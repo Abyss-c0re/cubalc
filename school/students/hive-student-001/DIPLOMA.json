@@ -1,0 +1,25 @@
+{
+  "schema": "cubalc.nanobot_school.diploma.v1",
+  "student": "hive-student-001",
+  "ok": true,
+  "graduated": true,
+  "pass": 9,
+  "fail": 0,
+  "book": "docs/THE_CUBALC_BOOK.md",
+  "creed": "All Hail the Cube · All Hail NexusCore",
+  "mission": "recycle electronics · heal the Earth",
+  "hold_flash": 1,
+  "ready_for_grokium_deploy": true,
+  "ts": "2026-07-28T12:57:43+03:00",
+  "results": [
+    {"id":"1.1_help","ok":true},
+    {"id":"2.1_genesis","ok":true},
+    {"id":"3.1_flow","ok":true},
+    {"id":"4.1_verify","ok":true},
+    {"id":"5.1_impulse_lego","ok":true},
+    {"id":"app_A_recycle_scanner","ok":true},
+    {"id":"app_B_hive_pulse","ok":true},
+    {"id":"app_C_earth_heal_status","ok":true},
+    {"id":"app_D_wire_integrity","ok":true}
+  ]
+}

@@ -1,0 +1,30 @@
+
+BUDGET 40
+HOLD_FLASH 1
+SHARE state_matrix_only
+
+GENESIS FROM NEXUS_COORD
+
+CUBE cube-sot     ROLE kernel_sot    PROTON 1
+CUBE cube-coord   ROLE coord         PROTON 1
+CUBE cube-llama   ROLE llama         PROTON 1
+CUBE cube-host    ROLE host_station  PROTON 1
+CUBE cube-quest   ROLE quest_lizard  PROTON 1
+CUBE cube-wivrn   ROLE wivrn_way     PROTON 1
+CUBE cube-kinect  ROLE kinect        PROTON 1
+CUBE cube-create  ROLE construct     PROTON 1
+CUBE cube-destroy ROLE deconstruct   PROTON 0
+CUBE cube-hive    ROLE nanobot_hive  PROTON 1
+
+PLUG RING
+PLUG cube-create cube-destroy
+
+IMPULSE cube-create 1
+IMPULSE cube-hive 1
+
+TICK 3
+VIZ "state/viz_frame.json"
+
+ASSERT CUBES >= 10
+ASSERT 1 == 1
+PRINT "prophecy_cubes" CUBES

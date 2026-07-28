@@ -1,0 +1,2 @@
+LET x = 1
+ASSERT x == 0

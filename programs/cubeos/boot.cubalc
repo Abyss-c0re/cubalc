@@ -1,0 +1,105 @@
+
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=cubeos | type=boot | role=way | hold_flash=1 | braincube=core | visual=cubes |"
+
+CUBE brain     ROLE braincube      PROTON 1
+CUBE sot       ROLE kernel_sot     PROTON 1
+CUBE algo      ROLE algocube       PROTON 1
+CUBE nanobot   ROLE atom           PROTON 1
+
+CUBE titan     ROLE host_hand      PROTON 1
+CUBE clanker   ROLE body           PROTON 1
+
+CUBE nb_host      ROLE nanobot_host       PROTON 1
+CUBE nb_quest     ROLE nanobot_eyes       PROTON 1
+CUBE nb_titan     ROLE nanobot_hand       PROTON 1
+CUBE nb_clanker   ROLE nanobot_body       PROTON 1
+CUBE nb_matrix    ROLE nanobot_eval       PROTON 1
+CUBE nb_construct ROLE nanobot_construct  PROTON 1
+
+CUBE way_linux   ROLE os_way_linux   PROTON 1
+CUBE way_android ROLE os_way_android PROTON 1
+CUBE way_xr      ROLE os_way_xr      PROTON 1
+
+CUBE hive       ROLE nanobot_hive PROTON 1
+CUBE commander  ROLE titan        PROTON 0
+CUBE side       ROLE SIDE_organ   PROTON 1
+
+PLUG way_linux nanobot
+PLUG way_android nanobot
+PLUG way_xr nanobot
+PLUG titan nanobot
+PLUG clanker nanobot
+PLUG nanobot algo
+PLUG algo brain
+PLUG sot brain
+PLUG brain hive
+
+PLUG nb_host hive
+PLUG nb_quest hive
+PLUG nb_titan hive
+PLUG nb_clanker hive
+PLUG nb_matrix hive
+PLUG nb_construct hive
+PLUG side hive
+PLUG side commander
+
+SETBIT titan 0 1
+SETBIT titan 1 1
+SETBIT titan 4 1
+SETBIT clanker 2 1
+SETBIT clanker 6 1
+SETBIT brain 0 1
+SETBIT brain 3 1
+SETBIT brain 7 1
+SETBIT brain 11 1
+SETBIT sot 2 1
+SETBIT sot 8 1
+SETBIT hive 1 1
+SETBIT hive 5 1
+SETBIT hive 9 1
+
+IMPULSE nanobot 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE hive 1
+FLOW 6
+
+IF ENERGY(nanobot) == 0 THEN
+  DECONSTRUCT nanobot
+  RECONSTRUCT nanobot
+  PLUG titan nanobot
+  PLUG clanker nanobot
+  PLUG nanobot algo
+  IMPULSE nanobot 1
+  FLOW 4
+END
+
+IF ENERGY(brain) == 0 THEN
+  DECONSTRUCT brain
+  RECONSTRUCT brain
+  PLUG algo brain
+  PLUG sot brain
+  IMPULSE brain 1
+  FLOW 4
+END
+
+DECIDE brain
+
+LOOP 3
+  FLOW 2
+  IF ENERGY(hive) < 20 THEN
+    IMPULSE hive 1
+    FLOW 2
+  END
+END
+
+DECIDE brain
+PRINT "cubeos" DECIDE DIGIT(brain) CUBES UNITY ENERGY(nanobot) ENERGY(brain) ENERGY(hive)
+ASSERT CUBES >= 16
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT ENERGY(brain) > 0

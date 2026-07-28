@@ -1,0 +1,22 @@
+{
+  "app": "D_wire_integrity",
+  "ok": true,
+  "smx": {
+    "ok": true,
+    "cmd": "smx-selftest",
+    "proto": 2,
+    "talk": "binary",
+    "anti_replay": true,
+    "hold_flash": 1,
+    "frame_bytes": 132
+  },
+  "cubechain": {
+    "ok": true,
+    "cmd": "cubechain-verify",
+    "blocks": 241,
+    "path": "./state/cubechain.cchn",
+    "matrix_is_key": true
+  },
+  "talk": "binary",
+  "hold_flash": 1
+}

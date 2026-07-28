@@ -1,0 +1,14 @@
+{
+  "app": "C_earth_heal_status",
+  "ok": true,
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "mission": "recycle electronics \u00b7 heal the Earth",
+  "hold_flash": 1,
+  "plate_ack": "HOLD_FLASH=ack_held",
+  "cubechain_tip": 241,
+  "unity": 0.8813,
+  "energy": 0.7944,
+  "n_cubes": 10,
+  "talk": "binary_CBLC",
+  "ts": "2026-07-28T12:57:52+0300"
+}

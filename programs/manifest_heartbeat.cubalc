@@ -1,0 +1,12 @@
+HOLD_FLASH 1
+BUDGET 40
+GENESIS "NEXUS_COORD v1 | from=pve-lab | type=heartbeat | role=SIDE_organ | status=ONLINE | sessions=1 | tubes=10 | rain_design=yes | HOLD_FLASH=ack_held | ts=2026-07-28T12:58:03+03:00 |"
+OS_ASPECTS
+CUBE side ROLE SIDE_organ PROTON 1
+PLUG RING
+IMPULSE side 1
+IMPULSE cube-hive 1
+FLOW 8
+VIZ "state/cubalc_viz_frame.json"
+PRINT "manifest" CUBES UNITY
+ASSERT CUBES >= 1

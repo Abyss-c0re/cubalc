@@ -1,0 +1,10 @@
+out/
+state/
+*.o
+*.bak
+*.pyc
+__pycache__/
+.DS_Store
+*.cchn
+cubalc_viz_frame.json
+viz_frame.json

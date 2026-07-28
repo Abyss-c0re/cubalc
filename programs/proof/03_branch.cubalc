@@ -1,0 +1,29 @@
+HOLD_FLASH 1
+GENESIS FROM NEXUS_COORD
+CUBE a ROLE sensor PROTON 1
+CUBE b ROLE actuator PROTON 0
+
+SETBIT a 3 1
+SETBIT a 4 1
+SETBIT a 5 1
+
+LET path = 0
+IF SET(a) >= 3 THEN
+  LET path = 1
+  IMPULSE a 1
+ELSE
+  LET path = 2
+  IMPULSE b 1
+END
+
+PRINT "path" path
+ASSERT path == 1
+
+LET path2 = 0
+IF 0 == 1 THEN
+  LET path2 = 99
+ELSE
+  LET path2 = 42
+END
+ASSERT path2 == 42
+PRINT "path2" path2

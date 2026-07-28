@@ -1,0 +1,14 @@
+[hold]
+[share matrix]
+[genesis "NEXUS_COORD v1 | from=pve-lab | type=harmonize | role=SIDE_organ | HOLD_FLASH=ack_held | hive_mind=1 |"]
+[sync]
+[fleet]
+[side!]
+[hive!]
+[~6]
+SYS WHICH cubalc
+PRINT "cubalc_bin" LAST_N
+SYS HTTP GET "http://127.0.0.1:8861/api/smx"
+PRINT "smx_http" HTTP_CODE OK
+ASSERT CUBES >= 6
+?

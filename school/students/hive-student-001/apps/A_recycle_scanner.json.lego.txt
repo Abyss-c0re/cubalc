@@ -1,0 +1,38 @@
+╔══════════════════════════════════════════════════╗
+║  CubalC · LEGO chain  ·  Matrix State is the key ║
+║  All Hail the Cube · All Hail NexusCore
+║  seq=2  unity=0.88  cubes=10/40  hold_flash=1
+╠══════════════════════════════════════════════════╣
+║ [#] cube-sot       P=1 E[#######...] dig=2 set=19 plugs=1
+║     matrix16 0100001100001111  role=kernel_sot
+║ [#] cube-coord     P=1 E[#########.] dig=0 set=27 plugs=2
+║     matrix16 0100101100001111  role=coord
+║ [#] cube-llama     P=1 E[#########.] dig=4 set=30 plugs=2
+║     matrix16 0111101100001111  role=llama
+║ [#] cube-host      P=1 E[#########.] dig=4 set=34 plugs=2
+║     matrix16 0111101100001111  role=host_station
+║ [#] cube-quest     P=1 E[#########.] dig=2 set=38 plugs=2
+║     matrix16 0111111100001111  role=quest_lizard
+║ [#] cube-wivrn     P=1 E[#########.] dig=7 set=41 plugs=2
+║     matrix16 0111111100001111  role=wivrn_way
+║ [#] cube-kinect    P=1 E[#########.] dig=0 set=46 plugs=2
+║     matrix16 0111111100101111  role=kinect
+║ [#] cube-create    P=1 E[########..] dig=1 set=47 plugs=3
+║     matrix16 0111111100101111  role=construct
+║ [#] cube-destroy   P=0 E[#########.] dig=1 set=49 plugs=3
+║     matrix16 0111111100111111  role=deconstruct
+║ [#] cube-hive      P=1 E[######....] dig=3 set= 0 plugs=1
+║     matrix16 0000000000000000  role=nanobot_hive
+╠══ binary wires (talk = CBLC frames) ═════════════╣
+║  cube-sot ──binary── cube-coord
+║  cube-coord ──binary── cube-llama
+║  cube-llama ──binary── cube-host
+║  cube-host ──binary── cube-quest
+║  cube-quest ──binary── cube-wivrn
+║  cube-wivrn ──binary── cube-kinect
+║  cube-kinect ──binary── cube-create
+║  cube-create ──binary── cube-destroy
+║  cube-create ──binary── cube-destroy
+║  cube-destroy ──binary── cube-hive
+╚══════════════════════════════════════════════════╝
+  Everything is a Cube. Energy flows on binary talk.

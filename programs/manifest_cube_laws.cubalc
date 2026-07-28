@@ -1,0 +1,23 @@
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+
+GENESIS "NEXUS_COORD v1 | from=pve-lab | type=manifest | role=SIDE_organ | HOLD_FLASH=ack_held | law=CUBE_DECLARATION | visual=cubes |"
+
+OS_ASPECTS
+
+CUBE side ROLE SIDE_organ PROTON 1
+CUBE kernel ROLE kernel_sot PROTON 1
+PLUG side kernel
+PLUG RING
+
+IMPULSE kernel 1
+IMPULSE side 1
+FLOW 6
+
+PRINT "law_manifest cubes" CUBES
+PRINT "unity_centi" UNITY
+PRINT "kernel_set" SET(kernel)
+ASSERT CUBES >= 2
+ASSERT SET(kernel) >= 1
+VIZ "state/cubalc_viz_frame.json"

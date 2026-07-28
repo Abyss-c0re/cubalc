@@ -1,0 +1,13 @@
+[hold]
+[genesis "NEXUS_COORD v1 | from=oversee | type=cubebrain_bridge | hold_flash=1 |"]
+[sync]
+[titan:prophecy]
+[clanker_peer:prophecy]
+[titan~hive]
+[clanker_peer~hive]
+[titan!]
+[clanker_peer!]
+[~4]
+?
+PRINT "oversee" CUBES
+ASSERT CUBES >= 6
