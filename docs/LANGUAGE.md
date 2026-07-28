@@ -75,5 +75,6 @@ cubalc smx-bus dial 192.168.x.y:7733
 cubalc law
 ```
 
-Token `C3` · Share `smx` · Hold `1` · Version `1.4.1-c3` · **http_required=0**  
-Wire: `u32le + SMX2` over **TCP / AF_UNIX / file** — never HTTP.
+Token `C3` · Share `smx` · Hold `1` · Version `1.4.2-c3` · **http_required=0**  
+Wire: `u32le + SMX2` over **TCP / AF_UNIX / file** — never HTTP.  
+P2P: `programs/p2p/*.cubalc`
