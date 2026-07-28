@@ -1,0 +1,44 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// CubalC P2P node — DIAL side (nanobot home peer)
+// Peer: CUBALC_P2P_PEER or "host:port"
+GENESIS "NEXUS_COORD v1 | from=p2p | type=peer_dial | hold_flash=1 | share=smx | proto=SMX2 |"
+
+CUBE self   ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+CUBE bus    ROLE atom PROTON 1
+
+PLUG self bus
+PLUG remote bus
+
+SETBIT self 1 1
+SETBIT self 3 1
+SETBIT self 5 1
+SETBIT self 7 1
+SETBIT self 9 1
+SETBIT self 11 1
+SETBIT self 13 1
+IMPULSE self 1
+FLOW 2
+
+LET set_before = SET(remote)
+
+SMX KEY
+SYS ENV "CUBALC_P2P_PEER"
+IF LAST_N > 0 THEN
+  SMX DIAL self remote LAST
+ELSE
+  SMX DIAL self remote "127.0.0.1:7733"
+END
+
+LET set_after = SET(remote)
+DECIDE self
+DECIDE remote
+
+PRINT "p2p_dial" CUBES SMX_OK SMX_TALKS SMX_N set_before set_after DIGIT(self) DIGIT(remote) COMPAT(self,remote) UNITY
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 1
+ASSERT set_after >= set_before
+ASSERT COMPAT(self,remote) >= 0

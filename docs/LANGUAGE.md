@@ -1,4 +1,4 @@
-# CubalC language card (1.4.1-c3)
+# CubalC language card (1.4.2-c3)
 
 **CubalC does not need HTTP.** Core talk is SMX2 / CBLC / AF_UNIX / file bus.  
 `SYS HTTP` is an optional host edge only (allowlisted); never required for language, law, or manifestation.
@@ -35,8 +35,11 @@
 | `SMX EXCHANGE a b` | a→b then b→a |
 | `SMX SEAL a b path` | write HMAC frame to path |
 | `SMX OPEN b path` | open frame into cube b |
-| `SMX DIAL a b "host:port"` | **TCP network** exchange (no HTTP) |
+| `SMX SERVE local remote bind` | **TCP listen** one P2P exchange |
+| `SMX DIAL a b "host:port"` | **TCP dial** P2P exchange (no HTTP) |
 | `SMX_OK` / `SMX_TALKS` / `SMX_N` | status vars |
+
+P2P for nanobot homes: `programs/p2p/*.cubalc` · `docs/P2P_SMX.md`
 
 Peers **manifest** when matrices exchange. Prose is not talk.  
 **Network:** same SMX2 wire over TCP — shared `CUBALC_SMX_KEY` on both devices.

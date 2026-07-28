@@ -37,6 +37,8 @@ test: all
 	./out/cubalc smx-bus prove-tcp 17733
 	./out/cubalc run programs/proof/08_peer_fold.cubalc
 	./out/cubalc run programs/proof/09_smx_manifest.cubalc
+	./out/cubalc run programs/proof/10_p2p_cubalc.cubalc
+	./out/cubalc run programs/p2p/mesh_local.cubalc
 	./out/cubalc run programs/manifest_smx.cubalc
 	./out/cubalc run programs/harmonize_hive.cubalc
 	CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 ./out/cubalc peers

@@ -64,16 +64,22 @@ Exit: non-zero on assert fail / hard SYS fail. Soft optional HTTP may set `OK=0`
 | `SMX TALK a b` | **Law of Manifestation** — secure matrix a→b |
 | `SMX EXCHANGE a b` | bidirectional SMX2 talk |
 | `SMX SEAL a b path` / `SMX OPEN b path` | file-bus frames |
-| `SMX DIAL a b "host:port"` | **TCP network** (LAN/WAN, no HTTP) |
+| `SMX SERVE local remote bind` | TCP listen one exchange (P2P) |
+| `SMX DIAL a b "host:port"` | TCP dial (LAN/WAN, no HTTP) |
 | `SMX KEY` | reload SMX key from env |
 
-Cross-device (same `CUBALC_SMX_KEY` on both hosts):
+P2P for nanobot is **written in CubalC** (`programs/p2p/`):
 
 ```bash
-# device B
-cubalc smx-bus serve 0.0.0.0:7733
-# device A
-cubalc smx-bus dial 192.168.x.y:7733
+export CUBALC_SMX_KEY="$(openssl rand -hex 32)"
+# peer B
+CUBALC_P2P_SERVE=1 CUBALC_P2P_BIND=0.0.0.0:7733 \
+  cubalc run programs/p2p/nanobot_peer.cubalc
+# peer A
+CUBALC_P2P_PEER=192.168.x.y:7733 \
+  cubalc run programs/p2p/nanobot_peer.cubalc
+# local mesh proof
+./scripts/p2p_nanobot_mesh.sh
 ```
 
 ### Law of Manifestation

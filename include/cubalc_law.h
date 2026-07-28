@@ -29,7 +29,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP"
-#define CUBALC_LANG_VERSION "1.4.1-c3"
+#define CUBALC_LANG_VERSION "1.4.2-c3"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)

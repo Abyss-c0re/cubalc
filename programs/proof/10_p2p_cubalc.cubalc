@@ -1,0 +1,22 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+// Pure CubalC P2P proof (in-process + language surface)
+GENESIS "NEXUS_COORD v1 | from=proof | type=p2p | hold_flash=1 |"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+PLUG a b
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT a 2 1
+SETBIT b 8 1
+
+SMX EXCHANGE a b
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 2
+ASSERT SET(b) >= 3
+
+PRINT "p2p_proof" SMX_OK SMX_TALKS SET(a) SET(b) COMPAT(a,b)
+ASSERT COMPAT(a,b) >= 50

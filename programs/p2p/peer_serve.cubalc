@@ -1,0 +1,41 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// CubalC P2P node — SERVE side (nanobot home peer)
+// Wire: SMX2 binary over TCP · no HTTP
+// Bind: CUBALC_P2P_BIND or arg "0.0.0.0:7733"
+GENESIS "NEXUS_COORD v1 | from=p2p | type=peer_serve | hold_flash=1 | share=smx | proto=SMX2 |"
+
+CUBE self   ROLE body PROTON 1
+CUBE remote ROLE host PROTON 1
+CUBE bus    ROLE atom PROTON 1
+
+PLUG self bus
+PLUG remote bus
+
+// Local matrix seed (IO / identity bits — not prose)
+SETBIT self 0 1
+SETBIT self 2 1
+SETBIT self 4 1
+SETBIT self 6 1
+SETBIT self 8 1
+SETBIT self 12 1
+SETBIT self 14 1
+IMPULSE self 1
+FLOW 2
+
+SMX KEY
+// Listen and exchange State Matrix with one dialer
+SYS ENV "CUBALC_P2P_BIND"
+IF LAST_N > 0 THEN
+  SMX SERVE self remote LAST
+ELSE
+  SMX SERVE self remote "0.0.0.0:7733"
+END
+
+DECIDE self
+PRINT "p2p_serve" CUBES SMX_OK SMX_TALKS SMX_N SET(self) DIGIT(self) UNITY COMPAT(self,remote)
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 1
+ASSERT SET(self) >= 1

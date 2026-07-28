@@ -13,6 +13,7 @@
 #include <time.h>
 #include <math.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 /* CubalC lang — place/plug/pulse/flow/look. Grammar = ops, not prose. */
 
@@ -1611,9 +1612,86 @@ static int parse_form(VM *vm, Lex *L){
       if (do_smx_open(vm, id, path) != 0) return -1;
       bump(vm); return 1;
     }
+    /* P2P serve: SMX SERVE local remote "host:port"|port  (listen one binary exchange) */
+    if (kw(&L->cur,"SERVE")||kw(&L->cur,"LISTEN")||kw(&L->cur,"ACCEPT")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SERVE local remote bind"); return -1; }
+      char local[48]; snprintf(local,sizeof local,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SERVE local remote bind"); return -1; }
+      char remote[48]; snprintf(remote,sizeof remote,"%s",L->cur.text); lex_next(L);
+      char bind[256];
+      if (resolve_str_arg(vm, L, bind, sizeof bind)!=0){
+        /* allow env CUBALC_P2P_BIND */
+        const char *e = getenv("CUBALC_P2P_BIND");
+        if (e && e[0]) snprintf(bind,sizeof bind,"%s",e);
+        else { fail(vm,"SMX SERVE need \"host:port\"|port or CUBALC_P2P_BIND"); return -1; }
+      }
+      {
+        char host[128]="0.0.0.0";
+        int port = 0, lfd, cfd, ia, ib;
+        uint8_t frame[512];
+        size_t n = 0;
+        cubalc_atom recv;
+        char fr[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
+        const char *colon = strrchr(bind, ':');
+        if (colon && colon != bind) {
+          size_t hl = (size_t)(colon - bind);
+          if (hl >= sizeof host) hl = sizeof host - 1;
+          memcpy(host, bind, hl); host[hl] = 0;
+          port = atoi(colon + 1);
+        } else {
+          port = atoi(bind);
+        }
+        if (port <= 0){ fail(vm,"SMX SERVE bad port"); return -1; }
+        ensure_world(vm);
+        if (ensure_smx_key(vm) != 0) return -1;
+        ia = find_cube(vm, local);
+        ib = find_cube(vm, remote);
+        if (ia < 0){ place_cube(vm, local, "body", 1); ia = find_cube(vm, local); }
+        if (ib < 0){ place_cube(vm, remote, "host", 1); ib = find_cube(vm, remote); }
+        lfd = cubalc_smx_tcp_listen(host, port, 4);
+        if (lfd < 0){ fail(vm,"SMX SERVE listen fail"); return -1; }
+        if (vm->trace) fprintf(vm->trace, "# SMX SERVE %s:%d wait peer\n", host, port);
+        cfd = accept(lfd, NULL, NULL);
+        close(lfd);
+        if (cfd < 0){ fail(vm,"SMX SERVE accept fail"); return -1; }
+        n = 0;
+        if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0){
+          close(cfd); fail(vm,"SMX SERVE recv"); return -1;
+        }
+        if (cubalc_smx_open(&vm->smx, frame, n, &recv, fr, to,
+                            &vm->ch.cubes[ia].atom.matrix) != 0){
+          close(cfd); fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX SERVE open"); return -1;
+        }
+        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
+          if (cubalc_matrix_get(&recv.matrix, i))
+            cubalc_matrix_set(&vm->ch.cubes[ia].atom.matrix, i, 1);
+        vm->ch.cubes[ia].atom.digit =
+          (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ia].atom.matrix);
+        n = 0;
+        if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, local, remote,
+                            frame, sizeof frame, &n) != 0){
+          close(cfd); fail(vm,"SMX SERVE seal"); return -1;
+        }
+        if (cubalc_smx_send_frame(cfd, frame, n) != 0){
+          close(cfd); fail(vm,"SMX SERVE send"); return -1;
+        }
+        close(cfd);
+        cubalc_cube_plug(&vm->ch, ia, ib);
+        vm->smx_ok = 1;
+        vm->smx_talks++;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+        var_set_num(vm, "SMX_N", (long)n);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# SMX SERVE %s ← peer set=%u\n",
+                  local, (unsigned)vm->ch.cubes[ia].atom.matrix.set);
+      }
+      bump(vm); return 1;
+    }
     /* Cross-device TCP (no HTTP): SMX DIAL a b "host:port" */
     if (kw(&L->cur,"DIAL")||kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
-      /* DIAL from_cube to_cube host:port  OR  NET DIAL ... */
       if (kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
         lex_next(L);
         if (!kw(&L->cur,"DIAL") && !kw(&L->cur,"SEND") && !kw(&L->cur,"TALK")){
@@ -1628,7 +1706,9 @@ static int parse_form(VM *vm, Lex *L){
       char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
       char endpoint[256];
       if (resolve_str_arg(vm, L, endpoint, sizeof endpoint)!=0){
-        fail(vm,"SMX DIAL a b \"host:port\""); return -1;
+        const char *e = getenv("CUBALC_P2P_PEER");
+        if (e && e[0]) snprintf(endpoint,sizeof endpoint,"%s",e);
+        else { fail(vm,"SMX DIAL a b \"host:port\" or CUBALC_P2P_PEER"); return -1; }
       }
       {
         char host[128];
@@ -1676,6 +1756,7 @@ static int parse_form(VM *vm, Lex *L){
         vm->ch.cubes[ib].atom.digit =
           (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ib].atom.matrix);
         close(fd);
+        cubalc_cube_plug(&vm->ch, ia, ib);
         vm->smx_ok = 1;
         vm->smx_talks++;
         var_set_num(vm, "SMX_OK", 1);
@@ -1687,7 +1768,7 @@ static int parse_form(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
-    fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|DIAL");
+    fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL");
     return -1;
   }
   if (kw(&L->cur,"DECONSTRUCT")||kw(&L->cur,"DESTROY")){
