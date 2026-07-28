@@ -21,6 +21,7 @@ typedef struct cubalc_atom {
   uint8_t  proton;      /* 1 create · 0 destroy */
   uint8_t  alive;
   uint8_t  digit;       /* algocube 0–9 */
+  uint8_t  digit_lock;  /* 1 = peer SETDIGIT sticky; tick must not recompute */
   float    unity;
   float    energy;      /* 0..1 — flows through binary CBLC talk */
   cubalc_matrix matrix; /* State Matrix SoT — machine key, cube soul */

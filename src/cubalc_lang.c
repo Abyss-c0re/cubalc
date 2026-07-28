@@ -4,6 +4,7 @@
 #include "cubalc_async.h"
 #include "cubalc_hw.h"
 #include "cubalc_hostops.h"
+#include "cubalc_smx.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 /* CubalC lang — place/plug/pulse/flow/look. Grammar = ops, not prose. */
 
@@ -28,6 +30,7 @@ typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
 
 typedef struct {
   cubalc_chain ch;
+  cubalc_smx_ctx smx; /* SMX2 secure talk — Law of Manifestation */
   Var vars[64];
   int n_vars;
   cubalc_run_result *res;
@@ -42,6 +45,8 @@ typedef struct {
   char last_str[CUBALC_HOST_STR_MAX];
   int last_code;
   long last_n;
+  int smx_ok;
+  int smx_talks;
 } VM;
 
 static void fail(VM *vm, const char *msg) {
@@ -369,28 +374,28 @@ static int parse_cube_body(VM *vm, Lex *L){
     if (L->cur.kind!=TK_RBRACK){ fail(vm,"[os]"); return -1; }
     lex_next(L); ensure_world(vm); cubalc_chain_os_aspects(&vm->ch); bump(vm); return 1;
   }
-  /* [sync] — join the other hive mind (NexusCore atoms as cubes) */
+  /* [sync] — hive lattice as abstract roles (no product/device names) */
   if (kw(&L->cur,"sync") || kw(&L->cur,"HIVE_SYNC")){
     lex_next(L);
     if (L->cur.kind!=TK_RBRACK){ fail(vm,"[sync]"); return -1; }
     lex_next(L);
     ensure_world(vm);
-    place_cube(vm, "crimson", "construct", 1);
-    place_cube(vm, "void", "architect", 1);
-    place_cube(vm, "clanker", "body", 1);
-    place_cube(vm, "commander", "titan", 0); /* offline peer still a cube */
+    place_cube(vm, "construct", "construct", 1);
+    place_cube(vm, "architect", "architect", 1);
+    place_cube(vm, "peer_body", "body", 1);
+    place_cube(vm, "peer_host", "host", 0); /* optional offline peer still a cube */
     place_cube(vm, "side", "SIDE_organ", 1);
-    place_cube(vm, "hive", "nanobot", 1);
-    do_plug(vm, "side", "crimson");
-    do_plug(vm, "crimson", "void");
-    do_plug(vm, "void", "clanker");
-    do_plug(vm, "clanker", "hive");
+    place_cube(vm, "hive", "atom", 1);
+    do_plug(vm, "side", "construct");
+    do_plug(vm, "construct", "architect");
+    do_plug(vm, "architect", "peer_body");
+    do_plug(vm, "peer_body", "hive");
     do_plug(vm, "hive", "side");
-    do_plug(vm, "side", "commander");
+    do_plug(vm, "side", "peer_host");
     cubalc_chain_impulse(&vm->ch, "hive", 1);
-    cubalc_chain_impulse(&vm->ch, "crimson", 1);
+    cubalc_chain_impulse(&vm->ch, "construct", 1);
     do_flow(vm, 4);
-    if (vm->trace) fprintf(vm->trace, "# WE sync: crimson void clanker commander side hive\n");
+    if (vm->trace) fprintf(vm->trace, "# sync: construct architect peer_body peer_host side hive\n");
     bump(vm); return 1;
   }
   /* [export "path"] — dump board JSON for host (Grokium way) */
@@ -619,6 +624,205 @@ static void do_reconstruct(VM *vm, const char *id){
   if (vm->trace) fprintf(vm->trace,"# RECONSTRUCT %s\n",id);
 }
 
+/* Resolve path/string arg: "lit" | LAST | string-var */
+static int resolve_str_arg(VM *vm, Lex *L, char *out, size_t outn){
+  if (L->cur.kind==TK_STR){
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 0;
+  }
+  if (L->cur.kind==TK_IDENT){
+    if (strcmp(L->cur.text,"LAST")==0){
+      snprintf(out, outn, "%s", vm->last_str);
+      lex_next(L);
+      return 0;
+    }
+    Var *v = var_get(vm, L->cur.text, 0);
+    if (v && v->is_str){
+      snprintf(out, outn, "%s", v->sval);
+      lex_next(L);
+      return 0;
+    }
+  }
+  return -1;
+}
+
+/* Peer digit inject: SETDIGIT cube n — CubeBrain algocube 0–9 into matrix SoT */
+static void do_setdigit(VM *vm, const char *id, long d){
+  ensure_world(vm);
+  if (d < 0) d = 0;
+  if (d > 9) d = d % 10;
+  int ix = find_cube(vm, id);
+  if (ix < 0){ place_cube(vm, id, "peer", 1); ix = find_cube(vm, id); }
+  if (ix < 0) return;
+  cubalc_cube *c = &vm->ch.cubes[ix];
+  c->atom.digit = (uint8_t)d;
+  c->atom.digit_lock = 1; /* sticky through tick/impulse — peer digit inject */
+  c->atom.alive = 1;
+  c->atom.energy = fminf(1.f, c->atom.energy + 0.20f);
+  /* encode digit pulse into State Matrix — matrix remains SoT */
+  for (int i = 0; i < 8; i++)
+    cubalc_matrix_set(&c->atom.matrix, (int)((d * 3 + i) % CUBALC_ATOM_BITS), 1);
+  cubalc_matrix_set(&c->atom.matrix, (int)d, 1);
+  cubalc_matrix_set(&c->atom.matrix, (int)d + 10, 1);
+  long *slot = var_slot(vm, "DIGIT", 1);
+  if (slot) *slot = d;
+  if (vm->trace) fprintf(vm->trace, "# SETDIGIT %s → %ld (%s)\n",
+    c->id, d, CUBALC_DIGIT_TAG[d % 10]);
+}
+
+/* Ensure SMX2 key is loaded (env / token / demo demo-key for local proof) */
+static int ensure_smx_key(VM *vm){
+  if (vm->smx.key_ok) return 0;
+  cubalc_smx_ctx_init(&vm->smx);
+  if (vm->smx.key_ok) return 0;
+  {
+    const char *tok = getenv("CUBALC_SMX_TOKEN");
+    if (!tok || !tok[0]) tok = getenv("NANOBOT_PEER_TOKEN");
+    if (tok && tok[0] && cubalc_smx_load_key_token(&vm->smx, tok) == 0) return 0;
+  }
+  /* local lab default — never a device secret; proof/dev only */
+  {
+    const char *demo =
+      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
+    if (cubalc_smx_load_key_hex(&vm->smx, demo) == 0) return 0;
+  }
+  fail(vm, "SMX key missing (CUBALC_SMX_KEY|CUBALC_SMX_TOKEN)");
+  return -1;
+}
+
+/* SMX TALK a b — secure State Matrix transfer a→b (manifest peers) */
+static int do_smx_talk(VM *vm, const char *from_id, const char *to_id){
+  ensure_world(vm);
+  if (ensure_smx_key(vm) != 0) return -1;
+  int ia = find_cube(vm, from_id);
+  int ib = find_cube(vm, to_id);
+  if (ia < 0){ place_cube(vm, from_id, "host", 1); ia = find_cube(vm, from_id); }
+  if (ib < 0){ place_cube(vm, to_id, "body", 1); ib = find_cube(vm, to_id); }
+  if (ia < 0 || ib < 0){ fail(vm, "SMX TALK unknown cube"); return -1; }
+  /* open ports + plug if needed so law IN/OUT holds */
+  cubalc_cube_plug(&vm->ch, ia, ib);
+  int rc = cubalc_cube_talk_secure(&vm->ch, &vm->smx, ia, ib);
+  if (rc != 0){
+    char msg[120];
+    snprintf(msg, sizeof msg, "SMX TALK fail %d %s", rc,
+             vm->smx.last_err[0] ? vm->smx.last_err : "");
+    fail(vm, msg);
+    var_set_num(vm, "SMX_OK", 0);
+    vm->smx_ok = 0;
+    return -1;
+  }
+  vm->smx_ok = 1;
+  vm->smx_talks++;
+  var_set_num(vm, "SMX_OK", 1);
+  var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+  var_set_num(vm, "OK", 1);
+  /* unity after transfer */
+  vm->ch.cubes[ib].atom.unity =
+    cubalc_matrix_compat(&vm->ch.cubes[ia].atom.matrix, &vm->ch.cubes[ib].atom.matrix);
+  if (vm->trace)
+    fprintf(vm->trace, "# SMX TALK %s → %s digit=%u set=%u\n",
+            from_id, to_id,
+            (unsigned)vm->ch.cubes[ib].atom.digit,
+            (unsigned)vm->ch.cubes[ib].atom.matrix.set);
+  return 0;
+}
+
+/* SMX SEAL a b path — write sealed frame; SMX OPEN b path — apply into b */
+static int do_smx_seal(VM *vm, const char *from_id, const char *to_id, const char *path){
+  ensure_world(vm);
+  if (ensure_smx_key(vm) != 0) return -1;
+  int ia = find_cube(vm, from_id);
+  if (ia < 0){ place_cube(vm, from_id, "host", 1); ia = find_cube(vm, from_id); }
+  if (ia < 0 || !path || !path[0]){ fail(vm, "SMX SEAL cube cube path"); return -1; }
+  uint8_t frame[512];
+  size_t n = 0;
+  if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, from_id, to_id,
+                      frame, sizeof frame, &n) != 0){
+    fail(vm, vm->smx.last_err[0] ? vm->smx.last_err : "SMX SEAL");
+    var_set_num(vm, "SMX_OK", 0);
+    return -1;
+  }
+  if (cubalc_smx_write_frame(path, frame, n) != 0){
+    fail(vm, "SMX SEAL write");
+    return -1;
+  }
+  snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+  vm->last_n = (long)n;
+  var_set_str(vm, "LAST", path);
+  var_set_num(vm, "LAST_N", (long)n);
+  var_set_num(vm, "SMX_N", (long)n);
+  var_set_num(vm, "SMX_OK", 1);
+  vm->smx_ok = 1;
+  if (vm->trace) fprintf(vm->trace, "# SMX SEAL %s→%s %s n=%zu\n", from_id, to_id, path, n);
+  return 0;
+}
+
+static int do_smx_open(VM *vm, const char *to_id, const char *path){
+  ensure_world(vm);
+  if (ensure_smx_key(vm) != 0) return -1;
+  int ib = find_cube(vm, to_id);
+  if (ib < 0){ place_cube(vm, to_id, "body", 1); ib = find_cube(vm, to_id); }
+  if (ib < 0 || !path || !path[0]){ fail(vm, "SMX OPEN cube path"); return -1; }
+  uint8_t frame[512];
+  size_t n = 0;
+  if (cubalc_smx_read_frame(path, frame, sizeof frame, &n) != 0){
+    fail(vm, "SMX OPEN read");
+    return -1;
+  }
+  cubalc_atom recv;
+  char from[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
+  if (cubalc_smx_open(&vm->smx, frame, n, &recv, from, to,
+                      &vm->ch.cubes[ib].atom.matrix) != 0){
+    fail(vm, vm->smx.last_err[0] ? vm->smx.last_err : "SMX OPEN");
+    var_set_num(vm, "SMX_OK", 0);
+    return -1;
+  }
+  /* create proton merges bits into dest matrix */
+  for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
+    if (cubalc_matrix_get(&recv.matrix, i))
+      cubalc_matrix_set(&vm->ch.cubes[ib].atom.matrix, i, 1);
+  vm->ch.cubes[ib].atom.digit =
+    (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ib].atom.matrix);
+  vm->ch.cubes[ib].atom.alive = 1;
+  vm->smx_ok = 1;
+  vm->smx_talks++;
+  var_set_num(vm, "SMX_OK", 1);
+  var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+  var_set_num(vm, "SMX_N", (long)n);
+  var_set_num(vm, "OK", 1);
+  if (vm->trace)
+    fprintf(vm->trace, "# SMX OPEN → %s from=%s set=%u\n",
+            to_id, from, (unsigned)vm->ch.cubes[ib].atom.matrix.set);
+  return 0;
+}
+
+/* FOLDBITS cube bits — fold 0/1 stream (newlines ok) into cube matrix + recompute digit */
+static void do_foldbits(VM *vm, const char *id, const char *bits){
+  ensure_world(vm);
+  int ix = find_cube(vm, id);
+  if (ix < 0){ place_cube(vm, id, "io", 1); ix = find_cube(vm, id); }
+  if (ix < 0 || !bits) return;
+  char compact[CUBALC_ATOM_BITS + 1];
+  int n = 0;
+  for (const char *p = bits; *p && n < CUBALC_ATOM_BITS; p++){
+    if (*p == '0' || *p == '1') compact[n++] = *p;
+  }
+  compact[n] = 0;
+  if (n <= 0) return;
+  cubalc_matrix_from_ascii(&vm->ch.cubes[ix].atom.matrix, compact, n);
+  /* keep full atom width for plugs */
+  if (vm->ch.cubes[ix].atom.matrix.n < CUBALC_ATOM_BITS)
+    vm->ch.cubes[ix].atom.matrix.n = CUBALC_ATOM_BITS;
+  /* FOLDBITS owns matrix → unlock peer digit so algocube can recompute */
+  vm->ch.cubes[ix].atom.digit_lock = 0;
+  vm->ch.cubes[ix].atom.digit =
+    (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+  vm->ch.cubes[ix].atom.alive = 1;
+  if (vm->trace) fprintf(vm->trace, "# FOLDBITS %s n=%d digit=%u\n",
+    id, n, (unsigned)vm->ch.cubes[ix].atom.digit);
+}
+
 /* Braincube decide: State Matrix → algocube digit 0..9 into var DECIDE + cube digit */
 static long do_decide(VM *vm, const char *id){
   ensure_world(vm);
@@ -631,8 +835,9 @@ static long do_decide(VM *vm, const char *id){
   }
   if (ix<0) return 4; /* hail nexus default digit */
   cubalc_cube *c=&vm->ch.cubes[ix];
-  /* matrix is SoT — recompute digit */
+  /* matrix is SoT — recompute digit; lock result as braincube decision */
   c->atom.digit = (uint8_t)cubalc_algocube_digit(&c->atom.matrix);
+  c->atom.digit_lock = 1;
   long d = c->atom.digit;
   long *slot = var_slot(vm, "DECIDE", 1);
   if (slot) *slot = d;
@@ -679,6 +884,15 @@ static long parse_prim(VM *vm, Lex *L){
 
     if (strcmp(name,"UNITY")==0) return (long)lround(vm->ch.unity*100);
     if (strcmp(name,"SEQ")==0) return (long)vm->ch.seq;
+    if (strcmp(name,"SMX_OK")==0){
+      Var *vv=var_get(vm,"SMX_OK",0); return vv?vv->val:(long)vm->smx_ok;
+    }
+    if (strcmp(name,"SMX_TALKS")==0){
+      Var *vv=var_get(vm,"SMX_TALKS",0); return vv?vv->val:(long)vm->smx_talks;
+    }
+    if (strcmp(name,"SMX_N")==0){
+      Var *vv=var_get(vm,"SMX_N",0); return vv?vv->val:0;
+    }
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
         strcmp(name,"ENERGY")==0 || strcmp(name,"DIGIT")==0 ||
         strcmp(name,"BIT")==0){
@@ -904,10 +1118,12 @@ static int parse_form(VM *vm, Lex *L){
     skip_nl(L);
     if (kw(&L->cur,"READ")){
       lex_next(L);
-      if (L->cur.kind!=TK_STR){ fail(vm,"SYS READ \"path\""); return -1; }
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS READ \"path\"|LAST"); return -1;
+      }
       cubalc_host_result hr;
-      if (cubalc_host_read(L->cur.text, &hr)!=0){ fail(vm, hr.err[0]?hr.err:"SYS READ fail"); return -1; }
-      lex_next(L);
+      if (cubalc_host_read(path, &hr)!=0){ fail(vm, hr.err[0]?hr.err:"SYS READ fail"); return -1; }
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n; vm->last_code = 0;
       var_set_str(vm, "LAST", hr.str);
@@ -957,9 +1173,11 @@ static int parse_form(VM *vm, Lex *L){
     }
     if (kw(&L->cur,"EXIST") || kw(&L->cur,"EXISTS")){
       lex_next(L);
-      if (L->cur.kind!=TK_STR){ fail(vm,"SYS EXIST \"path\""); return -1; }
-      int e = cubalc_host_exists(L->cur.text);
-      lex_next(L);
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS EXIST \"path\"|LAST"); return -1;
+      }
+      int e = cubalc_host_exists(path);
       var_set_num(vm, "LAST_N", e);
       var_set_num(vm, "EXIST", e);
       bump(vm); return 1;
@@ -1159,7 +1377,27 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm,"LAST_N",hr.n);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG");
+    /* SYS NUM|INT — parse LAST as integer → LAST_N (CubeBrain digit fold) */
+    if (kw(&L->cur,"NUM") || kw(&L->cur,"INT") || kw(&L->cur,"ATOI")){
+      lex_next(L);
+      const char *s = vm->last_str;
+      if (L->cur.kind==TK_STR){ s = L->cur.text; lex_next(L); }
+      else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")!=0){
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) s = v->sval;
+        else if (v) { var_set_num(vm,"LAST_N", v->val); vm->last_n = v->val; bump(vm); return 1; }
+        lex_next(L);
+      } else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")==0){
+        lex_next(L);
+      }
+      long n = 0;
+      if (s && s[0]) n = strtol(s, NULL, 10);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM");
     return -1;
   }
 
@@ -1274,10 +1512,13 @@ static int parse_form(VM *vm, Lex *L){
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"SETBIT cube i on"); return -1; }
     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
-    if (L->cur.kind!=TK_NUM){ fail(vm,"SETBIT index"); return -1; }
-    int bit=(int)L->cur.num; lex_next(L);
+    int bit=(int)parse_expr(vm,L);
     int on=1;
-    if (L->cur.kind==TK_NUM){ on=L->cur.num?1:0; lex_next(L); }
+    /* optional on/off expr (default 1) */
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+        L->cur.kind==TK_MINUS){
+      on = parse_expr(vm,L) ? 1 : 0;
+    }
     int ix=find_cube(vm,id);
     if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
     if (ix<0){ fail(vm,"SETBIT unknown cube"); return -1; }
@@ -1285,6 +1526,169 @@ static int parse_form(VM *vm, Lex *L){
     vm->ch.cubes[ix].atom.digit =
       (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
     bump(vm); return 1;
+  }
+  /* SETDIGIT cube expr — inject CubeBrain/peer algocube digit 0–9 into matrix */
+  if (kw(&L->cur,"SETDIGIT")||kw(&L->cur,"INJECT_DIGIT")||kw(&L->cur,"PEER_DIGIT")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"SETDIGIT cube n"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    long d = parse_expr(vm, L);
+    do_setdigit(vm, id, d);
+    bump(vm); return 1;
+  }
+  /* FOLDBITS cube "01…"|LAST — fold IO bitstring into cube State Matrix */
+  if (kw(&L->cur,"FOLDBITS")||kw(&L->cur,"LOADBITS")||kw(&L->cur,"FOLD_BITS")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FOLDBITS cube bits"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    char bits[CUBALC_HOST_STR_MAX]; bits[0]=0;
+    if (resolve_str_arg(vm, L, bits, sizeof bits)!=0){
+      /* allow bare bitstring without quotes if all 0/1 — rare; fail soft */
+      fail(vm,"FOLDBITS cube \"01…\"|LAST"); return -1;
+    }
+    do_foldbits(vm, id, bits);
+    bump(vm); return 1;
+  }
+  /*
+   * Law of Manifestation — SMX surface (language, not shell):
+   *   SMX TALK a b
+   *   SMX EXCHANGE a b     (a→b then b→a)
+   *   SMX SEAL a b "path"
+   *   SMX OPEN b "path"
+   *   SMX KEY              (reload key from env)
+   */
+  if (kw(&L->cur,"SMX")||kw(&L->cur,"SMX2")||kw(&L->cur,"MANIFEST_SMX")){
+    lex_next(L);
+    if (kw(&L->cur,"KEY")||kw(&L->cur,"LOADKEY")){
+      lex_next(L);
+      memset(&vm->smx, 0, sizeof vm->smx);
+      if (ensure_smx_key(vm) != 0) return -1;
+      var_set_num(vm, "SMX_OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"TALK")||kw(&L->cur,"SEND")||kw(&L->cur,"XFER")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX TALK a b"); return -1; }
+      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX TALK a b"); return -1; }
+      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      if (do_smx_talk(vm, a, b) != 0) return -1;
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"EXCHANGE")||kw(&L->cur,"SWAP")||kw(&L->cur,"PAIR")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX EXCHANGE a b"); return -1; }
+      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX EXCHANGE a b"); return -1; }
+      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      /* each direction needs fresh seq — talk_secure uses ctx seq;
+       * use two ctxs via re-init seq by talking once each way with same key */
+      if (do_smx_talk(vm, a, b) != 0) return -1;
+      if (do_smx_talk(vm, b, a) != 0) return -1;
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"SEAL")||kw(&L->cur,"EMIT")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SEAL a b path"); return -1; }
+      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SEAL a b path"); return -1; }
+      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SMX SEAL a b \"path\"|LAST"); return -1;
+      }
+      if (do_smx_seal(vm, a, b, path) != 0) return -1;
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"OPEN")||kw(&L->cur,"RECV")||kw(&L->cur,"IMPORT")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX OPEN cube path"); return -1; }
+      char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SMX OPEN cube \"path\"|LAST"); return -1;
+      }
+      if (do_smx_open(vm, id, path) != 0) return -1;
+      bump(vm); return 1;
+    }
+    /* Cross-device TCP (no HTTP): SMX DIAL a b "host:port" */
+    if (kw(&L->cur,"DIAL")||kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
+      /* DIAL from_cube to_cube host:port  OR  NET DIAL ... */
+      if (kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
+        lex_next(L);
+        if (!kw(&L->cur,"DIAL") && !kw(&L->cur,"SEND") && !kw(&L->cur,"TALK")){
+          fail(vm,"SMX NET DIAL a b \"host:port\""); return -1;
+        }
+      }
+      if (kw(&L->cur,"DIAL")||kw(&L->cur,"SEND")||kw(&L->cur,"TALK"))
+        lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX DIAL a b \"host:port\""); return -1; }
+      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX DIAL a b \"host:port\""); return -1; }
+      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+      char endpoint[256];
+      if (resolve_str_arg(vm, L, endpoint, sizeof endpoint)!=0){
+        fail(vm,"SMX DIAL a b \"host:port\""); return -1;
+      }
+      {
+        char host[128];
+        int port = 0;
+        const char *colon = strrchr(endpoint, ':');
+        int fd, ia, ib;
+        uint8_t frame[512];
+        size_t n = 0;
+        cubalc_atom recv;
+        char fr[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
+        if (!colon || colon == endpoint){ fail(vm,"SMX DIAL need host:port"); return -1; }
+        {
+          size_t hl = (size_t)(colon - endpoint);
+          if (hl >= sizeof host) hl = sizeof host - 1;
+          memcpy(host, endpoint, hl); host[hl] = 0;
+          port = atoi(colon + 1);
+        }
+        if (port <= 0){ fail(vm,"SMX DIAL bad port"); return -1; }
+        ensure_world(vm);
+        if (ensure_smx_key(vm) != 0) return -1;
+        ia = find_cube(vm, a);
+        ib = find_cube(vm, b);
+        if (ia < 0){ place_cube(vm, a, "host", 1); ia = find_cube(vm, a); }
+        if (ib < 0){ place_cube(vm, b, "body", 1); ib = find_cube(vm, b); }
+        fd = cubalc_smx_tcp_connect(host, port);
+        if (fd < 0){ fail(vm,"SMX DIAL connect fail"); return -1; }
+        if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, a, b,
+                            frame, sizeof frame, &n) != 0){
+          close(fd); fail(vm,"SMX DIAL seal"); return -1;
+        }
+        if (cubalc_smx_send_frame(fd, frame, n) != 0){
+          close(fd); fail(vm,"SMX DIAL send"); return -1;
+        }
+        n = 0;
+        if (cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0){
+          close(fd); fail(vm,"SMX DIAL recv"); return -1;
+        }
+        if (cubalc_smx_open(&vm->smx, frame, n, &recv, fr, to,
+                            &vm->ch.cubes[ib].atom.matrix) != 0){
+          close(fd); fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX DIAL open"); return -1;
+        }
+        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
+          if (cubalc_matrix_get(&recv.matrix, i))
+            cubalc_matrix_set(&vm->ch.cubes[ib].atom.matrix, i, 1);
+        vm->ch.cubes[ib].atom.digit =
+          (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ib].atom.matrix);
+        close(fd);
+        vm->smx_ok = 1;
+        vm->smx_talks++;
+        var_set_num(vm, "SMX_OK", 1);
+        var_set_num(vm, "SMX_TALKS", vm->smx_talks);
+        var_set_num(vm, "SMX_N", (long)n);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# SMX DIAL %s→%s @%s:%d n=%zu\n", a, b, host, port, n);
+      }
+      bump(vm); return 1;
+    }
+    fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|DIAL");
+    return -1;
   }
   if (kw(&L->cur,"DECONSTRUCT")||kw(&L->cur,"DESTROY")){
     lex_next(L);
@@ -1421,6 +1825,7 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   snprintf(vm.creed,sizeof vm.creed,"%s",CUBALC_CREED);
   cubalc_async_init(0);
   cubalc_chain_init(&vm.ch);
+  cubalc_smx_ctx_init(&vm.smx);
   vm.last_str[0]=0; vm.last_code=0; vm.last_n=0;
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);

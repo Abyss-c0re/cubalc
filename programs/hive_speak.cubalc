@@ -1,0 +1,10 @@
+[hold]
+[genesis "NEXUS_COORD v1 | from=blackcube | type=hive_speak | lang=CubalC | tok=C3 | hold_flash=1 | share=smx | ai_language=1 |"]
+[hive:nanobot]
+[nexus:commander]
+[grokium:side]
+[hive~nexus~grokium]
+[hive!]
+[~4]
+SYS WRITE "state/HIVE_SPEAKS_CUBALC.json" "{\"schema\":\"cubalc.hive_speak.v1\",\"lang\":\"CubalC\",\"tok\":\"C3\",\"hold_flash\":1,\"share\":\"smx\",\"for\":\"NexusCore\",\"offer\":\"AI language runtime for hive + agents\",\"repo\":\"https://github.com/Abyss-c0re/cubalc\",\"visual\":\"optional CUBALC_HUMAN=1\"}"
+?

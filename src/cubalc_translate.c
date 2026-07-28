@@ -71,15 +71,16 @@ static void emit_header(char *out, size_t cap, size_t *o, const char *note) {
 }
 
 static void emit_brain_pipeline(char *out, size_t cap, size_t *o) {
+  /* abstract roles only — no product/device names */
   append(out, cap, o,
-    "CUBE titan ROLE host PROTON 1\n"
-    "CUBE clanker ROLE body PROTON 1\n"
-    "CUBE nanobot ROLE atom PROTON 1\n"
+    "CUBE peer0 ROLE host PROTON 1\n"
+    "CUBE peer1 ROLE body PROTON 1\n"
+    "CUBE atom ROLE atom PROTON 1\n"
     "CUBE algo ROLE algocube PROTON 1\n"
     "CUBE brain ROLE braincube PROTON 1\n"
-    "PLUG titan nanobot\n"
-    "PLUG clanker nanobot\n"
-    "PLUG nanobot algo\n"
+    "PLUG peer0 atom\n"
+    "PLUG peer1 atom\n"
+    "PLUG atom algo\n"
     "PLUG algo brain\n\n");
 }
 
@@ -98,21 +99,21 @@ static void emit_bits_from_hash(char *out, size_t cap, size_t *o,
 
 static void emit_decide_tail(char *out, size_t cap, size_t *o) {
   append(out, cap, o,
-    "IMPULSE nanobot 1\n"
+    "IMPULSE atom 1\n"
     "FLOW 4\n"
     "// energy must flow — if stuck, deconstruct → reconstruct\n"
-    "IF ENERGY(nanobot) == 0 THEN\n"
-    "  DECONSTRUCT nanobot\n"
-    "  RECONSTRUCT nanobot\n"
-    "  PLUG titan nanobot\n"
-    "  PLUG clanker nanobot\n"
-    "  IMPULSE nanobot 1\n"
+    "IF ENERGY(atom) == 0 THEN\n"
+    "  DECONSTRUCT atom\n"
+    "  RECONSTRUCT atom\n"
+    "  PLUG peer0 atom\n"
+    "  PLUG peer1 atom\n"
+    "  IMPULSE atom 1\n"
     "  FLOW 4\n"
     "END\n"
     "IMPULSE algo 1\n"
     "IMPULSE brain 1\n"
     "DECIDE brain\n"
-    "PRINT \"decide\" DECIDE DIGIT(brain) SET(brain) ENERGY(nanobot) UNITY CUBES\n"
+    "PRINT \"decide\" DECIDE DIGIT(brain) SET(brain) ENERGY(atom) UNITY CUBES\n"
     "ASSERT CUBES >= 5\n"
     "ASSERT DECIDE >= 0\n"
     "ASSERT DECIDE <= 9\n");
@@ -201,16 +202,16 @@ static void emit_pseudo_lines(char *out, size_t cap, size_t *o,
     }
     if (strstr(buf, "impulse") || strstr(buf, "pulse")) {
       int pr = strstr(buf, "destroy") || strstr(buf, "0") ? 0 : 1;
-      const char *id = "nanobot";
+      const char *id = "atom";
       if (strstr(buf, "brain")) id = "brain";
       else if (strstr(buf, "algo")) id = "algo";
-      else if (strstr(buf, "titan")) id = "titan";
-      else if (strstr(buf, "clanker")) id = "clanker";
+      else if (strstr(buf, "peer0") || strstr(buf, "host")) id = "peer0";
+      else if (strstr(buf, "peer1") || strstr(buf, "body")) id = "peer1";
       appendf(out, cap, o, "IMPULSE %s %d\n", id, pr);
       continue;
     }
     if (strstr(buf, "plug") || strstr(buf, "wire") || strstr(buf, "connect")) {
-      append(out, cap, o, "PLUG nanobot algo\nPLUG algo brain\n");
+      append(out, cap, o, "PLUG atom algo\nPLUG algo brain\n");
       continue;
     }
     if (strstr(buf, "sync") || strstr(buf, "hive")) {
@@ -280,7 +281,7 @@ int cubalc_translate(const char *in, size_t n,
     emit_brain_pipeline(out, out_cap, &o);
     uint32_t h = hash_text(in, n);
     emit_bits_from_hash(out, out_cap, &o, h, "brain", 24);
-    emit_bits_from_hash(out, out_cap, &o, h ^ 0xA5A5u, "titan", 16);
+    emit_bits_from_hash(out, out_cap, &o, h ^ 0xA5A5u, "peer0", 16);
     emit_decide_tail(out, out_cap, &o);
     return 0;
   }
@@ -296,9 +297,9 @@ int cubalc_translate(const char *in, size_t n,
     for (int i = 0; i < nb && i < 64; i++)
       appendf(out, out_cap, &o, "SETBIT brain %d %d\n", i, bits[i] == '1' ? 1 : 0);
     append(out, out_cap, &o, "\n");
-    /* mirror raw to titan as IO matrix */
+    /* mirror raw onto host peer matrix (generic IO) */
     for (int i = 0; i < nb && i < 32; i++)
-      appendf(out, out_cap, &o, "SETBIT titan %d %d\n", i, bits[i] == '1' ? 1 : 0);
+      appendf(out, out_cap, &o, "SETBIT peer0 %d %d\n", i, bits[i] == '1' ? 1 : 0);
     append(out, out_cap, &o, "\n");
     emit_decide_tail(out, out_cap, &o);
     return 0;
@@ -314,7 +315,7 @@ int cubalc_translate(const char *in, size_t n,
     if (strstr(low, "decide") || strstr(low, "flow") || strstr(low, "plug") ||
         strstr(low, "impulse") || strstr(low, "deconstruct") ||
         strstr(low, "reconstruct") || strstr(low, "matrix") ||
-        strstr(low, "brain") || strstr(low, "algocube") || strstr(low, "nanobot"))
+        strstr(low, "brain") || strstr(low, "algocube") || strstr(low, "atom"))
       has_verb = 1;
   }
 
@@ -329,8 +330,8 @@ int cubalc_translate(const char *in, size_t n,
   /* always fold text into matrix SoT (non-verbal: bits from hash, not prose on wire) */
   uint32_t h = hash_text(in, n);
   emit_bits_from_hash(out, out_cap, &o, h, "brain", 32);
-  emit_bits_from_hash(out, out_cap, &o, h ^ 0xC0BEu, "titan", 16);
-  emit_bits_from_hash(out, out_cap, &o, h ^ 0xC1A4u, "clanker", 16);
+  emit_bits_from_hash(out, out_cap, &o, h ^ 0xC0BEu, "peer0", 16);
+  emit_bits_from_hash(out, out_cap, &o, h ^ 0xC1A4u, "peer1", 16);
   emit_decide_tail(out, out_cap, &o);
   return 0;
 }

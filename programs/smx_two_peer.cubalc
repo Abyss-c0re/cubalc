@@ -1,0 +1,37 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Board view of two-peer SMX talk (abstract roles — no device names)
+GENESIS "NEXUS_COORD v1 | from=smx_two_peer | type=peer_talk | hold_flash=1 | share=smx |"
+
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+CUBE bus   ROLE atom PROTON 1
+
+PLUG peer0 bus
+PLUG peer1 bus
+
+// Distinct IO patterns before exchange
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 6 1
+SETBIT peer0 8 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 7 1
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE bus 1
+FLOW 4
+DECIDE peer0
+DECIDE peer1
+
+PRINT "smx_board" CUBES UNITY DIGIT(peer0) DIGIT(peer1) SET(peer0) SET(peer1) COMPAT(peer0,peer1)
+ASSERT CUBES >= 3
+ASSERT SET(peer0) >= 1
+ASSERT SET(peer1) >= 1
+ASSERT COMPAT(peer0,peer1) >= 0

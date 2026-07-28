@@ -29,7 +29,9 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP"
-#define CUBALC_LANG_VERSION "1.2.0-c3"
+#define CUBALC_LANG_VERSION "1.4.1-c3"
+/* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
+#define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
 #define CUBALC_MAX_HEAP     256
 
@@ -53,12 +55,15 @@
 #define CUBALC_LAW_SHARE_MATRIX     7
 #define CUBALC_LAW_DEVICES_FREE     8
 #define CUBALC_LAW_ONE_COMMANDER    9
-#define CUBALC_LAW_COUNT            10
+/* Law of Manifestation: peers manifest only by State Matrix SMX exchange */
+#define CUBALC_LAW_MANIFEST_SMX     10
+#define CUBALC_LAW_COUNT            11
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
-  "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd"
+  "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
+  "manifest_smx"
 };
 
 static const char *const CUBALC_DIGIT_TAG[10] = {

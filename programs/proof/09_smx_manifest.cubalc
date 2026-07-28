@@ -1,0 +1,29 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=manifest_smx | hold_flash=1 |"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+PLUG a b
+
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT a 2 1
+SETBIT b 10 1
+SETBIT b 11 1
+
+SMX TALK a b
+ASSERT SMX_OK == 1
+ASSERT SET(b) >= 3
+
+SMX TALK b a
+ASSERT SMX_OK == 1
+ASSERT SET(a) >= 3
+
+SMX SEAL a b "state/test_suite/smx_proof.cblc"
+ASSERT SMX_N > 64
+
+PRINT "smx_proof" SMX_OK SMX_TALKS SET(a) SET(b) COMPAT(a,b)
+ASSERT CUBES == 2

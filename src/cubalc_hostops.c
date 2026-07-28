@@ -26,15 +26,37 @@ static int url_allowed(const char *url) {
   return 0;
 }
 
+static int base_in_allowlist(const char *base, const char *list) {
+  /* colon-separated basenames, e.g. "nanobot:extra:tool" */
+  if (!base || !list || !list[0]) return 0;
+  const char *p = list;
+  size_t bl = strlen(base);
+  while (*p) {
+    while (*p == ':' || *p == ',' || *p == ' ') p++;
+    if (!*p) break;
+    const char *start = p;
+    while (*p && *p != ':' && *p != ',' && *p != ' ') p++;
+    size_t n = (size_t)(p - start);
+    if (n == bl && strncmp(start, base, bl) == 0) return 1;
+  }
+  return 0;
+}
+
 static int bin_allowed(const char *bin) {
   if (!bin || !bin[0]) return 0;
   const char *base = strrchr(bin, '/');
   base = base ? base + 1 : bin;
+  /* core hive tools only — extend via CUBALC_SPAWN_ALLOW (no device hardcode) */
   if (strcmp(base, "nanobot") == 0) return 1;
   if (strcmp(base, "cubalc") == 0) return 1;
-  if (strcmp(base, "curl") == 0) return 1; /* only used internally via our http */
-  /* absolute path under home Dev or /usr */
-  if (bin[0] == '/' && (strstr(bin, "/nanobot") || strstr(bin, "/cubalc"))) return 1;
+  if (strcmp(base, "curl") == 0) return 1; /* internal HTTP helper */
+  const char *extra = getenv("CUBALC_SPAWN_ALLOW");
+  if (base_in_allowlist(base, extra)) return 1;
+  /* absolute path only if basename already allowed */
+  if (bin[0] == '/' &&
+      (strcmp(base, "nanobot") == 0 || strcmp(base, "cubalc") == 0 ||
+       strcmp(base, "curl") == 0 || base_in_allowlist(base, extra)))
+    return 1;
   return 0;
 }
 
@@ -141,15 +163,36 @@ int cubalc_host_http(const char *method, const char *url, const char *body,
           ? "120" : "15";
       const char *envt = getenv("CUBALC_HTTP_TIMEOUT");
       if (envt && envt[0]) tmax = envt;
-      if (body && body[0] && (strcmp(m, "POST") == 0 || strcmp(m, "PUT") == 0)) {
-        execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-               "-H", "Content-Type: application/json",
-               "-d", body, "-w", "\n__HTTP_CODE__%{http_code}",
-               url, (char *)NULL);
-      } else {
-        execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-               "-w", "\n__HTTP_CODE__%{http_code}",
-               url, (char *)NULL);
+      {
+        /* optional peer token for nanobot SMX/braincube (localhost allowlist only) */
+        const char *pt = getenv("NANOBOT_PEER_TOKEN");
+        if (!pt || !pt[0]) pt = getenv("CUBALC_PEER_TOKEN");
+        char auth[320];
+        auth[0] = 0;
+        if (pt && pt[0] && url_allowed(url))
+          snprintf(auth, sizeof auth, "X-Nanobot-Peer-Token: %s", pt);
+        if (body && body[0] && (strcmp(m, "POST") == 0 || strcmp(m, "PUT") == 0)) {
+          if (auth[0])
+            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+                   "-H", "Content-Type: application/json",
+                   "-H", auth, "-d", body,
+                   "-w", "\n__HTTP_CODE__%{http_code}",
+                   url, (char *)NULL);
+          else
+            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+                   "-H", "Content-Type: application/json",
+                   "-d", body, "-w", "\n__HTTP_CODE__%{http_code}",
+                   url, (char *)NULL);
+        } else {
+          if (auth[0])
+            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+                   "-H", auth, "-w", "\n__HTTP_CODE__%{http_code}",
+                   url, (char *)NULL);
+          else
+            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+                   "-w", "\n__HTTP_CODE__%{http_code}",
+                   url, (char *)NULL);
+        }
       }
     }
     _exit(127);
@@ -261,36 +304,63 @@ int cubalc_host_json_get(const char *json, const char *key, cubalc_host_result *
     if (*p != ':') continue;
     p++;
     while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
-    if (*p != '"') continue;
-    p++;
-    size_t k = 0;
     char tmp[CUBALC_HOST_STR_MAX];
-    while (*p && k + 1 < sizeof tmp) {
-      if (*p == '"') break;
-      if (*p == '\\' && p[1]) {
-        p++;
-        if (*p == 'n') { tmp[k++] = '\n'; p++; continue; }
-        if (*p == 't') { tmp[k++] = '\t'; p++; continue; }
-        if (*p == 'r') { p++; continue; }
-        if (*p == 'u') {
+    size_t k = 0;
+    tmp[0] = 0;
+    if (*p == '"') {
+      /* string value */
+      p++;
+      while (*p && k + 1 < sizeof tmp) {
+        if (*p == '"') break;
+        if (*p == '\\' && p[1]) {
           p++;
-          for (int i = 0; i < 4 && isxdigit((unsigned char)*p); i++) p++;
-          tmp[k++] = '?';
+          if (*p == 'n') { tmp[k++] = '\n'; p++; continue; }
+          if (*p == 't') { tmp[k++] = '\t'; p++; continue; }
+          if (*p == 'r') { p++; continue; }
+          if (*p == 'u') {
+            p++;
+            for (int i = 0; i < 4 && isxdigit((unsigned char)*p); i++) p++;
+            tmp[k++] = '?';
+            continue;
+          }
+          tmp[k++] = *p++;
           continue;
         }
         tmp[k++] = *p++;
-        continue;
       }
-      tmp[k++] = *p++;
+      tmp[k] = 0;
+      if (*p == '"') p++;
+    } else if (*p == '-' || isdigit((unsigned char)*p)) {
+      /* number → string so SYS NUM / SETDIGIT can fold peer digits */
+      if (*p == '-') tmp[k++] = *p++;
+      while (*p && k + 1 < sizeof tmp &&
+             (isdigit((unsigned char)*p) || *p == '.' || *p == 'e' || *p == 'E' ||
+              *p == '+' || *p == '-')) {
+        tmp[k++] = *p++;
+      }
+      tmp[k] = 0;
+    } else if (strncmp(p, "true", 4) == 0) {
+      snprintf(tmp, sizeof tmp, "1");
+      k = 1;
+      p += 4;
+    } else if (strncmp(p, "false", 5) == 0) {
+      snprintf(tmp, sizeof tmp, "0");
+      k = 1;
+      p += 5;
+    } else if (strncmp(p, "null", 4) == 0) {
+      tmp[0] = 0;
+      k = 0;
+      p += 4;
+    } else {
+      continue;
     }
-    tmp[k] = 0;
     size_t nz = 0;
     for (size_t i = 0; i < k; i++) if ((unsigned char)tmp[i] > ' ') nz++;
-    if (nz) {
+    if (nz || k == 0) {
+      /* last match wins when key repeats */
       snprintf(best, sizeof best, "%s", tmp);
       any = 1;
     }
-    if (*p == '"') p++;
   }
   if (!any) {
     snprintf(r->err, sizeof r->err, "json: no field %s", key);

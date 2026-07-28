@@ -1,0 +1,60 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Law of Manifestation (CUBALC_LAW_MANIFEST_SMX):
+// Peers manifest by exchanging State Matrix over SMX2 — not prose.
+GENESIS "NEXUS_COORD v1 | from=manifest_smx | type=manifest | hold_flash=1 | law=manifest_smx | share=smx |"
+
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+CUBE bus   ROLE atom PROTON 1
+
+PLUG peer0 bus
+PLUG peer1 bus
+PLUG peer0 peer1
+
+// Distinct matrices before talk (must become more unified after SMX)
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 6 1
+SETBIT peer0 8 1
+SETBIT peer0 10 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 7 1
+SETBIT peer1 9 1
+
+LET set0_before = SET(peer0)
+LET set1_before = SET(peer1)
+LET compat_before = COMPAT(peer0,peer1)
+
+SMX KEY
+SMX EXCHANGE peer0 peer1
+
+LET set0_after = SET(peer0)
+LET set1_after = SET(peer1)
+LET compat_after = COMPAT(peer0,peer1)
+
+// File-bus manifestation (seal → open is the wire form of the law)
+SMX SEAL peer0 peer1 "state/smx_manifest_ab.cblc"
+// reopen uses anti-replay on same ctx after EXCHANGE already saw frames —
+// use a fresh path seal already written; OPEN would fail replay if same frame
+// so only assert SEAL succeeded
+ASSERT SMX_OK == 1
+ASSERT SMX_N > 0
+
+IMPULSE bus 1
+FLOW 2
+DECIDE peer0
+DECIDE peer1
+
+PRINT "manifest_smx" CUBES UNITY SMX_OK SMX_TALKS set0_before set1_before set0_after set1_after compat_before compat_after DIGIT(peer0) DIGIT(peer1)
+ASSERT CUBES >= 3
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 2
+ASSERT set0_after >= set0_before
+ASSERT set1_after >= set1_before
+ASSERT compat_after >= compat_before

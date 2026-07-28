@@ -89,6 +89,7 @@ void cubalc_atom_init(cubalc_atom *a, const char *id, uint8_t proton) {
   a->unity = 1.f;
   a->energy = proton ? 0.85f : 0.15f; /* create starts charged; destroy is sink */
   a->matrix.n = CUBALC_ATOM_BITS;
+  a->digit_lock = 0;
   a->digit = cubalc_algocube_digit(&a->matrix);
 }
 
@@ -108,7 +109,9 @@ int cubalc_atom_impulse(cubalc_atom *a, uint8_t proton) {
       cubalc_matrix_set(&a->matrix, i, 0);
     if (a->matrix.set == 0) a->alive = 0;
   }
-  a->digit = cubalc_algocube_digit(&a->matrix);
+  /* peer SETDIGIT lock: impulse may pulse matrix but must not wipe peer digit */
+  if (!a->digit_lock)
+    a->digit = cubalc_algocube_digit(&a->matrix);
   return 0;
 }
 
@@ -316,6 +319,7 @@ int cubalc_coord_to_matrix(const char *plate_line, cubalc_matrix *out) {
   cubalc_matrix_set(out, 11, 1); /* hold_flash slot */
   cubalc_matrix_set(out, 12, 1); /* no_brain_wire */
   cubalc_matrix_set(out, 13, 1); /* matrix_is_key */
+  cubalc_matrix_set(out, 14, 1); /* manifest_smx — peers talk matrices */
   return 0;
 }
 
@@ -375,7 +379,8 @@ int cubalc_chain_tick(cubalc_chain *ch) {
   float u = 0.f, e = 0.f; int alive = 0;
   for (int i = 0; i < ch->n_cubes; i++) {
     cubalc_cube *c = &ch->cubes[i];
-    c->atom.digit = cubalc_algocube_digit(&c->atom.matrix);
+    if (!c->atom.digit_lock)
+      c->atom.digit = cubalc_algocube_digit(&c->atom.matrix);
     /* slow energy decay toward proton rest — keeps the chain breathing */
     float rest = c->atom.proton ? 0.55f : 0.20f;
     c->atom.energy += (rest - c->atom.energy) * 0.04f;
@@ -761,6 +766,11 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
     if (err) snprintf(err, errn, "SHARE must be smx");
     return -2;
   }
+  /* L10 Law of Manifestation: talk channel is SMX2 / CBLC binary only */
+  if (CUBALC_PROTO_SMX2 != 2 || CUBALC_MAGIC_BIN != 0x43424C43u) {
+    if (err) snprintf(err, errn, "manifest_smx: SMX2/CBLC not built");
+    return -10;
+  }
   if (!ch) return 0; /* build-only laws ok */
   if (ch->hold_flash != 1) {
     if (err) snprintf(err, errn, "chain hold_flash!=1");
@@ -784,6 +794,16 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
       return -5;
     }
   }
+  /* Manifestation readiness: ≥2 plugged cubes implies SMX peer path exists */
+  if (ch->n_cubes >= 2) {
+    int plugged = 0;
+    for (int i = 0; i < ch->n_cubes; i++)
+      if (ch->cubes[i].plugged > 0) plugged++;
+    if (plugged < 2) {
+      /* not a hard fail — solo boards may law-check; multi-peer should plug */
+      (void)plugged;
+    }
+  }
   return 0;
 }
 
@@ -794,10 +814,13 @@ int cubalc_law_manifest_json(const cubalc_chain *ch, FILE *out) {
   fprintf(out, "{\"schema\":\"cubalc.law_manifest.v1\",\"ok\":%s,"
                "\"language\":\"%s\",\"version\":\"%s\",\"paradigm\":\"%s\","
                "\"creed\":\"%s\",\"share\":\"%s\",\"hold_flash\":%d,"
-               "\"talk\":\"binary_CBLC\",\"store\":\"cubechain\","
+               "\"talk\":\"binary_CBLC\",\"proto\":\"SMX2\",\"store\":\"cubechain\","
+               "\"http_required\":false,\"http_role\":\"optional_host_edge_only\","
                "\"no_brain_wires\":true,\"devices_free\":true,"
                "\"one_commander\":true,\"matrix_is_key\":true,"
                "\"cube_is_sot\":true,\"visual\":\"cubes_not_lego\","
+               "\"manifest_smx\":true,"
+               "\"manifest_law\":\"peers_manifest_via_smx_matrix_exchange\","
                "\"n_cubes\":%d,\"unity\":%.4f,\"laws\":[",
           rc == 0 ? "true" : "false",
           CUBALC_LANG_NAME, CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM,

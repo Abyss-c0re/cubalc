@@ -16,7 +16,7 @@ ifeq ($(USE_OPENCL),1)
   LDFLAGS += -lOpenCL
 endif
 
-.PHONY: all clean test law install human demo
+.PHONY: all clean test law install human demo peers oversee
 
 all: out/cubalc
 
@@ -28,12 +28,26 @@ clean:
 	rm -f out/cubalc
 	rm -rf state
 
+# Core tests: no HTTP required
 test: all
 	@bash tests/lang_suite.sh
 	./out/cubalc smx-selftest
+	./out/cubalc smx-exchange
+	./out/cubalc smx-bus prove
+	./out/cubalc smx-bus prove-tcp 17733
+	./out/cubalc run programs/proof/08_peer_fold.cubalc
+	./out/cubalc run programs/proof/09_smx_manifest.cubalc
+	./out/cubalc run programs/manifest_smx.cubalc
+	./out/cubalc run programs/harmonize_hive.cubalc
+	CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 ./out/cubalc peers
+	./out/cubalc law
 
 law: all
 	./out/cubalc law
+
+# Host adapter: optional peer env → peer_fold.cubalc (not language hardcode)
+peers oversee: all
+	@bash scripts/peer_fold.sh
 
 # Human-friendly real cubes (optional)
 human: all

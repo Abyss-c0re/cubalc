@@ -61,6 +61,19 @@ int  cubalc_cube_talk_secure(cubalc_chain *ch, cubalc_smx_ctx *ctx, int from, in
 int  cubalc_smx_write_frame(const char *path, const uint8_t *frame, size_t n);
 int  cubalc_smx_read_frame(const char *path, uint8_t *out, size_t cap, size_t *n_out);
 
+/* raw binary bus (no HTTP): u32le length-prefix + SMX2 frame */
+int  cubalc_smx_send_frame(int fd, const uint8_t *frame, size_t n);
+int  cubalc_smx_recv_frame(int fd, uint8_t *out, size_t cap, size_t *n_out);
+
+/* AF_UNIX SOCK_STREAM path bus (local, no HTTP) */
+int  cubalc_smx_unix_listen(const char *sock_path, int backlog);
+int  cubalc_smx_unix_connect(const char *sock_path);
+
+/* AF_INET TCP bus — same frame wire, works across devices on LAN/WAN
+ * (HMAC SMX2 key must be shared; no HTTP). host NULL/"0.0.0.0" = all ifaces. */
+int  cubalc_smx_tcp_listen(const char *host, int port, int backlog);
+int  cubalc_smx_tcp_connect(const char *host, int port);
+
 #ifdef __cplusplus
 }
 #endif

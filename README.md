@@ -15,8 +15,9 @@
 ## Why agents use CubalC
 
 - **Place · plug · pulse · flow · look** — small grammar, stable ops
-- **`SYS` host ops** — READ/WRITE/ENV/HTTP/SPAWN/CHAT/JOIN/JSON (allowlisted)
+- **`SYS` host ops** — READ/WRITE/ENV/SPAWN/JOIN/JSON (allowlisted); HTTP optional edge only
 - **State Matrix is SoT** — bits agents can verify, not free text
+- **SMX2 peer talk** — no HTTP required (in-process, file bus, AF_UNIX)
 - **HOLD_FLASH** — never auto-flash hardware
 - **JSON + ASCII boards** — easy for tools to parse
 
