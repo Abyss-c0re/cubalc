@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>CubalC · human cubes (optional)</title>
+<title>CubalC · per-object render</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; font:14px/1.4 ui-monospace,monospace; background:#0a0c10; color:#9fe8ff; }
@@ -17,8 +17,8 @@
 </head>
 <body>
 <header>
-  <h1>CubalC cubes</h1>
-  <span class="note">optional human visual · agents use JSON metrics</span>
+  <h1>CubalC · per-object</h1>
+  <span class="note">LOD 0 cull · 1 point · 2 box · 3 full · cost-sorted</span>
   <label>Load viz JSON<input type="file" id="file" accept="application/json,.json"/></label>
   <button id="spin">spin</button>
   <span id="hud">drop state/cubalc_viz_frame.json</span>
@@ -38,7 +38,6 @@ document.getElementById('file').onchange = async (e) => {
 };
 document.getElementById('spin').onclick = () => spinning = !spinning;
 
-// Try fetch local default (may fail if opened as file://)
 fetch('../state/cubalc_viz_frame.json').then(r=>r.json()).then(j=>{ frame=j; document.getElementById('hud').textContent=j.hud||''; }).catch(()=>{});
 
 function project(x,y,z, yaw){
@@ -48,46 +47,117 @@ function project(x,y,z, yaw){
   const W=canvas.width, H=canvas.height;
   return [W/2 + x2*f*W*0.12, H/2 - y*f*H*0.18, z2];
 }
-function drawCube(cx,cy,cz,s, rgba, yaw, label, energy){
-  const h=s*0.5;
+
+/* LOD1: single impostor point — cheapest */
+function drawPoint(cx,cy,cz, rgba, yaw, glow){
+  const p = project(cx, cy, cz, yaw);
+  const [r,g,b] = rgba||[80,220,200,220];
+  const rad = (3 + 6*(glow||0.2)) * devicePixelRatio;
+  ctx.beginPath();
+  ctx.arc(p[0], p[1], rad, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(${r},${g},${b},${0.5+0.5*(glow||0.2)})`;
+  ctx.fill();
+}
+
+/* LOD2: solid box shell only */
+function drawBox(cx,cy,cz,s, rgba, yaw, energy){
+  const h=(s||1)*0.5;
   const corners=[[-h,-h,-h],[h,-h,-h],[h,h,-h],[-h,h,-h],[-h,-h,h],[h,-h,h],[h,h,h],[-h,h,h]];
   const P=corners.map(([x,y,z])=>project(cx+x, cy+y, cz+z, yaw));
   const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
   const [r,g,b,a]=rgba||[80,220,200,220];
   ctx.strokeStyle=`rgba(${r},${g},${b},${(a||220)/255})`;
-  ctx.lineWidth=2*devicePixelRatio;
+  ctx.lineWidth=1.5*devicePixelRatio;
   edges.forEach(([i,j])=>{
     ctx.beginPath(); ctx.moveTo(P[i][0],P[i][1]); ctx.lineTo(P[j][0],P[j][1]); ctx.stroke();
   });
-  // face fill (frontish)
   const face=[0,1,2,3];
   ctx.beginPath();
   face.forEach((i,k)=>{ const p=P[i]; k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); });
   ctx.closePath();
-  ctx.fillStyle=`rgba(${r},${g},${b},${0.15+0.35*energy})`;
+  ctx.fillStyle=`rgba(${r},${g},${b},${0.12+0.3*(energy||0.3)})`;
   ctx.fill();
-  const c=P[0];
-  ctx.fillStyle='#c8fff0';
-  ctx.font=`${12*devicePixelRatio}px monospace`;
-  ctx.fillText(label||'', c[0]-20, c[1]-8);
 }
+
+/* LOD3: box + face fill + digit/label + optional m16 glyph */
+function drawFull(cx,cy,cz,s, rgba, yaw, label, energy, digit, m16){
+  drawBox(cx,cy,cz,s, rgba, yaw, energy);
+  const p = project(cx, cy+ (s||1)*0.55, cz, yaw);
+  const [r,g,b]=rgba||[80,220,200,220];
+  ctx.fillStyle=`rgba(${r},${g},${b},0.95)`;
+  ctx.font=`${11*devicePixelRatio}px monospace`;
+  const dig = (digit!=null) ? String(digit) : '';
+  ctx.fillText((label||'') + (dig!==''?' ·'+dig:''), p[0]-24*devicePixelRatio, p[1]);
+  if (m16 && energy > 0.4) {
+    ctx.fillStyle='rgba(160,220,255,0.55)';
+    ctx.font=`${8*devicePixelRatio}px monospace`;
+    ctx.fillText(String(m16).slice(0,8), p[0]-24*devicePixelRatio, p[1]+12*devicePixelRatio);
+  }
+}
+
+function edgeKey(e, cubes){
+  if (typeof e.fi === 'number' && typeof e.ti === 'number') return [e.fi, e.ti];
+  let a=-1,b=-1;
+  for (let i=0;i<cubes.length;i++){
+    if (cubes[i].id===e.from) a=i;
+    if (cubes[i].id===e.to) b=i;
+  }
+  return [a,b];
+}
+
 function loop(){
   requestAnimationFrame(loop);
   if (spinning) t+=0.012;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if (!frame||!frame.cubes) {
     ctx.fillStyle='#3a6070'; ctx.font=`${14*devicePixelRatio}px monospace`;
-    ctx.fillText('Load cubalc_viz_frame.json — optional human view', 40, 80);
+    ctx.fillText('Load cubalc_viz_frame.json — per-object LOD render', 40, 80);
     return;
   }
-  const cubes=[...frame.cubes].sort((a,b)=>(a.z||0)-(b.z||0));
-  cubes.forEach((c,i)=>{
-    drawCube(c.x||(i-cubes.length/2)*1.4, c.y||0, c.z||0, c.s||1,
-      c.rgba||[80,220,200,220], t + (c.yaw||0)*Math.PI/180, c.id||c.label, c.energy||0.5);
-  });
+  const cubes = frame.cubes;
+  /* Draw low-pri / far first; high pri last. Skip draw:0 (LOD0 cull). */
+  const order = cubes
+    .map((c,i)=>({c,i}))
+    .filter(({c}) => (c.draw !== 0) && ((c.lod|0) > 0 || c.draw === undefined))
+    .sort((A,B)=>{
+      const za=(A.c.z||0)-(B.c.z||0);
+      if (Math.abs(za)>1e-4) return za;
+      return (A.c.pri|0)-(B.c.pri|0);
+    });
+
+  /* Edges first (under cubes), index-based O(edges) */
   if (frame.edges){
-    ctx.strokeStyle='rgba(100,200,255,0.35)';
-    // simple: skip world edges without index map
+    for (const e of frame.edges){
+      if ((e.lod|0) === 0) continue;
+      const [fi,ti] = edgeKey(e, cubes);
+      if (fi<0||ti<0||!cubes[fi]||!cubes[ti]) continue;
+      if (cubes[fi].draw===0 || cubes[ti].draw===0) continue;
+      const A=cubes[fi], B=cubes[ti];
+      const pa=project(A.x||0,A.y||0,A.z||0, t+(A.yaw||0)*Math.PI/180);
+      const pb=project(B.x||0,B.y||0,B.z||0, t+(B.yaw||0)*Math.PI/180);
+      const en=e.energy||0.3;
+      ctx.strokeStyle=`rgba(100,200,255,${0.15+0.45*en})`;
+      ctx.lineWidth=((e.lod|0)>=3?2:1)*devicePixelRatio;
+      ctx.beginPath(); ctx.moveTo(pa[0],pa[1]); ctx.lineTo(pb[0],pb[1]); ctx.stroke();
+    }
+  }
+
+  for (const {c,i} of order){
+    const lod = (c.lod!=null) ? (c.lod|0) : 3;
+    const yaw = t + (c.yaw||0)*Math.PI/180;
+    const x=c.x!=null?c.x:(i-cubes.length/2)*1.4, y=c.y||0, z=c.z||0;
+    const rgba=c.rgba||[80,220,200,220];
+    const glow=c.glow!=null?c.glow:(c.energy||0.3);
+    if (lod <= 1) drawPoint(x,y,z, rgba, yaw, glow);
+    else if (lod === 2) drawBox(x,y,z, c.s||1, rgba, yaw, c.energy||0.3);
+    else drawFull(x,y,z, c.s||1, rgba, yaw, c.id||c.label, c.energy||0.5, c.digit, c.m16||c.matrix16);
+  }
+
+  const R = frame.render||{};
+  if (R.per_object){
+    ctx.fillStyle='rgba(100,160,180,0.7)';
+    ctx.font=`${10*devicePixelRatio}px monospace`;
+    ctx.fillText(`per_object draw=${R.draw_n??order.length} cost=${R.cost??'?'} compact=${R.compact?'1':'0'}`, 12*devicePixelRatio, 20*devicePixelRatio);
   }
 }
 loop();

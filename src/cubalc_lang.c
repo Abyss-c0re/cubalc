@@ -1932,18 +1932,13 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     char path[512];
     snprintf(path,sizeof path,"%s/cubalc_viz_frame.json", st&&st[0]?st:"state");
     cubalc_chain_write_viz(&vm.ch, path);
-    /* also publish to prophecy_cube state for LOVR (machine UI) */
-    const char *root=getenv("PROPHECY_CUBE_ROOT");
+    /* optional secondary publish path (env only — no baked app layout) */
+    const char *root=getenv("CUBALC_VIZ_ROOT");
+    if (!root || !root[0]) root=getenv("PROPHECY_CUBE_ROOT"); /* legacy env alias */
     if (root && root[0]) {
       snprintf(path,sizeof path,"%s/state/cubalc_viz_frame.json", root);
       cubalc_chain_write_viz(&vm.ch, path);
       snprintf(path,sizeof path,"%s/state/viz_frame.json", root);
-      cubalc_chain_write_viz(&vm.ch, path);
-    } else {
-      /* sibling ../state when running from cubalc/ */
-      snprintf(path,sizeof path,"../state/cubalc_viz_frame.json");
-      cubalc_chain_write_viz(&vm.ch, path);
-      snprintf(path,sizeof path,"../state/viz_frame.json");
       cubalc_chain_write_viz(&vm.ch, path);
     }
   }

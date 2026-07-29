@@ -40,7 +40,7 @@ typedef struct cubalc_port {
 typedef struct cubalc_cube {
   char     id[CUBALC_ID_LEN];
   char     label[CUBALC_ID_LEN];
-  char     role[24];    /* os aspect: kernel|llama|quest|wivrn|kinect|coord|host|… */
+  char     role[24];    /* abstract aspect: kernel|model|guest|link|sense|coord|host|hive|… */
   float    x, y, z, s;
   float    yaw, pitch, roll; /* degrees — spin of the cube (Kernel Matrix face) */
   uint8_t  r, g, b, a;

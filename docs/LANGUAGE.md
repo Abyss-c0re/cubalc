@@ -3,6 +3,21 @@
 **CubalC does not need HTTP.** Core talk is SMX2 / CBLC / AF_UNIX / file bus.  
 `SYS HTTP` is an optional host edge only (allowlisted); never required for language, law, or manifestation.
 
+**Language stays abstract.** No host product, device brand, or app name in core, SoT frames, or sample law programs. Roles are way planes (`kernel_sot`, `guest_way`, `link_way`, `sense_way`, `model_way`, `hive`…). Concrete hosts bind via env only (`CUBALC_STATE`, `CUBALC_VIZ_TARGET`, peer inject, spawn allow).
+
+## Viz · per-object render
+
+`cube.viz_frame.v1` is a **render plan**, not a product hook. Emphasize **per object**:
+
+| field | meaning |
+|-------|---------|
+| `render.per_object` | always true — batch/cull per cube |
+| `draw` / `lod` / `cost` / `pri` | cull · 1 point · 2 box · 3 full · relative cost · sort key |
+| `glow` / `m16` | energy tint · compact matrix nib |
+| `edges[].fi/ti` | index edges (O(1) draw; ids optional) |
+
+Env: `CUBALC_VIZ_COMPACT=1` (no full matrix / no edge ids) · `CUBALC_VIZ_FULL=1` (force full matrix) · `CUBALC_SELF_DEV_VIZ` · `CUBALC_REALITY_BLUR` · optional `CUBALC_VIZ_TARGET`/`SOURCE` (never required brands).
+
 ## Play forms
 
 | form | meaning |

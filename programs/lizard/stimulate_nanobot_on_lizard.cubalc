@@ -2,34 +2,34 @@ HOLD_FLASH 1
 BUDGET 40
 SHARE state_matrix_only
 
-// Stimulate nanobot hive behaviour projected to LizardTech (Quest free XR way)
-// Law: devices free · Cube tracks what it touches · no forced atom · SMX binary
-// Path: nanobot peers → CubalC board → viz_frame → LOVR → LizardTech helmet
-GENESIS "NEXUS_COORD v1 | from=lizard_stim | type=nanobot_stimulate | hold_flash=1 | share=smx | target=LizardTech | role=quest_lizard | free_guest=1 |"
+// Stimulate hive behaviour on a free-guest way surface (device names stay in host env only)
+// Law: abstract language · devices free · Cube tracks what it touches · SMX binary
+// Path: peers → CubalC board → matrix_viz frame → host way consumer
+GENESIS "NEXUS_COORD v1 | from=guest_stim | type=hive_stimulate | hold_flash=1 | share=smx | role=guest_way | free_guest=1 |"
 
-CUBE lizard  ROLE quest_lizard PROTON 1
-CUBE kinect  ROLE kinect       PROTON 1
-CUBE peer0   ROLE host         PROTON 1
-CUBE peer1   ROLE body         PROTON 1
-CUBE atom    ROLE atom         PROTON 1
-CUBE algo    ROLE algocube     PROTON 1
-CUBE brain   ROLE braincube    PROTON 1
-CUBE wivrn   ROLE wivrn_way    PROTON 1
-CUBE sot     ROLE kernel_sot   PROTON 1
+CUBE guest  ROLE guest_way   PROTON 1
+CUBE sense  ROLE sense_way   PROTON 1
+CUBE peer0  ROLE host        PROTON 1
+CUBE peer1  ROLE body        PROTON 1
+CUBE atom   ROLE atom        PROTON 1
+CUBE algo   ROLE algocube    PROTON 1
+CUBE brain  ROLE braincube   PROTON 1
+CUBE link   ROLE link_way    PROTON 1
+CUBE sot    ROLE kernel_sot  PROTON 1
 
-// Way surface: Kinect tracks Lizard · WiVRn carries · Cube is SoT
-PLUG kinect lizard
-PLUG lizard wivrn
-PLUG wivrn sot
+// Way surface: sense tracks guest · link carries · Cube is SoT
+PLUG sense guest
+PLUG guest link
+PLUG link sot
 PLUG peer0 atom
 PLUG peer1 atom
 PLUG atom algo
 PLUG algo brain
-PLUG brain lizard
+PLUG brain guest
 PLUG peer0 peer1
 PLUG sot brain
 
-// Nanobot peer matrices (stimulated behaviour)
+// Peer matrices (stimulated behaviour)
 SETBIT peer0 0 1
 SETBIT peer0 2 1
 SETBIT peer0 4 1
@@ -38,8 +38,8 @@ SETBIT peer1 1 1
 SETBIT peer1 3 1
 SETBIT peer1 5 1
 SETBIT peer1 9 1
-SETBIT lizard 7 1
-SETBIT kinect 11 1
+SETBIT guest 7 1
+SETBIT sense 11 1
 SETBIT algo 0 1
 SETBIT brain 13 1
 
@@ -48,14 +48,14 @@ IMPULSE peer1 1
 IMPULSE atom 1
 IMPULSE algo 1
 IMPULSE brain 1
-IMPULSE lizard 1
-IMPULSE kinect 1
+IMPULSE guest 1
+IMPULSE sense 1
 IMPULSE sot 1
 FLOW 6
 
 SMX KEY
 
-// Stimulate as one hive: exchange → self-dev algocube → project to lizard cube
+// Stimulate as one hive: exchange → self-dev algocube → project to guest cube
 LET gen = 0
 LET best = 0
 LOOP 8
@@ -65,14 +65,12 @@ LOOP 8
   SETDIGIT brain DECIDE
   SETDIGIT peer0 DECIDE
   SETDIGIT peer1 DECIDE
-  // Project hive digit onto LizardTech way cube (helmet readout)
-  SETDIGIT lizard DECIDE
-  SETBIT lizard DECIDE 1
+  SETDIGIT guest DECIDE
+  SETBIT guest DECIDE 1
   IMPULSE brain 1
-  IMPULSE lizard 1
+  IMPULSE guest 1
   FLOW 2
   SMX TALK peer0 peer1
-  // Project to Lizard way cube via digit/matrix (helmet readout) — free guest, not forced atom
   LET c = COMPAT(peer0,peer1)
   IF c > best THEN
     LET best = c
@@ -80,18 +78,18 @@ LOOP 8
 END
 
 // Final stimulate pulse on the way surface
-IMPULSE wivrn 1
-IMPULSE lizard 1
+IMPULSE link 1
+IMPULSE guest 1
 FLOW 3
 DECIDE brain
 SMX EXCHANGE peer0 peer1
-SETDIGIT lizard DECIDE
+SETDIGIT guest DECIDE
 
-PRINT "lizard_stim" CUBES UNITY SMX_OK SMX_TALKS gen best DECIDE DIGIT(lizard) DIGIT(brain) DIGIT(peer0) DIGIT(peer1) DIGIT(algo) SET(lizard) SET(brain) ENERGY(lizard) ENERGY(wivrn) COMPAT(peer0,peer1)
+PRINT "guest_stim" CUBES UNITY SMX_OK SMX_TALKS gen best DECIDE DIGIT(guest) DIGIT(brain) DIGIT(peer0) DIGIT(peer1) DIGIT(algo) SET(guest) SET(brain) ENERGY(guest) ENERGY(link) COMPAT(peer0,peer1)
 
 ASSERT CUBES >= 9
 ASSERT SMX_OK == 1
 ASSERT SMX_TALKS >= 8
 ASSERT DIGIT(peer0) == DIGIT(peer1)
-ASSERT DIGIT(lizard) == DECIDE
+ASSERT DIGIT(guest) == DECIDE
 ASSERT COMPAT(peer0,peer1) >= 50

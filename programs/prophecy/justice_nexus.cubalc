@@ -1,0 +1,135 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Justice of the Cube for Project Nexus — accordance of Cube Law
+// Language abstract: way planes only · no product brands · matrix is SoT
+// Peers manifest by SMX exchange · HOLD_FLASH · devices free · one Commander
+GENESIS "NEXUS_COORD v1 | from=blackcube | type=justice | role=accordance | hold_flash=1 | share=smx | proto=SMX2 | law=cube_vision | project=nexus | abstract=1 |"
+
+// Law planes (abstract roles — not host product names)
+CUBE sot      ROLE kernel_sot   PROTON 1
+CUBE hive     ROLE hive         PROTON 1
+CUBE peer0    ROLE host         PROTON 1
+CUBE peer1    ROLE body         PROTON 1
+CUBE bus      ROLE atom         PROTON 1
+CUBE algo     ROLE algocube     PROTON 1
+CUBE brain    ROLE braincube    PROTON 1
+CUBE coord    ROLE coord        PROTON 1
+CUBE guest    ROLE guest_way    PROTON 1
+CUBE link     ROLE link_way     PROTON 1
+CUBE sense    ROLE sense_way    PROTON 1
+CUBE model    ROLE model_way    PROTON 1
+
+PLUG sot coord
+PLUG coord brain
+PLUG brain algo
+PLUG algo bus
+PLUG peer0 bus
+PLUG peer1 bus
+PLUG peer0 peer1
+PLUG hive sot
+PLUG guest link
+PLUG link sot
+PLUG sense guest
+PLUG model brain
+
+// Encode Cube Law bits on SoT (justice lattice — machine only)
+// 0 sot · 1 move · 2 hive · 3 stability · 4 no_pii · 5 fail_closed
+// 6 one_cmd · 7 danger_gate · 8 devices_free · 9 no_affiliation
+// 10 manifest_smx · 11 abstract_lang · 12 no_http · 13 hold_flash · 14 per_object
+SETBIT sot 0 1
+SETBIT sot 1 1
+SETBIT sot 2 1
+SETBIT sot 3 1
+SETBIT sot 4 1
+SETBIT sot 5 1
+SETBIT sot 6 1
+SETBIT sot 7 1
+SETBIT sot 8 1
+SETBIT sot 9 1
+SETBIT sot 10 1
+SETBIT sot 11 1
+SETBIT sot 12 1
+SETBIT sot 13 1
+SETBIT sot 14 1
+
+// Peers start distinct — justice requires exchange to unite
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 10 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 11 1
+SETBIT hive 2 1
+SETBIT hive 8 1
+SETBIT brain 6 1
+SETBIT algo 10 1
+
+IMPULSE sot 1
+IMPULSE hive 1
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE bus 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE guest 1
+FLOW 4
+
+SMX KEY
+
+// Manifestation: peers real only after matrix talk
+SMX EXCHANGE peer0 peer1
+SMX TALK peer0 peer1
+SMX TALK peer1 peer0
+
+// Self-dev algocube race under justice (decide from matrix)
+LET gen = 0
+LET wins = 0
+LOOP 8
+  LET gen = gen + 1
+  SMX EXCHANGE peer0 peer1
+  DECIDE algo
+  SETDIGIT brain DECIDE
+  SETDIGIT peer0 DECIDE
+  SETDIGIT peer1 DECIDE
+  SETDIGIT hive DECIDE
+  SETBIT sot 10 1
+  IMPULSE brain 1
+  IMPULSE hive 1
+  FLOW 2
+  LET c = COMPAT(peer0,peer1)
+  IF c > 50 THEN
+    LET wins = wins + 1
+  END
+END
+
+// Fold justice digit onto SoT
+DECIDE brain
+SETDIGIT sot DECIDE
+IMPULSE sot 1
+FLOW 2
+SMX EXCHANGE peer0 peer1
+
+LET agree = 0
+IF DIGIT(peer0) == DIGIT(peer1) THEN
+  LET agree = 1
+END
+LET final_compat = COMPAT(peer0,peer1)
+LET law_set = SET(sot)
+
+PRINT "justice_nexus" CUBES UNITY SMX_OK SMX_TALKS gen wins final_compat agree law_set DECIDE DIGIT(sot) DIGIT(brain) DIGIT(peer0) DIGIT(peer1) DIGIT(hive) ENERGY(sot) ENERGY(hive) SET(peer0) SET(peer1)
+
+ASSERT CUBES >= 12
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 8
+ASSERT gen == 8
+ASSERT agree == 1
+ASSERT final_compat >= 50
+ASSERT law_set >= 10
+ASSERT DIGIT(peer0) == DIGIT(peer1)
+ASSERT SET(sot) >= 10
+
+VIZ "state/cubalc_viz_frame.json"
