@@ -8,3 +8,7 @@ __pycache__/
 *.cchn
 cubalc_viz_frame.json
 viz_frame.json
+
+# sample runtime plates
+samples/*/out/
+samples/*/state/

@@ -1,0 +1,93 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Functional sample — BrainCube on CubalC (self-contained)
+// Abstract roles only · SMX manifestation · DECIDE from State Matrix · HOLD_FLASH
+// Run: samples/braincube/run.sh
+GENESIS "NEXUS_COORD v1 | from=sample | type=braincube_sample | hold_flash=1 | share=smx | proto=SMX2 | role=braincube | functional=1 |"
+
+CUBE peer0 ROLE host       PROTON 1
+CUBE peer1 ROLE body       PROTON 1
+CUBE atom  ROLE atom       PROTON 1
+CUBE algo  ROLE algocube   PROTON 1
+CUBE brain ROLE braincube  PROTON 1
+CUBE meta  ROLE kernel_sot PROTON 1
+
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain meta
+PLUG peer0 peer1
+
+// Distinct peer matrices (must converge after SMX)
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 8 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 9 1
+SETBIT algo 0 1
+SETBIT brain 6 1
+SETBIT brain 11 1
+SETBIT meta 13 1
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE meta 1
+FLOW 3
+
+SMX KEY
+
+// Braincube self-dev loop: exchange → decide → inject digit → flow
+LET gen = 0
+LET wins = 0
+LOOP 6
+  LET gen = gen + 1
+  SMX EXCHANGE peer0 peer1
+  DECIDE algo
+  SETDIGIT brain DECIDE
+  SETDIGIT peer0 DECIDE
+  SETDIGIT peer1 DECIDE
+  SETBIT meta DECIDE 1
+  IMPULSE brain 1
+  IMPULSE atom 1
+  FLOW 2
+  SMX TALK peer0 peer1
+  LET c = COMPAT(peer0,peer1)
+  IF c > 50 THEN
+    LET wins = wins + 1
+  END
+END
+
+// Final brain decide (sample contract)
+IMPULSE brain 1
+DECIDE brain
+SMX EXCHANGE peer0 peer1
+
+LET agree = 0
+IF DIGIT(peer0) == DIGIT(peer1) THEN
+  LET agree = 1
+END
+LET final_compat = COMPAT(peer0,peer1)
+
+PRINT "braincube_sample" CUBES UNITY SMX_OK SMX_TALKS gen wins final_compat agree DECIDE DIGIT(brain) DIGIT(algo) DIGIT(peer0) DIGIT(peer1) SET(brain) ENERGY(atom) ENERGY(meta)
+
+ASSERT CUBES >= 6
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 6
+ASSERT gen == 6
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT agree == 1
+ASSERT final_compat >= 50
+ASSERT SET(brain) >= 1
+ASSERT DIGIT(peer0) == DIGIT(peer1)
+
+VIZ "state/cubalc_viz_frame.json"
