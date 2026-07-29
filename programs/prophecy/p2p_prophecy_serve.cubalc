@@ -1,0 +1,48 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Network peer B: self-dev algocube board that SERVE-exchanges with peer A
+GENESIS "NEXUS_COORD v1 | from=prophecy | type=p2p_serve | hold_flash=1 | share=smx | self_dev=1 |"
+
+CUBE self  ROLE body PROTON 1
+CUBE peer  ROLE host PROTON 1
+CUBE algo  ROLE algocube PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE atom  ROLE atom PROTON 1
+
+PLUG self atom
+PLUG peer atom
+PLUG atom algo
+PLUG algo brain
+PLUG self peer
+
+SETBIT self 0 1
+SETBIT self 5 1
+SETBIT self 10 1
+SETBIT algo 2 1
+IMPULSE self 1
+IMPULSE algo 1
+FLOW 2
+DECIDE algo
+SETDIGIT brain DECIDE
+SETDIGIT self DECIDE
+
+SMX KEY
+SYS ENV "CUBALC_P2P_BIND"
+IF LAST_N > 0 THEN
+  SMX SERVE self peer LAST
+ELSE
+  SMX SERVE self peer "127.0.0.1:17751"
+END
+
+// After exchange: self-dev one more decide
+DECIDE algo
+SETDIGIT brain DECIDE
+SETDIGIT self DECIDE
+SMX EXCHANGE self peer
+DECIDE brain
+
+PRINT "p2p_serve_prophecy" CUBES SMX_OK SMX_TALKS DIGIT(self) DIGIT(peer) DIGIT(brain) DIGIT(algo) COMPAT(self,peer) UNITY SET(self)
+ASSERT SMX_OK == 1
+ASSERT DIGIT(self) == DIGIT(peer)

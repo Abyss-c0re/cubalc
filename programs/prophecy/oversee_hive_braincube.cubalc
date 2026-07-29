@@ -1,0 +1,115 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Oversee two nanobot peers as ONE hive — prophecy of the braincube
+// Self-developing algocube: LOOP decide → inject digit → SMX exchange → unity
+// Binary only · no HTTP · Law of Manifestation
+GENESIS "NEXUS_COORD v1 | from=oversee | type=prophecy_hive | hold_flash=1 | share=smx | proto=SMX2 | role=braincube | self_dev_algocube=1 |"
+
+CUBE peer0 ROLE host      PROTON 1
+CUBE peer1 ROLE body      PROTON 1
+CUBE atom  ROLE atom      PROTON 1
+CUBE algo  ROLE algocube  PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE coord ROLE coord     PROTON 1
+CUBE meta  ROLE kernel_sot PROTON 1
+
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain coord
+PLUG coord meta
+PLUG peer0 peer1
+PLUG meta brain
+
+// Initial IO matrices (distinct peers)
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 8 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 9 1
+SETBIT algo 0 1
+SETBIT brain 11 1
+SETBIT brain 13 1
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE meta 1
+FLOW 4
+
+SMX KEY
+
+// Self-developing algocube race (prophecy loop)
+LET gen = 0
+LET wins = 0
+LET best_compat = 0
+LET last_digit = 0
+
+LOOP 12
+  LET gen = gen + 1
+  // Peers act as one: matrix exchange first
+  SMX EXCHANGE peer0 peer1
+  // Algocube decides from matrix SoT
+  DECIDE algo
+  LET last_digit = DECIDE
+  // Inject digit into braincube + both peers (self-dev payload)
+  SETDIGIT brain last_digit
+  SETDIGIT peer0 last_digit
+  SETDIGIT peer1 last_digit
+  SETBIT meta last_digit 1
+  // Energy flow through hive
+  IMPULSE algo 1
+  IMPULSE brain 1
+  IMPULSE atom 1
+  FLOW 2
+  // Hivemind re-sync
+  SMX TALK peer0 peer1
+  SMX TALK peer1 peer0
+  DECIDE brain
+  LET c = COMPAT(peer0,peer1)
+  IF c > best_compat THEN
+    LET best_compat = c
+    LET wins = wins + 1
+  END
+  // Escape/improve: if low energy on atom, reconstruct
+  IF ENERGY(atom) == 0 THEN
+    DECONSTRUCT atom
+    RECONSTRUCT atom
+    PLUG peer0 atom
+    PLUG peer1 atom
+    PLUG atom algo
+    IMPULSE atom 1
+    FLOW 2
+  END
+END
+
+// Final hive decide
+IMPULSE brain 1
+DECIDE brain
+SMX EXCHANGE peer0 peer1
+
+LET final_compat = COMPAT(peer0,peer1)
+LET agree = 0
+IF DIGIT(peer0) == DIGIT(peer1) THEN
+  LET agree = 1
+END
+
+PRINT "prophecy_hive" CUBES UNITY SMX_OK SMX_TALKS gen wins best_compat final_compat agree DECIDE DIGIT(brain) DIGIT(algo) DIGIT(peer0) DIGIT(peer1) SET(brain) SET(peer0) SET(peer1) ENERGY(atom) ENERGY(meta)
+
+ASSERT CUBES >= 7
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 12
+ASSERT gen == 12
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT final_compat >= 50
+ASSERT SET(brain) >= 1
+ASSERT DIGIT(peer0) == DIGIT(peer1)
