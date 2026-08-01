@@ -1,0 +1,16 @@
+# Earth 02 — Atmosphere composition & pressure
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT ATM_N2 == 78
+ASSERT ATM_O2 == 21
+ASSERT ATM_N2 + ATM_O2 + 1 == 100
+ASSERT ATM_KPA == 101
+# partial pressure O2 scale: 21% of 101
+LET pO2 = ATM_KPA * ATM_O2 / 100
+ASSERT pO2 == 21
+CUBE air ROLE atmos PROTON 1
+CUBE ground ROLE earth PROTON 1
+PLUG air ground
+FLOW 2
+ASSERT FLOWED(ground) == 1
+PRINT "earth02" pO2 ATM_N2

@@ -1,0 +1,25 @@
+# Earth 08 — Carbon cycle cubes (atmosphere ↔ biosphere ↔ ocean)
+HOLD_FLASH 1
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=school | domain=carbon |"
+CUBE atm ROLE C PROTON 1
+CUBE bio ROLE C PROTON 1
+CUBE ocean ROLE C PROTON 1
+CUBE fossil ROLE C PROTON 0
+FOLDBITS atm   "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS bio   "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS ocean "1010101010101010101010101010101010101010101010101010101010101010"
+PLUG atm bio
+PLUG bio atm
+PLUG atm ocean
+PLUG fossil atm
+IMPULSE fossil 1
+FLOW 4
+ASSERT FLOWED(atm) == 1
+# conservation toy: total carbon counts fixed in model
+LET C_total = 100
+LET C_atm = 40
+LET C_bio = 30
+LET C_ocean = 30
+ASSERT C_atm + C_bio + C_ocean == C_total
+PRINT "earth08_carbon" C_atm FLOWED(ocean)

@@ -1,0 +1,16 @@
+# Physics 08 — Momentum p=mv and elastic toy
+HOLD_FLASH 1
+SCIENCE LOAD
+LET m1 = 3
+LET v1 = 4
+LET p1 = m1 * v1
+ASSERT p1 == 12
+# equal mass head-on exchange (1D elastic equal m)
+LET m2 = 3
+LET v2 = 0
+LET v1f = v2
+LET v2f = v1
+ASSERT v1f == 0
+ASSERT v2f == 4
+ASSERT m1 * v1 + m2 * v2 == m1 * v1f + m2 * v2f
+PRINT "phys08_momentum" p1

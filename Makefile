@@ -18,7 +18,7 @@ ifeq ($(USE_OPENCL),1)
   LDFLAGS += -lOpenCL
 endif
 
-.PHONY: all clean test law install human demo peers oversee jit-test evolve evolve-loop showcase school
+.PHONY: all clean test law install human demo peers oversee jit-test evolve evolve-loop showcase school diploma
 
 all: out/cubalc
 
@@ -71,6 +71,10 @@ sync:
 showcase: all
 	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./out/cubalc showcase
 
-# Pure-science school program (math + physics + chemistry + biology)
+# Pure-science school program (math + physics + chemistry + biology + earth)
 school: all
 	@bash programs/school/run_curriculum.sh
+
+# Unified diploma: full curriculum + DIPLOMA.json
+diploma: all
+	@bash programs/school/run_diploma.sh

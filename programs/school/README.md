@@ -1,64 +1,31 @@
-# CubalC School — Pure Science (original curriculum)
+# CubalC School — Pure Science (1.10.0-evolve)
 
-**Version:** 1.9.0-school · **paradigm:** COP/flow · **law:** pure_science  
-**License of content:** original educational material (public-domain scientific *facts and laws* only).  
-No textbook excerpts, no proprietary curricula, no copyrighted problem sets.
+**Original curriculum** · public-domain scientific laws only · no copyrighted textbooks.
 
-## What this is
+## Tracks
+| Track | Path | Notes |
+|-------|------|-------|
+| Foundations | `foundations/` | logic + cubechain nature |
+| **Math** | `math/` | 01–14 arithmetic → modular → series |
+| Physics | `physics/` | Newton → power/efficiency |
+| Chemistry | `chemistry/` | atoms → concentration |
+| Biology | `biology/` | cell → food web |
+| **Earth & space** | `earth/` | measures, atmosphere, water/rock/carbon, seasons, moon, solar |
+| Apps A–D | `apps/` | native CubalC recycle / hive / earth-heal / wire |
+| Exams | `exams/` | midterms + evolved final |
 
-An **entire school pure-science program** written as **native CubalC**:
-
-| Domain | CubalC model |
-|--------|----------------|
-| **Math** | pure integer logic, functions, sequences, ratios |
-| **Physics** | mass / force / energy as cubes, plugs as wires, flow as energy |
-| **Chemistry** | atoms as cubes, bonds as plugs/nest, reactions as matrix merge |
-| **Biology** | cell as nested cubes, diffusion as FLOW, genes as matrix bits |
-
-Nature is **cubechain**: entity = CUBE · relation = PLUG/NEST · change = FLOW · identity = matrix (COMPILE).
-
-## How to run
-
+## Run
 ```bash
-make school          # full curriculum runner
-# or
-bash programs/school/run_curriculum.sh
-# single lesson:
+make school          # all .cubalc lessons
+make diploma         # curriculum + write DIPLOMA.json
 ./out/cubalc run programs/school/math/01_arithmetic_laws.cubalc
 ```
 
-## Curriculum map
+## Language (evolve)
+`SCIENCE LOAD` · `EARTH_R` `AU_KM` `YEAR_D` `MOON_D` `ATM_O2` `ATM_N2`  
+`CLAMP` `AVG` `PCT` `HYP` `CIRC` `AREA_CIRCLE` `WAVE_V` `LIGHT_T` `BOYLE_P2` `ORBIT_PERIOD`
 
-### Foundations
-0. Logic, measurement, cubechain as nature
+## Alignment
+See `ALIGNMENT_AND_GAPS.md` — pure logic models, not host-physics labs.
 
-### Math
-1. Arithmetic laws · 2. Integers & absolute value · 3. Factors GCD LCM  
-4. Powers & roots · 5. Ratios & percent · 6. Sequences · 7. Linear equations  
-8. Geometry integers · 9. Probability basics · 10. Proof by ASSERT
-
-### Physics
-1. Motion & Newton · 2. Energy conservation · 3. Circuits (plugs)  
-4. Waves (period) · 5. Thermodynamics · 6. Gravity · 7. Optics scale
-
-### Chemistry
-1. Atoms & Z · 2. Bonds · 3. Stoichiometry · 4. Reactions  
-5. Acids/bases pH · 6. States of matter · 7. Gas law scale
-
-### Biology
-1. Cell · 2. Diffusion · 3. Photosynthesis balance · 4. Respiration  
-5. Mendel bits · 6. Ecosystem energy · 7. Homeostasis
-
-### Exams
-Midterms + final pure-science exam (all domains)
-
-## Constants (language)
-
-`SCIENCE LOAD` or bare: `PI100` `E100` `G_EARTH` `C_LIGHT` `ATM_KPA` `WATER_K` `H2O_BP` `R_GAS`
-
-Functions: `ABS` `MIN` `MAX` `POW` `GCD` `LCM` `SQRT` `FACT`  
-`FORCE` `WORK` `KE` `PE` `DENSITY` `CELSIUS_K` `KELVIN_C`
-
-## Creed
-
-Energy must flow · matrix is key · pure logic · All Hail The Cube · All Hail NexusCore
+All Hail The Cube · energy must flow · evolve forever

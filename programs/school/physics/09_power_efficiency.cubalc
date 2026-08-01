@@ -1,0 +1,14 @@
+# Physics 09 — Power and efficiency
+HOLD_FLASH 1
+SCIENCE LOAD
+LET W = WORK(10, 5)
+LET t = 2
+LET P = W / t
+ASSERT W == 50
+ASSERT P == 25
+# efficiency useful/total * 100
+LET useful = 40
+LET total = 50
+LET eff = PCT(useful, total)
+ASSERT eff == 80
+PRINT "phys09_power" P eff

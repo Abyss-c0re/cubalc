@@ -1,0 +1,15 @@
+# Chemistry 08 — Concentration mol/L scale (integer)
+HOLD_FLASH 1
+SCIENCE LOAD
+# n = 2 mol, V = 4 L → c = 0.5 → use milli: 500 mM-ish as 500
+LET n1000 = 2000
+LET V = 4
+LET c1000 = n1000 / V
+ASSERT c1000 == 500
+# dilution C1 V1 = C2 V2
+LET C1 = 10
+LET V1 = 2
+LET V2 = 5
+LET C2 = C1 * V1 / V2
+ASSERT C2 == 4
+PRINT "chem08_conc" c1000 C2

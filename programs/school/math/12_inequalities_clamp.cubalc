@@ -1,0 +1,10 @@
+# Math 12 — Inequalities and clamp
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT MIN(4,9) == 4
+ASSERT MAX(4,9) == 9
+ASSERT CLAMP(15, 0, 10) == 10
+ASSERT CLAMP(-3, 0, 10) == 0
+ASSERT CLAMP(7, 0, 10) == 7
+ASSERT PCT(18, 60) == 30
+PRINT "math12_clamp" CLAMP(15,0,10) PCT(18,60)

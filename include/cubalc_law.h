@@ -29,7 +29,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.9.0-school"
+#define CUBALC_LANG_VERSION "1.10.0-evolve"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
@@ -47,6 +47,14 @@
 #define CUBALC_SCI_AVOGADRO_E23 6            /* NA ≈ 6×10^23 (order) */
 #define CUBALC_SCI_R_J          8314         /* R ≈ 8.314 J/(mol·K) × 1000 */
 #define CUBALC_SCI_F_C_MOL      96485        /* Faraday C/mol (approx) */
+/* Earth & space (public domain scales) */
+#define CUBALC_SCI_EARTH_R_KM   6371         /* mean Earth radius km */
+#define CUBALC_SCI_AU_KM        149597870L   /* 1 AU km (approx) */
+#define CUBALC_SCI_YEAR_D       365          /* Earth year days (civil) */
+#define CUBALC_SCI_MOON_D       27           /* sidereal month ~27 d */
+#define CUBALC_SCI_SOLAR_C      1361         /* solar constant W/m² order */
+#define CUBALC_SCI_ATM_O2_PCT   21           /* O2 % air */
+#define CUBALC_SCI_ATM_N2_PCT   78           /* N2 % air */
 
 #define CUBALC_KIND_VOID    0
 #define CUBALC_KIND_BIT     1
@@ -76,14 +84,16 @@
 #define CUBALC_LAW_NEST             14
 /* Pure science school plane: math · physics · chemistry · biology as CubalC logic */
 #define CUBALC_LAW_PURE_SCIENCE     15
-#define CUBALC_LAW_COUNT            16
+/* Continuous evolve: curriculum + language must keep flowing */
+#define CUBALC_LAW_EVOLVE           16
+#define CUBALC_LAW_COUNT            17
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
   "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
   "manifest_smx", "algocube", "energy_flow",
-  "flow_compile", "nest", "pure_science"
+  "flow_compile", "nest", "pure_science", "evolve"
 };
 
 /* Resolved algocube blueprint genome (deep-opt champion — The Cube watches) */

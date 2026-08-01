@@ -1,0 +1,15 @@
+# Earth 05 — Seasons as day-length scale (tilt model, integer)
+HOLD_FLASH 1
+SCIENCE LOAD
+# hemisphere summer day longer: 15h vs winter 9h (example scale)
+LET day_summer = 15
+LET day_winter = 9
+LET year = YEAR_D
+ASSERT day_summer > day_winter
+ASSERT year == 365
+# axial tilt not zero → seasons exist (boolean law)
+LET tilt = 23
+ASSERT tilt > 0
+LET day_avg = AVG(day_summer, day_winter)
+ASSERT day_avg == 12
+PRINT "earth05_seasons" day_summer day_winter tilt

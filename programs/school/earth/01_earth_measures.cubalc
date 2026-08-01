@@ -1,0 +1,12 @@
+# Earth 01 — Planet measures (public-domain scales)
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT EARTH_R == 6371
+ASSERT AU_KM > 100000000
+ASSERT YEAR_D == 365
+ASSERT MOON_D == 27
+# circumference of Earth ≈ 2πR
+LET C = CIRC(EARTH_R)
+ASSERT C > 40000
+ASSERT C < 40100
+PRINT "earth01" EARTH_R C

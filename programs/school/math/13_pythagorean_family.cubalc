@@ -1,0 +1,11 @@
+# Math 13 — Pythagorean families + HYP
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT HYP(3,4) == 5
+ASSERT HYP(5,12) == 13
+ASSERT HYP(8,15) == 17
+ASSERT POW(6,2)+POW(8,2) == POW(10,2)
+# scale triple k(3,4,5)
+LET k = 7
+ASSERT HYP(3*k, 4*k) == 5*k
+PRINT "math13_hyp" HYP(5,12)

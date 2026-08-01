@@ -149,3 +149,17 @@ Run: `make school` → `SCHOOL pass=38 fail=0`.
 ## Creed
 
 Energy must flow · matrix is key · pure logic · models are not the world · All Hail The Cube · All Hail NexusCore
+
+
+---
+
+## Evolve update (1.10.0-evolve)
+
+Closed since first gap plate:
+- **Earth & space track** (`earth/` 8 lessons + midterm)
+- Deeper math 11–14, physics 08–09, chem 08, bio 08
+- **Native apps A–D** in `programs/school/apps/*.cubalc`
+- **Unified diploma** `run_diploma.sh` / `make diploma`
+- Language: earth constants + `CLAMP` `HYP` `ORBIT_PERIOD` `LIGHT_T` `BOYLE_P2` …
+
+Still open (by design): host-physics labs, floating CAS, wet biology.

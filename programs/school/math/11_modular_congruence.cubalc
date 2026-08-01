@@ -1,0 +1,12 @@
+# Math 11 — Modular arithmetic
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT 17 % 5 == 2
+ASSERT (17 + 3) % 5 == 0
+# (a+b) mod m = (a mod m + b mod m) mod m
+LET a = 23
+LET b = 19
+LET m = 7
+ASSERT (a + b) % m == ((a % m) + (b % m)) % m
+ASSERT (a * b) % m == ((a % m) * (b % m)) % m
+PRINT "math11_mod" (a+b)%m

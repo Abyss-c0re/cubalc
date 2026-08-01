@@ -1,0 +1,27 @@
+# App A — Recycle Scanner (native CubalC)
+# Scan waste cubes; classify by digit; only compatible matrices plug to recycle
+HOLD_FLASH 1
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=school | app=A_recycle |"
+CUBE scanner ROLE device PROTON 1
+CUBE plastic ROLE waste PROTON 0
+CUBE metal ROLE waste PROTON 1
+CUBE glass ROLE waste PROTON 0
+FOLDBITS scanner "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS plastic "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS metal   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS glass   "1111000011110000111100001111000011110000111100001111000011110000"
+# classify after matrix fold (digit_lock sticky)
+SETDIGIT plastic 2
+SETDIGIT metal 7
+SETDIGIT glass 3
+# metal (create proton) accepted into recycle path
+PLUG scanner metal
+IMPULSE scanner 1
+FLOW 3
+ASSERT FLOWED(metal) == 1
+ASSERT DIGIT(metal) == 7
+ASSERT COMPAT(scanner, metal) >= 35
+LET recycled = 1
+ASSERT recycled == 1
+PRINT "appA_recycle" DIGIT(metal) recycled

@@ -1,0 +1,22 @@
+# Earth 07 — Solar system scale + Kepler integer period
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT AU_KM == 149597870
+ASSERT SOLAR_C == 1361
+# light time Earth→Sun ~ 500 s order: AU / c
+LET t = LIGHT_T(AU_KM * 1000, C_LIGHT)
+ASSERT t >= 498
+ASSERT t <= 500
+# Kepler scale: Earth a=1 → T~1; a=4 → √64=8
+ASSERT ORBIT_PERIOD(1) == 1
+ASSERT ORBIT_PERIOD(4) == 8
+CUBE sun ROLE star PROTON 1
+CUBE earth ROLE planet PROTON 1
+NEST sun earth
+PLUG sun earth
+IMPULSE sun 1
+FLOW 3
+COMPILE earth
+COMPILE sun
+ASSERT COMPILED(sun) == 1
+PRINT "earth07_solar" t ORBIT_PERIOD(4)

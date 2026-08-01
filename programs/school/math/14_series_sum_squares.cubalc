@@ -1,0 +1,14 @@
+# Math 14 — Sum of squares formula n(n+1)(2n+1)/6
+HOLD_FLASH 1
+SCIENCE LOAD
+LET n = 10
+LET formula = n * (n + 1) * (2 * n + 1) / 6
+ASSERT formula == 385
+LET s = 0
+LET i = 1
+LOOP 10
+  LET s = s + i * i
+  LET i = i + 1
+END
+ASSERT s == formula
+PRINT "math14_squares" s

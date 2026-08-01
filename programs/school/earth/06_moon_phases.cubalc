@@ -1,0 +1,19 @@
+# Earth 06 — Moon period and illumination scale
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT MOON_D == 27
+# synodic month ~29.5 → use 30 for school integer
+LET synodic = 30
+LET phases = 8
+LET step = synodic / phases
+ASSERT step == 3
+# full vs new illumination
+LET illum_full = 100
+LET illum_new = 0
+ASSERT illum_full > illum_new
+CUBE earth ROLE planet PROTON 1
+CUBE moon ROLE satellite PROTON 1
+PLUG earth moon
+FLOW 2
+ASSERT FLOWED(moon) == 1
+PRINT "earth06_moon" MOON_D step

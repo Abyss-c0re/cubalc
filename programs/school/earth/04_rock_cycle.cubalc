@@ -1,0 +1,22 @@
+# Earth 04 — Rock cycle states (igneous/sedimentary/metamorphic as digits)
+HOLD_FLASH 1
+SCIENCE LOAD
+CUBE magma ROLE rock PROTON 1
+CUBE igneous ROLE rock PROTON 1
+CUBE sediment ROLE rock PROTON 1
+CUBE meta ROLE rock PROTON 1
+SETDIGIT magma 0
+SETDIGIT igneous 1
+SETDIGIT sediment 2
+SETDIGIT meta 3
+# cool: magma → igneous
+ASSERT DIGIT(magma) == 0
+ASSERT DIGIT(igneous) == 1
+# weather: igneous → sediment; heat-pressure: → meta
+PLUG magma igneous
+PLUG igneous sediment
+PLUG sediment meta
+PLUG meta magma
+FLOW 3
+ASSERT CUBES == 4
+PRINT "earth04_rock" DIGIT(igneous) DIGIT(meta)

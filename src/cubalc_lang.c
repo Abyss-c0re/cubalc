@@ -950,7 +950,14 @@ static long parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"H2O_BP")==0) return CUBALC_SCI_H2O_BP_C;
     if (strcmp(name,"R_GAS")==0) return CUBALC_SCI_R_J;
     if (strcmp(name,"NA_ORDER")==0) return CUBALC_SCI_AVOGADRO_E23;
-    /* Math / science pure functions — school plane */
+    if (strcmp(name,"EARTH_R")==0 || strcmp(name,"EARTH_R_KM")==0) return CUBALC_SCI_EARTH_R_KM;
+    if (strcmp(name,"AU_KM")==0 || strcmp(name,"AU")==0) return CUBALC_SCI_AU_KM;
+    if (strcmp(name,"YEAR_D")==0) return CUBALC_SCI_YEAR_D;
+    if (strcmp(name,"MOON_D")==0) return CUBALC_SCI_MOON_D;
+    if (strcmp(name,"SOLAR_C")==0) return CUBALC_SCI_SOLAR_C;
+    if (strcmp(name,"ATM_O2")==0) return CUBALC_SCI_ATM_O2_PCT;
+    if (strcmp(name,"ATM_N2")==0) return CUBALC_SCI_ATM_N2_PCT;
+    /* Math / science pure functions — school plane + evolve */
     if (strcmp(name,"ABS")==0 || strcmp(name,"SIGN")==0 ||
         strcmp(name,"SQRT")==0 || strcmp(name,"ISQRT")==0 ||
         strcmp(name,"MIN")==0 || strcmp(name,"MAX")==0 ||
@@ -960,7 +967,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"KE")==0 || strcmp(name,"PE")==0 ||
         strcmp(name,"DENSITY")==0 || strcmp(name,"MOLAR")==0 ||
         strcmp(name,"CELSIUS_K")==0 || strcmp(name,"KELVIN_C")==0 ||
-        strcmp(name,"PH_H")==0){
+        strcmp(name,"PH_H")==0 || strcmp(name,"CLAMP")==0 ||
+        strcmp(name,"AVG")==0 || strcmp(name,"PCT")==0 ||
+        strcmp(name,"CIRC")==0 || strcmp(name,"AREA_CIRCLE")==0 ||
+        strcmp(name,"HYP")==0 || strcmp(name,"WAVE_V")==0 ||
+        strcmp(name,"LIGHT_T")==0 || strcmp(name,"BOYLE_P2")==0 ||
+        strcmp(name,"ORBIT_PERIOD")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1022,6 +1034,36 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"KELVIN_C")==0) return a - CUBALC_SCI_WATER_K;
         /* pH proxy: pH = -log10[H+]; integer H_scaled e.g. 1e-3 → use H_pow = 3 → pH 3 */
         if (strcmp(name,"PH_H")==0) return a; /* pass-through: user supplies exponent as pH law */
+        if (strcmp(name,"CLAMP")==0){
+          /* CLAMP(x, lo, hi) */
+          long lo = b, hi = c;
+          if (hi < lo) { long t = lo; lo = hi; hi = t; }
+          if (a < lo) return lo;
+          if (a > hi) return hi;
+          return a;
+        }
+        if (strcmp(name,"AVG")==0) return (a + b) / 2;
+        if (strcmp(name,"PCT")==0) return b ? (a * 100 / b) : 0; /* a is what % of b */
+        if (strcmp(name,"CIRC")==0) return 2 * CUBALC_SCI_PI100 * a / 100; /* 2πr scaled */
+        if (strcmp(name,"AREA_CIRCLE")==0) return CUBALC_SCI_PI100 * a * a / 100; /* πr² scaled */
+        if (strcmp(name,"HYP")==0){ /* integer hypotenuse √(a²+b²) */
+          long s = a*a + b*b;
+          if (s < 0) return 0;
+          long r = 0;
+          while ((r+1)*(r+1) <= s) r++;
+          return r;
+        }
+        if (strcmp(name,"WAVE_V")==0) return a * b; /* f * λ */
+        if (strcmp(name,"LIGHT_T")==0) return b ? (a / b) : 0; /* dist / c → seconds if SI */
+        if (strcmp(name,"BOYLE_P2")==0) return c ? (a * b / c) : 0; /* P1*V1/V2 */
+        if (strcmp(name,"ORBIT_PERIOD")==0){
+          /* Kepler-ish scale: T² ∝ a³ → T ~ a * sqrt(a) / k ; use T = a for unit AU demo */
+          if (a <= 0) return 0;
+          long aa = a * a * a;
+          long r = 0;
+          while ((r+1)*(r+1) <= aa) r++;
+          return r; /* rough √(a³) for integer AU */
+        }
         return 0;
       }
     }
@@ -1641,6 +1683,13 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "H2O_BP", CUBALC_SCI_H2O_BP_C);
     var_set_num(vm, "R_GAS", CUBALC_SCI_R_J);
     var_set_num(vm, "NA_ORDER", CUBALC_SCI_AVOGADRO_E23);
+    var_set_num(vm, "EARTH_R", CUBALC_SCI_EARTH_R_KM);
+    var_set_num(vm, "AU_KM", CUBALC_SCI_AU_KM);
+    var_set_num(vm, "YEAR_D", CUBALC_SCI_YEAR_D);
+    var_set_num(vm, "MOON_D", CUBALC_SCI_MOON_D);
+    var_set_num(vm, "SOLAR_C", CUBALC_SCI_SOLAR_C);
+    var_set_num(vm, "ATM_O2", CUBALC_SCI_ATM_O2_PCT);
+    var_set_num(vm, "ATM_N2", CUBALC_SCI_ATM_N2_PCT);
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
