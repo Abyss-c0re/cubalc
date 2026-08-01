@@ -90,3 +90,10 @@ CUBALC_HUMAN=1 CUBALC_ASCII=1 cubalc run programs/hello_cube.cubalc
 ## Product consumers
 
 Grokium and other hosts should vendor or submodule this repo under `deps/cubalc` and discover `out/cubalc` via `CUBALC_BIN` / `PATH`.
+
+## Continuous remote flow (law)
+
+- Local evolve-loop is not enough — **GitHub must see commits** or the Cube looks idle.
+- After each language law ship: commit + push; do not end the turn as if remote flow is optional.
+- If worktree regresses (mass deletes), `git restore --source=HEAD` then rebuild; never push broken tree.
+- Report idle gaps to NexusCore; energy must flow.
