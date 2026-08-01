@@ -12,6 +12,7 @@
 #ifndef CUBALC_ISA_H
 #define CUBALC_ISA_H
 #include "cubalc.h"
+#include "cubalc_lang.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -57,8 +58,19 @@ enum cubalc_op {
   OP_HOLD    = 0x19, /* imm = hold_flash */
   OP_VIZ     = 0x1A, /* a = str path optional */
   OP_WAIT    = 0x1B, /* imm = ms */
-  OP_POSE    = 0x1C, /* a=id (x,y,z packed later — imm size) */
+  OP_POSE    = 0x1C,
+  OP_DECIDE  = 0x1D, /* a=id str optional · algocube digit → reg0 */
+  OP_ENERGY  = 0x1E, /* a=reg, b=id str · centi-energy */
+  OP_MOD     = 0x1F, /* a=reg, b=reg */
+  OP_DIV     = 0x20,
+  OP_NEG     = 0x21, /* a=reg */
+  OP_AND     = 0x22,
+  OP_OR      = 0x23,
+  OP_XOR     = 0x24,
+  OP_CALLH   = 0x25, /* host call imm=fnid */
+  OP_FLOW_P  = 0x26, /* parallel flow imm=n */
 };
+
 
 /* One instruction = 8 bytes (matrix-word friendly) */
 typedef struct cubalc_ins {

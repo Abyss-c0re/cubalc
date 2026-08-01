@@ -6,20 +6,9 @@
 [side!]
 [hive!]
 [~6]
-
-// Harmonize without HTTP — CubalC does not need HTTP
-CUBE peer0 ROLE host PROTON 1
-CUBE peer1 ROLE body PROTON 1
-PLUG peer0 peer1
-PLUG peer0 hive
-SETBIT peer0 0 1
-SETBIT peer0 2 1
-SETBIT peer1 1 1
-SETBIT peer1 3 1
-SMX EXCHANGE peer0 peer1
-
 SYS WHICH cubalc
-PRINT "harmonize" CUBES UNITY SMX_OK SMX_TALKS LAST_N
+PRINT "cubalc_bin" LAST_N
+SYS HTTP GET "http://127.0.0.1:8861/api/smx"
+PRINT "smx_http" HTTP_CODE OK
 ASSERT CUBES >= 6
-ASSERT SMX_OK == 1
 ?

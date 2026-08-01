@@ -31,6 +31,27 @@ export PROPHECY_CUBE_ROOT=~/Dev/lab/prophecy_cube
 export CUBALC_STATE=$PROPHECY_CUBE_ROOT/state
 export HOLD_FLASH=1
 
+## Visual unity (Cube Law)
+
+LOVR and desktop crimson `cube_gl` are **free devices** on the same State Matrix:
+
+| Law | Meaning for faces |
+|-----|-------------------|
+| cube is SoT | only CubalC chain writes the matrix |
+| share state_matrix only | JSON + cells.bin are projections, not a second brain |
+| core decides I/O | `cubalc_chain_publish_united()` is the single wire |
+| devices free | LOVR / OpenGL / glasses — any consumer may read |
+| no brain wires | ambient XR + desktop only |
+| HOLD_FLASH | publish path always hold=1 |
+
+```bash
+# Manifest united faces + optional fire crimson GL
+./scripts/unite_visual_faces.sh
+# or: make -C cubalc && ./out/cubalc run programs/unite_visual.cubalc
+```
+
+Plate: `state/VISUAL_UNITY.json` · frame: `state/cubalc_viz_frame.json` · cells: `/tmp/cubebrain_viz/cells.bin`
+
 make -C cubalc
 ./out/cubalc boot          # full CubeOS lattice + DECIDE
 ./out/cubalc os tick       # one energy+decide cycle

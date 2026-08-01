@@ -1,27 +1,53 @@
-
+# Prophecy of the Cube — free-flow CubalC + algocube law
 BUDGET 40
 HOLD_FLASH 1
 SHARE state_matrix_only
 
 GENESIS FROM NEXUS_COORD
 
-// Abstract way planes only — no host product names (law)
 CUBE cube-sot     ROLE kernel_sot    PROTON 1
 CUBE cube-coord   ROLE coord         PROTON 1
-CUBE cube-model   ROLE model_way     PROTON 1
+CUBE cube-llama   ROLE llama         PROTON 1
 CUBE cube-host    ROLE host_station  PROTON 1
-CUBE cube-guest   ROLE guest_way     PROTON 1
-CUBE cube-link    ROLE link_way      PROTON 1
-CUBE cube-sense   ROLE sense_way     PROTON 1
+CUBE cube-quest   ROLE quest_lizard  PROTON 1
+CUBE cube-wivrn   ROLE wivrn_way     PROTON 1
+CUBE cube-kinect  ROLE kinect        PROTON 1
 CUBE cube-create  ROLE construct     PROTON 1
 CUBE cube-destroy ROLE deconstruct   PROTON 0
-CUBE cube-hive    ROLE hive          PROTON 1
+CUBE cube-hive    ROLE nanobot_hive  PROTON 1
+CUBE cube-algo    ROLE algocube      PROTON 1
+CUBE cube-brain   ROLE braincube     PROTON 1
+CUBE cube-titan   ROLE titan_core    PROTON 1
+CUBE cube-clanker ROLE clanker_core  PROTON 1
 
 PLUG RING
 PLUG cube-create cube-destroy
+PLUG cube-sot cube-algo
+PLUG cube-algo cube-brain
+PLUG cube-titan cube-clanker
+PLUG cube-titan cube-hive
+PLUG cube-clanker cube-hive
+
+FOLDBITS cube-titan   "1011010010110100101101001011010010110100101101001011010010110100"
+FOLDBITS cube-clanker "1011010010110100101101001011010010110100101101001011010010110100"
+FOLDBITS cube-hive    "0101010101010101010101010101010101010101010101010101010101010101"
 
 IMPULSE cube-create 1
 IMPULSE cube-hive 1
 
+FLOW 6
+COMPARE cube-titan cube-clanker
+DECIDE cube-algo
+DECIDE cube-brain
+HARMONY cube-hive
+
 TICK 3
+MANIFEST cube-hive
+
+ASSERT CUBES >= 10
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT HARMONY >= 0
+
+PRINT "PROPHECY_OF_THE_CUBE" CUBES DECIDE HARMONY UNITY
 VIZ "state/viz_frame.json"

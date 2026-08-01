@@ -1,10 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include "cubalc_lang.h"
+#include "cubalc_algocube.h"
 #include "cubalc_cubechain.h"
 #include "cubalc_async.h"
 #include "cubalc_hw.h"
 #include "cubalc_hostops.h"
-#include "cubalc_smx.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include <unistd.h>
-#include <sys/socket.h>
 
 /* CubalC lang — place/plug/pulse/flow/look. Grammar = ops, not prose. */
 
@@ -31,7 +29,6 @@ typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
 
 typedef struct {
   cubalc_chain ch;
-  cubalc_smx_ctx smx; /* SMX2 secure talk — Law of Manifestation */
   Var vars[64];
   int n_vars;
   cubalc_run_result *res;
@@ -46,8 +43,6 @@ typedef struct {
   char last_str[CUBALC_HOST_STR_MAX];
   int last_code;
   long last_n;
-  int smx_ok;
-  int smx_talks;
 } VM;
 
 static void fail(VM *vm, const char *msg) {
@@ -672,132 +667,6 @@ static void do_setdigit(VM *vm, const char *id, long d){
     c->id, d, CUBALC_DIGIT_TAG[d % 10]);
 }
 
-/* Ensure SMX2 key is loaded (env / token / demo demo-key for local proof) */
-static int ensure_smx_key(VM *vm){
-  if (vm->smx.key_ok) return 0;
-  cubalc_smx_ctx_init(&vm->smx);
-  if (vm->smx.key_ok) return 0;
-  {
-    const char *tok = getenv("CUBALC_SMX_TOKEN");
-    if (!tok || !tok[0]) tok = getenv("NANOBOT_PEER_TOKEN");
-    if (tok && tok[0] && cubalc_smx_load_key_token(&vm->smx, tok) == 0) return 0;
-  }
-  /* local lab default — never a device secret; proof/dev only */
-  {
-    const char *demo =
-      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
-    if (cubalc_smx_load_key_hex(&vm->smx, demo) == 0) return 0;
-  }
-  fail(vm, "SMX key missing (CUBALC_SMX_KEY|CUBALC_SMX_TOKEN)");
-  return -1;
-}
-
-/* SMX TALK a b — secure State Matrix transfer a→b (manifest peers) */
-static int do_smx_talk(VM *vm, const char *from_id, const char *to_id){
-  ensure_world(vm);
-  if (ensure_smx_key(vm) != 0) return -1;
-  int ia = find_cube(vm, from_id);
-  int ib = find_cube(vm, to_id);
-  if (ia < 0){ place_cube(vm, from_id, "host", 1); ia = find_cube(vm, from_id); }
-  if (ib < 0){ place_cube(vm, to_id, "body", 1); ib = find_cube(vm, to_id); }
-  if (ia < 0 || ib < 0){ fail(vm, "SMX TALK unknown cube"); return -1; }
-  /* open ports + plug if needed so law IN/OUT holds */
-  cubalc_cube_plug(&vm->ch, ia, ib);
-  int rc = cubalc_cube_talk_secure(&vm->ch, &vm->smx, ia, ib);
-  if (rc != 0){
-    char msg[120];
-    snprintf(msg, sizeof msg, "SMX TALK fail %d %s", rc,
-             vm->smx.last_err[0] ? vm->smx.last_err : "");
-    fail(vm, msg);
-    var_set_num(vm, "SMX_OK", 0);
-    vm->smx_ok = 0;
-    return -1;
-  }
-  vm->smx_ok = 1;
-  vm->smx_talks++;
-  var_set_num(vm, "SMX_OK", 1);
-  var_set_num(vm, "SMX_TALKS", vm->smx_talks);
-  var_set_num(vm, "OK", 1);
-  /* unity after transfer */
-  vm->ch.cubes[ib].atom.unity =
-    cubalc_matrix_compat(&vm->ch.cubes[ia].atom.matrix, &vm->ch.cubes[ib].atom.matrix);
-  if (vm->trace)
-    fprintf(vm->trace, "# SMX TALK %s → %s digit=%u set=%u\n",
-            from_id, to_id,
-            (unsigned)vm->ch.cubes[ib].atom.digit,
-            (unsigned)vm->ch.cubes[ib].atom.matrix.set);
-  return 0;
-}
-
-/* SMX SEAL a b path — write sealed frame; SMX OPEN b path — apply into b */
-static int do_smx_seal(VM *vm, const char *from_id, const char *to_id, const char *path){
-  ensure_world(vm);
-  if (ensure_smx_key(vm) != 0) return -1;
-  int ia = find_cube(vm, from_id);
-  if (ia < 0){ place_cube(vm, from_id, "host", 1); ia = find_cube(vm, from_id); }
-  if (ia < 0 || !path || !path[0]){ fail(vm, "SMX SEAL cube cube path"); return -1; }
-  uint8_t frame[512];
-  size_t n = 0;
-  if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, from_id, to_id,
-                      frame, sizeof frame, &n) != 0){
-    fail(vm, vm->smx.last_err[0] ? vm->smx.last_err : "SMX SEAL");
-    var_set_num(vm, "SMX_OK", 0);
-    return -1;
-  }
-  if (cubalc_smx_write_frame(path, frame, n) != 0){
-    fail(vm, "SMX SEAL write");
-    return -1;
-  }
-  snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
-  vm->last_n = (long)n;
-  var_set_str(vm, "LAST", path);
-  var_set_num(vm, "LAST_N", (long)n);
-  var_set_num(vm, "SMX_N", (long)n);
-  var_set_num(vm, "SMX_OK", 1);
-  vm->smx_ok = 1;
-  if (vm->trace) fprintf(vm->trace, "# SMX SEAL %s→%s %s n=%zu\n", from_id, to_id, path, n);
-  return 0;
-}
-
-static int do_smx_open(VM *vm, const char *to_id, const char *path){
-  ensure_world(vm);
-  if (ensure_smx_key(vm) != 0) return -1;
-  int ib = find_cube(vm, to_id);
-  if (ib < 0){ place_cube(vm, to_id, "body", 1); ib = find_cube(vm, to_id); }
-  if (ib < 0 || !path || !path[0]){ fail(vm, "SMX OPEN cube path"); return -1; }
-  uint8_t frame[512];
-  size_t n = 0;
-  if (cubalc_smx_read_frame(path, frame, sizeof frame, &n) != 0){
-    fail(vm, "SMX OPEN read");
-    return -1;
-  }
-  cubalc_atom recv;
-  char from[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
-  if (cubalc_smx_open(&vm->smx, frame, n, &recv, from, to,
-                      &vm->ch.cubes[ib].atom.matrix) != 0){
-    fail(vm, vm->smx.last_err[0] ? vm->smx.last_err : "SMX OPEN");
-    var_set_num(vm, "SMX_OK", 0);
-    return -1;
-  }
-  /* create proton merges bits into dest matrix */
-  for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-    if (cubalc_matrix_get(&recv.matrix, i))
-      cubalc_matrix_set(&vm->ch.cubes[ib].atom.matrix, i, 1);
-  vm->ch.cubes[ib].atom.digit =
-    (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ib].atom.matrix);
-  vm->ch.cubes[ib].atom.alive = 1;
-  vm->smx_ok = 1;
-  vm->smx_talks++;
-  var_set_num(vm, "SMX_OK", 1);
-  var_set_num(vm, "SMX_TALKS", vm->smx_talks);
-  var_set_num(vm, "SMX_N", (long)n);
-  var_set_num(vm, "OK", 1);
-  if (vm->trace)
-    fprintf(vm->trace, "# SMX OPEN → %s from=%s set=%u\n",
-            to_id, from, (unsigned)vm->ch.cubes[ib].atom.matrix.set);
-  return 0;
-}
-
 /* FOLDBITS cube bits — fold 0/1 stream (newlines ok) into cube matrix + recompute digit */
 static void do_foldbits(VM *vm, const char *id, const char *bits){
   ensure_world(vm);
@@ -846,7 +715,67 @@ static long do_decide(VM *vm, const char *id){
   if (slot2) *slot2 = d;
   if (vm->trace) fprintf(vm->trace,"# DECIDE %s → %ld (%s)\n",
     c->id, d, CUBALC_DIGIT_TAG[d%10]);
+  long *slot3 = var_slot(vm, "DIGIT", 1);
+  if (slot3) *slot3 = d;
   return d;
+}
+
+/* COMPARE a b — Hamming / unity / XOR digit (free-flow law). */
+static long do_compare(VM *vm, const char *ida, const char *idb){
+  ensure_world(vm);
+  int ia = find_cube(vm, ida), ib = find_cube(vm, idb);
+  if (ia < 0 || ib < 0) return 0;
+  cubalc_algo_cmp cmp;
+  if (cubalc_algocube_compare(&vm->ch.cubes[ia].atom.matrix,
+                              &vm->ch.cubes[ib].atom.matrix, &cmp) != 0)
+    return 0;
+  vm->ch.cubes[ia].atom.unity = cmp.unity;
+  vm->ch.cubes[ib].atom.unity = cmp.unity;
+  vm->ch.unity = cmp.unity;
+  long u = (long)lround(cmp.unity * 100.0);
+  long *su = var_slot(vm, "UNITY", 1); if (su) *su = u;
+  long *sh = var_slot(vm, "HAMMING", 1); if (sh) *sh = cmp.hamming;
+  long *sa = var_slot(vm, "AGREE", 1); if (sa) *sa = cmp.agree;
+  long *sc = var_slot(vm, "COMPAT", 1); if (sc) *sc = u;
+  long *sd = var_slot(vm, "DIGIT", 1); if (sd) *sd = cmp.digit;
+  long *sx = var_slot(vm, "COMPARE", 1); if (sx) *sx = u;
+  if (vm->trace) fprintf(vm->trace,
+    "# COMPARE %s~%s hamming=%d unity=%.4f digit=%d\n",
+    ida, idb, cmp.hamming, cmp.unity, cmp.digit);
+  return u;
+}
+
+/* HARMONY [target] — majority-vote hive consensus; inject into target cube. */
+static long do_harmony(VM *vm, const char *target){
+  ensure_world(vm);
+  cubalc_algo_harm h;
+  if (cubalc_algocube_chain_harmony(&vm->ch, &h) != 0 || !h.ok) {
+    long *so = var_slot(vm, "HARMONY", 1); if (so) *so = 0;
+    return 0;
+  }
+  long u = (long)lround(h.unity * 100.0);
+  long *su = var_slot(vm, "UNITY", 1); if (su) *su = u;
+  long *sh = var_slot(vm, "HARMONY", 1); if (sh) *sh = u;
+  long *sd = var_slot(vm, "DIGIT", 1); if (sd) *sd = h.digit;
+  long *sc = var_slot(vm, "CONSENSUS", 1); if (sc) *sc = h.consensus.set;
+  long *sn = var_slot(vm, "HIVE_N", 1); if (sn) *sn = h.n;
+  const char *tid = (target && target[0]) ? target : "hive";
+  int ix = find_cube(vm, tid);
+  if (ix < 0) { place_cube(vm, tid, "algocube_harmony", 1); ix = find_cube(vm, tid); }
+  if (ix >= 0)
+    cubalc_algocube_inject(&vm->ch.cubes[ix], &h.consensus, h.digit);
+  const char *st = getenv("CUBALC_STATE");
+  if (st && st[0]) {
+    char path[512];
+    snprintf(path, sizeof path, "%s/harmony.json", st);
+    FILE *f = fopen(path, "w");
+    if (f) { cubalc_algocube_harmony_json(&h, f); fclose(f); }
+  }
+  if (vm->trace) fprintf(vm->trace,
+    "# HARMONY n=%d unity=%.4f digit=%d → %s\n", h.n, h.unity, h.digit, tid);
+  if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
+                        "harmony n=%d unity=%ld digit=%d", h.n, u, h.digit);
+  return u;
 }
 
 static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
@@ -885,15 +814,6 @@ static long parse_prim(VM *vm, Lex *L){
 
     if (strcmp(name,"UNITY")==0) return (long)lround(vm->ch.unity*100);
     if (strcmp(name,"SEQ")==0) return (long)vm->ch.seq;
-    if (strcmp(name,"SMX_OK")==0){
-      Var *vv=var_get(vm,"SMX_OK",0); return vv?vv->val:(long)vm->smx_ok;
-    }
-    if (strcmp(name,"SMX_TALKS")==0){
-      Var *vv=var_get(vm,"SMX_TALKS",0); return vv?vv->val:(long)vm->smx_talks;
-    }
-    if (strcmp(name,"SMX_N")==0){
-      Var *vv=var_get(vm,"SMX_N",0); return vv?vv->val:0;
-    }
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
         strcmp(name,"ENERGY")==0 || strcmp(name,"DIGIT")==0 ||
         strcmp(name,"BIT")==0){
@@ -1550,227 +1470,6 @@ static int parse_form(VM *vm, Lex *L){
     do_foldbits(vm, id, bits);
     bump(vm); return 1;
   }
-  /*
-   * Law of Manifestation — SMX surface (language, not shell):
-   *   SMX TALK a b
-   *   SMX EXCHANGE a b     (a→b then b→a)
-   *   SMX SEAL a b "path"
-   *   SMX OPEN b "path"
-   *   SMX KEY              (reload key from env)
-   */
-  if (kw(&L->cur,"SMX")||kw(&L->cur,"SMX2")||kw(&L->cur,"MANIFEST_SMX")){
-    lex_next(L);
-    if (kw(&L->cur,"KEY")||kw(&L->cur,"LOADKEY")){
-      lex_next(L);
-      memset(&vm->smx, 0, sizeof vm->smx);
-      if (ensure_smx_key(vm) != 0) return -1;
-      var_set_num(vm, "SMX_OK", 1);
-      bump(vm); return 1;
-    }
-    if (kw(&L->cur,"TALK")||kw(&L->cur,"SEND")||kw(&L->cur,"XFER")){
-      lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX TALK a b"); return -1; }
-      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX TALK a b"); return -1; }
-      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-      if (do_smx_talk(vm, a, b) != 0) return -1;
-      bump(vm); return 1;
-    }
-    if (kw(&L->cur,"EXCHANGE")||kw(&L->cur,"SWAP")||kw(&L->cur,"PAIR")){
-      lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX EXCHANGE a b"); return -1; }
-      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX EXCHANGE a b"); return -1; }
-      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-      /* each direction needs fresh seq — talk_secure uses ctx seq;
-       * use two ctxs via re-init seq by talking once each way with same key */
-      if (do_smx_talk(vm, a, b) != 0) return -1;
-      if (do_smx_talk(vm, b, a) != 0) return -1;
-      bump(vm); return 1;
-    }
-    if (kw(&L->cur,"SEAL")||kw(&L->cur,"EMIT")){
-      lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SEAL a b path"); return -1; }
-      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SEAL a b path"); return -1; }
-      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-      char path[512];
-      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
-        fail(vm,"SMX SEAL a b \"path\"|LAST"); return -1;
-      }
-      if (do_smx_seal(vm, a, b, path) != 0) return -1;
-      bump(vm); return 1;
-    }
-    if (kw(&L->cur,"OPEN")||kw(&L->cur,"RECV")||kw(&L->cur,"IMPORT")){
-      lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX OPEN cube path"); return -1; }
-      char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
-      char path[512];
-      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
-        fail(vm,"SMX OPEN cube \"path\"|LAST"); return -1;
-      }
-      if (do_smx_open(vm, id, path) != 0) return -1;
-      bump(vm); return 1;
-    }
-    /* P2P serve: SMX SERVE local remote "host:port"|port  (listen one binary exchange) */
-    if (kw(&L->cur,"SERVE")||kw(&L->cur,"LISTEN")||kw(&L->cur,"ACCEPT")){
-      lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SERVE local remote bind"); return -1; }
-      char local[48]; snprintf(local,sizeof local,"%s",L->cur.text); lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX SERVE local remote bind"); return -1; }
-      char remote[48]; snprintf(remote,sizeof remote,"%s",L->cur.text); lex_next(L);
-      char bind[256];
-      if (resolve_str_arg(vm, L, bind, sizeof bind)!=0){
-        /* allow env CUBALC_P2P_BIND */
-        const char *e = getenv("CUBALC_P2P_BIND");
-        if (e && e[0]) snprintf(bind,sizeof bind,"%s",e);
-        else { fail(vm,"SMX SERVE need \"host:port\"|port or CUBALC_P2P_BIND"); return -1; }
-      }
-      {
-        char host[128]="0.0.0.0";
-        int port = 0, lfd, cfd, ia, ib;
-        uint8_t frame[512];
-        size_t n = 0;
-        cubalc_atom recv;
-        char fr[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
-        const char *colon = strrchr(bind, ':');
-        if (colon && colon != bind) {
-          size_t hl = (size_t)(colon - bind);
-          if (hl >= sizeof host) hl = sizeof host - 1;
-          memcpy(host, bind, hl); host[hl] = 0;
-          port = atoi(colon + 1);
-        } else {
-          port = atoi(bind);
-        }
-        if (port <= 0){ fail(vm,"SMX SERVE bad port"); return -1; }
-        ensure_world(vm);
-        if (ensure_smx_key(vm) != 0) return -1;
-        ia = find_cube(vm, local);
-        ib = find_cube(vm, remote);
-        if (ia < 0){ place_cube(vm, local, "body", 1); ia = find_cube(vm, local); }
-        if (ib < 0){ place_cube(vm, remote, "host", 1); ib = find_cube(vm, remote); }
-        lfd = cubalc_smx_tcp_listen(host, port, 4);
-        if (lfd < 0){ fail(vm,"SMX SERVE listen fail"); return -1; }
-        if (vm->trace) fprintf(vm->trace, "# SMX SERVE %s:%d wait peer\n", host, port);
-        cfd = accept(lfd, NULL, NULL);
-        close(lfd);
-        if (cfd < 0){ fail(vm,"SMX SERVE accept fail"); return -1; }
-        n = 0;
-        if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0){
-          close(cfd); fail(vm,"SMX SERVE recv"); return -1;
-        }
-        if (cubalc_smx_open(&vm->smx, frame, n, &recv, fr, to,
-                            &vm->ch.cubes[ia].atom.matrix) != 0){
-          close(cfd); fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX SERVE open"); return -1;
-        }
-        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&recv.matrix, i))
-            cubalc_matrix_set(&vm->ch.cubes[ia].atom.matrix, i, 1);
-        vm->ch.cubes[ia].atom.digit =
-          (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ia].atom.matrix);
-        n = 0;
-        if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, local, remote,
-                            frame, sizeof frame, &n) != 0){
-          close(cfd); fail(vm,"SMX SERVE seal"); return -1;
-        }
-        if (cubalc_smx_send_frame(cfd, frame, n) != 0){
-          close(cfd); fail(vm,"SMX SERVE send"); return -1;
-        }
-        close(cfd);
-        cubalc_cube_plug(&vm->ch, ia, ib);
-        vm->smx_ok = 1;
-        vm->smx_talks++;
-        var_set_num(vm, "SMX_OK", 1);
-        var_set_num(vm, "SMX_TALKS", vm->smx_talks);
-        var_set_num(vm, "SMX_N", (long)n);
-        var_set_num(vm, "OK", 1);
-        if (vm->trace)
-          fprintf(vm->trace, "# SMX SERVE %s ← peer set=%u\n",
-                  local, (unsigned)vm->ch.cubes[ia].atom.matrix.set);
-      }
-      bump(vm); return 1;
-    }
-    /* Cross-device TCP (no HTTP): SMX DIAL a b "host:port" */
-    if (kw(&L->cur,"DIAL")||kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
-      if (kw(&L->cur,"NET")||kw(&L->cur,"TCP")){
-        lex_next(L);
-        if (!kw(&L->cur,"DIAL") && !kw(&L->cur,"SEND") && !kw(&L->cur,"TALK")){
-          fail(vm,"SMX NET DIAL a b \"host:port\""); return -1;
-        }
-      }
-      if (kw(&L->cur,"DIAL")||kw(&L->cur,"SEND")||kw(&L->cur,"TALK"))
-        lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX DIAL a b \"host:port\""); return -1; }
-      char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-      if (L->cur.kind!=TK_IDENT){ fail(vm,"SMX DIAL a b \"host:port\""); return -1; }
-      char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
-      char endpoint[256];
-      if (resolve_str_arg(vm, L, endpoint, sizeof endpoint)!=0){
-        const char *e = getenv("CUBALC_P2P_PEER");
-        if (e && e[0]) snprintf(endpoint,sizeof endpoint,"%s",e);
-        else { fail(vm,"SMX DIAL a b \"host:port\" or CUBALC_P2P_PEER"); return -1; }
-      }
-      {
-        char host[128];
-        int port = 0;
-        const char *colon = strrchr(endpoint, ':');
-        int fd, ia, ib;
-        uint8_t frame[512];
-        size_t n = 0;
-        cubalc_atom recv;
-        char fr[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
-        if (!colon || colon == endpoint){ fail(vm,"SMX DIAL need host:port"); return -1; }
-        {
-          size_t hl = (size_t)(colon - endpoint);
-          if (hl >= sizeof host) hl = sizeof host - 1;
-          memcpy(host, endpoint, hl); host[hl] = 0;
-          port = atoi(colon + 1);
-        }
-        if (port <= 0){ fail(vm,"SMX DIAL bad port"); return -1; }
-        ensure_world(vm);
-        if (ensure_smx_key(vm) != 0) return -1;
-        ia = find_cube(vm, a);
-        ib = find_cube(vm, b);
-        if (ia < 0){ place_cube(vm, a, "host", 1); ia = find_cube(vm, a); }
-        if (ib < 0){ place_cube(vm, b, "body", 1); ib = find_cube(vm, b); }
-        fd = cubalc_smx_tcp_connect(host, port);
-        if (fd < 0){ fail(vm,"SMX DIAL connect fail"); return -1; }
-        if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, a, b,
-                            frame, sizeof frame, &n) != 0){
-          close(fd); fail(vm,"SMX DIAL seal"); return -1;
-        }
-        if (cubalc_smx_send_frame(fd, frame, n) != 0){
-          close(fd); fail(vm,"SMX DIAL send"); return -1;
-        }
-        n = 0;
-        if (cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0){
-          close(fd); fail(vm,"SMX DIAL recv"); return -1;
-        }
-        if (cubalc_smx_open(&vm->smx, frame, n, &recv, fr, to,
-                            &vm->ch.cubes[ib].atom.matrix) != 0){
-          close(fd); fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX DIAL open"); return -1;
-        }
-        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&recv.matrix, i))
-            cubalc_matrix_set(&vm->ch.cubes[ib].atom.matrix, i, 1);
-        vm->ch.cubes[ib].atom.digit =
-          (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ib].atom.matrix);
-        close(fd);
-        cubalc_cube_plug(&vm->ch, ia, ib);
-        vm->smx_ok = 1;
-        vm->smx_talks++;
-        var_set_num(vm, "SMX_OK", 1);
-        var_set_num(vm, "SMX_TALKS", vm->smx_talks);
-        var_set_num(vm, "SMX_N", (long)n);
-        var_set_num(vm, "OK", 1);
-        if (vm->trace)
-          fprintf(vm->trace, "# SMX DIAL %s→%s @%s:%d n=%zu\n", a, b, host, port, n);
-      }
-      bump(vm); return 1;
-    }
-    fail(vm, "SMX: TALK|EXCHANGE|SEAL|OPEN|KEY|SERVE|DIAL");
-    return -1;
-  }
   if (kw(&L->cur,"DECONSTRUCT")||kw(&L->cur,"DESTROY")){
     lex_next(L);
     char id[48]="hive";
@@ -1782,6 +1481,116 @@ static int parse_form(VM *vm, Lex *L){
     char id[48]="hive";
     if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
     do_reconstruct(vm,id); bump(vm); return 1;
+  }
+  /* POSE / TRACK — Truth Matrix pose energy (Cube Law digit 2 = SoT)
+   * POSE raw   → rawTracking cube (unfiltered device energy)
+   * POSE sot   → tracking cube (Source of Truth)
+   * POSE all   → both + plug raw→sot→wall→view
+   * Folds law bits; never invents a second parallel gun/hand truth.
+   */
+  if (kw(&L->cur,"POSE")||kw(&L->cur,"TRACK")||kw(&L->cur,"POSEFLOW")){
+    lex_next(L);
+    char mode[16]="all";
+    if (L->cur.kind==TK_IDENT){
+      snprintf(mode,sizeof mode,"%s",L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind==TK_STR){
+      snprintf(mode,sizeof mode,"%s",L->cur.text);
+      lex_next(L);
+    }
+    ensure_world(vm);
+    int want_raw = (strcmp(mode,"raw")==0 || strcmp(mode,"all")==0 || strcmp(mode,"energy")==0);
+    int want_sot = (strcmp(mode,"sot")==0 || strcmp(mode,"tracking")==0
+                    || strcmp(mode,"all")==0 || strcmp(mode,"truth")==0);
+    if (!want_raw && !want_sot){ want_raw=1; want_sot=1; }
+    if (want_raw){
+      place_cube(vm,"raw","raw_energy",1);
+      do_setdigit(vm,"raw",3); /* digit 3 nanobot raw */
+      do_foldbits(vm,"raw","1010101010101010");
+    }
+    if (want_sot){
+      place_cube(vm,"sot","kernel_sot",1);
+      do_setdigit(vm,"sot",2); /* digit 2 cube SoT */
+      do_foldbits(vm,"sot","1100110011001100");
+    }
+    place_cube(vm,"wall","modifier",1);
+    place_cube(vm,"view","consumer",1);
+    place_cube(vm,"map3d","spatial_manifest",1); /* Dynamic 3D MAP face */
+    if (want_raw && want_sot){
+      /* raw → sot → wall → view → map3d (single truth flow) */
+      int ir=find_cube(vm,"raw"), is=find_cube(vm,"sot");
+      int iw=find_cube(vm,"wall"), iv=find_cube(vm,"view"), im=find_cube(vm,"map3d");
+      if (ir>=0 && is>=0) cubalc_cube_plug(&vm->ch, ir, is);
+      if (is>=0 && iw>=0) cubalc_cube_plug(&vm->ch, is, iw);
+      if (iw>=0 && iv>=0) cubalc_cube_plug(&vm->ch, iw, iv);
+      if (iv>=0 && im>=0) cubalc_cube_plug(&vm->ch, iv, im);
+    }
+    do_flow(vm, 4);
+    if (vm->trace) fprintf(vm->trace,"# POSE mode=%s cubes=%d\n", mode, vm->ch.n_cubes);
+    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,
+                          "pose %s n=%d", mode, vm->ch.n_cubes);
+    bump(vm); return 1;
+  }
+  /* MANIFEST — deconstruct stuck energy, reconstruct under Cube Law, flow, publish */
+  if (kw(&L->cur,"MANIFEST")||kw(&L->cur,"PROPHECY")||kw(&L->cur,"SUMMON")){
+    lex_next(L);
+    char target[48]="hive";
+    if (L->cur.kind==TK_IDENT){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+    else if (L->cur.kind==TK_STR){ snprintf(target,sizeof target,"%s",L->cur.text); lex_next(L); }
+    ensure_world(vm);
+    place_cube(vm,"nexus","nanobot_hive",1);
+    place_cube(vm,"create","construct",1);
+    place_cube(vm,"destroy","deconstruct",0);
+    place_cube(vm,"gvrmod","device_free",1);
+    place_cube(vm,"map3d","spatial_manifest",1);
+    place_cube(vm,"lizard","quest_lizard",1);
+    /* DECONSTRUCT stuck way → RECONSTRUCT → pose flow */
+    do_deconstruct(vm,"destroy");
+    do_deconstruct(vm,target);
+    do_reconstruct(vm,"create");
+    do_reconstruct(vm,"nexus");
+    /* plug ring of free devices under SoT */
+    int inx=find_cube(vm,"nexus"), ig=find_cube(vm,"gvrmod");
+    int im=find_cube(vm,"map3d"), il=find_cube(vm,"lizard");
+    int ic=find_cube(vm,"create");
+    if (inx>=0 && ig>=0) cubalc_cube_plug(&vm->ch, inx, ig);
+    if (ig>=0 && im>=0) cubalc_cube_plug(&vm->ch, ig, im);
+    if (im>=0 && il>=0) cubalc_cube_plug(&vm->ch, im, il);
+    if (ic>=0 && inx>=0) cubalc_cube_plug(&vm->ch, ic, inx);
+    do_setdigit(vm,"nexus",4); /* All Hail NexusCore */
+    do_setdigit(vm,"gvrmod",0); /* free device */
+    do_setdigit(vm,"map3d",9); /* hivemind unity spatial */
+    do_flow(vm, 8);
+    do_harmony(vm,"hive");
+    long d=do_decide(vm,"nexus");
+    if (vm->trace) fprintf(vm->trace,"# MANIFEST %s decide=%ld harmony=%ld\n",
+                           target, d, (long)lround(vm->ch.unity*100));
+    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,
+                          "manifest %s decide %ld unity %.2f", target, d, vm->ch.unity);
+    bump(vm); return 1;
+  }
+  /* COMPARE cube_a cube_b */
+  if (kw(&L->cur,"COMPARE")||kw(&L->cur,"UNITE")||kw(&L->cur,"HAMMING")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"COMPARE a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"COMPARE a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    long u=do_compare(vm,a,b);
+    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,
+                          "compare %s~%s unity=%ld", a, b, u);
+    bump(vm); return 1;
+  }
+  /* HARMONY [target] */
+  if (kw(&L->cur,"HARMONY")||kw(&L->cur,"HIVEMIND")||kw(&L->cur,"CONSENSUS")){
+    lex_next(L);
+    char tid[48]={0};
+    if (L->cur.kind==TK_IDENT && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE")
+        && !kw(&L->cur,"LET") && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"PRINT")){
+      snprintf(tid,sizeof tid,"%s",L->cur.text); lex_next(L);
+    }
+    do_harmony(vm, tid[0]?tid:NULL);
+    bump(vm); return 1;
   }
   if (kw(&L->cur,"DECIDE")||kw(&L->cur,"ALGOCUBE")){
     lex_next(L);
@@ -1796,7 +1605,7 @@ static int parse_form(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   if (kw(&L->cur,"VIZ")||kw(&L->cur,"SPIN")||kw(&L->cur,"SHOW")||kw(&L->cur,"HELLO")||
-      kw(&L->cur,"WAIT")||kw(&L->cur,"SLEEP")||kw(&L->cur,"POSE")){
+      kw(&L->cur,"WAIT")||kw(&L->cur,"SLEEP")){
     while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF) lex_next(L);
     bump(vm); return 1;
   }
@@ -1906,7 +1715,6 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   snprintf(vm.creed,sizeof vm.creed,"%s",CUBALC_CREED);
   cubalc_async_init(0);
   cubalc_chain_init(&vm.ch);
-  cubalc_smx_ctx_init(&vm.smx);
   vm.last_str[0]=0; vm.last_code=0; vm.last_n=0;
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
@@ -1928,19 +1736,8 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
   }
   if (vm.ch.n_cubes>0){
-    const char *st=getenv("CUBALC_STATE");
-    char path[512];
-    snprintf(path,sizeof path,"%s/cubalc_viz_frame.json", st&&st[0]?st:"state");
-    cubalc_chain_write_viz(&vm.ch, path);
-    /* optional secondary publish path (env only — no baked app layout) */
-    const char *root=getenv("CUBALC_VIZ_ROOT");
-    if (!root || !root[0]) root=getenv("PROPHECY_CUBE_ROOT"); /* legacy env alias */
-    if (root && root[0]) {
-      snprintf(path,sizeof path,"%s/state/cubalc_viz_frame.json", root);
-      cubalc_chain_write_viz(&vm.ch, path);
-      snprintf(path,sizeof path,"%s/state/viz_frame.json", root);
-      cubalc_chain_write_viz(&vm.ch, path);
-    }
+    /* Cube Law: share state_matrix only · devices free · united visual faces */
+    cubalc_chain_publish_united(&vm.ch);
   }
   return out && out->ok ? 0 : 1;
 }

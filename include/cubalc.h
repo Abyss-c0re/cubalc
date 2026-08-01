@@ -40,7 +40,7 @@ typedef struct cubalc_port {
 typedef struct cubalc_cube {
   char     id[CUBALC_ID_LEN];
   char     label[CUBALC_ID_LEN];
-  char     role[24];    /* abstract aspect: kernel|model|guest|link|sense|coord|host|hive|… */
+  char     role[24];    /* os aspect: kernel|llama|quest|wivrn|kinect|coord|host|… */
   float    x, y, z, s;
   float    yaw, pitch, roll; /* degrees — spin of the cube (Kernel Matrix face) */
   uint8_t  r, g, b, a;
@@ -87,6 +87,7 @@ float cubalc_matrix_compat(const cubalc_matrix *a, const cubalc_matrix *b); /* 0
 /* atom / proton */
 void cubalc_atom_init(cubalc_atom *a, const char *id, uint8_t proton);
 int  cubalc_atom_impulse(cubalc_atom *a, uint8_t proton); /* create=1 destroy=0 */
+/* Algocube law engine — see cubalc_algocube.h */
 int  cubalc_algocube_digit(const cubalc_matrix *m);
 
 /* cube OOP */
@@ -112,6 +113,11 @@ int  cubalc_chain_tick(cubalc_chain *ch);
 int  cubalc_chain_flow(cubalc_chain *ch);
 int  cubalc_chain_write_viz(const cubalc_chain *ch, const char *path);
 int  cubalc_chain_write_json(const cubalc_chain *ch, const char *path);
+/* Crimson cube_gl cells.bin — same matrix projection as LOVR face */
+int  cubalc_chain_write_cells(const cubalc_chain *ch, const char *path);
+/* Cube Law: one SoT → all visual faces (LOVR JSON + cells.bin + unity plate).
+ * devices free · share state_matrix only · core decides I/O · no brain wires */
+int  cubalc_chain_publish_united(const cubalc_chain *ch);
 int  cubalc_chain_impulse(cubalc_chain *ch, const char *cube_id, uint8_t proton);
 /* Human cube board (ASCII) — machine-parseable JSON via write_json */
 int  cubalc_chain_print_cubes(const cubalc_chain *ch, FILE *out);

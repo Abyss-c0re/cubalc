@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <stdint.h>
+#include <errno.h>
 
 void cubalc_matrix_clear(cubalc_matrix *m) {
   if (!m) return;
@@ -68,15 +71,7 @@ float cubalc_matrix_compat(const cubalc_matrix *a, const cubalc_matrix *b) {
   return base * 0.5f + bond * 0.5f;
 }
 
-int cubalc_algocube_digit(const cubalc_matrix *m) {
-  if (!m || m->n == 0) return 4;
-  uint32_t rng = 0xC0BEA160u, set = m->set;
-  for (int i = 0; i < m->n; i++)
-    if (cubalc_matrix_get(m, i)) rng ^= (uint32_t)(i + 1) * 0x9E3779B9u;
-  rng ^= set * 16777619u;
-  rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
-  return (int)(rng % 10u);
-}
+/* cubalc_algocube_digit lives in cubalc_algocube.c */
 
 void cubalc_atom_init(cubalc_atom *a, const char *id, uint8_t proton) {
   if (!a) return;
@@ -116,17 +111,15 @@ int cubalc_atom_impulse(cubalc_atom *a, uint8_t proton) {
 }
 
 static void role_color(const char *role, uint8_t *r, uint8_t *g, uint8_t *b) {
-  /* Abstract role tokens only — no host product / brand names. */
   *r = 242; *g = 38; *b = 71; /* default crimson */
   if (!role) return;
   if (strstr(role, "kernel") || strstr(role, "sot")) { *r=255; *g=165; *b=46; }
-  else if (strstr(role, "model") || strstr(role, "algo")) { *r=64; *g=242; *b=115; }
-  else if (strstr(role, "guest") || strstr(role, "body") || strstr(role, "helmet")) { *r=90; *g=200; *b=255; }
-  else if (strstr(role, "link") || strstr(role, "transport")) { *r=180; *g=120; *b=255; }
-  else if (strstr(role, "sense") || strstr(role, "track")) { *r=255; *g=200; *b=80; }
+  else if (strstr(role, "llama")) { *r=64; *g=242; *b=115; }
+  else if (strstr(role, "quest") || strstr(role, "lizard")) { *r=90; *g=200; *b=255; }
+  else if (strstr(role, "wivrn")) { *r=180; *g=120; *b=255; }
+  else if (strstr(role, "kinect")) { *r=255; *g=200; *b=80; }
   else if (strstr(role, "host") || strstr(role, "station")) { *r=242; *g=38; *b=71; }
   else if (strstr(role, "coord")) { *r=255; *g=100; *b=160; }
-  else if (strstr(role, "hive") || strstr(role, "peer")) { *r=200; *g=140; *b=255; }
   else if (strstr(role, "destroy") || strstr(role, "decon")) { *r=30; *g=30; *b=36; }
   else if (strstr(role, "create") || strstr(role, "construct")) { *r=255; *g=60; *b=80; }
 }
@@ -279,7 +272,8 @@ int cubalc_cube_talk(cubalc_chain *ch, int from, int to) {
       if (cubalc_matrix_get(&received.matrix, i))
         cubalc_matrix_set(&B->atom.matrix, i, 0);
   }
-  B->atom.digit = cubalc_algocube_digit(&B->atom.matrix);
+  if (!B->atom.digit_lock)
+    B->atom.digit = (uint8_t)cubalc_algocube_digit(&B->atom.matrix);
   B->atom.unity = cubalc_matrix_compat(&A->atom.matrix, &B->atom.matrix);
   /* ENERGY FLOW along binary talk: create pushes energy; destroy drains peer */
   if (received.proton) {
@@ -321,7 +315,6 @@ int cubalc_coord_to_matrix(const char *plate_line, cubalc_matrix *out) {
   cubalc_matrix_set(out, 11, 1); /* hold_flash slot */
   cubalc_matrix_set(out, 12, 1); /* no_brain_wire */
   cubalc_matrix_set(out, 13, 1); /* matrix_is_key */
-  cubalc_matrix_set(out, 14, 1); /* manifest_smx — peers talk matrices */
   return 0;
 }
 
@@ -336,21 +329,21 @@ int cubalc_chain_from_initial(cubalc_chain *ch, const cubalc_matrix *genesis, ui
   return 0;
 }
 
-/* OS aspects as cubes — abstract way planes (no product brands). */
+/* OS aspects as cubes — important planes of the Cube way */
 int cubalc_chain_os_aspects(cubalc_chain *ch) {
   if (!ch) return -1;
-  /* ring layout — abstract planes of the Cube way */
+  /* ring layout — octopus-friendly big studs */
   struct { const char *id; const char *role; uint8_t proton; float ang; float elev; } asp[] = {
     {"cube-sot",     "kernel_sot",   1, 0.f,           1.35f},
     {"cube-coord",   "coord",        1, 0.785f,        1.35f},
-    {"cube-model",   "model_way",    1, 1.57f,         1.25f},
+    {"cube-llama",   "llama",        1, 1.57f,         1.25f},
     {"cube-host",    "host_station", 1, 2.356f,        1.25f},
-    {"cube-guest",   "guest_way",    1, 3.141f,        1.20f},
-    {"cube-link",    "link_way",     1, 3.927f,        1.20f},
-    {"cube-sense",   "sense_way",    1, 4.712f,        1.15f},
+    {"cube-quest",   "quest_lizard", 1, 3.141f,        1.20f},
+    {"cube-wivrn",   "wivrn_way",    1, 3.927f,        1.20f},
+    {"cube-kinect",  "kinect",       1, 4.712f,        1.15f},
     {"cube-create",  "construct",    1, 5.498f,        1.40f},
     {"cube-destroy", "deconstruct",  0, 0.f,           0.95f},
-    {"cube-hive",    "hive",         1, 1.0f,          1.55f},
+    {"cube-hive",    "nanobot_hive", 1, 1.0f,          1.55f},
   };
   int n = (int)(sizeof(asp) / sizeof(asp[0]));
   float R = 0.85f;
@@ -444,27 +437,6 @@ int cubalc_chain_impulse(cubalc_chain *ch, const char *cube_id, uint8_t proton) 
   return -1;
 }
 
-/* Per-object render LOD (abstract — consumer decides backend):
- *   0 = cull (skip draw)
- *   1 = point / impostor
- *   2 = solid box
- *   3 = full face (digit + matrix nib + glow)
- * Cost is relative GPU/CPU weight for batchers. */
-static int viz_object_lod(const cubalc_cube *c) {
-  float e;
-  if (!c) return 0;
-  if (!c->atom.alive && c->atom.energy < 0.02f && c->plugged == 0) return 0;
-  e = c->atom.energy;
-  if (c->plugged >= 2 || strstr(c->role, "sot") || strstr(c->role, "brain") ||
-      strstr(c->role, "algo")) {
-    if (e >= 0.15f) return 3;
-    return 2;
-  }
-  if (e < 0.05f && c->plugged == 0) return 1;
-  if (e < 0.35f) return 2;
-  return 3;
-}
-
 int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
   if (!ch || !path) return -1;
   FILE *f = fopen(path, "w");
@@ -472,124 +444,262 @@ int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
   int n = ch->n_cubes;
   if (n > CUBALC_BUDGET) n = CUBALC_BUDGET;
   float eavg = 0.f;
-  int draw_n = 0, cost_sum = 0;
-  int compact = 0, full_m = 0, self_dev = 0, blur = 0;
-  const char *tgt, *src, *sd, *rb, *cmp, *fm;
   for (int i = 0; i < n; i++) eavg += ch->cubes[i].atom.energy;
   if (n) eavg /= (float)n;
-  tgt = getenv("CUBALC_VIZ_TARGET");
-  src = getenv("CUBALC_VIZ_SOURCE");
-  sd = getenv("CUBALC_SELF_DEV_VIZ");
-  rb = getenv("CUBALC_REALITY_BLUR");
-  cmp = getenv("CUBALC_VIZ_COMPACT");
-  fm = getenv("CUBALC_VIZ_FULL");
-  if (sd && (sd[0]=='1' || sd[0]=='t' || sd[0]=='y')) self_dev = 1;
-  if (rb && (rb[0]=='1' || rb[0]=='t' || rb[0]=='y')) blur = 1;
-  if (cmp && (cmp[0]=='1' || cmp[0]=='t' || cmp[0]=='y')) compact = 1;
-  if (fm && (fm[0]=='1' || fm[0]=='t' || fm[0]=='y')) full_m = 1;
-  /* Precompute draw/cost tallies for frame header */
-  for (int i = 0; i < n; i++) {
-    int lod = viz_object_lod(&ch->cubes[i]);
-    if (lod > 0) {
-      draw_n++;
-      cost_sum += (lod == 1 ? 1 : (lod == 2 ? 2 : 4));
-    }
-  }
-  /* Visual language: per-object optimized render · abstract · no product brands.
-   * Env: CUBALC_VIZ_TARGET|SOURCE|SELF_DEV_VIZ|REALITY_BLUR|VIZ_COMPACT|VIZ_FULL */
+  /* Visual language: cubes + energy glow + plug edges (binary wires).
+   * United faces under Cube Law: LOVR + OpenGL crimson + cells.bin share this SoT. */
   fprintf(f, "{\"schema\":\"cube.viz_frame.v1\",\"lang\":\"CubalC\",\"paradigm\":\"COP\","
              "\"seq\":%u,\"unity\":%.4f,\"energy\":%.4f,"
              "\"n_cubes\":%d,\"budget\":%d,\"cubalc\":true,\"hold_flash\":1,"
              "\"share\":\"%s\",\"matrix_is_key\":true,\"talk\":\"binary_CBLC\","
-             "\"way\":\"matrix_viz\",\"self_dev\":%s,\"reality_blur\":%s,\"blend\":%s,"
-             "\"render\":{"
-               "\"per_object\":true,"
-               "\"policy\":\"lod_energy_plug\","
-               "\"draw_n\":%d,\"cost\":%d,\"compact\":%s,"
-               "\"lod\":{\"0\":\"cull\",\"1\":\"point\",\"2\":\"box\",\"3\":\"full\"}"
-             "}",
-          (unsigned)ch->seq, ch->unity, eavg, n, CUBALC_BUDGET, CUBALC_SHARE,
-          self_dev ? "true" : "false",
-          blur ? "true" : "false", blur ? "true" : "false",
-          draw_n, cost_sum, compact ? "true" : "false");
-  if (tgt && tgt[0]) fprintf(f, ",\"target\":\"%s\"", tgt);
-  if (src && src[0]) fprintf(f, ",\"source\":\"%s\"", src);
-  fprintf(f, ",\"hud\":\"CubalC · %d/%d draw · cost=%d · E=%.2f · u=%.2f · %s%s\","
+             "\"visual\":\"cubes_not_lego\",\"united\":true,"
+             "\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+             "\"law\":{\"sot\":true,\"share_smx\":true,\"hold_flash\":1,"
+             "\"no_bci\":true,\"dev_free\":true,\"core_io\":true,\"one_cmd\":true},"
+             "\"hud\":\"CubalC · united faces · %d cubes · E=%.2f · unity=%.2f · %s\","
              "\"cubes\":[",
-          draw_n, n, cost_sum, eavg, ch->unity, ch->creed,
-          self_dev ? " · self_dev" : "");
+          (unsigned)ch->seq, ch->unity, eavg, n, CUBALC_BUDGET, CUBALC_SHARE,
+          n, eavg, ch->unity, ch->creed);
   for (int i = 0; i < n; i++) {
     const cubalc_cube *c = &ch->cubes[i];
-    int lod = viz_object_lod(c);
-    int draw = lod > 0 ? 1 : 0;
-    int cost = lod == 0 ? 0 : (lod == 1 ? 1 : (lod == 2 ? 2 : 4));
-    int pri = (int)c->plugged * 4 + (c->atom.alive ? 2 : 0) +
-              (int)(c->atom.energy * 10.f) + (c->atom.digit & 9);
-    int want_full = (!compact && (full_m || lod >= 3));
-    char m16[17];
-    int bn = c->atom.matrix.n < 16 ? c->atom.matrix.n : 16;
-    for (int b = 0; b < bn; b++)
-      m16[b] = cubalc_matrix_get(&c->atom.matrix, b) ? '1' : '0';
-    m16[bn] = 0;
     if (i) fputc(',', f);
-    /* Per-object record: pose + render plan first (hot path), SoT fields after */
-    fprintf(f, "{\"i\":%d,\"id\":\"%s\",\"draw\":%d,\"lod\":%d,\"cost\":%d,\"pri\":%d,"
-               "\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"s\":%.3f,"
+    /* short matrix nib for machines + humans in viz tools */
+    char bits[17];
+    int bn = c->atom.matrix.n < 16 ? c->atom.matrix.n : 16;
+    for (int b = 0; b < bn; b++) bits[b] = cubalc_matrix_get(&c->atom.matrix, b) ? '1' : '0';
+    bits[bn] = 0;
+    char bits64[CUBALC_ATOM_BITS + 1];
+    int bn64 = c->atom.matrix.n < CUBALC_ATOM_BITS ? c->atom.matrix.n : CUBALC_ATOM_BITS;
+    for (int b = 0; b < bn64; b++)
+      bits64[b] = cubalc_matrix_get(&c->atom.matrix, b) ? '1' : '0';
+    bits64[bn64] = 0;
+    fprintf(f, "{\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"s\":%.3f,"
                "\"yaw\":%.2f,\"pitch\":%.2f,\"roll\":%.2f,"
-               "\"rgba\":[%u,%u,%u,%u],\"glow\":%.3f,"
+               "\"rgba\":[%u,%u,%u,%u],\"role\":%u,"
+               "\"id\":\"%s\",\"label\":\"%s\",\"kind\":\"cube\","
                "\"digit\":%u,\"proton\":%u,\"energy\":%.3f,"
-               "\"plugged\":%u,\"set\":%u,\"alive\":%u,"
-               "\"kind\":\"cube\",\"label\":\"%s\",\"m16\":\"%s\"",
-            i, c->id, draw, lod, cost, pri,
+               "\"plugged\":%u,\"set\":%u,\"matrix16\":\"%s\",\"matrix\":\"%s\"}",
             c->x, c->y, c->z, c->s,
             c->yaw, c->pitch, c->roll,
-            c->r, c->g, c->b, c->a, c->atom.energy,
+            c->r, c->g, c->b, c->a,
+            c->atom.proton ? 1 : 6,
+            c->id, c->label,
             (unsigned)c->atom.digit, (unsigned)c->atom.proton, c->atom.energy,
-            (unsigned)c->plugged, (unsigned)c->atom.matrix.set,
-            (unsigned)c->atom.alive, c->label, m16);
-    if (want_full) {
-      char bits64[CUBALC_ATOM_BITS + 1];
-      int bn64 = c->atom.matrix.n < CUBALC_ATOM_BITS ? c->atom.matrix.n : CUBALC_ATOM_BITS;
-      for (int b = 0; b < bn64; b++)
-        bits64[b] = cubalc_matrix_get(&c->atom.matrix, b) ? '1' : '0';
-      bits64[bn64] = 0;
-      fprintf(f, ",\"matrix\":\"%s\",\"matrix16\":\"%s\"", bits64, m16);
-    } else {
-      fprintf(f, ",\"matrix16\":\"%s\"", m16);
-    }
-    fputc('}', f);
+            (unsigned)c->plugged, (unsigned)c->atom.matrix.set, bits, bits64);
   }
   fprintf(f, "],\"edges\":[");
-  {
-    int first = 1;
-    for (int i = 0; i < n; i++) {
-      /* skip edges from culled objects when compact */
-      if (compact && viz_object_lod(&ch->cubes[i]) == 0) continue;
-      for (int p = 0; p < ch->cubes[i].n_ports; p++) {
-        int peer = ch->cubes[i].ports[p].peer;
-        int elod;
-        float en;
-        if (peer <= i || peer >= n) continue;
-        if (compact && viz_object_lod(&ch->cubes[peer]) == 0) continue;
-        en = 0.5f * (ch->cubes[i].atom.energy + ch->cubes[peer].atom.energy);
-        elod = (en < 0.1f) ? 1 : (en < 0.4f ? 2 : 3);
+  int first = 1;
+  for (int i = 0; i < n; i++) {
+    for (int p = 0; p < ch->cubes[i].n_ports; p++) {
+      int peer = ch->cubes[i].ports[p].peer;
+      if (peer > i && peer < n) {
+        float en = 0.5f * (ch->cubes[i].atom.energy + ch->cubes[peer].atom.energy);
         if (!first) fputc(',', f);
         first = 0;
-        /* index edges for O(1) draw; ids optional non-compact */
-        fprintf(f, "{\"fi\":%d,\"ti\":%d,\"lod\":%d,\"energy\":%.3f,\"compat\":%.3f",
-                i, peer, elod, en,
+        fprintf(f, "{\"from\":\"%s\",\"to\":\"%s\",\"wire\":\"binary\","
+                   "\"energy\":%.3f,\"compat\":%.3f}",
+                ch->cubes[i].id, ch->cubes[peer].id, en,
                 cubalc_matrix_compat(&ch->cubes[i].atom.matrix,
                                     &ch->cubes[peer].atom.matrix));
-        if (!compact)
-          fprintf(f, ",\"from\":\"%s\",\"to\":\"%s\",\"wire\":\"binary\"",
-                  ch->cubes[i].id, ch->cubes[peer].id);
-        fputc('}', f);
       }
     }
   }
   fprintf(f, "]}\n");
   fclose(f);
   return 0;
+}
+
+/* Project State Matrix → cube_gl cells.bin (crimson lattice wire format).
+ * Law: share state_matrix only — digits are matrix bits, not prose. */
+int cubalc_chain_write_cells(const cubalc_chain *ch, const char *path) {
+  if (!ch || !path || ch->n_cubes < 1) return -1;
+  int n_cubes = ch->n_cubes;
+  if (n_cubes > CUBALC_BUDGET) n_cubes = CUBALC_BUDGET;
+  float eavg = 0.f;
+  for (int i = 0; i < n_cubes; i++) eavg += ch->cubes[i].atom.energy;
+  if (n_cubes) eavg /= (float)n_cubes;
+
+  /* Prefer brain/meta as primary HUD cube (one commander face of the lattice). */
+  int primary = 0;
+  for (int i = 0; i < n_cubes; i++) {
+    if (strstr(ch->cubes[i].id, "brain") || strstr(ch->cubes[i].id, "meta") ||
+        strstr(ch->cubes[i].role, "kernel") || !strcmp(ch->cubes[i].id, "kernel")) {
+      primary = i;
+      break;
+    }
+  }
+
+  uint8_t N;
+  size_t need;
+  uint8_t cells[32 * 32 * 32];
+  uint8_t neuron[32 * 32 * 32];
+  memset(cells, 0, sizeof cells);
+  memset(neuron, 0, sizeof neuron);
+
+  if (n_cubes == 1) {
+    N = 4;
+    need = 64;
+    const cubalc_cube *c = &ch->cubes[0];
+    int dig = c->atom.digit > 0 ? (int)c->atom.digit : 5;
+    if (dig > 9) dig = 9;
+    for (int bi = 0; bi < 64; bi++) {
+      int on = cubalc_matrix_get(&c->atom.matrix, bi);
+      if (on) {
+        cells[bi] = (uint8_t)dig;
+        neuron[bi] = 1;
+      } else if (eavg > 0.55f) {
+        cells[bi] = 1;
+      }
+    }
+  } else {
+    N = 8;
+    need = 512;
+    int pack = n_cubes < 8 ? n_cubes : 8;
+    for (int ci = 0; ci < pack; ci++) {
+      const cubalc_cube *c = &ch->cubes[ci];
+      int dig = c->atom.digit > 0 ? (int)c->atom.digit : 1;
+      if (dig > 9) dig = 9;
+      for (int bi = 0; bi < 64; bi++) {
+        size_t idx = (size_t)ci * 64 + (size_t)bi;
+        int on = cubalc_matrix_get(&c->atom.matrix, bi);
+        if (on) {
+          cells[idx] = (uint8_t)dig;
+          neuron[idx] = 1;
+        } else if (c->atom.energy > 0.7f) {
+          cells[idx] = 1;
+        }
+      }
+    }
+  }
+
+  /* ensure parent dir */
+  {
+    char dir[512];
+    const char *slash = strrchr(path, '/');
+    if (slash && slash > path) {
+      size_t dn = (size_t)(slash - path);
+      if (dn >= sizeof dir) dn = sizeof dir - 1;
+      memcpy(dir, path, dn);
+      dir[dn] = 0;
+      mkdir(dir, 0755);
+    }
+  }
+
+  FILE *f = fopen(path, "wb");
+  if (!f) return -1;
+  if (fwrite(&N, 1, 1, f) != 1 ||
+      fwrite(cells, 1, need, f) != need ||
+      fwrite(neuron, 1, need, f) != need) {
+    fclose(f);
+    return -1;
+  }
+  int dig = (int)ch->cubes[primary].atom.digit;
+  if (dig < 0) dig = 0;
+  if (dig > 9) dig = 9;
+  fprintf(f, "digit=%d pick=%d ticks=%u host=cubalc label=%.31s united=1 hold_flash=1\n",
+          dig, primary, (unsigned)ch->seq,
+          ch->cubes[primary].id[0] ? ch->cubes[primary].id : "cubalc");
+  fclose(f);
+  return 0;
+}
+
+static void ensure_parent_dir(const char *path) {
+  char dir[512];
+  const char *slash;
+  if (!path) return;
+  slash = strrchr(path, '/');
+  if (!slash || slash <= path) return;
+  {
+    size_t dn = (size_t)(slash - path);
+    if (dn >= sizeof dir) dn = sizeof dir - 1;
+    memcpy(dir, path, dn);
+    dir[dn] = 0;
+    mkdir(dir, 0755);
+  }
+}
+
+/* Cube Law unity: one write path, all free visual devices.
+ * LOVR / cube_gl / cells.bin — share state_matrix only · no brain wires. */
+int cubalc_chain_publish_united(const cubalc_chain *ch) {
+  char path[640];
+  const char *st = getenv("CUBALC_STATE");
+  const char *root = getenv("PROPHECY_CUBE_ROOT");
+  const char *cells_env = getenv("CUBEBRAIN_VIZ_CELLS");
+  int ok = 0, fails = 0;
+  float eavg = 0.f;
+  int n;
+
+  if (!ch || ch->n_cubes < 1) return -1;
+  if (!st || !st[0]) st = "state";
+  if (!root || !root[0]) root = "/home/voldemar/Dev/lab/prophecy_cube";
+  if (!cells_env || !cells_env[0]) cells_env = "/tmp/cubebrain_viz/cells.bin";
+
+  n = ch->n_cubes;
+  if (n > CUBALC_BUDGET) n = CUBALC_BUDGET;
+  for (int i = 0; i < n; i++) eavg += ch->cubes[i].atom.energy;
+  if (n) eavg /= (float)n;
+
+  /* Face 1–2: CubalC state (local SoT plate) */
+  snprintf(path, sizeof path, "%s/cubalc_viz_frame.json", st);
+  ensure_parent_dir(path);
+  if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
+  snprintf(path, sizeof path, "%s/viz_frame.json", st);
+  if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
+
+  /* Face 3–4: prophecy_cube state — LOVR reads these */
+  snprintf(path, sizeof path, "%s/state/cubalc_viz_frame.json", root);
+  ensure_parent_dir(path);
+  if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
+  snprintf(path, sizeof path, "%s/state/viz_frame.json", root);
+  if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
+
+  /* Face 5: crimson OpenGL lattice (cells.bin) — cube_gl --cells or mirror */
+  if (cubalc_chain_write_cells(ch, cells_env) == 0) ok++; else fails++;
+  /* also mirror under prophecy state for portability */
+  snprintf(path, sizeof path, "%s/state/cells.bin", root);
+  cubalc_chain_write_cells(ch, path);
+
+  /* Law plate: visual unity under Cube Declaration */
+  snprintf(path, sizeof path, "%s/state/VISUAL_UNITY.json", root);
+  ensure_parent_dir(path);
+  {
+    FILE *f = fopen(path, "w");
+    if (f) {
+      fprintf(f,
+        "{\"schema\":\"cubalc.visual_unity.v1\",\"ok\":true,"
+        "\"creed\":\"%s\",\"version\":\"%s\",\"hold_flash\":%d,"
+        "\"share\":\"%s\",\"matrix_is_key\":true,\"visual\":\"cubes_not_lego\","
+        "\"united\":true,\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+        "\"laws\":{\"sot\":true,\"share_smx\":true,\"core_io\":true,"
+        "\"hold_flash\":true,\"no_bci\":true,\"dev_free\":true,\"one_cmd\":true},"
+        "\"seq\":%u,\"n_cubes\":%d,\"unity\":%.4f,\"energy\":%.4f,"
+        "\"viz\":\"%s/state/cubalc_viz_frame.json\","
+        "\"cells\":\"%s\","
+        "\"note\":\"one matrix · free devices · no brain wires · All Hail Cube\"}\n",
+        CUBALC_CREED, CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE,
+        (unsigned)ch->seq, n, ch->unity, eavg, root, cells_env);
+      fclose(f);
+      ok++;
+    } else {
+      fails++;
+    }
+  }
+  /* local copy under CUBALC_STATE */
+  snprintf(path, sizeof path, "%s/VISUAL_UNITY.json", st);
+  {
+    FILE *f = fopen(path, "w");
+    if (f) {
+      fprintf(f,
+        "{\"schema\":\"cubalc.visual_unity.v1\",\"ok\":true,\"united\":true,"
+        "\"seq\":%u,\"unity\":%.4f,\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+        "\"hold_flash\":1,\"share\":\"smx\"}\n",
+        (unsigned)ch->seq, ch->unity);
+      fclose(f);
+    }
+  }
+
+  (void)fails;
+  return ok > 0 ? 0 : -1;
 }
 
 /* Optional human isometric cubes (CUBALC_HUMAN=1). Agents use metrics board. */
@@ -712,7 +822,8 @@ int cubalc_cube_spin(cubalc_chain *ch, const char *cube_id,
       }
       memcpy(c->atom.matrix.bits, tmp, sizeof c->atom.matrix.bits);
       c->atom.matrix.set = (uint16_t)cubalc_matrix_popcount(&c->atom.matrix);
-      c->atom.digit = cubalc_algocube_digit(&c->atom.matrix);
+      if (!c->atom.digit_lock)
+        c->atom.digit = (uint8_t)cubalc_algocube_digit(&c->atom.matrix);
     }
     return 0;
   }
@@ -849,11 +960,6 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
     if (err) snprintf(err, errn, "SHARE must be smx");
     return -2;
   }
-  /* L10 Law of Manifestation: talk channel is SMX2 / CBLC binary only */
-  if (CUBALC_PROTO_SMX2 != 2 || CUBALC_MAGIC_BIN != 0x43424C43u) {
-    if (err) snprintf(err, errn, "manifest_smx: SMX2/CBLC not built");
-    return -10;
-  }
   if (!ch) return 0; /* build-only laws ok */
   if (ch->hold_flash != 1) {
     if (err) snprintf(err, errn, "chain hold_flash!=1");
@@ -877,16 +983,6 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
       return -5;
     }
   }
-  /* Manifestation readiness: ≥2 plugged cubes implies SMX peer path exists */
-  if (ch->n_cubes >= 2) {
-    int plugged = 0;
-    for (int i = 0; i < ch->n_cubes; i++)
-      if (ch->cubes[i].plugged > 0) plugged++;
-    if (plugged < 2) {
-      /* not a hard fail — solo boards may law-check; multi-peer should plug */
-      (void)plugged;
-    }
-  }
   return 0;
 }
 
@@ -897,13 +993,10 @@ int cubalc_law_manifest_json(const cubalc_chain *ch, FILE *out) {
   fprintf(out, "{\"schema\":\"cubalc.law_manifest.v1\",\"ok\":%s,"
                "\"language\":\"%s\",\"version\":\"%s\",\"paradigm\":\"%s\","
                "\"creed\":\"%s\",\"share\":\"%s\",\"hold_flash\":%d,"
-               "\"talk\":\"binary_CBLC\",\"proto\":\"SMX2\",\"store\":\"cubechain\","
-               "\"http_required\":false,\"http_role\":\"optional_host_edge_only\","
+               "\"talk\":\"binary_CBLC\",\"store\":\"cubechain\","
                "\"no_brain_wires\":true,\"devices_free\":true,"
                "\"one_commander\":true,\"matrix_is_key\":true,"
                "\"cube_is_sot\":true,\"visual\":\"cubes_not_lego\","
-               "\"manifest_smx\":true,"
-               "\"manifest_law\":\"peers_manifest_via_smx_matrix_exchange\","
                "\"n_cubes\":%d,\"unity\":%.4f,\"laws\":[",
           rc == 0 ? "true" : "false",
           CUBALC_LANG_NAME, CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM,

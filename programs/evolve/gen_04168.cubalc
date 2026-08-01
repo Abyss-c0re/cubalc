@@ -1,0 +1,49 @@
+HOLD_FLASH 1
+SHARE state_matrix_only
+GENESIS "NEXUS_COORD v1 | from=self_evolve | type=reverse_rubik | gen=4168 | E=779230 | face=2 | diff=4.00 | hold_flash=1 |"
+
+CUBE brain ROLE braincube PROTON 1
+CUBE meta ROLE meta PROTON 1
+CUBE hive ROLE nanobot_hive PROTON 1
+CUBE create ROLE construct PROTON 1
+CUBE destroy ROLE deconstruct PROTON 0
+CUBE lane0 ROLE sensor PROTON 0
+CUBE lane1 ROLE sensor PROTON 0
+CUBE lane2 ROLE sensor PROTON 0
+CUBE lane3 ROLE sensor PROTON 0
+
+PLUG brain meta
+PLUG meta hive
+PLUG create destroy
+PLUG brain hive
+PLUG meta lane0
+PLUG meta lane1
+PLUG brain lane2
+PLUG brain lane3
+
+SETBIT brain 0 1
+SETBIT brain 1 0
+SETBIT brain 2 1
+SETBIT brain 3 1
+SETBIT brain 4 0
+SETBIT brain 5 1
+SETBIT brain 6 1
+SETBIT brain 7 1
+SETBIT meta 0 1
+SETBIT meta 1 0
+SETBIT meta 2 1
+SETBIT meta 3 1
+SETBIT meta 4 0
+SETBIT meta 5 1
+SETBIT meta 6 1
+SETBIT meta 7 1
+SETBIT meta 2 1
+
+IMPULSE create 1
+IMPULSE hive 1
+IMPULSE brain 1
+FLOW 1
+DECIDE brain
+PRINT evolve CUBES
+ASSERT CUBES >= 2
+

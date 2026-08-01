@@ -1,0 +1,16 @@
+// Cube Flow — compile + JIT path (manifest of the language)
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=cube_flow | type=jit | hold_flash=1 |"
+CUBE brain ROLE braincube PROTON 1
+CUBE hive ROLE nanobot_hive PROTON 1
+PLUG brain hive
+SETBIT brain 1 1
+SETBIT brain 3 1
+SETBIT brain 7 1
+IMPULSE hive 1
+FLOW 4
+DECIDE brain
+LET d = 0
+// digit lands in r0 from DECIDE in bytecode; high-level uses LET after
+PRINT "flow" CUBES
+ASSERT CUBES >= 2

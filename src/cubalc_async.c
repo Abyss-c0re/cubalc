@@ -523,7 +523,8 @@ int cubalc_async_chain_flow(cubalc_chain *ch, int ticks) {
           if (cubalc_matrix_get(&received->matrix, bi))
             cubalc_matrix_set(&B->atom.matrix, bi, 0);
       }
-      B->atom.digit = cubalc_algocube_digit(&B->atom.matrix);
+      if (!B->atom.digit_lock)
+        B->atom.digit = (uint8_t)cubalc_algocube_digit(&B->atom.matrix);
       B->atom.unity = cubalc_matrix_compat(&A->atom.matrix, &B->atom.matrix);
       A->atom.energy = fminf(1.f, fmaxf(0.f, A->atom.energy + edges[e].e_from_delta));
       B->atom.energy = fminf(1.f, fmaxf(0.f, B->atom.energy + edges[e].e_to_delta));

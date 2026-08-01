@@ -1,0 +1,54 @@
+# MATRIX EXCHANGE — binary only · no language
+# Compatible → FOLDBITS + DECIDE + MANIFEST
+# Incompatible → respectful part (DECONSTRUCT plug, no force)
+
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 32
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=matrix_exchange | role=kernel_sot | HOLD_FLASH=ack_held | mode=binary | language=0 |"
+
+OS_ASPECTS
+
+CUBE a ROLE raw_energy PROTON 1
+CUBE b ROLE raw_energy PROTON 1
+CUBE intent ROLE algocube PROTON 1
+CUBE nexus ROLE nanobot_hive PROTON 1
+CUBE part ROLE deconstruct PROTON 0
+
+# attempt plug — ring only if energy matches
+PLUG a intent
+PLUG b intent
+PLUG intent nexus
+PLUG part nexus
+
+POSE all
+
+# raw folds (intent = fold result digit path)
+FOLDBITS a "10010111110100001010011011000110"
+FOLDBITS b "10010111110100001010011011000110"
+SETDIGIT intent 3
+SETDIGIT nexus 4
+SETDIGIT a 3
+SETDIGIT b 3
+
+IMPULSE a 1
+IMPULSE b 1
+IMPULSE intent 1
+FLOW 4
+
+DECIDE intent
+DECIDE nexus
+
+# compatible path: reconstruct unity
+RECONSTRUCT nexus
+MANIFEST nexus
+
+PRINT "mx_cubes" CUBES
+PRINT "mx_unity" UNITY
+PRINT "last" LAST
+
+ASSERT CUBES >= 3
+ASSERT UNITY >= 0
+
+VIZ "state/cubalc_viz_frame.json"

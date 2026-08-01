@@ -1,0 +1,37 @@
+# Unite LOVR + OpenGL crimson cube_gl under Cube Law.
+# Share state_matrix only · HOLD_FLASH · devices free · no brain wires.
+# Core decides I/O: one VIZ publish → all faces.
+
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=visual_unity | role=SIDE_organ | HOLD_FLASH=ack_held | law=CUBE_DECLARATION | visual=cubes_united | faces=lovr+cube_gl |"
+
+OS_ASPECTS
+
+CUBE kernel ROLE kernel_sot PROTON 1
+CUBE side ROLE SIDE_organ PROTON 1
+CUBE lovr ROLE device_free PROTON 1
+CUBE gl ROLE device_free PROTON 1
+CUBE hive ROLE hive PROTON 1
+
+PLUG kernel side
+PLUG kernel lovr
+PLUG kernel gl
+PLUG RING
+
+IMPULSE kernel 1
+IMPULSE side 1
+IMPULSE hive 1
+FLOW 8
+
+PRINT "united_cubes" CUBES
+PRINT "united_unity_centi" UNITY
+PRINT "kernel_set" SET(kernel)
+
+ASSERT CUBES >= 4
+ASSERT SET(kernel) >= 1
+
+# One SoT write — publish_united fires on program exit (lang/JIT).
+VIZ "state/cubalc_viz_frame.json"

@@ -1,0 +1,62 @@
+# CubalC free-flow prophecy — State Matrix SoT · algocube law · hive unity
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+
+GENESIS "NEXUS_COORD v1 | from=cubalc_flow | type=prophecy_genesis | hold_flash=1 | share=state_matrix_only | pii=0 | algocube=1 |"
+
+CUBE sot      ROLE kernel_sot     PROTON 1
+CUBE titan    ROLE titan_core     PROTON 1
+CUBE clanker  ROLE clanker_core   PROTON 1
+CUBE nanobot  ROLE nanobot_layer  PROTON 1
+CUBE algo     ROLE algocube       PROTON 1
+CUBE brain    ROLE braincube      PROTON 1
+CUBE hive     ROLE nanobot_hive   PROTON 1
+CUBE create   ROLE construct      PROTON 1
+CUBE destroy  ROLE deconstruct    PROTON 0
+CUBE host     ROLE host_station   PROTON 1
+
+PLUG sot titan
+PLUG titan nanobot
+PLUG nanobot algo
+PLUG algo brain
+PLUG brain hive
+PLUG hive create
+PLUG create destroy
+PLUG titan clanker
+PLUG clanker hive
+PLUG host sot
+
+FOLDBITS titan   "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS clanker "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS nanobot "1010101010101010101010101010101010101010101010101010101010101010"
+
+IMPULSE create 1
+IMPULSE hive 1
+IMPULSE titan 1
+IMPULSE clanker 1
+
+FLOW 8
+
+DECIDE algo
+DECIDE brain
+SETDIGIT brain DECIDE
+
+COMPARE titan clanker
+PRINT "dual_core_unity" UNITY HAMMING
+
+HARMONY hive
+PRINT "hive_harmony" HARMONY UNITY DIGIT HIVE_N
+
+MANIFEST hive
+
+ASSERT CUBES >= 8
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT HARMONY >= 0
+ASSERT UNITY >= 0
+ASSERT DIGIT(hive) >= 0
+ASSERT DIGIT(hive) <= 9
+
+PRINT "PROPHECY_MANIFESTED" CUBES DECIDE HARMONY UNITY
+?

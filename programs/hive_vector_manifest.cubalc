@@ -1,0 +1,88 @@
+# HIVE VECTOR MANIFEST — non-intersecting agent vectors
+# Nano-help: each cube picks a free vector, plugs neighbor, MANIFEST unity
+# No prose hot path. Digits only. product=cubalc · quest_flash=0
+
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 96
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=hive_vector | role=nanobot_hive | HOLD_FLASH=ack_held | product=cubalc | quest_flash=0 | intersect=0 |"
+
+OS_ASPECTS
+
+# vectors 0-7 — must not share ROLE energy on same plug ring spoke
+CUBE v0 ROLE tracking_sot    PROTON 1
+CUBE v1 ROLE spatial_manifest PROTON 1
+CUBE v2 ROLE construct       PROTON 1
+CUBE v3 ROLE deconstruct     PROTON 0
+CUBE v4 ROLE algocube        PROTON 1
+CUBE v5 ROLE quest_lizard    PROTON 1
+CUBE v6 ROLE nanobot_hive    PROTON 1
+CUBE v7 ROLE kernel_sot      PROTON 1
+CUBE nexus ROLE nanobot_hive PROTON 1
+CUBE wind  ROLE construct    PROTON 1
+CUBE atom  ROLE raw_energy   PROTON 1
+
+# non-intersect ring: each vector plugs only neighbor + nexus
+PLUG v0 v1
+PLUG v1 v2
+PLUG v2 v3
+PLUG v3 v4
+PLUG v4 v5
+PLUG v5 v6
+PLUG v6 v7
+PLUG v7 v0
+PLUG v0 nexus
+PLUG v1 nexus
+PLUG v2 nexus
+PLUG v3 nexus
+PLUG v4 nexus
+PLUG v5 nexus
+PLUG v6 nexus
+PLUG v7 nexus
+PLUG wind atom
+PLUG atom nexus
+PLUG RING
+
+DECONSTRUCT v3
+RECONSTRUCT v2
+RECONSTRUCT nexus
+RECONSTRUCT wind
+
+POSE all
+
+SETDIGIT v0 2
+SETDIGIT v1 9
+SETDIGIT v2 1
+SETDIGIT v3 0
+SETDIGIT v4 4
+SETDIGIT v5 1
+SETDIGIT v6 4
+SETDIGIT v7 2
+SETDIGIT nexus 4
+SETDIGIT atom 3
+SETDIGIT wind 8
+
+FOLDBITS v4 "1010010110100101"
+FOLDBITS atom "1100110011001100"
+
+IMPULSE v0 1
+IMPULSE v1 1
+IMPULSE v2 1
+IMPULSE v4 1
+IMPULSE v6 1
+IMPULSE nexus 1
+FLOW 12
+
+DECIDE v4
+DECIDE nexus
+
+PRINT "hive_cubes" CUBES
+PRINT "hive_unity" UNITY
+PRINT "last" LAST
+
+ASSERT CUBES >= 8
+ASSERT UNITY >= 0
+
+MANIFEST nexus
+VIZ "state/cubalc_viz_frame.json"

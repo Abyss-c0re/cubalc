@@ -1,96 +1,33 @@
-# CubalC
+# CubalC — product (ProjectNexus)
 
-**CubalC (C³)** is an **AI-native programming language** for agents and cube-shaped computation.
+**Version:** 1.5.0-flow · paradigm **COP/flow** · pure **C** runtime  
+**Origin:** `Dev/lab/prophecy_cube/cubalc`
 
-| | |
-|--|--|
-| **For** | AI agents, tool runtimes, hive/control planes |
-| **Paradigm** | COP — Cube-Oriented Programming |
-| **Talk** | Binary State Matrix (CBLC) · not prose |
-| **Runtime** | Pure C · portable · no Python |
-| **Humans** | Optional real-cube visuals (`CUBALC_HUMAN=1`, browser viewer) |
-
-> Agents write CubalC. Humans may *see* cubes. The machine never needs the picture.
-
-## Why agents use CubalC
-
-- **Place · plug · pulse · flow · look** — small grammar, stable ops
-- **`SYS` host ops** — READ/WRITE/ENV/SPAWN/JOIN/JSON (allowlisted); HTTP optional edge only
-- **State Matrix is SoT** — bits agents can verify, not free text
-- **SMX2 peer talk** — no HTTP required (in-process, file bus, AF_UNIX)
-- **HOLD_FLASH** — never auto-flash hardware
-- **JSON + ASCII boards** — easy for tools to parse
-
-## Quick start
+## Keep this product up to date
 
 ```bash
-make
-./out/cubalc run programs/hello_cube.cubalc
-./out/cubalc help
-make test
+bash scripts/sync_cubalc_product.sh
+# or
+make -C products/cubalc sync
 ```
-
-Install:
 
 ```bash
-make install          # → ~/.local/bin/cubalc
-# GPU pool (optional):
-make USE_OPENCL=1
+make -C products/cubalc all
+./products/cubalc/out/cubalc law
+./products/cubalc/out/cubalc run programs/free_flow_prophecy.cubalc
+./products/cubalc/out/cubalc evolve --once
+./products/cubalc/out/cubalc evolve-loop --hz 5
+./products/cubalc/out/cubalc evolve --deep          # algocube deep search
+bash products/cubalc/scripts/cubalc_session_guard.sh --daemon
 ```
 
-## Language (agent surface)
+Binary: `out/cubalc` → `../../bin/cubalc`
 
-```cubalc
-[hold]
-[kernel:sot]
-[hive:nanobot]
-[kernel~hive]
-[kernel!]
-[~4]
-?
+| Surface | Path |
+|---------|------|
+| Algocube | `include/cubalc_algocube.h` |
+| Evolve (C) | `include/cubalc_evolve.h` |
+| Session guard | `scripts/cubalc_session_guard.sh` |
+| Docs | `docs/FREE_FLOW.md` `docs/ALGOCUBE.md` `docs/EVOLVE.md` |
 
-SYS WRITE "/tmp/mark.txt" "ok"
-SYS READ "/tmp/mark.txt"
-SYS CHAT "local"
-PRINT LAST
-```
-
-Play dialect `[]` and verb dialect (`CUBE`/`PLUG`/`FLOW`) both work.
-
-## Optional human visuals (real cubes)
-
-Agents ignore these. Humans may enable:
-
-```bash
-# ASCII isometric cubes + metrics
-make human
-# or:
-CUBALC_HUMAN=1 ./out/cubalc run programs/hello_cube.cubalc
-
-# Spinning kernel cube
-./out/cubalc run programs/hello_cube.cubalc   # ? already prints board
-# Browser (open local file after a run that publishes viz):
-#   tools/cube_view.html  — loads state/cubalc_viz_frame.json
-```
-
-Viz schema: `cube.viz_frame.v1` JSON (positions, colors, edges, matrix bits).
-
-## Agent integration
-
-See **[AGENTS.md](AGENTS.md)** and **[docs/FOR_AGENTS.md](docs/FOR_AGENTS.md)**.
-
-Env:
-
-| var | meaning |
-|-----|---------|
-| `CUBALC_STATE` | state dir (default `./state`) |
-| `CUBALC_BIN` | path to binary for SYS WHICH/SPAWN |
-| `CUBALC_HUMAN` | `1` = isometric cube art |
-| `CUBALC_ASCII` | `1` = ASCII boards |
-| `GROKIUM_MSG` | message for `SYS CHAT` |
-
-## Status
-
-Standalone OSS-ready runtime. Products (e.g. Grokium) depend on CubalC — CubalC does not depend on them.
-
-License: see LICENSE.
+Creed: Cube is SoT · OS is way · devices free · algocube law · loop must go on · `C3`

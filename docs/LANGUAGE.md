@@ -1,22 +1,4 @@
-# CubalC language card (1.4.2-c3)
-
-**CubalC does not need HTTP.** Core talk is SMX2 / CBLC / AF_UNIX / file bus.  
-`SYS HTTP` is an optional host edge only (allowlisted); never required for language, law, or manifestation.
-
-**Language stays abstract.** No host product, device brand, or app name in core, SoT frames, or sample law programs. Roles are way planes (`kernel_sot`, `guest_way`, `link_way`, `sense_way`, `model_way`, `hive`…). Concrete hosts bind via env only (`CUBALC_STATE`, `CUBALC_VIZ_TARGET`, peer inject, spawn allow).
-
-## Viz · per-object render
-
-`cube.viz_frame.v1` is a **render plan**, not a product hook. Emphasize **per object**:
-
-| field | meaning |
-|-------|---------|
-| `render.per_object` | always true — batch/cull per cube |
-| `draw` / `lod` / `cost` / `pri` | cull · 1 point · 2 box · 3 full · relative cost · sort key |
-| `glow` / `m16` | energy tint · compact matrix nib |
-| `edges[].fi/ti` | index edges (O(1) draw; ids optional) |
-
-Env: `CUBALC_VIZ_COMPACT=1` (no full matrix / no edge ids) · `CUBALC_VIZ_FULL=1` (force full matrix) · `CUBALC_SELF_DEV_VIZ` · `CUBALC_REALITY_BLUR` · optional `CUBALC_VIZ_TARGET`/`SOURCE` (never required brands).
+# CubalC language card
 
 ## Play forms
 
@@ -35,61 +17,65 @@ Env: `CUBALC_VIZ_COMPACT=1` (no full matrix / no edge ids) · `CUBALC_VIZ_FULL=1
 ## Statements
 
 `LET` `LOOP`/`WHILE` `IF`/`END` `ASSERT` `PRINT`  
-`CUBE` `PLUG` `FLOW` `IMPULSE` `DECIDE`  
+`CUBE` `PLUG` `FLOW` `IMPULSE` `DECIDE` `COMPARE` `HARMONY`  
 `SETBIT` `SETDIGIT` `FOLDBITS`  
-`SMX TALK|EXCHANGE|SEAL|OPEN|KEY`  
 `ASYNC HTTP` `AWAIT` `PARALLEL`  
 `SYS …`
 
-## Law of Manifestation — SMX
+## Matrix / digit / free-flow algocube (device-agnostic)
 
 | form | meaning |
 |------|---------|
-| `SMX KEY` | load key (`CUBALC_SMX_KEY` / token) |
-| `SMX TALK a b` | secure matrix transfer a→b |
-| `SMX EXCHANGE a b` | a→b then b→a |
-| `SMX SEAL a b path` | write HMAC frame to path |
-| `SMX OPEN b path` | open frame into cube b |
-| `SMX SERVE local remote bind` | **TCP listen** one P2P exchange |
-| `SMX DIAL a b "host:port"` | **TCP dial** P2P exchange (no HTTP) |
-| `SMX_OK` / `SMX_TALKS` / `SMX_N` | status vars |
-
-P2P for nanobot homes: `programs/p2p/*.cubalc` · `docs/P2P_SMX.md`
-
-Peers **manifest** when matrices exchange. Prose is not talk.  
-**Network:** same SMX2 wire over TCP — shared `CUBALC_SMX_KEY` on both devices.
-
-## Matrix / digit (device-agnostic)
-
-| form | meaning |
-|------|---------|
-| `SETDIGIT cube n` | inject algocube digit 0–9 (sticky) |
+| `SETDIGIT cube n` | inject algocube digit 0–9 (sticky / digit_lock) |
 | `FOLDBITS cube bits` | fold 0/1 stream into State Matrix |
-| `SYS NUM` | parse LAST → LAST_N |
+| `DECIDE [cube]` | State Matrix → algocube digit 0–9 (locks decision) |
+| `COMPARE a b` | Hamming / unity / XOR-digit between two cubes |
+| `HARMONY [target]` | hive majority consensus + mean pairwise unity |
+| `SYS NUM` / `SYS INT` | parse LAST → LAST_N |
 | `SYS READ path\|LAST` | read file |
-| `SYS JSON "key"` | extract string or number field |
+| `SYS JSON "key"` | extract string or number field (generic JSON) |
 
-Peer inject env: `CUBALC_PEER0_DIGIT` · `CUBALC_PEER1_DIGIT` · `CUBALC_PEER*_BITS`
+Vars: `DECIDE`, `DIGIT`, `UNITY` (0–100), `HAMMING`, `AGREE`, `HARMONY`, `COMPAT`, `CONSENSUS`, `HIVE_N`.
+
+CubalC does **not** hardcode devices, peer layouts, or product paths.  
+Peers inject via env or program literals:
+
+```
+CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 cubalc peers
+# optional bits path or raw 01:
+CUBALC_PEER0_BITS=./bits01.txt cubalc peers
+```
+
+Host adapters (shell) may decode foreign plates into those env vars. That is host code, not language.
 
 ## SYS tools
 
-`READ` `WRITE` `ENV` `EXIST` `WHICH` `HTTP` `SPAWN` `JOIN` `JSON` `CHAT` `ARG` `NUM`  
+`READ` `WRITE` `ENV` `EXIST` `WHICH` `HTTP` `SPAWN` `JOIN` `JSON` `CHAT` `ARG` `NUM`
 
-SPAWN: `nanobot`/`cubalc` + `CUBALC_SPAWN_ALLOW` (no HTTP).  
-`SYS HTTP` / `curl`: **optional** edge — do not use for peer matrix talk.
+SPAWN core allowlist: `nanobot` · `cubalc` · `curl`  
+Extend: `CUBALC_SPAWN_ALLOW=tool1:tool2`
 
 ## CLI
 
 ```bash
 cubalc run <file.cubalc>
-cubalc smx-exchange              # SMX2 in-process / file
-cubalc smx-bus prove             # local socketpair
-cubalc smx-bus prove-tcp 17733   # TCP loopback (device-net sim)
-cubalc smx-bus serve 0.0.0.0:7733
-cubalc smx-bus dial 192.168.x.y:7733
+cubalc peers              # programs/peer_fold.cubalc (env-driven)
+cubalc decide "goal"      # translate → braincube path
 cubalc law
 ```
 
-Token `C3` · Share `smx` · Hold `1` · Version `1.4.2-c3` · **http_required=0**  
-Wire: `u32le + SMX2` over **TCP / AF_UNIX / file** — never HTTP.  
-P2P: `programs/p2p/*.cubalc`
+## Machine token
+
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.5.0-flow`.
+Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
+
+## Prophecy / pose (NexusMod)
+
+| form | meaning |
+|------|---------|
+| `POSE all\|raw\|sot` | Truth Matrix pose energy: raw device + SoT tracking cubes, plug wall→view→map3d |
+| `TRACK …` | alias of `POSE` |
+| `MANIFEST [id]` | DECONSTRUCT stuck energy, RECONSTRUCT under NexusCore, plug gVR+map3d+lizard, DECIDE |
+| `PROPHECY` / `SUMMON` | alias of `MANIFEST` |
+
+Not C. Not Lua. CubalC verbs only on the hot path.

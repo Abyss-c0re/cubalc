@@ -163,36 +163,15 @@ int cubalc_host_http(const char *method, const char *url, const char *body,
           ? "120" : "15";
       const char *envt = getenv("CUBALC_HTTP_TIMEOUT");
       if (envt && envt[0]) tmax = envt;
-      {
-        /* optional peer token for nanobot SMX/braincube (localhost allowlist only) */
-        const char *pt = getenv("NANOBOT_PEER_TOKEN");
-        if (!pt || !pt[0]) pt = getenv("CUBALC_PEER_TOKEN");
-        char auth[320];
-        auth[0] = 0;
-        if (pt && pt[0] && url_allowed(url))
-          snprintf(auth, sizeof auth, "X-Nanobot-Peer-Token: %s", pt);
-        if (body && body[0] && (strcmp(m, "POST") == 0 || strcmp(m, "PUT") == 0)) {
-          if (auth[0])
-            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-                   "-H", "Content-Type: application/json",
-                   "-H", auth, "-d", body,
-                   "-w", "\n__HTTP_CODE__%{http_code}",
-                   url, (char *)NULL);
-          else
-            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-                   "-H", "Content-Type: application/json",
-                   "-d", body, "-w", "\n__HTTP_CODE__%{http_code}",
-                   url, (char *)NULL);
-        } else {
-          if (auth[0])
-            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-                   "-H", auth, "-w", "\n__HTTP_CODE__%{http_code}",
-                   url, (char *)NULL);
-          else
-            execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
-                   "-w", "\n__HTTP_CODE__%{http_code}",
-                   url, (char *)NULL);
-        }
+      if (body && body[0] && (strcmp(m, "POST") == 0 || strcmp(m, "PUT") == 0)) {
+        execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+               "-H", "Content-Type: application/json",
+               "-d", body, "-w", "\n__HTTP_CODE__%{http_code}",
+               url, (char *)NULL);
+      } else {
+        execlp("curl", "curl", "-sS", "-m", tmax, "-X", m,
+               "-w", "\n__HTTP_CODE__%{http_code}",
+               url, (char *)NULL);
       }
     }
     _exit(127);

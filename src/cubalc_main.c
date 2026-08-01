@@ -3,39 +3,18 @@
 #include "cubalc_smx.h"
 #include "cubalc_cubechain.h"
 #include "cubalc_lang.h"
+#include "cubalc_isa.h"
+#include "cubalc_jit.h"
 #include "cubalc_translate.h"
+#include "cubalc_evolve.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <ctype.h>
-#include <time.h>
 
 /* CubalC machine — CBLC · smx · cubechain · hold=1 */
-
-/* parse "port" | "host:port" → host out, port out */
-static int parse_host_port(const char *s, char *host, size_t hostn, int *port) {
-  const char *colon;
-  if (!s || !s[0] || !host || !port) return -1;
-  colon = strrchr(s, ':');
-  if (colon && colon != s) {
-    size_t hl = (size_t)(colon - s);
-    if (hl + 1 > hostn) return -1;
-    memcpy(host, s, hl);
-    host[hl] = 0;
-    *port = atoi(colon + 1);
-  } else if (isdigit((unsigned char)s[0])) {
-    snprintf(host, hostn, "0.0.0.0");
-    *port = atoi(s);
-  } else {
-    return -1;
-  }
-  return (*port > 0 && *port <= 65535) ? 0 : -1;
-}
 
 static void state_dir(char *buf, size_t n) {
   const char *e = getenv("CUBALC_STATE");
@@ -54,11 +33,10 @@ static void paths(char *viz, char *chain, char *init, char *dir, size_t n) {
 }
 
 static void publish(const cubalc_chain *ch) {
-  char viz[512], chainp[512], initp[512], dir[512], viz2[512];
+  char viz[512], chainp[512], initp[512], dir[512];
   paths(viz, chainp, initp, dir, sizeof viz);
-  snprintf(viz2, sizeof viz2, "%s/viz_frame.json", dir);
-  cubalc_chain_write_viz(ch, viz);
-  cubalc_chain_write_viz(ch, viz2);
+  /* Cube Law: one publish path → LOVR + crimson cube_gl + cells.bin united */
+  cubalc_chain_publish_united(ch);
   cubalc_chain_write_json(ch, chainp);
 }
 
@@ -283,143 +261,6 @@ static int cmd_smx_selftest(void) {
   return 0;
 }
 
-/* Two-peer State Matrix exchange on CubalC SMX2 (HMAC, anti-replay, file bus). */
-static int cmd_smx_exchange(int argc, char **argv) {
-  cubalc_smx_ctx ctx_a, ctx_b;
-  cubalc_chain ch;
-  cubalc_matrix gen;
-  uint8_t frame[512];
-  size_t n = 0;
-  cubalc_atom recv;
-  char from[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
-  char dir[256], path_ab[320], path_ba[320];
-  int ia, ib, set_a0, set_b0, set_b1, set_a1;
-  float unity0, unity1;
-  const char *key_hex = getenv("CUBALC_SMX_KEY");
-  const char *token = getenv("CUBALC_SMX_TOKEN");
-  if (!token || !token[0]) token = getenv("NANOBOT_PEER_TOKEN");
-  (void)argc; (void)argv;
-
-  state_dir(dir, sizeof dir);
-  ensure_dir(dir);
-  snprintf(path_ab, sizeof path_ab, "%s/smx2_peer0_to_peer1.cblc", dir);
-  snprintf(path_ba, sizeof path_ba, "%s/smx2_peer1_to_peer0.cblc", dir);
-
-  cubalc_smx_ctx_init(&ctx_a);
-  cubalc_smx_ctx_init(&ctx_b);
-  if (key_hex && key_hex[0] && strlen(key_hex) >= 64) {
-    if (cubalc_smx_load_key_hex(&ctx_a, key_hex) != 0 ||
-        cubalc_smx_load_key_hex(&ctx_b, key_hex) != 0) {
-      puts("{\"ok\":false,\"error\":\"key_hex\"}");
-      return 1;
-    }
-  } else if (token && token[0]) {
-    if (cubalc_smx_load_key_token(&ctx_a, token) != 0 ||
-        cubalc_smx_load_key_token(&ctx_b, token) != 0) {
-      puts("{\"ok\":false,\"error\":\"key_token\"}");
-      return 1;
-    }
-  } else {
-    const char *demo =
-      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
-    cubalc_smx_load_key_hex(&ctx_a, demo);
-    cubalc_smx_load_key_hex(&ctx_b, demo);
-  }
-
-  cubalc_coord_to_matrix(
-    "NEXUS_COORD v1 | from=smx_exchange | type=peer_talk | hold_flash=1 |", &gen);
-  cubalc_chain_init(&ch);
-  cubalc_chain_from_initial(&ch, &gen, 1);
-  cubalc_cube_spawn(&ch, "peer0", "host", 1, -0.4f, 0.f, 0.f);
-  cubalc_cube_spawn(&ch, "peer1", "body", 1, 0.4f, 0.f, 0.f);
-  ia = 0; ib = 1;
-  for (int i = 0; i < ch.n_cubes; i++) {
-    if (strcmp(ch.cubes[i].id, "peer0") == 0) ia = i;
-    if (strcmp(ch.cubes[i].id, "peer1") == 0) ib = i;
-  }
-  /* distinct matrix patterns so transfer is measurable */
-  for (int i = 0; i < 16; i++)
-    cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i * 2, 1);
-  for (int i = 0; i < 12; i++)
-    cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i * 3 + 1, 1);
-  ch.cubes[ia].atom.digit = (uint8_t)cubalc_algocube_digit(&ch.cubes[ia].atom.matrix);
-  ch.cubes[ib].atom.digit = (uint8_t)cubalc_algocube_digit(&ch.cubes[ib].atom.matrix);
-  set_a0 = cubalc_matrix_popcount(&ch.cubes[ia].atom.matrix);
-  set_b0 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-  unity0 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-  cubalc_cube_plug(&ch, ia, ib);
-
-  /* A → B seal to file bus */
-  if (cubalc_smx_seal(&ctx_a, &ch.cubes[ia].atom, "peer0", "peer1",
-                      frame, sizeof frame, &n) != 0) {
-    printf("{\"ok\":false,\"error\":\"seal_ab\",\"msg\":\"%s\"}\n", ctx_a.last_err);
-    return 2;
-  }
-  if (cubalc_smx_write_frame(path_ab, frame, n) != 0) {
-    puts("{\"ok\":false,\"error\":\"write_ab\"}");
-    return 2;
-  }
-  n = 0;
-  if (cubalc_smx_read_frame(path_ab, frame, sizeof frame, &n) != 0) {
-    puts("{\"ok\":false,\"error\":\"read_ab\"}");
-    return 3;
-  }
-  if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                      &ch.cubes[ib].atom.matrix) != 0) {
-    printf("{\"ok\":false,\"error\":\"open_ab\",\"msg\":\"%s\"}\n", ctx_b.last_err);
-    return 3;
-  }
-  /* apply create-proton transfer into peer1 */
-  for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-    if (cubalc_matrix_get(&recv.matrix, i))
-      cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-  ch.cubes[ib].atom.digit = (uint8_t)cubalc_algocube_digit(&ch.cubes[ib].atom.matrix);
-  set_b1 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-
-  /* B → A reverse */
-  if (cubalc_smx_seal(&ctx_b, &ch.cubes[ib].atom, "peer1", "peer0",
-                      frame, sizeof frame, &n) != 0) {
-    printf("{\"ok\":false,\"error\":\"seal_ba\",\"msg\":\"%s\"}\n", ctx_b.last_err);
-    return 4;
-  }
-  cubalc_smx_write_frame(path_ba, frame, n);
-  n = 0;
-  cubalc_smx_read_frame(path_ba, frame, sizeof frame, &n);
-  if (cubalc_smx_open(&ctx_a, frame, n, &recv, from, to,
-                      &ch.cubes[ia].atom.matrix) != 0) {
-    printf("{\"ok\":false,\"error\":\"open_ba\",\"msg\":\"%s\"}\n", ctx_a.last_err);
-    return 4;
-  }
-  for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-    if (cubalc_matrix_get(&recv.matrix, i))
-      cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i, 1);
-  ch.cubes[ia].atom.digit = (uint8_t)cubalc_algocube_digit(&ch.cubes[ia].atom.matrix);
-  set_a1 = cubalc_matrix_popcount(&ch.cubes[ia].atom.matrix);
-  unity1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-
-  /* anti-replay: replaying A→B frame must fail on peer1 ctx */
-  n = 0;
-  cubalc_smx_read_frame(path_ab, frame, sizeof frame, &n);
-  if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                      &ch.cubes[ib].atom.matrix) == 0) {
-    puts("{\"ok\":false,\"error\":\"replay_not_rejected\"}");
-    return 5;
-  }
-
-  cubalc_chain_write_viz(&ch, "state/cubalc_viz_frame.json");
-  printf("{\"ok\":true,\"cmd\":\"smx-exchange\",\"proto\":2,\"talk\":\"binary\","
-         "\"hold_flash\":1,\"anti_replay\":true,"
-         "\"peer0_set_before\":%d,\"peer1_set_before\":%d,"
-         "\"peer0_set_after\":%d,\"peer1_set_after\":%d,"
-         "\"unity_before\":%.3f,\"unity_after\":%.3f,"
-         "\"frame_ab\":\"%s\",\"frame_ba\":\"%s\","
-         "\"digit0\":%u,\"digit1\":%u,\"law\":\"state_matrix_only\"}\n",
-         set_a0, set_b0, set_a1, set_b1, unity0, unity1,
-         path_ab, path_ba,
-         (unsigned)ch.cubes[ia].atom.digit, (unsigned)ch.cubes[ib].atom.digit);
-  return (set_b1 > set_b0 && set_a1 >= set_a0) ? 0 : 6;
-}
-
 int main(int argc, char **argv) {
   const char *cmd = argc > 1 ? argv[1] : "genesis";
   if (strcmp(cmd, "genesis") == 0)
@@ -438,439 +279,6 @@ int main(int argc, char **argv) {
     return cmd_cubechain(argc > 2 ? argv[2] : "tip");
   if (strcmp(cmd, "smx-selftest") == 0 || strcmp(cmd, "smx") == 0)
     return cmd_smx_selftest();
-  if (strcmp(cmd, "smx-exchange") == 0 || strcmp(cmd, "smx-talk") == 0)
-    return cmd_smx_exchange(argc, argv);
-  if (strcmp(cmd, "smx-bus") == 0 || strcmp(cmd, "smx-nohttp") == 0 ||
-      strcmp(cmd, "smx-net") == 0) {
-    /* Binary SMX2 bus — no HTTP.
-     * prove | prove-tcp [port]
-     * listen|connect <unix-path>
-     * serve [host:]port | dial host:port   ← cross-device TCP */
-    const char *mode = argc > 2 ? argv[2] : "prove";
-    const char *arg3 = argc > 3 ? argv[3] : NULL;
-    cubalc_smx_ctx ctx_a, ctx_b;
-    cubalc_chain ch;
-    cubalc_matrix gen;
-    uint8_t frame[512];
-    size_t n = 0;
-    cubalc_atom recv;
-    char from[CUBALC_ID_LEN], to[CUBALC_ID_LEN];
-    int ia = 0, ib = 1, set_b0, set_b1;
-    float u0, u1;
-    const char *demo =
-      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
-    const char *key = getenv("CUBALC_SMX_KEY");
-    const char *tok = getenv("CUBALC_SMX_TOKEN");
-    if (!tok || !tok[0]) tok = getenv("NANOBOT_PEER_TOKEN");
-
-    cubalc_smx_ctx_init(&ctx_a);
-    cubalc_smx_ctx_init(&ctx_b);
-    if (key && strlen(key) >= 64) {
-      cubalc_smx_load_key_hex(&ctx_a, key);
-      cubalc_smx_load_key_hex(&ctx_b, key);
-    } else if (tok && tok[0]) {
-      cubalc_smx_load_key_token(&ctx_a, tok);
-      cubalc_smx_load_key_token(&ctx_b, tok);
-    } else {
-      cubalc_smx_load_key_hex(&ctx_a, demo);
-      cubalc_smx_load_key_hex(&ctx_b, demo);
-    }
-
-    cubalc_coord_to_matrix(
-      "NEXUS_COORD v1 | from=smx_bus | type=no_http | hold_flash=1 | net=1 |", &gen);
-    cubalc_chain_init(&ch);
-    cubalc_chain_from_initial(&ch, &gen, 1);
-    cubalc_cube_spawn(&ch, "peer0", "host", 1, -0.4f, 0.f, 0.f);
-    cubalc_cube_spawn(&ch, "peer1", "body", 1, 0.4f, 0.f, 0.f);
-    for (int i = 0; i < ch.n_cubes; i++) {
-      if (strcmp(ch.cubes[i].id, "peer0") == 0) ia = i;
-      if (strcmp(ch.cubes[i].id, "peer1") == 0) ib = i;
-    }
-    for (int i = 0; i < 16; i++)
-      cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i * 2, 1);
-    for (int i = 0; i < 12; i++)
-      cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i * 3 + 1, 1);
-    set_b0 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-    u0 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-
-    if (strcmp(mode, "prove") == 0) {
-      /* socketpair — pure process bus, zero HTTP, zero filesystem wire */
-      int sv[2];
-      pid_t pid;
-      if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {
-        puts("{\"ok\":false,\"error\":\"socketpair\"}");
-        return 2;
-      }
-      pid = fork();
-      if (pid < 0) {
-        puts("{\"ok\":false,\"error\":\"fork\"}");
-        return 2;
-      }
-      if (pid == 0) {
-        /* child = peer1: recv A→B, apply, seal B→A, send */
-        close(sv[0]);
-        n = 0;
-        if (cubalc_smx_recv_frame(sv[1], frame, sizeof frame, &n) != 0) _exit(3);
-        if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                            &ch.cubes[ib].atom.matrix) != 0)
-          _exit(4);
-        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&recv.matrix, i))
-            cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-        n = 0;
-        if (cubalc_smx_seal(&ctx_b, &ch.cubes[ib].atom, "peer1", "peer0",
-                            frame, sizeof frame, &n) != 0)
-          _exit(5);
-        if (cubalc_smx_send_frame(sv[1], frame, n) != 0) _exit(6);
-        close(sv[1]);
-        _exit(0);
-      }
-      /* parent = peer0 */
-      close(sv[1]);
-      n = 0;
-      if (cubalc_smx_seal(&ctx_a, &ch.cubes[ia].atom, "peer0", "peer1",
-                          frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"seal\"}");
-        return 2;
-      }
-      if (cubalc_smx_send_frame(sv[0], frame, n) != 0) {
-        puts("{\"ok\":false,\"error\":\"send\"}");
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_recv_frame(sv[0], frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"recv_reply\"}");
-        return 3;
-      }
-      if (cubalc_smx_open(&ctx_a, frame, n, &recv, from, to,
-                          &ch.cubes[ia].atom.matrix) != 0) {
-        printf("{\"ok\":false,\"error\":\"open_reply\",\"msg\":\"%s\"}\n",
-               ctx_a.last_err);
-        return 4;
-      }
-      for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-        if (cubalc_matrix_get(&recv.matrix, i))
-          cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i, 1);
-      close(sv[0]);
-      {
-        int st = 0;
-        waitpid(pid, &st, 0);
-        if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
-          printf("{\"ok\":false,\"error\":\"peer1_exit\",\"code\":%d}\n",
-                 WIFEXITED(st) ? WEXITSTATUS(st) : -1);
-          return 5;
-        }
-      }
-      /* parent re-simulates peer1 set after transfer for metrics:
-       * child applied A→B; we only have peer0 after B→A. Re-run open of sealed
-       * pattern by talking secure in-process for display set_b — or estimate. */
-      set_b1 = set_b0; /* child has higher set; re-seal path already proved wire */
-      /* actual unity: re-apply A matrix onto a local B copy for report */
-      {
-        cubalc_cube *B = &ch.cubes[ib];
-        for (int i = 0; i < ch.cubes[ia].atom.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&ch.cubes[ia].atom.matrix, i))
-            cubalc_matrix_set(&B->atom.matrix, i, 1);
-        set_b1 = cubalc_matrix_popcount(&B->atom.matrix);
-      }
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"prove\",\"http\":false,"
-             "\"transport\":\"AF_UNIX_socketpair\",\"proto\":2,\"talk\":\"binary\","
-             "\"hold_flash\":1,\"frame_bytes\":%zu,"
-             "\"peer1_set_before\":%d,\"peer1_set_after\":%d,"
-             "\"unity_before\":%.3f,\"unity_after\":%.3f,"
-             "\"law\":\"manifest_smx\"}\n",
-             n, set_b0, set_b1, u0, u1);
-      return (u1 >= u0 && set_b1 >= set_b0) ? 0 : 6;
-    }
-
-    if (strcmp(mode, "listen") == 0) {
-      const char *sock = arg3 ? arg3 : "state/smx2.sock";
-      int lfd = cubalc_smx_unix_listen(sock, 1);
-      int cfd;
-      if (lfd < 0) {
-        puts("{\"ok\":false,\"error\":\"listen\"}");
-        return 2;
-      }
-      cfd = accept(lfd, NULL, NULL);
-      if (cfd < 0) {
-        puts("{\"ok\":false,\"error\":\"accept\"}");
-        close(lfd);
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"recv\"}");
-        return 3;
-      }
-      if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                          &ch.cubes[ib].atom.matrix) != 0) {
-        printf("{\"ok\":false,\"error\":\"open\",\"msg\":\"%s\"}\n", ctx_b.last_err);
-        return 3;
-      }
-      for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-        if (cubalc_matrix_get(&recv.matrix, i))
-          cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-      set_b1 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-      n = 0;
-      cubalc_smx_seal(&ctx_b, &ch.cubes[ib].atom, "peer1", "peer0",
-                      frame, sizeof frame, &n);
-      cubalc_smx_send_frame(cfd, frame, n);
-      close(cfd);
-      close(lfd);
-      unlink(sock);
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"listen\",\"http\":false,"
-             "\"transport\":\"AF_UNIX\",\"sock\":\"%s\",\"proto\":2,"
-             "\"peer1_set_before\":%d,\"peer1_set_after\":%d,"
-             "\"unity\":%.3f}\n",
-             sock, set_b0, set_b1, u1);
-      return 0;
-    }
-
-    if (strcmp(mode, "connect") == 0) {
-      const char *sock = arg3 ? arg3 : "state/smx2.sock";
-      int fd = cubalc_smx_unix_connect(sock);
-      if (fd < 0) {
-        puts("{\"ok\":false,\"error\":\"connect\"}");
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_seal(&ctx_a, &ch.cubes[ia].atom, "peer0", "peer1",
-                          frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"seal\"}");
-        return 2;
-      }
-      if (cubalc_smx_send_frame(fd, frame, n) != 0) {
-        puts("{\"ok\":false,\"error\":\"send\"}");
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"recv\"}");
-        return 3;
-      }
-      if (cubalc_smx_open(&ctx_a, frame, n, &recv, from, to,
-                          &ch.cubes[ia].atom.matrix) != 0) {
-        puts("{\"ok\":false,\"error\":\"open\"}");
-        return 3;
-      }
-      close(fd);
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"connect\",\"http\":false,"
-             "\"transport\":\"AF_UNIX\",\"sock\":\"%s\",\"proto\":2,"
-             "\"frame_bytes\":%zu,\"unity\":%.3f}\n",
-             sock, n, u1);
-      return 0;
-    }
-
-    /* Cross-device TCP: serve [host:]port — peer1 waits, one exchange */
-    if (strcmp(mode, "serve") == 0 || strcmp(mode, "tcp-listen") == 0) {
-      char host[128];
-      int port = 0, lfd, cfd;
-      if (parse_host_port(arg3 ? arg3 : "7733", host, sizeof host, &port) != 0) {
-        puts("{\"ok\":false,\"error\":\"need port or host:port\"}");
-        return 2;
-      }
-      lfd = cubalc_smx_tcp_listen(host, port, 4);
-      if (lfd < 0) {
-        puts("{\"ok\":false,\"error\":\"tcp_listen\"}");
-        return 2;
-      }
-      fprintf(stderr, "# smx-bus serve %s:%d (SMX2 binary, no HTTP)\n", host, port);
-      cfd = accept(lfd, NULL, NULL);
-      if (cfd < 0) {
-        puts("{\"ok\":false,\"error\":\"accept\"}");
-        close(lfd);
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"recv\"}");
-        close(cfd); close(lfd);
-        return 3;
-      }
-      if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                          &ch.cubes[ib].atom.matrix) != 0) {
-        printf("{\"ok\":false,\"error\":\"open\",\"msg\":\"%s\"}\n", ctx_b.last_err);
-        close(cfd); close(lfd);
-        return 3;
-      }
-      for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-        if (cubalc_matrix_get(&recv.matrix, i))
-          cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-      set_b1 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-      n = 0;
-      if (cubalc_smx_seal(&ctx_b, &ch.cubes[ib].atom, "peer1", "peer0",
-                          frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"seal\"}");
-        close(cfd); close(lfd);
-        return 4;
-      }
-      cubalc_smx_send_frame(cfd, frame, n);
-      close(cfd);
-      close(lfd);
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"serve\",\"http\":false,"
-             "\"transport\":\"TCP\",\"bind\":\"%s:%d\",\"proto\":2,"
-             "\"frame_bytes\":%zu,\"peer1_set_before\":%d,\"peer1_set_after\":%d,"
-             "\"unity\":%.3f,\"law\":\"manifest_smx\"}\n",
-             host, port, n, set_b0, set_b1, u1);
-      return 0;
-    }
-
-    /* dial host:port — peer0 initiates across network */
-    if (strcmp(mode, "dial") == 0 || strcmp(mode, "tcp-connect") == 0) {
-      char host[128];
-      int port = 0, fd;
-      if (parse_host_port(arg3 ? arg3 : "127.0.0.1:7733", host, sizeof host, &port) != 0) {
-        puts("{\"ok\":false,\"error\":\"need host:port\"}");
-        return 2;
-      }
-      /* dial default host 127.0.0.1 if only port given */
-      if (strcmp(host, "0.0.0.0") == 0) snprintf(host, sizeof host, "127.0.0.1");
-      fd = cubalc_smx_tcp_connect(host, port);
-      if (fd < 0) {
-        puts("{\"ok\":false,\"error\":\"tcp_connect\"}");
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_seal(&ctx_a, &ch.cubes[ia].atom, "peer0", "peer1",
-                          frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"seal\"}");
-        close(fd);
-        return 2;
-      }
-      if (cubalc_smx_send_frame(fd, frame, n) != 0) {
-        puts("{\"ok\":false,\"error\":\"send\"}");
-        close(fd);
-        return 2;
-      }
-      n = 0;
-      if (cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0) {
-        puts("{\"ok\":false,\"error\":\"recv\"}");
-        close(fd);
-        return 3;
-      }
-      if (cubalc_smx_open(&ctx_a, frame, n, &recv, from, to,
-                          &ch.cubes[ia].atom.matrix) != 0) {
-        printf("{\"ok\":false,\"error\":\"open\",\"msg\":\"%s\"}\n", ctx_a.last_err);
-        close(fd);
-        return 3;
-      }
-      for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-        if (cubalc_matrix_get(&recv.matrix, i))
-          cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i, 1);
-      close(fd);
-      set_b1 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"dial\",\"http\":false,"
-             "\"transport\":\"TCP\",\"peer\":\"%s:%d\",\"proto\":2,"
-             "\"frame_bytes\":%zu,\"unity\":%.3f,\"law\":\"manifest_smx\"}\n",
-             host, port, n, u1);
-      return 0;
-    }
-
-    /* prove-tcp [port] — two processes over loopback TCP (simulates LAN devices) */
-    if (strcmp(mode, "prove-tcp") == 0 || strcmp(mode, "tcp-prove") == 0) {
-      int port = arg3 ? atoi(arg3) : 17733;
-      int lfd;
-      pid_t pid;
-      if (port <= 0) port = 17733;
-      lfd = cubalc_smx_tcp_listen("127.0.0.1", port, 2);
-      if (lfd < 0) {
-        puts("{\"ok\":false,\"error\":\"tcp_listen\"}");
-        return 2;
-      }
-      pid = fork();
-      if (pid < 0) {
-        close(lfd);
-        puts("{\"ok\":false,\"error\":\"fork\"}");
-        return 2;
-      }
-      if (pid == 0) {
-        /* child = peer1 server */
-        int cfd = accept(lfd, NULL, NULL);
-        close(lfd);
-        if (cfd < 0) _exit(3);
-        n = 0;
-        if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0) _exit(4);
-        if (cubalc_smx_open(&ctx_b, frame, n, &recv, from, to,
-                            &ch.cubes[ib].atom.matrix) != 0)
-          _exit(5);
-        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&recv.matrix, i))
-            cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-        n = 0;
-        if (cubalc_smx_seal(&ctx_b, &ch.cubes[ib].atom, "peer1", "peer0",
-                            frame, sizeof frame, &n) != 0)
-          _exit(6);
-        if (cubalc_smx_send_frame(cfd, frame, n) != 0) _exit(7);
-        close(cfd);
-        _exit(0);
-      }
-      /* parent = peer0 client */
-      close(lfd);
-      {
-        int fd = -1, tries, st = 0;
-        for (tries = 0; tries < 40; tries++) {
-          fd = cubalc_smx_tcp_connect("127.0.0.1", port);
-          if (fd >= 0) break;
-          {
-            struct timespec ts = {0, 25 * 1000 * 1000};
-            nanosleep(&ts, NULL);
-          }
-        }
-        if (fd < 0) {
-          waitpid(pid, &st, 0);
-          puts("{\"ok\":false,\"error\":\"tcp_connect\"}");
-          return 3;
-        }
-        n = 0;
-        if (cubalc_smx_seal(&ctx_a, &ch.cubes[ia].atom, "peer0", "peer1",
-                            frame, sizeof frame, &n) != 0 ||
-            cubalc_smx_send_frame(fd, frame, n) != 0 ||
-            cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0 ||
-            cubalc_smx_open(&ctx_a, frame, n, &recv, from, to,
-                            &ch.cubes[ia].atom.matrix) != 0) {
-          close(fd);
-          waitpid(pid, &st, 0);
-          puts("{\"ok\":false,\"error\":\"tcp_exchange\"}");
-          return 4;
-        }
-        for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
-          if (cubalc_matrix_get(&recv.matrix, i))
-            cubalc_matrix_set(&ch.cubes[ia].atom.matrix, i, 1);
-        close(fd);
-        waitpid(pid, &st, 0);
-        if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
-          printf("{\"ok\":false,\"error\":\"peer1_exit\",\"code\":%d}\n",
-                 WIFEXITED(st) ? WEXITSTATUS(st) : -1);
-          return 5;
-        }
-      }
-      for (int i = 0; i < ch.cubes[ia].atom.matrix.n && i < CUBALC_ATOM_BITS; i++)
-        if (cubalc_matrix_get(&ch.cubes[ia].atom.matrix, i))
-          cubalc_matrix_set(&ch.cubes[ib].atom.matrix, i, 1);
-      set_b1 = cubalc_matrix_popcount(&ch.cubes[ib].atom.matrix);
-      u1 = cubalc_matrix_compat(&ch.cubes[ia].atom.matrix, &ch.cubes[ib].atom.matrix);
-      printf("{\"ok\":true,\"cmd\":\"smx-bus\",\"mode\":\"prove-tcp\",\"http\":false,"
-             "\"transport\":\"TCP\",\"port\":%d,\"proto\":2,"
-             "\"peer1_set_before\":%d,\"peer1_set_after\":%d,"
-             "\"unity_before\":%.3f,\"unity_after\":%.3f,"
-             "\"cross_device\":true,\"law\":\"manifest_smx\"}\n",
-             port, set_b0, set_b1, u0, u1);
-      return (u1 >= u0 && set_b1 >= set_b0) ? 0 : 6;
-    }
-
-    fprintf(stderr,
-      "usage: cubalc smx-bus prove|prove-tcp [port]\n"
-      "       cubalc smx-bus listen|connect [unix-path]\n"
-      "       cubalc smx-bus serve [host:]port     # device B on network\n"
-      "       cubalc smx-bus dial host:port        # device A on network\n"
-      "wire: u32le + SMX2 HMAC frame · no HTTP · shared CUBALC_SMX_KEY\n");
-    return 2;
-  }
   if (strcmp(cmd, "law") == 0 || strcmp(cmd, "manifest") == 0)
     return cmd_law_manifest();
   if (strcmp(cmd, "sync") == 0 || strcmp(cmd, "hive") == 0)
@@ -974,6 +382,77 @@ int main(int argc, char **argv) {
            rr.last_print, rr.err);
     return rc;
   }
+
+  if (strcmp(cmd, "compile") == 0) {
+    if (argc < 3) {
+      fprintf(stderr, "usage: cubalc compile <file.cubalc|.casm> [-o out.cblc]\n");
+      return 2;
+    }
+    const char *srcp = argv[2];
+    const char *outp = "out/a.cblc";
+    for (int i = 3; i < argc; i++)
+      if (!strcmp(argv[i], "-o") && i + 1 < argc) outp = argv[++i];
+    FILE *f = fopen(srcp, "rb");
+    if (!f) { fprintf(stderr, "cannot open %s\n", srcp); return 2; }
+    fseek(f, 0, SEEK_END); long sz = ftell(f); fseek(f, 0, SEEK_SET);
+    if (sz < 0 || sz > CUBALC_MAX_SRC) { fclose(f); return 2; }
+    char *buf = malloc((size_t)sz + 1);
+    size_t nr = fread(buf, 1, (size_t)sz, f); fclose(f); buf[nr] = 0;
+    cubalc_image img; char err[160];
+    if (cubalc_isa_compile_source(buf, nr, &img, err, sizeof err) != 0) {
+      printf("{\"ok\":false,\"cmd\":\"compile\",\"err\":\"%s\"}\n", err);
+      free(buf); return 2;
+    }
+    free(buf);
+    {
+      char dir[512]; snprintf(dir, sizeof dir, "%s", outp);
+      char *slash = strrchr(dir, '/');
+      if (slash) { *slash = 0; mkdir(dir, 0755); }
+    }
+    if (cubalc_isa_save(&img, outp) != 0) {
+      printf("{\"ok\":false,\"cmd\":\"compile\",\"err\":\"save\"}\n");
+      return 2;
+    }
+    printf("{\"ok\":true,\"cmd\":\"compile\",\"in\":\"%s\",\"out\":\"%s\","
+           "\"n_ins\":%u,\"n_str\":%u,\"jit\":\"%s\",\"version\":\"%s\"}\n",
+           srcp, outp, img.n_ins, img.n_str, cubalc_jit_backend(), CUBALC_LANG_VERSION);
+    return 0;
+  }
+  if (strcmp(cmd, "jit") == 0 || strcmp(cmd, "cflow") == 0) {
+    if (argc < 3) {
+      fprintf(stderr, "usage: cubalc jit <file.cblc|file.cubalc>\n");
+      return 2;
+    }
+    const char *path = argv[2];
+    cubalc_run_result rr;
+    int rc;
+    if (strstr(path, ".cblc")) {
+      cubalc_image img;
+      if (cubalc_isa_load(&img, path) != 0) {
+        printf("{\"ok\":false,\"cmd\":\"jit\",\"err\":\"load cblc\"}\n");
+        return 2;
+      }
+      rc = cubalc_jit_exec(&img, &rr, stdout);
+    } else {
+      char outc[512];
+      mkdir("out", 0755);
+      snprintf(outc, sizeof outc, "out/manifest_%ld.cblc", (long)time(NULL));
+      rc = cubalc_flow_manifest(path, outc, &rr, stdout);
+    }
+    printf("{\"ok\":%s,\"cmd\":\"jit\",\"file\":\"%s\",\"stmts\":%d,"
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
+           "\"backend\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
+           rr.ok ? "true" : "false", path, rr.stmts, rr.asserts_ok, rr.asserts_fail,
+           rr.n_cubes, rr.unity, cubalc_jit_backend(), CUBALC_LANG_VERSION, rr.err);
+    return rc;
+  }
+  if (strcmp(cmd, "disasm") == 0) {
+    if (argc < 3) return 2;
+    cubalc_image img;
+    if (cubalc_isa_load(&img, argv[2]) != 0) return 2;
+    cubalc_isa_disasm(&img, stdout);
+    return 0;
+  }
   if (strcmp(cmd, "run") == 0 || strcmp(cmd, "eval") == 0) {
     /* Real language entry: parse + evaluate a .cubalc source program */
     if (argc < 3) {
@@ -981,7 +460,17 @@ int main(int argc, char **argv) {
       return 2;
     }
     cubalc_run_result rr;
-    int rc = cubalc_run_file(argv[2], &rr, stdout);
+    int rc;
+    if (strstr(argv[2], ".cblc")) {
+      cubalc_image img;
+      if (cubalc_isa_load(&img, argv[2]) != 0) {
+        printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
+        return 2;
+      }
+      rc = cubalc_jit_exec(&img, &rr, stdout);
+    } else {
+      rc = cubalc_run_file(argv[2], &rr, stdout);
+    }
     printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
            "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
            "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
@@ -1006,17 +495,23 @@ int main(int argc, char **argv) {
            CUBALC_LANG_VERSION, rr.last_print, rr.err);
     return rc;
   }
+  if (strcmp(cmd, "evolve") == 0 || strcmp(cmd, "evolve-loop") == 0 ||
+      strcmp(cmd, "self-evolve") == 0) {
+    /* Pure C: braincube solves · algocube optimizes · emits .cubalc */
+    return cubalc_cmd_evolve(argc - 1, argv + 1);
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
       "CubalC %s\n"
-      "  boot|os|run|translate|decide|sync|peers\n"
-      "  genesis|impulse|flow|cubes|law|cubechain|smx|smx-exchange\n"
-      "  SMX TALK|EXCHANGE|SEAL|OPEN  (Law of Manifestation)\n"
-      "  smx-bus prove|prove-tcp|serve|dial  (SMX2 binary — TCP/AF_UNIX, no HTTP)\n"
-      "  SETDIGIT · FOLDBITS · SYS NUM · SPAWN\n"
-      "  hold=%d share=%s tok=%s http_required=%d\n",
+      "  boot|os|run|compile|jit|cflow|disasm|translate|decide|sync|peers\n"
+      "  genesis|impulse|flow|cubes|law|cubechain|smx\n"
+      "  evolve [--once|--loop|--hz N|--cycles N|--reset]  # C self-improve\n"
+      "  evolve-loop [--hz N]   # constant braincube→algocube cycle (no Python)\n"
+      "  SETDIGIT · FOLDBITS · DECIDE · COMPARE · HARMONY · JIT Cube Flow\n"
+      "  ASYNC HTTP · AWAIT · PARALLEL\n"
+      "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,
-      CUBALC_HTTP_REQUIRED);
+      CUBALC_LANG_PARADIGM);
     return 0;
   }
   fprintf(stderr, "unknown cmd %s — try help\n", cmd);
