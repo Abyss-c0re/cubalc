@@ -1,0 +1,21 @@
+# Chemistry 07 — Ideal gas scale PV = nRT (integer R_GAS = 8314)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# n=1 mol, T=273 K, V=22 L-scale check order: P = nRT/V
+LET n = 1
+LET T = 273
+LET V = 22
+LET P = n * R_GAS * T / V / 1000
+# rough positive pressure
+ASSERT P > 0
+ASSERT R_GAS == 8314
+
+# Boyle: P1 V1 = P2 V2
+LET P1 = 2
+LET V1 = 6
+LET V2 = 3
+LET P2 = P1 * V1 / V2
+ASSERT P2 == 4
+
+PRINT "chem07_gas" P P2

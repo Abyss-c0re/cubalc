@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.9.0-school — 2026-08-01
+
+### Law
+- **pure_science** — school plane: math · physics · chemistry · biology as CubalC pure logic on cubechain.
+
+### Language
+- `SCIENCE LOAD` — public-domain scaled constants into vars
+- Math: `ABS` `SIGN` `MIN` `MAX` `POW` `GCD` `LCM` `SQRT` `FACT`
+- Physics helpers: `FORCE` `WORK` `KE` `PE` `DENSITY`
+- Thermo: `CELSIUS_K` `KELVIN_C` · constants `PI100` `G_EARTH` `C_LIGHT` …
+
+### Curriculum (original, no copyrighted materials)
+- `programs/school/` — foundations, **math** (10), physics (7), chemistry (7), biology (7), exams (5)
+- `make school` / `programs/school/run_curriculum.sh`
+
+### Prior
+See 1.8.0-nest (compile-to-matrix, nest).
+
 ## 1.8.0-nest — 2026-08-01
 
 ### Law

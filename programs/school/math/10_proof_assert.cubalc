@@ -1,0 +1,22 @@
+# Math 10 — Proof style: conjecture → ASSERT chain
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# Prove: sum of first n odds = n²
+LET n = 7
+LET s = 0
+LET k = 1
+LET i = 0
+WHILE i < n
+  LET s = s + k
+  LET k = k + 2
+  LET i = i + 1
+END
+ASSERT s == n * n
+
+# Prove: (a+b)² = a²+2ab+b²
+LET a = 11
+LET b = 6
+ASSERT POW(a+b,2) == POW(a,2) + 2*a*b + POW(b,2)
+
+PRINT "math10_proof" s POW(a+b,2)

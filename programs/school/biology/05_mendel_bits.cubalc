@@ -1,0 +1,26 @@
+# Biology 05 — Mendel: alleles as matrix bits (Aa x Aa)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# Punnett: AA,Aa,aA,aa → dominant phenotype 3/4
+LET total = 4
+LET dom = 3
+LET rec = 1
+ASSERT dom + rec == total
+LET pheno_dom_pct = dom * 100 / total
+ASSERT pheno_dom_pct == 75
+
+# genotype ratio 1:2:1
+ASSERT 1 + 2 + 1 == 4
+
+CUBE parent1 ROLE gene PROTON 1
+CUBE parent2 ROLE gene PROTON 1
+SETBIT parent1 0 1
+SETBIT parent1 1 0
+SETBIT parent2 0 1
+SETBIT parent2 1 1
+PLUG parent1 parent2
+FLOW 1
+ASSERT BIT(parent1, 0) == 1
+
+PRINT "bio05_mendel" pheno_dom_pct

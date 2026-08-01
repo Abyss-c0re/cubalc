@@ -1,0 +1,22 @@
+# Chemistry 06 — States of matter vs temperature
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET T = 25
+# water: solid <0, liquid 0..100, gas >100 at 1 atm
+LET state = 1
+IF T < 0 THEN
+  LET state = 0
+END
+IF T > H2O_BP THEN
+  LET state = 2
+END
+ASSERT state == 1
+ASSERT ATM_KPA == 101
+
+# density ice < liquid water (qualitative integers)
+LET d_ice = 917
+LET d_water = 1000
+ASSERT d_ice < d_water
+
+PRINT "chem06_states" state d_ice

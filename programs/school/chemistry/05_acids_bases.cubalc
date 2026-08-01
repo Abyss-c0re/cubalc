@@ -1,0 +1,18 @@
+# Chemistry 05 — pH scale (integer pH as -log10[H+] exponent)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# [H+]=1e-3 → pH 3; [H+]=1e-7 → pH 7 neutral
+LET pH_acid = 3
+LET pH_neut = 7
+LET pH_base = 11
+ASSERT pH_acid < pH_neut
+ASSERT pH_base > pH_neut
+ASSERT PH_H(7) == 7
+
+# neutralization abstract: acid + base → salt + water
+LET acid_eq = 2
+LET base_eq = 2
+ASSERT acid_eq == base_eq
+
+PRINT "chem05_ph" pH_acid pH_neut pH_base

@@ -940,6 +940,91 @@ static long parse_prim(VM *vm, Lex *L){
 
     if (strcmp(name,"UNITY")==0) return (long)lround(vm->ch.unity*100);
     if (strcmp(name,"SEQ")==0) return (long)vm->ch.seq;
+    /* Pure-science public-domain constants (integer scales) */
+    if (strcmp(name,"PI100")==0 || strcmp(name,"PI")==0) return CUBALC_SCI_PI100;
+    if (strcmp(name,"E100")==0 || strcmp(name,"EULER")==0) return CUBALC_SCI_E100;
+    if (strcmp(name,"G_EARTH")==0 || strcmp(name,"GEARTH")==0) return CUBALC_SCI_G_EARTH10;
+    if (strcmp(name,"C_LIGHT")==0 || strcmp(name,"CLIGHT")==0) return CUBALC_SCI_C_LIGHT;
+    if (strcmp(name,"ATM_KPA")==0) return CUBALC_SCI_ATM_KPA;
+    if (strcmp(name,"WATER_K")==0 || strcmp(name,"ZERO_C_K")==0) return CUBALC_SCI_WATER_K;
+    if (strcmp(name,"H2O_BP")==0) return CUBALC_SCI_H2O_BP_C;
+    if (strcmp(name,"R_GAS")==0) return CUBALC_SCI_R_J;
+    if (strcmp(name,"NA_ORDER")==0) return CUBALC_SCI_AVOGADRO_E23;
+    /* Math / science pure functions — school plane */
+    if (strcmp(name,"ABS")==0 || strcmp(name,"SIGN")==0 ||
+        strcmp(name,"SQRT")==0 || strcmp(name,"ISQRT")==0 ||
+        strcmp(name,"MIN")==0 || strcmp(name,"MAX")==0 ||
+        strcmp(name,"POW")==0 || strcmp(name,"GCD")==0 ||
+        strcmp(name,"LCM")==0 || strcmp(name,"FACT")==0 ||
+        strcmp(name,"FORCE")==0 || strcmp(name,"WORK")==0 ||
+        strcmp(name,"KE")==0 || strcmp(name,"PE")==0 ||
+        strcmp(name,"DENSITY")==0 || strcmp(name,"MOLAR")==0 ||
+        strcmp(name,"CELSIUS_K")==0 || strcmp(name,"KELVIN_C")==0 ||
+        strcmp(name,"PH_H")==0){
+      if (L->cur.kind==TK_LPAREN){
+        lex_next(L);
+        long a = parse_expr(vm,L);
+        long b = 0, c = 0;
+        if (L->cur.kind==TK_COMMA){ lex_next(L); b = parse_expr(vm,L); }
+        if (L->cur.kind==TK_COMMA){ lex_next(L); c = parse_expr(vm,L); }
+        if (L->cur.kind==TK_RPAREN) lex_next(L);
+        if (strcmp(name,"ABS")==0) return a < 0 ? -a : a;
+        if (strcmp(name,"SIGN")==0) return a > 0 ? 1 : (a < 0 ? -1 : 0);
+        if (strcmp(name,"SQRT")==0 || strcmp(name,"ISQRT")==0){
+          if (a < 0) return 0;
+          long r = 0;
+          while ((r+1)*(r+1) <= a) r++;
+          return r;
+        }
+        if (strcmp(name,"MIN")==0) return a < b ? a : b;
+        if (strcmp(name,"MAX")==0) return a > b ? a : b;
+        if (strcmp(name,"POW")==0){
+          long e = b; if (e < 0) return 0;
+          long r = 1;
+          while (e-- > 0) r *= a;
+          return r;
+        }
+        if (strcmp(name,"GCD")==0){
+          long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+          while (y){ long t = x % y; x = y; y = t; }
+          return x;
+        }
+        if (strcmp(name,"LCM")==0){
+          long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+          if (!x || !y) return 0;
+          long g = x, h = y;
+          while (h){ long t = g % h; g = h; h = t; }
+          return (x / g) * y;
+        }
+        if (strcmp(name,"FACT")==0){
+          if (a < 0) return 0;
+          if (a > 20) a = 20; /* stay in long */
+          long r = 1;
+          for (long i = 2; i <= a; i++) r *= i;
+          return r;
+        }
+        /* Physics (integer): F=ma, W=Fd, KE=mv²/2, PE=mgh (g scaled ×10 → divide 10) */
+        if (strcmp(name,"FORCE")==0) return a * b;           /* m * a */
+        if (strcmp(name,"WORK")==0) return a * b;            /* F * d */
+        if (strcmp(name,"KE")==0) return (a * b * b) / 2;    /* m v v / 2 */
+        if (strcmp(name,"PE")==0){
+          /* PE(m,h) → m·g·h with g×10; PE(m,g10,h) if third arg present (c!=0 or b used as g) */
+          long g10 = CUBALC_SCI_G_EARTH10;
+          long h = b;
+          /* 3-arg form: PE(m, g10, h) when user passes three numbers; detect via c!=0 OR
+             convention: if only two args, b is height. Third arg always sets c from parse. */
+          if (c) { g10 = b; h = c; }
+          return (a * g10 * h) / 10;
+        }
+        if (strcmp(name,"DENSITY")==0) return b ? (a / b) : 0; /* m/V */
+        if (strcmp(name,"MOLAR")==0) return b ? (a / b) : 0;   /* n = N/NA_order or mass/M */
+        if (strcmp(name,"CELSIUS_K")==0) return a + CUBALC_SCI_WATER_K;
+        if (strcmp(name,"KELVIN_C")==0) return a - CUBALC_SCI_WATER_K;
+        /* pH proxy: pH = -log10[H+]; integer H_scaled e.g. 1e-3 → use H_pow = 3 → pH 3 */
+        if (strcmp(name,"PH_H")==0) return a; /* pass-through: user supplies exponent as pH law */
+        return 0;
+      }
+    }
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
         strcmp(name,"ENERGY")==0 || strcmp(name,"DIGIT")==0 ||
         strcmp(name,"BIT")==0 || strcmp(name,"FLOWED")==0 ||
@@ -1541,6 +1626,22 @@ static int parse_form(VM *vm, Lex *L){
     cubalc_matrix gen; cubalc_coord_to_matrix(plate,&gen);
     cubalc_chain_from_initial(&vm->ch,&gen,1);
     vm->ch.hold_flash=(uint8_t)vm->hold_flash;
+    bump(vm); return 1;
+  }
+  /* SCIENCE [LOAD] — inject pure-science school constants into vars (public domain) */
+  if (kw(&L->cur,"SCIENCE")||kw(&L->cur,"PURESCIENCE")||kw(&L->cur,"SCHOOL")){
+    lex_next(L);
+    if (kw(&L->cur,"LOAD")||kw(&L->cur,"CONST")||kw(&L->cur,"CONSTANTS")) lex_next(L);
+    var_set_num(vm, "PI100", CUBALC_SCI_PI100);
+    var_set_num(vm, "E100", CUBALC_SCI_E100);
+    var_set_num(vm, "G_EARTH", CUBALC_SCI_G_EARTH10);
+    var_set_num(vm, "C_LIGHT", CUBALC_SCI_C_LIGHT);
+    var_set_num(vm, "ATM_KPA", CUBALC_SCI_ATM_KPA);
+    var_set_num(vm, "WATER_K", CUBALC_SCI_WATER_K);
+    var_set_num(vm, "H2O_BP", CUBALC_SCI_H2O_BP_C);
+    var_set_num(vm, "R_GAS", CUBALC_SCI_R_J);
+    var_set_num(vm, "NA_ORDER", CUBALC_SCI_AVOGADRO_E23);
+    var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"CUBE")){

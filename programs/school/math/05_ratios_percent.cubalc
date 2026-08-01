@@ -1,0 +1,20 @@
+# Math 05 — Ratios and percent (integer scale ×100)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# 3:4 ratio total 7 parts; if total 35 then part = 5
+LET total = 35
+LET parts = 3 + 4
+LET unit = total / parts
+ASSERT unit == 5
+ASSERT unit * 3 == 15
+ASSERT unit * 4 == 20
+
+# percent: 18 is what % of 60? → 30
+LET pct = 18 * 100 / 60
+ASSERT pct == 30
+# 25% of 80
+LET val = 80 * 25 / 100
+ASSERT val == 20
+
+PRINT "math05_ratio_pct" unit pct val

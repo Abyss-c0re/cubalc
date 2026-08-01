@@ -1,0 +1,27 @@
+# Math 07 — Linear equations ax+b=c (integer)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# 3x + 5 = 20 → x = 5
+LET a = 3
+LET b = 5
+LET c = 20
+LET x = (c - b) / a
+ASSERT x == 5
+ASSERT a * x + b == c
+
+# two-step: 2(x-4)=10 → x-4=5 → x=9
+LET y = 10 / 2 + 4
+ASSERT y == 9
+
+# system: x+y=10, x-y=4 → x=7 y=3
+LET s = 10
+LET d = 4
+LET xs = (s + d) / 2
+LET ys = (s - d) / 2
+ASSERT xs == 7
+ASSERT ys == 3
+ASSERT xs + ys == 10
+ASSERT xs - ys == 4
+
+PRINT "math07_linear" x y xs ys

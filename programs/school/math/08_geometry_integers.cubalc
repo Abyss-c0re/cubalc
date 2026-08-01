@@ -1,0 +1,24 @@
+# Math 08 — Integer geometry (rectangle, circle scale, Pythagorean)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET L = 8
+LET W = 5
+LET area = L * W
+LET peri = 2 * (L + W)
+ASSERT area == 40
+ASSERT peri == 26
+
+# circle approx: A ≈ π r² with PI100 → A100 = PI100 * r * r / 100
+LET r = 10
+LET A100 = PI100 * r * r / 100
+ASSERT A100 == 314
+# circumference C100 = 2 * PI100 * r / 100 → 2*314*10/100 = 62
+LET C100 = 2 * PI100 * r / 100
+ASSERT C100 == 62
+
+# Pythagorean triple 3-4-5
+ASSERT POW(3,2) + POW(4,2) == POW(5,2)
+ASSERT SQRT(POW(3,2) + POW(4,2)) == 5
+
+PRINT "math08_geometry" area A100 C100

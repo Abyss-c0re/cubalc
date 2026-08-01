@@ -1,0 +1,22 @@
+# Biology 07 — Homeostasis feedback (setpoint control loop)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET setpoint = 37
+LET body = 34
+LET i = 0
+WHILE body < setpoint
+  LET body = body + 1
+  LET i = i + 1
+END
+ASSERT body == setpoint
+ASSERT i == 3
+
+# negative feedback: if high, reduce
+LET heat = 40
+IF heat > setpoint THEN
+  LET heat = heat - (heat - setpoint)
+END
+ASSERT heat == setpoint
+
+PRINT "bio07_homeo" body heat

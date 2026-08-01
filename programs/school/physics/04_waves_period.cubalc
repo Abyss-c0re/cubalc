@@ -1,0 +1,19 @@
+# Physics 04 — Waves: T = 1/f, v = f λ (integer)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET f = 50
+LET T1000 = 1000 / f
+ASSERT T1000 == 20
+
+LET lam = 4
+LET v = f * lam
+ASSERT v == 200
+
+# string segments as nested period cubes
+CUBE wave ROLE medium PROTON 1
+CUBE crest ROLE phase PROTON 1
+NEST wave crest
+ASSERT NESTED(crest) == 1
+
+PRINT "phys04_waves" T1000 v

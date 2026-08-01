@@ -1,0 +1,16 @@
+# Physics 07 — Optics scale: c, path delay
+HOLD_FLASH 1
+SCIENCE LOAD
+
+ASSERT C_LIGHT == 299792458
+# light travel 1e6 m time ≈ 1000000 / c seconds micro-scale: t_ns scale
+LET dist = 300000000
+LET t_s = dist / C_LIGHT
+ASSERT t_s == 1
+
+# reflection angle law abstract: i = r (integers equal)
+LET i = 35
+LET r = 35
+ASSERT i == r
+
+PRINT "phys07_optics" C_LIGHT t_s

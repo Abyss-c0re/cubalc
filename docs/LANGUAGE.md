@@ -72,9 +72,21 @@ cubalc decide "goal"      # translate → braincube path
 cubalc law
 ```
 
+## Pure science (1.9.0-school)
+
+| form | meaning |
+|------|---------|
+| `SCIENCE LOAD` | inject school constants into vars |
+| `PI100` `E100` `G_EARTH` `C_LIGHT` | public-domain scaled constants |
+| `ABS` `MIN` `MAX` `POW` `GCD` `LCM` `SQRT` `FACT` | math |
+| `FORCE` `WORK` `KE` `PE` | mechanics (integer) |
+| `CELSIUS_K` `KELVIN_C` | temperature |
+
+Curriculum: `programs/school/` · `make school` (math + physics + chemistry + biology)
+
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.7.0-cube`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.9.0-school`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

@@ -1,0 +1,20 @@
+# Chemistry 03 — Stoichiometry integer balancing 2H2 + O2 → 2H2O
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# atoms in: H=4 O=2 ; out H=4 O=2
+LET H_in = 2 * 2
+LET O_in = 2
+LET H_out = 2 * 2
+LET O_out = 2 * 1
+ASSERT H_in == H_out
+ASSERT O_in == O_out
+
+# moles: 4 mol H2 need 2 mol O2
+LET n_H2 = 4
+LET n_O2 = n_H2 / 2
+ASSERT n_O2 == 2
+LET n_H2O = n_H2
+ASSERT n_H2O == 4
+
+PRINT "chem03_stoich" n_O2 n_H2O

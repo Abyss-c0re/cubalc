@@ -1,0 +1,27 @@
+# Math 03 — Factors, GCD, LCM
+HOLD_FLASH 1
+SCIENCE LOAD
+
+ASSERT GCD(48,18) == 6
+ASSERT GCD(17,13) == 1
+ASSERT LCM(4,6) == 12
+ASSERT LCM(3,5) == 15
+# GCD(a,b)*LCM(a,b) == a*b for positive
+LET a = 12
+LET b = 18
+ASSERT GCD(a,b) * LCM(a,b) == a * b
+
+# Prime check light: n with no factor 2..sqrt
+LET n = 13
+LET f = 0
+LET k = 2
+LET lim = SQRT(n)
+WHILE k <= lim
+  IF n % k == 0 THEN
+    LET f = 1
+  END
+  LET k = k + 1
+END
+ASSERT f == 0
+
+PRINT "math03_gcd_lcm" GCD(48,18) LCM(4,6)

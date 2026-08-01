@@ -1,8 +1,9 @@
 # CubalC — product (ProjectNexus)
 
-**Version:** 1.8.0-nest · paradigm **COP/flow** · pure **C** runtime  
+**Version:** 1.9.0-school · paradigm **COP/flow** · pure **C** runtime  
 **Origin:** `Dev/lab/prophecy_cube/cubalc`  
-**Law:** each cube compiles to a matrix · must flow · no flow → no compile · cubes may nest
+**Law:** cube → matrix after flow · nest · **pure science** (math · physics · chemistry · biology)  
+**School:** `make school` · `programs/school/` (original curriculum, no copyrighted texts)
 
 ## Keep this product up to date
 

@@ -1,0 +1,15 @@
+# Math 02 — Integers, absolute value, sign
+HOLD_FLASH 1
+SCIENCE LOAD
+
+ASSERT ABS(-12) == 12
+ASSERT ABS(0) == 0
+ASSERT ABS(9) == 9
+ASSERT SIGN(-4) == -1
+ASSERT SIGN(0) == 0
+ASSERT SIGN(8) == 1
+ASSERT -(-5) == 5
+ASSERT 3 - 10 == -7
+ASSERT ABS(3 - 10) == 7
+
+PRINT "math02_integers" ABS(-12) SIGN(-4)

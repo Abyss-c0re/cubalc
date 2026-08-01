@@ -1,0 +1,32 @@
+# Math 06 — Arithmetic & geometric sequences
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# arithmetic: a_n = a1 + (n-1)d ; sum = n(a1+an)/2
+LET a1 = 2
+LET d = 3
+LET n = 10
+LET an = a1 + (n - 1) * d
+ASSERT an == 29
+LET sum = n * (a1 + an) / 2
+ASSERT sum == 155
+
+# geometric: 2,4,8,16… term n = a*r^(n-1)
+LET g1 = 2
+LET r = 2
+LET gn = g1 * POW(r, 4)
+ASSERT gn == 32
+
+# Fibonacci F10
+LET f_a = 0
+LET f_b = 1
+LET i = 1
+LOOP 9
+  LET f_t = f_a + f_b
+  LET f_a = f_b
+  LET f_b = f_t
+  LET i = i + 1
+END
+ASSERT f_b == 55
+
+PRINT "math06_sequences" an sum gn f_b

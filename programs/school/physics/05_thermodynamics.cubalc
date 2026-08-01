@@ -1,0 +1,20 @@
+# Physics 05 — Temperature scales & heat idea Q=mcΔT scale
+HOLD_FLASH 1
+SCIENCE LOAD
+
+ASSERT CELSIUS_K(0) == 273
+ASSERT CELSIUS_K(100) == 373
+ASSERT KELVIN_C(273) == 0
+ASSERT H2O_BP == 100
+
+# Q = m c dT with c_water ~ 4184 J/(kg K) → use c=4184
+LET m = 2
+LET c = 4184
+LET dT = 10
+LET Q = m * c * dT
+ASSERT Q == 83680
+
+# absolute zero floor
+ASSERT WATER_K > 0
+
+PRINT "phys05_thermo" Q CELSIUS_K(25)

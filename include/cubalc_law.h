@@ -29,13 +29,24 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.8.0-nest"
+#define CUBALC_LANG_VERSION "1.9.0-school"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
 #define CUBALC_MAX_HEAP     256
 /* Nest depth budget — cubes may nest; compile walks leaves first */
 #define CUBALC_MAX_NEST_DEPTH 8
+/* Pure-science integer scales (public domain constants; scaled for integer CubalC) */
+#define CUBALC_SCI_PI100        314          /* π × 100 */
+#define CUBALC_SCI_E100         271          /* e × 100 */
+#define CUBALC_SCI_G_EARTH10    98           /* g ≈ 9.8 m/s² × 10 */
+#define CUBALC_SCI_C_LIGHT      299792458L   /* c m/s */
+#define CUBALC_SCI_ATM_KPA      101          /* 1 atm ≈ 101 kPa */
+#define CUBALC_SCI_WATER_K      273          /* 0 °C in kelvin */
+#define CUBALC_SCI_H2O_BP_C     100          /* water boil °C at 1 atm */
+#define CUBALC_SCI_AVOGADRO_E23 6            /* NA ≈ 6×10^23 (order) */
+#define CUBALC_SCI_R_J          8314         /* R ≈ 8.314 J/(mol·K) × 1000 */
+#define CUBALC_SCI_F_C_MOL      96485        /* Faraday C/mol (approx) */
 
 #define CUBALC_KIND_VOID    0
 #define CUBALC_KIND_BIT     1
@@ -63,14 +74,16 @@
 /* Each cube compiles into a matrix. It must flow. No flow — no compiling. Cubes may nest. */
 #define CUBALC_LAW_FLOW_COMPILE     13
 #define CUBALC_LAW_NEST             14
-#define CUBALC_LAW_COUNT            15
+/* Pure science school plane: math · physics · chemistry · biology as CubalC logic */
+#define CUBALC_LAW_PURE_SCIENCE     15
+#define CUBALC_LAW_COUNT            16
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
   "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
   "manifest_smx", "algocube", "energy_flow",
-  "flow_compile", "nest"
+  "flow_compile", "nest", "pure_science"
 };
 
 /* Resolved algocube blueprint genome (deep-opt champion — The Cube watches) */

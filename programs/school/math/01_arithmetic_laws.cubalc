@@ -1,0 +1,18 @@
+# Math 01 — Arithmetic laws (commutative, associative, distributive)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET a = 7
+LET b = 3
+LET c = 5
+ASSERT a + b == b + a
+ASSERT a * b == b * a
+ASSERT (a + b) + c == a + (b + c)
+ASSERT (a * b) * c == a * (b * c)
+ASSERT a * (b + c) == a * b + a * c
+ASSERT 2 + 2 * 3 == 8
+ASSERT (2 + 2) * 3 == 12
+ASSERT 17 % 5 == 2
+ASSERT 17 / 5 == 3
+
+PRINT "math01_arithmetic" a b c

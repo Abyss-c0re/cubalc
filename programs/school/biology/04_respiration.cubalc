@@ -1,0 +1,19 @@
+# Biology 04 — Respiration reverse energy path C6H12O6 + 6O2 → 6CO2 + 6H2O
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET sugar = 1
+LET O2 = 6
+LET CO2 = 6
+LET H2O = 6
+ASSERT O2 == CO2
+ASSERT sugar * 6 == O2
+
+CUBE cell ROLE mito PROTON 1
+CUBE glucose ROLE fuel PROTON 1
+PLUG glucose cell
+IMPULSE glucose 1
+FLOW 4
+ASSERT FLOWED(cell) == 1
+
+PRINT "bio04_resp" O2 ENERGY(cell)

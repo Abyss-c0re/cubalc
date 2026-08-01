@@ -1,0 +1,26 @@
+# Physics 02 — Mechanical energy (integer KE/PE)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET m = 4
+LET v = 5
+LET h = 10
+LET ke = KE(m, v)
+LET pe = PE(m, h)
+ASSERT ke == 50
+ASSERT pe == 4 * 98 * 10 / 10
+ASSERT pe == 392
+
+# free fall convert PE→KE ideally: total E constant in closed model
+LET E1 = pe + 0
+LET v_land = SQRT(2 * pe / m)
+# rough check energy scale positive
+ASSERT ke > 0
+ASSERT pe > ke
+ASSERT E1 == pe
+
+# work-energy: W = F d
+LET W = WORK(FORCE(2, 3), 4)
+ASSERT W == 24
+
+PRINT "phys02_energy" ke pe W

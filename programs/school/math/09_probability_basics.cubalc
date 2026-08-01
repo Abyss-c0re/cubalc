@@ -1,0 +1,22 @@
+# Math 09 — Probability basics (integer ×1000)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# fair die P(6) = 1/6 → milliproba 1000/6 = 166
+LET p6 = 1000 / 6
+ASSERT p6 == 166
+
+# two coins: P(HH)=1/4 → 250
+LET phh = 1000 / 4
+ASSERT phh == 250
+
+# independent: P(A and B)=P(A)P(B); 1/2 * 1/3 = 1/6
+LET p_and = (500 * 333) / 1000
+ASSERT p_and >= 166
+ASSERT p_and <= 167
+
+# counting: 5 choose 2 = 10
+LET nC2 = FACT(5) / (FACT(2) * FACT(3))
+ASSERT nC2 == 10
+
+PRINT "math09_probability" p6 phh nC2

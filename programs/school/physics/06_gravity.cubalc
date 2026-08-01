@@ -1,0 +1,20 @@
+# Physics 06 — Gravity near Earth (uniform g model)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# drop: v = g t  (g×10, t in s) → v = 98*t/10
+LET t = 3
+LET v = G_EARTH * t / 10
+ASSERT v == 29
+
+# distance s = g t² / 2
+LET s = G_EARTH * t * t / 20
+ASSERT s == 44
+
+CUBE earth ROLE mass PROTON 1
+CUBE apple ROLE mass PROTON 1
+PLUG earth apple
+FLOW 2
+ASSERT CUBES == 2
+
+PRINT "phys06_gravity" v s
