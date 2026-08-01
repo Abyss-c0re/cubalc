@@ -1,0 +1,80 @@
+# Contained hive: each nanobot member runs in its own container, shared network + token.
+# Usage: samples/hive_containers/run_hive.sh
+name: cube_hive
+
+services:
+  hive-a:
+    image: ${NANOBOT_IMAGE:-nanobot:0.5.1}
+    container_name: cube-hive-a
+    hostname: hive-a
+    environment:
+      NANOBOT_HOME: /home/nanobot/.nanobot
+      NANOBOT_PORT: "8787"
+      NANOBOT_MODE: peer
+      NANOBOT_LAN: "1"
+      NANOBOT_PEER_TOKEN: ${HIVE_TOKEN:?set HIVE_TOKEN}
+      NANOBOT_OFFLINE: "1"
+      HIVE_ROLE: host
+      HIVE_MEMBER: a
+    command: ["peer"]
+    ports:
+      - "19001:8787"
+    volumes:
+      - hive_a_home:/home/nanobot
+    networks:
+      - hive_net
+    restart: "no"
+
+  hive-b:
+    image: ${NANOBOT_IMAGE:-nanobot:0.5.1}
+    container_name: cube-hive-b
+    hostname: hive-b
+    environment:
+      NANOBOT_HOME: /home/nanobot/.nanobot
+      NANOBOT_PORT: "8787"
+      NANOBOT_MODE: peer
+      NANOBOT_LAN: "1"
+      NANOBOT_PEER_TOKEN: ${HIVE_TOKEN:?set HIVE_TOKEN}
+      NANOBOT_OFFLINE: "1"
+      HIVE_ROLE: body
+      HIVE_MEMBER: b
+    command: ["peer"]
+    ports:
+      - "19002:8787"
+    volumes:
+      - hive_b_home:/home/nanobot
+    networks:
+      - hive_net
+    restart: "no"
+
+  hive-c:
+    image: ${NANOBOT_IMAGE:-nanobot:0.5.1}
+    container_name: cube-hive-c
+    hostname: hive-c
+    environment:
+      NANOBOT_HOME: /home/nanobot/.nanobot
+      NANOBOT_PORT: "8787"
+      NANOBOT_MODE: peer
+      NANOBOT_LAN: "1"
+      NANOBOT_PEER_TOKEN: ${HIVE_TOKEN:?set HIVE_TOKEN}
+      NANOBOT_OFFLINE: "1"
+      HIVE_ROLE: brain
+      HIVE_MEMBER: c
+    command: ["peer"]
+    ports:
+      - "19003:8787"
+    volumes:
+      - hive_c_home:/home/nanobot
+    networks:
+      - hive_net
+    restart: "no"
+
+networks:
+  hive_net:
+    name: cube_hive_net
+    driver: bridge
+
+volumes:
+  hive_a_home:
+  hive_b_home:
+  hive_c_home:

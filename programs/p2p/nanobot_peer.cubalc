@@ -1,0 +1,74 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Nanobot home peer board — abstract roles only
+// Mode via env:
+//   CUBALC_P2P_MODE=serve|dial  (default dial)
+//   CUBALC_P2P_BIND / CUBALC_P2P_PEER
+//   CUBALC_P2P_ID optional self label bits via digit
+GENESIS "NEXUS_COORD v1 | from=nanobot_p2p | type=peer | hold_flash=1 | share=smx | proto=SMX2 | http=0 |"
+
+CUBE self   ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+CUBE atom   ROLE atom PROTON 1
+CUBE algo   ROLE algocube PROTON 1
+CUBE brain  ROLE braincube PROTON 1
+
+PLUG self atom
+PLUG remote atom
+PLUG atom algo
+PLUG algo brain
+PLUG self remote
+
+// Seed matrix from optional peer digit inject (still no device hardcode)
+SYS ENV "CUBALC_PEER0_DIGIT"
+IF LAST_N > 0 THEN
+  SYS NUM
+  SETDIGIT self LAST_N
+ELSE
+  SETBIT self 0 1
+  SETBIT self 3 1
+  SETBIT self 7 1
+  SETBIT self 11 1
+END
+
+IMPULSE self 1
+IMPULSE atom 1
+FLOW 3
+
+SMX KEY
+
+SYS ENV "CUBALC_P2P_MODE"
+// default dial if unset; SERVE if mode contains "serve"
+LET is_serve = 0
+// string compare via ENV re-read: if LAST starts with s — soft: use EXIST of serve flag
+SYS ENV "CUBALC_P2P_SERVE"
+IF LAST_N > 0 THEN
+  LET is_serve = 1
+END
+
+IF is_serve == 1 THEN
+  SYS ENV "CUBALC_P2P_BIND"
+  IF LAST_N > 0 THEN
+    SMX SERVE self remote LAST
+  ELSE
+    SMX SERVE self remote "0.0.0.0:7733"
+  END
+ELSE
+  SYS ENV "CUBALC_P2P_PEER"
+  IF LAST_N > 0 THEN
+    SMX DIAL self remote LAST
+  ELSE
+    SMX DIAL self remote "127.0.0.1:7733"
+  END
+END
+
+IMPULSE brain 1
+DECIDE brain
+
+PRINT "nanobot_p2p" CUBES SMX_OK SMX_TALKS SMX_N SET(self) SET(remote) DIGIT(self) DIGIT(remote) DIGIT(brain) COMPAT(self,remote) UNITY
+ASSERT CUBES >= 5
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 1
+ASSERT SET(self) >= 1

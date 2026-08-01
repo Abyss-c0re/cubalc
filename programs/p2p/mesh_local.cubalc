@@ -1,0 +1,34 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// In-process mesh (same machine, no TCP) — Law of Manifestation baseline
+GENESIS "NEXUS_COORD v1 | from=p2p | type=mesh_local | hold_flash=1 | share=smx |"
+
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+CUBE peer2 ROLE atom PROTON 1
+
+PLUG peer0 peer1
+PLUG peer1 peer2
+PLUG peer0 peer2
+
+SETBIT peer0 0 1
+SETBIT peer0 4 1
+SETBIT peer0 8 1
+SETBIT peer1 1 1
+SETBIT peer1 5 1
+SETBIT peer1 9 1
+SETBIT peer2 2 1
+SETBIT peer2 6 1
+SETBIT peer2 10 1
+
+SMX KEY
+SMX EXCHANGE peer0 peer1
+SMX EXCHANGE peer1 peer2
+SMX EXCHANGE peer0 peer2
+
+PRINT "mesh_local" CUBES SMX_OK SMX_TALKS SET(peer0) SET(peer1) SET(peer2) COMPAT(peer0,peer1) COMPAT(peer1,peer2) UNITY
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 3
+ASSERT COMPAT(peer0,peer1) >= 50

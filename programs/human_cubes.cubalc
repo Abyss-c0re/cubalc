@@ -1,0 +1,9 @@
+[hold]
+[alpha:sot]
+[beta:nanobot]
+[gamma:view]
+[alpha~beta~gamma]
+[alpha!]
+[beta!]
+[~8]
+?

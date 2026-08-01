@@ -1,0 +1,108 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Hive board for contained members — host CubalC SoT
+// Peer digits injected from container identities (env) · SMX unites hive
+GENESIS "NEXUS_COORD v1 | from=hive_containers | type=contained_hive | hold_flash=1 | share=smx | proto=SMX2 | members=3 | contained=1 |"
+
+CUBE peer0 ROLE host      PROTON 1
+CUBE peer1 ROLE body      PROTON 1
+CUBE peer2 ROLE brain     PROTON 1
+CUBE atom  ROLE atom      PROTON 1
+CUBE algo  ROLE algocube  PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE hive  ROLE hive      PROTON 1
+CUBE meta  ROLE kernel_sot PROTON 1
+
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG peer2 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain hive
+PLUG hive meta
+PLUG peer0 peer1
+PLUG peer1 peer2
+PLUG peer0 peer2
+
+// Distinct matrices per contained member
+SETBIT peer0 0 1
+SETBIT peer0 3 1
+SETBIT peer0 6 1
+SETBIT peer1 1 1
+SETBIT peer1 4 1
+SETBIT peer1 7 1
+SETBIT peer2 2 1
+SETBIT peer2 5 1
+SETBIT peer2 8 1
+SETBIT algo 10 1
+SETBIT brain 11 1
+SETBIT hive 2 1
+SETBIT meta 13 1
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE peer2 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE hive 1
+FLOW 3
+
+// Inject digits from container sample (env CUBALC_PEER*_DIGIT)
+// If unset, FOLDBITS from distinct seeds
+SYS ENV "CUBALC_PEER0_DIGIT"
+SYS NUM
+SETDIGIT peer0 LAST_N
+SYS ENV "CUBALC_PEER1_DIGIT"
+SYS NUM
+SETDIGIT peer1 LAST_N
+// peer2 digit = (p0+p1) mod 10 via decide after fold
+SETBIT peer2 9 1
+
+SMX KEY
+
+LET gen = 0
+LOOP 6
+  LET gen = gen + 1
+  SMX EXCHANGE peer0 peer1
+  SMX EXCHANGE peer1 peer2
+  SMX EXCHANGE peer0 peer2
+  DECIDE algo
+  SETDIGIT brain DECIDE
+  SETDIGIT hive DECIDE
+  SETDIGIT peer0 DECIDE
+  SETDIGIT peer1 DECIDE
+  SETDIGIT peer2 DECIDE
+  IMPULSE brain 1
+  IMPULSE hive 1
+  FLOW 2
+END
+
+IMPULSE brain 1
+DECIDE brain
+SMX EXCHANGE peer0 peer1
+SMX EXCHANGE peer1 peer2
+
+LET agree = 0
+IF DIGIT(peer0) == DIGIT(peer1) THEN
+  IF DIGIT(peer1) == DIGIT(peer2) THEN
+    LET agree = 1
+  END
+END
+
+LET final_compat = COMPAT(peer0,peer1)
+
+PRINT "hive_contained" CUBES UNITY SMX_OK SMX_TALKS agree DECIDE DIGIT(peer0) DIGIT(peer1) DIGIT(peer2) DIGIT(brain) DIGIT(hive) final_compat gen SET(brain) ENERGY(hive)
+
+ASSERT CUBES >= 8
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 6
+ASSERT agree == 1
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT DIGIT(peer0) == DIGIT(peer1)
+ASSERT DIGIT(peer1) == DIGIT(peer2)
+
+VIZ "state/cubalc_viz_frame.json"

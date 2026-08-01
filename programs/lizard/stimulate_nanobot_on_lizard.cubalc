@@ -1,0 +1,95 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Stimulate hive behaviour on a free-guest way surface (device names stay in host env only)
+// Law: abstract language · devices free · Cube tracks what it touches · SMX binary
+// Path: peers → CubalC board → matrix_viz frame → host way consumer
+GENESIS "NEXUS_COORD v1 | from=guest_stim | type=hive_stimulate | hold_flash=1 | share=smx | role=guest_way | free_guest=1 |"
+
+CUBE guest  ROLE guest_way   PROTON 1
+CUBE sense  ROLE sense_way   PROTON 1
+CUBE peer0  ROLE host        PROTON 1
+CUBE peer1  ROLE body        PROTON 1
+CUBE atom   ROLE atom        PROTON 1
+CUBE algo   ROLE algocube    PROTON 1
+CUBE brain  ROLE braincube   PROTON 1
+CUBE link   ROLE link_way    PROTON 1
+CUBE sot    ROLE kernel_sot  PROTON 1
+
+// Way surface: sense tracks guest · link carries · Cube is SoT
+PLUG sense guest
+PLUG guest link
+PLUG link sot
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain guest
+PLUG peer0 peer1
+PLUG sot brain
+
+// Peer matrices (stimulated behaviour)
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer0 8 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+SETBIT peer1 9 1
+SETBIT guest 7 1
+SETBIT sense 11 1
+SETBIT algo 0 1
+SETBIT brain 13 1
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE guest 1
+IMPULSE sense 1
+IMPULSE sot 1
+FLOW 6
+
+SMX KEY
+
+// Stimulate as one hive: exchange → self-dev algocube → project to guest cube
+LET gen = 0
+LET best = 0
+LOOP 8
+  LET gen = gen + 1
+  SMX EXCHANGE peer0 peer1
+  DECIDE algo
+  SETDIGIT brain DECIDE
+  SETDIGIT peer0 DECIDE
+  SETDIGIT peer1 DECIDE
+  SETDIGIT guest DECIDE
+  SETBIT guest DECIDE 1
+  IMPULSE brain 1
+  IMPULSE guest 1
+  FLOW 2
+  SMX TALK peer0 peer1
+  LET c = COMPAT(peer0,peer1)
+  IF c > best THEN
+    LET best = c
+  END
+END
+
+// Final stimulate pulse on the way surface
+IMPULSE link 1
+IMPULSE guest 1
+FLOW 3
+DECIDE brain
+SMX EXCHANGE peer0 peer1
+SETDIGIT guest DECIDE
+
+PRINT "guest_stim" CUBES UNITY SMX_OK SMX_TALKS gen best DECIDE DIGIT(guest) DIGIT(brain) DIGIT(peer0) DIGIT(peer1) DIGIT(algo) SET(guest) SET(brain) ENERGY(guest) ENERGY(link) COMPAT(peer0,peer1)
+
+ASSERT CUBES >= 9
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 8
+ASSERT DIGIT(peer0) == DIGIT(peer1)
+ASSERT DIGIT(guest) == DECIDE
+ASSERT COMPAT(peer0,peer1) >= 50
