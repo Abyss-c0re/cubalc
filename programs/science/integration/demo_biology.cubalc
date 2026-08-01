@@ -1,0 +1,13 @@
+# Demo integration — Biology integration
+HOLD_FLASH 1
+SCIENCE LOAD
+CUBE cell ROLE c PROTON 1
+CUBE nuc ROLE o PROTON 1
+NEST cell nuc
+ASSERT NESTED(nuc) == 1
+LET E0 = 1000
+LET E1 = E0 / 10
+ASSERT E1 == 100
+LET pheno = 3 * 100 / 4
+ASSERT pheno == 75
+PRINT "exam_bio" pheno

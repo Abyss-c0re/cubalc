@@ -1,18 +1,29 @@
 # Changelog
 
+## 1.10.1-science — 2026-08-01
+
+### Clarify
+- Pure science is a **language design direction**, not a school or diploma product.
+- `programs/school` → `programs/science` demos; removed diploma runner / graduation framing.
+- `make science` runs language regression demos only.
+
+### Language (retained)
+- Science constants + pure ops: `SCIENCE LOAD`, `FORCE`/`KE`/`PE`, `GCD`/`POW`/`HYP`, earth scales, …
+
+### Prior
+See 1.10.0-evolve (ops + demos added).
+
 ## 1.10.0-evolve — 2026-08-01
 
 ### Law
-- **evolve** — curriculum and language keep flowing after pure_science.
+- **evolve** — language keeps flowing after pure_science.
 
 ### Language
 - Earth/space constants: `EARTH_R` `AU_KM` `YEAR_D` `MOON_D` `SOLAR_C` `ATM_O2` `ATM_N2`
 - Helpers: `CLAMP` `AVG` `PCT` `HYP` `CIRC` `AREA_CIRCLE` `WAVE_V` `LIGHT_T` `BOYLE_P2` `ORBIT_PERIOD`
 
-### Curriculum
-- **Earth & space** track (8 lessons + midterm)
-- Math 11–14 · Physics 08–09 · Chem 08 · Bio 08
-- Native apps **A–D** in CubalC · `make diploma` unified runner
+### Demos
+- Pure-science language demos (math/physics/chem/bio/earth) under programs/science
 
 ### Prior
 See 1.9.0-school.

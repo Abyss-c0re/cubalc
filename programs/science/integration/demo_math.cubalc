@@ -1,0 +1,17 @@
+# Demo integration — Math integration (pure logic)
+HOLD_FLASH 1
+SCIENCE LOAD
+ASSERT GCD(54,24) == 6
+ASSERT LCM(6,8) == 24
+ASSERT POW(2,8) == 256
+ASSERT SQRT(81) == 9
+ASSERT FACT(4) == 24
+LET sum = 0
+LET n = 1
+LOOP 10
+  LET sum = sum + n
+  LET n = n + 1
+END
+ASSERT sum == 55
+ASSERT POW(3,2)+POW(4,2) == POW(5,2)
+PRINT "exam_math" sum

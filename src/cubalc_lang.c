@@ -957,7 +957,7 @@ static long parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"SOLAR_C")==0) return CUBALC_SCI_SOLAR_C;
     if (strcmp(name,"ATM_O2")==0) return CUBALC_SCI_ATM_O2_PCT;
     if (strcmp(name,"ATM_N2")==0) return CUBALC_SCI_ATM_N2_PCT;
-    /* Math / science pure functions — school plane + evolve */
+    /* Math / science pure functions — pure-science language plane */
     if (strcmp(name,"ABS")==0 || strcmp(name,"SIGN")==0 ||
         strcmp(name,"SQRT")==0 || strcmp(name,"ISQRT")==0 ||
         strcmp(name,"MIN")==0 || strcmp(name,"MAX")==0 ||
@@ -1670,8 +1670,8 @@ static int parse_form(VM *vm, Lex *L){
     vm->ch.hold_flash=(uint8_t)vm->hold_flash;
     bump(vm); return 1;
   }
-  /* SCIENCE [LOAD] — inject pure-science school constants into vars (public domain) */
-  if (kw(&L->cur,"SCIENCE")||kw(&L->cur,"PURESCIENCE")||kw(&L->cur,"SCHOOL")){
+  /* SCIENCE [LOAD] — inject pure-science constants (public domain; language design) */
+  if (kw(&L->cur,"SCIENCE")||kw(&L->cur,"PURESCIENCE")){
     lex_next(L);
     if (kw(&L->cur,"LOAD")||kw(&L->cur,"CONST")||kw(&L->cur,"CONSTANTS")) lex_next(L);
     var_set_num(vm, "PI100", CUBALC_SCI_PI100);

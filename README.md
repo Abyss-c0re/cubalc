@@ -1,9 +1,10 @@
 # CubalC — product (ProjectNexus)
 
-**Version:** 1.10.0-evolve · paradigm **COP/flow** · pure **C** runtime  
+**Version:** 1.10.1-science · paradigm **COP/flow** · pure **C** runtime  
 **Origin:** `Dev/lab/prophecy_cube/cubalc`  
-**Law:** flow-compile · nest · pure science · **evolve**  
-**School:** `make school` · `make diploma` · math/physics/chemistry/biology/**earth** + apps A–D
+**Law:** flow-compile · nest · pure science · evolve  
+**Direction:** pure science enhances the **language** (math/physics/chem/bio/earth ops) — not a school or diploma.  
+**Demos:** `make science` · `programs/science/`
 
 ## Keep this product up to date
 

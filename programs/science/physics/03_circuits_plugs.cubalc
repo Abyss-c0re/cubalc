@@ -1,0 +1,39 @@
+# Physics 03 — Circuits: plugs as wires, current as flow
+HOLD_FLASH 1
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=science | domain=circuit |"
+
+CUBE battery ROLE source PROTON 1
+CUBE resistor ROLE load PROTON 1
+CUBE lamp ROLE load PROTON 1
+
+IO battery OUT 0
+IO battery IN 1
+IO resistor IN 0
+IO resistor OUT 1
+IO lamp IN 0
+IO lamp OUT 1
+
+FOLDBITS battery  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS resistor "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS lamp     "1111000011110000111100001111000011110000111100001111000011110000"
+
+# series: battery → resistor → lamp → battery
+PLUG battery resistor
+PLUG resistor lamp
+PLUG lamp battery
+
+IMPULSE battery 1
+FLOW DIR 6
+ASSERT FLOWED(resistor) == 1
+ASSERT FLOWED(lamp) == 1
+
+# Ohm scale: V = I R  (integers)
+LET I = 2
+LET R = 6
+LET V = I * R
+ASSERT V == 12
+LET P = V * I
+ASSERT P == 24
+
+PRINT "phys03_circuit" V P CUBES

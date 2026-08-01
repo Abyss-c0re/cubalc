@@ -29,7 +29,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.10.0-evolve"
+#define CUBALC_LANG_VERSION "1.10.1-science"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
@@ -82,9 +82,9 @@
 /* Each cube compiles into a matrix. It must flow. No flow — no compiling. Cubes may nest. */
 #define CUBALC_LAW_FLOW_COMPILE     13
 #define CUBALC_LAW_NEST             14
-/* Pure science school plane: math · physics · chemistry · biology as CubalC logic */
+/* Pure science: math · physics · chemistry · biology · earth as language design */
 #define CUBALC_LAW_PURE_SCIENCE     15
-/* Continuous evolve: curriculum + language must keep flowing */
+/* Continuous evolve: language must keep flowing */
 #define CUBALC_LAW_EVOLVE           16
 #define CUBALC_LAW_COUNT            17
 

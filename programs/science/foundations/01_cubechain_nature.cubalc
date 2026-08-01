@@ -1,0 +1,28 @@
+# Foundations 01 — Nature as cubechain (COP pure logic)
+HOLD_FLASH 1
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=science | domain=nature | hold_flash=1 |"
+
+# Entity = cube; relation = plug; containment = nest; process = flow
+CUBE system ROLE hive PROTON 1
+CUBE partA ROLE organ PROTON 1
+CUBE partB ROLE organ PROTON 1
+NEST system partA
+NEST system partB
+ASSERT NESTED(partA) == 1
+ASSERT NESTED(partB) == 1
+
+FOLDBITS system "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS partA  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS partB  "1010101010101010101010101010101010101010101010101010101010101010"
+PLUG system partA
+PLUG system partB
+IMPULSE system 1
+FLOW 3
+COMPILE partA
+COMPILE partB
+COMPILE system
+ASSERT COMPILED(system) == 1
+ASSERT SET(system) > 0
+
+PRINT "nature_cubechain" CUBES COMPILED(system) SET(system)

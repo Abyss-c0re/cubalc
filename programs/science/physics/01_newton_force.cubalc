@@ -1,0 +1,22 @@
+# Physics 01 — Newton II: F = m a (cubes as bodies)
+HOLD_FLASH 1
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=science | domain=physics | law=newton |"
+
+CUBE body ROLE mass PROTON 1
+CUBE thruster ROLE force PROTON 1
+PLUG thruster body
+IMPULSE thruster 1
+FLOW 2
+
+LET m = 5
+LET a = 3
+LET F = FORCE(m, a)
+ASSERT F == 15
+ASSERT FORCE(10, 2) == 20
+
+# weight W = m g (g×10)
+LET W = (m * G_EARTH) / 10
+ASSERT W == 49
+
+PRINT "phys01_newton" F W ENERGY(body)
