@@ -28,3 +28,9 @@ state/evolve/guard_restarts.txt
 *.pem
 *.key
 out/
+
+# Local-only auth helpers — NEVER publish
+scripts/git_push_https.sh
+**/git_push_https.sh
+.git-credentials*
+.netrc_github*
