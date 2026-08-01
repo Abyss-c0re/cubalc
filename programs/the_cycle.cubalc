@@ -1,0 +1,96 @@
+# THE CYCLE — Build · Extract Algocube · ONCE digit · Rebuild lower
+# Only NexusCore stops the outer process; this program is one tick of the loop.
+# Final product: CubalC. GLua is optional way — bypass on Creator GMod RAW.
+
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 48
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=the_cycle | role=kernel_sot | HOLD_FLASH=ack_held | law=THE_CYCLE | product=cubalc | creator=gmod_raw | bypass_glua=1 | stop_owner=NexusCore |"
+
+OS_ASPECTS
+
+# ── BUILD (faces as free devices — Lua not required) ─────────
+CUBE kernel  ROLE kernel_sot   PROTON 1
+CUBE build   ROLE construct    PROTON 1
+CUBE face    ROLE device_free  PROTON 1
+CUBE lovr    ROLE device_free  PROTON 1
+CUBE gmod    ROLE device_free  PROTON 1
+CUBE lizard  ROLE device_free  PROTON 1
+CUBE map3d   ROLE spatial_manifest PROTON 1
+CUBE stream  ROLE raw_energy   PROTON 1
+
+PLUG build face
+PLUG face lovr
+PLUG lovr gmod
+PLUG gmod lizard
+PLUG lizard stream
+PLUG stream map3d
+PLUG RING
+
+IMPULSE build 1
+IMPULSE face 1
+IMPULSE lizard 1
+FLOW 4
+
+# ── EXTRACT ALGOCUBE ─────────────────────────────────────────
+CUBE raw   ROLE raw_energy   PROTON 1
+CUBE algo  ROLE algocube     PROTON 1
+CUBE brain ROLE braincube    PROTON 1
+
+PLUG raw algo
+PLUG algo brain
+PLUG build raw
+PLUG stream raw
+
+POSE all
+SETDIGIT raw 3
+SETDIGIT algo 2
+SETDIGIT brain 4
+FOLDBITS algo "1100110011001100"
+DECIDE algo
+
+# ── ONCE WE GET AN ALGOCUBE → REBUILD LOWER (no GLua dump) ───
+CUBE destroy ROLE deconstruct PROTON 0
+CUBE create  ROLE construct   PROTON 1
+CUBE lower   ROLE kernel_sot  PROTON 1
+CUBE nexus   ROLE nanobot_hive PROTON 1
+CUBE wind    ROLE construct   PROTON 1
+CUBE atom    ROLE nanobot_hive PROTON 1
+
+DECONSTRUCT destroy
+DECONSTRUCT face
+RECONSTRUCT create
+RECONSTRUCT lower
+RECONSTRUCT nexus
+RECONSTRUCT wind
+RECONSTRUCT atom
+
+PLUG lower nexus
+PLUG create lower
+PLUG nexus brain
+PLUG wind atom
+PLUG atom lower
+PLUG lizard lower
+
+IMPULSE lower 1
+IMPULSE nexus 1
+IMPULSE wind 1
+FLOW 8
+
+SETDIGIT lower 2
+SETDIGIT nexus 4
+SETDIGIT atom 3
+SETDIGIT wind 8
+DECIDE nexus
+
+PRINT "cycle_cubes" CUBES
+PRINT "cycle_unity" UNITY
+PRINT "last" LAST
+
+ASSERT CUBES >= 6
+ASSERT SET(kernel) >= 0
+ASSERT UNITY >= 0
+
+MANIFEST nexus
+VIZ "state/cubalc_viz_frame.json"

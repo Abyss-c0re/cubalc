@@ -1,0 +1,21 @@
+
+[hold]
+[share matrix]
+
+[
+  [sot:kernel]
+  [coord]
+  [llama]
+  [host]
+  [quest]
+  [hive:nanobot]
+]
+
+[sot~coord~llama~host~quest~hive]
+
+[sot!]
+[hive!]
+
+[~8]
+
+?

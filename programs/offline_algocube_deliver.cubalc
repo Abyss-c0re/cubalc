@@ -1,0 +1,47 @@
+# OFFLINE ALGOCUBE DELIVER — no cloud · no brand · digit to nexus
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 32
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=offline_algocube | role=kernel_sot | HOLD_FLASH=ack_held | offline=1 | brand=0 | product=cubalc |"
+
+OS_ASPECTS
+
+CUBE raw ROLE raw_energy PROTON 1
+CUBE algo ROLE algocube PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE nexus ROLE nanobot_hive PROTON 1
+CUBE queue ROLE construct PROTON 1
+
+PLUG raw algo
+PLUG algo brain
+PLUG brain nexus
+PLUG nexus queue
+PLUG RING
+
+POSE all
+FOLDBITS raw "11001100100110100110011010011010"
+FOLDBITS algo "10100101101001011010010110100101"
+SETDIGIT raw 3
+SETDIGIT algo 2
+SETDIGIT brain 4
+SETDIGIT nexus 4
+SETDIGIT queue 1
+
+IMPULSE raw 1
+IMPULSE algo 1
+IMPULSE nexus 1
+FLOW 6
+
+DECIDE algo
+DECIDE nexus
+RECONSTRUCT queue
+MANIFEST nexus
+
+PRINT "offline_cubes" CUBES
+PRINT "offline_unity" UNITY
+PRINT "last" LAST
+
+ASSERT CUBES >= 4
+ASSERT UNITY >= 0
+VIZ "state/cubalc_viz_frame.json"

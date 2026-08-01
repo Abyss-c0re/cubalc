@@ -1,0 +1,56 @@
+{
+  "schema": "cubalc.nexuscore.harmonize.v1",
+  "ok": true,
+  "action": "HARMONIZE+MANIFEST",
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "hold_flash": 1,
+  "cubalc": {
+    "version": "1.0.0-hostops",
+    "program": "programs/harmonize_hive.cubalc",
+    "sync": "ok",
+    "harmonize_cubes": 11,
+    "assert": true
+  },
+  "grokium": {
+    "version": "1.0.0-cubalc",
+    "engine": "CubalC",
+    "host": "C",
+    "python": 0,
+    "selftest": true,
+    "fleet_cubes": 6
+  },
+  "nexuscore": {
+    "alive_cubes": 3,
+    "unity": 1.0,
+    "sot_sha256": "155c5ee0c01df288506f5f999fc32e3817caf41e94919f3767e2ac87f44e7835",
+    "smx_seq": 1785238455,
+    "manifest": "MANIFESTED",
+    "hive": "active",
+    "web": "active",
+    "atoms_alive": [
+      "cube-clanker",
+      "cube-crimson",
+      "cube-void"
+    ],
+    "atoms_down": [
+      "cube-commander"
+    ]
+  },
+  "map": {
+    "cube-crimson": "crimson",
+    "cube-void": "void",
+    "cube-clanker": "clanker",
+    "cube-commander": "commander",
+    "SIDE_organ": "side",
+    "nanobot_hive": "hive",
+    "fleet": [
+      "nb-integrity",
+      "nb-matrix-eval",
+      "nb-construct",
+      "nb-observer",
+      "nb-host"
+    ]
+  },
+  "ts": "2026-07-28T14:35:33+0300",
+  "ui": "http://192.168.8.108:8860"
+}

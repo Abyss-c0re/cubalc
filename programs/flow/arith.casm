@@ -1,0 +1,10 @@
+# sum 1..10 = 55 via JIT
+LOADI r2 0
+LOADI r3 1
+LOADI r4 10
+# loop: while r3 <= r4
+# r0 = r3; cmp le r4
+LOADI r5 0
+# top:
+# use manual unrolled? better LOOP via lowerer
+HALT

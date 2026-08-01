@@ -1,0 +1,126 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Generic peer fold — no device names, no peer file formats.
+// Host sets env before run:
+//   CUBALC_PEER0_DIGIT / CUBALC_PEER1_DIGIT  → integer 0..9 as string
+//   CUBALC_PEER0_BITS  / CUBALC_PEER1_BITS   → path to 01 stream OR raw 01 string
+GENESIS "NEXUS_COORD v1 | from=peer_fold | hold_flash=1 | type=peer_matrix |"
+
+CUBE peer0 ROLE host      PROTON 1
+CUBE peer1 ROLE body      PROTON 1
+CUBE atom  ROLE atom      PROTON 1
+CUBE algo  ROLE algocube  PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE coord ROLE coord     PROTON 1
+
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain coord
+
+LET d0 = -1
+LET d1 = -1
+LET has0 = 0
+LET has1 = 0
+
+// Optional IO bits into peer matrices (path or raw bitstring in env)
+SYS ENV "CUBALC_PEER0_BITS"
+IF LAST_N > 0 THEN
+  LET b0 = LAST
+  SYS EXIST b0
+  IF EXIST == 1 THEN
+    SYS READ b0
+    FOLDBITS peer0 LAST
+  ELSE
+    FOLDBITS peer0 b0
+  END
+END
+
+SYS ENV "CUBALC_PEER1_BITS"
+IF LAST_N > 0 THEN
+  LET b1 = LAST
+  SYS EXIST b1
+  IF EXIST == 1 THEN
+    SYS READ b1
+    FOLDBITS peer1 LAST
+  ELSE
+    FOLDBITS peer1 b1
+  END
+END
+
+// Optional peer digits (already decoded by host — language only sees numbers)
+SYS ENV "CUBALC_PEER0_DIGIT"
+IF LAST_N > 0 THEN
+  SYS NUM
+  LET d0 = LAST_N
+  LET has0 = 1
+END
+
+SYS ENV "CUBALC_PEER1_DIGIT"
+IF LAST_N > 0 THEN
+  SYS NUM
+  LET d1 = LAST_N
+  LET has1 = 1
+END
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+FLOW 6
+
+IF ENERGY(atom) == 0 THEN
+  DECONSTRUCT atom
+  RECONSTRUCT atom
+  PLUG peer0 atom
+  PLUG peer1 atom
+  IMPULSE atom 1
+  FLOW 4
+END
+
+// Digit inject after energy race so impulse cannot wipe sticky peer digits
+IF has0 == 1 THEN
+  SETDIGIT peer0 d0
+  SETBIT brain d0 1
+END
+IF has1 == 1 THEN
+  SETDIGIT peer1 d1
+  SETBIT brain d1 1
+END
+
+IMPULSE algo 1
+IMPULSE brain 1
+IF has0 == 1 THEN
+  SETDIGIT peer0 d0
+END
+IF has1 == 1 THEN
+  SETDIGIT peer1 d1
+END
+DECIDE brain
+
+LET agree = 0
+IF has0 == 1 THEN
+  IF has1 == 1 THEN
+    IF d0 == d1 THEN
+      LET agree = 1
+    END
+  END
+END
+
+PRINT "peer_fold" CUBES UNITY DECIDE DIGIT(peer0) DIGIT(peer1) DIGIT(brain) SET(brain) ENERGY(atom) d0 d1 agree
+ASSERT CUBES >= 6
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT SET(brain) >= 1
+IF has0 == 1 THEN
+  ASSERT DIGIT(peer0) == d0
+END
+IF has1 == 1 THEN
+  ASSERT DIGIT(peer1) == d1
+END
+
+VIZ "state/cubalc_viz_frame.json"

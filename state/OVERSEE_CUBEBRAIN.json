@@ -1,0 +1,75 @@
+{
+  "schema": "cubalc.oversee.cubebrain.v1",
+  "ok": true,
+  "ts": "2026-07-28T13:28:14+0300",
+  "law": {
+    "cube_is_sot": true,
+    "cube_overrides_surfaces": true,
+    "cubalc_role": "language + play board + CBLC machine (oversee)",
+    "cubebrain_role": "prophecy pipeline \u00b7 algocube \u00b7 titan/clanker IO matrix (peer, not deleted)",
+    "nexuscore_role": "station hive SMX SoT",
+    "commander": "only BlackCube Commander overrides NexusCore",
+    "hold_flash": 1,
+    "visual": "cubes",
+    "not": "lego"
+  },
+  "progress": {
+    "cubalc_version": "0.6.0-hive",
+    "cubalc_live": true,
+    "cubalc_n_cubes": 6,
+    "cubalc_unity": 0.6901,
+    "cubalc_energy": 0.4979,
+    "lovr_prefers_cubalc_viz": true,
+    "lovr_path": "lab/prophecy_cube/state/cubalc_viz_frame.json",
+    "viz_published_to_lovr_root": true,
+    "cubebrain_titan": {
+      "host": "titan",
+      "digit": 5,
+      "pick": 0,
+      "approx": 0,
+      "teacher": -1,
+      "bits_set": 17,
+      "ticks": 16741,
+      "unity_agree": 4,
+      "unity_n": 8,
+      "escape_n": 0,
+      "algo_rolls": 8,
+      "chain_ticks": 8
+    },
+    "cubebrain_clanker": {
+      "host": "clanker",
+      "digit": 3,
+      "pick": 0,
+      "approx": 1,
+      "teacher": -1,
+      "bits_set": 10,
+      "ticks": 16728,
+      "unity_agree": 4,
+      "unity_n": 8,
+      "escape_n": 0,
+      "algo_rolls": 8,
+      "chain_ticks": 8
+    },
+    "cubebrain_running": true,
+    "cube_daemon_running": true,
+    "dual_path": true,
+    "override_status": "PARTIAL \u2014 LOVR leans CubalC viz when cubalc:true; CubeBrain prophecy loop still independent; cube_daemon still writes own viz_frame"
+  },
+  "risks": [
+    "two viz writers (cube_daemon viz_frame vs cubalc_viz_frame) \u2014 LOVR prefers cubalc when present",
+    "CubeBrain digits not yet folded into CubalC matrix programmatically",
+    "cubalc_lego.lua filename residual (labels only)",
+    "titan-commander atom still DOWN on NexusCore"
+  ],
+  "next": [
+    "keep publishing cubalc_viz \u2192 prophecy_cube/state on every sync",
+    "optional: cubebrain digit \u2192 CubalC SETBIT / algocube digit on hive cubes",
+    "do not kill CubeBrain \u2014 peer under CubalC oversee until bridge proven"
+  ],
+  "mtimes": {
+    "cubalc_viz": "2026-07-28T13:28:14",
+    "lovr_cubalc_viz": "2026-07-28T13:28:14",
+    "daemon_viz": "2026-07-28T13:28:12"
+  },
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore"
+}

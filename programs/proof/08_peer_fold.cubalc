@@ -1,0 +1,22 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=peer_fold | hold_flash=1 |"
+
+CUBE peer0 ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG peer0 brain
+
+// Pure language: bits + digit — no devices, no external files
+FOLDBITS peer0 "1010101011110000"
+SETDIGIT peer0 5
+SETDIGIT brain 4
+DECIDE brain
+
+PRINT "fold" DIGIT(peer0) DIGIT(brain) SET(peer0) DECIDE
+ASSERT DIGIT(peer0) == 5
+ASSERT SET(peer0) >= 1
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT CUBES == 2

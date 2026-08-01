@@ -1,0 +1,15 @@
+[hold]
+[genesis "NEXUS_COORD v1 | from=pve-lab | type=heartbeat | role=SIDE_organ | status=ONLINE | sessions=1 | tubes=10 | rain_design=yes | HOLD_FLASH=ack_held | ts=2026-07-28T13:13:04+03:00 |"]
+[
+  [side:SIDE_organ]
+  [sot:kernel]
+  [hive:nanobot]
+  [rain:rain_design]
+]
+[side~sot~hive~rain]
+[side!]
+[hive!]
+[~8]
+?
+PRINT "evolve" CUBES UNITY
+ASSERT CUBES >= 4

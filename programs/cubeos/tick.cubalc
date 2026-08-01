@@ -1,0 +1,35 @@
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=cubeos | type=tick | hold_flash=1 | braincube=core |"
+
+CUBE brain   ROLE braincube PROTON 1
+CUBE nanobot ROLE atom      PROTON 1
+CUBE algo    ROLE algocube  PROTON 1
+CUBE hive    ROLE nanobot_hive PROTON 1
+CUBE titan   ROLE host_hand PROTON 1
+CUBE clanker ROLE body      PROTON 1
+
+PLUG titan nanobot
+PLUG clanker nanobot
+PLUG nanobot algo
+PLUG algo brain
+PLUG brain hive
+
+SETBIT titan 0 1
+SETBIT titan 3 1
+SETBIT brain 1 1
+SETBIT brain 5 1
+
+IMPULSE nanobot 1
+FLOW 4
+IF ENERGY(nanobot) == 0 THEN
+  DECONSTRUCT nanobot
+  RECONSTRUCT nanobot
+  PLUG titan nanobot
+  IMPULSE nanobot 1
+  FLOW 3
+END
+IMPULSE brain 1
+DECIDE brain
+PRINT "tick" DECIDE ENERGY(nanobot) ENERGY(brain) UNITY CUBES
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9

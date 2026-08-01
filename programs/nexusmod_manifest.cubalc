@@ -1,0 +1,72 @@
+# NexusMod real-time prophecy — gVR + Dynamic 3D MAP + NexusCore nanobots
+# Native CubalC only · Cube Law · HOLD_FLASH · state_matrix_only
+# DECONSTRUCT stuck energy → RECONSTRUCT under SoT → POSE flow → MANIFEST
+
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 64
+
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=prophecy_manifest | role=SIDE_organ | HOLD_FLASH=ack_held | law=CUBE_DECLARATION | visual=cubes | faces=gvrmod+map3d+lizard | tracking=raw_to_sot |"
+
+OS_ASPECTS
+
+# ── place cubes ──────────────────────────────────────────────
+CUBE kernel  ROLE kernel_sot      PROTON 1
+CUBE raw     ROLE raw_energy      PROTON 1
+CUBE sot     ROLE tracking_sot    PROTON 1
+CUBE wall    ROLE modifier        PROTON 1
+CUBE view    ROLE consumer        PROTON 1
+CUBE gvrmod  ROLE device_free     PROTON 1
+CUBE map3d   ROLE spatial_manifest PROTON 1
+CUBE lizard  ROLE quest_lizard    PROTON 1
+CUBE nexus   ROLE nanobot_hive    PROTON 1
+CUBE create  ROLE construct       PROTON 1
+CUBE destroy ROLE deconstruct     PROTON 0
+CUBE hive    ROLE nanobot         PROTON 1
+
+# ── plug Truth Matrix pose flow (single SoT) ─────────────────
+PLUG raw sot
+PLUG sot wall
+PLUG wall view
+PLUG view gvrmod
+PLUG gvrmod map3d
+PLUG map3d lizard
+PLUG create destroy
+PLUG nexus create
+PLUG RING
+
+# ── nanobot deconstruct → reconstruct ────────────────────────
+DECONSTRUCT destroy
+DECONSTRUCT hive
+RECONSTRUCT create
+RECONSTRUCT nexus
+
+# ── pose energy (language verbs, not C/Lua) ──────────────────
+POSE all
+MANIFEST nexus
+
+IMPULSE kernel 1
+IMPULSE nexus 1
+IMPULSE raw 1
+IMPULSE sot 1
+IMPULSE map3d 1
+FLOW 10
+
+SETDIGIT kernel 2
+SETDIGIT nexus 4
+SETDIGIT gvrmod 0
+SETDIGIT map3d 9
+SETDIGIT lizard 1
+
+DECIDE nexus
+
+PRINT "nexusmod_cubes" CUBES
+PRINT "nexusmod_unity" UNITY
+PRINT "kernel_set" SET(kernel)
+PRINT "last" LAST
+
+ASSERT CUBES >= 8
+ASSERT SET(kernel) >= 1
+ASSERT UNITY >= 0
+
+VIZ "state/cubalc_viz_frame.json"

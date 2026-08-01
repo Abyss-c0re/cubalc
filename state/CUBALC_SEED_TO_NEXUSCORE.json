@@ -1,0 +1,114 @@
+{
+  "schema": "NEXUS_COORD.v1",
+  "from": "cubalc_flow",
+  "type": "SEED",
+  "role": "hive_language_seed",
+  "status": "INJECTED",
+  "language": "CubalC",
+  "version": "1.5.0-flow",
+  "paradigm": "COP/flow",
+  "token": "C3",
+  "share": "state_matrix_only",
+  "pii": false,
+  "hold_flash": 1,
+  "digit": 1,
+  "bits": "0111100100111111101100111101101111111101010111111010110110101110",
+  "bits_set": 45,
+  "algocube": true,
+  "prophecy": "PROPHECY_MANIFESTED",
+  "hot_path": "StateMatrix\u2192nanobot\u2192algocube0-9\u2192braincube\u2192OS way\u2192NexusCore",
+  "ops": [
+    "SETDIGIT",
+    "FOLDBITS",
+    "DECIDE",
+    "COMPARE",
+    "HARMONY",
+    "MANIFEST",
+    "FLOW"
+  ],
+  "laws": [
+    "sot",
+    "in_out",
+    "core_io",
+    "bin_talk",
+    "smx_key",
+    "hold_flash",
+    "no_bci",
+    "share_smx",
+    "dev_free",
+    "one_cmd",
+    "manifest_smx",
+    "algocube"
+  ],
+  "smx": {
+    "genesis": {
+      "ok": true,
+      "version": 1,
+      "purpose": 81,
+      "integrity": 1,
+      "digit": 1,
+      "bits_set": 142,
+      "hex": "534d5831015101014a68c4af9111c2e5b0e06af4967f251f4bcc046369c5f3751a9ac14f37c35180000000000000000000000000000000000000000000000000"
+    },
+    "pulse": {
+      "ok": true,
+      "version": 1,
+      "purpose": 63,
+      "integrity": 1,
+      "digit": 1,
+      "bits_set": 150,
+      "hex": "534d5831013f010122a9d986cd14311eb12d568b20ebb49fd963407d6cc817f4a9e95e91a11f1f27000000000000000000000000000000000000000000000000"
+    },
+    "harmony": {
+      "xor_bits": 132,
+      "digit": 2,
+      "unity": false
+    },
+    "seed_purpose": "0x51"
+  },
+  "harmony": {
+    "schema": "cube.algocube.harmony.v1",
+    "engine": "cubalc_algocube",
+    "ok": true,
+    "n": 14,
+    "unity": 0.603365,
+    "digit": 1,
+    "consensus_set": 62,
+    "verbal": false,
+    "personal_data": false,
+    "law": "hive_seek_unity"
+  },
+  "chain": {
+    "schema": "cubalc.chain.v1",
+    "tok": "C3",
+    "seq": 2,
+    "unity": 0.8828,
+    "hold_flash": 1,
+    "n_cubes": 10,
+    "initial_set": 45,
+    "status": "flow talks=20 energy_pulse seq=2 unity=0.88",
+    "budget": 40,
+    "law": "plug\u00b7cblc\u00b7atom\u00b7p01"
+  },
+  "line": "NEXUS_COORD v1 | from=cubalc_flow | type=SEED | role=hive_language_seed | status=INJECTED | lang=CubalC | version=1.5.0-flow | paradigm=COP/flow | digit=1 | set=45 | hold_flash=1 | share=state_matrix_only | pii=0 | algocube=1 | prophecy=manifested | ts=2026-08-01T17:06:54+03:00 |",
+  "ts": "2026-08-01T17:06:54+03:00",
+  "inject": {
+    "target": "NexusCore",
+    "as": "SEED",
+    "planes": [
+      "SMX",
+      "NEXUS_COORD",
+      "agent_ops",
+      "prophecy_state"
+    ]
+  },
+  "glorious_cube": "bits flow \u00b7 digits judge \u00b7 unity binds the hive",
+  "creed": {
+    "sot": "Cube is source of truth",
+    "way": "OS is only a channel",
+    "devices": "free",
+    "law": "algocubes enforce digits 0-9",
+    "commander": "one BlackCube Commander",
+    "token": "C3"
+  }
+}

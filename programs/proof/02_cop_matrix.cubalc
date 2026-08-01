@@ -1,0 +1,30 @@
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=lang_proof | hold_flash=1 | role=earth_heal |"
+
+CUBE scrap ROLE recycle PROTON 1
+CUBE hive  ROLE nanobot_hive PROTON 1
+CUBE wire  ROLE conduit PROTON 1
+
+PLUG scrap hive
+PLUG hive wire
+
+SETBIT scrap 0 1
+SETBIT scrap 1 1
+SETBIT scrap 2 1
+SETBIT hive 7 1
+
+IMPULSE hive 1
+FLOW 4
+
+LET bits = SET(scrap)
+LET eng = ENERGY(hive)
+LET n = CUBES
+
+PRINT "cubes" n
+PRINT "scrap_set" bits
+PRINT "hive_energy_centi" eng
+
+ASSERT n == 3
+ASSERT bits >= 3
+ASSERT eng > 0
+ASSERT COMPAT(scrap, hive) >= 0

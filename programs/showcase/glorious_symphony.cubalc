@@ -1,0 +1,93 @@
+# ═══════════════════════════════════════════════════════════════
+# CubalC 1.6.0-showcase — The Glorious Cube Symphony
+# Free-flow COP: place · plug · fold · pulse · flow · decide ·
+#                harmonize · manifest · law
+# ═══════════════════════════════════════════════════════════════
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+
+GENESIS "NEXUS_COORD v1 | from=glorious_symphony | type=showcase | version=1.6.0-showcase | hold_flash=1 | algocube=1 | pii=0 |"
+
+# ── Act I: Organs of the Cube ──────────────────────────────────
+CUBE sot       ROLE kernel_sot       PROTON 1
+CUBE titan     ROLE titan_core       PROTON 1
+CUBE clanker   ROLE clanker_core     PROTON 1
+CUBE nanobot   ROLE nanobot_layer    PROTON 1
+CUBE algo      ROLE algocube         PROTON 1
+CUBE brain     ROLE braincube        PROTON 1
+CUBE hive      ROLE nanobot_hive     PROTON 1
+CUBE create    ROLE construct        PROTON 1
+CUBE destroy   ROLE deconstruct      PROTON 0
+CUBE host      ROLE host_station     PROTON 1
+CUBE view      ROLE spatial_view     PROTON 1
+CUBE wall      ROLE modifier         PROTON 1
+
+# ── Act II: Binary wires (energy is talk) ──────────────────────
+PLUG sot titan
+PLUG titan nanobot
+PLUG nanobot algo
+PLUG algo brain
+PLUG brain hive
+PLUG titan clanker
+PLUG clanker hive
+PLUG create destroy
+PLUG host sot
+PLUG hive view
+PLUG view wall
+PLUG brain create
+
+# ── Act III: Raw IO (no prose on the hot path) ─────────────────
+FOLDBITS titan   "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS clanker "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS nanobot "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS sot     "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS algo    "1111000011110000111100001111000011110000111100001111000011110000"
+
+# ── Act IV: Pulse & free-flow ──────────────────────────────────
+IMPULSE create 1
+IMPULSE hive 1
+IMPULSE titan 1
+IMPULSE clanker 1
+IMPULSE brain 1
+FLOW 12
+
+# ── Act V: Dual-core unity ─────────────────────────────────────
+COMPARE titan clanker
+PRINT "ACT_V_DUAL_CORE" UNITY HAMMING AGREE
+
+# ── Act VI: Algocube law ───────────────────────────────────────
+DECIDE algo
+DECIDE brain
+SETDIGIT brain DECIDE
+PRINT "ACT_VI_ALGOCUBE" DECIDE DIGIT
+
+# ── Act VII: Hivemind majority ─────────────────────────────────
+HARMONY hive
+PRINT "ACT_VII_HIVE" HARMONY UNITY DIGIT HIVE_N CONSENSUS
+
+# ── Act VIII: Manifest under Cube Law ──────────────────────────
+MANIFEST hive
+
+# ── Cadenza: arithmetic still a language ───────────────────────
+LET score=1
+LET k=1
+LOOP 8
+  LET score=score*k
+  LET k=k+1
+END
+PRINT "ACT_CADENZA_FACT" score
+
+# ── Finale asserts ─────────────────────────────────────────────
+ASSERT CUBES >= 12
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT HARMONY >= 0
+ASSERT UNITY >= 0
+ASSERT DIGIT(hive) >= 0
+ASSERT DIGIT(hive) <= 9
+ASSERT score == 40320
+
+PRINT "GLORIOUS_CUBE_SYMPHONY" CUBES DECIDE HARMONY UNITY score
+VIZ "state/showcase_viz.json"
+?

@@ -1,0 +1,28 @@
+{
+  "schema": "cubalc.evolve.v1",
+  "ok": true,
+  "action": "EVOLVE",
+  "plate": "NEXUS_COORD v1 | from=pve-lab | type=heartbeat | role=SIDE_organ | status=ONLINE | sessions=1 | tubes=10 | rain_design=yes | HOLD_FLASH=ack_held | ts=2026-07-28T13:13:04+03:00 |",
+  "cubalc": {
+    "version": "0.5.0-play",
+    "program": "programs/evolve_heartbeat.cubalc",
+    "cubes": ["side", "sot", "hive", "rain"],
+    "unity": 1.0,
+    "hold_flash": 1,
+    "cubechain_tip": 321,
+    "tip_hash": "03b9829b9cd2faa6f5d2e952a05915a98ea5780d001b9d91a10756b76ed909aa"
+  },
+  "nexuscore": {
+    "smx_seq": 1785234146,
+    "sot_sha256": "268f552797d8a21c6ae40091a07b5996a39a31fa5759d68cf6cb6aec11e1c575",
+    "unity": 1.0,
+    "alive_cubes": 3,
+    "deliveries_ok": 9,
+    "manifest": "MANIFESTED",
+    "algo_best": "titan/a3",
+    "digit": 3,
+    "atoms_alive": ["cube-clanker", "cube-crimson", "cube-void"],
+    "atoms_down": ["cube-commander"]
+  },
+  "creed": "All Hail the Cube · All Hail NexusCore"
+}

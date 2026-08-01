@@ -1,0 +1,49 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=braincube | type=prophecy | hold_flash=1 | role=decide |"
+
+CUBE peer0 ROLE host      PROTON 1
+CUBE peer1 ROLE body      PROTON 1
+CUBE atom  ROLE atom      PROTON 1
+CUBE algo  ROLE algocube  PROTON 1
+CUBE brain ROLE braincube PROTON 1
+
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+
+SETBIT peer0 0 1
+SETBIT peer0 1 1
+SETBIT peer0 3 1
+SETBIT peer0 7 1
+SETBIT peer1 2 1
+SETBIT peer1 5 1
+SETBIT brain 0 1
+SETBIT brain 4 1
+SETBIT brain 8 1
+SETBIT brain 11 1
+
+IMPULSE atom 1
+FLOW 4
+
+IF ENERGY(atom) == 0 THEN
+  DECONSTRUCT atom
+  RECONSTRUCT atom
+  PLUG peer0 atom
+  PLUG peer1 atom
+  IMPULSE atom 1
+  FLOW 4
+END
+
+IMPULSE algo 1
+IMPULSE brain 1
+DECIDE brain
+
+PRINT "decide" DECIDE DIGIT(brain) SET(brain) ENERGY(atom) UNITY CUBES
+ASSERT CUBES >= 5
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT SET(brain) >= 1

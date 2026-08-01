@@ -1,0 +1,18 @@
+
+[hold]
+[
+  [phone:scrap]
+  [radio:scrap]
+  [watch:scrap]
+  [hive:nanobot]
+]
+
+[phone~hive]
+[radio~hive]
+[watch~hive]
+[hive!]
+[~4]
+?
+
+PRINT "scraps" CUBES
+ASSERT CUBES >= 4

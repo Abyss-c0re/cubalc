@@ -1,0 +1,22 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=cubebrain_fold | hold_flash=1 |"
+
+CUBE titan ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG titan brain
+
+// Matrix fold first; peer digit inject last (CubeBrain digit wins on peer cube)
+FOLDBITS titan "1010101011110000"
+SETDIGIT titan 5
+SETDIGIT brain 4
+DECIDE brain
+
+PRINT "fold" DIGIT(titan) DIGIT(brain) SET(titan) DECIDE
+ASSERT DIGIT(titan) == 5
+ASSERT SET(titan) >= 1
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT CUBES == 2

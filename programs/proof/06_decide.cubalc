@@ -1,0 +1,12 @@
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=decide | hold_flash=1 |"
+CUBE brain ROLE braincube PROTON 1
+SETBIT brain 1 1
+SETBIT brain 2 1
+SETBIT brain 3 1
+SETBIT brain 9 1
+DECIDE brain
+PRINT "decide" DECIDE
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT DIGIT(brain) == DECIDE

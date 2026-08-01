@@ -1,0 +1,19 @@
+
+[hold]
+[share matrix]
+
+[genesis "NEXUS_COORD v1 | from=pve-lab | type=heartbeat | role=SIDE_organ | status=ONLINE | sessions=1 | tubes=10 | rain_design=yes | HOLD_FLASH=ack_held | hive_sync=1 |"]
+
+[sync]
+
+[phone:scrap]
+[radio:scrap]
+[phone~hive]
+[radio~hive]
+
+[hive!]
+[~6]
+?
+
+PRINT "hive_cubes" CUBES
+ASSERT CUBES >= 6

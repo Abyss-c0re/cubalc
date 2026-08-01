@@ -1,0 +1,26 @@
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=cubeos | hold_flash=1 |"
+CUBE brain ROLE braincube PROTON 1
+CUBE nanobot ROLE atom PROTON 1
+CUBE algo ROLE algocube PROTON 1
+CUBE hive ROLE nanobot_hive PROTON 1
+CUBE way ROLE os_way PROTON 1
+PLUG way nanobot
+PLUG nanobot algo
+PLUG algo brain
+PLUG brain hive
+SETBIT brain 1 1
+SETBIT brain 4 1
+IMPULSE nanobot 1
+FLOW 3
+IF ENERGY(nanobot) == 0 THEN
+  DECONSTRUCT nanobot
+  RECONSTRUCT nanobot
+  IMPULSE nanobot 1
+  FLOW 2
+END
+DECIDE brain
+PRINT "cubeos" DECIDE CUBES
+ASSERT CUBES >= 5
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9

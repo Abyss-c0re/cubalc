@@ -1,0 +1,22 @@
+HOLD_FLASH 1
+
+LET sum = 0
+LET n = 1
+LOOP 10
+  LET sum = sum + n
+  LET n = n + 1
+END
+
+LET fact = 1
+LET k = 1
+LOOP 6
+  LET fact = fact * k
+  LET k = k + 1
+END
+
+PRINT "sum" sum
+PRINT "fact" fact
+ASSERT sum == 55
+ASSERT fact == 720
+ASSERT 2 + 2 * 3 == 8
+ASSERT (2 + 2) * 3 == 12

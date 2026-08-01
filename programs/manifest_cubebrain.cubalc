@@ -1,0 +1,106 @@
+// Deprecated filename — kept so old `cubalc oversee` callers resolve.
+// CubalC programs must not hardcode devices or peer file formats.
+// See programs/peer_fold.cubalc and scripts/peer_fold.sh
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=peer_fold | hold_flash=1 | type=peer_matrix |"
+
+CUBE peer0 ROLE host      PROTON 1
+CUBE peer1 ROLE body      PROTON 1
+CUBE atom  ROLE atom      PROTON 1
+CUBE algo  ROLE algocube  PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE coord ROLE coord     PROTON 1
+CUBE sot   ROLE kernel_sot PROTON 1
+CUBE a0    ROLE lane      PROTON 1
+CUBE a1    ROLE lane      PROTON 1
+CUBE a2    ROLE lane      PROTON 1
+CUBE a3    ROLE lane      PROTON 1
+CUBE prison ROLE escape   PROTON 1
+
+PLUG sot peer0
+PLUG sot peer1
+PLUG peer0 atom
+PLUG peer1 atom
+PLUG atom algo
+PLUG algo brain
+PLUG brain coord
+PLUG coord a0
+PLUG coord a1
+PLUG coord a2
+PLUG coord a3
+PLUG prison brain
+PLUG a0 prison
+PLUG a1 prison
+
+LET d0 = -1
+LET d1 = -1
+LET has0 = 0
+LET has1 = 0
+
+SYS ENV "CUBALC_PEER0_BITS"
+IF LAST_N > 0 THEN
+  LET b0 = LAST
+  SYS EXIST b0
+  IF EXIST == 1 THEN
+    SYS READ b0
+    FOLDBITS peer0 LAST
+  ELSE
+    FOLDBITS peer0 b0
+  END
+END
+SYS ENV "CUBALC_PEER1_BITS"
+IF LAST_N > 0 THEN
+  LET b1 = LAST
+  SYS EXIST b1
+  IF EXIST == 1 THEN
+    SYS READ b1
+    FOLDBITS peer1 LAST
+  ELSE
+    FOLDBITS peer1 b1
+  END
+END
+SYS ENV "CUBALC_PEER0_DIGIT"
+IF LAST_N > 0 THEN
+  SYS NUM
+  LET d0 = LAST_N
+  LET has0 = 1
+END
+SYS ENV "CUBALC_PEER1_DIGIT"
+IF LAST_N > 0 THEN
+  SYS NUM
+  LET d1 = LAST_N
+  LET has1 = 1
+END
+
+IMPULSE sot 1
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE atom 1
+IMPULSE algo 1
+IMPULSE brain 1
+IMPULSE prison 1
+FLOW 8
+
+IF has0 == 1 THEN
+  SETDIGIT peer0 d0
+  SETBIT brain d0 1
+END
+IF has1 == 1 THEN
+  SETDIGIT peer1 d1
+  SETBIT brain d1 1
+END
+DECIDE brain
+
+PRINT "peer_lattice" CUBES UNITY DECIDE DIGIT(peer0) DIGIT(peer1) DIGIT(brain) d0 d1
+ASSERT CUBES >= 12
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+IF has0 == 1 THEN
+  ASSERT DIGIT(peer0) == d0
+END
+IF has1 == 1 THEN
+  ASSERT DIGIT(peer1) == d1
+END

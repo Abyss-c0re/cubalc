@@ -1,0 +1,30 @@
+# Build
+out/
+*.o
+*.a
+*.so
+*.cblc
+
+# Runtime state (local SoT plates — not source)
+state/test_suite/
+state/evolve/loop.log
+state/evolve/loop.pid
+state/evolve/guard.pid
+state/evolve/guard.log
+state/evolve/mind.bin
+state/evolve/guard_restarts.txt
+*.pid
+
+# Editor / OS
+*.bak
+*~
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+out/
