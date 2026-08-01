@@ -1,1 +1,1 @@
-{"schema":"cube.algocube.deep_opt.v1","see":"evolve/ALGOCUBE_DEEP_OPT.json","fit_before":0.950000,"fit_after":0.987500,"top_way":"crossover_best","ts":1785597675}
+{"schema":"cube.algocube.deep_opt.v1","see":"evolve/ALGOCUBE_DEEP_OPT.json","fit_before":0.962500,"fit_after":0.987500,"top_way":"point_nudge","ts":1785598071}

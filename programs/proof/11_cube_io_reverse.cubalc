@@ -1,0 +1,42 @@
+# Proof 11 — Only CUBE is defined; I/O is pluggable and reversible
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=cube_io | hold_flash=1 |"
+
+# Only cubes — no other types as first-class agents
+CUBE sensor ROLE io PROTON 1
+CUBE brain  ROLE core PROTON 1
+CUBE sink   ROLE sink PROTON 0
+
+# Declare pluggable I/O faces
+IO sensor OUT 0
+IO sensor IN  1
+IO brain  IN  0
+IO brain  OUT 1
+IO sink   IN  0
+
+FOLDBITS sensor "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS brain  "1111000011110000111100001111000011110000111100001111000011110000"
+
+# Plug = wire pluggable I/O (matrix-compatible)
+PLUG sensor brain
+PLUG brain sink
+
+IMPULSE sensor 1
+FLOW DIR 4
+LET e1 = ENERGY(brain)
+
+# Reverse I/O on the wire (can be reversed if needed)
+REVERSE sensor brain
+FLOW DIR 4
+LET e2 = ENERGY(sensor)
+
+# Unplug / re-plug (I/O remains cube-only)
+UNPLUG sensor brain
+PLUG sensor brain
+FLOW 2
+
+ASSERT CUBES == 3
+ASSERT e1 >= 0
+ASSERT e2 >= 0
+ASSERT OK == 1
+PRINT "proof11_cube_io" CUBES e1 e2 REVERSED

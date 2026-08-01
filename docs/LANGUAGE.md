@@ -14,10 +14,16 @@
 | `[sync]` | hive join cubes |
 | `[fleet]` | fleet map cubes |
 
+## Core law: only **CUBE** is defined
+
+Everything else is **pluggable I/O** on cubes (ports IN/OUT).  
+Plugs wire cubes; **REVERSE** flips I/O direction when needed.
+
 ## Statements
 
-`LET` `LOOP`/`WHILE` `IF`/`END` `ASSERT` `PRINT`  
-`CUBE` `PLUG` `FLOW` `IMPULSE` `DECIDE` `COMPARE` `HARMONY`  
+`LET` `LOOP`/`WHILE` `FOR`/`EACH` `IF`/`END` `ASSERT` `PRINT`  
+`CUBE` `PLUG` `UNPLUG` `REVERSE` `IO` `FLOW`/`FLOW DIR` `IMPULSE`  
+`DECIDE` `COMPARE` `HARMONY` `RESOLVE` `ENERGYFLOW`  
 `SETBIT` `SETDIGIT` `FOLDBITS`  
 `ASYNC HTTP` `AWAIT` `PARALLEL`  
 `SYS …`
@@ -68,7 +74,7 @@ cubalc law
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.6.1-resolve`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.7.0-cube`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)
@@ -81,3 +87,18 @@ Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law
 | `PROPHECY` / `SUMMON` | alias of `MANIFEST` |
 
 Not C. Not Lua. CubalC verbs only on the hot path.
+
+
+## Cube I/O (pluggable · reversible)
+
+| form | meaning |
+|------|---------|
+| `CUBE id ROLE r PROTON 0\|1` | **only** first-class unit (COP) |
+| `IO cube IN\|OUT [face]` | declare pluggable port direction |
+| `PLUG a b` | wire I/O if matrices compatible |
+| `UNPLUG a b` | detach I/O wire |
+| `REVERSE a b` | reverse I/O on the wire (IN↔OUT) |
+| `FLOW n` | bidirectional energy hops |
+| `FLOW DIR n` | directed energy OUT→IN only |
+
+There is no separate device/object model: sensors, brains, sinks are **cubes** with different ports.

@@ -1,0 +1,46 @@
+# CubalC 1.7.0-cube — Only CUBE is defined. I/O is pluggable (reversible).
+# COP free-flow: cubes · ports · plugs · reverse · energy
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+GENESIS "NEXUS_COORD v1 | from=cop | type=cube_only_io | hold_flash=1 |"
+
+CUBE src    ROLE source   PROTON 1
+CUBE mid    ROLE relay    PROTON 1
+CUBE dst    ROLE sink     PROTON 1
+CUBE hive   ROLE hive     PROTON 1
+
+IO src  OUT 0
+IO src  IN  1
+IO mid  IN  0
+IO mid  OUT 1
+IO dst  IN  0
+IO dst  OUT 1
+IO hive IN  0
+IO hive OUT 1
+
+FOLDBITS src  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS mid  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS dst  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG src mid
+PLUG mid dst
+PLUG mid hive
+
+IMPULSE src 1
+ENERGYFLOW 4
+FLOW DIR 4
+COMPARE src mid
+RESOLVE hive
+
+# Reverse the source→mid I/O — free-flow the other way
+REVERSE src mid
+FLOW DIR 6
+IMPULSE mid 1
+FLOW DIR 4
+
+ASSERT CUBES >= 4
+ASSERT DIGIT(hive) >= 0
+ASSERT DIGIT(hive) <= 9
+PRINT "CUBE_ONLY_IO" CUBES DIGIT(hive) ENERGY(src) ENERGY(dst) REVERSED UNITY
+VIZ "state/cube_io_viz.json"

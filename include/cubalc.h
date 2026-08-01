@@ -90,13 +90,20 @@ int  cubalc_atom_impulse(cubalc_atom *a, uint8_t proton); /* create=1 destroy=0 
 /* Algocube law engine — see cubalc_algocube.h */
 int  cubalc_algocube_digit(const cubalc_matrix *m);
 
-/* cube OOP */
+/* cube COP — only CUBE is defined; I/O is pluggable (and reversible) */
 int  cubalc_cube_spawn(cubalc_chain *ch, const char *id, const char *role,
                        uint8_t proton, float x, float y, float z);
 int  cubalc_cube_plug(cubalc_chain *ch, int a, int b); /* plug if matrices compatible */
 int  cubalc_cube_unplug(cubalc_chain *ch, int a, int b);
+/* Reverse pluggable I/O between two cubes (swap port dirs on the wire). */
+int  cubalc_cube_reverse(cubalc_chain *ch, int a, int b);
+/* Set one free port direction on a cube: face 0..5, dir IN|OUT. */
+int  cubalc_cube_io(cubalc_chain *ch, int cube, int face, uint8_t dir);
+/* Directed energy talk only from → to (one-way I/O). */
 int  cubalc_cube_talk(cubalc_chain *ch, int from, int to); /* binary matrix transfer (legacy v1) */
 /* secure talk is cubalc_cube_talk_secure() in cubalc_smx.h */
+/* One-way flow hop along OUT→IN only (respects port direction). */
+int  cubalc_chain_flow_directed(cubalc_chain *ch);
 
 /* binary pack/unpack */
 int  cubalc_bin_pack(const cubalc_atom *atom, const char *from, const char *to,

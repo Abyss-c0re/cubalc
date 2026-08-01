@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.0-cube — 2026-08-01
+
+### Law
+- **Only CUBE is defined** (COP). No parallel object/device type system.
+- **I/O is pluggable** on cube ports (IN/OUT faces).
+- **I/O is reversible** when needed (`REVERSE a b`).
+
+### Added
+- `cubalc_cube_reverse` · `cubalc_cube_io` · `cubalc_chain_flow_directed`
+- Language: `IO`, `UNPLUG`, `REVERSE`/`FLIP_IO`, `FLOW DIR`
+- Proof `11_cube_io_reverse.cubalc` · showcase `cube_only_io.cubalc`
+
+### Prior
+See 1.6.1-resolve (RESOLVE, ENERGYFLOW, genome) and 1.6.0-showcase.
+
+# Changelog
+
 ## 1.6.0-showcase — 2026-08-01
 
 ### Added

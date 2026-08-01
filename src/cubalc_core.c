@@ -210,6 +210,89 @@ int cubalc_cube_unplug(cubalc_chain *ch, int a, int b) {
   return 0;
 }
 
+/* Reverse pluggable I/O: flip IN↔OUT on every port that wires a↔b.
+ * Only CUBE is defined; I/O direction is not identity — it is reversible. */
+int cubalc_cube_reverse(cubalc_chain *ch, int a, int b) {
+  if (!ch || a < 0 || b < 0 || a >= ch->n_cubes || b >= ch->n_cubes || a == b)
+    return -1;
+  int flipped = 0;
+  for (int i = 0; i < ch->cubes[a].n_ports; i++) {
+    cubalc_port *p = &ch->cubes[a].ports[i];
+    if (p->peer == b) {
+      p->dir = (p->dir == CUBALC_PORT_OUT) ? CUBALC_PORT_IN : CUBALC_PORT_OUT;
+      flipped++;
+    }
+  }
+  for (int i = 0; i < ch->cubes[b].n_ports; i++) {
+    cubalc_port *p = &ch->cubes[b].ports[i];
+    if (p->peer == a) {
+      p->dir = (p->dir == CUBALC_PORT_OUT) ? CUBALC_PORT_IN : CUBALC_PORT_OUT;
+      flipped++;
+    }
+  }
+  if (!flipped) return -2; /* no plug between them */
+  /* After reverse: one directed talk b→a then a→b so energy re-settles */
+  cubalc_cube_talk(ch, b, a);
+  cubalc_cube_talk(ch, a, b);
+  snprintf(ch->status, sizeof ch->status,
+           "reverse io a=%d b=%d flipped=%d · pluggable I/O", a, b, flipped);
+  return flipped;
+}
+
+/* Declare / reassign a cube face as IN or OUT I/O (pluggable port). */
+int cubalc_cube_io(cubalc_chain *ch, int cube, int face, uint8_t dir) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return -1;
+  if (face < 0) face = 0;
+  if (face >= CUBALC_MAX_PORTS) face = CUBALC_MAX_PORTS - 1;
+  cubalc_cube *c = &ch->cubes[cube];
+  /* find port by face, or first free/open slot */
+  int ix = -1;
+  for (int i = 0; i < c->n_ports; i++)
+    if (c->ports[i].face == (uint8_t)face) { ix = i; break; }
+  if (ix < 0) {
+    if (c->n_ports >= CUBALC_MAX_PORTS) return -2;
+    ix = c->n_ports++;
+    c->ports[ix].open = 1;
+    c->ports[ix].peer = -1;
+    c->ports[ix].face = (uint8_t)face;
+    c->ports[ix].gate = c->atom.matrix;
+  }
+  c->ports[ix].dir = (dir == CUBALC_PORT_OUT) ? CUBALC_PORT_OUT : CUBALC_PORT_IN;
+  c->ports[ix].open = 1;
+  return ix;
+}
+
+/* Directed free-flow: only push energy OUT→peer (respect port direction). */
+int cubalc_chain_flow_directed(cubalc_chain *ch) {
+  if (!ch || ch->n_cubes < 1) return -1;
+  int talks = 0;
+  for (int i = 0; i < ch->n_cubes; i++) {
+    for (int p = 0; p < ch->cubes[i].n_ports; p++) {
+      cubalc_port *port = &ch->cubes[i].ports[p];
+      if (!port->open || port->peer < 0) continue;
+      if (port->dir != CUBALC_PORT_OUT) continue; /* only OUT is emit I/O */
+      int peer = port->peer;
+      if (peer < 0 || peer >= ch->n_cubes) continue;
+      cubalc_cube_talk(ch, i, peer);
+      talks++;
+    }
+  }
+  cubalc_chain_tick(ch);
+  if (ch->unity >= 0.55f) {
+    float boost = 0.04f + 0.08f * ch->unity;
+    for (int i = 0; i < ch->n_cubes; i++) {
+      if (ch->cubes[i].atom.proton && ch->cubes[i].atom.alive) {
+        ch->cubes[i].atom.energy += boost * 0.5f;
+        if (ch->cubes[i].atom.energy > 1.f) ch->cubes[i].atom.energy = 1.f;
+      }
+    }
+  }
+  snprintf(ch->status, sizeof ch->status,
+           "flow_directed talks=%d seq=%u unity=%.2f · cube I/O only",
+           talks, (unsigned)ch->seq, ch->unity);
+  return talks;
+}
+
 int cubalc_bin_pack(const cubalc_atom *atom, const char *from, const char *to,
                     uint32_t seq, uint8_t *out, size_t cap, size_t *n_out) {
   if (!atom || !out) return -1;

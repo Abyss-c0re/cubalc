@@ -28,21 +28,31 @@ typedef struct { const char *s; size_t n, i; int line; Tok cur; } Lex;
 typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
 
 typedef struct {
+  char name[48];
+  const char *body;
+  size_t len;
+} FnDef;
+
+typedef struct {
   cubalc_chain ch;
-  Var vars[64];
+  Var vars[128];
   int n_vars;
+  FnDef fns[32];
+  int n_fns;
   cubalc_run_result *res;
   FILE *trace;
   int hold_flash;
   int fatal;
+  int break_loop;
+  int continue_loop;
   char err[160];
   char creed[80];
-  /* last placed cube ids in current chunk (for ring) */
   char chunk[40][48];
   int n_chunk;
   char last_str[CUBALC_HOST_STR_MAX];
   int last_code;
   long last_n;
+  char include_base[512];
 } VM;
 
 static void fail(VM *vm, const char *msg) {
@@ -186,7 +196,7 @@ static void chunk_push(VM *vm, const char *id){
 static Var *var_get(VM *vm, const char *name, int create) {
   for (int i=0;i<vm->n_vars;i++)
     if (strcmp(vm->vars[i].name, name)==0) return &vm->vars[i];
-  if (!create || vm->n_vars >= 64) return NULL;
+  if (!create || vm->n_vars >= 128) return NULL;
   Var *v = &vm->vars[vm->n_vars++];
   memset(v, 0, sizeof *v);
   snprintf(v->name, sizeof v->name, "%s", name);
@@ -225,6 +235,31 @@ static void do_plug(VM *vm, const char *a, const char *b){
   if (ia<0||ib<0){ fail(vm,"plug missing cube"); return; }
   cubalc_cube_plug(&vm->ch, ia, ib);
 }
+/* Only CUBE is defined — I/O is pluggable; reverse flips IN/OUT on the wire. */
+static void do_reverse(VM *vm, const char *a, const char *b){
+  int ia=find_cube(vm,a), ib=find_cube(vm,b);
+  if (ia<0||ib<0){ fail(vm,"REVERSE needs two cubes"); return; }
+  int rc = cubalc_cube_reverse(&vm->ch, ia, ib);
+  if (rc < 0){ fail(vm,"REVERSE: no plug between cubes (pluggable I/O only)"); return; }
+  var_set_num(vm, "REVERSED", rc);
+  var_set_num(vm, "OK", 1);
+}
+static void do_unplug(VM *vm, const char *a, const char *b){
+  int ia=find_cube(vm,a), ib=find_cube(vm,b);
+  if (ia<0||ib<0){ fail(vm,"UNPLUG needs two cubes"); return; }
+  cubalc_cube_unplug(&vm->ch, ia, ib);
+  var_set_num(vm, "OK", 1);
+}
+static void do_io(VM *vm, const char *id, int face, int is_out){
+  int ix=find_cube(vm,id);
+  if (ix<0){ place_cube(vm,id,"io",1); ix=find_cube(vm,id); }
+  if (ix<0){ fail(vm,"IO cube missing"); return; }
+  int rc = cubalc_cube_io(&vm->ch, ix, face,
+    is_out ? CUBALC_PORT_OUT : CUBALC_PORT_IN);
+  if (rc < 0){ fail(vm,"IO port full"); return; }
+  var_set_num(vm, "OK", 1);
+  var_set_num(vm, "PORT", rc);
+}
 static void do_ring(VM *vm){
   int n = vm->ch.n_cubes;
   if (n < 2) return;
@@ -255,6 +290,8 @@ static void do_deconstruct(VM *vm, const char *id);
 static void do_reconstruct(VM *vm, const char *id);
 static long do_decide(VM *vm, const char *id);
 static long *var_slot(VM *vm, const char *name, int create);
+static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
+static long parse_expr(VM *vm, Lex *L);
 
 /* Parse inside [ ... ] already consumed '[' */
 static int parse_cube_body(VM *vm, Lex *L){
@@ -902,7 +939,7 @@ static long parse_add(VM *vm, Lex *L){
   }
   return v;
 }
-static long parse_expr(VM *vm, Lex *L){
+static long parse_cmp(VM *vm, Lex *L){
   long v=parse_add(vm,L);
   if (L->cur.kind==TK_EQEQ){ lex_next(L); return v==parse_add(vm,L); }
   if (L->cur.kind==TK_NE){ lex_next(L); return v!=parse_add(vm,L); }
@@ -910,6 +947,21 @@ static long parse_expr(VM *vm, Lex *L){
   if (L->cur.kind==TK_LE){ lex_next(L); return v<=parse_add(vm,L); }
   if (L->cur.kind==TK_GT){ lex_next(L); return v>parse_add(vm,L); }
   if (L->cur.kind==TK_GE){ lex_next(L); return v>=parse_add(vm,L); }
+  return v;
+}
+static long parse_expr(VM *vm, Lex *L){
+  long v = parse_cmp(vm, L);
+  for(;;){
+    if (kw(&L->cur,"AND")){
+      lex_next(L);
+      long r = parse_cmp(vm, L);
+      v = (v && r) ? 1 : 0;
+    } else if (kw(&L->cur,"OR")){
+      lex_next(L);
+      long r = parse_cmp(vm, L);
+      v = (v || r) ? 1 : 0;
+    } else break;
+  }
   return v;
 }
 
@@ -1341,7 +1393,52 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM");
+    if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
+      lex_next(L);
+      long n = 0;
+      if (L->cur.kind==TK_STR){ n = (long)strlen(L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0){ n = (long)strlen(vm->last_str); lex_next(L); }
+        else {
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && v->is_str) n = (long)strlen(v->sval);
+          else if (v) n = v->val;
+          lex_next(L);
+        }
+      } else n = (long)strlen(vm->last_str);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"TIME") || kw(&L->cur,"NOW") || kw(&L->cur,"EPOCH")){
+      lex_next(L);
+      long n = (long)time(NULL);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "TIME", n); var_set_num(vm, "OK", 1);
+      char buf[32]; snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf); snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
+      lex_next(L);
+      char path[512]="", data[4096]; data[0]=0;
+      if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(path,sizeof path,"%s",v->sval); }
+        lex_next(L);
+      }
+      if (L->cur.kind==TK_STR){ snprintf(data,sizeof data,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(data,sizeof data,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(data,sizeof data,"%s",v->sval);
+               else if(v) snprintf(data,sizeof data,"%ld",v->val); }
+        lex_next(L);
+      }
+      FILE *af = fopen(path, "a");
+      if (!af){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      fputs(data, af); fputc('\n', af); fclose(af);
+      var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND");
     return -1;
   }
 
@@ -1386,14 +1483,45 @@ static int parse_form(VM *vm, Lex *L){
     }
     place_cube(vm,id,role,proton); bump(vm); return 1;
   }
-  if (kw(&L->cur,"PLUG")){
+  /* PLUG — only cubes; pluggable I/O wire (matrix-compatible) */
+  if (kw(&L->cur,"PLUG")||kw(&L->cur,"WIRE")||kw(&L->cur,"IO_PLUG")){
     lex_next(L);
     if (kw(&L->cur,"RING")){ lex_next(L); do_ring(vm); bump(vm); return 1; }
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_a cube_b"); return -1; }
     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG b"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_b"); return -1; }
     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
     do_plug(vm,a,b); bump(vm); return 1;
+  }
+  /* UNPLUG a b — detach pluggable I/O */
+  if (kw(&L->cur,"UNPLUG")||kw(&L->cur,"DETACH")||kw(&L->cur,"DISCONNECT")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNPLUG a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNPLUG a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    do_unplug(vm,a,b); bump(vm); return 1;
+  }
+  /* REVERSE a b — reverse pluggable I/O direction (IN↔OUT) */
+  if (kw(&L->cur,"REVERSE")||kw(&L->cur,"REV")||kw(&L->cur,"FLIP_IO")||kw(&L->cur,"IOR")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"REVERSE a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"REVERSE a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    do_reverse(vm,a,b); bump(vm); return 1;
+  }
+  /* IO cube IN|OUT [face] — declare pluggable port direction on a cube */
+  if (kw(&L->cur,"IO")||kw(&L->cur,"PORT")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"IO cube IN|OUT [face]"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int is_out = 1;
+    if (kw(&L->cur,"IN")||kw(&L->cur,"RECV")||kw(&L->cur,"RX")){ is_out=0; lex_next(L); }
+    else if (kw(&L->cur,"OUT")||kw(&L->cur,"EMIT")||kw(&L->cur,"TX")||kw(&L->cur,"SEND")){ is_out=1; lex_next(L); }
+    int face = 0;
+    if (L->cur.kind==TK_NUM){ face=(int)L->cur.num; lex_next(L); }
+    do_io(vm, id, face, is_out); bump(vm); return 1;
   }
   if (kw(&L->cur,"IMPULSE")){
     lex_next(L);
@@ -1402,11 +1530,24 @@ static int parse_form(VM *vm, Lex *L){
     int p=1; if (L->cur.kind==TK_NUM){ p=L->cur.num?1:0; lex_next(L); }
     cubalc_chain_impulse(&vm->ch,id,(uint8_t)p); bump(vm); return 1;
   }
+  /* FLOW [DIR|IO] n — free-flow energy; DIR respects OUT→IN only (pluggable I/O) */
   if (kw(&L->cur,"FLOW")||kw(&L->cur,"TICK")){
     lex_next(L);
-    int n=8; if (L->cur.kind==TK_NUM){ n=(int)L->cur.num; lex_next(L); }
-    if (L->cur.kind==TK_NUM) lex_next(L);
-    do_flow(vm,n); bump(vm); return 1;
+    int directed = 0;
+    if (kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTED")||kw(&L->cur,"IO")||kw(&L->cur,"OUT")){
+      directed = 1; lex_next(L);
+    }
+    int n=8;
+    if (L->cur.kind==TK_NUM){ n=(int)L->cur.num; lex_next(L); }
+    if (n < 1) n = 1;
+    if (n > 1000) n = 1000;
+    ensure_world(vm);
+    if (directed) {
+      for (int i = 0; i < n; i++) cubalc_chain_flow_directed(&vm->ch);
+    } else {
+      do_flow(vm, n);
+    }
+    bump(vm); return 1;
   }
   if (kw(&L->cur,"OS_ASPECTS")||kw(&L->cur,"SPAWN_OS")){
     lex_next(L); ensure_world(vm); cubalc_chain_os_aspects(&vm->ch); bump(vm); return 1;
@@ -1438,14 +1579,37 @@ static int parse_form(VM *vm, Lex *L){
     char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
     if (L->cur.kind!=TK_EQ){ fail(vm,"LET ="); return -1; }
     lex_next(L);
-    if (L->cur.kind==TK_STR){
-      var_set_str(vm, name, L->cur.text);
-      lex_next(L);
-      bump(vm); return 1;
-    }
-    if (kw(&L->cur,"LAST") || (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")==0)){
-      var_set_str(vm, name, vm->last_str);
-      lex_next(L);
+    if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
+          strcmp(L->cur.text,"LAST")==0 ||
+          (var_get(vm,L->cur.text,0) && var_get(vm,L->cur.text,0)->is_str)))){
+      char buf[CUBALC_HOST_STR_MAX]; buf[0]=0;
+      for(;;){
+        if (L->cur.kind==TK_STR){
+          size_t bl=strlen(buf), al=strlen(L->cur.text);
+          if (bl+al+1 < sizeof buf) memcpy(buf+bl, L->cur.text, al+1);
+          lex_next(L);
+        } else if (L->cur.kind==TK_IDENT){
+          if (strcmp(L->cur.text,"LAST")==0){
+            size_t bl=strlen(buf), al=strlen(vm->last_str);
+            if (bl+al+1 < sizeof buf) memcpy(buf+bl, vm->last_str, al+1);
+            lex_next(L);
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str){
+              size_t bl=strlen(buf), al=strlen(v->sval);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, v->sval, al+1);
+            } else if (v){
+              char nb[32]; snprintf(nb,sizeof nb,"%ld", v->val);
+              size_t bl=strlen(buf), al=strlen(nb);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, nb, al+1);
+            } else break;
+            lex_next(L);
+          }
+        } else break;
+        if (L->cur.kind==TK_PLUS){ lex_next(L); continue; }
+        break;
+      }
+      var_set_str(vm, name, buf);
       bump(vm); return 1;
     }
     long v=parse_expr(vm,L);
@@ -1655,12 +1819,250 @@ static int parse_form(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"decide %ld",d);
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"VIZ")||kw(&L->cur,"SPIN")||kw(&L->cur,"SHOW")||kw(&L->cur,"HELLO")||
-      kw(&L->cur,"WAIT")||kw(&L->cur,"SLEEP")){
-    while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF) lex_next(L);
+  if (kw(&L->cur,"VIZ")||kw(&L->cur,"PUBLISH_VIZ")){
+    lex_next(L);
+    ensure_world(vm);
+    char path[512]="state/cubalc_viz_frame.json";
+    if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+    else if (L->cur.kind==TK_IDENT){
+      Var *v=var_get(vm,L->cur.text,0);
+      if (v&&v->is_str) snprintf(path,sizeof path,"%s",v->sval);
+      lex_next(L);
+    }
+    cubalc_chain_write_viz(&vm->ch, path);
+    cubalc_chain_publish_united(&vm->ch);
+    var_set_str(vm,"LAST", path); var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"LOOP")){
+  if (kw(&L->cur,"SPIN")||kw(&L->cur,"SHOW")||kw(&L->cur,"HELLO")){
+    lex_next(L);
+    char id[48]={0};
+    if (L->cur.kind==TK_IDENT){ snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L); }
+    do_show(vm, id[0]?id:NULL);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"WAIT")||kw(&L->cur,"SLEEP")){
+    lex_next(L);
+    long ms = 100;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)
+      ms = parse_expr(vm,L);
+    if (ms < 0) ms = 0; if (ms > 60000) ms = 60000;
+    if (ms > 0){ struct timespec ts; ts.tv_sec = ms/1000; ts.tv_nsec = (ms%1000)*1000000L; nanosleep(&ts, NULL); }
+    bump(vm); return 1;
+  }
+  /* INCLUDE "path.cubalc" — practical modules (same VM / world) */
+  if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
+    lex_next(L);
+    if (L->cur.kind!=TK_STR){ fail(vm,"INCLUDE \"path.cubalc\""); return -1; }
+    char path[768];
+    if (L->cur.text[0]=='/' || (vm->include_base[0]==0))
+      snprintf(path,sizeof path,"%s",L->cur.text);
+    else
+      snprintf(path,sizeof path,"%s/%s", vm->include_base, L->cur.text);
+    lex_next(L);
+    FILE *f=fopen(path,"rb");
+    if (!f){
+      const char *root=getenv("CUBALC_ROOT");
+      if (root && root[0]) {
+        char p2[768];
+        snprintf(p2, sizeof p2, "%s/%s", root, path);
+        f = fopen(p2, "rb");
+        if (f) snprintf(path, sizeof path, "%s", p2);
+      }
+    }
+    if (!f){
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/%s", path);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
+    }
+    if (!f){ snprintf(vm->err,sizeof vm->err,"INCLUDE cannot open %s", path); fail(vm,vm->err); return -1; }
+    fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
+    if (sz<0 || sz>CUBALC_MAX_SRC){ fclose(f); fail(vm,"INCLUDE too large"); return -1; }
+    char *buf=malloc((size_t)sz+1); if(!buf){ fclose(f); fail(vm,"oom"); return -1; }
+    size_t nr=fread(buf,1,(size_t)sz,f); fclose(f); buf[nr]=0;
+    char save_base[512]; snprintf(save_base,sizeof save_base,"%s", vm->include_base);
+    /* set include_base to dir of included file */
+    {
+      char *sl = strrchr(path, '/');
+      if (sl){ size_t n=(size_t)(sl-path); if(n>=sizeof vm->include_base) n=sizeof vm->include_base-1;
+        memcpy(vm->include_base, path, n); vm->include_base[n]=0; }
+    }
+    Lex Li; lex_init(&Li, buf, nr);
+    int rc = exec_stmts_until(vm, &Li, NULL, NULL);
+    snprintf(vm->include_base,sizeof vm->include_base,"%s", save_base);
+    free(buf);
+    if (rc<0) return -1;
+    bump(vm); return 1;
+  }
+  /* FN name ... END — reusable practical blocks */
+  if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FN name"); return -1; }
+    char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    skip_nl(L);
+    /* capture body until matching END */
+    const char *body_start = L->s + L->i;
+    /* L->i points after current token start roughly - use cur position via scanning from save */
+    Lex save=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF && depth>0){
+      if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
+          kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")) depth++;
+      else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
+      lex_next(L);
+    }
+    if (depth!=0){ fail(vm,"FN without END"); return -1; }
+    /* body is from save.i to L.i (start of END) — approximate using token stream offsets */
+    /* Store slice: from save position in source */
+    size_t start_off = save.i > 0 ? save.i : 0;
+    /* After lex_init, i is advanced; use difference of pointer into s */
+    /* Safer: re-scan - body between save and current before END */
+    const char *bs = save.s + (save.i < save.n ? save.i : 0);
+    /* Actually Tok doesn't keep offset of token start easily. Use save.i after first lex of body. */
+    /* Lex struct: after lex_next at body start, save.i is past that token. */
+    size_t b0 = save.i;
+    size_t b1 = L->i; /* at END token start-ish */
+    if (b1 < b0) b1 = b0;
+    size_t blen = b1 - b0;
+    if (vm->n_fns >= 32){ fail(vm,"too many FN"); return -1; }
+    FnDef *fn = &vm->fns[vm->n_fns++];
+    snprintf(fn->name, sizeof fn->name, "%s", fname);
+    fn->body = L->s + b0;
+    fn->len = blen;
+    if (kw(&L->cur,"END")) lex_next(L);
+    if (vm->trace) fprintf(vm->trace, "# FN %s len=%zu\n", fname, blen);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"CALL name"); return -1; }
+    char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    FnDef *fn=NULL;
+    for (int i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
+    if (!fn){ snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname); fail(vm,vm->err); return -1; }
+    /* optional args: CALL name a b c → ARG0 ARG1 */
+    int ai=0;
+    while (ai<8 && (L->cur.kind==TK_NUM||L->cur.kind==TK_IDENT||L->cur.kind==TK_STR||L->cur.kind==TK_MINUS||L->cur.kind==TK_LPAREN)){
+      if (L->cur.kind==TK_STR){
+        char an[16]; snprintf(an,sizeof an,"ARG%d",ai);
+        var_set_str(vm, an, L->cur.text); lex_next(L);
+      } else {
+        long v=parse_expr(vm,L);
+        char an[16]; snprintf(an,sizeof an,"ARG%d",ai);
+        var_set_num(vm, an, v);
+      }
+      ai++;
+    }
+    var_set_num(vm, "NARGS", ai);
+    Lex fl; lex_init(&fl, fn->body, fn->len);
+    if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
+    bump(vm); return 1;
+  }
+  /* FOR i = a TO b [STEP s] ... END */
+  if (kw(&L->cur,"FOR")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FOR var = a TO b"); return -1; }
+    char vname[48]; snprintf(vname,sizeof vname,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_EQ){ fail(vm,"FOR var ="); return -1; }
+    lex_next(L);
+    long lo=parse_expr(vm,L);
+    if (!kw(&L->cur,"TO") && !kw(&L->cur,"..") && !(L->cur.kind==TK_IDENT && strcmp(L->cur.text,"TO")==0)){
+      /* allow FOR i = n as 0..n-1 */
+      long hi=lo-1; lo=0;
+      long step=1;
+      skip_nl(L);
+      Lex body_start=*L;
+      int depth=1;
+      while (L->cur.kind!=TK_EOF && depth>0){
+        if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+        else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+        lex_next(L);
+      }
+      if (depth!=0){ fail(vm,"FOR without END"); return -1; }
+      for (long i=lo;i<=hi && !vm->fatal;i+=step){
+        var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
+        vm->break_loop=0; vm->continue_loop=0;
+        Lex body=body_start;
+        if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+        if (vm->break_loop){ vm->break_loop=0; break; }
+        vm->continue_loop=0;
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"TO")||kw(&L->cur,"..")) lex_next(L);
+    long hi=parse_expr(vm,L);
+    long step=1;
+    if (kw(&L->cur,"STEP")||kw(&L->cur,"BY")){ lex_next(L); step=parse_expr(vm,L); if(!step) step=1; }
+    skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF && depth>0){
+      if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+      else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+      lex_next(L);
+    }
+    if (depth!=0){ fail(vm,"FOR without END"); return -1; }
+    if (step>0){
+      for (long i=lo;i<=hi && !vm->fatal;i+=step){
+        var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
+        vm->break_loop=0; vm->continue_loop=0;
+        Lex body=body_start;
+        if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+        if (vm->break_loop){ vm->break_loop=0; break; }
+      }
+    } else {
+      for (long i=lo;i>=hi && !vm->fatal;i+=step){
+        var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
+        vm->break_loop=0; vm->continue_loop=0;
+        Lex body=body_start;
+        if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+        if (vm->break_loop){ vm->break_loop=0; break; }
+      }
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    bump(vm); return 1;
+  }
+  /* EACH CUBE as name ... END */
+  if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
+    lex_next(L);
+    if (!kw(&L->cur,"CUBE") && !kw(&L->cur,"CUBES")){ fail(vm,"EACH CUBE as name"); return -1; }
+    lex_next(L);
+    if (kw(&L->cur,"AS")||kw(&L->cur,"->")){ lex_next(L); }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"EACH CUBE as name"); return -1; }
+    char cname[48]; snprintf(cname,sizeof cname,"%s",L->cur.text); lex_next(L);
+    skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF && depth>0){
+      if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+      else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+      lex_next(L);
+    }
+    if (depth!=0){ fail(vm,"EACH without END"); return -1; }
+    ensure_world(vm);
+    for (int i=0;i<vm->ch.n_cubes && !vm->fatal;i++){
+      var_set_str(vm, cname, vm->ch.cubes[i].id);
+      var_set_num(vm, "IT", i);
+      var_set_num(vm, "DIGIT", vm->ch.cubes[i].atom.digit);
+      var_set_num(vm, "ENERGY", (long)lround(vm->ch.cubes[i].atom.energy*100));
+      var_set_num(vm, "SET", cubalc_matrix_popcount(&vm->ch.cubes[i].atom.matrix));
+      vm->break_loop=0;
+      Lex body=body_start;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"BREAK")){
+    lex_next(L); vm->break_loop=1; bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CONTINUE")){
+    lex_next(L); vm->continue_loop=1; bump(vm); return 1;
+  }
+    if (kw(&L->cur,"LOOP")){
     lex_next(L);
     long times=parse_expr(vm,L);
     if (times<0) times=0;
@@ -1676,8 +2078,10 @@ static int parse_form(VM *vm, Lex *L){
     if (depth!=0){ fail(vm,"LOOP without END"); return -1; }
     for (long t=0;t<times && !vm->fatal;t++){
       long *it=var_slot(vm,"IT",1); if (it) *it=t;
+      vm->break_loop=0; vm->continue_loop=0;
       Lex body=save;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
     }
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
@@ -1709,33 +2113,48 @@ static int parse_form(VM *vm, Lex *L){
   }
   if (kw(&L->cur,"IF")){
     lex_next(L);
-    long cond=parse_expr(vm,L);
-    if (!kw(&L->cur,"THEN")){ fail(vm,"IF expr THEN"); return -1; }
-    lex_next(L); skip_nl(L);
-    Lex then_start=*L;
-    int depth=1; int has_else=0; Lex else_start; memset(&else_start,0,sizeof else_start);
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")) depth++;
-      else if (kw(&L->cur,"ELSE") && depth==1){
-        else_start=*L; lex_next(&else_start); skip_nl(&else_start);
-        has_else=1; lex_next(L); continue;
-      } else if (kw(&L->cur,"END")){
-        depth--; if (depth==0) break;
+    /* chain: IF c THEN ... ELIF c THEN ... ELSE ... END */
+    for(;;){
+      long cond=parse_expr(vm,L);
+      if (!kw(&L->cur,"THEN")){ fail(vm,"IF expr THEN"); return -1; }
+      lex_next(L); skip_nl(L);
+      Lex body_start=*L;
+      int depth=1;
+      while (L->cur.kind!=TK_EOF && depth>0){
+        if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+        else if ((kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")) && depth==1) break;
+        else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
+        lex_next(L);
       }
-      lex_next(L);
+      if (depth>1){ fail(vm,"IF without END"); return -1; }
+      if (cond){
+        Lex body=body_start;
+        if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
+        /* also stop at ELIF */
+        /* skip to final END */
+        depth=1;
+        while (L->cur.kind!=TK_EOF && depth>0){
+          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+          else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        bump(vm); return 1;
+      }
+      /* not taken */
+      if (kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")){ lex_next(L); continue; }
+      if (kw(&L->cur,"ELSE")){
+        lex_next(L); skip_nl(L);
+        Lex body=*L;
+        if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+        if (kw(&L->cur,"END")) lex_next(L);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"END")){ lex_next(L); bump(vm); return 1; }
+      fail(vm,"IF chain broken"); return -1;
     }
-    if (depth!=0){ fail(vm,"IF without END"); return -1; }
-    if (cond){
-      Lex body=then_start;
-      if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
-    } else if (has_else){
-      Lex body=else_start;
-      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
-    }
-    if (kw(&L->cur,"END")) lex_next(L);
-    bump(vm); return 1;
   }
-  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"THEN")){
+  if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")){
     return 0; /* stop marker for nested bodies */
   }
 
@@ -1752,9 +2171,11 @@ static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2
     if (L->cur.kind==TK_EOF) break;
     if (stop1 && kw(&L->cur,stop1)) break;
     if (stop2 && kw(&L->cur,stop2)) break;
+    if (vm->break_loop || vm->continue_loop) break;
     int r=parse_form(vm,L);
     if (r<0) return -1;
     if (r==0) break;
+    if (vm->break_loop || vm->continue_loop) break;
   }
   return vm->fatal ? -1 : 0;
 }
@@ -1770,7 +2191,15 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
   if (out){ memset(out,0,sizeof*out); out->ok=1; }
-  (void)name;
+  if (name && name[0]){
+    const char *sl = strrchr(name, '/');
+    if (sl){
+      size_t nbase = (size_t)(sl - name);
+      if (nbase >= sizeof vm.include_base) nbase = sizeof vm.include_base - 1;
+      memcpy(vm.include_base, name, nbase);
+      vm.include_base[nbase] = 0;
+    } else vm.include_base[0]=0;
+  }
 
   Lex L; lex_init(&L, src, n);
   while (!vm.fatal && L.cur.kind != TK_EOF){
