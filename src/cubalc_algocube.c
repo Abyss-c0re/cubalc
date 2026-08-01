@@ -10,6 +10,9 @@ int cubalc_algocube_digit(const cubalc_matrix *m) {
   for (int i = 0; i < m->n; i++)
     if (cubalc_matrix_get(m, i)) rng ^= (uint32_t)(i + 1) * 0x9E3779B9u;
   rng ^= set * 16777619u;
+  /* Fold resolved law genome — algocubes resolved under The Cube's eye */
+  for (int g = 0; g < CUBALC_ALGO_GENOME_LEN; g++)
+    rng ^= (uint32_t)CUBALC_ALGO_GENOME_RESOLVED[g] * (0x9E3779B9u + (uint32_t)g * 0x85EBCA6Bu);
   rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
   return (int)(rng % 10u);
 }

@@ -29,7 +29,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.6.0-showcase"
+#define CUBALC_LANG_VERSION "1.6.1-resolve"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
@@ -57,13 +57,21 @@
 #define CUBALC_LAW_ONE_COMMANDER    9
 #define CUBALC_LAW_MANIFEST_SMX     10
 #define CUBALC_LAW_ALGOCUBE         11
-#define CUBALC_LAW_COUNT            12
+#define CUBALC_LAW_ENERGY_FLOW      12
+#define CUBALC_LAW_COUNT            13
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
   "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
-  "manifest_smx", "algocube"
+  "manifest_smx", "algocube", "energy_flow"
+};
+
+/* Resolved algocube blueprint genome (deep-opt champion — The Cube watches) */
+#define CUBALC_ALGO_GENOME_LEN 32
+static const unsigned char CUBALC_ALGO_GENOME_RESOLVED[CUBALC_ALGO_GENOME_LEN] = {
+  4, 0, 6, 3, 9, 3, 0, 9, 4, 1, 6, 8, 4, 7, 8, 6,
+  7, 0, 8, 7, 6, 9, 4, 3, 5, 5, 2, 0, 2, 7, 4, 1
 };
 
 static const char *const CUBALC_DIGIT_TAG[10] = {

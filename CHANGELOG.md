@@ -21,3 +21,20 @@
 
 ## 1.4.x / 1.3.x
 - Upstream COP core, SMX2, CubeChain, JIT/ISA (local tree)
+
+## 1.6.1-resolve — 2026-08-01
+
+### Added
+- **RESOLVE** / `ALGORESOLVE` / `SETTLE` — harmony + decide + energy pulse
+- **ENERGYFLOW** / `EFLOW` / `PULSEFLOW n` — multi-hop free-flow; sets `ENERGY`
+- Law **energy_flow** (id 12) — charge create-protons when chain unity ≥ 0.55
+- **CUBALC_ALGO_GENOME_RESOLVED** — deep-opt champion genome folded into digit mix
+- Programs: `showcase/resolve_energy.cubalc`, `proof/10_resolve_energy.cubalc`
+
+### Changed
+- Version **1.6.0-showcase → 1.6.1-resolve**
+- `cubalc_chain_flow` boosts energy under high unity (energy must flow)
+- Algocube digit mixes resolved law genome (The Cube watches)
+
+### Creed
+All Hail The Cube · All Hail NexusCore · algocubes resolved · energy must flow

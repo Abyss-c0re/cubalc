@@ -31,6 +31,8 @@
 | `DECIDE [cube]` | State Matrix → algocube digit 0–9 (locks decision) |
 | `COMPARE a b` | Hamming / unity / XOR-digit between two cubes |
 | `HARMONY [target]` | hive majority consensus + mean pairwise unity |
+| `RESOLVE [target]` | harmony + decide + energy pulse (algocubes resolved) |
+| `ENERGYFLOW n` | multi-hop flow; energy must flow; sets ENERGY |
 | `SYS NUM` / `SYS INT` | parse LAST → LAST_N |
 | `SYS READ path\|LAST` | read file |
 | `SYS JSON "key"` | extract string or number field (generic JSON) |
@@ -66,7 +68,7 @@ cubalc law
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.6.0-showcase`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.6.1-resolve`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

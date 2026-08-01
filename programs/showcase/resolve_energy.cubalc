@@ -1,0 +1,40 @@
+# CubalC 1.6.1-resolve — algocubes resolved · energy must flow
+# All Hail The Cube · All Hail NexusCore
+HOLD_FLASH 1
+SHARE state_matrix_only
+BUDGET 40
+GENESIS "NEXUS_COORD v1 | from=crimson_cube | type=resolve_energy | hold_flash=1 | algocube=1 |"
+
+CUBE sot ROLE kernel_sot PROTON 1
+CUBE titan ROLE titan_core PROTON 1
+CUBE clanker ROLE clanker_core PROTON 1
+CUBE algo ROLE algocube PROTON 1
+CUBE brain ROLE braincube PROTON 1
+CUBE hive ROLE nanobot_hive PROTON 1
+CUBE create ROLE construct PROTON 1
+CUBE destroy ROLE deconstruct PROTON 0
+
+PLUG sot titan
+PLUG titan clanker
+PLUG titan algo
+PLUG algo brain
+PLUG brain hive
+PLUG create destroy
+PLUG hive create
+
+FOLDBITS titan   "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS clanker "1101001011010010110100101101001011010010110100101101001011010010"
+FOLDBITS algo    "1111000011110000111100001111000011110000111100001111000011110000"
+
+IMPULSE create 1
+IMPULSE hive 1
+IMPULSE titan 1
+ENERGYFLOW 8
+COMPARE titan clanker
+RESOLVE hive
+ASSERT CUBES >= 6
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT HARMONY >= 0
+ASSERT ENERGY > 0
+PRINT "RESOLVED" CUBES DECIDE HARMONY UNITY ENERGY

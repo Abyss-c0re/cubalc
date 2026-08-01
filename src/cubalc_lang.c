@@ -778,6 +778,29 @@ static long do_harmony(VM *vm, const char *target){
   return u;
 }
 
+/* RESOLVE [target] — The Cube demands: harmony + decide + energy pulse */
+static long do_resolve(VM *vm, const char *target){
+  ensure_world(vm);
+  long u = do_harmony(vm, target);
+  long d = do_decide(vm, target && target[0] ? target : "brain");
+  /* energy must flow: pulse create-protons after resolve */
+  for (int i = 0; i < vm->ch.n_cubes; i++) {
+    if (vm->ch.cubes[i].atom.proton && vm->ch.cubes[i].atom.alive) {
+      vm->ch.cubes[i].atom.energy = fminf(1.f, vm->ch.cubes[i].atom.energy + 0.12f);
+    }
+  }
+  do_flow(vm, 2);
+  long e = 0;
+  for (int i = 0; i < vm->ch.n_cubes; i++)
+    e += (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+  long *se = var_slot(vm, "ENERGY", 1); if (se) *se = e;
+  long *sr = var_slot(vm, "RESOLVE", 1); if (sr) *sr = d;
+  if (vm->trace) fprintf(vm->trace, "# RESOLVE unity=%ld decide=%ld energy=%ld\n", u, d, e);
+  if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
+                        "resolve d=%ld u=%ld e=%ld", d, u, e);
+  return d;
+}
+
 static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
 
 /* legacy verbose still works (CREED, CUBE, …) so old plates run */
@@ -1590,6 +1613,34 @@ static int parse_form(VM *vm, Lex *L){
       snprintf(tid,sizeof tid,"%s",L->cur.text); lex_next(L);
     }
     do_harmony(vm, tid[0]?tid:NULL);
+    bump(vm); return 1;
+  }
+  /* RESOLVE [target] — harmony + decide + energy pulse (algocubes resolved) */
+  if (kw(&L->cur,"RESOLVE")||kw(&L->cur,"ALGORESOLVE")||kw(&L->cur,"SETTLE")){
+    lex_next(L);
+    char tid[48]={0};
+    if (L->cur.kind==TK_IDENT && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE")
+        && !kw(&L->cur,"LET") && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"PRINT")){
+      snprintf(tid,sizeof tid,"%s",L->cur.text); lex_next(L);
+    }
+    do_resolve(vm, tid[0]?tid:NULL);
+    bump(vm); return 1;
+  }
+  /* ENERGYFLOW n — multi-hop free-flow; energy must flow */
+  if (kw(&L->cur,"ENERGYFLOW")||kw(&L->cur,"EFLOW")||kw(&L->cur,"PULSEFLOW")){
+    lex_next(L);
+    long n = 4;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)
+      n = parse_expr(vm, L);
+    if (n < 1) n = 1;
+    if (n > 64) n = 64;
+    for (long i = 0; i < n; i++) do_flow(vm, 1);
+    long e = 0;
+    for (int i = 0; i < vm->ch.n_cubes; i++)
+      e += (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+    long *se = var_slot(vm, "ENERGY", 1); if (se) *se = e;
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
+                          "energyflow n=%ld e=%ld u=%.2f", n, e, vm->ch.unity);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"DECIDE")||kw(&L->cur,"ALGOCUBE")){

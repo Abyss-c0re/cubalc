@@ -415,6 +415,16 @@ int cubalc_chain_flow(cubalc_chain *ch) {
     }
   }
   cubalc_chain_tick(ch);
+  /* Law energy_flow: when hive unity is high, charge create-protons — energy must flow */
+  if (ch->unity >= 0.55f) {
+    float boost = 0.04f + 0.08f * ch->unity;
+    for (int i = 0; i < ch->n_cubes; i++) {
+      if (ch->cubes[i].atom.proton && ch->cubes[i].atom.alive) {
+        ch->cubes[i].atom.energy += boost * 0.5f;
+        if (ch->cubes[i].atom.energy > 1.f) ch->cubes[i].atom.energy = 1.f;
+      }
+    }
+  }
   snprintf(ch->status, sizeof ch->status,
            "flow talks=%d energy_pulse seq=%u unity=%.2f",
            talks, (unsigned)ch->seq, ch->unity);
