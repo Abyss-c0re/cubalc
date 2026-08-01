@@ -36,7 +36,7 @@ typedef struct cubalc_port {
   cubalc_matrix gate;   /* required mask for plug */
 } cubalc_port;
 
-/* Visible Cube object (OOP instance in VR) */
+/* Visible Cube object — only CUBE is defined (COP). Nestable; compiles to matrix. */
 typedef struct cubalc_cube {
   char     id[CUBALC_ID_LEN];
   char     label[CUBALC_ID_LEN];
@@ -48,6 +48,12 @@ typedef struct cubalc_cube {
   cubalc_port ports[CUBALC_MAX_PORTS];
   int      n_ports;
   uint8_t  plugged;     /* count of live plugs */
+  /* Nest: cubes may nest (parent holds children). -1 = root. */
+  int16_t  parent;
+  /* Law flow_compile: energy must flow before compile into matrix. */
+  uint8_t  flowed;      /* 1 if energy talk/flow touched this cube */
+  uint8_t  compiled;    /* 1 if successfully compiled to matrix after flow */
+  cubalc_matrix compiled_matrix; /* materialised matrix (SoT snapshot after compile) */
 } cubalc_cube;
 
 /* Cube Chain — wired cubes from Initial State Matrix */
@@ -90,7 +96,7 @@ int  cubalc_atom_impulse(cubalc_atom *a, uint8_t proton); /* create=1 destroy=0 
 /* Algocube law engine — see cubalc_algocube.h */
 int  cubalc_algocube_digit(const cubalc_matrix *m);
 
-/* cube COP — only CUBE is defined; I/O is pluggable (and reversible) */
+/* cube COP — only CUBE is defined; I/O is pluggable (and reversible); nestable */
 int  cubalc_cube_spawn(cubalc_chain *ch, const char *id, const char *role,
                        uint8_t proton, float x, float y, float z);
 int  cubalc_cube_plug(cubalc_chain *ch, int a, int b); /* plug if matrices compatible */
@@ -99,6 +105,22 @@ int  cubalc_cube_unplug(cubalc_chain *ch, int a, int b);
 int  cubalc_cube_reverse(cubalc_chain *ch, int a, int b);
 /* Set one free port direction on a cube: face 0..5, dir IN|OUT. */
 int  cubalc_cube_io(cubalc_chain *ch, int cube, int face, uint8_t dir);
+/* Nest child inside parent (cubes may nest). Returns 0 ok; -1 args; -2 cycle/depth. */
+int  cubalc_cube_nest(cubalc_chain *ch, int parent, int child);
+/* Detach child from its parent (child becomes root). */
+int  cubalc_cube_unnest(cubalc_chain *ch, int child);
+/* Mark cube as having received energy flow (also set automatically on talk). */
+void cubalc_cube_mark_flow(cubalc_chain *ch, int cube);
+/* Law: each cube compiles into a matrix. No flow → no compile.
+ * Folds atom (+ nested children if any) into compiled_matrix and atom.matrix.
+ * Returns 0 ok; -1 bad; -2 no flow; -3 child not compiled; -4 nest depth. */
+int  cubalc_cube_compile(cubalc_chain *ch, int cube);
+/* Compile all cubes leaves-first. *failed_ix = first failure index or -1. */
+int  cubalc_chain_compile(cubalc_chain *ch, int *failed_ix);
+/* Queries */
+int  cubalc_cube_has_flow(const cubalc_chain *ch, int cube);
+int  cubalc_cube_is_compiled(const cubalc_chain *ch, int cube);
+int  cubalc_cube_parent(const cubalc_chain *ch, int cube); /* -1 root / missing */
 /* Directed energy talk only from → to (one-way I/O). */
 int  cubalc_cube_talk(cubalc_chain *ch, int from, int to); /* binary matrix transfer (legacy v1) */
 /* secure talk is cubalc_cube_talk_secure() in cubalc_smx.h */

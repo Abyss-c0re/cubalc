@@ -1,0 +1,64 @@
+# Proof 12 — Each cube compiles into a matrix. It must flow. Cubes may nest.
+# Law: no flow → no compiling.
+HOLD_FLASH 1
+GENESIS "NEXUS_COORD v1 | from=proof | type=nest_compile | hold_flash=1 |"
+
+CUBE shell ROLE hive   PROTON 1
+CUBE core  ROLE kernel PROTON 1
+CUBE leaf  ROLE leaf   PROTON 1
+
+# Cubes may nest (shell contains core contains leaf)
+NEST shell core
+NEST core  leaf
+
+ASSERT NESTED(core) == 1
+ASSERT NESTED(leaf) == 1
+ASSERT PARENT(core) == 0
+ASSERT PARENT(leaf) == 1
+ASSERT FLOWED(leaf) == 0
+ASSERT COMPILED(leaf) == 0
+
+# Attempt compile with no flow — law blocks
+COMPILE leaf
+ASSERT COMPILED(leaf) == 0
+ASSERT COMPILE_RC == -2
+ASSERT OK == 0
+
+# Compatible matrices + plug = energy talk = flow
+FOLDBITS shell "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS core  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS leaf  "1111000011110000111100001111000011110000111100001111000011110000"
+PLUG shell core
+PLUG core  leaf
+IMPULSE shell 1
+FLOW 3
+
+ASSERT FLOWED(shell) == 1
+ASSERT FLOWED(core) == 1
+ASSERT FLOWED(leaf) == 1
+
+# Leaves first: compile leaf → matrix
+COMPILE leaf
+ASSERT COMPILED(leaf) == 1
+ASSERT SET(leaf) > 0
+ASSERT OK == 1
+
+# Parent needs children compiled
+COMPILE core
+ASSERT COMPILED(core) == 1
+COMPILE shell
+ASSERT COMPILED(shell) == 1
+
+# Re-flow invalidates compile (energy moved)
+FLOW 1
+ASSERT COMPILED(leaf) == 0
+
+# Chain compile leaves-first after flow
+COMPILE ALL
+ASSERT COMPILED(leaf) == 1
+ASSERT COMPILED(core) == 1
+ASSERT COMPILED(shell) == 1
+ASSERT COMPILED >= 3
+
+ASSERT CUBES == 3
+PRINT "proof12_nest_compile" CUBES COMPILED(shell) COMPILED(core) COMPILED(leaf) SET(shell)

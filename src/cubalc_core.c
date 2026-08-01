@@ -146,6 +146,10 @@ int cubalc_cube_spawn(cubalc_chain *ch, const char *id, const char *role,
     if (cubalc_matrix_get(&ch->initial, i) && (i % 3 == 0))
       cubalc_matrix_set(&c->atom.matrix, i, 1);
   c->atom.digit = cubalc_algocube_digit(&c->atom.matrix);
+  c->parent = -1;
+  c->flowed = 0;
+  c->compiled = 0;
+  cubalc_matrix_clear(&c->compiled_matrix);
   /* Cube Declaration: every chain cube MUST have IN and OUT */
   c->n_ports = 2;
   c->ports[0].open = 1; c->ports[0].dir = CUBALC_PORT_IN;  c->ports[0].peer = -1; c->ports[0].face = 0;
@@ -370,7 +374,197 @@ int cubalc_cube_talk(cubalc_chain *ch, int from, int to) {
     B->atom.energy = fmaxf(0.f, B->atom.energy - drain);
     A->atom.energy = fminf(1.f, A->atom.energy + drain * 0.25f);
   }
+  /* Law flow_compile: talk is flow — mark both ends so compile may proceed */
+  A->flowed = 1;
+  B->flowed = 1;
+  /* re-flow invalidates prior compile (matrix must re-fold after energy moves) */
+  A->compiled = 0;
+  B->compiled = 0;
   return 0;
+}
+
+/* --- Nest + compile-to-matrix (law: no flow → no compile; cubes may nest) --- */
+
+void cubalc_cube_mark_flow(cubalc_chain *ch, int cube) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return;
+  ch->cubes[cube].flowed = 1;
+  ch->cubes[cube].compiled = 0; /* fresh flow waits for re-compile */
+}
+
+int cubalc_cube_has_flow(const cubalc_chain *ch, int cube) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return 0;
+  return ch->cubes[cube].flowed ? 1 : 0;
+}
+
+int cubalc_cube_is_compiled(const cubalc_chain *ch, int cube) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return 0;
+  return ch->cubes[cube].compiled ? 1 : 0;
+}
+
+int cubalc_cube_parent(const cubalc_chain *ch, int cube) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return -1;
+  return (int)ch->cubes[cube].parent;
+}
+
+static int nest_depth_of(const cubalc_chain *ch, int cube) {
+  int d = 0, cur = cube;
+  while (cur >= 0 && cur < ch->n_cubes && d <= CUBALC_MAX_NEST_DEPTH + 1) {
+    int p = ch->cubes[cur].parent;
+    if (p < 0) return d;
+    if (p == cube) return CUBALC_MAX_NEST_DEPTH + 2; /* cycle */
+    cur = p;
+    d++;
+  }
+  return d;
+}
+
+int cubalc_cube_nest(cubalc_chain *ch, int parent, int child) {
+  if (!ch || parent < 0 || child < 0 || parent >= ch->n_cubes || child >= ch->n_cubes)
+    return -1;
+  if (parent == child) return -2;
+  /* no cycles: walk parent's ancestors — child must not be among them */
+  int walk = parent;
+  int guard = 0;
+  while (walk >= 0 && walk < ch->n_cubes && guard++ <= CUBALC_MAX_NEST_DEPTH + 1) {
+    if (walk == child) return -2; /* would cycle */
+    walk = ch->cubes[walk].parent;
+  }
+  /* depth of child under new parent */
+  int d = nest_depth_of(ch, parent) + 1;
+  if (d > CUBALC_MAX_NEST_DEPTH) return -2;
+  ch->cubes[child].parent = (int16_t)parent;
+  ch->cubes[parent].compiled = 0; /* parent matrix must re-fold after nest */
+  ch->cubes[child].compiled = 0;
+  /* spatial hint: child slightly inside parent */
+  ch->cubes[child].x = ch->cubes[parent].x + 0.04f;
+  ch->cubes[child].y = ch->cubes[parent].y + 0.04f;
+  ch->cubes[child].z = ch->cubes[parent].z + 0.04f;
+  ch->cubes[child].s = ch->cubes[parent].s * 0.72f;
+  snprintf(ch->status, sizeof ch->status,
+           "nest parent=%s child=%s depth=%d · cubes may nest",
+           ch->cubes[parent].id, ch->cubes[child].id, d);
+  return 0;
+}
+
+int cubalc_cube_unnest(cubalc_chain *ch, int child) {
+  if (!ch || child < 0 || child >= ch->n_cubes) return -1;
+  int p = ch->cubes[child].parent;
+  ch->cubes[child].parent = -1;
+  ch->cubes[child].compiled = 0;
+  if (p >= 0 && p < ch->n_cubes) ch->cubes[p].compiled = 0;
+  return 0;
+}
+
+/* Fold one cube's live atom (+ optional child compiled matrices) into compiled_matrix.
+ * Law: no flow → no compile. Nested children must already be compiled. */
+int cubalc_cube_compile(cubalc_chain *ch, int cube) {
+  if (!ch || cube < 0 || cube >= ch->n_cubes) return -1;
+  cubalc_cube *c = &ch->cubes[cube];
+  if (!c->flowed) {
+    snprintf(ch->status, sizeof ch->status,
+             "NO COMPILE: cube %s has no flow · law: no flow — no compiling",
+             c->id);
+    return -2;
+  }
+  if (nest_depth_of(ch, cube) > CUBALC_MAX_NEST_DEPTH) return -4;
+
+  /* Require nested children compiled first (bottom-up). */
+  for (int i = 0; i < ch->n_cubes; i++) {
+    if (ch->cubes[i].parent != cube) continue;
+    if (!ch->cubes[i].compiled) {
+      snprintf(ch->status, sizeof ch->status,
+               "NO COMPILE: child %s of %s not compiled yet",
+               ch->cubes[i].id, c->id);
+      return -3;
+    }
+  }
+
+  cubalc_matrix m;
+  cubalc_matrix_clear(&m);
+  m.n = CUBALC_ATOM_BITS;
+  /* base: live atom matrix */
+  for (int b = 0; b < CUBALC_ATOM_BITS; b++)
+    if (cubalc_matrix_get(&c->atom.matrix, b))
+      cubalc_matrix_set(&m, b, 1);
+  /* nest fold: OR children compiled matrices + rotate by child index salt */
+  int nchild = 0;
+  for (int i = 0; i < ch->n_cubes; i++) {
+    if (ch->cubes[i].parent != cube) continue;
+    const cubalc_matrix *cm = &ch->cubes[i].compiled_matrix;
+    int rot = (nchild * 7 + (int)ch->cubes[i].atom.digit) % CUBALC_ATOM_BITS;
+    for (int b = 0; b < CUBALC_ATOM_BITS; b++) {
+      if (cubalc_matrix_get(cm, b)) {
+        int dst = (b + rot) % CUBALC_ATOM_BITS;
+        cubalc_matrix_set(&m, dst, 1);
+      }
+    }
+    nchild++;
+  }
+  /* sticky law bits: matrix is key + hold flash + nest marker */
+  cubalc_matrix_set(&m, 11, 1);
+  cubalc_matrix_set(&m, 13, 1);
+  if (nchild > 0) cubalc_matrix_set(&m, 14, 1); /* nest bit */
+  if (c->parent >= 0) cubalc_matrix_set(&m, 15, 1); /* child-of bit */
+
+  c->compiled_matrix = m;
+  c->atom.matrix = m;
+  if (!c->atom.digit_lock)
+    c->atom.digit = (uint8_t)cubalc_algocube_digit(&c->atom.matrix);
+  c->atom.alive = 1;
+  c->compiled = 1;
+  /* refresh port gates to compiled SoT */
+  for (int p = 0; p < c->n_ports; p++)
+    c->ports[p].gate = c->atom.matrix;
+
+  snprintf(ch->status, sizeof ch->status,
+           "compiled cube=%s set=%u dig=%u nest_children=%d · matrix is the cube",
+           c->id, (unsigned)c->compiled_matrix.set, (unsigned)c->atom.digit, nchild);
+  return 0;
+}
+
+/* Leaves-first compile of every cube. Returns 0 if all ok; else first error code. */
+int cubalc_chain_compile(cubalc_chain *ch, int *failed_ix) {
+  if (failed_ix) *failed_ix = -1;
+  if (!ch) return -1;
+  int remaining = ch->n_cubes;
+  uint8_t done[CUBALC_MAX_CUBES];
+  memset(done, 0, sizeof done);
+  int last_rc = 0;
+  /* multi-pass: only compile when all children already done (or leaf) */
+  while (remaining > 0) {
+    int progressed = 0;
+    for (int i = 0; i < ch->n_cubes; i++) {
+      if (done[i]) continue;
+      int kids_ready = 1;
+      for (int j = 0; j < ch->n_cubes; j++) {
+        if (ch->cubes[j].parent == i && !done[j]) { kids_ready = 0; break; }
+      }
+      if (!kids_ready) continue;
+      int rc = cubalc_cube_compile(ch, i);
+      if (rc != 0) {
+        if (failed_ix) *failed_ix = i;
+        return rc;
+      }
+      done[i] = 1;
+      remaining--;
+      progressed = 1;
+      last_rc = 0;
+    }
+    if (!progressed) {
+      /* cycle or stuck — fail first unfinished */
+      for (int i = 0; i < ch->n_cubes; i++) {
+        if (!done[i]) {
+          if (failed_ix) *failed_ix = i;
+          return -4;
+        }
+      }
+      break;
+    }
+  }
+  snprintf(ch->status, sizeof ch->status,
+           "chain compile ok n=%d · every cube is a matrix · energy flowed",
+           ch->n_cubes);
+  return last_rc;
 }
 
 void cubalc_chain_init(cubalc_chain *ch) {
@@ -571,14 +765,17 @@ int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
                "\"rgba\":[%u,%u,%u,%u],\"role\":%u,"
                "\"id\":\"%s\",\"label\":\"%s\",\"kind\":\"cube\","
                "\"digit\":%u,\"proton\":%u,\"energy\":%.3f,"
-               "\"plugged\":%u,\"set\":%u,\"matrix16\":\"%s\",\"matrix\":\"%s\"}",
+               "\"plugged\":%u,\"parent\":%d,\"flowed\":%u,\"compiled\":%u,"
+               "\"set\":%u,\"matrix16\":\"%s\",\"matrix\":\"%s\"}",
             c->x, c->y, c->z, c->s,
             c->yaw, c->pitch, c->roll,
             c->r, c->g, c->b, c->a,
             c->atom.proton ? 1 : 6,
             c->id, c->label,
             (unsigned)c->atom.digit, (unsigned)c->atom.proton, c->atom.energy,
-            (unsigned)c->plugged, (unsigned)c->atom.matrix.set, bits, bits64);
+            (unsigned)c->plugged, (int)c->parent,
+            (unsigned)c->flowed, (unsigned)c->compiled,
+            (unsigned)c->atom.matrix.set, bits, bits64);
   }
   fprintf(f, "],\"edges\":[");
   int first = 1;
@@ -845,10 +1042,12 @@ int cubalc_chain_print_cubes(const cubalc_chain *ch, FILE *out) {
     int bn = c->atom.matrix.n < 16 ? (int)c->atom.matrix.n : 16;
     for (int b = 0; b < bn; b++) bits[b] = cubalc_matrix_get(&c->atom.matrix, b) ? '1' : '0';
     bits[bn] = 0;
-    fprintf(out, "| [%c] %-14s P=%u E[%s] dig=%u set=%2u plugs=%u\n",
+    fprintf(out, "| [%c] %-14s P=%u E[%s] dig=%u set=%2u plugs=%u"
+            " nest=%d F=%u C=%u\n",
             c->atom.alive ? '#' : '.', c->id, (unsigned)c->atom.proton,
             ebar, (unsigned)c->atom.digit, (unsigned)c->atom.matrix.set,
-            (unsigned)c->plugged);
+            (unsigned)c->plugged, (int)c->parent,
+            (unsigned)c->flowed, (unsigned)c->compiled);
     fprintf(out, "|     m16 %s r=%s\n", bits, c->role);
   }
   fprintf(out, "+-- cblc\n");
@@ -1074,6 +1273,22 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
     if (c->atom.matrix.n == 0) {
       if (err) snprintf(err, errn, "cube %s empty matrix n", c->id);
       return -5;
+    }
+    /* nest: parent index must be valid or -1 */
+    if (c->parent < -1 || c->parent >= ch->n_cubes) {
+      if (err) snprintf(err, errn, "cube %s bad parent", c->id);
+      return -6;
+    }
+    /* law flow_compile: if marked compiled, must have flowed and matrix set */
+    if (c->compiled) {
+      if (!c->flowed) {
+        if (err) snprintf(err, errn, "cube %s compiled without flow", c->id);
+        return -7;
+      }
+      if (c->compiled_matrix.n == 0 || c->compiled_matrix.set == 0) {
+        if (err) snprintf(err, errn, "cube %s compiled empty matrix", c->id);
+        return -8;
+      }
     }
   }
   return 0;

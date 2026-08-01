@@ -1,7 +1,8 @@
 # CubalC — product (ProjectNexus)
 
-**Version:** 1.5.0-flow · paradigm **COP/flow** · pure **C** runtime  
-**Origin:** `Dev/lab/prophecy_cube/cubalc`
+**Version:** 1.8.0-nest · paradigm **COP/flow** · pure **C** runtime  
+**Origin:** `Dev/lab/prophecy_cube/cubalc`  
+**Law:** each cube compiles to a matrix · must flow · no flow → no compile · cubes may nest
 
 ## Keep this product up to date
 

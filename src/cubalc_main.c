@@ -315,16 +315,16 @@ static void print_cube_art(void) {
   puts("              ┌─────────────────┐");
   puts("             ╱                 ╱│");
   puts("            ╱   C U B a l C   ╱ │");
-  puts("           ╱   1.6.0-showcase╱  │");
+  puts("           ╱   1.8.0-nest     ╱  │");
   puts("          ┌─────────────────┐   │");
   puts("          │  ■ ■ ■ ■ ■ ■ ■  │   │");
   puts("          │  ■ COP / flow ■  │   │");
-  puts("          │  ■ matrix SoT ■  │   │");
-  puts("          │  ■ algocube   ■  │  ╱");
-  puts("          │  ■ hive unity ■  │ ╱");
+  puts("          │  ■ nest→matrix■  │   │");
+  puts("          │  ■ no flow? no■  │  ╱");
+  puts("          │  ■ compile    ■  │ ╱");
   puts("          │  ■ ■ ■ ■ ■ ■ ■  │╱");
   puts("          └─────────────────┘");
-  puts("     bits flow · digits judge · unity binds");
+  puts("     bits flow · nest folds · matrix is the cube");
   puts("");
 }
 
@@ -351,6 +351,10 @@ static int cmd_showcase(void) {
   run_one(root, "COP matrix", "programs/proof/02_cop_matrix.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
   run_one(root, "decide / algocube", "programs/proof/06_decide.cubalc",
+          &pass, &fail, &aok, &afail, &cubes_max);
+  run_one(root, "cube I/O reverse", "programs/proof/11_cube_io_reverse.cubalc",
+          &pass, &fail, &aok, &afail, &cubes_max);
+  run_one(root, "nest + compile", "programs/proof/12_nest_compile.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
 
   puts("\n── Act III · Hive geometry ──");
@@ -403,7 +407,7 @@ static int cmd_showcase(void) {
       int rc = system(cmd);
       if (rc == 0) {
         pass++;
-        printf("  ✓ %-28s 12 laws\n", "law plate");
+        printf("  ✓ %-28s 15 laws\n", "law plate");
       } else {
         fail++;
         printf("  ✗ %-28s\n", "law plate");

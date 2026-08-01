@@ -528,6 +528,11 @@ int cubalc_async_chain_flow(cubalc_chain *ch, int ticks) {
       B->atom.unity = cubalc_matrix_compat(&A->atom.matrix, &B->atom.matrix);
       A->atom.energy = fminf(1.f, fmaxf(0.f, A->atom.energy + edges[e].e_from_delta));
       B->atom.energy = fminf(1.f, fmaxf(0.f, B->atom.energy + edges[e].e_to_delta));
+      /* Law flow_compile: async energy talk is still flow — recompile required */
+      A->flowed = 1;
+      B->flowed = 1;
+      A->compiled = 0;
+      B->compiled = 0;
     }
     ch->seq++;
     cubalc_chain_tick(ch);

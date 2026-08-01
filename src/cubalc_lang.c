@@ -260,6 +260,72 @@ static void do_io(VM *vm, const char *id, int face, int is_out){
   var_set_num(vm, "OK", 1);
   var_set_num(vm, "PORT", rc);
 }
+/* Nest child inside parent — cubes may nest. */
+static void do_nest(VM *vm, const char *parent, const char *child){
+  int ip=find_cube(vm,parent), ic=find_cube(vm,child);
+  if (ip<0){ place_cube(vm,parent,"shell",1); ip=find_cube(vm,parent); }
+  if (ic<0){ place_cube(vm,child,"inner",1); ic=find_cube(vm,child); }
+  if (ip<0||ic<0){ fail(vm,"NEST parent child — missing cube"); return; }
+  int rc = cubalc_cube_nest(&vm->ch, ip, ic);
+  if (rc == -2){ fail(vm,"NEST cycle or depth limit"); return; }
+  if (rc < 0){ fail(vm,"NEST failed"); return; }
+  var_set_num(vm, "OK", 1);
+  var_set_num(vm, "NESTED", 1);
+  var_set_num(vm, "PARENT", ip);
+}
+static void do_unnest(VM *vm, const char *child){
+  int ic=find_cube(vm,child);
+  if (ic<0){ fail(vm,"UNNEST needs cube"); return; }
+  cubalc_cube_unnest(&vm->ch, ic);
+  var_set_num(vm, "OK", 1);
+}
+/* Law: each cube compiles into a matrix. No flow — no compiling. */
+static void do_compile_cube(VM *vm, const char *id){
+  int ix=find_cube(vm,id);
+  if (ix<0){ fail(vm,"COMPILE needs cube"); return; }
+  int rc = cubalc_cube_compile(&vm->ch, ix);
+  var_set_num(vm, "COMPILE_RC", rc);
+  if (rc == -2){
+    var_set_num(vm, "OK", 0);
+    var_set_num(vm, "COMPILED", 0);
+    /* soft fail: law gate, not fatal — program may ASSERT no-compile */
+    if (vm->trace) fprintf(vm->trace, "# COMPILE blocked: no flow on %s\n", id);
+    return;
+  }
+  if (rc == -3){
+    var_set_num(vm, "OK", 0);
+    var_set_num(vm, "COMPILED", 0);
+    if (vm->trace) fprintf(vm->trace, "# COMPILE blocked: nested child not compiled for %s\n", id);
+    return;
+  }
+  if (rc < 0){ fail(vm,"COMPILE failed"); return; }
+  var_set_num(vm, "OK", 1);
+  var_set_num(vm, "COMPILED", 1);
+  var_set_num(vm, "SET", (long)vm->ch.cubes[ix].compiled_matrix.set);
+}
+static void do_compile_all(VM *vm){
+  ensure_world(vm);
+  int failed = -1;
+  int rc = cubalc_chain_compile(&vm->ch, &failed);
+  var_set_num(vm, "COMPILE_RC", rc);
+  var_set_num(vm, "FAILED", failed);
+  if (rc == -2){
+    var_set_num(vm, "OK", 0);
+    var_set_num(vm, "COMPILED", 0);
+    if (vm->trace) fprintf(vm->trace, "# COMPILE ALL blocked: no flow (ix=%d)\n", failed);
+    return;
+  }
+  if (rc < 0){
+    var_set_num(vm, "OK", 0);
+    if (vm->trace) fprintf(vm->trace, "# COMPILE ALL rc=%d ix=%d\n", rc, failed);
+    return;
+  }
+  int ncomp = 0;
+  for (int i = 0; i < vm->ch.n_cubes; i++)
+    if (vm->ch.cubes[i].compiled) ncomp++;
+  var_set_num(vm, "OK", 1);
+  var_set_num(vm, "COMPILED", ncomp);
+}
 static void do_ring(VM *vm){
   int n = vm->ch.n_cubes;
   if (n < 2) return;
@@ -876,7 +942,9 @@ static long parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"SEQ")==0) return (long)vm->ch.seq;
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
         strcmp(name,"ENERGY")==0 || strcmp(name,"DIGIT")==0 ||
-        strcmp(name,"BIT")==0){
+        strcmp(name,"BIT")==0 || strcmp(name,"FLOWED")==0 ||
+        strcmp(name,"COMPILED")==0 || strcmp(name,"PARENT")==0 ||
+        strcmp(name,"NESTED")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         char id[48]={0};
@@ -896,6 +964,10 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"DIGIT")==0) return (long)c->atom.digit;
         if (strcmp(name,"BIT")==0 && bit>=0)
           return cubalc_matrix_get(&c->atom.matrix, bit)?1:0;
+        if (strcmp(name,"FLOWED")==0) return c->flowed ? 1 : 0;
+        if (strcmp(name,"COMPILED")==0) return c->compiled ? 1 : 0;
+        if (strcmp(name,"PARENT")==0) return (long)c->parent;
+        if (strcmp(name,"NESTED")==0) return c->parent >= 0 ? 1 : 0;
         return 0;
       }
     }
@@ -1522,6 +1594,33 @@ static int parse_form(VM *vm, Lex *L){
     int face = 0;
     if (L->cur.kind==TK_NUM){ face=(int)L->cur.num; lex_next(L); }
     do_io(vm, id, face, is_out); bump(vm); return 1;
+  }
+  /* NEST parent child — cubes may nest */
+  if (kw(&L->cur,"NEST")||kw(&L->cur,"INSIDE")||kw(&L->cur,"CONTAIN")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"NEST parent child"); return -1; }
+    char p[48]; snprintf(p,sizeof p,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"NEST parent child"); return -1; }
+    char c[48]; snprintf(c,sizeof c,"%s",L->cur.text); lex_next(L);
+    do_nest(vm, p, c); bump(vm); return 1;
+  }
+  /* UNNEST child — detach from parent */
+  if (kw(&L->cur,"UNNEST")||kw(&L->cur,"EJECT")||kw(&L->cur,"DETACH_NEST")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNNEST child"); return -1; }
+    char c[48]; snprintf(c,sizeof c,"%s",L->cur.text); lex_next(L);
+    do_unnest(vm, c); bump(vm); return 1;
+  }
+  /* COMPILE cube | COMPILE ALL — each cube → matrix; no flow → no compile */
+  if (kw(&L->cur,"COMPILE")||kw(&L->cur,"TOMATRIX")||kw(&L->cur,"MATERIALIZE")){
+    lex_next(L);
+    if (kw(&L->cur,"ALL")||kw(&L->cur,"CHAIN")||kw(&L->cur,"WORLD")){
+      lex_next(L);
+      do_compile_all(vm); bump(vm); return 1;
+    }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"COMPILE cube|ALL"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    do_compile_cube(vm, id); bump(vm); return 1;
   }
   if (kw(&L->cur,"IMPULSE")){
     lex_next(L);

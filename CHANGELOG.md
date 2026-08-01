@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.8.0-nest — 2026-08-01
+
+### Law
+- **Each cube compiles into a matrix** (`COMPILE` → `compiled_matrix` + atom SoT).
+- **It must flow** — energy talk / FLOW marks `flowed`.
+- **No flow → no compiling** (soft gate, `COMPILE_RC == -2`).
+- **Cubes may nest** (`NEST parent child`, depth ≤ 8). Parent compile folds children.
+
+### Added
+- `cubalc_cube_nest` · `unnest` · `compile` · `chain_compile` · flow/compile queries
+- Language: `NEST`, `UNNEST`, `COMPILE` / `COMPILE ALL`, `FLOWED(c)`, `COMPILED(c)`, `PARENT(c)`, `NESTED(c)`
+- Proof `12_nest_compile.cubalc` · showcase `nest_compile.cubalc`
+- Laws: `flow_compile` (13), `nest` (14)
+
+### Prior
+See 1.7.0-cube (only CUBE, pluggable/reversible I/O).
+
 ## 1.7.0-cube — 2026-08-01
 
 ### Law

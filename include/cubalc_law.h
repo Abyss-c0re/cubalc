@@ -29,11 +29,13 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.7.0-cube"
+#define CUBALC_LANG_VERSION "1.8.0-nest"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
 #define CUBALC_MAX_HEAP     256
+/* Nest depth budget — cubes may nest; compile walks leaves first */
+#define CUBALC_MAX_NEST_DEPTH 8
 
 #define CUBALC_KIND_VOID    0
 #define CUBALC_KIND_BIT     1
@@ -58,13 +60,17 @@
 #define CUBALC_LAW_MANIFEST_SMX     10
 #define CUBALC_LAW_ALGOCUBE         11
 #define CUBALC_LAW_ENERGY_FLOW      12
-#define CUBALC_LAW_COUNT            13
+/* Each cube compiles into a matrix. It must flow. No flow — no compiling. Cubes may nest. */
+#define CUBALC_LAW_FLOW_COMPILE     13
+#define CUBALC_LAW_NEST             14
+#define CUBALC_LAW_COUNT            15
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
   "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
-  "manifest_smx", "algocube", "energy_flow"
+  "manifest_smx", "algocube", "energy_flow",
+  "flow_compile", "nest"
 };
 
 /* Resolved algocube blueprint genome (deep-opt champion — The Cube watches) */
