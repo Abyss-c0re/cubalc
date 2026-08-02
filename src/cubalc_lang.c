@@ -4001,6 +4001,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",a); vm->last_n=a;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack foundation: NDROP · SEMPTY/SFULL · SSWAPN */
+  if (kw(&L->cur,"NDROP")||kw(&L->cur,"DROPN")||kw(&L->cur,"STACKNDROP")||
+      kw(&L->cur,"DROPN")){
+    /* NDROP n — drop top n items (n clamped to sp) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n > (long)vm->sp) n = (long)vm->sp;
+    vm->sp -= (int)n;
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEMPTY")||kw(&L->cur,"STACKEMPTY")||kw(&L->cur,"SEMPTYP")||
+      kw(&L->cur,"ISEMPTY")||kw(&L->cur,"EMPTYSTACK")){
+    /* SEMPTY → LAST_N = 1 if stack empty */
+    lex_next(L);
+    long r = (vm->sp == 0) ? 1 : 0;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SFULL")||kw(&L->cur,"STACKFULL")||kw(&L->cur,"SFULLP")||
+      kw(&L->cur,"ISFULL")||kw(&L->cur,"FULLSTACK")){
+    /* SFULL → LAST_N = 1 if stack at capacity */
+    lex_next(L);
+    long r = (vm->sp >= CUBALC_STACK_N) ? 1 : 0;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSWAPN")||kw(&L->cur,"SWAPN")||kw(&L->cur,"STACKSWAPN")||
+      kw(&L->cur,"XCHGN")||kw(&L->cur,"SEXCHN")){
+    /* SSWAPN n — exchange TOS with item n under top (0=noop self) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (vm->sp < 1 || n >= (long)vm->sp){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    int i = vm->sp - 1;
+    int j = vm->sp - 1 - (int)n;
+    long t = vm->stack[i];
+    vm->stack[i] = vm->stack[j];
+    vm->stack[j] = t;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",vm->stack[i]); vm->last_n=vm->stack[i];
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"PICK")||kw(&L->cur,"STACKPICK")){
     /* PICK n — copy n-th under top (0=top) onto stack; depth from TOS */
     lex_next(L);

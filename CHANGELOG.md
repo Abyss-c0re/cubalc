@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.74-universal — 2026-08-02
+
+### Direction
+- Algocube digit **0** → stack foundation: multi-drop, empty/full probes, depth swap.
+
+### Language
+- `NDROP`/`DROPN` n — drop top n items
+- `SEMPTY`/`ISEMPTY` · `SFULL`/`ISFULL` → LAST_N predicate
+- `SSWAPN`/`SWAPN` n — exchange TOS with n-th under top
+- Proof `97_ndrop_sswapn.cubalc`
+
+### Prior
+See 1.12.73-universal.
+
 ## 1.12.73-universal — 2026-08-02
 
 ### Direction

@@ -76,7 +76,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             93_andrange_reduce \
             94_clz_jaccard \
             95_mobius_radical \
-            96_trans_runs_mask; do
+            96_trans_runs_mask \
+            97_ndrop_sswapn; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
