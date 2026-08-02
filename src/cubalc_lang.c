@@ -8901,6 +8901,67 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",hits); vm->last_n=hits;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 cell relational predicates: LTCELL GTCELL LECELL GECELL (complete EQ/NE plane) */
+  if (kw(&L->cur,"LTCELL")||kw(&L->cur,"CELLLT")||kw(&L->cur,"CMPLTCELL")||
+      kw(&L->cur,"GTCELL")||kw(&L->cur,"CELLGT")||kw(&L->cur,"CMPGTCELL")||
+      kw(&L->cur,"LECELL")||kw(&L->cur,"CELLLE")||kw(&L->cur,"CMPLECELL")||
+      kw(&L->cur,"GECELL")||kw(&L->cur,"CELLGE")||kw(&L->cur,"CMPGECELL")){
+    /* LTCELL/GTCELL/LECELL/GECELL lo hi val — 0/1 mask vs val; LAST_N = hits */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long val = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int mode = 0; /* 0=lt 1=gt 2=le 3=ge */
+    if (strcmp(op,"GTCELL")==0 || strcmp(op,"CELLGT")==0 || strcmp(op,"CMPGTCELL")==0) mode = 1;
+    else if (strcmp(op,"LECELL")==0 || strcmp(op,"CELLLE")==0 || strcmp(op,"CMPLECELL")==0) mode = 2;
+    else if (strcmp(op,"GECELL")==0 || strcmp(op,"CELLGE")==0 || strcmp(op,"CMPGECELL")==0) mode = 3;
+    long hits = 0;
+    for (long i=lo;i<=hi;i++){
+      long c = vm->cells[(int)i];
+      long bit = 0;
+      if (mode==0) bit = (c < val) ? 1 : 0;
+      else if (mode==1) bit = (c > val) ? 1 : 0;
+      else if (mode==2) bit = (c <= val) ? 1 : 0;
+      else bit = (c >= val) ? 1 : 0;
+      vm->cells[(int)i] = bit;
+      hits += bit;
+    }
+    var_set_num(vm,"LAST_N",hits); vm->last_n=hits;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 cell mux: MUXCELL dst_lo a_lo b_lo mask_lo n
+   * dst[i] = mask[i] ? a[i] : b[i]  for i in 0..n-1 (overlap-safe via temp) */
+  if (kw(&L->cur,"MUXCELL")||kw(&L->cur,"CELLMUX")||kw(&L->cur,"SELECTCELL")||
+      kw(&L->cur,"BLENDCELL")||kw(&L->cur,"CELLBLEND")){
+    lex_next(L);
+    long dlo = parse_expr(vm,L);
+    long alo = parse_expr(vm,L);
+    long blo = parse_expr(vm,L);
+    long mlo = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n > CUBALC_CELL_N) n = CUBALC_CELL_N;
+    long tmp[CUBALC_CELL_N];
+    long wrote = 0;
+    for (long i=0;i<n;i++){
+      long mi = mlo + i, ai = alo + i, bi = blo + i;
+      long av = (ai >= 0 && ai < CUBALC_CELL_N) ? vm->cells[(int)ai] : 0;
+      long bv = (bi >= 0 && bi < CUBALC_CELL_N) ? vm->cells[(int)bi] : 0;
+      long mv = (mi >= 0 && mi < CUBALC_CELL_N) ? vm->cells[(int)mi] : 0;
+      tmp[i] = mv ? av : bv;
+    }
+    for (long i=0;i<n;i++){
+      long di = dlo + i;
+      if (di >= 0 && di < CUBALC_CELL_N){ vm->cells[(int)di] = tmp[i]; wrote++; }
+    }
+    var_set_num(vm,"LAST_N",wrote); vm->last_n=wrote;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 cell-logic stack duals: SANDCELL SORCELL SXORCELL SNOTCELL SEQCELL SNECELL */
   if (kw(&L->cur,"SANDCELL")||kw(&L->cur,"SCELLAND")||kw(&L->cur,"STACKANDCELL")||
       kw(&L->cur,"SANDC")){
@@ -9004,6 +9065,75 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       hits += ne;
     }
     var_set_num(vm,"LAST_N",hits); vm->last_n=hits;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 stack duals of cell relational: SLTCELL SGTCELL SLECELL SGECELL */
+  if (kw(&L->cur,"SLTCELL")||kw(&L->cur,"SCELLLT")||kw(&L->cur,"STACKLTCELL")||
+      kw(&L->cur,"SLTC")||
+      kw(&L->cur,"SGTCELL")||kw(&L->cur,"SCELLGT")||kw(&L->cur,"STACKGTCELL")||
+      kw(&L->cur,"SGTC")||
+      kw(&L->cur,"SLECELL")||kw(&L->cur,"SCELLLE")||kw(&L->cur,"STACKLECELL")||
+      kw(&L->cur,"SLEC")||
+      kw(&L->cur,"SGECELL")||kw(&L->cur,"SCELLGE")||kw(&L->cur,"STACKGECELL")||
+      kw(&L->cur,"SGEC")){
+    /* lo hi val (stack) — relational 0/1 mask; LAST_N = hits */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long val = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int mode = 0;
+    if (strcmp(op,"SGTCELL")==0 || strcmp(op,"SCELLGT")==0 ||
+        strcmp(op,"STACKGTCELL")==0 || strcmp(op,"SGTC")==0) mode = 1;
+    else if (strcmp(op,"SLECELL")==0 || strcmp(op,"SCELLLE")==0 ||
+             strcmp(op,"STACKLECELL")==0 || strcmp(op,"SLEC")==0) mode = 2;
+    else if (strcmp(op,"SGECELL")==0 || strcmp(op,"SCELLGE")==0 ||
+             strcmp(op,"STACKGECELL")==0 || strcmp(op,"SGEC")==0) mode = 3;
+    long hits = 0;
+    for (long i=lo;i<=hi;i++){
+      long c = vm->cells[(int)i];
+      long bit = 0;
+      if (mode==0) bit = (c < val) ? 1 : 0;
+      else if (mode==1) bit = (c > val) ? 1 : 0;
+      else if (mode==2) bit = (c <= val) ? 1 : 0;
+      else bit = (c >= val) ? 1 : 0;
+      vm->cells[(int)i] = bit;
+      hits += bit;
+    }
+    var_set_num(vm,"LAST_N",hits); vm->last_n=hits;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 SMUXCELL — stack: dlo alo blo mlo n → mux cell plane */
+  if (kw(&L->cur,"SMUXCELL")||kw(&L->cur,"SCELLMUX")||kw(&L->cur,"STACKMUXCELL")||
+      kw(&L->cur,"SMUXC")||kw(&L->cur,"SSELECTCELL")||kw(&L->cur,"SBLENDCELL")){
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long mlo = vm->stack[--vm->sp];
+    long blo = vm->stack[--vm->sp];
+    long alo = vm->stack[--vm->sp];
+    long dlo = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (n > CUBALC_CELL_N) n = CUBALC_CELL_N;
+    long tmp[CUBALC_CELL_N];
+    long wrote = 0;
+    for (long i=0;i<n;i++){
+      long mi = mlo + i, ai = alo + i, bi = blo + i;
+      long av = (ai >= 0 && ai < CUBALC_CELL_N) ? vm->cells[(int)ai] : 0;
+      long bv = (bi >= 0 && bi < CUBALC_CELL_N) ? vm->cells[(int)bi] : 0;
+      long mv = (mi >= 0 && mi < CUBALC_CELL_N) ? vm->cells[(int)mi] : 0;
+      tmp[i] = mv ? av : bv;
+    }
+    for (long i=0;i<n;i++){
+      long di = dlo + i;
+      if (di >= 0 && di < CUBALC_CELL_N){ vm->cells[(int)di] = tmp[i]; wrote++; }
+    }
+    var_set_num(vm,"LAST_N",wrote); vm->last_n=wrote;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-9 cell fold arith: SUBCELL/DIVCELL/MODCELL + SCANCELL + CLAMPCELL */

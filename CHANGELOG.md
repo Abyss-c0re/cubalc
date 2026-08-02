@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.111-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → cell compare/mux: relational predicates + cell-plane mux.
+
+### Language
+- `LTCELL`/`GTCELL`/`LECELL`/`GECELL` lo hi val — 0/1 relational masks
+- `SLTCELL`/`SGTCELL`/`SLECELL`/`SGECELL` — stack duals (lo hi val)
+- `MUXCELL` dst_lo a_lo b_lo mask_lo n — mask?a:b cell blend
+- `SMUXCELL` — stack dlo alo blo mlo n
+- Proof `134_ltcell_mux.cubalc`
+
+### Prior
+See 1.12.110-universal.
+
 ## 1.12.110-universal — 2026-08-03
 
 ### Direction
