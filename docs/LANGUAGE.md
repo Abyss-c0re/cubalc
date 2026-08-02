@@ -84,7 +84,7 @@ Science domains guide **what ops CubalC must express as pure logic**. No diploma
 | `FORCE` `WORK` `KE` `PE` `WAVE_V` `BOYLE_P2` `ORBIT_PERIOD` | physics |
 | `CELSIUS_K` `KELVIN_C` | temperature |
 
-Bit ops (universal integer): `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `HAMMING32`
+Bit ops (universal integer): `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `HAMMING32` · `BEXT`/`BDEP` · `BYTE`/`LOBYTE`/`HIBYTE` · `DIVCEIL`
 
 Rotate/pack/select: `ROTL`/`ROL` `ROTR`/`ROR` `PACK16` `HI16` `LO16` `ISEL`/`SELECT` `NEG` · hex `0x…`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.8-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.9-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

@@ -1076,7 +1076,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"CTZ")==0 || strcmp(name,"CLZ")==0 ||
         strcmp(name,"ISPOW2")==0 || strcmp(name,"POW2")==0 ||
         strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
-        strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0){
+        strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0 ||
+        /* digit-0 foundation: bitfield extract/deposit + ceil div */
+        strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0 ||
+        strcmp(name,"BDEP")==0 || strcmp(name,"BITDEP")==0 ||
+        strcmp(name,"BYTE")==0 || strcmp(name,"HIBYTE")==0 ||
+        strcmp(name,"LOBYTE")==0 ||
+        strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1443,6 +1449,53 @@ static long parse_prim(VM *vm, Lex *L){
           if (r > 1) return 0; /* not invertible */
           if (t < 0) t += m;
           return t;
+        }
+        /* digit-0 foundation bitfields */
+        if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
+          /* BEXT(val, pos, width) — extract width bits starting at bit pos */
+          long pos = b, width = c;
+          if (pos < 0) pos = 0;
+          if (pos > 62) return 0;
+          if (width < 1) return 0;
+          if (width > 63 - pos) width = 63 - pos;
+          if (width <= 0) return 0;
+          unsigned long mask = (width >= 63) ? ~0ul : ((1ul << width) - 1ul);
+          return (long)(((unsigned long)a >> (unsigned)pos) & mask);
+        }
+        if (strcmp(name,"BDEP")==0 || strcmp(name,"BITDEP")==0){
+          /* BDEP(base, field, pos) — deposit low 8 bits of field at bit pos */
+          long pos = c;
+          long width = 8;
+          if (pos < 0) pos = 0;
+          if (pos > 62) return a;
+          if (width > 63 - pos) width = 63 - pos;
+          if (width <= 0) return a;
+          unsigned long mask = (width >= 63) ? ~0ul : ((1ul << width) - 1ul);
+          unsigned long base = (unsigned long)a;
+          unsigned long field = (unsigned long)b & mask;
+          base = (base & ~(mask << (unsigned)pos)) | (field << (unsigned)pos);
+          return (long)base;
+        }
+        if (strcmp(name,"BYTE")==0){
+          /* BYTE(val, i) — i-th byte little-endian (0=LSB) */
+          long i = b;
+          if (i < 0) i = 0;
+          if (i > 7) i = 7;
+          return (long)(((unsigned long)a >> (unsigned)(i * 8)) & 0xFFul);
+        }
+        if (strcmp(name,"LOBYTE")==0)
+          return (long)((unsigned long)a & 0xFFul);
+        if (strcmp(name,"HIBYTE")==0)
+          return (long)(((unsigned long)a >> 8) & 0xFFul);
+        if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
+          /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
+          if (b == 0) return 0;
+          if (a >= 0 && b > 0) return (a + b - 1) / b;
+          if (a <= 0 && b < 0){
+            long aa = -a, bb = -b;
+            return (aa + bb - 1) / bb;
+          }
+          return a / b;
         }
         return 0;
       }
