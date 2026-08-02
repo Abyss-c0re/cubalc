@@ -1,0 +1,136 @@
+# Proof 68 — digit-1 JUMP/JZ/JNZ/CJZ + SLOOP/SJZ/UNTIL control flow
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# JNZ break
+LET n = 0
+LOOP 100
+  LET n = n + 1
+  JNZ n == 6
+END
+ASSERT n == 6
+
+# JZ break (stop when remaining hits zero)
+LET m = 5
+LOOP 20
+  LET m = m - 1
+  JZ m
+END
+ASSERT m == 0
+
+# JUMP unconditional
+LET j = 0
+LOOP 50
+  LET j = j + 1
+  JUMP
+  LET j = j + 100
+END
+ASSERT j == 1
+
+# JUMP IF
+LET p = 0
+LOOP 30
+  LET p = p + 1
+  JUMP IF p >= 4
+END
+ASSERT p == 4
+
+# CJNZ continue (sum only odds 1..9 via LOOP 0..9 skip)
+LET s = 0
+LOOP 10
+  CJZ IT % 2
+  LET s = s + IT
+END
+ASSERT s == 25
+
+# CJZ continue (skip zeros in cell walk)
+CLEARCELLS
+SETCELL 0 0
+SETCELL 1 3
+SETCELL 2 0
+SETCELL 3 5
+LET acc = 0
+LET i = 0
+LOOP 4
+  LET i = IT
+  CJZ CELL(i)
+  LET acc = acc + CELL(i)
+END
+ASSERT acc == 8
+
+# UNTIL pre-test (inverse WHILE)
+LET r = 0
+UNTIL r >= 3
+  LET r = r + 1
+END
+ASSERT r == 3
+
+# SLOOP from stack
+CLEARSTACK
+PUSH 4
+LET k = 0
+SLOOP
+  LET k = k + 1
+END
+ASSERT k == 4
+
+# SJNZ stack break
+CLEARSTACK
+LET z = 0
+LOOP 40
+  LET z = z + 1
+  PUSH z == 5
+  SJNZ
+END
+ASSERT z == 5
+
+# SJZ stack break
+CLEARSTACK
+LET w = 3
+LOOP 20
+  LET w = w - 1
+  PUSH w
+  SJZ
+END
+ASSERT w == 0
+
+# SCJZ stack continue — sum nonzeros from stack pushes of IT
+LET t = 0
+LOOP 6
+  PUSH IT % 2
+  SCJZ
+  LET t = t + IT
+END
+ASSERT t == 9
+
+# TIMES alias for LOOP
+LET u = 0
+TIMES 3
+  LET u = u + 1
+END
+ASSERT u == 3
+
+# SJUMP unconditional stack break
+LET q = 0
+LOOP 10
+  LET q = q + 1
+  SJUMP
+END
+ASSERT q == 1
+
+# underflow soft OK
+CLEARSTACK
+SJZ
+ASSERT OK == 0
+CLEARSTACK
+SLOOP
+  LET dead = 1
+END
+ASSERT OK == 0
+
+CUBE c ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof68_jump_jz_sloop" n m j p s acc r k z w t u q

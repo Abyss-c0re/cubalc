@@ -950,18 +950,25 @@ static long do_resolve(VM *vm, const char *target){
 static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
 
 /* Scan one token toward block end. Parks on matching END (depth→0) or UNTIL (if allow_until).
- * Skips BREAK IF / CONTINUE IF so guarded IF does not nest the block. */
+ * Skips BREAK IF / CONTINUE IF / JUMP/JZ family so guarded IF does not nest the block. */
 static int block_scan_step(Lex *L, int *depth, int allow_until){
   if (L->cur.kind==TK_EOF) return 1;
-  if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+  if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")||
+      kw(&L->cur,"JUMP")||kw(&L->cur,"JMP")||kw(&L->cur,"JZ")||kw(&L->cur,"JZERO")||
+      kw(&L->cur,"JNZ")||kw(&L->cur,"JNEZ")||kw(&L->cur,"JTRUE")||
+      kw(&L->cur,"CJZ")||kw(&L->cur,"CJZERO")||kw(&L->cur,"CJNZ")||kw(&L->cur,"CJNEZ")||
+      kw(&L->cur,"SJUMP")||kw(&L->cur,"SBREAK")||kw(&L->cur,"SCONTINUE")||
+      kw(&L->cur,"SJZ")||kw(&L->cur,"SJZERO")||kw(&L->cur,"SJNZ")||kw(&L->cur,"SJNEZ")||
+      kw(&L->cur,"SCJZ")||kw(&L->cur,"SCJNZ")){
     lex_next(L);
     if (kw(&L->cur,"IF")) lex_next(L);
     return 0;
   }
   if (allow_until && *depth==1 && kw(&L->cur,"UNTIL")) return 1;
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
-      kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
-      kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||kw(&L->cur,"REPEAT")){
+      kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||
+      kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||kw(&L->cur,"REPEAT")||
+      kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")){
     (*depth)++;
     lex_next(L);
     return 0;
@@ -6352,7 +6359,106 @@ static int parse_form(VM *vm, Lex *L){
     }
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"LOOP")){
+  /* digit-1 control: JUMP / JZ / JNZ / CJZ / CJNZ (asm-style loop exits) */
+  if (kw(&L->cur,"JUMP")||kw(&L->cur,"JMP")){
+    /* JUMP [IF expr] — unconditional or conditional break */
+    lex_next(L);
+    if (kw(&L->cur,"IF")){
+      lex_next(L);
+      long c = parse_expr(vm, L);
+      if (c) vm->break_loop = 1;
+    } else {
+      vm->break_loop = 1;
+    }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"JZ")||kw(&L->cur,"JZERO")){
+    /* JZ expr — break if expr == 0 */
+    lex_next(L);
+    long c = parse_expr(vm, L);
+    if (!c) vm->break_loop = 1;
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"JNZ")||kw(&L->cur,"JNEZ")||kw(&L->cur,"JTRUE")){
+    /* JNZ expr — break if expr != 0 */
+    lex_next(L);
+    long c = parse_expr(vm, L);
+    if (c) vm->break_loop = 1;
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CJZ")||kw(&L->cur,"CJZERO")){
+    /* CJZ expr — continue if expr == 0 */
+    lex_next(L);
+    long c = parse_expr(vm, L);
+    if (!c) vm->continue_loop = 1;
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CJNZ")||kw(&L->cur,"CJNEZ")){
+    /* CJNZ expr — continue if expr != 0 */
+    lex_next(L);
+    long c = parse_expr(vm, L);
+    if (c) vm->continue_loop = 1;
+    bump(vm); return 1;
+  }
+  /* stack-driven loop control: SJUMP/SBREAK SJZ SJNZ SCONTINUE SCJZ SCJNZ */
+  if (kw(&L->cur,"SJUMP")||kw(&L->cur,"SBREAK")||kw(&L->cur,"STACKJUMP")||
+      kw(&L->cur,"STACKBREAK")){
+    lex_next(L);
+    vm->break_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCONTINUE")||kw(&L->cur,"SNEXT")||kw(&L->cur,"STACKCONTINUE")){
+    lex_next(L);
+    vm->continue_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SJZ")||kw(&L->cur,"SJZERO")||kw(&L->cur,"STACKJZ")){
+    /* pop TOS; break if zero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    if (!c) vm->break_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SJNZ")||kw(&L->cur,"SJNEZ")||kw(&L->cur,"STACKJNZ")){
+    /* pop TOS; break if nonzero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    if (c) vm->break_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCJZ")||kw(&L->cur,"STACKCJZ")){
+    /* pop TOS; continue if zero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    if (!c) vm->continue_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCJNZ")||kw(&L->cur,"STACKCJNZ")){
+    /* pop TOS; continue if nonzero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    if (c) vm->continue_loop = 1;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"LOOP")||kw(&L->cur,"TIMES")){
     lex_next(L);
     long times=parse_expr(vm,L);
     if (times<0) times=0;
@@ -6371,6 +6477,37 @@ static int parse_form(VM *vm, Lex *L){
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
       if (vm->break_loop){ vm->break_loop=0; break; }
       /* continue_loop: already stopped body via exec_stmts_until */
+      vm->continue_loop=0;
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    bump(vm); return 1;
+  }
+  /* SLOOP — stack count: pop TOS as times, same body semantics as LOOP */
+  if (kw(&L->cur,"SLOOP")||kw(&L->cur,"STACKLOOP")){
+    lex_next(L);
+    long times = 0;
+    if (vm->sp >= 1){
+      times = vm->stack[--vm->sp];
+      var_set_num(vm,"SP",vm->sp);
+      var_set_num(vm,"OK",1);
+    } else {
+      var_set_num(vm,"OK",0);
+    }
+    if (times<0) times=0;
+    if (times>100000) times=100000;
+    skip_nl(L);
+    Lex save=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth!=0){ fail(vm,"SLOOP without END"); return -1; }
+    for (long t=0;t<times && !vm->fatal;t++){
+      long *it=var_slot(vm,"IT",1); if (it) *it=t;
+      vm->break_loop=0; vm->continue_loop=0;
+      Lex body=save;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
       vm->continue_loop=0;
     }
     if (kw(&L->cur,"END")) lex_next(L);
@@ -6440,6 +6577,33 @@ static int parse_form(VM *vm, Lex *L){
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
   }
+  /* UNTIL cond ... END — pre-test inverse WHILE: run while cond is false (digit-1 loops) */
+  if (kw(&L->cur,"UNTIL")){
+    lex_next(L);
+    Lex cond_start=*L;
+    long cond=parse_expr(vm,L);
+    skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth!=0){ fail(vm,"UNTIL without END"); return -1; }
+    Lex end_tok=*L;
+    long guard=0;
+    while (!cond && !vm->fatal && guard++<100000){
+      vm->break_loop=0; vm->continue_loop=0;
+      Lex body=body_start;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
+      vm->continue_loop=0;
+      Lex clex=cond_start;
+      cond=parse_expr(vm,&clex);
+    }
+    *L=end_tok;
+    if (kw(&L->cur,"END")) lex_next(L);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"IF")){
     lex_next(L);
     /* chain: IF c THEN ... ELIF c THEN ... ELSE ... END */
@@ -6455,8 +6619,9 @@ static int parse_form(VM *vm, Lex *L){
           if (kw(&L->cur,"IF")) lex_next(L);
           continue;
         }
-        if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
-            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
+        if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||
+            kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
+            kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")) depth++;
         else if ((kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")) && depth==1) break;
         else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
         lex_next(L);
@@ -6474,8 +6639,9 @@ static int parse_form(VM *vm, Lex *L){
             if (kw(&L->cur,"IF")) lex_next(L);
             continue;
           }
-          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
-              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
+          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||
+              kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
+              kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")) depth++;
           else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
           lex_next(L);
         }
