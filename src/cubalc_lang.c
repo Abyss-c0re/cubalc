@@ -6259,6 +6259,79 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack-imm field duals: SBEXTN · SBDEPN · SMASKN (after SBEXT/SBDEP stack) */
+  if (kw(&L->cur,"SBEXTN")||kw(&L->cur,"EXTN")||kw(&L->cur,"SEXTRN")||
+      kw(&L->cur,"STACKBEXTN")||kw(&L->cur,"SBITEXTN")||kw(&L->cur,"BEXTN")){
+    /* SBEXTN pos width — extract width bits at pos from TOS */
+    lex_next(L);
+    long pos = parse_expr(vm,L);
+    long width = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      vm->stack[vm->sp - 1] = 0;
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width < 1) width = 0;
+    if (width > 63 - pos) width = 63 - pos;
+    long r = 0;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      r = (long)(((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)pos) & mask);
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBDEPN")||kw(&L->cur,"DEPN")||kw(&L->cur,"SDEPN")||
+      kw(&L->cur,"STACKBDEPN")||kw(&L->cur,"SBITDEPN")||kw(&L->cur,"BDEPN")){
+    /* SBDEPN field pos — deposit low 8 bits of field into TOS at bit pos */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long pos = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long width = 8;
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      var_set_num(vm,"LAST_N",a); vm->last_n=a;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width > 63 - pos) width = 63 - pos;
+    long r = a;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      unsigned long base = (unsigned long)a;
+      unsigned long f = (unsigned long)field & mask;
+      base = (base & ~(mask << (unsigned)pos)) | (f << (unsigned)pos);
+      r = (long)base;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMASKN")||kw(&L->cur,"MASKN")||kw(&L->cur,"BITSMSK")||
+      kw(&L->cur,"STACKMASKN")||kw(&L->cur,"LOWMASKN")||kw(&L->cur,"ONESN")){
+    /* SMASKN n — TOS = low-n-bit mask (1<<n)-1; n clamped 0..64 (64 → all ones) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){
+      /* allow push form if stack empty: grow if room */
+      if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->sp++; /* will write below */
+    }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long v = (long)m;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SSHLN")||kw(&L->cur,"SHLN")||kw(&L->cur,"STACKSHLN")||
       kw(&L->cur,"SLSHLN")||kw(&L->cur,"SSHLIMM")){
     /* SSHLN n — TOS <<= n (n clamped 0..63) */

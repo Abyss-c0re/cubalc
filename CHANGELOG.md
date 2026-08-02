@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.97-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → stack-imm bitfield extract/deposit/mask (dual of SBEXT/SBDEP + mask generator).
+
+### Language
+- `SBEXTN`/`EXTN`/`BEXTN` pos width — extract width bits at pos from TOS
+- `SBDEPN`/`DEPN`/`BDEPN` field pos — deposit low 8 bits of field into TOS at pos
+- `SMASKN`/`MASKN`/`ONESN` n — TOS = low-n-bit mask ((1≪n)−1; n=64 → all ones)
+- Proof `120_sbextn_smaskn.cubalc`
+
+### Prior
+See 1.12.96-universal.
+
 ## 1.12.96-universal — 2026-08-03
 
 ### Direction

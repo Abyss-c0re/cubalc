@@ -1,0 +1,70 @@
+# Proof 120 — digit-5 stack-imm bitfield: SBEXTN SBDEPN SMASKN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# SMASKN — low-n mask
+CLEARSTACK
+PUSH 0
+SMASKN 4
+ASSERT LAST_N == 15
+SMASKN 0
+ASSERT LAST_N == 0
+SMASKN 8
+ASSERT LAST_N == 255
+# n=64 all ones
+SMASKN 64
+ASSERT LAST_N == -1
+
+# empty stack SMASKN still works (push form)
+CLEARSTACK
+MASKN 3
+ASSERT SP == 1
+ASSERT LAST_N == 7
+
+# SBEXTN — extract nibble
+CLEARSTACK
+PUSH 0xAB
+SBEXTN 0 4
+ASSERT LAST_N == 0x0B
+CLEARSTACK
+PUSH 0xAB
+EXTN 4 4
+ASSERT LAST_N == 0x0A
+CLEARSTACK
+PUSH 0xF0
+BEXTN 4 4
+ASSERT LAST_N == 0x0F
+
+# SBDEPN — deposit field
+CLEARSTACK
+PUSH 0
+SBDEPN 0x0A 4
+ASSERT LAST_N == 0xA0
+# deposit into high nibble of 0x0F
+CLEARSTACK
+PUSH 0x0F
+DEPN 0x0C 4
+ASSERT LAST_N == 0xCF
+
+# chain: mask then deposit then extract
+CLEARSTACK
+PUSH 0
+SMASKN 0
+SBDEPN 0x5A 0
+ASSERT LAST_N == 0x5A
+SBEXTN 0 8
+ASSERT LAST_N == 0x5A
+
+# soft fail empty on extract/deposit
+CLEARSTACK
+SBEXTN 0 4
+ASSERT OK == 0
+SBDEPN 1 0
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof120_sbextn_smaskn" LAST_N SP
