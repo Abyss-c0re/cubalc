@@ -3900,15 +3900,19 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-6 stack fold/reduce: SSUM SPROD SFAND SFOR SFXOR FOLDMIN FOLDMAX
-   * optional trailing n = fold only top n items; omit n → whole stack.
-   * empty identities: sum/or/xor=0, prod=1, and=-1; min/max empty → OK=0. */
+   * SMEAN SCOUNTNZ — optional trailing n = fold only top n; omit n → whole stack.
+   * empty identities: sum/or/xor/countnz=0, prod=1, and=-1; min/max/mean empty → OK=0. */
   if (kw(&L->cur,"SSUM")||kw(&L->cur,"STACKSUM")||kw(&L->cur,"SFOLDADD")||
       kw(&L->cur,"SPROD")||kw(&L->cur,"STACKPROD")||kw(&L->cur,"SFOLDMUL")||
       kw(&L->cur,"SFAND")||kw(&L->cur,"FOLDAND")||kw(&L->cur,"SFOLDAND")||
       kw(&L->cur,"SFOR")||kw(&L->cur,"FOLDOR")||kw(&L->cur,"SFOLDOR")||
       kw(&L->cur,"SFXOR")||kw(&L->cur,"FOLDXOR")||kw(&L->cur,"SFOLDXOR")||
       kw(&L->cur,"FOLDMIN")||kw(&L->cur,"SFOLDMIN")||
-      kw(&L->cur,"FOLDMAX")||kw(&L->cur,"SFOLDMAX")){
+      kw(&L->cur,"FOLDMAX")||kw(&L->cur,"SFOLDMAX")||
+      kw(&L->cur,"SMEAN")||kw(&L->cur,"SFOLDAVG")||kw(&L->cur,"STACKMEAN")||
+      kw(&L->cur,"SAVGALL")||
+      kw(&L->cur,"SCOUNTNZ")||kw(&L->cur,"SCNTNZ")||kw(&L->cur,"SFOLDCOUNTNZ")||
+      kw(&L->cur,"STACKCOUNTNZ")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -3932,10 +3936,14 @@ static int parse_form(VM *vm, Lex *L){
     int is_and = (strcmp(op,"SFAND")==0 || strcmp(op,"FOLDAND")==0 || strcmp(op,"SFOLDAND")==0);
     int is_or = (strcmp(op,"SFOR")==0 || strcmp(op,"FOLDOR")==0 || strcmp(op,"SFOLDOR")==0);
     int is_xor = (strcmp(op,"SFXOR")==0 || strcmp(op,"FOLDXOR")==0 || strcmp(op,"SFOLDXOR")==0);
+    int is_mean = (strcmp(op,"SMEAN")==0 || strcmp(op,"SFOLDAVG")==0 ||
+                   strcmp(op,"STACKMEAN")==0 || strcmp(op,"SAVGALL")==0);
+    int is_cntnz = (strcmp(op,"SCOUNTNZ")==0 || strcmp(op,"SCNTNZ")==0 ||
+                    strcmp(op,"SFOLDCOUNTNZ")==0 || strcmp(op,"STACKCOUNTNZ")==0);
     long r = 0;
     if (n == 0){
-      if (is_min || is_max){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-      if (is_sum || is_or || is_xor) r = 0;
+      if (is_min || is_max || is_mean){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      if (is_sum || is_or || is_xor || is_cntnz) r = 0;
       else if (is_prod) r = 1;
       else if (is_and) r = -1;
       else r = 0;
@@ -3946,16 +3954,27 @@ static int parse_form(VM *vm, Lex *L){
     }
     /* left-fold top n items (bottom of window first) */
     int base = vm->sp - (int)n;
-    r = vm->stack[base];
-    for (int i = 1; i < (int)n; i++){
-      long v = vm->stack[base + i];
-      if (is_sum) r = r + v;
-      else if (is_prod) r = r * v;
-      else if (is_and) r = r & v;
-      else if (is_or) r = r | v;
-      else if (is_xor) r = r ^ v;
-      else if (is_min) r = (r < v) ? r : v;
-      else if (is_max) r = (r > v) ? r : v;
+    if (is_mean){
+      long acc = 0;
+      for (int i = 0; i < (int)n; i++) acc += vm->stack[base + i];
+      r = acc / n;
+    } else if (is_cntnz){
+      long c = 0;
+      for (int i = 0; i < (int)n; i++)
+        if (vm->stack[base + i] != 0) c++;
+      r = c;
+    } else {
+      r = vm->stack[base];
+      for (int i = 1; i < (int)n; i++){
+        long v = vm->stack[base + i];
+        if (is_sum) r = r + v;
+        else if (is_prod) r = r * v;
+        else if (is_and) r = r & v;
+        else if (is_or) r = r | v;
+        else if (is_xor) r = r ^ v;
+        else if (is_min) r = (r < v) ? r : v;
+        else if (is_max) r = (r > v) ? r : v;
+      }
     }
     vm->sp = base;
     vm->stack[vm->sp++] = r;
