@@ -6027,10 +6027,11 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-0/9 stack immediate bitwise mask dual forms: SANDI/SANDN · SORI/SORN · SXORI/SXORN */
-  if (kw(&L->cur,"SANDI")||kw(&L->cur,"SANDN")||kw(&L->cur,"ANDIMM")||kw(&L->cur,"STACKANDI")||
-      kw(&L->cur,"ANDI")||kw(&L->cur,"SANDIMM")||kw(&L->cur,"ANDN")||kw(&L->cur,"STACKANDN")){
-    /* SANDI/SANDN n — TOS &= n */
+  /* digit-0/9 stack immediate bitwise mask: SANDI · SORI · SXORI
+   * NOTE: SANDN/SORN/SXORN stay stack-stack (a&~b / a|~b / dual of SNAND family). */
+  if (kw(&L->cur,"SANDI")||kw(&L->cur,"ANDIMM")||kw(&L->cur,"STACKANDI")||
+      kw(&L->cur,"ANDI")||kw(&L->cur,"SANDIMM")){
+    /* SANDI n — TOS &= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -6039,9 +6040,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  if (kw(&L->cur,"SORI")||kw(&L->cur,"SORN")||kw(&L->cur,"ORIMM")||kw(&L->cur,"STACKORI")||
-      kw(&L->cur,"ORI")||kw(&L->cur,"SORIMM")||kw(&L->cur,"ORN")||kw(&L->cur,"STACKORN")){
-    /* SORI/SORN n — TOS |= n */
+  if (kw(&L->cur,"SORI")||kw(&L->cur,"ORIMM")||kw(&L->cur,"STACKORI")||
+      kw(&L->cur,"ORI")||kw(&L->cur,"SORIMM")){
+    /* SORI n — TOS |= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -6050,9 +6051,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  if (kw(&L->cur,"SXORI")||kw(&L->cur,"SXORN")||kw(&L->cur,"XORIMM")||kw(&L->cur,"STACKXORI")||
-      kw(&L->cur,"XORI")||kw(&L->cur,"SXORIMM")||kw(&L->cur,"XORN")||kw(&L->cur,"STACKXORN")){
-    /* SXORI/SXORN n — TOS ^= n */
+  if (kw(&L->cur,"SXORI")||kw(&L->cur,"XORIMM")||kw(&L->cur,"STACKXORI")||
+      kw(&L->cur,"XORI")||kw(&L->cur,"SXORIMM")){
+    /* SXORI n — TOS ^= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -7587,6 +7588,26 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",(long)u); vm->last_n=(long)u;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 stack-imm range RNG: SRANDRANGEN lo hi — push uniform [lo,hi] (dual of SRANDRANGE) */
+  if (kw(&L->cur,"SRANDRANGEN")||kw(&L->cur,"RANDRANGEN")||kw(&L->cur,"SRNGX")||
+      kw(&L->cur,"STACKRANDRANGEN")||kw(&L->cur,"SRANDINN")){
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long span = hi - lo + 1;
+    if (span < 1) span = 1;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long v = lo + (long)(x % (uint32_t)span);
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-6 RNG range + shuffle + random matrix bits */
   if (kw(&L->cur,"RANDRANGE")||kw(&L->cur,"RANDIN")||kw(&L->cur,"RANDBETWEEN")){
     /* RANDRANGE lo hi — uniform integer in [lo,hi] inclusive */
@@ -7805,6 +7826,69 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long *se = var_slot(vm, "ENERGY", 1); if (se) *se = e;
     var_set_num(vm, "ENERGY", e);
     var_set_num(vm, "LAST_N", e); vm->last_n = e;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* digit-6 ENERGYXFER src dst n — move energy units (0..100 scale) src→dst, clamp both */
+  if (kw(&L->cur,"ENERGYXFER")||kw(&L->cur,"XFERENERGY")||kw(&L->cur,"SENRX")||
+      kw(&L->cur,"TRANSFERENERGY")||kw(&L->cur,"ENERGYMOVE")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYXFER src dst n"); return -1; }
+    char src[48]; snprintf(src,sizeof src,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYXFER dst"); return -1; }
+    char dst[48]; snprintf(dst,sizeof dst,"%s",L->cur.text); lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    ensure_world(vm);
+    int is = find_cube(vm,src);
+    int id = find_cube(vm,dst);
+    if (is<0){ place_cube(vm,src,src,1); is=find_cube(vm,src); }
+    if (id<0){ place_cube(vm,dst,dst,1); id=find_cube(vm,dst); }
+    if (is<0 || id<0){ fail(vm,"ENERGYXFER missing"); return -1; }
+    float es = vm->ch.cubes[is].atom.energy;
+    float ed = vm->ch.cubes[id].atom.energy;
+    float amt = (float)n / 100.f;
+    if (amt > es) amt = es;
+    es -= amt;
+    ed += amt;
+    if (es < 0.f) es = 0.f;
+    if (es > 1.f) es = 1.f;
+    if (ed < 0.f) ed = 0.f;
+    if (ed > 1.f) ed = 1.f;
+    vm->ch.cubes[is].atom.energy = es;
+    vm->ch.cubes[id].atom.energy = ed;
+    vm->ch.cubes[is].flowed = 1;
+    vm->ch.cubes[id].flowed = 1;
+    long moved = (long)lround(amt * 100.0);
+    long *se = var_slot(vm, "ENERGY", 1);
+    if (se) *se = (long)lround(ed * 100.0);
+    var_set_num(vm, "ENERGY", (long)lround(ed * 100.0));
+    var_set_num(vm, "LAST_N", moved); vm->last_n = moved;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* digit-6 ENERGYCLAMP id lo hi — clamp energy plane to [lo,hi] (0..100 scale) */
+  if (kw(&L->cur,"ENERGYCLAMP")||kw(&L->cur,"CLAMPENERGY")||kw(&L->cur,"SFLWX")||
+      kw(&L->cur,"ENERGYBOUND")||kw(&L->cur,"BOUNDENERGY")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYCLAMP id lo hi"); return -1; }
+    char idn[48]; snprintf(idn,sizeof idn,"%s",L->cur.text); lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    if (lo < 0) lo = 0;
+    if (hi > 100) hi = 100;
+    ensure_world(vm);
+    int ix = find_cube(vm,idn);
+    if (ix<0){ place_cube(vm,idn,idn,1); ix=find_cube(vm,idn); }
+    if (ix<0){ fail(vm,"ENERGYCLAMP missing"); return -1; }
+    long ev = (long)lround(vm->ch.cubes[ix].atom.energy * 100.0);
+    if (ev < lo) ev = lo;
+    if (ev > hi) ev = hi;
+    vm->ch.cubes[ix].atom.energy = (float)ev / 100.f;
+    vm->ch.cubes[ix].flowed = 1;
+    var_set_num(vm, "ENERGY", ev);
+    var_set_num(vm, "LAST_N", ev); vm->last_n = ev;
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

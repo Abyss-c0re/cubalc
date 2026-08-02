@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.94-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy transfer/clamp + stack-imm range RNG (extend after ENERGYSUB/SRANDN).
+
+### Language
+- `ENERGYXFER`/`XFERENERGY`/`SENRX` src dst n — move n energy units src→dst (clamp 0..100)
+- `ENERGYCLAMP`/`CLAMPENERGY`/`SFLWX` id lo hi — clamp energy to [lo,hi]
+- `SRANDRANGEN`/`RANDRANGEN`/`SRNGX` lo hi — push uniform [lo,hi] (stack-imm dual of SRANDRANGE)
+- Proof `117_energyxfer_srandrangen.cubalc`
+
+### Prior
+See 1.12.93-universal.
+
 ## 1.12.93-universal — 2026-08-03
 
 ### Direction
