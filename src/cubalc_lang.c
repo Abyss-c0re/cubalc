@@ -3224,7 +3224,88 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE");
+    /* digit-3 string pad/repeat: LPAD RPAD STREPEAT (SYS REPEAT alias) */
+    if (kw(&L->cur,"LPAD") || kw(&L->cur,"RPAD") || kw(&L->cur,"PADLEFT") ||
+        kw(&L->cur,"PADRIGHT") || kw(&L->cur,"STRPAD") ||
+        kw(&L->cur,"STREPEAT") || kw(&L->cur,"STRREPEAT") ||
+        kw(&L->cur,"REPEATSTR") || kw(&L->cur,"SREPEAT")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      int is_rep = (strcmp(op,"STREPEAT")==0 || strcmp(op,"STRREPEAT")==0 ||
+                    strcmp(op,"REPEATSTR")==0 || strcmp(op,"SREPEAT")==0);
+      int is_left = (strcmp(op,"LPAD")==0 || strcmp(op,"PADLEFT")==0 ||
+                     strcmp(op,"STRPAD")==0);
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      if (is_rep){
+        long times = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+            L->cur.kind==TK_IDENT)
+          times = parse_expr(vm, L);
+        if (times < 0) times = 0;
+        if (times > 512) times = 512;
+        char out[512]; size_t o = 0;
+        size_t sn = strlen(s);
+        if (sn == 0){ out[0]=0; }
+        else {
+          for (long t=0; t<times && o+1 < sizeof out; t++){
+            size_t take = sn;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, s, take); o += take;
+          }
+          out[o] = 0;
+        }
+        var_set_str(vm, "LAST", out);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)o;
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* LPAD/RPAD str width [padchar] */
+      long width = 0;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT)
+        width = parse_expr(vm, L);
+      if (width < 0) width = 0;
+      if (width > 511) width = 511;
+      char padc = ' ';
+      char pad[16]; pad[0]=0;
+      if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
+        padc = pad[0];
+      size_t sn = strlen(s);
+      char out[512];
+      if ((long)sn >= width){
+        size_t take = (size_t)width;
+        if (take >= sizeof out) take = sizeof out - 1;
+        memcpy(out, s, take); out[take] = 0;
+      } else {
+        size_t need = (size_t)width - sn;
+        if (is_left){
+          size_t o = 0;
+          for (size_t i=0; i<need && o+1 < sizeof out; i++) out[o++] = padc;
+          size_t take = sn;
+          if (o + take >= sizeof out) take = sizeof out - 1 - o;
+          memcpy(out + o, s, take); o += take; out[o] = 0;
+        } else {
+          size_t o = 0;
+          size_t take = sn;
+          if (take >= sizeof out) take = sizeof out - 1;
+          memcpy(out, s, take); o = take;
+          for (size_t i=0; i<need && o+1 < sizeof out; i++) out[o++] = padc;
+          out[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6800,7 +6881,8 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
-  /* FOR i = a TO b [STEP s] ... END */
+  /* FOR i = a TO b [STEP s] ... END
+     FOR i = a DOWNTO b [STEP s] ... END  (digit-1: default step -1) */
   if (kw(&L->cur,"FOR")){
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"FOR var = a TO b"); return -1; }
@@ -6808,7 +6890,8 @@ static int parse_form(VM *vm, Lex *L){
     if (L->cur.kind!=TK_EQ){ fail(vm,"FOR var ="); return -1; }
     lex_next(L);
     long lo=parse_expr(vm,L);
-    if (!kw(&L->cur,"TO") && !kw(&L->cur,"..") && !(L->cur.kind==TK_IDENT && strcmp(L->cur.text,"TO")==0)){
+    if (!kw(&L->cur,"TO") && !kw(&L->cur,"DOWNTO") && !kw(&L->cur,"DOWN") &&
+        !kw(&L->cur,"..") && !(L->cur.kind==TK_IDENT && strcmp(L->cur.text,"TO")==0)){
       /* allow FOR i = n as 0..n-1 */
       long hi=lo-1; lo=0;
       long step=1;
@@ -6830,10 +6913,18 @@ static int parse_form(VM *vm, Lex *L){
       if (kw(&L->cur,"END")) lex_next(L);
       bump(vm); return 1;
     }
-    if (kw(&L->cur,"TO")||kw(&L->cur,"..")) lex_next(L);
+    int downto = 0;
+    if (kw(&L->cur,"DOWNTO")||kw(&L->cur,"DOWN")){ downto = 1; lex_next(L); }
+    else if (kw(&L->cur,"TO")||kw(&L->cur,"..")) lex_next(L);
     long hi=parse_expr(vm,L);
-    long step=1;
-    if (kw(&L->cur,"STEP")||kw(&L->cur,"BY")){ lex_next(L); step=parse_expr(vm,L); if(!step) step=1; }
+    long step = downto ? -1 : 1;
+    if (kw(&L->cur,"STEP")||kw(&L->cur,"BY")){
+      lex_next(L);
+      step=parse_expr(vm,L);
+      if (!step) step = downto ? -1 : 1;
+      /* DOWNTO with positive step → force negative direction */
+      if (downto && step > 0) step = -step;
+    }
     skip_nl(L);
     Lex body_start=*L;
     int depth=1;
@@ -6848,6 +6939,7 @@ static int parse_form(VM *vm, Lex *L){
         Lex body=body_start;
         if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
         if (vm->break_loop){ vm->break_loop=0; break; }
+        vm->continue_loop=0;
       }
     } else {
       for (long i=lo;i>=hi && !vm->fatal;i+=step){
@@ -6856,6 +6948,7 @@ static int parse_form(VM *vm, Lex *L){
         Lex body=body_start;
         if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
         if (vm->break_loop){ vm->break_loop=0; break; }
+        vm->continue_loop=0;
       }
     }
     if (kw(&L->cur,"END")) lex_next(L);

@@ -1,0 +1,69 @@
+# Proof 74 — digit-1 FOR DOWNTO + digit-3 SYS LPAD/RPAD/STREPEAT
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# FOR DOWNTO
+LET s = 0
+FOR i = 5 DOWNTO 1
+  LET s = s + i
+END
+ASSERT s == 15
+
+LET t = 0
+FOR i = 10 DOWNTO 0 STEP 2
+  LET t = t + i
+END
+ASSERT t == 30
+
+# FOR TO still works
+LET u = 0
+FOR i = 1 TO 4
+  LET u = u + i
+END
+ASSERT u == 10
+
+# DOWNTO with BREAK
+LET k = 0
+FOR i = 8 DOWNTO 1
+  LET k = k + 1
+  BEQ i 5
+END
+ASSERT k == 4
+ASSERT i == 5
+
+# LPAD / RPAD
+SYS LPAD "7" 3 "0"
+SYS EQS LAST "007"
+ASSERT LAST_N == 1
+SYS RPAD "ab" 5 "*"
+SYS EQS LAST "ab***"
+ASSERT LAST_N == 1
+SYS LPAD "toolong" 4
+SYS EQS LAST "tool"
+ASSERT LAST_N == 1
+SYS PADRIGHT "x" 3
+SYS EQS LAST "x  "
+ASSERT LAST_N == 1
+
+# STREPEAT
+SYS STREPEAT "ab" 3
+SYS EQS LAST "ababab"
+ASSERT LAST_N == 1
+SYS STRREPEAT "*" 5
+SYS EQS LAST "*****"
+ASSERT LAST_N == 1
+SYS STREPEAT "z" 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# compose
+SYS LPAD "42" 5 "0"
+SYS STARTS LAST "000"
+ASSERT LAST_N == 1
+
+CUBE c ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof74_for_downto_lpad" s t u k LAST_N
