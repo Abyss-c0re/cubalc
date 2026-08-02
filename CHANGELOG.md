@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.107-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → cell-logic stack duals + NECELL predicate.
+
+### Language
+- `NECELL`/`CELLNE` — range ≠ val → 0/1 mask
+- `SANDCELL`/`SORCELL`/`SXORCELL` — stack lo hi mask bitwise
+- `SNOTCELL` — stack lo hi bitwise invert
+- `SCELLEQ`/`SNECELL` — stack lo hi val predicate masks
+- Proof `130_sandcell_sne.cubalc`
+
+### Prior
+See 1.12.106-universal.
+
 ## 1.12.106-universal — 2026-08-03
 
 ### Direction

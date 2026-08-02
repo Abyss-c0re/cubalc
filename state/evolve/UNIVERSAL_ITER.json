@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:48:53+0300",
-  "iter": 191,
+  "ts": "2026-08-03T01:57:06+0300",
+  "iter": 192,
   "algocube_digit": 9,
-  "version": "1.12.106-universal",
-  "pass": 144,
+  "version": "1.12.107-universal",
+  "pass": 145,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DIFFCELL SSCANCELL SDIFFCELL SSHIFTCELL SCLAMPCELL",
-  "proof": "programs/proof/129_sscan_sdiff.cubalc"
+  "delta": "SANDCELL SORCELL SXORCELL SNOTCELL SCELLEQ SNECELL NECELL",
+  "proof": "programs/proof/130_sandcell_sne.cubalc"
 }
