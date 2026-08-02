@@ -66,7 +66,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             83_pack32_pext_zip \
             84_eqbits_subset \
             85_rand_shuffle \
-            86_muxbits_match; do
+            86_muxbits_match \
+            87_copyrange_parity; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

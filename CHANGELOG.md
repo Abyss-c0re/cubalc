@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.64-universal — 2026-08-02
+
+### Direction
+- Algocube digit **7** → COP matrix parity, bit-range copy, local reverse.
+
+### Language
+- `PARITYBITS`/`XORREDUCE` cube → XOR-reduce of all bits
+- `COPYRANGE` dst doff src soff n — copy n bits between cubes
+- `SWAPRANGE`/`REVRANGE` cube lo hi — reverse bits in range
+- Proof `87_copyrange_parity.cubalc`
+
+### Prior
+See 1.12.63-universal.
+
+
 ## 1.12.63-universal — 2026-08-02
 
 ### Direction
