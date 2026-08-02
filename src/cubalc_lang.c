@@ -1117,6 +1117,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"FIB")==0 || strcmp(name,"FIBONACCI")==0 ||
         strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
+        /* digit-0/2 muldiv: unsigned div + high multiply */
+        strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
+        strcmp(name,"UMOD")==0 || strcmp(name,"UREM")==0 ||
+        strcmp(name,"MULHI")==0 || strcmp(name,"MULH")==0 ||
+        strcmp(name,"UMULHI")==0 || strcmp(name,"UMULH")==0 ||
         strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0 ||
         strcmp(name,"ILOG10")==0 || strcmp(name,"LOG10")==0 ||
         strcmp(name,"ODD")==0 || strcmp(name,"EVEN")==0 ||
@@ -1136,6 +1141,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0 ||
         /* digit-1 data path: word reverse / parity / nibble */
         strcmp(name,"BSWAP")==0 || strcmp(name,"BSWAP32")==0 ||
+        strcmp(name,"BSWAP16")==0 || strcmp(name,"BSWAP64")==0 ||
         strcmp(name,"BITREV")==0 || strcmp(name,"REVBITS")==0 ||
         strcmp(name,"PARITY")==0 ||
         strcmp(name,"NIBBLE")==0 || strcmp(name,"NIB")==0 ||
@@ -1565,6 +1571,28 @@ static long parse_prim(VM *vm, Lex *L){
         /* Modular arithmetic (digit-2 math plane) */
         if (strcmp(name,"IDIV")==0) return b ? (a / b) : 0;
         if (strcmp(name,"IMOD")==0) return b ? (a % b) : 0;
+        if (strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0){
+          /* unsigned divide; divisor 0 → 0 */
+          if (b == 0) return 0;
+          return (long)((unsigned long)a / (unsigned long)b);
+        }
+        if (strcmp(name,"UMOD")==0 || strcmp(name,"UREM")==0){
+          /* unsigned remainder; divisor 0 → 0 */
+          if (b == 0) return 0;
+          return (long)((unsigned long)a % (unsigned long)b);
+        }
+        if (strcmp(name,"MULHI")==0 || strcmp(name,"MULH")==0){
+          /* high 64 bits of signed 64×64 → 128 product */
+          __int128 p = (__int128)a * (__int128)b;
+          return (long)(p >> 64);
+        }
+        if (strcmp(name,"UMULHI")==0 || strcmp(name,"UMULH")==0){
+          /* high 64 bits of unsigned 64×64 product */
+          unsigned __int128 p =
+              (unsigned __int128)(unsigned long)a *
+              (unsigned __int128)(unsigned long)b;
+          return (long)(p >> 64);
+        }
         if (strcmp(name,"ADDMOD")==0){
           long m = c; if (m <= 0) return 0;
           long x = a % m; if (x < 0) x += m;
@@ -1819,6 +1847,19 @@ static long parse_prim(VM *vm, Lex *L){
           unsigned int w = (unsigned int)a;
           w = ((w & 0x000000FFu) << 24) | ((w & 0x0000FF00u) << 8) |
               ((w & 0x00FF0000u) >> 8) | ((w & 0xFF000000u) >> 24);
+          return (long)w;
+        }
+        if (strcmp(name,"BSWAP16")==0){
+          unsigned int w = (unsigned int)a & 0xFFFFu;
+          w = ((w & 0x00FFu) << 8) | ((w & 0xFF00u) >> 8);
+          return (long)w;
+        }
+        if (strcmp(name,"BSWAP64")==0){
+          unsigned long w = (unsigned long)a;
+          w = ((w & 0x00000000000000FFul) << 56) | ((w & 0x000000000000FF00ul) << 40) |
+              ((w & 0x0000000000FF0000ul) << 24) | ((w & 0x00000000FF000000ul) << 8) |
+              ((w & 0x000000FF00000000ul) >> 8) | ((w & 0x0000FF0000000000ul) >> 24) |
+              ((w & 0x00FF000000000000ul) >> 40) | ((w & 0xFF00000000000000ul) >> 56);
           return (long)w;
         }
         if (strcmp(name,"BITREV")==0 || strcmp(name,"REVBITS")==0){
@@ -4546,6 +4587,59 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0/2 muldiv + byteswap stack: SUDIV SUMOD SMULHI SUMULHI SBSWAP16 SBSWAP64 */
+  if (kw(&L->cur,"SUDIV")||kw(&L->cur,"SUDIVIDE")||kw(&L->cur,"STACKUDIV")||
+      kw(&L->cur,"SUMOD")||kw(&L->cur,"SUREM")||kw(&L->cur,"STACKUMOD")||
+      kw(&L->cur,"SMULHI")||kw(&L->cur,"SMULH")||kw(&L->cur,"STACKMULHI")||
+      kw(&L->cur,"SUMULHI")||kw(&L->cur,"SUMULH")||kw(&L->cur,"STACKUMULHI")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SUDIV")==0 || strcmp(op,"SUDIVIDE")==0 || strcmp(op,"STACKUDIV")==0){
+      if (b != 0) r = (long)((unsigned long)a / (unsigned long)b);
+    } else if (strcmp(op,"SUMOD")==0 || strcmp(op,"SUREM")==0 || strcmp(op,"STACKUMOD")==0){
+      if (b != 0) r = (long)((unsigned long)a % (unsigned long)b);
+    } else if (strcmp(op,"SMULHI")==0 || strcmp(op,"SMULH")==0 || strcmp(op,"STACKMULHI")==0){
+      __int128 p = (__int128)a * (__int128)b;
+      r = (long)(p >> 64);
+    } else {
+      unsigned __int128 p =
+          (unsigned __int128)(unsigned long)a *
+          (unsigned __int128)(unsigned long)b;
+      r = (long)(p >> 64);
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBSWAP16")||kw(&L->cur,"STACKBSWAP16")||
+      kw(&L->cur,"SBSWAP64")||kw(&L->cur,"STACKBSWAP64")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (strcmp(op,"SBSWAP16")==0 || strcmp(op,"STACKBSWAP16")==0){
+      unsigned int w = (unsigned int)a & 0xFFFFu;
+      w = ((w & 0x00FFu) << 8) | ((w & 0xFF00u) >> 8);
+      r = (long)w;
+    } else {
+      unsigned long w = (unsigned long)a;
+      w = ((w & 0x00000000000000FFul) << 56) | ((w & 0x000000000000FF00ul) << 40) |
+          ((w & 0x0000000000FF0000ul) << 24) | ((w & 0x00000000FF000000ul) << 8) |
+          ((w & 0x000000FF00000000ul) >> 8) | ((w & 0x0000FF0000000000ul) >> 24) |
+          ((w & 0x00FF000000000000ul) >> 40) | ((w & 0xFF00000000000000ul) >> 56);
+      r = (long)w;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-1 shift/rotate/cmp stack: SCMP SUCMP SULT SUGT SULE SUGE SROTL64 SROTR64 */
   if (kw(&L->cur,"SCMP")||kw(&L->cur,"SICMP")||kw(&L->cur,"SCMP3")||kw(&L->cur,"STACKCMP")||
