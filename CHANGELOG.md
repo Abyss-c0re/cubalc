@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.116-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack pair ALU: DDIV DMOD DMIN DMAX.
+
+### Language
+- `DDIV`/`2DIV` — a b c d → (a/c) (b/d) (0-safe)
+- `DMOD`/`2MOD`/`DREM` — a b c d → (a%c) (b%d)
+- `DMIN`/`2MIN` · `DMAX`/`2MAX` — pairwise min/max
+- Completes DADD/DSUB/DMUL pair plane
+- Proof `139_ddiv_dmin.cubalc`
+
+### Prior
+See 1.12.115-universal.
+
 ## 1.12.115-universal — 2026-08-03
 
 ### Direction
