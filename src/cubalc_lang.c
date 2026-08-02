@@ -1046,6 +1046,15 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"SATMUL")==0 ||
         strcmp(name,"WRAPMOD")==0 || strcmp(name,"WMOD")==0 ||
         strcmp(name,"CLIP8")==0 || strcmp(name,"CLIP16")==0 ||
+        /* digit-1 overflow predicates + single-bit ops */
+        strcmp(name,"ADDOVF")==0 || strcmp(name,"ADDOVER")==0 ||
+        strcmp(name,"SUBOVF")==0 || strcmp(name,"SUBOVER")==0 ||
+        strcmp(name,"MULOVF")==0 || strcmp(name,"MULOVER")==0 ||
+        strcmp(name,"BTEST")==0 || strcmp(name,"BITTEST")==0 ||
+        strcmp(name,"BSET")==0 || strcmp(name,"BITSET")==0 ||
+        strcmp(name,"BCLR")==0 || strcmp(name,"BITCLR")==0 ||
+        strcmp(name,"BFLIP")==0 || strcmp(name,"BITFLIP")==0 ||
+        strcmp(name,"BTGL")==0 || strcmp(name,"BITTGL")==0 ||
         strcmp(name,"AVG")==0 || strcmp(name,"PCT")==0 ||
         strcmp(name,"CIRC")==0 || strcmp(name,"AREA_CIRCLE")==0 ||
         strcmp(name,"HYP")==0 || strcmp(name,"WAVE_V")==0 ||
@@ -1235,6 +1244,56 @@ static long parse_prim(VM *vm, Lex *L){
           if (a < 0) return 0;
           if (a > 65535) return 65535;
           return a;
+        }
+        if (strcmp(name,"ADDOVF")==0 || strcmp(name,"ADDOVER")==0){
+          /* ADDOVF(a,b) → 1 if signed a+b overflows long */
+          if (b > 0 && a > LONG_MAX - b) return 1;
+          if (b < 0 && a < LONG_MIN - b) return 1;
+          return 0;
+        }
+        if (strcmp(name,"SUBOVF")==0 || strcmp(name,"SUBOVER")==0){
+          /* SUBOVF(a,b) → 1 if signed a-b overflows long */
+          if (b > 0 && a < LONG_MIN + b) return 1;
+          if (b < 0 && a > LONG_MAX + b) return 1;
+          return 0;
+        }
+        if (strcmp(name,"MULOVF")==0 || strcmp(name,"MULOVER")==0){
+          /* MULOVF(a,b) → 1 if signed a*b overflows long */
+          if (a == 0 || b == 0) return 0;
+          {
+            __int128 p = (__int128)a * (__int128)b;
+            if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) return 1;
+            return 0;
+          }
+        }
+        if (strcmp(name,"BTEST")==0 || strcmp(name,"BITTEST")==0){
+          /* BTEST(val, k) → 1 if bit k set (k clamped 0..63) */
+          long k = b;
+          if (k < 0) k = 0;
+          if (k > 63) k = 63;
+          return (((unsigned long)a >> (unsigned)k) & 1ul) ? 1 : 0;
+        }
+        if (strcmp(name,"BSET")==0 || strcmp(name,"BITSET")==0){
+          /* BSET(val, k) → val with bit k set */
+          long k = b;
+          if (k < 0) k = 0;
+          if (k > 63) k = 63;
+          return (long)((unsigned long)a | (1ul << (unsigned)k));
+        }
+        if (strcmp(name,"BCLR")==0 || strcmp(name,"BITCLR")==0){
+          /* BCLR(val, k) → val with bit k cleared */
+          long k = b;
+          if (k < 0) k = 0;
+          if (k > 63) k = 63;
+          return (long)((unsigned long)a & ~(1ul << (unsigned)k));
+        }
+        if (strcmp(name,"BFLIP")==0 || strcmp(name,"BITFLIP")==0 ||
+            strcmp(name,"BTGL")==0 || strcmp(name,"BITTGL")==0){
+          /* BFLIP(val, k) → val with bit k toggled */
+          long k = b;
+          if (k < 0) k = 0;
+          if (k > 63) k = 63;
+          return (long)((unsigned long)a ^ (1ul << (unsigned)k));
         }
         if (strcmp(name,"AVG")==0) return (a + b) / 2;
         if (strcmp(name,"PCT")==0) return b ? (a * 100 / b) : 0; /* a is what % of b */
@@ -4287,6 +4346,38 @@ static int parse_form(VM *vm, Lex *L){
     long r = n;
     if (r < lo) r = lo;
     if (r > hi) r = hi;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 overflow predicates stack: SADDOVF SSUBOVF SMULOVF */
+  if (kw(&L->cur,"SADDOVF")||kw(&L->cur,"SADDOVER")||kw(&L->cur,"STACKADDOVF")||
+      kw(&L->cur,"SSUBOVF")||kw(&L->cur,"SSUBOVER")||kw(&L->cur,"STACKSUBOVF")||
+      kw(&L->cur,"SMULOVF")||kw(&L->cur,"SMULOVER")||kw(&L->cur,"STACKMULOVF")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    int is_add = (strcmp(op,"SADDOVF")==0 || strcmp(op,"SADDOVER")==0 ||
+                  strcmp(op,"STACKADDOVF")==0);
+    int is_sub = (strcmp(op,"SSUBOVF")==0 || strcmp(op,"SSUBOVER")==0 ||
+                  strcmp(op,"STACKSUBOVF")==0);
+    if (is_add){
+      if (b > 0 && a > LONG_MAX - b) r = 1;
+      else if (b < 0 && a < LONG_MIN - b) r = 1;
+    } else if (is_sub){
+      if (b > 0 && a < LONG_MIN + b) r = 1;
+      else if (b < 0 && a > LONG_MAX + b) r = 1;
+    } else {
+      /* SMULOVF / SMULOVER / STACKMULOVF */
+      if (a != 0 && b != 0){
+        __int128 p = (__int128)a * (__int128)b;
+        if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) r = 1;
+      }
+    }
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
