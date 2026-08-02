@@ -1,0 +1,53 @@
+# Proof 16 — universal control flow (digit 4): BREAK IF · CONTINUE IF · REPEAT UNTIL · WHILE break
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# WHILE + BREAK IF
+LET n = 0
+WHILE n < 100
+  LET n = n + 1
+  BREAK IF n == 7
+END
+ASSERT n == 7
+
+# LOOP + CONTINUE IF (skip odds from sum of evens 0..9)
+LET s = 0
+LOOP 10
+  CONTINUE IF IT % 2 == 1
+  LET s = s + IT
+END
+ASSERT s == 20
+
+# FOR + BREAK
+LET k = 0
+FOR i = 1 TO 20
+  LET k = k + 1
+  BREAK IF i == 5
+END
+ASSERT k == 5
+
+# REPEAT ... UNTIL
+LET r = 0
+REPEAT
+  LET r = r + 1
+UNTIL r >= 4
+ASSERT r == 4
+
+# nested: LOOP with BREAK IF
+LET z = 0
+LOOP 50
+  LET z = z + 1
+  BREAK IF z >= 3
+END
+ASSERT z == 3
+
+# ISEL still works as expr control
+ASSERT ISEL(1, 9, 0) == 9
+ASSERT OK == 1
+
+CUBE c ROLE matrix PROTON 1
+FOLDBITS c "1100110011001100110011001100110011001100110011001100110011001100"
+ASSERT DIGIT(c) >= 0
+ASSERT DIGIT(c) <= 9
+
+PRINT "proof16_control_flow" n s k r z DIGIT(c)

@@ -920,6 +920,33 @@ static long do_resolve(VM *vm, const char *target){
 
 static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2);
 
+/* Scan one token toward block end. Parks on matching END (depth→0) or UNTIL (if allow_until).
+ * Skips BREAK IF / CONTINUE IF so guarded IF does not nest the block. */
+static int block_scan_step(Lex *L, int *depth, int allow_until){
+  if (L->cur.kind==TK_EOF) return 1;
+  if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+    lex_next(L);
+    if (kw(&L->cur,"IF")) lex_next(L);
+    return 0;
+  }
+  if (allow_until && *depth==1 && kw(&L->cur,"UNTIL")) return 1;
+  if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
+      kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+      kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||kw(&L->cur,"REPEAT")){
+    (*depth)++;
+    lex_next(L);
+    return 0;
+  }
+  if (kw(&L->cur,"END")){
+    (*depth)--;
+    if (*depth==0) return 1; /* leave END for caller */
+    lex_next(L);
+    return 0;
+  }
+  lex_next(L);
+  return 0;
+}
+
 /* legacy verbose still works (CREED, CUBE, …) so old plates run */
 static long parse_expr(VM *vm, Lex *L); /* minimal for ASSERT */
 static long parse_prim(VM *vm, Lex *L){
@@ -2333,11 +2360,8 @@ static int parse_form(VM *vm, Lex *L){
     /* L->i points after current token start roughly - use cur position via scanning from save */
     Lex save=*L;
     int depth=1;
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
-          kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")) depth++;
-      else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
-      lex_next(L);
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"FN without END"); return -1; }
     /* body is from save.i to L.i (start of END) — approximate using token stream offsets */
@@ -2401,10 +2425,8 @@ static int parse_form(VM *vm, Lex *L){
       skip_nl(L);
       Lex body_start=*L;
       int depth=1;
-      while (L->cur.kind!=TK_EOF && depth>0){
-        if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
-        else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
-        lex_next(L);
+      while (L->cur.kind!=TK_EOF){
+        if (block_scan_step(L, &depth, 0)) break;
       }
       if (depth!=0){ fail(vm,"FOR without END"); return -1; }
       for (long i=lo;i<=hi && !vm->fatal;i+=step){
@@ -2425,10 +2447,8 @@ static int parse_form(VM *vm, Lex *L){
     skip_nl(L);
     Lex body_start=*L;
     int depth=1;
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
-      else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
-      lex_next(L);
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"FOR without END"); return -1; }
     if (step>0){
@@ -2462,10 +2482,8 @@ static int parse_form(VM *vm, Lex *L){
     skip_nl(L);
     Lex body_start=*L;
     int depth=1;
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"FOR")||kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
-      else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
-      lex_next(L);
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"EACH without END"); return -1; }
     ensure_world(vm);
@@ -2483,13 +2501,31 @@ static int parse_form(VM *vm, Lex *L){
     if (kw(&L->cur,"END")) lex_next(L);
     bump(vm); return 1;
   }
+  /* BREAK [IF expr] — leave enclosing loop (digit-4 control flow) */
   if (kw(&L->cur,"BREAK")){
-    lex_next(L); vm->break_loop=1; bump(vm); return 1;
+    lex_next(L);
+    if (kw(&L->cur,"IF")){
+      lex_next(L);
+      long c = parse_expr(vm, L);
+      if (c) vm->break_loop = 1;
+    } else {
+      vm->break_loop = 1;
+    }
+    bump(vm); return 1;
   }
-  if (kw(&L->cur,"CONTINUE")){
-    lex_next(L); vm->continue_loop=1; bump(vm); return 1;
+  /* CONTINUE [IF expr] — next loop iteration */
+  if (kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+    lex_next(L);
+    if (kw(&L->cur,"IF")){
+      lex_next(L);
+      long c = parse_expr(vm, L);
+      if (c) vm->continue_loop = 1;
+    } else {
+      vm->continue_loop = 1;
+    }
+    bump(vm); return 1;
   }
-    if (kw(&L->cur,"LOOP")){
+  if (kw(&L->cur,"LOOP")){
     lex_next(L);
     long times=parse_expr(vm,L);
     if (times<0) times=0;
@@ -2497,10 +2533,8 @@ static int parse_form(VM *vm, Lex *L){
     skip_nl(L);
     Lex save=*L;
     int depth=1;
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")) depth++;
-      else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
-      lex_next(L);
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"LOOP without END"); return -1; }
     for (long t=0;t<times && !vm->fatal;t++){
@@ -2509,8 +2543,48 @@ static int parse_form(VM *vm, Lex *L){
       Lex body=save;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
       if (vm->break_loop){ vm->break_loop=0; break; }
+      /* continue_loop: already stopped body via exec_stmts_until */
+      vm->continue_loop=0;
     }
     if (kw(&L->cur,"END")) lex_next(L);
+    bump(vm); return 1;
+  }
+  /* REPEAT ... UNTIL cond — post-test loop (digit-4 universal control) */
+  if (kw(&L->cur,"REPEAT")){
+    lex_next(L);
+    skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 1)) break;
+    }
+    if (!(kw(&L->cur,"UNTIL") || kw(&L->cur,"END"))){ fail(vm,"REPEAT without UNTIL|END"); return -1; }
+    int use_until = kw(&L->cur,"UNTIL") ? 1 : 0;
+    if (use_until){
+      lex_next(L);
+      Lex cond_start=*L;
+      (void)parse_expr(vm,L); /* advance over cond for outer scan */
+      Lex after_cond=*L;
+      long guard=0;
+      do {
+        vm->break_loop=0; vm->continue_loop=0;
+        Lex body=body_start;
+        if (exec_stmts_until(vm,&body,"UNTIL",NULL)<0) return -1;
+        if (vm->break_loop){ vm->break_loop=0; break; }
+        vm->continue_loop=0;
+        Lex clex=cond_start;
+        long done = parse_expr(vm,&clex);
+        if (done) break;
+      } while (!vm->fatal && guard++<100000);
+      *L=after_cond;
+    } else {
+      /* REPEAT ... END  (same as LOOP 1..∞ with break only — run once as block) */
+      if (kw(&L->cur,"END")) lex_next(L);
+      vm->break_loop=0; vm->continue_loop=0;
+      Lex body=body_start;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      vm->break_loop=0; vm->continue_loop=0;
+    }
     bump(vm); return 1;
   }
   if (kw(&L->cur,"WHILE")){
@@ -2520,17 +2594,18 @@ static int parse_form(VM *vm, Lex *L){
     skip_nl(L);
     Lex body_start=*L;
     int depth=1;
-    while (L->cur.kind!=TK_EOF && depth>0){
-      if (kw(&L->cur,"LOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")) depth++;
-      else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
-      lex_next(L);
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"WHILE without END"); return -1; }
     Lex end_tok=*L;
     long guard=0;
     while (cond && !vm->fatal && guard++<100000){
+      vm->break_loop=0; vm->continue_loop=0;
       Lex body=body_start;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
+      vm->continue_loop=0;
       Lex clex=cond_start;
       cond=parse_expr(vm,&clex);
     }
@@ -2548,7 +2623,13 @@ static int parse_form(VM *vm, Lex *L){
       Lex body_start=*L;
       int depth=1;
       while (L->cur.kind!=TK_EOF && depth>0){
-        if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+        if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+          lex_next(L);
+          if (kw(&L->cur,"IF")) lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+            kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
         else if ((kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")) && depth==1) break;
         else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
         lex_next(L);
@@ -2561,7 +2642,13 @@ static int parse_form(VM *vm, Lex *L){
         /* skip to final END */
         depth=1;
         while (L->cur.kind!=TK_EOF && depth>0){
-          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")) depth++;
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
           else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
           lex_next(L);
         }

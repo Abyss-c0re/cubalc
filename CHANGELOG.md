@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.11.3-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → control-flow expressiveness.
+
+### Language
+- `BREAK IF expr` · `CONTINUE IF expr` (aliases `NEXT`/`SKIP`)
+- `REPEAT … UNTIL cond` post-test loop
+- `WHILE` honors BREAK/CONTINUE; deeper nest depth for LOOP/WHILE
+- Proof `16_control_flow_universal.cubalc`
+
+### Prior
+See 1.11.2-universal.
+
 ## 1.11.2-universal — 2026-08-02
 
 ### Direction

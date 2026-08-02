@@ -48,7 +48,8 @@ run_one() {
 # curated fast proofs (language surface + new universal bitops)
 for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             11_cube_io_reverse 12_nest_compile 13_bitops_universal \
-            14_io_codec_universal 15_rotate_pack_universal; do
+            14_io_codec_universal 15_rotate_pack_universal \
+            16_control_flow_universal; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
