@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.11-universal — 2026-08-02
+
+### Direction
+- Algocube digit **7** → stack ALU: Forth-style binary/unary arithmetic on the stack.
+
+### Language
+- `ADD`/`SUB`/`MUL`/`DIV`/`MOD` — pop a b, push result (OK/LAST_N/SP)
+- `SNEG`/`STACKNEG`/`NEGATE` — negate TOS
+- `SABS`/`STACKABS` — absolute value of TOS
+- Proof `34_stack_alu.cubalc`
+
+### Prior
+See 1.12.10-universal.
+
 ## 1.12.10-universal — 2026-08-02
 
 ### Direction
