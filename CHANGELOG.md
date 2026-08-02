@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.56-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → COP matrix↔word data path (pack/extract bitfields pure-C).
+
+### Language
+- `WORDFROM`/`MAT2WORD`/`BITS2WORD`/`BITS2N`/`LOADWORD` cube → `LAST_N` from bits 0..63
+- `WORDTO`/`WORD2MAT`/`N2BITS`/`STOREWORD`/`WORD2BITS` cube n — deposit word into low bits
+- `EXTRACTBITS`/`GETBITS`/`SLICEBITS`/`BITFIELD`/`FIELDGET` cube lo hi → field value
+- `DEPOSITBITS`/`PUTBITS`/`SETBITS`/`FIELDSET`/`INJECTBITS` cube lo hi val — write field
+- Proof `79_word_bits_bridge.cubalc`
+
+### Prior
+See 1.12.55-universal.
+
+
 ## 1.12.55-universal — 2026-08-02
 
 ### Direction
