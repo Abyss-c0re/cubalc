@@ -6389,6 +6389,60 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* digit-3 COP matrix logical shift: SHLBITS/SHRBITS cube k (zero-fill, not rotate) */
+  if (kw(&L->cur,"SHLBITS")||kw(&L->cur,"LSHBITS")||kw(&L->cur,"LSHIFTBITS")||
+      kw(&L->cur,"SHRBITS")||kw(&L->cur,"RSHBITS")||kw(&L->cur,"RSHIFTBITS")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"SHLBITS cube k"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    long k = parse_expr(vm,L);
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"SHLBITS missing cube"); return -1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    if (n < 1) n = CUBALC_ATOM_BITS;
+    int left = (strcmp(op,"SHLBITS")==0 || strcmp(op,"LSHBITS")==0 ||
+                strcmp(op,"LSHIFTBITS")==0);
+    if (k < 0){
+      /* negative shift flips direction */
+      left = !left;
+      k = -k;
+    }
+    if (k >= n){
+      cubalc_matrix_clear(m);
+      m->n = (uint16_t)n;
+    } else if (k > 0){
+      uint8_t tmp[(CUBALC_ATOM_BITS + 7) / 8];
+      memset(tmp, 0, sizeof tmp);
+      for (int i=0;i<n;i++){
+        if (!cubalc_matrix_get(m, i)) continue;
+        int dst = left ? i + (int)k : i - (int)k;
+        if (dst < 0 || dst >= n) continue; /* drop overflow */
+        tmp[dst >> 3] |= (uint8_t)(1u << (dst & 7));
+      }
+      cubalc_matrix_clear(m);
+      m->n = (uint16_t)n;
+      for (int i=0;i<n;i++){
+        int on = (tmp[i >> 3] >> (i & 7)) & 1;
+        if (on) cubalc_matrix_set(m, i, 1);
+      }
+    }
+    vm->ch.cubes[ix].atom.digit_lock = 0;
+    vm->ch.cubes[ix].atom.digit =
+      (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    vm->ch.cubes[ix].flowed = 1;
+    long ones = cubalc_matrix_popcount(m);
+    var_set_num(vm, "SET", ones);
+    var_set_num(vm, "LAST_N", ones); vm->last_n = ones;
+    var_set_num(vm, "DIGIT", vm->ch.cubes[ix].atom.digit);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"SETBIT")){
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"SETBIT cube i on"); return -1; }
@@ -6444,6 +6498,47 @@ static int parse_form(VM *vm, Lex *L){
     if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1; }
     long v = cubalc_matrix_get(&vm->ch.cubes[ix].atom.matrix, bit) ? 1 : 0;
     var_set_num(vm, "LAST_N", v); vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* digit-3 COP matrix scan: FINDONE/LASTONE cube · ANYBITS/ALLBITS cube */
+  if (kw(&L->cur,"FINDONE")||kw(&L->cur,"FIRSTBIT")||kw(&L->cur,"FIRSTONE")||
+      kw(&L->cur,"FFSBIT")||kw(&L->cur,"LASTONE")||kw(&L->cur,"LASTBIT")||
+      kw(&L->cur,"FLSBIT")||kw(&L->cur,"ANYBITS")||kw(&L->cur,"ALLBITS")||
+      kw(&L->cur,"NONEBITS")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FINDONE cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",-1); vm->last_n=-1; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long ones = cubalc_matrix_popcount(m);
+    long r = -1;
+    if (strcmp(op,"ANYBITS")==0){
+      r = ones > 0 ? 1 : 0;
+    } else if (strcmp(op,"ALLBITS")==0){
+      r = (ones >= n && n > 0) ? 1 : 0;
+    } else if (strcmp(op,"NONEBITS")==0){
+      r = ones == 0 ? 1 : 0;
+    } else if (strcmp(op,"LASTONE")==0 || strcmp(op,"LASTBIT")==0 ||
+               strcmp(op,"FLSBIT")==0){
+      r = -1;
+      for (int i=n-1;i>=0;i--){
+        if (cubalc_matrix_get(m, i)){ r = i; break; }
+      }
+    } else {
+      /* FINDONE / FIRSTBIT / FIRSTONE / FFSBIT */
+      r = -1;
+      for (int i=0;i<n;i++){
+        if (cubalc_matrix_get(m, i)){ r = i; break; }
+      }
+    }
+    var_set_num(vm, "SET", ones);
+    var_set_num(vm, "LAST_N", r); vm->last_n = r;
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
