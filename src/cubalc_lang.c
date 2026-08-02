@@ -4620,6 +4620,47 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack ALU unary: SINC · SDEC · SDBL · SHALF */
+  if (kw(&L->cur,"SINC")||kw(&L->cur,"INCSTK")||
+      kw(&L->cur,"STACKINC")||kw(&L->cur,"INCS")){
+    /* SINC — TOS += 1 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 1] += 1;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDEC")||kw(&L->cur,"DECSTK")||
+      kw(&L->cur,"STACKDEC")||kw(&L->cur,"DECS")){
+    /* SDEC — TOS -= 1 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 1] -= 1;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDBL")||kw(&L->cur,"SDOUBLE")||
+      kw(&L->cur,"STACKDBL")||kw(&L->cur,"DOUBLES")){
+    /* SDBL — TOS *= 2 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 1] *= 2;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHALF")||kw(&L->cur,"SHALVE")||
+      kw(&L->cur,"STACKHALF")||kw(&L->cur,"HALFS")){
+    /* SHALF — TOS /= 2 (toward zero) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 1] /= 2;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
   if (kw(&L->cur,"SSQR")||kw(&L->cur,"STACKSQR")||kw(&L->cur,"SSQUARE")||
       kw(&L->cur,"SISQRT")||kw(&L->cur,"SSQRT")||kw(&L->cur,"STACKISQRT")){

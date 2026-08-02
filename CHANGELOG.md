@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.83-universal — 2026-08-02
+
+### Direction
+- Algocube digit **7** → stack ALU unary: inc/dec, double, half.
+
+### Language
+- `SINC`/`INCSTK`/`STACKINC` — TOS += 1
+- `SDEC`/`DECSTK`/`STACKDEC` — TOS -= 1
+- `SDBL`/`SDOUBLE`/`STACKDBL` — TOS *= 2
+- `SHALF`/`SHALVE`/`STACKHALF` — TOS /= 2
+- Proof `106_sinc_sdbl.cubalc`
+
+### Prior
+See 1.12.82-universal.
+
 ## 1.12.82-universal — 2026-08-02
 
 ### Direction
