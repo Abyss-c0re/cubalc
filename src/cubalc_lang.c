@@ -4443,6 +4443,58 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack duals (n from TOS): SPICK · SROLL · SNDROP (dual of PICK/ROLL/NDROP imm) */
+  if (kw(&L->cur,"SPICK")||kw(&L->cur,"PICKS")||kw(&L->cur,"STACKPICKS")||
+      kw(&L->cur,"SPICKST")||kw(&L->cur,"PICKST")){
+    /* SPICK — pop n, copy n-th under remaining TOS onto stack */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (vm->sp <= 0 || n >= vm->sp){
+      var_set_num(vm,"OK",0); var_set_num(vm,"SP",vm->sp);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1;
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1 - (int)n];
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROLL")||kw(&L->cur,"ROLLS")||kw(&L->cur,"STACKROLLS")||
+      kw(&L->cur,"SROLLST")||kw(&L->cur,"ROLLST")){
+    /* SROLL — pop n, rotate top (n+1) items (dual of ROLL n) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (n == 0){
+      var_set_num(vm,"OK", vm->sp > 0 ? 1 : 0);
+      if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+      var_set_num(vm,"SP",vm->sp); bump(vm); return 1;
+    }
+    if (vm->sp <= n){ var_set_num(vm,"OK",0); var_set_num(vm,"SP",vm->sp); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1 - (int)n];
+    for (int i = (int)n; i > 0; i--)
+      vm->stack[vm->sp - 1 - i] = vm->stack[vm->sp - i];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNDROP")||kw(&L->cur,"DROPS")||kw(&L->cur,"STACKDROPS")||
+      kw(&L->cur,"SNDROPST")||kw(&L->cur,"NDROPS")){
+    /* SNDROP — pop n, drop that many remaining top items (dual of NDROP n) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (n > (long)vm->sp) n = (long)vm->sp;
+    vm->sp -= (int)n;
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 stack combinators: SFILL · DROPZ · DROPNZ */
   if (kw(&L->cur,"SFILL")||kw(&L->cur,"STACKFILL")||kw(&L->cur,"FILLSTK")||
       kw(&L->cur,"FILLTOP")){

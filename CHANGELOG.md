@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.99-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → stack combinator duals with n from TOS (complete PICK/ROLL/NDROP imm plane).
+
+### Language
+- `SPICK`/`PICKS` — pop n, copy n-th under remaining top
+- `SROLL`/`ROLLS` — pop n, rotate top (n+1) items
+- `SNDROP`/`DROPS` — pop n, drop n remaining top items
+- Proof `122_spick_sroll.cubalc`
+
+### Prior
+See 1.12.98-universal.
+
 ## 1.12.98-universal — 2026-08-03
 
 ### Direction
