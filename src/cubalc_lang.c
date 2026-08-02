@@ -4741,6 +4741,31 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack immediate ALU: SDIVN · SMODN (complete + − * / % by constant) */
+  if (kw(&L->cur,"SDIVN")||kw(&L->cur,"DIVN")||kw(&L->cur,"QUOTN")||
+      kw(&L->cur,"STACKDIVN")||kw(&L->cur,"SDIVIMM")){
+    /* SDIVN n — TOS /= n (n==0 → 0, soft) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n == 0) vm->stack[vm->sp - 1] = 0;
+    else vm->stack[vm->sp - 1] /= n;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODN")||kw(&L->cur,"MODN")||kw(&L->cur,"REMN")||
+      kw(&L->cur,"STACKMODN")||kw(&L->cur,"SMODIMM")){
+    /* SMODN n — TOS %= n (n==0 → 0, soft) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n == 0) vm->stack[vm->sp - 1] = 0;
+    else vm->stack[vm->sp - 1] %= n;
+    long v = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
   if (kw(&L->cur,"SSQR")||kw(&L->cur,"STACKSQR")||kw(&L->cur,"SSQUARE")||
       kw(&L->cur,"SISQRT")||kw(&L->cur,"SSQRT")||kw(&L->cur,"STACKISQRT")){

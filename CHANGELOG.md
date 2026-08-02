@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.86-universal — 2026-08-02
+
+### Direction
+- Algocube digit **7** → stack immediate ALU: div/mod by constant (complete +−×÷% family).
+
+### Language
+- `SDIVN`/`DIVN`/`QUOTN` n — TOS /= n (n==0 → 0, soft)
+- `SMODN`/`MODN`/`REMN` n — TOS %= n (n==0 → 0, soft)
+- Proof `109_sdivn_smodn.cubalc`
+
+### Prior
+See 1.12.85-universal.
+
 ## 1.12.85-universal — 2026-08-02
 
 ### Direction
