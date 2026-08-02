@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.89-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → stack immediate rotate + arithmetic shift (complete shift/rotate-by-constant after SSHLN/SSHRN).
+
+### Language
+- `SROLN`/`ROLN`/`SROTLN` n — rotate left TOS by n mod 64
+- `SRORN`/`RORN`/`SROTRN` n — rotate right TOS by n mod 64
+- `SSARN`/`SARN`/`SASHRN`/`ASHRN` n — arithmetic TOS ≫= n (sign-preserving)
+- Proof `112_sroln_ssarn.cubalc`
+
+### Prior
+See 1.12.88-universal.
+
 ## 1.12.88-universal — 2026-08-03
 
 ### Direction

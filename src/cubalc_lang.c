@@ -6062,6 +6062,48 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack immediate rotate + arithmetic shift (complete after SSHLN/SSHRN) */
+  if (kw(&L->cur,"SROLN")||kw(&L->cur,"ROLN")||kw(&L->cur,"STACKROLN")||
+      kw(&L->cur,"SROTLN")||kw(&L->cur,"SROLIMM")){
+    /* SROLN n — rotate left TOS by n mod 64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    long v = (uk == 0) ? (long)u : (long)((u << uk) | (u >> (64u - uk)));
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRORN")||kw(&L->cur,"RORN")||kw(&L->cur,"STACKRORN")||
+      kw(&L->cur,"SROTRN")||kw(&L->cur,"SRORIMM")){
+    /* SRORN n — rotate right TOS by n mod 64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    long v = (uk == 0) ? (long)u : (long)((u >> uk) | (u << (64u - uk)));
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSARN")||kw(&L->cur,"SARN")||kw(&L->cur,"SASHRN")||
+      kw(&L->cur,"STACKSARN")||kw(&L->cur,"SSARIMM")||kw(&L->cur,"ASHRN")){
+    /* SSARN n — arithmetic (sign-preserving) TOS >>= n; n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long v = vm->stack[vm->sp - 1] >> n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack compare + min/max: predicate 0/1 or ordered select */
   if (kw(&L->cur,"SMIN")||kw(&L->cur,"SMAX")||
       kw(&L->cur,"STACKMIN")||kw(&L->cur,"STACKMAX")||
