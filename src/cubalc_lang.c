@@ -1067,6 +1067,8 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"MAXIDX")==0 || strcmp(name,"ARGMAX")==0 ||
         strcmp(name,"RAND")==0 || strcmp(name,"RND")==0 ||
         strcmp(name,"IRAND")==0 ||
+        strcmp(name,"SEED")==0 || strcmp(name,"SETSEED")==0 ||
+        strcmp(name,"RNG")==0 || strcmp(name,"GETSEED")==0 ||
         /* digit-2 math: modular + number theory + integer bit/log */
         strcmp(name,"ADDMOD")==0 || strcmp(name,"SUBMOD")==0 ||
         strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
@@ -1318,6 +1320,17 @@ static long parse_prim(VM *vm, Lex *L){
           vm->rng = x;
           long m = a > 0 ? a : 10;
           return (long)(x % (uint32_t)m);
+        }
+        if (strcmp(name,"SEED")==0 || strcmp(name,"SETSEED")==0){
+          /* SEED(n) — set RNG state; 0 maps to 1; return the seed used */
+          uint32_t s = (uint32_t)a;
+          if (!s) s = 1;
+          vm->rng = s;
+          return (long)s;
+        }
+        if (strcmp(name,"RNG")==0 || strcmp(name,"GETSEED")==0){
+          /* current PRNG state (no advance); arg ignored */
+          return (long)vm->rng;
         }
         /* Modular arithmetic (digit-2 math plane) */
         if (strcmp(name,"IDIV")==0) return b ? (a / b) : 0;
@@ -4322,6 +4335,64 @@ static int parse_form(VM *vm, Lex *L){
     vm->last_n = v;
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
+  }
+  /* digit-6 SEED n — set PRNG state (0 → 1); GETSEED / RNG reports state */
+  if (kw(&L->cur,"SEED")||kw(&L->cur,"SETSEED")){
+    lex_next(L);
+    long s = parse_expr(vm,L);
+    uint32_t u = (uint32_t)s;
+    if (!u) u = 1;
+    vm->rng = u;
+    var_set_num(vm, "LAST_N", (long)u);
+    vm->last_n = (long)u;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"GETSEED")||kw(&L->cur,"SHOWSEED")){
+    /* statement form: report current rng without advancing */
+    lex_next(L);
+    long v = (long)vm->rng;
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* digit-6 stack RNG: SSEED SRAND SGETSEED */
+  if (kw(&L->cur,"SSEED")||kw(&L->cur,"STACKSEED")){
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long s = vm->stack[--vm->sp];
+    uint32_t u = (uint32_t)s;
+    if (!u) u = 1;
+    vm->rng = u;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",(long)u); vm->last_n=(long)u;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGETSEED")||kw(&L->cur,"STACKGETSEED")||kw(&L->cur,"SRNG")){
+    lex_next(L);
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = (long)vm->rng;
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRAND")||kw(&L->cur,"STACKRAND")||kw(&L->cur,"SRND")){
+    /* max → rand in [0, max); max<=0 treated as 10 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    if (m < 1) m = 10;
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long v = (long)(x % (uint32_t)m);
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* ENERGYSET cube n · ENERGYADD cube n — energy plane 0..100 (digit-6) */
   if (kw(&L->cur,"ENERGYSET")||kw(&L->cur,"SETENERGY")||
