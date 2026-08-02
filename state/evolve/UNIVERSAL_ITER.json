@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:25:26+0300",
-  "iter": 187,
-  "algocube_digit": 2,
-  "version": "1.12.102-universal",
-  "pass": 140,
+  "ts": "2026-08-03T01:31:09+0300",
+  "iter": 188,
+  "algocube_digit": 5,
+  "version": "1.12.103-universal",
+  "pass": 141,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SMODDIV SJACOBI SSPF JACOBI MODDIV SPF",
-  "proof": "programs/proof/125_smoddiv_jacobi.cubalc"
+  "delta": "SCOPYCELL SMOVECELL SREVCELL SROTCELL",
+  "proof": "programs/proof/126_scopycell_srot.cubalc"
 }

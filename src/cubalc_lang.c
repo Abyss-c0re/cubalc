@@ -7577,6 +7577,116 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",val); vm->last_n=val;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack duals of cell memory: SCOPYCELL · SMOVECELL · SREVCELL · SROTCELL */
+  if (kw(&L->cur,"SCOPYCELL")||kw(&L->cur,"SCELLCOPY")||kw(&L->cur,"STACKCOPYCELL")||
+      kw(&L->cur,"SCOPYC")||kw(&L->cur,"SCMOVE")){
+    /* src dst n (stack) — overlap-safe copy n cells src.. → dst.. */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long dst = vm->stack[--vm->sp];
+    long src = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (src < 0) src = 0;
+    if (dst < 0) dst = 0;
+    if (src >= CUBALC_CELL_N || dst >= CUBALC_CELL_N || n == 0){
+      var_set_num(vm,"OK", n==0 ? 1 : 0);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp);
+      bump(vm); return 1;
+    }
+    if (src + n > CUBALC_CELL_N) n = CUBALC_CELL_N - src;
+    if (dst + n > CUBALC_CELL_N) n = CUBALC_CELL_N - dst;
+    if (n > 0){
+      long tmp[CUBALC_CELL_N];
+      for (long i=0;i<n;i++) tmp[i] = vm->cells[(int)(src+i)];
+      for (long i=0;i<n;i++) vm->cells[(int)(dst+i)] = tmp[i];
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMOVECELL")||kw(&L->cur,"SCELLMOVE")||kw(&L->cur,"STACKMOVECELL")||
+      kw(&L->cur,"SMOVEC")){
+    /* src dst n (stack) — copy then zero non-overlapping source */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long dst = vm->stack[--vm->sp];
+    long src = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (src < 0) src = 0;
+    if (dst < 0) dst = 0;
+    if (src >= CUBALC_CELL_N || dst >= CUBALC_CELL_N || n == 0){
+      var_set_num(vm,"OK", n==0 ? 1 : 0);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp);
+      bump(vm); return 1;
+    }
+    if (src + n > CUBALC_CELL_N) n = CUBALC_CELL_N - src;
+    if (dst + n > CUBALC_CELL_N) n = CUBALC_CELL_N - dst;
+    if (n > 0){
+      long tmp[CUBALC_CELL_N];
+      for (long i=0;i<n;i++) tmp[i] = vm->cells[(int)(src+i)];
+      for (long i=0;i<n;i++) vm->cells[(int)(dst+i)] = tmp[i];
+      for (long i=0;i<n;i++){
+        long si = src + i;
+        if (si < dst || si >= dst + n)
+          vm->cells[(int)si] = 0;
+      }
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SREVCELL")||kw(&L->cur,"SCELLREV")||kw(&L->cur,"STACKREVCELL")||
+      kw(&L->cur,"SREVC")){
+    /* lo hi (stack) — reverse cell[lo..hi] in place */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long i = lo, j = hi;
+    while (i < j){
+      long t = vm->cells[(int)i];
+      vm->cells[(int)i] = vm->cells[(int)j];
+      vm->cells[(int)j] = t;
+      i++; j--;
+    }
+    long cnt = hi - lo + 1;
+    var_set_num(vm,"LAST_N",cnt); vm->last_n=cnt;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTCELL")||kw(&L->cur,"SCELLROT")||kw(&L->cur,"STACKROTCELL")||
+      kw(&L->cur,"SROTC")){
+    /* lo hi k (stack) — rotate cell[lo..hi] left by k (k<0 = right) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long n = hi - lo + 1;
+    if (n > 0){
+      long kk = (n == 0) ? 0 : (k % n);
+      if (kk < 0) kk += n;
+      if (kk){
+        long tmp[CUBALC_CELL_N];
+        for (long i=0;i<n;i++) tmp[i] = vm->cells[(int)(lo+i)];
+        for (long i=0;i<n;i++)
+          vm->cells[(int)(lo+i)] = tmp[(i + kk) % n];
+      }
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 data/memory plane: block copy/move + search + reverse */
   if (kw(&L->cur,"COPYCELL")||kw(&L->cur,"CELLCOPY")||kw(&L->cur,"CMOVE")){
     /* COPYCELL src dst n — copy n cells src.. → dst.. (overlap-safe) */

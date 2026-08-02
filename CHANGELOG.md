@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.103-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → cell-memory stack duals of COPY/MOVE/REV/ROT.
+
+### Language
+- `SCOPYCELL`/`SCELLCOPY` — stack src dst n → copy range
+- `SMOVECELL`/`SCELLMOVE` — stack src dst n → move (clear source)
+- `SREVCELL`/`SCELLREV` — stack lo hi → reverse range
+- `SROTCELL`/`SCELLROT` — stack lo hi k → rotate range
+- Proof `126_scopycell_srot.cubalc`
+
+### Prior
+See 1.12.102-universal.
+
 ## 1.12.102-universal — 2026-08-03
 
 ### Direction
