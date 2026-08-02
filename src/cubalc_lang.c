@@ -154,7 +154,7 @@ static void lex_next(Lex *L) {
       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
     }
     /* 2DUP / 2DROP / 2SWAP / 2OVER / 2ROT / 2NIP / 2TUCK — Forth double ops (digit-8)
-     * 3DUP / 3DROP / 3SWAP — triple stack depth (digit-8) */
+     * 3DUP / 3DROP / 3SWAP / 3OVER — triple stack depth (digit-8/3) */
     if (k==1 && (b[0]=='2' || b[0]=='3') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
@@ -170,7 +170,7 @@ static void lex_next(Lex *L) {
           ok = 1;
       } else {
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-            strcasecmp(tail,"SWAP")==0)
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0)
           ok = 1;
       }
       if (ok){
@@ -4499,7 +4499,33 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",a); vm->last_n=a;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
+    if (kw(&L->cur,"3OVER")||kw(&L->cur,"TOVER")||kw(&L->cur,"OVER3")||
+      kw(&L->cur,"TRIPLEOVER")||kw(&L->cur,"STACK3OVER")){
+    /* a b c d e f -> a b c d e f a b c */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 3 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long x = vm->stack[vm->sp-6], y = vm->stack[vm->sp-5], z = vm->stack[vm->sp-4];
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    vm->stack[vm->sp++] = z;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",z); vm->last_n=z;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
+      kw(&L->cur,"STACKUNDER")){
+    /* a b -> a a b */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long under = vm->stack[vm->sp-2];
+    long top = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-1] = under;
+    vm->stack[vm->sp++] = top;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",top); vm->last_n=top;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     /* DEPTH — push current stack depth */
     lex_next(L);
     if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }

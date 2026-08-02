@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.81-universal — 2026-08-02
+
+### Direction
+- Algocube digit **3** → stack structure: 3OVER + UNDER (complete triple plane after remote 1.12.80 2TUCK).
+
+### Language
+- `3OVER`/`TOVER`/`OVER3` — copy under-triple onto stack
+- `UNDER`/`SUNDER`/`DUPUNDER` — a b → a a b
+- Lexer: `3OVER` as ident
+- Proof `104_3over_under.cubalc`
+
+### Prior
+See 1.12.80-universal.
+
 ## 1.12.80-universal — 2026-08-02
 
 ### Direction

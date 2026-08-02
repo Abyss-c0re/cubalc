@@ -83,7 +83,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             100_coprime_ceilpow2 \
             101_maxrun_zruns \
             102_skeep \
-            103_3dup_2tuck; do
+            103_3dup_2tuck \
+            104_3over_under; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
