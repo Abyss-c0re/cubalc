@@ -1080,6 +1080,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ODD")==0 || strcmp(name,"EVEN")==0 ||
         strcmp(name,"CTZ")==0 || strcmp(name,"CLZ")==0 ||
         strcmp(name,"ISPOW2")==0 || strcmp(name,"POW2")==0 ||
+        strcmp(name,"POW10")==0 || strcmp(name,"TENPOW")==0 ||
         strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
         strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0 ||
         /* digit-0 foundation: bitfield extract/deposit + ceil div */
@@ -1468,6 +1469,13 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"POW2")==0){
           if (a < 0 || a > 62) return 0;
           return 1L << a;
+        }
+        if (strcmp(name,"POW10")==0 || strcmp(name,"TENPOW")==0){
+          /* 10^a for a in 0..18; out of range → 0 */
+          if (a < 0 || a > 18) return 0;
+          long r = 1;
+          for (long i = 0; i < a; i++) r *= 10;
+          return r;
         }
         if (strcmp(name,"NDIGITS")==0){
           long x = a < 0 ? -a : a;
@@ -3284,6 +3292,7 @@ static int parse_form(VM *vm, Lex *L){
       kw(&L->cur,"SISPRIME")||kw(&L->cur,"SPRIME")||kw(&L->cur,"SPRIMEP")||
       kw(&L->cur,"SISPOW2")||kw(&L->cur,"SISPOWER2")||kw(&L->cur,"SPOW2P")||
       kw(&L->cur,"SPOW2")||kw(&L->cur,"STACKPOW2")||
+      kw(&L->cur,"SPOW10")||kw(&L->cur,"STENPOW")||kw(&L->cur,"STACKPOW10")||
       kw(&L->cur,"SNDIGITS")||kw(&L->cur,"SNDIG")||kw(&L->cur,"STACKNDIGITS")||
       kw(&L->cur,"SDIGSUM")||kw(&L->cur,"SDIGITSUM")||kw(&L->cur,"STACKDIGSUM")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
@@ -3348,6 +3357,12 @@ static int parse_form(VM *vm, Lex *L){
     } else if (strcmp(op,"SPOW2")==0 || strcmp(op,"STACKPOW2")==0){
       if (a < 0 || a > 62) r = 0;
       else r = 1L << a;
+    } else if (strcmp(op,"SPOW10")==0 || strcmp(op,"STENPOW")==0 || strcmp(op,"STACKPOW10")==0){
+      if (a < 0 || a > 18) r = 0;
+      else {
+        r = 1;
+        for (long i = 0; i < a; i++) r *= 10;
+      }
     } else if (strcmp(op,"SNDIGITS")==0 || strcmp(op,"SNDIG")==0 || strcmp(op,"STACKNDIGITS")==0){
       long x = a < 0 ? -a : a;
       if (x == 0) r = 1;
