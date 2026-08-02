@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.106-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → cell-fold stack duals: scan/diff/shift/clamp + DIFFCELL.
+
+### Language
+- `DIFFCELL`/`CELLDIFF` — adjacent differences (inverse of SCANCELL)
+- `SSCANCELL`/`SPREFIXSUM` — stack lo hi → prefix sum
+- `SDIFFCELL`/`SCELLDIFF` — stack lo hi → adjacent diffs
+- `SSHIFTCELL`/`SCELLSHIFT` — stack lo hi k → zero-fill shift
+- `SCLAMPCELL`/`SCELLCLAMP` — stack lo hi mn mx → clamp range
+- Proof `129_sscan_sdiff.cubalc`
+
+### Prior
+See 1.12.105-universal.
+
 ## 1.12.105-universal — 2026-08-03
 
 ### Direction

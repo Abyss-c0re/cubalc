@@ -8319,6 +8319,120 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  if (kw(&L->cur,"DIFFCELL")||kw(&L->cur,"CELLDIFF")||kw(&L->cur,"DELTACELL")||
+      kw(&L->cur,"ADJDIFF")){
+    /* DIFFCELL lo hi — in-place adjacent differences (inverse of SCANCELL);
+     * cells[lo] kept; cells[i] = cells[i]-prev for i>lo */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long prev = vm->cells[(int)lo];
+    for (long i = lo + 1; i <= hi; i++){
+      long v = vm->cells[(int)i];
+      vm->cells[(int)i] = v - prev;
+      prev = v;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N", n > 0 ? vm->cells[(int)hi] : 0); vm->last_n = n > 0 ? vm->cells[(int)hi] : 0;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 cell-fold stack duals: SSCANCELL · SDIFFCELL · SSHIFTCELL · SCLAMPCELL */
+  if (kw(&L->cur,"SSCANCELL")||kw(&L->cur,"SPREFIXSUM")||kw(&L->cur,"SCUMSUM")||
+      kw(&L->cur,"STACKSCANCELL")||kw(&L->cur,"SSCANC")){
+    /* lo hi (stack) — in-place inclusive prefix sum */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long run = 0;
+    for (long i=lo;i<=hi;i++){
+      run += vm->cells[(int)i];
+      vm->cells[(int)i] = run;
+    }
+    var_set_num(vm,"LAST_N",run); vm->last_n=run;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIFFCELL")||kw(&L->cur,"SCELLDIFF")||kw(&L->cur,"SDELTACELL")||
+      kw(&L->cur,"STACKDIFFCELL")||kw(&L->cur,"SDIFFC")){
+    /* lo hi (stack) — adjacent differences (inverse of SSCANCELL) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long prev = vm->cells[(int)lo];
+    for (long i = lo + 1; i <= hi; i++){
+      long v = vm->cells[(int)i];
+      vm->cells[(int)i] = v - prev;
+      prev = v;
+    }
+    long last = (hi >= lo) ? vm->cells[(int)hi] : 0;
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHIFTCELL")||kw(&L->cur,"SCELLSHIFT")||kw(&L->cur,"STACKSHIFTCELL")||
+      kw(&L->cur,"SSHIFTC")){
+    /* lo hi k (stack) — shift left by k (k>0) or right by |k|; zero-fill */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long n = hi - lo + 1;
+    if (n > 0 && k != 0){
+      long tmp[CUBALC_CELL_N];
+      for (long i=0;i<n;i++) tmp[i] = 0;
+      if (k > 0){
+        if (k > n) k = n;
+        for (long i=0;i<n-k;i++) tmp[i] = vm->cells[(int)(lo+i+k)];
+      } else {
+        long kk = -k;
+        if (kk > n) kk = n;
+        for (long i=kk;i<n;i++) tmp[i] = vm->cells[(int)(lo+i-kk)];
+      }
+      for (long i=0;i<n;i++) vm->cells[(int)(lo+i)] = tmp[i];
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLAMPCELL")||kw(&L->cur,"SCELLCLAMP")||kw(&L->cur,"SBOUNDCELL")||
+      kw(&L->cur,"STACKCLAMPCELL")||kw(&L->cur,"SCLAMPC")){
+    /* lo hi mn mx (stack) — clamp each cell into [mn,mx] */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mx = vm->stack[--vm->sp];
+    long mn = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (mx < mn){ long t=mn; mn=mx; mx=t; }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long v = vm->cells[(int)i];
+      if (v < mn) v = mn;
+      if (v > mx) v = mx;
+      vm->cells[(int)i] = v;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */
   if (kw(&L->cur,"RAND")||kw(&L->cur,"RND")||kw(&L->cur,"IRAND")){
     lex_next(L);

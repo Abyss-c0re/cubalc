@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:44:01+0300",
-  "iter": 190,
-  "algocube_digit": 2,
-  "version": "1.12.105-universal",
-  "pass": 143,
+  "ts": "2026-08-03T01:48:53+0300",
+  "iter": 191,
+  "algocube_digit": 9,
+  "version": "1.12.106-universal",
+  "pass": 144,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SVAL SOMEGA SOMEGA0 VALUATION OMEGA OMEGA0",
-  "proof": "programs/proof/128_sval_somega.cubalc"
+  "delta": "DIFFCELL SSCANCELL SDIFFCELL SSHIFTCELL SCLAMPCELL",
+  "proof": "programs/proof/129_sscan_sdiff.cubalc"
 }
