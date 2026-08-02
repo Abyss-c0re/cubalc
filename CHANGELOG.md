@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.84-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → stack immediate ALU: add/sub/mul by constant.
+
+### Language
+- `SADDN`/`PLUSN`/`ADDN` n — TOS += n
+- `SSUBN`/`MINUSN`/`SUBN` n — TOS -= n
+- `SMULN`/`TIMESN`/`MULN` n — TOS *= n
+- Proof `107_saddn_smuln.cubalc`
+
+### Prior
+See 1.12.83-universal.
+
 ## 1.12.83-universal — 2026-08-02
 
 ### Direction
