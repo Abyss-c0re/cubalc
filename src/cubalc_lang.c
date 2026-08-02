@@ -1089,6 +1089,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BITREV")==0 || strcmp(name,"REVBITS")==0 ||
         strcmp(name,"PARITY")==0 ||
         strcmp(name,"NIBBLE")==0 || strcmp(name,"NIB")==0 ||
+        strcmp(name,"DIST")==0 || strcmp(name,"ABSDIFF")==0 ||
         /* digit-2 math ext: combinatorics + square + floor div */
         strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
         strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
@@ -1526,6 +1527,10 @@ static long parse_prim(VM *vm, Lex *L){
           if (i < 0) i = 0;
           if (i > 15) i = 15;
           return (long)(((unsigned long)a >> (unsigned)(i * 4)) & 0xFul);
+        }
+        if (strcmp(name,"DIST")==0 || strcmp(name,"ABSDIFF")==0){
+          long d = a - b;
+          return d < 0 ? -d : d;
         }
         if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
           /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
@@ -3457,6 +3462,46 @@ static int parse_form(VM *vm, Lex *L){
     if (i < 0) i = 0;
     if (i > 15) i = 15;
     long r = (long)(((unsigned long)a >> (unsigned)(i * 4)) & 0xFul);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 stack science/math duals: SAVG SPCT SHYP SHAM SDIST */
+  if (kw(&L->cur,"SAVG")||kw(&L->cur,"STACKAVG")||
+      kw(&L->cur,"SPCT")||kw(&L->cur,"STACKPCT")||kw(&L->cur,"SPERCENT")||
+      kw(&L->cur,"SHYP")||kw(&L->cur,"STACKHYP")||kw(&L->cur,"SHYPOT")||
+      kw(&L->cur,"SHAM")||kw(&L->cur,"SHAMMING")||kw(&L->cur,"STACKHAMMING")||
+      kw(&L->cur,"SDIST")||kw(&L->cur,"SABSDIFF")||kw(&L->cur,"STACKDIST")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SAVG")==0 || strcmp(op,"STACKAVG")==0)
+      r = (a + b) / 2;
+    else if (strcmp(op,"SPCT")==0 || strcmp(op,"STACKPCT")==0 || strcmp(op,"SPERCENT")==0)
+      r = b ? (a * 100 / b) : 0;
+    else if (strcmp(op,"SHYP")==0 || strcmp(op,"STACKHYP")==0 || strcmp(op,"SHYPOT")==0){
+      long s = a * a + b * b;
+      if (s < 0) r = 0;
+      else {
+        long t = 0;
+        while ((t + 1) * (t + 1) <= s) t++;
+        r = t;
+      }
+    } else if (strcmp(op,"SHAM")==0 || strcmp(op,"SHAMMING")==0 ||
+               strcmp(op,"STACKHAMMING")==0){
+      unsigned long u = (unsigned long)(a ^ b);
+      int n = 0;
+      while (u){ n += (int)(u & 1u); u >>= 1; }
+      r = (long)n;
+    } else {
+      /* SDIST / SABSDIFF / STACKDIST — |a-b| */
+      long d = a - b;
+      r = d < 0 ? -d : d;
+    }
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;

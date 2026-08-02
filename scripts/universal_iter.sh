@@ -57,7 +57,7 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             28_cell_arith_sort 29_cell_argmin_rot 30_stack_cell_bridge \
             31_cell_logic 32_bitfield_divceil 33_math_binom_perm 34_stack_alu \
             35_stack_bitops 36_stack_compare 37_stack_select_clamp 38_stack_fold \
-            39_stack_bitmetrics 40_stack_bitfield 41_stack_numthy 42_stack_double 43_stack_modarith 44_stack_combinators 45_stack_numpred 46_stack_combin 47_stack_pack 48_word_path; do
+            39_stack_bitmetrics 40_stack_bitfield 41_stack_numthy 42_stack_double 43_stack_modarith 44_stack_combinators 45_stack_numpred 46_stack_combin 47_stack_pack 48_word_path 49_stack_science; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
