@@ -1159,6 +1159,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
         strcmp(name,"FIB")==0 || strcmp(name,"FIBONACCI")==0 ||
         strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0 ||
+        /* digit-2 roots / primes / perfect powers */
+        strcmp(name,"IROOT")==0 || strcmp(name,"NTHROOT")==0 ||
+        strcmp(name,"ISSQUARE")==0 || strcmp(name,"ISQUARE")==0 ||
+        strcmp(name,"ISSQR")==0 ||
+        strcmp(name,"ISCUBE")==0 || strcmp(name,"ISCUB")==0 ||
+        strcmp(name,"NEXTPRIME")==0 || strcmp(name,"NXTPRIME")==0 ||
+        strcmp(name,"PREVPRIME")==0 || strcmp(name,"PRVPRIME")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -1865,6 +1872,126 @@ static long parse_prim(VM *vm, Lex *L){
             if ((a % i) == 0 || (a % (i + 2)) == 0) return 0;
           }
           return 1;
+        }
+        if (strcmp(name,"IROOT")==0 || strcmp(name,"NTHROOT")==0){
+          /* IROOT(a,k) — largest x s.t. x^k <= a (k>=1); a<0 only if k odd */
+          long k = b;
+          if (k < 1) return 0;
+          if (k == 1) return a;
+          int neg = 0;
+          long n = a;
+          if (n < 0){
+            if ((k & 1L) == 0) return 0; /* even root of negative */
+            neg = 1;
+            n = -n;
+          }
+          if (n == 0 || n == 1) return neg ? -n : n;
+          /* binary search in [1, n] */
+          long lo = 1, hi = n, ans = 1;
+          if (k == 2){
+            /* faster isqrt: hi starts at min(n, 2^31-ish) */
+            hi = n;
+            if (hi > 3037000499L) hi = 3037000499L; /* sqrt(LLONG_MAX)~ */
+          } else {
+            /* bound hi so hi^k won't uselessly exceed */
+            hi = n;
+            if (hi > 1000000L && k >= 3) hi = 1000000L;
+            if (k >= 4 && hi > 10000L) hi = 10000L;
+            if (k >= 10 && hi > 100L) hi = 100L;
+            if (k >= 40 && hi > 10L) hi = 10L;
+            if (k >= 64) hi = 2;
+          }
+          while (lo <= hi){
+            long mid = lo + (hi - lo) / 2;
+            /* compute mid^k with overflow guard */
+            __int128 p = 1;
+            int ov = 0;
+            for (long i = 0; i < k; i++){
+              p *= (__int128)mid;
+              if (p > (__int128)n){ ov = 1; break; }
+            }
+            if (!ov && p <= (__int128)n){
+              ans = mid;
+              lo = mid + 1;
+            } else {
+              hi = mid - 1;
+            }
+          }
+          return neg ? -ans : ans;
+        }
+        if (strcmp(name,"ISSQUARE")==0 || strcmp(name,"ISQUARE")==0 ||
+            strcmp(name,"ISSQR")==0){
+          /* ISSQUARE(a) → 1 if a is perfect square (incl 0) */
+          if (a < 0) return 0;
+          if (a <= 1) return 1;
+          long r = 0;
+          {
+            long lo = 1, hi = a;
+            if (hi > 3037000499L) hi = 3037000499L;
+            while (lo <= hi){
+              long mid = lo + (hi - lo) / 2;
+              __int128 p = (__int128)mid * (__int128)mid;
+              if (p == (__int128)a){ r = 1; break; }
+              if (p < (__int128)a) lo = mid + 1;
+              else hi = mid - 1;
+            }
+          }
+          return r;
+        }
+        if (strcmp(name,"ISCUBE")==0 || strcmp(name,"ISCUB")==0){
+          if (a == 0 || a == 1 || a == -1) return 1;
+          int neg = a < 0;
+          long n = neg ? -a : a;
+          long lo = 1, hi = n;
+          if (hi > 2097151L) hi = 2097151L; /* cbrt(2^63) ~ */
+          while (lo <= hi){
+            long mid = lo + (hi - lo) / 2;
+            __int128 p = (__int128)mid * mid * mid;
+            if (p == (__int128)n) return 1;
+            if (p < (__int128)n) lo = mid + 1;
+            else hi = mid - 1;
+          }
+          return 0;
+        }
+        if (strcmp(name,"NEXTPRIME")==0 || strcmp(name,"NXTPRIME")==0){
+          /* NEXTPRIME(n) — smallest prime strictly > n; guard search */
+          long x = a + 1;
+          if (x <= 2) return 2;
+          if ((x & 1L) == 0) x++;
+          for (long guard = 0; guard < 200000; guard++, x += 2){
+            long t = x;
+            int okp = 1;
+            if (t <= 3) return t;
+            if ((t % 3) == 0){ okp = 0; }
+            else {
+              for (long i = 5; i * i <= t; i += 6){
+                if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+              }
+            }
+            if (okp) return t;
+          }
+          return 0;
+        }
+        if (strcmp(name,"PREVPRIME")==0 || strcmp(name,"PRVPRIME")==0){
+          /* PREVPRIME(n) — largest prime strictly < n; 0 if none */
+          if (a <= 2) return 0;
+          if (a == 3) return 2;
+          long x = a - 1;
+          if ((x & 1L) == 0) x--;
+          for (long guard = 0; guard < 200000 && x >= 2; guard++, x -= 2){
+            long t = x;
+            if (t == 2) return 2;
+            if (t == 3) return 3;
+            int okp = 1;
+            if ((t % 3) == 0) okp = 0;
+            else {
+              for (long i = 5; i * i <= t; i += 6){
+                if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+              }
+            }
+            if (okp) return t;
+          }
+          return 0;
         }
         /* digit-2/6 extended math: log2 / log10 / odd-even / bit counts / pow2 */
         if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
@@ -3855,6 +3982,138 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 stack roots/primes: SIROOT SISSQUARE SISCUBE SNEXTPRIME SPREVPRIME */
+  if (kw(&L->cur,"SIROOT")||kw(&L->cur,"SNTHROOT")||kw(&L->cur,"STACKIROOT")){
+    /* a k → IROOT(a,k) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    /* reuse expression path via local recompute */
+    long r = 0;
+    {
+      if (k < 1) r = 0;
+      else if (k == 1) r = a;
+      else {
+        int neg = 0;
+        long n = a;
+        if (n < 0){
+          if ((k & 1L) == 0) r = 0;
+          else { neg = 1; n = -n; }
+        }
+        if (n == 0 || n == 1) r = neg ? -n : n;
+        else if (!(n < 0 && (k & 1L) == 0)){
+          long lo = 1, hi = n, ans = 1;
+          if (k == 2){ if (hi > 3037000499L) hi = 3037000499L; }
+          else {
+            if (hi > 1000000L && k >= 3) hi = 1000000L;
+            if (k >= 4 && hi > 10000L) hi = 10000L;
+            if (k >= 10 && hi > 100L) hi = 100L;
+            if (k >= 40 && hi > 10L) hi = 10L;
+            if (k >= 64) hi = 2;
+          }
+          while (lo <= hi){
+            long mid = lo + (hi - lo) / 2;
+            __int128 p = 1;
+            int ov = 0;
+            for (long i = 0; i < k; i++){
+              p *= (__int128)mid;
+              if (p > (__int128)n){ ov = 1; break; }
+            }
+            if (!ov && p <= (__int128)n){ ans = mid; lo = mid + 1; }
+            else hi = mid - 1;
+          }
+          r = neg ? -ans : ans;
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SISSQUARE")||kw(&L->cur,"SISSQR")||kw(&L->cur,"STACKISSQUARE")||
+      kw(&L->cur,"SISCUBE")||kw(&L->cur,"SISCUB")||kw(&L->cur,"STACKISCUBE")||
+      kw(&L->cur,"SNEXTPRIME")||kw(&L->cur,"SNXTPRIME")||kw(&L->cur,"STACKNEXTPRIME")||
+      kw(&L->cur,"SPREVPRIME")||kw(&L->cur,"SPRVPRIME")||kw(&L->cur,"STACKPREVPRIME")){
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SISSQUARE")==0 || strcmp(op,"SISSQR")==0 || strcmp(op,"STACKISSQUARE")==0){
+      if (a < 0) r = 0;
+      else if (a <= 1) r = 1;
+      else {
+        long lo = 1, hi = a;
+        if (hi > 3037000499L) hi = 3037000499L;
+        while (lo <= hi){
+          long mid = lo + (hi - lo) / 2;
+          __int128 p = (__int128)mid * mid;
+          if (p == (__int128)a){ r = 1; break; }
+          if (p < (__int128)a) lo = mid + 1;
+          else hi = mid - 1;
+        }
+      }
+    } else if (strcmp(op,"SISCUBE")==0 || strcmp(op,"SISCUB")==0 || strcmp(op,"STACKISCUBE")==0){
+      if (a == 0 || a == 1 || a == -1) r = 1;
+      else {
+        int neg = a < 0;
+        long n = neg ? -a : a;
+        long lo = 1, hi = n;
+        if (hi > 2097151L) hi = 2097151L;
+        while (lo <= hi){
+          long mid = lo + (hi - lo) / 2;
+          __int128 p = (__int128)mid * mid * mid;
+          if (p == (__int128)n){ r = 1; break; }
+          if (p < (__int128)n) lo = mid + 1;
+          else hi = mid - 1;
+        }
+      }
+    } else if (strcmp(op,"SNEXTPRIME")==0 || strcmp(op,"SNXTPRIME")==0 ||
+               strcmp(op,"STACKNEXTPRIME")==0){
+      long x = a + 1;
+      if (x <= 2) r = 2;
+      else {
+        if ((x & 1L) == 0) x++;
+        r = 0;
+        for (long guard = 0; guard < 200000; guard++, x += 2){
+          long t = x; int okp = 1;
+          if (t <= 3){ r = t; break; }
+          if ((t % 3) == 0) okp = 0;
+          else {
+            for (long i = 5; i * i <= t; i += 6){
+              if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+            }
+          }
+          if (okp){ r = t; break; }
+        }
+      }
+    } else {
+      /* SPREVPRIME */
+      if (a <= 2) r = 0;
+      else if (a == 3) r = 2;
+      else {
+        long x = a - 1;
+        if ((x & 1L) == 0) x--;
+        r = 0;
+        for (long guard = 0; guard < 200000 && x >= 2; guard++, x -= 2){
+          long t = x; int okp = 1;
+          if (t == 2 || t == 3){ r = t; break; }
+          if ((t % 3) == 0) okp = 0;
+          else {
+            for (long i = 5; i * i <= t; i += 6){
+              if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+            }
+          }
+          if (okp){ r = t; break; }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2/6 stack unary math: SFACT SILOG2 SILOG10 SODD SEVEN SFIB ... */
   if (kw(&L->cur,"SFACT")||kw(&L->cur,"STACKFACT")||kw(&L->cur,"SFACTORIAL")||
