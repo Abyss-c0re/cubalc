@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.4-universal — 2026-08-02
+
+### Direction
+- Algocube digit **5** → COP matrix algebra (cube State Matrix ops).
+
+### Language
+- `CLEARBITS` · `FILLBITS` · `NOTBITS` · `COPYBITS` · `ANDBITS` · `ORBITS` · `XORBITS` · `NANDBITS`
+- Cube queries: `PORTS`/`NPORTS` · `PLUGGED` · `BITS`/`WIDTH`
+- Proof `17_cop_matrix_ops.cubalc`
+
+### Prior
+See 1.11.3-universal.
+
 ## 1.11.3-universal — 2026-08-02
 
 ### Direction

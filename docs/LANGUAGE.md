@@ -90,6 +90,8 @@ Rotate/pack/select: `ROTL`/`ROL` `ROTR`/`ROR` `PACK16` `HI16` `LO16` `ISEL`/`SEL
 
 Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTIL` · `BREAK`/`BREAK IF` · `CONTINUE`/`CONTINUE IF`
 
+COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` · `PORTS` `PLUGGED` `BITS`
+
 I/O codecs (universal string↔int): `SYS HEX`/`FROMHEX` · `SYS TOHEX` · `SYS ORD` · `SYS CHR` · `SYS MID`/`SUBSTR`/`SLICE`
 
 Demos (optional): `programs/science/` · `make science`  
