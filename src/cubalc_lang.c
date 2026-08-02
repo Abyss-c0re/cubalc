@@ -2940,6 +2940,82 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
+  if (kw(&L->cur,"SSQR")||kw(&L->cur,"STACKSQR")||kw(&L->cur,"SSQUARE")||
+      kw(&L->cur,"SISQRT")||kw(&L->cur,"SSQRT")||kw(&L->cur,"STACKISQRT")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SSQR")==0 || strcmp(op,"STACKSQR")==0 || strcmp(op,"SSQUARE")==0)
+      r = a * a;
+    else {
+      /* SISQRT / SSQRT / STACKISQRT — integer square root; neg → 0 */
+      if (a < 0) r = 0;
+      else {
+        long t = 0;
+        while ((t + 1) * (t + 1) <= a) t++;
+        r = t;
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOW")||kw(&L->cur,"STACKPOW")||kw(&L->cur,"SPOWER")||
+      kw(&L->cur,"SGCD")||kw(&L->cur,"STACKGCD")||
+      kw(&L->cur,"SLCM")||kw(&L->cur,"STACKLCM")||
+      kw(&L->cur,"SDIVCEIL")||kw(&L->cur,"SCEILDIV")||kw(&L->cur,"STACKDIVCEIL")||
+      kw(&L->cur,"SDIVFLOOR")||kw(&L->cur,"SFLOORDIV")||kw(&L->cur,"STACKDIVFLOOR")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SPOW")==0 || strcmp(op,"STACKPOW")==0 || strcmp(op,"SPOWER")==0){
+      long e = b;
+      if (e < 0) r = 0;
+      else {
+        r = 1;
+        while (e-- > 0) r *= a;
+      }
+    } else if (strcmp(op,"SGCD")==0 || strcmp(op,"STACKGCD")==0){
+      long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+      while (y){ long t = x % y; x = y; y = t; }
+      r = x;
+    } else if (strcmp(op,"SLCM")==0 || strcmp(op,"STACKLCM")==0){
+      long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+      if (!x || !y) r = 0;
+      else {
+        long g = x, h = y;
+        while (h){ long t = g % h; g = h; h = t; }
+        r = (x / g) * y;
+      }
+    } else if (strcmp(op,"SDIVCEIL")==0 || strcmp(op,"SCEILDIV")==0 ||
+               strcmp(op,"STACKDIVCEIL")==0){
+      if (b == 0) r = 0;
+      else if (a >= 0 && b > 0) r = (a + b - 1) / b;
+      else if (a <= 0 && b < 0){
+        long aa = -a, bb = -b;
+        r = (aa + bb - 1) / bb;
+      } else r = a / b;
+    } else {
+      /* SDIVFLOOR / SFLOORDIV / STACKDIVFLOOR */
+      if (b == 0) r = 0;
+      else {
+        long q = a / b, rem = a % b;
+        if (rem != 0 && ((a < 0) != (b < 0))) q--;
+        r = q;
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack bitwise ALU: SAND SOR SXOR SNOT SSHL SSHR */
   if (kw(&L->cur,"SAND")||kw(&L->cur,"STACKAND")||kw(&L->cur,"BANDST")||
       kw(&L->cur,"SOR")||kw(&L->cur,"STACKOR")||kw(&L->cur,"BORST")||
