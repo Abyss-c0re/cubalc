@@ -2521,6 +2521,93 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* digit-4 data plane: Forth-style stack combinators + FILLCELL */
+  if (kw(&L->cur,"DUP")||kw(&L->cur,"STACKDUP")){
+    lex_next(L);
+    if (vm->sp <= 0){
+      var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1];
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DROP")||kw(&L->cur,"STACKDROP")){
+    lex_next(L);
+    if (vm->sp <= 0){
+      var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    long v = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SWAP")||kw(&L->cur,"STACKSWAP")||kw(&L->cur,"SWAPTOP")){
+    /* SWAP only if not already consumed as SWAPCELL (checked earlier) */
+    lex_next(L);
+    if (vm->sp < 2){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    long t = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-1] = vm->stack[vm->sp-2];
+    vm->stack[vm->sp-2] = t;
+    var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1];
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"OVER")||kw(&L->cur,"STACKOVER")){
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 2];
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ROT")||kw(&L->cur,"ROTSTACK")||kw(&L->cur,"STACKROT")){
+    /* a b c → b c a  (rotate top 3 left) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = b;
+    vm->stack[vm->sp-2] = c;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PICK")||kw(&L->cur,"STACKPICK")){
+    /* PICK n — copy n-th under top (0=top) onto stack; depth from TOS */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (vm->sp <= 0 || n >= vm->sp){
+      var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1 - (int)n];
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FILLCELL")||kw(&L->cur,"CELLFILL")||kw(&L->cur,"FILL")){
+    /* FILLCELL lo hi val — fill cell[lo..hi] with val */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long val = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i = lo; i <= hi; i++) vm->cells[(int)i] = val;
+    var_set_num(vm,"LAST_N",val); vm->last_n=val;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */
   if (kw(&L->cur,"RAND")||kw(&L->cur,"RND")||kw(&L->cur,"IRAND")){
     lex_next(L);

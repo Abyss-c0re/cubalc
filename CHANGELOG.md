@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.1-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → data-plane stack combinators + cell fill.
+
+### Language
+- `DUP`/`DROP`/`SWAP`/`OVER`/`ROT` — Forth-style stack ops (OK/LAST_N/SP)
+- `PICK` n — copy n-th under top (0=TOS) onto stack
+- `FILLCELL`/`CELLFILL` lo hi val — fill cell range
+- Proof `24_stack_ops_universal.cubalc`
+
+### Prior
+See 1.12.0-universal.
+
+
 ## 1.12.0-universal — 2026-08-02
 
 ### Direction
