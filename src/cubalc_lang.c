@@ -3056,6 +3056,90 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack bitfield data path: SBTEST SSETB SCLRB SFLPB SBEXT SBDEP */
+  if (kw(&L->cur,"SBTEST")||kw(&L->cur,"SBITT")||kw(&L->cur,"STACKBIT")||
+      kw(&L->cur,"SBTST")||kw(&L->cur,"TESTBIT")||
+      kw(&L->cur,"SSETB")||kw(&L->cur,"SSETBIT")||kw(&L->cur,"STACKSETB")||
+      kw(&L->cur,"SCLRB")||kw(&L->cur,"SCLRBIT")||kw(&L->cur,"STACKCLRB")||
+      kw(&L->cur,"SFLPB")||kw(&L->cur,"SFLIPB")||kw(&L->cur,"STGLB")||
+      kw(&L->cur,"STGLBIT")||kw(&L->cur,"STACKFLIPB")){
+    /* a k → test/set/clear/flip bit k of a (k clamped 0..63) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (k < 0) k = 0;
+    if (k > 63) k = 63;
+    unsigned long uk = (unsigned long)k;
+    unsigned long bit = 1ul << uk;
+    unsigned long u = (unsigned long)a;
+    long r = 0;
+    if (strcmp(op,"SBTEST")==0 || strcmp(op,"SBITT")==0 || strcmp(op,"STACKBIT")==0 ||
+        strcmp(op,"SBTST")==0 || strcmp(op,"TESTBIT")==0)
+      r = (u & bit) ? 1 : 0;
+    else if (strcmp(op,"SSETB")==0 || strcmp(op,"SSETBIT")==0 || strcmp(op,"STACKSETB")==0)
+      r = (long)(u | bit);
+    else if (strcmp(op,"SCLRB")==0 || strcmp(op,"SCLRBIT")==0 || strcmp(op,"STACKCLRB")==0)
+      r = (long)(u & ~bit);
+    else
+      /* SFLPB / SFLIPB / STGLB / STGLBIT / STACKFLIPB */
+      r = (long)(u ^ bit);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBEXT")||kw(&L->cur,"STACKBEXT")||kw(&L->cur,"SEXTR")||
+      kw(&L->cur,"SBITEXT")){
+    /* a pos width → extract width bits at pos (dual of BEXT) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long width = vm->stack[--vm->sp];
+    long pos = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (pos < 0) pos = 0;
+    if (pos > 62){ vm->stack[vm->sp++] = 0; var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1; }
+    if (width < 1) width = 0;
+    if (width > 63 - pos) width = 63 - pos;
+    long r = 0;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      r = (long)(((unsigned long)a >> (unsigned)pos) & mask);
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBDEP")||kw(&L->cur,"STACKBDEP")||kw(&L->cur,"SDEP")||
+      kw(&L->cur,"SBITDEP")){
+    /* base field pos → deposit low 8 bits of field at pos (dual of BDEP) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long pos = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long width = 8;
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      vm->stack[vm->sp++] = a;
+      var_set_num(vm,"LAST_N",a); vm->last_n=a;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width > 63 - pos) width = 63 - pos;
+    long r = a;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      unsigned long base = (unsigned long)a;
+      unsigned long f = (unsigned long)field & mask;
+      base = (base & ~(mask << (unsigned)pos)) | (f << (unsigned)pos);
+      r = (long)base;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack compare + min/max: predicate 0/1 or ordered select */
   if (kw(&L->cur,"SMIN")||kw(&L->cur,"SMAX")||
       kw(&L->cur,"STACKMIN")||kw(&L->cur,"STACKMAX")||
