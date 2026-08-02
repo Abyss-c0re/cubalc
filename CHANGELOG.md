@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.113-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → abundance class: aliquot / perfect / abundant / deficient.
+
+### Language
+- `ALIQUOT`/`PROPERSIGMA`(n) — proper divisor sum σ(n)−n
+- `ISPERFECT`/`PERFECTP`(n) · `ISABUNDANT`/`ABUNDANTP`(n) · `ISDEFICIENT`/`DEFICIENTP`(n)
+- Stack: `SALIQUOT` · `SISPERFECT` · `SISABUNDANT` · `SISDEFICIENT`
+- Proof `136_aliquot_perfect.cubalc`
+
+### Prior
+See 1.12.112-universal.
+
 ## 1.12.112-universal — 2026-08-03
 
 ### Direction

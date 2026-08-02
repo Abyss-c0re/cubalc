@@ -1204,6 +1204,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"DIVCOUNT")==0 || strcmp(name,"TAUD")==0 ||
         strcmp(name,"SIGMA")==0 || strcmp(name,"DIVSUM")==0 ||
         strcmp(name,"SIGMA1")==0 ||
+        /* digit-2 abundance class: ALIQUOT ISPERFECT ISABUNDANT ISDEFICIENT */
+        strcmp(name,"ALIQUOT")==0 || strcmp(name,"PROPERSIGMA")==0 ||
+        strcmp(name,"S0")==0 || strcmp(name,"SIGMA0STAR")==0 ||
+        strcmp(name,"ISPERFECT")==0 || strcmp(name,"PERFECTP")==0 ||
+        strcmp(name,"ISABUNDANT")==0 || strcmp(name,"ABUNDANTP")==0 ||
+        strcmp(name,"ISDEFICIENT")==0 || strcmp(name,"DEFICIENTP")==0 ||
         strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
         strcmp(name,"EULERPHI")==0 ||
         /* digit-2 number theory: MOBIUS RADICAL SQUAREFREE COPRIME CEILPOW2 */
@@ -2109,6 +2115,33 @@ static long parse_prim(VM *vm, Lex *L){
             }
           }
           return sum;
+        }
+        if (strcmp(name,"ALIQUOT")==0 || strcmp(name,"PROPERSIGMA")==0 ||
+            strcmp(name,"S0")==0 || strcmp(name,"SIGMA0STAR")==0 ||
+            strcmp(name,"ISPERFECT")==0 || strcmp(name,"PERFECTP")==0 ||
+            strcmp(name,"ISABUNDANT")==0 || strcmp(name,"ABUNDANTP")==0 ||
+            strcmp(name,"ISDEFICIENT")==0 || strcmp(name,"DEFICIENTP")==0){
+          /* ALIQUOT(n)=σ(n)-n; ISPERFECT/ISABUNDANT/ISDEFICIENT classification
+           * n<=0 → 0; n=1 aliquot=0 (no proper divisors >0 except convention s(1)=0) */
+          if (a <= 0) return 0;
+          long n = a;
+          long sum = 0;
+          for (long i = 1; i * i <= n; i++){
+            if ((n % i) == 0){
+              sum += i;
+              if (i * i != n) sum += n / i;
+            }
+          }
+          long s = sum - n; /* proper divisor sum (exclude n itself) */
+          if (strcmp(name,"ALIQUOT")==0 || strcmp(name,"PROPERSIGMA")==0 ||
+              strcmp(name,"S0")==0 || strcmp(name,"SIGMA0STAR")==0)
+            return s;
+          if (strcmp(name,"ISPERFECT")==0 || strcmp(name,"PERFECTP")==0)
+            return (s == n) ? 1 : 0;
+          if (strcmp(name,"ISABUNDANT")==0 || strcmp(name,"ABUNDANTP")==0)
+            return (s > n) ? 1 : 0;
+          /* ISDEFICIENT / DEFICIENTP */
+          return (s < n) ? 1 : 0;
         }
         if (strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
             strcmp(name,"EULERPHI")==0){
@@ -6655,6 +6688,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
           }
         }
       }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 abundance stack: SALIQUOT · SISPERFECT · SISABUNDANT · SISDEFICIENT */
+  if (kw(&L->cur,"SALIQUOT")||kw(&L->cur,"SPROPERSIGMA")||kw(&L->cur,"STACKALIQUOT")||
+      kw(&L->cur,"SS0")||
+      kw(&L->cur,"SISPERFECT")||kw(&L->cur,"SPERFECTP")||kw(&L->cur,"STACKISPERFECT")||
+      kw(&L->cur,"SISABUNDANT")||kw(&L->cur,"SABUNDANTP")||kw(&L->cur,"STACKISABUNDANT")||
+      kw(&L->cur,"SISDEFICIENT")||kw(&L->cur,"SDEFICIENTP")||kw(&L->cur,"STACKISDEFICIENT")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (a > 0){
+      long n = a, sum = 0;
+      for (long i = 1; i * i <= n; i++){
+        if ((n % i) == 0){
+          sum += i;
+          if (i * i != n) sum += n / i;
+        }
+      }
+      long s = sum - n;
+      if (strcmp(op,"SALIQUOT")==0 || strcmp(op,"SPROPERSIGMA")==0 ||
+          strcmp(op,"STACKALIQUOT")==0 || strcmp(op,"SS0")==0)
+        r = s;
+      else if (strcmp(op,"SISPERFECT")==0 || strcmp(op,"SPERFECTP")==0 ||
+               strcmp(op,"STACKISPERFECT")==0)
+        r = (s == n) ? 1 : 0;
+      else if (strcmp(op,"SISABUNDANT")==0 || strcmp(op,"SABUNDANTP")==0 ||
+               strcmp(op,"STACKISABUNDANT")==0)
+        r = (s > n) ? 1 : 0;
+      else
+        r = (s < n) ? 1 : 0; /* SISDEFICIENT */
     }
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
