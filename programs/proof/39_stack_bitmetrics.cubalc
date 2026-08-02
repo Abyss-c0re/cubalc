@@ -1,0 +1,109 @@
+# Proof 39 — stack bit metrics/rotate digit-3: SPOPCNT SCLZ SCTZ SROL SROR SSAR
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# SPOPCNT
+CLEARSTACK
+PUSH 0
+SPOPCNT
+ASSERT LAST_N == 0
+ASSERT SP == 1
+
+CLEARSTACK
+PUSH 0xF0
+SPOPCNT
+ASSERT LAST_N == 4
+
+CLEARSTACK
+PUSH 7
+SPCOUNT
+ASSERT LAST_N == 3
+
+# SCLZ / SCTZ (64-bit word)
+CLEARSTACK
+PUSH 0
+SCLZ
+ASSERT LAST_N == 64
+CLEARSTACK
+PUSH 1
+SCLZ
+ASSERT LAST_N == 63
+CLEARSTACK
+PUSH 0
+SCTZ
+ASSERT LAST_N == 64
+CLEARSTACK
+PUSH 8
+SCTZ
+ASSERT LAST_N == 3
+
+# SROL: 1 rol 1 → 2; 0x8000…0 rol 1 → 1
+CLEARSTACK
+PUSH 1
+PUSH 1
+SROL
+ASSERT LAST_N == 2
+
+CLEARSTACK
+PUSH 1
+PUSH 63
+SROL
+# 1<<63; rotate back by 63 restores
+PUSH 63
+SROR
+ASSERT LAST_N == 1
+
+# SROR
+CLEARSTACK
+PUSH 8
+PUSH 2
+SROR
+ASSERT LAST_N == 2
+
+# SSAR arithmetic: -8 >> 2 → -2
+CLEARSTACK
+PUSH -8
+PUSH 2
+SSAR
+ASSERT LAST_N == -2
+
+# SSHR is logical — contrast
+CLEARSTACK
+PUSH -8
+PUSH 2
+SSHR
+# logical right on unsigned; not equal to -2 on full width
+ASSERT SP == 1
+
+# aliases + empty guards
+CLEARSTACK
+SPOPCNT
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+SROL
+ASSERT OK == 0
+
+# compose: popcnt of folded OR bits
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 4
+SFOR
+SPOPCNT
+ASSERT LAST_N == 3
+
+# compose: rotate then popcnt invariant for single bit
+CLEARSTACK
+PUSH 1
+PUSH 5
+SROL
+SPOPCNT
+ASSERT LAST_N == 1
+
+CUBE m ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof39_stack_bitmetrics" LAST_N SP

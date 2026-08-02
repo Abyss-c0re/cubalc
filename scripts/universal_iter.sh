@@ -56,7 +56,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             25_cell_mem_universal 26_math_ilog_modinv 27_stack_depth_universal \
             28_cell_arith_sort 29_cell_argmin_rot 30_stack_cell_bridge \
             31_cell_logic 32_bitfield_divceil 33_math_binom_perm 34_stack_alu \
-            35_stack_bitops 36_stack_compare 37_stack_select_clamp 38_stack_fold; do
+            35_stack_bitops 36_stack_compare 37_stack_select_clamp 38_stack_fold \
+            39_stack_bitmetrics; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

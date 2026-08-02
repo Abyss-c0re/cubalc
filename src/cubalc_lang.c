@@ -2990,6 +2990,72 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack bit metrics + rotate/SAR: SPOPCNT SCLZ SCTZ SROL SROR SSAR */
+  if (kw(&L->cur,"SPOPCNT")||kw(&L->cur,"SPCOUNT")||kw(&L->cur,"STACKPOPCNT")||
+      kw(&L->cur,"SPOPCOUNT")||kw(&L->cur,"SPCNT")||
+      kw(&L->cur,"SCLZ")||kw(&L->cur,"STACKCLZ")||
+      kw(&L->cur,"SCTZ")||kw(&L->cur,"STACKCTZ")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    unsigned long u = (unsigned long)a;
+    long r = 0;
+    if (strcmp(op,"SPOPCNT")==0 || strcmp(op,"SPCOUNT")==0 ||
+        strcmp(op,"STACKPOPCNT")==0 || strcmp(op,"SPOPCOUNT")==0 ||
+        strcmp(op,"SPCNT")==0){
+      while (u){ r += (long)(u & 1ul); u >>= 1; }
+    } else if (strcmp(op,"SCLZ")==0 || strcmp(op,"STACKCLZ")==0){
+      if (u == 0) r = 64;
+      else {
+        for (int i = 63; i >= 0; i--){
+          if (u & (1ul << i)) break;
+          r++;
+        }
+      }
+    } else {
+      /* SCTZ / STACKCTZ */
+      if (u == 0) r = 64;
+      else {
+        while ((u & 1ul) == 0){ r++; u >>= 1; }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROL")||kw(&L->cur,"STACKROL")||kw(&L->cur,"SROTL")||
+      kw(&L->cur,"SROR")||kw(&L->cur,"STACKROR")||kw(&L->cur,"SROTR")||
+      kw(&L->cur,"SSAR")||kw(&L->cur,"STACKSAR")||kw(&L->cur,"SASHR")){
+    /* a k → rotate/arithmetic-shift a by k (k mod 64; k<0 → 0) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (k < 0) k = 0;
+    unsigned uk = (unsigned)(k & 63);
+    if (strcmp(op,"SSAR")==0 || strcmp(op,"STACKSAR")==0 || strcmp(op,"SASHR")==0){
+      /* arithmetic right shift (sign-preserving) */
+      if (k > 63) k = 63;
+      r = a >> k;
+    } else if (strcmp(op,"SROL")==0 || strcmp(op,"STACKROL")==0 || strcmp(op,"SROTL")==0){
+      unsigned long u = (unsigned long)a;
+      if (uk == 0) r = a;
+      else r = (long)((u << uk) | (u >> (64u - uk)));
+    } else {
+      /* SROR / STACKROR / SROTR */
+      unsigned long u = (unsigned long)a;
+      if (uk == 0) r = a;
+      else r = (long)((u >> uk) | (u << (64u - uk)));
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack compare + min/max: predicate 0/1 or ordered select */
   if (kw(&L->cur,"SMIN")||kw(&L->cur,"SMAX")||
       kw(&L->cur,"STACKMIN")||kw(&L->cur,"STACKMAX")||
