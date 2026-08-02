@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.12.62-universal — 2026-08-02
+
+### Direction
+- Algocube digit **6** → RNG range, cell shuffle/pick, random matrix bits, energy read.
+
+### Language
+- `RANDRANGE`/`RANDIN` lo hi · `SRANDRANGE` stack lo hi → rand in [lo,hi]
+- `SHUFFLECELL` lo hi — Fisher–Yates (seeded)
+- `PICKCELL` lo hi — random cell value (`IT`=index)
+- `RANDBITS` cube [pct] — randomize matrix (density 0..100, default 50)
+- `ENERGYGET` cube → energy 0..100
+- Proof `85_rand_shuffle.cubalc`
+
+### Prior
+See 1.12.61-universal.
+
+
 ## 1.12.61-universal — 2026-08-02
 
 ### Direction

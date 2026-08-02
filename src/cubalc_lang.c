@@ -6522,6 +6522,136 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 RNG range + shuffle + random matrix bits */
+  if (kw(&L->cur,"RANDRANGE")||kw(&L->cur,"RANDIN")||kw(&L->cur,"RANDBETWEEN")){
+    /* RANDRANGE lo hi — uniform integer in [lo,hi] inclusive */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long span = hi - lo + 1;
+    if (span < 1) span = 1;
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long v = lo + (long)(x % (uint32_t)span);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRANDRANGE")||kw(&L->cur,"STACKRANDRANGE")||kw(&L->cur,"SRANDIN")){
+    /* lo hi → push rand in [lo,hi] */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long span = hi - lo + 1;
+    if (span < 1) span = 1;
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long v = lo + (long)(x % (uint32_t)span);
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHUFFLECELL")||kw(&L->cur,"CELLSHUFFLE")||kw(&L->cur,"SHUFFLE")){
+    /* SHUFFLECELL lo hi — Fisher–Yates using seeded RNG */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i = hi; i > lo; i--){
+      uint32_t x = vm->rng;
+      x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+      if (!x) x = 1;
+      vm->rng = x;
+      long j = lo + (long)(x % (uint32_t)(i - lo + 1));
+      long tmp = vm->cells[(int)i];
+      vm->cells[(int)i] = vm->cells[(int)j];
+      vm->cells[(int)j] = tmp;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PICKCELL")||kw(&L->cur,"CELLPICK")||kw(&L->cur,"RANDCELL")){
+    /* PICKCELL lo hi — LAST_N = value at random index; IT = index */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long span = hi - lo + 1;
+    if (span < 1) span = 1;
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long idx = lo + (long)(x % (uint32_t)span);
+    long v = vm->cells[(int)idx];
+    long *it = var_slot(vm,"IT",1); if (it) *it = idx;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"RANDBITS")||kw(&L->cur,"RANDOMBITS")||kw(&L->cur,"RANDMATRIX")||
+      kw(&L->cur,"FILLRAND")){
+    /* RANDBITS cube [pct] — randomize matrix; optional density 0..100 (default 50) */
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"RANDBITS cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    long pct = 50;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      pct = parse_expr(vm,L);
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"RANDBITS missing cube"); return -1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = CUBALC_ATOM_BITS;
+    cubalc_matrix_clear(m);
+    m->n = (uint16_t)n;
+    long ones = 0;
+    for (int i=0;i<n;i++){
+      uint32_t x = vm->rng;
+      x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+      if (!x) x = 1;
+      vm->rng = x;
+      int on = ((long)(x % 100u) < pct) ? 1 : 0;
+      if (on){ cubalc_matrix_set(m, i, 1); ones++; }
+    }
+    vm->ch.cubes[ix].atom.digit_lock = 0;
+    vm->ch.cubes[ix].atom.digit =
+      (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    vm->ch.cubes[ix].flowed = 1;
+    var_set_num(vm,"SET",ones);
+    var_set_num(vm,"LAST_N",ones); vm->last_n=ones;
+    var_set_num(vm,"DIGIT",vm->ch.cubes[ix].atom.digit);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ENERGYGET")||kw(&L->cur,"GETENERGY")||kw(&L->cur,"READENERGY")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYGET cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1; }
+    long ev = (long)lround(vm->ch.cubes[ix].atom.energy * 100.0);
+    var_set_num(vm,"ENERGY",ev);
+    var_set_num(vm,"LAST_N",ev); vm->last_n=ev;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   /* ENERGYSET cube n · ENERGYADD cube n — energy plane 0..100 (digit-6) */
   if (kw(&L->cur,"ENERGYSET")||kw(&L->cur,"SETENERGY")||
       kw(&L->cur,"ENERGYADD")||kw(&L->cur,"ADDENERGY")||kw(&L->cur,"PULSE")){
