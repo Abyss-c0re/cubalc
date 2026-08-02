@@ -1073,7 +1073,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BLEND")==0 ||
         strcmp(name,"SHL")==0 || strcmp(name,"SHR")==0 ||
         strcmp(name,"SAR")==0 || strcmp(name,"ASHR")==0 ||
-        strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0 ||
+        strcmp(name,"BITCOUNT")==0 || strcmp(name,"POPCNT")==0 ||
+        strcmp(name,"POPCOUNT")==0 || strcmp(name,"HAMMING32")==0 ||
+        /* digit-1 bit metrics: FFS FLS CLO CTO BWIDTH */
+        strcmp(name,"FFS")==0 || strcmp(name,"FINDLS")==0 ||
+        strcmp(name,"FLS")==0 || strcmp(name,"MSB")==0 || strcmp(name,"FINDMSB")==0 ||
+        strcmp(name,"CLO")==0 || strcmp(name,"CTO")==0 ||
+        strcmp(name,"BWIDTH")==0 || strcmp(name,"BITWIDTH")==0 ||
         /* digit-9 universal data-path: rotate · pack · select */
         strcmp(name,"ROTL")==0 || strcmp(name,"ROTR")==0 ||
         strcmp(name,"ROL")==0 || strcmp(name,"ROR")==0 ||
@@ -1115,6 +1121,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ILOG10")==0 || strcmp(name,"LOG10")==0 ||
         strcmp(name,"ODD")==0 || strcmp(name,"EVEN")==0 ||
         strcmp(name,"CTZ")==0 || strcmp(name,"CLZ")==0 ||
+        strcmp(name,"NTZ")==0 || strcmp(name,"NLZ")==0 ||
         strcmp(name,"ISPOW2")==0 || strcmp(name,"POW2")==0 ||
         strcmp(name,"POW10")==0 || strcmp(name,"TENPOW")==0 ||
         strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
@@ -1365,7 +1372,8 @@ static long parse_prim(VM *vm, Lex *L){
           if (b < 0) b = 0; if (b > 62) b = 62;
           return a >> b;
         }
-        if (strcmp(name,"BITCOUNT")==0){
+        if (strcmp(name,"BITCOUNT")==0 || strcmp(name,"POPCNT")==0 ||
+            strcmp(name,"POPCOUNT")==0){
           unsigned long u = (unsigned long)a; int n = 0;
           while (u) { n += (int)(u & 1u); u >>= 1; }
           return n;
@@ -1648,7 +1656,7 @@ static long parse_prim(VM *vm, Lex *L){
         }
         if (strcmp(name,"ODD")==0) return (a & 1L) ? 1 : 0;
         if (strcmp(name,"EVEN")==0) return (a & 1L) ? 0 : 1;
-        if (strcmp(name,"CTZ")==0){
+        if (strcmp(name,"CTZ")==0 || strcmp(name,"NTZ")==0){
           /* count trailing zeros (0 → 64) */
           if (a == 0) return 64;
           unsigned long u = (unsigned long)a;
@@ -1656,7 +1664,7 @@ static long parse_prim(VM *vm, Lex *L){
           while ((u & 1ul) == 0){ n++; u >>= 1; }
           return n;
         }
-        if (strcmp(name,"CLZ")==0){
+        if (strcmp(name,"CLZ")==0 || strcmp(name,"NLZ")==0){
           /* count leading zeros in 64-bit word (0 → 64) */
           if (a == 0) return 64;
           unsigned long u = (unsigned long)a;
@@ -1664,6 +1672,50 @@ static long parse_prim(VM *vm, Lex *L){
           for (int i = 63; i >= 0; i--){
             if (u & (1ul << i)) break;
             n++;
+          }
+          return n;
+        }
+        if (strcmp(name,"FFS")==0 || strcmp(name,"FINDLS")==0){
+          /* find first set: 1-based index of lowest 1-bit; 0 if a==0 */
+          if (a == 0) return 0;
+          unsigned long u = (unsigned long)a;
+          long n = 1;
+          while ((u & 1ul) == 0){ n++; u >>= 1; }
+          return n;
+        }
+        if (strcmp(name,"FLS")==0 || strcmp(name,"MSB")==0 || strcmp(name,"FINDMSB")==0){
+          /* find last set: 1-based index of highest 1-bit; 0 if a==0 */
+          if (a == 0) return 0;
+          unsigned long u = (unsigned long)a;
+          for (int i = 63; i >= 0; i--){
+            if (u & (1ul << (unsigned)i)) return (long)(i + 1);
+          }
+          return 0;
+        }
+        if (strcmp(name,"CLO")==0){
+          /* count leading ones in 64-bit word (all ones → 64) */
+          unsigned long u = (unsigned long)a;
+          long n = 0;
+          for (int i = 63; i >= 0; i--){
+            if ((u & (1ul << (unsigned)i)) == 0) break;
+            n++;
+          }
+          return n;
+        }
+        if (strcmp(name,"CTO")==0){
+          /* count trailing ones (all ones → 64) */
+          unsigned long u = (unsigned long)a;
+          long n = 0;
+          while (u & 1ul){ n++; u >>= 1; if (n >= 64) break; }
+          return n;
+        }
+        if (strcmp(name,"BWIDTH")==0 || strcmp(name,"BITWIDTH")==0){
+          /* minimal bits to represent unsigned a (0 → 0) */
+          if (a == 0) return 0;
+          unsigned long u = (unsigned long)a;
+          long n = 0;
+          for (int i = 63; i >= 0; i--){
+            if (u & (1ul << (unsigned)i)){ n = i + 1; break; }
           }
           return n;
         }
@@ -4066,12 +4118,17 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-3 stack bit metrics + rotate/SAR: SPOPCNT SCLZ SCTZ SROL SROR SSAR */
+  /* digit-3/1 stack bit metrics: SPOPCNT SCLZ SCTZ SFFS SFLS SCLO SCTO SBWIDTH */
   if (kw(&L->cur,"SPOPCNT")||kw(&L->cur,"SPCOUNT")||kw(&L->cur,"STACKPOPCNT")||
       kw(&L->cur,"SPOPCOUNT")||kw(&L->cur,"SPCNT")||
-      kw(&L->cur,"SCLZ")||kw(&L->cur,"STACKCLZ")||
-      kw(&L->cur,"SCTZ")||kw(&L->cur,"STACKCTZ")){
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      kw(&L->cur,"SCLZ")||kw(&L->cur,"STACKCLZ")||kw(&L->cur,"SNLZ")||
+      kw(&L->cur,"SCTZ")||kw(&L->cur,"STACKCTZ")||kw(&L->cur,"SNTZ")||
+      kw(&L->cur,"SFFS")||kw(&L->cur,"SFINDFS")||kw(&L->cur,"STACKFFS")||
+      kw(&L->cur,"SFLS")||kw(&L->cur,"SMSB")||kw(&L->cur,"STACKFLS")||
+      kw(&L->cur,"SCLO")||kw(&L->cur,"STACKCLO")||
+      kw(&L->cur,"SCTO")||kw(&L->cur,"STACKCTO")||
+      kw(&L->cur,"SBWIDTH")||kw(&L->cur,"SBITWIDTH")||kw(&L->cur,"STACKBWIDTH")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -4082,7 +4139,7 @@ static int parse_form(VM *vm, Lex *L){
         strcmp(op,"STACKPOPCNT")==0 || strcmp(op,"SPOPCOUNT")==0 ||
         strcmp(op,"SPCNT")==0){
       while (u){ r += (long)(u & 1ul); u >>= 1; }
-    } else if (strcmp(op,"SCLZ")==0 || strcmp(op,"STACKCLZ")==0){
+    } else if (strcmp(op,"SCLZ")==0 || strcmp(op,"STACKCLZ")==0 || strcmp(op,"SNLZ")==0){
       if (u == 0) r = 64;
       else {
         for (int i = 63; i >= 0; i--){
@@ -4090,11 +4147,38 @@ static int parse_form(VM *vm, Lex *L){
           r++;
         }
       }
-    } else {
-      /* SCTZ / STACKCTZ */
+    } else if (strcmp(op,"SCTZ")==0 || strcmp(op,"STACKCTZ")==0 || strcmp(op,"SNTZ")==0){
       if (u == 0) r = 64;
       else {
         while ((u & 1ul) == 0){ r++; u >>= 1; }
+      }
+    } else if (strcmp(op,"SFFS")==0 || strcmp(op,"SFINDFS")==0 || strcmp(op,"STACKFFS")==0){
+      if (u == 0) r = 0;
+      else {
+        r = 1;
+        while ((u & 1ul) == 0){ r++; u >>= 1; }
+      }
+    } else if (strcmp(op,"SFLS")==0 || strcmp(op,"SMSB")==0 || strcmp(op,"STACKFLS")==0){
+      if (u == 0) r = 0;
+      else {
+        for (int i = 63; i >= 0; i--){
+          if (u & (1ul << (unsigned)i)){ r = i + 1; break; }
+        }
+      }
+    } else if (strcmp(op,"SCLO")==0 || strcmp(op,"STACKCLO")==0){
+      for (int i = 63; i >= 0; i--){
+        if ((u & (1ul << (unsigned)i)) == 0) break;
+        r++;
+      }
+    } else if (strcmp(op,"SCTO")==0 || strcmp(op,"STACKCTO")==0){
+      while (u & 1ul){ r++; u >>= 1; if (r >= 64) break; }
+    } else {
+      /* SBWIDTH / SBITWIDTH / STACKBWIDTH */
+      if (u == 0) r = 0;
+      else {
+        for (int i = 63; i >= 0; i--){
+          if (u & (1ul << (unsigned)i)){ r = i + 1; break; }
+        }
       }
     }
     vm->stack[vm->sp - 1] = r;
