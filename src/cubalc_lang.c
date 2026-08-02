@@ -3091,6 +3091,69 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 stack fold/reduce: SSUM SPROD SFAND SFOR SFXOR FOLDMIN FOLDMAX
+   * optional trailing n = fold only top n items; omit n → whole stack.
+   * empty identities: sum/or/xor=0, prod=1, and=-1; min/max empty → OK=0. */
+  if (kw(&L->cur,"SSUM")||kw(&L->cur,"STACKSUM")||kw(&L->cur,"SFOLDADD")||
+      kw(&L->cur,"SPROD")||kw(&L->cur,"STACKPROD")||kw(&L->cur,"SFOLDMUL")||
+      kw(&L->cur,"SFAND")||kw(&L->cur,"FOLDAND")||kw(&L->cur,"SFOLDAND")||
+      kw(&L->cur,"SFOR")||kw(&L->cur,"FOLDOR")||kw(&L->cur,"SFOLDOR")||
+      kw(&L->cur,"SFXOR")||kw(&L->cur,"FOLDXOR")||kw(&L->cur,"SFOLDXOR")||
+      kw(&L->cur,"FOLDMIN")||kw(&L->cur,"SFOLDMIN")||
+      kw(&L->cur,"FOLDMAX")||kw(&L->cur,"SFOLDMAX")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    int have_n = 0;
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE") &&
+         !kw(&L->cur,"PUSH") && !kw(&L->cur,"POP") && !kw(&L->cur,"CLEARSTACK") &&
+         !kw(&L->cur,"PEEK") && !kw(&L->cur,"DROP") && !kw(&L->cur,"DUP"))){
+      n = parse_expr(vm,L);
+      have_n = 1;
+    }
+    if (!have_n) n = (long)vm->sp;
+    if (n < 0) n = 0;
+    if (have_n && n > (long)vm->sp){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    int is_min = (strcmp(op,"FOLDMIN")==0 || strcmp(op,"SFOLDMIN")==0);
+    int is_max = (strcmp(op,"FOLDMAX")==0 || strcmp(op,"SFOLDMAX")==0);
+    int is_sum = (strcmp(op,"SSUM")==0 || strcmp(op,"STACKSUM")==0 || strcmp(op,"SFOLDADD")==0);
+    int is_prod = (strcmp(op,"SPROD")==0 || strcmp(op,"STACKPROD")==0 || strcmp(op,"SFOLDMUL")==0);
+    int is_and = (strcmp(op,"SFAND")==0 || strcmp(op,"FOLDAND")==0 || strcmp(op,"SFOLDAND")==0);
+    int is_or = (strcmp(op,"SFOR")==0 || strcmp(op,"FOLDOR")==0 || strcmp(op,"SFOLDOR")==0);
+    int is_xor = (strcmp(op,"SFXOR")==0 || strcmp(op,"FOLDXOR")==0 || strcmp(op,"SFOLDXOR")==0);
+    long r = 0;
+    if (n == 0){
+      if (is_min || is_max){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      if (is_sum || is_or || is_xor) r = 0;
+      else if (is_prod) r = 1;
+      else if (is_and) r = -1;
+      else r = 0;
+      if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = r;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+      var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    /* left-fold top n items (bottom of window first) */
+    int base = vm->sp - (int)n;
+    r = vm->stack[base];
+    for (int i = 1; i < (int)n; i++){
+      long v = vm->stack[base + i];
+      if (is_sum) r = r + v;
+      else if (is_prod) r = r * v;
+      else if (is_and) r = r & v;
+      else if (is_or) r = r | v;
+      else if (is_xor) r = r ^ v;
+      else if (is_min) r = (r < v) ? r : v;
+      else if (is_max) r = (r > v) ? r : v;
+    }
+    vm->sp = base;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack↔cell bridge: TOCELL / FROMCELL */
   if (kw(&L->cur,"TOCELL")||kw(&L->cur,"STACKTOCELL")||kw(&L->cur,">CELL")){
     /* TOCELL dst [n] — pop n values into cells[dst..dst+n-1] (TOS → highest index) */
