@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.8-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → cell logic plane: bitwise range masks + equality predicate.
+
+### Language
+- `ANDCELL`/`CELLAND` lo hi mask — bitwise AND each cell in range with mask
+- `ORCELL`/`CELLOR` lo hi mask — bitwise OR each cell in range with mask
+- `XORCELL`/`CELLXOR` lo hi mask — bitwise XOR each cell in range with mask
+- `NOTCELL`/`CELLNOT` lo hi — bitwise NOT (~) each cell in range
+- `EQCELL`/`CELLEQ` lo hi val — set cell to 1 if == val else 0; LAST_N = hit count
+- Proof `31_cell_logic.cubalc`
+
+### Prior
+See 1.12.7-universal.
+
 ## 1.12.7-universal — 2026-08-02
 
 ### Direction

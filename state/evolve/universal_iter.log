@@ -1,0 +1,53 @@
+[2026-08-02T16:12:55+03:00] ITER=39 algocube_digit=9 — build
+make: Entering directory '/tmp/cubalc-upstream'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/tmp/cubalc-upstream'
+[2026-08-02T16:12:55+03:00] evolve --once
+{"ok":true,"cmd":"evolve","engine":"C","language":"CubalC","version":"1.12.8-universal","gen":0,"races":2,"wins":2,"losses":0,"energy":10.4,"difficulty":1.000,"fitness":0.9500,"best_fitness":0.9500,"unity":0.6786,"algo_solves":8,"algo_fails":0,"digit":5,"program":"programs/evolve/LATEST.cubalc","status":"WIN path=7 plug=12 face=0"}
+[2026-08-02T16:12:55+03:00] proofs + science demos (timeout 25s each)
+  PASS /tmp/cubalc-upstream/programs/proof/01_arithmetic.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/02_cop_matrix.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/06_decide.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/09_algocube_harmony.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/11_cube_io_reverse.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/12_nest_compile.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/13_bitops_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/14_io_codec_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/15_rotate_pack_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/16_control_flow_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/17_cop_matrix_ops.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/18_data_cells_stack.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/19_math_modular_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/20_string_ops_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/21_fn_return_case.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/22_cell_fold_inc.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/23_rand_energy_rotbits.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/24_stack_ops_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/25_cell_mem_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/26_math_ilog_modinv.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/27_stack_depth_universal.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/28_cell_arith_sort.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/29_cell_argmin_rot.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/30_stack_cell_bridge.cubalc
+  PASS /tmp/cubalc-upstream/programs/proof/31_cell_logic.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/01_cell_cube.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/02_diffusion.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/03_photosynthesis.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/04_respiration.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/05_mendel_bits.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/06_ecosystem_energy.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/07_homeostasis.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/biology/08_food_web.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/01_atoms_elements.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/02_bonds_molecules.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/03_stoichiometry.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/04_reactions_energy.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/05_acids_bases.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/06_states_matter.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/07_gas_law.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/chemistry/08_concentration.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/earth/01_earth_measures.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/earth/02_atmosphere.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/earth/03_water_cycle.cubalc
+  PASS /tmp/cubalc-upstream/programs/science/earth/04_rock_cycle.cubalc
+[2026-08-02T16:12:56+03:00] done iter=39 digit=9 pass=45 fail=0 ver=1.12.8-universal

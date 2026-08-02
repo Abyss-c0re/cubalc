@@ -3175,6 +3175,80 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 cell logic plane: ANDCELL ORCELL XORCELL NOTCELL EQCELL */
+  if (kw(&L->cur,"ANDCELL")||kw(&L->cur,"CELLAND")||kw(&L->cur,"BANDCELL")){
+    /* ANDCELL lo hi mask — bitwise AND each cell in range with mask */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] &= mask;
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ORCELL")||kw(&L->cur,"CELLOR")||kw(&L->cur,"BORCELL")){
+    /* ORCELL lo hi mask — bitwise OR each cell in range with mask */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] |= mask;
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XORCELL")||kw(&L->cur,"CELLXOR")||kw(&L->cur,"BXORCELL")){
+    /* XORCELL lo hi mask — bitwise XOR each cell in range with mask */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] ^= mask;
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
+    /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] = ~vm->cells[(int)i];
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"EQCELL")||kw(&L->cur,"CELLEQ")||kw(&L->cur,"CMPEQCELL")){
+    /* EQCELL lo hi val — set cell to 1 if == val else 0 (predicate mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long val = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long hits = 0;
+    for (long i=lo;i<=hi;i++){
+      long eq = (vm->cells[(int)i] == val) ? 1 : 0;
+      vm->cells[(int)i] = eq;
+      hits += eq;
+    }
+    var_set_num(vm,"LAST_N",hits); vm->last_n=hits;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */
   if (kw(&L->cur,"RAND")||kw(&L->cur,"RND")||kw(&L->cur,"IRAND")){
     lex_next(L);
