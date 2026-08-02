@@ -1043,6 +1043,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"SP")==0 ||
         strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
         strcmp(name,"MAXCELL")==0 ||
+        strcmp(name,"FINDCELL")==0 || strcmp(name,"COUNTCELL")==0 ||
         strcmp(name,"RAND")==0 || strcmp(name,"RND")==0 ||
         strcmp(name,"IRAND")==0 ||
         /* digit-2 math: modular + number theory */
@@ -1220,6 +1221,27 @@ static long parse_prim(VM *vm, Lex *L){
           if (strcmp(name,"MINCELL")==0) return first?0:mn;
           if (strcmp(name,"MAXCELL")==0) return first?0:mx;
           return acc;
+        }
+        /* digit-5 cell memory: FINDCELL(val[,lo[,hi]]) · COUNTCELL(val[,lo[,hi]]) */
+        if (strcmp(name,"FINDCELL")==0 || strcmp(name,"COUNTCELL")==0){
+          long val = a;
+          long lo = 0, hi = CUBALC_CELL_N - 1;
+          if (b != 0 || c != 0){
+            lo = b;
+            hi = (c != 0) ? c : CUBALC_CELL_N - 1;
+          }
+          if (lo < 0) lo = 0;
+          if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+          if (hi < lo){ long t=lo; lo=hi; hi=t; }
+          if (strcmp(name,"FINDCELL")==0){
+            for (long i=lo;i<=hi;i++)
+              if (vm->cells[(int)i] == val) return i;
+            return -1;
+          }
+          long cnt = 0;
+          for (long i=lo;i<=hi;i++)
+            if (vm->cells[(int)i] == val) cnt++;
+          return cnt;
         }
         if (strcmp(name,"PEEK")==0){
           if (vm->sp <= 0) return 0;
@@ -2606,6 +2628,129 @@ static int parse_form(VM *vm, Lex *L){
     if (hi < lo){ long t=lo; lo=hi; hi=t; }
     for (long i = lo; i <= hi; i++) vm->cells[(int)i] = val;
     var_set_num(vm,"LAST_N",val); vm->last_n=val;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 data/memory plane: block copy/move + search + reverse */
+  if (kw(&L->cur,"COPYCELL")||kw(&L->cur,"CELLCOPY")||kw(&L->cur,"CMOVE")){
+    /* COPYCELL src dst n — copy n cells src.. → dst.. (overlap-safe) */
+    lex_next(L);
+    long src = parse_expr(vm,L);
+    long dst = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (src < 0) src = 0;
+    if (dst < 0) dst = 0;
+    if (src >= CUBALC_CELL_N || dst >= CUBALC_CELL_N || n == 0){
+      var_set_num(vm,"OK", n==0 ? 1 : 0);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    if (src + n > CUBALC_CELL_N) n = CUBALC_CELL_N - src;
+    if (dst + n > CUBALC_CELL_N) n = CUBALC_CELL_N - dst;
+    if (n > 0){
+      long tmp[CUBALC_CELL_N];
+      for (long i=0;i<n;i++) tmp[i] = vm->cells[(int)(src+i)];
+      for (long i=0;i<n;i++) vm->cells[(int)(dst+i)] = tmp[i];
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"MOVECELL")||kw(&L->cur,"CELLMOVE")){
+    /* MOVECELL src dst n — copy then zero source (non-overlapping src clear) */
+    lex_next(L);
+    long src = parse_expr(vm,L);
+    long dst = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (src < 0) src = 0;
+    if (dst < 0) dst = 0;
+    if (src >= CUBALC_CELL_N || dst >= CUBALC_CELL_N || n == 0){
+      var_set_num(vm,"OK", n==0 ? 1 : 0);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    if (src + n > CUBALC_CELL_N) n = CUBALC_CELL_N - src;
+    if (dst + n > CUBALC_CELL_N) n = CUBALC_CELL_N - dst;
+    if (n > 0){
+      long tmp[CUBALC_CELL_N];
+      for (long i=0;i<n;i++) tmp[i] = vm->cells[(int)(src+i)];
+      for (long i=0;i<n;i++) vm->cells[(int)(dst+i)] = tmp[i];
+      /* clear source cells that are not inside the destination range */
+      for (long i=0;i<n;i++){
+        long si = src + i;
+        if (si < dst || si >= dst + n)
+          vm->cells[(int)si] = 0;
+      }
+    }
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FINDCELL")||kw(&L->cur,"CELLFIND")||kw(&L->cur,"INDEXCELL")){
+    /* FINDCELL val [lo [hi]] — first index of val, or -1; OK=found */
+    lex_next(L);
+    long val = parse_expr(vm,L);
+    long lo = 0, hi = CUBALC_CELL_N - 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      lo = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        hi = parse_expr(vm,L);
+      else hi = CUBALC_CELL_N - 1;
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long found = -1;
+    for (long i=lo;i<=hi;i++){
+      if (vm->cells[(int)i] == val){ found = i; break; }
+    }
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"COUNTCELL")||kw(&L->cur,"CELLCOUNT")||kw(&L->cur,"COUNTVAL")){
+    /* COUNTCELL val [lo [hi]] — how many cells equal val */
+    lex_next(L);
+    long val = parse_expr(vm,L);
+    long lo = 0, hi = CUBALC_CELL_N - 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      lo = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        hi = parse_expr(vm,L);
+      else hi = CUBALC_CELL_N - 1;
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long cnt = 0;
+    for (long i=lo;i<=hi;i++)
+      if (vm->cells[(int)i] == val) cnt++;
+    var_set_num(vm,"LAST_N",cnt); vm->last_n=cnt;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"REVCELL")||kw(&L->cur,"CELLREV")||kw(&L->cur,"REVERSECELLS")){
+    /* REVCELL lo hi — reverse cell[lo..hi] in place */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long i = lo, j = hi;
+    while (i < j){
+      long t = vm->cells[(int)i];
+      vm->cells[(int)i] = vm->cells[(int)j];
+      vm->cells[(int)j] = t;
+      i++; j--;
+    }
+    var_set_num(vm,"LAST_N", hi - lo + 1); vm->last_n = hi - lo + 1;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */

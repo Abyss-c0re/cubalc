@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.2-universal — 2026-08-02
+
+### Direction
+- Algocube digit **5** → cell memory plane: block copy/move + find/count + reverse.
+
+### Language
+- `COPYCELL`/`CELLCOPY`/`CMOVE` src dst n — overlap-safe cell block copy
+- `MOVECELL`/`CELLMOVE` src dst n — copy then clear non-overlapping source
+- `FINDCELL`/`CELLFIND` val [lo [hi]] — first index or -1 (`OK` = found); expr form too
+- `COUNTCELL`/`CELLCOUNT` val [lo [hi]] — count matches; expr form too
+- `REVCELL`/`CELLREV` lo hi — reverse cell range in place
+- Proof `25_cell_mem_universal.cubalc`
+
+### Prior
+See 1.12.1-universal.
+
 ## 1.12.1-universal — 2026-08-02
 
 ### Direction
