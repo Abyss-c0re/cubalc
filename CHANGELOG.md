@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.55-universal — 2026-08-02
+
+### Direction
+- Algocube digit **7** → COP matrix reorder + complete boolean algebra + Hamming distance.
+
+### Language
+- `REVBITS`/`REVERSEBITS`/`BITREVM`/`MIRRORBITS` cube — reverse bit order in-place
+- `SWAPBIT`/`XCHGBIT`/`EXCHBIT`/`SWBIT` cube i j — exchange two bit positions
+- `XNORBITS`/`EQVBITS`/`NXORBITS` · `NORBITS` · `ANDNBITS`/`BICBITS` · `ORNBITS` dst src
+- `DIFFBITS`/`HAMBITS`/`HAMMINGBITS`/`BITDIFF`/`XORDIST` a b → `LAST_N` = Hamming distance
+- Proof `78_revbits_diff.cubalc`
+
+### Prior
+See 1.12.54-universal.
+
+
 ## 1.12.14-universal — 2026-08-02
 
 ### Direction

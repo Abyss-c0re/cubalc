@@ -1,0 +1,121 @@
+# Proof 78 — digit-7 COP matrix: REVBITS/SWAPBIT + XNOR/NOR/ANDN + DIFFBITS
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+SETBIT m 0 1
+SETBIT m 1 1
+ONES m
+ASSERT LAST_N == 2
+GETBIT m 0
+ASSERT LAST_N == 1
+GETBIT m 1
+ASSERT LAST_N == 1
+
+# REVBITS: index i ↔ n-1-i (n=64 → 0↔63, 1↔62)
+REVBITS m
+GETBIT m 0
+ASSERT LAST_N == 0
+GETBIT m 63
+ASSERT LAST_N == 1
+GETBIT m 62
+ASSERT LAST_N == 1
+FINDONE m
+ASSERT LAST_N == 62
+LASTONE m
+ASSERT LAST_N == 63
+ONES m
+ASSERT LAST_N == 2
+
+# reverse again restores
+REVERSEBITS m
+FINDONE m
+ASSERT LAST_N == 0
+LASTONE m
+ASSERT LAST_N == 1
+
+# SWAPBIT 0 5: bit0 goes to 5
+SWAPBIT m 0 5
+GETBIT m 0
+ASSERT LAST_N == 0
+GETBIT m 5
+ASSERT LAST_N == 1
+GETBIT m 1
+ASSERT LAST_N == 1
+# swap back
+XCHGBIT m 0 5
+GETBIT m 0
+ASSERT LAST_N == 1
+GETBIT m 5
+ASSERT LAST_N == 0
+
+# boolean algebra: a bits 0,1 ; b bits 0,2
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CUBE c ROLE matrix PROTON 1
+CLEARBITS a
+CLEARBITS b
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT b 0 1
+SETBIT b 2 1
+
+# XNOR: equal bits → 1. bit0 both1 →1; bit1 a1b0 →0; bit2 a0b1 →0; bit3 both0 →1
+COPYBITS c a
+XNORBITS c b
+GETBIT c 0
+ASSERT LAST_N == 1
+GETBIT c 1
+ASSERT LAST_N == 0
+GETBIT c 2
+ASSERT LAST_N == 0
+GETBIT c 3
+ASSERT LAST_N == 1
+
+# NORBITS: only both-zero → 1
+COPYBITS c a
+NORBITS c b
+GETBIT c 0
+ASSERT LAST_N == 0
+GETBIT c 3
+ASSERT LAST_N == 1
+
+# ANDNBITS: a & ~b → bit1 only
+COPYBITS c a
+ANDNBITS c b
+GETBIT c 0
+ASSERT LAST_N == 0
+GETBIT c 1
+ASSERT LAST_N == 1
+ONES c
+ASSERT LAST_N == 1
+
+# ORNBITS: a | ~b — dense (nearly all ones)
+COPYBITS c a
+ORNBITS c b
+ONES c
+ASSERT LAST_N >= 62
+
+# DIFFBITS = Hamming(a,b): positions 1 and 2 differ → 2
+DIFFBITS a b
+ASSERT LAST_N == 2
+HAMBITS a a
+ASSERT LAST_N == 0
+
+# self XNOR all ones
+COPYBITS c a
+XNORBITS c a
+ALLBITS c
+ASSERT LAST_N == 1
+
+# soft fail missing
+DIFFBITS a nosuch
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof78_revbits_diff" LAST_N SET
