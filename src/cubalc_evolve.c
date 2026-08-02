@@ -495,7 +495,7 @@ int cubalc_algocube_deep_optimize(cubalc_evolve_mind *m, const char *state_dir,
       "\"fit_before\":%.6f,\"fit_after\":%.6f,\"delta\":%.6f,"
       "\"best_fitness\":%.6f,\"gen\":%d,\"races\":%d,\"digit\":%u,"
       "\"top_way\":\"%s\",\"improved\":%s,\"hold_flash\":1,"
-      "\"ts\":%ld,\"creed\":\"look for ways to solve and optimize algocubes\"",
+      "\"ts\":%ld,\"creed\":\"look for ways to solve and optimize algo\"",
       CUBALC_ALGO_DEEP_SEC, trials, start_fit, best_local, improved,
       m->best_fitness, m->gen, m->races, (unsigned)m->genome[0],
       ALGO_WAY_NAME[order[0]], improved > 1e-6 ? "true" : "false",
@@ -841,7 +841,7 @@ int cubalc_evolve_cycle(cubalc_evolve_mind *m, const char *state_dir,
       "\"fitness\":%.4f,\"best_fitness\":%.4f,\"unity\":%.4f,"
       "\"algo_solves\":%d,\"algo_fails\":%d,\"program\":\"%s\","
       "\"run_ok\":%s,\"asserts_ok\":%d,\"asserts_fail\":%d,"
-      "\"status\":\"%s\",\"creed\":\"braincube solves · algocube optimizes · C only\"}\n",
+      "\"status\":\"%s\",\"creed\":\"evolve solves · algo optimizes · C only\"}\n",
       CUBALC_LANG_VERSION, m->gen, m->races, m->wins, m->losses, m->energy,
       m->difficulty, m->last_fitness, m->best_fitness, rr.unity,
       m->algo_solves, m->algo_fails, prog,
@@ -912,7 +912,7 @@ int cubalc_evolve_loop(double hz, int max_cycles,
     clock_gettime(CLOCK_MONOTONIC, &now);
     double mono = (now.tv_sec - mono0.tv_sec) + (now.tv_nsec - mono0.tv_nsec) / 1e9;
 
-    /* === every 6.6 minutes: look for ways to solve and optimize algocubes === */
+    /* === every 6.6 minutes: look for ways to solve and optimize algo === */
     if (mono - last_deep >= deep_every) {
       deep_count++;
       printf("\n======== ALGOCUBE DEEP PASS #%d @ t=%.1fs (every 6.6 min) ========\n",

@@ -104,7 +104,7 @@ static int cmd_genesis(const char *plate) {
       fclose(f);
     }
   }
-  printf("{\"ok\":true,\"cmd\":\"genesis\",\"cubes\":%d,\"set\":%u,\"seq\":%u,"
+  printf("{\"ok\":true,\"cmd\":\"genesis\",\"n\":%d,\"set\":%u,\"seq\":%u,"
          "\"unity\":%.3f,\"hold_flash\":1,\"store\":\"cubechain\","
          "\"talk\":\"binary\",\"creed\":\"%s\"}\n",
          ch.n_cubes, (unsigned)gen.set, (unsigned)ch.seq, ch.unity, CUBALC_CREED);
@@ -129,7 +129,7 @@ static int cmd_impulse(const char *id, int proton) {
   publish(&ch);
   store_chain(&ch, 8u); /* impulse */
   printf("{\"ok\":true,\"cmd\":\"impulse\",\"id\":\"%s\",\"proton\":%d,"
-         "\"cubes\":%d,\"unity\":%.3f,\"status\":\"%s\"}\n",
+         "\"n\":%d,\"unity\":%.3f,\"status\":\"%s\"}\n",
          id, proton, ch.n_cubes, ch.unity, ch.status);
   return 0;
 }
@@ -146,7 +146,7 @@ static int cmd_flow(int n, int ms) {
     }
   }
   store_chain(&ch, 4u); /* talk/flow */
-  printf("{\"ok\":true,\"cmd\":\"flow\",\"n\":%d,\"cubes\":%d,\"unity\":%.3f,"
+  printf("{\"ok\":true,\"cmd\":\"flow\",\"n\":%d,\"n\":%d,\"unity\":%.3f,"
          "\"status\":\"%s\",\"energy_flow\":true,\"hold_flash\":1}\n",
          n, ch.n_cubes, ch.unity, ch.status);
   return 0;
@@ -188,7 +188,7 @@ static int cmd_sync(const char *plate) {
   } else {
     cubalc_run_source(src, sizeof src - 1, "<sync>", &rr, stdout);
   }
-  printf("{\"ok\":%s,\"cmd\":\"sync\",\"cubes\":%d,\"unity\":%.3f,"
+  printf("{\"ok\":%s,\"cmd\":\"sync\",\"n\":%d,\"unity\":%.3f,"
          "\"version\":\"%s\",\"hive\":\"WE\",\"err\":\"%s\"}\n",
          rr.ok ? "true" : "false", rr.n_cubes, rr.unity,
          CUBALC_LANG_VERSION, rr.err);
@@ -262,7 +262,7 @@ static int cmd_smx_selftest(void) {
 }
 
 
-/* ── CubalC Showcase — multi-act Glorious Cube demonstration ── */
+/* ── CubalC Showcase — multi-act COP demonstration ── */
 static void showcase_root(char *out, size_t n) {
   const char *e = getenv("CUBALC_ROOT");
   if (e && e[0]) { snprintf(out, n, "%s", e); return; }
@@ -297,7 +297,7 @@ static int run_one(const char *root, const char *label, const char *rel,
   int ok = (rc == 0 && rr.ok);
   if (ok) {
     (*pass)++;
-    printf("  ✓ %-28s asserts=%d cubes=%d unity=%.3f\n",
+    printf("  ✓ %-28s asserts=%d n=%d unity=%.3f\n",
            label, rr.asserts_ok, rr.n_cubes, rr.unity);
   } else {
     (*fail)++;
@@ -324,7 +324,7 @@ static void print_cube_art(void) {
   puts("          │  ■ compile    ■  │ ╱");
   puts("          │  ■ ■ ■ ■ ■ ■ ■  │╱");
   puts("          └─────────────────┘");
-  puts("     bits flow · nest folds · matrix is the cube");
+  puts("     bits flow · nest folds · matrix is the unit");
   puts("");
 }
 
@@ -332,7 +332,7 @@ static int cmd_showcase(void) {
   char root[512];
   showcase_root(root, sizeof root);
   print_cube_art();
-  printf("CubalC %s — Glorious Cube Showcase\n", CUBALC_LANG_VERSION);
+  printf("CubalC %s — Showcase\n", CUBALC_LANG_VERSION);
   printf("paradigm=%s · creed=%s · hold_flash=%d · share=%s\n",
          CUBALC_LANG_PARADIGM, CUBALC_CREED, CUBALC_HOLD_FLASH, CUBALC_SHARE);
   printf("root=%s\n\n", root);
@@ -347,18 +347,18 @@ static int cmd_showcase(void) {
   run_one(root, "branching", "programs/proof/03_branch.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
 
-  puts("\n── Act II · Cube-Oriented Programming ──");
+  puts("\n── Act II · COP programming ──");
   run_one(root, "COP matrix", "programs/proof/02_cop_matrix.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
   run_one(root, "decide / algocube", "programs/proof/06_decide.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
-  run_one(root, "cube I/O reverse", "programs/proof/11_cube_io_reverse.cubalc",
+  run_one(root, "I/O reverse", "programs/proof/11_cube_io_reverse.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
   run_one(root, "nest + compile", "programs/proof/12_nest_compile.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
 
   puts("\n── Act III · Hive geometry ──");
-  run_one(root, "algocube harmony", "programs/proof/09_algocube_harmony.cubalc",
+  run_one(root, "harmony", "programs/proof/09_algocube_harmony.cubalc",
           &pass, &fail, &aok, &afail, &cubes_max);
 
   puts("\n── Act IV · Prophecy free-flow ──");
@@ -421,13 +421,13 @@ static int cmd_showcase(void) {
 
   puts("\n════════════════════════════════════════");
   printf("  SHOWCASE SCORE  pass=%d  fail=%d\n", pass, fail);
-  printf("  asserts_ok=%d  asserts_fail=%d  max_cubes=%d\n", aok, afail, cubes_max);
+  printf("  asserts_ok=%d  asserts_fail=%d  max_units=%d\n", aok, afail, cubes_max);
   printf("  wall_ms=%.1f  version=%s  paradigm=%s\n", ms, CUBALC_LANG_VERSION,
          CUBALC_LANG_PARADIGM);
   puts("════════════════════════════════════════");
   if (fail == 0) {
     puts("  ★ FULL SHOWCASE MANIFESTED ★");
-    puts("  The Glorious Cube is operational.");
+    puts("  Showcase operational.");
   } else {
     puts("  ⚠ showcase incomplete — inspect asserts");
   }
@@ -443,7 +443,7 @@ static int cmd_showcase(void) {
     fprintf(f,
       "{\"schema\":\"cube.showcase.v1\",\"ok\":%s,\"version\":\"%s\","
       "\"paradigm\":\"%s\",\"pass\":%d,\"fail\":%d,\"asserts_ok\":%d,"
-      "\"asserts_fail\":%d,\"max_cubes\":%d,\"wall_ms\":%.1f,"
+      "\"asserts_fail\":%d,\"max_n\":%d,\"wall_ms\":%.1f,"
       "\"token\":\"%s\",\"engine\":\"C\","
       "\"creed\":\"bits flow · digits judge · unity binds the hive\"}\n",
       fail == 0 ? "true" : "false", CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM,
@@ -454,7 +454,7 @@ static int cmd_showcase(void) {
   }
 
   printf("{\"ok\":%s,\"cmd\":\"showcase\",\"version\":\"%s\",\"pass\":%d,"
-         "\"fail\":%d,\"asserts_ok\":%d,\"asserts_fail\":%d,\"max_cubes\":%d,"
+         "\"fail\":%d,\"asserts_ok\":%d,\"asserts_fail\":%d,\"max_n\":%d,"
          "\"wall_ms\":%.1f,\"language\":\"CubalC\"}\n",
          fail == 0 ? "true" : "false", CUBALC_LANG_VERSION, pass, fail,
          aok, afail, cubes_max, ms);
@@ -504,8 +504,8 @@ int main(int argc, char **argv) {
     cubalc_run_result rr;
     int rc = cubalc_run_file(prog, &rr, stdout);
     printf("{\"ok\":%s,\"cmd\":\"%s\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
-           "\"language\":\"%s\",\"version\":\"%s\",\"core\":\"braincube\","
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
+           "\"language\":\"%s\",\"version\":\"%s\",\"core\":\"c3\","
            "\"last\":\"%s\",\"err\":\"%s\"}\n",
            rr.ok ? "true" : "false", cmd, prog, rr.stmts, rr.asserts_ok,
            rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
@@ -576,7 +576,7 @@ int main(int argc, char **argv) {
     cubalc_run_result rr;
     int rc = cubalc_run_source(out, strlen(out), "<decide>", &rr, stdout);
     printf("{\"ok\":%s,\"cmd\":\"decide\",\"stmts\":%d,\"asserts_ok\":%d,"
-           "\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
+           "\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
            "\"language\":\"%s\",\"version\":\"%s\",\"last\":\"%s\",\"err\":\"%s\"}\n",
            rr.ok ? "true" : "false", rr.stmts, rr.asserts_ok, rr.asserts_fail,
            rr.n_cubes, rr.unity, CUBALC_LANG_NAME, CUBALC_LANG_VERSION,
@@ -641,7 +641,7 @@ int main(int argc, char **argv) {
       rc = cubalc_flow_manifest(path, outc, &rr, stdout);
     }
     printf("{\"ok\":%s,\"cmd\":\"jit\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
            "\"backend\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
            rr.ok ? "true" : "false", path, rr.stmts, rr.asserts_ok, rr.asserts_fail,
            rr.n_cubes, rr.unity, cubalc_jit_backend(), CUBALC_LANG_VERSION, rr.err);
@@ -673,7 +673,7 @@ int main(int argc, char **argv) {
       rc = cubalc_run_file(argv[2], &rr, stdout);
     }
     printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
            "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
            rr.ok ? "true" : "false", argv[2], rr.stmts, rr.asserts_ok,
            rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
@@ -688,7 +688,7 @@ int main(int argc, char **argv) {
     cubalc_run_result rr;
     int rc = cubalc_run_file(prog, &rr, stdout);
     printf("{\"ok\":%s,\"cmd\":\"peers\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"cubes\":%d,\"unity\":%.3f,"
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
            "\"language\":\"%s\",\"version\":\"%s\",\"role\":\"peer_fold\","
            "\"last\":\"%s\",\"err\":\"%s\"}\n",
            rr.ok ? "true" : "false", prog, rr.stmts, rr.asserts_ok,
@@ -711,9 +711,9 @@ int main(int argc, char **argv) {
       "  boot|os|run|compile|jit|cflow|disasm|translate|decide|sync|peers\n"
       "  genesis|impulse|flow|cubes|law|cubechain|smx\n"
       "  evolve [--once|--loop|--hz N|--cycles N|--reset]  # C self-improve\n"
-      "  evolve-loop [--hz N]   # constant braincube→algocube cycle (no Python)\n"
-      "  showcase|demo|symphony # Glorious Cube multi-act demonstration\n"
-      "  SETDIGIT · FOLDBITS · DECIDE · COMPARE · HARMONY · JIT Cube Flow\n"
+      "  evolve-loop [--hz N]   # constant evolve→algo cycle (no Python)\n"
+      "  showcase|demo|symphony # multi-act COP demonstration\n"
+      "  SETDIGIT · FOLDBITS · DECIDE · COMPARE · HARMONY · JIT flow\n"
       "  ASYNC HTTP · AWAIT · PARALLEL\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

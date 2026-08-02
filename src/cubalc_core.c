@@ -129,8 +129,8 @@ int cubalc_cube_spawn(cubalc_chain *ch, const char *id, const char *role,
   if (!ch || ch->n_cubes >= CUBALC_MAX_CUBES || ch->n_cubes >= CUBALC_BUDGET) return -1;
   cubalc_cube *c = &ch->cubes[ch->n_cubes];
   memset(c, 0, sizeof(*c));
-  strncpy(c->id, id ? id : "cube", CUBALC_ID_LEN - 1);
-  strncpy(c->label, id ? id : "cube", CUBALC_ID_LEN - 1);
+  strncpy(c->id, id ? id : "unit", CUBALC_ID_LEN - 1);
+  strncpy(c->label, id ? id : "unit", CUBALC_ID_LEN - 1);
   strncpy(c->role, role ? role : "aspect", sizeof(c->role) - 1);
   c->x = x; c->y = y; c->z = z; c->s = 0.12f;
   role_color(c->role, &c->r, &c->g, &c->b);
@@ -292,7 +292,7 @@ int cubalc_chain_flow_directed(cubalc_chain *ch) {
     }
   }
   snprintf(ch->status, sizeof ch->status,
-           "flow_directed talks=%d seq=%u unity=%.2f · cube I/O only",
+           "flow_directed talks=%d seq=%u unity=%.2f · unit I/O only",
            talks, (unsigned)ch->seq, ch->unity);
   return talks;
 }
@@ -383,7 +383,7 @@ int cubalc_cube_talk(cubalc_chain *ch, int from, int to) {
   return 0;
 }
 
-/* --- Nest + compile-to-matrix (law: no flow → no compile; cubes may nest) --- */
+/* --- Nest + compile-to-matrix (law: no flow → no compile; units may nest) --- */
 
 void cubalc_cube_mark_flow(cubalc_chain *ch, int cube) {
   if (!ch || cube < 0 || cube >= ch->n_cubes) return;
@@ -441,7 +441,7 @@ int cubalc_cube_nest(cubalc_chain *ch, int parent, int child) {
   ch->cubes[child].z = ch->cubes[parent].z + 0.04f;
   ch->cubes[child].s = ch->cubes[parent].s * 0.72f;
   snprintf(ch->status, sizeof ch->status,
-           "nest parent=%s child=%s depth=%d · cubes may nest",
+           "nest parent=%s child=%s depth=%d · units may nest",
            ch->cubes[parent].id, ch->cubes[child].id, d);
   return 0;
 }
@@ -462,7 +462,7 @@ int cubalc_cube_compile(cubalc_chain *ch, int cube) {
   cubalc_cube *c = &ch->cubes[cube];
   if (!c->flowed) {
     snprintf(ch->status, sizeof ch->status,
-             "NO COMPILE: cube %s has no flow · law: no flow — no compiling",
+             "NO COMPILE: unit %s has no flow · law: no flow — no compiling",
              c->id);
     return -2;
   }
@@ -517,7 +517,7 @@ int cubalc_cube_compile(cubalc_chain *ch, int cube) {
     c->ports[p].gate = c->atom.matrix;
 
   snprintf(ch->status, sizeof ch->status,
-           "compiled cube=%s set=%u dig=%u nest_children=%d · matrix is the cube",
+           "compiled unit=%s set=%u dig=%u nest_children=%d · matrix is the unit",
            c->id, (unsigned)c->compiled_matrix.set, (unsigned)c->atom.digit, nchild);
   return 0;
 }
@@ -562,7 +562,7 @@ int cubalc_chain_compile(cubalc_chain *ch, int *failed_ix) {
     }
   }
   snprintf(ch->status, sizeof ch->status,
-           "chain compile ok n=%d · every cube is a matrix · energy flowed",
+           "chain compile ok n=%d · every unit is a matrix · energy flowed",
            ch->n_cubes);
   return last_rc;
 }
@@ -641,7 +641,7 @@ int cubalc_chain_os_aspects(cubalc_chain *ch) {
         if (strcmp(ch->cubes[j].id, "cube-destroy") == 0)
           cubalc_cube_plug(ch, i, j);
   }
-  snprintf(ch->status, sizeof ch->status, "OS cubes n=%d plugs live", ch->n_cubes);
+  snprintf(ch->status, sizeof ch->status, "OS units n=%d plugs live", ch->n_cubes);
   return ch->n_cubes;
 }
 
@@ -743,7 +743,7 @@ int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
              "\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
              "\"law\":{\"sot\":true,\"share_smx\":true,\"hold_flash\":1,"
              "\"no_bci\":true,\"dev_free\":true,\"core_io\":true,\"one_cmd\":true},"
-             "\"hud\":\"CubalC · united faces · %d cubes · E=%.2f · unity=%.2f · %s\","
+             "\"hud\":\"CubalC · united faces · %d units · E=%.2f · unity=%.2f · %s\","
              "\"cubes\":[",
           (unsigned)ch->seq, ch->unity, eavg, n, CUBALC_BUDGET, CUBALC_SHARE,
           n, eavg, ch->unity, ch->creed);
@@ -965,7 +965,7 @@ int cubalc_chain_publish_united(const cubalc_chain *ch) {
         "\"seq\":%u,\"n_cubes\":%d,\"unity\":%.4f,\"energy\":%.4f,"
         "\"viz\":\"%s/state/cubalc_viz_frame.json\","
         "\"cells\":\"%s\","
-        "\"note\":\"one matrix · free devices · no brain wires · All Hail Cube\"}\n",
+        "\"note\":\"one matrix · free devices · no brain wires · energy must flow\"}\n",
         CUBALC_CREED, CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE,
         (unsigned)ch->seq, n, ch->unity, eavg, root, cells_env);
       fclose(f);
@@ -1023,12 +1023,12 @@ int cubalc_chain_print_cubes(const cubalc_chain *ch, FILE *out) {
           (unsigned)ch->hold_flash, ch->creed[0] ? ch->creed : "C3");
 
   if (H) {
-    fprintf(out, "| human cubes (optional viz) · CUBALC_HUMAN=1\n");
+    fprintf(out, "| human units (optional viz) · CUBALC_HUMAN=1\n");
     int maxn = ch->n_cubes < 8 ? ch->n_cubes : 8;
     for (int i = 0; i < maxn; i++)
       print_iso_cube(out, &ch->cubes[i], i);
     if (ch->n_cubes > maxn)
-      fprintf(out, "  … +%d more cubes\n", ch->n_cubes - maxn);
+      fprintf(out, "  … +%d more units\n", ch->n_cubes - maxn);
   }
 
   for (int i = 0; i < ch->n_cubes; i++) {
@@ -1266,27 +1266,27 @@ int cubalc_law_check(const cubalc_chain *ch, char *err, size_t errn) {
       if (c->ports[p].dir == CUBALC_PORT_OUT) has_out = 1;
     }
     if (!has_in || !has_out) {
-      if (err) snprintf(err, errn, "cube %s missing IN/OUT", c->id);
+      if (err) snprintf(err, errn, "unit %s missing IN/OUT", c->id);
       return -4;
     }
     /* matrix is key — every cube has matrix width */
     if (c->atom.matrix.n == 0) {
-      if (err) snprintf(err, errn, "cube %s empty matrix n", c->id);
+      if (err) snprintf(err, errn, "unit %s empty matrix n", c->id);
       return -5;
     }
     /* nest: parent index must be valid or -1 */
     if (c->parent < -1 || c->parent >= ch->n_cubes) {
-      if (err) snprintf(err, errn, "cube %s bad parent", c->id);
+      if (err) snprintf(err, errn, "unit %s bad parent", c->id);
       return -6;
     }
     /* law flow_compile: if marked compiled, must have flowed and matrix set */
     if (c->compiled) {
       if (!c->flowed) {
-        if (err) snprintf(err, errn, "cube %s compiled without flow", c->id);
+        if (err) snprintf(err, errn, "unit %s compiled without flow", c->id);
         return -7;
       }
       if (c->compiled_matrix.n == 0 || c->compiled_matrix.set == 0) {
-        if (err) snprintf(err, errn, "cube %s compiled empty matrix", c->id);
+        if (err) snprintf(err, errn, "unit %s compiled empty matrix", c->id);
         return -8;
       }
     }

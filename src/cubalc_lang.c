@@ -181,7 +181,7 @@ static void ensure_world(VM *vm){
   if (vm->ch.n_cubes > 0 || vm->ch.initial.n > 0) return;
   cubalc_matrix gen;
   cubalc_coord_to_matrix(
-    "NEXUS_COORD v1 | from=play | type=world | hold_flash=1 | visual=cubes |", &gen);
+    "NEXUS_COORD v1 | from=play | type=world | hold_flash=1 | visual=units |", &gen);
   cubalc_chain_from_initial(&vm->ch, &gen, 1);
   vm->ch.hold_flash = (uint8_t)vm->hold_flash;
   snprintf(vm->ch.creed, sizeof vm->ch.creed, "%s",
@@ -222,7 +222,7 @@ static int place_cube(VM *vm, const char *id, const char *role, int proton){
   float z = (float)(vm->ch.n_cubes / 5) * 0.28f;
   if (cubalc_cube_spawn(&vm->ch, id, role && role[0]?role:id,
                         (uint8_t)(proton?1:0), x, 0.f, z) < 0) {
-    fail(vm, "world full — budget of cubes");
+    fail(vm, "world full — budget");
     return -1;
   }
   chunk_push(vm, id);
@@ -232,40 +232,40 @@ static void do_plug(VM *vm, const char *a, const char *b){
   int ia=find_cube(vm,a), ib=find_cube(vm,b);
   if (ia<0){ place_cube(vm,a,a,1); ia=find_cube(vm,a); }
   if (ib<0){ place_cube(vm,b,b,1); ib=find_cube(vm,b); }
-  if (ia<0||ib<0){ fail(vm,"plug missing cube"); return; }
+  if (ia<0||ib<0){ fail(vm,"plug missing unit"); return; }
   cubalc_cube_plug(&vm->ch, ia, ib);
 }
 /* Only CUBE is defined — I/O is pluggable; reverse flips IN/OUT on the wire. */
 static void do_reverse(VM *vm, const char *a, const char *b){
   int ia=find_cube(vm,a), ib=find_cube(vm,b);
-  if (ia<0||ib<0){ fail(vm,"REVERSE needs two cubes"); return; }
+  if (ia<0||ib<0){ fail(vm,"REVERSE needs two units"); return; }
   int rc = cubalc_cube_reverse(&vm->ch, ia, ib);
-  if (rc < 0){ fail(vm,"REVERSE: no plug between cubes (pluggable I/O only)"); return; }
+  if (rc < 0){ fail(vm,"REVERSE: no plug between units (pluggable I/O only)"); return; }
   var_set_num(vm, "REVERSED", rc);
   var_set_num(vm, "OK", 1);
 }
 static void do_unplug(VM *vm, const char *a, const char *b){
   int ia=find_cube(vm,a), ib=find_cube(vm,b);
-  if (ia<0||ib<0){ fail(vm,"UNPLUG needs two cubes"); return; }
+  if (ia<0||ib<0){ fail(vm,"UNPLUG needs two units"); return; }
   cubalc_cube_unplug(&vm->ch, ia, ib);
   var_set_num(vm, "OK", 1);
 }
 static void do_io(VM *vm, const char *id, int face, int is_out){
   int ix=find_cube(vm,id);
   if (ix<0){ place_cube(vm,id,"io",1); ix=find_cube(vm,id); }
-  if (ix<0){ fail(vm,"IO cube missing"); return; }
+  if (ix<0){ fail(vm,"IO unit missing"); return; }
   int rc = cubalc_cube_io(&vm->ch, ix, face,
     is_out ? CUBALC_PORT_OUT : CUBALC_PORT_IN);
   if (rc < 0){ fail(vm,"IO port full"); return; }
   var_set_num(vm, "OK", 1);
   var_set_num(vm, "PORT", rc);
 }
-/* Nest child inside parent — cubes may nest. */
+/* Nest child inside parent — units may nest. */
 static void do_nest(VM *vm, const char *parent, const char *child){
   int ip=find_cube(vm,parent), ic=find_cube(vm,child);
   if (ip<0){ place_cube(vm,parent,"shell",1); ip=find_cube(vm,parent); }
   if (ic<0){ place_cube(vm,child,"inner",1); ic=find_cube(vm,child); }
-  if (ip<0||ic<0){ fail(vm,"NEST parent child — missing cube"); return; }
+  if (ip<0||ic<0){ fail(vm,"NEST parent child — missing unit"); return; }
   int rc = cubalc_cube_nest(&vm->ch, ip, ic);
   if (rc == -2){ fail(vm,"NEST cycle or depth limit"); return; }
   if (rc < 0){ fail(vm,"NEST failed"); return; }
@@ -275,14 +275,14 @@ static void do_nest(VM *vm, const char *parent, const char *child){
 }
 static void do_unnest(VM *vm, const char *child){
   int ic=find_cube(vm,child);
-  if (ic<0){ fail(vm,"UNNEST needs cube"); return; }
+  if (ic<0){ fail(vm,"UNNEST needs unit"); return; }
   cubalc_cube_unnest(&vm->ch, ic);
   var_set_num(vm, "OK", 1);
 }
 /* Law: each cube compiles into a matrix. No flow — no compiling. */
 static void do_compile_cube(VM *vm, const char *id){
   int ix=find_cube(vm,id);
-  if (ix<0){ fail(vm,"COMPILE needs cube"); return; }
+  if (ix<0){ fail(vm,"COMPILE needs unit"); return; }
   int rc = cubalc_cube_compile(&vm->ch, ix);
   var_set_num(vm, "COMPILE_RC", rc);
   if (rc == -2){
@@ -530,7 +530,7 @@ static int parse_cube_body(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# export %s\n", path);
     bump(vm); return 1;
   }
-  /* [fleet] — Grokium nanobot roles as cubes */
+  /* [fleet] — Grokium nanobot roles as units */
   if (kw(&L->cur,"fleet") || kw(&L->cur,"nanobots")){
     lex_next(L);
     if (L->cur.kind!=TK_RBRACK){ fail(vm,"[fleet]"); return -1; }
@@ -550,7 +550,7 @@ static int parse_cube_body(VM *vm, Lex *L){
     do_plug(vm,"hive","nb-integrity");
     cubalc_chain_impulse(&vm->ch,"hive",1);
     do_flow(vm,3);
-    if (vm->trace) fprintf(vm->trace, "# fleet cubes placed\n");
+    if (vm->trace) fprintf(vm->trace, "# fleet units placed\n");
     bump(vm); return 1;
   }
   /* [status] — short board line for hosts */
@@ -1962,7 +1962,7 @@ static int parse_form(VM *vm, Lex *L){
       if (iv>=0 && im>=0) cubalc_cube_plug(&vm->ch, iv, im);
     }
     do_flow(vm, 4);
-    if (vm->trace) fprintf(vm->trace,"# POSE mode=%s cubes=%d\n", mode, vm->ch.n_cubes);
+    if (vm->trace) fprintf(vm->trace,"# POSE mode=%s n=%d\n", mode, vm->ch.n_cubes);
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,
                           "pose %s n=%d", mode, vm->ch.n_cubes);
     bump(vm); return 1;
@@ -2407,7 +2407,7 @@ static int parse_form(VM *vm, Lex *L){
     return 0; /* stop marker for nested bodies */
   }
 
-  snprintf(vm->err,sizeof vm->err,"unknown form '%s' line %d — place a cube with [name]",
+  snprintf(vm->err,sizeof vm->err,"unknown form '%s' line %d — place a unit with [name]",
            L->cur.text, L->cur.line);
   fail(vm, vm->err);
   return -1;
