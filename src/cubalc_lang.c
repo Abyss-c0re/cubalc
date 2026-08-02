@@ -1117,6 +1117,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"MEDIAN")==0 || strcmp(name,"MID3")==0 ||
         strcmp(name,"NEG")==0 ||
         strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0 ||
+        /* digit-1 mem control: set/inc/dec/xchg as expressions */
+        strcmp(name,"SETCELL")==0 || strcmp(name,"PUTCELL")==0 ||
+        strcmp(name,"STORE")==0 || strcmp(name,"POKE")==0 ||
+        strcmp(name,"INCCELL")==0 || strcmp(name,"INCELL")==0 ||
+        strcmp(name,"DECCELL")==0 || strcmp(name,"DECELL")==0 ||
+        strcmp(name,"XCHGCELL")==0 || strcmp(name,"EXCHCELL")==0 ||
+        strcmp(name,"SWAPC")==0 ||
         strcmp(name,"PEEK")==0 || strcmp(name,"STACKLEN")==0 ||
         strcmp(name,"SP")==0 ||
         strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
@@ -1575,6 +1582,43 @@ static long parse_prim(VM *vm, Lex *L){
           if (a < 0) a = 0;
           if (a >= CUBALC_CELL_N) a = CUBALC_CELL_N - 1;
           return vm->cells[(int)a];
+        }
+        if (strcmp(name,"SETCELL")==0 || strcmp(name,"PUTCELL")==0 ||
+            strcmp(name,"STORE")==0 || strcmp(name,"POKE")==0){
+          /* SETCELL(i, v) — store v at cell i, return v */
+          long i = a;
+          if (i < 0) i = 0;
+          if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+          vm->cells[(int)i] = b;
+          return b;
+        }
+        if (strcmp(name,"INCCELL")==0 || strcmp(name,"INCELL")==0){
+          /* INCCELL(i[, d]) — cells[i]+=d (default 1 when omitted), return new */
+          long i = a;
+          long step = (b == 0) ? 1 : b;
+          if (i < 0) i = 0;
+          if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+          vm->cells[(int)i] += step;
+          return vm->cells[(int)i];
+        }
+        if (strcmp(name,"DECCELL")==0 || strcmp(name,"DECELL")==0){
+          /* DECCELL(i[, d]) — cells[i]-=d (default 1), return new value */
+          long i = a;
+          long step = (b == 0) ? 1 : b;
+          if (i < 0) i = 0;
+          if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+          vm->cells[(int)i] -= step;
+          return vm->cells[(int)i];
+        }
+        if (strcmp(name,"XCHGCELL")==0 || strcmp(name,"EXCHCELL")==0 ||
+            strcmp(name,"SWAPC")==0){
+          /* XCHGCELL(i, v) — swap cells[i] with v, return previous cells[i] */
+          long i = a;
+          if (i < 0) i = 0;
+          if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+          long old = vm->cells[(int)i];
+          vm->cells[(int)i] = b;
+          return old;
         }
         if (strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
             strcmp(name,"MAXCELL")==0){
@@ -3120,8 +3164,24 @@ static int parse_form(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* ---- digit-1 data plane: cells + stack ---- */
-  if (kw(&L->cur,"CELLSET")||kw(&L->cur,"SLOTSET")||kw(&L->cur,"STORE")){
+  if (kw(&L->cur,"CELLSET")||kw(&L->cur,"SLOTSET")||kw(&L->cur,"STORE")||
+      kw(&L->cur,"POKE")||kw(&L->cur,"PUTCELL")||kw(&L->cur,"SETCELL")){
     lex_next(L);
+    /* SETCELL(i,v) paren form — expr-style mutator as statement */
+    if (L->cur.kind==TK_LPAREN){
+      lex_next(L);
+      long i = parse_expr(vm,L);
+      long v = 0;
+      if (L->cur.kind==TK_COMMA){ lex_next(L); v = parse_expr(vm,L); }
+      if (L->cur.kind==TK_RPAREN) lex_next(L);
+      if (i < 0) i = 0;
+      if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+      vm->cells[(int)i] = v;
+      var_set_num(vm, "LAST_N", v);
+      vm->last_n = v;
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     long i = parse_expr(vm,L);
     long v = 0;
     if (L->cur.kind==TK_EQ){ lex_next(L); v = parse_expr(vm,L); }
@@ -3157,6 +3217,54 @@ static int parse_form(VM *vm, Lex *L){
     vm->cells[(int)j] = t;
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
+  }
+  /* digit-1 stack↔cell: SSETCELL SINCCELL SDECCELL SXCHGCELL */
+  if (kw(&L->cur,"SSETCELL")||kw(&L->cur,"SSTORE")||kw(&L->cur,"SPUTCELL")||
+      kw(&L->cur,"STACKSETCELL")||kw(&L->cur,"SPOKE")){
+    /* i v → cells[i]=v, leave v */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SINCCELL")||kw(&L->cur,"SINCELL")||kw(&L->cur,"STACKINCCELL")||
+      kw(&L->cur,"SDECCELL")||kw(&L->cur,"SDECELL")||kw(&L->cur,"STACKDECCELL")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int is_dec = (strcmp(op,"SDECCELL")==0 || strcmp(op,"SDECELL")==0 ||
+                  strcmp(op,"STACKDECCELL")==0);
+    if (is_dec) vm->cells[(int)i] -= 1;
+    else vm->cells[(int)i] += 1;
+    long r = vm->cells[(int)i];
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXCHGCELL")||kw(&L->cur,"SEXCHCELL")||kw(&L->cur,"SSWAPC")||
+      kw(&L->cur,"STACKXCHGCELL")){
+    /* i v → swap cells[i] with v, leave previous cell value */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long old = vm->cells[(int)i];
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp++] = old;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",old); vm->last_n=old;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
