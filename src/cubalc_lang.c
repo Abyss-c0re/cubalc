@@ -957,18 +957,26 @@ static int block_scan_step(Lex *L, int *depth, int allow_until){
       kw(&L->cur,"JUMP")||kw(&L->cur,"JMP")||kw(&L->cur,"JZ")||kw(&L->cur,"JZERO")||
       kw(&L->cur,"JNZ")||kw(&L->cur,"JNEZ")||kw(&L->cur,"JTRUE")||
       kw(&L->cur,"CJZ")||kw(&L->cur,"CJZERO")||kw(&L->cur,"CJNZ")||kw(&L->cur,"CJNEZ")||
+      kw(&L->cur,"BEQ")||kw(&L->cur,"BNE")||kw(&L->cur,"BLT")||kw(&L->cur,"BLE")||
+      kw(&L->cur,"BGT")||kw(&L->cur,"BGE")||
+      kw(&L->cur,"CBEQ")||kw(&L->cur,"CBNE")||kw(&L->cur,"CBLT")||kw(&L->cur,"CBLE")||
+      kw(&L->cur,"CBGT")||kw(&L->cur,"CBGE")||
       kw(&L->cur,"SJUMP")||kw(&L->cur,"SBREAK")||kw(&L->cur,"SCONTINUE")||
       kw(&L->cur,"SJZ")||kw(&L->cur,"SJZERO")||kw(&L->cur,"SJNZ")||kw(&L->cur,"SJNEZ")||
-      kw(&L->cur,"SCJZ")||kw(&L->cur,"SCJNZ")){
+      kw(&L->cur,"SCJZ")||kw(&L->cur,"SCJNZ")||
+      kw(&L->cur,"SBEQ")||kw(&L->cur,"SBNE")||kw(&L->cur,"SBLT")||kw(&L->cur,"SBLE")||
+      kw(&L->cur,"SBGT")||kw(&L->cur,"SBGE")||
+      kw(&L->cur,"SCBEQ")||kw(&L->cur,"SCBNE")||kw(&L->cur,"SCBLT")||kw(&L->cur,"SCBLE")||
+      kw(&L->cur,"SCBGT")||kw(&L->cur,"SCBGE")){
     lex_next(L);
     if (kw(&L->cur,"IF")) lex_next(L);
     return 0;
   }
   if (allow_until && *depth==1 && kw(&L->cur,"UNTIL")) return 1;
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
-      kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"WHILE")||
-      kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||kw(&L->cur,"REPEAT")||
-      kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")){
+      kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||
+      kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||
+      kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")){
     (*depth)++;
     lex_next(L);
     return 0;
@@ -6168,6 +6176,15 @@ static int parse_form(VM *vm, Lex *L){
       if (kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"CASEIF")){
         lex_next(L);
         long w = parse_expr(vm, L);
+        long w_hi = w;
+        int is_range = 0;
+        /* WHEN lo TO hi THEN — inclusive range arm (digit-1 control_or_branch) */
+        if (kw(&L->cur,"TO")||kw(&L->cur,"THROUGH")||kw(&L->cur,"THRU")||
+            kw(&L->cur,"DOTDOT")||kw(&L->cur,"RANGE")){
+          lex_next(L);
+          w_hi = parse_expr(vm, L);
+          is_range = 1;
+        }
         if (kw(&L->cur,"THEN")) lex_next(L);
         skip_nl(L);
         Lex body_start=*L;
@@ -6176,13 +6193,22 @@ static int parse_form(VM *vm, Lex *L){
           if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
             lex_next(L); if (kw(&L->cur,"IF")) lex_next(L); continue;
           }
-          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
-              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"CASE")) depth++;
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
+              kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
+              kw(&L->cur,"CASE")) depth++;
           else if ((kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")) && depth==1) break;
           else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
           lex_next(L);
         }
-        if (!matched && !ran && w == sel){
+        int arm_hit = 0;
+        if (is_range){
+          long lo = w, hi = w_hi;
+          if (hi < lo){ long t = lo; lo = hi; hi = t; }
+          arm_hit = (sel >= lo && sel <= hi);
+        } else {
+          arm_hit = (w == sel);
+        }
+        if (!matched && !ran && arm_hit){
           matched = 1; ran = 1;
           Lex body=body_start;
           /* arm body: stop before next WHEN/DEFAULT/END (body copy only) */
@@ -6457,6 +6483,125 @@ static int parse_form(VM *vm, Lex *L){
     if (c) vm->continue_loop = 1;
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
+  }
+  /* digit-1 control_or_branch: BEQ/BNE/BLT/BLE/BGT/BGE + CB* continue */
+  if (kw(&L->cur,"BEQ")||kw(&L->cur,"BNE")||kw(&L->cur,"BLT")||kw(&L->cur,"BLE")||
+      kw(&L->cur,"BGT")||kw(&L->cur,"BGE")||
+      kw(&L->cur,"CBEQ")||kw(&L->cur,"CBNE")||kw(&L->cur,"CBLT")||kw(&L->cur,"CBLE")||
+      kw(&L->cur,"CBGT")||kw(&L->cur,"CBGE")){
+    char op[12]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    long a = parse_expr(vm, L);
+    long b = parse_expr(vm, L);
+    int cont = (op[0]=='C');
+    const char *rel = cont ? op+1 : op; /* CBEQ → BEQ */
+    int hit = 0;
+    if (strcmp(rel,"BEQ")==0) hit = (a == b);
+    else if (strcmp(rel,"BNE")==0) hit = (a != b);
+    else if (strcmp(rel,"BLT")==0) hit = (a < b);
+    else if (strcmp(rel,"BLE")==0) hit = (a <= b);
+    else if (strcmp(rel,"BGT")==0) hit = (a > b);
+    else if (strcmp(rel,"BGE")==0) hit = (a >= b);
+    if (hit){
+      if (cont) vm->continue_loop = 1;
+      else vm->break_loop = 1;
+    }
+    var_set_num(vm,"LAST_N", hit ? 1 : 0); vm->last_n = hit ? 1 : 0;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* stack compare-branch: SBEQ..SBGE + SCB* continue (pop a,b under/TOS) */
+  if (kw(&L->cur,"SBEQ")||kw(&L->cur,"SBNE")||kw(&L->cur,"SBLT")||kw(&L->cur,"SBLE")||
+      kw(&L->cur,"SBGT")||kw(&L->cur,"SBGE")||
+      kw(&L->cur,"SCBEQ")||kw(&L->cur,"SCBNE")||kw(&L->cur,"SCBLT")||kw(&L->cur,"SCBLE")||
+      kw(&L->cur,"SCBGT")||kw(&L->cur,"SCBGE")||
+      kw(&L->cur,"STACKBEQ")||kw(&L->cur,"STACKBNE")||kw(&L->cur,"STACKBLT")||
+      kw(&L->cur,"STACKBLE")||kw(&L->cur,"STACKBGT")||kw(&L->cur,"STACKBGE")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    var_set_num(vm,"SP",vm->sp);
+    int cont = 0;
+    const char *rel = "BEQ";
+    if (strncmp(op,"STACK",5)==0) rel = op+5;
+    else if (strncmp(op,"SCB",3)==0){ cont = 1; rel = op+2; }
+    else if (op[0]=='S') rel = op+1;
+    int hit = 0;
+    if (strcmp(rel,"BEQ")==0) hit = (a == b);
+    else if (strcmp(rel,"BNE")==0) hit = (a != b);
+    else if (strcmp(rel,"BLT")==0) hit = (a < b);
+    else if (strcmp(rel,"BLE")==0) hit = (a <= b);
+    else if (strcmp(rel,"BGT")==0) hit = (a > b);
+    else if (strcmp(rel,"BGE")==0) hit = (a >= b);
+    if (hit){
+      if (cont) vm->continue_loop = 1;
+      else vm->break_loop = 1;
+    }
+    var_set_num(vm,"LAST_N", hit ? 1 : 0); vm->last_n = hit ? 1 : 0;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* UNLESS cond THEN ... [ELSE ...] END — inverted IF */
+  if (kw(&L->cur,"UNLESS")){
+    lex_next(L);
+    long cond = parse_expr(vm, L);
+    if (!kw(&L->cur,"THEN")){ fail(vm,"UNLESS expr THEN"); return -1; }
+    lex_next(L); skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF && depth>0){
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
+        depth++;
+      else if ((kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")) && depth==1) break;
+      else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
+      lex_next(L);
+    }
+    if (depth>1){ fail(vm,"UNLESS without END"); return -1; }
+    if (!cond){
+      Lex body=body_start;
+      if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
+      depth=1;
+      while (L->cur.kind!=TK_EOF && depth>0){
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
+          depth++;
+        else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"ELSE")){
+      lex_next(L); skip_nl(L);
+      Lex body=*L;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      /* advance outer L from ELSE-body start to matching END */
+      depth=1;
+      while (L->cur.kind!=TK_EOF && depth>0){
+        if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+            kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+            kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
+          depth++;
+        else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+        lex_next(L);
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"END")){ lex_next(L); bump(vm); return 1; }
+    fail(vm,"UNLESS chain broken"); return -1;
   }
   if (kw(&L->cur,"LOOP")||kw(&L->cur,"TIMES")){
     lex_next(L);

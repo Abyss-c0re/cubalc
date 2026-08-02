@@ -1,0 +1,174 @@
+# Proof 69 — digit-1 control_or_branch: BEQ/BNE/BLT + CASE WHEN TO + UNLESS + stack
+HOLD_FLASH 1
+SCIENCE LOAD
+
+LET n = 0
+LOOP 20
+  LET n = n + 1
+  BEQ n 7
+END
+ASSERT n == 7
+
+LET m = 5
+LOOP 10
+  LET m = m - 1
+  BEQ m 0
+END
+ASSERT m == 0
+
+LET d = 0
+LOOP 10
+  LET d = d + 1
+  BNE d 1
+END
+ASSERT d == 2
+
+LET a = 0
+LOOP 30
+  LET a = a + 1
+  BGE a 4
+END
+ASSERT a == 4
+
+LET b = 10
+LOOP 20
+  LET b = b - 1
+  BLT b 3
+END
+ASSERT b == 2
+
+LET c = 0
+LOOP 15
+  LET c = c + 1
+  BGT c 5
+END
+ASSERT c == 6
+
+LET s = 0
+LOOP 6
+  CBEQ IT 0
+  LET s = s + IT
+END
+ASSERT s == 15
+
+LET zc = 0
+LOOP 5
+  CBNE IT % 2 0
+  LET zc = zc + 1
+END
+ASSERT zc == 3
+
+LET path = 0
+CASE 12
+  WHEN 1 TO 5 THEN
+    LET path = 1
+  WHEN 10 TO 15 THEN
+    LET path = 2
+  WHEN 20 TO 30 THEN
+    LET path = 3
+  DEFAULT
+    LET path = 9
+END
+ASSERT path == 2
+
+LET path2 = 0
+CASE 3
+  WHEN 1 TO 5 THEN
+    LET path2 = 5
+  DEFAULT
+    LET path2 = 0
+END
+ASSERT path2 == 5
+
+LET path3 = 0
+CASE 99
+  WHEN 1 TO 5 THEN
+    LET path3 = 1
+  DEFAULT
+    LET path3 = 99
+END
+ASSERT path3 == 99
+
+LET path4 = 0
+CASE 2
+  WHEN 2 THEN
+    LET path4 = 22
+  DEFAULT
+    LET path4 = 0
+END
+ASSERT path4 == 22
+
+LET u = 0
+UNLESS 0 THEN
+  LET u = 1
+END
+ASSERT u == 1
+
+LET v = 0
+UNLESS 1 THEN
+  LET v = 9
+ELSE
+  LET v = 2
+END
+ASSERT v == 2
+
+CLEARSTACK
+LET k = 0
+LOOP 12
+  LET k = k + 1
+  PUSH k
+  PUSH 5
+  SBEQ
+END
+ASSERT k == 5
+
+CLEARSTACK
+LET w = 4
+LOOP 10
+  LET w = w - 1
+  PUSH w
+  PUSH 0
+  SBEQ
+END
+ASSERT w == 0
+
+CLEARSTACK
+LET e = 0
+LOOP 8
+  LET e = e + 1
+  PUSH e
+  PUSH 1
+  SBNE
+END
+ASSERT e == 2
+
+CLEARSTACK
+LET t = 8
+LOOP 20
+  LET t = t - 1
+  PUSH t
+  PUSH 3
+  SBLT
+END
+ASSERT t == 2
+
+CLEARSTACK
+LET acc = 0
+LOOP 6
+  PUSH IT
+  PUSH 0
+  SCBEQ
+  LET acc = acc + IT
+END
+ASSERT acc == 15
+
+CLEARSTACK
+SBEQ
+ASSERT OK == 0
+
+CUBE x ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof69_branch_beq_case" n m d a b c s zc path path2 path3 path4 u v k w e t acc
