@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.6-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → cell fold ext: argmin/argmax + range rotate/shift.
+
+### Language
+- `MINIDX`/`ARGMIN` [lo [hi]] — first index of minimum in range (stmt + expr)
+- `MAXIDX`/`ARGMAX` [lo [hi]] — first index of maximum in range (stmt + expr)
+- `ROTCELL`/`CELLROT` lo hi k — rotate range left by k (k<0 right)
+- `SHIFTCELL`/`CELLSHIFT` lo hi k — shift with zero-fill (k>0 left, k<0 right)
+- Proof `29_cell_argmin_rot.cubalc`
+
+### Prior
+See 1.12.5-universal.
+
 ## 1.12.5-universal — 2026-08-02
 
 ### Direction
