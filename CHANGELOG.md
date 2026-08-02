@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.109-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → modular ext: square-part, primitive root, CRT stack.
+
+### Language
+- `SQPART`/`LARGESQ`(n) · `SSQPART` — largest square dividing n
+- `ISPRIMITIVE`/`ISPRROOT`(a,m) · `SIPRIMITIVE` — primitive root test
+- `SCRT`/`SCHINREM` — stack Chinese remainder (a m b n → x)
+- Proof `132_sqpart_scrt.cubalc`
+
+### Prior
+See 1.12.108-universal.
+
 ## 1.12.108-universal — 2026-08-03
 
 ### Direction

@@ -1230,6 +1230,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"CARMICHAEL")==0 || strcmp(name,"LAMBDA")==0 ||
         strcmp(name,"CARM")==0 ||
         strcmp(name,"ORDER")==0 || strcmp(name,"MULTORDER")==0 ||
+        /* digit-2 modular ext: SQPART ISPRIMITIVE */
+        strcmp(name,"SQPART")==0 || strcmp(name,"LARGESQ")==0 ||
+        strcmp(name,"MAXSQ")==0 ||
+        strcmp(name,"ISPRIMITIVE")==0 || strcmp(name,"ISPRROOT")==0 ||
+        strcmp(name,"PRIMROOTP")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2544,6 +2549,77 @@ static long parse_prim(VM *vm, Lex *L){
               exp >>= 1;
             }
             if (r == 1) return k;
+          }
+          return 0;
+        }
+        if (strcmp(name,"SQPART")==0 || strcmp(name,"LARGESQ")==0 ||
+            strcmp(name,"MAXSQ")==0){
+          /* SQPART(n) — largest square dividing n; n<=0 → 0; n==1 → 1 */
+          long n = a < 0 ? -a : a;
+          if (n == 0) return 0;
+          if (n == 1) return 1;
+          long r = 1;
+          long e = 0;
+          while ((n & 1L) == 0){ n >>= 1; e++; }
+          e = (e / 2) * 2;
+          for (long i = 0; i < e; i++) r *= 2;
+          for (long p = 3; p * p <= n; p += 2){
+            e = 0;
+            while ((n % p) == 0){ n /= p; e++; }
+            e = (e / 2) * 2;
+            for (long i = 0; i < e; i++) r *= p;
+          }
+          /* remaining prime power p^1 has no square factor */
+          return r;
+        }
+        if (strcmp(name,"ISPRIMITIVE")==0 || strcmp(name,"ISPRROOT")==0 ||
+            strcmp(name,"PRIMROOTP")==0){
+          /* ISPRIMITIVE(a,m) — 1 if a is a primitive root mod m (order==φ(m)) */
+          long m = b;
+          if (m <= 1) return 0;
+          long aa = a % m; if (aa < 0) aa += m;
+          if (aa == 0) return 0;
+          long gx = aa, gy = m;
+          while (gy){ long t = gx % gy; gx = gy; gy = t; }
+          if (gx != 1) return 0;
+          /* φ(m) */
+          long mm = m, phi = m;
+          if ((mm & 1L) == 0){
+            phi -= phi / 2;
+            while ((mm & 1L) == 0) mm >>= 1;
+          }
+          for (long p = 3; p * p <= mm; p += 2){
+            if ((mm % p) == 0){
+              phi -= phi / p;
+              while ((mm % p) == 0) mm /= p;
+            }
+          }
+          if (mm > 1) phi -= phi / mm;
+          /* order(a,m) via scan 1..phi; prim root iff order==phi */
+          for (long k = 1; k <= phi; k++){
+            long base = aa, exp = k, r = 1 % m;
+            while (exp > 0){
+              if (exp & 1){
+                long y2 = r, x2 = base, acc = 0;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                r = acc;
+              }
+              {
+                long x2 = base, acc = 0, y2 = base;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                base = acc;
+              }
+              exp >>= 1;
+            }
+            if (r == 1) return (k == phi) ? 1 : 0;
           }
           return 0;
         }
@@ -6272,6 +6348,127 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
             if (rr == 1){ r = k; break; }
           }
         }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 modular ext stack: SSQPART · SIPRIMITIVE · SCRT */
+  if (kw(&L->cur,"SSQPART")||kw(&L->cur,"SLARGESQ")||kw(&L->cur,"SMAXSQ")||
+      kw(&L->cur,"STACKSQPART")){
+    /* n → largest square dividing n */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n == 1) r = 1;
+    else if (n > 1){
+      r = 1;
+      long e = 0;
+      while ((n & 1L) == 0){ n >>= 1; e++; }
+      e = (e / 2) * 2;
+      for (long i = 0; i < e; i++) r *= 2;
+      for (long p = 3; p * p <= n; p += 2){
+        e = 0;
+        while ((n % p) == 0){ n /= p; e++; }
+        e = (e / 2) * 2;
+        for (long i = 0; i < e; i++) r *= p;
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SIPRIMITIVE")||kw(&L->cur,"SIPRROOT")||kw(&L->cur,"SPRIMROOTP")||
+      kw(&L->cur,"STACKISPRIMITIVE")||kw(&L->cur,"SIPROOT")){
+    /* a m → 1 if a is primitive root mod m */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long gx = aa, gy = m;
+        while (gy){ long t = gx % gy; gx = gy; gy = t; }
+        if (gx == 1){
+          long mm = m, phi = m;
+          if ((mm & 1L) == 0){
+            phi -= phi / 2;
+            while ((mm & 1L) == 0) mm >>= 1;
+          }
+          for (long p = 3; p * p <= mm; p += 2){
+            if ((mm % p) == 0){
+              phi -= phi / p;
+              while ((mm % p) == 0) mm /= p;
+            }
+          }
+          if (mm > 1) phi -= phi / mm;
+          for (long k = 1; k <= phi; k++){
+            long base = aa, exp = k, rr = 1 % m;
+            while (exp > 0){
+              if (exp & 1){
+                long y2 = rr, x2 = base, acc = 0;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                rr = acc;
+              }
+              {
+                long x2 = base, acc = 0, y2 = base;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                base = acc;
+              }
+              exp >>= 1;
+            }
+            if (rr == 1){ r = (k == phi) ? 1 : 0; break; }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCRT")||kw(&L->cur,"SCHINREM")||kw(&L->cur,"STACKCRT")||
+      kw(&L->cur,"SCRT2")){
+    /* a m b n → x with x≡a (mod m), x≡b (mod n); 0 if inconsistent / bad mods */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long m = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 0 && n > 0){
+      long aa = a % m; if (aa < 0) aa += m;
+      long bb = b % n; if (bb < 0) bb += n;
+      long old_r = m, rr = n;
+      long old_s = 1, ss = 0;
+      while (rr != 0){
+        long q = old_r / rr;
+        long tmp = rr; rr = old_r - q * rr; old_r = tmp;
+        tmp = ss; ss = old_s - q * ss; old_s = tmp;
+      }
+      long g = old_r < 0 ? -old_r : old_r;
+      long s = old_r < 0 ? -old_s : old_s;
+      long diff = bb - aa;
+      if (g != 0 && (diff % g) == 0){
+        long mod = (m / g) * n;
+        long ng = n / g;
+        long k = (diff / g) * s;
+        k %= ng; if (k < 0) k += ng;
+        r = aa + m * k;
+        r %= mod; if (r < 0) r += mod;
       }
     }
     vm->stack[vm->sp++] = r;

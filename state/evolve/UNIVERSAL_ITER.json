@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T02:04:07+0300",
-  "iter": 193,
+  "ts": "2026-08-03T02:13:33+0300",
+  "iter": 194,
   "algocube_digit": 2,
-  "version": "1.12.108-universal",
-  "pass": 146,
+  "version": "1.12.109-universal",
+  "pass": 147,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,7 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SOPF CARMICHAEL ORDER SSOPF SCARMICHAEL SORDER",
-  "proof": "programs/proof/131_sorder_carmichael.cubalc",
-  "note": "tree restored from origin/main after evolve corruption"
+  "delta": "SQPART ISPRIMITIVE SCRT SSQPART SIPRIMITIVE",
+  "proof": "programs/proof/132_sqpart_scrt.cubalc"
 }
