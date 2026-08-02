@@ -86,12 +86,14 @@ Science domains guide **what ops CubalC must express as pure logic**. No diploma
 
 Bit ops (universal integer): `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `HAMMING32`
 
+I/O codecs (universal string↔int): `SYS HEX`/`FROMHEX` · `SYS TOHEX` · `SYS ORD` · `SYS CHR` · `SYS MID`/`SUBSTR`/`SLICE`
+
 Demos (optional): `programs/science/` · `make science`  
 Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh` (6 min)
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.10.1-science`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.1-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

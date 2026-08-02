@@ -1665,7 +1665,104 @@ static int parse_form(VM *vm, Lex *L){
       fputs(data, af); fputc('\n', af); fclose(af);
       var_set_num(vm,"OK",1); bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND");
+    /* SYS HEX|FROMHEX — parse hex string (LAST default) → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"HEX") || kw(&L->cur,"FROMHEX") || kw(&L->cur,"XTOI")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      /* skip optional 0x / 0X prefix */
+      const char *p = s;
+      if (p[0]=='0' && (p[1]=='x' || p[1]=='X')) p += 2;
+      long n = 0;
+      if (p[0]) n = strtol(p, NULL, 16);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS TOHEX [expr] — format int as lowercase hex → LAST (I/O codec) */
+    if (kw(&L->cur,"TOHEX") || kw(&L->cur,"ITOH") || kw(&L->cur,"HEXOUT")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      char buf[40];
+      snprintf(buf, sizeof buf, "%lx", (unsigned long)n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ORD [str|LAST] — first byte code → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"ORD") || kw(&L->cur,"CODE") || kw(&L->cur,"BYTE")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long n = s[0] ? (long)(unsigned char)s[0] : 0;
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CHR [expr] — integer → single-byte string LAST  (I/O codec) */
+    if (kw(&L->cur,"CHR") || kw(&L->cur,"CHAR")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      n &= 0xFF;
+      char buf[4];
+      buf[0] = (char)(unsigned char)n;
+      buf[1] = 0;
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MID|SUBSTR|SLICE str start [len] — substring → LAST  (I/O codec) */
+    if (kw(&L->cur,"MID") || kw(&L->cur,"SUBSTR") || kw(&L->cur,"SLICE")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long start = 0, len = -1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT){
+        start = parse_expr(vm, L);
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+            L->cur.kind==TK_IDENT)
+          len = parse_expr(vm, L);
+      }
+      size_t slen = strlen(s);
+      if (start < 0) start = 0;
+      if ((size_t)start > slen) start = (long)slen;
+      size_t remain = slen - (size_t)start;
+      size_t take = (len < 0) ? remain : (size_t)len;
+      if (take > remain) take = remain;
+      char out[512];
+      if (take >= sizeof out) take = sizeof out - 1;
+      memcpy(out, s + (size_t)start, take);
+      out[take] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)take;
+      var_set_num(vm, "LAST_N", (long)take);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID");
     return -1;
   }
 

@@ -1,0 +1,46 @@
+# Proof 14 — universal I/O codecs (digit-3 direction: string↔int interchange)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# hex encode / decode round-trip
+SYS TOHEX 255
+SYS LEN LAST
+ASSERT LAST_N == 2
+SYS HEX "ff"
+ASSERT LAST_N == 255
+SYS HEX "0x10"
+ASSERT LAST_N == 16
+SYS TOHEX 4095
+SYS HEX LAST
+ASSERT LAST_N == 4095
+
+# char / ordinal
+SYS CHR 65
+SYS ORD LAST
+ASSERT LAST_N == 65
+SYS CHR 99
+SYS ORD LAST
+ASSERT LAST_N == 99
+
+# substring (MID)
+SYS MID "abcdef" 2 3
+SYS LEN LAST
+ASSERT LAST_N == 3
+SYS ORD LAST
+ASSERT LAST_N == 99
+SYS MID "cubalc" 0 4
+SYS LEN LAST
+ASSERT LAST_N == 4
+
+# pack path: number → hex string → bits-friendly digit
+SYS TOHEX 7
+SYS HEX LAST
+ASSERT LAST_N == 7
+ASSERT OK == 1
+
+CUBE io ROLE matrix PROTON 1
+FOLDBITS io "1111000011110000111100001111000011110000111100001111000011110000"
+ASSERT DIGIT(io) >= 0
+ASSERT DIGIT(io) <= 9
+
+PRINT "proof14_io_codec" 255 65 99 DIGIT(io)

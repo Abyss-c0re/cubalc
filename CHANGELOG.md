@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.11.1-universal — 2026-08-02
+
+### Direction
+- Algocube digit **3** → I/O expressiveness (string↔int codecs).
+
+### Language
+- I/O codecs under `SYS`: `HEX`/`FROMHEX` · `TOHEX` · `ORD` · `CHR` · `MID`/`SUBSTR`/`SLICE`
+- Proof `14_io_codec_universal.cubalc`
+
+### Prior
+See 1.11.0-universal.
+
 ## 1.11.0-universal — 2026-08-02
 
 ### Direction
