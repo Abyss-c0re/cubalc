@@ -1179,11 +1179,14 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"SIGMA1")==0 ||
         strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
         strcmp(name,"EULERPHI")==0 ||
-        /* digit-2 number theory: MOBIUS RADICAL SQUAREFREE */
+        /* digit-2 number theory: MOBIUS RADICAL SQUAREFREE COPRIME CEILPOW2 */
         strcmp(name,"MOBIUS")==0 || strcmp(name,"MU")==0 ||
         strcmp(name,"RADICAL")==0 || strcmp(name,"RAD")==0 ||
         strcmp(name,"ISSQUAREFREE")==0 || strcmp(name,"SQFREE")==0 ||
         strcmp(name,"SQUAREFREE")==0 ||
+        strcmp(name,"COPRIME")==0 || strcmp(name,"ISCOPRIME")==0 ||
+        strcmp(name,"CEILPOW2")==0 || strcmp(name,"NEXTPOW2")==0 ||
+        strcmp(name,"CPOW2")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2127,6 +2130,29 @@ static long parse_prim(VM *vm, Lex *L){
             }
           }
           return 1;
+        }
+        if (strcmp(name,"COPRIME")==0 || strcmp(name,"ISCOPRIME")==0){
+          /* COPRIME(a,b) — 1 if gcd(|a|,|b|)==1 */
+          long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+          if (x == 0 && y == 0) return 0;
+          while (y){ long t = x % y; x = y; y = t; }
+          return x == 1 ? 1 : 0;
+        }
+        if (strcmp(name,"CEILPOW2")==0 || strcmp(name,"NEXTPOW2")==0 ||
+            strcmp(name,"CPOW2")==0){
+          /* CEILPOW2(n) — smallest power of 2 ≥ n; n<=0→0; overflow→0 */
+          if (a <= 0) return 0;
+          if (a == 1) return 1;
+          unsigned long u = (unsigned long)a;
+          if ((u & (u - 1ul)) == 0ul) return a;
+          /* next power of two; max 2^62 in signed 64 */
+          if (a > (1L << 62)) return 0;
+          long r = 1;
+          while (r < a){
+            if (r > (1L << 61)) return 0;
+            r <<= 1;
+          }
+          return r;
         }
         /* digit-2/6 extended math: log2 / log10 / odd-even / bit counts / pow2 */
         if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
@@ -4511,6 +4537,77 @@ static int parse_form(VM *vm, Lex *L){
     }
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 stack: SCOPRIME · SCEILPOW2 · SEGCD */
+  if (kw(&L->cur,"SCOPRIME")||kw(&L->cur,"SISCOPRIME")||kw(&L->cur,"STACKCOPRIME")){
+    /* a b → 1 if gcd==1 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a < 0 ? -a : a, y = b < 0 ? -b : b;
+    long r = 0;
+    if (!(x == 0 && y == 0)){
+      while (y){ long t = x % y; x = y; y = t; }
+      r = (x == 1) ? 1 : 0;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCEILPOW2")||kw(&L->cur,"SNEXTPOW2")||kw(&L->cur,"SCPOW2")||
+      kw(&L->cur,"STACKCEILPOW2")||kw(&L->cur,"STACKNEXTPOW2")){
+    /* a → smallest power of 2 ≥ a */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (a > 0){
+      if (a == 1) r = 1;
+      else {
+        unsigned long u = (unsigned long)a;
+        if ((u & (u - 1ul)) == 0ul) r = a;
+        else if (a <= (1L << 62)){
+          r = 1;
+          while (r < a){
+            if (r > (1L << 61)){ r = 0; break; }
+            r <<= 1;
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEGCD")||kw(&L->cur,"SXGCD")||kw(&L->cur,"SEXTGCD")||
+      kw(&L->cur,"STACKEGCD")||kw(&L->cur,"STACKXGCD")){
+    /* a b → g x y  where a*x + b*y = g = gcd(|a|,|b|) (signed Bézout) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long old_r = a, r = b;
+    long old_s = 1, ss = 0;
+    long old_t = 0, tt = 1;
+    while (r != 0){
+      long q = old_r / r;
+      long tmp = r; r = old_r - q * r; old_r = tmp;
+      tmp = ss; ss = old_s - q * ss; old_s = tmp;
+      tmp = tt; tt = old_t - q * tt; old_t = tmp;
+    }
+    long g = old_r < 0 ? -old_r : old_r;
+    long x = old_r < 0 ? -old_s : old_s;
+    long y = old_r < 0 ? -old_t : old_t;
+    /* if a==b==0 → g=0,x=0,y=0 */
+    if (a == 0 && b == 0){ g = 0; x = 0; y = 0; }
+    vm->stack[vm->sp++] = g;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack roots/primes: SIROOT SISSQUARE SISCUBE SNEXTPRIME SPREVPRIME */

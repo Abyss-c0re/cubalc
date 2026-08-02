@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.77-universal — 2026-08-02
+
+### Direction
+- Algocube digit **2** → math plane: coprime test, ceil power-of-two, extended GCD.
+
+### Language
+- `COPRIME`/`ISCOPRIME`(a,b) · stack `SCOPRIME`
+- `CEILPOW2`/`NEXTPOW2`(n) · stack `SCEILPOW2`/`SNEXTPOW2`
+- `SEGCD`/`SXGCD` — stack `a b → g x y` (Bézout)
+- Proof `100_coprime_ceilpow2.cubalc`
+
+### Prior
+See 1.12.76-universal.
+
 ## 1.12.76-universal — 2026-08-02
 
 ### Direction
