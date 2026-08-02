@@ -1064,10 +1064,18 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BAND")==0 || strcmp(name,"BOR")==0 ||
         strcmp(name,"BXOR")==0 || strcmp(name,"BNOT")==0 ||
         strcmp(name,"SHL")==0 || strcmp(name,"SHR")==0 ||
+        strcmp(name,"SAR")==0 || strcmp(name,"ASHR")==0 ||
         strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0 ||
         /* digit-9 universal data-path: rotate · pack · select */
         strcmp(name,"ROTL")==0 || strcmp(name,"ROTR")==0 ||
         strcmp(name,"ROL")==0 || strcmp(name,"ROR")==0 ||
+        /* digit-1 shift/rotate/cmp: 64-bit rotate + unsigned/3-way cmp */
+        strcmp(name,"ROTL64")==0 || strcmp(name,"ROL64")==0 ||
+        strcmp(name,"ROTR64")==0 || strcmp(name,"ROR64")==0 ||
+        strcmp(name,"ICMP")==0 || strcmp(name,"CMP3")==0 ||
+        strcmp(name,"UCMP")==0 || strcmp(name,"UCMP3")==0 ||
+        strcmp(name,"ULT")==0 || strcmp(name,"UGT")==0 ||
+        strcmp(name,"ULE")==0 || strcmp(name,"UGE")==0 ||
         strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0 ||
         strcmp(name,"HI16")==0 || strcmp(name,"LO16")==0 ||
         strcmp(name,"HIWORD")==0 || strcmp(name,"LOWORD")==0 ||
@@ -1330,6 +1338,11 @@ static long parse_prim(VM *vm, Lex *L){
           if (b < 0) b = 0; if (b > 62) b = 62;
           return (long)((unsigned long)a >> (unsigned)b);
         }
+        if (strcmp(name,"SAR")==0 || strcmp(name,"ASHR")==0){
+          /* SAR/ASHR(a,n) — arithmetic (sign-preserving) right shift */
+          if (b < 0) b = 0; if (b > 62) b = 62;
+          return a >> b;
+        }
         if (strcmp(name,"BITCOUNT")==0){
           unsigned long u = (unsigned long)a; int n = 0;
           while (u) { n += (int)(u & 1u); u >>= 1; }
@@ -1357,6 +1370,45 @@ static long parse_prim(VM *vm, Lex *L){
           if (k == 0) return (long)w;
           return (long)((w >> k) | (w << (32 - k)));
         }
+        if (strcmp(name,"ROTL64")==0 || strcmp(name,"ROL64")==0){
+          /* 64-bit rotate left on unsigned long word */
+          unsigned long w = (unsigned long)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 63;
+          if (k == 0) return (long)w;
+          return (long)((w << k) | (w >> (64 - k)));
+        }
+        if (strcmp(name,"ROTR64")==0 || strcmp(name,"ROR64")==0){
+          /* 64-bit rotate right on unsigned long word */
+          unsigned long w = (unsigned long)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 63;
+          if (k == 0) return (long)w;
+          return (long)((w >> k) | (w << (64 - k)));
+        }
+        if (strcmp(name,"ICMP")==0 || strcmp(name,"CMP3")==0){
+          /* ICMP(a,b) → -1 if a<b, 0 if equal, 1 if a>b (signed) */
+          if (a < b) return -1;
+          if (a > b) return 1;
+          return 0;
+        }
+        if (strcmp(name,"UCMP")==0 || strcmp(name,"UCMP3")==0){
+          /* UCMP(a,b) → -1/0/1 as unsigned long compare */
+          unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+          if (ua < ub) return -1;
+          if (ua > ub) return 1;
+          return 0;
+        }
+        if (strcmp(name,"ULT")==0)
+          return ((unsigned long)a < (unsigned long)b) ? 1 : 0;
+        if (strcmp(name,"UGT")==0)
+          return ((unsigned long)a > (unsigned long)b) ? 1 : 0;
+        if (strcmp(name,"ULE")==0)
+          return ((unsigned long)a <= (unsigned long)b) ? 1 : 0;
+        if (strcmp(name,"UGE")==0)
+          return ((unsigned long)a >= (unsigned long)b) ? 1 : 0;
         /* Pack / unpack 16-bit halves → 32-bit word */
         if (strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0){
           unsigned int hi = (unsigned int)a & 0xFFFFu;
@@ -4346,6 +4398,70 @@ static int parse_form(VM *vm, Lex *L){
     long r = n;
     if (r < lo) r = lo;
     if (r > hi) r = hi;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 shift/rotate/cmp stack: SCMP SUCMP SULT SUGT SULE SUGE SROTL64 SROTR64 */
+  if (kw(&L->cur,"SCMP")||kw(&L->cur,"SICMP")||kw(&L->cur,"SCMP3")||kw(&L->cur,"STACKCMP")||
+      kw(&L->cur,"SUCMP")||kw(&L->cur,"SUCMP3")||kw(&L->cur,"STACKUCMP")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    int is_u = (strcmp(op,"SUCMP")==0 || strcmp(op,"SUCMP3")==0 || strcmp(op,"STACKUCMP")==0);
+    if (is_u){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      if (ua < ub) r = -1;
+      else if (ua > ub) r = 1;
+      else r = 0;
+    } else {
+      if (a < b) r = -1;
+      else if (a > b) r = 1;
+      else r = 0;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SULT")||kw(&L->cur,"SUGT")||kw(&L->cur,"SULE")||kw(&L->cur,"SUGE")||
+      kw(&L->cur,"STACKULT")||kw(&L->cur,"STACKUGT")||kw(&L->cur,"STACKULE")||kw(&L->cur,"STACKUGE")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    long r = 0;
+    if (strcmp(op,"SULT")==0 || strcmp(op,"STACKULT")==0) r = (ua < ub) ? 1 : 0;
+    else if (strcmp(op,"SUGT")==0 || strcmp(op,"STACKUGT")==0) r = (ua > ub) ? 1 : 0;
+    else if (strcmp(op,"SULE")==0 || strcmp(op,"STACKULE")==0) r = (ua <= ub) ? 1 : 0;
+    else r = (ua >= ub) ? 1 : 0;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTL64")||kw(&L->cur,"SROL64")||kw(&L->cur,"STACKROTL64")||
+      kw(&L->cur,"SROTR64")||kw(&L->cur,"SROR64")||kw(&L->cur,"STACKROTR64")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long w = (unsigned long)a;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 63;
+    long r;
+    int is_l = (strcmp(op,"SROTL64")==0 || strcmp(op,"SROL64")==0 || strcmp(op,"STACKROTL64")==0);
+    if (kk == 0) r = (long)w;
+    else if (is_l) r = (long)((w << kk) | (w >> (64 - kk)));
+    else r = (long)((w >> kk) | (w << (64 - kk)));
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
