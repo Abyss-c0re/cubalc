@@ -2515,6 +2515,19 @@ static long parse_expr(VM *vm, Lex *L){
       v = (v || r) ? 1 : 0;
     } else break;
   }
+  /* digit-1 control expr: cond ? then : else  (C-style ternary; right-assoc) */
+  if (L->cur.kind==TK_QMARK){
+    lex_next(L);
+    long t = parse_expr(vm, L);
+    if (L->cur.kind!=TK_COLON){
+      /* soft: missing colon → treat as look? keep value t if cond else 0 */
+      fail(vm,"ternary needs ':' (cond ? then : else)");
+      return 0;
+    }
+    lex_next(L);
+    long e = parse_expr(vm, L);
+    v = v ? t : e;
+  }
   return v;
 }
 
@@ -7717,6 +7730,30 @@ static int parse_form(VM *vm, Lex *L){
     }
     if (kw(&L->cur,"END")){ lex_next(L); bump(vm); return 1; }
     fail(vm,"UNLESS chain broken"); return -1;
+  }
+  /* digit-1 control: FOREVER / LOOPINF / INFINITE ... END — unbounded until BREAK */
+  if (kw(&L->cur,"FOREVER")||kw(&L->cur,"LOOPINF")||kw(&L->cur,"INFINITE")||
+      kw(&L->cur,"LOOPFOREVER")){
+    lex_next(L);
+    skip_nl(L);
+    Lex save=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth!=0){ fail(vm,"FOREVER without END"); return -1; }
+    long guard=0;
+    for (; !vm->fatal && guard++<100000;){
+      long *it=var_slot(vm,"IT",1); if (it) *it=guard-1;
+      vm->break_loop=0; vm->continue_loop=0;
+      Lex body=save;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      if (vm->break_loop){ vm->break_loop=0; break; }
+      vm->continue_loop=0;
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
   }
   if (kw(&L->cur,"LOOP")||kw(&L->cur,"TIMES")){
     lex_next(L);

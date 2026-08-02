@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.57-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → control flow: C-style ternary expressions + unbounded FOREVER loops.
+
+### Language
+- Expression ternary: `cond ? then : else` (right-associative; after AND/OR)
+- `FOREVER` / `LOOPINF` / `INFINITE` / `LOOPFOREVER` ... `END` — loop until `BREAK` (guard 1e5)
+- Proof `80_ternary_forever.cubalc`
+
+### Prior
+See 1.12.56-universal.
+
+
 ## 1.12.56-universal — 2026-08-02
 
 ### Direction

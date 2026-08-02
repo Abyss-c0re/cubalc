@@ -1,0 +1,67 @@
+# Proof 80 — digit-1 control: ternary ? : + FOREVER/BREAK
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# ternary in LET / ASSERT
+LET a = 1 ? 10 : 20
+ASSERT a == 10
+LET b = 0 ? 10 : 20
+ASSERT b == 20
+ASSERT ((3 > 2) ? 1 : 0) == 1
+ASSERT ((1 == 0) ? 99 : 7) == 7
+
+# nested right-assoc: cond ? t : (c2 ? t2 : e2)
+LET c = 0 ? 1 : (1 ? 2 : 3)
+ASSERT c == 2
+LET d = 1 ? (0 ? 8 : 9) : 5
+ASSERT d == 9
+
+# with AND/OR (ternary lower precedence after boolean chain)
+LET e = 1 AND 0 ? 100 : 200
+ASSERT e == 200
+LET f = 1 OR 0 ? 11 : 22
+ASSERT f == 11
+
+# ISEL dual still works
+ASSERT ISEL(1, 3, 4) == 3
+ASSERT ISEL(0, 3, 4) == 4
+
+# FOREVER with BREAK IF
+LET n = 0
+FOREVER
+  LET n = n + 1
+  BREAK IF n >= 5
+END
+ASSERT n == 5
+
+# LOOPINF alias + CONTINUE
+LET m = 0
+LET skips = 0
+LOOPINF
+  LET m = m + 1
+  IF m == 2 THEN
+    LET skips = skips + 1
+    CONTINUE
+  END
+  BREAK IF m >= 4
+END
+ASSERT m == 4
+ASSERT skips == 1
+
+# IT set during FOREVER
+LET last_it = -1
+LET k = 0
+INFINITE
+  LET last_it = IT
+  LET k = k + 1
+  BREAK IF k >= 3
+END
+ASSERT k == 3
+ASSERT last_it >= 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof80_ternary_forever" a b n m LAST_N
