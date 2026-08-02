@@ -1074,6 +1074,9 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BCLR")==0 || strcmp(name,"BITCLR")==0 ||
         strcmp(name,"BFLIP")==0 || strcmp(name,"BITFLIP")==0 ||
         strcmp(name,"BTGL")==0 || strcmp(name,"BITTGL")==0 ||
+        /* digit-1 word parity */
+        strcmp(name,"PARITY")==0 || strcmp(name,"PAR")==0 ||
+        strcmp(name,"ODDPAR")==0 || strcmp(name,"EVENPAR")==0 ||
         strcmp(name,"AVG")==0 || strcmp(name,"PCT")==0 ||
         strcmp(name,"CIRC")==0 || strcmp(name,"AREA_CIRCLE")==0 ||
         strcmp(name,"HYP")==0 || strcmp(name,"WAVE_V")==0 ||
@@ -1402,6 +1405,20 @@ static long parse_prim(VM *vm, Lex *L){
           if (k < 0) k = 0;
           if (k > 63) k = 63;
           return (((unsigned long)a >> (unsigned)k) & 1ul) ? 1 : 0;
+        }
+        if (strcmp(name,"PARITY")==0 || strcmp(name,"PAR")==0 ||
+            strcmp(name,"ODDPAR")==0){
+          /* PARITY(a) → popcount(a) mod 2 (odd parity of bits) */
+          unsigned long u = (unsigned long)a;
+          int p = 0;
+          while (u){ p ^= (int)(u & 1ul); u >>= 1; }
+          return p;
+        }
+        if (strcmp(name,"EVENPAR")==0){
+          unsigned long u = (unsigned long)a;
+          int p = 0;
+          while (u){ p ^= (int)(u & 1ul); u >>= 1; }
+          return p ? 0 : 1;
         }
         if (strcmp(name,"BSET")==0 || strcmp(name,"BITSET")==0){
           /* BSET(val, k) → val with bit k set */
@@ -6389,6 +6406,45 @@ static int parse_form(VM *vm, Lex *L){
     cubalc_matrix_set(&vm->ch.cubes[ix].atom.matrix, bit, on);
     vm->ch.cubes[ix].atom.digit =
       (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    var_set_num(vm, "LAST_N", on ? 1 : 0); vm->last_n = on ? 1 : 0;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* digit-0/5 COP matrix query: COUNTBITS/ONES/ZEROS cube · GETBIT cube i */
+  if (kw(&L->cur,"COUNTBITS")||kw(&L->cur,"ONES")||kw(&L->cur,"POPBITS")||
+      kw(&L->cur,"BITCOUNT")||kw(&L->cur,"ZEROS")||kw(&L->cur,"ZEROCOUNT")||
+      kw(&L->cur,"NZERO")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"COUNTBITS cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long ones = cubalc_matrix_popcount(m);
+    long r = ones;
+    if (strcmp(op,"ZEROS")==0 || strcmp(op,"ZEROCOUNT")==0 || strcmp(op,"NZERO")==0)
+      r = (long)n - ones;
+    var_set_num(vm, "SET", ones);
+    var_set_num(vm, "LAST_N", r); vm->last_n = r;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"GETBIT")||kw(&L->cur,"BITAT")||kw(&L->cur,"MATBIT")||
+      kw(&L->cur,"CUBEBIT")||kw(&L->cur,"READBIT")){
+    /* note: TESTBIT is stack bitfield — use GETBIT for matrix */
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"GETBIT cube i"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int bit = (int)parse_expr(vm,L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1; }
+    long v = cubalc_matrix_get(&vm->ch.cubes[ix].atom.matrix, bit) ? 1 : 0;
+    var_set_num(vm, "LAST_N", v); vm->last_n = v;
+    var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
   /* SETDIGIT cube expr — inject CubeBrain/peer algocube digit 0–9 into matrix */
