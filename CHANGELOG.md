@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.90-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack immediate bitwise mask (complete AND/OR/XOR-with-constant after bitfield + shift).
+
+### Language
+- `SANDI`/`ANDIMM`/`ANDI` n — TOS &= n
+- `SORI`/`ORIMM`/`ORI` n — TOS |= n
+- `SXORI`/`XORIMM`/`XORI` n — TOS ^= n
+- Proof `113_sandi_sxori.cubalc`
+
+### Prior
+See 1.12.89-universal.
+
+
+
 ## 1.12.89-universal — 2026-08-03
 
 ### Direction

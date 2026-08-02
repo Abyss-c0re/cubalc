@@ -5976,6 +5976,40 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack immediate bitwise mask: SANDI · SORI · SXORI (imm plane after bitfield) */
+  if (kw(&L->cur,"SANDI")||kw(&L->cur,"ANDIMM")||kw(&L->cur,"STACKANDI")||
+      kw(&L->cur,"ANDI")||kw(&L->cur,"SANDIMM")){
+    /* SANDI n — TOS &= n */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] & n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORI")||kw(&L->cur,"ORIMM")||kw(&L->cur,"STACKORI")||
+      kw(&L->cur,"ORI")||kw(&L->cur,"SORIMM")){
+    /* SORI n — TOS |= n */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] | n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXORI")||kw(&L->cur,"XORIMM")||kw(&L->cur,"STACKXORI")||
+      kw(&L->cur,"XORI")||kw(&L->cur,"SXORIMM")){
+    /* SXORI n — TOS ^= n */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] ^ n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 stack immediate bitfield: SSETBN SCLRBN SFLIPBN SBTESTN + SSHLN SSHRN */
   if (kw(&L->cur,"SSETBN")||kw(&L->cur,"SETBN")||kw(&L->cur,"SSETBITN")||
       kw(&L->cur,"STACKSETBN")){
