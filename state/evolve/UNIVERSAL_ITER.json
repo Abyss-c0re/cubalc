@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:37:35+0300",
-  "iter": 189,
-  "algocube_digit": 8,
-  "version": "1.12.104-universal",
-  "pass": 142,
+  "ts": "2026-08-03T01:44:01+0300",
+  "iter": 190,
+  "algocube_digit": 2,
+  "version": "1.12.105-universal",
+  "pass": 143,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "4TUCK 5DUP 5DROP 5SWAP",
-  "proof": "programs/proof/127_4tuck_5dup.cubalc"
+  "delta": "SVAL SOMEGA SOMEGA0 VALUATION OMEGA OMEGA0",
+  "proof": "programs/proof/128_sval_somega.cubalc"
 }

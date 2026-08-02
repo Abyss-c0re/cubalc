@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.105-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → factor metrics after SPF/Jacobi: valuation + Ω/ω.
+
+### Language
+- `VALUATION`/`PVAL`/`VP`(n,p) · `SVAL`/`SPVAL` — p-adic valuation v_p(n)
+- `OMEGA`/`BIGOMEGA`(n) · `SOMEGA` — Ω(n) factors with multiplicity
+- `OMEGA0`/`LITTLEOMEGA`(n) · `SOMEGA0` — ω(n) distinct primes
+- Proof `128_sval_somega.cubalc`
+
+### Prior
+See 1.12.104-universal.
+
 ## 1.12.104-universal — 2026-08-03
 
 ### Direction

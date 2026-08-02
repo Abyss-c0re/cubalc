@@ -1219,6 +1219,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"MODDIV")==0 || strcmp(name,"DIVMODM")==0 ||
         strcmp(name,"SPF")==0 || strcmp(name,"SMALLPF")==0 ||
         strcmp(name,"MINPF")==0 ||
+        /* digit-2 factor metrics: VALUATION OMEGA OMEGA0 */
+        strcmp(name,"VALUATION")==0 || strcmp(name,"PVAL")==0 ||
+        strcmp(name,"VP")==0 ||
+        strcmp(name,"OMEGA")==0 || strcmp(name,"BIGOMEGA")==0 ||
+        strcmp(name,"OMEGA0")==0 || strcmp(name,"LITTLEOMEGA")==0 ||
+        strcmp(name,"NUOMEGA")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2369,6 +2375,48 @@ static long parse_prim(VM *vm, Lex *L){
             if ((n % (i + 2)) == 0) return i + 2;
           }
           return n;
+        }
+        /* digit-2 factor metrics: VALUATION / OMEGA / OMEGA0 */
+        if (strcmp(name,"VALUATION")==0 || strcmp(name,"PVAL")==0 ||
+            strcmp(name,"VP")==0){
+          /* VALUATION(n,p) — largest k with p^k | n; p<=1 or n==0 → 0 */
+          long n = a < 0 ? -a : a;
+          long p = b < 0 ? -b : b;
+          if (n == 0 || p <= 1) return 0;
+          long k = 0;
+          while (n % p == 0){ n /= p; k++; if (n == 0) break; }
+          return k;
+        }
+        if (strcmp(name,"OMEGA")==0 || strcmp(name,"BIGOMEGA")==0){
+          /* OMEGA(n) — total prime factors with multiplicity Ω(n); n<=1 → 0 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          long k = 0;
+          while ((n & 1L) == 0){ n >>= 1; k++; }
+          for (long p = 3; p * p <= n; p += 2){
+            while ((n % p) == 0){ n /= p; k++; }
+          }
+          if (n > 1) k++;
+          return k;
+        }
+        if (strcmp(name,"OMEGA0")==0 || strcmp(name,"LITTLEOMEGA")==0 ||
+            strcmp(name,"NUOMEGA")==0){
+          /* OMEGA0(n) — distinct prime factors ω(n); n<=1 → 0 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          long k = 0;
+          if ((n & 1L) == 0){
+            k++;
+            while ((n & 1L) == 0) n >>= 1;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              k++;
+              while ((n % p) == 0) n /= p;
+            }
+          }
+          if (n > 1) k++;
+          return k;
         }
         /* digit-0 foundation bitfields */
         if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
@@ -5900,6 +5948,68 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
           if ((n % (i + 2)) == 0){ r = i + 2; break; }
         }
       }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 factor metrics stack: SVAL · SOMEGA · SOMEGA0 */
+  if (kw(&L->cur,"SVAL")||kw(&L->cur,"SPVAL")||kw(&L->cur,"SVALUATION")||
+      kw(&L->cur,"STACKVAL")||kw(&L->cur,"SVP")){
+    /* n p → v_p(n)  largest k with p^k | n */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long p = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long n = a < 0 ? -a : a;
+    long pp = p < 0 ? -p : p;
+    long r = 0;
+    if (n != 0 && pp > 1){
+      while (n % pp == 0){ n /= pp; r++; if (n == 0) break; }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SOMEGA")||kw(&L->cur,"SBIGOMEGA")||kw(&L->cur,"STACKOMEGA")||
+      kw(&L->cur,"SOMGA")){
+    /* n → Ω(n) total prime factors with multiplicity */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n > 1){
+      while ((n & 1L) == 0){ n >>= 1; r++; }
+      for (long p = 3; p * p <= n; p += 2){
+        while ((n % p) == 0){ n /= p; r++; }
+      }
+      if (n > 1) r++;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SOMEGA0")||kw(&L->cur,"SLITTLEOMEGA")||kw(&L->cur,"SNUOMEGA")||
+      kw(&L->cur,"STACKOMEGA0")||kw(&L->cur,"SOMGA0")){
+    /* n → ω(n) distinct prime factors */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n > 1){
+      if ((n & 1L) == 0){
+        r++;
+        while ((n & 1L) == 0) n >>= 1;
+      }
+      for (long p = 3; p * p <= n; p += 2){
+        if ((n % p) == 0){
+          r++;
+          while ((n % p) == 0) n /= p;
+        }
+      }
+      if (n > 1) r++;
     }
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
