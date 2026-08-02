@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.12.65-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → data expressiveness: local range rotate/shift on matrix bits.
+
+### Language
+- `ROTRANGE`/`ROLRANGE` cube lo hi k — rotate-left bits in [lo..hi]
+- `RORRANGE` cube lo hi k — rotate-right in range
+- `SHLRANGE`/`SHIFTRANGE` cube lo hi k — logical left shift (zero-fill) in range
+- `SHRRANGE` cube lo hi k — logical right shift in range
+- Outside [lo..hi] untouched; negative k flips direction
+- Proof `88_rotrange_shift.cubalc`
+
+### Prior
+See 1.12.64-universal.
+
+
+
 ## 1.12.64-universal — 2026-08-02
 
 ### Direction

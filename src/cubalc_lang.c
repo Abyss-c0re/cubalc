@@ -7088,6 +7088,92 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
+  /* digit-1 data: ROTRANGE/RORRANGE/SHLRANGE/SHRRANGE cube lo hi k
+   * Local rotate or logical shift of bits in [lo..hi] (outside range untouched).
+   * SHL: index i → i+k (zero-fill low); SHR: i → i-k; ROL wraps; ROR wraps. */
+  if (kw(&L->cur,"ROTRANGE")||kw(&L->cur,"ROLRANGE")||kw(&L->cur,"ROTATERANGE")||
+      kw(&L->cur,"RORRANGE")||kw(&L->cur,"ROTRRANGE")||
+      kw(&L->cur,"SHLRANGE")||kw(&L->cur,"LSHRANGE")||kw(&L->cur,"SHIFTRANGE")||
+      kw(&L->cur,"SHRRANGE")||kw(&L->cur,"RSHRANGE")){
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ROTRANGE cube lo hi k"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int lo = (int)parse_expr(vm,L);
+    int hi = (int)parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"ROTRANGE missing cube"); return -1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = CUBALC_ATOM_BITS;
+    if (m->n < (uint16_t)n) m->n = (uint16_t)n;
+    if (lo < 0) lo = 0;
+    if (hi < lo){ int t=lo; lo=hi; hi=t; }
+    if (lo >= n){ var_set_num(vm,"OK",1); bump(vm); return 1; }
+    if (hi >= n) hi = n - 1;
+    int len = hi - lo + 1;
+    if (len < 1){ var_set_num(vm,"OK",1); bump(vm); return 1; }
+    int is_ror = (strcmp(op,"RORRANGE")==0 || strcmp(op,"ROTRRANGE")==0);
+    int is_rol = (strcmp(op,"ROTRANGE")==0 || strcmp(op,"ROLRANGE")==0 ||
+                  strcmp(op,"ROTATERANGE")==0);
+    int is_shr = (strcmp(op,"SHRRANGE")==0 || strcmp(op,"RSHRANGE")==0);
+    int is_shl = (strcmp(op,"SHLRANGE")==0 || strcmp(op,"LSHRANGE")==0 ||
+                  strcmp(op,"SHIFTRANGE")==0);
+    if (k < 0){
+      k = -k;
+      if (is_rol){ is_rol=0; is_ror=1; }
+      else if (is_ror){ is_ror=0; is_rol=1; }
+      else if (is_shl){ is_shl=0; is_shr=1; }
+      else if (is_shr){ is_shr=0; is_shl=1; }
+    }
+    uint8_t oldb[CUBALC_ATOM_BITS];
+    uint8_t newb[CUBALC_ATOM_BITS];
+    memset(oldb, 0, sizeof oldb);
+    memset(newb, 0, sizeof newb);
+    for (int i=0;i<len;i++) oldb[i] = cubalc_matrix_get(m, lo + i) ? 1 : 0;
+    if (k == 0){
+      memcpy(newb, oldb, (size_t)len);
+    } else if (is_rol || is_ror){
+      /* left-by-k: bit i → (i+k)%len  ⇒  new[i] = old[(i-k+len)%len] */
+      int kk = (int)(k % (long)len);
+      if (is_ror) kk = (len - kk) % len;
+      for (int i=0;i<len;i++){
+        int si = i - kk;
+        while (si < 0) si += len;
+        si %= len;
+        newb[i] = oldb[si];
+      }
+    } else {
+      int kk = (int)k;
+      if (kk >= len){
+        /* all zeros */
+      } else if (is_shl){
+        for (int i=0;i<len;i++){
+          int si = i - kk;
+          if (si >= 0) newb[i] = oldb[si];
+        }
+      } else { /* SHR */
+        for (int i=0;i<len;i++){
+          int si = i + kk;
+          if (si < len) newb[i] = oldb[si];
+        }
+      }
+    }
+    for (int i=0;i<len;i++) cubalc_matrix_set(m, lo + i, newb[i] ? 1 : 0);
+    vm->ch.cubes[ix].atom.digit_lock = 0;
+    vm->ch.cubes[ix].atom.digit =
+      (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    vm->ch.cubes[ix].flowed = 1;
+    long ones = cubalc_matrix_popcount(m);
+    var_set_num(vm,"SET",ones);
+    var_set_num(vm,"LAST_N",ones); vm->last_n=ones;
+    var_set_num(vm,"DIGIT",vm->ch.cubes[ix].atom.digit);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   /* digit-8 COP matrix↔word bridge: WORDFROM/WORDTO · EXTRACTBITS/DEPOSITBITS */
   if (kw(&L->cur,"WORDFROM")||kw(&L->cur,"MAT2WORD")||kw(&L->cur,"BITS2WORD")||
       kw(&L->cur,"BITS2N")||kw(&L->cur,"LOADWORD")){
