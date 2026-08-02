@@ -4269,6 +4269,54 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack combinators: SFILL · DROPZ · DROPNZ */
+  if (kw(&L->cur,"SFILL")||kw(&L->cur,"STACKFILL")||kw(&L->cur,"FILLSTK")||
+      kw(&L->cur,"FILLTOP")){
+    /* SFILL n v — write value v into top n stack slots (need n items) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    long v = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n == 0){
+      var_set_num(vm,"OK",1); var_set_num(vm,"LAST_N",v); vm->last_n=v;
+      var_set_num(vm,"SP",vm->sp); bump(vm); return 1;
+    }
+    if (vm->sp < n){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    for (int i = 0; i < (int)n; i++)
+      vm->stack[vm->sp - 1 - i] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DROPZ")||kw(&L->cur,"SDROPZ")||kw(&L->cur,"DROPIF0")||
+      kw(&L->cur,"DROPZERO")||kw(&L->cur,"STACKDROPZ")){
+    /* DROPZ — drop TOS if it is zero; leave nonzero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1];
+    if (v == 0){
+      vm->sp--;
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    } else {
+      var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DROPNZ")||kw(&L->cur,"SDROPNZ")||kw(&L->cur,"DROPIF")||
+      kw(&L->cur,"DROPNONZERO")||kw(&L->cur,"STACKDROPNZ")){
+    /* DROPNZ — drop TOS if nonzero; leave zero */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1];
+    if (v != 0){
+      vm->sp--;
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    } else {
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 stack combinators ext: QDUP NDUP SREVERSE */
   if (kw(&L->cur,"QDUP")||kw(&L->cur,"DUPNZ")||kw(&L->cur,"DUPIF")||
       kw(&L->cur,"DUPNONZERO")){

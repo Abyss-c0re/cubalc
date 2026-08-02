@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.82-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → stack combinators: fill top-N, conditional drop.
+
+### Language
+- `SFILL`/`FILLTOP` n v — write v into top n stack slots
+- `DROPZ`/`SDROPZ`/`DROPIF0` — drop TOS if zero
+- `DROPNZ`/`SDROPNZ`/`DROPIF` — drop TOS if nonzero
+- Proof `105_sfill_dropz.cubalc`
+
+### Prior
+See 1.12.81-universal.
+
 ## 1.12.81-universal — 2026-08-02
 
 ### Direction
