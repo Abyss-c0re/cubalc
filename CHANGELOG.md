@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.12-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → broaden computational expressiveness (stack bitwise ALU pure-C).
+
+### Language
+- Stack bitwise: `SAND`/`STACKAND`/`BANDST` · `SOR`/`STACKOR`/`BORST` · `SXOR`/`STACKXOR`/`BXORST`
+- Unary: `SNOT`/`STACKNOT`/`BNOTST`/`SINVERT`
+- Shifts: `SSHL`/`STACKSHL`/`SLSHL` · `SSHR`/`STACKSHR`/`SLSHR` (shift amount clamped 0..63)
+- Proof `35_stack_bitops.cubalc`
+
+### Prior
+See 1.12.11-universal.
+
 ## 1.12.11-universal — 2026-08-02
 
 ### Direction

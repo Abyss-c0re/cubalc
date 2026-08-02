@@ -2940,6 +2940,56 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack bitwise ALU: SAND SOR SXOR SNOT SSHL SSHR */
+  if (kw(&L->cur,"SAND")||kw(&L->cur,"STACKAND")||kw(&L->cur,"BANDST")||
+      kw(&L->cur,"SOR")||kw(&L->cur,"STACKOR")||kw(&L->cur,"BORST")||
+      kw(&L->cur,"SXOR")||kw(&L->cur,"STACKXOR")||kw(&L->cur,"BXORST")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SAND")==0 || strcmp(op,"STACKAND")==0 || strcmp(op,"BANDST")==0)
+      r = a & b;
+    else if (strcmp(op,"SOR")==0 || strcmp(op,"STACKOR")==0 || strcmp(op,"BORST")==0)
+      r = a | b;
+    else if (strcmp(op,"SXOR")==0 || strcmp(op,"STACKXOR")==0 || strcmp(op,"BXORST")==0)
+      r = a ^ b;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNOT")||kw(&L->cur,"STACKNOT")||kw(&L->cur,"BNOTST")||kw(&L->cur,"SINVERT")){
+    /* bitwise invert TOS */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHL")||kw(&L->cur,"STACKSHL")||kw(&L->cur,"SLSHL")||
+      kw(&L->cur,"SSHR")||kw(&L->cur,"STACKSHR")||kw(&L->cur,"SLSHR")){
+    /* a b → a<<b or a>>b (logical-ish on unsigned cast for SHR) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (b < 0) b = 0;
+    if (b > 63) b = 63;
+    if (strcmp(op,"SSHL")==0 || strcmp(op,"STACKSHL")==0 || strcmp(op,"SLSHL")==0)
+      r = (long)((unsigned long)a << (unsigned)b);
+    else
+      r = (long)((unsigned long)a >> (unsigned)b);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack↔cell bridge: TOCELL / FROMCELL */
   if (kw(&L->cur,"TOCELL")||kw(&L->cur,"STACKTOCELL")||kw(&L->cur,">CELL")){
     /* TOCELL dst [n] — pop n values into cells[dst..dst+n-1] (TOS → highest index) */
