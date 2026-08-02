@@ -3798,6 +3798,21 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack↔cell accumulate: SADDTOC (i v → cells[i]+=v leave sum) */
+  if (kw(&L->cur,"SADDTOC")||kw(&L->cur,"SCELLADD")||kw(&L->cur,"SACCUMCELL")||
+      kw(&L->cur,"STACKADDCELL")||kw(&L->cur,"SADDTOCELL")){
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] + v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
     memset(vm->cells, 0, sizeof vm->cells);
@@ -4119,6 +4134,62 @@ static int parse_form(VM *vm, Lex *L){
     long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
     var_set_num(vm,"SP",vm->sp);
     var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 stack index insert + bulk push + cell accumulate */
+  if (kw(&L->cur,"SINSERT")||kw(&L->cur,"INSERTAT")||kw(&L->cur,"UNROLL")||
+      kw(&L->cur,"RROLL")||kw(&L->cur,"STACKINSERT")||kw(&L->cur,"MOVETODEEP")){
+    /* SINSERT/UNROLL n — move TOS to depth n (n=0 noop; n=1≡SWAP; n=2≡-ROT) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (vm->sp < 1 || n >= vm->sp){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    long v = vm->stack[vm->sp - 1];
+    for (int j = vm->sp - 1; j > vm->sp - 1 - (int)n; j--)
+      vm->stack[j] = vm->stack[j - 1];
+    vm->stack[vm->sp - 1 - (int)n] = v;
+    long last = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"RROT")||kw(&L->cur,"NROT")||kw(&L->cur,"-ROT")||
+      kw(&L->cur,"REVROT")||kw(&L->cur,"STACKRROT")){
+    /* RROT / -ROT: a b c → c a b  (≡ SINSERT 2) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = a;
+    vm->stack[vm->sp-1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NPUSH")||kw(&L->cur,"PUSHN")||kw(&L->cur,"STACKNPUSH")||
+      kw(&L->cur,"REPPUSH")){
+    /* NPUSH v n — push value v, n times (n clamped; soft-fail on overflow) */
+    lex_next(L);
+    long v = parse_expr(vm,L);
+    long n = 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n == 0){
+      var_set_num(vm,"OK",1); var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp); bump(vm); return 1;
+    }
+    if (vm->sp + n > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    for (long i = 0; i < n; i++)
+      vm->stack[vm->sp++] = v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"PICK")||kw(&L->cur,"STACKPICK")){

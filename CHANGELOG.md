@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.76-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → data plane: depth insert/unroll, bulk push, cell accumulate.
+
+### Language
+- `SINSERT`/`UNROLL`/`RROLL` n — move TOS to depth n (n=1≡SWAP)
+- `RROT`/`NROT`/`-ROT` — fixed reverse ROT (a b c → c a b)
+- `NPUSH`/`PUSHN` v n — push value v, n times
+- `SADDTOC`/`SCELLADD` — stack `i v → cells[i]+=v` leave sum
+- Proof `99_sinsert_npush.cubalc`
+
+### Prior
+See 1.12.75-universal.
+
 ## 1.12.75-universal — 2026-08-02
 
 ### Direction
