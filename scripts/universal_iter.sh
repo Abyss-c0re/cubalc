@@ -62,7 +62,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             79_word_bits_bridge \
             80_ternary_forever \
             81_range_bits \
-            82_cell_div_scan; do
+            82_cell_div_scan \
+            83_pack32_pext_zip; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

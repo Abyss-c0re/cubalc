@@ -1,0 +1,74 @@
+# Proof 83 — digit-8 stack pack32 + SPEXT/SPDEP + ZIP/UNZIP
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# SPACK32 / SHI32 / SLO32
+PUSH 0xAABBCCDD
+PUSH 0x11223344
+SPACK32
+SLO32
+ASSERT LAST_N == 0x11223344
+PUSH 0xAABBCCDD
+PUSH 0x11223344
+SPACK32
+SHI32
+ASSERT LAST_N == 0xAABBCCDD
+
+# SPEXT: extract bits under mask
+# src=0xFF, mask=0xAA (bits 1,3,5,7) → 0b1111 = 15
+PUSH 0xFF
+PUSH 0xAA
+SPEXT
+ASSERT LAST_N == 15
+# src=0x3C (00111100), mask=0x0F (low 4) → 0xC
+PUSH 0x3C
+PUSH 0x0F
+SPEXT
+ASSERT LAST_N == 0xC
+# src=0xF0, mask=0xAA → bits 1,3,5,7 of F0 = 0,0,1,1 → 0b1100 = 12
+PUSH 0xF0
+PUSH 0xAA
+SPEXT
+ASSERT LAST_N == 12
+
+# SPDEP: deposit low bits into mask positions
+# deposit 0b1011 (0xB) into mask 0xAA → 0x8A
+PUSH 0xB
+PUSH 0xAA
+SPDEP
+ASSERT LAST_N == 0x8A
+# round-trip SPEXT(SPDEP(x,m),m) recovers low |mask| bits of x
+PUSH 0x5
+PUSH 0x0F
+SPDEP
+PUSH 0x0F
+SPEXT
+ASSERT LAST_N == 5
+
+# SZIP: a=1 (bit0), b=2 (bit1) → bit0 from a, bit3 from b → 9
+PUSH 1
+PUSH 2
+SZIP
+ASSERT LAST_N == 9
+
+# zip then unzip recovers (TOS=odd/b, NOS=even/a)
+PUSH 0x0F
+PUSH 0x0A
+SZIP
+SUNZIP
+POP
+ASSERT LAST_N == 0x0A
+POP
+ASSERT LAST_N == 0x0F
+
+PUSH 0
+PUSH 0
+SINTERLEAVE
+ASSERT LAST_N == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof83_pack32_pext_zip" LAST_N

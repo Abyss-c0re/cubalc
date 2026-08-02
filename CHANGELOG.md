@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.60-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → stack pack32 + PEXT/PDEP + bit interleave (data-path pure-C).
+
+### Language
+- `SPACK32`/`SPACKW` hi lo → 64-bit word; `SHI32`/`SLO32` unpack halves
+- `SPEXT`/`SPDEP` src mask — parallel bit extract/deposit (BMI2 duals)
+- `SZIP`/`SINTERLEAVE` a b — Morton interleave low 32 bits
+- `SUNZIP`/`SDEINTERLEAVE` z → even, odd halves on stack
+- Proof `83_pack32_pext_zip.cubalc`
+
+### Prior
+See 1.12.59-universal.
+
+
 ## 1.12.59-universal — 2026-08-02
 
 ### Direction

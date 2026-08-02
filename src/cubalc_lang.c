@@ -4837,6 +4837,108 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 pack32 + PEXT/PDEP + interleave (universal bit data-path) */
+  if (kw(&L->cur,"SPACK32")||kw(&L->cur,"SPACKW")||kw(&L->cur,"STACKPACK32")){
+    /* hi lo → (hi<<32)|lo  (32-bit halves → 64-bit word) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long lo = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    unsigned long long h = (unsigned long long)(unsigned int)hi;
+    unsigned long long l = (unsigned long long)(unsigned int)lo;
+    long r = (long)((h << 32) | l);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHI32")||kw(&L->cur,"SHIWORD")||kw(&L->cur,"STACKHI32")||
+      kw(&L->cur,"SLO32")||kw(&L->cur,"SLOWORD")||kw(&L->cur,"STACKLO32")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long u = (unsigned long long)vm->stack[--vm->sp];
+    long r;
+    if (strcmp(op,"SHI32")==0 || strcmp(op,"SHIWORD")==0 || strcmp(op,"STACKHI32")==0)
+      r = (long)(unsigned int)(u >> 32);
+    else
+      r = (long)(unsigned int)(u & 0xFFFFFFFFu);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPEXT")||kw(&L->cur,"SPEXTRACT")||kw(&L->cur,"STACKPEXT")||
+      kw(&L->cur,"SPEX")||kw(&L->cur,"SPDEP")||kw(&L->cur,"SPDEPOSIT")||
+      kw(&L->cur,"STACKPDEP")||kw(&L->cur,"SPDP")){
+    /* SPEXT: src mask → parallel extract bits of src under mask (BMI2 PEXT)
+     * SPDEP: src mask → deposit low bits of src into mask positions (BMI2 PDEP) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_dep = (strcmp(op,"SPDEP")==0 || strcmp(op,"SPDEPOSIT")==0 ||
+                  strcmp(op,"STACKPDEP")==0 || strcmp(op,"SPDP")==0);
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long mask = (unsigned long long)vm->stack[--vm->sp];
+    unsigned long long src  = (unsigned long long)vm->stack[--vm->sp];
+    unsigned long long res = 0;
+    if (is_dep){
+      unsigned long long bb = 1;
+      for (int i=0;i<64;i++){
+        if ((mask >> i) & 1ull){
+          if (src & bb) res |= (1ull << i);
+          bb <<= 1;
+        }
+      }
+    } else {
+      unsigned long long k = 0;
+      for (int i=0;i<64;i++){
+        if ((mask >> i) & 1ull){
+          if ((src >> i) & 1ull) res |= (1ull << k);
+          k++;
+        }
+      }
+    }
+    long r = (long)res;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZIP")||kw(&L->cur,"SINTERLEAVE")||kw(&L->cur,"STACKZIP")||
+      kw(&L->cur,"SZIPBITS")||kw(&L->cur,"SMORTON")){
+    /* a b → interleave low 32 bits: ... b1 a1 b0 a0 (Morton / zip) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long b = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long a = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long r = 0;
+    for (int i=0;i<32;i++){
+      if ((a >> i) & 1ull) r |= (1ull << (2*i));
+      if ((b >> i) & 1ull) r |= (1ull << (2*i + 1));
+    }
+    long out = (long)r;
+    vm->stack[vm->sp++] = out;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",out); vm->last_n=out;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUNZIP")||kw(&L->cur,"SDEINTERLEAVE")||kw(&L->cur,"STACKUNZIP")||
+      kw(&L->cur,"SUNZIPBITS")){
+    /* z → push even bits (lo), odd bits (hi) as two stack values: lo hi (TOS=hi)
+     * convention: after SUNZIP, TOS=odd/hi half, NOS=even/lo half */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long z = (unsigned long long)vm->stack[--vm->sp];
+    unsigned long long even = 0, odd = 0;
+    for (int i=0;i<32;i++){
+      if ((z >> (2*i)) & 1ull) even |= (1ull << i);
+      if ((z >> (2*i + 1)) & 1ull) odd |= (1ull << i);
+    }
+    vm->stack[vm->sp++] = (long)even;
+    vm->stack[vm->sp++] = (long)odd;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",(long)odd); vm->last_n=(long)odd;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 sign/zero extend: SSEXT SZEXT SSEXT8 SSEXT16 */
   if (kw(&L->cur,"SSEXT8")||kw(&L->cur,"SSEXTB")||kw(&L->cur,"STACKSEXT8")||
       kw(&L->cur,"SSEXT16")||kw(&L->cur,"SSEXTW")||kw(&L->cur,"STACKSEXT16")){
