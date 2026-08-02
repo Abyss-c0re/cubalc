@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.93-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack pair ALU (vector pair +−× after binary stack ALU + 2DUP family).
+
+### Language
+- `DADD`/`2ADD`/`PAIRADD` — a b c d → (a+c) (b+d)
+- `DSUB`/`2SUB`/`PAIRSUB` — a b c d → (a-c) (b-d)
+- `DMUL`/`2MUL`/`PAIRMUL` — a b c d → (a*c) (b*d)
+- Proof `116_dadd_dmul.cubalc`
+
+### Prior
+See 1.12.92-universal.
+
 ## 1.12.92-universal — 2026-08-03
 
 ### Direction

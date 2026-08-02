@@ -166,7 +166,9 @@ static void lex_next(Lex *L) {
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
             strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0 ||
             strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0 ||
-            strcasecmp(tail,"TUCK")==0)
+            strcasecmp(tail,"TUCK")==0 ||
+            strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
+            strcasecmp(tail,"MUL")==0)
           ok = 1;
       } else {
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -4764,6 +4766,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else vm->stack[vm->sp - 1] %= n;
     long v = vm->stack[vm->sp - 1];
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack pair ALU: DADD · DSUB · DMUL (vector pairs a b + c d) */
+  if (kw(&L->cur,"DADD")||kw(&L->cur,"2ADD")||kw(&L->cur,"S2ADD")||
+      kw(&L->cur,"STACK2ADD")||kw(&L->cur,"PAIRADD")){
+    /* a b c d → (a+c) (b+d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a + c;
+    long y = b + d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSUB")||kw(&L->cur,"2SUB")||kw(&L->cur,"S2SUB")||
+      kw(&L->cur,"STACK2SUB")||kw(&L->cur,"PAIRSUB")){
+    /* a b c d → (a-c) (b-d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a - c;
+    long y = b - d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMUL")||kw(&L->cur,"2MUL")||kw(&L->cur,"S2MUL")||
+      kw(&L->cur,"STACK2MUL")||kw(&L->cur,"PAIRMUL")){
+    /* a b c d → (a*c) (b*d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a * c;
+    long y = b * d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
