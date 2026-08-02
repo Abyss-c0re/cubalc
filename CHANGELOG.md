@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.7-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → stack↔cell bridge: block transfer between stack and cells.
+
+### Language
+- `TOCELL`/`>CELL` dst [n] — pop n stack values into cells[dst..] (TOS → highest)
+- `FROMCELL`/`CELL>`/`PUSHCELL` src [n] — push cells[src..] onto stack
+- Proof `30_stack_cell_bridge.cubalc`
+
+### Prior
+See 1.12.6-universal.
+
 ## 1.12.6-universal — 2026-08-02
 
 ### Direction

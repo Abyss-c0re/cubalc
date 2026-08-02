@@ -2815,6 +2815,54 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",d); vm->last_n=d;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack↔cell bridge: TOCELL / FROMCELL */
+  if (kw(&L->cur,"TOCELL")||kw(&L->cur,"STACKTOCELL")||kw(&L->cur,">CELL")){
+    /* TOCELL dst [n] — pop n values into cells[dst..dst+n-1] (TOS → highest index) */
+    lex_next(L);
+    long dst = parse_expr(vm,L);
+    long n = 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 1) n = 1;
+    if (dst < 0) dst = 0;
+    if (dst >= CUBALC_CELL_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (dst + n > CUBALC_CELL_N) n = CUBALC_CELL_N - dst;
+    if (vm->sp < n){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    /* pop n times: first pop goes to dst+n-1 (TOS last index) */
+    for (long i = n - 1; i >= 0; i--){
+      long v = vm->stack[--vm->sp];
+      vm->cells[(int)(dst + i)] = v;
+    }
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FROMCELL")||kw(&L->cur,"CELLTOSTACK")||kw(&L->cur,"CELL>")||
+      kw(&L->cur,"PUSHCELL")){
+    /* FROMCELL src [n] — push cells[src..src+n-1] onto stack (src first, then up) */
+    lex_next(L);
+    long src = parse_expr(vm,L);
+    long n = 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 1) n = 1;
+    if (src < 0) src = 0;
+    if (src >= CUBALC_CELL_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (src + n > CUBALC_CELL_N) n = CUBALC_CELL_N - src;
+    if (vm->sp + n > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long last = 0;
+    for (long i = 0; i < n; i++){
+      last = vm->cells[(int)(src + i)];
+      vm->stack[vm->sp++] = last;
+    }
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"FILLCELL")||kw(&L->cur,"CELLFILL")||kw(&L->cur,"FILL")){
     /* FILLCELL lo hi val — fill cell[lo..hi] with val */
     lex_next(L);

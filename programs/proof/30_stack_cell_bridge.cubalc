@@ -1,0 +1,79 @@
+# Proof 30 — stack↔cell bridge (digit 8): TOCELL / FROMCELL
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+CLEARCELLS
+
+# single TOCELL: push then store
+PUSH 42
+TOCELL 5
+ASSERT SP == 0
+ASSERT CELL(5) == 42
+ASSERT LAST_N == 1
+
+# block TOCELL: stack bottom→top 10,20,30 → cells[0..2]
+PUSH 10
+PUSH 20
+PUSH 30
+TOCELL 0 3
+ASSERT SP == 0
+ASSERT CELL(0) == 10
+ASSERT CELL(1) == 20
+ASSERT CELL(2) == 30
+
+# FROMCELL single
+FROMCELL 5
+ASSERT SP == 1
+PEEK
+ASSERT LAST_N == 42
+POP x
+ASSERT x == 42
+ASSERT SP == 0
+
+# FROMCELL block then stack ops
+CLEARSTACK
+FROMCELL 0 3
+ASSERT SP == 3
+PEEK
+ASSERT LAST_N == 30
+# stack: 10 20 30 — ROT then check
+ROT
+POP a
+ASSERT a == 10
+POP b
+ASSERT b == 30
+POP c
+ASSERT c == 20
+
+# round-trip: cells → stack → cells elsewhere
+CLEARCELLS
+IOTA 0 3 1 1
+CLEARSTACK
+FROMCELL 0 4
+TOCELL 10 4
+ASSERT CELL(10) == 1
+ASSERT CELL(11) == 2
+ASSERT CELL(12) == 3
+ASSERT CELL(13) == 4
+ASSERT SP == 0
+
+# empty / underflow guards
+CLEARSTACK
+TOCELL 0 1
+ASSERT OK == 0
+TOCELL 0 3
+ASSERT OK == 0
+
+# FROMCELL past stack capacity still OK for small n
+FROMCELL 10 2
+ASSERT OK == 1
+ASSERT SP == 2
+ASSERT CELL(10) == 1
+
+CUBE m ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof30_stack_cell" SP CELL(10) CELL(13)
