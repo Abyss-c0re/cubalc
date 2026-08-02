@@ -3277,6 +3277,57 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack combinatorics + add/sub mod: SBINOM SPERM SADDMOD SSUBMOD */
+  if (kw(&L->cur,"SBINOM")||kw(&L->cur,"SCHOOSE")||kw(&L->cur,"STACKBINOM")||
+      kw(&L->cur,"SPERM")||kw(&L->cur,"SPNR")||kw(&L->cur,"STACKPERM")){
+    /* n k → C(n,k) or P(n,k) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    long r = 0;
+    if (n < 0 || k < 0 || k > n) r = 0;
+    else if (strcmp(op,"SPERM")==0 || strcmp(op,"SPNR")==0 || strcmp(op,"STACKPERM")==0){
+      r = 1;
+      for (long i = 0; i < k; i++) r *= (n - i);
+    } else {
+      /* SBINOM / SCHOOSE / STACKBINOM */
+      long kk = k;
+      if (kk > n - kk) kk = n - kk;
+      r = 1;
+      for (long i = 1; i <= kk; i++)
+        r = r * (n - kk + i) / i;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SADDMOD")||kw(&L->cur,"STACKADDMOD")||
+      kw(&L->cur,"SSUBMOD")||kw(&L->cur,"STACKSUBMOD")){
+    /* a b m → (a±b) mod m */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m <= 0) r = 0;
+    else {
+      long x = a % m; if (x < 0) x += m;
+      long y = b % m; if (y < 0) y += m;
+      if (strcmp(op,"SADDMOD")==0 || strcmp(op,"STACKADDMOD")==0)
+        r = (x + y) % m;
+      else
+        r = (x - y + m) % m;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack bitwise ALU: SAND SOR SXOR SNOT SSHL SSHR */
   if (kw(&L->cur,"SAND")||kw(&L->cur,"STACKAND")||kw(&L->cur,"BANDST")||
       kw(&L->cur,"SOR")||kw(&L->cur,"STACKOR")||kw(&L->cur,"BORST")||
