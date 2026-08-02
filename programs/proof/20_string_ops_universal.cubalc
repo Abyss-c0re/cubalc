@@ -1,0 +1,52 @@
+# Proof 20 — string plane (digit 3): CAT FIND EQS HAS REVS UPPER LOWER
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# concat
+SYS CAT "cu" "balc"
+SYS LEN LAST
+ASSERT LAST_N == 6
+SYS EQS LAST "cubalc"
+ASSERT LAST_N == 1
+
+# find / contains
+SYS FIND "hello cube world" "cube"
+ASSERT LAST_N == 6
+SYS FIND "abc" "z"
+ASSERT LAST_N == -1
+SYS HAS "prophecy" "phe"
+ASSERT LAST_N == 1
+SYS HAS "prophecy" "xyz"
+ASSERT LAST_N == 0
+
+# reverse + case
+SYS REVS "abcd"
+SYS EQS LAST "dcba"
+ASSERT LAST_N == 1
+SYS UPPER "Cube"
+SYS EQS LAST "CUBE"
+ASSERT LAST_N == 1
+SYS LOWER "CUBE"
+SYS EQS LAST "cube"
+ASSERT LAST_N == 1
+
+# compose with mid + hex
+SYS CAT "0x" "ff"
+SYS MID LAST 2 2
+SYS HEX LAST
+ASSERT LAST_N == 255
+
+# control with HAS
+LET flag = 0
+SYS HAS "flow_compile" "flow"
+IF LAST_N == 1 THEN
+  LET flag = 1
+END
+ASSERT flag == 1
+ASSERT OK == 1
+
+CUBE s ROLE matrix PROTON 1
+FOLDBITS s "1100110011001100110011001100110011001100110011001100110011001100"
+ASSERT DIGIT(s) >= 0
+
+PRINT "proof20_string_ops" 6 255 flag DIGIT(s)

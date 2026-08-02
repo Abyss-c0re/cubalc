@@ -1959,7 +1959,115 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID");
+    /* SYS CAT|STRCAT a b — concatenate strings → LAST (digit-3 string plane) */
+    if (kw(&L->cur,"CAT") || kw(&L->cur,"STRCAT") || kw(&L->cur,"CONCAT")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
+      char out[1024];
+      snprintf(out, sizeof out, "%s%s", a, b);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FIND|INDEX hay needle — first index of needle in hay → LAST_N (-1 miss) */
+    if (kw(&L->cur,"FIND") || kw(&L->cur,"INDEX") || kw(&L->cur,"STRFIND")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long idx = -1;
+      if (needle[0]){
+        const char *p = strstr(hay, needle);
+        if (p) idx = (long)(p - hay);
+      } else if (hay[0]) idx = 0;
+      vm->last_n = idx;
+      var_set_num(vm, "LAST_N", idx);
+      var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
+    if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
+      long eq = (strcmp(a, b) == 0) ? 1 : 0;
+      vm->last_n = eq;
+      var_set_num(vm, "LAST_N", eq);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HAS|CONTAINS hay needle — 1 if needle in hay */
+    if (kw(&L->cur,"HAS") || kw(&L->cur,"CONTAINS") || kw(&L->cur,"INSTR")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long hit = (needle[0] && strstr(hay, needle)) ? 1 : 0;
+      if (!needle[0]) hit = 1;
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE) */
+    if (kw(&L->cur,"REVS") || kw(&L->cur,"STRREV") || kw(&L->cur,"SREV")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      size_t n = strlen(s);
+      char out[512];
+      if (n >= sizeof out) n = sizeof out - 1;
+      for (size_t i=0;i<n;i++) out[i] = s[n-1-i];
+      out[n] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UPPER|UCASE [str] — ASCII upper → LAST */
+    if (kw(&L->cur,"UPPER") || kw(&L->cur,"UCASE") || kw(&L->cur,"TOUPPER")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      for (char *p=s; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      var_set_str(vm, "LAST", s);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", s);
+      vm->last_n = (long)strlen(s);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LOWER|LCASE [str] — ASCII lower → LAST */
+    if (kw(&L->cur,"LOWER") || kw(&L->cur,"LCASE") || kw(&L->cur,"TOLOWER")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      for (char *p=s; *p; p++)
+        if (*p >= 'A' && *p <= 'Z') *p = (char)(*p - 'A' + 'a');
+      var_set_str(vm, "LAST", s);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", s);
+      vm->last_n = (long)strlen(s);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER");
     return -1;
   }
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.11.7-universal — 2026-08-02
+
+### Direction
+- Algocube digit **3** → string plane (control + data interchange).
+
+### Language
+- `SYS CAT`/`STRCAT` · `SYS FIND`/`INDEX` · `SYS EQS`/`STREQ`
+- `SYS HAS`/`CONTAINS` · `SYS REVS`/`STRREV` · `SYS UPPER` · `SYS LOWER`
+- Proof `20_string_ops_universal.cubalc`
+- Tree restore from HEAD if mass-delete corruption
+
+### Prior
+See 1.11.6-universal.
+
 ## 1.11.6-universal — 2026-08-02
 
 ### Direction
