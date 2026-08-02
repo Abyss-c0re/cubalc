@@ -6010,6 +6010,40 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack immediate inverted bitwise: SNANDI · SNORI · SXNORI (complete after SANDI/SORI/SXORI) */
+  if (kw(&L->cur,"SNANDI")||kw(&L->cur,"NANDI")||kw(&L->cur,"STACKNANDI")||
+      kw(&L->cur,"SNANDIMM")||kw(&L->cur,"NANDIMM")){
+    /* SNANDI n — TOS = ~(TOS & n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] & n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNORI")||kw(&L->cur,"NORI")||kw(&L->cur,"STACKNORI")||
+      kw(&L->cur,"SNORIMM")||kw(&L->cur,"NORIMM")){
+    /* SNORI n — TOS = ~(TOS | n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] | n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNORI")||kw(&L->cur,"XNORI")||kw(&L->cur,"STACKXNORI")||
+      kw(&L->cur,"SXNORIMM")||kw(&L->cur,"XNORIMM")||kw(&L->cur,"SEQUIVI")){
+    /* SXNORI n — TOS = ~(TOS ^ n)  (bitwise equivalence with constant) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] ^ n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 stack immediate bitfield: SSETBN SCLRBN SFLIPBN SBTESTN + SSHLN SSHRN */
   if (kw(&L->cur,"SSETBN")||kw(&L->cur,"SETBN")||kw(&L->cur,"SSETBITN")||
       kw(&L->cur,"STACKSETBN")){

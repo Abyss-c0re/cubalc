@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.91-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack immediate inverted bitwise (complete NAND/NOR/XNOR-with-constant after SANDI/SORI/SXORI).
+
+### Language
+- `SNANDI`/`NANDI`/`NANDIMM` n — TOS = ~(TOS & n)
+- `SNORI`/`NORI`/`NORIMM` n — TOS = ~(TOS | n)
+- `SXNORI`/`XNORI`/`XNORIMM` n — TOS = ~(TOS ^ n) (equiv)
+- Proof `114_snandi_sxnori.cubalc`
+
+### Prior
+See 1.12.90-universal.
+
 ## 1.12.90-universal — 2026-08-03
 
 ### Direction
