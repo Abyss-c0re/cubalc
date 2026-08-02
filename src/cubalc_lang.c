@@ -1225,6 +1225,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"OMEGA")==0 || strcmp(name,"BIGOMEGA")==0 ||
         strcmp(name,"OMEGA0")==0 || strcmp(name,"LITTLEOMEGA")==0 ||
         strcmp(name,"NUOMEGA")==0 ||
+        /* digit-2 modular order: SOPF CARMICHAEL LAMBDA ORDER */
+        strcmp(name,"SOPF")==0 || strcmp(name,"SOPFR")==0 ||
+        strcmp(name,"CARMICHAEL")==0 || strcmp(name,"LAMBDA")==0 ||
+        strcmp(name,"CARM")==0 ||
+        strcmp(name,"ORDER")==0 || strcmp(name,"MULTORDER")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2417,6 +2422,130 @@ static long parse_prim(VM *vm, Lex *L){
           }
           if (n > 1) k++;
           return k;
+        }
+        if (strcmp(name,"SOPF")==0){
+          /* SOPF(n) — sum of distinct prime factors; n<=1 → 0 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          long s = 0;
+          if ((n & 1L) == 0){
+            s += 2;
+            while ((n & 1L) == 0) n >>= 1;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              s += p;
+              while ((n % p) == 0) n /= p;
+            }
+          }
+          if (n > 1) s += n;
+          return s;
+        }
+        if (strcmp(name,"SOPFR")==0){
+          /* SOPFR(n) — sum of prime factors with multiplicity; n<=1 → 0 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          long s = 0;
+          while ((n & 1L) == 0){ s += 2; n >>= 1; }
+          for (long p = 3; p * p <= n; p += 2){
+            while ((n % p) == 0){ s += p; n /= p; }
+          }
+          if (n > 1) s += n;
+          return s;
+        }
+        if (strcmp(name,"CARMICHAEL")==0 || strcmp(name,"LAMBDA")==0 ||
+            strcmp(name,"CARM")==0){
+          /* CARMICHAEL/LAMBDA(n) — Carmichael λ(n); n<=0 → 0; n==1 → 1 */
+          long n = a < 0 ? -a : a;
+          if (n <= 0) return 0;
+          if (n == 1) return 1;
+          long res = 1;
+          long e2 = 0;
+          while ((n & 1L) == 0){ n >>= 1; e2++; }
+          if (e2){
+            if (e2 == 1) res = 1;
+            else if (e2 == 2) res = 2;
+            else res = 1L << (e2 - 2);
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              long pk = 1;
+              while ((n % p) == 0){ n /= p; pk *= p; }
+              long lam = (pk / p) * (p - 1);
+              long x = res, y = lam;
+              while (y){ long t = x % y; x = y; y = t; }
+              long g = x;
+              res = (g == 0) ? 0 : (res / g) * lam;
+            }
+          }
+          if (n > 1){
+            long lam = n - 1;
+            long x = res, y = lam;
+            while (y){ long t = x % y; x = y; y = t; }
+            long g = x;
+            res = (g == 0) ? 0 : (res / g) * lam;
+          }
+          return res;
+        }
+        if (strcmp(name,"ORDER")==0 || strcmp(name,"MULTORDER")==0){
+          /* ORDER(a,m) — mult. order of a mod m; 0 if gcd!=1 or m<=1 */
+          long m = b;
+          if (m <= 1) return 0;
+          long aa = a % m; if (aa < 0) aa += m;
+          if (aa == 0) return 0;
+          long x = aa, y = m;
+          while (y){ long t = x % y; x = y; y = t; }
+          if (x != 1) return 0;
+          long mm = m, res = 1, e2 = 0;
+          while ((mm & 1L) == 0){ mm >>= 1; e2++; }
+          if (e2){
+            if (e2 == 1) res = 1;
+            else if (e2 == 2) res = 2;
+            else res = 1L << (e2 - 2);
+          }
+          for (long p = 3; p * p <= mm; p += 2){
+            if ((mm % p) == 0){
+              long pk = 1;
+              while ((mm % p) == 0){ mm /= p; pk *= p; }
+              long lam = (pk / p) * (p - 1);
+              long gx = res, gy = lam;
+              while (gy){ long t = gx % gy; gx = gy; gy = t; }
+              res = (gx == 0) ? 0 : (res / gx) * lam;
+            }
+          }
+          if (mm > 1){
+            long lam = mm - 1;
+            long gx = res, gy = lam;
+            while (gy){ long t = gx % gy; gx = gy; gy = t; }
+            res = (gx == 0) ? 0 : (res / gx) * lam;
+          }
+          long lam = res;
+          for (long k = 1; k <= lam; k++){
+            long base = aa, exp = k, r = 1 % m;
+            while (exp > 0){
+              if (exp & 1){
+                long y2 = r, x2 = base, acc = 0;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                r = acc;
+              }
+              {
+                long x2 = base, acc = 0, y2 = base;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                base = acc;
+              }
+              exp >>= 1;
+            }
+            if (r == 1) return k;
+          }
+          return 0;
         }
         /* digit-0 foundation bitfields */
         if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
@@ -6014,6 +6143,140 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 modular order stack: SSOPF · SCARMICHAEL · SORDER */
+  if (kw(&L->cur,"SSOPF")||kw(&L->cur,"STACKSOPF")||kw(&L->cur,"SSUMOPF")){
+    /* n → sum of distinct prime factors */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long s = 0;
+    if (n > 1){
+      if ((n & 1L) == 0){
+        s += 2;
+        while ((n & 1L) == 0) n >>= 1;
+      }
+      for (long p = 3; p * p <= n; p += 2){
+        if ((n % p) == 0){
+          s += p;
+          while ((n % p) == 0) n /= p;
+        }
+      }
+      if (n > 1) s += n;
+    }
+    vm->stack[vm->sp - 1] = s;
+    var_set_num(vm,"LAST_N",s); vm->last_n=s;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCARMICHAEL")||kw(&L->cur,"SLAMBDA")||kw(&L->cur,"SCARM")||
+      kw(&L->cur,"STACKCARMICHAEL")||kw(&L->cur,"STACKLAMBDA")){
+    /* n → Carmichael λ(n) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n == 1) r = 1;
+    else if (n > 1){
+      r = 1;
+      long e2 = 0;
+      while ((n & 1L) == 0){ n >>= 1; e2++; }
+      if (e2){
+        if (e2 == 1) r = 1;
+        else if (e2 == 2) r = 2;
+        else r = 1L << (e2 - 2);
+      }
+      for (long p = 3; p * p <= n; p += 2){
+        if ((n % p) == 0){
+          long pk = 1;
+          while ((n % p) == 0){ n /= p; pk *= p; }
+          long lam = (pk / p) * (p - 1);
+          long x = r, y = lam;
+          while (y){ long t = x % y; x = y; y = t; }
+          r = (x == 0) ? 0 : (r / x) * lam;
+        }
+      }
+      if (n > 1){
+        long lam = n - 1;
+        long x = r, y = lam;
+        while (y){ long t = x % y; x = y; y = t; }
+        r = (x == 0) ? 0 : (r / x) * lam;
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORDER")||kw(&L->cur,"SMULTORDER")||kw(&L->cur,"STACKORDER")||
+      kw(&L->cur,"SORD")){
+    /* a m → multiplicative order of a mod m (0 if none) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long gx = aa, gy = m;
+        while (gy){ long t = gx % gy; gx = gy; gy = t; }
+        if (gx == 1){
+          long mm = m, res = 1, e2 = 0;
+          while ((mm & 1L) == 0){ mm >>= 1; e2++; }
+          if (e2){
+            if (e2 == 1) res = 1;
+            else if (e2 == 2) res = 2;
+            else res = 1L << (e2 - 2);
+          }
+          for (long p = 3; p * p <= mm; p += 2){
+            if ((mm % p) == 0){
+              long pk = 1;
+              while ((mm % p) == 0){ mm /= p; pk *= p; }
+              long lam = (pk / p) * (p - 1);
+              long x = res, y = lam;
+              while (y){ long t = x % y; x = y; y = t; }
+              res = (x == 0) ? 0 : (res / x) * lam;
+            }
+          }
+          if (mm > 1){
+            long lam = mm - 1;
+            long x = res, y = lam;
+            while (y){ long t = x % y; x = y; y = t; }
+            res = (x == 0) ? 0 : (res / x) * lam;
+          }
+          long lam = res;
+          for (long k = 1; k <= lam; k++){
+            long base = aa, exp = k, rr = 1 % m;
+            while (exp > 0){
+              if (exp & 1){
+                long y2 = rr, x2 = base, acc = 0;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                rr = acc;
+              }
+              {
+                long x2 = base, acc = 0, y2 = base;
+                while (y2 > 0){
+                  if (y2 & 1) acc = (acc + x2) % m;
+                  x2 = (x2 + x2) % m;
+                  y2 >>= 1;
+                }
+                base = acc;
+              }
+              exp >>= 1;
+            }
+            if (rr == 1){ r = k; break; }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack combinatorics + add/sub mod: SBINOM SPERM SADDMOD SSUBMOD */
   if (kw(&L->cur,"SBINOM")||kw(&L->cur,"SCHOOSE")||kw(&L->cur,"STACKBINOM")||

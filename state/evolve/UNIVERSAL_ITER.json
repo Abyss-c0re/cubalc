@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:57:06+0300",
-  "iter": 192,
-  "algocube_digit": 9,
-  "version": "1.12.107-universal",
-  "pass": 145,
+  "ts": "2026-08-03T02:04:07+0300",
+  "iter": 193,
+  "algocube_digit": 2,
+  "version": "1.12.108-universal",
+  "pass": 146,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,7 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SANDCELL SORCELL SXORCELL SNOTCELL SCELLEQ SNECELL NECELL",
-  "proof": "programs/proof/130_sandcell_sne.cubalc"
+  "delta": "SOPF CARMICHAEL ORDER SSOPF SCARMICHAEL SORDER",
+  "proof": "programs/proof/131_sorder_carmichael.cubalc",
+  "note": "tree restored from origin/main after evolve corruption"
 }

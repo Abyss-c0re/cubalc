@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.108-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → modular order plane: SOPF + Carmichael λ + mult. order.
+
+### Language
+- `SOPF`/`SOPFR`(n) · `SSOPF` — sum of prime factors (distinct / with mult.)
+- `CARMICHAEL`/`LAMBDA`(n) · `SCARMICHAEL`/`SLAMBDA` — Carmichael λ(n)
+- `ORDER`/`MULTORDER`(a,m) · `SORDER` — multiplicative order
+- Proof `131_sorder_carmichael.cubalc`
+
+### Prior
+See 1.12.107-universal.
+
 ## 1.12.107-universal — 2026-08-03
 
 ### Direction
