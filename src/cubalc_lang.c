@@ -1063,6 +1063,14 @@ static long parse_prim(VM *vm, Lex *L){
         /* universal bit ops (word forms — | used by play dialect) */
         strcmp(name,"BAND")==0 || strcmp(name,"BOR")==0 ||
         strcmp(name,"BXOR")==0 || strcmp(name,"BNOT")==0 ||
+        /* digit-1 bitwise logic + bit-select blend */
+        strcmp(name,"BNAND")==0 || strcmp(name,"BNOR")==0 ||
+        strcmp(name,"BXNOR")==0 || strcmp(name,"XNOR")==0 ||
+        strcmp(name,"ANDN")==0 || strcmp(name,"ANDNOT")==0 ||
+        strcmp(name,"BIC")==0 ||
+        strcmp(name,"ORN")==0 || strcmp(name,"ORNOT")==0 ||
+        strcmp(name,"BSEL")==0 || strcmp(name,"BITSEL")==0 ||
+        strcmp(name,"BLEND")==0 ||
         strcmp(name,"SHL")==0 || strcmp(name,"SHR")==0 ||
         strcmp(name,"SAR")==0 || strcmp(name,"ASHR")==0 ||
         strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0 ||
@@ -1330,6 +1338,20 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"BOR")==0) return a | b;
         if (strcmp(name,"BXOR")==0) return a ^ b;
         if (strcmp(name,"BNOT")==0) return ~a;
+        if (strcmp(name,"BNAND")==0) return ~(a & b);
+        if (strcmp(name,"BNOR")==0) return ~(a | b);
+        if (strcmp(name,"BXNOR")==0 || strcmp(name,"XNOR")==0) return ~(a ^ b);
+        if (strcmp(name,"ANDN")==0 || strcmp(name,"ANDNOT")==0 || strcmp(name,"BIC")==0)
+          return a & ~b; /* bit clear: a AND NOT b */
+        if (strcmp(name,"ORN")==0 || strcmp(name,"ORNOT")==0)
+          return a | ~b;
+        if (strcmp(name,"BSEL")==0 || strcmp(name,"BITSEL")==0 || strcmp(name,"BLEND")==0){
+          /* BSEL(mask, a, b) — bit blend: (a & mask) | (b & ~mask) */
+          unsigned long m = (unsigned long)a;
+          unsigned long x = (unsigned long)b;
+          unsigned long y = (unsigned long)c;
+          return (long)((x & m) | (y & ~m));
+        }
         if (strcmp(name,"SHL")==0){
           if (b < 0) b = 0; if (b > 62) b = 62;
           return a << b;
@@ -4398,6 +4420,45 @@ static int parse_form(VM *vm, Lex *L){
     long r = n;
     if (r < lo) r = lo;
     if (r > hi) r = hi;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 bitwise logic stack: SNAND SNOR SXNOR SANDN SORN SBSEL */
+  if (kw(&L->cur,"SNAND")||kw(&L->cur,"STACKNAND")||
+      kw(&L->cur,"SNOR")||kw(&L->cur,"STACKNOR")||
+      kw(&L->cur,"SXNOR")||kw(&L->cur,"STACKXNOR")||kw(&L->cur,"SXNORB")||
+      kw(&L->cur,"SANDN")||kw(&L->cur,"SANDNOT")||kw(&L->cur,"SBIC")||kw(&L->cur,"STACKANDN")||
+      kw(&L->cur,"SORN")||kw(&L->cur,"SORNOT")||kw(&L->cur,"STACKORN")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SNAND")==0 || strcmp(op,"STACKNAND")==0) r = ~(a & b);
+    else if (strcmp(op,"SNOR")==0 || strcmp(op,"STACKNOR")==0) r = ~(a | b);
+    else if (strcmp(op,"SXNOR")==0 || strcmp(op,"STACKXNOR")==0 || strcmp(op,"SXNORB")==0)
+      r = ~(a ^ b);
+    else if (strcmp(op,"SANDN")==0 || strcmp(op,"SANDNOT")==0 || strcmp(op,"SBIC")==0 ||
+             strcmp(op,"STACKANDN")==0)
+      r = a & ~b;
+    else
+      r = a | ~b; /* SORN / SORNOT / STACKORN */
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBSEL")||kw(&L->cur,"SBITSEL")||kw(&L->cur,"SBLEND")||kw(&L->cur,"STACKBSEL")){
+    /* mask a b → (a & mask) | (b & ~mask)  — mask on bottom of trio */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long m = vm->stack[--vm->sp];
+    unsigned long um = (unsigned long)m;
+    long r = (long)(((unsigned long)a & um) | ((unsigned long)b & ~um));
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
