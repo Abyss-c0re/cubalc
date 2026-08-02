@@ -1166,6 +1166,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ISCUBE")==0 || strcmp(name,"ISCUB")==0 ||
         strcmp(name,"NEXTPRIME")==0 || strcmp(name,"NXTPRIME")==0 ||
         strcmp(name,"PREVPRIME")==0 || strcmp(name,"PRVPRIME")==0 ||
+        /* digit-2 divisor arithmetic: NDIVS SIGMA PHI */
+        strcmp(name,"NDIVS")==0 || strcmp(name,"NUMDIV")==0 ||
+        strcmp(name,"DIVCOUNT")==0 || strcmp(name,"TAUD")==0 ||
+        strcmp(name,"SIGMA")==0 || strcmp(name,"DIVSUM")==0 ||
+        strcmp(name,"SIGMA1")==0 ||
+        strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
+        strcmp(name,"EULERPHI")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -1992,6 +1999,53 @@ static long parse_prim(VM *vm, Lex *L){
             if (okp) return t;
           }
           return 0;
+        }
+        if (strcmp(name,"NDIVS")==0 || strcmp(name,"NUMDIV")==0 ||
+            strcmp(name,"DIVCOUNT")==0 || strcmp(name,"TAUD")==0){
+          /* NDIVS(n) — number of positive divisors τ(n); n<=0 → 0 */
+          if (a <= 0) return 0;
+          long n = a, cnt = 0;
+          for (long i = 1; i * i <= n; i++){
+            if ((n % i) == 0){
+              cnt++;
+              if (i * i != n) cnt++;
+            }
+          }
+          return cnt;
+        }
+        if (strcmp(name,"SIGMA")==0 || strcmp(name,"DIVSUM")==0 ||
+            strcmp(name,"SIGMA1")==0){
+          /* SIGMA(n) — sum of positive divisors σ(n); n<=0 → 0 */
+          if (a <= 0) return 0;
+          long n = a;
+          long sum = 0;
+          for (long i = 1; i * i <= n; i++){
+            if ((n % i) == 0){
+              sum += i;
+              if (i * i != n) sum += n / i;
+            }
+          }
+          return sum;
+        }
+        if (strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
+            strcmp(name,"EULERPHI")==0){
+          /* PHI(n) — Euler's totient φ(n); n<=0 → 0 */
+          if (a <= 0) return 0;
+          if (a == 1) return 1;
+          long n = a;
+          long r = n;
+          if ((n % 2) == 0){
+            while ((n % 2) == 0) n /= 2;
+            r -= r / 2;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              while ((n % p) == 0) n /= p;
+              r -= r / p;
+            }
+          }
+          if (n > 1) r -= r / n;
+          return r;
         }
         /* digit-2/6 extended math: log2 / log10 / odd-even / bit counts / pow2 */
         if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
@@ -4211,6 +4265,47 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNDIVS")||kw(&L->cur,"SNUMDIV")||kw(&L->cur,"STACKNDIVS")||
+      kw(&L->cur,"SSIGMA")||kw(&L->cur,"SDIVSUM")||kw(&L->cur,"STACKSIGMA")||
+      kw(&L->cur,"SPHI")||kw(&L->cur,"STOTIENT")||kw(&L->cur,"STACKPHI")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SNDIVS")==0 || strcmp(op,"SNUMDIV")==0 || strcmp(op,"STACKNDIVS")==0){
+      if (a > 0){
+        long n = a;
+        for (long i = 1; i * i <= n; i++){
+          if ((n % i) == 0){ r++; if (i * i != n) r++; }
+        }
+      }
+    } else if (strcmp(op,"SSIGMA")==0 || strcmp(op,"SDIVSUM")==0 || strcmp(op,"STACKSIGMA")==0){
+      if (a > 0){
+        long n = a;
+        for (long i = 1; i * i <= n; i++){
+          if ((n % i) == 0){ r += i; if (i * i != n) r += n / i; }
+        }
+      }
+    } else {
+      /* SPHI / STOTIENT */
+      if (a > 0){
+        if (a == 1) r = 1;
+        else {
+          long n = a; r = n;
+          if ((n % 2) == 0){ while ((n % 2) == 0) n /= 2; r -= r / 2; }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ while ((n % p) == 0) n /= p; r -= r / p; }
+          }
+          if (n > 1) r -= r / n;
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"SISSQUARE")||kw(&L->cur,"SISSQR")||kw(&L->cur,"STACKISSQUARE")||
       kw(&L->cur,"SISCUBE")||kw(&L->cur,"SISCUB")||kw(&L->cur,"STACKISCUBE")||
