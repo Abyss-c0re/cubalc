@@ -1083,6 +1083,14 @@ static long parse_prim(VM *vm, Lex *L){
         /* digit-9 universal data-path: rotate · pack · select */
         strcmp(name,"ROTL")==0 || strcmp(name,"ROTR")==0 ||
         strcmp(name,"ROL")==0 || strcmp(name,"ROR")==0 ||
+        /* digit-1 rotate/shift extend: 8/16 rot + 32-bit shift/sext/zext */
+        strcmp(name,"ROTL8")==0 || strcmp(name,"ROL8")==0 ||
+        strcmp(name,"ROTR8")==0 || strcmp(name,"ROR8")==0 ||
+        strcmp(name,"ROTL16")==0 || strcmp(name,"ROL16")==0 ||
+        strcmp(name,"ROTR16")==0 || strcmp(name,"ROR16")==0 ||
+        strcmp(name,"SHL32")==0 || strcmp(name,"SHR32")==0 ||
+        strcmp(name,"SEXT32")==0 || strcmp(name,"SEXTL")==0 ||
+        strcmp(name,"ZEXT32")==0 || strcmp(name,"ZEXTL")==0 ||
         /* digit-1 shift/rotate/cmp: 64-bit rotate + unsigned/3-way cmp */
         strcmp(name,"ROTL64")==0 || strcmp(name,"ROL64")==0 ||
         strcmp(name,"ROTR64")==0 || strcmp(name,"ROR64")==0 ||
@@ -1405,6 +1413,66 @@ static long parse_prim(VM *vm, Lex *L){
           k &= 31;
           if (k == 0) return (long)w;
           return (long)((w >> k) | (w << (32 - k)));
+        }
+        if (strcmp(name,"ROTL8")==0 || strcmp(name,"ROL8")==0){
+          unsigned int w = (unsigned int)a & 0xFFu;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 7;
+          if (k == 0) return (long)w;
+          return (long)(((w << k) | (w >> (8 - k))) & 0xFFu);
+        }
+        if (strcmp(name,"ROTR8")==0 || strcmp(name,"ROR8")==0){
+          unsigned int w = (unsigned int)a & 0xFFu;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 7;
+          if (k == 0) return (long)w;
+          return (long)(((w >> k) | (w << (8 - k))) & 0xFFu);
+        }
+        if (strcmp(name,"ROTL16")==0 || strcmp(name,"ROL16")==0){
+          unsigned int w = (unsigned int)a & 0xFFFFu;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 15;
+          if (k == 0) return (long)w;
+          return (long)(((w << k) | (w >> (16 - k))) & 0xFFFFu);
+        }
+        if (strcmp(name,"ROTR16")==0 || strcmp(name,"ROR16")==0){
+          unsigned int w = (unsigned int)a & 0xFFFFu;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 15;
+          if (k == 0) return (long)w;
+          return (long)(((w >> k) | (w << (16 - k))) & 0xFFFFu);
+        }
+        if (strcmp(name,"SHL32")==0){
+          /* 32-bit logical left shift (result zero-extended to long) */
+          unsigned int w = (unsigned int)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          if (k >= 32) return 0;
+          return (long)(w << k);
+        }
+        if (strcmp(name,"SHR32")==0){
+          /* 32-bit logical right shift */
+          unsigned int w = (unsigned int)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          if (k >= 32) return 0;
+          return (long)(w >> k);
+        }
+        if (strcmp(name,"SEXT32")==0 || strcmp(name,"SEXTL")==0){
+          /* sign-extend low 32 bits to signed long */
+          long v = (long)(unsigned int)a;
+          if (v & 0x80000000L) v |= ~0xFFFFFFFFL;
+          else v &= 0xFFFFFFFFL;
+          /* portable: cast through int32 */
+          return (long)(int)(unsigned int)a;
+        }
+        if (strcmp(name,"ZEXT32")==0 || strcmp(name,"ZEXTL")==0){
+          /* zero-extend low 32 bits */
+          return (long)((unsigned long)a & 0xFFFFFFFFul);
         }
         if (strcmp(name,"ROTL64")==0 || strcmp(name,"ROL64")==0){
           /* 64-bit rotate left on unsigned long word */
@@ -4637,6 +4705,67 @@ static int parse_form(VM *vm, Lex *L){
           ((w & 0x00FF000000000000ul) >> 40) | ((w & 0xFF00000000000000ul) >> 56);
       r = (long)w;
     }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 rotate/shift-extend stack: SROTL8/16 SSEXT32 SZEXT32 SSHL32 SSHR32 */
+  if (kw(&L->cur,"SROTL8")||kw(&L->cur,"SROL8")||kw(&L->cur,"SROTR8")||kw(&L->cur,"SROR8")||
+      kw(&L->cur,"SROTL16")||kw(&L->cur,"SROL16")||kw(&L->cur,"SROTR16")||kw(&L->cur,"SROR16")||
+      kw(&L->cur,"SSHL32")||kw(&L->cur,"SSHR32")||
+      kw(&L->cur,"STACKROTL8")||kw(&L->cur,"STACKROTR8")||
+      kw(&L->cur,"STACKROTL16")||kw(&L->cur,"STACKROTR16")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    if (strcmp(op,"SROTL8")==0 || strcmp(op,"SROL8")==0 || strcmp(op,"STACKROTL8")==0){
+      unsigned int w = (unsigned int)a & 0xFFu;
+      kk &= 7;
+      r = kk ? (long)(((w << kk) | (w >> (8 - kk))) & 0xFFu) : (long)w;
+    } else if (strcmp(op,"SROTR8")==0 || strcmp(op,"SROR8")==0 || strcmp(op,"STACKROTR8")==0){
+      unsigned int w = (unsigned int)a & 0xFFu;
+      kk &= 7;
+      r = kk ? (long)(((w >> kk) | (w << (8 - kk))) & 0xFFu) : (long)w;
+    } else if (strcmp(op,"SROTL16")==0 || strcmp(op,"SROL16")==0 || strcmp(op,"STACKROTL16")==0){
+      unsigned int w = (unsigned int)a & 0xFFFFu;
+      kk &= 15;
+      r = kk ? (long)(((w << kk) | (w >> (16 - kk))) & 0xFFFFu) : (long)w;
+    } else if (strcmp(op,"SROTR16")==0 || strcmp(op,"SROR16")==0 || strcmp(op,"STACKROTR16")==0){
+      unsigned int w = (unsigned int)a & 0xFFFFu;
+      kk &= 15;
+      r = kk ? (long)(((w >> kk) | (w << (16 - kk))) & 0xFFFFu) : (long)w;
+    } else if (strcmp(op,"SSHL32")==0){
+      unsigned int w = (unsigned int)a;
+      if (kk >= 32) r = 0;
+      else r = (long)(w << kk);
+    } else {
+      /* SSHR32 */
+      unsigned int w = (unsigned int)a;
+      if (kk >= 32) r = 0;
+      else r = (long)(w >> kk);
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT32")||kw(&L->cur,"SSEXTL")||kw(&L->cur,"STACKSEXT32")||
+      kw(&L->cur,"SZEXT32")||kw(&L->cur,"SZEXTL")||kw(&L->cur,"STACKZEXT32")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (strcmp(op,"SSEXT32")==0 || strcmp(op,"SSEXTL")==0 || strcmp(op,"STACKSEXT32")==0)
+      r = (long)(int)(unsigned int)a;
+    else
+      r = (long)((unsigned long)a & 0xFFFFFFFFul);
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
