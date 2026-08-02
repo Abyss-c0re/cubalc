@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.104-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack depth duals: 4TUCK + quintuple 5DUP/5DROP/5SWAP.
+
+### Language
+- `4TUCK`/`QTUCK`/`TUCK4` — a b c d → d a b c d
+- `5DUP`/`DUP5` — duplicate top 5
+- `5DROP`/`DROP5` — drop top 5
+- `5SWAP`/`SWAP5` — reverse top 5
+- Proof `127_4tuck_5dup.cubalc`
+
+### Prior
+See 1.12.103-universal.
+
 ## 1.12.103-universal — 2026-08-03
 
 ### Direction

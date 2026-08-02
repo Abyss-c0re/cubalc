@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:31:09+0300",
-  "iter": 188,
-  "algocube_digit": 5,
-  "version": "1.12.103-universal",
-  "pass": 141,
+  "ts": "2026-08-03T01:37:35+0300",
+  "iter": 189,
+  "algocube_digit": 8,
+  "version": "1.12.104-universal",
+  "pass": 142,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SCOPYCELL SMOVECELL SREVCELL SROTCELL",
-  "proof": "programs/proof/126_scopycell_srot.cubalc"
+  "delta": "4TUCK 5DUP 5DROP 5SWAP",
+  "proof": "programs/proof/127_4tuck_5dup.cubalc"
 }

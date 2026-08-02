@@ -155,8 +155,9 @@ static void lex_next(Lex *L) {
     }
     /* 2DUP / 2DROP / 2SWAP / 2OVER / 2ROT / 2NIP / 2TUCK — Forth double ops (digit-8)
      * 3DUP / 3DROP / 3SWAP / 3OVER / 3ROT / 3NIP / 3TUCK — triple (digit-8)
-     * 4DUP / 4DROP / 4SWAP / 4NIP / 4ROT / 4RROT / 4OVER — quadruple (digit-0/8) */
-    if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
+     * 4DUP / 4DROP / 4SWAP / 4NIP / 4ROT / 4RROT / 4OVER / 4TUCK — quadruple
+     * 5DUP / 5DROP / 5SWAP — quintuple depth (digit-8) */
+    if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
       while (j<L->n && isalpha((unsigned char)L->s[j]) && t+1<sizeof tail)
@@ -177,11 +178,16 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0 ||
             strcasecmp(tail,"TUCK")==0 || strcasecmp(tail,"RROT")==0)
           ok = 1;
-      } else {
+      } else if (b[0]=='4'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
             strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0 ||
             strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0 ||
-            strcasecmp(tail,"OVER")==0)
+            strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
+          ok = 1;
+      } else {
+        /* 5… */
+        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+            strcasecmp(tail,"SWAP")==0)
           ok = 1;
       }
       if (ok){
@@ -5001,6 +5007,67 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp++] = d;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",d); vm->last_n=d;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 depth duals: 4TUCK · 5DUP · 5DROP · 5SWAP */
+  if (kw(&L->cur,"4TUCK")||kw(&L->cur,"QTUCK")||kw(&L->cur,"TUCK4")||
+      kw(&L->cur,"STACK4TUCK")){
+    /* a b c d → d a b c d  (copy TOS under top 3; dual of 3TUCK) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-4], b = vm->stack[vm->sp-3];
+    long c = vm->stack[vm->sp-2], d = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-4] = d;
+    vm->stack[vm->sp-3] = a;
+    vm->stack[vm->sp-2] = b;
+    vm->stack[vm->sp-1] = c;
+    vm->stack[vm->sp++] = d;
+    var_set_num(vm,"LAST_N",d); vm->last_n=d;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"5DUP")||kw(&L->cur,"PDUP")||kw(&L->cur,"DUP5")||
+      kw(&L->cur,"STACK5DUP")){
+    /* a b c d e → a b c d e a b c d e */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 5 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-5], b = vm->stack[vm->sp-4];
+    long c = vm->stack[vm->sp-3], d = vm->stack[vm->sp-2];
+    long e = vm->stack[vm->sp-1];
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    vm->stack[vm->sp++] = c;
+    vm->stack[vm->sp++] = d;
+    vm->stack[vm->sp++] = e;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",e); vm->last_n=e;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"5DROP")||kw(&L->cur,"PDROP")||kw(&L->cur,"DROP5")||
+      kw(&L->cur,"STACK5DROP")){
+    /* drop top 5 */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->sp -= 5;
+    var_set_num(vm,"SP",vm->sp);
+    if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+    else { var_set_num(vm,"LAST_N",0); vm->last_n=0; }
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"5SWAP")||kw(&L->cur,"PSWAP")||kw(&L->cur,"SWAP5")||
+      kw(&L->cur,"STACK5SWAP")){
+    /* a b c d e → e d c b a  (reverse top 5) */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-5], b = vm->stack[vm->sp-4];
+    long c = vm->stack[vm->sp-3], d = vm->stack[vm->sp-2];
+    long e = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-5] = e;
+    vm->stack[vm->sp-4] = d;
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = b;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){
