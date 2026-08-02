@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.70-universal — 2026-08-02
+
+### Direction
+- Algocube digit **3** → COP range algebra: bitwise range ops + range reduce.
+
+### Language
+- `ANDRANGE`/`ORRANGE`/`XORRANGE` a b lo hi — in-place a[i] OP= b[i]
+- `NANDRANGE`/`NORRANGE`/`XNORRANGE` · `ANDNRANGE`/`ORNRANGE`
+- `ANDREDUCE`/`ALLRANGE` cube lo hi · `ORREDUCE`/`ANYRANGE` cube lo hi
+- Proof `93_andrange_reduce.cubalc`
+
+### Prior
+See 1.12.69-universal.
+
 ## 1.12.69-universal — 2026-08-02
 
 ### Direction
