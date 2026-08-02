@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.85-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → data plane: stack↔cell accumulate (sub/mul/div).
+
+### Language
+- `SSUBTOC`/`SCELLSUB` — stack `i v → cells[i]-=v` leave result
+- `SMULTOC`/`SCELLMUL` — stack `i v → cells[i]*=v` leave product
+- `SDIVTOC`/`SCELLDIV` — stack `i v → cells[i]/=v` leave quotient
+- Proof `108_ssubtoc_smultoc.cubalc`
+
+### Prior
+See 1.12.84-universal.
+
 ## 1.12.84-universal — 2026-08-02
 
 ### Direction

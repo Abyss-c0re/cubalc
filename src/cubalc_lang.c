@@ -3849,6 +3849,52 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack↔cell accumulate ext: SSUBTOC · SMULTOC · SDIVTOC */
+  if (kw(&L->cur,"SSUBTOC")||kw(&L->cur,"SCELLSUB")||kw(&L->cur,"SSUBFROMCELL")||
+      kw(&L->cur,"STACKSUBCELL")||kw(&L->cur,"SSUBCELL")){
+    /* i v → cells[i]-=v, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] - v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMULTOC")||kw(&L->cur,"SCELLMUL")||kw(&L->cur,"SMULCELL")||
+      kw(&L->cur,"STACKMULCELL")||kw(&L->cur,"SMULTOCELL")){
+    /* i v → cells[i]*=v, leave product */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] * v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVTOC")||kw(&L->cur,"SCELLDIV")||kw(&L->cur,"SDIVCELL")||
+      kw(&L->cur,"STACKDIVCELL")||kw(&L->cur,"SDIVTOCELL")){
+    /* i v → cells[i]/=v (0 if v==0), leave quotient */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = v ? (vm->cells[(int)i] / v) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
     memset(vm->cells, 0, sizeof vm->cells);
