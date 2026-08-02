@@ -1037,7 +1037,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"NEG")==0 ||
         strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0 ||
         strcmp(name,"PEEK")==0 || strcmp(name,"STACKLEN")==0 ||
-        strcmp(name,"SP")==0){
+        strcmp(name,"SP")==0 ||
+        /* digit-2 math: modular + number theory */
+        strcmp(name,"ADDMOD")==0 || strcmp(name,"SUBMOD")==0 ||
+        strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
+        strcmp(name,"FIB")==0 || strcmp(name,"FIBONACCI")==0 ||
+        strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0 ||
+        strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1194,6 +1200,82 @@ static long parse_prim(VM *vm, Lex *L){
         }
         if (strcmp(name,"STACKLEN")==0 || strcmp(name,"SP")==0)
           return (long)vm->sp;
+        /* Modular arithmetic (digit-2 math plane) */
+        if (strcmp(name,"IDIV")==0) return b ? (a / b) : 0;
+        if (strcmp(name,"IMOD")==0) return b ? (a % b) : 0;
+        if (strcmp(name,"ADDMOD")==0){
+          long m = c; if (m <= 0) return 0;
+          long x = a % m; if (x < 0) x += m;
+          long y = b % m; if (y < 0) y += m;
+          return (x + y) % m;
+        }
+        if (strcmp(name,"SUBMOD")==0){
+          long m = c; if (m <= 0) return 0;
+          long x = a % m; if (x < 0) x += m;
+          long y = b % m; if (y < 0) y += m;
+          return (x - y + m) % m;
+        }
+        if (strcmp(name,"MULMOD")==0){
+          long m = c; if (m <= 0) return 0;
+          long x = a % m; if (x < 0) x += m;
+          long y = b % m; if (y < 0) y += m;
+          /* careful multiply via binary for large values */
+          long r = 0;
+          while (y > 0){
+            if (y & 1) r = (r + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          return r;
+        }
+        if (strcmp(name,"POWMOD")==0){
+          long m = c; if (m <= 0) return 0;
+          long base = a % m; if (base < 0) base += m;
+          long exp = b; if (exp < 0) return 0;
+          long r = 1 % m;
+          while (exp > 0){
+            if (exp & 1){
+              long y = r, x = base, acc = 0;
+              while (y > 0){
+                if (y & 1) acc = (acc + x) % m;
+                x = (x + x) % m;
+                y >>= 1;
+              }
+              r = acc;
+            }
+            {
+              long x = base, acc = 0, y = base;
+              while (y > 0){
+                if (y & 1) acc = (acc + x) % m;
+                x = (x + x) % m;
+                y >>= 1;
+              }
+              base = acc;
+            }
+            exp >>= 1;
+          }
+          return r;
+        }
+        if (strcmp(name,"FIB")==0 || strcmp(name,"FIBONACCI")==0){
+          if (a <= 0) return 0;
+          if (a == 1 || a == 2) return 1;
+          if (a > 92) a = 92; /* stay in signed 64-bit */
+          long f0 = 0, f1 = 1;
+          for (long i = 2; i <= a; i++){
+            long f2 = f0 + f1;
+            f0 = f1; f1 = f2;
+          }
+          return f1;
+        }
+        if (strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0){
+          if (a <= 1) return 0;
+          if (a <= 3) return 1;
+          if ((a % 2) == 0 || (a % 3) == 0) return 0;
+          for (long i = 5; i * i <= a; i += 6){
+            if ((a % i) == 0 || (a % (i + 2)) == 0) return 0;
+          }
+          return 1;
+        }
         return 0;
       }
       /* zero-arg: PEEK() STACKLEN() SP() */

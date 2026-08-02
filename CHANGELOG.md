@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.6-universal — 2026-08-02
+
+### Direction
+- Algocube digit **2** → math plane (modular + number theory).
+
+### Language
+- `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` · `FIB`/`FIBONACCI` · `ISPRIME`/`PRIMEP`
+- `IDIV` `IMOD` named integer div/mod
+- Proof `19_math_modular_universal.cubalc`
+
+### Prior
+See 1.11.5-universal.
+
 ## 1.11.5-universal — 2026-08-02
 
 ### Direction
