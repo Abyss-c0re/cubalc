@@ -2931,6 +2931,100 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N", hi - lo + 1); vm->last_n = hi - lo + 1;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 cell fold plane: ADDCELL MULCELL IOTA SORTCELL */
+  if (kw(&L->cur,"ADDCELL")||kw(&L->cur,"CELLADD")||kw(&L->cur,"ADDTOCELL")){
+    /* ADDCELL lo hi delta — add delta to each cell in range */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long delta = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] += delta;
+    var_set_num(vm,"LAST_N",delta); vm->last_n=delta;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"MULCELL")||kw(&L->cur,"CELLMUL")||kw(&L->cur,"SCALECELL")){
+    /* MULCELL lo hi k — multiply each cell in range by k */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] *= k;
+    var_set_num(vm,"LAST_N",k); vm->last_n=k;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"IOTA")||kw(&L->cur,"CELLIOTA")||kw(&L->cur,"SEQCELL")||kw(&L->cur,"RANGECELL")){
+    /* IOTA lo hi [start [step]] — fill cell[lo..hi] with arithmetic sequence */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long start = 0, step = 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      start = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        step = parse_expr(vm,L);
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long v = start;
+    for (long i=lo;i<=hi;i++){
+      vm->cells[(int)i] = v;
+      v += step;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORTCELL")||kw(&L->cur,"CELLSORT")||kw(&L->cur,"ISORTCELL")){
+    /* SORTCELL lo hi [ASC|DESC|dir] — insertion sort; default ASC
+     * Note: bare -1 after hi would parse as hi-1; use DESC or ( -1 ). */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long dir = 1;
+    if (kw(&L->cur,"DESC")||kw(&L->cur,"DOWN")||kw(&L->cur,"REV")||kw(&L->cur,"REVERSE")){
+      lex_next(L); dir = -1;
+    } else if (kw(&L->cur,"ASC")||kw(&L->cur,"UP")){
+      lex_next(L); dir = 1;
+    } else if (L->cur.kind==TK_NUM){
+      dir = L->cur.num; if (dir == 0) dir = -1;
+      lex_next(L);
+    } else if (L->cur.kind==TK_LPAREN){
+      dir = parse_expr(vm,L);
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i = lo + 1; i <= hi; i++){
+      long key = vm->cells[(int)i];
+      long j = i - 1;
+      if (dir >= 0){
+        while (j >= lo && vm->cells[(int)j] > key){
+          vm->cells[(int)(j+1)] = vm->cells[(int)j];
+          j--;
+        }
+      } else {
+        while (j >= lo && vm->cells[(int)j] < key){
+          vm->cells[(int)(j+1)] = vm->cells[(int)j];
+          j--;
+        }
+      }
+      vm->cells[(int)(j+1)] = key;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */
   if (kw(&L->cur,"RAND")||kw(&L->cur,"RND")||kw(&L->cur,"IRAND")){
     lex_next(L);

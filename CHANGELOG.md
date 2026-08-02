@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.5-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → cell fold plane: range arithmetic + iota + sort.
+
+### Language
+- `ADDCELL`/`CELLADD` lo hi delta — add to each cell in range
+- `MULCELL`/`CELLMUL` lo hi k — scale each cell in range
+- `IOTA`/`SEQCELL` lo hi [start [step]] — arithmetic sequence fill
+- `SORTCELL`/`CELLSORT` lo hi [ASC|DESC|dir] — insertion sort (DESC or 0 = descending)
+- Proof `28_cell_arith_sort.cubalc`
+
+### Prior
+See 1.12.4-universal.
+
 ## 1.12.4-universal — 2026-08-02
 
 ### Direction

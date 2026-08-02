@@ -92,7 +92,7 @@ Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTI
 
 COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` `ROTBITS` · `PORTS` `PLUGGED` `BITS` · `ENERGYSET`/`ENERGYADD` · `RAND`
 
-Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK` · `DUP`/`DROP`/`SWAP`/`OVER`/`ROT`/`PICK` · `NIP`/`TUCK`/`2DUP`/`2DROP`/`2SWAP`/`ROLL`/`DEPTH` · `FILLCELL` · `COPYCELL`/`MOVECELL` · `FINDCELL`/`COUNTCELL` · `REVCELL` · `INC`/`DEC` · `SUMCELL`/`MINCELL`/`MAXCELL`
+Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK` · `DUP`/`DROP`/`SWAP`/`OVER`/`ROT`/`PICK` · `NIP`/`TUCK`/`2DUP`/`2DROP`/`2SWAP`/`ROLL`/`DEPTH` · `FILLCELL` · `COPYCELL`/`MOVECELL` · `FINDCELL`/`COUNTCELL` · `REVCELL` · `ADDCELL`/`MULCELL`/`IOTA`/`SORTCELL` · `INC`/`DEC` · `SUMCELL`/`MINCELL`/`MAXCELL`
 
 Math plane: `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` `FIB` `ISPRIME` `IDIV` `IMOD` · `ILOG2`/`LOG2` `CTZ` `CLZ` `ISPOW2` `POW2` `NDIGITS` `DIGSUM` `MODINV`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.4-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.5-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)
