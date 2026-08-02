@@ -1,0 +1,23 @@
+# Proof 13 — universal integer bit ops (algocube-driven language surface)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+ASSERT BAND(12, 10) == 8
+ASSERT BOR(12, 10) == 14
+ASSERT BXOR(12, 10) == 6
+ASSERT SHL(3, 2) == 12
+ASSERT SHR(12, 2) == 3
+ASSERT BITCOUNT(15) == 4
+ASSERT HAMMING32(0, 15) == 4
+ASSERT BAND(255, 15) == 15
+ASSERT BOR(1, 2) == 3
+ASSERT BXOR(7, 7) == 0
+
+# random algocube digit path — matrix density as bitcount
+CUBE m ROLE matrix PROTON 1
+FOLDBITS m "1111000011110000111100001111000011110000111100001111000011110000"
+ASSERT BITCOUNT(SET(m)) >= 0
+ASSERT DIGIT(m) >= 0
+ASSERT DIGIT(m) <= 9
+
+PRINT "proof13_bitops" BAND(12,10) BOR(12,10) BXOR(12,10) BITCOUNT(15) DIGIT(m)

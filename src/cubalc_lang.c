@@ -972,7 +972,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"CIRC")==0 || strcmp(name,"AREA_CIRCLE")==0 ||
         strcmp(name,"HYP")==0 || strcmp(name,"WAVE_V")==0 ||
         strcmp(name,"LIGHT_T")==0 || strcmp(name,"BOYLE_P2")==0 ||
-        strcmp(name,"ORBIT_PERIOD")==0){
+        strcmp(name,"ORBIT_PERIOD")==0 ||
+        /* universal bit ops (word forms — | used by play dialect) */
+        strcmp(name,"BAND")==0 || strcmp(name,"BOR")==0 ||
+        strcmp(name,"BXOR")==0 || strcmp(name,"BNOT")==0 ||
+        strcmp(name,"SHL")==0 || strcmp(name,"SHR")==0 ||
+        strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1063,6 +1068,29 @@ static long parse_prim(VM *vm, Lex *L){
           long r = 0;
           while ((r+1)*(r+1) <= aa) r++;
           return r; /* rough √(a³) for integer AU */
+        }
+        /* Universal integer bit algebra */
+        if (strcmp(name,"BAND")==0) return a & b;
+        if (strcmp(name,"BOR")==0) return a | b;
+        if (strcmp(name,"BXOR")==0) return a ^ b;
+        if (strcmp(name,"BNOT")==0) return ~a;
+        if (strcmp(name,"SHL")==0){
+          if (b < 0) b = 0; if (b > 62) b = 62;
+          return a << b;
+        }
+        if (strcmp(name,"SHR")==0){
+          if (b < 0) b = 0; if (b > 62) b = 62;
+          return (long)((unsigned long)a >> (unsigned)b);
+        }
+        if (strcmp(name,"BITCOUNT")==0){
+          unsigned long u = (unsigned long)a; int n = 0;
+          while (u) { n += (int)(u & 1u); u >>= 1; }
+          return n;
+        }
+        if (strcmp(name,"HAMMING32")==0){
+          unsigned long u = (unsigned long)(a ^ b); int n = 0;
+          while (u) { n += (int)(u & 1u); u >>= 1; }
+          return n;
         }
         return 0;
       }

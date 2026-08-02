@@ -18,7 +18,7 @@ ifeq ($(USE_OPENCL),1)
   LDFLAGS += -lOpenCL
 endif
 
-.PHONY: all clean test law install human demo peers oversee jit-test evolve evolve-loop showcase science
+.PHONY: all clean test law install human demo peers oversee jit-test evolve evolve-loop showcase science universal-iter
 
 all: out/cubalc
 
@@ -74,3 +74,7 @@ showcase: all
 # Pure-science language demos (not a school — exercises SCIENCE surface)
 science: all
 	@bash programs/science/run_demos.sh
+
+# One universal improve tick (build + proofs + science + iter plate)
+universal-iter: all
+	@bash scripts/universal_iter.sh

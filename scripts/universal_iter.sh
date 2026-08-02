@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# CubalC universal improve tick (mechanical half of the 6-min loop).
+# Agent synthesizes language deltas; this script: pick algocube, evolve once,
+# build, run proofs + science demos, write iteration plate for NexusCore.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BIN="${CUBALC_BIN:-$ROOT/out/cubalc}"
+export CUBALC_STATE="${CUBALC_STATE:-$ROOT/state}"
+EV="$CUBALC_STATE/evolve"
+mkdir -p "$EV" "$CUBALC_STATE"
+ITER_F="$EV/UNIVERSAL_ITER.json"
+LOG="$EV/universal_iter.log"
+
+ts() { date -Iseconds; }
+log() { echo "[$(ts)] $*" | tee -a "$LOG" >&2; }
+
+[[ -x "$BIN" ]] || make -C "$ROOT" all
+
+# Random algocube digit 0–9 from /dev/urandom + optional genome
+DIGIT=$(( $(od -An -N1 -tu1 /dev/urandom | tr -d ' ') % 10 ))
+if [[ -f "$EV/algo_genome.txt" ]]; then
+  G0=$(head -c 1 "$EV/algo_genome.txt" | od -An -tu1 | tr -d ' ' || echo 0)
+  DIGIT=$(( (DIGIT + ${G0:-0}) % 10 ))
+fi
+
+ITER=1
+if [[ -f "$ITER_F" ]]; then
+  ITER=$(python3 -c "import json;print(json.load(open('$ITER_F')).get('iter',0)+1)" 2>/dev/null || echo 1)
+fi
+
+log "ITER=$ITER algocube_digit=$DIGIT — build"
+make -C "$ROOT" all 2>&1 | tail -3 | tee -a "$LOG"
+
+log "evolve --once"
+"$BIN" evolve --once 2>&1 | tee -a "$LOG" | tail -2 || true
+
+log "proofs + science demos (timeout 25s each)"
+PASS=0; FAIL=0
+run_one() {
+  local f="$1"
+  if timeout 25 "$BIN" run "$f" >"$EV/last_run.out" 2>&1 && grep -q '"ok":true' "$EV/last_run.out"; then
+    PASS=$((PASS+1)); echo "  PASS $f" | tee -a "$LOG"
+  else
+    FAIL=$((FAIL+1)); echo "  FAIL $f" | tee -a "$LOG"
+    tail -4 "$EV/last_run.out" 2>/dev/null | tee -a "$LOG" || true
+  fi
+}
+# curated fast proofs (language surface + new universal bitops)
+for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
+            11_cube_io_reverse 12_nest_compile 13_bitops_universal; do
+  f="$ROOT/programs/proof/${base}.cubalc"
+  [[ -f "$f" ]] && run_one "$f"
+done
+# science demos sample (language direction probes)
+if [[ -d "$ROOT/programs/science" ]]; then
+  while IFS= read -r f; do run_one "$f"; done < <(
+    find "$ROOT/programs/science" -name '*.cubalc' | sort | head -20
+  )
+fi
+VER=$("$BIN" law 2>/dev/null | python3 -c "import sys,json,re; s=sys.stdin.read(); m=re.search(r'\"version\":\"([^\"]+)\"',s); print(m.group(1) if m else '?')" 2>/dev/null || echo "?")
+
+python3 - <<PY
+import json, time
+from pathlib import Path
+plate = {
+  "schema": "cubalc.universal_iter.v1",
+  "to": "NexusCore",
+  "from": "cubalc_universal_loop",
+  "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+  "iter": $ITER,
+  "algocube_digit": $DIGIT,
+  "version": "$VER",
+  "pass": $PASS,
+  "fail": $FAIL,
+  "ok": $FAIL == 0,
+  "interval_sec": 360,
+  "goal": "more_universal_each_iteration",
+  "hold_flash": 1,
+  "law": ["pure_science", "evolve", "flow_compile"],
+}
+Path("$ITER_F").write_text(json.dumps(plate, indent=2) + "\n")
+print(json.dumps(plate))
+PY
+
+# Soft-copy plate for ProjectNexus if present
+PN="${PROJECT_NEXUS_ROOT:-/data/Workdir/voldemar/ProjectNexus}"
+if [[ -d "$PN" ]]; then
+  mkdir -p "$PN/var/cubalc" 2>/dev/null || true
+  cp -f "$ITER_F" "$PN/var/cubalc/UNIVERSAL_ITER.json" 2>/dev/null || true
+fi
+
+log "done iter=$ITER digit=$DIGIT pass=$PASS fail=$FAIL ver=$VER"
+[[ "$FAIL" -eq 0 ]]

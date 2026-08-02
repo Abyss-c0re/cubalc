@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.11.0-universal — 2026-08-02
+
+### Direction
+- **Universal improve loop** every 6 min: NexusCore brief · random algocube · language delta · build/test.
+
+### Language
+- Bit algebra: `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `HAMMING32`
+- Proof `13_bitops_universal.cubalc`
+
+### Ops
+- `scripts/universal_iter.sh` · `scripts/universal_loop_daemon.sh` (360s)
+- Plate: `state/evolve/UNIVERSAL_ITER.json`
+
+### Prior
+See 1.10.1-science.
+
 ## 1.10.1-science — 2026-08-01
 
 ### Clarify

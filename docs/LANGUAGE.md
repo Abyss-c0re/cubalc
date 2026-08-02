@@ -84,7 +84,10 @@ Science domains guide **what ops CubalC must express as pure logic**. No diploma
 | `FORCE` `WORK` `KE` `PE` `WAVE_V` `BOYLE_P2` `ORBIT_PERIOD` | physics |
 | `CELSIUS_K` `KELVIN_C` | temperature |
 
-Demos (optional): `programs/science/` · `make science`
+Bit ops (universal integer): `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `HAMMING32`
+
+Demos (optional): `programs/science/` · `make science`  
+Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh` (6 min)
 
 ## Machine token
 
