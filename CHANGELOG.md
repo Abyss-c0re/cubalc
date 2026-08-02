@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.13-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → stack compare + min/max (control predicates on the stack).
+
+### Language
+- `SEQ`/`SNE`/`SLT`/`SGT`/`SLE`/`SGE` (also `STACK*` / `CMP*`) — pop a b, push 0/1
+- `SMIN`/`SMAX` (`STACKMIN`/`STACKMAX`) — ordered select of top two
+- Proof `36_stack_compare.cubalc`
+
+### Prior
+See 1.12.12-universal.
+
 ## 1.12.12-universal — 2026-08-02
 
 ### Direction

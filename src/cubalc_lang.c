@@ -2990,6 +2990,40 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack compare + min/max: predicate 0/1 or ordered select */
+  if (kw(&L->cur,"SMIN")||kw(&L->cur,"SMAX")||
+      kw(&L->cur,"STACKMIN")||kw(&L->cur,"STACKMAX")||
+      kw(&L->cur,"SEQ")||kw(&L->cur,"SNE")||kw(&L->cur,"SLT")||
+      kw(&L->cur,"SGT")||kw(&L->cur,"SLE")||kw(&L->cur,"SGE")||
+      kw(&L->cur,"STACKEQ")||kw(&L->cur,"STACKNE")||kw(&L->cur,"STACKLT")||
+      kw(&L->cur,"STACKGT")||kw(&L->cur,"STACKLE")||kw(&L->cur,"STACKGE")||
+      kw(&L->cur,"CMPEQ")||kw(&L->cur,"CMPNE")||kw(&L->cur,"CMPLT")||
+      kw(&L->cur,"CMPGT")||kw(&L->cur,"CMPLE")||kw(&L->cur,"CMPGE")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SMIN")==0 || strcmp(op,"STACKMIN")==0) r = a < b ? a : b;
+    else if (strcmp(op,"SMAX")==0 || strcmp(op,"STACKMAX")==0) r = a > b ? a : b;
+    else if (strcmp(op,"SEQ")==0 || strcmp(op,"STACKEQ")==0 || strcmp(op,"CMPEQ")==0)
+      r = (a == b) ? 1 : 0;
+    else if (strcmp(op,"SNE")==0 || strcmp(op,"STACKNE")==0 || strcmp(op,"CMPNE")==0)
+      r = (a != b) ? 1 : 0;
+    else if (strcmp(op,"SLT")==0 || strcmp(op,"STACKLT")==0 || strcmp(op,"CMPLT")==0)
+      r = (a < b) ? 1 : 0;
+    else if (strcmp(op,"SGT")==0 || strcmp(op,"STACKGT")==0 || strcmp(op,"CMPGT")==0)
+      r = (a > b) ? 1 : 0;
+    else if (strcmp(op,"SLE")==0 || strcmp(op,"STACKLE")==0 || strcmp(op,"CMPLE")==0)
+      r = (a <= b) ? 1 : 0;
+    else if (strcmp(op,"SGE")==0 || strcmp(op,"STACKGE")==0 || strcmp(op,"CMPGE")==0)
+      r = (a >= b) ? 1 : 0;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack↔cell bridge: TOCELL / FROMCELL */
   if (kw(&L->cur,"TOCELL")||kw(&L->cur,"STACKTOCELL")||kw(&L->cur,">CELL")){
     /* TOCELL dst [n] — pop n values into cells[dst..dst+n-1] (TOS → highest index) */
