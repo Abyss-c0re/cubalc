@@ -1,0 +1,95 @@
+# Proof 119 — digit-8 triple depth duals: 3ROT 3RROT 3TUCK
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# 3ROT — a b c → b c a
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+3ROT
+ASSERT SP == 3
+ASSERT LAST_N == 1
+POP a
+POP b
+POP c
+ASSERT c == 2
+ASSERT b == 3
+ASSERT a == 1
+
+# aliases TROT / ROT3 + cycle thrice = identity
+CLEARSTACK
+PUSH 10
+PUSH 20
+PUSH 30
+TROT
+ROT3
+3ROT
+POP a
+POP b
+POP c
+ASSERT c == 10
+ASSERT b == 20
+ASSERT a == 30
+
+# 3RROT — a b c → c a b
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+3RROT
+POP a
+POP b
+POP c
+ASSERT c == 3
+ASSERT b == 1
+ASSERT a == 2
+
+# 3RROT inverse of 3ROT
+CLEARSTACK
+PUSH 5
+PUSH 6
+PUSH 7
+3ROT
+3RROT
+POP a
+POP b
+POP c
+ASSERT c == 5
+ASSERT b == 6
+ASSERT a == 7
+
+# 3TUCK — a b c → c a b c
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+3TUCK
+ASSERT SP == 4
+ASSERT LAST_N == 3
+POP a
+POP b
+POP c
+POP d
+ASSERT d == 3
+ASSERT c == 1
+ASSERT b == 2
+ASSERT a == 3
+
+# soft fail underfull
+CLEARSTACK
+PUSH 1
+PUSH 2
+3ROT
+ASSERT OK == 0
+3RROT
+ASSERT OK == 0
+3TUCK
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof119_3rot_3tuck" LAST_N SP

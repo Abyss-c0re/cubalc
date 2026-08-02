@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.96-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → triple stack-depth duals (complete after 3DUP/3DROP/3SWAP/3OVER).
+
+### Language
+- `3ROT`/`TROT`/`ROT3` — a b c → b c a
+- `3RROT`/`TRROT`/`RROT3` — a b c → c a b
+- `3TUCK`/`TTUCK`/`TUCK3` — a b c → c a b c
+- Proof `119_3rot_3tuck.cubalc`
+
+### Prior
+See 1.12.95-universal.
+
 ## 1.12.95-universal — 2026-08-03
 
 ### Direction

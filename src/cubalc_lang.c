@@ -172,7 +172,9 @@ static void lex_next(Lex *L) {
           ok = 1;
       } else {
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0)
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0 ||
+            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0 ||
+            strcasecmp(tail,"TUCK")==0 || strcasecmp(tail,"RROT")==0)
           ok = 1;
       }
       if (ok){
@@ -4669,6 +4671,45 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp++] = z;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",z); vm->last_n=z;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 triple depth duals: 3ROT · 3RROT · 3TUCK (complete after 3DUP/3SWAP) */
+  if (kw(&L->cur,"3ROT")||kw(&L->cur,"TROT")||kw(&L->cur,"ROT3")||
+      kw(&L->cur,"STACK3ROT")){
+    /* a b c → b c a */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = b;
+    vm->stack[vm->sp-2] = c;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"3RROT")||kw(&L->cur,"TRROT")||kw(&L->cur,"RROT3")||
+      kw(&L->cur,"STACK3RROT")||kw(&L->cur,"3-ROT")){
+    /* a b c → c a b  (right rotate top 3) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = a;
+    vm->stack[vm->sp-1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"3TUCK")||kw(&L->cur,"TTUCK")||kw(&L->cur,"TUCK3")||
+      kw(&L->cur,"STACK3TUCK")){
+    /* a b c → c a b c  (copy TOS under top 2) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = a;
+    vm->stack[vm->sp-1] = b;
+    vm->stack[vm->sp++] = c;
+    var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){
