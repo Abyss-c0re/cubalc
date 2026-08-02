@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.80-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → stack depth plane: triple ops + pair tuck.
+
+### Language
+- `3DUP`/`TDUP` — duplicate top 3
+- `3DROP`/`TDROP` — drop top 3
+- `2TUCK`/`DTUCK` — tuck top pair under second pair
+- `3SWAP`/`TSWAP` — reverse top 3 (`a b c → c b a`)
+- Lexer: `3DUP`/`3DROP`/`3SWAP`/`2TUCK` as idents
+- Proof `103_3dup_2tuck.cubalc`
+
+### Prior
+See 1.12.79-universal.
+
 ## 1.12.79-universal — 2026-08-02
 
 ### Direction

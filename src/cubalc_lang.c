@@ -153,19 +153,29 @@ static void lex_next(Lex *L) {
     while (L->i<L->n && isdigit((unsigned char)L->s[L->i])){
       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
     }
-    /* 2DUP / 2DROP / 2SWAP / 2OVER / 2ROT / 2NIP — Forth double ops (digit-8) */
-    if (k==1 && b[0]=='2' && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
+    /* 2DUP / 2DROP / 2SWAP / 2OVER / 2ROT / 2NIP / 2TUCK — Forth double ops (digit-8)
+     * 3DUP / 3DROP / 3SWAP — triple stack depth (digit-8) */
+    if (k==1 && (b[0]=='2' || b[0]=='3') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
       while (j<L->n && isalpha((unsigned char)L->s[j]) && t+1<sizeof tail)
         tail[t++]=L->s[j++];
       tail[t]=0;
-      if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-          strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0 ||
-          strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0){
+      int ok = 0;
+      if (b[0]=='2'){
+        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0 ||
+            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0 ||
+            strcasecmp(tail,"TUCK")==0)
+          ok = 1;
+      } else {
+        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+            strcasecmp(tail,"SWAP")==0)
+          ok = 1;
+      }
+      if (ok){
         L->i = j;
-        snprintf(L->cur.text, sizeof L->cur.text, "2%s", tail);
-        /* normalize to upper for kw() which is case-insensitive anyway */
+        snprintf(L->cur.text, sizeof L->cur.text, "%c%s", b[0], tail);
         for (char *p=L->cur.text; *p; p++)
           if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
         L->cur.kind = TK_IDENT;
@@ -4436,6 +4446,57 @@ static int parse_form(VM *vm, Lex *L){
       vm->stack[vm->sp - 1 - i] = vm->stack[vm->sp - i];
     vm->stack[vm->sp - 1] = v;
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 stack depth ext: 3DUP · 3DROP · 2TUCK · 3SWAP */
+  if (kw(&L->cur,"3DUP")||kw(&L->cur,"TDUP")||kw(&L->cur,"DUP3")||
+      kw(&L->cur,"STACK3DUP")){
+    /* a b c → a b c a b c */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 3 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], b = vm->stack[vm->sp-2], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    vm->stack[vm->sp++] = c;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"3DROP")||kw(&L->cur,"TDROP")||kw(&L->cur,"DROP3")||
+      kw(&L->cur,"STACK3DROP")){
+    /* a b c → (empty of top 3) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->sp -= 3;
+    var_set_num(vm,"SP",vm->sp);
+    if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+    else { var_set_num(vm,"LAST_N",0); vm->last_n=0; }
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2TUCK")||kw(&L->cur,"DTUCK")||kw(&L->cur,"TUCK2")||
+      kw(&L->cur,"STACK2TUCK")){
+    /* a b c d → c d a b c d  (tuck top pair under second pair) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-4], b = vm->stack[vm->sp-3];
+    long c = vm->stack[vm->sp-2], d = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-4] = c; vm->stack[vm->sp-3] = d;
+    vm->stack[vm->sp-2] = a; vm->stack[vm->sp-1] = b;
+    vm->stack[vm->sp++] = c;
+    vm->stack[vm->sp++] = d;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",d); vm->last_n=d;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"3SWAP")||kw(&L->cur,"TSWAP")||kw(&L->cur,"SWAP3")||
+      kw(&L->cur,"STACK3SWAP")){
+    /* a b c → c b a  (reverse top 3) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-3], c = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
