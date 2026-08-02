@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.9-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → cell fold + INC/DEC (loop-friendly data).
+
+### Language
+- `INC`/`DEC` name [step] · `INC CELL`/`DEC CELL` i [step]
+- `SUMCELL`/`MINCELL`/`MAXCELL` [lo [hi]] (stmt + expr forms)
+- Proof `22_cell_fold_inc.cubalc`
+
+### Prior
+See 1.11.8-universal.
+
 ## 1.11.8-universal — 2026-08-02
 
 ### Direction

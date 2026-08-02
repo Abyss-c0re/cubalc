@@ -1040,6 +1040,8 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0 ||
         strcmp(name,"PEEK")==0 || strcmp(name,"STACKLEN")==0 ||
         strcmp(name,"SP")==0 ||
+        strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
+        strcmp(name,"MAXCELL")==0 ||
         /* digit-2 math: modular + number theory */
         strcmp(name,"ADDMOD")==0 || strcmp(name,"SUBMOD")==0 ||
         strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
@@ -1195,6 +1197,26 @@ static long parse_prim(VM *vm, Lex *L){
           if (a < 0) a = 0;
           if (a >= CUBALC_CELL_N) a = CUBALC_CELL_N - 1;
           return vm->cells[(int)a];
+        }
+        if (strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
+            strcmp(name,"MAXCELL")==0){
+          long lo = a, hi = (b != 0 || L->cur.kind==TK_RPAREN) ? b : a;
+          /* if only one arg, hi=a already; if two, b set */
+          if (b == 0 && a == 0){ lo = 0; hi = CUBALC_CELL_N - 1; }
+          else if (b == 0) hi = a;
+          if (lo < 0) lo = 0;
+          if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+          if (hi < lo){ long t=lo; lo=hi; hi=t; }
+          long acc=0, mn=0, mx=0; int first=1;
+          for (long i=lo;i<=hi;i++){
+            long v=vm->cells[(int)i];
+            acc += v;
+            if (first){ mn=mx=v; first=0; }
+            else { if (v<mn) mn=v; if (v>mx) mx=v; }
+          }
+          if (strcmp(name,"MINCELL")==0) return first?0:mn;
+          if (strcmp(name,"MAXCELL")==0) return first?0:mx;
+          return acc;
         }
         if (strcmp(name,"PEEK")==0){
           if (vm->sp <= 0) return 0;
@@ -2339,6 +2361,103 @@ static int parse_form(VM *vm, Lex *L){
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
     memset(vm->cells, 0, sizeof vm->cells);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* INC / DEC var | CELL i — loop-friendly mutators (digit-9 data fold) */
+  if (kw(&L->cur,"INC")||kw(&L->cur,"INCR")||kw(&L->cur,"++")){
+    lex_next(L);
+    if (kw(&L->cur,"CELL")||kw(&L->cur,"SLOT")){
+      lex_next(L);
+      long i = parse_expr(vm,L);
+      if (i < 0) i = 0; if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+      long step = 1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        step = parse_expr(vm,L);
+      vm->cells[(int)i] += step;
+      var_set_num(vm, "LAST_N", vm->cells[(int)i]);
+      vm->last_n = vm->cells[(int)i];
+    } else if (L->cur.kind==TK_IDENT){
+      char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      long step = 1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        step = parse_expr(vm,L);
+      Var *v = var_get(vm, name, 1);
+      if (v){ v->is_str=0; v->val += step; }
+      long nv = v ? v->val : 0;
+      var_set_num(vm, "LAST_N", nv); vm->last_n = nv;
+    } else { fail(vm,"INC name|CELL i"); return -1; }
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DEC")||kw(&L->cur,"DECR")||kw(&L->cur,"--")){
+    lex_next(L);
+    if (kw(&L->cur,"CELL")||kw(&L->cur,"SLOT")){
+      lex_next(L);
+      long i = parse_expr(vm,L);
+      if (i < 0) i = 0; if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+      long step = 1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        step = parse_expr(vm,L);
+      vm->cells[(int)i] -= step;
+      var_set_num(vm, "LAST_N", vm->cells[(int)i]);
+      vm->last_n = vm->cells[(int)i];
+    } else if (L->cur.kind==TK_IDENT){
+      char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      long step = 1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        step = parse_expr(vm,L);
+      Var *v = var_get(vm, name, 1);
+      if (v){ v->is_str=0; v->val -= step; }
+      long nv = v ? v->val : 0;
+      var_set_num(vm, "LAST_N", nv); vm->last_n = nv;
+    } else { fail(vm,"DEC name|CELL i"); return -1; }
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* SUMCELL [lo [hi]] · MINCELL · MAXCELL — fold over cell bank */
+  if (kw(&L->cur,"SUMCELL")||kw(&L->cur,"CELLSUM")||
+      kw(&L->cur,"MINCELL")||kw(&L->cur,"CELLMIN")||
+      kw(&L->cur,"MAXCELL")||kw(&L->cur,"CELLMAX")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op; *p; p++) if (*p>='a'&&*p<='z') *p = (char)(*p - 'a' + 'A');
+    lex_next(L);
+    long lo = 0, hi = CUBALC_CELL_N - 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      lo = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        hi = parse_expr(vm,L);
+      else hi = lo;
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long acc = 0;
+    int first = 1;
+    long mn = 0, mx = 0;
+    for (long i=lo; i<=hi; i++){
+      long v = vm->cells[(int)i];
+      acc += v;
+      if (first){ mn = mx = v; first = 0; }
+      else { if (v < mn) mn = v; if (v > mx) mx = v; }
+    }
+    long out = acc;
+    if (strcmp(op,"MINCELL")==0 || strcmp(op,"CELLMIN")==0) out = first ? 0 : mn;
+    else if (strcmp(op,"MAXCELL")==0 || strcmp(op,"CELLMAX")==0) out = first ? 0 : mx;
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

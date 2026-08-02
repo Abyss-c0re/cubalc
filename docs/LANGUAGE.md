@@ -92,7 +92,7 @@ Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTI
 
 COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` · `PORTS` `PLUGGED` `BITS`
 
-Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK`
+Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK` · `INC`/`DEC` · `SUMCELL`/`MINCELL`/`MAXCELL`
 
 Math plane: `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` `FIB` `ISPRIME` `IDIV` `IMOD`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.8-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.9-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)
