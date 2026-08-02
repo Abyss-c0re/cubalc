@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.8-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → control flow: FN return + CASE.
+
+### Language
+- `RET`/`RETURN` [expr] early exit from `FN` body (`RETVAL`/`LAST_N`)
+- `CASE`/`SWITCH` … `WHEN` … `DEFAULT` … `END`
+- Proof `21_fn_return_case.cubalc`
+
+### Prior
+See 1.11.7-universal.
+
 ## 1.11.7-universal — 2026-08-02
 
 ### Direction

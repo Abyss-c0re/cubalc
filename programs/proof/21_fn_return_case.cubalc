@@ -1,0 +1,61 @@
+# Proof 21 — FN RET + CASE (digit 4 control flow)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# function with early return
+FN double
+  LET r = ARG0 * 2
+  RET r
+  LET r = 999
+END
+
+CALL double 21
+ASSERT LAST_N == 42
+ASSERT RETVAL == 42
+
+FN clamp10
+  IF ARG0 < 0 THEN
+    RET 0
+  END
+  IF ARG0 > 10 THEN
+    RET 10
+  END
+  RET ARG0
+END
+
+CALL clamp10 -3
+ASSERT LAST_N == 0
+CALL clamp10 7
+ASSERT LAST_N == 7
+CALL clamp10 99
+ASSERT LAST_N == 10
+
+# CASE / WHEN / DEFAULT
+LET path = 0
+CASE 2
+  WHEN 1 THEN
+    LET path = 11
+  WHEN 2 THEN
+    LET path = 22
+  WHEN 3 THEN
+    LET path = 33
+  DEFAULT
+    LET path = 99
+END
+ASSERT path == 22
+
+LET d = 0
+CASE 8
+  WHEN 1 THEN
+    LET d = 1
+  DEFAULT
+    LET d = 8
+END
+ASSERT d == 8
+
+ASSERT OK == 1
+CUBE f ROLE matrix PROTON 1
+FOLDBITS f "1010101010101010101010101010101010101010101010101010101010101010"
+ASSERT DIGIT(f) >= 0
+
+PRINT "proof21_fn_ret_case" 42 path d DIGIT(f)

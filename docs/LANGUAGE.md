@@ -88,7 +88,7 @@ Bit ops (universal integer): `BAND` `BOR` `BXOR` `BNOT` `SHL` `SHR` `BITCOUNT` `
 
 Rotate/pack/select: `ROTL`/`ROL` `ROTR`/`ROR` `PACK16` `HI16` `LO16` `ISEL`/`SELECT` `NEG` · hex `0x…`
 
-Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTIL` · `BREAK`/`BREAK IF` · `CONTINUE`/`CONTINUE IF`
+Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTIL` · `BREAK`/`BREAK IF` · `CONTINUE`/`CONTINUE IF` · `FN`/`CALL`/`RET` · `CASE`/`WHEN`/`DEFAULT`
 
 COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` · `PORTS` `PLUGGED` `BITS`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.7-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.8-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

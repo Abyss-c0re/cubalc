@@ -24,7 +24,7 @@ enum {
 };
 
 typedef struct { int kind; long num; char text[8192]; int line; } Tok;
-typedef struct { const char *s; size_t n, i; int line; Tok cur; } Lex;
+typedef struct { const char *s; size_t n, i; int line; size_t tok_off; Tok cur; } Lex;
 typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
 
 typedef struct {
@@ -47,6 +47,7 @@ typedef struct {
   int fatal;
   int break_loop;
   int continue_loop;
+  int return_fn; /* digit-4: RET from FN body */
   char err[160];
   char creed[80];
   char chunk[40][48];
@@ -91,6 +92,7 @@ static int is_id(int c){ return isalnum(c)||c=='_'||c=='-'||c=='.'; }
 
 static void lex_next(Lex *L) {
   lex_skip(L);
+  L->tok_off = L->i; /* start of current token (for FN body capture) */
   L->cur.line = L->line;
   L->cur.text[0]=0; L->cur.num=0;
   if (L->i >= L->n) { L->cur.kind = TK_EOF; return; }
@@ -2755,25 +2757,15 @@ static int parse_form(VM *vm, Lex *L){
     if (L->cur.kind!=TK_IDENT){ fail(vm,"FN name"); return -1; }
     char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
     skip_nl(L);
-    /* capture body until matching END */
-    const char *body_start = L->s + L->i;
-    /* L->i points after current token start roughly - use cur position via scanning from save */
-    Lex save=*L;
+    /* capture body from first body token start until matching END */
+    size_t b0 = L->tok_off;
     int depth=1;
     while (L->cur.kind!=TK_EOF){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"FN without END"); return -1; }
-    /* body is from save.i to L.i (start of END) — approximate using token stream offsets */
-    /* Store slice: from save position in source */
-    size_t start_off = save.i > 0 ? save.i : 0;
-    /* After lex_init, i is advanced; use difference of pointer into s */
-    /* Safer: re-scan - body between save and current before END */
-    const char *bs = save.s + (save.i < save.n ? save.i : 0);
-    /* Actually Tok doesn't keep offset of token start easily. Use save.i after first lex of body. */
-    /* Lex struct: after lex_next at body start, save.i is past that token. */
-    size_t b0 = save.i;
-    size_t b1 = L->i; /* at END token start-ish */
+    /* L parked on END; body ends at END's tok_off */
+    size_t b1 = L->tok_off;
     if (b1 < b0) b1 = b0;
     size_t blen = b1 - b0;
     if (vm->n_fns >= 32){ fail(vm,"too many FN"); return -1; }
@@ -2806,8 +2798,122 @@ static int parse_form(VM *vm, Lex *L){
       ai++;
     }
     var_set_num(vm, "NARGS", ai);
+    vm->return_fn = 0;
     Lex fl; lex_init(&fl, fn->body, fn->len);
     if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
+    vm->return_fn = 0;
+    bump(vm); return 1;
+  }
+  /* RET [expr] — early return from FN (digit-4 control flow) */
+  if (kw(&L->cur,"RET")||kw(&L->cur,"RETURN")){
+    lex_next(L);
+    /* optional return value when next looks like an expression start */
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        L->cur.kind==TK_STR ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") &&
+         !kw(&L->cur,"FN") && !kw(&L->cur,"CALL") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"ASSERT") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"RET") &&
+         !kw(&L->cur,"RETURN") && !kw(&L->cur,"WHEN") && !kw(&L->cur,"DEFAULT") &&
+         !kw(&L->cur,"FOR") && !kw(&L->cur,"WHILE") && !kw(&L->cur,"LOOP") &&
+         !kw(&L->cur,"IF") && !kw(&L->cur,"BREAK") && !kw(&L->cur,"CONTINUE") &&
+         !kw(&L->cur,"CASE") && !kw(&L->cur,"CUBE") && !kw(&L->cur,"SYS"))){
+      long v = parse_expr(vm, L);
+      var_set_num(vm, "LAST_N", v);
+      vm->last_n = v;
+      var_set_num(vm, "RETVAL", v);
+    }
+    vm->return_fn = 1;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* CASE expr ... WHEN n THEN ... [DEFAULT ...] END */
+  if (kw(&L->cur,"CASE")||kw(&L->cur,"SWITCH")||kw(&L->cur,"MATCH")){
+    lex_next(L);
+    long sel = parse_expr(vm, L);
+    skip_nl(L);
+    int matched = 0;
+    int ran = 0;
+    for(;;){
+      skip_nl(L);
+      if (L->cur.kind==TK_EOF){ fail(vm,"CASE without END"); return -1; }
+      if (kw(&L->cur,"END")){ lex_next(L); break; }
+      if (kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"CASEIF")){
+        lex_next(L);
+        long w = parse_expr(vm, L);
+        if (kw(&L->cur,"THEN")) lex_next(L);
+        skip_nl(L);
+        Lex body_start=*L;
+        int depth=1;
+        while (L->cur.kind!=TK_EOF && depth>0){
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L); if (kw(&L->cur,"IF")) lex_next(L); continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"CASE")) depth++;
+          else if ((kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")) && depth==1) break;
+          else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
+          lex_next(L);
+        }
+        if (!matched && !ran && w == sel){
+          matched = 1; ran = 1;
+          Lex body=body_start;
+          /* arm body: stop before next WHEN/DEFAULT/END (body copy only) */
+          while (!vm->fatal){
+            skip_nl(&body);
+            if (body.cur.kind==TK_EOF) break;
+            if (kw(&body.cur,"END")||kw(&body.cur,"WHEN")||kw(&body.cur,"OF")||
+                kw(&body.cur,"DEFAULT")||kw(&body.cur,"ELSE")||kw(&body.cur,"CASEIF")) break;
+            if (vm->return_fn || vm->break_loop) break;
+            int r=parse_form(vm,&body);
+            if (r<0) return -1;
+            if (r==0) break;
+          }
+          /* skip remaining arms to END on outer L (parked on next arm or END) */
+          depth=1;
+          while (L->cur.kind!=TK_EOF && depth>0){
+            if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
+                kw(&L->cur,"FOR")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
+            else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+            lex_next(L);
+          }
+          if (kw(&L->cur,"END")) lex_next(L);
+          break;
+        }
+        continue;
+      }
+      if (kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")){
+        lex_next(L);
+        if (kw(&L->cur,"THEN")) lex_next(L);
+        skip_nl(L);
+        if (!matched && !ran){
+          Lex body=*L;
+          while (!vm->fatal){
+            skip_nl(&body);
+            if (body.cur.kind==TK_EOF || kw(&body.cur,"END")) break;
+            if (vm->return_fn || vm->break_loop) break;
+            int r=parse_form(vm,&body);
+            if (r<0) return -1;
+            if (r==0) break;
+          }
+          ran = 1;
+        }
+        /* always advance outer L to matching END */
+        {
+          int depth=1;
+          while (L->cur.kind!=TK_EOF && depth>0){
+            if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
+                kw(&L->cur,"FOR")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
+            else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+            lex_next(L);
+          }
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        break;
+      }
+      fail(vm,"CASE expects WHEN|DEFAULT|END"); return -1;
+    }
+    var_set_num(vm, "MATCHED", matched || ran ? 1 : 0);
+    var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
   /* FOR i = a TO b [STEP s] ... END */
@@ -3085,11 +3191,11 @@ static int exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2
     if (L->cur.kind==TK_EOF) break;
     if (stop1 && kw(&L->cur,stop1)) break;
     if (stop2 && kw(&L->cur,stop2)) break;
-    if (vm->break_loop || vm->continue_loop) break;
+    if (vm->break_loop || vm->continue_loop || vm->return_fn) break;
     int r=parse_form(vm,L);
     if (r<0) return -1;
     if (r==0) break;
-    if (vm->break_loop || vm->continue_loop) break;
+    if (vm->break_loop || vm->continue_loop || vm->return_fn) break;
   }
   return vm->fatal ? -1 : 0;
 }
