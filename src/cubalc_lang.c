@@ -978,6 +978,7 @@ static int block_scan_step(Lex *L, int *depth, int allow_until){
       kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||
       kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||
       kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||kw(&L->cur,"FOREACHCELL")||
+      kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FOREACHBIT")||
       kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")){
     (*depth)++;
     lex_next(L);
@@ -8296,6 +8297,7 @@ static int parse_form(VM *vm, Lex *L){
           }
           if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
               kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
+              kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
               kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
               kw(&L->cur,"CASE")) depth++;
           else if ((kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")) && depth==1) break;
@@ -8329,6 +8331,7 @@ static int parse_form(VM *vm, Lex *L){
           while (L->cur.kind!=TK_EOF && depth>0){
             if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
                 kw(&L->cur,"FOR")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
+                kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
                 kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
             else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
             lex_next(L);
@@ -8360,6 +8363,7 @@ static int parse_form(VM *vm, Lex *L){
           while (L->cur.kind!=TK_EOF && depth>0){
             if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
                 kw(&L->cur,"FOR")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
+                kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
                 kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
             else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
             lex_next(L);
@@ -8586,6 +8590,61 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
+  /* digit-4 control: FORBIT/EACHBIT cube [AS name] ... END — iterate set-bit indices */
+  if (kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FOREACHBIT")||
+      kw(&L->cur,"EACHBITS")||kw(&L->cur,"FORBITS")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FORBIT cube [AS name]"); return -1; }
+    char cid[48]; snprintf(cid,sizeof cid,"%s",L->cur.text); lex_next(L);
+    char vname[48]; snprintf(vname,sizeof vname,"IT");
+    if (kw(&L->cur,"AS")||kw(&L->cur,"->")){
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT){ fail(vm,"FORBIT cube AS name"); return -1; }
+      snprintf(vname,sizeof vname,"%s",L->cur.text); lex_next(L);
+    }
+    skip_nl(L);
+    Lex body_start=*L;
+    int depth=1;
+    while (L->cur.kind!=TK_EOF){
+      if (block_scan_step(L, &depth, 0)) break;
+    }
+    if (depth!=0){ fail(vm,"FORBIT without END"); return -1; }
+    int ix=find_cube(vm,cid);
+    if (ix<0){
+      /* empty iteration */
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm,"OK",0);
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long count = 0;
+    for (int bi=0; bi<n && !vm->fatal; bi++){
+      if (!cubalc_matrix_get(m, bi)) continue;
+      var_set_num(vm, vname, bi);
+      var_set_num(vm, "IT", bi);
+      var_set_num(vm, "IDX", bi);
+      var_set_num(vm, "BIT", bi);
+      vm->break_loop=0; vm->continue_loop=0;
+      Lex body=body_start;
+      if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+      count++;
+      if (vm->break_loop){ vm->break_loop=0; break; }
+      vm->continue_loop=0;
+    }
+    if (kw(&L->cur,"END")) lex_next(L);
+    var_set_num(vm,"LAST_N",count); vm->last_n=count;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  /* PASS / NOP — no-op statement (digit-4 control placeholder) */
+  if (kw(&L->cur,"PASS")||kw(&L->cur,"NOP")||kw(&L->cur,"NOOP")||kw(&L->cur,"NOTHING")){
+    lex_next(L);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   /* BREAKIF expr · CONTINUEIF expr — single-token conditional loop control (digit-4) */
   if (kw(&L->cur,"BREAKIF")||kw(&L->cur,"BREAK_IF")){
     lex_next(L);
@@ -8800,7 +8859,7 @@ static int parse_form(VM *vm, Lex *L){
       }
       if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
           kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FORCELL")||
-          kw(&L->cur,"EACHCELL")||kw(&L->cur,"FN")||
+          kw(&L->cur,"EACHCELL")||kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FN")||
           kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
         depth++;
       else if ((kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")) && depth==1) break;
@@ -8815,7 +8874,7 @@ static int parse_form(VM *vm, Lex *L){
       while (L->cur.kind!=TK_EOF && depth>0){
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
             kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FORCELL")||
-            kw(&L->cur,"EACHCELL")||kw(&L->cur,"FN")||
+            kw(&L->cur,"EACHCELL")||kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FN")||
             kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
           depth++;
         else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
@@ -8833,7 +8892,7 @@ static int parse_form(VM *vm, Lex *L){
       while (L->cur.kind!=TK_EOF && depth>0){
         if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
             kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FORCELL")||
-            kw(&L->cur,"EACHCELL")||kw(&L->cur,"FN")||
+            kw(&L->cur,"EACHCELL")||kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||kw(&L->cur,"FN")||
             kw(&L->cur,"REPEAT")||kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"CASE"))
           depth++;
         else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }

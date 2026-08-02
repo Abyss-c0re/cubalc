@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.69-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → control flow: iterate set-bit indices + no-op.
+
+### Language
+- `FORBIT`/`EACHBIT` cube [AS name] ... END — loop over set bits (`IT`/`IDX`/`BIT`)
+- `PASS`/`NOP`/`NOOP` — no-op statement
+- Proof `92_forbit_pass.cubalc`
+
+### Prior
+See 1.12.68-universal.
+
 ## 1.12.68-universal — 2026-08-02
 
 ### Direction

@@ -71,7 +71,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             88_rotrange_shift \
             89_eachcell_breakif \
             90_pext_zip_matrix \
-            91_dot_maj_gray; do
+            91_dot_maj_gray \
+            92_forbit_pass; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

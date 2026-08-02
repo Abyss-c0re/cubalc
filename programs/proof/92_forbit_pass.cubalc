@@ -1,0 +1,73 @@
+# Proof 92 — digit-4 control: FORBIT/EACHBIT + PASS
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+SETBIT m 0 1
+SETBIT m 2 1
+SETBIT m 5 1
+SETBIT m 7 1
+
+# sum of set-bit indices: 0+2+5+7 = 14
+LET s = 0
+FORBIT m AS i
+  LET s = s + i
+END
+ASSERT s == 14
+
+# count iterations via LAST_N after loop
+EACHBIT m
+  PASS
+END
+ASSERT LAST_N == 4
+
+# CONTINUEIF skip index 2
+LET t = 0
+FORBIT m
+  CONTINUEIF IT == 2
+  LET t = t + IT
+END
+ASSERT t == 12
+
+# BREAKIF stop at first bit >= 5
+LET k = 0
+LET last = -1
+FORBIT m AS b
+  BREAKIF b >= 5
+  LET k = k + 1
+  LET last = b
+END
+ASSERT k == 2
+ASSERT last == 2
+
+# empty cube: zero iterations
+CUBE e ROLE matrix PROTON 1
+CLEARBITS e
+LET z = 0
+FORBIT e
+  LET z = z + 1
+END
+ASSERT z == 0
+ASSERT LAST_N == 0
+
+# missing cube soft-fails OK=0
+FORBIT nosuch
+  PASS
+END
+ASSERT OK == 0
+
+# nested LOOP still works with PASS
+LET n = 0
+LOOP 3
+  PASS
+  LET n = n + 1
+END
+ASSERT n == 3
+
+CUBE q ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof92_forbit_pass" s t k last n
