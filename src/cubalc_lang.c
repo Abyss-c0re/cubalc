@@ -1076,6 +1076,8 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0 ||
+        strcmp(name,"ILOG10")==0 || strcmp(name,"LOG10")==0 ||
+        strcmp(name,"ODD")==0 || strcmp(name,"EVEN")==0 ||
         strcmp(name,"CTZ")==0 || strcmp(name,"CLZ")==0 ||
         strcmp(name,"ISPOW2")==0 || strcmp(name,"POW2")==0 ||
         strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
@@ -1417,7 +1419,7 @@ static long parse_prim(VM *vm, Lex *L){
           }
           return 1;
         }
-        /* digit-2 extended math: log2 / bit counts / pow2 / digits / mod inverse */
+        /* digit-2/6 extended math: log2 / log10 / odd-even / bit counts / pow2 */
         if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
           if (a <= 0) return -1;
           unsigned long u = (unsigned long)a;
@@ -1425,6 +1427,16 @@ static long parse_prim(VM *vm, Lex *L){
           while (u){ r++; u >>= 1; }
           return r;
         }
+        if (strcmp(name,"ILOG10")==0 || strcmp(name,"LOG10")==0){
+          /* floor(log10(a)); a<=0 → -1 */
+          if (a <= 0) return -1;
+          long r = 0;
+          long x = a;
+          while (x >= 10){ r++; x /= 10; }
+          return r;
+        }
+        if (strcmp(name,"ODD")==0) return (a & 1L) ? 1 : 0;
+        if (strcmp(name,"EVEN")==0) return (a & 1L) ? 0 : 1;
         if (strcmp(name,"CTZ")==0){
           /* count trailing zeros (0 → 64) */
           if (a == 0) return 64;
@@ -3229,9 +3241,12 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-2 stack unary math: SFACT SILOG2 SFIB SISPRIME SISPOW2 SPOW2 SNDIGITS SDIGSUM */
+  /* digit-2/6 stack unary math: SFACT SILOG2 SILOG10 SODD SEVEN SFIB ... */
   if (kw(&L->cur,"SFACT")||kw(&L->cur,"STACKFACT")||kw(&L->cur,"SFACTORIAL")||
       kw(&L->cur,"SILOG2")||kw(&L->cur,"SLOG2")||kw(&L->cur,"STACKILOG2")||
+      kw(&L->cur,"SILOG10")||kw(&L->cur,"SLOG10")||kw(&L->cur,"STACKILOG10")||
+      kw(&L->cur,"SODD")||kw(&L->cur,"STACKODD")||
+      kw(&L->cur,"SEVEN")||kw(&L->cur,"STACKEVEN")||
       kw(&L->cur,"SFIB")||kw(&L->cur,"SFIBONACCI")||kw(&L->cur,"STACKFIB")||
       kw(&L->cur,"SISPRIME")||kw(&L->cur,"SPRIME")||kw(&L->cur,"SPRIMEP")||
       kw(&L->cur,"SISPOW2")||kw(&L->cur,"SISPOWER2")||kw(&L->cur,"SPOW2P")||
@@ -3258,6 +3273,17 @@ static int parse_form(VM *vm, Lex *L){
         r = -1;
         while (u){ r++; u >>= 1; }
       }
+    } else if (strcmp(op,"SILOG10")==0 || strcmp(op,"SLOG10")==0 || strcmp(op,"STACKILOG10")==0){
+      if (a <= 0) r = -1;
+      else {
+        r = 0;
+        long x = a;
+        while (x >= 10){ r++; x /= 10; }
+      }
+    } else if (strcmp(op,"SODD")==0 || strcmp(op,"STACKODD")==0){
+      r = (a & 1L) ? 1 : 0;
+    } else if (strcmp(op,"SEVEN")==0 || strcmp(op,"STACKEVEN")==0){
+      r = (a & 1L) ? 0 : 1;
     } else if (strcmp(op,"SFIB")==0 || strcmp(op,"SFIBONACCI")==0 || strcmp(op,"STACKFIB")==0){
       if (a <= 0) r = 0;
       else if (a == 1 || a == 2) r = 1;
