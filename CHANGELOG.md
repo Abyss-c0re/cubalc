@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.88-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack immediate compare + min/max-with-constant (complete SEQ/SLT/SMIN family after stack-stack).
+
+### Language
+- `SEQN`/`EQN`/`CMPEQN` n — TOS = (TOS == n) ? 1 : 0
+- `SNEN`/`NEN`/`CMPNEN` n — TOS = (TOS != n) ? 1 : 0
+- `SLTN`/`LTN` · `SGTN`/`GTN` n — ordered predicates vs constant
+- `SLENN`/`SLEQN` · `SGENN`/`SGEQN` n — ≤ / ≥ vs constant
+- `SMINN`/`MINN` · `SMAXN`/`MAXN` n — min/max(TOS, n)
+- Proof `111_seqn_sminn.cubalc`
+
+### Prior
+See 1.12.87-universal.
+
 ## 1.12.87-universal — 2026-08-03
 
 ### Direction
