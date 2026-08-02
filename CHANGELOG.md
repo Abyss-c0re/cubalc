@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.72-universal — 2026-08-02
+
+### Direction
+- Algocube digit **2** → number theory: Möbius, radical, square-free test.
+
+### Language
+- `MOBIUS`/`MU`(n) · `RADICAL`/`RAD`(n) · `ISSQUAREFREE`/`SQFREE`(n)
+- Stack: `SMOBIUS`/`SMU` · `SRAD`/`SRADICAL` · `SISSQFREE`/`SSQFREE`
+- Proof `95_mobius_radical.cubalc`
+
+### Prior
+See 1.12.71-universal.
+
 ## 1.12.71-universal — 2026-08-02
 
 ### Direction

@@ -1179,6 +1179,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"SIGMA1")==0 ||
         strcmp(name,"PHI")==0 || strcmp(name,"TOTIENT")==0 ||
         strcmp(name,"EULERPHI")==0 ||
+        /* digit-2 number theory: MOBIUS RADICAL SQUAREFREE */
+        strcmp(name,"MOBIUS")==0 || strcmp(name,"MU")==0 ||
+        strcmp(name,"RADICAL")==0 || strcmp(name,"RAD")==0 ||
+        strcmp(name,"ISSQUAREFREE")==0 || strcmp(name,"SQFREE")==0 ||
+        strcmp(name,"SQUAREFREE")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2066,6 +2071,62 @@ static long parse_prim(VM *vm, Lex *L){
           }
           if (n > 1) r -= r / n;
           return r;
+        }
+        if (strcmp(name,"MOBIUS")==0 || strcmp(name,"MU")==0){
+          /* MOBIUS(n) — μ(n): 0 if square factor; else (-1)^k for k distinct primes; n<=0→0 */
+          if (a <= 0) return 0;
+          if (a == 1) return 1;
+          long n = a;
+          int k = 0;
+          if ((n % 2) == 0){
+            n /= 2; k++;
+            if ((n % 2) == 0) return 0;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              n /= p; k++;
+              if ((n % p) == 0) return 0;
+            }
+          }
+          if (n > 1) k++;
+          return (k & 1) ? -1 : 1;
+        }
+        if (strcmp(name,"RADICAL")==0 || strcmp(name,"RAD")==0){
+          /* RADICAL(n) — product of distinct prime factors; n<=0→0; n=1→1 */
+          if (a <= 0) return 0;
+          if (a == 1) return 1;
+          long n = a;
+          long r = 1;
+          if ((n % 2) == 0){
+            r *= 2;
+            while ((n % 2) == 0) n /= 2;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              r *= p;
+              while ((n % p) == 0) n /= p;
+            }
+          }
+          if (n > 1) r *= n;
+          return r;
+        }
+        if (strcmp(name,"ISSQUAREFREE")==0 || strcmp(name,"SQFREE")==0 ||
+            strcmp(name,"SQUAREFREE")==0){
+          /* ISSQUAREFREE(n) — 1 if no squared prime divides n; n<=0→0; n=1→1 */
+          if (a <= 0) return 0;
+          if (a == 1) return 1;
+          long n = a;
+          if ((n % 2) == 0){
+            n /= 2;
+            if ((n % 2) == 0) return 0;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              n /= p;
+              if ((n % p) == 0) return 0;
+            }
+          }
+          return 1;
         }
         /* digit-2/6 extended math: log2 / log10 / odd-even / bit counts / pow2 */
         if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
@@ -4446,7 +4507,10 @@ static int parse_form(VM *vm, Lex *L){
       kw(&L->cur,"SPOW2")||kw(&L->cur,"STACKPOW2")||
       kw(&L->cur,"SPOW10")||kw(&L->cur,"STENPOW")||kw(&L->cur,"STACKPOW10")||
       kw(&L->cur,"SNDIGITS")||kw(&L->cur,"SNDIG")||kw(&L->cur,"STACKNDIGITS")||
-      kw(&L->cur,"SDIGSUM")||kw(&L->cur,"SDIGITSUM")||kw(&L->cur,"STACKDIGSUM")){
+      kw(&L->cur,"SDIGSUM")||kw(&L->cur,"SDIGITSUM")||kw(&L->cur,"STACKDIGSUM")||
+      kw(&L->cur,"SMOBIUS")||kw(&L->cur,"SMU")||kw(&L->cur,"STACKMOBIUS")||
+      kw(&L->cur,"SRAD")||kw(&L->cur,"SRADICAL")||kw(&L->cur,"STACKRAD")||
+      kw(&L->cur,"SISSQFREE")||kw(&L->cur,"SSQFREE")||kw(&L->cur,"STACKSQFREE")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -4498,6 +4562,42 @@ static int parse_form(VM *vm, Lex *L){
         r = 1;
         for (long i = 5; i * i <= a; i += 6){
           if ((a % i) == 0 || (a % (i + 2)) == 0){ r = 0; break; }
+        }
+      }
+    } else if (strcmp(op,"SMOBIUS")==0 || strcmp(op,"SMU")==0 || strcmp(op,"STACKMOBIUS")==0){
+      if (a <= 0) r = 0;
+      else if (a == 1) r = 1;
+      else {
+        long n = a; int k = 0; r = 1;
+        if ((n % 2) == 0){ n /= 2; k++; if ((n % 2) == 0) r = 0; }
+        if (r){
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ n /= p; k++; if ((n % p) == 0){ r = 0; break; } }
+          }
+          if (r){ if (n > 1) k++; r = (k & 1) ? -1 : 1; }
+        }
+      }
+    } else if (strcmp(op,"SRAD")==0 || strcmp(op,"SRADICAL")==0 || strcmp(op,"STACKRAD")==0){
+      if (a <= 0) r = 0;
+      else if (a == 1) r = 1;
+      else {
+        long n = a; r = 1;
+        if ((n % 2) == 0){ r *= 2; while ((n % 2) == 0) n /= 2; }
+        for (long p = 3; p * p <= n; p += 2){
+          if ((n % p) == 0){ r *= p; while ((n % p) == 0) n /= p; }
+        }
+        if (n > 1) r *= n;
+      }
+    } else if (strcmp(op,"SISSQFREE")==0 || strcmp(op,"SSQFREE")==0 || strcmp(op,"STACKSQFREE")==0){
+      if (a <= 0) r = 0;
+      else if (a == 1) r = 1;
+      else {
+        long n = a; r = 1;
+        if ((n % 2) == 0){ n /= 2; if ((n % 2) == 0) r = 0; }
+        if (r){
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ n /= p; if ((n % p) == 0){ r = 0; break; } }
+          }
         }
       }
     } else if (strcmp(op,"SISPOW2")==0 || strcmp(op,"SISPOWER2")==0 || strcmp(op,"SPOW2P")==0){
