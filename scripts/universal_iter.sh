@@ -118,7 +118,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             134_ltcell_mux \
             135_energy_fleet \
             136_aliquot_perfect \
-            137_dupz_swapif; do
+            137_dupz_swapif \
+            138_anycell_eqrange; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

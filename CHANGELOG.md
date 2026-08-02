@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.115-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → cell range predicates: any/all/none, nz-count, equal-range.
+
+### Language
+- `ANYCELL`/`ALLCELL`/`NONECELL` lo hi — nonzero range predicates
+- `NZCOUNT`/`COUNTNZCELL` lo hi — count nonzero cells
+- `EQRANGE` a_lo b_lo n — pairwise range equality
+- Stack: `SANYCELL`/`SALLCELL`/`SNONECELL`/`SNZCOUNT`/`SEQRANGES`
+- Proof `138_anycell_eqrange.cubalc`
+
+### Prior
+See 1.12.114-universal.
+
 ## 1.12.114-universal — 2026-08-03
 
 ### Direction

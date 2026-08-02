@@ -9089,6 +9089,58 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",wrote); vm->last_n=wrote;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 cell range predicates: ANYCELL ALLCELL NONECELL NZCOUNT EQRANGE */
+  if (kw(&L->cur,"ANYCELL")||kw(&L->cur,"CELLANY")||kw(&L->cur,"ANYNZ")||
+      kw(&L->cur,"ALLCELL")||kw(&L->cur,"CELLALL")||kw(&L->cur,"ALLNZ")||
+      kw(&L->cur,"NONECELL")||kw(&L->cur,"CELLNONE")||kw(&L->cur,"NONENZ")||
+      kw(&L->cur,"NZCOUNT")||kw(&L->cur,"COUNTNZCELL")||kw(&L->cur,"CELLNZCOUNT")||
+      kw(&L->cur,"CNZCELL")){
+    /* ANY/ALL/NONE: nonzero tests; NZCOUNT: count of nonzero cells in [lo,hi] */
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long nz = 0, n = hi - lo + 1;
+    for (long i=lo;i<=hi;i++) if (vm->cells[(int)i] != 0) nz++;
+    long r = nz;
+    if (strcmp(op,"ANYCELL")==0 || strcmp(op,"CELLANY")==0 || strcmp(op,"ANYNZ")==0)
+      r = (nz > 0) ? 1 : 0;
+    else if (strcmp(op,"ALLCELL")==0 || strcmp(op,"CELLALL")==0 || strcmp(op,"ALLNZ")==0)
+      r = (n > 0 && nz == n) ? 1 : 0;
+    else if (strcmp(op,"NONECELL")==0 || strcmp(op,"CELLNONE")==0 || strcmp(op,"NONENZ")==0)
+      r = (nz == 0) ? 1 : 0;
+    /* else NZCOUNT / COUNTNZCELL / CELLNZCOUNT / CNZCELL → nz */
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SET",nz);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"EQRANGE")||kw(&L->cur,"RANGEEQ")||kw(&L->cur,"CELLEQRANGE")||
+      kw(&L->cur,"EQCELLS")||kw(&L->cur,"SAMECELLS")){
+    /* EQRANGE a_lo b_lo n — 1 if cells[a+i]==cells[b+i] for i in 0..n-1 */
+    lex_next(L);
+    long alo = parse_expr(vm,L);
+    long blo = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n > CUBALC_CELL_N) n = CUBALC_CELL_N;
+    int ok = 1;
+    long checked = 0;
+    for (long i=0;i<n;i++){
+      long ai = alo + i, bi = blo + i;
+      long av = (ai >= 0 && ai < CUBALC_CELL_N) ? vm->cells[(int)ai] : 0;
+      long bv = (bi >= 0 && bi < CUBALC_CELL_N) ? vm->cells[(int)bi] : 0;
+      checked++;
+      if (av != bv){ ok = 0; break; }
+    }
+    long r = ok ? 1 : 0;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SET",checked);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 cell-logic stack duals: SANDCELL SORCELL SXORCELL SNOTCELL SEQCELL SNECELL */
   if (kw(&L->cur,"SANDCELL")||kw(&L->cur,"SCELLAND")||kw(&L->cur,"STACKANDCELL")||
       kw(&L->cur,"SANDC")){
@@ -9261,6 +9313,67 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       if (di >= 0 && di < CUBALC_CELL_N){ vm->cells[(int)di] = tmp[i]; wrote++; }
     }
     var_set_num(vm,"LAST_N",wrote); vm->last_n=wrote;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 stack duals: SANYCELL SALLCELL SNONECELL SNZCOUNT SEQRANGES */
+  if (kw(&L->cur,"SANYCELL")||kw(&L->cur,"SCELLANY")||kw(&L->cur,"STACKANYCELL")||
+      kw(&L->cur,"SANYC")||
+      kw(&L->cur,"SALLCELL")||kw(&L->cur,"SCELLALL")||kw(&L->cur,"STACKALLCELL")||
+      kw(&L->cur,"SALLC")||
+      kw(&L->cur,"SNONECELL")||kw(&L->cur,"SCELLNONE")||kw(&L->cur,"STACKNONECELL")||
+      kw(&L->cur,"SNONEC")||
+      kw(&L->cur,"SNZCOUNT")||kw(&L->cur,"SCELLNZCOUNT")||kw(&L->cur,"STACKNZCOUNT")||
+      kw(&L->cur,"SNZC")){
+    /* lo hi (stack) — cell-range nonzero predicates / count
+     * NOTE: not SCOUNTNZ — that is stack-fold over data stack */
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long nz = 0, n = hi - lo + 1;
+    for (long i=lo;i<=hi;i++) if (vm->cells[(int)i] != 0) nz++;
+    long r = nz;
+    if (strcmp(op,"SANYCELL")==0 || strcmp(op,"SCELLANY")==0 ||
+        strcmp(op,"STACKANYCELL")==0 || strcmp(op,"SANYC")==0)
+      r = (nz > 0) ? 1 : 0;
+    else if (strcmp(op,"SALLCELL")==0 || strcmp(op,"SCELLALL")==0 ||
+             strcmp(op,"STACKALLCELL")==0 || strcmp(op,"SALLC")==0)
+      r = (n > 0 && nz == n) ? 1 : 0;
+    else if (strcmp(op,"SNONECELL")==0 || strcmp(op,"SCELLNONE")==0 ||
+             strcmp(op,"STACKNONECELL")==0 || strcmp(op,"SNONEC")==0)
+      r = (nz == 0) ? 1 : 0;
+    /* else SNZCOUNT */
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEQRANGES")||kw(&L->cur,"SEQRANG")||kw(&L->cur,"STACKEQRANGE")||
+      kw(&L->cur,"SCELLEQRANGE")||kw(&L->cur,"SEQCRANGE")){
+    /* alo blo n (stack) → 1 if equal pairwise */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long blo = vm->stack[--vm->sp];
+    long alo = vm->stack[--vm->sp];
+    if (n < 0) n = 0;
+    if (n > CUBALC_CELL_N) n = CUBALC_CELL_N;
+    int ok = 1;
+    for (long i=0;i<n;i++){
+      long ai = alo + i, bi = blo + i;
+      long av = (ai >= 0 && ai < CUBALC_CELL_N) ? vm->cells[(int)ai] : 0;
+      long bv = (bi >= 0 && bi < CUBALC_CELL_N) ? vm->cells[(int)bi] : 0;
+      if (av != bv){ ok = 0; break; }
+    }
+    long r = ok ? 1 : 0;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-9 cell fold arith: SUBCELL/DIVCELL/MODCELL + SCANCELL + CLAMPCELL */
