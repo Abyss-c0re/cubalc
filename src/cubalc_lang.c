@@ -1208,6 +1208,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"COPRIME")==0 || strcmp(name,"ISCOPRIME")==0 ||
         strcmp(name,"CEILPOW2")==0 || strcmp(name,"NEXTPOW2")==0 ||
         strcmp(name,"CPOW2")==0 ||
+        /* digit-2 modular duals: JACOBI LEGENDRE MODDIV SPF */
+        strcmp(name,"JACOBI")==0 || strcmp(name,"LEGENDRE")==0 ||
+        strcmp(name,"MODDIV")==0 || strcmp(name,"DIVMODM")==0 ||
+        strcmp(name,"SPF")==0 || strcmp(name,"SMALLPF")==0 ||
+        strcmp(name,"MINPF")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2302,6 +2307,62 @@ static long parse_prim(VM *vm, Lex *L){
           if (r > 1) return 0; /* not invertible */
           if (t < 0) t += m;
           return t;
+        }
+        /* digit-2 modular duals: JACOBI / LEGENDRE / MODDIV / SPF */
+        if (strcmp(name,"JACOBI")==0 || strcmp(name,"LEGENDRE")==0){
+          /* JACOBI(a,n) / LEGENDRE(a,p) → -1/0/1; n must be odd positive */
+          long n = b;
+          if (n <= 0 || (n & 1L) == 0) return 0;
+          long aa = a % n; if (aa < 0) aa += n;
+          int res = 1;
+          while (aa != 0){
+            while ((aa & 1L) == 0){
+              aa >>= 1;
+              long n8 = n & 7L;
+              if (n8 == 3 || n8 == 5) res = -res;
+            }
+            long tmp = aa; aa = n; n = tmp;
+            if ((aa & 3L) == 3 && (n & 3L) == 3) res = -res;
+            aa %= n;
+          }
+          return (n == 1) ? (long)res : 0;
+        }
+        if (strcmp(name,"MODDIV")==0 || strcmp(name,"DIVMODM")==0){
+          /* MODDIV(a,b,m) → a * b^{-1} mod m; 0 if no inverse or m<=0 */
+          long m = c;
+          if (m <= 0) return 0;
+          long bb = b % m; if (bb < 0) bb += m;
+          if (bb == 0) return 0;
+          long t = 0, nt = 1;
+          long rr = m, nr = bb;
+          while (nr != 0){
+            long q = rr / nr;
+            long tmp = nt; nt = t - q * nt; t = tmp;
+            tmp = nr; nr = rr - q * nr; rr = tmp;
+          }
+          if (rr != 1) return 0;
+          if (t < 0) t += m;
+          long x = a % m; if (x < 0) x += m;
+          long y = t, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          return acc;
+        }
+        if (strcmp(name,"SPF")==0 || strcmp(name,"SMALLPF")==0 ||
+            strcmp(name,"MINPF")==0){
+          /* SPF(n) — smallest prime factor; n<=1 → 0 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          if ((n & 1L) == 0) return 2;
+          if ((n % 3L) == 0) return 3;
+          for (long i = 5; i * i <= n; i += 6){
+            if ((n % i) == 0) return i;
+            if ((n % (i + 2)) == 0) return i + 2;
+          }
+          return n;
         }
         /* digit-0 foundation bitfields */
         if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
@@ -5689,6 +5750,93 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 modular duals: SMODDIV · SJACOBI · SSPF (complete after SPOWMOD/SMODINV) */
+  if (kw(&L->cur,"SMODDIV")||kw(&L->cur,"SDIVMODM")||kw(&L->cur,"STACKMODDIV")||
+      kw(&L->cur,"SMODDIVIDE")){
+    /* a b m → a * b^{-1} mod m (0 if none / m<=0) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 0){
+      long bb = b % m; if (bb < 0) bb += m;
+      if (bb != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = bb;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += m;
+          long x = a % m; if (x < 0) x += m;
+          long y = t, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          r = acc;
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SJACOBI")||kw(&L->cur,"SLEGENDRE")||kw(&L->cur,"STACKJACOBI")||
+      kw(&L->cur,"STACKLEGENDRE")){
+    /* a n → Jacobi(a|n) ∈ {-1,0,1}; n must be odd positive else 0 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (n > 0 && (n & 1L) != 0){
+      long aa = a % n; if (aa < 0) aa += n;
+      int res = 1;
+      while (aa != 0){
+        while ((aa & 1L) == 0){
+          aa >>= 1;
+          long n8 = n & 7L;
+          if (n8 == 3 || n8 == 5) res = -res;
+        }
+        long tmp = aa; aa = n; n = tmp;
+        if ((aa & 3L) == 3 && (n & 3L) == 3) res = -res;
+        aa %= n;
+      }
+      r = (n == 1) ? (long)res : 0;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSPF")||kw(&L->cur,"SSMALLPF")||kw(&L->cur,"SMINPF")||
+      kw(&L->cur,"STACKSPF")||kw(&L->cur,"STACKSMALLPF")){
+    /* n → smallest prime factor; n<=1 → 0 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n > 1){
+      if ((n & 1L) == 0) r = 2;
+      else if ((n % 3L) == 0) r = 3;
+      else {
+        r = n;
+        for (long i = 5; i * i <= n; i += 6){
+          if ((n % i) == 0){ r = i; break; }
+          if ((n % (i + 2)) == 0){ r = i + 2; break; }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack combinatorics + add/sub mod: SBINOM SPERM SADDMOD SSUBMOD */
   if (kw(&L->cur,"SBINOM")||kw(&L->cur,"SCHOOSE")||kw(&L->cur,"STACKBINOM")||

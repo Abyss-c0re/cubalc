@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.102-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → modular / number-theory duals after SPOWMOD/SMODINV.
+
+### Language
+- `JACOBI`/`LEGENDRE`(a,n) · `SJACOBI`/`SLEGENDRE` — Jacobi symbol −1/0/1
+- `MODDIV`/`DIVMODM`(a,b,m) · `SMODDIV`/`SDIVMODM` — a·b⁻¹ mod m
+- `SPF`/`SMALLPF`/`MINPF`(n) · `SSPF`/`SSMALLPF` — smallest prime factor
+- Proof `125_smoddiv_jacobi.cubalc`
+
+### Prior
+See 1.12.101-universal.
+
 ## 1.12.101-universal — 2026-08-03
 
 ### Direction

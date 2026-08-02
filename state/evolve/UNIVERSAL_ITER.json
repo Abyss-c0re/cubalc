@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T01:20:09+0300",
-  "iter": 186,
-  "algocube_digit": 0,
-  "version": "1.12.101-universal",
-  "pass": 139,
+  "ts": "2026-08-03T01:25:26+0300",
+  "iter": 187,
+  "algocube_digit": 2,
+  "version": "1.12.102-universal",
+  "pass": 140,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "4NIP 4ROT 4RROT 4OVER",
-  "proof": "programs/proof/124_4nip_4rot.cubalc"
+  "delta": "SMODDIV SJACOBI SSPF JACOBI MODDIV SPF",
+  "proof": "programs/proof/125_smoddiv_jacobi.cubalc"
 }
