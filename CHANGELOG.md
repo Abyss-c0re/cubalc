@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.114-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack conditionals: dup-if-zero, swap/keep/nip under flag.
+
+### Language
+- `DUPZ`/`QDUP0` — duplicate TOS only if zero (complement of `QDUP`)
+- `SSWAPIF`/`SWAPIF`/`QSWAP` — a b f → swap a,b if f
+- `SKEEPIF`/`KEEPIF` — v f → keep v if f else drop both
+- `SNIPIF`/`NIPIF`/`NIPWHEN` — a b f → f?b:a
+- Proof `137_dupz_swapif.cubalc`
+
+### Prior
+See 1.12.113-universal.
+
 ## 1.12.113-universal — 2026-08-03
 
 ### Direction

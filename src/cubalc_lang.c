@@ -5004,6 +5004,63 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack conditionals: DUPZ · SSWAPIF · SKEEPIF · SNIPIF */
+  if (kw(&L->cur,"DUPZ")||kw(&L->cur,"QDUP0")||kw(&L->cur,"DUPIF0")||
+      kw(&L->cur,"DUPZERO")||kw(&L->cur,"STACKDUPZ")){
+    /* DUPZ — duplicate TOS only if zero (complement of QDUP) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1];
+    if (v == 0){
+      if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = 0;
+    }
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSWAPIF")||kw(&L->cur,"SWAPIF")||kw(&L->cur,"QSWAP")||
+      kw(&L->cur,"STACKSWAPIF")||kw(&L->cur,"CSWAP")){
+    /* a b f → if f then b a else a b  (conditional swap) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){ long t=a; a=b; b=t; }
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SKEEPIF")||kw(&L->cur,"KEEPIF")||kw(&L->cur,"QKEEP")||
+      kw(&L->cur,"STACKKEEPIF")||kw(&L->cur,"KEEPWHEN")){
+    /* v f → if f leave v else drop both */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long v = vm->stack[--vm->sp];
+    if (f){
+      vm->stack[vm->sp++] = v;
+      var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    } else {
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNIPIF")||kw(&L->cur,"NIPIF")||kw(&L->cur,"STACKNIPIF")||
+      kw(&L->cur,"CNIP")||kw(&L->cur,"NIPWHEN")){
+    /* a b f → if f then b else a  (conditional choose; QNIP reserved for 4NIP) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = f ? b : a;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NDUP")||kw(&L->cur,"DUPN")||kw(&L->cur,"STACKNDUP")){
     /* NDUP n — duplicate top n items (append copy of top n) */
     lex_next(L);
