@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.100-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack depth duals: 3NIP + quadruple 4DUP/4DROP/4SWAP (after 3ROT/3TUCK).
+
+### Language
+- `3NIP`/`TNIP`/`NIP3` — a b c → a c
+- `4DUP`/`DUP4` — duplicate top 4
+- `4DROP`/`DROP4` — drop top 4
+- `4SWAP`/`SWAP4` — reverse top 4
+- Proof `123_3nip_4dup.cubalc`
+
+### Prior
+See 1.12.99-universal.
+
 ## 1.12.99-universal — 2026-08-03
 
 ### Direction
