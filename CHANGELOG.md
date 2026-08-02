@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.95-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack↔cell range dual + cell transfer (complete after SGETCELL/SSETCELL single forms).
+
+### Language
+- `SLOADCELLS`/`SLOADN`/`SPUSHRANGE` lo n — push cells[lo..lo+n-1]
+- `SPOPCELLS`/`SSTORECELLS`/`SSTORERANGE` lo n — pop n into cells[lo..]
+- `CELLXFER`/`XFERCELL` i j amt — move amt from cell i → j
+- Proof `118_sloadcells_cellxfer.cubalc`
+
+### Prior
+See 1.12.94-universal.
+
 ## 1.12.94-universal — 2026-08-03
 
 ### Direction

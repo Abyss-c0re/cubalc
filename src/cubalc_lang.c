@@ -3897,6 +3897,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
+  if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
+      kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){
+    /* SLOADCELLS lo n — push cells[lo .. lo+n-1] (lo first; TOS = last) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (lo < 0) lo = 0;
+    if (lo >= CUBALC_CELL_N) lo = CUBALC_CELL_N - 1;
+    if (lo + n > CUBALC_CELL_N) n = CUBALC_CELL_N - lo;
+    if (vm->sp + n > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long last = 0;
+    for (long k = 0; k < n; k++){
+      last = vm->cells[(int)(lo + k)];
+      vm->stack[vm->sp++] = last;
+    }
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N", n ? last : 0); vm->last_n = n ? last : 0;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOPCELLS")||kw(&L->cur,"SSTORECELLS")||kw(&L->cur,"SSTORERANGE")||
+      kw(&L->cur,"SPOPRANGE")||kw(&L->cur,"STACKSTORECELLS")||kw(&L->cur,"SCELLSTOREN")){
+    /* SPOPCELLS lo n — pop n values into cells[lo..lo+n-1]; first pop → lo+n-1 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (lo < 0) lo = 0;
+    if (lo >= CUBALC_CELL_N) lo = CUBALC_CELL_N - 1;
+    if (lo + n > CUBALC_CELL_N) n = CUBALC_CELL_N - lo;
+    if (vm->sp < n){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    for (long k = n - 1; k >= 0; k--){
+      vm->cells[(int)(lo + k)] = vm->stack[--vm->sp];
+    }
+    long last = (n > 0) ? vm->cells[(int)(lo + n - 1)] : 0;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CELLXFER")||kw(&L->cur,"XFERCELL")||kw(&L->cur,"TRANSFERCELL")||
+      kw(&L->cur,"MOVEAMT")||kw(&L->cur,"CELLMOVEAMT")){
+    /* CELLXFER i j amt — move amt from cells[i] to cells[j] (clamp by source) */
+    lex_next(L);
+    long i = parse_expr(vm,L);
+    long j = parse_expr(vm,L);
+    long amt = parse_expr(vm,L);
+    if (i < 0) i = 0;
+    if (j < 0) j = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (j >= CUBALC_CELL_N) j = CUBALC_CELL_N - 1;
+    if (amt < 0) amt = 0;
+    long src = vm->cells[(int)i];
+    long moved = amt;
+    if (moved > src) moved = src;
+    /* allow negative sources: only transfer positive available */
+    if (src < 0) moved = 0;
+    vm->cells[(int)i] = src - moved;
+    vm->cells[(int)j] += moved;
+    var_set_num(vm,"LAST_N",moved); vm->last_n=moved;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
     memset(vm->cells, 0, sizeof vm->cells);
