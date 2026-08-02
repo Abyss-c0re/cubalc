@@ -1,0 +1,71 @@
+# Proof 73 — digit-7 string plane: TRIM STARTS ENDS REPLACE
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# TRIM / LTRIM / RTRIM
+SYS TRIM "  hi  "
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+SYS TRIM "  hi  "
+ASSERT LAST_N == 2
+SYS LTRIM "  ab"
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+SYS RTRIM "cd  "
+SYS EQS LAST "cd"
+ASSERT LAST_N == 1
+SYS TRIM "none"
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+SYS STRIP " x "
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# STARTSWITH / ENDSWITH
+SYS STARTS "hello" "he"
+ASSERT LAST_N == 1
+SYS STARTSWITH "hello" "lo"
+ASSERT LAST_N == 0
+SYS ENDS "hello" "lo"
+ASSERT LAST_N == 1
+SYS ENDSWITH "hello" "he"
+ASSERT LAST_N == 0
+SYS PREFIX "cube" ""
+ASSERT LAST_N == 1
+SYS SUFFIX "cube" "ube"
+ASSERT LAST_N == 1
+
+# REPLACE first occurrence
+SYS REPLACE "aa-bb-aa" "aa" "XX"
+SYS EQS LAST "XX-bb-aa"
+ASSERT LAST_N == 1
+SYS REPLACE "aa-bb-aa" "aa" "XX"
+ASSERT LAST_N == 1
+SYS SUBST "hello" "x" "y"
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+SYS SUBST "hello" "x" "y"
+ASSERT LAST_N == 0
+SYS STRREP "abcabc" "bc" "Z"
+SYS EQS LAST "aZabc"
+ASSERT LAST_N == 1
+
+# compose with CAT / UPPER
+SYS CAT "  go" " cube  "
+SYS TRIM LAST
+SYS EQS LAST "go cube"
+ASSERT LAST_N == 1
+SYS UPPER "go cube"
+SYS EQS LAST "GO CUBE"
+ASSERT LAST_N == 1
+SYS STARTS "GO CUBE" "GO"
+ASSERT LAST_N == 1
+SYS ENDS "GO CUBE" "CUBE"
+ASSERT LAST_N == 1
+
+CUBE s ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof73_str_trim_prefix" LAST_N

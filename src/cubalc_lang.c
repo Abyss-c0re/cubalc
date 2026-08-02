@@ -3125,7 +3125,106 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER");
+    /* digit-7 string plane: TRIM / STARTS / ENDS / REPLACE */
+    if (kw(&L->cur,"TRIM") || kw(&L->cur,"STRIP") ||
+        kw(&L->cur,"LTRIM") || kw(&L->cur,"RTRIM")){
+      char op[12]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      char *a = s, *b = s + strlen(s);
+      int do_l = (strcmp(op,"TRIM")==0 || strcmp(op,"STRIP")==0 || strcmp(op,"LTRIM")==0);
+      int do_r = (strcmp(op,"TRIM")==0 || strcmp(op,"STRIP")==0 || strcmp(op,"RTRIM")==0);
+      if (do_l) while (*a==' '||*a=='\t'||*a=='\n'||*a=='\r') a++;
+      if (do_r){
+        while (b > a && (b[-1]==' '||b[-1]=='\t'||b[-1]=='\n'||b[-1]=='\r')) b--;
+      }
+      char out[512];
+      size_t n = (size_t)(b - a);
+      if (n >= sizeof out) n = sizeof out - 1;
+      memcpy(out, a, n); out[n] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"STARTS") || kw(&L->cur,"STARTSWITH") || kw(&L->cur,"HASPREFIX") ||
+        kw(&L->cur,"PREFIX") ||
+        kw(&L->cur,"ENDS") || kw(&L->cur,"ENDSWITH") || kw(&L->cur,"HASSUFFIX") ||
+        kw(&L->cur,"SUFFIX")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      lex_next(L);
+      char hay[512]="", pref[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, pref, sizeof pref) != 0) pref[0]=0;
+      int is_end = (strcmp(op,"ENDS")==0 || strcmp(op,"ENDSWITH")==0 ||
+                    strcmp(op,"HASSUFFIX")==0 || strcmp(op,"SUFFIX")==0);
+      long hit = 0;
+      size_t hn = strlen(hay), pn = strlen(pref);
+      if (pn == 0) hit = 1;
+      else if (pn <= hn){
+        if (!is_end) hit = (strncmp(hay, pref, pn) == 0) ? 1 : 0;
+        else hit = (strcmp(hay + (hn - pn), pref) == 0) ? 1 : 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"REPLACE") || kw(&L->cur,"SUBST") || kw(&L->cur,"STRREP")){
+      /* SYS REPLACE hay old new — first occurrence; LAST = result; LAST_N = 1 if replaced */
+      lex_next(L);
+      char hay[512]="", olds[256]="", news[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0]=0;
+      if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0]=0;
+      char out[512];
+      long did = 0;
+      if (olds[0] == 0){
+        snprintf(out, sizeof out, "%s", hay);
+      } else {
+        char *p = strstr(hay, olds);
+        if (!p){
+          snprintf(out, sizeof out, "%s", hay);
+        } else {
+          size_t pre = (size_t)(p - hay);
+          size_t oldn = strlen(olds), newn = strlen(news), tail = strlen(p + oldn);
+          if (pre + newn + tail >= sizeof out){
+            /* truncate carefully */
+            size_t maxpre = pre;
+            if (maxpre >= sizeof out) maxpre = sizeof out - 1;
+            memcpy(out, hay, maxpre);
+            size_t o = maxpre;
+            size_t take = newn;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, news, take); o += take;
+            take = tail;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, p + oldn, take); o += take;
+            out[o] = 0;
+          } else {
+            memcpy(out, hay, pre);
+            memcpy(out + pre, news, newn);
+            memcpy(out + pre + newn, p + oldn, tail + 1);
+          }
+          did = 1;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = did;
+      var_set_num(vm, "LAST_N", did);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE");
     return -1;
   }
 
