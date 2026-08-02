@@ -1083,11 +1083,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"POW10")==0 || strcmp(name,"TENPOW")==0 ||
         strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
         strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0 ||
-        /* digit-0 foundation: bitfield extract/deposit + ceil div */
+        /* digit-0 foundation: bitfield extract/deposit + ceil div + mask */
         strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0 ||
         strcmp(name,"BDEP")==0 || strcmp(name,"BITDEP")==0 ||
         strcmp(name,"BYTE")==0 || strcmp(name,"HIBYTE")==0 ||
         strcmp(name,"LOBYTE")==0 ||
+        strcmp(name,"MASK")==0 || strcmp(name,"BITMASK")==0 ||
+        strcmp(name,"ISDIV")==0 || strcmp(name,"DIVISIBLE")==0 ||
         strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0 ||
         /* digit-1 data path: word reverse / parity / nibble */
         strcmp(name,"BSWAP")==0 || strcmp(name,"BSWAP32")==0 ||
@@ -1545,6 +1547,17 @@ static long parse_prim(VM *vm, Lex *L){
           return (long)((unsigned long)a & 0xFFul);
         if (strcmp(name,"HIBYTE")==0)
           return (long)(((unsigned long)a >> 8) & 0xFFul);
+        if (strcmp(name,"MASK")==0 || strcmp(name,"BITMASK")==0){
+          /* MASK(n) — low n bits set; n<=0 → 0; n>=63 → all ones (signed long) */
+          if (a <= 0) return 0;
+          if (a >= 63) return (long)~0ul;
+          return (long)((1ul << (unsigned)a) - 1ul);
+        }
+        if (strcmp(name,"ISDIV")==0 || strcmp(name,"DIVISIBLE")==0){
+          /* ISDIV(a,b) → 1 if b!=0 and a is multiple of b */
+          if (b == 0) return 0;
+          return (a % b) == 0 ? 1 : 0;
+        }
         /* digit-1 word data path: BSWAP BITREV PARITY NIBBLE */
         if (strcmp(name,"BSWAP")==0 || strcmp(name,"BSWAP32")==0){
           unsigned int w = (unsigned int)a;
@@ -3770,6 +3783,31 @@ static int parse_form(VM *vm, Lex *L){
       long d = a - b;
       r = d < 0 ? -d : d;
     }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 foundation stack: SMASK SISDIV */
+  if (kw(&L->cur,"SMASK")||kw(&L->cur,"SBITMASK")||kw(&L->cur,"STACKMASK")){
+    /* n → low n bits set */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (a <= 0) r = 0;
+    else if (a >= 63) r = (long)~0ul;
+    else r = (long)((1ul << (unsigned)a) - 1ul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SISDIV")||kw(&L->cur,"SDIVISIBLE")||kw(&L->cur,"STACKISDIV")){
+    /* a b → 1 if b!=0 and a multiple of b */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = (b != 0 && (a % b) == 0) ? 1 : 0;
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
