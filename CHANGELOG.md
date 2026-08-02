@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.4-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → stack depth plane: double-width combinators + ROLL/DEPTH.
+
+### Language
+- `NIP` — drop under top (a b → b)
+- `TUCK` — b under a, keep b (a b → b a b)
+- `2DUP`/`DDUP` · `2DROP`/`DDROP` · `2SWAP`/`DSWAP`
+- `ROLL` n — rotate top (n+1) items (n=1≡SWAP, n=2≡ROT)
+- `DEPTH` — push current stack depth
+- Proof `27_stack_depth_universal.cubalc`
+
+### Prior
+See 1.12.3-universal.
+
 ## 1.12.3-universal — 2026-08-02
 
 ### Direction

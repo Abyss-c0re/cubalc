@@ -53,7 +53,7 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             18_data_cells_stack 19_math_modular_universal \
             20_string_ops_universal 21_fn_return_case \
             22_cell_fold_inc 23_rand_energy_rotbits 24_stack_ops_universal \
-            25_cell_mem_universal 26_math_ilog_modinv; do
+            25_cell_mem_universal 26_math_ilog_modinv 27_stack_depth_universal; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

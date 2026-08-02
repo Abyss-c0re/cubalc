@@ -152,6 +152,24 @@ static void lex_next(Lex *L) {
     while (L->i<L->n && isdigit((unsigned char)L->s[L->i])){
       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
     }
+    /* 2DUP / 2DROP / 2SWAP — Forth double ops as single tokens (digit-8) */
+    if (k==1 && b[0]=='2' && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
+      size_t j = L->i;
+      char tail[16]; size_t t=0;
+      while (j<L->n && isalpha((unsigned char)L->s[j]) && t+1<sizeof tail)
+        tail[t++]=L->s[j++];
+      tail[t]=0;
+      if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+          strcasecmp(tail,"SWAP")==0){
+        L->i = j;
+        snprintf(L->cur.text, sizeof L->cur.text, "2%s", tail);
+        /* normalize to upper for kw() which is case-insensitive anyway */
+        for (char *p=L->cur.text; *p; p++)
+          if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+        L->cur.kind = TK_IDENT;
+        return;
+      }
+    }
     b[k]=0; L->cur.num=strtol(b,NULL,10); L->cur.kind=TK_NUM;
     snprintf(L->cur.text,sizeof L->cur.text,"%s",b); return;
   }
@@ -2689,6 +2707,94 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack depth plane: NIP TUCK 2DUP 2DROP 2SWAP ROLL DEPTH */
+  if (kw(&L->cur,"NIP")||kw(&L->cur,"STACKNIP")){
+    /* a b → b  (drop under top) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 2] = vm->stack[vm->sp - 1];
+    vm->sp--;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1];
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"TUCK")||kw(&L->cur,"STACKTUCK")){
+    /* a b → b a b */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-2], b = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-2] = b;
+    vm->stack[vm->sp-1] = a;
+    vm->stack[vm->sp++] = b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2DUP")||kw(&L->cur,"DDUP")||kw(&L->cur,"DUP2")){
+    /* a b → a b a b */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-2], b = vm->stack[vm->sp-1];
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2DROP")||kw(&L->cur,"DDROP")||kw(&L->cur,"DROP2")){
+    /* a b → (empty of top 2) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->sp -= 2;
+    var_set_num(vm,"SP",vm->sp);
+    if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+    else { var_set_num(vm,"LAST_N",0); vm->last_n=0; }
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2SWAP")||kw(&L->cur,"DSWAP")||kw(&L->cur,"SWAP2")){
+    /* a b c d → c d a b */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-4], b = vm->stack[vm->sp-3];
+    long c = vm->stack[vm->sp-2], d = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-4] = c; vm->stack[vm->sp-3] = d;
+    vm->stack[vm->sp-2] = a; vm->stack[vm->sp-1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ROLL")||kw(&L->cur,"STACKROLL")){
+    /* ROLL n — rotate top (n+1) items: n-th under top becomes TOS
+     * n=0 no-op; n=1 ≡ SWAP; n=2 ≡ ROT */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n == 0){
+      var_set_num(vm,"OK", vm->sp > 0 ? 1 : 0);
+      if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+      bump(vm); return 1;
+    }
+    if (vm->sp <= n){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    /* take item at depth n, shift others down, place on top */
+    long v = vm->stack[vm->sp - 1 - (int)n];
+    for (int i = (int)n; i > 0; i--)
+      vm->stack[vm->sp - 1 - i] = vm->stack[vm->sp - i];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
+    /* DEPTH — push current stack depth */
+    lex_next(L);
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = (long)vm->sp;
+    vm->stack[vm->sp++] = d;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",d); vm->last_n=d;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"FILLCELL")||kw(&L->cur,"CELLFILL")||kw(&L->cur,"FILL")){
     /* FILLCELL lo hi val — fill cell[lo..hi] with val */
     lex_next(L);
@@ -3188,6 +3294,9 @@ static int parse_form(VM *vm, Lex *L){
     for (int i = 0; i < vm->ch.n_cubes; i++)
       e += (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
     long *se = var_slot(vm, "ENERGY", 1); if (se) *se = e;
+    var_set_num(vm, "ENERGY", e);
+    var_set_num(vm, "LAST_N", e); vm->last_n = e;
+    var_set_num(vm, "OK", 1);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
                           "energyflow n=%ld e=%ld u=%.2f", n, e, vm->ch.unity);
     bump(vm); return 1;
