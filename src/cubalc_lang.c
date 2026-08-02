@@ -1065,6 +1065,10 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ADDOVF")==0 || strcmp(name,"ADDOVER")==0 ||
         strcmp(name,"SUBOVF")==0 || strcmp(name,"SUBOVER")==0 ||
         strcmp(name,"MULOVF")==0 || strcmp(name,"MULOVER")==0 ||
+        /* digit-2 multiword arith: ADDC SUBB DIVMOD (carry/borrow/rem) */
+        strcmp(name,"ADDC")==0 || strcmp(name,"ADC")==0 ||
+        strcmp(name,"SUBB")==0 || strcmp(name,"SBB")==0 ||
+        strcmp(name,"DIVMOD")==0 || strcmp(name,"DIVREM")==0 ||
         strcmp(name,"BTEST")==0 || strcmp(name,"BITTEST")==0 ||
         strcmp(name,"BSET")==0 || strcmp(name,"BITSET")==0 ||
         strcmp(name,"BCLR")==0 || strcmp(name,"BITCLR")==0 ||
@@ -1333,6 +1337,50 @@ static long parse_prim(VM *vm, Lex *L){
             if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) return 1;
             return 0;
           }
+        }
+        if (strcmp(name,"ADDC")==0 || strcmp(name,"ADC")==0){
+          /* ADDC(a,b[,cin]) — unsigned wrap add; sets CARRY 0/1; returns sum */
+          unsigned long ua = (unsigned long)a;
+          unsigned long ub = (unsigned long)b;
+          unsigned long uc = (unsigned long)(c != 0 ? 1 : 0);
+          unsigned long s = ua + ub;
+          int c1 = (s < ua) ? 1 : 0;
+          unsigned long r = s + uc;
+          int c2 = (r < s) ? 1 : 0;
+          int carry = c1 | c2;
+          var_set_num(vm, "CARRY", carry);
+          var_set_num(vm, "CY", carry);
+          return (long)r;
+        }
+        if (strcmp(name,"SUBB")==0 || strcmp(name,"SBB")==0){
+          /* SUBB(a,b[,bin]) — unsigned wrap sub; sets BORROW 0/1; returns diff */
+          unsigned long ua = (unsigned long)a;
+          unsigned long ub = (unsigned long)b;
+          unsigned long uin = (unsigned long)(c != 0 ? 1 : 0);
+          int b1 = (ua < ub) ? 1 : 0;
+          unsigned long d = ua - ub;
+          int b2 = (d < uin) ? 1 : 0;
+          unsigned long r = d - uin;
+          int borrow = b1 | b2;
+          var_set_num(vm, "BORROW", borrow);
+          var_set_num(vm, "BW", borrow);
+          var_set_num(vm, "CARRY", borrow); /* alias: borrow as carry-in chain */
+          return (long)r;
+        }
+        if (strcmp(name,"DIVMOD")==0 || strcmp(name,"DIVREM")==0){
+          /* DIVMOD(a,b) — return quot; set QUOT REM; b==0 → 0/0 OK soft */
+          if (b == 0){
+            var_set_num(vm, "QUOT", 0);
+            var_set_num(vm, "REM", 0);
+            var_set_num(vm, "OK", 0);
+            return 0;
+          }
+          long q = a / b;
+          long r = a % b;
+          var_set_num(vm, "QUOT", q);
+          var_set_num(vm, "REM", r);
+          var_set_num(vm, "OK", 1);
+          return q;
         }
         if (strcmp(name,"BTEST")==0 || strcmp(name,"BITTEST")==0){
           /* BTEST(val, k) → 1 if bit k set (k clamped 0..63) */
@@ -4802,6 +4850,73 @@ static int parse_form(VM *vm, Lex *L){
     long r = (long)(((unsigned long)a & um) | ((unsigned long)b & ~um));
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 multiword stack: SADDC SSUBB SDIVMOD (cin/bin from CARRY/BORROW) */
+  if (kw(&L->cur,"SADDC")||kw(&L->cur,"SADC")||kw(&L->cur,"STACKADDC")||
+      kw(&L->cur,"SSUBB")||kw(&L->cur,"SSBB")||kw(&L->cur,"STACKSUBB")){
+    /* SADDC: a b → sum  using CARRY as cin, then write new CARRY
+       SSUBB: a b → diff using BORROW (or CARRY) as bin */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    int is_sub = (strcmp(op,"SSUBB")==0 || strcmp(op,"SSBB")==0 ||
+                  strcmp(op,"STACKSUBB")==0);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, is_sub ? "BORROW" : "CARRY", 0);
+      if (!vc && is_sub) vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a;
+    unsigned long ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)cin;
+    long r;
+    if (!is_sub){
+      unsigned long s = ua + ub;
+      int c1 = (s < ua) ? 1 : 0;
+      unsigned long sum = s + uc;
+      int c2 = (sum < s) ? 1 : 0;
+      int carry = c1 | c2;
+      r = (long)sum;
+      var_set_num(vm,"CARRY",carry); var_set_num(vm,"CY",carry);
+    } else {
+      int b1 = (ua < ub) ? 1 : 0;
+      unsigned long d = ua - ub;
+      int b2 = (d < uc) ? 1 : 0;
+      unsigned long diff = d - uc;
+      int borrow = b1 | b2;
+      r = (long)diff;
+      var_set_num(vm,"BORROW",borrow); var_set_num(vm,"BW",borrow);
+      var_set_num(vm,"CARRY",borrow);
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVMOD")||kw(&L->cur,"SDIVREM")||kw(&L->cur,"STACKDIVMOD")){
+    /* a b → rem quot  (TOS=quot, under=rem); sets QUOT REM */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (b == 0){
+      var_set_num(vm,"QUOT",0); var_set_num(vm,"REM",0);
+      var_set_num(vm,"OK",0);
+      vm->stack[vm->sp++] = 0;
+      vm->stack[vm->sp++] = 0;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      bump(vm); return 1;
+    }
+    long q = a / b;
+    long r = a % b;
+    var_set_num(vm,"QUOT",q); var_set_num(vm,"REM",r);
+    vm->stack[vm->sp++] = r;
+    vm->stack[vm->sp++] = q;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",q); vm->last_n=q;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-0/2 muldiv + byteswap stack: SUDIV SUMOD SMULHI SUMULHI SBSWAP16 SBSWAP64 */
