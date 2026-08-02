@@ -1084,6 +1084,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BYTE")==0 || strcmp(name,"HIBYTE")==0 ||
         strcmp(name,"LOBYTE")==0 ||
         strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0 ||
+        /* digit-1 data path: word reverse / parity / nibble */
+        strcmp(name,"BSWAP")==0 || strcmp(name,"BSWAP32")==0 ||
+        strcmp(name,"BITREV")==0 || strcmp(name,"REVBITS")==0 ||
+        strcmp(name,"PARITY")==0 ||
+        strcmp(name,"NIBBLE")==0 || strcmp(name,"NIB")==0 ||
         /* digit-2 math ext: combinatorics + square + floor div */
         strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
         strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
@@ -1493,6 +1498,35 @@ static long parse_prim(VM *vm, Lex *L){
           return (long)((unsigned long)a & 0xFFul);
         if (strcmp(name,"HIBYTE")==0)
           return (long)(((unsigned long)a >> 8) & 0xFFul);
+        /* digit-1 word data path: BSWAP BITREV PARITY NIBBLE */
+        if (strcmp(name,"BSWAP")==0 || strcmp(name,"BSWAP32")==0){
+          unsigned int w = (unsigned int)a;
+          w = ((w & 0x000000FFu) << 24) | ((w & 0x0000FF00u) << 8) |
+              ((w & 0x00FF0000u) >> 8) | ((w & 0xFF000000u) >> 24);
+          return (long)w;
+        }
+        if (strcmp(name,"BITREV")==0 || strcmp(name,"REVBITS")==0){
+          unsigned int w = (unsigned int)a;
+          unsigned int r = 0;
+          for (int i = 0; i < 32; i++){
+            r = (r << 1) | (w & 1u);
+            w >>= 1;
+          }
+          return (long)r;
+        }
+        if (strcmp(name,"PARITY")==0){
+          unsigned long u = (unsigned long)a;
+          int n = 0;
+          while (u){ n ^= (int)(u & 1u); u >>= 1; }
+          return (long)n;
+        }
+        if (strcmp(name,"NIBBLE")==0 || strcmp(name,"NIB")==0){
+          /* NIBBLE(val, i) — i-th 4-bit nibble little-endian (0=LSB) */
+          long i = b;
+          if (i < 0) i = 0;
+          if (i > 15) i = 15;
+          return (long)(((unsigned long)a >> (unsigned)(i * 4)) & 0xFul);
+        }
         if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
           /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
           if (b == 0) return 0;
@@ -3374,6 +3408,55 @@ static int parse_form(VM *vm, Lex *L){
     unsigned int h = (unsigned int)hi & 0xFFFFu;
     unsigned int l = (unsigned int)lo & 0xFFFFu;
     long r = (long)((h << 16) | l);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 word data path: SBSWAP SBITREV SPARITY SNIBBLE */
+  if (kw(&L->cur,"SBSWAP")||kw(&L->cur,"SBSWAP32")||kw(&L->cur,"STACKBSWAP")||
+      kw(&L->cur,"SBITREV")||kw(&L->cur,"SREVBITS")||kw(&L->cur,"STACKBITREV")||
+      kw(&L->cur,"SPARITY")||kw(&L->cur,"STACKPARITY")||kw(&L->cur,"SPAR")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SBSWAP")==0 || strcmp(op,"SBSWAP32")==0 || strcmp(op,"STACKBSWAP")==0){
+      unsigned int w = (unsigned int)a;
+      w = ((w & 0x000000FFu) << 24) | ((w & 0x0000FF00u) << 8) |
+          ((w & 0x00FF0000u) >> 8) | ((w & 0xFF000000u) >> 24);
+      r = (long)w;
+    } else if (strcmp(op,"SBITREV")==0 || strcmp(op,"SREVBITS")==0 ||
+               strcmp(op,"STACKBITREV")==0){
+      unsigned int w = (unsigned int)a;
+      unsigned int rv = 0;
+      for (int i = 0; i < 32; i++){
+        rv = (rv << 1) | (w & 1u);
+        w >>= 1;
+      }
+      r = (long)rv;
+    } else {
+      /* SPARITY / STACKPARITY / SPAR */
+      unsigned long u = (unsigned long)a;
+      int n = 0;
+      while (u){ n ^= (int)(u & 1u); u >>= 1; }
+      r = (long)n;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNIB")||kw(&L->cur,"SNIBBLE")||kw(&L->cur,"STACKNIBBLE")||
+      kw(&L->cur,"SGETNIB")){
+    /* a i → i-th little-endian nibble of a (i clamped 0..15) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i > 15) i = 15;
+    long r = (long)(((unsigned long)a >> (unsigned)(i * 4)) & 0xFul);
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
