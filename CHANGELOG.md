@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.92-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy / flow / RNG dual forms (stack-imm RAND + energy drain + stack ENERGYFLOW).
+
+### Language
+- `SRANDN`/`RANDN`/`SRNGN` n — push rand in [0,n) (stack-imm dual of SRAND)
+- `ENERGYSUB`/`SUBENERGY`/`DRAIN`/`SENRN` id n — drain energy plane (complete set/add/sub)
+- `SEFLOW`/`SENERGYFLOW` — hops from TOS · `SEFLOWN`/`SFLWN` n — immediate hops
+- Proof `115_srandn_energysub.cubalc`
+
+### Prior
+See 1.12.91-universal.
+
 ## 1.12.91-universal — 2026-08-03
 
 ### Direction
