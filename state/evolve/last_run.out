@@ -6,4 +6,4 @@
 # ok
 # ok
 earth04_rock 1 3
-{"ok":true,"cmd":"run","file":"/tmp/cubalc-upstream/programs/science/earth/04_rock_cycle.cubalc","stmts":19,"asserts_ok":3,"asserts_fail":0,"n":4,"unity":1.000,"language":"CubalC","version":"1.12.8-universal","err":""}
+{"ok":true,"cmd":"run","file":"/tmp/cubalc-upstream/programs/science/earth/04_rock_cycle.cubalc","stmts":19,"asserts_ok":3,"asserts_fail":0,"n":4,"unity":1.000,"language":"CubalC","version":"1.12.78-universal","err":""}

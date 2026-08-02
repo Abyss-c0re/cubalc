@@ -4218,6 +4218,28 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  if (kw(&L->cur,"SKEEP")||kw(&L->cur,"KEEPN")||kw(&L->cur,"STACKKEEP")||
+      kw(&L->cur,"KEEP")||kw(&L->cur,"STAYN")){
+    /* SKEEP n — keep only top n items; drop everything under (n clamped) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n > (long)vm->sp) n = (long)vm->sp;
+    if (n < (long)vm->sp){
+      int base = vm->sp - (int)n;
+      for (int i = 0; i < (int)n; i++)
+        vm->stack[i] = vm->stack[base + i];
+      vm->sp = (int)n;
+    }
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"PICK")||kw(&L->cur,"STACKPICK")){
     /* PICK n — copy n-th under top (0=top) onto stack; depth from TOS */
     lex_next(L);

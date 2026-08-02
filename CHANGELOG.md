@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.12.79-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → stack structure: keep-top-N (finish SINSERT/UNROLL plane).
+
+### Language
+- `SKEEP`/`KEEPN`/`KEEP` n — keep only top n items; drop under
+- Proof `102_skeep.cubalc`
+
+### Prior
+See 1.12.78-universal.
+
 ## 1.12.78-universal — 2026-08-02
 
 ### Direction
