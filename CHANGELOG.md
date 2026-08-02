@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.5-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → data plane (integer cells + stack).
+
+### Language
+- Cells: `CELLSET`/`SLOTSET` · `CELLGET` · `CELL(i)`/`SLOT(i)` · `SWAPCELL` · `CLEARCELLS` · `CELLS`
+- Stack: `PUSH` · `POP` [var] · `PEEK` · `CLEARSTACK` · `SP`/`STACKLEN`
+- Proof `18_data_cells_stack.cubalc`
+
+### Prior
+See 1.11.4-universal.
+
 ## 1.11.4-universal — 2026-08-02
 
 ### Direction

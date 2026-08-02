@@ -33,6 +33,8 @@ typedef struct {
   size_t len;
 } FnDef;
 
+#define CUBALC_CELL_N   64
+#define CUBALC_STACK_N  32
 typedef struct {
   cubalc_chain ch;
   Var vars[128];
@@ -53,6 +55,10 @@ typedef struct {
   int last_code;
   long last_n;
   char include_base[512];
+  /* digit-1 data plane: integer cells + stack */
+  long cells[CUBALC_CELL_N];
+  long stack[CUBALC_STACK_N];
+  int sp; /* stack depth 0..CUBALC_STACK_N */
 } VM;
 
 static void fail(VM *vm, const char *msg) {
@@ -967,6 +973,8 @@ static long parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"OK")==0){ Var *vv=var_get(vm,"OK",0); return vv?vv->val:0; }
     if (strcmp(name,"EXIT")==0){ Var *vv=var_get(vm,"EXIT",0); return vv?vv->val:0; }
     if (strcmp(name,"LAST_N")==0){ Var *vn=var_get(vm,"LAST_N",0); if(vn) return vn->val; return vm->last_n; }
+    if (strcmp(name,"SP")==0 || strcmp(name,"STACKLEN")==0) return (long)vm->sp;
+    if (strcmp(name,"CELLS")==0) return (long)CUBALC_CELL_N;
     if (strcmp(name,"STRLEN")==0){
       if (L->cur.kind==TK_LPAREN){ lex_next(L);
         long ln=0;
@@ -1026,7 +1034,10 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"HI16")==0 || strcmp(name,"LO16")==0 ||
         strcmp(name,"HIWORD")==0 || strcmp(name,"LOWORD")==0 ||
         strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0 ||
-        strcmp(name,"NEG")==0){
+        strcmp(name,"NEG")==0 ||
+        strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0 ||
+        strcmp(name,"PEEK")==0 || strcmp(name,"STACKLEN")==0 ||
+        strcmp(name,"SP")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1172,8 +1183,26 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0)
           return a ? b : c;
         if (strcmp(name,"NEG")==0) return -a;
+        if (strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0){
+          if (a < 0) a = 0;
+          if (a >= CUBALC_CELL_N) a = CUBALC_CELL_N - 1;
+          return vm->cells[(int)a];
+        }
+        if (strcmp(name,"PEEK")==0){
+          if (vm->sp <= 0) return 0;
+          return vm->stack[vm->sp - 1];
+        }
+        if (strcmp(name,"STACKLEN")==0 || strcmp(name,"SP")==0)
+          return (long)vm->sp;
         return 0;
       }
+      /* zero-arg: PEEK() STACKLEN() SP() */
+      if (strcmp(name,"PEEK")==0){
+        if (vm->sp <= 0) return 0;
+        return vm->stack[vm->sp - 1];
+      }
+      if (strcmp(name,"STACKLEN")==0 || strcmp(name,"SP")==0)
+        return (long)vm->sp;
     }
     if (strcmp(name,"SET")==0 || strcmp(name,"POPCOUNT")==0 ||
         strcmp(name,"ENERGY")==0 || strcmp(name,"DIGIT")==0 ||
@@ -2076,6 +2105,99 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, name, v);
     bump(vm); return 1;
   }
+  /* ---- digit-1 data plane: cells + stack ---- */
+  if (kw(&L->cur,"CELLSET")||kw(&L->cur,"SLOTSET")||kw(&L->cur,"STORE")){
+    lex_next(L);
+    long i = parse_expr(vm,L);
+    long v = 0;
+    if (L->cur.kind==TK_EQ){ lex_next(L); v = parse_expr(vm,L); }
+    else if (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF)
+      v = parse_expr(vm,L);
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    vm->cells[(int)i] = v;
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CELLGET")||kw(&L->cur,"SLOTGET")||kw(&L->cur,"LOAD")){
+    lex_next(L);
+    long i = parse_expr(vm,L);
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i];
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SWAPCELL")||kw(&L->cur,"CELLSWAP")||kw(&L->cur,"SWAPSLOT")){
+    lex_next(L);
+    long i = parse_expr(vm,L);
+    long j = parse_expr(vm,L);
+    if (i < 0) i = 0; if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (j < 0) j = 0; if (j >= CUBALC_CELL_N) j = CUBALC_CELL_N - 1;
+    long t = vm->cells[(int)i];
+    vm->cells[(int)i] = vm->cells[(int)j];
+    vm->cells[(int)j] = t;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
+    lex_next(L);
+    memset(vm->cells, 0, sizeof vm->cells);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PUSH")){
+    lex_next(L);
+    long v = parse_expr(vm,L);
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = v;
+    var_set_num(vm, "SP", vm->sp);
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"POP")){
+    lex_next(L);
+    if (vm->sp <= 0){
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      bump(vm); return 1;
+    }
+    long v = vm->stack[--vm->sp];
+    var_set_num(vm, "SP", vm->sp);
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    /* optional: POP name → store into var */
+    if (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+        !kw(&L->cur,"PUSH") && !kw(&L->cur,"POP") && !kw(&L->cur,"PRINT") &&
+        !kw(&L->cur,"END") && !kw(&L->cur,"ELSE")){
+      char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+      var_set_num(vm, name, v);
+    }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PEEK")){
+    lex_next(L);
+    long v = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", vm->sp > 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLEARSTACK")||kw(&L->cur,"STACKCLEAR")||kw(&L->cur,"DROPALL")){
+    lex_next(L);
+    vm->sp = 0;
+    var_set_num(vm, "SP", 0);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"SETBIT")){
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"SETBIT cube i on"); return -1; }
@@ -2790,6 +2912,7 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   cubalc_async_init(0);
   cubalc_chain_init(&vm.ch);
   vm.last_str[0]=0; vm.last_code=0; vm.last_n=0;
+  vm.sp=0;
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
   if (out){ memset(out,0,sizeof*out); out->ok=1; }

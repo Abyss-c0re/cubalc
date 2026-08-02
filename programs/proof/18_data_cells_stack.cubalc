@@ -1,0 +1,68 @@
+# Proof 18 — data plane (digit 1): integer cells + stack
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# cells
+CELLSET 0 10
+CELLSET 1 20
+CELLSET 2 30
+ASSERT CELL(0) == 10
+ASSERT CELL(1) == 20
+ASSERT SLOT(2) == 30
+CELLGET 1
+ASSERT LAST_N == 20
+
+# swap cells
+SWAPCELL 0 1
+ASSERT CELL(0) == 20
+ASSERT CELL(1) == 10
+
+# stack push/pop/peek
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+ASSERT SP == 3
+ASSERT STACKLEN == 3
+PEEK
+ASSERT LAST_N == 3
+POP x
+ASSERT x == 3
+ASSERT SP == 2
+POP y
+ASSERT y == 2
+POP z
+ASSERT z == 1
+ASSERT SP == 0
+POP
+ASSERT OK == 0
+
+# stack sum via loop
+CLEARSTACK
+LET sum = 0
+FOR i = 1 TO 5
+  PUSH i
+END
+ASSERT SP == 5
+WHILE SP > 0
+  POP v
+  LET sum = sum + v
+END
+ASSERT sum == 15
+
+# cells as small table
+CLEARCELLS
+FOR i = 0 TO 9
+  CELLSET i i * i
+END
+ASSERT CELL(0) == 0
+ASSERT CELL(3) == 9
+ASSERT CELL(9) == 81
+ASSERT CELLS == 64
+ASSERT OK == 1
+
+CUBE d ROLE matrix PROTON 1
+FOLDBITS d "0101010101010101010101010101010101010101010101010101010101010101"
+ASSERT DIGIT(d) >= 0
+
+PRINT "proof18_data_cells" CELL(3) sum SP DIGIT(d)
