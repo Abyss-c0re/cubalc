@@ -2815,6 +2815,72 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack combinators ext: QDUP NDUP SREVERSE */
+  if (kw(&L->cur,"QDUP")||kw(&L->cur,"DUPNZ")||kw(&L->cur,"DUPIF")||
+      kw(&L->cur,"DUPNONZERO")){
+    /* QDUP — duplicate TOS only if nonzero (Forth ?DUP) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1];
+    if (v != 0){
+      if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = v;
+    }
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NDUP")||kw(&L->cur,"DUPN")||kw(&L->cur,"STACKNDUP")){
+    /* NDUP n — duplicate top n items (append copy of top n) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n == 0){ var_set_num(vm,"OK",1); bump(vm); return 1; }
+    if (vm->sp < n){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + n > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    int base = vm->sp - (int)n;
+    long last = 0;
+    for (int i = 0; i < (int)n; i++){
+      last = vm->stack[base + i];
+      vm->stack[vm->sp++] = last;
+    }
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SREVERSE")||kw(&L->cur,"REVSTACK")||kw(&L->cur,"STACKREV")||
+      kw(&L->cur,"SREVST")){
+    /* SREVERSE [n] — reverse top n items (omit n → whole stack) */
+    lex_next(L);
+    int have_n = 0;
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE") &&
+         !kw(&L->cur,"PUSH") && !kw(&L->cur,"POP") && !kw(&L->cur,"CLEARSTACK") &&
+         !kw(&L->cur,"PEEK") && !kw(&L->cur,"DROP") && !kw(&L->cur,"DUP"))){
+      n = parse_expr(vm,L);
+      have_n = 1;
+    }
+    if (!have_n) n = (long)vm->sp;
+    if (n < 0) n = 0;
+    if (have_n && n > (long)vm->sp){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n > 1){
+      int lo = vm->sp - (int)n;
+      int hi = vm->sp - 1;
+      while (lo < hi){
+        long t = vm->stack[lo];
+        vm->stack[lo] = vm->stack[hi];
+        vm->stack[hi] = t;
+        lo++; hi--;
+      }
+    }
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack depth plane: NIP TUCK 2DUP 2DROP 2SWAP 2OVER 2ROT 2NIP ROLL DEPTH */
   if (kw(&L->cur,"NIP")||kw(&L->cur,"STACKNIP")){
     /* a b → b  (drop under top) */
