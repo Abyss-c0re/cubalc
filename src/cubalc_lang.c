@@ -1056,6 +1056,10 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"HI16")==0 || strcmp(name,"LO16")==0 ||
         strcmp(name,"HIWORD")==0 || strcmp(name,"LOWORD")==0 ||
         strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0 ||
+        /* digit-1 select/clamp family: range predicates + median */
+        strcmp(name,"BETWEEN")==0 || strcmp(name,"INRANGE")==0 ||
+        strcmp(name,"WITHIN")==0 ||
+        strcmp(name,"MEDIAN")==0 || strcmp(name,"MID3")==0 ||
         strcmp(name,"NEG")==0 ||
         strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0 ||
         strcmp(name,"PEEK")==0 || strcmp(name,"STACKLEN")==0 ||
@@ -1259,6 +1263,25 @@ static long parse_prim(VM *vm, Lex *L){
         /* ISEL(cond, then, else) — expression ternary (universal control in expr) */
         if (strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0)
           return a ? b : c;
+        /* digit-1 select/clamp: WITHIN half-open, BETWEEN inclusive, MEDIAN of 3 */
+        if (strcmp(name,"WITHIN")==0){
+          /* WITHIN(n, lo, hi) → 1 if lo <= n < hi (Forth-style) */
+          return (a >= b && a < c) ? 1 : 0;
+        }
+        if (strcmp(name,"BETWEEN")==0 || strcmp(name,"INRANGE")==0){
+          /* BETWEEN(n, lo, hi) → 1 if n in [lo,hi] (swap lo/hi if inverted) */
+          long lo = b, hi = c;
+          if (hi < lo){ long t = lo; lo = hi; hi = t; }
+          return (a >= lo && a <= hi) ? 1 : 0;
+        }
+        if (strcmp(name,"MEDIAN")==0 || strcmp(name,"MID3")==0){
+          /* MEDIAN(a,b,c) — middle of three (order-statistic select) */
+          long x = a, y = b, z = c;
+          if (x > y){ long t = x; x = y; y = t; }
+          if (y > z){ long t = y; y = z; z = t; }
+          if (x > y){ long t = x; x = y; y = t; }
+          return y;
+        }
         if (strcmp(name,"NEG")==0) return -a;
         if (strcmp(name,"CELL")==0 || strcmp(name,"SLOT")==0){
           if (a < 0) a = 0;
@@ -4109,6 +4132,36 @@ static int parse_form(VM *vm, Lex *L){
     long r = n;
     if (r < lo) r = lo;
     if (r > hi) r = hi;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 select/clamp stack: SBETWEEN SINRANGE SMEDIAN */
+  if (kw(&L->cur,"SBETWEEN")||kw(&L->cur,"SINRANGE")||kw(&L->cur,"STACKBETWEEN")||
+      kw(&L->cur,"STACKINRANGE")){
+    /* n lo hi → 1 if n in [lo,hi] inclusive (swap lo/hi if needed) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long r = (n >= lo && n <= hi) ? 1 : 0;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMEDIAN")||kw(&L->cur,"SMID3")||kw(&L->cur,"STACKMEDIAN")){
+    /* a b c → median of three */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long z = vm->stack[--vm->sp];
+    long y = vm->stack[--vm->sp];
+    long x = vm->stack[--vm->sp];
+    if (x > y){ long t=x; x=y; y=t; }
+    if (y > z){ long t=y; y=z; z=t; }
+    if (x > y){ long t=x; x=y; y=t; }
+    long r = y;
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
