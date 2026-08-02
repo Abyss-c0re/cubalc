@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.110-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → primes/powers: perfect power, prime power, nth prime.
+
+### Language
+- `ISPOWER`/`PERFPOW`(n) · `SISPOWER` — perfect power b^e (e≥2)
+- `ISPRIMEPOWER`/`IPP`(n) · `SIPP` — form p^k
+- `NTHPRIME`/`PRIMEN`(k) · `SNTHPRIME` — k-th prime (1→2)
+- Proof `133_ispower_nthprime.cubalc`
+
+### Prior
+See 1.12.109-universal.
+
 ## 1.12.109-universal — 2026-08-03
 
 ### Direction

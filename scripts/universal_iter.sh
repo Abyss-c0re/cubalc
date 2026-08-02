@@ -113,7 +113,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             129_sscan_sdiff \
             130_sandcell_sne \
             131_sorder_carmichael \
-            132_sqpart_scrt; do
+            132_sqpart_scrt \
+            133_ispower_nthprime; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

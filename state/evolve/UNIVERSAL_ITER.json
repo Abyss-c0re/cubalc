@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T02:13:33+0300",
-  "iter": 194,
+  "ts": "2026-08-03T02:19:27+0300",
+  "iter": 195,
   "algocube_digit": 2,
-  "version": "1.12.109-universal",
-  "pass": 147,
+  "version": "1.12.110-universal",
+  "pass": 148,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SQPART ISPRIMITIVE SCRT SSQPART SIPRIMITIVE",
-  "proof": "programs/proof/132_sqpart_scrt.cubalc"
+  "delta": "ISPOWER ISPRIMEPOWER NTHPRIME SISPOWER SIPP SNTHPRIME",
+  "proof": "programs/proof/133_ispower_nthprime.cubalc"
 }

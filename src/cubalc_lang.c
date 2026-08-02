@@ -1235,6 +1235,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"MAXSQ")==0 ||
         strcmp(name,"ISPRIMITIVE")==0 || strcmp(name,"ISPRROOT")==0 ||
         strcmp(name,"PRIMROOTP")==0 ||
+        /* digit-2 primes/powers: ISPOWER ISPRIMEPOWER NTHPRIME */
+        strcmp(name,"ISPOWER")==0 || strcmp(name,"PERFPOW")==0 ||
+        strcmp(name,"ISPOW")==0 ||
+        strcmp(name,"ISPRIMEPOWER")==0 || strcmp(name,"IPP")==0 ||
+        strcmp(name,"PRIMEPOWERP")==0 ||
+        strcmp(name,"NTHPRIME")==0 || strcmp(name,"PRIMEN")==0 ||
+        strcmp(name,"PRIMEK")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2622,6 +2629,86 @@ static long parse_prim(VM *vm, Lex *L){
             if (r == 1) return (k == phi) ? 1 : 0;
           }
           return 0;
+        }
+        if (strcmp(name,"ISPOWER")==0 || strcmp(name,"PERFPOW")==0 ||
+            strcmp(name,"ISPOW")==0){
+          /* ISPOWER(n) — 1 if n = b^e for some e>=2, b>0; n<=1 → 0 */
+          long n = a;
+          if (n <= 1) return 0;
+          /* try exponents 2..62 */
+          for (long e = 2; e <= 62; e++){
+            /* binary search root: largest r with r^e <= n */
+            long lo = 1, hi = n, ans = 1;
+            if (e == 2){
+              hi = n;
+              if (hi > 3037000499L) hi = 3037000499L;
+            } else {
+              /* rough upper bound */
+              hi = n;
+              if (e >= 3 && hi > 1000000L) hi = 1000000L;
+              if (e >= 10 && hi > 10000L) hi = 10000L;
+              if (e >= 20 && hi > 100L) hi = 100L;
+              if (e >= 40 && hi > 4L) hi = 4L;
+            }
+            while (lo <= hi){
+              long mid = lo + (hi - lo) / 2;
+              /* compute mid^e with overflow guard */
+              long p = 1;
+              int ov = 0;
+              for (long i = 0; i < e; i++){
+                if (mid != 0 && p > n / mid){ ov = 1; break; }
+                p *= mid;
+              }
+              if (ov || p > n) hi = mid - 1;
+              else { ans = mid; lo = mid + 1; }
+            }
+            long p = 1, ov = 0;
+            for (long i = 0; i < e; i++){
+              if (ans != 0 && p > n / ans){ ov = 1; break; }
+              p *= ans;
+            }
+            if (!ov && p == n && ans > 1) return 1;
+          }
+          return 0;
+        }
+        if (strcmp(name,"ISPRIMEPOWER")==0 || strcmp(name,"IPP")==0 ||
+            strcmp(name,"PRIMEPOWERP")==0){
+          /* ISPRIMEPOWER(n) — 1 if n = p^k for prime p, k>=1 */
+          long n = a < 0 ? -a : a;
+          if (n <= 1) return 0;
+          if ((n & 1L) == 0){
+            while ((n & 1L) == 0) n >>= 1;
+            return n == 1 ? 1 : 0;
+          }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){
+              while ((n % p) == 0) n /= p;
+              return n == 1 ? 1 : 0;
+            }
+          }
+          return 1; /* n itself prime */
+        }
+        if (strcmp(name,"NTHPRIME")==0 || strcmp(name,"PRIMEN")==0 ||
+            strcmp(name,"PRIMEK")==0){
+          /* NTHPRIME(k) — k-th prime (1-indexed: 1→2); k<=0 → 0; cap k=10000 */
+          long k = a;
+          if (k <= 0) return 0;
+          if (k > 10000) k = 10000;
+          if (k == 1) return 2;
+          long found = 1; /* already counted 2 */
+          for (long n = 3; ; n += 2){
+            int prime = 1;
+            if ((n % 3) == 0){ if (n != 3) prime = 0; }
+            else {
+              for (long i = 5; i * i <= n; i += 6){
+                if ((n % i) == 0 || (n % (i + 2)) == 0){ prime = 0; break; }
+              }
+            }
+            if (prime){
+              found++;
+              if (found == k) return n;
+            }
+          }
         }
         /* digit-0 foundation bitfields */
         if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
@@ -6474,6 +6561,104 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 primes/powers stack: SISPOWER · SIPP · SNTHPRIME */
+  if (kw(&L->cur,"SISPOWER")||kw(&L->cur,"SPERFPOW")||kw(&L->cur,"SISPOW")||
+      kw(&L->cur,"STACKISPOWER")||kw(&L->cur,"SISPOWERP")){
+    /* n → 1 if perfect power b^e, e>=2 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n > 1){
+      for (long e = 2; e <= 62 && !r; e++){
+        long lo = 1, hi = n, ans = 1;
+        if (e == 2){ if (hi > 3037000499L) hi = 3037000499L; }
+        else {
+          if (e >= 3 && hi > 1000000L) hi = 1000000L;
+          if (e >= 10 && hi > 10000L) hi = 10000L;
+          if (e >= 20 && hi > 100L) hi = 100L;
+          if (e >= 40 && hi > 4L) hi = 4L;
+        }
+        while (lo <= hi){
+          long mid = lo + (hi - lo) / 2;
+          long p = 1; int ov = 0;
+          for (long i = 0; i < e; i++){
+            if (mid != 0 && p > n / mid){ ov = 1; break; }
+            p *= mid;
+          }
+          if (ov || p > n) hi = mid - 1;
+          else { ans = mid; lo = mid + 1; }
+        }
+        long p = 1; int ov = 0;
+        for (long i = 0; i < e; i++){
+          if (ans != 0 && p > n / ans){ ov = 1; break; }
+          p *= ans;
+        }
+        if (!ov && p == n && ans > 1) r = 1;
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SIPP")||kw(&L->cur,"SISPRIMEPOWER")||kw(&L->cur,"SPRIMEPOWERP")||
+      kw(&L->cur,"STACKIPP")||kw(&L->cur,"SIPOWP")){
+    /* n → 1 if prime power p^k */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long n = a < 0 ? -a : a;
+    long r = 0;
+    if (n > 1){
+      if ((n & 1L) == 0){
+        while ((n & 1L) == 0) n >>= 1;
+        r = (n == 1) ? 1 : 0;
+      } else {
+        r = 1;
+        for (long p = 3; p * p <= n; p += 2){
+          if ((n % p) == 0){
+            while ((n % p) == 0) n /= p;
+            r = (n == 1) ? 1 : 0;
+            break;
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNTHPRIME")||kw(&L->cur,"SPRIMEN")||kw(&L->cur,"SPRIMEK")||
+      kw(&L->cur,"STACKNTHPRIME")||kw(&L->cur,"SNPRIME")){
+    /* k → k-th prime (1→2); k<=0 → 0; cap 10000 */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (k > 0){
+      if (k > 10000) k = 10000;
+      if (k == 1) r = 2;
+      else {
+        long found = 1;
+        for (long n = 3; ; n += 2){
+          int prime = 1;
+          if ((n % 3) == 0){ if (n != 3) prime = 0; }
+          else {
+            for (long i = 5; i * i <= n; i += 6){
+              if ((n % i) == 0 || (n % (i + 2)) == 0){ prime = 0; break; }
+            }
+          }
+          if (prime){
+            found++;
+            if (found == k){ r = n; break; }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack combinatorics + add/sub mod: SBINOM SPERM SADDMOD SSUBMOD */
   if (kw(&L->cur,"SBINOM")||kw(&L->cur,"SCHOOSE")||kw(&L->cur,"STACKBINOM")||
