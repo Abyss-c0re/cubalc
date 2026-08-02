@@ -1,0 +1,65 @@
+# Proof 96 — digit-9 COP: TRANSBITS + RUNSBITS + MASKPOP
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+# pattern: 1,1,0,0,1,1,0,1 then zeros — 5 flips (incl 1→0 after bit 7)
+SETBIT m 0 1
+SETBIT m 1 1
+SETBIT m 4 1
+SETBIT m 5 1
+SETBIT m 7 1
+
+TRANSBITS m
+ASSERT LAST_N == 5
+BITTRANS m
+ASSERT LAST_N == 5
+
+RUNSBITS m
+ASSERT LAST_N == 3
+ONERUNS m
+ASSERT LAST_N == 3
+
+# all zeros → 0 transitions, 0 runs
+CLEARBITS m
+TRANSBITS m
+ASSERT LAST_N == 0
+RUNSBITS m
+ASSERT LAST_N == 0
+
+# single solid run of 8 ones: flips at entry from -none- and exit 1→0 after bit7
+FILLRANGE m 0 7
+# bit7=1, bit8=0 → 1 transition only
+TRANSBITS m
+ASSERT LAST_N == 1
+RUNSBITS m
+ASSERT LAST_N == 1
+
+# MASKPOP: low 8 all ones
+MASKPOP m 0x0F
+ASSERT LAST_N == 4
+MASKPOP m 0xAA
+ASSERT LAST_N == 4
+MASKPOP m 0x00
+ASSERT LAST_N == 0
+CLEARBITS m
+SETBIT m 1 1
+SETBIT m 3 1
+MASKPOP m 0x0A
+ASSERT LAST_N == 2
+
+# soft fail
+TRANSBITS nosuch
+ASSERT OK == 0
+RUNSBITS nosuch
+ASSERT OK == 0
+MASKPOP nosuch 1
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof96_trans_runs_mask" LAST_N SET

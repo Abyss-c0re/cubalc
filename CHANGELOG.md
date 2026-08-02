@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.73-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → COP metrics: transitions, one-runs, masked popcount.
+
+### Language
+- `TRANSBITS`/`BITTRANS` cube → adjacent flip count
+- `RUNSBITS`/`ONERUNS` cube → number of 1-runs
+- `MASKPOP`/`POPMASK` cube mask → popcount under mask ones
+- Proof `96_trans_runs_mask.cubalc`
+
+### Prior
+See 1.12.72-universal.
+
 ## 1.12.72-universal — 2026-08-02
 
 ### Direction
