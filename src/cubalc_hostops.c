@@ -394,7 +394,7 @@ static void json_esc(FILE *f, const char *s) {
 }
 
 static int resolve_local_model_id(char *model, size_t n) {
-  if (model[0] && strcmp(model, "local") != 0 && strcmp(model, "llama") != 0)
+  if (model[0] && strcmp(model, "local") != 0)
     return 0;
   FILE *mf = popen("curl -sS -m 3 http://127.0.0.1:1212/v1/models 2>/dev/null", "r");
   if (!mf) { if (!model[0]) snprintf(model, n, "local"); return 0; }

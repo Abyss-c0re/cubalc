@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stimulate nanobot hive behaviour on LizardTech (Quest free XR way).
-# Law: BrainCube/nanobot I/O → CubalC SMX → cubalc_viz_frame → LOVR → LizardTech
+# Law: BrainCube/nanobot I/O → CubalC SMX → cubalc_viz_frame → viz → LizardTech
 # Devices free · HOLD_FLASH · no forced atom · no HTTP on SMX hot path
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -59,7 +59,7 @@ vf["intent"] = {
     "lizardtech_way": True,
     "hold_flash": True,
 }
-# HUD for LOVR / helmet
+# HUD for viz / helmet
 n = vf.get("n_cubes") or len(vf.get("cubes") or [])
 u = vf.get("unity") or 0
 dig = None
@@ -69,7 +69,7 @@ for c in vf.get("cubes") or []:
         if c.get("id") == "lizard":
             break
 vf["hud"] = f"LIZARD STIM · nanobot hive · cubes={n} · unity={u:.2f} · dig={dig} · SMX2 · free way"
-# publish both names LOVR prefers
+# publish both names viz prefers
 pc.mkdir(parents=True, exist_ok=True)
 for name in ("cubalc_viz_frame.json", "viz_frame.json"):
     out = pc / name
@@ -92,7 +92,7 @@ if curl -fsS -m 1 http://127.0.0.1:17333/health >/dev/null 2>&1; then
     -d '{"from":"cubalc","type":"lizard_stim","target":"LizardTech","hold_flash":1}' || true
   echo
 else
-  echo "# [2] cube_way :17333 down — viz still published for LOVR/WiVRn guest"
+  echo "# [2] cube_way :17333 down — viz still published for viz stream guest"
 fi
 
 # 4) Optional: dual nanobot offline + braincube tick feeding same stim law
@@ -146,7 +146,7 @@ else
   echo "# [3] skip live nanobot binary"
 fi
 
-# 5) Plate for Commander / LOVR
+# 5) Plate for Commander / viz
 python3 - <<PY
 import json, time
 from pathlib import Path
@@ -171,7 +171,7 @@ plate = {
   "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
   "target": "LizardTech",
   "role": "free_guest_xr_way",
-  "law": "BrainCube/nanobot I/O → CubalC SMX → viz → LOVR → LizardTech",
+  "law": "BrainCube/nanobot I/O → CubalC SMX → viz → viz → LizardTech",
   "hold_flash": 1,
   "http_required": False,
   "stim": {
@@ -197,8 +197,8 @@ plate = {
   "way": {
     "cube_sot": "http://127.0.0.1:17333",
     "trackers": "/v1/trackers/lizard",
-    "lovr": "reads cubalc_viz_frame.json",
-    "wivrn": "guest transport only",
+    "viz": "reads cubalc_viz_frame.json",
+    "stream": "guest transport only",
   },
   "note": "Nanobot hive behaviour stimulated in CubalC and projected to LizardTech helmet as free XR way",
 }
@@ -211,7 +211,7 @@ plate = {
   "cube_sot_host": "http://127.0.0.1:17333",
   "hold_flash": 1,
   "budget": 40,
-  "law": "BrainCube I/O race -> CubalC viz -> LOVR -> LizardTech",
+  "law": "BrainCube I/O race -> CubalC viz -> viz -> LizardTech",
   "viz_source": "cubalc_nanobot_stimulate",
   "viz_frame": "state/cubalc_viz_frame.json",
   "stim_plate": "state/LIZARD_NANOBOT_STIM.json",
@@ -227,5 +227,5 @@ echo "=============================================="
 echo " LizardTech stim ready"
 echo "  viz:  $PC_STATE/cubalc_viz_frame.json"
 echo "  plate: $STATE/LIZARD_NANOBOT_STIM.json"
-echo "  LOVR/WiVRn guest should load CubalC viz on helmet"
+echo "  viz stream guest should load CubalC viz on helmet"
 echo "=============================================="

@@ -18,7 +18,7 @@ CUBE wall    ROLE modifier        PROTON 1
 CUBE view    ROLE consumer        PROTON 1
 CUBE gvrmod  ROLE device_free     PROTON 1
 CUBE map3d   ROLE spatial_manifest PROTON 1
-CUBE lizard  ROLE quest_lizard    PROTON 1
+CUBE lizard  ROLE headset    PROTON 1
 CUBE nexus   ROLE nanobot_hive    PROTON 1
 CUBE create  ROLE construct       PROTON 1
 CUBE destroy ROLE deconstruct     PROTON 0

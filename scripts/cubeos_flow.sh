@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CubeOS way flow — CubalC braincube core · LOVR viz · no flash
+# CubeOS way flow — CubalC braincube core · viz viz · no flash
 # C3
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

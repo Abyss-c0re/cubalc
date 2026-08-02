@@ -15,7 +15,7 @@ fi
 echo "# cubalc oversee cubebrain root=$CUBEBRAIN_ROOT"
 "$BIN" oversee "$@"
 
-# Machine plate for Commander / LOVR / agents
+# Machine plate for Commander / viz / agents
 TS="$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')"
 TITAN_JSON="$CUBEBRAIN_ROOT/lab/prophecy/titan/LATEST.json"
 CLANKER_JSON="$CUBEBRAIN_ROOT/lab/prophecy/clanker/LATEST.json"
@@ -71,7 +71,7 @@ cat > "$PLATE" <<EOF
 }
 EOF
 
-# Publish to prophecy_cube state for LOVR when root set
+# Publish to prophecy_cube state for viz when root set
 if [[ -n "${PROPHECY_CUBE_ROOT:-}" && -d "$PROPHECY_CUBE_ROOT/state" ]]; then
   cp -f "$CUBALC_STATE/cubalc_viz_frame.json" "$PROPHECY_CUBE_ROOT/state/cubalc_viz_frame.json" 2>/dev/null || true
   cp -f "$CUBALC_STATE/cubalc_viz_frame.json" "$PROPHECY_CUBE_ROOT/state/viz_frame.json" 2>/dev/null || true

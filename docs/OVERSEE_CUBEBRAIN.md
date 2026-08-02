@@ -17,7 +17,7 @@
 | Layer | Knows |
 |-------|--------|
 | **CubalC language** | cubes, plugs, energy, bits 0/1, digits 0–9, SYS |
-| **Host adapter** (`scripts/peer_fold.sh`) | optional local paths, JSON digit fields, LOVR publish |
+| **Host adapter** (`scripts/peer_fold.sh`) | optional local paths, JSON digit fields, viz publish |
 | **Peer binary** | its own formats / devices |
 
 ## Progress

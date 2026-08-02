@@ -8,7 +8,7 @@ export PROPHECY_CUBE_ROOT=~/Dev/lab/prophecy_cube
 export CUBALC_STATE=$PROPHECY_CUBE_ROOT/state
 export HOLD_FLASH=1
 
-# boot full CubeOS lattice in CubalC (publishes viz for LOVR)
+# boot full CubeOS lattice in CubalC (publishes viz for viz)
 ./out/cubalc boot
 
 # one energy+decide tick

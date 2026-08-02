@@ -1,12 +1,12 @@
 # HIVE VECTOR MANIFEST — non-intersecting agent vectors
 # Nano-help: each cube picks a free vector, plugs neighbor, MANIFEST unity
-# No prose hot path. Digits only. product=cubalc · quest_flash=0
+# No prose hot path. Digits only. product=cubalc · hold_edge=0
 
 HOLD_FLASH 1
 SHARE state_matrix_only
 BUDGET 96
 
-GENESIS "NEXUS_COORD v1 | from=BlackCube | type=hive_vector | role=nanobot_hive | HOLD_FLASH=ack_held | product=cubalc | quest_flash=0 | intersect=0 |"
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=hive_vector | role=nanobot_hive | HOLD_FLASH=ack_held | product=cubalc | hold_edge=0 | intersect=0 |"
 
 OS_ASPECTS
 
@@ -16,7 +16,7 @@ CUBE v1 ROLE spatial_manifest PROTON 1
 CUBE v2 ROLE construct       PROTON 1
 CUBE v3 ROLE deconstruct     PROTON 0
 CUBE v4 ROLE algocube        PROTON 1
-CUBE v5 ROLE quest_lizard    PROTON 1
+CUBE v5 ROLE headset    PROTON 1
 CUBE v6 ROLE nanobot_hive    PROTON 1
 CUBE v7 ROLE kernel_sot      PROTON 1
 CUBE nexus ROLE nanobot_hive PROTON 1

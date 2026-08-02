@@ -35,7 +35,7 @@ static void paths(char *viz, char *chain, char *init, char *dir, size_t n) {
 static void publish(const cubalc_chain *ch) {
   char viz[512], chainp[512], initp[512], dir[512];
   paths(viz, chainp, initp, dir, sizeof viz);
-  /* Cube Law: one publish path → LOVR + crimson cube_gl + cells.bin united */
+  /* Cube Law: one publish path → viz JSON + lattice + cells.bin united */
   cubalc_chain_publish_united(ch);
   cubalc_chain_write_json(ch, chainp);
 }

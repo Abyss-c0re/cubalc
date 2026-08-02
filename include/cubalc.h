@@ -40,7 +40,7 @@ typedef struct cubalc_port {
 typedef struct cubalc_cube {
   char     id[CUBALC_ID_LEN];
   char     label[CUBALC_ID_LEN];
-  char     role[24];    /* os aspect: kernel|llama|quest|wivrn|kinect|coord|host|… */
+  char     role[24];    /* os aspect: kernel|infer|headset|stream|depth|coord|host|… */
   float    x, y, z, s;
   float    yaw, pitch, roll; /* degrees — spin of the cube (Kernel Matrix face) */
   uint8_t  r, g, b, a;
@@ -142,9 +142,9 @@ int  cubalc_chain_tick(cubalc_chain *ch);
 int  cubalc_chain_flow(cubalc_chain *ch);
 int  cubalc_chain_write_viz(const cubalc_chain *ch, const char *path);
 int  cubalc_chain_write_json(const cubalc_chain *ch, const char *path);
-/* Crimson cube_gl cells.bin — same matrix projection as LOVR face */
+/* cells.bin lattice projection — same matrix SoT as viz JSON */
 int  cubalc_chain_write_cells(const cubalc_chain *ch, const char *path);
-/* Cube Law: one SoT → all visual faces (LOVR JSON + cells.bin + unity plate).
+/* One SoT → all visual faces (viz JSON + cells.bin + unity plate).
  * devices free · share state_matrix only · core decides I/O · no brain wires */
 int  cubalc_chain_publish_united(const cubalc_chain *ch);
 int  cubalc_chain_impulse(cubalc_chain *ch, const char *cube_id, uint8_t proton);

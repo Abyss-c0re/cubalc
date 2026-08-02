@@ -1979,7 +1979,7 @@ static int parse_form(VM *vm, Lex *L){
     place_cube(vm,"destroy","deconstruct",0);
     place_cube(vm,"gvrmod","device_free",1);
     place_cube(vm,"map3d","spatial_manifest",1);
-    place_cube(vm,"lizard","quest_lizard",1);
+    place_cube(vm,"lizard","headset",1);
     /* DECONSTRUCT stuck way → RECONSTRUCT → pose flow */
     do_deconstruct(vm,"destroy");
     do_deconstruct(vm,target);

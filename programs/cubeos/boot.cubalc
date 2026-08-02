@@ -14,7 +14,7 @@ CUBE titan     ROLE host_hand      PROTON 1
 CUBE clanker   ROLE body           PROTON 1
 
 CUBE nb_host      ROLE nanobot_host       PROTON 1
-CUBE nb_quest     ROLE nanobot_eyes       PROTON 1
+CUBE nb_eyes     ROLE nanobot_eyes       PROTON 1
 CUBE nb_titan     ROLE nanobot_hand       PROTON 1
 CUBE nb_clanker   ROLE nanobot_body       PROTON 1
 CUBE nb_matrix    ROLE nanobot_eval       PROTON 1
@@ -39,7 +39,7 @@ PLUG sot brain
 PLUG brain hive
 
 PLUG nb_host hive
-PLUG nb_quest hive
+PLUG nb_eyes hive
 PLUG nb_titan hive
 PLUG nb_clanker hive
 PLUG nb_matrix hive

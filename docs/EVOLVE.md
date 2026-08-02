@@ -1,4 +1,4 @@
-# CubalC self-evolve — pure C · no Python
+# CubalC self-evolve — pure C · no host tooling
 
 Braincube **solves** path races; algocube **optimizes** genome by solving math problems.
 Each cycle **emits and runs** a fresh `.cubalc` program (language improvement surface).

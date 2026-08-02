@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
-/* Optional OpenCL — compile with CUBALC_HAVE_OPENCL */
+/* Optional GPU accel — compile with CUBALC_HAVE_OPENCL */
 #if defined(CUBALC_HAVE_OPENCL)
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 300
@@ -53,7 +53,7 @@ static long mono_ms(void) {
   return (long)ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
 }
 
-/* ---- OpenCL probe (popcount-friendly path placeholder) ---- */
+/* ---- GPU probe (popcount-friendly path placeholder) ---- */
 static int gpu_probe(void) {
 #if defined(CUBALC_HAVE_OPENCL)
   cl_uint nplat = 0;
@@ -62,7 +62,7 @@ static int gpu_probe(void) {
   if (clGetPlatformIDs(1, &plat, NULL) != CL_SUCCESS) return 0;
   cl_uint ndev = 0;
   if (clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 0, NULL, &ndev) != CL_SUCCESS || ndev == 0) {
-    /* accept CPU OpenCL as accel too */
+    /* accept CPU GPU-device as accel too */
     if (clGetDeviceIDs(plat, CL_DEVICE_TYPE_ALL, 0, NULL, &ndev) != CL_SUCCESS || ndev == 0)
       return 0;
   }
@@ -209,7 +209,7 @@ int cubalc_async_init(int n_workers) {
   G.n_workers = n_workers;
   G.gpu_ok = gpu_probe();
   snprintf(G.backend, sizeof G.backend, "cpu:%d%s",
-           G.n_workers, G.gpu_ok ? "+gpu:opencl" : "");
+           G.n_workers, G.gpu_ok ? "+gpu" : "");
   G.th = calloc((size_t)G.n_workers, sizeof(pthread_t));
   if (!G.th) return -1;
   G.next_id = 1;

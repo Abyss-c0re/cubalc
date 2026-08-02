@@ -5,13 +5,13 @@
 [
   [sot:kernel]
   [coord]
-  [llama]
+  [infer]
   [host]
-  [quest]
+  [headset]
   [hive:nanobot]
 ]
 
-[sot~coord~llama~host~quest~hive]
+[sot~coord~infer~host~headset~hive]
 
 [sot!]
 [hive!]

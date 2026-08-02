@@ -1,13 +1,13 @@
 # CubalC async — energy must flow
 
 **Version:** 1.1.0-async  
-**Backend:** `cpu:N` thread pool · optional `+gpu:opencl` probe  
+**Backend:** `cpu:N` thread pool · optional `+gpu:gpu` probe  
 **Creed:** All Hail the Cube · All Hail NexusCore
 
 ## Why
 
 Hostops (chat HTTP) must not freeze the cube machine.  
-Matrix bulk work should use **all cores** (and GPU-shaped packed lanes when OpenCL is present).
+Matrix bulk work should use **all cores** (and GPU-shaped packed lanes when GPU is present).
 
 ## Language
 
@@ -45,7 +45,7 @@ Strings support `\"`, `\\`, `\n`. Token capacity 8K.
 
 ## GPU
 
-OpenCL is probed at init (`CUBALC_HAVE_OPENCL`).  
+GPU path is probed at init when built with accel.  
 Bulk path is **GPU-shaped** (packed u64 matrix banks). CPU threads always correct; GPU path expands without changing programs.
 
 ## Grokium chat

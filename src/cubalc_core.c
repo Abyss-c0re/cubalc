@@ -114,10 +114,10 @@ static void role_color(const char *role, uint8_t *r, uint8_t *g, uint8_t *b) {
   *r = 242; *g = 38; *b = 71; /* default crimson */
   if (!role) return;
   if (strstr(role, "kernel") || strstr(role, "sot")) { *r=255; *g=165; *b=46; }
-  else if (strstr(role, "llama")) { *r=64; *g=242; *b=115; }
-  else if (strstr(role, "quest") || strstr(role, "lizard")) { *r=90; *g=200; *b=255; }
-  else if (strstr(role, "wivrn")) { *r=180; *g=120; *b=255; }
-  else if (strstr(role, "kinect")) { *r=255; *g=200; *b=80; }
+  else if (strstr(role, "infer")) { *r=64; *g=242; *b=115; }
+  else if (strstr(role, "headset") || strstr(role, "lizard")) { *r=90; *g=200; *b=255; }
+  else if (strstr(role, "stream")) { *r=180; *g=120; *b=255; }
+  else if (strstr(role, "depth")) { *r=255; *g=200; *b=80; }
   else if (strstr(role, "host") || strstr(role, "station")) { *r=242; *g=38; *b=71; }
   else if (strstr(role, "coord")) { *r=255; *g=100; *b=160; }
   else if (strstr(role, "destroy") || strstr(role, "decon")) { *r=30; *g=30; *b=36; }
@@ -611,16 +611,16 @@ int cubalc_chain_os_aspects(cubalc_chain *ch) {
   if (!ch) return -1;
   /* ring layout — octopus-friendly big studs */
   struct { const char *id; const char *role; uint8_t proton; float ang; float elev; } asp[] = {
-    {"cube-sot",     "kernel_sot",   1, 0.f,           1.35f},
-    {"cube-coord",   "coord",        1, 0.785f,        1.35f},
-    {"cube-llama",   "llama",        1, 1.57f,         1.25f},
-    {"cube-host",    "host_station", 1, 2.356f,        1.25f},
-    {"cube-quest",   "quest_lizard", 1, 3.141f,        1.20f},
-    {"cube-wivrn",   "wivrn_way",    1, 3.927f,        1.20f},
-    {"cube-kinect",  "kinect",       1, 4.712f,        1.15f},
-    {"cube-create",  "construct",    1, 5.498f,        1.40f},
-    {"cube-destroy", "deconstruct",  0, 0.f,           0.95f},
-    {"cube-hive",    "nanobot_hive", 1, 1.0f,          1.55f},
+    {"unit-sot",     "kernel_sot",   1, 0.f,           1.35f},
+    {"unit-coord",   "coord",        1, 0.785f,        1.35f},
+    {"unit-infer",   "infer",        1, 1.57f,         1.25f},
+    {"unit-host",    "host_station", 1, 2.356f,        1.25f},
+    {"unit-headset", "headset",      1, 3.141f,        1.20f},
+    {"stream-link",  "stream_way",   1, 3.927f,        1.20f},
+    {"unit-depth",   "depth",        1, 4.712f,        1.15f},
+    {"unit-create",  "construct",    1, 5.498f,        1.40f},
+    {"unit-destroy", "deconstruct",  0, 0.f,           0.95f},
+    {"unit-hive",    "nanobot_hive", 1, 1.0f,          1.55f},
   };
   int n = (int)(sizeof(asp) / sizeof(asp[0]));
   float R = 0.85f;
@@ -734,13 +734,13 @@ int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
   for (int i = 0; i < n; i++) eavg += ch->cubes[i].atom.energy;
   if (n) eavg /= (float)n;
   /* Visual language: cubes + energy glow + plug edges (binary wires).
-   * United faces under Cube Law: LOVR + OpenGL crimson + cells.bin share this SoT. */
+   * United faces under Cube Law: viz + lattice + cells.bin share this SoT. */
   fprintf(f, "{\"schema\":\"cube.viz_frame.v1\",\"lang\":\"CubalC\",\"paradigm\":\"COP\","
              "\"seq\":%u,\"unity\":%.4f,\"energy\":%.4f,"
              "\"n_cubes\":%d,\"budget\":%d,\"cubalc\":true,\"hold_flash\":1,"
              "\"share\":\"%s\",\"matrix_is_key\":true,\"talk\":\"binary_CBLC\","
              "\"visual\":\"cubes_not_lego\",\"united\":true,"
-             "\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+             "\"faces\":[\"viz\",\"lattice\",\"cells_bin\"],"
              "\"law\":{\"sot\":true,\"share_smx\":true,\"hold_flash\":1,"
              "\"no_bci\":true,\"dev_free\":true,\"core_io\":true,\"one_cmd\":true},"
              "\"hud\":\"CubalC · united faces · %d units · E=%.2f · unity=%.2f · %s\","
@@ -799,7 +799,7 @@ int cubalc_chain_write_viz(const cubalc_chain *ch, const char *path) {
   return 0;
 }
 
-/* Project State Matrix → cube_gl cells.bin (crimson lattice wire format).
+/* Project State Matrix → cells.bin lattice (crimson lattice wire format).
  * Law: share state_matrix only — digits are matrix bits, not prose. */
 int cubalc_chain_write_cells(const cubalc_chain *ch, const char *path) {
   if (!ch || !path || ch->n_cubes < 1) return -1;
@@ -909,7 +909,7 @@ static void ensure_parent_dir(const char *path) {
 }
 
 /* Cube Law unity: one write path, all free visual devices.
- * LOVR / cube_gl / cells.bin — share state_matrix only · no brain wires. */
+ * viz / lattice / cells.bin — share state_matrix only · no brain wires. */
 int cubalc_chain_publish_united(const cubalc_chain *ch) {
   char path[640];
   const char *st = getenv("CUBALC_STATE");
@@ -936,14 +936,14 @@ int cubalc_chain_publish_united(const cubalc_chain *ch) {
   snprintf(path, sizeof path, "%s/viz_frame.json", st);
   if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
 
-  /* Face 3–4: prophecy_cube state — LOVR reads these */
+  /* Face 3–4: prophecy_cube state — viz consumers read these */
   snprintf(path, sizeof path, "%s/state/cubalc_viz_frame.json", root);
   ensure_parent_dir(path);
   if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
   snprintf(path, sizeof path, "%s/state/viz_frame.json", root);
   if (cubalc_chain_write_viz(ch, path) == 0) ok++; else fails++;
 
-  /* Face 5: crimson OpenGL lattice (cells.bin) — cube_gl --cells or mirror */
+  /* Face 5: crimson lattice (cells.bin) — lattice cells or mirror */
   if (cubalc_chain_write_cells(ch, cells_env) == 0) ok++; else fails++;
   /* also mirror under prophecy state for portability */
   snprintf(path, sizeof path, "%s/state/cells.bin", root);
@@ -959,7 +959,7 @@ int cubalc_chain_publish_united(const cubalc_chain *ch) {
         "{\"schema\":\"cubalc.visual_unity.v1\",\"ok\":true,"
         "\"creed\":\"%s\",\"version\":\"%s\",\"hold_flash\":%d,"
         "\"share\":\"%s\",\"matrix_is_key\":true,\"visual\":\"cubes_not_lego\","
-        "\"united\":true,\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+        "\"united\":true,\"faces\":[\"viz\",\"lattice\",\"cells_bin\"],"
         "\"laws\":{\"sot\":true,\"share_smx\":true,\"core_io\":true,"
         "\"hold_flash\":true,\"no_bci\":true,\"dev_free\":true,\"one_cmd\":true},"
         "\"seq\":%u,\"n_cubes\":%d,\"unity\":%.4f,\"energy\":%.4f,"
@@ -981,7 +981,7 @@ int cubalc_chain_publish_united(const cubalc_chain *ch) {
     if (f) {
       fprintf(f,
         "{\"schema\":\"cubalc.visual_unity.v1\",\"ok\":true,\"united\":true,"
-        "\"seq\":%u,\"unity\":%.4f,\"faces\":[\"lovr\",\"cube_gl\",\"cells_bin\"],"
+        "\"seq\":%u,\"unity\":%.4f,\"faces\":[\"viz\",\"lattice\",\"cells_bin\"],"
         "\"hold_flash\":1,\"share\":\"smx\"}\n",
         (unsigned)ch->seq, ch->unity);
       fclose(f);

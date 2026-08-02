@@ -512,7 +512,7 @@ int cubalc_jit_run(const cubalc_jit_blob *blob, const cubalc_image *img,
     snprintf(out->last_print, sizeof out->last_print, "%s", rt.last_print);
     if (rt.fatal) snprintf(out->err, sizeof out->err, "%s", rt.err);
   }
-  /* Cube Law: united faces (LOVR + crimson GL + cells.bin) from one matrix */
+  /* Cube Law: united faces (viz + lattice + cells.bin) from one matrix */
   if (vm.ch.n_cubes > 0)
     cubalc_chain_publish_united(&vm.ch);
   return out && out->ok ? 0 : 1;

@@ -12,7 +12,7 @@
 | Atom core | **Nanobot** inside every Cube |
 | Proton | **1 = create** · **0 = destroy** |
 | Transport | Binary matrix frames (`CBLC`) |
-| Creator surface | LOVR LEGO studs · budget ≤ **40** |
+| Creator surface | viz LEGO studs · budget ≤ **40** |
 | Dev API | Cube way `http://127.0.0.1:17333` |
 | Edge API | Nanobot peer `…/peer/v1/*` (token) |
 
@@ -39,8 +39,8 @@ Hot path stays **matrix / plates / impulses** — not ideology prose.
 | **Talk = binary** | Packed `CBLC` frames transfer matrices |
 | **HOLD_FLASH** | Sticky; never auto-flash |
 | **Share** | `state_matrix_only` off-box |
-| **OS is a way** | WiVrn / Android / LOVR are channels, not sovereign |
-| **Devices free** | No forced ownership of Titan / Quest / Switch |
+| **OS is a way** | stream / Android / viz are channels, not sovereign |
+| **Devices free** | No forced ownership of edge peer / Switch |
 | **Budget ≤ 40** | Hard lag guard on viz |
 | **All Hail the Cube** | Creed line for status only |
 
@@ -69,7 +69,7 @@ Hot path stays **matrix / plates / impulses** — not ideology prose.
                     binary CBLC talk
                               │
                               ▼
-                     LOVR / viz_frame
+                     viz / viz_frame
                      (budget ≤ 40 studs)
 ```
 
@@ -104,7 +104,7 @@ SHARE state_matrix_only
 ```cubalc
 GENESIS FROM NEXUS_COORD
 // or embed plate:
-GENESIS PLATE "NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=… | unity=1.0 | ssh=1 | llama=1 | watchd=1 | farm=standby | hold_flash=1 |"
+GENESIS PLATE "NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=… | unity=1.0 | ssh=1 | infer=1 | watchd=1 | farm=standby | hold_flash=1 |"
 ```
 
 ### 3.3 Spawn Cubes (OOP)
@@ -125,11 +125,11 @@ CUBE <id> ROLE <role> PROTON <0|1>
 |----|------|--------|
 | `cube-sot` | kernel_sot | 1 |
 | `cube-coord` | coord | 1 |
-| `cube-llama` | llama | 1 |
+| `unit-infer` | llama | 1 |
 | `cube-host` | host_station | 1 |
-| `cube-quest` | quest_lizard | 1 |
-| `cube-wivrn` | wivrn_way | 1 |
-| `cube-kinect` | kinect | 1 |
+| `unit-headset` | headset | 1 |
+| `stream-link` | stream_way | 1 |
+| `unit-depth` | depth | 1 |
 | `cube-create` | construct | 1 |
 | `cube-destroy` | deconstruct | 0 |
 | `cube-hive` | nanobot_hive | 1 |
@@ -170,7 +170,7 @@ Binary: `lab/prophecy_cube/cubalc/out/cubalc`
 make -C ~/Dev/lab/prophecy_cube/cubalc
 
 # Genesis from plate → Initial Matrix + OS chain + viz
-./out/cubalc genesis 'NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | llama=1 | watchd=1 | farm=standby | hold_flash=1 |'
+./out/cubalc genesis 'NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | infer=1 | watchd=1 | farm=standby | hold_flash=1 |'
 
 # Proton impulse
 ./out/cubalc impulse cube-create 1
@@ -188,7 +188,7 @@ make -C ~/Dev/lab/prophecy_cube/cubalc
 |------|---------|
 | `state/cubalc_initial_matrix.json` | Genesis bits (chain root) |
 | `state/cubalc_chain.json` | Chain status (seq, unity, law) |
-| `state/cubalc_viz_frame.json` | LEGO frame for LOVR (preferred) |
+| `state/cubalc_viz_frame.json` | LEGO frame for viz (preferred) |
 | `state/viz_frame.json` | Also published for lean path |
 
 ---
@@ -208,7 +208,7 @@ Fold plate → Initial Matrix → Cube Chain → viz.
 POST /v1/cubalc/genesis
 Content-Type: application/json
 
-{"plate":"NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | llama=1 | watchd=1 | farm=standby | hold_flash=1 |"}
+{"plate":"NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | infer=1 | watchd=1 | farm=standby | hold_flash=1 |"}
 ```
 
 Aliases in body: `"line"` or `"plate"`.
@@ -259,7 +259,7 @@ or `"destroy":true`.
 
 ```bash
 BASE=http://127.0.0.1:17333
-PLATE='NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | llama=1 | watchd=1 | farm=standby | hold_flash=1 |'
+PLATE='NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | infer=1 | watchd=1 | farm=standby | hold_flash=1 |'
 
 curl -sS -X POST $BASE/v1/coord/station -H 'Content-Type: application/json' \
   -d "{\"line\":\"$PLATE\"}"
@@ -276,7 +276,7 @@ curl -sS $BASE/v1/api | jq .
 
 ---
 
-## 6. Nanobot API (edge peers — Titan / Quest / host fleet)
+## 6. Nanobot API (edge peers — edge peer / host fleet)
 
 Nanobots **do not invent SoT**. They:
 
@@ -292,7 +292,7 @@ Typical bases:
 |-------|-----|
 | Host MCP Titan bridge | `http://127.0.0.1:28787` (adb forward) |
 | Titan LAN | `http://<TITAN_LAN>:8787` |
-| Quest Lizard | `http://<QUEST_LAN>:8787` |
+| headset edge | `http://<QUEST_LAN>:8787` |
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
@@ -320,7 +320,7 @@ curl -sS -X POST http://127.0.0.1:17333/v1/cubalc/impulse \
   -d '{"id":"cube-construct-proxy","proton":1}'
 ```
 
-Nanobot on **Titan/Quest** (edge) may only:
+Nanobot on **edge peer** (edge) may only:
 
 - Report sensors / shell **if token + shell control on**  
 - **Never** claim Cube SoT  
@@ -347,7 +347,7 @@ curl -sS -m 3 -X POST http://<BLACKCUBE_LAN>:17333/v1/cubalc/chain
 
 If host Cube API is loopback-only (default law), edge peers **post raw bits** and host `nb-host` runs CubalC.
 
-### 6.4 Grokium host nanobot helpers (Python)
+### 6.4 Grokium host nanobot helpers (host tooling)
 
 ```python
 from grokium.config import load
@@ -422,11 +422,11 @@ Compatibility is **only** from inner StateMatrices — not names, not roles, not
 
 ---
 
-## 9. VR / LOVR Creator UX
+## 9. VR / viz Creator UX
 
 1. Run genesis (CLI or API).  
-2. LOVR prefers `state/cubalc_viz_frame.json` when `cubalc:true`.  
-3. Labels via `lovr/cubalc_lego.lua`.  
+2. viz prefers `state/cubalc_viz_frame.json` when `cubalc:true`.  
+3. Labels via `viz/cubalc_lego.lua`.  
 4. Keyboard (`K` / B) talks to Core via `/v1/core/talk` — **Commander edge**, not SMX prose.  
 5. Background: `scripts/cubalc_lego_flow.sh` keeps studs ticking.
 
@@ -438,7 +438,7 @@ Compatibility is **only** from inner StateMatrices — not names, not roles, not
 
 ```bash
 PC=~/Dev/lab/prophecy_cube
-PLATE='NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | llama=1 | watchd=1 | farm=standby | hold_flash=1 |'
+PLATE='NEXUS_COORD v1 | from=BlackCube | type=heartbeat | topic=channel_stim | seq=1785173158 | unity=1.0 | ssh=1 | infer=1 | watchd=1 | farm=standby | hold_flash=1 |'
 
 # 1) Station plate
 curl -sS -X POST http://127.0.0.1:17333/v1/coord/station \
@@ -477,7 +477,7 @@ lab/prophecy_cube/cubalc/
   out/cubalc
 
 lab/prophecy_cube/c_cubeos/src/net/control_api.c   # /v1/cubalc/*
-lab/prophecy_cube/lovr/cubalc_lego.lua
+lab/prophecy_cube/viz/cubalc_lego.lua
 lab/prophecy_cube/scripts/cubalc_lego_flow.sh
 lab/prophecy_cube/docs/CUBE_WAY_API.md
 lab/prophecy_cube/docs/TITAN_PEER_LAW.md
@@ -491,7 +491,7 @@ lab/prophecy_cube/docs/TITAN_PEER_LAW.md
 |-----|----------|----------|
 | Host CubalC CLI/API | genesis, impulse, chain, tick | Invent plates without station/Commander |
 | Host Grokium bots | raw bits + Cube way CubalC | Merge online/offline cores |
-| Titan/Quest peer | health, token shell/prompt | Loopback-only peer; claim SoT |
+| edge peer peer | health, token shell/prompt | Loopback-only peer; claim SoT |
 | Creator (human/VR) | keyboard talk, pick, impulses | Auto HOLD_FLASH clear |
 
 **Auth:** peer mutate routes require `X-Nanobot-Peer-Token`.  

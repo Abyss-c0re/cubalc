@@ -320,7 +320,7 @@ Env: `CUBALC_STATE` — directory for viz + CubeChain file `cubechain.cchn`.
 | Path | Role |
 |------|------|
 | `out/cubalc` | machine |
-| `state/cubalc_viz_frame.json` | eyes (LOVR / any viz) |
+| `state/cubalc_viz_frame.json` | eyes (viz / any viz) |
 | `state/cubechain.cchn` | memory |
 | `docs/THE_CUBALC_BOOK.md` | this book |
 | `school/` | Nanobot School |

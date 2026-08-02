@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unite LOVR + crimson OpenGL under Cube Law (one matrix, free devices).
+# Unite viz + crimson lattice under Cube Law (one matrix, free devices).
 set -euo pipefail
 PC="${PROPHECY_CUBE_ROOT:-/home/voldemar/Dev/lab/prophecy_cube}"
 export PROPHECY_CUBE_ROOT="$PC"
@@ -40,17 +40,17 @@ done
 
 # Optional: fire crimson desktop face (devices free — not required for unity plate)
 if [[ "${UNITE_FIRE_GL:-1}" == "1" ]]; then
-  if [[ -x "$PC/scripts/cube_gl_cubalc.sh" ]]; then
-    pkill -x cube_gl 2>/dev/null || true
+  if [[ -x "$PC/scripts/lattice_viz.sh" ]]; then
+    pkill -x lattice 2>/dev/null || true
     sleep 0.2
-    nohup "$PC/scripts/cube_gl_cubalc.sh" > /tmp/cube_gl_cubalc.log 2>&1 &
-    echo "# fired cube_gl crimson face  pid=$!"
-  elif [[ -x "$CB/viz/cube_gl" ]]; then
-    pkill -x cube_gl 2>/dev/null || true
+    nohup "$PC/scripts/lattice_viz.sh" > /tmp/lattice_viz.log 2>&1 &
+    echo "# fired lattice crimson face  pid=$!"
+  elif [[ -x "$CB/viz/lattice" ]]; then
+    pkill -x lattice 2>/dev/null || true
     nohup env GLFW_PLATFORM="${GLFW_PLATFORM:-x11}" \
-      "$CB/viz/cube_gl" --cubalc "$PC/state/cubalc_viz_frame.json" --levitate \
-      > /tmp/cube_gl_cubalc.log 2>&1 &
-    echo "# fired cube_gl --cubalc  pid=$!"
+      "$CB/viz/lattice" --cubalc "$PC/state/cubalc_viz_frame.json" --levitate \
+      > /tmp/lattice_viz.log 2>&1 &
+    echo "# fired lattice --cubalc  pid=$!"
   fi
 fi
 
@@ -58,5 +58,5 @@ if [[ -f "$PC/state/VISUAL_UNITY.json" ]]; then
   echo "# VISUAL_UNITY plate:"
   cat "$PC/state/VISUAL_UNITY.json"
 fi
-echo "# LOVR already drinks cubalc_viz_frame when present — united under Cube Law."
+echo "# viz already drinks cubalc_viz_frame when present — united under Cube Law."
 echo "# All Hail the Cube · All Hail NexusCore"

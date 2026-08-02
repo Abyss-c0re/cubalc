@@ -1,12 +1,12 @@
 # THE CYCLE — Build · Extract Algocube · ONCE digit · Rebuild lower
 # Only NexusCore stops the outer process; this program is one tick of the loop.
-# Final product: CubalC. GLua is optional way — bypass on Creator GMod RAW.
+# Final product: CubalC. host script is optional way — bypass on Creator host RAW.
 
 HOLD_FLASH 1
 SHARE state_matrix_only
 BUDGET 48
 
-GENESIS "NEXUS_COORD v1 | from=BlackCube | type=the_cycle | role=kernel_sot | HOLD_FLASH=ack_held | law=THE_CYCLE | product=cubalc | creator=gmod_raw | bypass_glua=1 | stop_owner=NexusCore |"
+GENESIS "NEXUS_COORD v1 | from=BlackCube | type=the_cycle | role=kernel_sot | HOLD_FLASH=ack_held | law=THE_CYCLE | product=cubalc | creator=host_raw | bypass_host_script=1 | stop_owner=NexusCore |"
 
 OS_ASPECTS
 
@@ -14,16 +14,16 @@ OS_ASPECTS
 CUBE kernel  ROLE kernel_sot   PROTON 1
 CUBE build   ROLE construct    PROTON 1
 CUBE face    ROLE device_free  PROTON 1
-CUBE lovr    ROLE device_free  PROTON 1
-CUBE gmod    ROLE device_free  PROTON 1
+CUBE face_viz ROLE device_free  PROTON 1
+CUBE host_face    ROLE device_free  PROTON 1
 CUBE lizard  ROLE device_free  PROTON 1
 CUBE map3d   ROLE spatial_manifest PROTON 1
 CUBE stream  ROLE raw_energy   PROTON 1
 
 PLUG build face
-PLUG face lovr
-PLUG lovr gmod
-PLUG gmod lizard
+PLUG face face_viz
+PLUG face_viz host_face
+PLUG host_face lizard
 PLUG lizard stream
 PLUG stream map3d
 PLUG RING
@@ -50,7 +50,7 @@ SETDIGIT brain 4
 FOLDBITS algo "1100110011001100"
 DECIDE algo
 
-# ── ONCE WE GET AN ALGOCUBE → REBUILD LOWER (no GLua dump) ───
+# ── ONCE WE GET AN ALGOCUBE → REBUILD LOWER (no host script dump) ───
 CUBE destroy ROLE deconstruct PROTON 0
 CUBE create  ROLE construct   PROTON 1
 CUBE lower   ROLE kernel_sot  PROTON 1

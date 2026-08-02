@@ -7,11 +7,11 @@ GENESIS FROM NEXUS_COORD
 
 CUBE cube-sot     ROLE kernel_sot    PROTON 1
 CUBE cube-coord   ROLE coord         PROTON 1
-CUBE cube-llama   ROLE llama         PROTON 1
+CUBE unit-infer ROLE infer PROTON 1
 CUBE cube-host    ROLE host_station  PROTON 1
-CUBE cube-quest   ROLE quest_lizard  PROTON 1
-CUBE cube-wivrn   ROLE wivrn_way     PROTON 1
-CUBE cube-kinect  ROLE kinect        PROTON 1
+CUBE unit-headset ROLE headset PROTON 1
+CUBE stream-link ROLE stream_way     PROTON 1
+CUBE unit-depth ROLE depth PROTON 1
 CUBE cube-create  ROLE construct     PROTON 1
 CUBE cube-destroy ROLE deconstruct   PROTON 0
 CUBE cube-hive    ROLE nanobot_hive  PROTON 1

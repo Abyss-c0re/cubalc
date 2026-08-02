@@ -9,8 +9,8 @@
 | Layer | Role |
 |-------|------|
 | **CubalC CubeOS** (`programs/cubeos/*`) | OS lattice as cubes; **braincube decides** |
-| **c_cubeos** (`:17333` cube_daemon) | Existing C way API / Kinect / pick — **unchanged** |
-| **LOVR** | Machine-native cube UI from `state/cubalc_viz_frame.json` |
+| **c_cubeos** (`:17333` cube_daemon) | Existing C way API / depth sensor / pick — **unchanged** |
+| **viz** | Machine-native cube UI from `state/cubalc_viz_frame.json` |
 
 CubalC does **not** replace the daemon hot path. It **is** the CubeOS program layer: boot, tick, decide, energy flow.
 
@@ -33,14 +33,14 @@ export HOLD_FLASH=1
 
 ## Visual unity (Cube Law)
 
-LOVR and desktop crimson `cube_gl` are **free devices** on the same State Matrix:
+viz and desktop crimson `lattice` are **free devices** on the same State Matrix:
 
 | Law | Meaning for faces |
 |-----|-------------------|
 | cube is SoT | only CubalC chain writes the matrix |
 | share state_matrix only | JSON + cells.bin are projections, not a second brain |
 | core decides I/O | `cubalc_chain_publish_united()` is the single wire |
-| devices free | LOVR / OpenGL / glasses — any consumer may read |
+| devices free | viz / lattice / glasses — any consumer may read |
 | no brain wires | ambient XR + desktop only |
 | HOLD_FLASH | publish path always hold=1 |
 
@@ -61,11 +61,11 @@ bash scripts/cubeos_flow.sh 8
 Publishes:
 
 - `$CUBALC_STATE/cubalc_viz_frame.json`
-- `$PROPHECY_CUBE_ROOT/state/viz_frame.json` (LOVR prefer path)
+- `$PROPHECY_CUBE_ROOT/state/viz_frame.json` (viz prefer path)
 
-## LOVR
+## viz
 
-`lovr/cubalc_lego.lua` draws **energy bars, algocube digits, binary wires, brain pulse** — matrix-native, not prose theater.
+`viz/cubalc_lego.lua` draws **energy bars, algocube digits, binary wires, brain pulse** — matrix-native, not prose theater.
 
 ## Prove
 

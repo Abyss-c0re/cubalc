@@ -27,7 +27,7 @@ make -C cubalc
 ./out/cubalc cubechain verify
 ```
 
-Viz for LOVR / any 80s-style renderer: `state/cubalc_viz_frame.json` (studs + energy + binary edges).
+Viz for viz / any 80s-style renderer: `state/cubalc_viz_frame.json` (studs + energy + binary edges).
 
 ## Cube-Oriented Programming
 

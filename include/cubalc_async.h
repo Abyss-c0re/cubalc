@@ -1,6 +1,6 @@
 /* CubalC async runtime — energy must flow.
  * Thread pool · job queue · non-blocking hostops · parallel matrix lanes.
- * CPU workers always; GPU (OpenCL) when available for packed matrix bulk.
+ * CPU workers always; optional GPU path when built with accel.
  * Law: HOLD_FLASH · matrix SoT · loopback hostops · no prose on the wire.
  */
 #ifndef CUBALC_ASYNC_H
@@ -52,7 +52,7 @@ typedef struct cubalc_async_job {
 int  cubalc_async_init(int n_workers);
 void cubalc_async_shutdown(void);
 int  cubalc_async_workers(void);
-int  cubalc_async_gpu_ok(void); /* 1 if OpenCL path live */
+int  cubalc_async_gpu_ok(void); /* 1 if GPU accel path live */
 
 /* non-blocking HTTP (loopback). returns job id >=1, or -1 */
 int  cubalc_async_http(const char *method, const char *url, const char *body,
@@ -71,7 +71,7 @@ int  cubalc_async_chain_flow(cubalc_chain *ch, int ticks);
 /* Parallel NxN matrix compat (CPU threads; GPU when large & available) */
 int  cubalc_async_compat_batch(const cubalc_chain *ch, float *out_n_by_n, int n_cap);
 
-/* Device string for status: "cpu:N" or "cpu:N+gpu:opencl" */
+/* Device string for status: "cpu:N" or "cpu:N+gpu" */
 const char *cubalc_async_backend(void);
 
 #ifdef __cplusplus
