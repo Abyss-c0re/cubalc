@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <limits.h>
 
 /* CubalC lang — place/plug/pulse/flow/look. Grammar = ops, not prose. */
 
@@ -1039,6 +1040,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"DENSITY")==0 || strcmp(name,"MOLAR")==0 ||
         strcmp(name,"CELSIUS_K")==0 || strcmp(name,"KELVIN_C")==0 ||
         strcmp(name,"PH_H")==0 || strcmp(name,"CLAMP")==0 ||
+        strcmp(name,"BOUND")==0 ||
+        /* digit-1 clamp/bound: saturating arith + modular wrap */
+        strcmp(name,"SATADD")==0 || strcmp(name,"SATSUB")==0 ||
+        strcmp(name,"SATMUL")==0 ||
+        strcmp(name,"WRAPMOD")==0 || strcmp(name,"WMOD")==0 ||
+        strcmp(name,"CLIP8")==0 || strcmp(name,"CLIP16")==0 ||
         strcmp(name,"AVG")==0 || strcmp(name,"PCT")==0 ||
         strcmp(name,"CIRC")==0 || strcmp(name,"AREA_CIRCLE")==0 ||
         strcmp(name,"HYP")==0 || strcmp(name,"WAVE_V")==0 ||
@@ -1180,12 +1187,53 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"KELVIN_C")==0) return a - CUBALC_SCI_WATER_K;
         /* pH proxy: pH = -log10[H+]; integer H_scaled e.g. 1e-3 → use H_pow = 3 → pH 3 */
         if (strcmp(name,"PH_H")==0) return a; /* pass-through: user supplies exponent as pH law */
-        if (strcmp(name,"CLAMP")==0){
-          /* CLAMP(x, lo, hi) */
+        if (strcmp(name,"CLAMP")==0 || strcmp(name,"BOUND")==0){
+          /* CLAMP/BOUND(x, lo, hi) */
           long lo = b, hi = c;
           if (hi < lo) { long t = lo; lo = hi; hi = t; }
           if (a < lo) return lo;
           if (a > hi) return hi;
+          return a;
+        }
+        if (strcmp(name,"SATADD")==0){
+          /* SATADD(a,b) — add with signed long saturation */
+          if (b > 0 && a > LONG_MAX - b) return LONG_MAX;
+          if (b < 0 && a < LONG_MIN - b) return LONG_MIN;
+          return a + b;
+        }
+        if (strcmp(name,"SATSUB")==0){
+          /* SATSUB(a,b) — subtract with signed long saturation */
+          if (b > 0 && a < LONG_MIN + b) return LONG_MIN;
+          if (b < 0 && a > LONG_MAX + b) return LONG_MAX;
+          return a - b;
+        }
+        if (strcmp(name,"SATMUL")==0){
+          /* SATMUL(a,b) — multiply with signed long saturation */
+          if (a == 0 || b == 0) return 0;
+          {
+            __int128 p = (__int128)a * (__int128)b;
+            if (p > (__int128)LONG_MAX) return LONG_MAX;
+            if (p < (__int128)LONG_MIN) return LONG_MIN;
+            return (long)p;
+          }
+        }
+        if (strcmp(name,"WRAPMOD")==0 || strcmp(name,"WMOD")==0){
+          /* WRAPMOD(n, m) — n mod m in [0, m); m<=0 → 0 */
+          if (b <= 0) return 0;
+          long r = a % b;
+          if (r < 0) r += b;
+          return r;
+        }
+        if (strcmp(name,"CLIP8")==0){
+          /* CLIP8(n) — clamp to unsigned 8-bit range [0,255] */
+          if (a < 0) return 0;
+          if (a > 255) return 255;
+          return a;
+        }
+        if (strcmp(name,"CLIP16")==0){
+          /* CLIP16(n) — clamp to unsigned 16-bit range [0,65535] */
+          if (a < 0) return 0;
+          if (a > 65535) return 65535;
           return a;
         }
         if (strcmp(name,"AVG")==0) return (a + b) / 2;
@@ -4162,6 +4210,83 @@ static int parse_form(VM *vm, Lex *L){
     if (y > z){ long t=y; y=z; z=t; }
     if (x > y){ long t=x; x=y; y=t; }
     long r = y;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 clamp/bound stack: SSATADD SSATSUB SSATMUL SWMOD SCLIP8 SCLIP16 SBOUND */
+  if (kw(&L->cur,"SSATADD")||kw(&L->cur,"SSATSUB")||kw(&L->cur,"SSATMUL")||
+      kw(&L->cur,"STACKSATADD")||kw(&L->cur,"STACKSATSUB")||kw(&L->cur,"STACKSATMUL")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    int is_add = (strcmp(op,"SSATADD")==0 || strcmp(op,"STACKSATADD")==0);
+    int is_sub = (strcmp(op,"SSATSUB")==0 || strcmp(op,"STACKSATSUB")==0);
+    if (is_add){
+      if (b > 0 && a > LONG_MAX - b) r = LONG_MAX;
+      else if (b < 0 && a < LONG_MIN - b) r = LONG_MIN;
+      else r = a + b;
+    } else if (is_sub){
+      if (b > 0 && a < LONG_MIN + b) r = LONG_MIN;
+      else if (b < 0 && a > LONG_MAX + b) r = LONG_MAX;
+      else r = a - b;
+    } else {
+      /* SSATMUL / STACKSATMUL */
+      if (a == 0 || b == 0) r = 0;
+      else {
+        __int128 p = (__int128)a * (__int128)b;
+        if (p > (__int128)LONG_MAX) r = LONG_MAX;
+        else if (p < (__int128)LONG_MIN) r = LONG_MIN;
+        else r = (long)p;
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SWMOD")||kw(&L->cur,"SWRAPMOD")||kw(&L->cur,"STACKWRAPMOD")){
+    /* n m → n mod m in [0,m); m<=0 → 0 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 0){ r = n % m; if (r < 0) r += m; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIP8")||kw(&L->cur,"SCLIP16")||
+      kw(&L->cur,"STACKCLIP8")||kw(&L->cur,"STACKCLIP16")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = a;
+    int is16 = (strcmp(op,"SCLIP16")==0 || strcmp(op,"STACKCLIP16")==0);
+    long hi = is16 ? 65535L : 255L;
+    if (r < 0) r = 0;
+    if (r > hi) r = hi;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBOUND")||kw(&L->cur,"STACKBOUND")){
+    /* alias of SCLAMP: n lo hi → clamp */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long r = n;
+    if (r < lo) r = lo;
+    if (r > hi) r = hi;
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
