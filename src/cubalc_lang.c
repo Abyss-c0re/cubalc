@@ -9746,6 +9746,125 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* digit-6 ENERGYSWAP a b — exchange energy planes */
+  if (kw(&L->cur,"ENERGYSWAP")||kw(&L->cur,"SWAPENERGY")||kw(&L->cur,"ESWAP")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYSWAP a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYSWAP a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    ensure_world(vm);
+    int ia = find_cube(vm,a); if (ia<0){ place_cube(vm,a,a,1); ia=find_cube(vm,a); }
+    int ib = find_cube(vm,b); if (ib<0){ place_cube(vm,b,b,1); ib=find_cube(vm,b); }
+    if (ia<0 || ib<0){ fail(vm,"ENERGYSWAP missing"); return -1; }
+    float ea = vm->ch.cubes[ia].atom.energy;
+    float eb = vm->ch.cubes[ib].atom.energy;
+    vm->ch.cubes[ia].atom.energy = eb;
+    vm->ch.cubes[ib].atom.energy = ea;
+    vm->ch.cubes[ia].flowed = 1;
+    vm->ch.cubes[ib].flowed = 1;
+    long ev = (long)lround(eb * 100.0); /* energy now on a */
+    var_set_num(vm,"ENERGY",ev);
+    var_set_num(vm,"LAST_N",ev); vm->last_n=ev;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 ENERGYSHARE a b — equalize energy (mean of both, clamp 0..1) */
+  if (kw(&L->cur,"ENERGYSHARE")||kw(&L->cur,"SHAREENERGY")||kw(&L->cur,"EQUALIZEENERGY")||
+      kw(&L->cur,"ENERGYEQZ")||kw(&L->cur,"ESHAR")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYSHARE a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGYSHARE a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    ensure_world(vm);
+    int ia = find_cube(vm,a); if (ia<0){ place_cube(vm,a,a,1); ia=find_cube(vm,a); }
+    int ib = find_cube(vm,b); if (ib<0){ place_cube(vm,b,b,1); ib=find_cube(vm,b); }
+    if (ia<0 || ib<0){ fail(vm,"ENERGYSHARE missing"); return -1; }
+    float mean = 0.5f * (vm->ch.cubes[ia].atom.energy + vm->ch.cubes[ib].atom.energy);
+    if (mean < 0.f) mean = 0.f;
+    if (mean > 1.f) mean = 1.f;
+    vm->ch.cubes[ia].atom.energy = mean;
+    vm->ch.cubes[ib].atom.energy = mean;
+    vm->ch.cubes[ia].flowed = 1;
+    vm->ch.cubes[ib].flowed = 1;
+    long ev = (long)lround(mean * 100.0);
+    var_set_num(vm,"ENERGY",ev);
+    var_set_num(vm,"LAST_N",ev); vm->last_n=ev;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 fleet energy metrics: ENERGYTOTAL ENERGYAVG ENERGYMIN ENERGYMAX */
+  if (kw(&L->cur,"ENERGYTOTAL")||kw(&L->cur,"ENERGYSUM")||kw(&L->cur,"SUMENERGY")||
+      kw(&L->cur,"TOTALENERGY")||
+      kw(&L->cur,"ENERGYAVG")||kw(&L->cur,"AVGENERGY")||kw(&L->cur,"MEANENERGY")||
+      kw(&L->cur,"ENERGYMEAN")||
+      kw(&L->cur,"ENERGYMIN")||kw(&L->cur,"MINENERGY")||
+      kw(&L->cur,"ENERGYMAX")||kw(&L->cur,"MAXENERGY")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    ensure_world(vm);
+    int nc = vm->ch.n_cubes;
+    if (nc < 1){
+      var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1;
+    }
+    long sum = 0, mn = 101, mx = -1;
+    for (int i=0;i<nc;i++){
+      long ev = (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+      sum += ev;
+      if (ev < mn) mn = ev;
+      if (ev > mx) mx = ev;
+    }
+    long r = sum;
+    if (strcmp(op,"ENERGYAVG")==0 || strcmp(op,"AVGENERGY")==0 ||
+        strcmp(op,"MEANENERGY")==0 || strcmp(op,"ENERGYMEAN")==0)
+      r = sum / nc;
+    else if (strcmp(op,"ENERGYMIN")==0 || strcmp(op,"MINENERGY")==0)
+      r = mn;
+    else if (strcmp(op,"ENERGYMAX")==0 || strcmp(op,"MAXENERGY")==0)
+      r = mx;
+    /* else TOTAL/SUM */
+    var_set_num(vm,"ENERGY",r);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SET",(long)nc);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack fleet energy metrics: SENERGYTOTAL SENERGYAVG SENERGYMIN SENERGYMAX */
+  if (kw(&L->cur,"SENERGYTOTAL")||kw(&L->cur,"SENERGYSUM")||kw(&L->cur,"STACKENERGYTOTAL")||
+      kw(&L->cur,"SETOTAL")||
+      kw(&L->cur,"SENERGYAVG")||kw(&L->cur,"SENERGYMEAN")||kw(&L->cur,"STACKENERGYAVG")||
+      kw(&L->cur,"SEAVG")||
+      kw(&L->cur,"SENERGYMIN")||kw(&L->cur,"STACKENERGYMIN")||kw(&L->cur,"SEMIN")||
+      kw(&L->cur,"SENERGYMAX")||kw(&L->cur,"STACKENERGYMAX")||kw(&L->cur,"SEMAX")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    ensure_world(vm);
+    int nc = vm->ch.n_cubes;
+    if (nc < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long sum = 0, mn = 101, mx = -1;
+    for (int i=0;i<nc;i++){
+      long ev = (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+      sum += ev;
+      if (ev < mn) mn = ev;
+      if (ev > mx) mx = ev;
+    }
+    long r = sum;
+    if (strcmp(op,"SENERGYAVG")==0 || strcmp(op,"SENERGYMEAN")==0 ||
+        strcmp(op,"STACKENERGYAVG")==0 || strcmp(op,"SEAVG")==0)
+      r = sum / nc;
+    else if (strcmp(op,"SENERGYMIN")==0 || strcmp(op,"STACKENERGYMIN")==0 ||
+             strcmp(op,"SEMIN")==0)
+      r = mn;
+    else if (strcmp(op,"SENERGYMAX")==0 || strcmp(op,"STACKENERGYMAX")==0 ||
+             strcmp(op,"SEMAX")==0)
+      r = mx;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"ENERGY",r);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* ROTBITS cube k — rotate State Matrix bits left by k (digit-6 matrix flow) */
   if (kw(&L->cur,"ROTBITS")||kw(&L->cur,"ROLBITS")||kw(&L->cur,"SHIFTBITS")){
     lex_next(L);

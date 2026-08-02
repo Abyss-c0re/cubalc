@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.112-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy fleet metrics + pair equalize/swap.
+
+### Language
+- `ENERGYSWAP` a b — exchange energy planes
+- `ENERGYSHARE` a b — equalize mean energy
+- `ENERGYTOTAL`/`ENERGYAVG`/`ENERGYMIN`/`ENERGYMAX` — fleet metrics (0..100)
+- `SENERGYTOTAL`/`SENERGYAVG`/`SENERGYMIN`/`SENERGYMAX` — stack duals
+- Proof `135_energy_fleet.cubalc`
+
+### Prior
+See 1.12.111-universal.
+
 ## 1.12.111-universal — 2026-08-03
 
 ### Direction
