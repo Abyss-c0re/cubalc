@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.58-universal — 2026-08-02
+
+### Direction
+- Algocube digit **3** → COP matrix range fill/clear/flip/count (bit-block ops pure-C).
+
+### Language
+- `FILLRANGE`/`SETRANGE` cube lo hi [val] — set bits [lo..hi] (default val=1)
+- `CLEARRANGE`/`CLRRANGE`/`ZERORANGE` cube lo hi — clear range
+- `FLIPRANGE`/`NOTRANGE`/`INVERTRANGE` cube lo hi — invert range
+- `COUNTRANGE`/`ONESRANGE`/`POPRANGE` cube lo hi → `LAST_N` ones in range
+- Proof `81_range_bits.cubalc`
+
+### Prior
+See 1.12.57-universal.
+
+
 ## 1.12.57-universal — 2026-08-02
 
 ### Direction

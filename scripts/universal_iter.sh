@@ -60,7 +60,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             39_stack_bitmetrics 40_stack_bitfield 41_stack_numthy 42_stack_double 43_stack_modarith 44_stack_combinators 45_stack_numpred 46_stack_combin 47_stack_pack 48_word_path 49_stack_science 50_seed_rng 51_sext_zext 52_stack_fold_mean 53_pack8_nibble 54_ilog10_parity 55_align_setbyte 56_pow10 57_mask_isdiv 58_select_clamp_range 59_clamp_bound_sat 60_overflow_bitops 61_shift_rotate_cmp 62_bitwise_logic_select 63_popcount_clz_ctz 64_muldiv_bswap 65_rotate_shift_extend 66_bool_logic_cmp 67_mem_set_inc_xchg 68_jump_jz_sloop 69_branch_beq_case 70_addc_divmod 71_callif_retif 72_iroot_nextprime 73_str_trim_prefix 74_for_downto_lpad 75_ndivs_sigma_phi 76_countbits_getbit 77_shlbits_findone \
             78_revbits_diff \
             79_word_bits_bridge \
-            80_ternary_forever; do
+            80_ternary_forever \
+            81_range_bits; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
