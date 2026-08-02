@@ -1082,7 +1082,12 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BDEP")==0 || strcmp(name,"BITDEP")==0 ||
         strcmp(name,"BYTE")==0 || strcmp(name,"HIBYTE")==0 ||
         strcmp(name,"LOBYTE")==0 ||
-        strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
+        strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0 ||
+        /* digit-2 math ext: combinatorics + square + floor div */
+        strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
+        strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
+        strcmp(name,"PERM")==0 || strcmp(name,"PNR")==0 ||
+        strcmp(name,"DIVFLOOR")==0 || strcmp(name,"FLOORDIV")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1496,6 +1501,35 @@ static long parse_prim(VM *vm, Lex *L){
             return (aa + bb - 1) / bb;
           }
           return a / b;
+        }
+        if (strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0)
+          return a * a;
+        if (strcmp(name,"DIVFLOOR")==0 || strcmp(name,"FLOORDIV")==0){
+          /* floor(a/b); 0 if b==0 */
+          if (b == 0) return 0;
+          long q = a / b, r = a % b;
+          if (r != 0 && ((a < 0) != (b < 0))) q--; /* toward -inf when signs differ */
+          return q;
+        }
+        if (strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0){
+          /* C(n,k) multiplicative formula; 0 if invalid */
+          long n = a, k = b;
+          if (n < 0 || k < 0 || k > n) return 0;
+          if (k > n - k) k = n - k;
+          long r = 1;
+          for (long i = 1; i <= k; i++){
+            /* keep intermediate exact: multiply then divide by i */
+            r = r * (n - k + i) / i;
+          }
+          return r;
+        }
+        if (strcmp(name,"PERM")==0 || strcmp(name,"PNR")==0){
+          /* P(n,k) = n!/(n-k)! */
+          long n = a, k = b;
+          if (n < 0 || k < 0 || k > n) return 0;
+          long r = 1;
+          for (long i = 0; i < k; i++) r *= (n - i);
+          return r;
         }
         return 0;
       }

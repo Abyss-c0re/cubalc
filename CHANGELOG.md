@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.10-universal — 2026-08-02
+
+### Direction
+- Algocube digit **2** → math plane ext: square, floor-div, binomial/permutation.
+
+### Language
+- `SQR`/`SQUARE`(n) — n²
+- `DIVFLOOR`/`FLOORDIV`(a,b) — floor division (toward −∞)
+- `BINOM`/`CHOOSE`(n,k) — binomial coefficient C(n,k)
+- `PERM`/`PNR`(n,k) — P(n,k) = n!/(n−k)!
+- Proof `33_math_binom_perm.cubalc`
+
+### Prior
+See 1.12.9-universal.
+
 ## 1.12.9-universal — 2026-08-02
 
 ### Direction
