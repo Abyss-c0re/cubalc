@@ -7578,6 +7578,84 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
+  /* digit-9 COP metrics ext: MAXRUN · ZRUNS · FINDZERO/LASTZERO */
+  if (kw(&L->cur,"MAXRUN")||kw(&L->cur,"LONGRUN")||kw(&L->cur,"LONGESTONES")||
+      kw(&L->cur,"MAXONESRUN")||kw(&L->cur,"LONGEST1")){
+    /* MAXRUN cube → length of longest contiguous 1-run (0 if no ones) */
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"MAXRUN cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",-1); vm->last_n=-1; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long best = 0, cur = 0;
+    for (int i=0;i<n;i++){
+      if (cubalc_matrix_get(m, i)){ cur++; if (cur > best) best = cur; }
+      else cur = 0;
+    }
+    var_set_num(vm,"SET",cubalc_matrix_popcount(m));
+    var_set_num(vm,"LAST_N",best); vm->last_n=best;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ZRUNS")||kw(&L->cur,"ZERORUNS")||kw(&L->cur,"OFFRUNS")||
+      kw(&L->cur,"GROUPZEROS")||kw(&L->cur,"ZEROGROUPS")){
+    /* ZRUNS cube → number of maximal contiguous 0-runs */
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ZRUNS cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",-1); vm->last_n=-1; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long runs = 0;
+    int prev = 1; /* treat edge as "ones" so leading zeros start a run */
+    for (int i=0;i<n;i++){
+      int on = cubalc_matrix_get(m, i) ? 1 : 0;
+      if (!on && prev) runs++;
+      prev = on;
+    }
+    var_set_num(vm,"SET",cubalc_matrix_popcount(m));
+    var_set_num(vm,"LAST_N",runs); vm->last_n=runs;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FINDZERO")||kw(&L->cur,"FIRSTZERO")||kw(&L->cur,"FIRST0")||
+      kw(&L->cur,"FFZBIT")||kw(&L->cur,"LASTZERO")||kw(&L->cur,"LAST0")||
+      kw(&L->cur,"FLZBIT")){
+    /* FINDZERO cube → index of first 0, or -1 if all ones
+     * LASTZERO cube → index of last 0, or -1 if all ones */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"FINDZERO cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",-1); vm->last_n=-1; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    long ones = cubalc_matrix_popcount(m);
+    long r = -1;
+    int is_last = (strcmp(op,"LASTZERO")==0 || strcmp(op,"LAST0")==0 ||
+                   strcmp(op,"FLZBIT")==0);
+    if (is_last){
+      for (int i=n-1;i>=0;i--){
+        if (!cubalc_matrix_get(m, i)){ r = i; break; }
+      }
+    } else {
+      for (int i=0;i<n;i++){
+        if (!cubalc_matrix_get(m, i)){ r = i; break; }
+      }
+    }
+    var_set_num(vm,"SET",ones);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"MAJBITS")||kw(&L->cur,"MAJORITYBITS")||kw(&L->cur,"THRESHBITS")||
       kw(&L->cur,"VOTEBITS")||kw(&L->cur,"ONESGE")){
     /* MAJBITS cube [k] → LAST_N=1 if popcount >= k; default k = n/2+1 (strict majority)

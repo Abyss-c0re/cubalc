@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.78-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → COP metrics: longest 1-run, zero-runs, first/last zero.
+
+### Language
+- `MAXRUN`/`LONGRUN` cube — longest contiguous ones run
+- `ZRUNS`/`ZERORUNS` cube — count of maximal zero-runs
+- `FINDZERO`/`FIRSTZERO` · `LASTZERO` cube — first/last zero index (−1 if none)
+- Proof `101_maxrun_zruns.cubalc`
+
+### Prior
+See 1.12.77-universal.
+
 ## 1.12.77-universal — 2026-08-02
 
 ### Direction

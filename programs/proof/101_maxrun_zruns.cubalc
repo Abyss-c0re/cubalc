@@ -1,0 +1,81 @@
+# Proof 101 — digit-9 COP: MAXRUN + ZRUNS + FINDZERO/LASTZERO
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+# pattern: 1,1,0,0,1,1,1,0 → max run 3; zero runs 2 (at 2-3 and 7)
+SETBIT m 0 1
+SETBIT m 1 1
+SETBIT m 4 1
+SETBIT m 5 1
+SETBIT m 6 1
+
+MAXRUN m
+ASSERT LAST_N == 3
+LONGRUN m
+ASSERT LAST_N == 3
+
+ZRUNS m
+ASSERT LAST_N == 2
+ZERORUNS m
+ASSERT LAST_N == 2
+
+FINDZERO m
+ASSERT LAST_N == 2
+FIRSTZERO m
+ASSERT LAST_N == 2
+# last zero is end of 64-bit lattice (bits 7..63 are zero)
+LASTZERO m
+ASSERT LAST_N == 63
+
+# all zeros: maxrun 0, one zero-run, first zero 0, last zero n-1 (63)
+CLEARBITS m
+MAXRUN m
+ASSERT LAST_N == 0
+ZRUNS m
+ASSERT LAST_N == 1
+FINDZERO m
+ASSERT LAST_N == 0
+LASTZERO m
+ASSERT LAST_N == 63
+
+# solid ones 0..7: maxrun 8, zruns still has trailing zeros after bit7
+CLEARBITS m
+FILLRANGE m 0 7
+MAXRUN m
+ASSERT LAST_N == 8
+# zero-run starts at bit 8 → 1 run in 64-bit lattice
+ZRUNS m
+ASSERT LAST_N == 1
+FINDZERO m
+ASSERT LAST_N == 8
+LASTZERO m
+ASSERT LAST_N == 63
+
+# all ones: no zeros
+CLEARBITS m
+FILLRANGE m 0 63
+MAXRUN m
+ASSERT LAST_N == 64
+ZRUNS m
+ASSERT LAST_N == 0
+FINDZERO m
+ASSERT LAST_N == -1
+LASTZERO m
+ASSERT LAST_N == -1
+
+# soft fail
+MAXRUN nosuch
+ASSERT OK == 0
+ZRUNS nosuch
+ASSERT OK == 0
+FINDZERO nosuch
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof101_maxrun_zruns" LAST_N SET
