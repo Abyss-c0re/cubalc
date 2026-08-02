@@ -1,0 +1,79 @@
+# Proof 84 — digit-5 COP matrix relations: EQ/NE/SUBSET/SUPERSET/DISJOINT
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CUBE c ROLE matrix PROTON 1
+
+CLEARBITS a
+CLEARBITS b
+SETBIT a 0 1
+SETBIT a 2 1
+SETBIT b 0 1
+SETBIT b 2 1
+
+# equal
+EQBITS a b
+ASSERT LAST_N == 1
+SAMEBITS a b
+ASSERT LAST_N == 1
+NEBITS a b
+ASSERT LAST_N == 0
+
+# differ
+SETBIT b 4 1
+NEBITS a b
+ASSERT LAST_N == 1
+EQBITS a b
+ASSERT LAST_N == 0
+DIFFBITS a b
+ASSERT LAST_N == 1
+
+# subset: a ⊆ b (a bits 0,2; b bits 0,2,4)
+SUBSETBITS a b
+ASSERT LAST_N == 1
+SUPERSETBITS a b
+ASSERT LAST_N == 0
+ISSUPERSET b a
+ASSERT LAST_N == 1
+
+# not subset when a has extra
+SETBIT a 6 1
+SUBSETBITS a b
+ASSERT LAST_N == 0
+
+# disjoint
+CLEARBITS c
+SETBIT c 1 1
+SETBIT c 3 1
+# a has 0,2,6 — c has 1,3 — no overlap
+DISJOINTBITS a c
+ASSERT LAST_N == 1
+OVERLAPBITS a c
+ASSERT LAST_N == 0
+# a and b still overlap on 0,2
+DISJOINTBITS a b
+ASSERT LAST_N == 0
+INTERSECTBITS a b
+ASSERT LAST_N == 1
+
+# empty is subset of all
+CLEARBITS c
+SUBSETBITS c a
+ASSERT LAST_N == 1
+DISJOINTBITS c a
+ASSERT LAST_N == 1
+EQBITS c c
+ASSERT LAST_N == 1
+
+# soft fail missing
+EQBITS a nosuch
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof84_eqbits_subset" LAST_N

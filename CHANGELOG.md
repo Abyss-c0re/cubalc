@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.61-universal — 2026-08-02
+
+### Direction
+- Algocube digit **5** → COP matrix set relations (equality/subset/disjoint pure-C).
+
+### Language
+- `EQBITS`/`SAMEBITS` · `NEBITS`/`NEQBITS` a b → 0/1
+- `SUBSETBITS`/`ISSUBSET` · `SUPERSETBITS`/`ISSUPERSET` a b
+- `DISJOINTBITS` · `OVERLAPBITS`/`INTERSECTBITS` a b
+- Proof `84_eqbits_subset.cubalc`
+
+### Prior
+See 1.12.60-universal.
+
+
 ## 1.12.60-universal — 2026-08-02
 
 ### Direction
