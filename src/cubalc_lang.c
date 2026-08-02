@@ -3051,6 +3051,117 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack modular + fact/ilog: SMULMOD SPOWMOD SMODINV SFACT SILOG2 */
+  if (kw(&L->cur,"SFACT")||kw(&L->cur,"STACKFACT")||kw(&L->cur,"SFACTORIAL")||
+      kw(&L->cur,"SILOG2")||kw(&L->cur,"SLOG2")||kw(&L->cur,"STACKILOG2")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SFACT")==0 || strcmp(op,"STACKFACT")==0 || strcmp(op,"SFACTORIAL")==0){
+      if (a < 0) r = 0;
+      else {
+        if (a > 20) a = 20;
+        r = 1;
+        for (long i = 2; i <= a; i++) r *= i;
+      }
+    } else {
+      /* SILOG2 / SLOG2 / STACKILOG2 — floor(log2(a)); a<=0 → -1 */
+      if (a <= 0) r = -1;
+      else {
+        unsigned long u = (unsigned long)a;
+        r = -1;
+        while (u){ r++; u >>= 1; }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODINV")||kw(&L->cur,"SINVMOD")||kw(&L->cur,"STACKMODINV")){
+    /* a m → a^{-1} mod m (0 if none) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = aa;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += m;
+          r = t;
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMULMOD")||kw(&L->cur,"STACKMULMOD")||
+      kw(&L->cur,"SPOWMOD")||kw(&L->cur,"STACKPOWMOD")){
+    /* a b m → (a*b)%m or pow(a,b)%m */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long m = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (m <= 0) r = 0;
+    else if (strcmp(op,"SMULMOD")==0 || strcmp(op,"STACKMULMOD")==0){
+      long x = a % m; if (x < 0) x += m;
+      long y = b % m; if (y < 0) y += m;
+      r = 0;
+      while (y > 0){
+        if (y & 1) r = (r + x) % m;
+        x = (x + x) % m;
+        y >>= 1;
+      }
+    } else {
+      /* SPOWMOD / STACKPOWMOD */
+      long base = a % m; if (base < 0) base += m;
+      long exp = b;
+      if (exp < 0) r = 0;
+      else {
+        r = 1 % m;
+        while (exp > 0){
+          if (exp & 1){
+            long y = r, x = base, acc = 0;
+            while (y > 0){
+              if (y & 1) acc = (acc + x) % m;
+              x = (x + x) % m;
+              y >>= 1;
+            }
+            r = acc;
+          }
+          {
+            long x = base, acc = 0, y = base;
+            while (y > 0){
+              if (y & 1) acc = (acc + x) % m;
+              x = (x + x) % m;
+              y >>= 1;
+            }
+            base = acc;
+          }
+          exp >>= 1;
+        }
+      }
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack bitwise ALU: SAND SOR SXOR SNOT SSHL SSHR */
   if (kw(&L->cur,"SAND")||kw(&L->cur,"STACKAND")||kw(&L->cur,"BANDST")||
       kw(&L->cur,"SOR")||kw(&L->cur,"STACKOR")||kw(&L->cur,"BORST")||
