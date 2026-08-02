@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.66-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → control flow: cell-range iterators + single-token break/continue-if.
+
+### Language
+- `EACH CELL` [as name] [FROM lo TO hi] ... END — iterate cells, bind value/`VAL`, `IT`/`IDX`
+- `FORCELL`/`EACHCELL` [name] lo hi ... END — compact cell-range loop
+- `BREAKIF` expr · `CONTINUEIF`/`CONTIF`/`SKIPIF`/`NEXTIF` expr
+- Proof `89_eachcell_breakif.cubalc`
+
+### Prior
+See 1.12.65-universal.
+
+
 ## 1.12.65-universal — 2026-08-02
 
 ### Direction
