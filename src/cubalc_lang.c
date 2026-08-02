@@ -5976,6 +5976,92 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack immediate bitfield: SSETBN SCLRBN SFLIPBN SBTESTN + SSHLN SSHRN */
+  if (kw(&L->cur,"SSETBN")||kw(&L->cur,"SETBN")||kw(&L->cur,"SSETBITN")||
+      kw(&L->cur,"STACKSETBN")){
+    /* SSETBN n — TOS |= (1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    u |= (1ul << (unsigned)n);
+    long v = (long)u;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRBN")||kw(&L->cur,"CLRBN")||kw(&L->cur,"SCLRBITN")||
+      kw(&L->cur,"STACKCLRBN")||kw(&L->cur,"SCLRBIMM")){
+    /* SCLRBN n — TOS &= ~(1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    u &= ~(1ul << (unsigned)n);
+    long v = (long)u;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SFLIPBN")||kw(&L->cur,"FLIPBN")||kw(&L->cur,"STGLBN")||
+      kw(&L->cur,"SFLPBN")||kw(&L->cur,"STACKFLIPBN")||kw(&L->cur,"STGLBITN")){
+    /* SFLIPBN n — TOS ^= (1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    u ^= (1ul << (unsigned)n);
+    long v = (long)u;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBTESTN")||kw(&L->cur,"TESTBITN")||kw(&L->cur,"SBITN")||
+      kw(&L->cur,"SBTSTN")||kw(&L->cur,"STACKBITN")||kw(&L->cur,"SBITTESTN")){
+    /* SBTESTN n — replace TOS with bit n (0/1); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long u = (unsigned long)vm->stack[vm->sp - 1];
+    long v = (u & (1ul << (unsigned)n)) ? 1 : 0;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHLN")||kw(&L->cur,"SHLN")||kw(&L->cur,"STACKSHLN")||
+      kw(&L->cur,"SLSHLN")||kw(&L->cur,"SSHLIMM")){
+    /* SSHLN n — TOS <<= n (n clamped 0..63) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long v = (long)((unsigned long)vm->stack[vm->sp - 1] << (unsigned)n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHRN")||kw(&L->cur,"SHRN")||kw(&L->cur,"STACKSHRN")||
+      kw(&L->cur,"SLSHRN")||kw(&L->cur,"SSHRIMM")){
+    /* SSHRN n — logical TOS >>= n (n clamped 0..63) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long v = (long)((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack compare + min/max: predicate 0/1 or ordered select */
   if (kw(&L->cur,"SMIN")||kw(&L->cur,"SMAX")||
       kw(&L->cur,"STACKMIN")||kw(&L->cur,"STACKMAX")||

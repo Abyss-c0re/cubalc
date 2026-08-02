@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.87-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → stack immediate bitfield + shift-by-constant (complete bit path after stack-stack SBTEST/SSETB).
+
+### Language
+- `SSETBN`/`SETBN`/`SSETBITN` n — TOS \|= (1≪n)
+- `SCLRBN`/`CLRBN`/`SCLRBITN` n — TOS &= ~(1≪n)
+- `SFLIPBN`/`FLIPBN`/`STGLBN` n — TOS ^= (1≪n)
+- `SBTESTN`/`TESTBITN`/`SBITN` n — replace TOS with bit n (0/1)
+- `SSHLN`/`SHLN` n — TOS ≪= n · `SSHRN`/`SHRN` n — logical TOS ≫= n
+- Proof `110_ssetbn_stestn.cubalc`
+
+### Prior
+See 1.12.86-universal.
+
 ## 1.12.86-universal — 2026-08-02
 
 ### Direction
