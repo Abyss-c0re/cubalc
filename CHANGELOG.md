@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.68-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → COP metrics: bit-dot, majority threshold, Gray code.
+
+### Language
+- `DOTBITS`/`ANDPOP` a b → popcount(a AND b)
+- `MAJBITS`/`THRESHBITS` cube [k] → 1 if ones ≥ k (default strict majority)
+- `GRAYBITS`/`TOGRAY` cube · `UNGRAYBITS`/`GRAY2BIN` cube
+- Proof `91_dot_maj_gray.cubalc`
+
+### Prior
+See 1.12.67-universal.
+
 ## 1.12.67-universal — 2026-08-02
 
 ### Direction

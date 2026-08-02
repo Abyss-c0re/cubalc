@@ -1,0 +1,69 @@
+# Proof 91 — digit-9 COP: DOTBITS + MAJBITS + GRAYBITS
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CLEARBITS a
+CLEARBITS b
+# a: bits 0,1,2  b: bits 1,2,3 → overlap 2
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT a 2 1
+SETBIT b 1 1
+SETBIT b 2 1
+SETBIT b 3 1
+DOTBITS a b
+ASSERT LAST_N == 2
+ANDPOP a b
+ASSERT LAST_N == 2
+DIFFBITS a b
+ASSERT LAST_N == 2
+
+# MAJBITS: 3 ones in 64 → not majority
+MAJBITS a
+ASSERT LAST_N == 0
+# threshold 3
+THRESHBITS a 3
+ASSERT LAST_N == 1
+THRESHBITS a 4
+ASSERT LAST_N == 0
+# fill half+1 of first 8 bits
+CLEARBITS a
+FILLRANGE a 0 4
+# 5 ones in n=64 → still not majority of 64
+MAJBITS a
+ASSERT LAST_N == 0
+MAJBITS a 5
+ASSERT LAST_N == 1
+
+# GRAYBITS / UNGRAYBITS on word pattern
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+WORDTO m 7
+GRAYBITS m
+WORDFROM m
+ASSERT LAST_N == 4
+UNGRAYBITS m
+WORDFROM m
+ASSERT LAST_N == 7
+
+# Gray(5)=7, ungray back
+WORDTO m 5
+TOGRAY m
+WORDFROM m
+ASSERT LAST_N == 7
+GRAY2BIN m
+WORDFROM m
+ASSERT LAST_N == 5
+
+# soft fail missing cubes
+DOTBITS nosuch a
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof91_dot_maj_gray" LAST_N SET

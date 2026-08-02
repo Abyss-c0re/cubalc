@@ -6988,6 +6988,116 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* digit-9 COP metrics: DOTBITS · MAJBITS/THRESHBITS · GRAYBITS/UNGRAYBITS */
+  if (kw(&L->cur,"DOTBITS")||kw(&L->cur,"ANDPOP")||kw(&L->cur,"ANDCOUNT")||
+      kw(&L->cur,"BITDOT")||kw(&L->cur,"OVERLAPCOUNT")){
+    /* DOTBITS a b → LAST_N = popcount(a AND b) */
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"DOTBITS a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"DOTBITS a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    int ia=find_cube(vm,a), ib=find_cube(vm,b);
+    if (ia<0 || ib<0){
+      var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",-1); vm->last_n=-1; bump(vm); return 1;
+    }
+    cubalc_matrix *ma = &vm->ch.cubes[ia].atom.matrix;
+    cubalc_matrix *mb = &vm->ch.cubes[ib].atom.matrix;
+    int na = ma->n > 0 ? ma->n : CUBALC_ATOM_BITS;
+    int nb = mb->n > 0 ? mb->n : CUBALC_ATOM_BITS;
+    if (na > CUBALC_ATOM_BITS) na = CUBALC_ATOM_BITS;
+    if (nb > CUBALC_ATOM_BITS) nb = CUBALC_ATOM_BITS;
+    int nn = na > nb ? na : nb;
+    if (nn < 1) nn = CUBALC_ATOM_BITS;
+    long d = 0;
+    for (int k=0;k<nn;k++){
+      int ba = cubalc_matrix_get(ma, k) ? 1 : 0;
+      int bb = cubalc_matrix_get(mb, k) ? 1 : 0;
+      if (ba && bb) d++;
+    }
+    var_set_num(vm,"LAST_N",d); vm->last_n=d;
+    var_set_num(vm,"SET",d);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"MAJBITS")||kw(&L->cur,"MAJORITYBITS")||kw(&L->cur,"THRESHBITS")||
+      kw(&L->cur,"VOTEBITS")||kw(&L->cur,"ONESGE")){
+    /* MAJBITS cube [k] → LAST_N=1 if popcount >= k; default k = n/2+1 (strict majority)
+     * THRESHBITS same with required k (if omitted, same majority default). */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"MAJBITS cube [k]"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int have_k = 0;
+    long kthr = 0;
+    /* optional k: number / (expr) / unary minus only — bare IDENT is next statement */
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS){
+      kthr = parse_expr(vm,L);
+      have_k = 1;
+    }
+    int ix=find_cube(vm,id);
+    if (ix<0){ var_set_num(vm,"OK",0); var_set_num(vm,"LAST_N",0); vm->last_n=0; bump(vm); return 1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    if (n < 1) n = CUBALC_ATOM_BITS;
+    long ones = cubalc_matrix_popcount(m);
+    if (!have_k){
+      kthr = (long)n / 2 + 1; /* strict majority */
+    }
+    if (kthr < 0) kthr = 0;
+    long hit = (ones >= kthr) ? 1 : 0;
+    var_set_num(vm,"SET",ones);
+    var_set_num(vm,"LAST_N",hit); vm->last_n=hit;
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"GRAYBITS")||kw(&L->cur,"TOGRAY")||kw(&L->cur,"BIN2GRAY")||
+      kw(&L->cur,"UNGRAYBITS")||kw(&L->cur,"FROMGRAY")||kw(&L->cur,"GRAY2BIN")||
+      kw(&L->cur,"DEGRAYBITS")){
+    /* GRAYBITS cube — binary→Gray: g = n^(n>>1); UNGRAYBITS Gray→binary */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int to_gray = (strcmp(op,"GRAYBITS")==0 || strcmp(op,"TOGRAY")==0 ||
+                   strcmp(op,"BIN2GRAY")==0);
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"GRAYBITS cube"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"GRAYBITS missing cube"); return -1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = CUBALC_ATOM_BITS;
+    if (m->n < (uint16_t)n) m->n = (uint16_t)n;
+    if (n > 64) n = 64;
+    unsigned long long u = 0;
+    for (int i=0;i<n && i<64;i++){
+      if (cubalc_matrix_get(m, i)) u |= (1ULL << i);
+    }
+    unsigned long long r;
+    if (to_gray){
+      r = u ^ (u >> 1);
+    } else {
+      /* Gray → binary: successive XOR of higher bits */
+      r = u;
+      for (int s=1;s<64;s<<=1) r ^= (r >> s);
+    }
+    for (int i=0;i<n && i<64;i++){
+      cubalc_matrix_set(m, i, (r >> i) & 1ULL ? 1 : 0);
+    }
+    vm->ch.cubes[ix].atom.digit_lock = 0;
+    vm->ch.cubes[ix].atom.digit =
+      (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    vm->ch.cubes[ix].flowed = 1;
+    long ones = cubalc_matrix_popcount(m);
+    var_set_num(vm,"SET",ones);
+    var_set_num(vm,"LAST_N",(long)r); vm->last_n=(long)r;
+    var_set_num(vm,"DIGIT",vm->ch.cubes[ix].atom.digit);
+    var_set_num(vm,"OK",1);
+    bump(vm); return 1;
+  }
   /* digit-7 COP matrix: PARITYBITS · COPYRANGE · SWAPRANGE (local reverse) */
   if (kw(&L->cur,"PARITYBITS")||kw(&L->cur,"XORREDUCE")||kw(&L->cur,"BITPARITY")||
       kw(&L->cur,"PARBIT")){
