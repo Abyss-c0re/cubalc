@@ -126,6 +126,20 @@ static void lex_next(Lex *L) {
   }
   if (isdigit((unsigned char)c)){
     char b[64]; size_t k=0;
+    /* 0x… / 0X… hex integer literals (universal data-path) */
+    if (c=='0' && L->i+1<L->n && (L->s[L->i+1]=='x' || L->s[L->i+1]=='X')){
+      b[k++]=L->s[L->i++]; /* 0 */
+      b[k++]=L->s[L->i++]; /* x */
+      while (L->i<L->n && isxdigit((unsigned char)L->s[L->i])){
+        if (k+1<sizeof b) b[k++]=L->s[L->i];
+        L->i++;
+      }
+      b[k]=0;
+      L->cur.num = strtoul(b, NULL, 16);
+      L->cur.kind = TK_NUM;
+      snprintf(L->cur.text, sizeof L->cur.text, "%s", b);
+      return;
+    }
     while (L->i<L->n && isdigit((unsigned char)L->s[L->i])){
       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
     }
@@ -977,7 +991,15 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BAND")==0 || strcmp(name,"BOR")==0 ||
         strcmp(name,"BXOR")==0 || strcmp(name,"BNOT")==0 ||
         strcmp(name,"SHL")==0 || strcmp(name,"SHR")==0 ||
-        strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0){
+        strcmp(name,"BITCOUNT")==0 || strcmp(name,"HAMMING32")==0 ||
+        /* digit-9 universal data-path: rotate · pack · select */
+        strcmp(name,"ROTL")==0 || strcmp(name,"ROTR")==0 ||
+        strcmp(name,"ROL")==0 || strcmp(name,"ROR")==0 ||
+        strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0 ||
+        strcmp(name,"HI16")==0 || strcmp(name,"LO16")==0 ||
+        strcmp(name,"HIWORD")==0 || strcmp(name,"LOWORD")==0 ||
+        strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0 ||
+        strcmp(name,"NEG")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1092,6 +1114,37 @@ static long parse_prim(VM *vm, Lex *L){
           while (u) { n += (int)(u & 1u); u >>= 1; }
           return n;
         }
+        /* Rotate (32-bit width — portable universal word) */
+        if (strcmp(name,"ROTL")==0 || strcmp(name,"ROL")==0){
+          unsigned int w = (unsigned int)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 31;
+          if (k == 0) return (long)w;
+          return (long)((w << k) | (w >> (32 - k)));
+        }
+        if (strcmp(name,"ROTR")==0 || strcmp(name,"ROR")==0){
+          unsigned int w = (unsigned int)a;
+          int k = (int)b;
+          if (k < 0) k = 0;
+          k &= 31;
+          if (k == 0) return (long)w;
+          return (long)((w >> k) | (w << (32 - k)));
+        }
+        /* Pack / unpack 16-bit halves → 32-bit word */
+        if (strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0){
+          unsigned int hi = (unsigned int)a & 0xFFFFu;
+          unsigned int lo = (unsigned int)b & 0xFFFFu;
+          return (long)((hi << 16) | lo);
+        }
+        if (strcmp(name,"HI16")==0 || strcmp(name,"HIWORD")==0)
+          return (long)(((unsigned int)a >> 16) & 0xFFFFu);
+        if (strcmp(name,"LO16")==0 || strcmp(name,"LOWORD")==0)
+          return (long)((unsigned int)a & 0xFFFFu);
+        /* ISEL(cond, then, else) — expression ternary (universal control in expr) */
+        if (strcmp(name,"ISEL")==0 || strcmp(name,"SELECT")==0)
+          return a ? b : c;
+        if (strcmp(name,"NEG")==0) return -a;
         return 0;
       }
     }

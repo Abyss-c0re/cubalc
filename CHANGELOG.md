@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.11.2-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → universal integer data-path (rotate · pack · select).
+
+### Language
+- Hex integer literals: `0x…` / `0X…`
+- `ROTL`/`ROL` · `ROTR`/`ROR` (32-bit rotate)
+- `PACK16`/`PACK` · `HI16`/`HIWORD` · `LO16`/`LOWORD`
+- `ISEL`/`SELECT` (expr ternary) · `NEG`
+- Proof `15_rotate_pack_universal.cubalc`
+
+### Prior
+See 1.11.1-universal.
+
 ## 1.11.1-universal — 2026-08-02
 
 ### Direction

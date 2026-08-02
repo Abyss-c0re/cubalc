@@ -1,0 +1,44 @@
+# Proof 15 — universal rotate/pack/select + 0x hex literals (digit 9)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# hex integer literals
+ASSERT 0x10 == 16
+ASSERT 0xff == 255
+ASSERT 0xFF == 255
+
+# rotate left/right (32-bit word)
+ASSERT ROTL(1, 4) == 16
+ASSERT ROTR(16, 4) == 1
+ASSERT ROL(0x80000000, 1) == 1
+ASSERT ROR(1, 1) == 0x80000000
+ASSERT ROTL(0x12345678, 8) == 0x34567812
+
+# pack / unpack 16-bit halves
+ASSERT PACK16(0xABCD, 0x1234) == 0xABCD1234
+ASSERT HI16(PACK16(7, 9)) == 7
+ASSERT LO16(PACK16(7, 9)) == 9
+ASSERT HIWORD(0x00010002) == 1
+ASSERT LOWORD(0x00010002) == 2
+
+# expression ternary + neg
+ASSERT ISEL(1, 10, 20) == 10
+ASSERT ISEL(0, 10, 20) == 20
+ASSERT SELECT(1, 3, 4) == 3
+ASSERT NEG(5) == -5
+ASSERT NEG(-3) == 3
+
+# compose: rotate packed word then unpack
+LET p = PACK16(1, 2)
+LET r = ROTL(p, 16)
+ASSERT HI16(r) == 2
+ASSERT LO16(r) == 1
+
+# cube still lives under rotate path
+CUBE m ROLE matrix PROTON 1
+FOLDBITS m "1010101010101010101010101010101010101010101010101010101010101010"
+ASSERT DIGIT(m) >= 0
+ASSERT DIGIT(m) <= 9
+ASSERT OK == 1
+
+PRINT "proof15_rotate_pack" ROTL(1,4) PACK16(7,9) ISEL(1,10,20) DIGIT(m)
