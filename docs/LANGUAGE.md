@@ -94,7 +94,7 @@ COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLB
 
 Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK` · `DUP`/`DROP`/`SWAP`/`OVER`/`ROT`/`PICK` · `FILLCELL` · `COPYCELL`/`MOVECELL` · `FINDCELL`/`COUNTCELL` · `REVCELL` · `INC`/`DEC` · `SUMCELL`/`MINCELL`/`MAXCELL`
 
-Math plane: `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` `FIB` `ISPRIME` `IDIV` `IMOD`
+Math plane: `ADDMOD` `SUBMOD` `MULMOD` `POWMOD` `FIB` `ISPRIME` `IDIV` `IMOD` · `ILOG2`/`LOG2` `CTZ` `CLZ` `ISPOW2` `POW2` `NDIGITS` `DIGSUM` `MODINV`
 
 I/O codecs (universal string↔int): `SYS HEX`/`FROMHEX` · `SYS TOHEX` · `SYS ORD` · `SYS CHR` · `SYS MID`/`SUBSTR`/`SLICE`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.2-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.3-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)

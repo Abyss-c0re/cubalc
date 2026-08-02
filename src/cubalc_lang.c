@@ -1046,12 +1046,17 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"FINDCELL")==0 || strcmp(name,"COUNTCELL")==0 ||
         strcmp(name,"RAND")==0 || strcmp(name,"RND")==0 ||
         strcmp(name,"IRAND")==0 ||
-        /* digit-2 math: modular + number theory */
+        /* digit-2 math: modular + number theory + integer bit/log */
         strcmp(name,"ADDMOD")==0 || strcmp(name,"SUBMOD")==0 ||
         strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
         strcmp(name,"FIB")==0 || strcmp(name,"FIBONACCI")==0 ||
         strcmp(name,"ISPRIME")==0 || strcmp(name,"PRIMEP")==0 ||
-        strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0){
+        strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
+        strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0 ||
+        strcmp(name,"CTZ")==0 || strcmp(name,"CLZ")==0 ||
+        strcmp(name,"ISPOW2")==0 || strcmp(name,"POW2")==0 ||
+        strcmp(name,"NDIGITS")==0 || strcmp(name,"DIGSUM")==0 ||
+        strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0){
       if (L->cur.kind==TK_LPAREN){
         lex_next(L);
         long a = parse_expr(vm,L);
@@ -1333,6 +1338,73 @@ static long parse_prim(VM *vm, Lex *L){
             if ((a % i) == 0 || (a % (i + 2)) == 0) return 0;
           }
           return 1;
+        }
+        /* digit-2 extended math: log2 / bit counts / pow2 / digits / mod inverse */
+        if (strcmp(name,"ILOG2")==0 || strcmp(name,"LOG2")==0){
+          if (a <= 0) return -1;
+          unsigned long u = (unsigned long)a;
+          long r = -1;
+          while (u){ r++; u >>= 1; }
+          return r;
+        }
+        if (strcmp(name,"CTZ")==0){
+          /* count trailing zeros (0 → 64) */
+          if (a == 0) return 64;
+          unsigned long u = (unsigned long)a;
+          long n = 0;
+          while ((u & 1ul) == 0){ n++; u >>= 1; }
+          return n;
+        }
+        if (strcmp(name,"CLZ")==0){
+          /* count leading zeros in 64-bit word (0 → 64) */
+          if (a == 0) return 64;
+          unsigned long u = (unsigned long)a;
+          long n = 0;
+          for (int i = 63; i >= 0; i--){
+            if (u & (1ul << i)) break;
+            n++;
+          }
+          return n;
+        }
+        if (strcmp(name,"ISPOW2")==0){
+          if (a <= 0) return 0;
+          unsigned long u = (unsigned long)a;
+          return (u & (u - 1ul)) == 0ul ? 1 : 0;
+        }
+        if (strcmp(name,"POW2")==0){
+          if (a < 0 || a > 62) return 0;
+          return 1L << a;
+        }
+        if (strcmp(name,"NDIGITS")==0){
+          long x = a < 0 ? -a : a;
+          if (x == 0) return 1;
+          long n = 0;
+          while (x){ n++; x /= 10; }
+          return n;
+        }
+        if (strcmp(name,"DIGSUM")==0){
+          long x = a < 0 ? -a : a;
+          long s = 0;
+          if (x == 0) return 0;
+          while (x){ s += x % 10; x /= 10; }
+          return s;
+        }
+        if (strcmp(name,"MODINV")==0 || strcmp(name,"INVMOD")==0){
+          /* modular inverse a^{-1} mod b via extended Euclid; 0 if none */
+          long m = b;
+          if (m <= 1) return 0;
+          long aa = a % m; if (aa < 0) aa += m;
+          if (aa == 0) return 0;
+          long t = 0, nt = 1;
+          long r = m, nr = aa;
+          while (nr != 0){
+            long q = r / nr;
+            long tmp = nt; nt = t - q * nt; t = tmp;
+            tmp = nr; nr = r - q * nr; r = tmp;
+          }
+          if (r > 1) return 0; /* not invertible */
+          if (t < 0) t += m;
+          return t;
         }
         return 0;
       }

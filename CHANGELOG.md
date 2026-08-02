@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.3-universal — 2026-08-02
+
+### Direction
+- Algocube digit **2** → math plane: integer log2 / bit ranks / digit folds / modular inverse.
+
+### Language
+- `ILOG2`/`LOG2`(n) — floor log2; -1 if n≤0
+- `CTZ`(n) / `CLZ`(n) — trailing / leading zeros (64-bit word; 0→64)
+- `ISPOW2`(n) / `POW2`(k) — power-of-two test / 2^k (k 0..62)
+- `NDIGITS`(n) / `DIGSUM`(n) — decimal digit count / digit sum
+- `MODINV`/`INVMOD`(a,m) — modular inverse via extended Euclid (0 if none)
+- Proof `26_math_ilog_modinv.cubalc`
+
+### Prior
+See 1.12.2-universal.
+
 ## 1.12.2-universal — 2026-08-02
 
 ### Direction
