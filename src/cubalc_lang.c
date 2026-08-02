@@ -1103,6 +1103,10 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"PACK8")==0 || strcmp(name,"PACKB")==0 ||
         strcmp(name,"PACKNIB")==0 || strcmp(name,"PACK4")==0 ||
         strcmp(name,"SETNIB")==0 || strcmp(name,"SETNIBBLE")==0 ||
+        strcmp(name,"SETBYTE")==0 || strcmp(name,"SETB")==0 ||
+        /* digit-5 align / round-to-multiple */
+        strcmp(name,"ALIGN")==0 || strcmp(name,"ROUNDUP")==0 ||
+        strcmp(name,"ALIGNDN")==0 || strcmp(name,"ROUNDDN")==0 ||
         /* digit-2 math ext: combinatorics + square + floor div */
         strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
         strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
@@ -1616,6 +1620,35 @@ static long parse_prim(VM *vm, Lex *L){
           unsigned long shift = (unsigned long)(i * 4);
           base = (base & ~(0xFul << shift)) | (field << shift);
           return (long)base;
+        }
+        if (strcmp(name,"SETBYTE")==0 || strcmp(name,"SETB")==0){
+          /* SETBYTE(val, byte, i) — deposit 8-bit at byte index i (LE) */
+          long i = c;
+          if (i < 0) i = 0;
+          if (i > 7) i = 7;
+          unsigned long base = (unsigned long)a;
+          unsigned long field = (unsigned long)b & 0xFFul;
+          unsigned long shift = (unsigned long)(i * 8);
+          base = (base & ~(0xFFul << shift)) | (field << shift);
+          return (long)base;
+        }
+        if (strcmp(name,"ALIGN")==0 || strcmp(name,"ROUNDUP")==0){
+          /* ALIGN(val, a) — smallest multiple of a that is >= val; a<=0 → val */
+          long al = b;
+          if (al <= 0) return a;
+          long q = a / al, r = a % al;
+          if (r == 0) return a;
+          if (a > 0) return (q + 1) * al;
+          return q * al; /* a<0: C trunc toward 0 → q*al is ceil toward +inf */
+        }
+        if (strcmp(name,"ALIGNDN")==0 || strcmp(name,"ROUNDDN")==0){
+          /* ALIGNDN(val, a) — largest multiple of a that is <= val */
+          long al = b;
+          if (al <= 0) return a;
+          long q = a / al, r = a % al;
+          if (r == 0) return a;
+          if (a > 0) return q * al;
+          return (q - 1) * al; /* a<0: floor toward -inf */
         }
         if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
           /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
@@ -3498,6 +3531,46 @@ static int parse_form(VM *vm, Lex *L){
     if (i < 0) i = 0;
     if (i > 7) i = 7;
     long r = (long)(((unsigned long)a >> (unsigned)(i * 8)) & 0xFFul);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 SETBYTE + ALIGN: SSETBYTE SALIGN SALIGNDN */
+  if (kw(&L->cur,"SSETBYTE")||kw(&L->cur,"STACKSETBYTE")||kw(&L->cur,"SSETBY")){
+    /* a field i → deposit 8-bit at byte index i (SSETB reserved for bit set) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i > 7) i = 7;
+    unsigned long base = (unsigned long)a;
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long shift = (unsigned long)(i * 8);
+    long r = (long)((base & ~(0xFFul << shift)) | (f << shift));
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
+      kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long al = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = a;
+    int is_dn = (strcmp(op,"SALIGNDN")==0 || strcmp(op,"SROUNDDN")==0 ||
+                 strcmp(op,"STACKALIGNDN")==0);
+    if (al > 0){
+      long q = a / al, rem = a % al;
+      if (rem != 0){
+        if (is_dn) r = (a > 0) ? q * al : (q - 1) * al;
+        else r = (a > 0) ? (q + 1) * al : q * al;
+      }
+    }
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
