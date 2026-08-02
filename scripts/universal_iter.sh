@@ -73,7 +73,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             90_pext_zip_matrix \
             91_dot_maj_gray \
             92_forbit_pass \
-            93_andrange_reduce; do
+            93_andrange_reduce \
+            94_clz_jaccard; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

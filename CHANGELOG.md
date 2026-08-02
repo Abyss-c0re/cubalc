@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.71-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → COP metrics: leading/trailing zeros, union pop, Jaccard.
+
+### Language
+- `CLZBITS`/`NLZBITS` cube · `CTZBITS`/`NTZBITS` cube
+- `ORPOP`/`UNIONPOP` a b → popcount(a OR b)
+- `JACCARD`/`SIMBITS` a b → 100·|A∩B|/|A∪B| integer percent
+- Proof `94_clz_jaccard.cubalc`
+
+### Prior
+See 1.12.70-universal.
+
 ## 1.12.70-universal — 2026-08-02
 
 ### Direction

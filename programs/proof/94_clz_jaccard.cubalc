@@ -1,0 +1,75 @@
+# Proof 94 — digit-9 COP: CLZBITS/CTZBITS + ORPOP + JACCARD
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+# empty → CTZ=n, CLZ=n (64)
+CTZBITS m
+ASSERT LAST_N == 64
+CLZBITS m
+ASSERT LAST_N == 64
+
+SETBIT m 2 1
+SETBIT m 3 1
+CTZBITS m
+ASSERT LAST_N == 2
+# high bit unset: CLZ from 63 down until bit3 → 64-1-3 = 60
+CLZBITS m
+ASSERT LAST_N == 60
+
+# set top bit → CLZ=0
+SETBIT m 63 1
+CLZBITS m
+ASSERT LAST_N == 0
+# low bit set → CTZ=0
+SETBIT m 0 1
+CTZBITS m
+ASSERT LAST_N == 0
+
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CLEARBITS a
+CLEARBITS b
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT a 2 1
+SETBIT b 1 1
+SETBIT b 2 1
+SETBIT b 3 1
+# inter=2, union=4
+DOTBITS a b
+ASSERT LAST_N == 2
+ORPOP a b
+ASSERT LAST_N == 4
+UNIONPOP a b
+ASSERT LAST_N == 4
+JACCARD a b
+ASSERT LAST_N == 50
+SIMBITS a b
+ASSERT LAST_N == 50
+
+# identical → 100
+JACCARD a a
+ASSERT LAST_N == 100
+
+# disjoint
+CLEARBITS b
+SETBIT b 5 1
+JACCARD a b
+ASSERT LAST_N == 0
+ORPOP a b
+ASSERT LAST_N == 4
+
+# soft fail
+CLZBITS nosuch
+ASSERT OK == 0
+JACCARD nosuch a
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof94_clz_jaccard" LAST_N SET
