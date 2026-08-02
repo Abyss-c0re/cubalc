@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.67-universal — 2026-08-02
+
+### Direction
+- Algocube digit **8** → matrix data-path: PEXT/PDEP under mask + bit interleave.
+
+### Language
+- `PEXTBITS`/`GATHERBITS` cube mask → LAST_N (parallel extract)
+- `PDEPBITS`/`SCATTERBITS` cube mask val — deposit low bits into mask positions
+- `ZIPBITS` dst a b — interleave a/b into dst (Morton)
+- `UNZIPBITS` even odd src — deinterleave even/odd lanes
+- Proof `90_pext_zip_matrix.cubalc`
+
+### Prior
+See 1.12.66-universal.
+
 ## 1.12.66-universal — 2026-08-02
 
 ### Direction

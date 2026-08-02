@@ -1,0 +1,90 @@
+# Proof 90 — digit-8 matrix: PEXTBITS/PDEPBITS + ZIPBITS/UNZIPBITS
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+# fill low 8 bits to 1 → 0xFF
+WORDTO m 0xFF
+PEXTBITS m 0xAA
+ASSERT LAST_N == 15
+# mask low 4 of 0x3C → 0xC
+WORDTO m 0x3C
+PEXTBITS m 0x0F
+ASSERT LAST_N == 12
+
+# PDEP: deposit 0xB into mask 0xAA → 0x8A
+CLEARBITS m
+PDEPBITS m 0xAA 0xB
+WORDFROM m
+ASSERT LAST_N == 0x8A
+# non-mask bits stay 0
+GETBIT m 0
+ASSERT LAST_N == 0
+GETBIT m 1
+ASSERT LAST_N == 1
+GETBIT m 2
+ASSERT LAST_N == 0
+GETBIT m 3
+ASSERT LAST_N == 1
+GETBIT m 5
+ASSERT LAST_N == 0
+GETBIT m 7
+ASSERT LAST_N == 1
+
+# preserve bits outside mask when pre-seeded
+CLEARBITS m
+WORDTO m 0x01
+PDEPBITS m 0xAA 0xB
+# bit0 was 1 and not in mask → still 1; mask positions updated
+GETBIT m 0
+ASSERT LAST_N == 1
+WORDFROM m
+ASSERT LAST_N == 0x8B
+
+# ZIPBITS: a has bit0, b has bit0 → dst bits 0 and 1 set
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CUBE z ROLE matrix PROTON 1
+CLEARBITS a
+CLEARBITS b
+CLEARBITS z
+SETBIT a 0 1
+SETBIT a 1 0
+SETBIT b 0 1
+SETBIT b 1 1
+ZIPBITS z a b
+GETBIT z 0
+ASSERT LAST_N == 1
+GETBIT z 1
+ASSERT LAST_N == 1
+GETBIT z 2
+ASSERT LAST_N == 0
+GETBIT z 3
+ASSERT LAST_N == 1
+
+# UNZIPBITS restores halves
+CUBE e ROLE matrix PROTON 1
+CUBE o ROLE matrix PROTON 1
+UNZIPBITS e o z
+GETBIT e 0
+ASSERT LAST_N == 1
+GETBIT e 1
+ASSERT LAST_N == 0
+GETBIT o 0
+ASSERT LAST_N == 1
+GETBIT o 1
+ASSERT LAST_N == 1
+
+# aliases
+GATHERBITS m 0x0F
+ASSERT OK == 1
+SCATTERBITS m 0x0F 5
+ASSERT OK == 1
+
+CUBE q ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof90_pext_zip_matrix" LAST_N SET
