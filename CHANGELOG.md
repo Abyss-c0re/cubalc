@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.98-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → string plane duals: LEFT/RIGHT slices + occurrence COUNT (after MID/FIND/LPAD).
+
+### Language
+- `SYS LEFT`/`STRLEFT`/`TAKELEFT` str n — first n chars → LAST
+- `SYS RIGHT`/`STRRIGHT`/`TAKERIGHT` str n — last n chars → LAST
+- `SYS COUNT`/`STRCOUNT`/`OCCURS` hay needle — non-overlapping count → LAST_N
+- Proof `121_str_left_count.cubalc`
+
+### Prior
+See 1.12.97-universal.
+
 ## 1.12.97-universal — 2026-08-03
 
 ### Direction

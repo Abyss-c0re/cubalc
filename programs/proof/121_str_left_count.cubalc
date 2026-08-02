@@ -1,0 +1,59 @@
+# Proof 121 — digit-3 string duals: LEFT RIGHT COUNT
+HOLD_FLASH 1
+SCIENCE LOAD
+
+SYS LEFT "cubalc" 3
+SYS EQS LAST "cub"
+ASSERT LAST_N == 1
+SYS LEFT "cubalc" 3
+ASSERT LAST_N == 3
+
+SYS RIGHT "cubalc" 4
+SYS EQS LAST "balc"
+ASSERT LAST_N == 1
+SYS RIGHT "cubalc" 4
+ASSERT LAST_N == 4
+
+SYS STRLEFT "hi" 10
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+SYS STRRIGHT "hi" 10
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+SYS TAKELEFT "abcdef" 0
+ASSERT LAST_N == 0
+
+SYS CAT "flow" "_compile"
+SYS LEFT LAST 4
+SYS EQS LAST "flow"
+ASSERT LAST_N == 1
+SYS CAT "flow" "_compile"
+SYS RIGHT LAST 7
+SYS EQS LAST "compile"
+ASSERT LAST_N == 1
+
+SYS COUNT "aaa" "aa"
+ASSERT LAST_N == 1
+SYS COUNT "ababab" "ab"
+ASSERT LAST_N == 3
+SYS COUNT "hello" "z"
+ASSERT LAST_N == 0
+SYS STRCOUNT "xx-xx-xx" "xx"
+ASSERT LAST_N == 3
+SYS OCCURS "banana" "ana"
+ASSERT LAST_N == 1
+SYS COUNT "abc" ""
+ASSERT LAST_N == 3
+
+SYS FIND "prophecy_flow" "_"
+ASSERT LAST_N == 8
+SYS LEFT "prophecy_flow" 8
+SYS EQS LAST "prophecy"
+ASSERT LAST_N == 1
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof121_str_left_count" LAST_N SP

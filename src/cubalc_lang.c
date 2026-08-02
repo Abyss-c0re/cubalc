@@ -3493,6 +3493,68 @@ static int parse_form(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* digit-3 string duals: LEFT/RIGHT slice + COUNT occurrences */
+    if (kw(&L->cur,"LEFT") || kw(&L->cur,"STRLEFT") || kw(&L->cur,"TAKELEFT") ||
+        kw(&L->cur,"PREFIXN") ||
+        kw(&L->cur,"RIGHT") || kw(&L->cur,"STRRIGHT") || kw(&L->cur,"TAKERIGHT") ||
+        kw(&L->cur,"SUFFIXN")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      int is_right = (strcmp(op,"RIGHT")==0 || strcmp(op,"STRRIGHT")==0 ||
+                      strcmp(op,"TAKERIGHT")==0 || strcmp(op,"SUFFIXN")==0);
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long n = 0;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT)
+        n = parse_expr(vm, L);
+      if (n < 0) n = 0;
+      size_t slen = strlen(s);
+      char out[512];
+      if (!is_right){
+        size_t take = (size_t)n;
+        if (take > slen) take = slen;
+        if (take >= sizeof out) take = sizeof out - 1;
+        memcpy(out, s, take); out[take] = 0;
+      } else {
+        size_t take = (size_t)n;
+        if (take > slen) take = slen;
+        if (take >= sizeof out) take = sizeof out - 1;
+        size_t start = slen - take;
+        memcpy(out, s + start, take); out[take] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"COUNT") || kw(&L->cur,"STRCOUNT") || kw(&L->cur,"COUNTSTR") ||
+        kw(&L->cur,"OCCURS") || kw(&L->cur,"COUNTOCC")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long cnt = 0;
+      if (needle[0] == 0){
+        cnt = (long)strlen(hay);
+      } else {
+        size_t nn = strlen(needle);
+        const char *p = hay;
+        while ((p = strstr(p, needle)) != NULL){
+          cnt++;
+          p += nn;
+        }
+      }
+      vm->last_n = cnt;
+      var_set_num(vm, "LAST_N", cnt);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
