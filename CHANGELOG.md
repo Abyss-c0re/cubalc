@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.63-universal — 2026-08-02
+
+### Direction
+- Algocube digit **5** → COP matrix mux + masked equality (select/match pure-C).
+
+### Language
+- `MUXBITS`/`BLENDBITS`/`SELECTBITS` dst a b mask — dst = mask?a:b per bit
+- `MATCHBITS`/`EQMASK` a b mask → 1 if a≡b under mask ones
+- Proof `86_muxbits_match.cubalc`
+
+### Prior
+See 1.12.62-universal.
+
+
 ## 1.12.62-universal — 2026-08-02
 
 ### Direction

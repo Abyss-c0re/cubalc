@@ -1,0 +1,83 @@
+# Proof 86 — digit-5 COP: MUXBITS blend + MATCHBITS masked equality
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CUBE a ROLE matrix PROTON 1
+CUBE b ROLE matrix PROTON 1
+CUBE m ROLE matrix PROTON 1
+CUBE d ROLE matrix PROTON 1
+
+CLEARBITS a
+CLEARBITS b
+CLEARBITS m
+# a: bits 0,1,2 = 1  b: bits 2,3,4 = 1  mask: bits 0,1,3
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT a 2 1
+SETBIT b 2 1
+SETBIT b 3 1
+SETBIT b 4 1
+SETBIT m 0 1
+SETBIT m 1 1
+SETBIT m 3 1
+
+# MUX: mask=1 take a, mask=0 take b
+# bit0: a →1  bit1: a →1  bit2: b →1  bit3: a →0  bit4: b →1
+MUXBITS d a b m
+GETBIT d 0
+ASSERT LAST_N == 1
+GETBIT d 1
+ASSERT LAST_N == 1
+GETBIT d 2
+ASSERT LAST_N == 1
+GETBIT d 3
+ASSERT LAST_N == 0
+GETBIT d 4
+ASSERT LAST_N == 1
+ONES d
+ASSERT LAST_N == 4
+
+# BLENDBITS alias: all-1 mask → copy a
+CUBE full ROLE matrix PROTON 1
+FILLBITS full 1
+MUXBITS d a b full
+EQBITS d a
+ASSERT LAST_N == 1
+
+# zero mask → copy b
+CLEARBITS full
+MUXBITS d a b full
+EQBITS d b
+ASSERT LAST_N == 1
+
+# MATCHBITS: agree under mask
+# a and b both have bit2=1; mask only 2 → match
+CLEARBITS m
+SETBIT m 2 1
+MATCHBITS a b m
+ASSERT LAST_N == 1
+# mask bits 0,1: a has them, b does not → no match
+CLEARBITS m
+SETBIT m 0 1
+SETBIT m 1 1
+MATCHBITS a b m
+ASSERT LAST_N == 0
+# empty mask always matches
+CLEARBITS m
+MATCHBITS a b m
+ASSERT LAST_N == 1
+# self under full mask
+FILLBITS m 1
+MATCHBITS a a m
+ASSERT LAST_N == 1
+
+# soft fail
+MATCHBITS a b nosuch
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof86_muxbits_match" LAST_N
