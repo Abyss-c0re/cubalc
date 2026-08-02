@@ -6027,10 +6027,10 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-9 stack immediate bitwise mask: SANDI · SORI · SXORI (imm plane after bitfield) */
-  if (kw(&L->cur,"SANDI")||kw(&L->cur,"ANDIMM")||kw(&L->cur,"STACKANDI")||
-      kw(&L->cur,"ANDI")||kw(&L->cur,"SANDIMM")){
-    /* SANDI n — TOS &= n */
+  /* digit-0/9 stack immediate bitwise mask dual forms: SANDI/SANDN · SORI/SORN · SXORI/SXORN */
+  if (kw(&L->cur,"SANDI")||kw(&L->cur,"SANDN")||kw(&L->cur,"ANDIMM")||kw(&L->cur,"STACKANDI")||
+      kw(&L->cur,"ANDI")||kw(&L->cur,"SANDIMM")||kw(&L->cur,"ANDN")||kw(&L->cur,"STACKANDN")){
+    /* SANDI/SANDN n — TOS &= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -6039,9 +6039,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  if (kw(&L->cur,"SORI")||kw(&L->cur,"ORIMM")||kw(&L->cur,"STACKORI")||
-      kw(&L->cur,"ORI")||kw(&L->cur,"SORIMM")){
-    /* SORI n — TOS |= n */
+  if (kw(&L->cur,"SORI")||kw(&L->cur,"SORN")||kw(&L->cur,"ORIMM")||kw(&L->cur,"STACKORI")||
+      kw(&L->cur,"ORI")||kw(&L->cur,"SORIMM")||kw(&L->cur,"ORN")||kw(&L->cur,"STACKORN")){
+    /* SORI/SORN n — TOS |= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
@@ -6050,9 +6050,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  if (kw(&L->cur,"SXORI")||kw(&L->cur,"XORIMM")||kw(&L->cur,"STACKXORI")||
-      kw(&L->cur,"XORI")||kw(&L->cur,"SXORIMM")){
-    /* SXORI n — TOS ^= n */
+  if (kw(&L->cur,"SXORI")||kw(&L->cur,"SXORN")||kw(&L->cur,"XORIMM")||kw(&L->cur,"STACKXORI")||
+      kw(&L->cur,"XORI")||kw(&L->cur,"SXORIMM")||kw(&L->cur,"XORN")||kw(&L->cur,"STACKXORN")){
+    /* SXORI/SXORN n — TOS ^= n */
     lex_next(L);
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
