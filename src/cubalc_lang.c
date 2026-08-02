@@ -152,7 +152,7 @@ static void lex_next(Lex *L) {
     while (L->i<L->n && isdigit((unsigned char)L->s[L->i])){
       if (k+1<sizeof b) b[k++]=L->s[L->i]; L->i++;
     }
-    /* 2DUP / 2DROP / 2SWAP — Forth double ops as single tokens (digit-8) */
+    /* 2DUP / 2DROP / 2SWAP / 2OVER / 2ROT / 2NIP — Forth double ops (digit-8) */
     if (k==1 && b[0]=='2' && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
@@ -160,7 +160,8 @@ static void lex_next(Lex *L) {
         tail[t++]=L->s[j++];
       tail[t]=0;
       if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-          strcasecmp(tail,"SWAP")==0){
+          strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"OVER")==0 ||
+          strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"NIP")==0){
         L->i = j;
         snprintf(L->cur.text, sizeof L->cur.text, "2%s", tail);
         /* normalize to upper for kw() which is case-insensitive anyway */
@@ -2814,7 +2815,7 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-8 stack depth plane: NIP TUCK 2DUP 2DROP 2SWAP ROLL DEPTH */
+  /* digit-8 stack depth plane: NIP TUCK 2DUP 2DROP 2SWAP 2OVER 2ROT 2NIP ROLL DEPTH */
   if (kw(&L->cur,"NIP")||kw(&L->cur,"STACKNIP")){
     /* a b → b  (drop under top) */
     lex_next(L);
@@ -2867,6 +2868,40 @@ static int parse_form(VM *vm, Lex *L){
     vm->stack[vm->sp-4] = c; vm->stack[vm->sp-3] = d;
     vm->stack[vm->sp-2] = a; vm->stack[vm->sp-1] = b;
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2OVER")||kw(&L->cur,"DOVER")||kw(&L->cur,"OVER2")){
+    /* a b c d → a b c d a b  (copy pair under top pair) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-4], b = vm->stack[vm->sp-3];
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2ROT")||kw(&L->cur,"DROT")||kw(&L->cur,"ROT2")){
+    /* a b c d e f → c d e f a b  (rotate three pairs left) */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], b = vm->stack[vm->sp-5];
+    long c = vm->stack[vm->sp-4], d = vm->stack[vm->sp-3];
+    long e = vm->stack[vm->sp-2], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = c; vm->stack[vm->sp-5] = d;
+    vm->stack[vm->sp-4] = e; vm->stack[vm->sp-3] = f;
+    vm->stack[vm->sp-2] = a; vm->stack[vm->sp-1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"2NIP")||kw(&L->cur,"DNIP")||kw(&L->cur,"NIP2")){
+    /* a b c d → a b d  (drop third under TOS) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-2] = d;
+    vm->sp--;
+    var_set_num(vm,"LAST_N",d); vm->last_n=d;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"ROLL")||kw(&L->cur,"STACKROLL")){
