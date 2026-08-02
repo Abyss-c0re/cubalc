@@ -3117,9 +3117,15 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-2 stack modular + fact/ilog: SMULMOD SPOWMOD SMODINV SFACT SILOG2 */
+  /* digit-2 stack unary math: SFACT SILOG2 SFIB SISPRIME SISPOW2 SPOW2 SNDIGITS SDIGSUM */
   if (kw(&L->cur,"SFACT")||kw(&L->cur,"STACKFACT")||kw(&L->cur,"SFACTORIAL")||
-      kw(&L->cur,"SILOG2")||kw(&L->cur,"SLOG2")||kw(&L->cur,"STACKILOG2")){
+      kw(&L->cur,"SILOG2")||kw(&L->cur,"SLOG2")||kw(&L->cur,"STACKILOG2")||
+      kw(&L->cur,"SFIB")||kw(&L->cur,"SFIBONACCI")||kw(&L->cur,"STACKFIB")||
+      kw(&L->cur,"SISPRIME")||kw(&L->cur,"SPRIME")||kw(&L->cur,"SPRIMEP")||
+      kw(&L->cur,"SISPOW2")||kw(&L->cur,"SISPOWER2")||kw(&L->cur,"SPOW2P")||
+      kw(&L->cur,"SPOW2")||kw(&L->cur,"STACKPOW2")||
+      kw(&L->cur,"SNDIGITS")||kw(&L->cur,"SNDIG")||kw(&L->cur,"STACKNDIGITS")||
+      kw(&L->cur,"SDIGSUM")||kw(&L->cur,"SDIGITSUM")||kw(&L->cur,"STACKDIGSUM")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -3133,14 +3139,57 @@ static int parse_form(VM *vm, Lex *L){
         r = 1;
         for (long i = 2; i <= a; i++) r *= i;
       }
-    } else {
-      /* SILOG2 / SLOG2 / STACKILOG2 — floor(log2(a)); a<=0 → -1 */
+    } else if (strcmp(op,"SILOG2")==0 || strcmp(op,"SLOG2")==0 || strcmp(op,"STACKILOG2")==0){
       if (a <= 0) r = -1;
       else {
         unsigned long u = (unsigned long)a;
         r = -1;
         while (u){ r++; u >>= 1; }
       }
+    } else if (strcmp(op,"SFIB")==0 || strcmp(op,"SFIBONACCI")==0 || strcmp(op,"STACKFIB")==0){
+      if (a <= 0) r = 0;
+      else if (a == 1 || a == 2) r = 1;
+      else {
+        if (a > 92) a = 92;
+        long f0 = 0, f1 = 1;
+        for (long i = 2; i <= a; i++){
+          long f2 = f0 + f1;
+          f0 = f1; f1 = f2;
+        }
+        r = f1;
+      }
+    } else if (strcmp(op,"SISPRIME")==0 || strcmp(op,"SPRIME")==0 || strcmp(op,"SPRIMEP")==0){
+      if (a <= 1) r = 0;
+      else if (a <= 3) r = 1;
+      else if ((a % 2) == 0 || (a % 3) == 0) r = 0;
+      else {
+        r = 1;
+        for (long i = 5; i * i <= a; i += 6){
+          if ((a % i) == 0 || (a % (i + 2)) == 0){ r = 0; break; }
+        }
+      }
+    } else if (strcmp(op,"SISPOW2")==0 || strcmp(op,"SISPOWER2")==0 || strcmp(op,"SPOW2P")==0){
+      if (a <= 0) r = 0;
+      else {
+        unsigned long u = (unsigned long)a;
+        r = ((u & (u - 1ul)) == 0ul) ? 1 : 0;
+      }
+    } else if (strcmp(op,"SPOW2")==0 || strcmp(op,"STACKPOW2")==0){
+      if (a < 0 || a > 62) r = 0;
+      else r = 1L << a;
+    } else if (strcmp(op,"SNDIGITS")==0 || strcmp(op,"SNDIG")==0 || strcmp(op,"STACKNDIGITS")==0){
+      long x = a < 0 ? -a : a;
+      if (x == 0) r = 1;
+      else {
+        r = 0;
+        while (x){ r++; x /= 10; }
+      }
+    } else {
+      /* SDIGSUM / SDIGITSUM / STACKDIGSUM */
+      long x = a < 0 ? -a : a;
+      r = 0;
+      if (x == 0) r = 0;
+      else while (x){ r += x % 10; x /= 10; }
     }
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
