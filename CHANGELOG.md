@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.59-universal — 2026-08-02
+
+### Direction
+- Algocube digit **9** → cell fold arithmetic + scan + reduce (data plane pure-C).
+
+### Language
+- `SUBCELL`/`DIVCELL`/`MODCELL` lo hi k — range element-wise arith
+- `SCANCELL`/`PREFIXSUM`/`CUMSUM` lo hi — in-place prefix sum
+- `CLAMPCELL` lo hi min max — clamp range into bounds
+- `PRODCELL`/`MEANCELL`/`AVGCELL` [lo [hi]] — product / integer mean reduce
+- Proof `82_cell_div_scan.cubalc`
+
+### Prior
+See 1.12.58-universal.
+
+
 ## 1.12.58-universal — 2026-08-02
 
 ### Direction
