@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.75-universal — 2026-08-02
+
+### Direction
+- Algocube digit **1** → data plane: stack↔cell fetch + depth-indexed stack mutators.
+
+### Language
+- `SGETCELL`/`SLOAD`/`SFETCH` — stack `i → cells[i]`
+- `SREPLACE`/`SPUT`/`SSTOREN` n — write TOS into depth-n slot, drop TOS
+- `SDROPAT`/`NIPN`/`DROPAT` n — remove item at depth n (0≡DROP, 1≡NIP)
+- Proof `98_sgetcell_sreplace.cubalc`
+
+### Prior
+See 1.12.74-universal.
+
 ## 1.12.74-universal — 2026-08-02
 
 ### Direction

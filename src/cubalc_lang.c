@@ -3784,6 +3784,20 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",old); vm->last_n=old;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack↔cell fetch: SGETCELL (complement of SSETCELL) */
+  if (kw(&L->cur,"SGETCELL")||kw(&L->cur,"SLOAD")||kw(&L->cur,"SFETCH")||
+      kw(&L->cur,"STACKGETCELL")||kw(&L->cur,"SPEEKCELL")){
+    /* i → cells[i]  (stack index → cell value) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"CLEARCELLS")||kw(&L->cur,"CELLSZERO")){
     lex_next(L);
     memset(vm->cells, 0, sizeof vm->cells);
@@ -4062,6 +4076,50 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",vm->stack[i]); vm->last_n=vm->stack[i];
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
+  }
+  /* digit-1 stack index mutators: SREPLACE · SDROPAT */
+  if (kw(&L->cur,"SREPLACE")||kw(&L->cur,"SPUT")||kw(&L->cur,"SSTOREN")||
+      kw(&L->cur,"STACKPUT")||kw(&L->cur,"PLACEAT")){
+    /* SREPLACE n — write TOS into depth-n slot, then drop TOS (n=0≡DROP) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (vm->sp < 1 || n >= vm->sp){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    long v = vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1 - (int)n] = v;
+    vm->sp--;
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : v;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDROPAT")||kw(&L->cur,"NIPN")||kw(&L->cur,"DROPAT")||
+      kw(&L->cur,"STACKDROPAT")||kw(&L->cur,"REMOVEAT")){
+    /* SDROPAT n — remove item at depth n, close gap (n=0≡DROP, n=1≡NIP) */
+    lex_next(L);
+    long n = 0;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (vm->sp < 1 || n >= vm->sp){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    int idx = vm->sp - 1 - (int)n;
+    for (int j = idx; j < vm->sp - 1; j++)
+      vm->stack[j] = vm->stack[j + 1];
+    vm->sp--;
+    long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"PICK")||kw(&L->cur,"STACKPICK")){
     /* PICK n — copy n-th under top (0=top) onto stack; depth from TOS */
