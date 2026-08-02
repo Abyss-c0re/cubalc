@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.14-universal — 2026-08-02
+
+### Direction
+- Algocube digit **4** → stack select / within / clamp + zero-tests (control predicates pure-C).
+
+### Language
+- Zero-tests (unary TOS): `SZ`/`S0EQ` · `SNZ`/`S0NE` · `S0LT` · `S0GT` · `SSIGN`/`SGN` (−1/0/1)
+- `SSEL`/`STACKSEL` — f t cond → (cond ? t : f)
+- `SWITHIN`/`WITHIN` — n lo hi → 1 if lo ≤ n < hi
+- `SCLAMP`/`STACKCLAMP` — n lo hi → clamp into [lo,hi]
+- Proof `37_stack_select_clamp.cubalc`
+
+### Prior
+See 1.12.13-universal.
+
 ## 1.12.13-universal — 2026-08-02
 
 ### Direction

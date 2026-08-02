@@ -3024,6 +3024,73 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack select/within/clamp + zero-tests/sign */
+  if (kw(&L->cur,"SZ")||kw(&L->cur,"S0EQ")||kw(&L->cur,"STACK0EQ")||kw(&L->cur,"S0=")||
+      kw(&L->cur,"SNZ")||kw(&L->cur,"S0NE")||kw(&L->cur,"STACK0NE")||kw(&L->cur,"S0<>")||
+      kw(&L->cur,"S0LT")||kw(&L->cur,"STACK0LT")||kw(&L->cur,"S0<")||
+      kw(&L->cur,"S0GT")||kw(&L->cur,"STACK0GT")||kw(&L->cur,"S0>")||
+      kw(&L->cur,"SSIGN")||kw(&L->cur,"STACKSIGN")||kw(&L->cur,"SGN")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SZ")==0 || strcmp(op,"S0EQ")==0 || strcmp(op,"STACK0EQ")==0 || strcmp(op,"S0=")==0)
+      r = (a == 0) ? 1 : 0;
+    else if (strcmp(op,"SNZ")==0 || strcmp(op,"S0NE")==0 || strcmp(op,"STACK0NE")==0 || strcmp(op,"S0<>")==0)
+      r = (a != 0) ? 1 : 0;
+    else if (strcmp(op,"S0LT")==0 || strcmp(op,"STACK0LT")==0 || strcmp(op,"S0<")==0)
+      r = (a < 0) ? 1 : 0;
+    else if (strcmp(op,"S0GT")==0 || strcmp(op,"STACK0GT")==0 || strcmp(op,"S0>")==0)
+      r = (a > 0) ? 1 : 0;
+    else {
+      /* SSIGN / STACKSIGN / SGN */
+      r = (a > 0) ? 1 : ((a < 0) ? -1 : 0);
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEL")||kw(&L->cur,"STACKSEL")||kw(&L->cur,"SSELECT")||kw(&L->cur,"STACKSELECT")){
+    /* f t cond → (cond ? t : f)  — cond on TOS */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long cond = vm->stack[--vm->sp];
+    long t = vm->stack[--vm->sp];
+    long f = vm->stack[--vm->sp];
+    long r = cond ? t : f;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SWITHIN")||kw(&L->cur,"WITHIN")||kw(&L->cur,"STACKWITHIN")){
+    /* n lo hi → 1 if lo <= n < hi else 0 (Forth WITHIN) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    long r = (n >= lo && n < hi) ? 1 : 0;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLAMP")||kw(&L->cur,"STACKCLAMP")||kw(&L->cur,"SCLMP")){
+    /* n lo hi → clamp n into [lo,hi] (if lo>hi swap) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long n = vm->stack[--vm->sp];
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long r = n;
+    if (r < lo) r = lo;
+    if (r > hi) r = hi;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack↔cell bridge: TOCELL / FROMCELL */
   if (kw(&L->cur,"TOCELL")||kw(&L->cur,"STACKTOCELL")||kw(&L->cur,">CELL")){
     /* TOCELL dst [n] — pop n values into cells[dst..dst+n-1] (TOS → highest index) */
