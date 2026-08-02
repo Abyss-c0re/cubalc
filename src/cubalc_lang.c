@@ -1097,6 +1097,10 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"ZEXT")==0 || strcmp(name,"ZEROEXT")==0 ||
         strcmp(name,"SEXT8")==0 || strcmp(name,"SEXTB")==0 ||
         strcmp(name,"SEXT16")==0 || strcmp(name,"SEXTW")==0 ||
+        /* digit-8 pack byte/nibble + set nibble */
+        strcmp(name,"PACK8")==0 || strcmp(name,"PACKB")==0 ||
+        strcmp(name,"PACKNIB")==0 || strcmp(name,"PACK4")==0 ||
+        strcmp(name,"SETNIB")==0 || strcmp(name,"SETNIBBLE")==0 ||
         /* digit-2 math ext: combinatorics + square + floor div */
         strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
         strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
@@ -1577,6 +1581,29 @@ static long parse_prim(VM *vm, Lex *L){
           unsigned long sign = 1ul << (unsigned)(w - 1);
           if (v & sign) v |= ~mask;
           return (long)v;
+        }
+        if (strcmp(name,"PACK8")==0 || strcmp(name,"PACKB")==0){
+          /* PACK8(hi, lo) — two bytes → 16-bit word */
+          unsigned int h = (unsigned int)a & 0xFFu;
+          unsigned int l = (unsigned int)b & 0xFFu;
+          return (long)((h << 8) | l);
+        }
+        if (strcmp(name,"PACKNIB")==0 || strcmp(name,"PACK4")==0){
+          /* PACKNIB(hi, lo) — two nibbles → byte */
+          unsigned int h = (unsigned int)a & 0xFu;
+          unsigned int l = (unsigned int)b & 0xFu;
+          return (long)((h << 4) | l);
+        }
+        if (strcmp(name,"SETNIB")==0 || strcmp(name,"SETNIBBLE")==0){
+          /* SETNIB(val, field, i) — deposit 4-bit field at nibble index i (LE) */
+          long i = c;
+          if (i < 0) i = 0;
+          if (i > 15) i = 15;
+          unsigned long base = (unsigned long)a;
+          unsigned long field = (unsigned long)b & 0xFul;
+          unsigned long shift = (unsigned long)(i * 4);
+          base = (base & ~(0xFul << shift)) | (field << shift);
+          return (long)base;
         }
         if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
           /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
@@ -3459,6 +3486,41 @@ static int parse_form(VM *vm, Lex *L){
     unsigned int h = (unsigned int)hi & 0xFFFFu;
     unsigned int l = (unsigned int)lo & 0xFFFFu;
     long r = (long)((h << 16) | l);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 pack8/nibble + set nibble: SPACK8 SPACKNIB SSETNIB */
+  if (kw(&L->cur,"SPACK8")||kw(&L->cur,"SPACKB")||kw(&L->cur,"STACKPACK8")||
+      kw(&L->cur,"SPACKNIB")||kw(&L->cur,"SPACK4")||kw(&L->cur,"STACKPACKNIB")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long lo = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long r;
+    if (strcmp(op,"SPACKNIB")==0 || strcmp(op,"SPACK4")==0 || strcmp(op,"STACKPACKNIB")==0)
+      r = (long)((((unsigned int)hi & 0xFu) << 4) | ((unsigned int)lo & 0xFu));
+    else
+      r = (long)((((unsigned int)hi & 0xFFu) << 8) | ((unsigned int)lo & 0xFFu));
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETNIB")||kw(&L->cur,"SSETNIBBLE")||kw(&L->cur,"STACKSETNIB")){
+    /* a field i → deposit 4-bit field at nibble index i */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i > 15) i = 15;
+    unsigned long base = (unsigned long)a;
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long shift = (unsigned long)(i * 4);
+    long r = (long)((base & ~(0xFul << shift)) | (f << shift));
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
