@@ -48,6 +48,7 @@ typedef struct {
   int break_loop;
   int continue_loop;
   int return_fn; /* digit-4: RET from FN body */
+  uint32_t rng;  /* digit-6: seeded RNG state */
   char err[160];
   char creed[80];
   char chunk[40][48];
@@ -1042,6 +1043,8 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"SP")==0 ||
         strcmp(name,"SUMCELL")==0 || strcmp(name,"MINCELL")==0 ||
         strcmp(name,"MAXCELL")==0 ||
+        strcmp(name,"RAND")==0 || strcmp(name,"RND")==0 ||
+        strcmp(name,"IRAND")==0 ||
         /* digit-2 math: modular + number theory */
         strcmp(name,"ADDMOD")==0 || strcmp(name,"SUBMOD")==0 ||
         strcmp(name,"MULMOD")==0 || strcmp(name,"POWMOD")==0 ||
@@ -1224,6 +1227,15 @@ static long parse_prim(VM *vm, Lex *L){
         }
         if (strcmp(name,"STACKLEN")==0 || strcmp(name,"SP")==0)
           return (long)vm->sp;
+        if (strcmp(name,"RAND")==0 || strcmp(name,"RND")==0 || strcmp(name,"IRAND")==0){
+          /* xorshift32 → [0, a) if a>0 else 0..9 */
+          uint32_t x = vm->rng;
+          x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+          if (!x) x = 1;
+          vm->rng = x;
+          long m = a > 0 ? a : 10;
+          return (long)(x % (uint32_t)m);
+        }
         /* Modular arithmetic (digit-2 math plane) */
         if (strcmp(name,"IDIV")==0) return b ? (a / b) : 0;
         if (strcmp(name,"IMOD")==0) return b ? (a % b) : 0;
@@ -2509,6 +2521,100 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
+  /* RAND [max] — seeded RNG (CUBALC_SEED); default range 0..9 */
+  if (kw(&L->cur,"RAND")||kw(&L->cur,"RND")||kw(&L->cur,"IRAND")){
+    lex_next(L);
+    long m = 10;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE")))
+      m = parse_expr(vm,L);
+    if (m < 1) m = 1;
+    uint32_t x = vm->rng;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    long v = (long)(x % (uint32_t)m);
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* ENERGYSET cube n · ENERGYADD cube n — energy plane 0..100 (digit-6) */
+  if (kw(&L->cur,"ENERGYSET")||kw(&L->cur,"SETENERGY")||
+      kw(&L->cur,"ENERGYADD")||kw(&L->cur,"ADDENERGY")||kw(&L->cur,"PULSE")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ENERGY* cube n"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    long n = parse_expr(vm,L);
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"ENERGY missing cube"); return -1; }
+    float e = vm->ch.cubes[ix].atom.energy;
+    if (strcmp(op,"ENERGYSET")==0 || strcmp(op,"SETENERGY")==0){
+      e = (float)n / 100.f;
+    } else {
+      e += (float)n / 100.f;
+    }
+    if (e < 0.f) e = 0.f;
+    if (e > 1.f) e = 1.f;
+    vm->ch.cubes[ix].atom.energy = e;
+    vm->ch.cubes[ix].flowed = 1;
+    long ev = (long)lround(e * 100.0);
+    var_set_num(vm, "ENERGY", ev);
+    var_set_num(vm, "LAST_N", ev);
+    vm->last_n = ev;
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  /* ROTBITS cube k — rotate State Matrix bits left by k (digit-6 matrix flow) */
+  if (kw(&L->cur,"ROTBITS")||kw(&L->cur,"ROLBITS")||kw(&L->cur,"SHIFTBITS")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"ROTBITS cube k"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    long k = parse_expr(vm,L);
+    ensure_world(vm);
+    int ix=find_cube(vm,id);
+    if (ix<0){ place_cube(vm,id,id,1); ix=find_cube(vm,id); }
+    if (ix<0){ fail(vm,"ROTBITS missing cube"); return -1; }
+    cubalc_matrix *m = &vm->ch.cubes[ix].atom.matrix;
+    int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
+    if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
+    if (n < 1) n = CUBALC_ATOM_BITS;
+    if (k < 0){
+      /* right rotate = left by n - (|k|%n) */
+      long kk = (-k) % n;
+      k = kk ? (n - kk) : 0;
+    } else {
+      k = k % n;
+    }
+    if (k){
+      uint8_t tmp[(CUBALC_ATOM_BITS + 7) / 8];
+      memset(tmp, 0, sizeof tmp);
+      for (int i=0;i<n;i++){
+        int src = cubalc_matrix_get(m, i);
+        int dst = (int)((i + k) % n);
+        if (src) tmp[dst >> 3] |= (uint8_t)(1u << (dst & 7));
+      }
+      cubalc_matrix_clear(m);
+      m->n = (uint16_t)n;
+      for (int i=0;i<n;i++){
+        int on = (tmp[i >> 3] >> (i & 7)) & 1;
+        if (on) cubalc_matrix_set(m, i, 1);
+      }
+    }
+    vm->ch.cubes[ix].atom.digit_lock = 0;
+    vm->ch.cubes[ix].atom.digit =
+      (uint8_t)cubalc_algocube_digit(&vm->ch.cubes[ix].atom.matrix);
+    vm->ch.cubes[ix].flowed = 1;
+    var_set_num(vm, "SET", cubalc_matrix_popcount(m));
+    var_set_num(vm, "DIGIT", vm->ch.cubes[ix].atom.digit);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"SETBIT")){
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"SETBIT cube i on"); return -1; }
@@ -3328,6 +3434,12 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   cubalc_chain_init(&vm.ch);
   vm.last_str[0]=0; vm.last_code=0; vm.last_n=0;
   vm.sp=0;
+  {
+    const char *se = getenv("CUBALC_SEED");
+    if (se && se[0]) vm.rng = (uint32_t)strtoul(se, NULL, 0);
+    else vm.rng = (uint32_t)time(NULL) ^ 0xC3C3C3C3u;
+    if (!vm.rng) vm.rng = 1;
+  }
   vm.ch.hold_flash=1;
   snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
   if (out){ memset(out,0,sizeof*out); out->ok=1; }

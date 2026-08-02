@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.0-universal — 2026-08-02
+
+### Direction
+- Algocube digit **6** → energy / matrix flow + seeded RNG.
+
+### Language
+- `RAND`/`RND` [max] · `RAND(n)` (seed: `CUBALC_SEED` env)
+- `ENERGYSET`/`ENERGYADD` cube n (0..100 scale)
+- `ROTBITS`/`SHIFTBITS` cube k (State Matrix bit rotate; negative = right)
+- Proof `23_rand_energy_rotbits.cubalc`
+
+### Prior
+See 1.11.9-universal.
+
 ## 1.11.9-universal — 2026-08-02
 
 ### Direction

@@ -1,0 +1,44 @@
+# Proof 23 — RAND + ENERGYSET/ADD + ROTBITS (digit 6 energy/matrix flow)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# deterministic seed via env is optional; exercise range only
+RAND 1
+ASSERT LAST_N == 0
+RAND 7
+ASSERT LAST_N >= 0
+ASSERT LAST_N < 7
+LET r = RAND(5)
+ASSERT r >= 0
+ASSERT r < 5
+
+# energy plane
+CUBE e ROLE core PROTON 1
+ENERGYSET e 50
+ASSERT ENERGY(e) == 50
+ENERGYADD e 25
+ASSERT ENERGY(e) == 75
+ENERGYSET e 0
+ASSERT ENERGY(e) == 0
+ENERGYADD e 10
+ASSERT ENERGY(e) == 10
+
+# rotate matrix bits
+CUBE m ROLE matrix PROTON 1
+CLEARBITS m
+SETBIT m 0 1
+SETBIT m 1 1
+ASSERT BIT(m, 0) == 1
+ASSERT BIT(m, 1) == 1
+ASSERT BIT(m, 2) == 0
+ROTBITS m 2
+ASSERT BIT(m, 2) == 1
+ASSERT BIT(m, 3) == 1
+ASSERT BIT(m, 0) == 0
+# rotate back
+ROTBITS m -2
+ASSERT BIT(m, 0) == 1
+ASSERT BIT(m, 1) == 1
+
+ASSERT OK == 1
+PRINT "proof23_rand_energy" r ENERGY(e) SET(m) DIGIT(m)

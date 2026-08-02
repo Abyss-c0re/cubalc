@@ -90,7 +90,7 @@ Rotate/pack/select: `ROTL`/`ROL` `ROTR`/`ROR` `PACK16` `HI16` `LO16` `ISEL`/`SEL
 
 Control flow: `IF`/`ELIF`/`ELSE` · `WHILE` · `FOR` · `LOOP` · `REPEAT…UNTIL` · `BREAK`/`BREAK IF` · `CONTINUE`/`CONTINUE IF` · `FN`/`CALL`/`RET` · `CASE`/`WHEN`/`DEFAULT`
 
-COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` · `PORTS` `PLUGGED` `BITS`
+COP matrix: `COPYBITS` `ANDBITS` `ORBITS` `XORBITS` `NOTBITS` `CLEARBITS` `FILLBITS` `ROTBITS` · `PORTS` `PLUGGED` `BITS` · `ENERGYSET`/`ENERGYADD` · `RAND`
 
 Data plane: `CELLSET` `CELL(i)` `PUSH` `POP` `PEEK` `SP`/`STACKLEN` `SWAPCELL` `CLEARCELLS` `CLEARSTACK` · `INC`/`DEC` · `SUMCELL`/`MINCELL`/`MAXCELL`
 
@@ -105,7 +105,7 @@ Universal tick: `make universal-iter` · loop: `scripts/universal_loop_daemon.sh
 
 ## Machine token
 
-Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.11.9-universal`.
+Default status token: `C3`. Share: `smx`. Hold: `1`. Version: `1.12.0-universal`.
 Paradigm: **COP/flow** — free-flow Cube-Oriented Programming with algocube law.
 
 ## Prophecy / pose (NexusMod)
