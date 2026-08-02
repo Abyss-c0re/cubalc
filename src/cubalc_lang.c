@@ -1098,6 +1098,15 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"UCMP")==0 || strcmp(name,"UCMP3")==0 ||
         strcmp(name,"ULT")==0 || strcmp(name,"UGT")==0 ||
         strcmp(name,"ULE")==0 || strcmp(name,"UGE")==0 ||
+        /* digit-1 boolean logic + signed compare predicates */
+        strcmp(name,"LAND")==0 || strcmp(name,"LOR")==0 ||
+        strcmp(name,"LXOR")==0 || strcmp(name,"LNOT")==0 ||
+        strcmp(name,"IMPLY")==0 || strcmp(name,"IMPLIES")==0 ||
+        strcmp(name,"EQZ")==0 || strcmp(name,"ISZERO")==0 ||
+        strcmp(name,"NEZ")==0 || strcmp(name,"ISNZ")==0 || strcmp(name,"NONZERO")==0 ||
+        strcmp(name,"EQ")==0 || strcmp(name,"NE")==0 ||
+        strcmp(name,"LT")==0 || strcmp(name,"LE")==0 ||
+        strcmp(name,"GT")==0 || strcmp(name,"GE")==0 ||
         strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0 ||
         strcmp(name,"HI16")==0 || strcmp(name,"LO16")==0 ||
         strcmp(name,"HIWORD")==0 || strcmp(name,"LOWORD")==0 ||
@@ -1513,6 +1522,22 @@ static long parse_prim(VM *vm, Lex *L){
           return ((unsigned long)a <= (unsigned long)b) ? 1 : 0;
         if (strcmp(name,"UGE")==0)
           return ((unsigned long)a >= (unsigned long)b) ? 1 : 0;
+        /* digit-1 boolean logic (normalize to 0/1) + signed compare predicates */
+        if (strcmp(name,"LAND")==0) return (a && b) ? 1 : 0;
+        if (strcmp(name,"LOR")==0) return (a || b) ? 1 : 0;
+        if (strcmp(name,"LXOR")==0) return ((a != 0) ^ (b != 0)) ? 1 : 0;
+        if (strcmp(name,"LNOT")==0) return a ? 0 : 1;
+        if (strcmp(name,"IMPLY")==0 || strcmp(name,"IMPLIES")==0)
+          return (!a || b) ? 1 : 0;
+        if (strcmp(name,"EQZ")==0 || strcmp(name,"ISZERO")==0) return a ? 0 : 1;
+        if (strcmp(name,"NEZ")==0 || strcmp(name,"ISNZ")==0 || strcmp(name,"NONZERO")==0)
+          return a ? 1 : 0;
+        if (strcmp(name,"EQ")==0) return (a == b) ? 1 : 0;
+        if (strcmp(name,"NE")==0) return (a != b) ? 1 : 0;
+        if (strcmp(name,"LT")==0) return (a < b) ? 1 : 0;
+        if (strcmp(name,"LE")==0) return (a <= b) ? 1 : 0;
+        if (strcmp(name,"GT")==0) return (a > b) ? 1 : 0;
+        if (strcmp(name,"GE")==0) return (a >= b) ? 1 : 0;
         /* Pack / unpack 16-bit halves → 32-bit word */
         if (strcmp(name,"PACK16")==0 || strcmp(name,"PACK")==0){
           unsigned int hi = (unsigned int)a & 0xFFFFu;
@@ -4766,6 +4791,47 @@ static int parse_form(VM *vm, Lex *L){
       r = (long)(int)(unsigned int)a;
     else
       r = (long)((unsigned long)a & 0xFFFFFFFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 boolean logic stack: SLAND SLOR SLXOR SLNOT SIMP SEQZ SNEZ */
+  if (kw(&L->cur,"SLAND")||kw(&L->cur,"STACKLAND")||
+      kw(&L->cur,"SLOR")||kw(&L->cur,"STACKLOR")||
+      kw(&L->cur,"SLXOR")||kw(&L->cur,"STACKLXOR")||
+      kw(&L->cur,"SIMP")||kw(&L->cur,"SIMPLY")||kw(&L->cur,"STACKIMPLY")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    if (strcmp(op,"SLAND")==0 || strcmp(op,"STACKLAND")==0) r = (a && b) ? 1 : 0;
+    else if (strcmp(op,"SLOR")==0 || strcmp(op,"STACKLOR")==0) r = (a || b) ? 1 : 0;
+    else if (strcmp(op,"SLXOR")==0 || strcmp(op,"STACKLXOR")==0)
+      r = ((a != 0) ^ (b != 0)) ? 1 : 0;
+    else
+      r = (!a || b) ? 1 : 0; /* SIMP / SIMPLY / STACKIMPLY */
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLNOT")||kw(&L->cur,"STACKLNOT")||
+      kw(&L->cur,"SEQZ")||kw(&L->cur,"SISZERO")||kw(&L->cur,"STACKEQZ")||
+      kw(&L->cur,"SNEZ")||kw(&L->cur,"SISNZ")||kw(&L->cur,"STACKNEZ")||
+      kw(&L->cur,"SNONZERO")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (strcmp(op,"SLNOT")==0 || strcmp(op,"STACKLNOT")==0) r = a ? 0 : 1;
+    else if (strcmp(op,"SEQZ")==0 || strcmp(op,"SISZERO")==0 || strcmp(op,"STACKEQZ")==0)
+      r = a ? 0 : 1;
+    else
+      r = a ? 1 : 0; /* SNEZ / SISNZ / STACKNEZ / SNONZERO */
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
