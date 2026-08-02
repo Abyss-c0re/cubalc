@@ -1,0 +1,98 @@
+# Proof 71 — digit-1 control: CALLIF/CALLZ + RETIF/RETZ conditional FN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+FN double
+  RET ARG0 * 2
+END
+
+FN absv
+  RETIF ARG0 >= 0 ARG0
+  RET 0 - ARG0
+END
+
+FN clamp10
+  RETIF ARG0 < 0 0
+  RETIF ARG0 > 10 10
+  RET ARG0
+END
+
+FN only_when_pos
+  RETZ ARG0 0
+  RET ARG0 * 3
+END
+
+# unconditional CALL still works
+CALL double 21
+ASSERT LAST_N == 42
+ASSERT RETVAL == 42
+
+# CALLIF true
+CALLIF 1 double 5
+ASSERT LAST_N == 10
+ASSERT CALLED == 1
+
+# CALLIF false — no call, LAST_N unchanged from prior if we save
+LET prev = LAST_N
+CALLIF 0 double 99
+ASSERT CALLED == 0
+ASSERT LAST_N == prev
+
+# CALLZ zero → call
+CALLZ 0 double 7
+ASSERT LAST_N == 14
+ASSERT CALLED == 1
+
+# CALLZ nonzero → skip
+LET prev2 = LAST_N
+CALLZ 3 double 100
+ASSERT CALLED == 0
+ASSERT LAST_N == prev2
+
+# CALLNZ alias of CALLIF
+CALLNZ 2 double 4
+ASSERT LAST_N == 8
+
+# CALLUNLESS
+CALLUNLESS 0 double 6
+ASSERT LAST_N == 12
+CALLUNLESS 1 double 1
+ASSERT CALLED == 0
+
+# RETIF inside absv
+CALL absv 5
+ASSERT LAST_N == 5
+CALL absv -9
+ASSERT LAST_N == 9
+
+# RETIF chain clamp
+CALL clamp10 -3
+ASSERT LAST_N == 0
+CALL clamp10 7
+ASSERT LAST_N == 7
+CALL clamp10 99
+ASSERT LAST_N == 10
+
+# RETZ
+CALL only_when_pos 0
+ASSERT LAST_N == 0
+CALL only_when_pos 4
+ASSERT LAST_N == 12
+
+# nested CALLIF with FN using RETIF
+FN step
+  RETIF ARG0 == 0 0
+  CALLIF ARG0 > 0 double ARG0
+  RET LAST_N
+END
+CALL step 0
+ASSERT LAST_N == 0
+CALL step 11
+ASSERT LAST_N == 22
+
+CUBE c ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof71_callif_retif" LAST_N RETVAL CALLED

@@ -6228,10 +6228,40 @@ static int parse_form(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# FN %s len=%zu\n", fname, blen);
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")){
+  if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")||
+      kw(&L->cur,"CALLIF")||kw(&L->cur,"CALLNZ")||kw(&L->cur,"CALLZ")||
+      kw(&L->cur,"CALLWHEN")||kw(&L->cur,"CALLUNLESS")){
+    /* CALL name [args…]
+       CALLIF|CALLNZ cond name [args…] — call if cond != 0
+       CALLZ cond name [args…] — call if cond == 0
+       CALLUNLESS cond name — call if cond == 0 (alias CALLZ) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
+    int mode = 0; /* 0=always, 1=if nz, 2=if z */
+    if (strcmp(op,"CALLIF")==0 || strcmp(op,"CALLNZ")==0 || strcmp(op,"CALLWHEN")==0) mode = 1;
+    else if (strcmp(op,"CALLZ")==0 || strcmp(op,"CALLUNLESS")==0) mode = 2;
+    long cond = 1;
+    if (mode){
+      cond = parse_expr(vm, L);
+    }
     if (L->cur.kind!=TK_IDENT){ fail(vm,"CALL name"); return -1; }
     char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    int do_call = 1;
+    if (mode == 1) do_call = (cond != 0);
+    else if (mode == 2) do_call = (cond == 0);
+    if (!do_call){
+      /* still consume optional args so lexer stays aligned */
+      int ai=0;
+      while (ai<8 && (L->cur.kind==TK_NUM||L->cur.kind==TK_IDENT||L->cur.kind==TK_STR||L->cur.kind==TK_MINUS||L->cur.kind==TK_LPAREN)){
+        if (L->cur.kind==TK_STR){ lex_next(L); }
+        else { (void)parse_expr(vm,L); }
+        ai++;
+      }
+      var_set_num(vm,"CALLED",0);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
     FnDef *fn=NULL;
     for (int i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
     if (!fn){ snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname); fail(vm,vm->err); return -1; }
@@ -6249,26 +6279,53 @@ static int parse_form(VM *vm, Lex *L){
       ai++;
     }
     var_set_num(vm, "NARGS", ai);
+    var_set_num(vm, "CALLED", 1);
     vm->return_fn = 0;
     Lex fl; lex_init(&fl, fn->body, fn->len);
     if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
     vm->return_fn = 0;
     bump(vm); return 1;
   }
-  /* RET [expr] — early return from FN (digit-4 control flow) */
-  if (kw(&L->cur,"RET")||kw(&L->cur,"RETURN")){
+  /* RET [expr] — early return from FN (digit-4 control flow)
+     RETIF cond [expr] / RETNZ / RETZ / RETUNLESS — conditional return (digit-1) */
+  if (kw(&L->cur,"RET")||kw(&L->cur,"RETURN")||
+      kw(&L->cur,"RETIF")||kw(&L->cur,"RETNZ")||kw(&L->cur,"RETZ")||
+      kw(&L->cur,"RETUNLESS")||kw(&L->cur,"RETWHEN")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
+    int mode = 0; /* 0 always, 1 if nz, 2 if z */
+    if (strcmp(op,"RETIF")==0 || strcmp(op,"RETNZ")==0 || strcmp(op,"RETWHEN")==0) mode = 1;
+    else if (strcmp(op,"RETZ")==0 || strcmp(op,"RETUNLESS")==0) mode = 2;
+    int do_ret = 1;
+    if (mode){
+      long cond = parse_expr(vm, L);
+      if (mode == 1) do_ret = (cond != 0);
+      else do_ret = (cond == 0);
+    }
     /* optional return value when next looks like an expression start */
+    int has_val = 0;
+    long v = 0;
     if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
         L->cur.kind==TK_STR ||
         (L->cur.kind==TK_IDENT && !kw(&L->cur,"END") && !kw(&L->cur,"ELSE") &&
          !kw(&L->cur,"FN") && !kw(&L->cur,"CALL") && !kw(&L->cur,"LET") &&
          !kw(&L->cur,"ASSERT") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"RET") &&
-         !kw(&L->cur,"RETURN") && !kw(&L->cur,"WHEN") && !kw(&L->cur,"DEFAULT") &&
+         !kw(&L->cur,"RETURN") && !kw(&L->cur,"RETIF") && !kw(&L->cur,"RETZ") &&
+         !kw(&L->cur,"RETNZ") && !kw(&L->cur,"RETUNLESS") && !kw(&L->cur,"RETWHEN") &&
+         !kw(&L->cur,"WHEN") && !kw(&L->cur,"DEFAULT") &&
          !kw(&L->cur,"FOR") && !kw(&L->cur,"WHILE") && !kw(&L->cur,"LOOP") &&
-         !kw(&L->cur,"IF") && !kw(&L->cur,"BREAK") && !kw(&L->cur,"CONTINUE") &&
-         !kw(&L->cur,"CASE") && !kw(&L->cur,"CUBE") && !kw(&L->cur,"SYS"))){
-      long v = parse_expr(vm, L);
+         !kw(&L->cur,"IF") && !kw(&L->cur,"UNLESS") && !kw(&L->cur,"BREAK") &&
+         !kw(&L->cur,"CONTINUE") && !kw(&L->cur,"CASE") && !kw(&L->cur,"CUBE") &&
+         !kw(&L->cur,"SYS"))){
+      v = parse_expr(vm, L);
+      has_val = 1;
+    }
+    if (!do_ret){
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    if (has_val){
       var_set_num(vm, "LAST_N", v);
       vm->last_n = v;
       var_set_num(vm, "RETVAL", v);
