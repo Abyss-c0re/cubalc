@@ -3328,6 +3328,56 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3/0 stack pack+byte: SPACK16 SHI16 SLO16 SBYTE SLOBYTE SHIBYTE */
+  if (kw(&L->cur,"SLOBYTE")||kw(&L->cur,"STACKLOBYTE")||
+      kw(&L->cur,"SHIBYTE")||kw(&L->cur,"STACKHIBYTE")||
+      kw(&L->cur,"SHI16")||kw(&L->cur,"SHIWORD")||kw(&L->cur,"STACKHI16")||
+      kw(&L->cur,"SLO16")||kw(&L->cur,"SLOWORD")||kw(&L->cur,"STACKLO16")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SLOBYTE")==0 || strcmp(op,"STACKLOBYTE")==0)
+      r = (long)((unsigned long)a & 0xFFul);
+    else if (strcmp(op,"SHIBYTE")==0 || strcmp(op,"STACKHIBYTE")==0)
+      r = (long)(((unsigned long)a >> 8) & 0xFFul);
+    else if (strcmp(op,"SHI16")==0 || strcmp(op,"SHIWORD")==0 || strcmp(op,"STACKHI16")==0)
+      r = (long)(((unsigned int)a >> 16) & 0xFFFFu);
+    else
+      r = (long)((unsigned int)a & 0xFFFFu);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBYTE")||kw(&L->cur,"STACKBYTE")||kw(&L->cur,"SGETBYTE")){
+    /* a i → i-th little-endian byte of a (i clamped 0..7) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i > 7) i = 7;
+    long r = (long)(((unsigned long)a >> (unsigned)(i * 8)) & 0xFFul);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPACK16")||kw(&L->cur,"SPACK")||kw(&L->cur,"STACKPACK")||
+      kw(&L->cur,"STACKPACK16")){
+    /* hi lo → (hi<<16)|lo  (16-bit halves) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long lo = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    unsigned int h = (unsigned int)hi & 0xFFFFu;
+    unsigned int l = (unsigned int)lo & 0xFFFFu;
+    long r = (long)((h << 16) | l);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack bitwise ALU: SAND SOR SXOR SNOT SSHL SSHR */
   if (kw(&L->cur,"SAND")||kw(&L->cur,"STACKAND")||kw(&L->cur,"BANDST")||
       kw(&L->cur,"SOR")||kw(&L->cur,"STACKOR")||kw(&L->cur,"BORST")||
