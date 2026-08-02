@@ -1,0 +1,56 @@
+# Proof 115 — digit-6 energy/flow/RNG immediate dual forms
+# SRANDI/SRANDN · SSEEDI/SSEEDN · ENERGYFLOWI/ENERGYFLOWN · FLOWI/FLOWN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# seed + immediate rand duals
+CLEARSTACK
+SSEEDI 42
+ASSERT LAST_N == 42
+ASSERT SP == 1
+POP seed
+ASSERT seed == 42
+
+SRANDN 10
+ASSERT SP == 1
+POP r0
+ASSERT r0 >= 0
+ASSERT r0 < 10
+
+SSEEDN 7
+POP s2
+ASSERT s2 == 7
+SRANDI 5
+POP r1
+ASSERT r1 >= 0
+ASSERT r1 < 5
+
+# dual SSEED still reports via SGETSEED
+SSEEDI 99
+POP _
+SGETSEED
+POP g
+ASSERT g == 99
+
+# energy/flow immediate duals
+CUBE e ROLE matrix PROTON 1
+ENERGYSET e 40
+ENERGYFLOWI 2
+ASSERT OK == 1
+ASSERT ENERGY >= 0
+ASSERT LAST_N >= 0
+
+ENERGYFLOWN 1
+ASSERT OK == 1
+
+FLOWI 2
+ASSERT OK == 1
+FLOWN 1
+ASSERT OK == 1
+
+# classic ENERGYFLOW still lives
+ENERGYFLOW 1
+ASSERT OK == 1
+ASSERT ENERGY >= 0
+
+PRINT "proof115_energy_rng_imm" LAST_N ENERGY SP

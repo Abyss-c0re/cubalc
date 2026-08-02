@@ -7554,9 +7554,11 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-6 stack immediate RNG: SRANDN n — push rand in [0,n) without consuming max */
-  if (kw(&L->cur,"SRANDN")||kw(&L->cur,"RANDN")||kw(&L->cur,"SRANDIMM")||
+  /* digit-6 stack/imm RNG dual forms: SRANDI/SRANDN · SSEEDI/SSEEDN (Cube aliases retained) */
+  if (kw(&L->cur,"SRANDI")||kw(&L->cur,"SRANDN")||kw(&L->cur,"RANDIMM")||
+      kw(&L->cur,"STACKRANDI")||kw(&L->cur,"RANDN")||kw(&L->cur,"SRANDIMM")||
       kw(&L->cur,"STACKRANDN")||kw(&L->cur,"SRNGN")){
+    /* SRANDI/SRANDN n — push rand in [0,n); n<=0 → 10 */
     lex_next(L);
     long m = parse_expr(vm,L);
     if (m < 1) m = 10;
@@ -7569,6 +7571,20 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = v;
     var_set_num(vm,"SP",vm->sp);
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEEDI")||kw(&L->cur,"SSEEDN")||kw(&L->cur,"SEEDIMM")||
+      kw(&L->cur,"STACKSEEDI")||kw(&L->cur,"SEEDN")||kw(&L->cur,"SSEEDIMM")){
+    /* SSEEDI/SSEEDN n — set PRNG seed to n (0→1); push seed used */
+    lex_next(L);
+    long s = parse_expr(vm,L);
+    uint32_t u = (uint32_t)s;
+    if (!u) u = 1;
+    vm->rng = u;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = (long)u;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"LAST_N",(long)u); vm->last_n=(long)u;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-6 RNG range + shuffle + random matrix bits */
@@ -9489,6 +9505,42 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm, "OK", 1);
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
                           "energyflow n=%ld e=%ld u=%.2f", n, e, vm->ch.unity);
+    bump(vm); return 1;
+  }
+  /* digit-6 energy/flow immediate dual forms: ENERGYFLOWI · FLOWI/FLOWN */
+  if (kw(&L->cur,"ENERGYFLOWI")||kw(&L->cur,"EFLOWI")||
+      kw(&L->cur,"PULSEFLOWI")||kw(&L->cur,"PULSEFLOWN")){
+    /* ENERGYFLOWI n — required imm multi-hop free-flow (ENERGYFLOWN via SEFLOWN Cube path) */
+    lex_next(L);
+    long n = parse_expr(vm, L);
+    if (n < 1) n = 1;
+    if (n > 64) n = 64;
+    for (long i = 0; i < n; i++) do_flow(vm, 1);
+    long e = 0;
+    for (int i = 0; i < vm->ch.n_cubes; i++)
+      e += (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+    long *se = var_slot(vm, "ENERGY", 1); if (se) *se = e;
+    var_set_num(vm, "ENERGY", e);
+    var_set_num(vm, "LAST_N", e); vm->last_n = e;
+    var_set_num(vm, "OK", 1);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print,
+                          "energyflown n=%ld e=%ld u=%.2f", n, e, vm->ch.unity);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FLOWI")||kw(&L->cur,"FLOWN")||kw(&L->cur,"TICKI")||kw(&L->cur,"TICKN")){
+    /* FLOWI/FLOWN n — required imm free-flow hops */
+    lex_next(L);
+    long n = parse_expr(vm, L);
+    if (n < 1) n = 1;
+    if (n > 1000) n = 1000;
+    ensure_world(vm);
+    do_flow(vm, (int)n);
+    long e = 0;
+    for (int i = 0; i < vm->ch.n_cubes; i++)
+      e += (long)lround(vm->ch.cubes[i].atom.energy * 100.0);
+    var_set_num(vm, "ENERGY", e);
+    var_set_num(vm, "LAST_N", e); vm->last_n = e;
+    var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"DECIDE")||kw(&L->cur,"ALGOCUBE")){
