@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.101-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack foundation duals: complete depth-4 plane after 4DUP/4DROP/4SWAP.
+
+### Language
+- `4NIP`/`QNIP`/`NIP4` — a b c d → a d (drop middle two)
+- `4ROT`/`QROT`/`ROT4` — a b c d → b c d a
+- `4RROT`/`QRROT`/`RROT4` — a b c d → d a b c
+- `4OVER`/`QOVER`/`OVER4` — copy under quartet (needs 8)
+- Proof `124_4nip_4rot.cubalc`
+
+### Prior
+See 1.12.100-universal.
+
 ## 1.12.100-universal — 2026-08-03
 
 ### Direction
