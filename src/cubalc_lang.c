@@ -1092,6 +1092,11 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"PARITY")==0 ||
         strcmp(name,"NIBBLE")==0 || strcmp(name,"NIB")==0 ||
         strcmp(name,"DIST")==0 || strcmp(name,"ABSDIFF")==0 ||
+        /* digit-8 sign/zero extend data path */
+        strcmp(name,"SEXT")==0 || strcmp(name,"SIGNEXT")==0 ||
+        strcmp(name,"ZEXT")==0 || strcmp(name,"ZEROEXT")==0 ||
+        strcmp(name,"SEXT8")==0 || strcmp(name,"SEXTB")==0 ||
+        strcmp(name,"SEXT16")==0 || strcmp(name,"SEXTW")==0 ||
         /* digit-2 math ext: combinatorics + square + floor div */
         strcmp(name,"SQR")==0 || strcmp(name,"SQUARE")==0 ||
         strcmp(name,"BINOM")==0 || strcmp(name,"CHOOSE")==0 ||
@@ -1544,6 +1549,34 @@ static long parse_prim(VM *vm, Lex *L){
         if (strcmp(name,"DIST")==0 || strcmp(name,"ABSDIFF")==0){
           long d = a - b;
           return d < 0 ? -d : d;
+        }
+        /* digit-8: SEXT/ZEXT — extend bottom width bits; SEXT8/16 fixed width */
+        if (strcmp(name,"SEXT8")==0 || strcmp(name,"SEXTB")==0){
+          long v = a & 0xFFL;
+          if (v & 0x80L) v |= ~0xFFL;
+          return v;
+        }
+        if (strcmp(name,"SEXT16")==0 || strcmp(name,"SEXTW")==0){
+          long v = a & 0xFFFFL;
+          if (v & 0x8000L) v |= ~0xFFFFL;
+          return v;
+        }
+        if (strcmp(name,"ZEXT")==0 || strcmp(name,"ZEROEXT")==0){
+          long w = b;
+          if (w <= 0) return 0;
+          if (w >= 63) return a;
+          unsigned long mask = (1ul << (unsigned)w) - 1ul;
+          return (long)((unsigned long)a & mask);
+        }
+        if (strcmp(name,"SEXT")==0 || strcmp(name,"SIGNEXT")==0){
+          long w = b;
+          if (w <= 0) return 0;
+          if (w >= 63) return a;
+          unsigned long mask = (1ul << (unsigned)w) - 1ul;
+          unsigned long v = (unsigned long)a & mask;
+          unsigned long sign = 1ul << (unsigned)(w - 1);
+          if (v & sign) v |= ~mask;
+          return (long)v;
         }
         if (strcmp(name,"DIVCEIL")==0 || strcmp(name,"CEILDIV")==0){
           /* ceil(a/b); 0 if b==0. Non-neg exact; mixed → C trunc (ok for ceil when <0). */
@@ -3475,6 +3508,52 @@ static int parse_form(VM *vm, Lex *L){
     if (i < 0) i = 0;
     if (i > 15) i = 15;
     long r = (long)(((unsigned long)a >> (unsigned)(i * 4)) & 0xFul);
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 sign/zero extend: SSEXT SZEXT SSEXT8 SSEXT16 */
+  if (kw(&L->cur,"SSEXT8")||kw(&L->cur,"SSEXTB")||kw(&L->cur,"STACKSEXT8")||
+      kw(&L->cur,"SSEXT16")||kw(&L->cur,"SSEXTW")||kw(&L->cur,"STACKSEXT16")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (strcmp(op,"SSEXT16")==0 || strcmp(op,"SSEXTW")==0 || strcmp(op,"STACKSEXT16")==0){
+      r = a & 0xFFFFL;
+      if (r & 0x8000L) r |= ~0xFFFFL;
+    } else {
+      r = a & 0xFFL;
+      if (r & 0x80L) r |= ~0xFFL;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT")||kw(&L->cur,"STACKSEXT")||kw(&L->cur,"SSIGNEXT")||
+      kw(&L->cur,"SZEXT")||kw(&L->cur,"STACKZEXT")||kw(&L->cur,"SZEROEXT")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long w = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long r = 0;
+    int is_z = (strcmp(op,"SZEXT")==0 || strcmp(op,"STACKZEXT")==0 ||
+                strcmp(op,"SZEROEXT")==0);
+    if (w <= 0) r = 0;
+    else if (w >= 63) r = a;
+    else {
+      unsigned long mask = (1ul << (unsigned)w) - 1ul;
+      unsigned long v = (unsigned long)a & mask;
+      if (!is_z){
+        unsigned long sign = 1ul << (unsigned)(w - 1);
+        if (v & sign) v |= ~mask;
+      }
+      r = (long)v;
+    }
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
