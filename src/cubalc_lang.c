@@ -5352,6 +5352,37 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack↔cell unary mutator: SINCTOC · SDECTOC (dual of SINC/SDEC after SDBL/SHALF TOC) */
+  if (kw(&L->cur,"SINCTOC")||kw(&L->cur,"SINCTOCELL")||kw(&L->cur,"STACKINCTOC")||
+      kw(&L->cur,"SINCELLTOC")||kw(&L->cur,"SINC AT")||kw(&L->cur,"INCTOC")||
+      kw(&L->cur,"SCELLINCTOC")){
+    /* i → cells[i] += 1, leave result (TOC dual of SINC; peer of SINCCELL) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i] + 1;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDECTOC")||kw(&L->cur,"SDECTOCELL")||kw(&L->cur,"STACKDECTOC")||
+      kw(&L->cur,"SDECELLTOC")||kw(&L->cur,"SDECAT")||kw(&L->cur,"DECTOC")||
+      kw(&L->cur,"SCELLDECTOC")){
+    /* i → cells[i] -= 1, leave result (TOC dual of SDEC; peer of SDECCELL) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i] - 1;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-2 stack↔cell math dual: SSQRTOC · SISQRTTOC (dual of SSQR/SISQRT after scale TOC) */
   if (kw(&L->cur,"SSQRTOC")||kw(&L->cur,"SSQRTOCELL")||kw(&L->cur,"STACKSQRTOC")||
       kw(&L->cur,"SSQUARETOC")||kw(&L->cur,"SCELLSQR")||kw(&L->cur,"SQRTOC")||

@@ -1,3 +1,16 @@
+## 1.12.317-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → unary mutator TOC (dual of SINC/SDEC after SDBL/SHALF scale TOC plane).
+
+### Language
+- `SINCTOC`/`INCTOC`/`SINC AT` — stack `i → cells[i]+=1` leave result
+- `SDECTOC`/`DECTOC`/`SDECAT` — stack `i → cells[i]-=1` leave result
+- Proof `340_sinctoc_sdectoc.cubalc`
+
+### Prior
+See 1.12.316-universal.
+
 ## 1.12.316-universal — 2026-08-04
 
 ### Direction
