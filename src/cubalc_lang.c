@@ -220,6 +220,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UDIV")==0 || strcasecmp(tail,"UMOD")==0 ||
             strcasecmp(tail,"UREM")==0 || strcasecmp(tail,"UDIVIDE")==0 ||
             strcasecmp(tail,"UMIN")==0 || strcasecmp(tail,"UMAX")==0 ||
+            strcasecmp(tail,"UMINN")==0 || strcasecmp(tail,"UMAXN")==0 ||
+            strcasecmp(tail,"UMINIMM")==0 || strcasecmp(tail,"UMAXIMM")==0 ||
             strcasecmp(tail,"ULT")==0 || strcasecmp(tail,"ULE")==0 ||
             strcasecmp(tail,"UGT")==0 || strcasecmp(tail,"UGE")==0 ||
             strcasecmp(tail,"ULTN")==0 || strcasecmp(tail,"ULEN")==0 ||
@@ -11921,6 +11923,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 dual-stack imm unsigned min/max: DUMINN · DUMAXN (dual of SUMINN/SUMAXN; imm of DUMIN/DUMAX) */
+  if (kw(&L->cur,"DUMINN")||kw(&L->cur,"2UMINN")||kw(&L->cur,"S2UMINN")||
+      kw(&L->cur,"STACK2UMINN")||kw(&L->cur,"PAIRUMINN")||kw(&L->cur,"DUMINIMM")||
+      kw(&L->cur,"2UMINIMM")||kw(&L->cur,"PAIRUMINIMM")){
+    /* a b + n → unsigned min(a,n) min(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua < un ? ua : un);
+    long y = (long)(ub < un ? ub : un);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUMAXN")||kw(&L->cur,"2UMAXN")||kw(&L->cur,"S2UMAXN")||
+      kw(&L->cur,"STACK2UMAXN")||kw(&L->cur,"PAIRUMAXN")||kw(&L->cur,"DUMAXIMM")||
+      kw(&L->cur,"2UMAXIMM")||kw(&L->cur,"PAIRUMAXIMM")){
+    /* a b + n → unsigned max(a,n) max(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua > un ? ua : un);
+    long y = (long)(ub > un ? ub : un);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"DCLAMPN")||kw(&L->cur,"2CLAMPN")||kw(&L->cur,"S2CLAMPN")||
       kw(&L->cur,"STACK2CLAMPN")||kw(&L->cur,"PAIRCLAMPN")||kw(&L->cur,"DCLAMPIMM")||
       kw(&L->cur,"2CLAMPIMM")||kw(&L->cur,"PAIRCLAMPIMM")||kw(&L->cur,"DBOUNDN")){
@@ -17418,6 +17455,33 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
     long a = vm->stack[vm->sp - 1];
     long v = a > n ? a : n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 stack imm unsigned min/max: SUMINN · SUMAXN (imm dual of SMINN/SMAXN for unsigned) */
+  if (kw(&L->cur,"SUMINN")||kw(&L->cur,"UMINN")||kw(&L->cur,"STACKUMINN")||
+      kw(&L->cur,"SUMINIMM")||kw(&L->cur,"UMINIMM")){
+    /* SUMINN n — TOS = unsigned min(TOS, n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (long)(ua < un ? ua : un);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMAXN")||kw(&L->cur,"UMAXN")||kw(&L->cur,"STACKUMAXN")||
+      kw(&L->cur,"SUMAXIMM")||kw(&L->cur,"UMAXIMM")){
+    /* SUMAXN n — TOS = unsigned max(TOS, n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (long)(ua > un ? ua : un);
     vm->stack[vm->sp - 1] = v;
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;

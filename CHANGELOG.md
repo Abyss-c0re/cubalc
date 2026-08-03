@@ -1,3 +1,18 @@
+## 1.12.289-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → imm unsigned min/max (imm dual of SMINN/SMAXN for unsigned + dual-stack after SULTN plane).
+
+### Language
+- `SUMINN`/`UMINN` n — TOS = unsigned min(TOS, n)
+- `SUMAXN`/`UMAXN` n — TOS = unsigned max(TOS, n)
+- `DUMINN`/`PAIRUMINN` n — a b → unsigned min(a,n) min(b,n)
+- `DUMAXN`/`PAIRUMAXN` n — a b → unsigned max(a,n) max(b,n)
+- Proof `312_suminn_dumaxn.cubalc`
+
+### Prior
+See 1.12.288-universal.
+
 ## 1.12.288-universal — 2026-08-03
 
 ### Direction
