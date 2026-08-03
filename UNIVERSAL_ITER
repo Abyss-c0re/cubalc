@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T15:13:45+0300",
-  "iter": 333,
-  "algocube_digit": 3,
-  "version": "1.12.233-universal",
-  "pass": 271,
+  "ts": "2026-08-03T15:19:59+0300",
+  "iter": 334,
+  "algocube_digit": 2,
+  "version": "1.12.234-universal",
+  "pass": 272,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SCLAMPN SBETWEENN SWITHINN",
-  "proof": "256_sclampn_swithinn.cubalc"
+  "delta": "SMODINVN SPOWMODN SMODDIVN",
+  "proof": "257_smodinvn_spowmodn.cubalc"
 }

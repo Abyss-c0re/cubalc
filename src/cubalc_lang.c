@@ -12809,6 +12809,107 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",x); vm->last_n=x;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack immediate modular inv/pow/div: SMODINVN · SPOWMODN · SMODDIVN (complete SADDMODN plane) */
+  if (kw(&L->cur,"SMODINVN")||kw(&L->cur,"STACKMODINVN")||kw(&L->cur,"SINVMODN")||
+      kw(&L->cur,"MODINVN")||kw(&L->cur,"INVMODN")||kw(&L->cur,"SMODINVIMM")){
+    /* SMODINVN m — TOS = TOS^{-1} mod m; 0 if none / m<=1 */
+    lex_next(L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = aa;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += m; r = t; }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOWMODN")||kw(&L->cur,"STACKPOWMODN")||kw(&L->cur,"POWMODN")||
+      kw(&L->cur,"SPOWMODIMM")||kw(&L->cur,"SEXPMMODN")){
+    /* SPOWMODN exp m — TOS = TOS^exp mod m; m<=0 → 0; exp<0 → 0 */
+    lex_next(L);
+    long exp = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (m > 0 && exp >= 0){
+      long base = a % m; if (base < 0) base += m;
+      r = 1 % m;
+      long e = exp;
+      while (e > 0){
+        if (e & 1){
+          long y = r, x = base, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          r = acc;
+        }
+        {
+          long x = base, acc = 0, y = base;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          base = acc;
+        }
+        e >>= 1;
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODDIVN")||kw(&L->cur,"STACKMODDIVN")||kw(&L->cur,"SDIVMODMN")||
+      kw(&L->cur,"MODDIVN")||kw(&L->cur,"SMODDIVIMM")){
+    /* SMODDIVN b m — TOS = TOS * b^{-1} mod m; 0 if none / m<=0 */
+    lex_next(L);
+    long b = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (m > 0){
+      long bb = b % m; if (bb < 0) bb += m;
+      if (bb != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = bb;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += m;
+          long x = a % m; if (x < 0) x += m;
+          long y = t, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          r = acc;
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3/0 stack pack+byte: SPACK16 SHI16 SLO16 SBYTE SLOBYTE SHIBYTE */
   if (kw(&L->cur,"SLOBYTE")||kw(&L->cur,"STACKLOBYTE")||
       kw(&L->cur,"SHIBYTE")||kw(&L->cur,"STACKHIBYTE")||

@@ -1,3 +1,17 @@
+## 1.12.234-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → stack immediate modular inv/pow/div (complete SADDMODN plane after inv/pow stack forms).
+
+### Language
+- `SMODINVN`/`SINVMODN`/`MODINVN` m — TOS = TOS⁻¹ mod m (0 if none)
+- `SPOWMODN`/`POWMODN` exp m — TOS = TOS^exp mod m
+- `SMODDIVN`/`MODDIVN` b m — TOS = TOS · b⁻¹ mod m
+- Proof `257_smodinvn_spowmodn.cubalc`
+
+### Prior
+See 1.12.233-universal.
+
 ## 1.12.233-universal — 2026-08-03
 
 ### Direction
