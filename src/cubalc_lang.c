@@ -173,6 +173,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NIP")==0 ||
             strcasecmp(tail,"TUCK")==0 ||
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
+            strcasecmp(tail,"ADDC")==0 || strcasecmp(tail,"ADC")==0 ||
+            strcasecmp(tail,"SUBB")==0 || strcasecmp(tail,"SBB")==0 ||
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
@@ -6444,6 +6446,70 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else if (is_le){ x = (ua <= uc) ? 1 : 0; y = (ub <= ud) ? 1 : 0; }
     else if (is_gt){ x = (ua > uc) ? 1 : 0; y = (ub > ud) ? 1 : 0; }
     else { x = (ua >= uc) ? 1 : 0; y = (ub >= ud) ? 1 : 0; }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack multiword: DADDC · DSUBB (pair + cin/bin from CARRY/BORROW) */
+  if (kw(&L->cur,"DADDC")||kw(&L->cur,"2ADDC")||kw(&L->cur,"S2ADDC")||
+      kw(&L->cur,"STACK2ADDC")||kw(&L->cur,"PAIRADDC")||kw(&L->cur,"DADC")||
+      kw(&L->cur,"2ADC")||
+      kw(&L->cur,"DSUBB")||kw(&L->cur,"2SUBB")||kw(&L->cur,"S2SUBB")||
+      kw(&L->cur,"STACK2SUBB")||kw(&L->cur,"PAIRSUBB")||kw(&L->cur,"DSBB")||
+      kw(&L->cur,"2SBB")){
+    /* a b c d → f(a,c) f(b,d)
+     * DADDC: unsigned wrap add with cin from CARRY (both lanes); CARRY = cout_x|cout_y
+     * DSUBB: unsigned wrap sub with bin from BORROW/CARRY; BORROW=CARRY = bout_x|bout_y */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_sub = (strcmp(op,"DSUBB")==0 || strcmp(op,"2SUBB")==0 ||
+                  strcmp(op,"S2SUBB")==0 || strcmp(op,"STACK2SUBB")==0 ||
+                  strcmp(op,"PAIRSUBB")==0 || strcmp(op,"DSBB")==0 ||
+                  strcmp(op,"2SBB")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, is_sub ? "BORROW" : "CARRY", 0);
+      if (!vc && is_sub) vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    unsigned long uin = (unsigned long)cin;
+    long x, y;
+    int flag = 0;
+    if (!is_sub){
+      unsigned long s0 = ua + uc;
+      int c1 = (s0 < ua) ? 1 : 0;
+      unsigned long sum0 = s0 + uin;
+      int c2 = (sum0 < s0) ? 1 : 0;
+      unsigned long s1 = ub + ud;
+      int c3 = (s1 < ub) ? 1 : 0;
+      unsigned long sum1 = s1 + uin;
+      int c4 = (sum1 < s1) ? 1 : 0;
+      flag = c1 | c2 | c3 | c4;
+      x = (long)sum0; y = (long)sum1;
+      var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    } else {
+      int b1 = (ua < uc) ? 1 : 0;
+      unsigned long d0 = ua - uc;
+      int b2 = (d0 < uin) ? 1 : 0;
+      unsigned long diff0 = d0 - uin;
+      int b3 = (ub < ud) ? 1 : 0;
+      unsigned long d1 = ub - ud;
+      int b4 = (d1 < uin) ? 1 : 0;
+      unsigned long diff1 = d1 - uin;
+      flag = b1 | b2 | b3 | b4;
+      x = (long)diff0; y = (long)diff1;
+      var_set_num(vm,"BORROW",flag); var_set_num(vm,"BW",flag);
+      var_set_num(vm,"CARRY",flag);
+    }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

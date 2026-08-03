@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.166-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack multiword add/sub with carry/borrow.
+
+### Language
+- `DADDC`/`2ADDC`/`DADC` — pairwise unsigned add with `CARRY` cin; `CARRY` = any cout
+- `DSUBB`/`2SUBB`/`DSBB` — pairwise unsigned sub with `BORROW`/`CARRY` bin; flags updated
+- Proof `189_daddc_dsubb.cubalc`
+
+### Prior
+See 1.12.165-universal.
+
+
 ## 1.12.165-universal — 2026-08-03
 
 ### Direction
