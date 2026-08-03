@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.152-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack modular add/sub.
+
+### Language
+- `DADDMOD`/`2ADDMOD`/`PAIRADDMOD` — pairwise `(a±c) mod ma`, `(b±d) mod mb` (add)
+- `DSUBMOD`/`2SUBMOD`/`PAIRSUBMOD` — pairwise modular subtract (`m≤0→0`, result in `[0,m)`)
+- Proof `175_daddmod_dsubmod.cubalc`
+
+### Prior
+See 1.12.151-universal.
+
 ## 1.12.151-universal — 2026-08-03
 
 ### Direction

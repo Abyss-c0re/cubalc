@@ -189,6 +189,7 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SQRT")==0 || strcasecmp(tail,"COPRIME")==0 ||
             strcasecmp(tail,"DIVCEIL")==0 || strcasecmp(tail,"CEILDIV")==0 ||
             strcasecmp(tail,"DIVFLOOR")==0 || strcasecmp(tail,"FLOORDIV")==0 ||
+            strcasecmp(tail,"ADDMOD")==0 || strcasecmp(tail,"SUBMOD")==0 ||
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
@@ -6477,6 +6478,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack modular: DADDMOD · DSUBMOD (a b c d ma mb → (a±c)%ma (b±d)%mb) */
+  if (kw(&L->cur,"DADDMOD")||kw(&L->cur,"2ADDMOD")||kw(&L->cur,"S2ADDMOD")||
+      kw(&L->cur,"STACK2ADDMOD")||kw(&L->cur,"PAIRADDMOD")||
+      kw(&L->cur,"DSUBMOD")||kw(&L->cur,"2SUBMOD")||kw(&L->cur,"S2SUBMOD")||
+      kw(&L->cur,"STACK2SUBMOD")||kw(&L->cur,"PAIRSUBMOD")){
+    /* a b c d ma mb → (a±c) mod ma, (b±d) mod mb; m<=0 → 0; result in [0,m) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_add = (strcmp(op,"DADDMOD")==0 || strcmp(op,"2ADDMOD")==0 ||
+                  strcmp(op,"S2ADDMOD")==0 || strcmp(op,"STACK2ADDMOD")==0 ||
+                  strcmp(op,"PAIRADDMOD")==0);
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[--vm->sp];
+    long ma = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (ma > 0){
+      long aa = a % ma; if (aa < 0) aa += ma;
+      long cc = c % ma; if (cc < 0) cc += ma;
+      if (is_add) x = (aa + cc) % ma;
+      else x = (aa - cc + ma) % ma;
+    }
+    if (mb > 0){
+      long bb = b % mb; if (bb < 0) bb += mb;
+      long dd = d % mb; if (dd < 0) dd += mb;
+      if (is_add) y = (bb + dd) % mb;
+      else y = (bb - dd + mb) % mb;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
