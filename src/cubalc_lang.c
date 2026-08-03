@@ -157,8 +157,9 @@ static void lex_next(Lex *L) {
      * 3DUP / 3DROP / 3SWAP / 3OVER / 3ROT / 3NIP / 3TUCK — triple (digit-8)
      * 4DUP / 4DROP / 4SWAP / 4NIP / 4ROT / 4RROT / 4OVER / 4TUCK — quadruple
      * 5DUP / 5DROP / 5SWAP — quintuple depth (digit-8)
-     * 6DUP / 6DROP — sextuple depth (digit-8) */
-    if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5' || b[0]=='6') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
+     * 6DUP / 6DROP — sextuple depth (digit-8)
+     * 7DUP / 7DROP / 7SWAP — septuple depth (digit-8) */
+    if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5' || b[0]=='6' || b[0]=='7') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
       /* alnum: allow 2ISPOW2 / 2POW2P style (digits inside tail) */
@@ -478,12 +479,17 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0 ||
             strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
           ok = 1;
-      } else {
+      } else if (b[0]=='6'){
         /* 6… depth plane (digit-8 stack) */
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
             strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0 ||
             strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0 ||
             strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
+          ok = 1;
+      } else if (b[0]=='7'){
+        /* 7… depth plane foundation (digit-8 stack) */
+        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+            strcasecmp(tail,"SWAP")==0)
           ok = 1;
       }
       if (ok){
@@ -6087,6 +6093,43 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",f); vm->last_n=f;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 depth-7 foundation: 7DUP · 7DROP · 7SWAP (extend after depth-6 plane) */
+  if (kw(&L->cur,"7DUP")||kw(&L->cur,"SEPDUP")||kw(&L->cur,"DUP7")||
+      kw(&L->cur,"STACK7DUP")){
+    /* a..g (7) → a..g a..g */
+    lex_next(L);
+    if (vm->sp < 7){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 7 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[7];
+    for (int i = 0; i < 7; i++) v[i] = vm->stack[vm->sp - 7 + i];
+    for (int i = 0; i < 7; i++) vm->stack[vm->sp++] = v[i];
+    long last = v[6];
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"7DROP")||kw(&L->cur,"SEPDROP")||kw(&L->cur,"DROP7")||
+      kw(&L->cur,"STACK7DROP")){
+    /* drop top 7 */
+    lex_next(L);
+    if (vm->sp < 7){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->sp -= 7;
+    var_set_num(vm,"SP",vm->sp);
+    if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
+    else { var_set_num(vm,"LAST_N",0); vm->last_n=0; }
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"7SWAP")||kw(&L->cur,"SEPSWAP")||kw(&L->cur,"SWAP7")||
+      kw(&L->cur,"STACK7SWAP")){
+    /* reverse top 7 */
+    lex_next(L);
+    if (vm->sp < 7){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[7];
+    for (int i = 0; i < 7; i++) v[i] = vm->stack[vm->sp - 7 + i];
+    for (int i = 0; i < 7; i++) vm->stack[vm->sp - 7 + i] = v[6 - i];
+    long last = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){
     /* a b -> a a b */
@@ -8347,6 +8390,37 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (a > 0) ? 1 : 0;
     long y = (b > 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack zero-bound preds: D0LE · D0GE (complete D0* after D0LT/D0GT; energy-sign plane) */
+  if (kw(&L->cur,"D0LE")||kw(&L->cur,"2_0LE")||kw(&L->cur,"S20LE")||
+      kw(&L->cur,"STACK20LE")||kw(&L->cur,"PAIR0LE")||kw(&L->cur,"DNONPOS")||
+      kw(&L->cur,"2NONPOS")||kw(&L->cur,"D0LEQ")||kw(&L->cur,"PAIR0LEQ")){
+    /* a b → (a<=0?1:0) (b<=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a <= 0) ? 1 : 0;
+    long y = (b <= 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0GE")||kw(&L->cur,"2_0GE")||kw(&L->cur,"S20GE")||
+      kw(&L->cur,"STACK20GE")||kw(&L->cur,"PAIR0GE")||kw(&L->cur,"DNONNEG")||
+      kw(&L->cur,"2NONNEG")||kw(&L->cur,"D0GEQ")||kw(&L->cur,"PAIR0GEQ")){
+    /* a b → (a>=0?1:0) (b>=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a >= 0) ? 1 : 0;
+    long y = (b >= 0) ? 1 : 0;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
@@ -16644,11 +16718,15 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-4 stack select/within/clamp + zero-tests/sign */
+  /* digit-4 stack select/within/clamp + zero-tests/sign; digit-6 adds S0LE/S0GE */
   if (kw(&L->cur,"SZ")||kw(&L->cur,"S0EQ")||kw(&L->cur,"STACK0EQ")||kw(&L->cur,"S0=")||
       kw(&L->cur,"SNZ")||kw(&L->cur,"S0NE")||kw(&L->cur,"STACK0NE")||kw(&L->cur,"S0<>")||
       kw(&L->cur,"S0LT")||kw(&L->cur,"STACK0LT")||kw(&L->cur,"S0<")||
       kw(&L->cur,"S0GT")||kw(&L->cur,"STACK0GT")||kw(&L->cur,"S0>")||
+      kw(&L->cur,"S0LE")||kw(&L->cur,"STACK0LE")||kw(&L->cur,"S0<=")||
+      kw(&L->cur,"SNONPOS")||kw(&L->cur,"S0LEQ")||
+      kw(&L->cur,"S0GE")||kw(&L->cur,"STACK0GE")||kw(&L->cur,"S0>=")||
+      kw(&L->cur,"SNONNEG")||kw(&L->cur,"S0GEQ")||
       kw(&L->cur,"SSIGN")||kw(&L->cur,"STACKSIGN")||kw(&L->cur,"SGN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
@@ -16664,6 +16742,12 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       r = (a < 0) ? 1 : 0;
     else if (strcmp(op,"S0GT")==0 || strcmp(op,"STACK0GT")==0 || strcmp(op,"S0>")==0)
       r = (a > 0) ? 1 : 0;
+    else if (strcmp(op,"S0LE")==0 || strcmp(op,"STACK0LE")==0 || strcmp(op,"S0<=")==0 ||
+             strcmp(op,"SNONPOS")==0 || strcmp(op,"S0LEQ")==0)
+      r = (a <= 0) ? 1 : 0;
+    else if (strcmp(op,"S0GE")==0 || strcmp(op,"STACK0GE")==0 || strcmp(op,"S0>=")==0 ||
+             strcmp(op,"SNONNEG")==0 || strcmp(op,"S0GEQ")==0)
+      r = (a >= 0) ? 1 : 0;
     else {
       /* SSIGN / STACKSIGN / SGN */
       r = (a > 0) ? 1 : ((a < 0) ? -1 : 0);

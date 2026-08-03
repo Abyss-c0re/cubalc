@@ -1,3 +1,34 @@
+## 1.12.276-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack depth-7 foundation (extend after complete depth-6 plane).
+- Lexer: promote `7…` depth idents (same path as 2…6) so `7DUP`/`7DROP`/`7SWAP` tokenize.
+
+### Language
+- `7DUP`/`DUP7`/`STACK7DUP` — duplicate top 7
+- `7DROP`/`DROP7`/`STACK7DROP` — drop top 7
+- `7SWAP`/`SWAP7`/`STACK7SWAP` — reverse top 7
+- Lex digit-prefix idents: `7` + DUP/DROP/SWAP/NIP/ROT/RROT/OVER/TUCK
+- Proof `299_7dup_7drop.cubalc`
+
+### Prior
+See 1.12.275-universal.
+
+## 1.12.275-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → zero-bound predicates on energy/sign plane (complete ≤0/≥0 after D0LT/D0GT + stack duals).
+
+### Language
+- `D0LE`/`PAIR0LE`/`DNONPOS` — a b → (a≤0?1:0) (b≤0?1:0)
+- `D0GE`/`PAIR0GE`/`DNONNEG` — a b → (a≥0?1:0) (b≥0?1:0)
+- `S0LE`/`STACK0LE`/`SNONPOS` — TOS = (TOS≤0?1:0)
+- `S0GE`/`STACK0GE`/`SNONNEG` — TOS = (TOS≥0?1:0)
+- Proof `298_d0le_d0ge.cubalc`
+
+### Prior
+See 1.12.274-universal.
+
 ## 1.12.274-universal — 2026-08-03
 
 ### Direction
