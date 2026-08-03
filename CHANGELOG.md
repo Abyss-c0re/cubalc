@@ -1,3 +1,18 @@
+## 1.12.305-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → depth-9 foundation (nonuple after complete depth-8 plane).
+- Lexer: promote `9DUP`/`9DROP`/`9SWAP` tails.
+
+### Language
+- `9DUP`/`DUP9`/`STACK9DUP` — duplicate top 9
+- `9DROP`/`DROP9`/`STACK9DROP` — drop top 9
+- `9SWAP`/`SWAP9`/`STACK9SWAP` — reverse top 9
+- Proof `328_9dup_9drop.cubalc`
+
+### Prior
+See 1.12.304-universal.
+
 ## 1.12.304-universal — 2026-08-03
 
 ### Direction

@@ -2,21 +2,23 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 430 |
-| **digit** | **7** (urandom+genome; unary scale TOC) |
-| **version** | `1.12.304-universal` |
-| **pass/fail** | **342 / 0** (green) |
-| **commit** | `035e921` → `origin/main` |
-| **ops** | `SDBLTOC`/`SHALFTOC` |
-| **proof** | `programs/proof/327_sdbltoc_shalftoc.cubalc` |
+| **iter** | 431 |
+| **digit** | **8** (urandom+genome; depth-9 foundation) |
+| **version** | `1.12.305-universal` |
+| **pass/fail** | **343 / 0** (green) |
+| **commit** | `0f1779e` → `origin/main` |
+| **ops** | `9DUP`/`9DROP`/`9SWAP` |
+| **proof** | `programs/proof/328_9dup_9drop.cubalc` |
 
 ### Delta
-Digit-7 unary scale stack↔cell after ABS/NEG/NOT TOC: `cells[i]*=2`, `cells[i]/=2` (toward zero).
+Digit-8 nonuple stack foundation after complete depth-8 plane: dup/drop/reverse top 9.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
+- tree briefly corrupted by evolve churn; restored from HEAD then reapplied delta
 
 ### Language
-- `SDBLTOC` `SHALFTOC` · aliases `SCELLDBL`/`SCELLHALF`/`DBLTOC`/`HALFTOC`
-- Proof `327_sdbltoc_shalftoc.cubalc`
+- `9DUP` `9DROP` `9SWAP` · aliases `DUP9`/`DROP9`/`SWAP9`
+- Lexer promotes `9…` tails for foundation ops
+- Proof `328_9dup_9drop.cubalc`
