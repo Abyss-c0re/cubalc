@@ -1,3 +1,17 @@
+## 1.12.314-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → unary control TOC (dual of SSIGN/SEQZ/SNEZ into cell after 3-way compare TOC).
+
+### Language
+- `SSIGNTOC`/`SGNTOC`/`SSIGNAT` — stack `i → cells[i]=sign(cells[i])` as −1/0/+1 leave result
+- `SEQZTOC`/`EQZTOC`/`SEQZAT` — stack `i → cells[i]=(cells[i]==0)?1:0` leave result
+- `SNEZTOC`/`NEZTOC`/`SNEZAT` — stack `i → cells[i]=(cells[i]!=0)?1:0` leave result
+- Proof `337_ssigntoc_snez.cubalc`
+
+### Prior
+See 1.12.313-universal.
+
 ## 1.12.313-universal — 2026-08-03
 
 ### Direction
