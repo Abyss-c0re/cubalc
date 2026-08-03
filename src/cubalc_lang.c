@@ -5913,6 +5913,43 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack↔cell 3-way imm compare TOC: SCMPTOCN · SUCMPTOCN
+   * (imm dual of SCMPTOC/SUCMPTOC; peer of SEQTOCN plane) */
+  if (kw(&L->cur,"SCMPTOCN")||kw(&L->cur,"SCMPTOCIMM")||kw(&L->cur,"STACKCMPTOCN")||
+      kw(&L->cur,"SICMPTOCN")||kw(&L->cur,"SCMP3TOCN")||kw(&L->cur,"CMP3TOCN")||
+      kw(&L->cur,"SCMPATN")){
+    /* i + n → cells[i]=signed 3-way(cells[i],n) as −1/0/+1, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = (a < n) ? -1 : ((a > n) ? 1 : 0);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUCMPTOCN")||kw(&L->cur,"SUCMPTOCIMM")||kw(&L->cur,"STACKUCMPTOCN")||
+      kw(&L->cur,"SUCMP3TOCN")||kw(&L->cur,"UCMP3TOCN")||kw(&L->cur,"CMPU3TOCN")||
+      kw(&L->cur,"SUCMPATN")){
+    /* i + n → cells[i]=unsigned 3-way as −1/0/+1, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long ua = (unsigned long)vm->cells[(int)i];
+    unsigned long un = (unsigned long)n;
+    long r = (ua < un) ? -1 : ((ua > un) ? 1 : 0);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

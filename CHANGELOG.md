@@ -1,3 +1,16 @@
+## 1.12.321-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack↔cell 3-way imm compare TOC (imm dual of SCMPTOC/SUCMPTOC after 0/1 TOCN plane).
+
+### Language
+- `SCMPTOCN`/`CMP3TOCN`/`SCMPATN` n — stack `i → cells[i]=signed 3-way(cells[i],n)` as −1/0/+1 leave result
+- `SUCMPTOCN`/`UCMP3TOCN`/`SUCMPATN` n — stack `i → cells[i]=unsigned 3-way` as −1/0/+1 leave result
+- Proof `344_scmptocn_sucmptocn.cubalc`
+
+### Prior
+See 1.12.320-universal.
+
 ## 1.12.320-universal — 2026-08-04
 
 ### Direction
