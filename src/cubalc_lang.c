@@ -226,7 +226,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
             strcasecmp(tail,"LO8")==0 || strcasecmp(tail,"HI8")==0 ||
             strcasecmp(tail,"PACK8")==0 || strcasecmp(tail,"PACKB")==0 ||
-            strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0)
+            strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0 ||
+            strcasecmp(tail,"LO16")==0 || strcasecmp(tail,"HI16")==0 ||
+            strcasecmp(tail,"PACK16")==0 || strcasecmp(tail,"PACKW")==0 ||
+            strcasecmp(tail,"LOWW")==0 || strcasecmp(tail,"HIW")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -7045,6 +7048,53 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long a = vm->stack[--vm->sp];
     long x = ((a & 0xFFL) << 8) | (c & 0xFFL);
     long y = ((b & 0xFFL) << 8) | (d & 0xFFL);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 dual-stack control-word halfpack: DLO16 · DHI16 · DPACK16 */
+  if (kw(&L->cur,"DLO16")||kw(&L->cur,"2LO16")||kw(&L->cur,"S2LO16")||
+      kw(&L->cur,"STACK2LO16")||kw(&L->cur,"PAIRLO16")||kw(&L->cur,"DLOWW")||
+      kw(&L->cur,"2LOWW")||
+      kw(&L->cur,"DHI16")||kw(&L->cur,"2HI16")||kw(&L->cur,"S2HI16")||
+      kw(&L->cur,"STACK2HI16")||kw(&L->cur,"PAIRHI16")||kw(&L->cur,"DHIW")||
+      kw(&L->cur,"2HIW")){
+    /* a b → lo16/hi16 of each (bits 0..15 / 16..31) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_lo = (strcmp(op,"DLO16")==0 || strcmp(op,"2LO16")==0 || strcmp(op,"S2LO16")==0 ||
+                 strcmp(op,"STACK2LO16")==0 || strcmp(op,"PAIRLO16")==0 ||
+                 strcmp(op,"DLOWW")==0 || strcmp(op,"2LOWW")==0);
+    long x, y;
+    if (is_lo){
+      x = a & 0xFFFFL;
+      y = b & 0xFFFFL;
+    } else {
+      x = (a >> 16) & 0xFFFFL;
+      y = (b >> 16) & 0xFFFFL;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPACK16")||kw(&L->cur,"2PACK16")||kw(&L->cur,"S2PACK16")||
+      kw(&L->cur,"STACK2PACK16")||kw(&L->cur,"PAIRPACK16")||kw(&L->cur,"DPACKW")||
+      kw(&L->cur,"2PACKW")){
+    /* a b c d → ((a&0xFFFF)<<16)|(c&0xFFFF)  ((b&0xFFFF)<<16)|(d&0xFFFF) — hi,lo halfwords */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = ((a & 0xFFFFL) << 16) | (c & 0xFFFFL);
+    long y = ((b & 0xFFFFL) << 16) | (d & 0xFFFFL);
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.141-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack control-word halfpack (16-bit).
+
+### Language
+- `DLO16`/`2LO16` · `DHI16`/`2HI16` — low/high halfword of each of pair
+- `DPACK16`/`2PACK16` — pack hi,lo halfwords: `a b c d → (a<<16|c) (b<<16|d)` (masked)
+- Proof `164_dlo16_dpack16.cubalc`
+
+### Prior
+See 1.12.140-universal.
+
 ## 1.12.140-universal — 2026-08-03
 
 ### Direction
