@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.145-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack bitfield position path.
+
+### Language
+- `DBTEST`/`2BTEST` — test bit at positions: `a b na nb → bit(a,na) bit(b,nb)`
+- `DSETB`/`2SETB` · `DCLRB`/`2CLRB` · `DFLIPB`/`2FLIPB` — set/clear/toggle bit at pair indices
+- Proof `168_dbtest_dsetb.cubalc`
+
+### Prior
+See 1.12.144-universal.
+
 ## 1.12.144-universal — 2026-08-03
 
 ### Direction
