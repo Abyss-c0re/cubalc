@@ -5169,6 +5169,42 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 reverse unsigned imm TOC: SUDIVFROMTOCN · SUMODFROMTOCN
+   * (imm dual of reverse unsigned after SUDIVFROMN; peer of SDIVFROMTOCN unsigned) */
+  if (kw(&L->cur,"SUDIVFROMTOCN")||kw(&L->cur,"SUDIVFROMTOCIMM")||kw(&L->cur,"STACKUDIVFROMTOCN")||
+      kw(&L->cur,"SUDIVFROMATN")||kw(&L->cur,"SRUDIVTOCN")||kw(&L->cur,"RUDIVTOCN")||
+      kw(&L->cur,"SCELLUDIVFROMN")||kw(&L->cur,"UDIVFROMTOCN")){
+    /* i + n → cells[i] = (u)n / (u)cells[i] (cell0 → 0 soft), leave quotient */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    long r = c ? (long)((unsigned long)n / c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMODFROMTOCN")||kw(&L->cur,"SUMODFROMTOCIMM")||kw(&L->cur,"STACKUMODFROMTOCN")||
+      kw(&L->cur,"SUMODFROMATN")||kw(&L->cur,"SRUMODTOCN")||kw(&L->cur,"RUMODTOCN")||
+      kw(&L->cur,"SCELLUMODFROMN")||kw(&L->cur,"UMODFROMTOCN")||kw(&L->cur,"SUREMFROMTOCN")){
+    /* i + n → cells[i] = (u)n % (u)cells[i] (cell0 → 0 soft), leave remainder */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    long r = c ? (long)((unsigned long)n % c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 reverse sat stack↔cell: SSATSUBFROMTOC · SSATDIVFROMTOC (sat dual of reverse TOC) */
   if (kw(&L->cur,"SSATSUBFROMTOC")||kw(&L->cur,"SCELLSATSUBFROM")||kw(&L->cur,"SSATRSUBCELL")||
       kw(&L->cur,"STACKSATSUBFROMCELL")||kw(&L->cur,"SSATSUBFROMCELL")||kw(&L->cur,"SATSUBFROMTOC")){

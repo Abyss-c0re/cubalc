@@ -1,3 +1,16 @@
+## 1.12.330-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → reverse unsigned imm TOC (imm dual of SUDIVFROMN plane after SDIVFROMTOCN).
+
+### Language
+- `SUDIVFROMTOCN`/`RUDIVTOCN`/`SUDIVFROMATN` n — stack `i → cells[i]=(u)n/(u)cells[i]` (0→0) leave result
+- `SUMODFROMTOCN`/`RUMODTOCN`/`SUMODFROMATN` n — stack `i → cells[i]=(u)n%(u)cells[i]` (0→0) leave result
+- Proof `353_sudivfromtocn_sumodfromtocn.cubalc`
+
+### Prior
+See 1.12.329-universal.
+
 ## 1.12.329-universal — 2026-08-04
 
 ### Direction
