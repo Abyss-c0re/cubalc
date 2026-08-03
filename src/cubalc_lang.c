@@ -336,6 +336,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"INV100")==0 ||
             strcasecmp(tail,"SUMSQ")==0 || strcasecmp(tail,"SSQ")==0 ||
             strcasecmp(tail,"POW2SUM")==0 ||
+            strcasecmp(tail,"DIFFSQ")==0 || strcasecmp(tail,"SQDIFF")==0 ||
+            strcasecmp(tail,"ERRSQ")==0 ||
+            strcasecmp(tail,"STEP")==0 || strcasecmp(tail,"HEAVI")==0 ||
+            strcasecmp(tail,"HEAVISIDE")==0 || strcasecmp(tail,"UNITSTEP")==0 ||
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP4")==0 || strcasecmp(tail,"CLIPN")==0 ||
@@ -7832,7 +7836,7 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-6 dual-stack energy power: DSUMSQ (building block for DRMS) */
+  /* digit-6 dual-stack energy power: DSUMSQ · DDIFFSQ (building blocks for DRMS/error) */
   if (kw(&L->cur,"DSUMSQ")||kw(&L->cur,"2SUMSQ")||kw(&L->cur,"S2SUMSQ")||
       kw(&L->cur,"STACK2SUMSQ")||kw(&L->cur,"PAIRSUMSQ")||kw(&L->cur,"DSSQ")||
       kw(&L->cur,"2SSQ")||kw(&L->cur,"DPOW2SUM")||kw(&L->cur,"2POW2SUM")){
@@ -7845,6 +7849,25 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long a = vm->stack[--vm->sp];
     long x = a * a + c * c;
     long y = b * b + d * d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDIFFSQ")||kw(&L->cur,"2DIFFSQ")||kw(&L->cur,"S2DIFFSQ")||
+      kw(&L->cur,"STACK2DIFFSQ")||kw(&L->cur,"PAIRDIFFSQ")||kw(&L->cur,"DSQDIFF")||
+      kw(&L->cur,"2SQDIFF")||kw(&L->cur,"DERRSQ")||kw(&L->cur,"2ERRSQ")){
+    /* a b c d → (a-c)² (b-d)²  energy residual / squared error */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long dx = a - c;
+    long dy = b - d;
+    long x = dx * dx;
+    long y = dy * dy;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
@@ -8208,6 +8231,23 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = 100 - a;
     long y = 100 - b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy step activation: DSTEP · DHEAVI */
+  if (kw(&L->cur,"DSTEP")||kw(&L->cur,"2STEP")||kw(&L->cur,"S2STEP")||
+      kw(&L->cur,"STACK2STEP")||kw(&L->cur,"PAIRSTEP")||kw(&L->cur,"DHEAVI")||
+      kw(&L->cur,"2HEAVI")||kw(&L->cur,"DHEAVISIDE")||kw(&L->cur,"2HEAVISIDE")||
+      kw(&L->cur,"DUNITSTEP")||kw(&L->cur,"2UNITSTEP")){
+    /* a b → (a>0?1:0) (b>0?1:0)  unit-step / Heaviside energy gate (0 at zero) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a > 0) ? 1 : 0;
+    long y = (b > 0) ? 1 : 0;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

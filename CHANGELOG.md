@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.190-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy residual + step activation.
+
+### Language
+- `DDIFFSQ`/`2DIFFSQ`/`DSQDIFF` — pairwise squared difference `(a-c)²` / `(b-d)²`
+- `DSTEP`/`2STEP`/`DHEAVI` — pairwise unit-step / Heaviside (`x>0 → 1`, else 0)
+- Proof `213_ddiffsq_dstep.cubalc`
+
+### Prior
+See 1.12.189-universal.
+
+
 ## 1.12.189-universal — 2026-08-03
 
 ### Direction
