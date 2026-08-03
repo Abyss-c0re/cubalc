@@ -213,6 +213,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"POW")==0 ||
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
             strcasecmp(tail,"SAR")==0 ||
+            strcasecmp(tail,"SHL8")==0 || strcasecmp(tail,"SHR8")==0 ||
+            strcasecmp(tail,"SAR8")==0 || strcasecmp(tail,"ASHR8")==0 ||
+            strcasecmp(tail,"SHL16")==0 || strcasecmp(tail,"SHR16")==0 ||
+            strcasecmp(tail,"SAR16")==0 || strcasecmp(tail,"ASHR16")==0 ||
             strcasecmp(tail,"SHLC")==0 || strcasecmp(tail,"SHRC")==0 ||
             strcasecmp(tail,"SHLCY")==0 || strcasecmp(tail,"SHRCY")==0 ||
             strcasecmp(tail,"SQR")==0 || strcasecmp(tail,"ISQRT")==0 ||
@@ -6922,6 +6926,76 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       /* arithmetic right */
       x = a >> kc;
       y = b >> kd;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack fixed-width shift: DSHL8 · DSHR8 · DSAR8 · DSHL16 · DSHR16 · DSAR16 */
+  if (kw(&L->cur,"DSHL8")||kw(&L->cur,"2SHL8")||kw(&L->cur,"S2SHL8")||
+      kw(&L->cur,"STACK2SHL8")||kw(&L->cur,"PAIRSHL8")||
+      kw(&L->cur,"DSHR8")||kw(&L->cur,"2SHR8")||kw(&L->cur,"S2SHR8")||
+      kw(&L->cur,"STACK2SHR8")||kw(&L->cur,"PAIRSHR8")||
+      kw(&L->cur,"DSAR8")||kw(&L->cur,"2SAR8")||kw(&L->cur,"S2SAR8")||
+      kw(&L->cur,"STACK2SAR8")||kw(&L->cur,"PAIRSAR8")||kw(&L->cur,"DASHR8")||
+      kw(&L->cur,"DSHL16")||kw(&L->cur,"2SHL16")||kw(&L->cur,"S2SHL16")||
+      kw(&L->cur,"STACK2SHL16")||kw(&L->cur,"PAIRSHL16")||
+      kw(&L->cur,"DSHR16")||kw(&L->cur,"2SHR16")||kw(&L->cur,"S2SHR16")||
+      kw(&L->cur,"STACK2SHR16")||kw(&L->cur,"PAIRSHR16")||
+      kw(&L->cur,"DSAR16")||kw(&L->cur,"2SAR16")||kw(&L->cur,"S2SAR16")||
+      kw(&L->cur,"STACK2SAR16")||kw(&L->cur,"PAIRSAR16")||kw(&L->cur,"DASHR16")){
+    /* a b c d → shift_w(a,c) shift_w(b,d); w∈{8,16}; amounts clamped; result width-masked (SAR sign-ext) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_w8 = (strcmp(op,"DSHL8")==0 || strcmp(op,"2SHL8")==0 || strcmp(op,"S2SHL8")==0 ||
+                 strcmp(op,"STACK2SHL8")==0 || strcmp(op,"PAIRSHL8")==0 ||
+                 strcmp(op,"DSHR8")==0 || strcmp(op,"2SHR8")==0 || strcmp(op,"S2SHR8")==0 ||
+                 strcmp(op,"STACK2SHR8")==0 || strcmp(op,"PAIRSHR8")==0 ||
+                 strcmp(op,"DSAR8")==0 || strcmp(op,"2SAR8")==0 || strcmp(op,"S2SAR8")==0 ||
+                 strcmp(op,"STACK2SAR8")==0 || strcmp(op,"PAIRSAR8")==0 ||
+                 strcmp(op,"DASHR8")==0);
+    int is_shl = (strcmp(op,"DSHL8")==0 || strcmp(op,"2SHL8")==0 || strcmp(op,"S2SHL8")==0 ||
+                  strcmp(op,"STACK2SHL8")==0 || strcmp(op,"PAIRSHL8")==0 ||
+                  strcmp(op,"DSHL16")==0 || strcmp(op,"2SHL16")==0 || strcmp(op,"S2SHL16")==0 ||
+                  strcmp(op,"STACK2SHL16")==0 || strcmp(op,"PAIRSHL16")==0);
+    int is_shr = (strcmp(op,"DSHR8")==0 || strcmp(op,"2SHR8")==0 || strcmp(op,"S2SHR8")==0 ||
+                  strcmp(op,"STACK2SHR8")==0 || strcmp(op,"PAIRSHR8")==0 ||
+                  strcmp(op,"DSHR16")==0 || strcmp(op,"2SHR16")==0 || strcmp(op,"S2SHR16")==0 ||
+                  strcmp(op,"STACK2SHR16")==0 || strcmp(op,"PAIRSHR16")==0);
+    /* else SAR/ASHR */
+    int bits = is_w8 ? 8 : 16;
+    unsigned long mask = is_w8 ? 0xFFul : 0xFFFFul;
+    long signb = is_w8 ? 0x80L : 0x8000L;
+    long kc = c < 0 ? 0 : c;
+    long kd = d < 0 ? 0 : d;
+    long x, y;
+    if (is_shl){
+      if (kc >= bits) x = 0;
+      else x = (long)((((unsigned long)a & mask) << (unsigned)kc) & mask);
+      if (kd >= bits) y = 0;
+      else y = (long)((((unsigned long)b & mask) << (unsigned)kd) & mask);
+    } else if (is_shr){
+      if (kc >= bits) x = 0;
+      else x = (long)(((unsigned long)a & mask) >> (unsigned)kc);
+      if (kd >= bits) y = 0;
+      else y = (long)(((unsigned long)b & mask) >> (unsigned)kd);
+    } else {
+      /* arithmetic right: sign-extend low w bits, then >> k (k>=bits → all sign) */
+      long va = (long)((unsigned long)a & mask);
+      long vb = (long)((unsigned long)b & mask);
+      if (va & signb) va |= (long)~mask;
+      if (vb & signb) vb |= (long)~mask;
+      if (kc >= bits) x = (va < 0) ? -1L : 0L;
+      else x = va >> kc;
+      if (kd >= bits) y = (vb < 0) ? -1L : 0L;
+      else y = vb >> kd;
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;

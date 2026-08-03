@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.182-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack fixed-width shift bitfield plane (byte/halfword).
+
+### Language
+- `DSHL8`/`2SHL8`/`PAIRSHL8` — pairwise logical left shift low 8 bits
+- `DSHR8`/`2SHR8`/`PAIRSHR8` — pairwise logical right shift low 8 bits
+- `DSAR8`/`2SAR8`/`DASHR8` — pairwise arithmetic right shift low 8 bits (sign-extend)
+- `DSHL16`/`2SHL16` · `DSHR16`/`2SHR16` · `DSAR16`/`2SAR16` — same for 16-bit halfwords
+- Proof `205_dshl8_dsar16.cubalc`
+
+### Prior
+See 1.12.181-universal.
+
+
 ## 1.12.181-universal — 2026-08-03
 
 ### Direction
