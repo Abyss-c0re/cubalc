@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T15:33:00+0300",
-  "iter": 336,
-  "algocube_digit": 1,
-  "version": "1.12.236-universal",
-  "pass": 274,
+  "ts": "2026-08-03T15:37:37+0300",
+  "iter": 337,
+  "algocube_digit": 4,
+  "version": "1.12.237-universal",
+  "pass": 275,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SBYTEN SSETBYTEN SCLRBYTEN",
-  "proof": "259_sbyten_ssetbyten.cubalc"
+  "delta": "SNIBN SSETNIBN SCLRNIBN",
+  "proof": "260_snibn_ssetnibn.cubalc"
 }

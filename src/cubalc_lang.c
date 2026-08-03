@@ -13264,6 +13264,52 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack imm nibble field: SNIBN · SSETNIBN · SCLRNIBN (imm dual of SNIB/SSETNIB; control-word plane) */
+  if (kw(&L->cur,"SNIBN")||kw(&L->cur,"STACKNIBN")||kw(&L->cur,"SGETNIBN")||
+      kw(&L->cur,"NIBN")||kw(&L->cur,"GETNIBN")||kw(&L->cur,"SNIBBLEN")){
+    /* SNIBN n — TOS = little-endian nibble n of TOS; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    long r = (long)(((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)(n * 4)) & 0xFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETNIBN")||kw(&L->cur,"STACKSETNIBN")||kw(&L->cur,"SSETNIBIMM")||
+      kw(&L->cur,"SETNIBN")||kw(&L->cur,"PUTNIBN")){
+    /* SSETNIBN field n — deposit low 4 bits of field into nibble n of TOS; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)((base & ~(0xFul << shift)) | (f << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRNIBN")||kw(&L->cur,"STACKCLRNIBN")||kw(&L->cur,"SCLRNIBIMM")||
+      kw(&L->cur,"CLRNIBN")||kw(&L->cur,"ZAPNIBN")){
+    /* SCLRNIBN n — clear little-endian nibble n of TOS; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)(base & ~(0xFul << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 pack32 + PEXT/PDEP + interleave (universal bit data-path) */
   if (kw(&L->cur,"SPACK32")||kw(&L->cur,"SPACKW")||kw(&L->cur,"STACKPACK32")){
     /* hi lo → (hi<<32)|lo  (32-bit halves → 64-bit word) */

@@ -1,3 +1,17 @@
+## 1.12.237-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → stack imm nibble field (imm dual of SNIB/SSETNIB; control-word plane after SBYTEN).
+
+### Language
+- `SNIBN`/`GETNIBN` n — extract little-endian nibble n of TOS
+- `SSETNIBN`/`SETNIBN` field n — deposit low 4 bits into nibble n of TOS
+- `SCLRNIBN`/`CLRNIBN` n — clear nibble n of TOS
+- Proof `260_snibn_ssetnibn.cubalc`
+
+### Prior
+See 1.12.236-universal.
+
 ## 1.12.236-universal — 2026-08-03
 
 ### Direction
