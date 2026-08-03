@@ -1,3 +1,18 @@
+## 1.12.308-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → depth-9 combinator ext (NIP/ROT/RROT after 9DUP/DROP/SWAP foundation).
+- Lexer: promote `9NIP`/`9ROT`/`9RROT` tails.
+
+### Language
+- `9NIP`/`NIP9`/`STACK9NIP` — keep ends of top 9
+- `9ROT`/`ROT9`/`STACK9ROT` — rotate top 9 left
+- `9RROT`/`RROT9`/`STACK9RROT` — rotate top 9 right
+- Proof `331_9nip_9rot.cubalc`
+
+### Prior
+See 1.12.307-universal.
+
 ## 1.12.307-universal — 2026-08-03
 
 ### Direction

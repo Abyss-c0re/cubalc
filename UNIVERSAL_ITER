@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 434 |
-| **digit** | **6** (urandom+genome; energy ANDN TOC) |
-| **version** | `1.12.307-universal` |
-| **pass/fail** | **345 / 0** (green) |
-| **commit** | `4863b30` → `origin/main` |
-| **ops** | `SANDNTOC`/`SORNTOC`/`SXORNTOC` |
-| **proof** | `programs/proof/330_sandntoc_sxorntoc.cubalc` |
+| **iter** | 435 |
+| **digit** | **9** (urandom+genome; depth-9 combinators) |
+| **version** | `1.12.308-universal` |
+| **pass/fail** | **346 / 0** (green) |
+| **commit** | `eb59128` → `origin/main` |
+| **ops** | `9NIP`/`9ROT`/`9RROT` |
+| **proof** | `programs/proof/331_9nip_9rot.cubalc` |
 
 ### Delta
-Digit-6 energy ANDN stack↔cell: `cells[i]&=~v`, `|=~v`, `^=~v` after SNAND/NOR/XNOR TOC.
+Digit-9 depth-9 combinator ext after foundation: keep ends / rotate left / rotate right on top 9.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SANDNTOC` `SORNTOC` `SXORNTOC` · aliases `SBICTOC`/`BICTOC`/`SORNOTTOC`/`XORNOTTOC`
-- Proof `330_sandntoc_sxorntoc.cubalc`
+- `9NIP` `9ROT` `9RROT` · aliases `NIP9`/`ROT9`/`RROT9`
+- Proof `331_9nip_9rot.cubalc`

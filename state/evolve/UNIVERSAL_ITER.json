@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T23:19:17+0300",
-  "iter": 434,
-  "algocube_digit": 6,
-  "version": "1.12.307-universal",
-  "pass": 345,
+  "ts": "2026-08-03T23:25:27+0300",
+  "iter": 435,
+  "algocube_digit": 9,
+  "version": "1.12.308-universal",
+  "pass": 346,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,9 +18,9 @@
     "flow_compile"
   ],
   "ops": [
-    "SANDNTOC",
-    "SORNTOC",
-    "SXORNTOC"
+    "9NIP",
+    "9ROT",
+    "9RROT"
   ],
-  "proof": "programs/proof/330_sandntoc_sxorntoc.cubalc"
+  "proof": "programs/proof/331_9nip_9rot.cubalc"
 }
