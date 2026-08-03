@@ -210,7 +210,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"POPDIFF")==0 ||
             strcasecmp(tail,"DBL")==0 || strcasecmp(tail,"DOUBLE")==0 ||
             strcasecmp(tail,"HALF")==0 || strcasecmp(tail,"HALVE")==0 ||
-            strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0)
+            strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0 ||
+            strcasecmp(tail,"LOG2")==0 || strcasecmp(tail,"ILOG2")==0 ||
+            strcasecmp(tail,"PHI")==0 || strcasecmp(tail,"TOTIENT")==0 ||
+            strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6247,6 +6250,90 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long y = (gy == 1) ? 1 : 0;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack numthy unary: DLOG2 · DPHI · DISPRIME */
+  if (kw(&L->cur,"DLOG2")||kw(&L->cur,"2LOG2")||kw(&L->cur,"S2LOG2")||
+      kw(&L->cur,"STACK2LOG2")||kw(&L->cur,"PAIRLOG2")||kw(&L->cur,"DILOG2")||
+      kw(&L->cur,"2ILOG2")||
+      kw(&L->cur,"DPHI")||kw(&L->cur,"2PHI")||kw(&L->cur,"S2PHI")||
+      kw(&L->cur,"STACK2PHI")||kw(&L->cur,"PAIRPHI")||kw(&L->cur,"DTOTIENT")||
+      kw(&L->cur,"2TOTIENT")||
+      kw(&L->cur,"DISPRIME")||kw(&L->cur,"2ISPRIME")||kw(&L->cur,"S2ISPRIME")||
+      kw(&L->cur,"STACK2ISPRIME")||kw(&L->cur,"PAIRISPRIME")||kw(&L->cur,"DPRIMEP")||
+      kw(&L->cur,"2PRIMEP")){
+    /* a b → f(a) f(b)
+     * LOG2: floor(log2); a<=0 → -1
+     * PHI: Euler totient; a<=0 → 0
+     * ISPRIME: 1 if prime else 0 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_log = (strcmp(op,"DLOG2")==0 || strcmp(op,"2LOG2")==0 || strcmp(op,"S2LOG2")==0 ||
+                  strcmp(op,"STACK2LOG2")==0 || strcmp(op,"PAIRLOG2")==0 ||
+                  strcmp(op,"DILOG2")==0 || strcmp(op,"2ILOG2")==0);
+    int is_phi = (strcmp(op,"DPHI")==0 || strcmp(op,"2PHI")==0 || strcmp(op,"S2PHI")==0 ||
+                  strcmp(op,"STACK2PHI")==0 || strcmp(op,"PAIRPHI")==0 ||
+                  strcmp(op,"DTOTIENT")==0 || strcmp(op,"2TOTIENT")==0);
+    long x = 0, y = 0;
+    if (is_log){
+      if (a <= 0) x = -1;
+      else { unsigned long u = (unsigned long)a; x = -1; while (u){ x++; u >>= 1; } }
+      if (b <= 0) y = -1;
+      else { unsigned long u = (unsigned long)b; y = -1; while (u){ y++; u >>= 1; } }
+    } else if (is_phi){
+      if (a > 0){
+        if (a == 1) x = 1;
+        else {
+          long n = a, r = n;
+          if ((n % 2) == 0){ while ((n % 2) == 0) n /= 2; r -= r / 2; }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ while ((n % p) == 0) n /= p; r -= r / p; }
+          }
+          if (n > 1) r -= r / n;
+          x = r;
+        }
+      }
+      if (b > 0){
+        if (b == 1) y = 1;
+        else {
+          long n = b, r = n;
+          if ((n % 2) == 0){ while ((n % 2) == 0) n /= 2; r -= r / 2; }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ while ((n % p) == 0) n /= p; r -= r / p; }
+          }
+          if (n > 1) r -= r / n;
+          y = r;
+        }
+      }
+    } else {
+      /* ISPRIME */
+      long va = a, vb = b;
+      if (va > 1){
+        if (va <= 3) x = 1;
+        else if ((va % 2) && (va % 3)){
+          x = 1;
+          for (long i = 5; i * i <= va; i += 6){
+            if ((va % i) == 0 || (va % (i + 2)) == 0){ x = 0; break; }
+          }
+        }
+      }
+      if (vb > 1){
+        if (vb <= 3) y = 1;
+        else if ((vb % 2) && (vb % 3)){
+          y = 1;
+          for (long i = 5; i * i <= vb; i += 6){
+            if ((vb % i) == 0 || (vb % (i + 2)) == 0){ y = 0; break; }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

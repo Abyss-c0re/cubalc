@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:48:49+0300",
-  "iter": 237,
-  "algocube_digit": 7,
-  "version": "1.12.134-universal",
-  "pass": 172,
+  "ts": "2026-08-03T04:54:52+0300",
+  "iter": 239,
+  "algocube_digit": 2,
+  "version": "1.12.135-universal",
+  "pass": 173,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,13 +18,13 @@
     "flow_compile"
   ],
   "ops": [
-    "DDBL",
-    "2DBL",
-    "DHALF",
-    "2HALF",
-    "DBSWAP",
-    "2BSWAP"
+    "DLOG2",
+    "2LOG2",
+    "DPHI",
+    "2PHI",
+    "DISPRIME",
+    "2ISPRIME"
   ],
-  "proof": "programs/proof/157_ddbl_dbswap.cubalc",
-  "delta": "digit-7 dual-stack ALU unary scale + endian"
+  "proof": "programs/proof/158_dlog2_dphi.cubalc",
+  "delta": "digit-2 dual-stack numthy unary DLOG2 DPHI DISPRIME"
 }

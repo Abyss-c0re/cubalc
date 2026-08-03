@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.135-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack number theory unary metrics.
+
+### Language
+- `DLOG2`/`2LOG2`/`DILOG2` — floor(log2); ≤0 → -1 on pair
+- `DPHI`/`2PHI`/`DTOTIENT` — Euler totient φ(n); ≤0 → 0 on pair
+- `DISPRIME`/`2ISPRIME`/`DPRIMEP` — prime predicate 0/1 on pair
+- Proof `158_dlog2_dphi.cubalc`
+
+### Prior
+See 1.12.134-universal.
+
 ## 1.12.134-universal — 2026-08-03
 
 ### Direction
