@@ -13265,6 +13265,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm 16-bit halfword field: SWORDN · SSET16N · SCLR16N (complete nibble/byte ladder) */
+  if (kw(&L->cur,"SWORDN")||kw(&L->cur,"STACKWORDN")||kw(&L->cur,"SGET16N")||
+      kw(&L->cur,"SHALFN")||kw(&L->cur,"GET16N")||kw(&L->cur,"WORDN")||
+      kw(&L->cur,"SGETHALF")){
+    /* SWORDN n — TOS = little-endian 16-bit halfword n; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    long r = (long)(((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)(n * 16)) & 0xFFFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSET16N")||kw(&L->cur,"STACKSET16N")||kw(&L->cur,"SSETWORDN")||
+      kw(&L->cur,"SET16N")||kw(&L->cur,"PUT16N")||kw(&L->cur,"SSETHALFN")||
+      kw(&L->cur,"SSETWIMM")){
+    /* SSET16N field n — deposit low 16 bits of field into halfword n of TOS; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long shift = (unsigned long)(n * 16);
+    long r = (long)((base & ~(0xFFFFul << shift)) | (f << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLR16N")||kw(&L->cur,"STACKCLR16N")||kw(&L->cur,"SCLRWORDN")||
+      kw(&L->cur,"CLR16N")||kw(&L->cur,"ZAP16N")||kw(&L->cur,"SCLRHAFN")||
+      kw(&L->cur,"SCLRWIMM")){
+    /* SCLR16N n — clear little-endian halfword n of TOS; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long shift = (unsigned long)(n * 16);
+    long r = (long)(base & ~(0xFFFFul << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

@@ -1,3 +1,17 @@
+## 1.12.240-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack imm 16-bit halfword field (complete nibble/byte ladder).
+
+### Language
+- `SWORDN`/`SGET16N`/`SHALFN` n — extract LE 16-bit halfword n of TOS (n 0..3)
+- `SSET16N`/`SET16N` field n — deposit low 16 bits into halfword n of TOS
+- `SCLR16N`/`CLR16N` n — clear halfword n of TOS
+- Proof `263_swordn_sset16n.cubalc`
+
+### Prior
+See 1.12.239-universal.
+
 ## 1.12.239-universal — 2026-08-03
 
 ### Direction
