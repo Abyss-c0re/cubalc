@@ -333,6 +333,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"RORHN")==0 ||
             strcasecmp(tail,"BREVNS")==0 || strcasecmp(tail,"ROLBNS")==0 ||
             strcasecmp(tail,"RORBNS")==0 ||
+            strcasecmp(tail,"BREVHNS")==0 || strcasecmp(tail,"ROLHNS")==0 ||
+            strcasecmp(tail,"RORHNS")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -13497,6 +13499,88 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       unsigned long la = (unsigned long)a & m;
       la = ((la >> 1) | (la << (unsigned)(n - 1))) & m;
       x = (long)(((unsigned long)a & ~m) | la);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      x = (long)((ua >> 1) | (ua << 63));
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 stack high-n field reverse/rotate: SBREVHN · SROLHN · SRORHN (dual of DBREVHN; complete SBREVN plane) */
+  if (kw(&L->cur,"SBREVHN")||kw(&L->cur,"STACKBREVHN")||kw(&L->cur,"BREVHNS")||
+      kw(&L->cur,"SREVHIGHN")||kw(&L->cur,"SBITREVHN")||kw(&L->cur,"STACKREVHIGHN")){
+    /* SBREVHN n — reverse high n bits of TOS; low kept; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n > 0 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long ra = 0;
+      for (long i = 0; i < n; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      x = (long)(((unsigned long)a & ~m) | ((ra << sh) & m));
+    } else if (n >= 64){
+      unsigned long la = (unsigned long)a;
+      unsigned long ra = 0;
+      for (int i = 0; i < 64; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      x = (long)ra;
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROLHN")||kw(&L->cur,"STACKROLHN")||kw(&L->cur,"ROLHNS")||
+      kw(&L->cur,"SROTLHN")||kw(&L->cur,"SHIGHROLN")||kw(&L->cur,"STACKHIGHROLN")){
+    /* SROLHN n — rotate left by 1 within high n bits of TOS; low kept */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long fm = (1ul << (unsigned)n) - 1ul;
+      la = ((la << 1) | (la >> (unsigned)(n - 1))) & fm;
+      x = (long)(((unsigned long)a & ~m) | ((la << sh) & m));
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      x = (long)((ua << 1) | (ua >> 63));
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRORHN")||kw(&L->cur,"STACKRORHN")||kw(&L->cur,"RORHNS")||
+      kw(&L->cur,"SROTRHN")||kw(&L->cur,"SHIGHRORN")||kw(&L->cur,"STACKHIGHRORN")){
+    /* SRORHN n — rotate right by 1 within high n bits of TOS; low kept */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long fm = (1ul << (unsigned)n) - 1ul;
+      la = ((la >> 1) | (la << (unsigned)(n - 1))) & fm;
+      x = (long)(((unsigned long)a & ~m) | ((la << sh) & m));
     } else if (n >= 64){
       unsigned long ua = (unsigned long)a;
       x = (long)((ua >> 1) | (ua << 63));

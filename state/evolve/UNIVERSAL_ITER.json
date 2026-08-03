@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T14:03:34+0300",
-  "iter": 314,
-  "algocube_digit": 4,
-  "version": "1.12.222-universal",
-  "pass": 260,
+  "ts": "2026-08-03T14:07:15+0300",
+  "iter": 316,
+  "algocube_digit": 0,
+  "version": "1.12.223-universal",
+  "pass": 261,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,7 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SBREVN SROLBN SRORBN",
-  "proof": "245_sbrevn_srolbn.cubalc",
-  "note": "tree restored from evolve mass-delete mid-tick"
+  "delta": "SBREVHN SROLHN SRORHN",
+  "proof": "246_sbrevhn_srolhn.cubalc"
 }
