@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.159-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy scale + percent clip.
+
+### Language
+- `DSCALE`/`2SCALE`/`DSCL` — pairwise percent scale `a*sa/100` / `b*sb/100`
+- `DCLIP100`/`DENCLIP`/`DCLIPPCT` — clamp pair into energy plane `[0,100]`
+- Proof `182_dscale_dclip100.cubalc`
+
+### Prior
+See 1.12.158-universal.
+
 ## 1.12.158-universal — 2026-08-03
 
 ### Direction

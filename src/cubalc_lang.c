@@ -256,6 +256,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"HYP")==0 || strcasecmp(tail,"HYPOT")==0 ||
             strcasecmp(tail,"PCT")==0 || strcasecmp(tail,"PERCENT")==0 ||
             strcasecmp(tail,"LERP")==0 || strcasecmp(tail,"MIX")==0 ||
+            strcasecmp(tail,"SCALE")==0 || strcasecmp(tail,"SCL")==0 ||
+            strcasecmp(tail,"CLIP100")==0 || strcasecmp(tail,"CLIPPCT")==0 ||
+            strcasecmp(tail,"ENCLIP")==0 ||
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
@@ -6980,6 +6983,42 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy scale/clip: DSCALE · DCLIP100 */
+  if (kw(&L->cur,"DSCALE")||kw(&L->cur,"2SCALE")||kw(&L->cur,"S2SCALE")||
+      kw(&L->cur,"STACK2SCALE")||kw(&L->cur,"PAIRSCALE")||kw(&L->cur,"DSCL")||
+      kw(&L->cur,"2SCL")){
+    /* a b sa sb → a*sa/100  b*sb/100  (percent scale; 100=identity) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long sb = vm->stack[--vm->sp];
+    long sa = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a * sa / 100;
+    long y = b * sb / 100;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLIP100")||kw(&L->cur,"2CLIP100")||kw(&L->cur,"S2CLIP100")||
+      kw(&L->cur,"STACK2CLIP100")||kw(&L->cur,"PAIRCLIP100")||kw(&L->cur,"DCLIPPCT")||
+      kw(&L->cur,"2CLIPPCT")||kw(&L->cur,"DENCLIP")||kw(&L->cur,"2ENCLIP")||
+      kw(&L->cur,"PAIRCLIPPCT")){
+    /* a b → clamp(a,0,100) clamp(b,0,100) energy-plane percent bound */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (a > 100) a = 100;
+    if (b < 0) b = 0;
+    if (b > 100) b = 100;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"DRANDBITS")||kw(&L->cur,"2RANDBITS")||kw(&L->cur,"S2RANDBITS")||
