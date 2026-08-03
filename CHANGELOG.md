@@ -1,3 +1,17 @@
+## 1.12.332-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → reverse imm ANDN-plane TOC (energy dual reverse of SANDNTOCN after SUDIVFROMTOCN).
+
+### Language
+- `SANDNFROMTOCN`/`BICFROMTOCN`/`SANDNFROMATN` n — stack `i → cells[i]=n&~cells[i]` leave result
+- `SORNFROMTOCN`/`ORNFROMTOCN`/`SORNFROMATN` n — stack `i → cells[i]=n|~cells[i]` leave result
+- `SXORNFROMTOCN`/`XORNFROMTOCN`/`SXORNFROMATN` n — stack `i → cells[i]=n^~cells[i]` leave result
+- Proof `355_sandnfromtocn_sxornfromtocn.cubalc`
+
+### Prior
+See 1.12.331-universal.
+
 ## 1.12.331-universal — 2026-08-04
 
 ### Direction
