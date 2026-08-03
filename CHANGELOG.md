@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.217-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack low-n bitfield metrics (popcount / any / all).
+
+### Language
+- `DPOPMN`/`DONESMN`/`2POPMN` n — pairwise popcount of low n bits
+- `DANYMN`/`2ANYMN`/`PAIRANYMN` n — pairwise `(x & mask) != 0` → 0/1
+- `DALLMN`/`2ALLMN`/`PAIRALLMN` n — pairwise `(x & mask) == mask` → 0/1
+- Proof `240_dpopmn_dallmn.cubalc`
+
+### Prior
+See 1.12.216-universal.
+
+
 ## 1.12.216-universal — 2026-08-03
 
 ### Direction

@@ -321,6 +321,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"XNORMN")==0 ||
             strcasecmp(tail,"NANDHN")==0 || strcasecmp(tail,"NORHN")==0 ||
             strcasecmp(tail,"XNORHN")==0 ||
+            strcasecmp(tail,"POPMN")==0 || strcasecmp(tail,"ANYMN")==0 ||
+            strcasecmp(tail,"ALLMN")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -9938,6 +9940,75 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (long)~((unsigned long)a ^ m);
     long y = (long)~((unsigned long)b ^ m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack low-n bitfield metrics: DPOPMN · DANYMN · DALLMN */
+  if (kw(&L->cur,"DPOPMN")||kw(&L->cur,"2POPMN")||kw(&L->cur,"S2POPMN")||
+      kw(&L->cur,"STACK2POPMN")||kw(&L->cur,"PAIRPOPMN")||kw(&L->cur,"DPCNTMN")||
+      kw(&L->cur,"2PCNTMN")||kw(&L->cur,"DONESMN")||kw(&L->cur,"2ONESMN")||
+      kw(&L->cur,"DLOWPOPN")||kw(&L->cur,"2LOWPOPN")){
+    /* a b + n → popcount(a&m) popcount(b&m); m=low-n; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2] & m;
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1] & m;
+    long x = 0, y = 0;
+    while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
+    while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DANYMN")||kw(&L->cur,"2ANYMN")||kw(&L->cur,"S2ANYMN")||
+      kw(&L->cur,"STACK2ANYMN")||kw(&L->cur,"PAIRANYMN")||kw(&L->cur,"DLOWANYN")||
+      kw(&L->cur,"2LOWANYN")||kw(&L->cur,"DTESTANYN")||kw(&L->cur,"2TESTANYN")){
+    /* a b + n → ((a&m)!=0)?1:0  ((b&m)!=0)?1:0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (((unsigned long)a & m) != 0) ? 1 : 0;
+    long y = (((unsigned long)b & m) != 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DALLMN")||kw(&L->cur,"2ALLMN")||kw(&L->cur,"S2ALLMN")||
+      kw(&L->cur,"STACK2ALLMN")||kw(&L->cur,"PAIRALLMN")||kw(&L->cur,"DLOWALLN")||
+      kw(&L->cur,"2LOWALLN")||kw(&L->cur,"DTESTALLN")||kw(&L->cur,"2TESTALLN")){
+    /* a b + n → ((a&m)==m)?1:0  ((b&m)==m)?1:0 ; n=0 → 1 (vacuous) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (((unsigned long)a & m) == m) ? 1 : 0;
+    long y = (((unsigned long)b & m) == m) ? 1 : 0;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
