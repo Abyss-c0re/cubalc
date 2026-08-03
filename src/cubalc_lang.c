@@ -274,6 +274,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
+            strcasecmp(tail,"ZEXT8")==0 || strcasecmp(tail,"ZEXT16")==0 ||
+            strcasecmp(tail,"ZEXTB")==0 || strcasecmp(tail,"ZEXTW")==0 ||
             strcasecmp(tail,"LO8")==0 || strcasecmp(tail,"HI8")==0 ||
             strcasecmp(tail,"PACK8")==0 || strcasecmp(tail,"PACKB")==0 ||
             strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0 ||
@@ -8196,6 +8198,37 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       /* SEXT16 */
       x = a & 0xFFFFL; if (x & 0x8000L) x |= ~0xFFFFL;
       y = b & 0xFFFFL; if (y & 0x8000L) y |= ~0xFFFFL;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 dual-stack data-path zero-extend: DZEXT8 · DZEXT16 */
+  if (kw(&L->cur,"DZEXT8")||kw(&L->cur,"2ZEXT8")||kw(&L->cur,"S2ZEXT8")||
+      kw(&L->cur,"STACK2ZEXT8")||kw(&L->cur,"PAIRZEXT8")||kw(&L->cur,"DZEXTB")||
+      kw(&L->cur,"2ZEXTB")||kw(&L->cur,"DZEROEXT8")||
+      kw(&L->cur,"DZEXT16")||kw(&L->cur,"2ZEXT16")||kw(&L->cur,"S2ZEXT16")||
+      kw(&L->cur,"STACK2ZEXT16")||kw(&L->cur,"PAIRZEXT16")||kw(&L->cur,"DZEXTW")||
+      kw(&L->cur,"2ZEXTW")||kw(&L->cur,"DZEROEXT16")){
+    /* a b → zero-extend low 8/16 bits (unsigned width mask) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is8 = (strcmp(op,"DZEXT8")==0 || strcmp(op,"2ZEXT8")==0 ||
+               strcmp(op,"S2ZEXT8")==0 || strcmp(op,"STACK2ZEXT8")==0 ||
+               strcmp(op,"PAIRZEXT8")==0 || strcmp(op,"DZEXTB")==0 ||
+               strcmp(op,"2ZEXTB")==0 || strcmp(op,"DZEROEXT8")==0);
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    if (is8){
+      x = a & 0xFFL;
+      y = b & 0xFFL;
+    } else {
+      x = a & 0xFFFFL;
+      y = b & 0xFFFFL;
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;

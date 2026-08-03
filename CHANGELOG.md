@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.165-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack data-path zero-extend.
+
+### Language
+- `DZEXT8`/`2ZEXT8`/`DZEXTB` — pairwise zero-extend low 8 bits
+- `DZEXT16`/`2ZEXT16`/`DZEXTW` — pairwise zero-extend low 16 bits
+- Proof `188_dzext8_dzext16.cubalc`
+
+### Prior
+See 1.12.164-universal.
+
+
 ## 1.12.164-universal — 2026-08-03
 
 ### Direction
