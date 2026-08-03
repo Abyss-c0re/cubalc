@@ -5130,6 +5130,59 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack↔cell shift foundation: SSHLTOC · SSHRTOC · SSARTOC (after SSHL/SSHR/SSAR stack + bitwise TOC) */
+  if (kw(&L->cur,"SSHLTOC")||kw(&L->cur,"SSHLTOCELL")||kw(&L->cur,"STACKSHLTOC")||
+      kw(&L->cur,"SHLTOC")||kw(&L->cur,"SCELLSHL")||kw(&L->cur,"SSHLAT")){
+    /* i n → cells[i] <<= n (n clamped 0..63), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = (long)((unsigned long)vm->cells[(int)i] << (unsigned)n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHRTOC")||kw(&L->cur,"SSHRTOCELL")||kw(&L->cur,"STACKSHRTOC")||
+      kw(&L->cur,"SHRTOC")||kw(&L->cur,"SCELLSHR")||kw(&L->cur,"SSHRAT")){
+    /* i n → cells[i] = logical cells[i] >> n (n clamped 0..63), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = (long)((unsigned long)vm->cells[(int)i] >> (unsigned)n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSARTOC")||kw(&L->cur,"SSARTOCELL")||kw(&L->cur,"STACKSARTOC")||
+      kw(&L->cur,"SARTOC")||kw(&L->cur,"SCELLSAR")||kw(&L->cur,"SASHRTOC")||
+      kw(&L->cur,"SSARAT")||kw(&L->cur,"ASHRTOC")){
+    /* i n → cells[i] = arithmetic cells[i] >> n (sign-preserving; n clamped 0..63), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = vm->cells[(int)i] >> n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 stack↔cell unary ALU: SABSTOC · SNEGTOC · SNOTTOC (dual of SABS/SNEG/SNOT) */
   if (kw(&L->cur,"SABSTOC")||kw(&L->cur,"SABSCELL")||kw(&L->cur,"STACKABSTOC")||
       kw(&L->cur,"SCELLABS")||kw(&L->cur,"ABSAT")){

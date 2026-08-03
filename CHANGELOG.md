@@ -1,3 +1,17 @@
+## 1.12.302-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack foundation shift stack↔cell (SHL/SHR/SAR into cell after bitwise TOC plane).
+
+### Language
+- `SSHLTOC`/`SSHLTOCELL`/`SHLTOC`/`SCELLSHL` — stack `i n → cells[i]<<=n` (n clamp 0..63) leave result
+- `SSHRTOC`/`SSHRTOCELL`/`SHRTOC`/`SCELLSHR` — stack `i n → cells[i]=logical>>n` leave result
+- `SSARTOC`/`SASHRTOC`/`SARTOC`/`SCELLSAR` — stack `i n → cells[i]=arithmetic>>n` leave result
+- Proof `325_sshltoc_ssartoc.cubalc`
+
+### Prior
+See 1.12.301-universal.
+
 ## 1.12.301-universal — 2026-08-03
 
 ### Direction

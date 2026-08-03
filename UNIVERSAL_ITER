@@ -2,20 +2,25 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 427 |
-| **digit** | **6** (urandom; energy inverted bits) |
-| **version** | `1.12.301-universal` |
-| **pass/fail** | **339 / 0** (green) |
-| **commit** | pending → `origin/main` |
-| **ops** | `SNANDTOC`/`SNORTOC`/`SXNORTOC` |
-| **proof** | `programs/proof/324_snandtoc_sxnortoc.cubalc` |
+| **iter** | 428 |
+| **digit** | **0** (urandom; stack foundation shift) |
+| **version** | `1.12.302-universal` |
+| **pass/fail** | **340 / 0** (green) |
+| **commit** | `47f21dd` → `origin/main` |
+| **ops** | `SSHLTOC`/`SSHRTOC`/`SSARTOC` |
+| **proof** | `programs/proof/325_sshltoc_ssartoc.cubalc` |
 
 ### Delta
-Digit-6 energy inverted bitwise stack↔cell after SAND/OR/XOR TOC: NAND/NOR/XNOR into cell.
+Digit-0 stack foundation shift stack↔cell after bitwise TOC: `cells[i]<<=n`, logical `>>n`, arithmetic `>>n` (n clamp 0..63).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
+- brief SMX tick + command ACK from hive (commander refused)
 
 ### Note
-Fir…
+Suite green 340/0 after language delta; mechanical plate also wrote iter 429 with random digit 7 (suite-only).
+
+### Language
+- `SSHLTOC` `SSHRTOC` `SSARTOC` · aliases `SHLTOC`/`SHRTOC`/`SARTOC`/`SCELLSHL`/`SCELLSHR`/`SCELLSAR`/`SASHRTOC`
+- Proof `325_sshltoc_ssartoc.cubalc`
