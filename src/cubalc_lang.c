@@ -9434,6 +9434,27 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 control-flag dual flip: DFLIPBN (complete after DSETBN/DCLRBN/DBTESTN; dual of SFLIPBN) */
+  if (kw(&L->cur,"DFLIPBN")||kw(&L->cur,"2FLIPBN")||kw(&L->cur,"S2FLIPBN")||
+      kw(&L->cur,"STACK2FLIPBN")||kw(&L->cur,"PAIRFLIPBN")||kw(&L->cur,"DFLIPBITN")||
+      kw(&L->cur,"2FLIPBITN")||kw(&L->cur,"DTGLBN")||kw(&L->cur,"2TGLBN")||
+      kw(&L->cur,"PAIRTGLBN")||kw(&L->cur,"DFLPBN")){
+    /* a b + n → a^(1<<n)  b^(1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long bit = 1ul << (unsigned)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua ^ bit);
+    long y = (long)(ub ^ bit);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack immediate rotate: DROLN · DRORN (dual of SROLN/SRORN) */
   if (kw(&L->cur,"DROLN")||kw(&L->cur,"2ROLN")||kw(&L->cur,"S2ROLN")||
       kw(&L->cur,"STACK2ROLN")||kw(&L->cur,"PAIRROLN")||kw(&L->cur,"DROTLN")||

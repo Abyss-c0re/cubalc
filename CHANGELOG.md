@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.209-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control-flag flip (complete DSETBN/DCLRBN/DBTESTN; dual of SFLIPBN).
+
+### Language
+- `DFLIPBN`/`2FLIPBN`/`PAIRFLIPBN` n — pairwise toggle bit n: `x ^= 1<<n` (n clamped 0..63)
+- Proof `232_dflipbn.cubalc`
+
+### Prior
+See 1.12.208-universal.
+
+
+
 ## 1.12.208-universal — 2026-08-03
 
 ### Direction
