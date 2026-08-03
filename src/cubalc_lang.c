@@ -216,7 +216,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0 ||
             strcasecmp(tail,"ODD")==0 || strcasecmp(tail,"EVEN")==0 ||
             strcasecmp(tail,"LTZ")==0 || strcasecmp(tail,"GTZ")==0 ||
-            strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0)
+            strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0 ||
+            strcasecmp(tail,"RAND")==0 || strcasecmp(tail,"RND")==0 ||
+            strcasecmp(tail,"SATADD")==0 || strcasecmp(tail,"SATSUB")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6434,6 +6436,67 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       unsigned long ua = (unsigned long)(a ^ c), ub = (unsigned long)(b ^ d);
       while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
       while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack RNG + sat energy: DRAND · DSATADD · DSATSUB */
+  if (kw(&L->cur,"DRAND")||kw(&L->cur,"2RAND")||kw(&L->cur,"S2RAND")||
+      kw(&L->cur,"STACK2RAND")||kw(&L->cur,"PAIRRAND")||kw(&L->cur,"2RND")||
+      kw(&L->cur,"DRND")){
+    /* a b → rand[0,a) rand[0,b); max<=0 → 10 (same as SRAND) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[vm->sp - 1];
+    long ma = vm->stack[vm->sp - 2];
+    if (ma < 1) ma = 10;
+    if (mb < 1) mb = 10;
+    uint32_t xg = vm->rng;
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long ra = (long)(xg % (uint32_t)ma);
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long rb = (long)(xg % (uint32_t)mb);
+    vm->rng = xg;
+    vm->stack[vm->sp - 2] = ra;
+    vm->stack[vm->sp - 1] = rb;
+    var_set_num(vm,"LAST_N",rb); vm->last_n=rb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSATADD")||kw(&L->cur,"2SATADD")||kw(&L->cur,"S2SATADD")||
+      kw(&L->cur,"STACK2SATADD")||kw(&L->cur,"PAIRSATADD")||
+      kw(&L->cur,"DSATSUB")||kw(&L->cur,"2SATSUB")||kw(&L->cur,"S2SATSUB")||
+      kw(&L->cur,"STACK2SATSUB")||kw(&L->cur,"PAIRSATSUB")){
+    /* a b c d → sat(a±c) sat(b±d) — energy-style saturating pair ALU */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_add = (strcmp(op,"DSATADD")==0 || strcmp(op,"2SATADD")==0 ||
+                  strcmp(op,"S2SATADD")==0 || strcmp(op,"STACK2SATADD")==0 ||
+                  strcmp(op,"PAIRSATADD")==0);
+    long x, y;
+    if (is_add){
+      if (c > 0 && a > LONG_MAX - c) x = LONG_MAX;
+      else if (c < 0 && a < LONG_MIN - c) x = LONG_MIN;
+      else x = a + c;
+      if (d > 0 && b > LONG_MAX - d) y = LONG_MAX;
+      else if (d < 0 && b < LONG_MIN - d) y = LONG_MIN;
+      else y = b + d;
+    } else {
+      if (c > 0 && a < LONG_MIN + c) x = LONG_MIN;
+      else if (c < 0 && a > LONG_MAX + c) x = LONG_MAX;
+      else x = a - c;
+      if (d > 0 && b < LONG_MIN + d) y = LONG_MIN;
+      else if (d < 0 && b > LONG_MAX + d) y = LONG_MAX;
+      else y = b - d;
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;

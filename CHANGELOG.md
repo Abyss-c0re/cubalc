@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.137-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack RNG + saturating energy ALU.
+
+### Language
+- `DRAND`/`2RAND`/`PAIRRAND` — pair uniform rand in `[0,max)`; max≤0 → 10
+- `DSATADD`/`2SATADD` · `DSATSUB`/`2SATSUB` — pairwise saturating ±
+- Proof `160_drand_dsatadd.cubalc`
+
+### Prior
+See 1.12.136-universal.
+
 ## 1.12.136-universal — 2026-08-03
 
 ### Direction
