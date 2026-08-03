@@ -1,3 +1,17 @@
+## 1.12.249-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack imm 8-bit byte field bitwise (dual of SAND8N/SOR8N/SXOR8N).
+
+### Language
+- `DAND8N`/`PAIRAND8N` field n — byte n of each &= field (n 0..7)
+- `DOR8N`/`PAIROR8N` field n — byte n of each |= field
+- `DXOR8N`/`PAIRXOR8N`/`DFLIP8N` field n — byte n of each ^= field
+- Proof `272_dand8n_dor8n.cubalc`
+
+### Prior
+See 1.12.248-universal.
+
 ## 1.12.248-universal — 2026-08-03
 
 ### Direction
