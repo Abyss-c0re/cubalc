@@ -1,3 +1,16 @@
+## 1.12.328-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → imm rotate TOC (imm dual of SROLTOC/SRORTOC; complete shift/rotate TOCN after SSHLTOCN).
+
+### Language
+- `SROLTOCN`/`ROLTOCN`/`SROLATN` n — stack `i → cells[i]=rotl(cells[i],n mod 64)` leave result
+- `SRORTOCN`/`RORTOCN`/`SRORATN` n — stack `i → cells[i]=rotr(cells[i],n mod 64)` leave result
+- Proof `351_sroltocn_srortocn.cubalc`
+
+### Prior
+See 1.12.327-universal.
+
 ## 1.12.327-universal — 2026-08-04
 
 ### Direction
