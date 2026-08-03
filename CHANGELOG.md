@@ -1,3 +1,17 @@
+## 1.12.258-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack imm inverted 32-bit word field (NAND/NOR/XNOR after SAND32N; complete stack inverted field ladder).
+
+### Language
+- `SNAND32N`/`NAND32N` field n — word n = ~(word & field) & 0xFFFFFFFF (n 0..1)
+- `SNOR32N`/`NOR32N` field n — word n = ~(word | field) & 0xFFFFFFFF
+- `SXNOR32N`/`XNOR32N`/`SEQUIV32N` field n — word n = ~(word ^ field) & 0xFFFFFFFF
+- Proof `281_snand32n_snor32n.cubalc`
+
+### Prior
+See 1.12.257-universal.
+
 ## 1.12.257-universal — 2026-08-03
 
 ### Direction
