@@ -1,3 +1,16 @@
+## 1.12.264-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack imm range predicates (dual of SBETWEENN/SWITHINN; complete DCLAMPN plane).
+
+### Language
+- `DBETWEENN`/`PAIRBETWEENN`/`DINRANGEN` lo hi — a b → (a∈[lo,hi]?1:0) (b∈[lo,hi]?1:0); swap lo/hi
+- `DWITHINN`/`PAIRWITHINN` lo hi — a b → (lo≤a<hi?1:0) (lo≤b<hi?1:0); hi exclusive
+- Proof `287_dbetweenn_dwithinn.cubalc`
+
+### Prior
+See 1.12.263-universal.
+
 ## 1.12.263-universal — 2026-08-03
 
 ### Direction

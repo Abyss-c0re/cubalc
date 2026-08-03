@@ -10918,6 +10918,42 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm range preds: DBETWEENN · DWITHINN (dual of SBETWEENN/SWITHINN; complete DCLAMPN) */
+  if (kw(&L->cur,"DBETWEENN")||kw(&L->cur,"S2BETWEENN")||kw(&L->cur,"STACK2BETWEENN")||
+      kw(&L->cur,"PAIRBETWEENN")||kw(&L->cur,"DINRANGEN")||kw(&L->cur,"PAIRINRANGEN")||
+      kw(&L->cur,"DBETWEENIMM")||kw(&L->cur,"PAIRBETWEENIMM")){
+    /* a b + lo hi → (a in [lo,hi]?1:0) (b in [lo,hi]?1:0); swap lo/hi if needed */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a >= lo && a <= hi) ? 1 : 0;
+    long y = (b >= lo && b <= hi) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DWITHINN")||kw(&L->cur,"S2WITHINN")||kw(&L->cur,"STACK2WITHINN")||
+      kw(&L->cur,"PAIRWITHINN")||kw(&L->cur,"DINTERVALN")||kw(&L->cur,"PAIRINTERVALN")||
+      kw(&L->cur,"DWITHINIMM")||kw(&L->cur,"PAIRWITHINIMM")){
+    /* a b + lo hi → (lo<=a<hi?1:0) (lo<=b<hi?1:0); hi exclusive, no lo/hi swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a >= lo && a < hi) ? 1 : 0;
+    long y = (b >= lo && b < hi) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack immediate compare: DEQN · DLTN · DGTN (dual of SEQN/SLTN/SGTN) */
   if (kw(&L->cur,"DEQN")||kw(&L->cur,"2EQN")||kw(&L->cur,"S2EQN")||
       kw(&L->cur,"STACK2EQN")||kw(&L->cur,"PAIREQN")||kw(&L->cur,"DEQIMM")||
