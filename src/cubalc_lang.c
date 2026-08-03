@@ -13373,6 +13373,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack imm 32-bit field: SGET32N · SSET32N · SCLR32N (complete nibble/byte/half/word ladder) */
+  if (kw(&L->cur,"SGET32N")||kw(&L->cur,"STACKGET32N")||kw(&L->cur,"SWORD32N")||
+      kw(&L->cur,"GET32N")||kw(&L->cur,"SLOW32N")||kw(&L->cur,"SDWORDN")||
+      kw(&L->cur,"SGETDWN")||kw(&L->cur,"WORD32N")){
+    /* SGET32N n — TOS = little-endian 32-bit word n; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long r = (long)(((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)(n * 32)) & 0xFFFFFFFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSET32N")||kw(&L->cur,"STACKSET32N")||kw(&L->cur,"SSETWORD32N")||
+      kw(&L->cur,"SET32N")||kw(&L->cur,"PUT32N")||kw(&L->cur,"SSETDWN")||
+      kw(&L->cur,"SSETW32IMM")){
+    /* SSET32N field n — deposit low 32 bits of field into word n of TOS; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long shift = (unsigned long)(n * 32);
+    long r = (long)((base & ~(0xFFFFFFFFul << shift)) | (f << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLR32N")||kw(&L->cur,"STACKCLR32N")||kw(&L->cur,"SCLRWORD32N")||
+      kw(&L->cur,"CLR32N")||kw(&L->cur,"ZAP32N")||kw(&L->cur,"SCLRDWN")||
+      kw(&L->cur,"SCLRW32IMM")){
+    /* SCLR32N n — clear little-endian 32-bit word n of TOS; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long shift = (unsigned long)(n * 32);
+    long r = (long)(base & ~(0xFFFFFFFFul << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

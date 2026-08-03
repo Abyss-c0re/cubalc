@@ -1,3 +1,17 @@
+## 1.12.242-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → stack imm 32-bit field (complete nibble/byte/halfword/word ladder).
+
+### Language
+- `SGET32N`/`SWORD32N`/`GET32N` n — extract LE 32-bit word n of TOS (n 0..1)
+- `SSET32N`/`SET32N`/`PUT32N` field n — deposit low 32 bits into word n of TOS
+- `SCLR32N`/`CLR32N`/`ZAP32N` n — clear word n of TOS
+- Proof `265_sget32n_sset32n.cubalc`
+
+### Prior
+See 1.12.241-universal.
+
 ## 1.12.241-universal — 2026-08-03
 
 ### Direction
