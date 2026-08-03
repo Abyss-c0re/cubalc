@@ -323,6 +323,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"XNORHN")==0 ||
             strcasecmp(tail,"POPMN")==0 || strcasecmp(tail,"ANYMN")==0 ||
             strcasecmp(tail,"ALLMN")==0 ||
+            strcasecmp(tail,"ADDMODN")==0 || strcasecmp(tail,"SUBMODN")==0 ||
+            strcasecmp(tail,"MULMODN")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -7735,7 +7737,64 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack immediate modular ALU: DADDMODN · DSUBMODN · DMULMODN */
+  if (kw(&L->cur,"DADDMODN")||kw(&L->cur,"2ADDMODN")||kw(&L->cur,"S2ADDMODN")||
+      kw(&L->cur,"STACK2ADDMODN")||kw(&L->cur,"PAIRADDMODN")||kw(&L->cur,"DADDMODIMM")||
+      kw(&L->cur,"DSUBMODN")||kw(&L->cur,"2SUBMODN")||kw(&L->cur,"S2SUBMODN")||
+      kw(&L->cur,"STACK2SUBMODN")||kw(&L->cur,"PAIRSUBMODN")||kw(&L->cur,"DSUBMODIMM")||
+      kw(&L->cur,"DMULMODN")||kw(&L->cur,"2MULMODN")||kw(&L->cur,"S2MULMODN")||
+      kw(&L->cur,"STACK2MULMODN")||kw(&L->cur,"PAIRMULMODN")||kw(&L->cur,"DMULMODIMM")){
+    /* a b + k m → f(a) f(b); m<=0 → 0; result in [0,m)
+     * ADD: (x+k)%m  SUB: (x-k)%m  MUL: (x*k)%m */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_add = (strcmp(op,"DADDMODN")==0 || strcmp(op,"2ADDMODN")==0 ||
+                  strcmp(op,"S2ADDMODN")==0 || strcmp(op,"STACK2ADDMODN")==0 ||
+                  strcmp(op,"PAIRADDMODN")==0 || strcmp(op,"DADDMODIMM")==0);
+    int is_sub = (strcmp(op,"DSUBMODN")==0 || strcmp(op,"2SUBMODN")==0 ||
+                  strcmp(op,"S2SUBMODN")==0 || strcmp(op,"STACK2SUBMODN")==0 ||
+                  strcmp(op,"PAIRSUBMODN")==0 || strcmp(op,"DSUBMODIMM")==0);
+    /* else DMULMODN */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (m > 0){
+      long kk = k % m; if (kk < 0) kk += m;
+      long aa = a % m; if (aa < 0) aa += m;
+      long bb = b % m; if (bb < 0) bb += m;
+      if (is_add){
+        x = (aa + kk) % m;
+        y = (bb + kk) % m;
+      } else if (is_sub){
+        x = (aa - kk + m) % m;
+        y = (bb - kk + m) % m;
+      } else {
+        /* mul mod — binary multiply to avoid overflow for large m (use long long path via stepwise) */
+        long accx = 0, accy = 0;
+        long xx = aa, yy = bb, kk2 = kk;
+        while (kk2 > 0){
+          if (kk2 & 1){
+            accx = (accx + xx) % m;
+            accy = (accy + yy) % m;
+          }
+          xx = (xx + xx) % m;
+          yy = (yy + yy) % m;
+          kk2 >>= 1;
+        }
+        x = accx; y = accy;
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-2 dual-stack modular inv/div: DMODINV · DMODDIV */
+
   if (kw(&L->cur,"DMODINV")||kw(&L->cur,"2MODINV")||kw(&L->cur,"S2MODINV")||
       kw(&L->cur,"STACK2MODINV")||kw(&L->cur,"PAIRMODINV")||kw(&L->cur,"DINVMOD")||
       kw(&L->cur,"2INVMOD")||kw(&L->cur,"S2INVMOD")||kw(&L->cur,"PAIRINVMOD")){

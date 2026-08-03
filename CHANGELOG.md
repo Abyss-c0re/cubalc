@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.218-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack immediate modular ALU (complete DADDMOD/DMULMOD stack forms).
+
+### Language
+- `DADDMODN`/`2ADDMODN` k m — pairwise `(x+k) mod m`
+- `DSUBMODN`/`2SUBMODN` k m — pairwise `(x-k) mod m`
+- `DMULMODN`/`2MULMODN` k m — pairwise `(x*k) mod m`
+- Proof `241_daddmodn_dmulmodn.cubalc`
+
+### Prior
+See 1.12.217-universal.
+
+
 ## 1.12.217-universal — 2026-08-03
 
 ### Direction
