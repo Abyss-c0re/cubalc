@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.124-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack numthy ext: DSQR DISQRT DCOPRIME.
+
+### Language
+- `DSQR`/`2SQR` — a b → a² b²
+- `DISQRT`/`2ISQRT` — a b → isqrt(a) isqrt(b) (neg → 0)
+- `DCOPRIME`/`2COPRIME` — a b c d → (gcd(a,c)==1) (gcd(b,d)==1)
+- Lexer 2-prefix: SQR ISQRT SQRT COPRIME
+- Complements dual-stack gcd/lcm/pow plane with square/root/coprime
+- Proof `147_dsqr_dcoprime.cubalc`
+
+### Prior
+See 1.12.123-universal.
+
 ## 1.12.123-universal — 2026-08-03
 
 ### Direction

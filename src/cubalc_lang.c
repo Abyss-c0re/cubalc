@@ -181,7 +181,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"GCD")==0 || strcasecmp(tail,"LCM")==0 ||
             strcasecmp(tail,"POW")==0 ||
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
-            strcasecmp(tail,"SAR")==0)
+            strcasecmp(tail,"SAR")==0 ||
+            strcasecmp(tail,"SQR")==0 || strcasecmp(tail,"ISQRT")==0 ||
+            strcasecmp(tail,"SQRT")==0 || strcasecmp(tail,"COPRIME")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6123,6 +6125,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = a >> kc;
       y = b >> kd;
     }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack numthy ext: DSQR · DISQRT (unary pair) · DCOPRIME (pairwise) */
+  if (kw(&L->cur,"DSQR")||kw(&L->cur,"2SQR")||kw(&L->cur,"S2SQR")||
+      kw(&L->cur,"STACK2SQR")||kw(&L->cur,"PAIRSQR")||kw(&L->cur,"DSQUARE")||
+      kw(&L->cur,"DISQRT")||kw(&L->cur,"2ISQRT")||kw(&L->cur,"S2ISQRT")||
+      kw(&L->cur,"STACK2ISQRT")||kw(&L->cur,"PAIRISQRT")||kw(&L->cur,"2SQRT")||
+      kw(&L->cur,"DSQRT")){
+    /* a b → f(a) f(b) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_sqr = (strcmp(op,"DSQR")==0 || strcmp(op,"2SQR")==0 || strcmp(op,"S2SQR")==0 ||
+                  strcmp(op,"STACK2SQR")==0 || strcmp(op,"PAIRSQR")==0 ||
+                  strcmp(op,"DSQUARE")==0);
+    long x, y;
+    if (is_sqr){
+      x = a * a;
+      y = b * b;
+    } else {
+      /* integer sqrt; neg → 0 */
+      if (a < 0) x = 0;
+      else { long t = 0; while ((t + 1) * (t + 1) <= a) t++; x = t; }
+      if (b < 0) y = 0;
+      else { long t = 0; while ((t + 1) * (t + 1) <= b) t++; y = t; }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCOPRIME")||kw(&L->cur,"2COPRIME")||kw(&L->cur,"S2COPRIME")||
+      kw(&L->cur,"STACK2COPRIME")||kw(&L->cur,"PAIRCOPRIME")||kw(&L->cur,"DISCOPRIME")){
+    /* a b c d → (gcd(a,c)==1) (gcd(b,d)==1) as 0/1 */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long ax = a < 0 ? -a : a, cx = c < 0 ? -c : c;
+    long bx = b < 0 ? -b : b, dx = d < 0 ? -d : d;
+    long gx = ax, hy = cx;
+    while (hy){ long t = gx % hy; gx = hy; hy = t; }
+    long gy = bx, hz = dx;
+    while (hz){ long t = gy % hz; gy = hz; hz = t; }
+    long x = (gx == 1) ? 1 : 0;
+    long y = (gy == 1) ? 1 : 0;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
