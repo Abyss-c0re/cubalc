@@ -13946,6 +13946,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",x); vm->last_n=x;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack inverted high-n mask: SNANDHN · SNORHN · SXNORHN (dual of DNANDHN/DNORHN/DXNORHN; complete SNANDMN plane) */
+  if (kw(&L->cur,"SNANDHN")||kw(&L->cur,"STACKNANDHN")||kw(&L->cur,"SHIGHNANDN")||
+      kw(&L->cur,"SNANDMASKH")||kw(&L->cur,"NANDHN")||kw(&L->cur,"MASKNANDH")){
+    /* SNANDHN n — TOS = ~(TOS & high-n mask); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)~((unsigned long)vm->stack[vm->sp - 1] & m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNORHN")||kw(&L->cur,"STACKNORHN")||kw(&L->cur,"SHIGHNORN")||
+      kw(&L->cur,"SNORMASKH")||kw(&L->cur,"NORHN")||kw(&L->cur,"MASKNORH")){
+    /* SNORHN n — TOS = ~(TOS | high-n mask); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)~((unsigned long)vm->stack[vm->sp - 1] | m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNORHN")||kw(&L->cur,"STACKXNORHN")||kw(&L->cur,"SHIGHXNORN")||
+      kw(&L->cur,"SXNORMASKH")||kw(&L->cur,"XNORHN")||kw(&L->cur,"MASKXNORH")||
+      kw(&L->cur,"SEQUIVHN")||kw(&L->cur,"EQUIVHN")){
+    /* SXNORHN n — TOS = ~(TOS ^ high-n mask); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)~((unsigned long)vm->stack[vm->sp - 1] ^ m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack low-n bitfield metrics: SPOPMN · SANYMN · SALLMN (dual of DPOPMN/DANYMN/DALLMN) */
   if (kw(&L->cur,"SPOPMN")||kw(&L->cur,"STACKPOPMN")||kw(&L->cur,"SONESMN")||
       kw(&L->cur,"SLOWPOPN")||kw(&L->cur,"SPCNTMN")||kw(&L->cur,"POPMN")){

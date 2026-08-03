@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T14:57:03+0300",
-  "iter": 331,
+  "ts": "2026-08-03T15:04:21+0300",
+  "iter": 332,
   "algocube_digit": 3,
-  "version": "1.12.231-universal",
-  "pass": 269,
+  "version": "1.12.232-universal",
+  "pass": 270,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "SNANDMN SNORMN SXNORMN",
-  "proof": "254_snandmn_sxnormn.cubalc"
+  "delta": "SNANDHN SNORHN SXNORHN",
+  "proof": "255_snandhn_sxnorhn.cubalc"
 }

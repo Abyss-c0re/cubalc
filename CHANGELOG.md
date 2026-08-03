@@ -1,3 +1,17 @@
+## 1.12.232-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → stack inverted high-n mask (dual of dual-stack DNANDHN/DNORHN/DXNORHN; complete SNANDMN plane).
+
+### Language
+- `SNANDHN`/`STACKNANDHN`/`NANDHN` n — TOS = ~(TOS & high-n mask)
+- `SNORHN`/`STACKNORHN`/`NORHN` n — TOS = ~(TOS | high-n mask)
+- `SXNORHN`/`STACKXNORHN`/`XNORHN` n — TOS = ~(TOS ^ high-n mask)
+- Proof `255_snandhn_sxnorhn.cubalc`
+
+### Prior
+See 1.12.231-universal.
+
 ## 1.12.231-universal — 2026-08-03
 
 ### Direction
