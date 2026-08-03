@@ -1,3 +1,18 @@
+## 1.12.277-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack/dual-stack imm unsigned div/mod (imm dual of SUDIV/SUMOD + DUDIV/DUMOD).
+
+### Language
+- `SUDIVN`/`UDIVN` n — TOS = (unsigned)TOS / n; n==0 → 0
+- `SUMODN`/`UMODN` n — TOS = (unsigned)TOS % n; n==0 → 0
+- `DUDIVN`/`PAIRUDIVN` n — a b → unsigned (a/n) (b/n)
+- `DUMODN`/`PAIRUMODN` n — a b → unsigned (a%n) (b%n)
+- Proof `300_sudivn_dumodn.cubalc`
+
+### Prior
+See 1.12.276-universal.
+
 ## 1.12.276-universal — 2026-08-03
 
 ### Direction

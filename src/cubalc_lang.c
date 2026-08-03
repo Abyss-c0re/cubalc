@@ -6290,6 +6290,34 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack imm unsigned div/mod: SUDIVN · SUMODN (imm dual of SUDIV/SUMOD) */
+  if (kw(&L->cur,"SUDIVN")||kw(&L->cur,"STACKUDIVN")||kw(&L->cur,"UDIVN")||
+      kw(&L->cur,"SUDIVIMM")||kw(&L->cur,"UDIVIMM")||kw(&L->cur,"SUQUOTN")){
+    /* SUDIVN n — TOS = (unsigned)TOS / (unsigned)n; n==0 → 0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long v = 0;
+    if (n != 0) v = (long)((unsigned long)a / (unsigned long)n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMODN")||kw(&L->cur,"STACKUMODN")||kw(&L->cur,"UMODN")||
+      kw(&L->cur,"SUMODIMM")||kw(&L->cur,"UMODIMM")||kw(&L->cur,"SUREMN")||
+      kw(&L->cur,"UREMN")){
+    /* SUMODN n — TOS = (unsigned)TOS % (unsigned)n; n==0 → 0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long v = 0;
+    if (n != 0) v = (long)((unsigned long)a % (unsigned long)n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack imm reverse ALU: SSUBFROMN · SDIVFROMN · SMODFROMN (n op TOS after SSUBN/SDIVN/SMODN) */
   if (kw(&L->cur,"SSUBFROMN")||kw(&L->cur,"SRSUBN")||kw(&L->cur,"RSUBN")||
       kw(&L->cur,"STACKSUBFROMN")||kw(&L->cur,"NSUBN")||kw(&L->cur,"SSUBFROMIMM")){
@@ -6908,6 +6936,45 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack imm unsigned div/mod: DUDIVN · DUMODN (imm dual of DUDIV/DUMOD; of SUDIVN) */
+  if (kw(&L->cur,"DUDIVN")||kw(&L->cur,"2UDIVN")||kw(&L->cur,"S2UDIVN")||
+      kw(&L->cur,"STACK2UDIVN")||kw(&L->cur,"PAIRUDIVN")||kw(&L->cur,"DUDIVIMM")||
+      kw(&L->cur,"2UDIVIMM")||kw(&L->cur,"PAIRUDIVIMM")||kw(&L->cur,"DUQUOTN")){
+    /* a b + n → unsigned (a/n) (b/n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n != 0){
+      x = (long)((unsigned long)a / (unsigned long)n);
+      y = (long)((unsigned long)b / (unsigned long)n);
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUMODN")||kw(&L->cur,"2UMODN")||kw(&L->cur,"S2UMODN")||
+      kw(&L->cur,"STACK2UMODN")||kw(&L->cur,"PAIRUMODN")||kw(&L->cur,"DUMODIMM")||
+      kw(&L->cur,"2UMODIMM")||kw(&L->cur,"PAIRUMODIMM")||kw(&L->cur,"DUREMN")){
+    /* a b + n → unsigned (a%n) (b%n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n != 0){
+      x = (long)((unsigned long)a % (unsigned long)n);
+      y = (long)((unsigned long)b % (unsigned long)n);
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
