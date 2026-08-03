@@ -1,3 +1,17 @@
+## 1.12.295-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → forward saturating stack↔cell energy (sat dual of SADDTOC/SSUBTOC/SDIVTOC; complement reverse sat TOC).
+
+### Language
+- `SSATADDTOC`/`SCELLSATADD`/`SATADDTOC` — stack `i v → cells[i]=sat(cells[i]+v)` leave result
+- `SSATSUBTOC`/`SCELLSATSUB`/`SATSUBTOC` — stack `i v → cells[i]=sat(cells[i]−v)` leave result
+- `SSATDIVTOC`/`SCELLSATDIV`/`SATDIVTOC` — stack `i v → cells[i]=sat(cells[i]/v)` (0 if v==0; LONG_MIN/−1 → LONG_MAX)
+- Proof `318_ssataddtoc_ssatdivtoc.cubalc`
+
+### Prior
+See 1.12.294-universal.
+
 ## 1.12.294-universal — 2026-08-03
 
 ### Direction

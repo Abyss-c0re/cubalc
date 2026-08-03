@@ -4933,6 +4933,64 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 forward sat stack↔cell energy: SSATADDTOC · SSATSUBTOC · SSATDIVTOC */
+  if (kw(&L->cur,"SSATADDTOC")||kw(&L->cur,"SCELLSATADD")||kw(&L->cur,"SSATADDCELL")||
+      kw(&L->cur,"STACKSATADDCELL")||kw(&L->cur,"SATADDTOC")){
+    /* i v → cells[i] = sat(cells[i] + v), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (v > 0 && a > LONG_MAX - v) r = LONG_MAX;
+    else if (v < 0 && a < LONG_MIN - v) r = LONG_MIN;
+    else r = a + v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATSUBTOC")||kw(&L->cur,"SCELLSATSUB")||kw(&L->cur,"SSATSUBCELL")||
+      kw(&L->cur,"STACKSATSUBCELL")||kw(&L->cur,"SATSUBTOC")){
+    /* i v → cells[i] = sat(cells[i] - v), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (v > 0 && a < LONG_MIN + v) r = LONG_MIN;
+    else if (v < 0 && a > LONG_MAX + v) r = LONG_MAX;
+    else r = a - v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATDIVTOC")||kw(&L->cur,"SCELLSATDIV")||kw(&L->cur,"SSATDIVCELL")||
+      kw(&L->cur,"STACKSATDIVCELL")||kw(&L->cur,"SATDIVTOC")){
+    /* i v → cells[i] = sat(cells[i] / v); v==0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (v == 0) r = 0;
+    else if (a == LONG_MIN && v == -1) r = LONG_MAX;
+    else r = a / v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

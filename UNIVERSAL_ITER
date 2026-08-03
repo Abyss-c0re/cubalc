@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 412 |
-| **digit** | **9** (urandom; reverse sat plane) |
-| **version** | `1.12.294-universal` |
-| **pass/fail** | **332 / 0** (green) |
+| **iter** | 414 |
+| **digit** | **6** (urandom; energy/sat plane) |
+| **version** | `1.12.295-universal` |
+| **pass/fail** | **333 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSATSUBFROMTOC`/`SSATDIVFROMTOC` |
-| **proof** | `programs/proof/317_ssatsubfromtoc_ssatdivfromtoc.cubalc` |
+| **ops** | `SSATADDTOC`/`SSATSUBTOC`/`SSATDIVTOC` |
+| **proof** | `programs/proof/318_ssataddtoc_ssatdivtoc.cubalc` |
 
 ### Delta
-Digit-9 reverse saturating stack↔cell after SSUBFROMTOC/SDIVFROMTOC: sat(v−cell), sat(v/cell).
+Digit-6 forward saturating stack↔cell energy: sat add/sub/div into cell (complement reverse sat TOC).
 
 ### NexusCore
 - unity 1.0, alive 3, smx_tick OK; commander offline
