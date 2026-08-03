@@ -173,6 +173,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NIP")==0 ||
             strcasecmp(tail,"TUCK")==0 ||
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
+            strcasecmp(tail,"ADDN")==0 || strcasecmp(tail,"SUBN")==0 ||
+            strcasecmp(tail,"MULN")==0 ||
+            strcasecmp(tail,"ADDIMM")==0 || strcasecmp(tail,"SUBIMM")==0 ||
+            strcasecmp(tail,"MULIMM")==0 ||
             strcasecmp(tail,"ADDC")==0 || strcasecmp(tail,"ADC")==0 ||
             strcasecmp(tail,"SUBB")==0 || strcasecmp(tail,"SBB")==0 ||
             strcasecmp(tail,"ADDC2")==0 || strcasecmp(tail,"ADC2")==0 ||
@@ -9424,6 +9428,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = a >> n;
     long y = b >> n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack immediate ALU: DADDN · DSUBN · DMULN (dual of SADDN/SSUBN/SMULN) */
+  if (kw(&L->cur,"DADDN")||kw(&L->cur,"2ADDN")||kw(&L->cur,"S2ADDN")||
+      kw(&L->cur,"STACK2ADDN")||kw(&L->cur,"PAIRADDN")||kw(&L->cur,"DADDIMM")||
+      kw(&L->cur,"2ADDIMM")||kw(&L->cur,"PAIRADDIMM")||kw(&L->cur,"DPLUSN")){
+    /* a b + n → (a+n) (b+n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a + n;
+    long y = b + n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSUBN")||kw(&L->cur,"2SUBN")||kw(&L->cur,"S2SUBN")||
+      kw(&L->cur,"STACK2SUBN")||kw(&L->cur,"PAIRSUBN")||kw(&L->cur,"DSUBIMM")||
+      kw(&L->cur,"2SUBIMM")||kw(&L->cur,"PAIRSUBIMM")||kw(&L->cur,"DMINUSN")){
+    /* a b + n → (a-n) (b-n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a - n;
+    long y = b - n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMULN")||kw(&L->cur,"2MULN")||kw(&L->cur,"S2MULN")||
+      kw(&L->cur,"STACK2MULN")||kw(&L->cur,"PAIRMULN")||kw(&L->cur,"DMULIMM")||
+      kw(&L->cur,"2MULIMM")||kw(&L->cur,"PAIRMULIMM")||kw(&L->cur,"DTIMESN")){
+    /* a b + n → (a*n) (b*n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a * n;
+    long y = b * n;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

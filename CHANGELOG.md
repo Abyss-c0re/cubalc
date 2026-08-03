@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.201-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack immediate ALU (dual of SADDN/SSUBN/SMULN).
+
+### Language
+- `DADDN`/`2ADDN`/`PAIRADDN` n — pairwise add constant: `a b → (a+n) (b+n)`
+- `DSUBN`/`2SUBN`/`PAIRSUBN` n — pairwise sub constant
+- `DMULN`/`2MULN`/`PAIRMULN` n — pairwise mul constant
+- Proof `224_daddn_dmuln.cubalc`
+
+### Prior
+See 1.12.200-universal.
+
+
 ## 1.12.200-universal — 2026-08-03
 
 ### Direction
