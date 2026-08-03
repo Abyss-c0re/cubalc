@@ -1,0 +1,102 @@
+# Proof 180 — digit-7 dual-stack ALU: DMADD DMULHI
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DMADD: a b c d e f → a*c+e  b*d+f
+CLEARSTACK
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+PUSH 7
+PUSH 8
+DMADD
+POP y
+POP x
+ASSERT x == 22
+ASSERT y == 32
+
+# 2MADD alias
+CLEARSTACK
+PUSH 2
+PUSH 3
+PUSH 10
+PUSH 10
+PUSH 1
+PUSH -1
+2MADD
+POP y
+POP x
+ASSERT x == 21
+ASSERT y == 29
+
+# DFMA zero addend
+CLEARSTACK
+PUSH 7
+PUSH 8
+PUSH 9
+PUSH 1
+PUSH 0
+PUSH 0
+DFMA
+POP y
+POP x
+ASSERT x == 63
+ASSERT y == 8
+
+# DMULHI: a b c d → high64(a*c) high64(b*d)
+# 1<<32 * 1<<32 = 1<<64 → high = 1
+CLEARSTACK
+PUSH 4294967296
+PUSH 4294967296
+PUSH 4294967296
+PUSH 4294967296
+DMULHI
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 1
+
+# small products → high 0
+CLEARSTACK
+PUSH 7
+PUSH 9
+PUSH 8
+PUSH 10
+2MULHI
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# negative product high ( -1 * 2 = -2 → high all-ones as sign)
+CLEARSTACK
+PUSH -1
+PUSH 1
+PUSH 2
+PUSH -2
+DHMUL
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -1
+
+# soft fail underflow
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+DMADD
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+PUSH 2
+DMULHI
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof180_dmadd_dmulhi" LAST_N SP

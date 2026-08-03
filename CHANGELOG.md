@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.157-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack ALU fused multiply-add + mul-high.
+
+### Language
+- `DMADD`/`2MADD`/`DFMA` — pairwise `a*c+e` / `b*d+f`
+- `DMULHI`/`2MULHI`/`DHMUL` — pairwise signed high-64 of product
+- Proof `180_dmadd_dmulhi.cubalc`
+
+### Prior
+See 1.12.156-universal.
+
 ## 1.12.156-universal — 2026-08-03
 
 ### Direction

@@ -176,6 +176,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
+            strcasecmp(tail,"MADD")==0 || strcasecmp(tail,"FMA")==0 ||
+            strcasecmp(tail,"MULADD")==0 ||
+            strcasecmp(tail,"MULHI")==0 || strcasecmp(tail,"MULH")==0 ||
+            strcasecmp(tail,"HMUL")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
@@ -6221,6 +6225,45 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack ALU fused/high: DMADD · DMULHI */
+  if (kw(&L->cur,"DMADD")||kw(&L->cur,"2MADD")||kw(&L->cur,"S2MADD")||
+      kw(&L->cur,"STACK2MADD")||kw(&L->cur,"PAIRMADD")||kw(&L->cur,"DFMA")||
+      kw(&L->cur,"2FMA")||kw(&L->cur,"DMULADD")||kw(&L->cur,"2MULADD")){
+    /* a b c d e f → a*c+e  b*d+f  (pairwise fused multiply-add) */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long e = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a * c + e;
+    long y = b * d + f;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMULHI")||kw(&L->cur,"2MULHI")||kw(&L->cur,"S2MULHI")||
+      kw(&L->cur,"STACK2MULHI")||kw(&L->cur,"PAIRMULHI")||kw(&L->cur,"DMULH")||
+      kw(&L->cur,"2MULH")||kw(&L->cur,"DHMUL")||kw(&L->cur,"2HMUL")){
+    /* a b c d → high64(a*c) high64(b*d) signed */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    __int128 px = (__int128)a * (__int128)c;
+    __int128 py = (__int128)b * (__int128)d;
+    long x = (long)(px >> 64);
+    long y = (long)(py >> 64);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
