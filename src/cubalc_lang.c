@@ -177,7 +177,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
             strcasecmp(tail,"LT")==0 || strcasecmp(tail,"LE")==0 ||
-            strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0)
+            strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0 ||
+            strcasecmp(tail,"GCD")==0 || strcasecmp(tail,"LCM")==0 ||
+            strcasecmp(tail,"POW")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6034,6 +6036,52 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else if (is_le){ x = (a <= c) ? 1 : 0; y = (b <= d) ? 1 : 0; }
     else if (is_gt){ x = (a > c) ? 1 : 0; y = (b > d) ? 1 : 0; }
     else { x = (a >= c) ? 1 : 0; y = (b >= d) ? 1 : 0; }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack pair numthy: DGCD · DLCM · DPOW (vector pairs a b ⋆ c d) */
+  if (kw(&L->cur,"DGCD")||kw(&L->cur,"2GCD")||kw(&L->cur,"S2GCD")||
+      kw(&L->cur,"STACK2GCD")||kw(&L->cur,"PAIRGCD")||
+      kw(&L->cur,"DLCM")||kw(&L->cur,"2LCM")||kw(&L->cur,"S2LCM")||
+      kw(&L->cur,"STACK2LCM")||kw(&L->cur,"PAIRLCM")||
+      kw(&L->cur,"DPOW")||kw(&L->cur,"2POW")||kw(&L->cur,"S2POW")||
+      kw(&L->cur,"STACK2POW")||kw(&L->cur,"PAIRPOW")){
+    /* a b c d → f(a,c) f(b,d) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_gcd = (strcmp(op,"DGCD")==0 || strcmp(op,"2GCD")==0 || strcmp(op,"S2GCD")==0 ||
+                  strcmp(op,"STACK2GCD")==0 || strcmp(op,"PAIRGCD")==0);
+    int is_lcm = (strcmp(op,"DLCM")==0 || strcmp(op,"2LCM")==0 || strcmp(op,"S2LCM")==0 ||
+                  strcmp(op,"STACK2LCM")==0 || strcmp(op,"PAIRLCM")==0);
+    long x = 0, y = 0;
+    if (is_gcd || is_lcm){
+      long ax = a < 0 ? -a : a, cx = c < 0 ? -c : c;
+      long bx = b < 0 ? -b : b, dx = d < 0 ? -d : d;
+      long gx = ax, hy = cx;
+      while (hy){ long t = gx % hy; gx = hy; hy = t; }
+      long gy = bx, hz = dx;
+      while (hz){ long t = gy % hz; gy = hz; hz = t; }
+      if (is_gcd){ x = gx; y = gy; }
+      else {
+        /* LCM — 0 if either side 0 */
+        x = (!ax || !cx) ? 0 : (ax / gx) * cx;
+        y = (!bx || !dx) ? 0 : (bx / gy) * dx;
+      }
+    } else {
+      /* DPOW — a^c, b^d; neg exp → 0 */
+      if (c < 0) x = 0;
+      else { x = 1; long e = c; while (e-- > 0) x *= a; }
+      if (d < 0) y = 0;
+      else { y = 1; long e = d; while (e-- > 0) y *= b; }
+    }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

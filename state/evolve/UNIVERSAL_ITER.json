@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T03:25:01+0300",
-  "iter": 217,
-  "algocube_digit": 1,
-  "version": "1.12.121-universal",
-  "pass": 159,
+  "ts": "2026-08-03T03:31:06+0300",
+  "iter": 218,
+  "algocube_digit": 2,
+  "version": "1.12.122-universal",
+  "pass": 160,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DEQ DNE DLT DLE DGT DGE 2EQ 2NE 2LT 2LE 2GT 2GE",
-  "proof": "programs/proof/144_deq_dlt.cubalc"
+  "delta": "DGCD DLCM DPOW 2GCD 2LCM 2POW",
+  "proof": "programs/proof/145_dgcd_dlcm.cubalc"
 }

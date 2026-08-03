@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.122-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack pair number theory: DGCD DLCM DPOW.
+
+### Language
+- `DGCD`/`2GCD` — a b c d → gcd(a,c) gcd(b,d)
+- `DLCM`/`2LCM` — a b c d → lcm(a,c) lcm(b,d) (0-safe)
+- `DPOW`/`2POW` — a b c d → a^c b^d (neg exp → 0)
+- Lexer 2-prefix: GCD LCM POW
+- Complements dual-stack ALU with pairwise numthy plane
+- Proof `145_dgcd_dlcm.cubalc`
+
+### Prior
+See 1.12.121-universal.
+
 ## 1.12.121-universal — 2026-08-03
 
 ### Direction
