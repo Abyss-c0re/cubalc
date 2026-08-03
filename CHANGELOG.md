@@ -1,3 +1,17 @@
+## 1.12.283-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → depth-7 foundation complete (7OVER/7TUCK after 7NIP/7ROT plane).
+
+### Language
+- `7OVER`/`OVER7`/`STACK7OVER` — 14-deep: copy under septet onto stack
+- `7TUCK`/`TUCK7`/`STACK7TUCK` — a…g → g a…f g (copy TOS under top 6)
+- Lexer: `7…` tails include OVER/TUCK
+- Proof `306_7over_7tuck.cubalc`
+
+### Prior
+See 1.12.282-universal.
+
 ## 1.12.282-universal — 2026-08-03
 
 ### Direction
