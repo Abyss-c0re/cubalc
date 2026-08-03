@@ -1,3 +1,17 @@
+## 1.12.238-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack imm byte field (dual of SBYTEN/SSETBYTEN/SCLRBYTEN).
+
+### Language
+- `DBYTEN`/`2BYTEN`/`PAIRBYTEN` n — extract LE byte n of each of pair
+- `DSETBYTEN`/`2SETBYTEN` field n — deposit field into byte n of each
+- `DCLRBYTEN`/`2CLRBYTEN` n — clear byte n of each
+- Proof `261_dbyten_dsetbyten.cubalc`
+
+### Prior
+See 1.12.237-universal.
+
 ## 1.12.237-universal — 2026-08-03
 
 ### Direction

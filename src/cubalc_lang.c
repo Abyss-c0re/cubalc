@@ -349,6 +349,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"BDEPN")==0 || strcasecmp(tail,"BITDEPN")==0 ||
             strcasecmp(tail,"BTESTN")==0 || strcasecmp(tail,"BITN")==0 ||
             strcasecmp(tail,"TESTBITN")==0 ||
+            strcasecmp(tail,"BYTEN")==0 || strcasecmp(tail,"GETBYTEN")==0 ||
+            strcasecmp(tail,"SETBYTEN")==0 || strcasecmp(tail,"PUTBYTEN")==0 ||
+            strcasecmp(tail,"CLRBYTEN")==0 || strcasecmp(tail,"ZAPBYTEN")==0 ||
+            strcasecmp(tail,"SETBYIMM")==0 || strcasecmp(tail,"CLRBYIMM")==0 ||
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
             strcasecmp(tail,"BDEP")==0 || strcasecmp(tail,"BITDEP")==0 ||
             strcasecmp(tail,"PEXT")==0 || strcasecmp(tail,"PDEP")==0 ||
@@ -11377,6 +11381,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = a & 0xFFFFL;
       y = b & 0xFFFFL;
     }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack imm byte field: DBYTEN · DSETBYTEN · DCLRBYTEN (dual of SBYTEN/SSETBYTEN/SCLRBYTEN) */
+  if (kw(&L->cur,"DBYTEN")||kw(&L->cur,"2BYTEN")||kw(&L->cur,"S2BYTEN")||
+      kw(&L->cur,"STACK2BYTEN")||kw(&L->cur,"PAIRBYTEN")||kw(&L->cur,"DGETBYTEN")||
+      kw(&L->cur,"2GETBYTEN")||kw(&L->cur,"GETBYTEN2")){
+    /* a b + n → byte n of a , byte n of b ; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned sh = (unsigned)(n * 8);
+    long x = (long)(((unsigned long)vm->stack[vm->sp - 2] >> sh) & 0xFFul);
+    long y = (long)(((unsigned long)vm->stack[vm->sp - 1] >> sh) & 0xFFul);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSETBYTEN")||kw(&L->cur,"2SETBYTEN")||kw(&L->cur,"S2SETBYTEN")||
+      kw(&L->cur,"STACK2SETBYTEN")||kw(&L->cur,"PAIRSETBYTEN")||kw(&L->cur,"DPUTBYTEN")||
+      kw(&L->cur,"2PUTBYTEN")||kw(&L->cur,"DSETBYIMM")){
+    /* a b + field n → deposit field into byte n of each; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)((ma & ~(0xFFul << sh)) | (f << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (f << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLRBYTEN")||kw(&L->cur,"2CLRBYTEN")||kw(&L->cur,"S2CLRBYTEN")||
+      kw(&L->cur,"STACK2CLRBYTEN")||kw(&L->cur,"PAIRCLRBYTEN")||kw(&L->cur,"DZAPBYTEN")||
+      kw(&L->cur,"2ZAPBYTEN")||kw(&L->cur,"DCLRBYIMM")){
+    /* a b + n → clear byte n of each; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 2] & ~(0xFFul << sh));
+    long y = (long)((unsigned long)vm->stack[vm->sp - 1] & ~(0xFFul << sh));
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
