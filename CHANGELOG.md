@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.198-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack immediate bitwise mask (dual of SANDI/SORI/SXORI).
+
+### Language
+- `DANDI`/`2ANDI`/`PAIRANDI` n — pairwise `x &= n`
+- `DORI`/`2ORI`/`PAIRORI` n — pairwise `x |= n`
+- `DXORI`/`2XORI`/`PAIRXORI` n — pairwise `x ^= n`
+- Proof `221_dandi_dxori.cubalc`
+
+### Prior
+See 1.12.197-universal.
+
+
 ## 1.12.197-universal — 2026-08-03
 
 ### Direction

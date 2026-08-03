@@ -187,6 +187,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
+            strcasecmp(tail,"ANDI")==0 || strcasecmp(tail,"ANDIMM")==0 ||
+            strcasecmp(tail,"ORI")==0 || strcasecmp(tail,"ORIMM")==0 ||
+            strcasecmp(tail,"XORI")==0 || strcasecmp(tail,"XORIMM")==0 ||
             strcasecmp(tail,"MADD")==0 || strcasecmp(tail,"FMA")==0 ||
             strcasecmp(tail,"MULADD")==0 ||
             strcasecmp(tail,"MULHI")==0 || strcasecmp(tail,"MULH")==0 ||
@@ -9333,6 +9336,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
     long x = (uk == 0) ? (long)ua : (long)((ua >> uk) | (ua << (64u - uk)));
     long y = (uk == 0) ? (long)ub : (long)((ub >> uk) | (ub << (64u - uk)));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack immediate bitwise mask: DANDI · DORI · DXORI (dual of SANDI/SORI/SXORI) */
+  if (kw(&L->cur,"DANDI")||kw(&L->cur,"2ANDI")||kw(&L->cur,"S2ANDI")||
+      kw(&L->cur,"STACK2ANDI")||kw(&L->cur,"PAIRANDI")||kw(&L->cur,"DANDIMM")||
+      kw(&L->cur,"2ANDIMM")||kw(&L->cur,"PAIRANDIMM")){
+    /* a b + n → (a&n) (b&n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a & n;
+    long y = b & n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DORI")||kw(&L->cur,"2ORI")||kw(&L->cur,"S2ORI")||
+      kw(&L->cur,"STACK2ORI")||kw(&L->cur,"PAIRORI")||kw(&L->cur,"DORIMM")||
+      kw(&L->cur,"2ORIMM")||kw(&L->cur,"PAIRORIMM")){
+    /* a b + n → (a|n) (b|n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a | n;
+    long y = b | n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXORI")||kw(&L->cur,"2XORI")||kw(&L->cur,"S2XORI")||
+      kw(&L->cur,"STACK2XORI")||kw(&L->cur,"PAIRXORI")||kw(&L->cur,"DXORIMM")||
+      kw(&L->cur,"2XORIMM")||kw(&L->cur,"PAIRXORIMM")){
+    /* a b + n → (a^n) (b^n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a ^ n;
+    long y = b ^ n;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

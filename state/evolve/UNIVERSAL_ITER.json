@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T11:19:24+0300",
-  "iter": 275,
-  "algocube_digit": 3,
-  "version": "1.12.197-universal",
-  "pass": 235,
+  "ts": "2026-08-03T11:25:22+0300",
+  "iter": 277,
+  "algocube_digit": 0,
+  "version": "1.12.198-universal",
+  "pass": 236,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,9 @@
     "flow_compile"
   ],
   "ops": [
-    "DROLN",
-    "DRORN"
+    "DANDI",
+    "DORI",
+    "DXORI"
   ],
-  "proof": "programs/proof/220_droln_drorn.cubalc"
+  "proof": "programs/proof/221_dandi_dxori.cubalc"
 }
