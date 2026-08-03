@@ -1,3 +1,18 @@
+## 1.12.298-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → depth-8 combinator extension after 8DUP/8DROP/8SWAP foundation (parity with 7NIP/7ROT plane).
+- Lexer: promote `8NIP`/`8ROT`/`8RROT` tails.
+
+### Language
+- `8NIP`/`NIP8`/`STACK8NIP` — keep ends of top 8 (`a…h → a h`)
+- `8ROT`/`ROT8`/`STACK8ROT` — rotate top 8 left (`a…h → b…h a`)
+- `8RROT`/`RROT8`/`STACK8RROT` — rotate top 8 right (`a…h → h a…g`)
+- Proof `321_8nip_8rot.cubalc`
+
+### Prior
+See 1.12.297-universal.
+
 ## 1.12.297-universal — 2026-08-03
 
 ### Direction

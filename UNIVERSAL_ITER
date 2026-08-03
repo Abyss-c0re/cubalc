@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 419 |
-| **digit** | **7** (urandom; unary ALU plane) |
-| **version** | `1.12.297-universal` |
-| **pass/fail** | **335 / 0** (green) |
+| **iter** | 421 |
+| **digit** | **9** (urandom; depth-8 combinators) |
+| **version** | `1.12.298-universal` |
+| **pass/fail** | **336 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SABSTOC`/`SNEGTOC`/`SNOTTOC` |
-| **proof** | `programs/proof/320_sabstoc_snottoc.cubalc` |
+| **ops** | `8NIP`/`8ROT`/`8RROT` |
+| **proof** | `programs/proof/321_8nip_8rot.cubalc` |
 
 ### Delta
-Digit-7 stack↔cell unary ALU: abs/neg/bitwise-not single cell (dual of SABS/SNEG/SNOT).
+Digit-9 depth-8 combinator ext after foundation: keep ends, rotate L/R top 8. Lexer `8NIP/8ROT/8RROT` tails.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline

@@ -159,7 +159,7 @@ static void lex_next(Lex *L) {
      * 5DUP / 5DROP / 5SWAP — quintuple depth (digit-8)
      * 6DUP / 6DROP — sextuple depth (digit-8)
      * 7DUP / 7DROP / 7SWAP / 7NIP / 7ROT / 7RROT / 7OVER / 7TUCK — septuple
-     * 8DUP / 8DROP / 8SWAP — octuple depth (digit-8 foundation) */
+     * 8DUP / 8DROP / 8SWAP / 8NIP / 8ROT / 8RROT — octuple depth */
     if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5' || b[0]=='6' || b[0]=='7' || b[0]=='8') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
@@ -511,9 +511,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
           ok = 1;
       } else if (b[0]=='8'){
-        /* 8… depth plane (digit-8 stack foundation) */
+        /* 8… depth plane (digit-8/9 stack foundation + combinators) */
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-            strcasecmp(tail,"SWAP")==0)
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0 ||
+            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0)
           ok = 1;
       }
       if (ok){
@@ -6509,6 +6510,44 @@ static int parse_form(VM *vm, Lex *L){
     long v[8];
     for (int i = 0; i < 8; i++) v[i] = vm->stack[vm->sp - 8 + i];
     for (int i = 0; i < 8; i++) vm->stack[vm->sp - 8 + i] = v[7 - i];
+    long last = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 depth-8 combinator ext: 8NIP · 8ROT · 8RROT (parity with 7NIP/7ROT plane) */
+  if (kw(&L->cur,"8NIP")||kw(&L->cur,"OCTNIP")||kw(&L->cur,"NIP8")||
+      kw(&L->cur,"STACK8NIP")){
+    /* a b c d e f g h → a h  (keep ends of top 8) */
+    lex_next(L);
+    if (vm->sp < 8){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 8], h = vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 8] = a;
+    vm->stack[vm->sp - 7] = h;
+    vm->sp -= 6;
+    var_set_num(vm,"LAST_N",h); vm->last_n=h;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"8ROT")||kw(&L->cur,"OCTROT")||kw(&L->cur,"ROT8")||
+      kw(&L->cur,"STACK8ROT")){
+    /* a b c d e f g h → b c d e f g h a */
+    lex_next(L);
+    if (vm->sp < 8){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[8];
+    for (int i = 0; i < 8; i++) v[i] = vm->stack[vm->sp - 8 + i];
+    for (int i = 0; i < 7; i++) vm->stack[vm->sp - 8 + i] = v[i + 1];
+    vm->stack[vm->sp - 1] = v[0];
+    var_set_num(vm,"LAST_N",v[0]); vm->last_n=v[0];
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"8RROT")||kw(&L->cur,"OCTRROT")||kw(&L->cur,"RROT8")||
+      kw(&L->cur,"STACK8RROT")||kw(&L->cur,"8-ROT")){
+    /* a b c d e f g h → h a b c d e f g */
+    lex_next(L);
+    if (vm->sp < 8){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[8];
+    for (int i = 0; i < 8; i++) v[i] = vm->stack[vm->sp - 8 + i];
+    vm->stack[vm->sp - 8] = v[7];
+    for (int i = 0; i < 7; i++) vm->stack[vm->sp - 7 + i] = v[i];
     long last = vm->stack[vm->sp - 1];
     var_set_num(vm,"LAST_N",last); vm->last_n=last;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
