@@ -1,3 +1,17 @@
+## 1.12.253-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack imm inverted 8-bit byte field (NAND/NOR/XNOR after SAND8N; ladder after SNAND4N).
+
+### Language
+- `SNAND8N`/`NAND8N` field n — byte n = ~(byte & field) & 0xFF (n 0..7)
+- `SNOR8N`/`NOR8N` field n — byte n = ~(byte | field) & 0xFF
+- `SXNOR8N`/`XNOR8N`/`SEQUIV8N` field n — byte n = ~(byte ^ field) & 0xFF
+- Proof `276_snand8n_snor8n.cubalc`
+
+### Prior
+See 1.12.252-universal.
+
 ## 1.12.252-universal — 2026-08-03
 
 ### Direction
