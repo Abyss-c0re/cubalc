@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.212-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack boolean control plane (dual of SLAND/SLOR/SLXOR/SIMP).
+
+### Language
+- `DLAND`/`2LAND`/`PAIRLAND` — pairwise `(a&&c)?1:0` / `(b&&d)?1:0`
+- `DLOR`/`2LOR`/`PAIRLOR` — pairwise logical OR → 0/1
+- `DLXOR`/`2LXOR`/`PAIRLXOR` — pairwise logical XOR → 0/1
+- `DIMP`/`DIMPLY`/`2IMP` — pairwise imply `(!a||c)` → 0/1
+- Proof `235_dland_dimp.cubalc`
+
+### Prior
+See 1.12.211-universal.
+
+
 ## 1.12.211-universal — 2026-08-03
 
 ### Direction
