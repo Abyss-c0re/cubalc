@@ -1,3 +1,17 @@
+## 1.12.243-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack imm 32-bit field (complete dual of SGET32N ladder).
+
+### Language
+- `DGET32N`/`PAIRGET32N`/`DWORD32N` n — extract LE 32-bit word n of each of pair (n 0..1)
+- `DSET32N`/`PAIRSET32N`/`DPUT32N` field n — deposit low 32 bits into word n of each
+- `DCLR32N`/`PAIRCLR32N`/`DZAP32N` n — clear word n of each
+- Proof `266_dget32n_dset32n.cubalc`
+
+### Prior
+See 1.12.242-universal.
+
 ## 1.12.242-universal — 2026-08-03
 
 ### Direction
