@@ -1,3 +1,17 @@
+## 1.12.248-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack imm 8-bit byte field bitwise merge (complete byte plane after SAND16N/SAND32N).
+
+### Language
+- `SAND8N`/`AND8N` field n — byte n of TOS &= field (n 0..7)
+- `SOR8N`/`OR8N` field n — byte n of TOS |= field
+- `SXOR8N`/`XOR8N`/`SFLIP8N` field n — byte n of TOS ^= field
+- Proof `271_sand8n_sor8n.cubalc`
+
+### Prior
+See 1.12.247-universal.
+
 ## 1.12.247-universal — 2026-08-03
 
 ### Direction
