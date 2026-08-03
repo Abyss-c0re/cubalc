@@ -1,0 +1,119 @@
+# Proof 199 — digit-7 dual-stack multiword shift-carry: DSHLC DSHRC
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DSHLC: a b ca cb → (a<<1)|ca_bit  (b<<1)|cb_bit
+CLEARSTACK
+LET CARRY = 0
+PUSH 1
+PUSH 2
+PUSH 1
+PUSH 0
+DSHLC
+POP y
+POP x
+ASSERT x == 3
+ASSERT y == 4
+ASSERT CARRY == 0
+
+# MSB out sets CARRY
+CLEARSTACK
+LET CARRY = 0
+LET msb = 0 - 9223372036854775807
+LET msb = msb - 1
+PUSH msb
+PUSH 0
+PUSH 0
+PUSH 1
+2SHLC
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 1
+ASSERT CARRY == 1
+
+# PAIRSHLC both cin
+CLEARSTACK
+LET CARRY = 0
+PUSH 4
+PUSH 8
+PUSH 1
+PUSH 1
+PAIRSHLC
+POP y
+POP x
+ASSERT x == 9
+ASSERT y == 17
+ASSERT CARRY == 0
+
+# DSHRC: a b ca cb → (a>>1)|(ca?MSB:0)
+CLEARSTACK
+LET CARRY = 0
+PUSH 5
+PUSH 4
+PUSH 0
+PUSH 0
+DSHRC
+POP y
+POP x
+ASSERT x == 2
+ASSERT y == 2
+ASSERT CARRY == 1
+
+# cin MSB into high
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 2
+PUSH 1
+PUSH 0
+2SHRC
+POP y
+POP x
+# y = 1, x = msb only
+ASSERT y == 1
+ASSERT CARRY == 0
+# x should be high bit only = msb as signed negative
+ASSERT x < 0
+
+# PAIRSHRC LSB outs
+CLEARSTACK
+LET CARRY = 0
+PUSH 3
+PUSH 1
+PUSH 0
+PUSH 0
+PAIRSHRC
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 0
+ASSERT CARRY == 1
+
+# DSHLCY alias
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 0
+PUSH 1
+PUSH 1
+DSHLCY
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 1
+ASSERT CARRY == 0
+
+# DSHRCY alias zero cin
+CLEARSTACK
+LET CARRY = 0
+PUSH 8
+PUSH 16
+PUSH 0
+PUSH 0
+DSHRCY
+POP y
+POP x
+ASSERT x == 4
+ASSERT y == 8
+ASSERT CARRY == 0

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.176-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack multiword shift-through-carry.
+
+### Language
+- `DSHLC`/`2SHLC`/`DSHLCY` — pairwise left-shift-1 with per-lane cin LSB; `CARRY` any MSB out
+- `DSHRC`/`2SHRC`/`DSHRCY` — pairwise right-shift-1 with per-lane cin MSB; `CARRY` any LSB out
+- Proof `199_dshlc_dshrc.cubalc`
+
+### Prior
+See 1.12.175-universal.
+
+
 ## 1.12.175-universal — 2026-08-03
 
 ### Direction
