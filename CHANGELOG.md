@@ -1,3 +1,16 @@
+## 1.12.306-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → stack↔cell math dual (square / integer sqrt after scale TOC; dual of SSQR/SISQRT).
+
+### Language
+- `SSQRTOC`/`SCELLSQR`/`SQRTOC` — stack `i → cells[i]*=cells[i]` leave result
+- `SISQRTTOC`/`SCELLISQRT`/`ISQRTTOC` — stack `i → cells[i]=isqrt(cells[i])` (neg→0) leave result
+- Proof `329_ssqrtoc_sisqrtoc.cubalc`
+
+### Prior
+See 1.12.305-universal.
+
 ## 1.12.305-universal — 2026-08-03
 
 ### Direction

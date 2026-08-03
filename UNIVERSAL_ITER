@@ -2,23 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 431 |
-| **digit** | **8** (urandom+genome; depth-9 foundation) |
-| **version** | `1.12.305-universal` |
-| **pass/fail** | **343 / 0** (green) |
-| **commit** | `0f1779e` → `origin/main` |
-| **ops** | `9DUP`/`9DROP`/`9SWAP` |
-| **proof** | `programs/proof/328_9dup_9drop.cubalc` |
+| **iter** | 432 |
+| **digit** | **2** (urandom+genome; math dual TOC) |
+| **version** | `1.12.306-universal` |
+| **pass/fail** | **344 / 0** (green) |
+| **commit** | `f11cb75` → `origin/main` |
+| **ops** | `SSQRTOC`/`SISQRTTOC` |
+| **proof** | `programs/proof/329_ssqrtoc_sisqrtoc.cubalc` |
 
 ### Delta
-Digit-8 nonuple stack foundation after complete depth-8 plane: dup/drop/reverse top 9.
+Digit-2 stack↔cell math dual after scale TOC: square and integer sqrt into cell.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-- tree briefly corrupted by evolve churn; restored from HEAD then reapplied delta
 
 ### Language
-- `9DUP` `9DROP` `9SWAP` · aliases `DUP9`/`DROP9`/`SWAP9`
-- Lexer promotes `9…` tails for foundation ops
-- Proof `328_9dup_9drop.cubalc`
+- `SSQRTOC` `SISQRTTOC` · aliases `SCELLSQR`/`SQRTOC`/`SCELLISQRT`/`ISQRTTOC`
+- Proof `329_ssqrtoc_sisqrtoc.cubalc`

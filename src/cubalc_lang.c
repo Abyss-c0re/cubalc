@@ -5303,6 +5303,45 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack↔cell math dual: SSQRTOC · SISQRTTOC (dual of SSQR/SISQRT after scale TOC) */
+  if (kw(&L->cur,"SSQRTOC")||kw(&L->cur,"SSQRTOCELL")||kw(&L->cur,"STACKSQRTOC")||
+      kw(&L->cur,"SSQUARETOC")||kw(&L->cur,"SCELLSQR")||kw(&L->cur,"SQRTOC")||
+      kw(&L->cur,"SSQRAT")){
+    /* i → cells[i] = cells[i]*cells[i], leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long v = a * a;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SISQRTTOC")||kw(&L->cur,"SISQRTTOCELL")||kw(&L->cur,"STACKISQRTTOC")||
+      kw(&L->cur,"SSQRTTOC")||kw(&L->cur,"SCELLISQRT")||kw(&L->cur,"ISQRTTOC")||
+      kw(&L->cur,"SISQRTAT")){
+    /* i → cells[i] = isqrt(cells[i]); neg → 0, leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long v = 0;
+    if (a < 0) v = 0;
+    else {
+      long t = 0;
+      while ((t + 1) * (t + 1) <= a) t++;
+      v = t;
+    }
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){
