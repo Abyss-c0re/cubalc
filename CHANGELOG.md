@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.174-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack multiword add/sub with per-lane cin/bin.
+
+### Language
+- `DADDC2`/`2ADDC2`/`DADC2` — pairwise unsigned add with stack cin per lane; `CARRY` any cout
+- `DSUBB2`/`2SUBB2`/`DSBB2` — pairwise unsigned sub with stack bin per lane; flags updated
+- Proof `197_daddc2_dsubb2.cubalc`
+
+### Prior
+See 1.12.173-universal.
+
+
 ## 1.12.173-universal — 2026-08-03
 
 ### Direction

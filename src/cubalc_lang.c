@@ -175,6 +175,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
             strcasecmp(tail,"ADDC")==0 || strcasecmp(tail,"ADC")==0 ||
             strcasecmp(tail,"SUBB")==0 || strcasecmp(tail,"SBB")==0 ||
+            strcasecmp(tail,"ADDC2")==0 || strcasecmp(tail,"ADC2")==0 ||
+            strcasecmp(tail,"SUBB2")==0 || strcasecmp(tail,"SBB2")==0 ||
+            strcasecmp(tail,"ADDCST")==0 || strcasecmp(tail,"SUBBST")==0 ||
             strcasecmp(tail,"ADDOVF")==0 || strcasecmp(tail,"ADDOVER")==0 ||
             strcasecmp(tail,"SUBOVF")==0 || strcasecmp(tail,"SUBOVER")==0 ||
             strcasecmp(tail,"MULOVF")==0 || strcasecmp(tail,"MULOVER")==0 ||
@@ -6631,6 +6634,68 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       unsigned long d1 = ub - ud;
       int b4 = (d1 < uin) ? 1 : 0;
       unsigned long diff1 = d1 - uin;
+      flag = b1 | b2 | b3 | b4;
+      x = (long)diff0; y = (long)diff1;
+      var_set_num(vm,"BORROW",flag); var_set_num(vm,"BW",flag);
+      var_set_num(vm,"CARRY",flag);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack multiword stack-cin: DADDC2 · DSUBB2 (per-lane cin/bin) */
+  if (kw(&L->cur,"DADDC2")||kw(&L->cur,"2ADDC2")||kw(&L->cur,"S2ADDC2")||
+      kw(&L->cur,"STACK2ADDC2")||kw(&L->cur,"PAIRADDC2")||kw(&L->cur,"DADC2")||
+      kw(&L->cur,"2ADC2")||kw(&L->cur,"DADDCST")||kw(&L->cur,"2ADDCST")||
+      kw(&L->cur,"DSUBB2")||kw(&L->cur,"2SUBB2")||kw(&L->cur,"S2SUBB2")||
+      kw(&L->cur,"STACK2SUBB2")||kw(&L->cur,"PAIRSUBB2")||kw(&L->cur,"DSBB2")||
+      kw(&L->cur,"2SBB2")||kw(&L->cur,"DSUBBST")||kw(&L->cur,"2SUBBST")){
+    /* a b c d ca cb → f(a,c,ca) f(b,d,cb)
+     * DADDC2: unsigned wrap add with per-lane cin (0/1 from ca/cb); CARRY = cout_x|cout_y
+     * DSUBB2: unsigned wrap sub with per-lane bin; BORROW=CARRY = bout_x|bout_y */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_sub = (strcmp(op,"DSUBB2")==0 || strcmp(op,"2SUBB2")==0 ||
+                  strcmp(op,"S2SUBB2")==0 || strcmp(op,"STACK2SUBB2")==0 ||
+                  strcmp(op,"PAIRSUBB2")==0 || strcmp(op,"DSBB2")==0 ||
+                  strcmp(op,"2SBB2")==0 || strcmp(op,"DSUBBST")==0 ||
+                  strcmp(op,"2SUBBST")==0);
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long cb = vm->stack[--vm->sp];
+    long ca = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    unsigned long uina = ca ? 1ul : 0ul;
+    unsigned long uinb = cb ? 1ul : 0ul;
+    long x, y;
+    int flag = 0;
+    if (!is_sub){
+      unsigned long s0 = ua + uc;
+      int c1 = (s0 < ua) ? 1 : 0;
+      unsigned long sum0 = s0 + uina;
+      int c2 = (sum0 < s0) ? 1 : 0;
+      unsigned long s1 = ub + ud;
+      int c3 = (s1 < ub) ? 1 : 0;
+      unsigned long sum1 = s1 + uinb;
+      int c4 = (sum1 < s1) ? 1 : 0;
+      flag = c1 | c2 | c3 | c4;
+      x = (long)sum0; y = (long)sum1;
+      var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    } else {
+      int b1 = (ua < uc) ? 1 : 0;
+      unsigned long d0 = ua - uc;
+      int b2 = (d0 < uina) ? 1 : 0;
+      unsigned long diff0 = d0 - uina;
+      int b3 = (ub < ud) ? 1 : 0;
+      unsigned long d1 = ub - ud;
+      int b4 = (d1 < uinb) ? 1 : 0;
+      unsigned long diff1 = d1 - uinb;
       flag = b1 | b2 | b3 | b4;
       x = (long)diff0; y = (long)diff1;
       var_set_num(vm,"BORROW",flag); var_set_num(vm,"BW",flag);
