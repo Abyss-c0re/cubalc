@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.219-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack high-n bitfield metrics (complete DPOPMN/DANYMN/DALLMN low plane).
+
+### Language
+- `DPOPHN`/`DONESHN`/`2POPHN` n — pairwise popcount of high n bits
+- `DANYHN`/`2ANYHN`/`PAIRANYHN` n — pairwise any high-n bit set → 0/1
+- `DALLHN`/`2ALLHN`/`PAIRALLHN` n — pairwise all high-n bits set → 0/1
+- Proof `242_dpophn_dallhn.cubalc`
+
+### Prior
+See 1.12.218-universal.
+
+
 ## 1.12.218-universal — 2026-08-03
 
 ### Direction
