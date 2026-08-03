@@ -1,3 +1,17 @@
+## 1.12.307-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy ANDN stack↔cell (cells[i] op ~v after SNAND/NOR/XNOR TOC plane).
+
+### Language
+- `SANDNTOC`/`SBICTOC`/`BICTOC` — stack `i v → cells[i]&=~v` leave result
+- `SORNTOC`/`SORNOTTOC`/`ORNOTTOC` — stack `i v → cells[i]|=~v` leave result
+- `SXORNTOC`/`SXORNOTTOC`/`XORNOTTOC` — stack `i v → cells[i]^=~v` leave result
+- Proof `330_sandntoc_sxorntoc.cubalc`
+
+### Prior
+See 1.12.306-universal.
+
 ## 1.12.306-universal — 2026-08-03
 
 ### Direction

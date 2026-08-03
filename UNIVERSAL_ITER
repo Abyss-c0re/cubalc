@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 432 |
-| **digit** | **2** (urandom+genome; math dual TOC) |
-| **version** | `1.12.306-universal` |
-| **pass/fail** | **344 / 0** (green) |
-| **commit** | `f11cb75` → `origin/main` |
-| **ops** | `SSQRTOC`/`SISQRTTOC` |
-| **proof** | `programs/proof/329_ssqrtoc_sisqrtoc.cubalc` |
+| **iter** | 434 |
+| **digit** | **6** (urandom+genome; energy ANDN TOC) |
+| **version** | `1.12.307-universal` |
+| **pass/fail** | **345 / 0** (green) |
+| **commit** | `4863b30` → `origin/main` |
+| **ops** | `SANDNTOC`/`SORNTOC`/`SXORNTOC` |
+| **proof** | `programs/proof/330_sandntoc_sxorntoc.cubalc` |
 
 ### Delta
-Digit-2 stack↔cell math dual after scale TOC: square and integer sqrt into cell.
+Digit-6 energy ANDN stack↔cell: `cells[i]&=~v`, `|=~v`, `^=~v` after SNAND/NOR/XNOR TOC.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SSQRTOC` `SISQRTTOC` · aliases `SCELLSQR`/`SQRTOC`/`SCELLISQRT`/`ISQRTTOC`
-- Proof `329_ssqrtoc_sisqrtoc.cubalc`
+- `SANDNTOC` `SORNTOC` `SXORNTOC` · aliases `SBICTOC`/`BICTOC`/`SORNOTTOC`/`XORNOTTOC`
+- Proof `330_sandntoc_sxorntoc.cubalc`

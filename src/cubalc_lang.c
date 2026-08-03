@@ -5136,6 +5136,53 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 energy ANDN plane TOC: SANDNTOC · SORNTOC · SXORNTOC (cells[i] op ~v after SNAND/NOR/XNOR TOC) */
+  if (kw(&L->cur,"SANDNTOC")||kw(&L->cur,"SANDNTOCELL")||kw(&L->cur,"STACKANDNTOC")||
+      kw(&L->cur,"SBICTOC")||kw(&L->cur,"SANDNOTTOC")||kw(&L->cur,"SANDNAT")||
+      kw(&L->cur,"BICTOC")){
+    /* i v → cells[i] &= ~v, leave result (clear bits set in v) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] & ~v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORNTOC")||kw(&L->cur,"SORNTOCELL")||kw(&L->cur,"STACKORNTOC")||
+      kw(&L->cur,"SORNOTTOC")||kw(&L->cur,"SORNAT")||kw(&L->cur,"ORNOTTOC")){
+    /* i v → cells[i] |= ~v, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] | ~v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXORNTOC")||kw(&L->cur,"SXORNTOCELL")||kw(&L->cur,"STACKXORNTOC")||
+      kw(&L->cur,"SXORNOTTOC")||kw(&L->cur,"SXORNAT")||kw(&L->cur,"XORNOTTOC")){
+    /* i v → cells[i] ^= ~v, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i] ^ ~v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 stack↔cell shift foundation: SSHLTOC · SSHRTOC · SSARTOC (after SSHL/SSHR/SSAR stack + bitwise TOC) */
   if (kw(&L->cur,"SSHLTOC")||kw(&L->cur,"SSHLTOCELL")||kw(&L->cur,"STACKSHLTOC")||
       kw(&L->cur,"SHLTOC")||kw(&L->cur,"SCELLSHL")||kw(&L->cur,"SSHLAT")){
