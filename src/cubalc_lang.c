@@ -249,6 +249,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"WRAP")==0 || strcasecmp(tail,"WRAPMOD")==0 ||
             strcasecmp(tail,"WMOD")==0 ||
             strcasecmp(tail,"HYP")==0 || strcasecmp(tail,"HYPOT")==0 ||
+            strcasecmp(tail,"PCT")==0 || strcasecmp(tail,"PERCENT")==0 ||
+            strcasecmp(tail,"LERP")==0 || strcasecmp(tail,"MIX")==0 ||
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
@@ -6780,6 +6782,45 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
         y = (long)lo;
       }
     }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy mix: DPCT · DLERP */
+  if (kw(&L->cur,"DPCT")||kw(&L->cur,"2PCT")||kw(&L->cur,"S2PCT")||
+      kw(&L->cur,"STACK2PCT")||kw(&L->cur,"PAIRPCT")||kw(&L->cur,"DPERCENT")||
+      kw(&L->cur,"2PERCENT")||kw(&L->cur,"S2PERCENT")||kw(&L->cur,"PAIRPERCENT")){
+    /* a b c d → (a*100)/c (b*100)/d; /0 → 0  (energy percent of whole) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = c ? (a * 100 / c) : 0;
+    long y = d ? (b * 100 / d) : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DLERP")||kw(&L->cur,"2LERP")||kw(&L->cur,"S2LERP")||
+      kw(&L->cur,"STACK2LERP")||kw(&L->cur,"PAIRLERP")||kw(&L->cur,"DMIX")||
+      kw(&L->cur,"2MIX")||kw(&L->cur,"S2MIX")||kw(&L->cur,"PAIRMIX")){
+    /* a b c d t → lerp(a,c,t) lerp(b,d,t) with t in 0..100 percent:
+     * a + (c-a)*t/100 ; t clamped to [0,100] */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long t = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (t < 0) t = 0;
+    if (t > 100) t = 100;
+    long x = a + (c - a) * t / 100;
+    long y = b + (d - b) * t / 100;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

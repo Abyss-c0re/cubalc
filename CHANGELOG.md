@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.156-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy percent + lerp mix.
+
+### Language
+- `DPCT`/`2PCT`/`DPERCENT` — pairwise `(a*100)/c` / `(b*100)/d` (`/0→0`)
+- `DLERP`/`2LERP`/`DMIX` — shared-t percent lerp: `a+(c-a)*t/100` (t clamp 0..100)
+- Proof `179_dpct_dlerp.cubalc`
+
+### Prior
+See 1.12.155-universal.
+
 ## 1.12.155-universal — 2026-08-03
 
 ### Direction
