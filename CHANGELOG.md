@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.151-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack depth plane: pair right-rotate + depth-6.
+
+### Language
+- `2RROT`/`DRROT`/`RROT2` — rotate three pairs right (`a b c d e f → e f a b c d`)
+- `6DUP`/`HDUP`/`DUP6` — duplicate top 6
+- `6DROP`/`HDROP`/`DROP6` — drop top 6
+- Proof `174_2rrot_6dup.cubalc`
+
+### Prior
+See 1.12.150-universal.
+
 ## 1.12.150-universal — 2026-08-03
 
 ### Direction
