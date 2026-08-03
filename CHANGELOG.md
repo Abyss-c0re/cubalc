@@ -1,3 +1,17 @@
+## 1.12.254-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack imm inverted 8-bit byte field (dual of SNAND8N/SNOR8N/SXNOR8N).
+
+### Language
+- `DNAND8N`/`PAIRNAND8N` field n — byte n of each = ~(byte & field) & 0xFF (n 0..7)
+- `DNOR8N`/`PAIRNOR8N` field n — byte n of each = ~(byte | field) & 0xFF
+- `DXNOR8N`/`PAIRXNOR8N`/`DEQUIV8N` field n — byte n of each = ~(byte ^ field) & 0xFF
+- Proof `277_dnand8n_dnor8n.cubalc`
+
+### Prior
+See 1.12.253-universal.
+
 ## 1.12.253-universal — 2026-08-03
 
 ### Direction
