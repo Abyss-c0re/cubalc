@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.183-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy means (complete after `DAVG`).
+
+### Language
+- `DGEOM`/`2GEOM`/`DGEOMEAN` — pairwise geometric mean `floor(sqrt(a*c))` (non-neg; else 0)
+- `DHARM`/`2HARM`/`DHARMMEAN` — pairwise harmonic mean `2*a*c/(a+c)` (sum 0 → 0)
+- `DRMS`/`2RMS`/`DROOTMS` — pairwise root-mean-square `floor(sqrt((a²+c²)/2))`
+- Proof `206_dgeom_dharm_drms.cubalc`
+
+### Prior
+See 1.12.182-universal.
+
+
 ## 1.12.182-universal — 2026-08-03
 
 ### Direction

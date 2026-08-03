@@ -272,6 +272,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"DIST")==0 || strcasecmp(tail,"ABSDIFF")==0 ||
             strcasecmp(tail,"HAMM")==0 || strcasecmp(tail,"HAMMING")==0 ||
             strcasecmp(tail,"POPDIFF")==0 ||
+            strcasecmp(tail,"GEOM")==0 || strcasecmp(tail,"GEOMEAN")==0 ||
+            strcasecmp(tail,"HARM")==0 || strcasecmp(tail,"HARMMEAN")==0 ||
+            strcasecmp(tail,"RMS")==0 || strcasecmp(tail,"ROOTMS")==0 ||
             strcasecmp(tail,"DBL")==0 || strcasecmp(tail,"DOUBLE")==0 ||
             strcasecmp(tail,"HALF")==0 || strcasecmp(tail,"HALVE")==0 ||
             strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0 ||
@@ -7549,6 +7552,101 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       unsigned long ua = (unsigned long)(a ^ c), ub = (unsigned long)(b ^ d);
       while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
       while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy means: DGEOM · DHARM · DRMS (complete after DAVG) */
+  if (kw(&L->cur,"DGEOM")||kw(&L->cur,"2GEOM")||kw(&L->cur,"S2GEOM")||
+      kw(&L->cur,"STACK2GEOM")||kw(&L->cur,"PAIRGEOM")||kw(&L->cur,"DGEOMEAN")||
+      kw(&L->cur,"2GEOMEAN")||
+      kw(&L->cur,"DHARM")||kw(&L->cur,"2HARM")||kw(&L->cur,"S2HARM")||
+      kw(&L->cur,"STACK2HARM")||kw(&L->cur,"PAIRHARM")||kw(&L->cur,"DHARMMEAN")||
+      kw(&L->cur,"2HARMMEAN")||
+      kw(&L->cur,"DRMS")||kw(&L->cur,"2RMS")||kw(&L->cur,"S2RMS")||
+      kw(&L->cur,"STACK2RMS")||kw(&L->cur,"PAIRRMS")||kw(&L->cur,"DROOTMS")||
+      kw(&L->cur,"2ROOTMS")){
+    /* a b c d → f(a,c) f(b,d)
+     * GEOM: floor(sqrt(a*c)) for a,c>=0 else 0 (geometric mean)
+     * HARM: 2*a*c/(a+c) if a+c!=0 else 0 (harmonic mean)
+     * RMS:  floor(sqrt((a*a+c*c)/2)) root-mean-square */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_geom = (strcmp(op,"DGEOM")==0 || strcmp(op,"2GEOM")==0 || strcmp(op,"S2GEOM")==0 ||
+                   strcmp(op,"STACK2GEOM")==0 || strcmp(op,"PAIRGEOM")==0 ||
+                   strcmp(op,"DGEOMEAN")==0 || strcmp(op,"2GEOMEAN")==0);
+    int is_harm = (strcmp(op,"DHARM")==0 || strcmp(op,"2HARM")==0 || strcmp(op,"S2HARM")==0 ||
+                   strcmp(op,"STACK2HARM")==0 || strcmp(op,"PAIRHARM")==0 ||
+                   strcmp(op,"DHARMMEAN")==0 || strcmp(op,"2HARMMEAN")==0);
+    long x = 0, y = 0;
+    if (is_geom){
+      if (a >= 0 && c >= 0){
+        unsigned long long p = (unsigned long long)a * (unsigned long long)c;
+        unsigned long long t = 0, s = p + 1;
+        if (s == 0){ /* p == ULLONG_MAX */
+          t = 1ull << 32; /* isqrt ceiling bound for max */
+          while (t * t > p) t--;
+          while ((t + 1) * (t + 1) <= p) t++;
+        } else {
+          while (t + 1 <= p / (t + 1)) t++;
+        }
+        x = (long)t;
+      }
+      if (b >= 0 && d >= 0){
+        unsigned long long p = (unsigned long long)b * (unsigned long long)d;
+        unsigned long long t = 0;
+        if (p == ~0ull){
+          t = 1ull << 32;
+          while (t * t > p) t--;
+          while ((t + 1) * (t + 1) <= p) t++;
+        } else {
+          while (t + 1 <= p / (t + 1)) t++;
+        }
+        y = (long)t;
+      }
+    } else if (is_harm){
+      long s1 = a + c;
+      long s2 = b + d;
+      if (s1 != 0) x = (2 * a * c) / s1;
+      if (s2 != 0) y = (2 * b * d) / s2;
+    } else {
+      /* RMS */
+      {
+        long long aa = (long long)a * (long long)a;
+        long long cc = (long long)c * (long long)c;
+        unsigned long long sum = (unsigned long long)(aa + cc) / 2ull;
+        unsigned long long t = 0;
+        if (sum == ~0ull){
+          t = 1ull << 32;
+          while (t * t > sum) t--;
+          while ((t + 1) * (t + 1) <= sum) t++;
+        } else {
+          while (t + 1 <= sum / (t + 1)) t++;
+        }
+        x = (long)t;
+      }
+      {
+        long long bb = (long long)b * (long long)b;
+        long long dd = (long long)d * (long long)d;
+        unsigned long long sum = (unsigned long long)(bb + dd) / 2ull;
+        unsigned long long t = 0;
+        if (sum == ~0ull){
+          t = 1ull << 32;
+          while (t * t > sum) t--;
+          while ((t + 1) * (t + 1) <= sum) t++;
+        } else {
+          while (t + 1 <= sum / (t + 1)) t++;
+        }
+        y = (long)t;
+      }
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;

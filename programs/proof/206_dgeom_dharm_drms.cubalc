@@ -1,0 +1,123 @@
+# Proof 206 — digit-6 dual-stack energy means: DGEOM DHARM DRMS
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DGEOM: geometric mean floor(sqrt(a*c))
+CLEARSTACK
+PUSH 4
+PUSH 9
+PUSH 9
+PUSH 16
+DGEOM
+POP y
+POP x
+ASSERT x == 6
+ASSERT y == 12
+
+# perfect squares
+CLEARSTACK
+PUSH 16
+PUSH 25
+PUSH 4
+PUSH 4
+2GEOM
+POP y
+POP x
+ASSERT x == 8
+ASSERT y == 10
+
+# negative → 0
+CLEARSTACK
+PUSH -4
+PUSH 9
+PUSH 9
+PUSH -1
+PAIRGEOM
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DGEOMEAN zero
+CLEARSTACK
+PUSH 0
+PUSH 7
+PUSH 100
+PUSH 0
+DGEOMEAN
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DHARM: 2*a*c/(a+c)
+CLEARSTACK
+PUSH 4
+PUSH 6
+PUSH 12
+PUSH 3
+DHARM
+POP y
+POP x
+ASSERT x == 6
+ASSERT y == 4
+
+# 2HARM / PAIRHARM
+CLEARSTACK
+PUSH 10
+PUSH 5
+PUSH 10
+PUSH 20
+2HARM
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == 8
+
+# sum zero → 0
+CLEARSTACK
+PUSH 5
+PUSH -3
+PUSH -5
+PUSH 3
+PAIRHARM
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DRMS: floor(sqrt((a^2+c^2)/2))
+CLEARSTACK
+PUSH 3
+PUSH 0
+PUSH 4
+PUSH 0
+DRMS
+POP y
+POP x
+ASSERT x == 3
+ASSERT y == 0
+
+# 3-4-5 style: rms of 3 and 4 = sqrt(12.5) = 3
+CLEARSTACK
+PUSH 6
+PUSH 8
+PUSH 8
+PUSH 6
+2RMS
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 7
+
+# PAIRRMS equal values → abs value
+CLEARSTACK
+PUSH 10
+PUSH -5
+PUSH 10
+PUSH -5
+PAIRRMS
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == 5
