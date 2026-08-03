@@ -221,7 +221,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SATADD")==0 || strcasecmp(tail,"SATSUB")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
-            strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0)
+            strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
+            strcasecmp(tail,"LO8")==0 || strcasecmp(tail,"HI8")==0 ||
+            strcasecmp(tail,"PACK8")==0 || strcasecmp(tail,"PACKB")==0 ||
+            strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6944,6 +6947,53 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 dual-stack control-word pack: DLO8 · DHI8 · DPACK8 */
+  if (kw(&L->cur,"DLO8")||kw(&L->cur,"2LO8")||kw(&L->cur,"S2LO8")||
+      kw(&L->cur,"STACK2LO8")||kw(&L->cur,"PAIRLO8")||kw(&L->cur,"DLOWB")||
+      kw(&L->cur,"2LOWB")||
+      kw(&L->cur,"DHI8")||kw(&L->cur,"2HI8")||kw(&L->cur,"S2HI8")||
+      kw(&L->cur,"STACK2HI8")||kw(&L->cur,"PAIRHI8")||kw(&L->cur,"DHIB")||
+      kw(&L->cur,"2HIB")){
+    /* a b → lo8/hi8 of each */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_lo = (strcmp(op,"DLO8")==0 || strcmp(op,"2LO8")==0 || strcmp(op,"S2LO8")==0 ||
+                 strcmp(op,"STACK2LO8")==0 || strcmp(op,"PAIRLO8")==0 ||
+                 strcmp(op,"DLOWB")==0 || strcmp(op,"2LOWB")==0);
+    long x, y;
+    if (is_lo){
+      x = a & 0xFFL;
+      y = b & 0xFFL;
+    } else {
+      x = (a >> 8) & 0xFFL;
+      y = (b >> 8) & 0xFFL;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPACK8")||kw(&L->cur,"2PACK8")||kw(&L->cur,"S2PACK8")||
+      kw(&L->cur,"STACK2PACK8")||kw(&L->cur,"PAIRPACK8")||kw(&L->cur,"DPACKB")||
+      kw(&L->cur,"2PACKB")){
+    /* a b c d → ((a&0xFF)<<8)|(c&0xFF)  ((b&0xFF)<<8)|(d&0xFF)  — hi,lo bytes */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = ((a & 0xFFL) << 8) | (c & 0xFFL);
+    long y = ((b & 0xFFL) << 8) | (d & 0xFFL);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

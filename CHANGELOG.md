@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.139-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack control-word byte pack/extract.
+
+### Language
+- `DLO8`/`2LO8` · `DHI8`/`2HI8` — low/high byte of each of pair
+- `DPACK8`/`2PACK8` — pack hi,lo bytes: `a b c d → (a<<8|c) (b<<8|d)` (masked)
+- Proof `162_dlo8_dpack8.cubalc`
+
+### Prior
+See 1.12.138-universal.
+
 ## 1.12.138-universal — 2026-08-03
 
 ### Direction
