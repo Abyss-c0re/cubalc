@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.207-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → depth-6 tuck (complete plane after 6ROT/6OVER).
+
+### Language
+- `6TUCK`/`TUCK6`/`HTUCK` — copy TOS under top 5: `a b c d e f → f a b c d e f`
+- Proof `230_6tuck.cubalc`
+
+### Prior
+See 1.12.206-universal.
+
+
+
 ## 1.12.206-universal — 2026-08-03
 
 ### Direction

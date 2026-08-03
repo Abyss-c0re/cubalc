@@ -1,0 +1,111 @@
+# Proof 230 — digit-8 depth-6 tuck: 6TUCK
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# 6TUCK: a b c d e f → f a b c d e f
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+6TUCK
+# stack depth 7: 6 1 2 3 4 5 6
+POP t
+ASSERT t == 6
+POP t
+ASSERT t == 5
+POP t
+ASSERT t == 4
+POP t
+ASSERT t == 3
+POP t
+ASSERT t == 2
+POP t
+ASSERT t == 1
+POP t
+ASSERT t == 6
+
+# TUCK6 alias
+CLEARSTACK
+PUSH 10
+PUSH 20
+PUSH 30
+PUSH 40
+PUSH 50
+PUSH 60
+TUCK6
+POP t
+ASSERT t == 60
+POP t
+ASSERT t == 50
+POP t
+ASSERT t == 40
+POP t
+ASSERT t == 30
+POP t
+ASSERT t == 20
+POP t
+ASSERT t == 10
+POP t
+ASSERT t == 60
+
+# HTUCK
+CLEARSTACK
+PUSH 7
+PUSH 8
+PUSH 9
+PUSH 10
+PUSH 11
+PUSH 12
+HTUCK
+POP t
+ASSERT t == 12
+POP t
+ASSERT t == 11
+POP t
+ASSERT t == 10
+POP t
+ASSERT t == 9
+POP t
+ASSERT t == 8
+POP t
+ASSERT t == 7
+POP t
+ASSERT t == 12
+
+# 6TUCK then drop top restores original order with f under
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+6TUCK
+DROP
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 6
+ASSERT b == 1
+ASSERT c == 2
+ASSERT d == 3
+ASSERT e == 4
+ASSERT f == 5
+
+# soft fail shallow
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+6TUCK
+ASSERT OK == 0
+
+CLEARSTACK
+6TUCK
+ASSERT OK == 0

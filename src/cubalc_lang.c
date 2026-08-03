@@ -6012,6 +6012,26 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",f); vm->last_n=f;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 depth-6 tuck: 6TUCK (complete 5/6 plane after 6OVER) */
+  if (kw(&L->cur,"6TUCK")||kw(&L->cur,"HTUCK")||kw(&L->cur,"TUCK6")||
+      kw(&L->cur,"STACK6TUCK")){
+    /* a b c d e f → f a b c d e f  (copy TOS under top 5) */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], b = vm->stack[vm->sp-5];
+    long c = vm->stack[vm->sp-4], d = vm->stack[vm->sp-3];
+    long e = vm->stack[vm->sp-2], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = f;
+    vm->stack[vm->sp-5] = a;
+    vm->stack[vm->sp-4] = b;
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = d;
+    vm->stack[vm->sp-1] = e;
+    vm->stack[vm->sp++] = f;
+    var_set_num(vm,"LAST_N",f); vm->last_n=f;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){
     /* a b -> a a b */
