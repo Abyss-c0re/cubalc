@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.136-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack unary predicates (parity + sign-vs-zero).
+
+### Language
+- `DODD`/`2ODD` · `DEVEN`/`2EVEN` — parity predicates on pair
+- `DLTZ`/`2LTZ` · `DGTZ`/`2GTZ` · `DLEZ`/`2LEZ` · `DGEZ`/`2GEZ` — compare to zero
+- Proof `159_dodd_dltz.cubalc`
+
+### Prior
+See 1.12.135-universal.
+
 ## 1.12.135-universal — 2026-08-03
 
 ### Direction

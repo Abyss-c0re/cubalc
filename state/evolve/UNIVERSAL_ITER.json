@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:54:52+0300",
-  "iter": 239,
-  "algocube_digit": 2,
-  "version": "1.12.135-universal",
-  "pass": 173,
+  "ts": "2026-08-03T05:02:55+0300",
+  "iter": 240,
+  "algocube_digit": 1,
+  "version": "1.12.136-universal",
+  "pass": 174,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,13 +18,20 @@
     "flow_compile"
   ],
   "ops": [
-    "DLOG2",
-    "2LOG2",
-    "DPHI",
-    "2PHI",
-    "DISPRIME",
-    "2ISPRIME"
+    "DODD",
+    "2ODD",
+    "DEVEN",
+    "2EVEN",
+    "DLTZ",
+    "2LTZ",
+    "DGTZ",
+    "2GTZ",
+    "DLEZ",
+    "2LEZ",
+    "DGEZ",
+    "2GEZ"
   ],
-  "proof": "programs/proof/158_dlog2_dphi.cubalc",
-  "delta": "digit-2 dual-stack numthy unary DLOG2 DPHI DISPRIME"
+  "proof": "programs/proof/159_dodd_dltz.cubalc",
+  "delta": "digit-1 dual-stack parity + zero-compare predicates",
+  "note": "tree restored after evolve mass-delete race"
 }

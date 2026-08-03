@@ -213,7 +213,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0 ||
             strcasecmp(tail,"LOG2")==0 || strcasecmp(tail,"ILOG2")==0 ||
             strcasecmp(tail,"PHI")==0 || strcasecmp(tail,"TOTIENT")==0 ||
-            strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0)
+            strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0 ||
+            strcasecmp(tail,"ODD")==0 || strcasecmp(tail,"EVEN")==0 ||
+            strcasecmp(tail,"LTZ")==0 || strcasecmp(tail,"GTZ")==0 ||
+            strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6470,6 +6473,48 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else if (is_not){ x = ~a; y = ~b; }
     else if (is_eqz){ x = (a == 0) ? 1 : 0; y = (b == 0) ? 1 : 0; }
     else { x = (a != 0) ? 1 : 0; y = (b != 0) ? 1 : 0; }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack unary predicates: DODD · DEVEN · DLTZ · DGTZ · DLEZ · DGEZ */
+  if (kw(&L->cur,"DODD")||kw(&L->cur,"2ODD")||kw(&L->cur,"S2ODD")||
+      kw(&L->cur,"STACK2ODD")||kw(&L->cur,"PAIRODD")||
+      kw(&L->cur,"DEVEN")||kw(&L->cur,"2EVEN")||kw(&L->cur,"S2EVEN")||
+      kw(&L->cur,"STACK2EVEN")||kw(&L->cur,"PAIREVEN")||
+      kw(&L->cur,"DLTZ")||kw(&L->cur,"2LTZ")||kw(&L->cur,"S2LTZ")||
+      kw(&L->cur,"STACK2LTZ")||kw(&L->cur,"PAIRLTZ")||
+      kw(&L->cur,"DGTZ")||kw(&L->cur,"2GTZ")||kw(&L->cur,"S2GTZ")||
+      kw(&L->cur,"STACK2GTZ")||kw(&L->cur,"PAIRGTZ")||
+      kw(&L->cur,"DLEZ")||kw(&L->cur,"2LEZ")||kw(&L->cur,"S2LEZ")||
+      kw(&L->cur,"STACK2LEZ")||kw(&L->cur,"PAIRLEZ")||
+      kw(&L->cur,"DGEZ")||kw(&L->cur,"2GEZ")||kw(&L->cur,"S2GEZ")||
+      kw(&L->cur,"STACK2GEZ")||kw(&L->cur,"PAIRGEZ")){
+    /* a b → pred(a) pred(b) as 0/1 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_odd = (strcmp(op,"DODD")==0 || strcmp(op,"2ODD")==0 || strcmp(op,"S2ODD")==0 ||
+                  strcmp(op,"STACK2ODD")==0 || strcmp(op,"PAIRODD")==0);
+    int is_even = (strcmp(op,"DEVEN")==0 || strcmp(op,"2EVEN")==0 || strcmp(op,"S2EVEN")==0 ||
+                   strcmp(op,"STACK2EVEN")==0 || strcmp(op,"PAIREVEN")==0);
+    int is_ltz = (strcmp(op,"DLTZ")==0 || strcmp(op,"2LTZ")==0 || strcmp(op,"S2LTZ")==0 ||
+                  strcmp(op,"STACK2LTZ")==0 || strcmp(op,"PAIRLTZ")==0);
+    int is_gtz = (strcmp(op,"DGTZ")==0 || strcmp(op,"2GTZ")==0 || strcmp(op,"S2GTZ")==0 ||
+                  strcmp(op,"STACK2GTZ")==0 || strcmp(op,"PAIRGTZ")==0);
+    int is_lez = (strcmp(op,"DLEZ")==0 || strcmp(op,"2LEZ")==0 || strcmp(op,"S2LEZ")==0 ||
+                  strcmp(op,"STACK2LEZ")==0 || strcmp(op,"PAIRLEZ")==0);
+    long x, y;
+    if (is_odd){ x = (a & 1L) ? 1 : 0; y = (b & 1L) ? 1 : 0; }
+    else if (is_even){ x = (a & 1L) ? 0 : 1; y = (b & 1L) ? 0 : 1; }
+    else if (is_ltz){ x = (a < 0) ? 1 : 0; y = (b < 0) ? 1 : 0; }
+    else if (is_gtz){ x = (a > 0) ? 1 : 0; y = (b > 0) ? 1 : 0; }
+    else if (is_lez){ x = (a <= 0) ? 1 : 0; y = (b <= 0) ? 1 : 0; }
+    else { x = (a >= 0) ? 1 : 0; y = (b >= 0) ? 1 : 0; }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
