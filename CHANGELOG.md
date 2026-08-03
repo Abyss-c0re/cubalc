@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.208-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack immediate compare complete (dual of SNEN/SLENN/SGENN).
+
+### Language
+- `DNEN`/`2NEN`/`PAIRNEN` n — pairwise `(x!=n)?1:0`
+- `DLENN`/`DLEQN`/`2LENN` n — pairwise `(x<=n)?1:0`
+- `DGENN`/`DGEQN`/`2GENN` n — pairwise `(x>=n)?1:0`
+- Proof `231_dnen_dgenn.cubalc`
+
+### Prior
+See 1.12.207-universal.
+
+
+
 ## 1.12.207-universal — 2026-08-03
 
 ### Direction
