@@ -1,3 +1,17 @@
+## 1.12.251-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack imm 4-bit nibble field bitwise (dual of SAND4N/SOR4N/SXOR4N; complete dual field bitwise ladder).
+
+### Language
+- `DAND4N`/`PAIRAND4N` field n — nibble n of each &= field (n 0..15)
+- `DOR4N`/`PAIROR4N` field n — nibble n of each |= field
+- `DXOR4N`/`PAIRXOR4N`/`DFLIP4N` field n — nibble n of each ^= field
+- Proof `274_dand4n_dor4n.cubalc`
+
+### Prior
+See 1.12.250-universal.
+
 ## 1.12.250-universal — 2026-08-03
 
 ### Direction
