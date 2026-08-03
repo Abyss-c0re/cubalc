@@ -12766,6 +12766,49 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 stack immediate modular ALU: SADDMODN · SSUBMODN · SMULMODN (dual of DADDMODN plane) */
+  if (kw(&L->cur,"SADDMODN")||kw(&L->cur,"STACKADDMODN")||kw(&L->cur,"ADDMODN")||
+      kw(&L->cur,"SADDMODIMM")||
+      kw(&L->cur,"SSUBMODN")||kw(&L->cur,"STACKSUBMODN")||kw(&L->cur,"SUBMODN")||
+      kw(&L->cur,"SSUBMODIMM")||
+      kw(&L->cur,"SMULMODN")||kw(&L->cur,"STACKMULMODN")||kw(&L->cur,"MULMODN")||
+      kw(&L->cur,"SMULMODIMM")){
+    /* TOS + k m → f(TOS); m<=0 → 0; result in [0,m)
+     * ADD: (x+k)%m  SUB: (x-k)%m  MUL: (x*k)%m */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_add = (strcmp(op,"SADDMODN")==0 || strcmp(op,"STACKADDMODN")==0 ||
+                  strcmp(op,"ADDMODN")==0 || strcmp(op,"SADDMODIMM")==0);
+    int is_sub = (strcmp(op,"SSUBMODN")==0 || strcmp(op,"STACKSUBMODN")==0 ||
+                  strcmp(op,"SUBMODN")==0 || strcmp(op,"SSUBMODIMM")==0);
+    /* else SMULMODN */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long x = 0;
+    if (m > 0){
+      long kk = k % m; if (kk < 0) kk += m;
+      long aa = a % m; if (aa < 0) aa += m;
+      if (is_add){
+        x = (aa + kk) % m;
+      } else if (is_sub){
+        x = (aa - kk + m) % m;
+      } else {
+        long acc = 0, xx = aa, kk2 = kk;
+        while (kk2 > 0){
+          if (kk2 & 1) acc = (acc + xx) % m;
+          xx = (xx + xx) % m;
+          kk2 >>= 1;
+        }
+        x = acc;
+      }
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3/0 stack pack+byte: SPACK16 SHI16 SLO16 SBYTE SLOBYTE SHIBYTE */
   if (kw(&L->cur,"SLOBYTE")||kw(&L->cur,"STACKLOBYTE")||
       kw(&L->cur,"SHIBYTE")||kw(&L->cur,"STACKHIBYTE")||

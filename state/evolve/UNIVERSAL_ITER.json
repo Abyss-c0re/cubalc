@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T14:31:10+0300",
-  "iter": 324,
-  "algocube_digit": 8,
-  "version": "1.12.227-universal",
-  "pass": 265,
+  "ts": "2026-08-03T14:37:19+0300",
+  "iter": 326,
+  "algocube_digit": 2,
+  "version": "1.12.228-universal",
+  "pass": 266,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DUNPACK32",
-  "proof": "250_dunpack32.cubalc"
+  "delta": "SADDMODN SSUBMODN SMULMODN",
+  "proof": "251_saddmodn_smulmodn.cubalc"
 }

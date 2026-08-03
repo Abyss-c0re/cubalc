@@ -1,3 +1,18 @@
+## 1.12.228-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → stack immediate modular ALU (dual of dual-stack DADDMODN/DSUBMODN/DMULMODN).
+
+### Language
+- `SADDMODN`/`STACKADDMODN`/`ADDMODN` k m — TOS = `(TOS+k) mod m`
+- `SSUBMODN`/`STACKSUBMODN`/`SUBMODN` k m — TOS = `(TOS-k) mod m`
+- `SMULMODN`/`STACKMULMODN`/`MULMODN` k m — TOS = `(TOS*k) mod m`
+- Proof `251_saddmodn_smulmodn.cubalc`
+
+### Prior
+See 1.12.227-universal.
+
+
 ## 1.12.227-universal — 2026-08-03
 
 ### Direction
