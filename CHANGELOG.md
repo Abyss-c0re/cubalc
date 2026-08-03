@@ -1,3 +1,17 @@
+## 1.12.246-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack imm 16-bit halfword field bitwise merge (complete halfword plane after SSET16N/SAND32N).
+
+### Language
+- `SAND16N`/`AND16N` field n — halfword n of TOS &= field (n 0..3)
+- `SOR16N`/`OR16N` field n — halfword n of TOS |= field
+- `SXOR16N`/`XOR16N`/`SFLIP16N` field n — halfword n of TOS ^= field
+- Proof `269_sand16n_sor16n.cubalc`
+
+### Prior
+See 1.12.245-universal.
+
 ## 1.12.245-universal — 2026-08-03
 
 ### Direction
