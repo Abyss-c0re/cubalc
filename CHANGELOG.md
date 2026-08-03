@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.193-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control combinator conditionals (after DSWAPIF/DDUPIF).
+
+### Language
+- `DOVERIF`/`2OVERIF`/`DQOVER` — conditional OVER: `a b f → a b a` if f else `a b`
+- `DTUCKIF`/`2TUCKIF`/`DQTUCK` — conditional TUCK: `a b f → b a b` if f else `a b`
+- Proof `216_doverif_dtuckif.cubalc`
+
+### Prior
+See 1.12.192-universal.
+
+
 ## 1.12.192-universal — 2026-08-03
 
 ### Direction
