@@ -8808,6 +8808,72 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",cnt); vm->last_n=cnt;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 cell search ext: FINDLASTCELL · FIRSTNZ · LASTNZ */
+  if (kw(&L->cur,"FINDLASTCELL")||kw(&L->cur,"RFINDCELL")||kw(&L->cur,"CELLLASTFIND")||
+      kw(&L->cur,"RINDEXCELL")||kw(&L->cur,"LASTFINDCELL")){
+    /* FINDLASTCELL val [lo [hi]] — last index of val, or -1; OK=found */
+    lex_next(L);
+    long val = parse_expr(vm,L);
+    long lo = 0, hi = CUBALC_CELL_N - 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      lo = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        hi = parse_expr(vm,L);
+      else hi = CUBALC_CELL_N - 1;
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long found = -1;
+    for (long i=hi;i>=lo;i--){
+      if (vm->cells[(int)i] == val){ found = i; break; }
+    }
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"FIRSTNZ")||kw(&L->cur,"FIRSTNONZERO")||kw(&L->cur,"CELLFIRSTNZ")||
+      kw(&L->cur,"FINDNZ")||
+      kw(&L->cur,"LASTNZ")||kw(&L->cur,"LASTNONZERO")||kw(&L->cur,"CELLLASTNZ")||
+      kw(&L->cur,"RFINDNZ")){
+    /* FIRSTNZ/LASTNZ [lo [hi]] — index of first/last nonzero, or -1 */
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    long lo = 0, hi = CUBALC_CELL_N - 1;
+    if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+        (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"END") && !kw(&L->cur,"CUBE"))){
+      lo = parse_expr(vm,L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"END")))
+        hi = parse_expr(vm,L);
+      else hi = CUBALC_CELL_N - 1;
+    }
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int want_last = (strcmp(op,"LASTNZ")==0 || strcmp(op,"LASTNONZERO")==0 ||
+                     strcmp(op,"CELLLASTNZ")==0 || strcmp(op,"RFINDNZ")==0);
+    long found = -1;
+    if (want_last){
+      for (long i=hi;i>=lo;i--){
+        if (vm->cells[(int)i] != 0){ found = i; break; }
+      }
+    } else {
+      for (long i=lo;i<=hi;i++){
+        if (vm->cells[(int)i] != 0){ found = i; break; }
+      }
+    }
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"REVCELL")||kw(&L->cur,"CELLREV")||kw(&L->cur,"REVERSECELLS")){
     /* REVCELL lo hi — reverse cell[lo..hi] in place */
     lex_next(L);
@@ -9442,6 +9508,82 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 stack cell search: SFINDCELL · SFINDLAST · SFIRSTNZ · SLASTNZ */
+  if (kw(&L->cur,"SFINDCELL")||kw(&L->cur,"SCELLFIND")||kw(&L->cur,"STACKFINDCELL")||
+      kw(&L->cur,"SFINDC")){
+    /* lo hi val (stack) → first index of val or -1 */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long val = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long found = -1;
+    for (long i=lo;i<=hi;i++){
+      if (vm->cells[(int)i] == val){ found = i; break; }
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = found;
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SFINDLAST")||kw(&L->cur,"SRFINDCELL")||kw(&L->cur,"STACKFINDLAST")||
+      kw(&L->cur,"SFINDL")||kw(&L->cur,"SLASTFIND")){
+    /* lo hi val (stack) → last index of val or -1 */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long val = vm->stack[--vm->sp];
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    long found = -1;
+    for (long i=hi;i>=lo;i--){
+      if (vm->cells[(int)i] == val){ found = i; break; }
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = found;
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SFIRSTNZ")||kw(&L->cur,"STACKFIRSTNZ")||kw(&L->cur,"SFNZ")||
+      kw(&L->cur,"SLASTNZ")||kw(&L->cur,"STACKLASTNZ")||kw(&L->cur,"SLNZ")){
+    /* lo hi (stack) → first/last nonzero index or -1 */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int want_last = (strcmp(op,"SLASTNZ")==0 || strcmp(op,"STACKLASTNZ")==0 ||
+                     strcmp(op,"SLNZ")==0);
+    long found = -1;
+    if (want_last){
+      for (long i=hi;i>=lo;i--){
+        if (vm->cells[(int)i] != 0){ found = i; break; }
+      }
+    } else {
+      for (long i=lo;i<=hi;i++){
+        if (vm->cells[(int)i] != 0){ found = i; break; }
+      }
+    }
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = found;
+    var_set_num(vm,"LAST_N",found); vm->last_n=found;
+    var_set_num(vm,"SP",vm->sp);
+    var_set_num(vm,"OK", found >= 0 ? 1 : 0);
+    bump(vm); return 1;
   }
   /* digit-9 cell fold arith: SUBCELL/DIVCELL/MODCELL + SCANCELL + CLAMPCELL */
   if (kw(&L->cur,"SUBCELL")||kw(&L->cur,"CELLSUB")||kw(&L->cur,"SUBFROMCELL")){

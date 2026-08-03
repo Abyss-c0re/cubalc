@@ -120,7 +120,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             136_aliquot_perfect \
             137_dupz_swapif \
             138_anycell_eqrange \
-            139_ddiv_dmin; do
+            139_ddiv_dmin \
+            140_findlast_nz; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

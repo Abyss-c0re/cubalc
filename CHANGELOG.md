@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.117-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → cell search: last-find + first/last nonzero + stack duals.
+
+### Language
+- `FINDLASTCELL`/`RFINDCELL` val [lo [hi]] — last index of val (−1 if none)
+- `FIRSTNZ`/`LASTNZ` [lo [hi]] — first/last nonzero index
+- Stack: `SFINDCELL` · `SFINDLAST` · `SFIRSTNZ` · `SLASTNZ`
+- Proof `140_findlast_nz.cubalc`
+
+### Prior
+See 1.12.116-universal.
+
 ## 1.12.116-universal — 2026-08-03
 
 ### Direction
