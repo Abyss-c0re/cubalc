@@ -1,3 +1,17 @@
+## 1.12.309-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → depth-9 over/tuck (complete depth-9 plane after 9NIP/9ROT).
+- Lexer: promote `9OVER`/`9TUCK` tails.
+
+### Language
+- `9OVER`/`OVER9`/`STACK9OVER` — 18-deep: copy under nonet onto stack
+- `9TUCK`/`TUCK9`/`STACK9TUCK` — `a…i → i a…h i` (copy TOS under top 8)
+- Proof `332_9over_9tuck.cubalc`
+
+### Prior
+See 1.12.308-universal.
+
 ## 1.12.308-universal — 2026-08-03
 
 ### Direction

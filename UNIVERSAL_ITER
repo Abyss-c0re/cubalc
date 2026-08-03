@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 435 |
-| **digit** | **9** (urandom+genome; depth-9 combinators) |
-| **version** | `1.12.308-universal` |
-| **pass/fail** | **346 / 0** (green) |
-| **commit** | `eb59128` → `origin/main` |
-| **ops** | `9NIP`/`9ROT`/`9RROT` |
-| **proof** | `programs/proof/331_9nip_9rot.cubalc` |
+| **iter** | 436 |
+| **digit** | **9** (urandom+genome; depth-9 over/tuck complete) |
+| **version** | `1.12.309-universal` |
+| **pass/fail** | **347 / 0** (green) |
+| **commit** | `caf9a74` → `origin/main` |
+| **ops** | `9OVER`/`9TUCK` |
+| **proof** | `programs/proof/332_9over_9tuck.cubalc` |
 
 ### Delta
-Digit-9 depth-9 combinator ext after foundation: keep ends / rotate left / rotate right on top 9.
+Digit-9 complete depth-9 plane: copy under nonet / tuck TOS under top 8.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `9NIP` `9ROT` `9RROT` · aliases `NIP9`/`ROT9`/`RROT9`
-- Proof `331_9nip_9rot.cubalc`
+- `9OVER` `9TUCK` · aliases `OVER9`/`TUCK9`
+- Proof `332_9over_9tuck.cubalc`
