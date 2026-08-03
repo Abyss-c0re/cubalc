@@ -274,10 +274,13 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
+            strcasecmp(tail,"CLIP32")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
+            strcasecmp(tail,"SEXT32")==0 || strcasecmp(tail,"SEXTD")==0 ||
             strcasecmp(tail,"ZEXT8")==0 || strcasecmp(tail,"ZEXT16")==0 ||
             strcasecmp(tail,"ZEXTB")==0 || strcasecmp(tail,"ZEXTW")==0 ||
+            strcasecmp(tail,"ZEXT32")==0 || strcasecmp(tail,"ZEXTD")==0 ||
             strcasecmp(tail,"LO8")==0 || strcasecmp(tail,"HI8")==0 ||
             strcasecmp(tail,"PACK8")==0 || strcasecmp(tail,"PACKB")==0 ||
             strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0 ||
@@ -8295,6 +8298,49 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     } else {
       x = a & 0xFFFFL;
       y = b & 0xFFFFL;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
+  if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
+      kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
+      kw(&L->cur,"DSEXT32")||kw(&L->cur,"2SEXT32")||kw(&L->cur,"S2SEXT32")||
+      kw(&L->cur,"STACK2SEXT32")||kw(&L->cur,"PAIRSEXT32")||kw(&L->cur,"DSEXTD")||
+      kw(&L->cur,"2SEXTD")||
+      kw(&L->cur,"DZEXT32")||kw(&L->cur,"2ZEXT32")||kw(&L->cur,"S2ZEXT32")||
+      kw(&L->cur,"STACK2ZEXT32")||kw(&L->cur,"PAIRZEXT32")||kw(&L->cur,"DZEXTD")||
+      kw(&L->cur,"2ZEXTD")||kw(&L->cur,"DZEROEXT32")){
+    /* a b → f(a) f(b)
+     * CLIP32: clamp to unsigned 32-bit [0, 2^32-1]
+     * SEXT32: sign-extend low 32 bits to 64
+     * ZEXT32: zero-extend low 32 bits */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_clip = (strcmp(op,"DCLIP32")==0 || strcmp(op,"2CLIP32")==0 ||
+                   strcmp(op,"S2CLIP32")==0 || strcmp(op,"STACK2CLIP32")==0 ||
+                   strcmp(op,"PAIRCLIP32")==0);
+    int is_sext = (strcmp(op,"DSEXT32")==0 || strcmp(op,"2SEXT32")==0 ||
+                   strcmp(op,"S2SEXT32")==0 || strcmp(op,"STACK2SEXT32")==0 ||
+                   strcmp(op,"PAIRSEXT32")==0 || strcmp(op,"DSEXTD")==0 ||
+                   strcmp(op,"2SEXTD")==0);
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    const long u32max = 4294967295L; /* 2^32-1 */
+    if (is_clip){
+      x = a < 0 ? 0 : (a > u32max ? u32max : a);
+      y = b < 0 ? 0 : (b > u32max ? u32max : b);
+    } else if (is_sext){
+      x = a & 0xFFFFFFFFL; if (x & 0x80000000L) x |= ~0xFFFFFFFFL;
+      y = b & 0xFFFFFFFFL; if (y & 0x80000000L) y |= ~0xFFFFFFFFL;
+    } else {
+      x = a & 0xFFFFFFFFL;
+      y = b & 0xFFFFFFFFL;
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;

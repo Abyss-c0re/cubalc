@@ -170,7 +170,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             186_dumulhi_dbswap \
             187_dult_duge \
             188_dzext8_dzext16 \
-            189_daddc_dsubb; do
+            189_daddc_dsubb \
+            190_dclip32_dext32; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

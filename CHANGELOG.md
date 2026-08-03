@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.167-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack 32-bit data-path clip/extend.
+
+### Language
+- `DCLIP32`/`2CLIP32` — pairwise clamp to u32 `[0, 2^32-1]`
+- `DSEXT32`/`2SEXT32`/`DSEXTD` — pairwise sign-extend low 32 bits
+- `DZEXT32`/`2ZEXT32`/`DZEXTD` — pairwise zero-extend low 32 bits
+- Proof `190_dclip32_dext32.cubalc`
+
+### Prior
+See 1.12.166-universal.
+
+
 ## 1.12.166-universal — 2026-08-03
 
 ### Direction
