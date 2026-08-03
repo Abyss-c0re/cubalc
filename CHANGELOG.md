@@ -1,3 +1,18 @@
+## 1.12.315-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → zero-relative compare TOC (complete S0*/DLTZ plane into cell after SEQZ/SNEZ TOC).
+
+### Language
+- `SLTZTOC`/`S0LTTOC`/`SLTZAT` — stack `i → cells[i]=(cells[i]<0)?1:0` leave result
+- `SGTZTOC`/`S0GTTOC`/`SGTZAT` — stack `i → cells[i]=(cells[i]>0)?1:0` leave result
+- `SLEZTOC`/`S0LETOC`/`SLEZAT` — stack `i → cells[i]=(cells[i]<=0)?1:0` leave result
+- `SGEZTOC`/`S0GEZTOC`/`SGEZAT` — stack `i → cells[i]=(cells[i]>=0)?1:0` leave result
+- Proof `338_sltz_sgez_toc.cubalc`
+
+### Prior
+See 1.12.314-universal.
+
 ## 1.12.314-universal — 2026-08-03
 
 ### Direction
