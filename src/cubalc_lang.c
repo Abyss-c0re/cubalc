@@ -10706,6 +10706,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack imm reverse ALU: DSUBFROMN · DDIVFROMN · DMODFROMN (dual of SSUBFROMN plane) */
+  if (kw(&L->cur,"DSUBFROMN")||kw(&L->cur,"S2SUBFROMN")||kw(&L->cur,"STACK2SUBFROMN")||
+      kw(&L->cur,"PAIRSUBFROMN")||kw(&L->cur,"DRSUBN")||kw(&L->cur,"PAIRRSUBN")||
+      kw(&L->cur,"DNSUBN")||kw(&L->cur,"DSUBFROMIMM")){
+    /* a b + n → (n-a) (n-b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = n - a;
+    long y = n - b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDIVFROMN")||kw(&L->cur,"S2DIVFROMN")||kw(&L->cur,"STACK2DIVFROMN")||
+      kw(&L->cur,"PAIRDIVFROMN")||kw(&L->cur,"DRDIVN")||kw(&L->cur,"PAIRRDIVN")||
+      kw(&L->cur,"DDIVFROMIMM")){
+    /* a b + n → (a==0?0:n/a) (b==0?0:n/b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a == 0) ? 0 : (n / a);
+    long y = (b == 0) ? 0 : (n / b);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMODFROMN")||kw(&L->cur,"S2MODFROMN")||kw(&L->cur,"STACK2MODFROMN")||
+      kw(&L->cur,"PAIRMODFROMN")||kw(&L->cur,"DRMODN")||kw(&L->cur,"PAIRRMODN")||
+      kw(&L->cur,"DREMFROMN")||kw(&L->cur,"PAIRREMFROMN")||kw(&L->cur,"DMODFROMIMM")){
+    /* a b + n → (a==0?0:n%a) (b==0?0:n%b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a == 0) ? 0 : (n % a);
+    long y = (b == 0) ? 0 : (n % b);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 dual-stack immediate bitwise mask: DANDI · DORI · DXORI (dual of SANDI/SORI/SXORI) */
   if (kw(&L->cur,"DANDI")||kw(&L->cur,"2ANDI")||kw(&L->cur,"S2ANDI")||
       kw(&L->cur,"STACK2ANDI")||kw(&L->cur,"PAIRANDI")||kw(&L->cur,"DANDIMM")||

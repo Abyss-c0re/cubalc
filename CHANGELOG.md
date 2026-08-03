@@ -1,3 +1,17 @@
+## 1.12.266-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack imm reverse ALU (dual of SSUBFROMN/SDIVFROMN/SMODFROMN).
+
+### Language
+- `DSUBFROMN`/`PAIRSUBFROMN`/`DRSUBN` n — a b → (n−a) (n−b)
+- `DDIVFROMN`/`PAIRDIVFROMN`/`DRDIVN` n — a b → (n/a) (n/b) (lane 0 → 0)
+- `DMODFROMN`/`PAIRMODFROMN`/`DREMFROMN` n — a b → (n%a) (n%b) (lane 0 → 0)
+- Proof `289_dsubfromn_ddivfromn.cubalc`
+
+### Prior
+See 1.12.265-universal.
+
 ## 1.12.265-universal — 2026-08-03
 
 ### Direction
