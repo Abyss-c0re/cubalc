@@ -1,3 +1,17 @@
+## 1.12.297-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → stack↔cell unary ALU (dual of SABS/SNEG/SNOT after bitwise TOC plane).
+
+### Language
+- `SABSTOC`/`SABSCELL`/`SCELLABS` — stack `i → cells[i]=|cells[i]|` leave abs
+- `SNEGTOC`/`SNEGCELL`/`SCELLNEG` — stack `i → cells[i]=-cells[i]` leave result
+- `SNOTTOC`/`SNOTTOCELL`/`BINVTOC` — stack `i → cells[i]=~cells[i]` leave result
+- Proof `320_sabstoc_snottoc.cubalc`
+
+### Prior
+See 1.12.296-universal.
+
 ## 1.12.296-universal — 2026-08-03
 
 ### Direction

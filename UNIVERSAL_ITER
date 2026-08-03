@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 416 |
-| **digit** | **1** (urandom; data plane bitwise) |
-| **version** | `1.12.296-universal` |
-| **pass/fail** | **334 / 0** (green) |
+| **iter** | 419 |
+| **digit** | **7** (urandom; unary ALU plane) |
+| **version** | `1.12.297-universal` |
+| **pass/fail** | **335 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SANDTOC`/`SORTOC`/`SXORTOC` |
-| **proof** | `programs/proof/319_sandtoc_sxortoc.cubalc` |
+| **ops** | `SABSTOC`/`SNEGTOC`/`SNOTTOC` |
+| **proof** | `programs/proof/320_sabstoc_snottoc.cubalc` |
 
 ### Delta
-Digit-1 stack↔cell bitwise accumulate: &=, |=, ^= single cell (dual of range SANDCELL). Tree restored after evolve mass-delete mid-tick.
+Digit-7 stack↔cell unary ALU: abs/neg/bitwise-not single cell (dual of SABS/SNEG/SNOT).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
