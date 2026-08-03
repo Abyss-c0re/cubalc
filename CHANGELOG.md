@@ -1,3 +1,17 @@
+## 1.12.247-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack imm 16-bit halfword field bitwise (dual of SAND16N/SOR16N/SXOR16N).
+
+### Language
+- `DAND16N`/`PAIRAND16N` field n — halfword n of each &= field (n 0..3)
+- `DOR16N`/`PAIROR16N` field n — halfword n of each |= field
+- `DXOR16N`/`PAIRXOR16N`/`DFLIP16N` field n — halfword n of each ^= field
+- Proof `270_dand16n_dor16n.cubalc`
+
+### Prior
+See 1.12.246-universal.
+
 ## 1.12.246-universal — 2026-08-03
 
 ### Direction
