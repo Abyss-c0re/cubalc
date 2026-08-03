@@ -11503,6 +11503,65 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 dual-stack imm 16-bit halfword field: DWORDN · DSET16N · DCLR16N (dual of SWORDN/SSET16N/SCLR16N) */
+  if (kw(&L->cur,"DWORDN")||kw(&L->cur,"2WORDN")||kw(&L->cur,"S2WORDN")||
+      kw(&L->cur,"STACK2WORDN")||kw(&L->cur,"PAIRWORDN")||kw(&L->cur,"DGET16N")||
+      kw(&L->cur,"2GET16N")||kw(&L->cur,"DHALFN")||kw(&L->cur,"2HALFN")||
+      kw(&L->cur,"DGETHALF")||kw(&L->cur,"GET16N2")){
+    /* a b + n → halfword n of a , halfword n of b ; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned sh = (unsigned)(n * 16);
+    long x = (long)(((unsigned long)vm->stack[vm->sp - 2] >> sh) & 0xFFFFul);
+    long y = (long)(((unsigned long)vm->stack[vm->sp - 1] >> sh) & 0xFFFFul);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSET16N")||kw(&L->cur,"2SET16N")||kw(&L->cur,"S2SET16N")||
+      kw(&L->cur,"STACK2SET16N")||kw(&L->cur,"PAIRSET16N")||kw(&L->cur,"DSETWORDN")||
+      kw(&L->cur,"2SETWORDN")||kw(&L->cur,"DPUT16N")||kw(&L->cur,"2PUT16N")||
+      kw(&L->cur,"DSETHALFN")||kw(&L->cur,"DSETWIMM")){
+    /* a b + field n → deposit field into halfword n of each; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)((ma & ~(0xFFFFul << sh)) | (f << sh));
+    long y = (long)((mb & ~(0xFFFFul << sh)) | (f << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLR16N")||kw(&L->cur,"2CLR16N")||kw(&L->cur,"S2CLR16N")||
+      kw(&L->cur,"STACK2CLR16N")||kw(&L->cur,"PAIRCLR16N")||kw(&L->cur,"DCLRWORDN")||
+      kw(&L->cur,"2CLRWORDN")||kw(&L->cur,"DZAP16N")||kw(&L->cur,"2ZAP16N")||
+      kw(&L->cur,"DCLRHAFN")||kw(&L->cur,"DCLRWIMM")){
+    /* a b + n → clear halfword n of each; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long sh = (unsigned long)(n * 16);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 2] & ~(0xFFFFul << sh));
+    long y = (long)((unsigned long)vm->stack[vm->sp - 1] & ~(0xFFFFul << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||

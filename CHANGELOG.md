@@ -1,3 +1,16 @@
+## 1.12.241-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack imm 16-bit halfword field (complete dual of SWORDN ladder).
+
+### Language
+- `DWORDN`/`PAIRWORDN`/`DGET16N`/`DHALFN` · `DSET16N`/`PAIRSET16N`/`DSETWORDN`/`DPUT16N` · `DCLR16N`/`PAIRCLR16N`/`DZAP16N`/`DCLRWORDN`
+- Dual of stack SWORDN/SSET16N/SCLR16N: extract/deposit/clear LE halfword n on top two stack cells; n clamped 0..3
+- Proof `264_dwordn_dset16n.cubalc`
+
+### Prior
+See 1.12.240-universal.
+
 ## 1.12.240-universal — 2026-08-03
 
 ### Direction
