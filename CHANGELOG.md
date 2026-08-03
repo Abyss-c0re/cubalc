@@ -1,3 +1,18 @@
+## 1.12.325-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm accumulate bound TOC (complete SADDTOCN plane with / % min max).
+
+### Language
+- `SDIVTOCN`/`DIVTOCN`/`SDIVATN` n — stack `i → cells[i]/=n` (n==0→0) leave result
+- `SMODTOCN`/`MODTOCN`/`SMODATN` n — stack `i → cells[i]%=n` (n==0→0) leave result
+- `SMINTOCN`/`MINTOCN`/`SMINATN` n — stack `i → cells[i]=min(cells[i],n)` leave result
+- `SMAXTOCN`/`MAXTOCN`/`SMAXATN` n — stack `i → cells[i]=max(cells[i],n)` leave result
+- Proof `348_sdivtocn_smaxtocn.cubalc`
+
+### Prior
+See 1.12.324-universal.
+
 ## 1.12.324-universal — 2026-08-04
 
 ### Direction
