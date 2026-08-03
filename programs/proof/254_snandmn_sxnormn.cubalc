@@ -1,0 +1,97 @@
+# Proof 254 — digit-3 stack inverted low-n mask: SNANDMN SNORMN SXNORMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# SNANDMN — ~(TOS & low-n mask)
+CLEARSTACK
+PUSH 0xFF
+SNANDMN 4
+POP x
+# ~(0xFF & 0xF) = ~0xF = -16
+ASSERT x == -16
+
+CLEARSTACK
+PUSH 0x00
+STACKNANDMN 8
+POP x
+# ~(0 & 0xFF) = ~0 = -1
+ASSERT x == -1
+
+# NANDMN alias + n=0 → ~0 = -1
+CLEARSTACK
+PUSH 5
+NANDMN 0
+POP x
+ASSERT x == -1
+
+# n=64 → ~TOS
+CLEARSTACK
+PUSH 1
+SNANDMN 64
+POP x
+ASSERT x == -2
+
+# SNORMN — ~(TOS | low-n mask)
+CLEARSTACK
+PUSH 0xF0
+SNORMN 4
+POP x
+# ~(0xF0 | 0xF) = ~0xFF = -256
+ASSERT x == -256
+
+CLEARSTACK
+PUSH 0x100
+STACKNORMN 8
+POP x
+# ~(0x100 | 0xFF) = ~0x1FF = -512
+ASSERT x == -512
+
+# NORMN n=0 → ~TOS
+CLEARSTACK
+PUSH 0
+NORMN 0
+POP x
+ASSERT x == -1
+
+# SXNORMN — ~(TOS ^ low-n mask)
+CLEARSTACK
+PUSH 0x0F
+SXNORMN 4
+POP x
+# ~(0x0F ^ 0xF) = ~0 = -1
+ASSERT x == -1
+
+CLEARSTACK
+PUSH 0xF0
+STACKXNORMN 8
+POP x
+# ~(0xF0 ^ 0xFF) = ~0x0F = -16
+ASSERT x == -16
+
+# XNORMN / EQUIVMN alias
+CLEARSTACK
+PUSH 0xAA
+XNORMN 4
+POP x
+# ~(0xAA ^ 0xF) = ~(0xA5) = ...FF5A
+ASSERT x == -166
+
+CLEARSTACK
+PUSH 0x00
+EQUIVMN 4
+POP x
+# ~(0 ^ 0xF) = ~0xF = -16
+ASSERT x == -16
+
+# soft fails
+CLEARSTACK
+SNANDMN 4
+ASSERT OK == 0
+CLEARSTACK
+SNORMN 4
+ASSERT OK == 0
+CLEARSTACK
+SXNORMN 4
+ASSERT OK == 0
+
+HOLD_FLASH 1

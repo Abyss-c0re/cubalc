@@ -1,3 +1,17 @@
+## 1.12.231-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → stack inverted low-n mask (dual of dual-stack DNANDMN/DNORMN/DXNORMN; invert SANDMN plane).
+
+### Language
+- `SNANDMN`/`STACKNANDMN`/`NANDMN` n — TOS = ~(TOS & low-n mask)
+- `SNORMN`/`STACKNORMN`/`NORMN` n — TOS = ~(TOS | low-n mask)
+- `SXNORMN`/`STACKXNORMN`/`XNORMN` n — TOS = ~(TOS ^ low-n mask)
+- Proof `254_snandmn_sxnormn.cubalc`
+
+### Prior
+See 1.12.230-universal.
+
 ## 1.12.230-universal — 2026-08-03
 
 ### Direction
