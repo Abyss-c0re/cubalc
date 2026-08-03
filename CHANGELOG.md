@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.199-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → stack depth-6 plane complete (after 6DUP/6DROP).
+
+### Language
+- `6SWAP`/`SWAP6`/`HSWAP` — reverse top 6 stack items
+- `6NIP`/`NIP6`/`HNIP` — keep ends of top 6: `a b c d e f → a f`
+- Proof `222_6swap_6nip.cubalc`
+
+### Prior
+See 1.12.198-universal.
+
+
 ## 1.12.198-universal — 2026-08-03
 
 ### Direction

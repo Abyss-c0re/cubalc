@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T11:25:22+0300",
-  "iter": 277,
-  "algocube_digit": 0,
-  "version": "1.12.198-universal",
-  "pass": 236,
+  "ts": "2026-08-03T11:32:04+0300",
+  "iter": 280,
+  "algocube_digit": 8,
+  "version": "1.12.199-universal",
+  "pass": 237,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,9 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "DANDI",
-    "DORI",
-    "DXORI"
+    "6SWAP",
+    "6NIP"
   ],
-  "proof": "programs/proof/221_dandi_dxori.cubalc"
+  "proof": "programs/proof/222_6swap_6nip.cubalc"
 }

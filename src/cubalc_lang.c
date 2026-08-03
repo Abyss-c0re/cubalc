@@ -411,7 +411,8 @@ static void lex_next(Lex *L) {
           ok = 1;
       } else {
         /* 6… depth plane (digit-8 stack) */
-        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0)
+        if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0)
           ok = 1;
       }
       if (ok){
@@ -5905,6 +5906,36 @@ static int parse_form(VM *vm, Lex *L){
     if (vm->sp > 0){ var_set_num(vm,"LAST_N",vm->stack[vm->sp-1]); vm->last_n=vm->stack[vm->sp-1]; }
     else { var_set_num(vm,"LAST_N",0); vm->last_n=0; }
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 depth-6 ext: 6SWAP · 6NIP (complete after 6DUP/6DROP) */
+  if (kw(&L->cur,"6SWAP")||kw(&L->cur,"HSWAP")||kw(&L->cur,"SWAP6")||
+      kw(&L->cur,"STACK6SWAP")){
+    /* a b c d e f → f e d c b a  (reverse top 6) */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], b = vm->stack[vm->sp-5];
+    long c = vm->stack[vm->sp-4], d = vm->stack[vm->sp-3];
+    long e = vm->stack[vm->sp-2], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = f;
+    vm->stack[vm->sp-5] = e;
+    vm->stack[vm->sp-4] = d;
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = b;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"6NIP")||kw(&L->cur,"HNIP")||kw(&L->cur,"NIP6")||
+      kw(&L->cur,"STACK6NIP")){
+    /* a b c d e f → a f  (keep ends of top 6; dual of 4NIP) */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = a;
+    vm->stack[vm->sp-5] = f;
+    vm->sp -= 4;
+    var_set_num(vm,"LAST_N",f); vm->last_n=f;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){
