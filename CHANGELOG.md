@@ -1,3 +1,18 @@
+## 1.12.221-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack high-n field reverse/rotate (complete low-n DBREVN/DROLBN/DRORBN plane).
+
+### Language
+- `DBREVHN`/`2BREVHN`/`PAIRBREVHN` n — reverse high n bits (low kept)
+- `DROLHN`/`2ROLHN` n — rotate left by 1 within high n bits
+- `DRORHN`/`2RORHN` n — rotate right by 1 within high n bits
+- Proof `244_dbrevhn_drolhn.cubalc`
+
+### Prior
+See 1.12.220-universal.
+
+
 # Changelog
 
 ## 1.12.220-universal — 2026-08-03

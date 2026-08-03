@@ -329,6 +329,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ALLHN")==0 ||
             strcasecmp(tail,"BREVN")==0 || strcasecmp(tail,"ROLBN")==0 ||
             strcasecmp(tail,"RORBN")==0 ||
+            strcasecmp(tail,"BREVHN")==0 || strcasecmp(tail,"ROLHN")==0 ||
+            strcasecmp(tail,"RORHN")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -10232,6 +10234,109 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       lb = ((lb >> 1) | (lb << (unsigned)(n - 1))) & m;
       x = (long)(((unsigned long)a & ~m) | la);
       y = (long)(((unsigned long)b & ~m) | lb);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      x = (long)((ua >> 1) | (ua << 63));
+      y = (long)((ub >> 1) | (ub << 63));
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack high-n field reverse/rotate: DBREVHN · DROLHN · DRORHN */
+  if (kw(&L->cur,"DBREVHN")||kw(&L->cur,"2BREVHN")||kw(&L->cur,"S2BREVHN")||
+      kw(&L->cur,"STACK2BREVHN")||kw(&L->cur,"PAIRBREVHN")||kw(&L->cur,"DREVHIGHN")||
+      kw(&L->cur,"2REVHIGHN")||kw(&L->cur,"DBITREVHN")||kw(&L->cur,"2BITREVHN")){
+    /* a b + n → reverse high n bits of each; low bits kept; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a, y = b;
+    if (n > 0 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long lb = ((unsigned long)b & m) >> sh;
+      unsigned long ra = 0, rb = 0;
+      for (long i = 0; i < n; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+        rb = (rb << 1) | (lb & 1ul); lb >>= 1;
+      }
+      x = (long)(((unsigned long)a & ~m) | ((ra << sh) & m));
+      y = (long)(((unsigned long)b & ~m) | ((rb << sh) & m));
+    } else if (n >= 64){
+      unsigned long la = (unsigned long)a, lb = (unsigned long)b;
+      unsigned long ra = 0, rb = 0;
+      for (int i = 0; i < 64; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+        rb = (rb << 1) | (lb & 1ul); lb >>= 1;
+      }
+      x = (long)ra; y = (long)rb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DROLHN")||kw(&L->cur,"2ROLHN")||kw(&L->cur,"S2ROLHN")||
+      kw(&L->cur,"STACK2ROLHN")||kw(&L->cur,"PAIRROLHN")||kw(&L->cur,"DROTLHN")||
+      kw(&L->cur,"2ROTLHN")||kw(&L->cur,"DHIGHROLN")||kw(&L->cur,"2HIGHROLN")){
+    /* a b + n → rotate left by 1 within high n bits; low kept; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a, y = b;
+    if (n >= 2 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long lb = ((unsigned long)b & m) >> sh;
+      unsigned long fm = (1ul << (unsigned)n) - 1ul;
+      la = ((la << 1) | (la >> (unsigned)(n - 1))) & fm;
+      lb = ((lb << 1) | (lb >> (unsigned)(n - 1))) & fm;
+      x = (long)(((unsigned long)a & ~m) | ((la << sh) & m));
+      y = (long)(((unsigned long)b & ~m) | ((lb << sh) & m));
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      x = (long)((ua << 1) | (ua >> 63));
+      y = (long)((ub << 1) | (ub >> 63));
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DRORHN")||kw(&L->cur,"2RORHN")||kw(&L->cur,"S2RORHN")||
+      kw(&L->cur,"STACK2RORHN")||kw(&L->cur,"PAIRRORHN")||kw(&L->cur,"DROTRHN")||
+      kw(&L->cur,"2ROTRHN")||kw(&L->cur,"DHIGHRORN")||kw(&L->cur,"2HIGHRORN")){
+    /* a b + n → rotate right by 1 within high n bits; low kept; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a, y = b;
+    if (n >= 2 && n < 64){
+      unsigned long m = ~0ul << (unsigned)(64 - n);
+      unsigned sh = (unsigned)(64 - n);
+      unsigned long la = ((unsigned long)a & m) >> sh;
+      unsigned long lb = ((unsigned long)b & m) >> sh;
+      unsigned long fm = (1ul << (unsigned)n) - 1ul;
+      la = ((la >> 1) | (la << (unsigned)(n - 1))) & fm;
+      lb = ((lb >> 1) | (lb << (unsigned)(n - 1))) & fm;
+      x = (long)(((unsigned long)a & ~m) | ((la << sh) & m));
+      y = (long)(((unsigned long)b & ~m) | ((lb << sh) & m));
     } else if (n >= 64){
       unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
       x = (long)((ua >> 1) | (ua << 63));
