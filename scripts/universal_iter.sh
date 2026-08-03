@@ -197,7 +197,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             213_ddiffsq_dstep \
             214_dleaky_dsoftsign \
             215_dunpack8_dunpack16 \
-            216_doverif_dtuckif; do
+            216_doverif_dtuckif \
+            217_drotif_drrotif; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

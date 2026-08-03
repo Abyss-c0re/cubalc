@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.194-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control rotate conditionals (complete after DOVERIF/DTUCKIF).
+
+### Language
+- `DROTIF`/`2ROTIF`/`DQROT` — conditional ROT: `a b c f → b c a` if f else `a b c`
+- `DRROTIF`/`2RROTIF`/`DQRROT` — conditional RROT: `a b c f → c a b` if f else `a b c`
+- Proof `217_drotif_drrotif.cubalc`
+
+### Prior
+See 1.12.193-universal.
+
+
 ## 1.12.193-universal — 2026-08-03
 
 ### Direction

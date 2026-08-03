@@ -248,6 +248,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"DUPWHEN")==0 ||
             strcasecmp(tail,"OVERIF")==0 || strcasecmp(tail,"QOVER")==0 ||
             strcasecmp(tail,"TUCKIF")==0 || strcasecmp(tail,"QTUCK")==0 ||
+            strcasecmp(tail,"ROTIF")==0 || strcasecmp(tail,"QROT")==0 ||
+            strcasecmp(tail,"RROTIF")==0 || strcasecmp(tail,"QRROT")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
@@ -7836,6 +7838,54 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       vm->stack[vm->sp++] = a;
       vm->stack[vm->sp++] = b;
       var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack conditionals ext3: DROTIF · DRROTIF (3-item rotate forms) */
+  if (kw(&L->cur,"DROTIF")||kw(&L->cur,"2ROTIF")||kw(&L->cur,"S2ROTIF")||
+      kw(&L->cur,"STACK2ROTIF")||kw(&L->cur,"PAIRROTIF")||kw(&L->cur,"DQROT")||
+      kw(&L->cur,"2QROT")||kw(&L->cur,"DROTWHEN")||kw(&L->cur,"2ROTWHEN")){
+    /* a b c f → if f then b c a else a b c  (conditional ROT) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){
+      vm->stack[vm->sp++] = b;
+      vm->stack[vm->sp++] = c;
+      vm->stack[vm->sp++] = a;
+      var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    } else {
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      vm->stack[vm->sp++] = c;
+      var_set_num(vm,"LAST_N",c); vm->last_n=c;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DRROTIF")||kw(&L->cur,"2RROTIF")||kw(&L->cur,"S2RROTIF")||
+      kw(&L->cur,"STACK2RROTIF")||kw(&L->cur,"PAIRRROTIF")||kw(&L->cur,"DQRROT")||
+      kw(&L->cur,"2QRROT")||kw(&L->cur,"DRROTWHEN")||kw(&L->cur,"2RROTWHEN")||
+      kw(&L->cur,"DNROTIF")||kw(&L->cur,"2NROTIF")){
+    /* a b c f → if f then c a b else a b c  (conditional RROT / -ROT) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){
+      vm->stack[vm->sp++] = c;
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    } else {
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      vm->stack[vm->sp++] = c;
+      var_set_num(vm,"LAST_N",c); vm->last_n=c;
     }
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
