@@ -1,0 +1,100 @@
+# Proof 201 — digit-7 dual-stack multiword: DNEGC2 (complement + cin)
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DNEGC2 cin=1 → two's complement negate
+CLEARSTACK
+LET CARRY = 0
+PUSH 5
+PUSH 7
+PUSH 1
+PUSH 1
+DNEGC2
+POP y
+POP x
+ASSERT x == -5
+ASSERT y == -7
+ASSERT CARRY == 0
+
+# cin=0 → bitwise not only
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 1
+PUSH 0
+PUSH 0
+2NEGC2
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+ASSERT CARRY == 0
+
+# PAIRNEGC2 mixed cin
+CLEARSTACK
+LET CARRY = 0
+PUSH 10
+PUSH 20
+PUSH 1
+PUSH 0
+PAIRNEGC2
+POP y
+POP x
+ASSERT x == -10
+ASSERT y == -21
+ASSERT CARRY == 0
+
+# DNEGC: zero with cin=1 → 0 with cout (wrap)
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 0
+PUSH 1
+PUSH 1
+DNEGC
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+ASSERT CARRY == 1
+
+# one lane wrap, other plain negate
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 3
+PUSH 1
+PUSH 1
+DCOMADC
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == -3
+ASSERT CARRY == 1
+
+# 2COMADC / DNEGADC
+CLEARSTACK
+LET CARRY = 0
+PUSH 1
+PUSH -1
+PUSH 1
+PUSH 1
+2COMADC
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == 1
+ASSERT CARRY == 0
+
+CLEARSTACK
+LET CARRY = 0
+PUSH 100
+PUSH 200
+PUSH 1
+PUSH 1
+DNEGADC
+POP y
+POP x
+ASSERT x == -100
+ASSERT y == -200
+ASSERT CARRY == 0

@@ -201,6 +201,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NORME")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
+            strcasecmp(tail,"NEGC2")==0 || strcasecmp(tail,"NEGC")==0 ||
+            strcasecmp(tail,"COMADC")==0 || strcasecmp(tail,"NEGADC")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
             strcasecmp(tail,"LT")==0 || strcasecmp(tail,"LE")==0 ||
             strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0 ||
@@ -6756,6 +6758,35 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack multiword negate-via-complement+cin: DNEGC2 */
+  if (kw(&L->cur,"DNEGC2")||kw(&L->cur,"2NEGC2")||kw(&L->cur,"S2NEGC2")||
+      kw(&L->cur,"STACK2NEGC2")||kw(&L->cur,"PAIRNEGC2")||kw(&L->cur,"DNEGC")||
+      kw(&L->cur,"2NEGC")||kw(&L->cur,"S2NEGC")||kw(&L->cur,"PAIRNEGC")||
+      kw(&L->cur,"DCOMADC")||kw(&L->cur,"2COMADC")||kw(&L->cur,"DNEGADC")||
+      kw(&L->cur,"2NEGADC")){
+    /* a b ca cb → (~a)+ca  (~b)+cb  (unsigned wrap); CARRY = any cout
+     * multiword two's-complement: first limb ca=1, next limbs ca=prev cout */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long cb = vm->stack[--vm->sp];
+    long ca = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long ta = ~ua, tb = ~ub;
+    unsigned long uina = ca ? 1ul : 0ul;
+    unsigned long uinb = cb ? 1ul : 0ul;
+    unsigned long sa = ta + uina;
+    unsigned long sb = tb + uinb;
+    int c0 = (uina && sa < ta) ? 1 : 0;
+    int c1 = (uinb && sb < tb) ? 1 : 0;
+    int flag = c0 | c1;
+    vm->stack[vm->sp++] = (long)sa;
+    vm->stack[vm->sp++] = (long)sb;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-1 dual-stack pair compare: DEQ · DNE · DLT · DLE · DGT · DGE (0/1 predicates) */

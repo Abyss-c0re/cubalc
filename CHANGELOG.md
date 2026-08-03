@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.178-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack multiword complement+cin negate.
+
+### Language
+- `DNEGC2`/`2NEGC2`/`DNEGC` — pairwise `~x + cin` (two's-complement limb); `CARRY` any cout
+- `DCOMADC`/`2COMADC`/`DNEGADC` — aliases
+- Proof `201_dnegc2.cubalc`
+
+### Prior
+See 1.12.177-universal.
+
+
 ## 1.12.177-universal — 2026-08-03
 
 ### Direction
