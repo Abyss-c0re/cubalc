@@ -1,0 +1,103 @@
+# Proof 172 — digit-3 dual-stack Morton zip/unzip: DZIP DUNZIP
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DZIP — a b c d → zip(a,c) zip(b,d)
+# zip(1,2): a=...0001 c=...0010 → bit0 of a, bit1 of c → 0b10 = 2? 
+# a bit0→pos0, c bit0→pos1, a bit1→pos2, c bit1→pos3
+# a=1 (bit0), c=2 (bit1) → bit0 set, bit3 set → 0b1001 = 9
+CLEARSTACK
+PUSH 1
+PUSH 1
+PUSH 2
+PUSH 2
+DZIP
+POP y
+POP x
+ASSERT x == 9
+ASSERT y == 9
+
+# zip(3,0) = a bits 0,1 → positions 0,2 → 0b0101 = 5
+CLEARSTACK
+PUSH 3
+PUSH 0
+PUSH 0
+PUSH 3
+2ZIP
+POP y
+POP x
+ASSERT x == 5
+ASSERT y == 10
+
+# DUNZIP of zipped values recovers originals
+CLEARSTACK
+PUSH 1
+PUSH 4
+PUSH 2
+PUSH 8
+DZIP
+POP zb
+POP za
+CLEARSTACK
+PUSH za
+PUSH zb
+DUNZIP
+POP ob
+POP oa
+POP eb
+POP ea
+ASSERT ea == 1
+ASSERT eb == 4
+ASSERT oa == 2
+ASSERT ob == 8
+
+# DUNZIP simple: 9=0b1001 → even=1 odd=2; 5=0b0101 → even=3 odd=0
+CLEARSTACK
+PUSH 9
+PUSH 5
+2UNZIP
+POP ob
+POP oa
+POP eb
+POP ea
+ASSERT ea == 1
+ASSERT eb == 3
+ASSERT oa == 2
+ASSERT ob == 0
+
+# aliases — zip(1,0)=1, zip(2,0)=4
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 0
+PUSH 0
+PAIRZIP
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 4
+
+# soft fails
+CLEARSTACK
+DZIP
+ASSERT OK == 0
+CLEARSTACK
+DUNZIP
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+2ZIP
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+2UNZIP
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof172_dzip_dunzip" LAST_N SP

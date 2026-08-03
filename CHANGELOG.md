@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.149-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack Morton zip/unzip (bit-path).
+
+### Language
+- `DZIP`/`2ZIP`/`DMORTON` — pair interleave: `a b c d → zip(a,c) zip(b,d)` (low-32 lanes)
+- `DUNZIP`/`2UNZIP` — pair deinterleave: `a b → even(a) even(b) odd(a) odd(b)`
+- Proof `172_dzip_dunzip.cubalc`
+
+### Prior
+See 1.12.148-universal.
+
 ## 1.12.148-universal — 2026-08-03
 
 ### Direction

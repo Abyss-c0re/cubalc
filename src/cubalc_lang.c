@@ -208,6 +208,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
             strcasecmp(tail,"BDEP")==0 || strcasecmp(tail,"BITDEP")==0 ||
             strcasecmp(tail,"PEXT")==0 || strcasecmp(tail,"PDEP")==0 ||
+            strcasecmp(tail,"ZIP")==0 || strcasecmp(tail,"UNZIP")==0 ||
+            strcasecmp(tail,"MORTON")==0 || strcasecmp(tail,"DEMORTON")==0 ||
             strcasecmp(tail,"PAR")==0 ||
             strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
             strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
@@ -7086,6 +7088,56 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack Morton zip/unzip: DZIP · DUNZIP */
+  if (kw(&L->cur,"DZIP")||kw(&L->cur,"2ZIP")||kw(&L->cur,"S2ZIP")||
+      kw(&L->cur,"STACK2ZIP")||kw(&L->cur,"PAIRZIP")||kw(&L->cur,"2MORTON")||
+      kw(&L->cur,"DMORTON")){
+    /* a b c d → zip(a,c) zip(b,d); low 32 bits of each lane interleaved
+     * zip(x,y): bit i of x → bit 2i; bit i of y → bit 2i+1 */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long d = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long c = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long b = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long a = (unsigned long long)(unsigned int)vm->stack[--vm->sp];
+    unsigned long long rx = 0, ry = 0;
+    for (int i = 0; i < 32; i++){
+      if ((a >> i) & 1ull) rx |= (1ull << (2 * i));
+      if ((c >> i) & 1ull) rx |= (1ull << (2 * i + 1));
+      if ((b >> i) & 1ull) ry |= (1ull << (2 * i));
+      if ((d >> i) & 1ull) ry |= (1ull << (2 * i + 1));
+    }
+    long x = (long)rx, y = (long)ry;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUNZIP")||kw(&L->cur,"2UNZIP")||kw(&L->cur,"S2UNZIP")||
+      kw(&L->cur,"STACK2UNZIP")||kw(&L->cur,"PAIRUNZIP")||kw(&L->cur,"2DEMORTON")||
+      kw(&L->cur,"DDEMORTON")){
+    /* a b → even(a) even(b) odd(a) odd(b)
+     * even = bits at even positions packed low; odd = bits at odd positions
+     * stack ends with TOS = odd(b) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long long zb = (unsigned long long)vm->stack[--vm->sp];
+    unsigned long long za = (unsigned long long)vm->stack[--vm->sp];
+    unsigned long long ea = 0, oa = 0, eb = 0, ob = 0;
+    for (int i = 0; i < 32; i++){
+      if ((za >> (2 * i)) & 1ull) ea |= (1ull << i);
+      if ((za >> (2 * i + 1)) & 1ull) oa |= (1ull << i);
+      if ((zb >> (2 * i)) & 1ull) eb |= (1ull << i);
+      if ((zb >> (2 * i + 1)) & 1ull) ob |= (1ull << i);
+    }
+    vm->stack[vm->sp++] = (long)ea;
+    vm->stack[vm->sp++] = (long)eb;
+    vm->stack[vm->sp++] = (long)oa;
+    vm->stack[vm->sp++] = (long)ob;
+    var_set_num(vm,"LAST_N",(long)ob); vm->last_n=(long)ob;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-5 dual-stack field extract/deposit: DBEXT · DBDEP */
