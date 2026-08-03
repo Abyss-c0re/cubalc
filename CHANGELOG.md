@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.150-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack ceil/floor divide modes.
+
+### Language
+- `DDIVCEIL`/`2DIVCEIL`/`DCEILDIV` — pairwise ceil-divide (`/0→0`)
+- `DDIVFLOOR`/`2DIVFLOOR`/`DFLOORDIV` — pairwise floor-divide (`/0→0`)
+- Proof `173_ddivceil_ddivfloor.cubalc`
+
+### Prior
+See 1.12.149-universal.
+
 ## 1.12.149-universal — 2026-08-03
 
 ### Direction
