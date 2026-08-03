@@ -5354,7 +5354,7 @@ static int parse_form(VM *vm, Lex *L){
   }
   /* digit-7 stack↔cell unary mutator: SINCTOC · SDECTOC (dual of SINC/SDEC after SDBL/SHALF TOC) */
   if (kw(&L->cur,"SINCTOC")||kw(&L->cur,"SINCTOCELL")||kw(&L->cur,"STACKINCTOC")||
-      kw(&L->cur,"SINCELLTOC")||kw(&L->cur,"SINC AT")||kw(&L->cur,"INCTOC")||
+      kw(&L->cur,"SINCELLTOC")||kw(&L->cur,"SINCAT")||kw(&L->cur,"INCTOC")||
       kw(&L->cur,"SCELLINCTOC")){
     /* i → cells[i] += 1, leave result (TOC dual of SINC; peer of SINCCELL) */
     lex_next(L);
