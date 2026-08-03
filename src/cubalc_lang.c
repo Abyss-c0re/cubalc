@@ -207,7 +207,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"AVG")==0 || strcasecmp(tail,"MEAN")==0 ||
             strcasecmp(tail,"DIST")==0 || strcasecmp(tail,"ABSDIFF")==0 ||
             strcasecmp(tail,"HAMM")==0 || strcasecmp(tail,"HAMMING")==0 ||
-            strcasecmp(tail,"POPDIFF")==0)
+            strcasecmp(tail,"POPDIFF")==0 ||
+            strcasecmp(tail,"DBL")==0 || strcasecmp(tail,"DOUBLE")==0 ||
+            strcasecmp(tail,"HALF")==0 || strcasecmp(tail,"HALVE")==0 ||
+            strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6022,6 +6025,45 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp - 2] = a;
     vm->stack[vm->sp - 1] = b;
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack ALU unary ext: DDBL · DHALF · DBSWAP (pair scale + endian) */
+  if (kw(&L->cur,"DDBL")||kw(&L->cur,"2DBL")||kw(&L->cur,"S2DBL")||
+      kw(&L->cur,"STACK2DBL")||kw(&L->cur,"PAIRDBL")||kw(&L->cur,"DDOUBLE")||
+      kw(&L->cur,"2DOUBLE")||
+      kw(&L->cur,"DHALF")||kw(&L->cur,"2HALF")||kw(&L->cur,"S2HALF")||
+      kw(&L->cur,"STACK2HALF")||kw(&L->cur,"PAIRHALF")||kw(&L->cur,"DHALVE")||
+      kw(&L->cur,"2HALVE")||
+      kw(&L->cur,"DBSWAP")||kw(&L->cur,"2BSWAP")||kw(&L->cur,"S2BSWAP")||
+      kw(&L->cur,"STACK2BSWAP")||kw(&L->cur,"PAIRBSWAP")||kw(&L->cur,"DBSWAP32")||
+      kw(&L->cur,"2BSWAP32")){
+    /* a b → f(a) f(b); DBL=*2; HALF=toward-zero /2; BSWAP=32-bit byte reverse */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_dbl = (strcmp(op,"DDBL")==0 || strcmp(op,"2DBL")==0 || strcmp(op,"S2DBL")==0 ||
+                  strcmp(op,"STACK2DBL")==0 || strcmp(op,"PAIRDBL")==0 ||
+                  strcmp(op,"DDOUBLE")==0 || strcmp(op,"2DOUBLE")==0);
+    int is_half = (strcmp(op,"DHALF")==0 || strcmp(op,"2HALF")==0 || strcmp(op,"S2HALF")==0 ||
+                   strcmp(op,"STACK2HALF")==0 || strcmp(op,"PAIRHALF")==0 ||
+                   strcmp(op,"DHALVE")==0 || strcmp(op,"2HALVE")==0);
+    long x, y;
+    if (is_dbl){ x = a * 2; y = b * 2; }
+    else if (is_half){ x = a / 2; y = b / 2; }
+    else {
+      unsigned int wa = (unsigned int)a, wb = (unsigned int)b;
+      wa = ((wa & 0x000000FFu) << 24) | ((wa & 0x0000FF00u) << 8) |
+           ((wa & 0x00FF0000u) >> 8) | ((wa & 0xFF000000u) >> 24);
+      wb = ((wb & 0x000000FFu) << 24) | ((wb & 0x0000FF00u) << 8) |
+           ((wb & 0x00FF0000u) >> 8) | ((wb & 0xFF000000u) >> 24);
+      x = (long)wa; y = (long)wb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-1 dual-stack pair compare: DEQ · DNE · DLT · DLE · DGT · DGE (0/1 predicates) */

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.134-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack ALU unary scale + endian.
+
+### Language
+- `DDBL`/`2DBL`/`PAIRDBL` — pair double (`*2`)
+- `DHALF`/`2HALF`/`PAIRHALF` — pair half toward zero (`/2`)
+- `DBSWAP`/`2BSWAP`/`PAIRBSWAP` — pair 32-bit byte-swap
+- Proof `157_ddbl_dbswap.cubalc`
+
+### Prior
+See 1.12.133-universal.
+
 ## 1.12.133-universal — 2026-08-03
 
 ### Direction

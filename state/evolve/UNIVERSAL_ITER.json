@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:43:06+0300",
-  "iter": 235,
-  "algocube_digit": 6,
-  "version": "1.12.133-universal",
-  "pass": 171,
+  "ts": "2026-08-03T04:48:49+0300",
+  "iter": 237,
+  "algocube_digit": 7,
+  "version": "1.12.134-universal",
+  "pass": 172,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,13 +18,13 @@
     "flow_compile"
   ],
   "ops": [
-    "DAVG",
-    "2AVG",
-    "DDIST",
-    "2DIST",
-    "DHAMM",
-    "2HAMM"
+    "DDBL",
+    "2DBL",
+    "DHALF",
+    "2HALF",
+    "DBSWAP",
+    "2BSWAP"
   ],
-  "proof": "programs/proof/156_davg_dhamm.cubalc",
-  "delta": "digit-6 dual-stack energy/flow distance metrics"
+  "proof": "programs/proof/157_ddbl_dbswap.cubalc",
+  "delta": "digit-7 dual-stack ALU unary scale + endian"
 }
