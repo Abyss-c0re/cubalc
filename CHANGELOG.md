@@ -1,3 +1,18 @@
+## 1.12.278-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → reverse unsigned imm div/mod (n op_u TOS; complete SUDIVN plane after SSUBFROMN).
+
+### Language
+- `SUDIVFROMN`/`UDIVFROMN` n — TOS = (unsigned)n / (unsigned)TOS; TOS==0 → 0
+- `SUMODFROMN`/`UMODFROMN` n — TOS = (unsigned)n % (unsigned)TOS; TOS==0 → 0
+- `DUDIVFROMN`/`PAIRUDIVFROMN` n — a b → unsigned (n/a) (n/b); lane 0 → 0
+- `DUMODFROMN`/`PAIRUMODFROMN` n — a b → unsigned (n%a) (n%b); lane 0 → 0
+- Proof `301_sudivfromn_dumodfromn.cubalc`
+
+### Prior
+See 1.12.277-universal.
+
 ## 1.12.277-universal — 2026-08-03
 
 ### Direction

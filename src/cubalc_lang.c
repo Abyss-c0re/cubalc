@@ -6355,6 +6355,35 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm reverse unsigned: SUDIVFROMN · SUMODFROMN (n op_u TOS after SUDIVN/SUMODN) */
+  if (kw(&L->cur,"SUDIVFROMN")||kw(&L->cur,"SRUDIVN")||kw(&L->cur,"RUDIVN")||
+      kw(&L->cur,"STACKUDIVFROMN")||kw(&L->cur,"NUDIVFROMN")||kw(&L->cur,"SUDIVFROMIMM")||
+      kw(&L->cur,"UDIVFROMN")){
+    /* SUDIVFROMN n — TOS = (unsigned)n / (unsigned)TOS; TOS==0 → 0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[vm->sp - 1];
+    long v = 0;
+    if (d != 0) v = (long)((unsigned long)n / (unsigned long)d);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMODFROMN")||kw(&L->cur,"SRUMODN")||kw(&L->cur,"RUMODN")||
+      kw(&L->cur,"STACKUMODFROMN")||kw(&L->cur,"NUMODFROMN")||kw(&L->cur,"SUMODFROMIMM")||
+      kw(&L->cur,"UMODFROMN")||kw(&L->cur,"UREMFROMN")){
+    /* SUMODFROMN n — TOS = (unsigned)n % (unsigned)TOS; TOS==0 → 0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[vm->sp - 1];
+    long v = 0;
+    if (d != 0) v = (long)((unsigned long)n % (unsigned long)d);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack pair ALU: DADD · DSUB · DMUL (vector pairs a b + c d) */
   if (kw(&L->cur,"DADD")||kw(&L->cur,"2ADD")||kw(&L->cur,"S2ADD")||
       kw(&L->cur,"STACK2ADD")||kw(&L->cur,"PAIRADD")){
@@ -11230,6 +11259,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (a == 0) ? 0 : (n % a);
     long y = (b == 0) ? 0 : (n % b);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 dual-stack imm reverse unsigned: DUDIVFROMN · DUMODFROMN (dual of SUDIVFROMN plane) */
+  if (kw(&L->cur,"DUDIVFROMN")||kw(&L->cur,"S2UDIVFROMN")||kw(&L->cur,"STACK2UDIVFROMN")||
+      kw(&L->cur,"PAIRUDIVFROMN")||kw(&L->cur,"DRUDIVN")||kw(&L->cur,"PAIRRUDIVN")||
+      kw(&L->cur,"DUDIVFROMIMM")||kw(&L->cur,"NUDIVFROMN")){
+    /* a b + n → unsigned (a==0?0:n/a) (b==0?0:n/b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (a != 0) x = (long)((unsigned long)n / (unsigned long)a);
+    if (b != 0) y = (long)((unsigned long)n / (unsigned long)b);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUMODFROMN")||kw(&L->cur,"S2UMODFROMN")||kw(&L->cur,"STACK2UMODFROMN")||
+      kw(&L->cur,"PAIRUMODFROMN")||kw(&L->cur,"DRUMODN")||kw(&L->cur,"PAIRRUMODN")||
+      kw(&L->cur,"DUMODFROMIMM")||kw(&L->cur,"DUREMFROMN")||kw(&L->cur,"PAIRUREMFROMN")){
+    /* a b + n → unsigned (a==0?0:n%a) (b==0?0:n%b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (a != 0) x = (long)((unsigned long)n % (unsigned long)a);
+    if (b != 0) y = (long)((unsigned long)n % (unsigned long)b);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
