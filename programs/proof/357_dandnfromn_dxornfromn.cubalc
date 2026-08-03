@@ -1,0 +1,76 @@
+# Proof 357 — digit-5 dual-stack reverse imm ANDN: DANDNFROMN DORNFROMN DXORNFROMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# DANDNFROMN: n=0xFF, a=0x0F, b=0xF0 → (0xFF&~0x0F)=0xF0, (0xFF&~0xF0)=0x0F
+PUSH 15
+PUSH 240
+DANDNFROMN 255
+POP y
+POP x
+ASSERT x == 240
+ASSERT y == 15
+
+# DBICFROMN: n=42, a=0, b=-1 → (42&~0)=42, (42&~(-1))=0
+PUSH 0
+PUSH (-1)
+DBICFROMN 42
+POP y
+POP x
+ASSERT x == 42
+ASSERT y == 0
+
+# PAIRANDNFROMN: n=7, a=-1, b=0 → 0, 7
+PUSH (-1)
+PUSH 0
+PAIRANDNFROMN 7
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 7
+
+# DORNFROMN: n=0, a=0, b=255 → -1, -256
+PUSH 0
+PUSH 255
+DORNFROMN 0
+POP y
+POP x
+ASSERT x == (-1)
+ASSERT y == (-256)
+
+# DRORNFROMN: n=8, a=1, b=0 → -2, -1? 8|~1=-2, 8|~0=-1
+PUSH 1
+PUSH 0
+DRORNFROMN 8
+POP y
+POP x
+ASSERT x == (-2)
+ASSERT y == (-1)
+
+# DXORNFROMN: n=0, a=0, b=5 → -1, -6? 0^~0=-1, 0^~5=-6
+PUSH 0
+PUSH 5
+DXORNFROMN 0
+POP y
+POP x
+ASSERT x == (-1)
+ASSERT y == (-6)
+
+# DRXORNFROMN: n=5, a=5, b=0 → -1, -6? 5^~5=-1, 5^~0=-6
+PUSH 5
+PUSH 0
+DRXORNFROMN 5
+POP y
+POP x
+ASSERT x == (-1)
+ASSERT y == (-6)
+
+# soft short stack OK=0
+CLEARSTACK
+PUSH 1
+DANDNFROMN 1
+ASSERT OK == 0
+
+PRINT "357_dandnfromn_dxornfromn OK"

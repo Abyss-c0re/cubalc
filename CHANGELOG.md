@@ -1,3 +1,17 @@
+## 1.12.334-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack reverse imm ANDN (dual of SANDNFROMN after DANDNI plane).
+
+### Language
+- `DANDNFROMN`/`DBICFROMN`/`PAIRANDNFROMN` n — stack `a b → (n&~a) (n&~b)`
+- `DORNFROMN`/`DRORNFROMN`/`PAIRORNFROMN` n — stack `a b → (n|~a) (n|~b)`
+- `DXORNFROMN`/`DRXORNFROMN`/`PAIRXORNFROMN` n — stack `a b → (n^~a) (n^~b)`
+- Proof `357_dandnfromn_dxornfromn.cubalc`
+
+### Prior
+See 1.12.333-universal.
+
 ## 1.12.333-universal — 2026-08-04
 
 ### Direction
