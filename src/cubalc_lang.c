@@ -5753,6 +5753,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 imm compare TOC: SEQTOCN · SNETOCN · SLTTOCN · SGTTOCN
+   * (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN/SNEN/SLTN/SGTN) */
+  if (kw(&L->cur,"SEQTOCN")||kw(&L->cur,"SEQTOCIMM")||kw(&L->cur,"STACKEQTOCN")||
+      kw(&L->cur,"CMPEQTOCN")||kw(&L->cur,"SEQATN")||kw(&L->cur,"EQTOCN")){
+    /* i + n → cells[i]=(cells[i]==n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] == n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNETOCN")||kw(&L->cur,"SNETOCIMM")||kw(&L->cur,"STACKNETOCN")||
+      kw(&L->cur,"CMPNETOCN")||kw(&L->cur,"SNEATN")||kw(&L->cur,"NETOCN")){
+    /* i + n → cells[i]=(cells[i]!=n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] != n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLTTOCN")||kw(&L->cur,"SLTTOCIMM")||kw(&L->cur,"STACKLTTOCN")||
+      kw(&L->cur,"CMPLTTOCN")||kw(&L->cur,"SLTATN")||kw(&L->cur,"LTTOCN")){
+    /* i + n → cells[i]=(cells[i]<n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] < n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGTTOCN")||kw(&L->cur,"SGTTOCIMM")||kw(&L->cur,"STACKGTTOCN")||
+      kw(&L->cur,"CMPGTTOCN")||kw(&L->cur,"SGTATN")||kw(&L->cur,"GTTOCN")){
+    /* i + n → cells[i]=(cells[i]>n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] > n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

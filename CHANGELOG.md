@@ -1,10 +1,25 @@
+## 1.12.318-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → imm compare TOC (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN plane).
+
+### Language
+- `SEQTOCN`/`EQTOCN`/`SEQATN` n — stack `i → cells[i]=(cells[i]==n)?1:0` leave result
+- `SNETOCN`/`NETOCN`/`SNEATN` n — stack `i → cells[i]=(cells[i]!=n)?1:0` leave result
+- `SLTTOCN`/`LTTOCN`/`SLTATN` n — stack `i → cells[i]=(cells[i]<n)?1:0` leave result
+- `SGTTOCN`/`GTTOCN`/`SGTATN` n — stack `i → cells[i]=(cells[i]>n)?1:0` leave result
+- Proof `341_seqtocn_sgttocn.cubalc`
+
+### Prior
+See 1.12.317-universal.
+
 ## 1.12.317-universal — 2026-08-04
 
 ### Direction
 - Algocube digit **7** → unary mutator TOC (dual of SINC/SDEC after SDBL/SHALF scale TOC plane).
 
 ### Language
-- `SINCTOC`/`INCTOC`/`SINC AT` — stack `i → cells[i]+=1` leave result
+- `SINCTOC`/`INCTOC`/`SINCAT` — stack `i → cells[i]+=1` leave result
 - `SDECTOC`/`DECTOC`/`SDECAT` — stack `i → cells[i]-=1` leave result
 - Proof `340_sinctoc_sdectoc.cubalc`
 
