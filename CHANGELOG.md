@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.196-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack immediate bitfield (dual of SSETBN/SBTESTN).
+
+### Language
+- `DSETBN`/`2SETBN`/`PAIRSETBN` n — pairwise set bit n: `x |= 1<<n`
+- `DCLRBN`/`2CLRBN`/`PAIRCLRBN` n — pairwise clear bit n
+- `DBTESTN`/`2BTESTN`/`DBITN` n — pairwise test bit n → 0/1
+- Proof `219_dsetbn_dbtestn.cubalc`
+
+### Prior
+See 1.12.195-universal.
+
+
 ## 1.12.195-universal — 2026-08-03
 
 ### Direction

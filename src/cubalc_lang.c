@@ -279,6 +279,11 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SETB")==0 || strcasecmp(tail,"SETBIT")==0 ||
             strcasecmp(tail,"CLRB")==0 || strcasecmp(tail,"CLRBIT")==0 ||
             strcasecmp(tail,"FLIPB")==0 || strcasecmp(tail,"FLIPBIT")==0 ||
+            strcasecmp(tail,"SETBN")==0 || strcasecmp(tail,"SETBITN")==0 ||
+            strcasecmp(tail,"CLRBN")==0 || strcasecmp(tail,"CLRBITN")==0 ||
+            strcasecmp(tail,"FLIPBN")==0 || strcasecmp(tail,"FLIPBITN")==0 ||
+            strcasecmp(tail,"BTESTN")==0 || strcasecmp(tail,"BITN")==0 ||
+            strcasecmp(tail,"TESTBITN")==0 ||
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
             strcasecmp(tail,"BDEP")==0 || strcasecmp(tail,"BITDEP")==0 ||
             strcasecmp(tail,"PEXT")==0 || strcasecmp(tail,"PDEP")==0 ||
@@ -9232,6 +9237,65 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack immediate bitfield: DSETBN · DBTESTN (dual of SSETBN/SBTESTN) */
+  if (kw(&L->cur,"DSETBN")||kw(&L->cur,"2SETBN")||kw(&L->cur,"S2SETBN")||
+      kw(&L->cur,"STACK2SETBN")||kw(&L->cur,"PAIRSETBN")||kw(&L->cur,"DSETBITN")||
+      kw(&L->cur,"2SETBITN")||kw(&L->cur,"PAIRSETBITN")){
+    /* a b + n → a|(1<<n)  b|(1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long bit = 1ul << (unsigned)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua | bit);
+    long y = (long)(ub | bit);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLRBN")||kw(&L->cur,"2CLRBN")||kw(&L->cur,"S2CLRBN")||
+      kw(&L->cur,"STACK2CLRBN")||kw(&L->cur,"PAIRCLRBN")||kw(&L->cur,"DCLRBITN")||
+      kw(&L->cur,"2CLRBITN")||kw(&L->cur,"PAIRCLRBITN")){
+    /* a b + n → a&~(1<<n)  b&~(1<<n); n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long bit = 1ul << (unsigned)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua & ~bit);
+    long y = (long)(ub & ~bit);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBTESTN")||kw(&L->cur,"2BTESTN")||kw(&L->cur,"S2BTESTN")||
+      kw(&L->cur,"STACK2BTESTN")||kw(&L->cur,"PAIRBTESTN")||kw(&L->cur,"DBITN")||
+      kw(&L->cur,"2BITN")||kw(&L->cur,"DTESTBITN")||kw(&L->cur,"2TESTBITN")||
+      kw(&L->cur,"PAIRBITN")){
+    /* a b + n → bit_n(a) bit_n(b) as 0/1; n clamped 0..63 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    unsigned long bit = 1ul << (unsigned)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (ua & bit) ? 1 : 0;
+    long y = (ub & bit) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

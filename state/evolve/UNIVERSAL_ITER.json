@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T11:04:27+0300",
-  "iter": 270,
-  "algocube_digit": 1,
-  "version": "1.12.195-universal",
-  "pass": 233,
+  "ts": "2026-08-03T11:14:58+0300",
+  "iter": 273,
+  "algocube_digit": 5,
+  "version": "1.12.196-universal",
+  "pass": 234,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,9 @@
     "flow_compile"
   ],
   "ops": [
-    "DSHGATE",
-    "DZEROIF"
+    "DSETBN",
+    "DCLRBN",
+    "DBTESTN"
   ],
-  "proof": "programs/proof/218_dshgate_dzeroif.cubalc"
+  "proof": "programs/proof/219_dsetbn_dbtestn.cubalc"
 }
