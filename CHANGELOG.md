@@ -1,3 +1,17 @@
+## 1.12.250-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → stack imm 4-bit nibble field bitwise merge (complete nibble/byte/half/word bitwise ladder).
+
+### Language
+- `SAND4N`/`AND4N` field n — nibble n of TOS &= field (n 0..15)
+- `SOR4N`/`OR4N` field n — nibble n of TOS |= field
+- `SXOR4N`/`XOR4N`/`SFLIP4N` field n — nibble n of TOS ^= field
+- Proof `273_sand4n_sor4n.cubalc`
+
+### Prior
+See 1.12.249-universal.
+
 ## 1.12.249-universal — 2026-08-03
 
 ### Direction

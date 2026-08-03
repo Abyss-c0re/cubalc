@@ -13855,6 +13855,58 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 4-bit field bitwise: SAND4N · SOR4N · SXOR4N (merge into nibble n; complete field bitwise ladder) */
+  if (kw(&L->cur,"SAND4N")||kw(&L->cur,"STACKAND4N")||kw(&L->cur,"AND4N")||
+      kw(&L->cur,"SANDNIBN")||kw(&L->cur,"SANDNIMM")||kw(&L->cur,"SKEEP4N")){
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = ((base >> sh) & 0xFul) & f;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SOR4N")||kw(&L->cur,"STACKOR4N")||kw(&L->cur,"OR4N")||
+      kw(&L->cur,"SORNIBN")||kw(&L->cur,"SORNIMM")||kw(&L->cur,"SSETOR4N")){
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = ((base >> sh) & 0xFul) | f;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXOR4N")||kw(&L->cur,"STACKXOR4N")||kw(&L->cur,"XOR4N")||
+      kw(&L->cur,"SXORNIBN")||kw(&L->cur,"SXORNIMM")||kw(&L->cur,"SFLIP4N")){
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = ((base >> sh) & 0xFul) ^ f;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
