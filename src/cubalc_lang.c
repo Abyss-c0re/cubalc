@@ -13826,6 +13826,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",x); vm->last_n=x;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack low-n bitfield metrics: SPOPMN · SANYMN · SALLMN (dual of DPOPMN/DANYMN/DALLMN) */
+  if (kw(&L->cur,"SPOPMN")||kw(&L->cur,"STACKPOPMN")||kw(&L->cur,"SONESMN")||
+      kw(&L->cur,"SLOWPOPN")||kw(&L->cur,"SPCNTMN")||kw(&L->cur,"POPMN")){
+    /* SPOPMN n — TOS = popcount(TOS & low-n mask); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1] & m;
+    long x = 0;
+    while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SANYMN")||kw(&L->cur,"STACKANYMN")||kw(&L->cur,"SLOWANYN")||
+      kw(&L->cur,"STESTANYN")||kw(&L->cur,"ANYMN")){
+    /* SANYMN n — TOS = ((TOS & low-n mask) != 0) ? 1 : 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long x = (((unsigned long)vm->stack[vm->sp - 1] & m) != 0) ? 1 : 0;
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SALLMN")||kw(&L->cur,"STACKALLMN")||kw(&L->cur,"SLOWALLN")||
+      kw(&L->cur,"STESTALLN")||kw(&L->cur,"ALLMN")){
+    /* SALLMN n — TOS = ((TOS & low-n mask) == mask) ? 1 : 0; n=0 → 1 vacuous */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long x = (((unsigned long)vm->stack[vm->sp - 1] & m) == m) ? 1 : 0;
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SSHLN")||kw(&L->cur,"SHLN")||kw(&L->cur,"STACKSHLN")||
       kw(&L->cur,"SLSHLN")||kw(&L->cur,"SSHLIMM")){
     /* SSHLN n — TOS <<= n (n clamped 0..63) */

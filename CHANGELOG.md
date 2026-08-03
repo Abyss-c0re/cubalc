@@ -1,3 +1,18 @@
+## 1.12.226-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack low-n bitfield metrics (dual of dual-stack DPOPMN/DANYMN/DALLMN).
+
+### Language
+- `SPOPMN`/`STACKPOPMN`/`SONESMN` n — popcount of low n bits of TOS
+- `SANYMN`/`STACKANYMN`/`ANYMN` n — any low-n bit set → 0/1
+- `SALLMN`/`STACKALLMN`/`ALLMN` n — all low-n bits set → 0/1 (n=0 vacuous 1)
+- Proof `249_spopmn_sallmn.cubalc`
+
+### Prior
+See 1.12.225-universal.
+
+
 ## 1.12.225-universal — 2026-08-03
 
 ### Direction
