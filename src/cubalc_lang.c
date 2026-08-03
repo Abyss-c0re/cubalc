@@ -9092,6 +9092,27 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 dual-stack imm energy wrap: DWRAPN · DWMODN (shared modulus m; dual of SWMODN) */
+  if (kw(&L->cur,"DWRAPN")||kw(&L->cur,"2WRAPN")||kw(&L->cur,"S2WRAPN")||
+      kw(&L->cur,"STACK2WRAPN")||kw(&L->cur,"PAIRWRAPN")||kw(&L->cur,"DWMODN")||
+      kw(&L->cur,"2WMODN")||kw(&L->cur,"S2WMODN")||kw(&L->cur,"PAIRWMODN")||
+      kw(&L->cur,"DWRAPMODN")||kw(&L->cur,"DWRAPIMM")||kw(&L->cur,"PAIRWRAPIMM")){
+    /* a b + m → wrap(a,m) wrap(b,m) in [0,m); m<=0 → 0,0 */
+    lex_next(L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (m > 0){
+      x = a % m; if (x < 0) x += m;
+      y = b % m; if (y < 0) y += m;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"DHYPOT")||kw(&L->cur,"2HYPOT")||kw(&L->cur,"S2HYPOT")||
       kw(&L->cur,"STACK2HYPOT")||kw(&L->cur,"PAIRHYPOT")||kw(&L->cur,"DHYP")||
       kw(&L->cur,"2HYP")||kw(&L->cur,"S2HYP")||kw(&L->cur,"PAIRHYP")){
@@ -17110,6 +17131,21 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack imm energy wrap: SWMODN · SWRAPN (imm dual of SWMOD) */
+  if (kw(&L->cur,"SWMODN")||kw(&L->cur,"SWRAPN")||kw(&L->cur,"STACKWRAPN")||
+      kw(&L->cur,"SWRAPMODN")||kw(&L->cur,"SWMODIMM")||kw(&L->cur,"SWRAPIMM")||
+      kw(&L->cur,"WRAPN")||kw(&L->cur,"WMODN")){
+    /* SWMODN m — TOS = wrap(TOS, m) in [0,m); m<=0 → 0 */
+    lex_next(L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (m > 0){ r = n % m; if (r < 0) r += m; }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"SCLIP8")||kw(&L->cur,"SCLIP16")||
       kw(&L->cur,"STACKCLIP8")||kw(&L->cur,"STACKCLIP16")){

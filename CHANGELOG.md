@@ -1,3 +1,16 @@
+## 1.12.279-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → imm energy wrap (imm dual of SWMOD + shared-modulus dual of DWRAP).
+
+### Language
+- `SWMODN`/`SWRAPN`/`WRAPN` m — TOS = wrap(TOS,m) in [0,m); m≤0 → 0
+- `DWRAPN`/`DWMODN`/`PAIRWRAPN` m — a b → wrap(a,m) wrap(b,m); m≤0 → 0,0
+- Proof `302_swmodn_dwrapn.cubalc`
+
+### Prior
+See 1.12.278-universal.
+
 ## 1.12.278-universal — 2026-08-03
 
 ### Direction
