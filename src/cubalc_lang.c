@@ -5850,6 +5850,69 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack foundation unsigned imm compare TOC:
+   * SULTTOCN · SUGTTOCN · SULETOCN · SUGETOCN (unsigned dual of signed TOCN plane) */
+  if (kw(&L->cur,"SULTTOCN")||kw(&L->cur,"SULTTOCIMM")||kw(&L->cur,"STACKULTTOCN")||
+      kw(&L->cur,"CMPULTTOCN")||kw(&L->cur,"SULTATN")||kw(&L->cur,"ULTTOCN")){
+    /* i + n → cells[i]=((u)cells[i]<(u)n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] < (unsigned long)n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGTTOCN")||kw(&L->cur,"SUGTTOCIMM")||kw(&L->cur,"STACKUGTTOCN")||
+      kw(&L->cur,"CMPUGTTOCN")||kw(&L->cur,"SUGTATN")||kw(&L->cur,"UGTTOCN")){
+    /* i + n → cells[i]=((u)cells[i]>(u)n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] > (unsigned long)n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SULETOCN")||kw(&L->cur,"SULETOCIMM")||kw(&L->cur,"STACKULETOCN")||
+      kw(&L->cur,"CMPULETOCN")||kw(&L->cur,"SULEATN")||kw(&L->cur,"ULETOCN")){
+    /* i + n → cells[i]=((u)cells[i]<=(u)n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] <= (unsigned long)n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGETOCN")||kw(&L->cur,"SUGETOCIMM")||kw(&L->cur,"STACKUGETOCN")||
+      kw(&L->cur,"CMPUGETOCN")||kw(&L->cur,"SUGEATN")||kw(&L->cur,"UGETOCN")){
+    /* i + n → cells[i]=((u)cells[i]>=(u)n)?1:0, leave result
+     * note: SUGETOCN != SGETOCN (signed imm GE) and != SGETOC (two-arg) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] >= (unsigned long)n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

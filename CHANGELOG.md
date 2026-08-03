@@ -1,3 +1,18 @@
+## 1.12.320-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack foundation unsigned imm compare TOC (unsigned dual of signed TOCN plane).
+
+### Language
+- `SULTTOCN`/`ULTTOCN`/`SULTATN` n — stack `i → cells[i]=((u)cells[i]<(u)n)?1:0` leave result
+- `SUGTTOCN`/`UGTTOCN`/`SUGTATN` n — stack `i → cells[i]=((u)cells[i]>(u)n)?1:0` leave result
+- `SULETOCN`/`ULETOCN`/`SULEATN` n — stack `i → cells[i]=((u)cells[i]<=(u)n)?1:0` leave result
+- `SUGETOCN`/`UGETOCN`/`SUGEATN` n — stack `i → cells[i]=((u)cells[i]>=(u)n)?1:0` leave result
+- Proof `343_sulttocn_sugtocn.cubalc`
+
+### Prior
+See 1.12.319-universal.
+
 ## 1.12.319-universal — 2026-08-04
 
 ### Direction
