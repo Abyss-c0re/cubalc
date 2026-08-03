@@ -221,6 +221,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SAR16")==0 || strcasecmp(tail,"ASHR16")==0 ||
             strcasecmp(tail,"UNPACK4")==0 || strcasecmp(tail,"UNPACKN")==0 ||
             strcasecmp(tail,"NIBSPLIT")==0 ||
+            strcasecmp(tail,"UNPACK8")==0 || strcasecmp(tail,"UNPACKB")==0 ||
+            strcasecmp(tail,"BYTSPLIT")==0 ||
+            strcasecmp(tail,"UNPACK16")==0 || strcasecmp(tail,"UNPACKW")==0 ||
+            strcasecmp(tail,"HALFSPLIT")==0 ||
             strcasecmp(tail,"SHLC")==0 || strcasecmp(tail,"SHRC")==0 ||
             strcasecmp(tail,"SHLCY")==0 || strcasecmp(tail,"SHRCY")==0 ||
             strcasecmp(tail,"SQR")==0 || strcasecmp(tail,"ISQRT")==0 ||
@@ -9774,6 +9778,47 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 dual-stack control-word unpack: DUNPACK8 · DUNPACK16 (inverse of DPACK8/16) */
+  if (kw(&L->cur,"DUNPACK8")||kw(&L->cur,"2UNPACK8")||kw(&L->cur,"S2UNPACK8")||
+      kw(&L->cur,"STACK2UNPACK8")||kw(&L->cur,"PAIRUNPACK8")||kw(&L->cur,"DUNPACKB")||
+      kw(&L->cur,"2UNPACKB")||kw(&L->cur,"DBYTSPLIT")||kw(&L->cur,"2BYTSPLIT")){
+    /* x y → (x>>8)&0xFF  (y>>8)&0xFF  x&0xFF  y&0xFF  — hi,hi,lo,lo so DPACK8 restores */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long y = vm->stack[--vm->sp];
+    long x = vm->stack[--vm->sp];
+    long ha = (x >> 8) & 0xFFL;
+    long hb = (y >> 8) & 0xFFL;
+    long la = x & 0xFFL;
+    long lb = y & 0xFFL;
+    vm->stack[vm->sp++] = ha;
+    vm->stack[vm->sp++] = hb;
+    vm->stack[vm->sp++] = la;
+    vm->stack[vm->sp++] = lb;
+    var_set_num(vm,"LAST_N",lb); vm->last_n=lb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUNPACK16")||kw(&L->cur,"2UNPACK16")||kw(&L->cur,"S2UNPACK16")||
+      kw(&L->cur,"STACK2UNPACK16")||kw(&L->cur,"PAIRUNPACK16")||kw(&L->cur,"DUNPACKW")||
+      kw(&L->cur,"2UNPACKW")||kw(&L->cur,"DHALFSPLIT")||kw(&L->cur,"2HALFSPLIT")){
+    /* x y → (x>>16)&0xFFFF  (y>>16)&0xFFFF  x&0xFFFF  y&0xFFFF — hi,hi,lo,lo so DPACK16 restores */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long y = vm->stack[--vm->sp];
+    long x = vm->stack[--vm->sp];
+    long ha = (x >> 16) & 0xFFFFL;
+    long hb = (y >> 16) & 0xFFFFL;
+    long la = x & 0xFFFFL;
+    long lb = y & 0xFFFFL;
+    vm->stack[vm->sp++] = ha;
+    vm->stack[vm->sp++] = hb;
+    vm->stack[vm->sp++] = la;
+    vm->stack[vm->sp++] = lb;
+    var_set_num(vm,"LAST_N",lb); vm->last_n=lb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-8 dual-stack word pack: DLO32 · DHI32 · DPACK32 */

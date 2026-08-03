@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T10:38:25+0300",
-  "iter": 263,
-  "algocube_digit": 6,
-  "version": "1.12.191-universal",
-  "pass": 229,
+  "ts": "2026-08-03T10:43:10+0300",
+  "iter": 265,
+  "algocube_digit": 4,
+  "version": "1.12.192-universal",
+  "pass": 230,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "DLEAKY",
-    "DSOFTSIGN"
+    "DUNPACK8",
+    "DUNPACK16"
   ],
-  "proof": "programs/proof/214_dleaky_dsoftsign.cubalc"
+  "proof": "programs/proof/215_dunpack8_dunpack16.cubalc"
 }

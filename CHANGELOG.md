@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.192-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack control-word unpack (complete after DPACK8/16).
+
+### Language
+- `DUNPACK8`/`2UNPACK8`/`DBYTSPLIT` — inverse of `DPACK8`: `x y → hi8_x hi8_y lo8_x lo8_y`
+- `DUNPACK16`/`2UNPACK16`/`DHALFSPLIT` — inverse of `DPACK16`: `x y → hi16_x hi16_y lo16_x lo16_y`
+- Proof `215_dunpack8_dunpack16.cubalc`
+
+### Prior
+See 1.12.191-universal.
+
+
 ## 1.12.191-universal — 2026-08-03
 
 ### Direction
