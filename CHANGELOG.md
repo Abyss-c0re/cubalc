@@ -1,3 +1,18 @@
+## 1.12.287-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → imm coprime/pow (imm dual of SCOPRIME/SPOW after SGCDN plane + dual-stack).
+
+### Language
+- `SCOPRIMEN`/`COPRIMEN` n — TOS = 1 if gcd(|TOS|,|n|)==1 else 0
+- `SPOWN`/`POWN` n — TOS = TOS^n; n<0 → 0
+- `DCOPRIMEN`/`PAIRCOPRIMEN` n — a b → coprime(a,n) coprime(b,n) as 0/1
+- `DPOWN`/`PAIRPOWN` n — a b → a^n b^n; n<0 → 0,0
+- Proof `310_scoprimenn_dpown.cubalc`
+
+### Prior
+See 1.12.286-universal.
+
 ## 1.12.286-universal — 2026-08-03
 
 ### Direction

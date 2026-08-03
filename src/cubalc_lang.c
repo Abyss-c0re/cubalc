@@ -238,6 +238,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"GCD")==0 || strcasecmp(tail,"LCM")==0 ||
             strcasecmp(tail,"GCDN")==0 || strcasecmp(tail,"LCMN")==0 ||
             strcasecmp(tail,"GCDIMM")==0 || strcasecmp(tail,"LCMIMM")==0 ||
+            strcasecmp(tail,"COPRIMEN")==0 || strcasecmp(tail,"ISCOPRIMEN")==0 ||
+            strcasecmp(tail,"COPRIMEIMM")==0 ||
+            strcasecmp(tail,"POWN")==0 || strcasecmp(tail,"POWIMM")==0 ||
+            strcasecmp(tail,"POWERN")==0 ||
             strcasecmp(tail,"POW")==0 ||
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
             strcasecmp(tail,"SAR")==0 ||
@@ -7753,6 +7757,53 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack imm numthy ext: DCOPRIMEN · DPOWN (dual of SCOPRIMEN/SPOWN) */
+  if (kw(&L->cur,"DCOPRIMEN")||kw(&L->cur,"2COPRIMEN")||kw(&L->cur,"S2COPRIMEN")||
+      kw(&L->cur,"STACK2COPRIMEN")||kw(&L->cur,"PAIRCOPRIMEN")||kw(&L->cur,"DISCOPRIMEN")||
+      kw(&L->cur,"2ISCOPRIMEN")||kw(&L->cur,"DCOPRIMEIMM")||kw(&L->cur,"PAIRCOPRIMEIMM")){
+    /* a b + n → (gcd(a,n)==1) (gcd(b,n)==1) as 0/1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long nn = n < 0 ? -n : n;
+    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
+    long gx = ax, hy = nn;
+    long x = 0, y = 0;
+    if (!(ax == 0 && nn == 0)){
+      while (hy){ long t = gx % hy; gx = hy; hy = t; }
+      x = (gx == 1) ? 1 : 0;
+    }
+    long gy = bx, hz = nn;
+    if (!(bx == 0 && nn == 0)){
+      while (hz){ long t = gy % hz; gy = hz; hz = t; }
+      y = (gy == 1) ? 1 : 0;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOWN")||kw(&L->cur,"2POWN")||kw(&L->cur,"S2POWN")||
+      kw(&L->cur,"STACK2POWN")||kw(&L->cur,"PAIRPOWN")||kw(&L->cur,"DPOWIMM")||
+      kw(&L->cur,"2POWIMM")||kw(&L->cur,"PAIRPOWIMM")||kw(&L->cur,"DPOWERN")){
+    /* a b + n → a^n b^n; n<0 → 0,0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n >= 0){
+      x = 1; long e = n; while (e-- > 0) x *= a;
+      y = 1; e = n; while (e-- > 0) y *= b;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 dual-stack pair shifts: DSHL · DSHR · DSAR (a b c d → a≪c b≪d etc) */
   if (kw(&L->cur,"DSHL")||kw(&L->cur,"2SHL")||kw(&L->cur,"S2SHL")||
       kw(&L->cur,"STACK2SHL")||kw(&L->cur,"PAIRSHL")||
@@ -13704,6 +13755,42 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       long g = x, h = y;
       while (h){ long t = g % h; g = h; h = t; }
       r = (x / g) * y;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 stack imm numthy ext: SCOPRIMEN · SPOWN (imm dual of SCOPRIME/SPOW after SGCDN) */
+  if (kw(&L->cur,"SCOPRIMEN")||kw(&L->cur,"SISCOPRIMEN")||kw(&L->cur,"STACKCOPRIMEN")||
+      kw(&L->cur,"COPRIMEN")||kw(&L->cur,"SCOPRIMEIMM")||kw(&L->cur,"ISCOPRIMEN")){
+    /* SCOPRIMEN n — TOS = 1 if gcd(|TOS|,|n|)==1 else 0; (0,0)→0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long x = a < 0 ? -a : a, y = n < 0 ? -n : n;
+    long r = 0;
+    if (!(x == 0 && y == 0)){
+      while (y){ long t = x % y; x = y; y = t; }
+      r = (x == 1) ? 1 : 0;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOWN")||kw(&L->cur,"STACKPOWN")||kw(&L->cur,"POWN")||
+      kw(&L->cur,"SPOWIMM")||kw(&L->cur,"POWERN")||kw(&L->cur,"SEXPN")){
+    /* SPOWN n — TOS = TOS^n; n<0 → 0 (match SPOW) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n < 0) r = 0;
+    else {
+      r = 1;
+      long e = n;
+      while (e-- > 0) r *= a;
     }
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
