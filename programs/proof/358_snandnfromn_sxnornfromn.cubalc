@@ -1,0 +1,69 @@
+# Proof 358 — digit-3 reverse imm inverted ANDN: SNANDNFROMN SNORNFROMN SXNORNFROMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# SNANDNFROMN: n=0x0F, TOS=0xF0 → ~(0x0F & ~0xF0) = ~(0x0F & 0x0F...0F) wait
+# ~0xF0 = ...FFFFFF0F, 0x0F & ~0xF0 = 0x0F, ~(0x0F) = -16
+# Also = ~n | TOS = ~0x0F | 0xF0 = (-16)|0xF0 = -16
+PUSH 240
+SNANDNFROMN 15
+POP a
+ASSERT a == (-16)
+
+# NANDNFROMN: n=0, TOS=5 → ~(0 & ~5) = ~0 = -1; also ~0|5 = -1
+PUSH 5
+NANDNFROMN 0
+POP a
+ASSERT a == (-1)
+
+# RNANDNFROMN: n=-1, TOS=0 → ~(-1 & ~0) = ~(-1 & -1) = ~(-1) = 0; also 0|0=0
+PUSH 0
+RNANDNFROMN (-1)
+POP a
+ASSERT a == 0
+
+# SNORNFROMN: n=0, TOS=-1 → ~(0 | ~(-1)) = ~(0|0) = -1; also ~0 & -1 = -1
+PUSH (-1)
+SNORNFROMN 0
+POP a
+ASSERT a == (-1)
+
+# NORNFROMN: n=15, TOS=255 → ~(15 | ~255) = ~(15 | -256)
+# 15 | -256 = -241; ~(-241) = 240; also ~15 & 255 = (-16)&255 = 240
+PUSH 255
+NORNFROMN 15
+POP a
+ASSERT a == 240
+
+# RNORNFROMN: n=-1, TOS=7 → ~(-1 | ~7) = ~(-1) = 0; also 0 & 7 = 0
+PUSH 7
+RNORNFROMN (-1)
+POP a
+ASSERT a == 0
+
+# SXNORNFROMN: n=5, TOS=5 → ~(5 ^ ~5) = ~(-1) = 0; equiv 5^5=0
+PUSH 5
+SXNORNFROMN 5
+POP a
+ASSERT a == 0
+
+# XNORNFROMN: n=7, TOS=1 → ~(7 ^ ~1) = 7^1 = 6
+PUSH 1
+XNORNFROMN 7
+POP a
+ASSERT a == 6
+
+# RXNORNFROMN: n=0, TOS=0 → ~(0 ^ ~0) = ~(-1) = 0; equiv 0
+PUSH 0
+RXNORNFROMN 0
+POP a
+ASSERT a == 0
+
+# soft empty OK=0
+CLEARSTACK
+SNANDNFROMN 1
+ASSERT OK == 0
+
+PRINT "358_snandnfromn_sxnornfromn OK"

@@ -1,3 +1,17 @@
+## 1.12.335-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → reverse imm inverted ANDN stack (reverse dual of SNANDNI after SANDNFROMN).
+
+### Language
+- `SNANDNFROMN`/`NANDNFROMN`/`RNANDNFROMN` n — `TOS = ~(n & ~TOS)` (= `~n | TOS`)
+- `SNORNFROMN`/`NORNFROMN`/`RNORNFROMN` n — `TOS = ~(n | ~TOS)` (= `~n & TOS`)
+- `SXNORNFROMN`/`XNORNFROMN`/`RXNORNFROMN` n — `TOS = ~(n ^ ~TOS)` (equiv `n ^ TOS`)
+- Proof `358_snandnfromn_sxnornfromn.cubalc`
+
+### Prior
+See 1.12.334-universal.
+
 ## 1.12.334-universal — 2026-08-04
 
 ### Direction
