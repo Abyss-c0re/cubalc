@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.133-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy/flow distance metrics.
+
+### Language
+- `DAVG`/`2AVG`/`DMEAN` — pairwise truncated mean `(a+c)/2`, `(b+d)/2`
+- `DDIST`/`2DIST`/`DABSDIFF` — pairwise absolute difference `|a-c|`, `|b-d|`
+- `DHAMM`/`2HAMM`/`DHAMMING` — pairwise Hamming distance (popcount of XOR)
+- Proof `156_davg_dhamm.cubalc`
+
+### Prior
+See 1.12.132-universal.
+
 ## 1.12.132-universal — 2026-08-03
 
 ### Direction

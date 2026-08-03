@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:34:25+0300",
-  "iter": 233,
-  "algocube_digit": 0,
-  "version": "1.12.132-universal",
-  "pass": 170,
+  "ts": "2026-08-03T04:43:06+0300",
+  "iter": 235,
+  "algocube_digit": 6,
+  "version": "1.12.133-universal",
+  "pass": 171,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,15 +18,13 @@
     "flow_compile"
   ],
   "ops": [
-    "DCLO",
-    "2CLO",
-    "DCTO",
-    "2CTO",
-    "DISPOW2",
-    "2ISPOW2",
-    "DPOW2P",
-    "2POW2P"
+    "DAVG",
+    "2AVG",
+    "DDIST",
+    "2DIST",
+    "DHAMM",
+    "2HAMM"
   ],
-  "proof": "programs/proof/155_dclo_dispow2.cubalc",
-  "delta": "digit-0 dual-stack ones-metrics + power-of-2; alnum 2-prefix tails"
+  "proof": "programs/proof/156_davg_dhamm.cubalc",
+  "delta": "digit-6 dual-stack energy/flow distance metrics"
 }
