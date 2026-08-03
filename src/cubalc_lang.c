@@ -242,6 +242,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"DBL")==0 || strcasecmp(tail,"DOUBLE")==0 ||
             strcasecmp(tail,"HALF")==0 || strcasecmp(tail,"HALVE")==0 ||
             strcasecmp(tail,"BSWAP")==0 || strcasecmp(tail,"BSWAP32")==0 ||
+            strcasecmp(tail,"BSWAP16")==0 || strcasecmp(tail,"BSWAP64")==0 ||
+            strcasecmp(tail,"UMULHI")==0 || strcasecmp(tail,"UMULH")==0 ||
             strcasecmp(tail,"LOG2")==0 || strcasecmp(tail,"ILOG2")==0 ||
             strcasecmp(tail,"PHI")==0 || strcasecmp(tail,"TOTIENT")==0 ||
             strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0 ||
@@ -6274,6 +6276,68 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long y = (long)(py >> 64);
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack unsigned mulhi + endian: DUMULHI · DBSWAP16 · DBSWAP64 */
+  if (kw(&L->cur,"DUMULHI")||kw(&L->cur,"2UMULHI")||kw(&L->cur,"S2UMULHI")||
+      kw(&L->cur,"STACK2UMULHI")||kw(&L->cur,"PAIRUMULHI")||kw(&L->cur,"DUMULH")||
+      kw(&L->cur,"2UMULH")||kw(&L->cur,"S2UMULH")||kw(&L->cur,"PAIRUMULH")){
+    /* a b c d → high64(ua*uc) high64(ub*ud) unsigned */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned __int128 px =
+        (unsigned __int128)(unsigned long)a *
+        (unsigned __int128)(unsigned long)c;
+    unsigned __int128 py =
+        (unsigned __int128)(unsigned long)b *
+        (unsigned __int128)(unsigned long)d;
+    long x = (long)(px >> 64);
+    long y = (long)(py >> 64);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBSWAP16")||kw(&L->cur,"2BSWAP16")||kw(&L->cur,"S2BSWAP16")||
+      kw(&L->cur,"STACK2BSWAP16")||kw(&L->cur,"PAIRBSWAP16")||
+      kw(&L->cur,"DBSWAP64")||kw(&L->cur,"2BSWAP64")||kw(&L->cur,"S2BSWAP64")||
+      kw(&L->cur,"STACK2BSWAP64")||kw(&L->cur,"PAIRBSWAP64")){
+    /* a b → bswap16/64(a) bswap16/64(b) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is16 = (strcmp(op,"DBSWAP16")==0 || strcmp(op,"2BSWAP16")==0 ||
+                strcmp(op,"S2BSWAP16")==0 || strcmp(op,"STACK2BSWAP16")==0 ||
+                strcmp(op,"PAIRBSWAP16")==0);
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    if (is16){
+      unsigned int wa = (unsigned int)a & 0xFFFFu;
+      unsigned int wb = (unsigned int)b & 0xFFFFu;
+      wa = ((wa & 0x00FFu) << 8) | ((wa & 0xFF00u) >> 8);
+      wb = ((wb & 0x00FFu) << 8) | ((wb & 0xFF00u) >> 8);
+      x = (long)wa; y = (long)wb;
+    } else {
+      unsigned long wa = (unsigned long)a, wb = (unsigned long)b;
+      wa = ((wa & 0x00000000000000FFul) << 56) | ((wa & 0x000000000000FF00ul) << 40) |
+           ((wa & 0x0000000000FF0000ul) << 24) | ((wa & 0x00000000FF000000ul) << 8) |
+           ((wa & 0x000000FF00000000ul) >> 8) | ((wa & 0x0000FF0000000000ul) >> 24) |
+           ((wa & 0x00FF000000000000ul) >> 40) | ((wa & 0xFF00000000000000ul) >> 56);
+      wb = ((wb & 0x00000000000000FFul) << 56) | ((wb & 0x000000000000FF00ul) << 40) |
+           ((wb & 0x0000000000FF0000ul) << 24) | ((wb & 0x00000000FF000000ul) << 8) |
+           ((wb & 0x000000FF00000000ul) >> 8) | ((wb & 0x0000FF0000000000ul) >> 24) |
+           ((wb & 0x00FF000000000000ul) >> 40) | ((wb & 0xFF00000000000000ul) >> 56);
+      x = (long)wa; y = (long)wb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

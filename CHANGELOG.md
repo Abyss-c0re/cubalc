@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.163-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack unsigned mulhi + endian width duals.
+
+### Language
+- `DUMULHI`/`2UMULHI`/`DUMULH` — pairwise unsigned high-64 of product
+- `DBSWAP16`/`2BSWAP16` — pairwise 16-bit byte swap
+- `DBSWAP64`/`2BSWAP64` — pairwise 64-bit byte swap
+- Proof `186_dumulhi_dbswap.cubalc`
+
+### Prior
+See 1.12.162-universal.
+
+
 ## 1.12.162-universal — 2026-08-03
 
 ### Direction
