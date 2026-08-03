@@ -1,3 +1,17 @@
+## 1.12.244-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack imm 32-bit field bitwise merge (AND/OR/XOR into word n after SSET32N).
+
+### Language
+- `SAND32N`/`AND32N` field n — word n of TOS &= field (n 0..1)
+- `SOR32N`/`OR32N` field n — word n of TOS |= field
+- `SXOR32N`/`XOR32N`/`SFLIP32N` field n — word n of TOS ^= field
+- Proof `267_sand32n_sor32n.cubalc`
+
+### Prior
+See 1.12.243-universal.
+
 ## 1.12.243-universal — 2026-08-03
 
 ### Direction
