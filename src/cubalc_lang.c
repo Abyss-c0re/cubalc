@@ -5067,6 +5067,58 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 reverse imm accumulate TOC: SSUBFROMTOCN · SDIVFROMTOCN · SMODFROMTOCN
+   * (imm dual of SSUBFROMTOC/SDIVFROMTOC/SMODFROMTOC; peer of SSUBFROMN into cell) */
+  if (kw(&L->cur,"SSUBFROMTOCN")||kw(&L->cur,"SSUBFROMTOCIMM")||kw(&L->cur,"STACKSUBFROMTOCN")||
+      kw(&L->cur,"SSUBFROMATN")||kw(&L->cur,"SRSUBTOCN")||kw(&L->cur,"RSUBTOCN")||
+      kw(&L->cur,"SCELLSUBFROMN")){
+    /* i + n → cells[i] = n - cells[i], leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = n - vm->cells[(int)i];
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVFROMTOCN")||kw(&L->cur,"SDIVFROMTOCIMM")||kw(&L->cur,"STACKDIVFROMTOCN")||
+      kw(&L->cur,"SDIVFROMATN")||kw(&L->cur,"SRDIVTOCN")||kw(&L->cur,"RDIVTOCN")||
+      kw(&L->cur,"SCELLDIVFROMN")){
+    /* i + n → cells[i] = n / cells[i] (cells[i]==0 → 0 soft), leave quotient */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long c = vm->cells[(int)i];
+    long r = c ? (n / c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODFROMTOCN")||kw(&L->cur,"SMODFROMTOCIMM")||kw(&L->cur,"STACKMODFROMTOCN")||
+      kw(&L->cur,"SMODFROMATN")||kw(&L->cur,"SRMODTOCN")||kw(&L->cur,"RMODTOCN")||
+      kw(&L->cur,"SCELLMODFROMN")||kw(&L->cur,"SREMFROMTOCN")){
+    /* i + n → cells[i] = n % cells[i] (cells[i]==0 → 0 soft), leave remainder */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long c = vm->cells[(int)i];
+    long r = c ? (n % c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 reverse sat stack↔cell: SSATSUBFROMTOC · SSATDIVFROMTOC (sat dual of reverse TOC) */
   if (kw(&L->cur,"SSATSUBFROMTOC")||kw(&L->cur,"SCELLSATSUBFROM")||kw(&L->cur,"SSATRSUBCELL")||
       kw(&L->cur,"STACKSATSUBFROMCELL")||kw(&L->cur,"SSATSUBFROMCELL")||kw(&L->cur,"SATSUBFROMTOC")){

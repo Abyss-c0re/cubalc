@@ -1,3 +1,17 @@
+## 1.12.326-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → reverse imm accumulate TOC (imm dual of SSUBFROMTOC plane after SSUBFROMN).
+
+### Language
+- `SSUBFROMTOCN`/`RSUBTOCN`/`SSUBFROMATN` n — stack `i → cells[i]=n-cells[i]` leave result
+- `SDIVFROMTOCN`/`RDIVTOCN`/`SDIVFROMATN` n — stack `i → cells[i]=n/cells[i]` (cell0→0) leave result
+- `SMODFROMTOCN`/`RMODTOCN`/`SMODFROMATN` n — stack `i → cells[i]=n%cells[i]` (cell0→0) leave result
+- Proof `349_ssubfromtocn_smodfromtocn.cubalc`
+
+### Prior
+See 1.12.325-universal.
+
 ## 1.12.325-universal — 2026-08-04
 
 ### Direction
