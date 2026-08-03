@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.187-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack nibble plane unpack + fixed-width nibble shifts.
+
+### Language
+- `DUNPACK4`/`2UNPACK4`/`DNIBSPLIT` — inverse of `DPACK4`: `x y → hi_x hi_y lo_x lo_y`
+- `DSHL4`/`2SHL4` · `DSHR4`/`2SHR4` · `DSAR4`/`2SAR4` — pairwise logical/arithmetic shifts on low 4 bits
+- Proof `210_dunpack4_dshl4.cubalc`
+
+### Prior
+See 1.12.186-universal.
+
+
 ## 1.12.186-universal — 2026-08-03
 
 ### Direction

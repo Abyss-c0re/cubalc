@@ -213,10 +213,14 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"POW")==0 ||
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
             strcasecmp(tail,"SAR")==0 ||
+            strcasecmp(tail,"SHL4")==0 || strcasecmp(tail,"SHR4")==0 ||
+            strcasecmp(tail,"SAR4")==0 || strcasecmp(tail,"ASHR4")==0 ||
             strcasecmp(tail,"SHL8")==0 || strcasecmp(tail,"SHR8")==0 ||
             strcasecmp(tail,"SAR8")==0 || strcasecmp(tail,"ASHR8")==0 ||
             strcasecmp(tail,"SHL16")==0 || strcasecmp(tail,"SHR16")==0 ||
             strcasecmp(tail,"SAR16")==0 || strcasecmp(tail,"ASHR16")==0 ||
+            strcasecmp(tail,"UNPACK4")==0 || strcasecmp(tail,"UNPACKN")==0 ||
+            strcasecmp(tail,"NIBSPLIT")==0 ||
             strcasecmp(tail,"SHLC")==0 || strcasecmp(tail,"SHRC")==0 ||
             strcasecmp(tail,"SHLCY")==0 || strcasecmp(tail,"SHRCY")==0 ||
             strcasecmp(tail,"SQR")==0 || strcasecmp(tail,"ISQRT")==0 ||
@@ -6949,8 +6953,14 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-5 dual-stack fixed-width shift: DSHL8 · DSHR8 · DSAR8 · DSHL16 · DSHR16 · DSAR16 */
-  if (kw(&L->cur,"DSHL8")||kw(&L->cur,"2SHL8")||kw(&L->cur,"S2SHL8")||
+  /* dual-stack fixed-width shift: DSHL4/8/16 · DSHR4/8/16 · DSAR4/8/16 (digit-3/5 nibble+byte) */
+  if (kw(&L->cur,"DSHL4")||kw(&L->cur,"2SHL4")||kw(&L->cur,"S2SHL4")||
+      kw(&L->cur,"STACK2SHL4")||kw(&L->cur,"PAIRSHL4")||
+      kw(&L->cur,"DSHR4")||kw(&L->cur,"2SHR4")||kw(&L->cur,"S2SHR4")||
+      kw(&L->cur,"STACK2SHR4")||kw(&L->cur,"PAIRSHR4")||
+      kw(&L->cur,"DSAR4")||kw(&L->cur,"2SAR4")||kw(&L->cur,"S2SAR4")||
+      kw(&L->cur,"STACK2SAR4")||kw(&L->cur,"PAIRSAR4")||kw(&L->cur,"DASHR4")||
+      kw(&L->cur,"DSHL8")||kw(&L->cur,"2SHL8")||kw(&L->cur,"S2SHL8")||
       kw(&L->cur,"STACK2SHL8")||kw(&L->cur,"PAIRSHL8")||
       kw(&L->cur,"DSHR8")||kw(&L->cur,"2SHR8")||kw(&L->cur,"S2SHR8")||
       kw(&L->cur,"STACK2SHR8")||kw(&L->cur,"PAIRSHR8")||
@@ -6962,7 +6972,7 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       kw(&L->cur,"STACK2SHR16")||kw(&L->cur,"PAIRSHR16")||
       kw(&L->cur,"DSAR16")||kw(&L->cur,"2SAR16")||kw(&L->cur,"S2SAR16")||
       kw(&L->cur,"STACK2SAR16")||kw(&L->cur,"PAIRSAR16")||kw(&L->cur,"DASHR16")){
-    /* a b c d → shift_w(a,c) shift_w(b,d); w∈{8,16}; amounts clamped; result width-masked (SAR sign-ext) */
+    /* a b c d → shift_w(a,c) shift_w(b,d); w∈{4,8,16}; amounts clamped; result width-masked (SAR sign-ext) */
     char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -6971,25 +6981,17 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long c = vm->stack[--vm->sp];
     long b = vm->stack[--vm->sp];
     long a = vm->stack[--vm->sp];
-    int is_w8 = (strcmp(op,"DSHL8")==0 || strcmp(op,"2SHL8")==0 || strcmp(op,"S2SHL8")==0 ||
-                 strcmp(op,"STACK2SHL8")==0 || strcmp(op,"PAIRSHL8")==0 ||
-                 strcmp(op,"DSHR8")==0 || strcmp(op,"2SHR8")==0 || strcmp(op,"S2SHR8")==0 ||
-                 strcmp(op,"STACK2SHR8")==0 || strcmp(op,"PAIRSHR8")==0 ||
-                 strcmp(op,"DSAR8")==0 || strcmp(op,"2SAR8")==0 || strcmp(op,"S2SAR8")==0 ||
-                 strcmp(op,"STACK2SAR8")==0 || strcmp(op,"PAIRSAR8")==0 ||
-                 strcmp(op,"DASHR8")==0);
-    int is_shl = (strcmp(op,"DSHL8")==0 || strcmp(op,"2SHL8")==0 || strcmp(op,"S2SHL8")==0 ||
-                  strcmp(op,"STACK2SHL8")==0 || strcmp(op,"PAIRSHL8")==0 ||
-                  strcmp(op,"DSHL16")==0 || strcmp(op,"2SHL16")==0 || strcmp(op,"S2SHL16")==0 ||
-                  strcmp(op,"STACK2SHL16")==0 || strcmp(op,"PAIRSHL16")==0);
-    int is_shr = (strcmp(op,"DSHR8")==0 || strcmp(op,"2SHR8")==0 || strcmp(op,"S2SHR8")==0 ||
-                  strcmp(op,"STACK2SHR8")==0 || strcmp(op,"PAIRSHR8")==0 ||
-                  strcmp(op,"DSHR16")==0 || strcmp(op,"2SHR16")==0 || strcmp(op,"S2SHR16")==0 ||
-                  strcmp(op,"STACK2SHR16")==0 || strcmp(op,"PAIRSHR16")==0);
-    /* else SAR/ASHR */
-    int bits = is_w8 ? 8 : 16;
-    unsigned long mask = is_w8 ? 0xFFul : 0xFFFFul;
-    long signb = is_w8 ? 0x80L : 0x8000L;
+    int is_w16 = (strstr(op,"16") != NULL);
+    int is_w8 = (!is_w16 && strstr(op,"8") != NULL);
+    /* else width 4 */
+    int is_shl = (strstr(op,"SHL") != NULL);
+    /* ASHR contains "SHR" — detect SAR/ASHR before plain SHR */
+    int is_sar = (!is_shl && (strstr(op,"SAR") != NULL || strstr(op,"ASHR") != NULL));
+    int is_shr = (!is_shl && !is_sar && strstr(op,"SHR") != NULL);
+    /* else SAR/ASHR (is_sar) */
+    int bits = is_w16 ? 16 : (is_w8 ? 8 : 4);
+    unsigned long mask = is_w16 ? 0xFFFFul : (is_w8 ? 0xFFul : 0xFul);
+    long signb = is_w16 ? 0x8000L : (is_w8 ? 0x80L : 0x8L);
     long kc = c < 0 ? 0 : c;
     long kd = d < 0 ? 0 : d;
     long x, y;
@@ -9386,6 +9388,27 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack nibble unpack: DUNPACK4 (inverse of DPACK4) */
+  if (kw(&L->cur,"DUNPACK4")||kw(&L->cur,"2UNPACK4")||kw(&L->cur,"S2UNPACK4")||
+      kw(&L->cur,"STACK2UNPACK4")||kw(&L->cur,"PAIRUNPACK4")||kw(&L->cur,"DUNPACKN")||
+      kw(&L->cur,"2UNPACKN")||kw(&L->cur,"DNIBSPLIT")||kw(&L->cur,"2NIBSPLIT")){
+    /* x y → (x>>4)&0xF  (y>>4)&0xF  x&0xF  y&0xF  — hi,hi,lo,lo so DPACK4 restores */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long y = vm->stack[--vm->sp];
+    long x = vm->stack[--vm->sp];
+    long ha = (x >> 4) & 0xFL;
+    long hb = (y >> 4) & 0xFL;
+    long la = x & 0xFL;
+    long lb = y & 0xFL;
+    vm->stack[vm->sp++] = ha;
+    vm->stack[vm->sp++] = hb;
+    vm->stack[vm->sp++] = la;
+    vm->stack[vm->sp++] = lb;
+    var_set_num(vm,"LAST_N",lb); vm->last_n=lb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-4 dual-stack control-word pack: DLO8 · DHI8 · DPACK8 */
