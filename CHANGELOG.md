@@ -1,3 +1,16 @@
+## 1.12.304-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → stack↔cell unary scale (double/half after ABS/NEG/NOT TOC; dual of SDBL/SHALF).
+
+### Language
+- `SDBLTOC`/`SDBLTOCELL`/`SCELLDBL`/`DBLTOC` — stack `i → cells[i]*=2` leave result
+- `SHALFTOC`/`SHALFTOCELL`/`SCELLHALF`/`HALFTOC` — stack `i → cells[i]/=2` (toward zero) leave result
+- Proof `327_sdbltoc_shalftoc.cubalc`
+
+### Prior
+See 1.12.303-universal.
+
 ## 1.12.303-universal — 2026-08-03
 
 ### Direction

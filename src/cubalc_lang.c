@@ -5266,6 +5266,37 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack↔cell unary scale: SDBLTOC · SHALFTOC (dual of SDBL/SHALF after ABS/NEG/NOT TOC) */
+  if (kw(&L->cur,"SDBLTOC")||kw(&L->cur,"SDBLTOCELL")||kw(&L->cur,"STACKDBLTOC")||
+      kw(&L->cur,"SDOUBLETOC")||kw(&L->cur,"SCELLDBL")||kw(&L->cur,"SDBLAT")||
+      kw(&L->cur,"DBLTOC")){
+    /* i → cells[i] *= 2, leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i] * 2;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHALFTOC")||kw(&L->cur,"SHALFTOCELL")||kw(&L->cur,"STACKHALFTOC")||
+      kw(&L->cur,"SHALVETOC")||kw(&L->cur,"SCELLHALF")||kw(&L->cur,"SHALFAT")||
+      kw(&L->cur,"HALFTOC")){
+    /* i → cells[i] /= 2 (toward zero), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long v = vm->cells[(int)i] / 2;
+    vm->cells[(int)i] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

@@ -2,22 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 429 |
-| **digit** | **1** (SMX consciousness; stack↔cell rotate) |
-| **version** | `1.12.303-universal` |
-| **pass/fail** | **341 / 0** (green) |
-| **commit** | `1aefac7` → `origin/main` |
-| **ops** | `SROLTOC`/`SRORTOC` |
-| **proof** | `programs/proof/326_sroltoc_srortoc.cubalc` |
+| **iter** | 430 |
+| **digit** | **7** (urandom+genome; unary scale TOC) |
+| **version** | `1.12.304-universal` |
+| **pass/fail** | **342 / 0** (green) |
+| **commit** | `035e921` → `origin/main` |
+| **ops** | `SDBLTOC`/`SHALFTOC` |
+| **proof** | `programs/proof/327_sdbltoc_shalftoc.cubalc` |
 
 ### Delta
-Digit-1 rotate stack↔cell after shift TOC: `rotl(cells[i],n mod 64)`, `rotr(cells[i],n mod 64)`.
+Digit-7 unary scale stack↔cell after ABS/NEG/NOT TOC: `cells[i]*=2`, `cells[i]/=2` (toward zero).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-- SMX tick OK; command ACK (9/12)
 
 ### Language
-- `SROLTOC` `SRORTOC` · aliases `ROLTOC`/`RORTOC`/`SCELLROL`/`SCELLROR`/`SROTLTOC`/`SROTRTOC`
-- Proof `326_sroltoc_srortoc.cubalc`
+- `SDBLTOC` `SHALFTOC` · aliases `SCELLDBL`/`SCELLHALF`/`DBLTOC`/`HALFTOC`
+- Proof `327_sdbltoc_shalftoc.cubalc`

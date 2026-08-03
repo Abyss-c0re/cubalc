@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T22:49:04+0300",
-  "iter": 429,
-  "algocube_digit": 1,
-  "version": "1.12.303-universal",
-  "pass": 341,
+  "ts": "2026-08-03T22:55:03+0300",
+  "iter": 430,
+  "algocube_digit": 7,
+  "version": "1.12.304-universal",
+  "pass": 342,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "SROLTOC",
-    "SRORTOC"
+    "SDBLTOC",
+    "SHALFTOC"
   ],
-  "proof": "programs/proof/326_sroltoc_srortoc.cubalc"
+  "proof": "programs/proof/327_sdbltoc_shalftoc.cubalc"
 }
