@@ -317,6 +317,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MASKN")==0 || strcasecmp(tail,"ONESN")==0 ||
             strcasecmp(tail,"ANDMN")==0 || strcasecmp(tail,"KEEPLN")==0 ||
             strcasecmp(tail,"ORMN")==0 || strcasecmp(tail,"XORMN")==0 ||
+            strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
+            strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"BEXTN")==0 || strcasecmp(tail,"BITEXTN")==0 ||
             strcasecmp(tail,"BDEPN")==0 || strcasecmp(tail,"BITDEPN")==0 ||
             strcasecmp(tail,"BTESTN")==0 || strcasecmp(tail,"BITN")==0 ||
@@ -9657,6 +9659,72 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (long)((unsigned long)a ^ m);
     long y = (long)((unsigned long)b ^ m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack data-path high-mask + clear-low (complete DMASKN/DANDMN low plane) */
+  if (kw(&L->cur,"DHMASKN")||kw(&L->cur,"2HMASKN")||kw(&L->cur,"S2HMASKN")||
+      kw(&L->cur,"STACK2HMASKN")||kw(&L->cur,"PAIRHMASKN")||kw(&L->cur,"DHIMASKN")||
+      kw(&L->cur,"2HIMASKN")||kw(&L->cur,"DHIGHMASKN")||kw(&L->cur,"2HIGHMASKN")){
+    /* a b + n → hm hm  with hm = high-n-bit mask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long v = (long)m;
+    vm->stack[vm->sp - 2] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DANDHN")||kw(&L->cur,"2ANDHN")||kw(&L->cur,"S2ANDHN")||
+      kw(&L->cur,"STACK2ANDHN")||kw(&L->cur,"PAIRANDHN")||kw(&L->cur,"DKEEPHN")||
+      kw(&L->cur,"2KEEPHN")||kw(&L->cur,"DHIGHANDN")||kw(&L->cur,"2HIGHANDN")||
+      kw(&L->cur,"DMASKANDH")||kw(&L->cur,"2MASKANDH")){
+    /* a b + n → (a&hm) (b&hm) keep high n bits; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)((unsigned long)a & m);
+    long y = (long)((unsigned long)b & m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLRLN")||kw(&L->cur,"2CLRLN")||kw(&L->cur,"S2CLRLN")||
+      kw(&L->cur,"STACK2CLRLN")||kw(&L->cur,"PAIRCLRLN")||kw(&L->cur,"DCLEARLN")||
+      kw(&L->cur,"2CLEARLN")||kw(&L->cur,"DZAPLN")||kw(&L->cur,"2ZAPLN")||
+      kw(&L->cur,"DLOWCLRN")||kw(&L->cur,"2LOWCLRN")){
+    /* a b + n → clear low n bits: x &= ~lowmask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)((unsigned long)a & ~m);
+    long y = (long)((unsigned long)b & ~m);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

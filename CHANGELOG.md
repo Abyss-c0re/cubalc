@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.213-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack data-path high-mask + clear-low (complete DMASKN/DANDMN low plane).
+
+### Language
+- `DHMASKN`/`2HMASKN`/`PAIRHMASKN` n — both lanes ← high-n-bit mask
+- `DANDHN`/`DKEEPHN`/`2ANDHN` n — pairwise keep high n bits: `x &= himask`
+- `DCLRLN`/`2CLRLN`/`PAIRCLRLN` n — pairwise clear low n bits: `x &= ~lowmask`
+- Proof `236_dhmaskn_dclrln.cubalc`
+
+### Prior
+See 1.12.212-universal.
+
+
 ## 1.12.212-universal — 2026-08-03
 
 ### Direction
