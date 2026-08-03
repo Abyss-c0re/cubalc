@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.203-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack immediate inverted bitwise (dual of SNANDI/SNORI/SXNORI).
+
+### Language
+- `DNANDI`/`2NANDI`/`PAIRNANDI` n — pairwise `x = ~(x & n)`
+- `DNORI`/`2NORI`/`PAIRNORI` n — pairwise `x = ~(x | n)`
+- `DXNORI`/`2XNORI`/`PAIRXNORI` n — pairwise `x = ~(x ^ n)` (equiv)
+- Proof `226_dnandi_dxnori.cubalc`
+
+### Prior
+See 1.12.202-universal.
+
+
 ## 1.12.202-universal — 2026-08-03
 
 ### Direction

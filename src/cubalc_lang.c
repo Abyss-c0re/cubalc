@@ -197,6 +197,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ANDI")==0 || strcasecmp(tail,"ANDIMM")==0 ||
             strcasecmp(tail,"ORI")==0 || strcasecmp(tail,"ORIMM")==0 ||
             strcasecmp(tail,"XORI")==0 || strcasecmp(tail,"XORIMM")==0 ||
+            strcasecmp(tail,"NANDI")==0 || strcasecmp(tail,"NANDIMM")==0 ||
+            strcasecmp(tail,"NORI")==0 || strcasecmp(tail,"NORIMM")==0 ||
+            strcasecmp(tail,"XNORI")==0 || strcasecmp(tail,"XNORIMM")==0 ||
+            strcasecmp(tail,"EQUIVI")==0 ||
             strcasecmp(tail,"MADD")==0 || strcasecmp(tail,"FMA")==0 ||
             strcasecmp(tail,"MULADD")==0 ||
             strcasecmp(tail,"MULHI")==0 || strcasecmp(tail,"MULH")==0 ||
@@ -9562,6 +9566,56 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = a ^ n;
     long y = b ^ n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack immediate inverted bitwise: DNANDI · DNORI · DXNORI (dual of SNANDI/SNORI/SXNORI) */
+  if (kw(&L->cur,"DNANDI")||kw(&L->cur,"2NANDI")||kw(&L->cur,"S2NANDI")||
+      kw(&L->cur,"STACK2NANDI")||kw(&L->cur,"PAIRNANDI")||kw(&L->cur,"DNANDIMM")||
+      kw(&L->cur,"2NANDIMM")||kw(&L->cur,"PAIRNANDIMM")){
+    /* a b + n → ~(a&n) ~(b&n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a & n);
+    long y = ~(b & n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNORI")||kw(&L->cur,"2NORI")||kw(&L->cur,"S2NORI")||
+      kw(&L->cur,"STACK2NORI")||kw(&L->cur,"PAIRNORI")||kw(&L->cur,"DNORIMM")||
+      kw(&L->cur,"2NORIMM")||kw(&L->cur,"PAIRNORIMM")){
+    /* a b + n → ~(a|n) ~(b|n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a | n);
+    long y = ~(b | n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXNORI")||kw(&L->cur,"2XNORI")||kw(&L->cur,"S2XNORI")||
+      kw(&L->cur,"STACK2XNORI")||kw(&L->cur,"PAIRXNORI")||kw(&L->cur,"DXNORIMM")||
+      kw(&L->cur,"2XNORIMM")||kw(&L->cur,"PAIRXNORIMM")||kw(&L->cur,"DEQUIVI")||
+      kw(&L->cur,"2EQUIVI")){
+    /* a b + n → ~(a^n) ~(b^n)  (bitwise equivalence with constant) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a ^ n);
+    long y = ~(b ^ n);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
