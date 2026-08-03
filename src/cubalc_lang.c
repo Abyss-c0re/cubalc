@@ -222,6 +222,11 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UMIN")==0 || strcasecmp(tail,"UMAX")==0 ||
             strcasecmp(tail,"ULT")==0 || strcasecmp(tail,"ULE")==0 ||
             strcasecmp(tail,"UGT")==0 || strcasecmp(tail,"UGE")==0 ||
+            strcasecmp(tail,"ULTN")==0 || strcasecmp(tail,"ULEN")==0 ||
+            strcasecmp(tail,"UGTN")==0 || strcasecmp(tail,"UGEN")==0 ||
+            strcasecmp(tail,"ULEQN")==0 || strcasecmp(tail,"UGEQN")==0 ||
+            strcasecmp(tail,"ULTIMM")==0 || strcasecmp(tail,"ULEIMM")==0 ||
+            strcasecmp(tail,"UGTIMM")==0 || strcasecmp(tail,"UGEIMM")==0 ||
             strcasecmp(tail,"INV")==0 || strcasecmp(tail,"RECIP")==0 ||
             strcasecmp(tail,"NORM100")==0 || strcasecmp(tail,"ENORM")==0 ||
             strcasecmp(tail,"NORME")==0 ||
@@ -12070,6 +12075,71 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm unsigned compare: DULTN · DUGTN · DULEN · DUGEN (dual of SULTN) */
+  if (kw(&L->cur,"DULTN")||kw(&L->cur,"2ULTN")||kw(&L->cur,"S2ULTN")||
+      kw(&L->cur,"STACK2ULTN")||kw(&L->cur,"PAIRULTN")||kw(&L->cur,"DULTIMM")||
+      kw(&L->cur,"2ULTIMM")||kw(&L->cur,"PAIRULTIMM")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (ua < un) ? 1 : 0;
+    long y = (ub < un) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUGTN")||kw(&L->cur,"2UGTN")||kw(&L->cur,"S2UGTN")||
+      kw(&L->cur,"STACK2UGTN")||kw(&L->cur,"PAIRUGTN")||kw(&L->cur,"DUGTIMM")||
+      kw(&L->cur,"2UGTIMM")||kw(&L->cur,"PAIRUGTIMM")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (ua > un) ? 1 : 0;
+    long y = (ub > un) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DULEN")||kw(&L->cur,"2ULEN")||kw(&L->cur,"S2ULEN")||
+      kw(&L->cur,"STACK2ULEN")||kw(&L->cur,"PAIRULEN")||kw(&L->cur,"DULEQN")||
+      kw(&L->cur,"2ULEQN")||kw(&L->cur,"DULEIMM")||kw(&L->cur,"PAIRULEQN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (ua <= un) ? 1 : 0;
+    long y = (ub <= un) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUGEN")||kw(&L->cur,"2UGEN")||kw(&L->cur,"S2UGEN")||
+      kw(&L->cur,"STACK2UGEN")||kw(&L->cur,"PAIRUGEN")||kw(&L->cur,"DUGEQN")||
+      kw(&L->cur,"2UGEQN")||kw(&L->cur,"DUGEIMM")||kw(&L->cur,"PAIRUGEQN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (ua >= un) ? 1 : 0;
+    long y = (ub >= un) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack parallel extract/deposit: DPEXT · DPDEP (BMI2-style) */
   if (kw(&L->cur,"DPEXT")||kw(&L->cur,"2PEXT")||kw(&L->cur,"S2PEXT")||
       kw(&L->cur,"STACK2PEXT")||kw(&L->cur,"PAIRPEXT")||kw(&L->cur,"2PEXTRACT")||
@@ -17275,6 +17345,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long n = parse_expr(vm,L);
     if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
     long v = (vm->stack[vm->sp - 1] >= n) ? 1 : 0;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 stack imm unsigned compare: SULTN · SUGTN · SULEN · SUGEN (imm dual of SULT plane) */
+  if (kw(&L->cur,"SULTN")||kw(&L->cur,"ULTN")||kw(&L->cur,"STACKULTN")||
+      kw(&L->cur,"SULTIMM")||kw(&L->cur,"CMPULTN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (ua < un) ? 1 : 0;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGTN")||kw(&L->cur,"UGTN")||kw(&L->cur,"STACKUGTN")||
+      kw(&L->cur,"SUGTIMM")||kw(&L->cur,"CMPUGTN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (ua > un) ? 1 : 0;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SULEN")||kw(&L->cur,"ULEN")||kw(&L->cur,"STACKULEN")||
+      kw(&L->cur,"SULEIMM")||kw(&L->cur,"SULEQN")||kw(&L->cur,"CMPULEN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (ua <= un) ? 1 : 0;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGEN")||kw(&L->cur,"UGEN")||kw(&L->cur,"STACKUGEN")||
+      kw(&L->cur,"SUGEIMM")||kw(&L->cur,"SUGEQN")||kw(&L->cur,"CMPUGEN")){
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long un = (unsigned long)n;
+    long v = (ua >= un) ? 1 : 0;
     vm->stack[vm->sp - 1] = v;
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;

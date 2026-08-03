@@ -1,3 +1,19 @@
+## 1.12.288-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → imm unsigned compare (imm dual of SULT/SUGT/SULE/SUGE + dual-stack after signed SEQN plane).
+
+### Language
+- `SULTN`/`ULTN` n — TOS = ((unsigned)TOS < n) ? 1 : 0
+- `SUGTN`/`UGTN` n — TOS = ((unsigned)TOS > n) ? 1 : 0
+- `SULEN`/`ULEN` n — TOS = ((unsigned)TOS ≤ n) ? 1 : 0
+- `SUGEN`/`UGEN` n — TOS = ((unsigned)TOS ≥ n) ? 1 : 0
+- `DULTN`/`DUGTN`/`DULEN`/`DUGEN` n — pair unsigned cmp vs n
+- Proof `311_sultn_dugen.cubalc`
+
+### Prior
+See 1.12.287-universal.
+
 ## 1.12.287-universal — 2026-08-03
 
 ### Direction
