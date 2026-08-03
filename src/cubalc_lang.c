@@ -240,6 +240,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"RAND")==0 || strcasecmp(tail,"RND")==0 ||
             strcasecmp(tail,"SATADD")==0 || strcasecmp(tail,"SATSUB")==0 ||
             strcasecmp(tail,"SATMUL")==0 || strcasecmp(tail,"SATDIV")==0 ||
+            strcasecmp(tail,"WRAP")==0 || strcasecmp(tail,"WRAPMOD")==0 ||
+            strcasecmp(tail,"WMOD")==0 ||
+            strcasecmp(tail,"HYP")==0 || strcasecmp(tail,"HYPOT")==0 ||
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
@@ -6707,6 +6710,69 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       if (d == 0) y = 0;
       else if (b == LONG_MIN && d == -1) y = LONG_MAX;
       else y = b / d;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy wrap + hypot: DWRAP · DHYPOT */
+  if (kw(&L->cur,"DWRAP")||kw(&L->cur,"2WRAP")||kw(&L->cur,"S2WRAP")||
+      kw(&L->cur,"STACK2WRAP")||kw(&L->cur,"PAIRWRAP")||kw(&L->cur,"DWMOD")||
+      kw(&L->cur,"2WMOD")||kw(&L->cur,"DWRAPMOD")||kw(&L->cur,"2WRAPMOD")||
+      kw(&L->cur,"S2WRAPMOD")||kw(&L->cur,"PAIRWRAPMOD")){
+    /* a b ma mb → wrap(a,ma) wrap(b,mb) in [0,m); m<=0 → 0 */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[--vm->sp];
+    long ma = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (ma > 0){ x = a % ma; if (x < 0) x += ma; }
+    if (mb > 0){ y = b % mb; if (y < 0) y += mb; }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DHYPOT")||kw(&L->cur,"2HYPOT")||kw(&L->cur,"S2HYPOT")||
+      kw(&L->cur,"STACK2HYPOT")||kw(&L->cur,"PAIRHYPOT")||kw(&L->cur,"DHYP")||
+      kw(&L->cur,"2HYP")||kw(&L->cur,"S2HYP")||kw(&L->cur,"PAIRHYP")){
+    /* a b c d → isqrt(a²+c²) isqrt(b²+d²); energy-style Euclidean pair length */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    {
+      __int128 s = (__int128)a * (__int128)a + (__int128)c * (__int128)c;
+      if (s > 0){
+        /* integer sqrt via binary search */
+        __int128 lo = 0, hi = s;
+        if (hi > (__int128)LONG_MAX) hi = (__int128)LONG_MAX;
+        while (lo < hi){
+          __int128 mid = lo + (hi - lo + 1) / 2;
+          if (mid * mid <= s) lo = mid;
+          else hi = mid - 1;
+        }
+        x = (long)lo;
+      }
+    }
+    {
+      __int128 s = (__int128)b * (__int128)b + (__int128)d * (__int128)d;
+      if (s > 0){
+        __int128 lo = 0, hi = s;
+        if (hi > (__int128)LONG_MAX) hi = (__int128)LONG_MAX;
+        while (lo < hi){
+          __int128 mid = lo + (hi - lo + 1) / 2;
+          if (mid * mid <= s) lo = mid;
+          else hi = mid - 1;
+        }
+        y = (long)lo;
+      }
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;

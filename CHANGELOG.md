@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.153-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy wrap + hypot.
+
+### Language
+- `DWRAP`/`2WRAP`/`DWMOD` — pairwise wrap-mod into `[0,m)` (`m≤0→0`)
+- `DHYPOT`/`2HYP`/`PAIRHYP` — pairwise Euclidean `isqrt(a²+c²)` / `isqrt(b²+d²)`
+- Proof `176_dwrap_dhypot.cubalc`
+
+### Prior
+See 1.12.152-universal.
+
 ## 1.12.152-universal — 2026-08-03
 
 ### Direction

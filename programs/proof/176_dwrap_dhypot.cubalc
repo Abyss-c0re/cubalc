@@ -1,0 +1,107 @@
+# Proof 176 — digit-6 dual-stack energy: DWRAP DHYPOT
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DWRAP: a b ma mb → wrap(a,ma) wrap(b,mb)
+CLEARSTACK
+PUSH 10
+PUSH 7
+PUSH 8
+PUSH 6
+DWRAP
+POP y
+POP x
+ASSERT x == 2
+ASSERT y == 1
+
+# negative normalize
+CLEARSTACK
+PUSH -3
+PUSH -1
+PUSH 7
+PUSH 5
+2WRAP
+POP y
+POP x
+ASSERT x == 4
+ASSERT y == 4
+
+# m<=0 → 0
+CLEARSTACK
+PUSH 5
+PUSH 5
+PUSH 0
+PUSH 3
+DWMOD
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 2
+
+# exact multiple
+CLEARSTACK
+PUSH 12
+PUSH 9
+PUSH 4
+PUSH 3
+DWRAPMOD
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DHYPOT: a b c d → isqrt(a²+c²) isqrt(b²+d²)
+CLEARSTACK
+PUSH 3
+PUSH 5
+PUSH 4
+PUSH 12
+DHYPOT
+POP y
+POP x
+ASSERT x == 5
+ASSERT y == 13
+
+# 2HYP alias
+CLEARSTACK
+PUSH 0
+PUSH 6
+PUSH 0
+PUSH 8
+2HYP
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 10
+
+# PAIRHYP zero axes
+CLEARSTACK
+PUSH 8
+PUSH 0
+PUSH 0
+PUSH 0
+PAIRHYP
+POP y
+POP x
+ASSERT x == 8
+ASSERT y == 0
+
+# soft fail underflow
+CLEARSTACK
+PUSH 1
+PUSH 2
+DWRAP
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+DHYPOT
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof176_dwrap_dhypot" LAST_N SP
