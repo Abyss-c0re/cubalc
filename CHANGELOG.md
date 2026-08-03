@@ -1,3 +1,17 @@
+## 1.12.252-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack imm inverted 4-bit nibble field (NAND/NOR/XNOR after SAND4N plane).
+
+### Language
+- `SNAND4N`/`NAND4N` field n — nibble n = ~(nibble & field) & 0xF (n 0..15)
+- `SNOR4N`/`NOR4N` field n — nibble n = ~(nibble | field) & 0xF
+- `SXNOR4N`/`XNOR4N`/`SEQUIV4N` field n — nibble n = ~(nibble ^ field) & 0xF
+- Proof `275_snand4n_snor4n.cubalc`
+
+### Prior
+See 1.12.251-universal.
+
 ## 1.12.251-universal — 2026-08-03
 
 ### Direction

@@ -13977,6 +13977,61 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm inverted 4-bit field: SNAND4N · SNOR4N · SXNOR4N (complete after SAND4N/SOR4N/SXOR4N) */
+  if (kw(&L->cur,"SNAND4N")||kw(&L->cur,"STACKNAND4N")||kw(&L->cur,"NAND4N")||
+      kw(&L->cur,"SNANDNIBN")||kw(&L->cur,"SNANDNIMM")||kw(&L->cur,"SINVERTAND4N")){
+    /* SNAND4N field n — nibble n of TOS = ~(nibble & field) & 0xF; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (~(((base >> sh) & 0xFul) & f)) & 0xFul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNOR4N")||kw(&L->cur,"STACKNOR4N")||kw(&L->cur,"NOR4N")||
+      kw(&L->cur,"SNORNIBN")||kw(&L->cur,"SNORNIMM")||kw(&L->cur,"SINVERTOR4N")){
+    /* SNOR4N field n — nibble n of TOS = ~(nibble | field) & 0xF; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (~(((base >> sh) & 0xFul) | f)) & 0xFul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNOR4N")||kw(&L->cur,"STACKXNOR4N")||kw(&L->cur,"XNOR4N")||
+      kw(&L->cur,"SXNORNIBN")||kw(&L->cur,"SXNORNIMM")||kw(&L->cur,"SEQUIV4N")){
+    /* SXNOR4N field n — nibble n of TOS = ~(nibble ^ field) & 0xF; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (~(((base >> sh) & 0xFul) ^ f)) & 0xFul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
