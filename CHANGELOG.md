@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.206-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack immediate compare (dual of SEQN/SLTN/SGTN).
+
+### Language
+- `DEQN`/`2EQN`/`PAIREQN` n — pairwise `(x==n)?1:0`
+- `DLTN`/`2LTN`/`PAIRLTN` n — pairwise `(x<n)?1:0`
+- `DGTN`/`2GTN`/`PAIRGTN` n — pairwise `(x>n)?1:0`
+- Proof `229_deqn_dgtn.cubalc`
+
+### Prior
+See 1.12.205-universal.
+
+
+
 ## 1.12.205-universal — 2026-08-03
 
 ### Direction
