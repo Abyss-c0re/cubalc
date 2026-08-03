@@ -198,6 +198,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"CLZ")==0 || strcasecmp(tail,"CTZ")==0 ||
             strcasecmp(tail,"ORN")==0 || strcasecmp(tail,"BREV")==0 ||
             strcasecmp(tail,"BITREV")==0 || strcasecmp(tail,"PARITY")==0 ||
+            strcasecmp(tail,"BLS")==0 || strcasecmp(tail,"BLSI")==0 ||
+            strcasecmp(tail,"BLC")==0 || strcasecmp(tail,"BLSR")==0 ||
+            strcasecmp(tail,"MASK")==0 || strcasecmp(tail,"BITMASK")==0 ||
             strcasecmp(tail,"PAR")==0 ||
             strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
             strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
@@ -6842,6 +6845,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       while (ua){ na ^= (int)(ua & 1u); ua >>= 1; }
       while (ub){ nb ^= (int)(ub & 1u); ub >>= 1; }
       x = (long)na; y = (long)nb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack bit isolate/mask: DBLS · DBLC · DMASK */
+  if (kw(&L->cur,"DBLS")||kw(&L->cur,"2BLS")||kw(&L->cur,"S2BLS")||
+      kw(&L->cur,"STACK2BLS")||kw(&L->cur,"PAIRBLS")||kw(&L->cur,"DBLSI")||
+      kw(&L->cur,"2BLSI")||kw(&L->cur,"DISOLB")||
+      kw(&L->cur,"DBLC")||kw(&L->cur,"2BLC")||kw(&L->cur,"S2BLC")||
+      kw(&L->cur,"STACK2BLC")||kw(&L->cur,"PAIRBLC")||kw(&L->cur,"DBLSR")||
+      kw(&L->cur,"2BLSR")||kw(&L->cur,"DCLRBLS")||
+      kw(&L->cur,"DMASK")||kw(&L->cur,"2MASK")||kw(&L->cur,"S2MASK")||
+      kw(&L->cur,"STACK2MASK")||kw(&L->cur,"PAIRMASK")||kw(&L->cur,"DBITMASK")||
+      kw(&L->cur,"2BITMASK")){
+    /* a b → f(a) f(b)
+     * BLS/BLSI: isolate lowest set bit  x & -x  (0 if zero)
+     * BLC/BLSR: clear lowest set bit    x & (x-1)
+     * MASK: low-n-bit mask (1<<n)-1; n clamped 0..64 (64 → all ones) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_bls = (strcmp(op,"DBLS")==0 || strcmp(op,"2BLS")==0 || strcmp(op,"S2BLS")==0 ||
+                  strcmp(op,"STACK2BLS")==0 || strcmp(op,"PAIRBLS")==0 ||
+                  strcmp(op,"DBLSI")==0 || strcmp(op,"2BLSI")==0 ||
+                  strcmp(op,"DISOLB")==0);
+    int is_blc = (strcmp(op,"DBLC")==0 || strcmp(op,"2BLC")==0 || strcmp(op,"S2BLC")==0 ||
+                  strcmp(op,"STACK2BLC")==0 || strcmp(op,"PAIRBLC")==0 ||
+                  strcmp(op,"DBLSR")==0 || strcmp(op,"2BLSR")==0 ||
+                  strcmp(op,"DCLRBLS")==0);
+    long x, y;
+    if (is_bls){
+      x = a ? (a & -a) : 0;
+      y = b ? (b & -b) : 0;
+    } else if (is_blc){
+      x = a ? (a & (a - 1)) : 0;
+      y = b ? (b & (b - 1)) : 0;
+    } else {
+      /* DMASK — width → low-n ones */
+      long na = a, nb = b;
+      if (na < 0) na = 0;
+      if (nb < 0) nb = 0;
+      if (na > 64) na = 64;
+      if (nb > 64) nb = 64;
+      if (na == 0) x = 0;
+      else if (na == 64) x = (long)(~0UL);
+      else x = (long)((1UL << (unsigned)na) - 1UL);
+      if (nb == 0) y = 0;
+      else if (nb == 64) y = (long)(~0UL);
+      else y = (long)((1UL << (unsigned)nb) - 1UL);
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;

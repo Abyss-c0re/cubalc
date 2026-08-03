@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.142-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack bit isolate/mask path.
+
+### Language
+- `DBLS`/`2BLS`/`DBLSI` — isolate lowest set bit of each of pair (`x & -x`)
+- `DBLC`/`2BLC`/`DBLSR` — clear lowest set bit (`x & (x-1)`)
+- `DMASK`/`2MASK` — low-n-bit mask from pair widths (`(1<<n)-1`, n clamped 0..64)
+- Proof `165_dbls_dmask.cubalc`
+
+### Prior
+See 1.12.141-universal.
+
 ## 1.12.141-universal — 2026-08-03
 
 ### Direction
