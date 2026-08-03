@@ -1,3 +1,17 @@
+## 1.12.337-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → reverse imm inverted ANDN TOC (imm dual of SNANDNFROMN after SANDNFROMTOCN).
+
+### Language
+- `SNANDNFROMTOCN`/`NANDNFROMTOCN`/`SNANDNFROMATN` n — stack `i → cells[i]=~(n&~cells[i])` leave result
+- `SNORNFROMTOCN`/`NORNFROMTOCN`/`SNORNFROMATN` n — stack `i → cells[i]=~(n|~cells[i])` leave result
+- `SXNORNFROMTOCN`/`XNORNFROMTOCN`/`SXNORNFROMATN` n — stack `i → cells[i]=~(n^~cells[i])` leave result
+- Proof `360_snandnfromtocn_sxnornfromtocn.cubalc`
+
+### Prior
+See 1.12.336-universal.
+
 ## 1.12.336-universal — 2026-08-04
 
 ### Direction
