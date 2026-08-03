@@ -1,3 +1,18 @@
+## 1.12.230-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → stack clear + high-mask (dual of dual-stack DCLRLN/DCLRHN/DHMASKN).
+
+### Language
+- `SCLRMN`/`STACKCLRMN`/`CLRLN` n — clear low n bits of TOS
+- `SCLRHN`/`STACKCLRHN`/`CLRHN` n — clear high n bits of TOS
+- `SHMASKN`/`STACKHMASKN`/`HMASKN` n — TOS = high-n-bit mask
+- Proof `253_sclrmn_shmaskn.cubalc`
+
+### Prior
+See 1.12.229-universal.
+
+
 ## 1.12.229-universal — 2026-08-03
 
 ### Direction
