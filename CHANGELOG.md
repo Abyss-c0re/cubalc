@@ -1,3 +1,17 @@
+## 1.12.311-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy compare bounds TOC (NE/LE/GE after SEQ/SLT/SGT plane).
+
+### Language
+- `SNETOC`/`CMPNETOC`/`SNEAT` — stack `i v → cells[i]=(cells[i]!=v)?1:0` leave result
+- `SLETOC`/`CMPLETOC`/`SLEAT` — stack `i v → cells[i]=(cells[i]<=v)?1:0` leave result
+- `SGETOC`/`CMPGETOC`/`SGEAT` — stack `i v → cells[i]=(cells[i]>=v)?1:0` leave result
+- Proof `334_snetoc_sgetoc.cubalc`
+
+### Prior
+See 1.12.310-universal.
+
 ## 1.12.310-universal — 2026-08-03
 
 ### Direction

@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 437 |
-| **digit** | **4** (urandom+genome; compare TOC) |
-| **version** | `1.12.310-universal` |
-| **pass/fail** | **348 / 0** (green) |
-| **commit** | `880a0f9` → `origin/main` |
-| **ops** | `SEQTOC`/`SLTTOC`/`SGTTOC` |
-| **proof** | `programs/proof/333_seqtoc_sgttoc.cubalc` |
+| **iter** | 438 |
+| **digit** | **6** (urandom+genome; energy compare bounds) |
+| **version** | `1.12.311-universal` |
+| **pass/fail** | **349 / 0** (green) |
+| **commit** | `363cb3c` → `origin/main` |
+| **ops** | `SNETOC`/`SLETOC`/`SGETOC` |
+| **proof** | `programs/proof/334_snetoc_sgetoc.cubalc` |
 
 ### Delta
-Digit-4 stack↔cell compare: eq/lt/gt predicate into cell (avoided SCELLEQ alias clash with range plane).
+Digit-6 energy compare bounds TOC: ne/le/ge predicates into cell (complete after SEQ/SLT/SGT).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SEQTOC` `SLTTOC` `SGTTOC` · aliases `CMPEQTOC`/`CMPLTTOC`/`CMPGTTOC`
-- Proof `333_seqtoc_sgttoc.cubalc`
+- `SNETOC` `SLETOC` `SGETOC` · aliases `CMPNETOC`/`CMPLETOC`/`CMPGETOC`
+- Proof `334_snetoc_sgetoc.cubalc`
