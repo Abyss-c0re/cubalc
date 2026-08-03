@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.181-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack fixed-width rotate plane (byte/halfword).
+
+### Language
+- `DROL8`/`2ROL8`/`PAIRROL8` — pairwise rotate-left low 8 bits (`a b c d → rol8(a,c) rol8(b,d)`)
+- `DROR8`/`2ROR8`/`PAIRROR8` — pairwise rotate-right low 8 bits
+- `DROL16`/`2ROL16`/`PAIRROL16` — pairwise rotate-left low 16 bits
+- `DROR16`/`2ROR16`/`PAIRROR16` — pairwise rotate-right low 16 bits
+- Proof `204_drol8_dror16.cubalc`
+
+### Prior
+See 1.12.180-universal.
+
+
 ## 1.12.180-universal — 2026-08-03
 
 ### Direction
