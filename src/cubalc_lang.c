@@ -7001,6 +7001,73 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack multiword imm: DADDCN · DSUBBN (imm dual of DADDC/DSUBB) */
+  if (kw(&L->cur,"DADDCN")||kw(&L->cur,"2ADDCN")||kw(&L->cur,"S2ADDCN")||
+      kw(&L->cur,"STACK2ADDCN")||kw(&L->cur,"PAIRADDCN")||kw(&L->cur,"DADCN")||
+      kw(&L->cur,"2ADCN")||kw(&L->cur,"DADDCIMM")||kw(&L->cur,"PAIRADDCIMM")){
+    /* a b + n → (a+n+cin) (b+n+cin); CARRY = any cout */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long un = (unsigned long)n, uin = (unsigned long)cin;
+    unsigned long s0 = ua + un;
+    int c1 = (s0 < ua) ? 1 : 0;
+    unsigned long sum0 = s0 + uin;
+    int c2 = (sum0 < s0) ? 1 : 0;
+    unsigned long s1 = ub + un;
+    int c3 = (s1 < ub) ? 1 : 0;
+    unsigned long sum1 = s1 + uin;
+    int c4 = (sum1 < s1) ? 1 : 0;
+    int flag = c1 | c2 | c3 | c4;
+    long x = (long)sum0, y = (long)sum1;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSUBBN")||kw(&L->cur,"2SUBBN")||kw(&L->cur,"S2SUBBN")||
+      kw(&L->cur,"STACK2SUBBN")||kw(&L->cur,"PAIRSUBBN")||kw(&L->cur,"DSBBN")||
+      kw(&L->cur,"2SBBN")||kw(&L->cur,"DSUBBIMM")||kw(&L->cur,"PAIRSUBBIMM")){
+    /* a b + n → (a−n−bin) (b−n−bin); BORROW=CARRY = any bout */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "BORROW", 0);
+      if (!vc) vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long un = (unsigned long)n, uin = (unsigned long)cin;
+    int b1 = (ua < un) ? 1 : 0;
+    unsigned long d0 = ua - un;
+    int b2 = (d0 < uin) ? 1 : 0;
+    unsigned long diff0 = d0 - uin;
+    int b3 = (ub < un) ? 1 : 0;
+    unsigned long d1 = ub - un;
+    int b4 = (d1 < uin) ? 1 : 0;
+    unsigned long diff1 = d1 - uin;
+    int flag = b1 | b2 | b3 | b4;
+    long x = (long)diff0, y = (long)diff1;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"BORROW",flag); var_set_num(vm,"BW",flag);
+    var_set_num(vm,"CARRY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack multiword stack-cin: DADDC2 · DSUBB2 (per-lane cin/bin) */
   if (kw(&L->cur,"DADDC2")||kw(&L->cur,"2ADDC2")||kw(&L->cur,"S2ADDC2")||
       kw(&L->cur,"STACK2ADDC2")||kw(&L->cur,"PAIRADDC2")||kw(&L->cur,"DADC2")||
@@ -16830,6 +16897,63 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 multiword imm: SADDCN · SSUBBN (imm dual of SADDC/SSUBB) */
+  if (kw(&L->cur,"SADDCN")||kw(&L->cur,"STACKADDCN")||
+      kw(&L->cur,"ADDCN")||kw(&L->cur,"SADCIMM")||kw(&L->cur,"SADDCIMM")||
+      kw(&L->cur,"SADCIN")){
+    /* SADDCN n — TOS = TOS + n + cin(CARRY); update CARRY/CY */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a;
+    unsigned long ub = (unsigned long)n;
+    unsigned long uc = (unsigned long)cin;
+    unsigned long s = ua + ub;
+    int c1 = (s < ua) ? 1 : 0;
+    unsigned long sum = s + uc;
+    int c2 = (sum < s) ? 1 : 0;
+    int carry = c1 | c2;
+    long r = (long)sum;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",carry); var_set_num(vm,"CY",carry);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSUBBN")||kw(&L->cur,"SSBBN")||kw(&L->cur,"STACKSUBBN")||
+      kw(&L->cur,"SUBBN")||kw(&L->cur,"SSBBIMM")||kw(&L->cur,"SSUBBIMM")||
+      kw(&L->cur,"SSUBBIN")){
+    /* SSUBBN n — TOS = TOS - n - bin(BORROW|CARRY); update BORROW/BW/CARRY */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "BORROW", 0);
+      if (!vc) vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a;
+    unsigned long ub = (unsigned long)n;
+    unsigned long uc = (unsigned long)cin;
+    int b1 = (ua < ub) ? 1 : 0;
+    unsigned long d = ua - ub;
+    int b2 = (d < uc) ? 1 : 0;
+    unsigned long diff = d - uc;
+    int borrow = b1 | b2;
+    long r = (long)diff;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"BORROW",borrow); var_set_num(vm,"BW",borrow);
+    var_set_num(vm,"CARRY",borrow);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"SDIVMOD")||kw(&L->cur,"SDIVREM")||kw(&L->cur,"STACKDIVMOD")){
     /* a b → rem quot  (TOS=quot, under=rem); sets QUOT REM */

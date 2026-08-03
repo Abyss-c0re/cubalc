@@ -1,3 +1,18 @@
+## 1.12.272-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → multiword imm add-with-carry / sub-with-borrow (imm dual of SADDC/SSUBB + DADDC/DSUBB).
+
+### Language
+- `SADDCN`/`ADDCN`/`SADCIMM` n — TOS = TOS+n+cin(CARRY); update CARRY
+- `SSUBBN`/`SUBBN`/`SSBBIMM` n — TOS = TOS−n−bin(BORROW|CARRY); update BORROW/CARRY
+- `DADDCN`/`PAIRADDCN` n — a b → (a+n+cin) (b+n+cin); CARRY = any cout
+- `DSUBBN`/`PAIRSUBBN` n — a b → (a−n−bin) (b−n−bin); BORROW=CARRY = any bout
+- Proof `295_saddcn_ssubbn.cubalc`
+
+### Prior
+See 1.12.271-universal.
+
 ## 1.12.271-universal — 2026-08-03
 
 ### Direction
