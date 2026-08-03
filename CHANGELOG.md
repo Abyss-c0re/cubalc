@@ -1,3 +1,17 @@
+## 1.12.257-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack imm inverted 4-bit nibble field (dual of SNAND4N/SNOR4N/SXNOR4N).
+
+### Language
+- `DNAND4N`/`PAIRNAND4N` field n — nibble n of each = ~(nibble & field) & 0xF (n 0..15)
+- `DNOR4N`/`PAIRNOR4N` field n — nibble n of each = ~(nibble | field) & 0xF
+- `DXNOR4N`/`PAIRXNOR4N`/`DEQUIV4N` field n — nibble n of each = ~(nibble ^ field) & 0xF
+- Proof `280_dnand4n_dnor4n.cubalc`
+
+### Prior
+See 1.12.256-universal.
+
 ## 1.12.256-universal — 2026-08-03
 
 ### Direction
