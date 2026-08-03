@@ -1,3 +1,17 @@
+## 1.12.329-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → foundation imm inverted bitwise TOC (imm dual of SNANDTOC plane after SANDTOCN).
+
+### Language
+- `SNANDTOCN`/`NANDTOCN`/`SNANDATN` n — stack `i → cells[i]=~(cells[i]&n)` leave result
+- `SNORTOCN`/`NORTOCN`/`SNORATN` n — stack `i → cells[i]=~(cells[i]|n)` leave result
+- `SXNORTOCN`/`XNORTOCN`/`SXNORATN` n — stack `i → cells[i]=~(cells[i]^n)` leave result
+- Proof `352_snandtocn_sxnortocn.cubalc`
+
+### Prior
+See 1.12.328-universal.
+
 ## 1.12.328-universal — 2026-08-04
 
 ### Direction

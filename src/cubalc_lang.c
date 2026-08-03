@@ -4953,6 +4953,56 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
+   * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
+  if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||
+      kw(&L->cur,"SNANDATN")||kw(&L->cur,"NANDTOCN")||kw(&L->cur,"SCELLNANDN")||
+      kw(&L->cur,"BNANDTOCN")){
+    /* i + n → cells[i] = ~(cells[i] & n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ~(vm->cells[(int)i] & n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNORTOCN")||kw(&L->cur,"SNORTOCIMM")||kw(&L->cur,"STACKNORTOCN")||
+      kw(&L->cur,"SNORATN")||kw(&L->cur,"NORTOCN")||kw(&L->cur,"SCELLNORN")||
+      kw(&L->cur,"BNORTOCN")){
+    /* i + n → cells[i] = ~(cells[i] | n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ~(vm->cells[(int)i] | n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNORTOCN")||kw(&L->cur,"SXNORTOCIMM")||kw(&L->cur,"STACKXNORTOCN")||
+      kw(&L->cur,"SXNORATN")||kw(&L->cur,"XNORTOCN")||kw(&L->cur,"SCELLXNORN")||
+      kw(&L->cur,"BXNORTOCN")||kw(&L->cur,"SEQUIVTOCN")){
+    /* i + n → cells[i] = ~(cells[i] ^ n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ~(vm->cells[(int)i] ^ n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 imm accumulate bound TOC: SDIVTOCN · SMODTOCN · SMINTOCN · SMAXTOCN
    * (complete SADDTOCN/SMULTOCN with / % min max; imm dual of SDIVTOC/SMODTOC/SMINTOC/SMAXTOC) */
   if (kw(&L->cur,"SDIVTOCN")||kw(&L->cur,"SDIVTOCIMM")||kw(&L->cur,"STACKDIVTOCN")||
