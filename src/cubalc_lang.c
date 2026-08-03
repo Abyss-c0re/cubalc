@@ -212,6 +212,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
             strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
             strcasecmp(tail,"BWIDTH")==0 || strcasecmp(tail,"BITWIDTH")==0 ||
+            strcasecmp(tail,"BHSI")==0 || strcasecmp(tail,"HIBIT")==0 ||
+            strcasecmp(tail,"CEILPOW2")==0 || strcasecmp(tail,"NEXTPOW2")==0 ||
+            strcasecmp(tail,"CPOW2")==0 ||
             strcasecmp(tail,"CLO")==0 || strcasecmp(tail,"CTO")==0 ||
             strcasecmp(tail,"ISPOW2")==0 || strcasecmp(tail,"POW2P")==0 ||
             strcasecmp(tail,"AVG")==0 || strcasecmp(tail,"MEAN")==0 ||
@@ -7151,6 +7154,75 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
         }
       }
       (void)is_fls; /* FLS == BWIDTH numeric result for unsigned words */
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack bit/power metrics: DBHSI · DCEILPOW2 */
+  if (kw(&L->cur,"DBHSI")||kw(&L->cur,"2BHSI")||kw(&L->cur,"S2BHSI")||
+      kw(&L->cur,"STACK2BHSI")||kw(&L->cur,"PAIRBHSI")||kw(&L->cur,"2HIBIT")||
+      kw(&L->cur,"DHIBIT")||
+      kw(&L->cur,"DCEILPOW2")||kw(&L->cur,"2CEILPOW2")||kw(&L->cur,"S2CEILPOW2")||
+      kw(&L->cur,"STACK2CEILPOW2")||kw(&L->cur,"PAIRCEILPOW2")||kw(&L->cur,"2NEXTPOW2")||
+      kw(&L->cur,"DNEXTPOW2")||kw(&L->cur,"2CPOW2")||kw(&L->cur,"DCPOW2")){
+    /* a b → f(a) f(b)
+     * BHSI/HIBIT: isolate highest set bit (value with only that bit); 0 → 0
+     * CEILPOW2/NEXTPOW2: smallest power of 2 ≥ n; n<=0 → 0; overflow → 0 */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_bhsi = (strcmp(op,"DBHSI")==0 || strcmp(op,"2BHSI")==0 || strcmp(op,"S2BHSI")==0 ||
+                   strcmp(op,"STACK2BHSI")==0 || strcmp(op,"PAIRBHSI")==0 ||
+                   strcmp(op,"2HIBIT")==0 || strcmp(op,"DHIBIT")==0);
+    long x = 0, y = 0;
+    if (is_bhsi){
+      if (a != 0){
+        unsigned long ua = (unsigned long)a;
+        for (int i = 63; i >= 0; i--){
+          if (ua & (1ul << (unsigned)i)){ x = (long)(1ul << (unsigned)i); break; }
+        }
+      }
+      if (b != 0){
+        unsigned long ub = (unsigned long)b;
+        for (int i = 63; i >= 0; i--){
+          if (ub & (1ul << (unsigned)i)){ y = (long)(1ul << (unsigned)i); break; }
+        }
+      }
+    } else {
+      /* CEILPOW2 */
+      if (a > 0){
+        if (a == 1) x = 1;
+        else {
+          unsigned long u = (unsigned long)a;
+          if ((u & (u - 1ul)) == 0ul) x = a;
+          else if (a <= (1L << 62)){
+            x = 1;
+            while (x < a){
+              if (x > (1L << 61)){ x = 0; break; }
+              x <<= 1;
+            }
+          }
+        }
+      }
+      if (b > 0){
+        if (b == 1) y = 1;
+        else {
+          unsigned long u = (unsigned long)b;
+          if ((u & (u - 1ul)) == 0ul) y = b;
+          else if (b <= (1L << 62)){
+            y = 1;
+            while (y < b){
+              if (y > (1L << 61)){ y = 0; break; }
+              y <<= 1;
+            }
+          }
+        }
+      }
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;

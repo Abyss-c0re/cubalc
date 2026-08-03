@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.147-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack high-bit isolate + ceil power-of-2.
+
+### Language
+- `DBHSI`/`2BHSI`/`DHIBIT` — isolate highest set bit of each of pair (0 if zero)
+- `DCEILPOW2`/`2CEILPOW2`/`DNEXTPOW2` — smallest power of 2 ≥ n (n≤0 → 0)
+- Proof `170_dbhsi_dceilpow2.cubalc`
+
+### Prior
+See 1.12.146-universal.
+
 ## 1.12.146-universal — 2026-08-03
 
 ### Direction
