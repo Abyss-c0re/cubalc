@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T02:19:27+0300",
-  "iter": 195,
-  "algocube_digit": 2,
-  "version": "1.12.110-universal",
-  "pass": 148,
+  "ts": "2026-08-03T03:25:01+0300",
+  "iter": 217,
+  "algocube_digit": 1,
+  "version": "1.12.121-universal",
+  "pass": 159,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "ISPOWER ISPRIMEPOWER NTHPRIME SISPOWER SIPP SNTHPRIME",
-  "proof": "programs/proof/133_ispower_nthprime.cubalc"
+  "delta": "DEQ DNE DLT DLE DGT DGE 2EQ 2NE 2LT 2LE 2GT 2GE",
+  "proof": "programs/proof/144_deq_dlt.cubalc"
 }

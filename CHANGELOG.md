@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.121-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack pair compare predicates: DEQ DNE DLT DLE DGT DGE.
+
+### Language
+- `DEQ`/`2EQ` · `DNE`/`2NE` — pairwise equality / inequality (0/1)
+- `DLT`/`2LT` · `DLE`/`2LE` · `DGT`/`2GT` · `DGE`/`2GE` — pairwise ordered compares
+- Lexer 2-prefix whitelist: EQ NE LT LE GT GE
+- Complements dual-stack ALU/bitwise with vector relational plane
+- Proof `144_deq_dlt.cubalc`
+
+### Prior
+See 1.12.120-universal.
+
 ## 1.12.120-universal — 2026-08-03
 
 ### Direction

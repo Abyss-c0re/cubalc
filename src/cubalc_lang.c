@@ -174,7 +174,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
-            strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0)
+            strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
+            strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
+            strcasecmp(tail,"LT")==0 || strcasecmp(tail,"LE")==0 ||
+            strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -5989,6 +5992,51 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp - 2] = a;
     vm->stack[vm->sp - 1] = b;
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack pair compare: DEQ · DNE · DLT · DLE · DGT · DGE (0/1 predicates) */
+  if (kw(&L->cur,"DEQ")||kw(&L->cur,"2EQ")||kw(&L->cur,"S2EQ")||
+      kw(&L->cur,"STACK2EQ")||kw(&L->cur,"PAIREQ")||
+      kw(&L->cur,"DNE")||kw(&L->cur,"2NE")||kw(&L->cur,"S2NE")||
+      kw(&L->cur,"STACK2NE")||kw(&L->cur,"PAIRNE")||
+      kw(&L->cur,"DLT")||kw(&L->cur,"2LT")||kw(&L->cur,"S2LT")||
+      kw(&L->cur,"STACK2LT")||kw(&L->cur,"PAIRLT")||
+      kw(&L->cur,"DLE")||kw(&L->cur,"2LE")||kw(&L->cur,"S2LE")||
+      kw(&L->cur,"STACK2LE")||kw(&L->cur,"PAIRLE")||
+      kw(&L->cur,"DGT")||kw(&L->cur,"2GT")||kw(&L->cur,"S2GT")||
+      kw(&L->cur,"STACK2GT")||kw(&L->cur,"PAIRGT")||
+      kw(&L->cur,"DGE")||kw(&L->cur,"2GE")||kw(&L->cur,"S2GE")||
+      kw(&L->cur,"STACK2GE")||kw(&L->cur,"PAIRGE")){
+    /* a b c d → (a ? c) (b ? d) as 0/1 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    int is_eq = (strcmp(op,"DEQ")==0 || strcmp(op,"2EQ")==0 || strcmp(op,"S2EQ")==0 ||
+                 strcmp(op,"STACK2EQ")==0 || strcmp(op,"PAIREQ")==0);
+    int is_ne = (strcmp(op,"DNE")==0 || strcmp(op,"2NE")==0 || strcmp(op,"S2NE")==0 ||
+                 strcmp(op,"STACK2NE")==0 || strcmp(op,"PAIRNE")==0);
+    int is_lt = (strcmp(op,"DLT")==0 || strcmp(op,"2LT")==0 || strcmp(op,"S2LT")==0 ||
+                 strcmp(op,"STACK2LT")==0 || strcmp(op,"PAIRLT")==0);
+    int is_le = (strcmp(op,"DLE")==0 || strcmp(op,"2LE")==0 || strcmp(op,"S2LE")==0 ||
+                 strcmp(op,"STACK2LE")==0 || strcmp(op,"PAIRLE")==0);
+    int is_gt = (strcmp(op,"DGT")==0 || strcmp(op,"2GT")==0 || strcmp(op,"S2GT")==0 ||
+                 strcmp(op,"STACK2GT")==0 || strcmp(op,"PAIRGT")==0);
+    /* else DGE family */
+    if (is_eq){ x = (a == c) ? 1 : 0; y = (b == d) ? 1 : 0; }
+    else if (is_ne){ x = (a != c) ? 1 : 0; y = (b != d) ? 1 : 0; }
+    else if (is_lt){ x = (a < c) ? 1 : 0; y = (b < d) ? 1 : 0; }
+    else if (is_le){ x = (a <= c) ? 1 : 0; y = (b <= d) ? 1 : 0; }
+    else if (is_gt){ x = (a > c) ? 1 : 0; y = (b > d) ? 1 : 0; }
+    else { x = (a >= c) ? 1 : 0; y = (b >= d) ? 1 : 0; }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
