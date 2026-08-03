@@ -311,6 +311,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SETBN")==0 || strcasecmp(tail,"SETBITN")==0 ||
             strcasecmp(tail,"CLRBN")==0 || strcasecmp(tail,"CLRBITN")==0 ||
             strcasecmp(tail,"FLIPBN")==0 || strcasecmp(tail,"FLIPBITN")==0 ||
+            strcasecmp(tail,"MASKN")==0 || strcasecmp(tail,"ONESN")==0 ||
+            strcasecmp(tail,"ANDMN")==0 || strcasecmp(tail,"KEEPLN")==0 ||
+            strcasecmp(tail,"BEXTN")==0 || strcasecmp(tail,"BITEXTN")==0 ||
             strcasecmp(tail,"BTESTN")==0 || strcasecmp(tail,"BITN")==0 ||
             strcasecmp(tail,"TESTBITN")==0 ||
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
@@ -9450,6 +9453,79 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
     long x = (long)(ua ^ bit);
     long y = (long)(ub ^ bit);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 dual-stack data-path imm mask/extract: DMASKN · DANDMN · DBEXTN (dual of SMASKN/SBEXTN) */
+  if (kw(&L->cur,"DMASKN")||kw(&L->cur,"2MASKN")||kw(&L->cur,"S2MASKN")||
+      kw(&L->cur,"STACK2MASKN")||kw(&L->cur,"PAIRMASKN")||kw(&L->cur,"DONESN")||
+      kw(&L->cur,"2ONESN")||kw(&L->cur,"DLOWMASKN")||kw(&L->cur,"2LOWMASKN")){
+    /* a b + n → m m  with m = low-n-bit mask (1<<n)-1; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long v = (long)m;
+    vm->stack[vm->sp - 2] = v;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DANDMN")||kw(&L->cur,"2ANDMN")||kw(&L->cur,"S2ANDMN")||
+      kw(&L->cur,"STACK2ANDMN")||kw(&L->cur,"PAIRANDMN")||kw(&L->cur,"DKEEPLN")||
+      kw(&L->cur,"2KEEPLN")||kw(&L->cur,"DLOWANDN")||kw(&L->cur,"2LOWANDN")||
+      kw(&L->cur,"DMASKAND")||kw(&L->cur,"2MASKAND")){
+    /* a b + n → (a&m) (b&m) with m = low-n mask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)((unsigned long)a & m);
+    long y = (long)((unsigned long)b & m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBEXTN")||kw(&L->cur,"2BEXTN")||kw(&L->cur,"S2BEXTN")||
+      kw(&L->cur,"STACK2BEXTN")||kw(&L->cur,"PAIRBEXTN")||kw(&L->cur,"DBITEXTN")||
+      kw(&L->cur,"2BITEXTN")||kw(&L->cur,"DEXTN")||kw(&L->cur,"2EXTN")){
+    /* a b + pos width → extract width bits at pos from each */
+    lex_next(L);
+    long pos = parse_expr(vm,L);
+    long width = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      vm->stack[vm->sp - 2] = 0;
+      vm->stack[vm->sp - 1] = 0;
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width < 1) width = 0;
+    if (width > 63 - pos) width = 63 - pos;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      x = (long)(((unsigned long)a >> (unsigned)pos) & mask);
+      y = (long)(((unsigned long)b >> (unsigned)pos) & mask);
+    }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

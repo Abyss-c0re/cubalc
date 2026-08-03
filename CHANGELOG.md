@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.210-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack data-path imm mask/extract (dual of SMASKN/SBEXTN).
+
+### Language
+- `DMASKN`/`2MASKN`/`PAIRMASKN` n — both lanes ← low-n-bit mask `(1<<n)-1`
+- `DANDMN`/`DKEEPLN`/`2ANDMN` n — pairwise keep low n bits: `x &= mask`
+- `DBEXTN`/`2BEXTN` pos width — pairwise field extract at pos
+- Proof `233_dmaskn_dbextn.cubalc`
+
+### Prior
+See 1.12.209-universal.
+
+
+
 ## 1.12.209-universal — 2026-08-03
 
 ### Direction
