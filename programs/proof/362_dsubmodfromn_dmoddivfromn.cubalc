@@ -1,0 +1,86 @@
+# Proof 362 — digit-6 dual-stack reverse imm modular: DSUBMODFROMN DPOWMODFROMN DMODDIVFROMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# DSUBMODFROMN: (10-3)%12=7, (10-5)%12=5
+PUSH 3
+PUSH 5
+DSUBMODFROMN 10 12
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 5
+
+# DRSUBMODN: (3-5)%12=10, (3-1)%12=2
+PUSH 5
+PUSH 1
+DRSUBMODN 3 12
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == 2
+
+# soft m=0 → 0,0
+PUSH 9
+PUSH 1
+DSUBMODFROMN 4 0
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DPOWMODFROMN: 2^10 mod 1000=24, 2^5 mod 1000=32
+PUSH 10
+PUSH 5
+DPOWMODFROMN 2 1000
+POP y
+POP x
+ASSERT x == 24
+ASSERT y == 32
+
+# DRPOWMODN: 3^5 mod 13=9, 3^0 mod 13=1
+PUSH 5
+PUSH 0
+DRPOWMODN 3 13
+POP y
+POP x
+ASSERT x == 9
+ASSERT y == 1
+
+# DMODDIVFROMN: c*inv(a) — 10*inv(3) mod 7=1, 10*inv(2) mod 7
+# inv(2) mod 7=4 (2*4=8≡1); 10%7=3; 3*4=12≡5
+PUSH 3
+PUSH 2
+DMODDIVFROMN 10 7
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 5
+
+# DRMODDIVN: 1*inv(2) mod 5=3, 1*inv(3) mod 5=2
+PUSH 2
+PUSH 3
+DRMODDIVN 1 5
+POP y
+POP x
+ASSERT x == 3
+ASSERT y == 2
+
+# no inverse → 0
+PUSH 2
+PUSH 4
+DMODDIVFROMN 1 4
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# soft short stack
+CLEARSTACK
+PUSH 1
+DSUBMODFROMN 1 5
+ASSERT OK == 0
+
+PRINT "362_dsubmodfromn_dmoddivfromn OK"

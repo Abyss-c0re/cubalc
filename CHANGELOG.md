@@ -1,3 +1,17 @@
+## 1.12.339-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → dual-stack reverse imm modular (dual of SSUBMODFROMN plane; energy-math reverse).
+
+### Language
+- `DSUBMODFROMN`/`DRSUBMODN` k m — `a b → (k-a)%m (k-b)%m`
+- `DPOWMODFROMN`/`DRPOWMODN` base m — `a b → base^a mod m , base^b mod m`
+- `DMODDIVFROMN`/`DRMODDIVN` c m — `a b → c·a⁻¹ mod m , c·b⁻¹ mod m`
+- Proof `362_dsubmodfromn_dmoddivfromn.cubalc`
+
+### Prior
+See 1.12.338-universal.
+
 ## 1.12.338-universal — 2026-08-04
 
 ### Direction
