@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.180-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack nibble data-path clip/extend.
+
+### Language
+- `DCLIP4`/`2CLIP4`/`DCLIPN` — pairwise clamp to unsigned nibble `[0,15]`
+- `DSEXT4`/`2SEXT4`/`DSEXTN` — pairwise sign-extend low 4 bits
+- `DZEXT4`/`2ZEXT4`/`DZEXTN` — pairwise zero-extend low 4 bits
+- Proof `203_dclip4_dext4.cubalc`
+
+### Prior
+See 1.12.179-universal.
+
+
 ## 1.12.179-universal — 2026-08-03
 
 ### Direction
