@@ -1,3 +1,17 @@
+## 1.12.233-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → stack immediate clamp/range (imm dual of SCLAMP/SBETWEEN/SWITHIN; pair of DCLAMPN).
+
+### Language
+- `SCLAMPN`/`STACKCLAMPN`/`CLAMPN` lo hi — clamp TOS into [lo,hi]
+- `SBETWEENN`/`SINRANGEN`/`BETWEENN` lo hi — TOS in [lo,hi] inclusive → 0/1
+- `SWITHINN`/`STACKWITHINN`/`WITHINN` lo hi — lo ≤ TOS < hi → 0/1
+- Proof `256_sclampn_swithinn.cubalc`
+
+### Prior
+See 1.12.232-universal.
+
 ## 1.12.232-universal — 2026-08-03
 
 ### Direction

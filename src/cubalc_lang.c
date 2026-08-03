@@ -14422,6 +14422,49 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack immediate clamp/range: SCLAMPN · SBETWEENN · SWITHINN (imm dual of SCLAMP/SBETWEEN/SWITHIN; pair of DCLAMPN) */
+  if (kw(&L->cur,"SCLAMPN")||kw(&L->cur,"STACKCLAMPN")||kw(&L->cur,"CLAMPN")||
+      kw(&L->cur,"SCLAMPIMM")||kw(&L->cur,"SBOUNDN")||kw(&L->cur,"BOUNDN")){
+    /* SCLAMPN lo hi — TOS = clamp(TOS,[lo,hi]); swap lo/hi if needed */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < lo) r = lo;
+    if (r > hi) r = hi;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBETWEENN")||kw(&L->cur,"SINRANGEN")||kw(&L->cur,"STACKBETWEENN")||
+      kw(&L->cur,"BETWEENN")||kw(&L->cur,"INRANGEN")||kw(&L->cur,"SINRANGEIMM")){
+    /* SBETWEENN lo hi — TOS = 1 if TOS in [lo,hi] inclusive; swap lo/hi if needed */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long n = vm->stack[vm->sp - 1];
+    long r = (n >= lo && n <= hi) ? 1 : 0;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SWITHINN")||kw(&L->cur,"STACKWITHINN")||kw(&L->cur,"WITHINN")||
+      kw(&L->cur,"SWITHINIMM")||kw(&L->cur,"SINTERVALN")){
+    /* SWITHINN lo hi — TOS = 1 if lo <= TOS < hi (Forth WITHIN); swap not applied (hi exclusive) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[vm->sp - 1];
+    long r = (n >= lo && n < hi) ? 1 : 0;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 select/clamp stack: SBETWEEN SINRANGE SMEDIAN */
   if (kw(&L->cur,"SBETWEEN")||kw(&L->cur,"SINRANGE")||kw(&L->cur,"STACKBETWEEN")||
       kw(&L->cur,"STACKINRANGE")){
