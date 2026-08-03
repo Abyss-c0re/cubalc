@@ -4934,7 +4934,7 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-6 forward sat stack↔cell energy: SSATADDTOC · SSATSUBTOC · SSATDIVTOC */
+  /* digit-6 forward sat stack↔cell energy: SSATADDTOC · SSATSUBTOC · SSATDIVTOC · SSATMULTOC · SCLAMPTOC */
   if (kw(&L->cur,"SSATADDTOC")||kw(&L->cur,"SCELLSATADD")||kw(&L->cur,"SSATADDCELL")||
       kw(&L->cur,"STACKSATADDCELL")||kw(&L->cur,"SATADDTOC")){
     /* i v → cells[i] = sat(cells[i] + v), leave result */
@@ -4987,6 +4987,50 @@ static int parse_form(VM *vm, Lex *L){
     if (v == 0) r = 0;
     else if (a == LONG_MIN && v == -1) r = LONG_MAX;
     else r = a / v;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 sat energy ext: SSATMULTOC · SCLAMPTOC (complete sat TOC + bound) */
+  if (kw(&L->cur,"SSATMULTOC")||kw(&L->cur,"SCELLSATMUL")||kw(&L->cur,"SSATMULCELL")||
+      kw(&L->cur,"STACKSATMULCELL")||kw(&L->cur,"SATMULTOC")){
+    /* i v → cells[i] = sat(cells[i] * v), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a == 0 || v == 0) r = 0;
+    else {
+      __int128 p = (__int128)a * (__int128)v;
+      if (p > (__int128)LONG_MAX) r = LONG_MAX;
+      else if (p < (__int128)LONG_MIN) r = LONG_MIN;
+      else r = (long)p;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLAMPTOC")||kw(&L->cur,"SCELLCLAMP")||kw(&L->cur,"SBOUNDTOC")||
+      kw(&L->cur,"STACKCLAMPTOC")||kw(&L->cur,"CLAMPTOC")||kw(&L->cur,"SCLIPTOC")){
+    /* i lo hi → cells[i] = clamp(cells[i], lo, hi), leave result */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (lo > hi){ long t = lo; lo = hi; hi = t; }
+    long a = vm->cells[(int)i];
+    long r = a;
+    if (r < lo) r = lo;
+    if (r > hi) r = hi;
     vm->cells[(int)i] = r;
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;

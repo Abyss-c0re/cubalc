@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 421 |
-| **digit** | **9** (urandom; depth-8 combinators) |
-| **version** | `1.12.298-universal` |
-| **pass/fail** | **336 / 0** (green) |
+| **iter** | 423 |
+| **digit** | **6** (urandom; sat energy) |
+| **version** | `1.12.299-universal` |
+| **pass/fail** | **337 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `8NIP`/`8ROT`/`8RROT` |
-| **proof** | `programs/proof/321_8nip_8rot.cubalc` |
+| **ops** | `SSATMULTOC`/`SCLAMPTOC` |
+| **proof** | `programs/proof/322_ssatmultoc_sclamptoc.cubalc` |
 
 ### Delta
-Digit-9 depth-8 combinator ext after foundation: keep ends, rotate L/R top 8. Lexer `8NIP/8ROT/8RROT` tails.
+Digit-6 sat energy complete: sat mul into cell; clamp cell to [lo,hi].
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline

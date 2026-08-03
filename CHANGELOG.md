@@ -1,3 +1,16 @@
+## 1.12.299-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → sat energy stack↔cell complete (mul + clamp after SSATADD/SUB/DIV TOC).
+
+### Language
+- `SSATMULTOC`/`SCELLSATMUL`/`SATMULTOC` — stack `i v → cells[i]=sat(cells[i]*v)` leave result
+- `SCLAMPTOC`/`SCELLCLAMP`/`SBOUNDTOC` — stack `i lo hi → cells[i]=clamp(cells[i],lo,hi)` leave result
+- Proof `322_ssatmultoc_sclamptoc.cubalc`
+
+### Prior
+See 1.12.298-universal.
+
 ## 1.12.298-universal — 2026-08-03
 
 ### Direction
