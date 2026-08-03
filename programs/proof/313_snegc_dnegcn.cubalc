@@ -1,0 +1,148 @@
+# Proof 313 — digit-7 multiword negate+cin: SNEGC SNEGCN DNEGCC DNEGCN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# SNEGC — cin=1: ~x+1 = -x (two's complement)
+CLEARSTACK
+LET CARRY = 1
+PUSH 5
+SNEGC
+POP x
+ASSERT x == -5
+ASSERT CARRY == 0
+
+# SNEGC — cin=0: just complement
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+SCOMADC
+POP x
+ASSERT x == -1
+ASSERT CARRY == 0
+
+# SNEGC — cin1 on 0: ~0+1 overflows to 0 with cout
+CLEARSTACK
+LET CARRY = 1
+PUSH 0
+SNEGC
+POP x
+ASSERT x == 0
+ASSERT CARRY == 1
+
+# SNEGC — cin1 on -1: ~(-1)+1 = 1 (two's complement of -1)
+CLEARSTACK
+LET CARRY = 1
+PUSH -1
+SNEGC
+POP x
+ASSERT x == 1
+ASSERT CARRY == 0
+
+# SNEGCN n=1 same as cin1
+CLEARSTACK
+LET CARRY = 0
+PUSH 7
+SNEGCN 1
+POP x
+ASSERT x == -7
+ASSERT CARRY == 0
+
+# SNEGCN n=0 complement only
+CLEARSTACK
+PUSH 0
+NEGCN 0
+POP x
+ASSERT x == -1
+ASSERT CARRY == 0
+
+# soft empty
+CLEARSTACK
+SNEGC
+ASSERT OK == 0
+CLEARSTACK
+SNEGCN 1
+ASSERT OK == 0
+
+# DNEGCC shared cin=1
+CLEARSTACK
+LET CARRY = 1
+PUSH 3
+PUSH 4
+DNEGCC
+POP y
+POP x
+ASSERT x == -3
+ASSERT y == -4
+ASSERT CARRY == 0
+
+# DNEGCC cin=0
+CLEARSTACK
+LET CARRY = 0
+PUSH 0
+PUSH 1
+PAIRNEGCC
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+ASSERT CARRY == 0
+
+# DNEGCN n=1
+CLEARSTACK
+LET CARRY = 0
+PUSH 10
+PUSH -1
+DNEGCN 1
+POP y
+POP x
+# ~10+1=-10; ~(-1)+1=0+1=1, no cout
+ASSERT x == -10
+ASSERT y == 1
+ASSERT CARRY == 0
+
+# DNEGCN n=0
+CLEARSTACK
+PUSH 5
+PUSH 6
+DNEGCN 0
+POP y
+POP x
+ASSERT x == -6
+ASSERT y == -7
+ASSERT CARRY == 0
+
+# 2NEGCN alias
+CLEARSTACK
+PUSH 1
+PUSH 2
+2NEGCN 1
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+ASSERT CARRY == 0
+
+# dual soft
+CLEARSTACK
+DNEGCC
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+DNEGCN 1
+ASSERT OK == 0
+
+# multiword two's complement of (lo=0,hi=1) i.e. 2^64 → (0,-1)
+CLEARSTACK
+LET CARRY = 1
+PUSH 0
+SNEGC
+POP lo
+ASSERT lo == 0
+ASSERT CARRY == 1
+PUSH 1
+SNEGC
+POP hi
+ASSERT hi == -1
+ASSERT CARRY == 0
+
+HOLD_FLASH 1

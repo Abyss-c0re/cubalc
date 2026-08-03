@@ -235,7 +235,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"NEGC2")==0 || strcasecmp(tail,"NEGC")==0 ||
+            strcasecmp(tail,"NEGCN")==0 || strcasecmp(tail,"NEGCC")==0 ||
+            strcasecmp(tail,"NEGCIMM")==0 || strcasecmp(tail,"NEGCF")==0 ||
             strcasecmp(tail,"COMADC")==0 || strcasecmp(tail,"NEGADC")==0 ||
+            strcasecmp(tail,"COMADCN")==0 || strcasecmp(tail,"COMADCC")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
             strcasecmp(tail,"LT")==0 || strcasecmp(tail,"LE")==0 ||
             strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0 ||
@@ -7575,6 +7578,54 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     int flag = c0 | c1;
     vm->stack[vm->sp++] = (long)sa;
     vm->stack[vm->sp++] = (long)sb;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack shared-CARRY negate: DNEGCC (pair of SNEGC; cin from CARRY) */
+  if (kw(&L->cur,"DNEGCC")||kw(&L->cur,"2NEGCC")||kw(&L->cur,"S2NEGCC")||
+      kw(&L->cur,"STACK2NEGCC")||kw(&L->cur,"PAIRNEGCC")||kw(&L->cur,"DCOMADCC")||
+      kw(&L->cur,"2COMADCC")||kw(&L->cur,"PAIRCOMADC")||kw(&L->cur,"DNEGCF")){
+    /* a b → (~a)+cin  (~b)+cin; cin=CARRY; CARRY = cout_a|cout_b */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long uin = cin ? 1ul : 0ul;
+    unsigned long ta = ~(unsigned long)a, tb = ~(unsigned long)b;
+    unsigned long sa = ta + uin, sb = tb + uin;
+    int c0 = (uin && sa < ta) ? 1 : 0;
+    int c1 = (uin && sb < tb) ? 1 : 0;
+    int flag = c0 | c1;
+    vm->stack[vm->sp - 2] = (long)sa;
+    vm->stack[vm->sp - 1] = (long)sb;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack imm cin negate: DNEGCN n (shared cin from n 0/1) */
+  if (kw(&L->cur,"DNEGCN")||kw(&L->cur,"2NEGCN")||kw(&L->cur,"S2NEGCN")||
+      kw(&L->cur,"STACK2NEGCN")||kw(&L->cur,"PAIRNEGCN")||kw(&L->cur,"DCOMADCN")||
+      kw(&L->cur,"2COMADCN")||kw(&L->cur,"DNEGCIMM")||kw(&L->cur,"PAIRNEGCIMM")){
+    /* a b + n → (~a)+(n?1:0) (~b)+(n?1:0); CARRY = OR cout */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    unsigned long uin = n ? 1ul : 0ul;
+    unsigned long ta = ~(unsigned long)a, tb = ~(unsigned long)b;
+    unsigned long sa = ta + uin, sb = tb + uin;
+    int c0 = (uin && sa < ta) ? 1 : 0;
+    int c1 = (uin && sb < tb) ? 1 : 0;
+    int flag = c0 | c1;
+    vm->stack[vm->sp - 2] = (long)sa;
+    vm->stack[vm->sp - 1] = (long)sb;
     var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
     var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
@@ -18013,6 +18064,46 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long r = (long)ua;
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"CARRY",cin); var_set_num(vm,"CY",cin);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 stack multiword negate-via-complement+cin: SNEGC (stack dual of DNEGC2 path) */
+  if (kw(&L->cur,"SNEGC")||kw(&L->cur,"SCOMADC")||kw(&L->cur,"SNEGADC")||
+      kw(&L->cur,"STACKNEGC")||kw(&L->cur,"SNEGCST")||kw(&L->cur,"SNOTADC")){
+    /* SNEGC — TOS = (~TOS) + cin(CARRY); CARRY = cout (unsigned wrap) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ta = ~(unsigned long)a;
+    unsigned long uin = cin ? 1ul : 0ul;
+    unsigned long sa = ta + uin;
+    int cout = (uin && sa < ta) ? 1 : 0;
+    long r = (long)sa;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",cout); var_set_num(vm,"CY",cout);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 stack imm cin negate: SNEGCN n — cin from n (0/1); dual of shared-CARRY form */
+  if (kw(&L->cur,"SNEGCN")||kw(&L->cur,"SCOMADCN")||kw(&L->cur,"SNEGADCIMM")||
+      kw(&L->cur,"STACKNEGCN")||kw(&L->cur,"SNEGCIMM")||kw(&L->cur,"NEGCN")){
+    /* SNEGCN n — TOS = (~TOS) + (n?1:0); CARRY = cout */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    unsigned long ta = ~(unsigned long)a;
+    unsigned long uin = n ? 1ul : 0ul;
+    unsigned long sa = ta + uin;
+    int cout = (uin && sa < ta) ? 1 : 0;
+    long r = (long)sa;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",cout); var_set_num(vm,"CY",cout);
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

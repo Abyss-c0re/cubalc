@@ -1,3 +1,18 @@
+## 1.12.290-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → multiword negate-via-complement+cin (stack dual of DNEGC2 + shared-CARRY/imm duals).
+
+### Language
+- `SNEGC`/`SCOMADC` — TOS = (~TOS)+cin(CARRY); CARRY = cout
+- `SNEGCN`/`NEGCN` n — TOS = (~TOS)+(n?1:0); CARRY = cout
+- `DNEGCC`/`PAIRNEGCC` — pair shared-CARRY cin form
+- `DNEGCN`/`PAIRNEGCN` n — pair shared imm cin
+- Proof `313_snegc_dnegcn.cubalc`
+
+### Prior
+See 1.12.289-universal.
+
 ## 1.12.289-universal — 2026-08-03
 
 ### Direction

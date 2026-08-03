@@ -293,7 +293,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             309_sdivceiln_ddivfloorn \
             310_scoprimenn_dpown \
             311_sultn_dugen \
-            312_suminn_dumaxn; do
+            312_suminn_dumaxn \
+            313_snegc_dnegcn; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
