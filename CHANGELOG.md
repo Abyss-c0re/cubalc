@@ -1,3 +1,17 @@
+## 1.12.338-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → reverse imm modular plane (reverse dual of SSUBMODN/SPOWMODN/SMODDIVN).
+
+### Language
+- `SSUBMODFROMN`/`RSUBMODN` k m — `TOS = (k - TOS) mod m` (m≤0 → 0)
+- `SPOWMODFROMN`/`RPOWMODN` base m — `TOS = base^TOS mod m` (m≤0 or exp<0 → 0)
+- `SMODDIVFROMN`/`RMODDIVN` a m — `TOS = a * TOS^{-1} mod m` (0 if none)
+- Proof `361_ssubmodfromn_smoddivfromn.cubalc`
+
+### Prior
+See 1.12.337-universal.
+
 ## 1.12.337-universal — 2026-08-04
 
 ### Direction
