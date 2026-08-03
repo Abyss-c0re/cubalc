@@ -10818,6 +10818,55 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm inverted ANDN plane: DNANDNI · DNORNI · DXNORNI (dual of SNANDNI) */
+  if (kw(&L->cur,"DNANDNI")||kw(&L->cur,"S2NANDNI")||kw(&L->cur,"STACK2NANDNI")||
+      kw(&L->cur,"PAIRNANDNI")||kw(&L->cur,"DINVERTANDNI")||kw(&L->cur,"DNANDNOTI")||
+      kw(&L->cur,"PAIRNANDNOTI")){
+    /* a b + n → ~(a&~n) ~(b&~n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a & ~n);
+    long y = ~(b & ~n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNORNI")||kw(&L->cur,"S2NORNI")||kw(&L->cur,"STACK2NORNI")||
+      kw(&L->cur,"PAIRNORNI")||kw(&L->cur,"DINVERTORNI")||kw(&L->cur,"DNORNOTI")||
+      kw(&L->cur,"PAIRNORNOTI")){
+    /* a b + n → ~(a|~n) ~(b|~n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a | ~n);
+    long y = ~(b | ~n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXNORNI")||kw(&L->cur,"S2XNORNI")||kw(&L->cur,"STACK2XNORNI")||
+      kw(&L->cur,"PAIRXNORNI")||kw(&L->cur,"DEQUIVNI")||kw(&L->cur,"DXNORNOTI")||
+      kw(&L->cur,"PAIRXNORNOTI")||kw(&L->cur,"PAIRSEQUIVNI")){
+    /* a b + n → ~(a^~n) ~(b^~n)  (equiv DXORI / a^n , b^n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = ~(a ^ ~n);
+    long y = ~(b ^ ~n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack immediate min/max/clamp: DMINN · DMAXN · DCLAMPN (dual of SMINN/SMAXN) */
   if (kw(&L->cur,"DMINN")||kw(&L->cur,"2MINN")||kw(&L->cur,"S2MINN")||
       kw(&L->cur,"STACK2MINN")||kw(&L->cur,"PAIRMINN")||kw(&L->cur,"DMINIMM")||

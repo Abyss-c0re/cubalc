@@ -1,3 +1,17 @@
+## 1.12.263-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack imm inverted ANDN plane (dual of SNANDNI/SNORNI/SXNORNI; completes ANDN ladder).
+
+### Language
+- `DNANDNI`/`PAIRNANDNI` n — a b → ~(a&~n) ~(b&~n)
+- `DNORNI`/`PAIRNORNI` n — a b → ~(a|~n) ~(b|~n)
+- `DXNORNI`/`PAIRXNORNI`/`DEQUIVNI` n — a b → ~(a^~n) ~(b^~n) (equiv `DXORI`)
+- Proof `286_dnandni_dnorni.cubalc`
+
+### Prior
+See 1.12.262-universal.
+
 ## 1.12.262-universal — 2026-08-03
 
 ### Direction
