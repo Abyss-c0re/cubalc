@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.189-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack arithmetic numthy (möbius / radical / square-free).
+
+### Language
+- `DMOBIUS`/`2MOBIUS`/`DMU` — pairwise Möbius μ(n) (`n<=0 → 0`; square factor → 0)
+- `DRAD`/`2RAD`/`DRADICAL` — pairwise radical (product of distinct primes)
+- `DSQFREE`/`2SQFREE`/`DISSQFREE` — pairwise square-free predicate (0/1)
+- Proof `212_dmobius_drad_dsqfree.cubalc`
+
+### Prior
+See 1.12.188-universal.
+
+
 ## 1.12.188-universal — 2026-08-03
 
 ### Direction
