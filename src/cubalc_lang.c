@@ -13098,6 +13098,52 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack imm byte field: SBYTEN · SSETBYTEN · SCLRBYTEN (imm dual of SBYTE/SSETBYTE) */
+  if (kw(&L->cur,"SBYTEN")||kw(&L->cur,"STACKBYTEN")||kw(&L->cur,"SGETBYTEN")||
+      kw(&L->cur,"BYTEN")||kw(&L->cur,"GETBYTEN")){
+    /* SBYTEN n — TOS = little-endian byte n of TOS; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    long r = (long)(((unsigned long)vm->stack[vm->sp - 1] >> (unsigned)(n * 8)) & 0xFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETBYTEN")||kw(&L->cur,"STACKSETBYTEN")||kw(&L->cur,"SSETBYIMM")||
+      kw(&L->cur,"SETBYTEN")||kw(&L->cur,"PUTBYTEN")){
+    /* SSETBYTEN field n — deposit low 8 bits of field into byte n of TOS; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)((base & ~(0xFFul << shift)) | (f << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRBYTEN")||kw(&L->cur,"STACKCLRBYTEN")||kw(&L->cur,"SCLRBYIMM")||
+      kw(&L->cur,"CLRBYTEN")||kw(&L->cur,"ZAPBYTEN")){
+    /* SCLRBYTEN n — clear little-endian byte n of TOS; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)(base & ~(0xFFul << shift));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

@@ -1,3 +1,17 @@
+## 1.12.236-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack imm byte field (imm dual of SBYTE/SSETBYTE; word data-path).
+
+### Language
+- `SBYTEN`/`GETBYTEN` n — extract little-endian byte n of TOS
+- `SSETBYTEN`/`SETBYTEN` field n — deposit low 8 bits into byte n of TOS
+- `SCLRBYTEN`/`CLRBYTEN` n — clear byte n of TOS
+- Proof `259_sbyten_ssetbyten.cubalc`
+
+### Prior
+See 1.12.235-universal.
+
 ## 1.12.235-universal — 2026-08-03
 
 ### Direction
