@@ -1,3 +1,18 @@
+## 1.12.229-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack high-n bitfield metrics (dual of dual-stack DPOPHN; complete SPOPMN low plane).
+
+### Language
+- `SPOPHN`/`STACKPOPHN`/`SONESHN` n — popcount of high n bits of TOS
+- `SANYHN`/`STACKANYHN`/`ANYHN` n — any high-n bit set → 0/1
+- `SALLHN`/`STACKALLHN`/`ALLHN` n — all high-n bits set → 0/1 (n=0 vacuous 1)
+- Proof `252_spophn_sallhn.cubalc`
+
+### Prior
+See 1.12.228-universal.
+
+
 ## 1.12.228-universal — 2026-08-03
 
 ### Direction
