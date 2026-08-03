@@ -1,3 +1,16 @@
+## 1.12.316-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → unary parity TOC (dual of SODD/SEVEN into cell after zero-rel predicate TOC).
+
+### Language
+- `SODDTOC`/`ODDTOC`/`SODDAT` — stack `i → cells[i]=(cells[i]&1)?1:0` leave result
+- `SEVENTOC`/`EVENTOC`/`SEVENAT` — stack `i → cells[i]=((cells[i]&1)==0)?1:0` leave result
+- Proof `339_soddtoc_seventoc.cubalc`
+
+### Prior
+See 1.12.315-universal.
+
 ## 1.12.315-universal — 2026-08-04
 
 ### Direction
