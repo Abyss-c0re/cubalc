@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.197-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack immediate rotate (dual of SROLN/SRORN).
+
+### Language
+- `DROLN`/`2ROLN`/`PAIRROLN` n — pairwise rotate-left by n (mod 64)
+- `DRORN`/`2RORN`/`PAIRRORN` n — pairwise rotate-right by n (mod 64)
+- Proof `220_droln_drorn.cubalc`
+
+### Prior
+See 1.12.196-universal.
+
+
 ## 1.12.196-universal — 2026-08-03
 
 ### Direction

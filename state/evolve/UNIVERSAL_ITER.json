@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T11:14:58+0300",
-  "iter": 273,
-  "algocube_digit": 5,
-  "version": "1.12.196-universal",
-  "pass": 234,
+  "ts": "2026-08-03T11:19:24+0300",
+  "iter": 275,
+  "algocube_digit": 3,
+  "version": "1.12.197-universal",
+  "pass": 235,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,9 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "DSETBN",
-    "DCLRBN",
-    "DBTESTN"
+    "DROLN",
+    "DRORN"
   ],
-  "proof": "programs/proof/219_dsetbn_dbtestn.cubalc"
+  "proof": "programs/proof/220_droln_drorn.cubalc"
 }

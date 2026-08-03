@@ -257,6 +257,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
             strcasecmp(tail,"ROL")==0 || strcasecmp(tail,"ROR")==0 ||
+            strcasecmp(tail,"ROLN")==0 || strcasecmp(tail,"RORN")==0 ||
+            strcasecmp(tail,"ROTLN")==0 || strcasecmp(tail,"ROTRN")==0 ||
             strcasecmp(tail,"ROL4")==0 || strcasecmp(tail,"ROR4")==0 ||
             strcasecmp(tail,"ROTL4")==0 || strcasecmp(tail,"ROTR4")==0 ||
             strcasecmp(tail,"ROL8")==0 || strcasecmp(tail,"ROR8")==0 ||
@@ -9294,6 +9296,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
     long x = (ua & bit) ? 1 : 0;
     long y = (ub & bit) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack immediate rotate: DROLN · DRORN (dual of SROLN/SRORN) */
+  if (kw(&L->cur,"DROLN")||kw(&L->cur,"2ROLN")||kw(&L->cur,"S2ROLN")||
+      kw(&L->cur,"STACK2ROLN")||kw(&L->cur,"PAIRROLN")||kw(&L->cur,"DROTLN")||
+      kw(&L->cur,"2ROTLN")||kw(&L->cur,"PAIRROTLN")||kw(&L->cur,"DROLIMM")){
+    /* a b + n → rotl(a,n) rotl(b,n); n mod 64; n<0 → 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (uk == 0) ? (long)ua : (long)((ua << uk) | (ua >> (64u - uk)));
+    long y = (uk == 0) ? (long)ub : (long)((ub << uk) | (ub >> (64u - uk)));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DRORN")||kw(&L->cur,"2RORN")||kw(&L->cur,"S2RORN")||
+      kw(&L->cur,"STACK2RORN")||kw(&L->cur,"PAIRRORN")||kw(&L->cur,"DROTRN")||
+      kw(&L->cur,"2ROTRN")||kw(&L->cur,"PAIRROTRN")||kw(&L->cur,"DRORIMM")){
+    /* a b + n → rotr(a,n) rotr(b,n); n mod 64; n<0 → 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (uk == 0) ? (long)ua : (long)((ua >> uk) | (ua << (64u - uk)));
+    long y = (uk == 0) ? (long)ub : (long)((ub >> uk) | (ub << (64u - uk)));
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
