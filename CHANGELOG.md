@@ -1,3 +1,17 @@
+## 1.12.324-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → imm bitwise TOC (imm dual of SANDTOC/SORTOC/SXORTOC after bitfield/SADDTOCN plane).
+
+### Language
+- `SANDTOCN`/`ANDTOCN`/`SANDATN` n — stack `i → cells[i]&=n` leave result
+- `SORTOCN`/`ORTOCN`/`SORATN` n — stack `i → cells[i]|=n` leave result
+- `SXORTOCN`/`XORTOCN`/`SXORATN` n — stack `i → cells[i]^=n` leave result
+- Proof `347_sandtocn_sxortocn.cubalc`
+
+### Prior
+See 1.12.323-universal.
+
 ## 1.12.323-universal — 2026-08-04
 
 ### Direction
