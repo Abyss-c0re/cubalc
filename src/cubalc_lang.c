@@ -11690,6 +11690,76 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 dual-stack imm inverted 32-bit field: DNAND32N · DNOR32N · DXNOR32N (dual of SNAND32N; complete dual inverted ladder) */
+  if (kw(&L->cur,"DNAND32N")||kw(&L->cur,"S2NAND32N")||kw(&L->cur,"STACK2NAND32N")||
+      kw(&L->cur,"PAIRNAND32N")||kw(&L->cur,"DNANDWN")||kw(&L->cur,"DINVERTAND32N")||
+      kw(&L->cur,"DNANDWIMM")){
+    /* a b + field n → word n of each = ~(word & field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long wa = (~(((ma >> sh) & 0xFFFFFFFFul) & f)) & 0xFFFFFFFFul;
+    unsigned long wb = (~(((mb >> sh) & 0xFFFFFFFFul) & f)) & 0xFFFFFFFFul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNOR32N")||kw(&L->cur,"S2NOR32N")||kw(&L->cur,"STACK2NOR32N")||
+      kw(&L->cur,"PAIRNOR32N")||kw(&L->cur,"DNORWN")||kw(&L->cur,"DINVERTOR32N")||
+      kw(&L->cur,"DNORWIMM")){
+    /* a b + field n → word n of each = ~(word | field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long wa = (~(((ma >> sh) & 0xFFFFFFFFul) | f)) & 0xFFFFFFFFul;
+    unsigned long wb = (~(((mb >> sh) & 0xFFFFFFFFul) | f)) & 0xFFFFFFFFul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXNOR32N")||kw(&L->cur,"S2XNOR32N")||kw(&L->cur,"STACK2XNOR32N")||
+      kw(&L->cur,"PAIRXNOR32N")||kw(&L->cur,"DXNORWN")||kw(&L->cur,"DEQUIV32N")||
+      kw(&L->cur,"DXNORWIMM")){
+    /* a b + field n → word n of each = ~(word ^ field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long wa = (~(((ma >> sh) & 0xFFFFFFFFul) ^ f)) & 0xFFFFFFFFul;
+    unsigned long wb = (~(((mb >> sh) & 0xFFFFFFFFul) ^ f)) & 0xFFFFFFFFul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 dual-stack imm 16-bit field bitwise: DAND16N · DOR16N · DXOR16N (dual of SAND16N/SOR16N/SXOR16N) */
   if (kw(&L->cur,"DAND16N")||kw(&L->cur,"S2AND16N")||kw(&L->cur,"STACK2AND16N")||
       kw(&L->cur,"PAIRAND16N")||kw(&L->cur,"DANDHIMM")||kw(&L->cur,"DKEEP16N")||

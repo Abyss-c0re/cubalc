@@ -1,3 +1,17 @@
+## 1.12.259-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack imm inverted 32-bit word field (dual of SNAND32N; complete dual inverted field ladder).
+
+### Language
+- `DNAND32N`/`PAIRNAND32N` field n — word n of each = ~(word & field) & 0xFFFFFFFF (n 0..1)
+- `DNOR32N`/`PAIRNOR32N` field n — word n of each = ~(word | field) & 0xFFFFFFFF
+- `DXNOR32N`/`PAIRXNOR32N`/`DEQUIV32N` field n — word n of each = ~(word ^ field) & 0xFFFFFFFF
+- Proof `282_dnand32n_dnor32n.cubalc`
+
+### Prior
+See 1.12.258-universal.
+
 ## 1.12.258-universal — 2026-08-03
 
 ### Direction
