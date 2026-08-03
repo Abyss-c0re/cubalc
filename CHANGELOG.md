@@ -1,3 +1,17 @@
+## 1.12.227-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack word unpack (complete DLO32/DHI32/DPACK32 plane).
+
+### Language
+- `DUNPACK32`/`2UNPACK32`/`PAIRUNPACK32` — pair words → hi32,hi32,lo32,lo32 (inverse of DPACK32)
+- Aliases: `DUNPACKDW` `DWORDSPLIT` `2WORDSPLIT`
+- Proof `250_dunpack32.cubalc`
+
+### Prior
+See 1.12.226-universal.
+
+
 ## 1.12.226-universal — 2026-08-03
 
 ### Direction

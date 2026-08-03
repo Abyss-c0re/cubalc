@@ -251,6 +251,7 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UNPACK8")==0 || strcasecmp(tail,"UNPACKB")==0 ||
             strcasecmp(tail,"BYTSPLIT")==0 ||
             strcasecmp(tail,"UNPACK16")==0 || strcasecmp(tail,"UNPACKW")==0 ||
+            strcasecmp(tail,"UNPACK32")==0 || strcasecmp(tail,"UNPACKDW")==0 ||
             strcasecmp(tail,"HALFSPLIT")==0 ||
             strcasecmp(tail,"SHLC")==0 || strcasecmp(tail,"SHRC")==0 ||
             strcasecmp(tail,"SHLCY")==0 || strcasecmp(tail,"SHRCY")==0 ||
@@ -11543,6 +11544,29 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 dual-stack word unpack: DUNPACK32 (inverse of DPACK32; complete DLO32/DHI32 plane) */
+  if (kw(&L->cur,"DUNPACK32")||kw(&L->cur,"2UNPACK32")||kw(&L->cur,"S2UNPACK32")||
+      kw(&L->cur,"STACK2UNPACK32")||kw(&L->cur,"PAIRUNPACK32")||kw(&L->cur,"DUNPACKDW")||
+      kw(&L->cur,"2UNPACKDW")||kw(&L->cur,"DWORDSPLIT")||kw(&L->cur,"2WORDSPLIT")){
+    /* x y → hi32(x) hi32(y) lo32(x) lo32(y) — hi,hi,lo,lo so DPACK32 restores */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long y = vm->stack[--vm->sp];
+    long x = vm->stack[--vm->sp];
+    unsigned long long ux = (unsigned long long)(unsigned long)x;
+    unsigned long long uy = (unsigned long long)(unsigned long)y;
+    long ha = (long)(unsigned int)(ux >> 32);
+    long hb = (long)(unsigned int)(uy >> 32);
+    long la = (long)(unsigned int)ux;
+    long lb = (long)(unsigned int)uy;
+    vm->stack[vm->sp++] = ha;
+    vm->stack[vm->sp++] = hb;
+    vm->stack[vm->sp++] = la;
+    vm->stack[vm->sp++] = lb;
+    var_set_num(vm,"LAST_N",lb); vm->last_n=lb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
