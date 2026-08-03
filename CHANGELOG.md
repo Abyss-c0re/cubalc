@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.188-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy unit/complement + power sum.
+
+### Language
+- `DCLIP01`/`2CLIP01`/`DUNIT` — pairwise clamp to unit interval `[0,1]`
+- `DCOMP100`/`2COMP100`/`DENCOMP` — pairwise energy complement `100-x`
+- `DSUMSQ`/`2SUMSQ`/`DSSQ` — pairwise sum-of-squares `a²+c²` / `b²+d²`
+- Proof `211_dclip01_dcomp100_dsumsq.cubalc`
+
+### Prior
+See 1.12.187-universal.
+
+
 ## 1.12.187-universal — 2026-08-03
 
 ### Direction

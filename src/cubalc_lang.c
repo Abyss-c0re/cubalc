@@ -326,6 +326,12 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SCALE")==0 || strcasecmp(tail,"SCL")==0 ||
             strcasecmp(tail,"CLIP100")==0 || strcasecmp(tail,"CLIPPCT")==0 ||
             strcasecmp(tail,"ENCLIP")==0 ||
+            strcasecmp(tail,"CLIP01")==0 || strcasecmp(tail,"UNIT")==0 ||
+            strcasecmp(tail,"CLAMP01")==0 ||
+            strcasecmp(tail,"COMP100")==0 || strcasecmp(tail,"ENCOMP")==0 ||
+            strcasecmp(tail,"INV100")==0 ||
+            strcasecmp(tail,"SUMSQ")==0 || strcasecmp(tail,"SSQ")==0 ||
+            strcasecmp(tail,"POW2SUM")==0 ||
             strcasecmp(tail,"RANDRANGE")==0 || strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"RANDBITS")==0 || strcasecmp(tail,"RBITS")==0 ||
             strcasecmp(tail,"CLIP4")==0 || strcasecmp(tail,"CLIPN")==0 ||
@@ -7713,6 +7719,24 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 dual-stack energy power: DSUMSQ (building block for DRMS) */
+  if (kw(&L->cur,"DSUMSQ")||kw(&L->cur,"2SUMSQ")||kw(&L->cur,"S2SUMSQ")||
+      kw(&L->cur,"STACK2SUMSQ")||kw(&L->cur,"PAIRSUMSQ")||kw(&L->cur,"DSSQ")||
+      kw(&L->cur,"2SSQ")||kw(&L->cur,"DPOW2SUM")||kw(&L->cur,"2POW2SUM")){
+    /* a b c d → a*a+c*c  b*b+d*d  (energy sum-of-squares / power metric) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a * a + c * c;
+    long y = b * b + d * d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-6 dual-stack energy means: DGEOM · DHARM · DRMS (complete after DAVG) */
   if (kw(&L->cur,"DGEOM")||kw(&L->cur,"2GEOM")||kw(&L->cur,"S2GEOM")||
       kw(&L->cur,"STACK2GEOM")||kw(&L->cur,"PAIRGEOM")||kw(&L->cur,"DGEOMEAN")||
@@ -8039,6 +8063,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp - 2] = a;
     vm->stack[vm->sp - 1] = b;
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy unit/complement: DCLIP01 · DCOMP100 */
+  if (kw(&L->cur,"DCLIP01")||kw(&L->cur,"2CLIP01")||kw(&L->cur,"S2CLIP01")||
+      kw(&L->cur,"STACK2CLIP01")||kw(&L->cur,"PAIRCLIP01")||kw(&L->cur,"DUNIT")||
+      kw(&L->cur,"2UNIT")||kw(&L->cur,"DCLAMP01")||kw(&L->cur,"2CLAMP01")||
+      kw(&L->cur,"PAIRCLAMP01")){
+    /* a b → clamp(a,0,1) clamp(b,0,1) unit-interval energy gate */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (a > 1) a = 1;
+    if (b < 0) b = 0;
+    if (b > 1) b = 1;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCOMP100")||kw(&L->cur,"2COMP100")||kw(&L->cur,"S2COMP100")||
+      kw(&L->cur,"STACK2COMP100")||kw(&L->cur,"PAIRCOMP100")||kw(&L->cur,"DENCOMP")||
+      kw(&L->cur,"2ENCOMP")||kw(&L->cur,"DINV100")||kw(&L->cur,"2INV100")||
+      kw(&L->cur,"PAIRINV100")){
+    /* a b → 100-a  100-b  energy-plane complement (remaining capacity) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 100 - a;
+    long y = 100 - b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-6 dual-stack energy invert + normalize: DINV · DNORM100 */
