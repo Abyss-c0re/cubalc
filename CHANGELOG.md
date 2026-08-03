@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.168-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack 3-way compare.
+
+### Language
+- `DCMP`/`2CMP`/`DICMP` — pairwise signed compare → −1/0/+1
+- `DUCMP`/`2UCMP`/`DUCMP3` — pairwise unsigned compare → −1/0/+1
+- Proof `191_dcmp_ducmp.cubalc`
+
+### Prior
+See 1.12.167-universal.
+
+
 ## 1.12.167-universal — 2026-08-03
 
 ### Direction
