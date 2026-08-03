@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.140-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack sat-mul + range RNG (energy/flow).
+
+### Language
+- `DSATMUL`/`2SATMUL` — pairwise saturating multiply
+- `DRANDRANGE`/`2RANDRANGE`/`DRANDIN` — pair uniform inclusive ranges `a b c d → U[a,c] U[b,d]`
+- Proof `163_dsatmul_drandrange.cubalc`
+
+### Prior
+See 1.12.139-universal.
+
 ## 1.12.139-universal — 2026-08-03
 
 ### Direction

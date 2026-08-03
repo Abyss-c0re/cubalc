@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T05:21:05+0300",
-  "iter": 248,
-  "algocube_digit": 4,
-  "version": "1.12.139-universal",
-  "pass": 177,
+  "ts": "2026-08-03T05:25:52+0300",
+  "iter": 250,
+  "algocube_digit": 6,
+  "version": "1.12.140-universal",
+  "pass": 178,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,13 +18,12 @@
     "flow_compile"
   ],
   "ops": [
-    "DLO8",
-    "2LO8",
-    "DHI8",
-    "2HI8",
-    "DPACK8",
-    "2PACK8"
+    "DSATMUL",
+    "2SATMUL",
+    "DRANDRANGE",
+    "2RANDRANGE",
+    "DRANDIN"
   ],
-  "proof": "programs/proof/162_dlo8_dpack8.cubalc",
-  "delta": "digit-4 dual-stack control-word byte pack/extract"
+  "proof": "programs/proof/163_dsatmul_drandrange.cubalc",
+  "delta": "digit-6 dual-stack sat-mul + range RNG"
 }

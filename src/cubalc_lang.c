@@ -219,6 +219,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0 ||
             strcasecmp(tail,"RAND")==0 || strcasecmp(tail,"RND")==0 ||
             strcasecmp(tail,"SATADD")==0 || strcasecmp(tail,"SATSUB")==0 ||
+            strcasecmp(tail,"SATMUL")==0 || strcasecmp(tail,"RANDRANGE")==0 ||
+            strcasecmp(tail,"RANDIN")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
@@ -6475,8 +6477,10 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
   if (kw(&L->cur,"DSATADD")||kw(&L->cur,"2SATADD")||kw(&L->cur,"S2SATADD")||
       kw(&L->cur,"STACK2SATADD")||kw(&L->cur,"PAIRSATADD")||
       kw(&L->cur,"DSATSUB")||kw(&L->cur,"2SATSUB")||kw(&L->cur,"S2SATSUB")||
-      kw(&L->cur,"STACK2SATSUB")||kw(&L->cur,"PAIRSATSUB")){
-    /* a b c d → sat(a±c) sat(b±d) — energy-style saturating pair ALU */
+      kw(&L->cur,"STACK2SATSUB")||kw(&L->cur,"PAIRSATSUB")||
+      kw(&L->cur,"DSATMUL")||kw(&L->cur,"2SATMUL")||kw(&L->cur,"S2SATMUL")||
+      kw(&L->cur,"STACK2SATMUL")||kw(&L->cur,"PAIRSATMUL")){
+    /* a b c d → sat(a⋆c) sat(b⋆d) — energy-style saturating pair ALU */
     char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -6488,6 +6492,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     int is_add = (strcmp(op,"DSATADD")==0 || strcmp(op,"2SATADD")==0 ||
                   strcmp(op,"S2SATADD")==0 || strcmp(op,"STACK2SATADD")==0 ||
                   strcmp(op,"PAIRSATADD")==0);
+    int is_sub = (strcmp(op,"DSATSUB")==0 || strcmp(op,"2SATSUB")==0 ||
+                  strcmp(op,"S2SATSUB")==0 || strcmp(op,"STACK2SATSUB")==0 ||
+                  strcmp(op,"PAIRSATSUB")==0);
     long x, y;
     if (is_add){
       if (c > 0 && a > LONG_MAX - c) x = LONG_MAX;
@@ -6496,14 +6503,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       if (d > 0 && b > LONG_MAX - d) y = LONG_MAX;
       else if (d < 0 && b < LONG_MIN - d) y = LONG_MIN;
       else y = b + d;
-    } else {
+    } else if (is_sub){
       if (c > 0 && a < LONG_MIN + c) x = LONG_MIN;
       else if (c < 0 && a > LONG_MAX + c) x = LONG_MAX;
       else x = a - c;
       if (d > 0 && b < LONG_MIN + d) y = LONG_MIN;
       else if (d < 0 && b > LONG_MAX + d) y = LONG_MAX;
       else y = b - d;
+    } else {
+      /* DSATMUL */
+      if (a == 0 || c == 0) x = 0;
+      else {
+        __int128 p = (__int128)a * (__int128)c;
+        if (p > (__int128)LONG_MAX) x = LONG_MAX;
+        else if (p < (__int128)LONG_MIN) x = LONG_MIN;
+        else x = (long)p;
+      }
+      if (b == 0 || d == 0) y = 0;
+      else {
+        __int128 p = (__int128)b * (__int128)d;
+        if (p > (__int128)LONG_MAX) y = LONG_MAX;
+        else if (p < (__int128)LONG_MIN) y = LONG_MIN;
+        else y = (long)p;
+      }
     }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DRANDRANGE")||kw(&L->cur,"2RANDRANGE")||kw(&L->cur,"S2RANDRANGE")||
+      kw(&L->cur,"STACK2RANDRANGE")||kw(&L->cur,"PAIRRANDRANGE")||kw(&L->cur,"2RANDIN")||
+      kw(&L->cur,"DRANDIN")||kw(&L->cur,"2RANDBETWEEN")){
+    /* a b c d → uniform[a,c] uniform[b,d] inclusive; swap ends if inverted */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long lo1 = a, hi1 = c, lo2 = b, hi2 = d;
+    if (lo1 > hi1){ long t = lo1; lo1 = hi1; hi1 = t; }
+    if (lo2 > hi2){ long t = lo2; lo2 = hi2; hi2 = t; }
+    uint32_t xg = vm->rng;
+    long span1 = hi1 - lo1 + 1;
+    if (span1 < 1) span1 = 1;
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long x = lo1 + (long)(xg % (uint32_t)span1);
+    long span2 = hi2 - lo2 + 1;
+    if (span2 < 1) span2 = 1;
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long y = lo2 + (long)(xg % (uint32_t)span2);
+    vm->rng = xg;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
