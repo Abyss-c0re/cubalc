@@ -266,6 +266,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"RELU6")==0 || strcasecmp(tail,"CLAMP6")==0 ||
             strcasecmp(tail,"DEADZ")==0 || strcasecmp(tail,"DEADZONE")==0 ||
             strcasecmp(tail,"DEAD")==0 ||
+            strcasecmp(tail,"THRESH")==0 || strcasecmp(tail,"GATE")==0 ||
+            strcasecmp(tail,"ANDIF")==0 || strcasecmp(tail,"TH")==0 ||
             strcasecmp(tail,"COPYSIGN")==0 || strcasecmp(tail,"CSIGN")==0 ||
             strcasecmp(tail,"MEDIAN")==0 || strcasecmp(tail,"MID3")==0 ||
             strcasecmp(tail,"MED")==0 ||
@@ -7704,6 +7706,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else { x = (a >= 0) ? 1 : 0; y = (b >= 0) ? 1 : 0; }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack control gates: DTHRESH · DGATE */
+  if (kw(&L->cur,"DTHRESH")||kw(&L->cur,"2THRESH")||kw(&L->cur,"S2THRESH")||
+      kw(&L->cur,"STACK2THRESH")||kw(&L->cur,"PAIRTHRESH")||kw(&L->cur,"DTH")||
+      kw(&L->cur,"2TH")){
+    /* a b ta tb → (a>=ta?1:0) (b>=tb?1:0)  dual threshold predicates */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = (a >= ta) ? 1 : 0;
+    long y = (b >= tb) ? 1 : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DGATE")||kw(&L->cur,"2GATE")||kw(&L->cur,"S2GATE")||
+      kw(&L->cur,"STACK2GATE")||kw(&L->cur,"PAIRGATE")||kw(&L->cur,"DANDIF")||
+      kw(&L->cur,"2ANDIF")||kw(&L->cur,"S2ANDIF")||kw(&L->cur,"PAIRANDIF")){
+    /* a b ga gb → (ga!=0?a:0) (gb!=0?b:0)  dual boolean gate / mask pass */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long gb = vm->stack[--vm->sp];
+    long ga = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = ga ? a : 0;
+    long y = gb ? b : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.172-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control gates (threshold + mask pass).
+
+### Language
+- `DTHRESH`/`2THRESH`/`PAIRTHRESH` — pairwise `x ≥ t` → 0/1
+- `DGATE`/`2GATE`/`DANDIF` — pairwise pass-if-mask (`mask≠0 ? x : 0`)
+- Proof `195_dthresh_dgate.cubalc`
+
+### Prior
+See 1.12.171-universal.
+
+
 ## 1.12.171-universal — 2026-08-03
 
 ### Direction

@@ -1,0 +1,99 @@
+# Proof 195 — digit-1 dual-stack control: DTHRESH DGATE
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DTHRESH: a b ta tb → (a>=ta) (b>=tb) as 0/1
+CLEARSTACK
+PUSH 5
+PUSH 3
+PUSH 5
+PUSH 4
+DTHRESH
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 0
+
+# equal thresholds pass
+CLEARSTACK
+PUSH 0
+PUSH -1
+PUSH 0
+PUSH -1
+2THRESH
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 1
+
+# both fail
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 3
+PAIRTHRESH
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DTH alias
+CLEARSTACK
+PUSH 10
+PUSH 10
+PUSH 10
+PUSH 11
+DTH
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == 0
+
+# DGATE: a b ga gb → (ga?a:0) (gb?b:0)
+CLEARSTACK
+PUSH 7
+PUSH 9
+PUSH 1
+PUSH 0
+DGATE
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 0
+
+# both open
+CLEARSTACK
+PUSH 4
+PUSH -5
+PUSH 1
+PUSH 2
+2GATE
+POP y
+POP x
+ASSERT x == 4
+ASSERT y == -5
+
+# both closed
+CLEARSTACK
+PUSH 8
+PUSH 6
+PUSH 0
+PUSH 0
+PAIRGATE
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DANDIF alias
+CLEARSTACK
+PUSH 3
+PUSH 5
+PUSH -1
+PUSH 0
+DANDIF
+POP y
+POP x
+ASSERT x == 3
+ASSERT y == 0
