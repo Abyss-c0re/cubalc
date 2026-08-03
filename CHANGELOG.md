@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.161-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack unsigned min/max.
+
+### Language
+- `DUMIN`/`2UMIN`/`PAIRUMIN` — pairwise unsigned min
+- `DUMAX`/`2UMAX`/`PAIRUMAX` — pairwise unsigned max
+- Proof `184_dumin_dumax.cubalc`
+
+### Prior
+See 1.12.160-universal.
+
+
 ## 1.12.160-universal — 2026-08-03
 
 ### Direction

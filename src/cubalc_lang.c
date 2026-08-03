@@ -182,6 +182,7 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"HMUL")==0 ||
             strcasecmp(tail,"UDIV")==0 || strcasecmp(tail,"UMOD")==0 ||
             strcasecmp(tail,"UREM")==0 || strcasecmp(tail,"UDIVIDE")==0 ||
+            strcasecmp(tail,"UMIN")==0 || strcasecmp(tail,"UMAX")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
@@ -6302,6 +6303,38 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     } else {
       if (uc != 0) x = (long)(ua % uc);
       if (ud != 0) y = (long)(ub % ud);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack unsigned min/max: DUMIN · DUMAX */
+  if (kw(&L->cur,"DUMIN")||kw(&L->cur,"2UMIN")||kw(&L->cur,"S2UMIN")||
+      kw(&L->cur,"STACK2UMIN")||kw(&L->cur,"PAIRUMIN")||kw(&L->cur,"DUMINU")||
+      kw(&L->cur,"DUMAX")||kw(&L->cur,"2UMAX")||kw(&L->cur,"S2UMAX")||
+      kw(&L->cur,"STACK2UMAX")||kw(&L->cur,"PAIRUMAX")||kw(&L->cur,"DUMAXU")){
+    /* a b c d → unsigned min/max(a,c) min/max(b,d) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_min = (strcmp(op,"DUMIN")==0 || strcmp(op,"2UMIN")==0 ||
+                  strcmp(op,"S2UMIN")==0 || strcmp(op,"STACK2UMIN")==0 ||
+                  strcmp(op,"PAIRUMIN")==0 || strcmp(op,"DUMINU")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    long x, y;
+    if (is_min){
+      x = (long)(ua < uc ? ua : uc);
+      y = (long)(ub < ud ? ub : ud);
+    } else {
+      x = (long)(ua > uc ? ua : uc);
+      y = (long)(ub > ud ? ub : ud);
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
