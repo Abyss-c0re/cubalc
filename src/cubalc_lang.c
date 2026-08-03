@@ -242,10 +242,14 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
             strcasecmp(tail,"ROL")==0 || strcasecmp(tail,"ROR")==0 ||
+            strcasecmp(tail,"ROL4")==0 || strcasecmp(tail,"ROR4")==0 ||
+            strcasecmp(tail,"ROTL4")==0 || strcasecmp(tail,"ROTR4")==0 ||
             strcasecmp(tail,"ROL8")==0 || strcasecmp(tail,"ROR8")==0 ||
             strcasecmp(tail,"ROTL8")==0 || strcasecmp(tail,"ROTR8")==0 ||
             strcasecmp(tail,"ROL16")==0 || strcasecmp(tail,"ROR16")==0 ||
             strcasecmp(tail,"ROTL16")==0 || strcasecmp(tail,"ROTR16")==0 ||
+            strcasecmp(tail,"NIBSWAP")==0 || strcasecmp(tail,"SWAPNIB")==0 ||
+            strcasecmp(tail,"NIBXCHG")==0 ||
             strcasecmp(tail,"WITHIN")==0 || strcasecmp(tail,"BETWEEN")==0 ||
             strcasecmp(tail,"NAND")==0 || strcasecmp(tail,"NOR")==0 ||
             strcasecmp(tail,"XNOR")==0 || strcasecmp(tail,"ANDN")==0 ||
@@ -8471,8 +8475,12 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-8 dual-stack fixed-width rotate: DROL8 · DROR8 · DROL16 · DROR16 */
-  if (kw(&L->cur,"DROL8")||kw(&L->cur,"2ROL8")||kw(&L->cur,"S2ROL8")||
+  /* digit-8 dual-stack fixed-width rotate: DROL4 · DROR4 · DROL8 · DROR8 · DROL16 · DROR16 */
+  if (kw(&L->cur,"DROL4")||kw(&L->cur,"2ROL4")||kw(&L->cur,"S2ROL4")||
+      kw(&L->cur,"STACK2ROL4")||kw(&L->cur,"PAIRROL4")||kw(&L->cur,"DROTL4")||
+      kw(&L->cur,"DROR4")||kw(&L->cur,"2ROR4")||kw(&L->cur,"S2ROR4")||
+      kw(&L->cur,"STACK2ROR4")||kw(&L->cur,"PAIRROR4")||kw(&L->cur,"DROTR4")||
+      kw(&L->cur,"DROL8")||kw(&L->cur,"2ROL8")||kw(&L->cur,"S2ROL8")||
       kw(&L->cur,"STACK2ROL8")||kw(&L->cur,"PAIRROL8")||kw(&L->cur,"DROTL8")||
       kw(&L->cur,"DROR8")||kw(&L->cur,"2ROR8")||kw(&L->cur,"S2ROR8")||
       kw(&L->cur,"STACK2ROR8")||kw(&L->cur,"PAIRROR8")||kw(&L->cur,"DROTR8")||
@@ -8480,7 +8488,7 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       kw(&L->cur,"STACK2ROL16")||kw(&L->cur,"PAIRROL16")||kw(&L->cur,"DROTL16")||
       kw(&L->cur,"DROR16")||kw(&L->cur,"2ROR16")||kw(&L->cur,"S2ROR16")||
       kw(&L->cur,"STACK2ROR16")||kw(&L->cur,"PAIRROR16")||kw(&L->cur,"DROTR16")){
-    /* a b c d → rot_w(a,c) rot_w(b,d); w∈{8,16}; amount mod w, neg→0; result masked */
+    /* a b c d → rot_w(a,c) rot_w(b,d); w∈{4,8,16}; amount mod w, neg→0; result masked */
     char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
@@ -8491,20 +8499,12 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long a = vm->stack[--vm->sp];
     if (c < 0) c = 0;
     if (d < 0) d = 0;
-    int is_rol = (strcmp(op,"DROL8")==0 || strcmp(op,"2ROL8")==0 || strcmp(op,"S2ROL8")==0 ||
-                  strcmp(op,"STACK2ROL8")==0 || strcmp(op,"PAIRROL8")==0 ||
-                  strcmp(op,"DROTL8")==0 ||
-                  strcmp(op,"DROL16")==0 || strcmp(op,"2ROL16")==0 || strcmp(op,"S2ROL16")==0 ||
-                  strcmp(op,"STACK2ROL16")==0 || strcmp(op,"PAIRROL16")==0 ||
-                  strcmp(op,"DROTL16")==0);
-    int is_w8 = (strcmp(op,"DROL8")==0 || strcmp(op,"2ROL8")==0 || strcmp(op,"S2ROL8")==0 ||
-                 strcmp(op,"STACK2ROL8")==0 || strcmp(op,"PAIRROL8")==0 ||
-                 strcmp(op,"DROTL8")==0 ||
-                 strcmp(op,"DROR8")==0 || strcmp(op,"2ROR8")==0 || strcmp(op,"S2ROR8")==0 ||
-                 strcmp(op,"STACK2ROR8")==0 || strcmp(op,"PAIRROR8")==0 ||
-                 strcmp(op,"DROTR8")==0);
-    unsigned bits = is_w8 ? 8u : 16u;
-    unsigned mask = is_w8 ? 0xFFu : 0xFFFFu;
+    int is_rol = (strstr(op,"ROL") != NULL || strstr(op,"ROTL") != NULL);
+    /* width: prefer 16, then 8, else 4 (check longest digit suffix first) */
+    int is_w16 = (strstr(op,"16") != NULL);
+    int is_w8 = (!is_w16 && strstr(op,"8") != NULL);
+    unsigned bits = is_w16 ? 16u : (is_w8 ? 8u : 4u);
+    unsigned mask = is_w16 ? 0xFFFFu : (is_w8 ? 0xFFu : 0xFu);
     unsigned uc = (unsigned)c & (bits - 1u);
     unsigned ud = (unsigned)d & (bits - 1u);
     unsigned wa = (unsigned)a & mask, wb = (unsigned)b & mask;
@@ -8516,8 +8516,28 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = (uc == 0) ? (long)wa : (long)(((wa >> uc) | (wa << (bits - uc))) & mask);
       y = (ud == 0) ? (long)wb : (long)(((wb >> ud) | (wb << (bits - ud))) & mask);
     }
+    (void)is_rol; /* used above */
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 dual-stack nibble swap: DNIBSWAP (low-byte nibble exchange) */
+  if (kw(&L->cur,"DNIBSWAP")||kw(&L->cur,"2NIBSWAP")||kw(&L->cur,"S2NIBSWAP")||
+      kw(&L->cur,"STACK2NIBSWAP")||kw(&L->cur,"PAIRNIBSWAP")||kw(&L->cur,"DSWAPNIB")||
+      kw(&L->cur,"2SWAPNIB")||kw(&L->cur,"DNIBXCHG")||kw(&L->cur,"2NIBXCHG")){
+    /* a b → swap_lo_nibbles(a) swap_lo_nibbles(b); result low byte only
+     * ((x&0xF)<<4)|((x>>4)&0xF) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    unsigned ua = (unsigned)a & 0xFFu;
+    unsigned ub = (unsigned)b & 0xFFu;
+    long x = (long)(((ua & 0x0Fu) << 4) | ((ua >> 4) & 0x0Fu));
+    long y = (long)(((ub & 0x0Fu) << 4) | ((ub >> 4) & 0x0Fu));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.186-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack nibble rotate/swap (complete fixed-width 4/8/16).
+
+### Language
+- `DROL4`/`2ROL4`/`PAIRROL4` — pairwise rotate-left low 4 bits
+- `DROR4`/`2ROR4`/`PAIRROR4` — pairwise rotate-right low 4 bits
+- `DNIBSWAP`/`2NIBSWAP`/`DSWAPNIB` — pairwise swap high/low nibble of low byte
+- Proof `209_drol4_dnibswap.cubalc`
+
+### Prior
+See 1.12.185-universal.
+
+
 ## 1.12.185-universal — 2026-08-03
 
 ### Direction
