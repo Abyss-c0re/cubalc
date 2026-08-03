@@ -183,6 +183,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UDIV")==0 || strcasecmp(tail,"UMOD")==0 ||
             strcasecmp(tail,"UREM")==0 || strcasecmp(tail,"UDIVIDE")==0 ||
             strcasecmp(tail,"UMIN")==0 || strcasecmp(tail,"UMAX")==0 ||
+            strcasecmp(tail,"INV")==0 || strcasecmp(tail,"RECIP")==0 ||
+            strcasecmp(tail,"NORM100")==0 || strcasecmp(tail,"ENORM")==0 ||
+            strcasecmp(tail,"NORME")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
@@ -7089,6 +7092,46 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp - 2] = a;
     vm->stack[vm->sp - 1] = b;
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy invert + normalize: DINV · DNORM100 */
+  if (kw(&L->cur,"DINV")||kw(&L->cur,"2INV")||kw(&L->cur,"S2INV")||
+      kw(&L->cur,"STACK2INV")||kw(&L->cur,"PAIRINV")||kw(&L->cur,"DRECIP")||
+      kw(&L->cur,"2RECIP")||kw(&L->cur,"S2RECIP")||kw(&L->cur,"STACK2RECIP")||
+      kw(&L->cur,"PAIRRECIP")){
+    /* a b → (a!=0?1/a:0) (b!=0?1/b:0)  integer reciprocal energy invert */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[vm->sp - 1];
+    long a = vm->stack[vm->sp - 2];
+    long x = a ? (1 / a) : 0;
+    long y = b ? (1 / b) : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNORM100")||kw(&L->cur,"2NORM100")||kw(&L->cur,"S2NORM100")||
+      kw(&L->cur,"STACK2NORM100")||kw(&L->cur,"PAIRNORM100")||kw(&L->cur,"DENORM")||
+      kw(&L->cur,"2ENORM")||kw(&L->cur,"S2ENORM")||kw(&L->cur,"PAIRENORM")||
+      kw(&L->cur,"DNORME")||kw(&L->cur,"2NORME")){
+    /* a b → a*100/m  b*100/m  where m = max(|a|,|b|); m==0 → 0,0
+     * maps pair onto energy plane with peak at ±100 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long b = vm->stack[vm->sp - 1];
+    long a = vm->stack[vm->sp - 2];
+    long aa = a < 0 ? -a : a;
+    long bb = b < 0 ? -b : b;
+    long m = aa > bb ? aa : bb;
+    long x = 0, y = 0;
+    if (m != 0){
+      x = a * 100 / m;
+      y = b * 100 / m;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"DRANDBITS")||kw(&L->cur,"2RANDBITS")||kw(&L->cur,"S2RANDBITS")||

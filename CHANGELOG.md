@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.162-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy invert + normalize.
+
+### Language
+- `DINV`/`2INV`/`DRECIP` — pairwise integer reciprocal (`/0→0`)
+- `DNORM100`/`2NORM100`/`DENORM` — pair → energy plane peak ±100 via max-abs scale
+- Proof `185_dinv_dnorm100.cubalc`
+
+### Prior
+See 1.12.161-universal.
+
+
 ## 1.12.161-universal — 2026-08-03
 
 ### Direction
