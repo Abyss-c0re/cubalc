@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.220-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack low-n field reverse/rotate (bitfield path).
+
+### Language
+- `DBREVN`/`2BREVN`/`PAIRBREVN` n — reverse low n bits (high kept)
+- `DROLBN`/`2ROLBN` n — rotate left by 1 within low n bits
+- `DRORBN`/`2RORBN` n — rotate right by 1 within low n bits
+- Proof `243_dbrevn_drolbn.cubalc`
+
+### Prior
+See 1.12.219-universal.
+
+
 ## 1.12.219-universal — 2026-08-03
 
 ### Direction
