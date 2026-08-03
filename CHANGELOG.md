@@ -1,3 +1,17 @@
+## 1.12.300-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → depth-8 over/tuck (complete depth-8 plane after 8NIP/8ROT; stack structure control).
+- Lexer: promote `8OVER`/`8TUCK` tails.
+
+### Language
+- `8OVER`/`OVER8`/`STACK8OVER` — 16-deep: copy under octet onto stack
+- `8TUCK`/`TUCK8`/`STACK8TUCK` — `a…h → h a…g h` (copy TOS under top 7)
+- Proof `323_8over_8tuck.cubalc`
+
+### Prior
+See 1.12.299-universal.
+
 ## 1.12.299-universal — 2026-08-03
 
 ### Direction

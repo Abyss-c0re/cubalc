@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 423 |
-| **digit** | **6** (urandom; sat energy) |
-| **version** | `1.12.299-universal` |
-| **pass/fail** | **337 / 0** (green) |
+| **iter** | 425 |
+| **digit** | **4** (urandom; stack structure) |
+| **version** | `1.12.300-universal` |
+| **pass/fail** | **338 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSATMULTOC`/`SCLAMPTOC` |
-| **proof** | `programs/proof/322_ssatmultoc_sclamptoc.cubalc` |
+| **ops** | `8OVER`/`8TUCK` |
+| **proof** | `programs/proof/323_8over_8tuck.cubalc` |
 
 ### Delta
-Digit-6 sat energy complete: sat mul into cell; clamp cell to [lo,hi].
+Digit-4 depth-8 complete: 8OVER (16-deep copy under) + 8TUCK (TOS under top 7). Lexer tails. Full depth-8 plane now: DUP/DROP/SWAP/NIP/ROT/RROT/OVER/TUCK.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline

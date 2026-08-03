@@ -159,7 +159,7 @@ static void lex_next(Lex *L) {
      * 5DUP / 5DROP / 5SWAP — quintuple depth (digit-8)
      * 6DUP / 6DROP — sextuple depth (digit-8)
      * 7DUP / 7DROP / 7SWAP / 7NIP / 7ROT / 7RROT / 7OVER / 7TUCK — septuple
-     * 8DUP / 8DROP / 8SWAP / 8NIP / 8ROT / 8RROT — octuple depth */
+     * 8DUP / 8DROP / 8SWAP / 8NIP / 8ROT / 8RROT / 8OVER / 8TUCK — octuple */
     if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5' || b[0]=='6' || b[0]=='7' || b[0]=='8') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
@@ -511,10 +511,11 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
           ok = 1;
       } else if (b[0]=='8'){
-        /* 8… depth plane (digit-8/9 stack foundation + combinators) */
+        /* 8… depth plane (foundation + combinators complete) */
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
             strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0 ||
-            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0)
+            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0 ||
+            strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
           ok = 1;
       }
       if (ok){
@@ -6594,6 +6595,34 @@ static int parse_form(VM *vm, Lex *L){
     for (int i = 0; i < 7; i++) vm->stack[vm->sp - 7 + i] = v[i];
     long last = vm->stack[vm->sp - 1];
     var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 depth-8 over/tuck: 8OVER · 8TUCK (complete depth-8 plane after 8NIP/8ROT) */
+  if (kw(&L->cur,"8OVER")||kw(&L->cur,"OCTOVER")||kw(&L->cur,"OVER8")||
+      kw(&L->cur,"STACK8OVER")){
+    /* 16-deep: copy under octet onto stack */
+    lex_next(L);
+    if (vm->sp < 16){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 8 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[8];
+    for (int i = 0; i < 8; i++) v[i] = vm->stack[vm->sp - 16 + i];
+    for (int i = 0; i < 8; i++) vm->stack[vm->sp++] = v[i];
+    long last = v[7];
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"8TUCK")||kw(&L->cur,"OCTTUCK")||kw(&L->cur,"TUCK8")||
+      kw(&L->cur,"STACK8TUCK")){
+    /* a..h → h a..g h  (copy TOS under top 7) */
+    lex_next(L);
+    if (vm->sp < 8){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v[8];
+    for (int i = 0; i < 8; i++) v[i] = vm->stack[vm->sp - 8 + i];
+    vm->stack[vm->sp - 8] = v[7];
+    for (int i = 0; i < 7; i++) vm->stack[vm->sp - 7 + i] = v[i];
+    vm->stack[vm->sp++] = v[7];
+    var_set_num(vm,"LAST_N",v[7]); vm->last_n=v[7];
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-0 stack foundation: 7OVER · 7TUCK (complete depth-7 plane after 7NIP/7ROT) */
