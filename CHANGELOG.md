@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.215-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack inverted low-n mask plane (complete DANDMN/DORMN/DXORMN).
+
+### Language
+- `DNANDMN`/`2NANDMN`/`PAIRNANDMN` n — pairwise `~(x & lowmask)`
+- `DNORMN`/`2NORMN`/`PAIRNORMN` n — pairwise `~(x | lowmask)`
+- `DXNORMN`/`DEQUIVMN`/`2XNORMN` n — pairwise `~(x ^ lowmask)`
+- Proof `238_dnandmn_dxnormn.cubalc`
+
+### Prior
+See 1.12.214-universal.
+
+
 ## 1.12.214-universal — 2026-08-03
 
 ### Direction

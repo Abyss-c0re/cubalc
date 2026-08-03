@@ -1,0 +1,126 @@
+# Proof 238 — digit-0 dual-stack inverted low-n mask: DNANDMN DNORMN DXNORMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DNANDMN — ~(x & mask)
+CLEARSTACK
+PUSH 0xFF
+PUSH 0x0F
+DNANDMN 4
+POP y
+POP x
+# ~(0xFF & 0xF) = ~0xF = ...FFF0
+ASSERT x == -16
+ASSERT y == -16
+
+CLEARSTACK
+PUSH 0x00
+PUSH 0xAB
+2NANDMN 8
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -172
+
+# PAIRNANDMN / n=0 → ~0 = -1
+CLEARSTACK
+PUSH 5
+PUSH 7
+PAIRNANDMN 0
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -1
+
+# n=64 → ~x
+CLEARSTACK
+PUSH 0
+PUSH 1
+DNANDMN 64
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+
+# DNORMN — ~(x | mask)
+CLEARSTACK
+PUSH 0xF0
+PUSH 0x00
+DNORMN 4
+POP y
+POP x
+# ~(0xF0|0xF)= ~0xFF = ...FF00
+ASSERT x == -256
+ASSERT y == -16
+
+CLEARSTACK
+PUSH 0x100
+PUSH 0x0FF
+2NORMN 8
+POP y
+POP x
+ASSERT x == -512
+ASSERT y == -256
+
+# PAIRNORMN n=0 → ~x
+CLEARSTACK
+PUSH 0
+PUSH 1
+PAIRNORMN 0
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+
+# DXNORMN — ~(x ^ mask)
+CLEARSTACK
+PUSH 0x0F
+PUSH 0xF0
+DXNORMN 4
+POP y
+POP x
+# ~(0x0F^0x0F)= ~0 = -1; ~(0xF0^0x0F)= ~0xFF = -256
+ASSERT x == -1
+ASSERT y == -256
+
+CLEARSTACK
+PUSH 0x00
+PUSH 0xFF
+2XNORMN 8
+POP y
+POP x
+ASSERT x == -256
+ASSERT y == -1
+
+# DEQUIVMN alias / double XNORMN = DXORMN path identity check
+CLEARSTACK
+PUSH 0x1234
+PUSH 0xABCD
+DEQUIVMN 12
+POP y
+POP x
+# ~(a^m); apply again: ~(~(a^m)^m) = a^m^m = a  if m bits only affect low
+# actually ~(~(a^m) ^ m) = (a^m)^m = a  yes
+CLEARSTACK
+PUSH x
+PUSH y
+DXNORMN 12
+POP y2
+POP x2
+ASSERT x2 == 0x1234
+ASSERT y2 == 0xABCD
+
+# soft fails
+CLEARSTACK
+DNANDMN 4
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+DNORMN 4
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+DXNORMN 4
+ASSERT OK == 0
+
+HOLD_FLASH 1
