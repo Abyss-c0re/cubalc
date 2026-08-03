@@ -183,6 +183,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UDIV")==0 || strcasecmp(tail,"UMOD")==0 ||
             strcasecmp(tail,"UREM")==0 || strcasecmp(tail,"UDIVIDE")==0 ||
             strcasecmp(tail,"UMIN")==0 || strcasecmp(tail,"UMAX")==0 ||
+            strcasecmp(tail,"ULT")==0 || strcasecmp(tail,"ULE")==0 ||
+            strcasecmp(tail,"UGT")==0 || strcasecmp(tail,"UGE")==0 ||
             strcasecmp(tail,"INV")==0 || strcasecmp(tail,"RECIP")==0 ||
             strcasecmp(tail,"NORM100")==0 || strcasecmp(tail,"ENORM")==0 ||
             strcasecmp(tail,"NORME")==0 ||
@@ -6403,6 +6405,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = (long)(ua > uc ? ua : uc);
       y = (long)(ub > ud ? ub : ud);
     }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack unsigned compare: DULT · DULE · DUGT · DUGE (0/1) */
+  if (kw(&L->cur,"DULT")||kw(&L->cur,"2ULT")||kw(&L->cur,"S2ULT")||
+      kw(&L->cur,"STACK2ULT")||kw(&L->cur,"PAIRULT")||
+      kw(&L->cur,"DULE")||kw(&L->cur,"2ULE")||kw(&L->cur,"S2ULE")||
+      kw(&L->cur,"STACK2ULE")||kw(&L->cur,"PAIRULE")||
+      kw(&L->cur,"DUGT")||kw(&L->cur,"2UGT")||kw(&L->cur,"S2UGT")||
+      kw(&L->cur,"STACK2UGT")||kw(&L->cur,"PAIRUGT")||
+      kw(&L->cur,"DUGE")||kw(&L->cur,"2UGE")||kw(&L->cur,"S2UGE")||
+      kw(&L->cur,"STACK2UGE")||kw(&L->cur,"PAIRUGE")){
+    /* a b c d → unsigned (a ? c) (b ? d) as 0/1 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    long x = 0, y = 0;
+    int is_lt = (strcmp(op,"DULT")==0 || strcmp(op,"2ULT")==0 || strcmp(op,"S2ULT")==0 ||
+                 strcmp(op,"STACK2ULT")==0 || strcmp(op,"PAIRULT")==0);
+    int is_le = (strcmp(op,"DULE")==0 || strcmp(op,"2ULE")==0 || strcmp(op,"S2ULE")==0 ||
+                 strcmp(op,"STACK2ULE")==0 || strcmp(op,"PAIRULE")==0);
+    int is_gt = (strcmp(op,"DUGT")==0 || strcmp(op,"2UGT")==0 || strcmp(op,"S2UGT")==0 ||
+                 strcmp(op,"STACK2UGT")==0 || strcmp(op,"PAIRUGT")==0);
+    /* else DUGE family */
+    if (is_lt){ x = (ua < uc) ? 1 : 0; y = (ub < ud) ? 1 : 0; }
+    else if (is_le){ x = (ua <= uc) ? 1 : 0; y = (ub <= ud) ? 1 : 0; }
+    else if (is_gt){ x = (ua > uc) ? 1 : 0; y = (ub > ud) ? 1 : 0; }
+    else { x = (ua >= uc) ? 1 : 0; y = (ub >= ud) ? 1 : 0; }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

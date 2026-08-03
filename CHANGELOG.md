@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.164-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack unsigned compare predicates.
+
+### Language
+- `DULT`/`2ULT`/`PAIRULT` — pairwise unsigned `<` → 0/1
+- `DULE`/`2ULE`/`PAIRULE` — pairwise unsigned `≤` → 0/1
+- `DUGT`/`2UGT`/`PAIRUGT` — pairwise unsigned `>` → 0/1
+- `DUGE`/`2UGE`/`PAIRUGE` — pairwise unsigned `≥` → 0/1
+- Proof `187_dult_duge.cubalc`
+
+### Prior
+See 1.12.163-universal.
+
+
 ## 1.12.163-universal — 2026-08-03
 
 ### Direction
