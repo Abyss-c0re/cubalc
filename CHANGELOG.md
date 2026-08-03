@@ -1,3 +1,17 @@
+## 1.12.239-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack imm nibble field (dual of SNIBN/SSETNIBN/SCLRNIBN; pair after DBYTEN).
+
+### Language
+- `DNIBN`/`2NIBN`/`PAIRNIBN` n — extract LE nibble n of each of pair
+- `DSETNIBN`/`2SETNIBN` field n — deposit field into nibble n of each
+- `DCLRNIBN`/`2CLRNIBN` n — clear nibble n of each
+- Proof `262_dnibn_dsetnibn.cubalc`
+
+### Prior
+See 1.12.238-universal.
+
 ## 1.12.238-universal — 2026-08-03
 
 ### Direction

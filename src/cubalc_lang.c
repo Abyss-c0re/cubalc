@@ -353,6 +353,11 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SETBYTEN")==0 || strcasecmp(tail,"PUTBYTEN")==0 ||
             strcasecmp(tail,"CLRBYTEN")==0 || strcasecmp(tail,"ZAPBYTEN")==0 ||
             strcasecmp(tail,"SETBYIMM")==0 || strcasecmp(tail,"CLRBYIMM")==0 ||
+            strcasecmp(tail,"NIBN")==0 || strcasecmp(tail,"GETNIBN")==0 ||
+            strcasecmp(tail,"SETNIBN")==0 || strcasecmp(tail,"PUTNIBN")==0 ||
+            strcasecmp(tail,"CLRNIBN")==0 || strcasecmp(tail,"ZAPNIBN")==0 ||
+            strcasecmp(tail,"SETNIBIMM")==0 || strcasecmp(tail,"CLRNIBIMM")==0 ||
+            strcasecmp(tail,"NIBBLEN")==0 ||
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
             strcasecmp(tail,"BDEP")==0 || strcasecmp(tail,"BITDEP")==0 ||
             strcasecmp(tail,"PEXT")==0 || strcasecmp(tail,"PDEP")==0 ||
@@ -11437,6 +11442,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     unsigned long sh = (unsigned long)(n * 8);
     long x = (long)((unsigned long)vm->stack[vm->sp - 2] & ~(0xFFul << sh));
     long y = (long)((unsigned long)vm->stack[vm->sp - 1] & ~(0xFFul << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack imm nibble field: DNIBN · DSETNIBN · DCLRNIBN (dual of SNIBN/SSETNIBN/SCLRNIBN) */
+  if (kw(&L->cur,"DNIBN")||kw(&L->cur,"2NIBN")||kw(&L->cur,"S2NIBN")||
+      kw(&L->cur,"STACK2NIBN")||kw(&L->cur,"PAIRNIBN")||kw(&L->cur,"DGETNIBN")||
+      kw(&L->cur,"2GETNIBN")||kw(&L->cur,"DNIBBLEN")){
+    /* a b + n → nibble n of a , nibble n of b ; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned sh = (unsigned)(n * 4);
+    long x = (long)(((unsigned long)vm->stack[vm->sp - 2] >> sh) & 0xFul);
+    long y = (long)(((unsigned long)vm->stack[vm->sp - 1] >> sh) & 0xFul);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSETNIBN")||kw(&L->cur,"2SETNIBN")||kw(&L->cur,"S2SETNIBN")||
+      kw(&L->cur,"STACK2SETNIBN")||kw(&L->cur,"PAIRSETNIBN")||kw(&L->cur,"DPUTNIBN")||
+      kw(&L->cur,"2PUTNIBN")||kw(&L->cur,"DSETNIBIMM")){
+    /* a b + field n → deposit field into nibble n of each; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)((ma & ~(0xFul << sh)) | (f << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (f << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLRNIBN")||kw(&L->cur,"2CLRNIBN")||kw(&L->cur,"S2CLRNIBN")||
+      kw(&L->cur,"STACK2CLRNIBN")||kw(&L->cur,"PAIRCLRNIBN")||kw(&L->cur,"DZAPNIBN")||
+      kw(&L->cur,"2ZAPNIBN")||kw(&L->cur,"DCLRNIBIMM")){
+    /* a b + n → clear nibble n of each; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 2] & ~(0xFul << sh));
+    long y = (long)((unsigned long)vm->stack[vm->sp - 1] & ~(0xFul << sh));
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
