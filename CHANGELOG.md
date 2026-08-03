@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.205-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack immediate min/max/clamp (dual of SMINN/SMAXN).
+
+### Language
+- `DMINN`/`2MINN`/`PAIRMINN` n — pairwise `min(x, n)`
+- `DMAXN`/`2MAXN`/`PAIRMAXN` n — pairwise `max(x, n)`
+- `DCLAMPN`/`2CLAMPN`/`PAIRCLAMPN` lo hi — pairwise clamp into [lo,hi]
+- Proof `228_dminn_dclampn.cubalc`
+
+### Prior
+See 1.12.204-universal.
+
+
+
 ## 1.12.204-universal — 2026-08-03
 
 ### Direction

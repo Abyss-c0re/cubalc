@@ -193,7 +193,11 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UMULOVF")==0 || strcasecmp(tail,"UMULOVER")==0 ||
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
-            strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
+            strcasecmp(tail,"MAX")==0 ||
+            strcasecmp(tail,"MINN")==0 || strcasecmp(tail,"MAXN")==0 ||
+            strcasecmp(tail,"MINIMM")==0 || strcasecmp(tail,"MAXIMM")==0 ||
+            strcasecmp(tail,"CLAMPN")==0 || strcasecmp(tail,"CLAMPIMM")==0 ||
+            strcasecmp(tail,"AND")==0 ||
             strcasecmp(tail,"ANDI")==0 || strcasecmp(tail,"ANDIMM")==0 ||
             strcasecmp(tail,"ORI")==0 || strcasecmp(tail,"ORIMM")==0 ||
             strcasecmp(tail,"XORI")==0 || strcasecmp(tail,"XORIMM")==0 ||
@@ -9671,6 +9675,57 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = ~(a ^ n);
     long y = ~(b ^ n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 dual-stack immediate min/max/clamp: DMINN · DMAXN · DCLAMPN (dual of SMINN/SMAXN) */
+  if (kw(&L->cur,"DMINN")||kw(&L->cur,"2MINN")||kw(&L->cur,"S2MINN")||
+      kw(&L->cur,"STACK2MINN")||kw(&L->cur,"PAIRMINN")||kw(&L->cur,"DMINIMM")||
+      kw(&L->cur,"2MINIMM")||kw(&L->cur,"PAIRMINIMM")){
+    /* a b + n → min(a,n) min(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a < n ? a : n;
+    long y = b < n ? b : n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMAXN")||kw(&L->cur,"2MAXN")||kw(&L->cur,"S2MAXN")||
+      kw(&L->cur,"STACK2MAXN")||kw(&L->cur,"PAIRMAXN")||kw(&L->cur,"DMAXIMM")||
+      kw(&L->cur,"2MAXIMM")||kw(&L->cur,"PAIRMAXIMM")){
+    /* a b + n → max(a,n) max(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a > n ? a : n;
+    long y = b > n ? b : n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLAMPN")||kw(&L->cur,"2CLAMPN")||kw(&L->cur,"S2CLAMPN")||
+      kw(&L->cur,"STACK2CLAMPN")||kw(&L->cur,"PAIRCLAMPN")||kw(&L->cur,"DCLAMPIMM")||
+      kw(&L->cur,"2CLAMPIMM")||kw(&L->cur,"PAIRCLAMPIMM")||kw(&L->cur,"DBOUNDN")){
+    /* a b + lo hi → clamp(a,[lo,hi]) clamp(b,[lo,hi]); swap lo/hi if needed */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (lo > hi){ long t=lo; lo=hi; hi=t; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = a; if (x < lo) x = lo; if (x > hi) x = hi;
+    long y = b; if (y < lo) y = lo; if (y > hi) y = hi;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
