@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.204-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → depth-6 rotate/over (parity with 5-plane after 6SWAP/6NIP).
+
+### Language
+- `6ROT`/`ROT6`/`HROT` — rotate top 6: `a b c d e f → b c d e f a`
+- `6RROT`/`RROT6`/`HRROT` — reverse-rotate top 6: `a b c d e f → f a b c d e`
+- `6OVER`/`OVER6`/`HOVER` — copy under-sextet onto stack (needs depth 12)
+- Proof `227_6rot_6over.cubalc`
+
+### Prior
+See 1.12.203-universal.
+
+
+
 ## 1.12.203-universal — 2026-08-03
 
 ### Direction

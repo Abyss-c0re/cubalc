@@ -425,7 +425,9 @@ static void lex_next(Lex *L) {
       } else {
         /* 6… depth plane (digit-8 stack) */
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
-            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0)
+            strcasecmp(tail,"SWAP")==0 || strcasecmp(tail,"NIP")==0 ||
+            strcasecmp(tail,"ROT")==0 || strcasecmp(tail,"RROT")==0 ||
+            strcasecmp(tail,"OVER")==0 || strcasecmp(tail,"TUCK")==0)
           ok = 1;
       }
       if (ok){
@@ -5949,6 +5951,59 @@ static int parse_form(VM *vm, Lex *L){
     vm->sp -= 4;
     var_set_num(vm,"LAST_N",f); vm->last_n=f;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 depth-6 rotate/over: 6ROT · 6RROT · 6OVER (parity with 5-plane) */
+  if (kw(&L->cur,"6ROT")||kw(&L->cur,"HROT")||kw(&L->cur,"ROT6")||
+      kw(&L->cur,"STACK6ROT")){
+    /* a b c d e f → b c d e f a */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], b = vm->stack[vm->sp-5];
+    long c = vm->stack[vm->sp-4], d = vm->stack[vm->sp-3];
+    long e = vm->stack[vm->sp-2], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = b;
+    vm->stack[vm->sp-5] = c;
+    vm->stack[vm->sp-4] = d;
+    vm->stack[vm->sp-3] = e;
+    vm->stack[vm->sp-2] = f;
+    vm->stack[vm->sp-1] = a;
+    var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"6RROT")||kw(&L->cur,"HRROT")||kw(&L->cur,"RROT6")||
+      kw(&L->cur,"STACK6RROT")||kw(&L->cur,"6-ROT")){
+    /* a b c d e f → f a b c d e */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-6], b = vm->stack[vm->sp-5];
+    long c = vm->stack[vm->sp-4], d = vm->stack[vm->sp-3];
+    long e = vm->stack[vm->sp-2], f = vm->stack[vm->sp-1];
+    vm->stack[vm->sp-6] = f;
+    vm->stack[vm->sp-5] = a;
+    vm->stack[vm->sp-4] = b;
+    vm->stack[vm->sp-3] = c;
+    vm->stack[vm->sp-2] = d;
+    vm->stack[vm->sp-1] = e;
+    var_set_num(vm,"LAST_N",e); vm->last_n=e;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"6OVER")||kw(&L->cur,"HOVER")||kw(&L->cur,"OVER6")||
+      kw(&L->cur,"STACK6OVER")){
+    /* 12-deep: copy under sextet onto stack */
+    lex_next(L);
+    if (vm->sp < 12){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (vm->sp + 6 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp-12], b = vm->stack[vm->sp-11];
+    long c = vm->stack[vm->sp-10], d = vm->stack[vm->sp-9];
+    long e = vm->stack[vm->sp-8], f = vm->stack[vm->sp-7];
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    vm->stack[vm->sp++] = c;
+    vm->stack[vm->sp++] = d;
+    vm->stack[vm->sp++] = e;
+    vm->stack[vm->sp++] = f;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",f); vm->last_n=f;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   if (kw(&L->cur,"UNDER")||kw(&L->cur,"SUNDER")||kw(&L->cur,"DUPUNDER")||
       kw(&L->cur,"STACKUNDER")){

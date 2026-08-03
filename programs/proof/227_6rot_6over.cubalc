@@ -1,0 +1,189 @@
+# Proof 227 — digit-8 depth-6 rotate/over: 6ROT 6RROT 6OVER
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# 6ROT: a b c d e f → b c d e f a
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+6ROT
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 2
+ASSERT b == 3
+ASSERT c == 4
+ASSERT d == 5
+ASSERT e == 6
+ASSERT f == 1
+
+# ROT6 alias
+CLEARSTACK
+PUSH 10
+PUSH 20
+PUSH 30
+PUSH 40
+PUSH 50
+PUSH 60
+ROT6
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 20
+ASSERT b == 30
+ASSERT c == 40
+ASSERT d == 50
+ASSERT e == 60
+ASSERT f == 10
+
+# 6RROT: a b c d e f → f a b c d e
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+6RROT
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 6
+ASSERT b == 1
+ASSERT c == 2
+ASSERT d == 3
+ASSERT e == 4
+ASSERT f == 5
+
+# RROT6 / HRROT
+CLEARSTACK
+PUSH 7
+PUSH 8
+PUSH 9
+PUSH 10
+PUSH 11
+PUSH 12
+RROT6
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 12
+ASSERT b == 7
+ASSERT c == 8
+ASSERT d == 9
+ASSERT e == 10
+ASSERT f == 11
+
+# 6ROT then 6RROT identity
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+6ROT
+6RROT
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 1
+ASSERT b == 2
+ASSERT c == 3
+ASSERT d == 4
+ASSERT e == 5
+ASSERT f == 6
+
+# 6OVER: under sextet copied (depth 12)
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+PUSH 7
+PUSH 8
+PUSH 9
+PUSH 10
+PUSH 11
+PUSH 12
+6OVER
+POP f
+POP e
+POP d
+POP c
+POP b
+POP a
+ASSERT a == 1
+ASSERT b == 2
+ASSERT c == 3
+ASSERT d == 4
+ASSERT e == 5
+ASSERT f == 6
+POP t
+ASSERT t == 12
+POP t
+ASSERT t == 11
+POP t
+ASSERT t == 10
+POP t
+ASSERT t == 9
+POP t
+ASSERT t == 8
+POP t
+ASSERT t == 7
+POP t
+ASSERT t == 6
+POP t
+ASSERT t == 5
+POP t
+ASSERT t == 4
+POP t
+ASSERT t == 3
+POP t
+ASSERT t == 2
+POP t
+ASSERT t == 1
+
+# OVER6 alias soft fail when depth < 12
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 5
+PUSH 6
+OVER6
+ASSERT OK == 0
+
+# soft fail 6ROT shallow
+CLEARSTACK
+PUSH 1
+PUSH 2
+6ROT
+ASSERT OK == 0
+
+CLEARSTACK
+PUSH 1
+6RROT
+ASSERT OK == 0
