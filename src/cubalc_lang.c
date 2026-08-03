@@ -282,6 +282,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"UMULHI")==0 || strcasecmp(tail,"UMULH")==0 ||
             strcasecmp(tail,"LOG2")==0 || strcasecmp(tail,"ILOG2")==0 ||
             strcasecmp(tail,"PHI")==0 || strcasecmp(tail,"TOTIENT")==0 ||
+            strcasecmp(tail,"FIB")==0 || strcasecmp(tail,"FIBONACCI")==0 ||
+            strcasecmp(tail,"FACT")==0 || strcasecmp(tail,"FACTORIAL")==0 ||
+            strcasecmp(tail,"LOG10")==0 || strcasecmp(tail,"ILOG10")==0 ||
+            strcasecmp(tail,"POW10")==0 || strcasecmp(tail,"TENPOW")==0 ||
             strcasecmp(tail,"ISPRIME")==0 || strcasecmp(tail,"PRIMEP")==0 ||
             strcasecmp(tail,"ODD")==0 || strcasecmp(tail,"EVEN")==0 ||
             strcasecmp(tail,"LTZ")==0 || strcasecmp(tail,"GTZ")==0 ||
@@ -7136,6 +7140,92 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
             if ((vb % i) == 0 || (vb % (i + 2)) == 0){ y = 0; break; }
           }
         }
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack numthy unary ext: DFIB · DFACT · DLOG10 · DPOW10 */
+  if (kw(&L->cur,"DFIB")||kw(&L->cur,"2FIB")||kw(&L->cur,"S2FIB")||
+      kw(&L->cur,"STACK2FIB")||kw(&L->cur,"PAIRFIB")||kw(&L->cur,"DFIBONACCI")||
+      kw(&L->cur,"2FIBONACCI")||
+      kw(&L->cur,"DFACT")||kw(&L->cur,"2FACT")||kw(&L->cur,"S2FACT")||
+      kw(&L->cur,"STACK2FACT")||kw(&L->cur,"PAIRFACT")||kw(&L->cur,"DFACTORIAL")||
+      kw(&L->cur,"2FACTORIAL")||
+      kw(&L->cur,"DLOG10")||kw(&L->cur,"2LOG10")||kw(&L->cur,"S2LOG10")||
+      kw(&L->cur,"STACK2LOG10")||kw(&L->cur,"PAIRLOG10")||kw(&L->cur,"DILOG10")||
+      kw(&L->cur,"2ILOG10")||
+      kw(&L->cur,"DPOW10")||kw(&L->cur,"2POW10")||kw(&L->cur,"S2POW10")||
+      kw(&L->cur,"STACK2POW10")||kw(&L->cur,"PAIRPOW10")||kw(&L->cur,"DTENPOW")||
+      kw(&L->cur,"2TENPOW")){
+    /* a b → f(a) f(b)
+     * FIB: Fib(n); n<=0 → 0; n>92 clamped
+     * FACT: n!; n<0 → 0; n>20 clamped
+     * LOG10: floor(log10); a<=0 → -1
+     * POW10: 10^n; n in 0..18 else 0 */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_fib = (strcmp(op,"DFIB")==0 || strcmp(op,"2FIB")==0 || strcmp(op,"S2FIB")==0 ||
+                  strcmp(op,"STACK2FIB")==0 || strcmp(op,"PAIRFIB")==0 ||
+                  strcmp(op,"DFIBONACCI")==0 || strcmp(op,"2FIBONACCI")==0);
+    int is_fact = (strcmp(op,"DFACT")==0 || strcmp(op,"2FACT")==0 || strcmp(op,"S2FACT")==0 ||
+                   strcmp(op,"STACK2FACT")==0 || strcmp(op,"PAIRFACT")==0 ||
+                   strcmp(op,"DFACTORIAL")==0 || strcmp(op,"2FACTORIAL")==0);
+    int is_log10 = (strcmp(op,"DLOG10")==0 || strcmp(op,"2LOG10")==0 || strcmp(op,"S2LOG10")==0 ||
+                    strcmp(op,"STACK2LOG10")==0 || strcmp(op,"PAIRLOG10")==0 ||
+                    strcmp(op,"DILOG10")==0 || strcmp(op,"2ILOG10")==0);
+    long x = 0, y = 0;
+    if (is_fib){
+      long na = a, nb = b;
+      if (na > 0){
+        if (na == 1 || na == 2) x = 1;
+        else {
+          if (na > 92) na = 92;
+          long f0 = 0, f1 = 1;
+          for (long i = 2; i <= na; i++){ long f2 = f0 + f1; f0 = f1; f1 = f2; }
+          x = f1;
+        }
+      }
+      if (nb > 0){
+        if (nb == 1 || nb == 2) y = 1;
+        else {
+          if (nb > 92) nb = 92;
+          long f0 = 0, f1 = 1;
+          for (long i = 2; i <= nb; i++){ long f2 = f0 + f1; f0 = f1; f1 = f2; }
+          y = f1;
+        }
+      }
+    } else if (is_fact){
+      if (a >= 0){
+        long n = a > 20 ? 20 : a;
+        x = 1;
+        for (long i = 2; i <= n; i++) x *= i;
+      }
+      if (b >= 0){
+        long n = b > 20 ? 20 : b;
+        y = 1;
+        for (long i = 2; i <= n; i++) y *= i;
+      }
+    } else if (is_log10){
+      if (a <= 0) x = -1;
+      else { x = 0; long t = a; while (t >= 10){ x++; t /= 10; } }
+      if (b <= 0) y = -1;
+      else { y = 0; long t = b; while (t >= 10){ y++; t /= 10; } }
+    } else {
+      /* POW10 / TENPOW */
+      if (a >= 0 && a <= 18){
+        x = 1;
+        for (long i = 0; i < a; i++) x *= 10;
+      }
+      if (b >= 0 && b <= 18){
+        y = 1;
+        for (long i = 0; i < b; i++) y *= 10;
       }
     }
     vm->stack[vm->sp - 2] = x;

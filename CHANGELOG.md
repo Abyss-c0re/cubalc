@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.184-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack numthy unary ext (fib/fact/decade).
+
+### Language
+- `DFIB`/`2FIB`/`DFIBONACCI` — pairwise Fibonacci (`n<=0 → 0`; clamp n≤92)
+- `DFACT`/`2FACT`/`DFACTORIAL` — pairwise factorial (`n<0 → 0`; clamp n≤20)
+- `DLOG10`/`2LOG10`/`DILOG10` — pairwise `floor(log10)`; `n<=0 → -1`
+- `DPOW10`/`2POW10`/`DTENPOW` — pairwise `10^n` for n in 0..18 else 0
+- Proof `207_dfib_dfact_dlog10.cubalc`
+
+### Prior
+See 1.12.183-universal.
+
+
 ## 1.12.183-universal — 2026-08-03
 
 ### Direction
