@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.126-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack unary control: DINC DDEC DNOT DEQZ DNEZ.
+
+### Language
+- `DINC`/`2INC` · `DDEC`/`2DEC` — pair increment / decrement
+- `DNOT`/`2NOT` — pairwise bitwise complement
+- `DEQZ`/`2EQZ` · `DNEZ`/`2NEZ` — pair zero / nonzero predicates (0/1)
+- Lexer 2-prefix: INC DEC NOT EQZ NEZ
+- Complements dual-stack compare plane with loop/counter + boolean duals
+- Proof `149_dinc_dnot.cubalc`
+
+### Prior
+See 1.12.125-universal.
+
 ## 1.12.125-universal — 2026-08-03
 
 ### Direction

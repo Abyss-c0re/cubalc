@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T03:49:10+0300",
-  "iter": 221,
-  "algocube_digit": 6,
-  "version": "1.12.125-universal",
-  "pass": 163,
+  "ts": "2026-08-03T03:54:42+0300",
+  "iter": 222,
+  "algocube_digit": 1,
+  "version": "1.12.126-universal",
+  "pass": 164,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DSIGN DCLAMP DSEL DMUX 2SIGN 2CLAMP 2SEL 2MUX",
-  "proof": "programs/proof/148_dclamp_dsel.cubalc"
+  "delta": "DINC DDEC DNOT DEQZ DNEZ 2INC 2DEC 2NOT 2EQZ 2NEZ",
+  "proof": "programs/proof/149_dinc_dnot.cubalc"
 }
