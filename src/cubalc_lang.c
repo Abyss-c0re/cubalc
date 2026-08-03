@@ -221,6 +221,7 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MODDIV")==0 || strcasecmp(tail,"DIVMODM")==0 ||
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
+            strcasecmp(tail,"SEL2")==0 || strcasecmp(tail,"MUX2")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
@@ -7279,6 +7280,27 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long fa = vm->stack[--vm->sp];
     long x = c ? ta : fa;
     long y = c ? tb : fb;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack control: DSEL2 · DMUX2 (per-lane cond mux) */
+  if (kw(&L->cur,"DSEL2")||kw(&L->cur,"2SEL2")||kw(&L->cur,"S2SEL2")||
+      kw(&L->cur,"STACK2SEL2")||kw(&L->cur,"PAIRSEL2")||
+      kw(&L->cur,"DMUX2")||kw(&L->cur,"2MUX2")||kw(&L->cur,"S2MUX2")||
+      kw(&L->cur,"STACK2MUX2")||kw(&L->cur,"PAIRMUX2")){
+    /* fa fb ta tb ca cb → (ca?ta:fa) (cb?tb:fb) — independent lane conds */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long cb = vm->stack[--vm->sp];
+    long ca = vm->stack[--vm->sp];
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long fb = vm->stack[--vm->sp];
+    long fa = vm->stack[--vm->sp];
+    long x = ca ? ta : fa;
+    long y = cb ? tb : fb;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

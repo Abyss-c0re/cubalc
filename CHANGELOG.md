@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.175-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control: per-lane select/mux.
+
+### Language
+- `DSEL2`/`2SEL2`/`PAIRSEL2` — pairwise mux with independent cond per lane
+- `DMUX2`/`2MUX2`/`PAIRMUX2` — alias of `DSEL2`
+- Proof `198_dsel2_dmux2.cubalc`
+
+### Prior
+See 1.12.174-universal.
+
+
 ## 1.12.174-universal — 2026-08-03
 
 ### Direction
