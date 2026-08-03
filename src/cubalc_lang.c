@@ -8239,6 +8239,70 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 dual-stack zero/sign predicates: D0EQ · D0NE · D0LT · D0GT (dual of SZ/SNZ/S0LT/S0GT) */
+  if (kw(&L->cur,"D0EQ")||kw(&L->cur,"2_0EQ")||kw(&L->cur,"S20EQ")||
+      kw(&L->cur,"STACK20EQ")||kw(&L->cur,"PAIR0EQ")||kw(&L->cur,"DZ")||
+      kw(&L->cur,"2Z")||kw(&L->cur,"S2Z")||kw(&L->cur,"PAIRZ")||
+      kw(&L->cur,"DZEROEQ")||kw(&L->cur,"2ZEROEQ")){
+    /* a b → (a==0?1:0) (b==0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a == 0) ? 1 : 0;
+    long y = (b == 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0NE")||kw(&L->cur,"2_0NE")||kw(&L->cur,"S20NE")||
+      kw(&L->cur,"STACK20NE")||kw(&L->cur,"PAIR0NE")||kw(&L->cur,"DNZ")||
+      kw(&L->cur,"2NZ")||kw(&L->cur,"S2NZ")||kw(&L->cur,"PAIRNZ")||
+      kw(&L->cur,"DZERONE")||kw(&L->cur,"2ZERONE")||kw(&L->cur,"D0NEQ")){
+    /* a b → (a!=0?1:0) (b!=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a != 0) ? 1 : 0;
+    long y = (b != 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0LT")||kw(&L->cur,"2_0LT")||kw(&L->cur,"S20LT")||
+      kw(&L->cur,"STACK20LT")||kw(&L->cur,"PAIR0LT")||kw(&L->cur,"DNEGSGN")||
+      kw(&L->cur,"2NEGSGN")||kw(&L->cur,"D0NEG")||kw(&L->cur,"PAIR0NEG")){
+    /* a b → (a<0?1:0) (b<0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a < 0) ? 1 : 0;
+    long y = (b < 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0GT")||kw(&L->cur,"2_0GT")||kw(&L->cur,"S20GT")||
+      kw(&L->cur,"STACK20GT")||kw(&L->cur,"PAIR0GT")||kw(&L->cur,"DPOS")||
+      kw(&L->cur,"2POS")||kw(&L->cur,"S2POS")||kw(&L->cur,"PAIRPOS")||
+      kw(&L->cur,"D0POS")||kw(&L->cur,"PAIR0POS")){
+    /* a b → (a>0?1:0) (b>0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a > 0) ? 1 : 0;
+    long y = (b > 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"DCLAMP")||kw(&L->cur,"2CLAMP")||kw(&L->cur,"S2CLAMP")||
       kw(&L->cur,"STACK2CLAMP")||kw(&L->cur,"PAIRCLAMP")||kw(&L->cur,"DCLMP")){
     /* a b lo hi → clamp(a,[lo,hi]) clamp(b,[lo,hi]); lo/hi swapped if inverted */

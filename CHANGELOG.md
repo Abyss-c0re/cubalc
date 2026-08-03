@@ -1,3 +1,18 @@
+## 1.12.273-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack zero/sign predicates (dual of SZ/SNZ/S0LT/S0GT; complete after DSIGN).
+
+### Language
+- `D0EQ`/`DZ`/`PAIR0EQ` — a b → (a==0?1:0) (b==0?1:0)
+- `D0NE`/`DNZ`/`PAIR0NE` — a b → (a!=0?1:0) (b!=0?1:0)
+- `D0LT`/`PAIR0LT` — a b → (a<0?1:0) (b<0?1:0)
+- `D0GT`/`PAIR0GT`/`DPOS` — a b → (a>0?1:0) (b>0?1:0)
+- Proof `296_d0eq_d0ne.cubalc`
+
+### Prior
+See 1.12.272-universal.
+
 ## 1.12.272-universal — 2026-08-03
 
 ### Direction
