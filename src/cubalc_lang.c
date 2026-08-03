@@ -5753,6 +5753,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack↔cell bit metrics TOC: SPOPCNTTOC · SCLZTOC · SCTZTOC
+   * (dual of SPOPCNT/SCLZ/SCTZ into cell after parity/unary TOC plane) */
+  if (kw(&L->cur,"SPOPCNTTOC")||kw(&L->cur,"SPOPCNTTOCELL")||kw(&L->cur,"STACKPOPCNTTOC")||
+      kw(&L->cur,"SPCNTTOC")||kw(&L->cur,"SPOPAT")||kw(&L->cur,"POPCNTTOC")||
+      kw(&L->cur,"SCELLPOPCNT")){
+    /* i → cells[i]=popcount(cells[i]), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    long r = 0;
+    while (u){ r += (long)(u & 1ul); u >>= 1; }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLZTOC")||kw(&L->cur,"SCLZTOCELL")||kw(&L->cur,"STACKCLZTOC")||
+      kw(&L->cur,"SNLZTOC")||kw(&L->cur,"SCLZAT")||kw(&L->cur,"CLZTOC")||
+      kw(&L->cur,"SCELLCLZ")){
+    /* i → cells[i]=clz64(cells[i]) (0 → 64), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    long r = 0;
+    if (u == 0) r = 64;
+    else {
+      for (int b = 63; b >= 0; b--){
+        if (u & (1ul << (unsigned)b)) break;
+        r++;
+      }
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCTZTOC")||kw(&L->cur,"SCTZTOCELL")||kw(&L->cur,"STACKCTZTOC")||
+      kw(&L->cur,"SNTZTOC")||kw(&L->cur,"SCTZAT")||kw(&L->cur,"CTZTOC")||
+      kw(&L->cur,"SCELLCTZ")){
+    /* i → cells[i]=ctz64(cells[i]) (0 → 64), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    long r = 0;
+    if (u == 0) r = 64;
+    else {
+      while ((u & 1ul) == 0){ r++; u >>= 1; }
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 imm compare TOC: SEQTOCN · SNETOCN · SLTTOCN · SGTTOCN
    * (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN/SNEN/SLTN/SGTN) */
   if (kw(&L->cur,"SEQTOCN")||kw(&L->cur,"SEQTOCIMM")||kw(&L->cur,"STACKEQTOCN")||

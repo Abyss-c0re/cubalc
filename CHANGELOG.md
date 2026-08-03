@@ -1,3 +1,17 @@
+## 1.12.322-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack↔cell bit metrics TOC (dual of SPOPCNT/SCLZ/SCTZ after parity/unary TOC plane).
+
+### Language
+- `SPOPCNTTOC`/`SPCNTTOC`/`SPOPAT` — stack `i → cells[i]=popcount(cells[i])` leave result
+- `SCLZTOC`/`CLZTOC`/`SCLZAT` — stack `i → cells[i]=clz64(cells[i])` (0→64) leave result
+- `SCTZTOC`/`CTZTOC`/`SCTZAT` — stack `i → cells[i]=ctz64(cells[i])` (0→64) leave result
+- Proof `345_spopcnttoc_sclztoc.cubalc`
+
+### Prior
+See 1.12.321-universal.
+
 ## 1.12.321-universal — 2026-08-04
 
 ### Direction
