@@ -194,6 +194,7 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"DIVCEIL")==0 || strcasecmp(tail,"CEILDIV")==0 ||
             strcasecmp(tail,"DIVFLOOR")==0 || strcasecmp(tail,"FLOORDIV")==0 ||
             strcasecmp(tail,"ADDMOD")==0 || strcasecmp(tail,"SUBMOD")==0 ||
+            strcasecmp(tail,"MULMOD")==0 || strcasecmp(tail,"POWMOD")==0 ||
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
@@ -6566,6 +6567,118 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       long dd = d % mb; if (dd < 0) dd += mb;
       if (is_add) y = (bb + dd) % mb;
       else y = (bb - dd + mb) % mb;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack modular mul/pow: DMULMOD · DPOWMOD */
+  if (kw(&L->cur,"DMULMOD")||kw(&L->cur,"2MULMOD")||kw(&L->cur,"S2MULMOD")||
+      kw(&L->cur,"STACK2MULMOD")||kw(&L->cur,"PAIRMULMOD")||
+      kw(&L->cur,"DPOWMOD")||kw(&L->cur,"2POWMOD")||kw(&L->cur,"S2POWMOD")||
+      kw(&L->cur,"STACK2POWMOD")||kw(&L->cur,"PAIRPOWMOD")){
+    /* a b c d ma mb → f(a,c,ma) f(b,d,mb); m<=0 → 0; result in [0,m)
+     * MUL: (a*c) mod m  POW: (a^c) mod m; neg exp → 0 */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_mul = (strcmp(op,"DMULMOD")==0 || strcmp(op,"2MULMOD")==0 ||
+                  strcmp(op,"S2MULMOD")==0 || strcmp(op,"STACK2MULMOD")==0 ||
+                  strcmp(op,"PAIRMULMOD")==0);
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[--vm->sp];
+    long ma = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (is_mul){
+      if (ma > 0){
+        long aa = a % ma; if (aa < 0) aa += ma;
+        long cc = c % ma; if (cc < 0) cc += ma;
+        long acc = 0, xx = aa, yy = cc;
+        while (yy > 0){
+          if (yy & 1) acc = (acc + xx) % ma;
+          xx = (xx + xx) % ma;
+          yy >>= 1;
+        }
+        x = acc;
+      }
+      if (mb > 0){
+        long bb = b % mb; if (bb < 0) bb += mb;
+        long dd = d % mb; if (dd < 0) dd += mb;
+        long acc = 0, xx = bb, yy = dd;
+        while (yy > 0){
+          if (yy & 1) acc = (acc + xx) % mb;
+          xx = (xx + xx) % mb;
+          yy >>= 1;
+        }
+        y = acc;
+      }
+    } else {
+      /* DPOWMOD */
+      if (ma > 0){
+        if (c < 0) x = 0;
+        else {
+          long base = a % ma; if (base < 0) base += ma;
+          long exp = c;
+          long r = 1 % ma;
+          while (exp > 0){
+            if (exp & 1){
+              long acc = 0, xx = r, yy = base;
+              while (yy > 0){
+                if (yy & 1) acc = (acc + xx) % ma;
+                xx = (xx + xx) % ma;
+                yy >>= 1;
+              }
+              r = acc;
+            }
+            {
+              long acc = 0, xx = base, yy = base;
+              while (yy > 0){
+                if (yy & 1) acc = (acc + xx) % ma;
+                xx = (xx + xx) % ma;
+                yy >>= 1;
+              }
+              base = acc;
+            }
+            exp >>= 1;
+          }
+          x = r;
+        }
+      }
+      if (mb > 0){
+        if (d < 0) y = 0;
+        else {
+          long base = b % mb; if (base < 0) base += mb;
+          long exp = d;
+          long r = 1 % mb;
+          while (exp > 0){
+            if (exp & 1){
+              long acc = 0, xx = r, yy = base;
+              while (yy > 0){
+                if (yy & 1) acc = (acc + xx) % mb;
+                xx = (xx + xx) % mb;
+                yy >>= 1;
+              }
+              r = acc;
+            }
+            {
+              long acc = 0, xx = base, yy = base;
+              while (yy > 0){
+                if (yy & 1) acc = (acc + xx) % mb;
+                xx = (xx + xx) % mb;
+                yy >>= 1;
+              }
+              base = acc;
+            }
+            exp >>= 1;
+          }
+          y = r;
+        }
+      }
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;

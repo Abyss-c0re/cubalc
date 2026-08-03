@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.158-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack modular mul/pow.
+
+### Language
+- `DMULMOD`/`2MULMOD` — pairwise `(a*c) mod ma` / `(b*d) mod mb` (`m≤0→0`)
+- `DPOWMOD`/`2POWMOD` — pairwise modular power; neg exp → 0
+- Proof `181_dmulmod_dpowmod.cubalc`
+
+### Prior
+See 1.12.157-universal.
+
 ## 1.12.157-universal — 2026-08-03
 
 ### Direction
