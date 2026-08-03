@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.127-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → dual-stack rotate + range predicates: DROL DROR DWITHIN DBETWEEN.
+
+### Language
+- `DROL`/`2ROL` · `DROR`/`2ROR` — pairwise rotate left/right (amounts mod 64)
+- `DWITHIN`/`2WITHIN` — a b lo hi → Forth half-open range tests (0/1)
+- `DBETWEEN`/`2BETWEEN` — inclusive [lo,hi] (swap if inverted)
+- Lexer 2-prefix: ROL ROR WITHIN BETWEEN
+- Completes dual-stack shift plane with rotates + control range checks
+- Proof `150_drol_dwithin.cubalc`
+
+### Prior
+See 1.12.126-universal.
+
 ## 1.12.126-universal — 2026-08-03
 
 ### Direction

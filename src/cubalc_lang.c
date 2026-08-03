@@ -188,7 +188,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
-            strcasecmp(tail,"NEZ")==0)
+            strcasecmp(tail,"NEZ")==0 ||
+            strcasecmp(tail,"ROL")==0 || strcasecmp(tail,"ROR")==0 ||
+            strcasecmp(tail,"WITHIN")==0 || strcasecmp(tail,"BETWEEN")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6278,6 +6280,73 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else { x = (a != 0) ? 1 : 0; y = (b != 0) ? 1 : 0; }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 dual-stack rotate + range predicates: DROL · DROR · DWITHIN · DBETWEEN */
+  if (kw(&L->cur,"DROL")||kw(&L->cur,"2ROL")||kw(&L->cur,"S2ROL")||
+      kw(&L->cur,"STACK2ROL")||kw(&L->cur,"PAIRROL")||kw(&L->cur,"DROTL")||
+      kw(&L->cur,"DROR")||kw(&L->cur,"2ROR")||kw(&L->cur,"S2ROR")||
+      kw(&L->cur,"STACK2ROR")||kw(&L->cur,"PAIRROR")||kw(&L->cur,"DROTR")){
+    /* a b c d → rot(a,c) rot(b,d); amounts mod 64, neg→0 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (c < 0) c = 0;
+    if (d < 0) d = 0;
+    unsigned uc = (unsigned)(c & 63);
+    unsigned ud = (unsigned)(d & 63);
+    int is_rol = (strcmp(op,"DROL")==0 || strcmp(op,"2ROL")==0 || strcmp(op,"S2ROL")==0 ||
+                  strcmp(op,"STACK2ROL")==0 || strcmp(op,"PAIRROL")==0 ||
+                  strcmp(op,"DROTL")==0);
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    long x, y;
+    if (is_rol){
+      x = (uc == 0) ? a : (long)((ua << uc) | (ua >> (64u - uc)));
+      y = (ud == 0) ? b : (long)((ub << ud) | (ub >> (64u - ud)));
+    } else {
+      x = (uc == 0) ? a : (long)((ua >> uc) | (ua << (64u - uc)));
+      y = (ud == 0) ? b : (long)((ub >> ud) | (ub << (64u - ud)));
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DWITHIN")||kw(&L->cur,"2WITHIN")||kw(&L->cur,"S2WITHIN")||
+      kw(&L->cur,"STACK2WITHIN")||kw(&L->cur,"PAIRWITHIN")||
+      kw(&L->cur,"DBETWEEN")||kw(&L->cur,"2BETWEEN")||kw(&L->cur,"S2BETWEEN")||
+      kw(&L->cur,"STACK2BETWEEN")||kw(&L->cur,"PAIRBETWEEN")||kw(&L->cur,"DINRANGE")){
+    /* a b lo hi → inrange(a) inrange(b); WITHIN half-open [lo,hi), BETWEEN closed [lo,hi] */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_within = (strcmp(op,"DWITHIN")==0 || strcmp(op,"2WITHIN")==0 ||
+                     strcmp(op,"S2WITHIN")==0 || strcmp(op,"STACK2WITHIN")==0 ||
+                     strcmp(op,"PAIRWITHIN")==0);
+    long x, y;
+    if (is_within){
+      /* Forth WITHIN: lo <= n < hi (no swap) */
+      x = (a >= lo && a < hi) ? 1 : 0;
+      y = (b >= lo && b < hi) ? 1 : 0;
+    } else {
+      long lo2 = lo, hi2 = hi;
+      if (lo2 > hi2){ long t = lo2; lo2 = hi2; hi2 = t; }
+      x = (a >= lo2 && a <= hi2) ? 1 : 0;
+      y = (b >= lo2 && b <= hi2) ? 1 : 0;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
