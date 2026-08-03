@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.146-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack field extract/deposit (bitfield path).
+
+### Language
+- `DBEXT`/`2BEXT` — extract width bits at pos from pair: `a b pos width → field field`
+- `DBDEP`/`2BDEP` — deposit low 8 bits of pair fields at pos: `a b fa fb pos → base' base'`
+- Proof `169_dbext_dbdep.cubalc`
+
+### Prior
+See 1.12.145-universal.
+
 ## 1.12.145-universal — 2026-08-03
 
 ### Direction

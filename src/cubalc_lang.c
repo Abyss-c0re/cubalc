@@ -205,6 +205,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SETB")==0 || strcasecmp(tail,"SETBIT")==0 ||
             strcasecmp(tail,"CLRB")==0 || strcasecmp(tail,"CLRBIT")==0 ||
             strcasecmp(tail,"FLIPB")==0 || strcasecmp(tail,"FLIPBIT")==0 ||
+            strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
+            strcasecmp(tail,"BDEP")==0 || strcasecmp(tail,"BITDEP")==0 ||
+            strcasecmp(tail,"PEXT")==0 || strcasecmp(tail,"PDEP")==0 ||
             strcasecmp(tail,"PAR")==0 ||
             strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
             strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
@@ -7023,6 +7026,73 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       /* FLIPB */
       x = (long)(ua ^ ba);
       y = (long)(ub ^ bb);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack field extract/deposit: DBEXT · DBDEP */
+  if (kw(&L->cur,"DBEXT")||kw(&L->cur,"2BEXT")||kw(&L->cur,"S2BEXT")||
+      kw(&L->cur,"STACK2BEXT")||kw(&L->cur,"PAIRBEXT")||kw(&L->cur,"2BITEXT")||
+      kw(&L->cur,"DBITEXT")){
+    /* a b pos width → extract width bits at pos from each (pos/width shared) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long width = vm->stack[--vm->sp];
+    long pos = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      vm->stack[vm->sp++] = 0;
+      vm->stack[vm->sp++] = 0;
+      var_set_num(vm,"LAST_N",0); vm->last_n=0;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width < 1) width = 0;
+    if (width > 63 - pos) width = 63 - pos;
+    long x = 0, y = 0;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      x = (long)(((unsigned long)a >> (unsigned)pos) & mask);
+      y = (long)(((unsigned long)b >> (unsigned)pos) & mask);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBDEP")||kw(&L->cur,"2BDEP")||kw(&L->cur,"S2BDEP")||
+      kw(&L->cur,"STACK2BDEP")||kw(&L->cur,"PAIRBDEP")||kw(&L->cur,"2BITDEP")||
+      kw(&L->cur,"DBITDEP")){
+    /* a b fa fb pos → deposit low 8 bits of fa/fb into a/b at pos (SBDEP dual) */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long pos = vm->stack[--vm->sp];
+    long fb = vm->stack[--vm->sp];
+    long fa = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long width = 8;
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width > 63 - pos) width = 63 - pos;
+    long x = a, y = b;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      unsigned long ba = (unsigned long)a;
+      unsigned long bb = (unsigned long)b;
+      unsigned long faa = (unsigned long)fa & mask;
+      unsigned long fbb = (unsigned long)fb & mask;
+      ba = (ba & ~(mask << (unsigned)pos)) | (faa << (unsigned)pos);
+      bb = (bb & ~(mask << (unsigned)pos)) | (fbb << (unsigned)pos);
+      x = (long)ba; y = (long)bb;
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
