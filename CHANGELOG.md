@@ -1,3 +1,17 @@
+## 1.12.340-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → reverse imm modular TOC (imm dual of SSUBMODFROMN after SMODFROMTOCN plane).
+
+### Language
+- `SSUBMODFROMTOCN`/`RSUBMODTOCN` k m — stack `i → cells[i]=(k-cells[i]) mod m` leave result
+- `SPOWMODFROMTOCN`/`RPOWMODTOCN` base m — stack `i → cells[i]=base^cells[i] mod m` leave result
+- `SMODDIVFROMTOCN`/`RMODDIVTOCN` a m — stack `i → cells[i]=a·cells[i]⁻¹ mod m` leave result
+- Proof `363_ssubmodfromtocn_smoddivfromtocn.cubalc`
+
+### Prior
+See 1.12.339-universal.
+
 ## 1.12.339-universal — 2026-08-04
 
 ### Direction
