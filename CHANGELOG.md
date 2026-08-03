@@ -1,3 +1,17 @@
+## 1.12.261-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack immediate ANDN plane (dual of SANDNI/SORNI/SXORNI after DANDI/DNANDI).
+
+### Language
+- `DANDNI`/`DBICI`/`PAIRANDNI` n — a b → (a&~n) (b&~n)
+- `DORNI`/`PAIRORNI` n — a b → (a|~n) (b|~n)
+- `DXORNI`/`PAIRXORNI` n — a b → (a^~n) (b^~n) (equiv `DXNORI`)
+- Proof `284_dandni_dorni.cubalc`
+
+### Prior
+See 1.12.260-universal.
+
 ## 1.12.260-universal — 2026-08-03
 
 ### Direction
