@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.154-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack unary control: ReLU + copysign.
+
+### Language
+- `DRELU`/`2RELU`/`DCLAMP0` — pairwise `max(0,a)` / `max(0,b)`
+- `DCOPYSIGN`/`2COPYSIGN`/`DCSIGN` — pairwise magnitude of first with sign of second pair
+- Proof `177_drelu_dcopysign.cubalc`
+
+### Prior
+See 1.12.153-universal.
+
 ## 1.12.153-universal — 2026-08-03
 
 ### Direction

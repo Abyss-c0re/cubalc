@@ -237,6 +237,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ODD")==0 || strcasecmp(tail,"EVEN")==0 ||
             strcasecmp(tail,"LTZ")==0 || strcasecmp(tail,"GTZ")==0 ||
             strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0 ||
+            strcasecmp(tail,"RELU")==0 || strcasecmp(tail,"CLAMP0")==0 ||
+            strcasecmp(tail,"COPYSIGN")==0 || strcasecmp(tail,"CSIGN")==0 ||
             strcasecmp(tail,"RAND")==0 || strcasecmp(tail,"RND")==0 ||
             strcasecmp(tail,"SATADD")==0 || strcasecmp(tail,"SATSUB")==0 ||
             strcasecmp(tail,"SATMUL")==0 || strcasecmp(tail,"SATDIV")==0 ||
@@ -6927,6 +6929,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else { x = (a >= 0) ? 1 : 0; y = (b >= 0) ? 1 : 0; }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack unary control ext: DRELU · DCOPYSIGN */
+  if (kw(&L->cur,"DRELU")||kw(&L->cur,"2RELU")||kw(&L->cur,"S2RELU")||
+      kw(&L->cur,"STACK2RELU")||kw(&L->cur,"PAIRRELU")||kw(&L->cur,"DCLAMP0")||
+      kw(&L->cur,"2CLAMP0")||kw(&L->cur,"S2CLAMP0")||kw(&L->cur,"PAIRCLAMP0")){
+    /* a b → max(0,a) max(0,b)  (ReLU / clamp-at-zero) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (b < 0) b = 0;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCOPYSIGN")||kw(&L->cur,"2COPYSIGN")||kw(&L->cur,"S2COPYSIGN")||
+      kw(&L->cur,"STACK2COPYSIGN")||kw(&L->cur,"PAIRCOPYSIGN")||kw(&L->cur,"DCSIGN")||
+      kw(&L->cur,"2CSIGN")||kw(&L->cur,"S2CSIGN")||kw(&L->cur,"PAIRCSIGN")){
+    /* a b sa sb → |a| with sign of sa, |b| with sign of sb; zero sign → + */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long sb = vm->stack[--vm->sp];
+    long sa = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long ax = a < 0 ? -a : a;
+    long bx = b < 0 ? -b : b;
+    long x = (sa < 0) ? -ax : ax;
+    long y = (sb < 0) ? -bx : bx;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

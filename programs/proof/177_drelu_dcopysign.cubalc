@@ -1,0 +1,100 @@
+# Proof 177 — digit-1 dual-stack control: DRELU DCOPYSIGN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DRELU: a b → max(0,a) max(0,b)
+CLEARSTACK
+PUSH -3
+PUSH 5
+DRELU
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 5
+
+# zero stays zero
+CLEARSTACK
+PUSH 0
+PUSH -1
+2RELU
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# positive unchanged
+CLEARSTACK
+PUSH 7
+PUSH 9
+DCLAMP0
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 9
+
+# DCOPYSIGN: a b sa sb → |a|·sgn(sa) |b|·sgn(sb)
+CLEARSTACK
+PUSH 5
+PUSH 7
+PUSH -1
+PUSH 1
+DCOPYSIGN
+POP y
+POP x
+ASSERT x == -5
+ASSERT y == 7
+
+# magnitude from negative source
+CLEARSTACK
+PUSH -8
+PUSH -3
+PUSH 1
+PUSH -2
+2COPYSIGN
+POP y
+POP x
+ASSERT x == 8
+ASSERT y == -3
+
+# zero sign → positive magnitude
+CLEARSTACK
+PUSH -4
+PUSH 6
+PUSH 0
+PUSH 0
+DCSIGN
+POP y
+POP x
+ASSERT x == 4
+ASSERT y == 6
+
+# PAIRCOPYSIGN alias
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH -9
+PUSH -1
+PAIRCOPYSIGN
+POP y
+POP x
+ASSERT x == -1
+ASSERT y == -2
+
+# soft fail underflow
+CLEARSTACK
+PUSH 1
+DRELU
+ASSERT OK == 0
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+DCOPYSIGN
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof177_drelu_dcopysign" LAST_N SP
