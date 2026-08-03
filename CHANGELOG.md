@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.125-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack bound/select: DSIGN DCLAMP DSEL/DMUX.
+
+### Language
+- `DSIGN`/`2SIGN` — a b → sgn(a) sgn(b) as −1/0/1
+- `DCLAMP`/`2CLAMP` — a b lo hi → clamp both into [lo,hi] (shared bounds)
+- `DSEL`/`DMUX`/`2SEL`/`2MUX` — fa fb ta tb c → (c?ta:fa) (c?tb:fb)
+- Lexer 2-prefix: SIGN CLAMP SEL MUX
+- Energy-style shared bounds + vector mux plane
+- Proof `148_dclamp_dsel.cubalc`
+
+### Prior
+See 1.12.124-universal.
+
 ## 1.12.124-universal — 2026-08-03
 
 ### Direction

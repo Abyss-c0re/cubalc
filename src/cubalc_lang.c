@@ -183,7 +183,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
             strcasecmp(tail,"SAR")==0 ||
             strcasecmp(tail,"SQR")==0 || strcasecmp(tail,"ISQRT")==0 ||
-            strcasecmp(tail,"SQRT")==0 || strcasecmp(tail,"COPRIME")==0)
+            strcasecmp(tail,"SQRT")==0 || strcasecmp(tail,"COPRIME")==0 ||
+            strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
+            strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6179,6 +6181,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     while (hz){ long t = gy % hz; gy = hz; hz = t; }
     long x = (gx == 1) ? 1 : 0;
     long y = (gy == 1) ? 1 : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack bound/select: DSIGN · DCLAMP · DSEL/DMUX (energy-style bounds) */
+  if (kw(&L->cur,"DSIGN")||kw(&L->cur,"2SIGN")||kw(&L->cur,"S2SIGN")||
+      kw(&L->cur,"STACK2SIGN")||kw(&L->cur,"PAIRSIGN")||kw(&L->cur,"DSGN")){
+    /* a b → sgn(a) sgn(b)  as -1/0/1 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a > 0) ? 1 : ((a < 0) ? -1 : 0);
+    long y = (b > 0) ? 1 : ((b < 0) ? -1 : 0);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLAMP")||kw(&L->cur,"2CLAMP")||kw(&L->cur,"S2CLAMP")||
+      kw(&L->cur,"STACK2CLAMP")||kw(&L->cur,"PAIRCLAMP")||kw(&L->cur,"DCLMP")){
+    /* a b lo hi → clamp(a,[lo,hi]) clamp(b,[lo,hi]); lo/hi swapped if inverted */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (lo > hi){ long t = lo; lo = hi; hi = t; }
+    long x = a, y = b;
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    if (y < lo) y = lo;
+    if (y > hi) y = hi;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSEL")||kw(&L->cur,"2SEL")||kw(&L->cur,"S2SEL")||
+      kw(&L->cur,"STACK2SEL")||kw(&L->cur,"PAIRSEL")||
+      kw(&L->cur,"DMUX")||kw(&L->cur,"2MUX")||kw(&L->cur,"S2MUX")||
+      kw(&L->cur,"STACK2MUX")||kw(&L->cur,"PAIRMUX")){
+    /* fa fb ta tb c → (c?ta:fa) (c?tb:fb) — shared cond on TOS */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long fb = vm->stack[--vm->sp];
+    long fa = vm->stack[--vm->sp];
+    long x = c ? ta : fa;
+    long y = c ? tb : fb;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

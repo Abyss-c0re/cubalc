@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T03:42:59+0300",
-  "iter": 220,
-  "algocube_digit": 2,
-  "version": "1.12.124-universal",
-  "pass": 162,
+  "ts": "2026-08-03T03:49:10+0300",
+  "iter": 221,
+  "algocube_digit": 6,
+  "version": "1.12.125-universal",
+  "pass": 163,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DSQR DISQRT DCOPRIME 2SQR 2ISQRT 2COPRIME",
-  "proof": "programs/proof/147_dsqr_dcoprime.cubalc"
+  "delta": "DSIGN DCLAMP DSEL DMUX 2SIGN 2CLAMP 2SEL 2MUX",
+  "proof": "programs/proof/148_dclamp_dsel.cubalc"
 }
