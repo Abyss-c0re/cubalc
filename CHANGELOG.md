@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.119-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → prime metrics: π(n), gap to next prime, composite test.
+
+### Language
+- `PRIMECOUNT`/`PRIMEPI`(n) — primes ≤ n (cap 200000)
+- `PRIMEGAP`/`PGAP`(n) — nextprime(n) − n
+- `ISCOMPOSITE`/`COMPOSITEP`(n) — composite predicate
+- Stack: `SPRIMECOUNT` · `SPRIMEGAP` · `SISCOMPOSITE`
+- Proof `142_primecount_gap.cubalc`
+
+### Prior
+See 1.12.118-universal.
+
 ## 1.12.118-universal — 2026-08-03
 
 ### Direction

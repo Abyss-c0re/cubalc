@@ -1252,6 +1252,13 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"PRIMEPOWERP")==0 ||
         strcmp(name,"NTHPRIME")==0 || strcmp(name,"PRIMEN")==0 ||
         strcmp(name,"PRIMEK")==0 ||
+        /* digit-2 prime metrics: PRIMECOUNT PRIMEGAP ISCOMPOSITE */
+        strcmp(name,"PRIMECOUNT")==0 || strcmp(name,"PRIMEPI")==0 ||
+        strcmp(name,"PIN")==0 || strcmp(name,"COUNTPRIMES")==0 ||
+        strcmp(name,"PRIMEGAP")==0 || strcmp(name,"PGAP")==0 ||
+        strcmp(name,"NEXTGAP")==0 ||
+        strcmp(name,"ISCOMPOSITE")==0 || strcmp(name,"COMPOSITEP")==0 ||
+        strcmp(name,"COMPP")==0 ||
         strcmp(name,"IDIV")==0 || strcmp(name,"IMOD")==0 ||
         /* digit-0/2 muldiv: unsigned div + high multiply */
         strcmp(name,"UDIV")==0 || strcmp(name,"UDIVIDE")==0 ||
@@ -2746,6 +2753,57 @@ static long parse_prim(VM *vm, Lex *L){
               if (found == k) return n;
             }
           }
+        }
+        if (strcmp(name,"PRIMECOUNT")==0 || strcmp(name,"PRIMEPI")==0 ||
+            strcmp(name,"PIN")==0 || strcmp(name,"COUNTPRIMES")==0){
+          /* PRIMECOUNT(n) / π(n) — number of primes ≤ n; n<2 → 0; cap n=200000 */
+          long n = a;
+          if (n < 2) return 0;
+          if (n > 200000L) n = 200000L;
+          long cnt = 0;
+          for (long x = 2; x <= n; x++){
+            int okp = 1;
+            if (x <= 3){ cnt++; continue; }
+            if ((x % 2) == 0 || (x % 3) == 0){ okp = 0; }
+            else {
+              for (long i = 5; i * i <= x; i += 6){
+                if ((x % i) == 0 || (x % (i + 2)) == 0){ okp = 0; break; }
+              }
+            }
+            if (okp) cnt++;
+          }
+          return cnt;
+        }
+        if (strcmp(name,"PRIMEGAP")==0 || strcmp(name,"PGAP")==0 ||
+            strcmp(name,"NEXTGAP")==0){
+          /* PRIMEGAP(n) — nextprime(n) - n (strictly next prime distance); n large → 0 */
+          long x = a + 1;
+          if (x <= 2) return 2 - a; /* if a < 2, gap to 2 */
+          if ((x & 1L) == 0) x++;
+          for (long guard = 0; guard < 200000; guard++, x += 2){
+            long t = x;
+            int okp = 1;
+            if (t <= 3) return t - a;
+            if ((t % 3) == 0){ okp = 0; }
+            else {
+              for (long i = 5; i * i <= t; i += 6){
+                if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+              }
+            }
+            if (okp) return t - a;
+          }
+          return 0;
+        }
+        if (strcmp(name,"ISCOMPOSITE")==0 || strcmp(name,"COMPOSITEP")==0 ||
+            strcmp(name,"COMPP")==0){
+          /* ISCOMPOSITE(n) — 1 if n has a non-trivial factor (n>1 and not prime) */
+          long n = a < 0 ? -a : a;
+          if (n <= 3) return 0;
+          if ((n % 2) == 0 || (n % 3) == 0) return 1;
+          for (long i = 5; i * i <= n; i += 6){
+            if ((n % i) == 0 || (n % (i + 2)) == 0) return 1;
+          }
+          return 0;
         }
         /* digit-0 foundation bitfields */
         if (strcmp(name,"BEXT")==0 || strcmp(name,"BITEXT")==0){
@@ -6891,6 +6949,73 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
           if (prime){
             found++;
             if (found == k){ r = n; break; }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 prime metrics stack: SPRIMECOUNT · SPRIMEGAP · SISCOMPOSITE */
+  if (kw(&L->cur,"SPRIMECOUNT")||kw(&L->cur,"SPRIMEPI")||kw(&L->cur,"SPIN")||
+      kw(&L->cur,"STACKPRIMECOUNT")||kw(&L->cur,"SCOUNTPRIMES")||
+      kw(&L->cur,"SPRIMEGAP")||kw(&L->cur,"SPGAP")||kw(&L->cur,"STACKPRIMEGAP")||
+      kw(&L->cur,"SNEXTGAP")||
+      kw(&L->cur,"SISCOMPOSITE")||kw(&L->cur,"SCOMPOSITEP")||kw(&L->cur,"SCOMPP")||
+      kw(&L->cur,"STACKISCOMPOSITE")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (strcmp(op,"SPRIMECOUNT")==0 || strcmp(op,"SPRIMEPI")==0 ||
+        strcmp(op,"SPIN")==0 || strcmp(op,"STACKPRIMECOUNT")==0 ||
+        strcmp(op,"SCOUNTPRIMES")==0){
+      long n = a;
+      if (n >= 2){
+        if (n > 200000L) n = 200000L;
+        for (long x = 2; x <= n; x++){
+          int okp = 1;
+          if (x <= 3){ r++; continue; }
+          if ((x % 2) == 0 || (x % 3) == 0){ okp = 0; }
+          else {
+            for (long i = 5; i * i <= x; i += 6){
+              if ((x % i) == 0 || (x % (i + 2)) == 0){ okp = 0; break; }
+            }
+          }
+          if (okp) r++;
+        }
+      }
+    } else if (strcmp(op,"SPRIMEGAP")==0 || strcmp(op,"SPGAP")==0 ||
+               strcmp(op,"STACKPRIMEGAP")==0 || strcmp(op,"SNEXTGAP")==0){
+      long x = a + 1;
+      if (x <= 2) r = 2 - a;
+      else {
+        if ((x & 1L) == 0) x++;
+        for (long guard = 0; guard < 200000; guard++, x += 2){
+          long t = x;
+          int okp = 1;
+          if (t <= 3){ r = t - a; break; }
+          if ((t % 3) == 0){ okp = 0; }
+          else {
+            for (long i = 5; i * i <= t; i += 6){
+              if ((t % i) == 0 || (t % (i + 2)) == 0){ okp = 0; break; }
+            }
+          }
+          if (okp){ r = t - a; break; }
+        }
+      }
+    } else {
+      /* SISCOMPOSITE */
+      long n = a < 0 ? -a : a;
+      if (n > 3){
+        if ((n % 2) == 0 || (n % 3) == 0) r = 1;
+        else {
+          r = 0;
+          for (long i = 5; i * i <= n; i += 6){
+            if ((n % i) == 0 || (n % (i + 2)) == 0){ r = 1; break; }
           }
         }
       }
