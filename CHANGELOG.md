@@ -1,3 +1,16 @@
+## 1.12.313-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack↔cell 3-way compare TOC (dual of SCMP/SUCMP into cell after 0/1 predicate TOC plane).
+
+### Language
+- `SCMPTOC`/`SICMPTOC`/`SCMPAT` — stack `i v → cells[i]=signed 3-way(cells[i],v)` as −1/0/+1 leave result
+- `SUCMPTOC`/`SUCMP3TOC`/`SUCMPAT` — stack `i v → cells[i]=unsigned 3-way` as −1/0/+1 leave result
+- Proof `336_scmptoc_sucmptoc.cubalc`
+
+### Prior
+See 1.12.312-universal.
+
 ## 1.12.312-universal — 2026-08-03
 
 ### Direction
