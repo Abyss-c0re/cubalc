@@ -208,6 +208,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"DIVFLOOR")==0 || strcasecmp(tail,"FLOORDIV")==0 ||
             strcasecmp(tail,"ADDMOD")==0 || strcasecmp(tail,"SUBMOD")==0 ||
             strcasecmp(tail,"MULMOD")==0 || strcasecmp(tail,"POWMOD")==0 ||
+            strcasecmp(tail,"MODINV")==0 || strcasecmp(tail,"INVMOD")==0 ||
+            strcasecmp(tail,"MODDIV")==0 || strcasecmp(tail,"DIVMODM")==0 ||
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
@@ -6930,6 +6932,113 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
             exp >>= 1;
           }
           y = r;
+        }
+      }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 dual-stack modular inv/div: DMODINV · DMODDIV */
+  if (kw(&L->cur,"DMODINV")||kw(&L->cur,"2MODINV")||kw(&L->cur,"S2MODINV")||
+      kw(&L->cur,"STACK2MODINV")||kw(&L->cur,"PAIRMODINV")||kw(&L->cur,"DINVMOD")||
+      kw(&L->cur,"2INVMOD")||kw(&L->cur,"S2INVMOD")||kw(&L->cur,"PAIRINVMOD")){
+    /* a b ma mb → a^{-1} mod ma , b^{-1} mod mb ; 0 if none / m<=1 */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[--vm->sp];
+    long ma = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (ma > 1){
+      long aa = a % ma; if (aa < 0) aa += ma;
+      if (aa != 0){
+        long t = 0, nt = 1;
+        long rr = ma, nr = aa;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += ma; x = t; }
+      }
+    }
+    if (mb > 1){
+      long bb = b % mb; if (bb < 0) bb += mb;
+      if (bb != 0){
+        long t = 0, nt = 1;
+        long rr = mb, nr = bb;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += mb; y = t; }
+      }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMODDIV")||kw(&L->cur,"2MODDIV")||kw(&L->cur,"S2MODDIV")||
+      kw(&L->cur,"STACK2MODDIV")||kw(&L->cur,"PAIRMODDIV")||kw(&L->cur,"DDIVMODM")||
+      kw(&L->cur,"2DIVMODM")||kw(&L->cur,"DMODDIVIDE")||kw(&L->cur,"2MODDIVIDE")){
+    /* a b c d ma mb → (a * c^{-1}) mod ma , (b * d^{-1}) mod mb ; 0 if none */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long mb = vm->stack[--vm->sp];
+    long ma = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (ma > 0){
+      long cc = c % ma; if (cc < 0) cc += ma;
+      if (cc != 0){
+        long t = 0, nt = 1;
+        long rr = ma, nr = cc;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += ma;
+          long aa = a % ma; if (aa < 0) aa += ma;
+          long acc = 0, xx = aa, yy = t;
+          while (yy > 0){
+            if (yy & 1) acc = (acc + xx) % ma;
+            xx = (xx + xx) % ma;
+            yy >>= 1;
+          }
+          x = acc;
+        }
+      }
+    }
+    if (mb > 0){
+      long dd = d % mb; if (dd < 0) dd += mb;
+      if (dd != 0){
+        long t = 0, nt = 1;
+        long rr = mb, nr = dd;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += mb;
+          long bb = b % mb; if (bb < 0) bb += mb;
+          long acc = 0, xx = bb, yy = t;
+          while (yy > 0){
+            if (yy & 1) acc = (acc + xx) % mb;
+            xx = (xx + xx) % mb;
+            yy >>= 1;
+          }
+          y = acc;
         }
       }
     }

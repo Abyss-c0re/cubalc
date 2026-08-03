@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.169-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack modular inverse / modular divide.
+
+### Language
+- `DMODINV`/`2MODINV`/`DINVMOD` — pairwise modular inverse (`0` if none)
+- `DMODDIV`/`2MODDIV` — pairwise `a·c⁻¹ mod ma` / `b·d⁻¹ mod mb`
+- Proof `192_dmodinv_dmoddiv.cubalc`
+
+### Prior
+See 1.12.168-universal.
+
+
 ## 1.12.168-universal — 2026-08-03
 
 ### Direction
