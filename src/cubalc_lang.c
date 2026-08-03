@@ -174,9 +174,12 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"TUCK")==0 ||
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
             strcasecmp(tail,"ADDN")==0 || strcasecmp(tail,"SUBN")==0 ||
-            strcasecmp(tail,"MULN")==0 ||
+            strcasecmp(tail,"MULN")==0 || strcasecmp(tail,"DIVN")==0 ||
+            strcasecmp(tail,"MODN")==0 || strcasecmp(tail,"QUOTN")==0 ||
+            strcasecmp(tail,"REMN")==0 ||
             strcasecmp(tail,"ADDIMM")==0 || strcasecmp(tail,"SUBIMM")==0 ||
-            strcasecmp(tail,"MULIMM")==0 ||
+            strcasecmp(tail,"MULIMM")==0 || strcasecmp(tail,"DIVIMM")==0 ||
+            strcasecmp(tail,"MODIMM")==0 ||
             strcasecmp(tail,"ADDC")==0 || strcasecmp(tail,"ADC")==0 ||
             strcasecmp(tail,"SUBB")==0 || strcasecmp(tail,"SBB")==0 ||
             strcasecmp(tail,"ADDC2")==0 || strcasecmp(tail,"ADC2")==0 ||
@@ -9477,6 +9480,39 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = a * n;
     long y = b * n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack immediate div/mod: DDIVN · DMODN (dual of SDIVN/SMODN; complete imm ALU) */
+  if (kw(&L->cur,"DDIVN")||kw(&L->cur,"2DIVN")||kw(&L->cur,"S2DIVN")||
+      kw(&L->cur,"STACK2DIVN")||kw(&L->cur,"PAIRDIVN")||kw(&L->cur,"DDIVIMM")||
+      kw(&L->cur,"2DIVIMM")||kw(&L->cur,"PAIRDIVIMM")||kw(&L->cur,"DQUOTN")){
+    /* a b + n → (a/n) (b/n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (n == 0) ? 0 : (a / n);
+    long y = (n == 0) ? 0 : (b / n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMODN")||kw(&L->cur,"2MODN")||kw(&L->cur,"S2MODN")||
+      kw(&L->cur,"STACK2MODN")||kw(&L->cur,"PAIRMODN")||kw(&L->cur,"DMODIMM")||
+      kw(&L->cur,"2MODIMM")||kw(&L->cur,"PAIRMODIMM")||kw(&L->cur,"DREMN")){
+    /* a b + n → (a%n) (b%n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (n == 0) ? 0 : (a % n);
+    long y = (n == 0) ? 0 : (b % n);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.202-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack immediate div/mod (dual of SDIVN/SMODN; complete imm ALU).
+
+### Language
+- `DDIVN`/`2DIVN`/`PAIRDIVN` n — pairwise `x /= n` (n==0 → 0 soft)
+- `DMODN`/`2MODN`/`PAIRMODN` n — pairwise `x %= n` (n==0 → 0 soft)
+- Proof `225_ddivn_dmodn.cubalc`
+
+### Prior
+See 1.12.201-universal.
+
+
 ## 1.12.201-universal — 2026-08-03
 
 ### Direction
