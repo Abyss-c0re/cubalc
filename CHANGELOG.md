@@ -1,3 +1,17 @@
+## 1.12.245-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack imm 32-bit field bitwise merge (dual of SAND32N/SOR32N/SXOR32N).
+
+### Language
+- `DAND32N`/`PAIRAND32N` field n — word n of each &= field (n 0..1)
+- `DOR32N`/`PAIROR32N` field n — word n of each |= field
+- `DXOR32N`/`PAIRXOR32N`/`DFLIP32N` field n — word n of each ^= field
+- Proof `268_dand32n_dor32n.cubalc`
+
+### Prior
+See 1.12.244-universal.
+
 ## 1.12.244-universal — 2026-08-03
 
 ### Direction
