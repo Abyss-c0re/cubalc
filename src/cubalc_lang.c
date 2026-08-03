@@ -331,6 +331,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"RORBN")==0 ||
             strcasecmp(tail,"BREVHN")==0 || strcasecmp(tail,"ROLHN")==0 ||
             strcasecmp(tail,"RORHN")==0 ||
+            strcasecmp(tail,"BREVNS")==0 || strcasecmp(tail,"ROLBNS")==0 ||
+            strcasecmp(tail,"RORBNS")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -13424,6 +13426,83 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long v = ~(vm->stack[vm->sp - 1] ^ n);
     vm->stack[vm->sp - 1] = v;
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 stack low-n field reverse/rotate: SBREVN · SROLBN · SRORBN (dual of DBREVN/DROLBN/DRORBN) */
+  if (kw(&L->cur,"SBREVN")||kw(&L->cur,"STACKBREVN")||kw(&L->cur,"BREVNS")||
+      kw(&L->cur,"SREVLOWN")||kw(&L->cur,"SBITREVN")||kw(&L->cur,"STACKREVLOWN")){
+    /* SBREVN n — reverse low n bits of TOS; high kept; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n > 0 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      unsigned long ra = 0;
+      for (long i = 0; i < n; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      x = (long)(((unsigned long)a & ~m) | (ra & m));
+    } else if (n >= 64){
+      unsigned long la = (unsigned long)a;
+      unsigned long ra = 0;
+      for (int i = 0; i < 64; i++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      x = (long)ra;
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROLBN")||kw(&L->cur,"STACKROLBN")||kw(&L->cur,"ROLBNS")||
+      kw(&L->cur,"SROTLBN")||kw(&L->cur,"SLOWROLN")||kw(&L->cur,"STACKLOWROLN")){
+    /* SROLBN n — rotate left by 1 within low n bits of TOS; high kept */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      la = ((la << 1) | (la >> (unsigned)(n - 1))) & m;
+      x = (long)(((unsigned long)a & ~m) | la);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      x = (long)((ua << 1) | (ua >> 63));
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRORBN")||kw(&L->cur,"STACKRORBN")||kw(&L->cur,"RORBNS")||
+      kw(&L->cur,"SROTRBN")||kw(&L->cur,"SLOWRORN")||kw(&L->cur,"STACKLOWRORN")){
+    /* SRORBN n — rotate right by 1 within low n bits of TOS; high kept */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->stack[vm->sp - 1];
+    long x = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      la = ((la >> 1) | (la << (unsigned)(n - 1))) & m;
+      x = (long)(((unsigned long)a & ~m) | la);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      x = (long)((ua >> 1) | (ua << 63));
+    }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-5 stack immediate bitfield: SSETBN SCLRBN SFLIPBN SBTESTN + SSHLN SSHRN */

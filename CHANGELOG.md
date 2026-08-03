@@ -1,3 +1,18 @@
+## 1.12.222-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → stack low-n field reverse/rotate (dual of dual-stack DBREVN plane).
+
+### Language
+- `SBREVN`/`STACKBREVN`/`BREVNS` n — reverse low n bits of TOS (high kept)
+- `SROLBN`/`STACKROLBN`/`ROLBNS` n — rotate left by 1 within low n bits of TOS
+- `SRORBN`/`STACKRORBN`/`RORBNS` n — rotate right by 1 within low n bits of TOS
+- Proof `245_sbrevn_srolbn.cubalc`
+
+### Prior
+See 1.12.221-universal.
+
+
 ## 1.12.221-universal — 2026-08-03
 
 ### Direction
