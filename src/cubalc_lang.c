@@ -192,7 +192,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ROL")==0 || strcasecmp(tail,"ROR")==0 ||
             strcasecmp(tail,"WITHIN")==0 || strcasecmp(tail,"BETWEEN")==0 ||
             strcasecmp(tail,"NAND")==0 || strcasecmp(tail,"NOR")==0 ||
-            strcasecmp(tail,"XNOR")==0 || strcasecmp(tail,"ANDN")==0)
+            strcasecmp(tail,"XNOR")==0 || strcasecmp(tail,"ANDN")==0 ||
+            strcasecmp(tail,"POPCNT")==0 || strcasecmp(tail,"PCNT")==0 ||
+            strcasecmp(tail,"CLZ")==0 || strcasecmp(tail,"CTZ")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6385,6 +6387,51 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     else { x = a & ~c; y = b & ~d; }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack bit metrics: DPOPCNT · DCLZ · DCTZ (unary pair) */
+  if (kw(&L->cur,"DPOPCNT")||kw(&L->cur,"2POPCNT")||kw(&L->cur,"S2POPCNT")||
+      kw(&L->cur,"STACK2POPCNT")||kw(&L->cur,"PAIRPOPCNT")||kw(&L->cur,"2PCNT")||
+      kw(&L->cur,"DPCNT")||
+      kw(&L->cur,"DCLZ")||kw(&L->cur,"2CLZ")||kw(&L->cur,"S2CLZ")||
+      kw(&L->cur,"STACK2CLZ")||kw(&L->cur,"PAIRCLZ")||
+      kw(&L->cur,"DCTZ")||kw(&L->cur,"2CTZ")||kw(&L->cur,"S2CTZ")||
+      kw(&L->cur,"STACK2CTZ")||kw(&L->cur,"PAIRCTZ")){
+    /* a b → metric(a) metric(b); zero → 64 for clz/ctz */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_pop = (strcmp(op,"DPOPCNT")==0 || strcmp(op,"2POPCNT")==0 ||
+                  strcmp(op,"S2POPCNT")==0 || strcmp(op,"STACK2POPCNT")==0 ||
+                  strcmp(op,"PAIRPOPCNT")==0 || strcmp(op,"2PCNT")==0 ||
+                  strcmp(op,"DPCNT")==0);
+    int is_clz = (strcmp(op,"DCLZ")==0 || strcmp(op,"2CLZ")==0 || strcmp(op,"S2CLZ")==0 ||
+                  strcmp(op,"STACK2CLZ")==0 || strcmp(op,"PAIRCLZ")==0);
+    long x = 0, y = 0;
+    if (is_pop){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
+      while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
+    } else if (is_clz){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      if (ua == 0) x = 64;
+      else { for (int i = 63; i >= 0; i--){ if (ua & (1ul << (unsigned)i)) break; x++; } }
+      if (ub == 0) y = 64;
+      else { for (int i = 63; i >= 0; i--){ if (ub & (1ul << (unsigned)i)) break; y++; } }
+    } else {
+      /* CTZ */
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      if (ua == 0) x = 64;
+      else { while ((ua & 1ul) == 0){ x++; ua >>= 1; } }
+      if (ub == 0) y = 64;
+      else { while ((ub & 1ul) == 0){ y++; ub >>= 1; } }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

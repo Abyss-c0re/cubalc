@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:08:09+0300",
-  "iter": 224,
-  "algocube_digit": 5,
-  "version": "1.12.128-universal",
-  "pass": 166,
+  "ts": "2026-08-03T04:13:11+0300",
+  "iter": 225,
+  "algocube_digit": 0,
+  "version": "1.12.129-universal",
+  "pass": 167,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,7 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DNAND DNOR DXNOR DANDN 2NAND 2NOR 2XNOR 2ANDN",
-  "proof": "programs/proof/151_dnand_dandn.cubalc",
-  "note": "tree restored from evolve corruption then digit-5 delta"
+  "delta": "DPOPCNT DCLZ DCTZ 2POPCNT 2CLZ 2CTZ",
+  "proof": "programs/proof/152_dpopcnt_dclz.cubalc"
 }

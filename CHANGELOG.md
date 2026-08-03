@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.129-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack bit metrics: DPOPCNT DCLZ DCTZ.
+
+### Language
+- `DPOPCNT`/`2POPCNT` — a b → popcount(a) popcount(b)
+- `DCLZ`/`2CLZ` — pair count leading zeros (0 → 64)
+- `DCTZ`/`2CTZ` — pair count trailing zeros (0 → 64)
+- Lexer 2-prefix: POPCNT PCNT CLZ CTZ
+- Complements dual-stack shift/bitwise with vector bit-metrics
+- Proof `152_dpopcnt_dclz.cubalc`
+
+### Prior
+See 1.12.128-universal.
+
 ## 1.12.128-universal — 2026-08-03
 
 ### Direction
