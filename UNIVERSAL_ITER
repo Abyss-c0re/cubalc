@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 414 |
-| **digit** | **6** (urandom; energy/sat plane) |
-| **version** | `1.12.295-universal` |
-| **pass/fail** | **333 / 0** (green) |
+| **iter** | 416 |
+| **digit** | **1** (urandom; data plane bitwise) |
+| **version** | `1.12.296-universal` |
+| **pass/fail** | **334 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSATADDTOC`/`SSATSUBTOC`/`SSATDIVTOC` |
-| **proof** | `programs/proof/318_ssataddtoc_ssatdivtoc.cubalc` |
+| **ops** | `SANDTOC`/`SORTOC`/`SXORTOC` |
+| **proof** | `programs/proof/319_sandtoc_sxortoc.cubalc` |
 
 ### Delta
-Digit-6 forward saturating stack↔cell energy: sat add/sub/div into cell (complement reverse sat TOC).
+Digit-1 stack↔cell bitwise accumulate: &=, |=, ^= single cell (dual of range SANDCELL).
 
 ### NexusCore
-- unity 1.0, alive 3, smx_tick OK; commander offline
-- daemon running
+- unity 1.0, alive 3; commander offline
+- daemon running; evolve mass-deleted proofs/scripts mid-tick — restored from HEAD
 
 ### Note
 Fir…

@@ -1,3 +1,17 @@
+## 1.12.296-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack↔cell bitwise accumulate (single-index dual of range SANDCELL plane after arith TOC).
+
+### Language
+- `SANDTOC`/`SANDTOCELL`/`BANDTOC` — stack `i v → cells[i]&=v` leave result
+- `SORTOC`/`SORTOCELL`/`BORTOC` — stack `i v → cells[i]|=v` leave result
+- `SXORTOC`/`SXORTOCELL`/`BXORTOC` — stack `i v → cells[i]^=v` leave result
+- Proof `319_sandtoc_sxortoc.cubalc`
+
+### Prior
+See 1.12.295-universal.
+
 ## 1.12.295-universal — 2026-08-03
 
 ### Direction
