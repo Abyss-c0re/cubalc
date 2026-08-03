@@ -1,3 +1,18 @@
+## 1.12.284-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → multiword imm rotate-through-CARRY (imm dual of SSHLC/SSHRC + dual-stack).
+
+### Language
+- `SSHLCN`/`RCLN`/`SHLCYN` n — RCL TOS by n (0..64); CARRY in/out
+- `SSHRCN`/`RCRN`/`SHRCYN` n — RCR TOS by n (0..64); CARRY in/out
+- `DSHLCCN`/`PAIRSHLCCN`/`DRCLN` n — pair RCL; shared cin; CARRY = OR cout
+- `DSHRCCN`/`PAIRSHRCCN`/`DRCRN` n — pair RCR; shared cin; CARRY = OR cout
+- Proof `307_sshlcn_dshrccn.cubalc`
+
+### Prior
+See 1.12.283-universal.
+
 ## 1.12.283-universal — 2026-08-03
 
 ### Direction

@@ -7431,6 +7431,75 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 dual-stack imm rotate-through-CARRY: DSHLCCN · DSHRCCN (dual of SSHLCN/SSHRCN) */
+  if (kw(&L->cur,"DSHLCCN")||kw(&L->cur,"2SHLCCN")||kw(&L->cur,"S2SHLCCN")||
+      kw(&L->cur,"STACK2SHLCCN")||kw(&L->cur,"PAIRSHLCCN")||kw(&L->cur,"DSHLCFN")||
+      kw(&L->cur,"2SHLCFN")||kw(&L->cur,"PAIRSHLCFN")||kw(&L->cur,"DRCLN")||
+      kw(&L->cur,"2RCLN")||kw(&L->cur,"PAIRRCLN")){
+    /* a b + n → RCL(a,n) RCL(b,n); shared cin, CARRY = OR of final couts */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    long cina = cin, cinb = cin;
+    for (long i = 0; i < n; i++){
+      int ca = (ua & msb) ? 1 : 0;
+      int cb = (ub & msb) ? 1 : 0;
+      ua = (ua << 1) | (cina ? 1ul : 0ul);
+      ub = (ub << 1) | (cinb ? 1ul : 0ul);
+      cina = ca; cinb = cb;
+    }
+    int flag = (cina ? 1 : 0) | (cinb ? 1 : 0);
+    long x = (long)ua, y = (long)ub;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSHRCCN")||kw(&L->cur,"2SHRCCN")||kw(&L->cur,"S2SHRCCN")||
+      kw(&L->cur,"STACK2SHRCCN")||kw(&L->cur,"PAIRSHRCCN")||kw(&L->cur,"DSHRCFN")||
+      kw(&L->cur,"2SHRCFN")||kw(&L->cur,"PAIRSHRCFN")||kw(&L->cur,"DRCRN")||
+      kw(&L->cur,"2RCRN")||kw(&L->cur,"PAIRRCRN")){
+    /* a b + n → RCR(a,n) RCR(b,n); shared cin, CARRY = OR of final couts */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    long cina = cin, cinb = cin;
+    for (long i = 0; i < n; i++){
+      int ca = (ua & 1ul) ? 1 : 0;
+      int cb = (ub & 1ul) ? 1 : 0;
+      ua = (ua >> 1) | (cina ? msb : 0ul);
+      ub = (ub >> 1) | (cinb ? msb : 0ul);
+      cina = ca; cinb = cb;
+    }
+    int flag = (cina ? 1 : 0) | (cinb ? 1 : 0);
+    long x = (long)ua, y = (long)ub;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack multiword negate-via-complement+cin: DNEGC2 */
   if (kw(&L->cur,"DNEGC2")||kw(&L->cur,"2NEGC2")||kw(&L->cur,"S2NEGC2")||
       kw(&L->cur,"STACK2NEGC2")||kw(&L->cur,"PAIRNEGC2")||kw(&L->cur,"DNEGC")||
@@ -17453,6 +17522,61 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long r = (long)((ua >> 1) | (cin ? msb : 0ul));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"CARRY",cout); var_set_num(vm,"CY",cout);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 stack multiword imm rotate-through-CARRY: SSHLCN · SSHRCN (imm dual of SSHLC/SSHRC) */
+  if (kw(&L->cur,"SSHLCN")||kw(&L->cur,"STACKSHLCN")||kw(&L->cur,"SHLCYN")||
+      kw(&L->cur,"SSHLCFN")||kw(&L->cur,"SHLCFN")||kw(&L->cur,"SHLCIMM")||
+      kw(&L->cur,"SRCLN")||kw(&L->cur,"RCLN")){
+    /* SSHLCN n — rotate-through-carry left n times (n clamped 0..64); cin/cout via CARRY */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    for (long i = 0; i < n; i++){
+      int cout = (ua & msb) ? 1 : 0;
+      ua = (ua << 1) | (cin ? 1ul : 0ul);
+      cin = cout;
+    }
+    long r = (long)ua;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",cin); var_set_num(vm,"CY",cin);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHRCN")||kw(&L->cur,"STACKSHRCN")||kw(&L->cur,"SHRCYN")||
+      kw(&L->cur,"SSHRCFN")||kw(&L->cur,"SHRCFN")||kw(&L->cur,"SHRCIMM")||
+      kw(&L->cur,"SRCRN")||kw(&L->cur,"RCRN")){
+    /* SSHRCN n — rotate-through-carry right n times (n clamped 0..64) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    for (long i = 0; i < n; i++){
+      int cout = (ua & 1ul) ? 1 : 0;
+      ua = (ua >> 1) | (cin ? msb : 0ul);
+      cin = cout;
+    }
+    long r = (long)ua;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",cin); var_set_num(vm,"CY",cin);
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
