@@ -226,6 +226,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"SEL2")==0 || strcasecmp(tail,"MUX2")==0 ||
+            strcasecmp(tail,"NIPIF")==0 || strcasecmp(tail,"KEEPIF")==0 ||
+            strcasecmp(tail,"CNIP")==0 || strcasecmp(tail,"QKEEP")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
@@ -7386,6 +7388,44 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack conditionals: DNIPIF · DKEEPIF (pair forms of SNIPIF/SKEEPIF) */
+  if (kw(&L->cur,"DNIPIF")||kw(&L->cur,"2NIPIF")||kw(&L->cur,"S2NIPIF")||
+      kw(&L->cur,"STACK2NIPIF")||kw(&L->cur,"PAIRNIPIF")||kw(&L->cur,"DCNIP")||
+      kw(&L->cur,"2CNIP")){
+    /* a b c d f → (f?b:a) (f?d:c) — shared flag choose-per-lane */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = f ? b : a;
+    long y = f ? d : c;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DKEEPIF")||kw(&L->cur,"2KEEPIF")||kw(&L->cur,"S2KEEPIF")||
+      kw(&L->cur,"STACK2KEEPIF")||kw(&L->cur,"PAIRKEEPIF")||kw(&L->cur,"DQKEEP")||
+      kw(&L->cur,"2QKEEP")||kw(&L->cur,"DKEEPWHEN")||kw(&L->cur,"2KEEPWHEN")){
+    /* a b f → if f leave a b else drop both */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    } else {
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    }
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-6 dual-stack flow metrics: DAVG · DDIST · DHAMM (energy-style distance) */

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.179-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack conditionals (pair nip/keep-if).
+
+### Language
+- `DNIPIF`/`2NIPIF`/`PAIRNIPIF` — shared-flag choose per lane: `(f?b:a)(f?d:c)`
+- `DKEEPIF`/`2KEEPIF`/`PAIRKEEPIF` — keep pair `a b` if flag else drop both
+- Proof `202_dnipif_dkeepif.cubalc`
+
+### Prior
+See 1.12.178-universal.
+
+
 ## 1.12.178-universal — 2026-08-03
 
 ### Direction

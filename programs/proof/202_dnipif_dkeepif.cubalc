@@ -1,0 +1,97 @@
+# Proof 202 — digit-1 dual-stack conditionals: DNIPIF DKEEPIF
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DNIPIF: a b c d f → (f?b:a) (f?d:c)
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 4
+PUSH 1
+DNIPIF
+POP y
+POP x
+ASSERT x == 2
+ASSERT y == 4
+
+# flag false keeps a,c
+CLEARSTACK
+PUSH 10
+PUSH 20
+PUSH 30
+PUSH 40
+PUSH 0
+2NIPIF
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == 30
+
+# PAIRNIPIF / DCNIP
+CLEARSTACK
+PUSH 5
+PUSH 6
+PUSH 7
+PUSH 8
+PUSH -1
+PAIRNIPIF
+POP y
+POP x
+ASSERT x == 6
+ASSERT y == 8
+
+CLEARSTACK
+PUSH 9
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 0
+DCNIP
+POP y
+POP x
+ASSERT x == 9
+ASSERT y == 2
+
+# DKEEPIF: a b f → keep pair if f
+CLEARSTACK
+PUSH 100
+PUSH 200
+PUSH 1
+DKEEPIF
+POP y
+POP x
+ASSERT x == 100
+ASSERT y == 200
+
+# drop both when false
+CLEARSTACK
+PUSH 1
+PUSH 2
+PUSH 3
+PUSH 0
+2KEEPIF
+POP spv
+# only the leading 1 remains
+ASSERT spv == 1
+
+# PAIRKEEPIF keep
+CLEARSTACK
+PUSH 7
+PUSH 8
+PUSH 1
+PAIRKEEPIF
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 8
+
+# DQKEEP alias drop
+CLEARSTACK
+PUSH 11
+PUSH 12
+PUSH 13
+PUSH 0
+DQKEEP
+POP z
+ASSERT z == 11
