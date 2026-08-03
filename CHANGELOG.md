@@ -1,3 +1,17 @@
+## 1.12.327-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack foundation imm shift TOC (imm dual of SSHLTOC/SSHRTOC/SSARTOC after SSHLN plane).
+
+### Language
+- `SSHLTOCN`/`SHLTOCN`/`SSHLATN` n — stack `i → cells[i]<<=n` (n clamp 0..63) leave result
+- `SSHRTOCN`/`SHRTOCN`/`SSHRATN` n — stack `i → cells[i] logical >>=n` leave result
+- `SSARTOCN`/`SARTOCN`/`SSARATN` n — stack `i → cells[i] arithmetic >>=n` leave result
+- Proof `350_sshltocn_ssartocn.cubalc`
+
+### Prior
+See 1.12.326-universal.
+
 ## 1.12.326-universal — 2026-08-04
 
 ### Direction

@@ -5453,6 +5453,60 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack foundation imm shift TOC: SSHLTOCN · SSHRTOCN · SSARTOCN
+   * (imm dual of SSHLTOC/SSHRTOC/SSARTOC; peer of SSHLN/SSHRN/SSARN into cell) */
+  if (kw(&L->cur,"SSHLTOCN")||kw(&L->cur,"SSHLTOCIMM")||kw(&L->cur,"STACKSHLTOCN")||
+      kw(&L->cur,"SSHLATN")||kw(&L->cur,"SHLTOCN")||kw(&L->cur,"SCELLSHLN")){
+    /* i + n → cells[i] <<= n (n clamped 0..63), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = (long)((unsigned long)vm->cells[(int)i] << (unsigned)n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHRTOCN")||kw(&L->cur,"SSHRTOCIMM")||kw(&L->cur,"STACKSHRTOCN")||
+      kw(&L->cur,"SSHRATN")||kw(&L->cur,"SHRTOCN")||kw(&L->cur,"SCELLSHRN")){
+    /* i + n → cells[i] logical >>= n (n clamped 0..63), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = (long)((unsigned long)vm->cells[(int)i] >> (unsigned)n);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSARTOCN")||kw(&L->cur,"SSARTOCIMM")||kw(&L->cur,"STACKSARTOCN")||
+      kw(&L->cur,"SSARATN")||kw(&L->cur,"SARTOCN")||kw(&L->cur,"SCELLSARN")||
+      kw(&L->cur,"SASHRTOCN")||kw(&L->cur,"ASHRTOCN")){
+    /* i + n → cells[i] arithmetic >>= n (n clamped 0..63), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 63) n = 63;
+    long r = vm->cells[(int)i] >> n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack↔cell rotate dual: SROLTOC · SRORTOC (complete shift/rotate TOC after SSHL/SHR/SAR TOC) */
   if (kw(&L->cur,"SROLTOC")||kw(&L->cur,"SROLTOCELL")||kw(&L->cur,"STACKROLTOC")||
       kw(&L->cur,"ROLTOC")||kw(&L->cur,"SCELLROL")||kw(&L->cur,"SROTLTOC")||
