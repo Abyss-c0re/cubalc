@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.211-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack data-path imm deposit + low-n or/xor (complete DMASKN/DANDMN/DBEXTN; energy bit-fill/toggle).
+
+### Language
+- `DBDEPN`/`2BDEPN`/`PAIRBDEPN` field pos — pairwise deposit low 8 bits of field at pos (dual of SBDEPN)
+- `DORMN`/`DSETLN`/`2ORMN` n — pairwise set low n bits: `x |= mask`
+- `DXORMN`/`DFLIPLN`/`2XORMN` n — pairwise toggle low n bits: `x ^= mask`
+- Proof `234_dbdepn_dormn.cubalc`
+
+### Prior
+See 1.12.210-universal.
+
+
 ## 1.12.210-universal — 2026-08-03
 
 ### Direction

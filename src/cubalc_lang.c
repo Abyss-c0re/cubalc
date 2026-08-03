@@ -313,7 +313,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"FLIPBN")==0 || strcasecmp(tail,"FLIPBITN")==0 ||
             strcasecmp(tail,"MASKN")==0 || strcasecmp(tail,"ONESN")==0 ||
             strcasecmp(tail,"ANDMN")==0 || strcasecmp(tail,"KEEPLN")==0 ||
+            strcasecmp(tail,"ORMN")==0 || strcasecmp(tail,"XORMN")==0 ||
             strcasecmp(tail,"BEXTN")==0 || strcasecmp(tail,"BITEXTN")==0 ||
+            strcasecmp(tail,"BDEPN")==0 || strcasecmp(tail,"BITDEPN")==0 ||
             strcasecmp(tail,"BTESTN")==0 || strcasecmp(tail,"BITN")==0 ||
             strcasecmp(tail,"TESTBITN")==0 ||
             strcasecmp(tail,"BEXT")==0 || strcasecmp(tail,"BITEXT")==0 ||
@@ -9526,6 +9528,86 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = (long)(((unsigned long)a >> (unsigned)pos) & mask);
       y = (long)(((unsigned long)b >> (unsigned)pos) & mask);
     }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack data-path imm deposit + low-n or/xor (complete DMASKN/DANDMN/DBEXTN) */
+  if (kw(&L->cur,"DBDEPN")||kw(&L->cur,"2BDEPN")||kw(&L->cur,"S2BDEPN")||
+      kw(&L->cur,"STACK2BDEPN")||kw(&L->cur,"PAIRBDEPN")||kw(&L->cur,"DBITDEPN")||
+      kw(&L->cur,"2BITDEPN")||kw(&L->cur,"DDEPN")||kw(&L->cur,"2DEPN")){
+    /* a b + field pos → deposit low 8 bits of field into each lane at pos (dual of SBDEPN) */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long pos = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long width = 8;
+    if (pos < 0) pos = 0;
+    if (pos > 62){
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+      var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    if (width > 63 - pos) width = 63 - pos;
+    long x = a, y = b;
+    if (width > 0){
+      unsigned long mask = (width >= 63) ? ~0ul : ((1ul << (unsigned)width) - 1ul);
+      unsigned long f = (unsigned long)field & mask;
+      unsigned long ba = (unsigned long)a;
+      unsigned long bb = (unsigned long)b;
+      ba = (ba & ~(mask << (unsigned)pos)) | (f << (unsigned)pos);
+      bb = (bb & ~(mask << (unsigned)pos)) | (f << (unsigned)pos);
+      x = (long)ba;
+      y = (long)bb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DORMN")||kw(&L->cur,"2ORMN")||kw(&L->cur,"S2ORMN")||
+      kw(&L->cur,"STACK2ORMN")||kw(&L->cur,"PAIRORMN")||kw(&L->cur,"DSETLN")||
+      kw(&L->cur,"2SETLN")||kw(&L->cur,"DLOWORN")||kw(&L->cur,"2LOWORN")||
+      kw(&L->cur,"DMASKOR")||kw(&L->cur,"2MASKOR")){
+    /* a b + n → (a|m) (b|m) with m = low-n mask; n clamped 0..64 (energy bit-fill) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)((unsigned long)a | m);
+    long y = (long)((unsigned long)b | m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXORMN")||kw(&L->cur,"2XORMN")||kw(&L->cur,"S2XORMN")||
+      kw(&L->cur,"STACK2XORMN")||kw(&L->cur,"PAIRXORMN")||kw(&L->cur,"DFLIPLN")||
+      kw(&L->cur,"2FLIPLN")||kw(&L->cur,"DLOWXORN")||kw(&L->cur,"2LOWXORN")||
+      kw(&L->cur,"DMASKXOR")||kw(&L->cur,"2MASKXOR")){
+    /* a b + n → (a^m) (b^m) with m = low-n mask; n clamped 0..64 (toggle low plane) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)((unsigned long)a ^ m);
+    long y = (long)((unsigned long)b ^ m);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
