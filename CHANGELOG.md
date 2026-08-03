@@ -1,3 +1,17 @@
+## 1.12.333-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → reverse imm ANDN stack plane (reverse dual of SANDNI after SANDNFROMTOCN / SUDIVFROMN).
+
+### Language
+- `SANDNFROMN`/`BICFROMN`/`RANDNFROMN` n — `TOS = n & ~TOS`
+- `SORNFROMN`/`ORNFROMN`/`RORNFROMN` n — `TOS = n | ~TOS`
+- `SXORNFROMN`/`XORNFROMN`/`RXORNFROMN` n — `TOS = n ^ ~TOS`
+- Proof `356_sandnfromn_sxornfromn.cubalc`
+
+### Prior
+See 1.12.332-universal.
+
 ## 1.12.332-universal — 2026-08-04
 
 ### Direction

@@ -8427,6 +8427,44 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 reverse imm ANDN plane: SANDNFROMN · SORNFROMN · SXORNFROMN
+   * (TOS = n op ~TOS; reverse dual of SANDNI/SORNI/SXORNI after SUDIVFROMN + ANDN stack) */
+  if (kw(&L->cur,"SANDNFROMN")||kw(&L->cur,"STACKANDNFROMN")||kw(&L->cur,"ANDNFROMN")||
+      kw(&L->cur,"SBICFROMN")||kw(&L->cur,"BICFROMN")||kw(&L->cur,"SANDNFROMIMM")||
+      kw(&L->cur,"SRANDNFROMN")||kw(&L->cur,"RANDNFROMN")||kw(&L->cur,"SANDNOTFROMN")){
+    /* SANDNFROMN n — TOS = n & ~TOS */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = n & ~vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORNFROMN")||kw(&L->cur,"STACKORNFROMN")||kw(&L->cur,"ORNFROMN")||
+      kw(&L->cur,"SORNOTFROMN")||kw(&L->cur,"ORNOTFROMN")||kw(&L->cur,"SORNFROMIMM")||
+      kw(&L->cur,"SRORNFROMN")||kw(&L->cur,"RORNFROMN")){
+    /* SORNFROMN n — TOS = n | ~TOS */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = n | ~vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXORNFROMN")||kw(&L->cur,"STACKXORNFROMN")||kw(&L->cur,"XORNFROMN")||
+      kw(&L->cur,"SXORNOTFROMN")||kw(&L->cur,"XORNOTFROMN")||kw(&L->cur,"SXORNFROMIMM")||
+      kw(&L->cur,"SRXORNFROMN")||kw(&L->cur,"RXORNFROMN")){
+    /* SXORNFROMN n — TOS = n ^ ~TOS */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = n ^ ~vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack pair ALU: DADD · DSUB · DMUL (vector pairs a b + c d) */
   if (kw(&L->cur,"DADD")||kw(&L->cur,"2ADD")||kw(&L->cur,"S2ADD")||
       kw(&L->cur,"STACK2ADD")||kw(&L->cur,"PAIRADD")){
