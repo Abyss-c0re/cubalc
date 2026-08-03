@@ -1,3 +1,18 @@
+## 1.12.224-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → stack low-n mask plane (dual of dual-stack DANDMN/DORMN/DXORMN energy bit-fill).
+
+### Language
+- `SANDMN`/`STACKANDMN`/`KEEPLN` n — TOS &= low-n mask (keep low n bits)
+- `SORMN`/`STACKORMN`/`SETLN` n — TOS |= low-n mask (set low n bits)
+- `SXORMN`/`STACKXORMN`/`FLIPLN` n — TOS ^= low-n mask (toggle low n bits)
+- Proof `247_sandmn_sormn.cubalc`
+
+### Prior
+See 1.12.223-universal.
+
+
 ## 1.12.223-universal — 2026-08-03
 
 ### Direction
