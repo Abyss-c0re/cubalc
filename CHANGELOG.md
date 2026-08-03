@@ -1,3 +1,17 @@
+## 1.12.255-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack imm inverted 16-bit halfword field (NAND/NOR/XNOR after SAND16N; ladder after SNAND8N).
+
+### Language
+- `SNAND16N`/`NAND16N` field n — halfword n = ~(half & field) & 0xFFFF (n 0..3)
+- `SNOR16N`/`NOR16N` field n — halfword n = ~(half | field) & 0xFFFF
+- `SXNOR16N`/`XNOR16N`/`SEQUIV16N` field n — halfword n = ~(half ^ field) & 0xFFFF
+- Proof `278_snand16n_snor16n.cubalc`
+
+### Prior
+See 1.12.254-universal.
+
 ## 1.12.254-universal — 2026-08-03
 
 ### Direction

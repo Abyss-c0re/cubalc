@@ -13940,6 +13940,61 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack imm inverted 16-bit field: SNAND16N · SNOR16N · SXNOR16N (complete after SAND16N; ladder after SNAND8N) */
+  if (kw(&L->cur,"SNAND16N")||kw(&L->cur,"STACKNAND16N")||kw(&L->cur,"NAND16N")||
+      kw(&L->cur,"SNANDHN16")||kw(&L->cur,"SNANDHIMM")||kw(&L->cur,"SINVERTAND16N")){
+    /* SNAND16N field n — halfword n of TOS = ~(half & field) & 0xFFFF; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (~(((base >> sh) & 0xFFFFul) & f)) & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNOR16N")||kw(&L->cur,"STACKNOR16N")||kw(&L->cur,"NOR16N")||
+      kw(&L->cur,"SNORHN16")||kw(&L->cur,"SNORHIMM")||kw(&L->cur,"SINVERTOR16N")){
+    /* SNOR16N field n — halfword n of TOS = ~(half | field) & 0xFFFF; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (~(((base >> sh) & 0xFFFFul) | f)) & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNOR16N")||kw(&L->cur,"STACKXNOR16N")||kw(&L->cur,"XNOR16N")||
+      kw(&L->cur,"SXNORHN16")||kw(&L->cur,"SXNORHIMM")||kw(&L->cur,"SEQUIV16N")){
+    /* SXNOR16N field n — halfword n of TOS = ~(half ^ field) & 0xFFFF; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (~(((base >> sh) & 0xFFFFul) ^ f)) & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 stack imm 8-bit field bitwise: SAND8N · SOR8N · SXOR8N (merge into byte n; complete after SAND16N/SAND32N) */
   if (kw(&L->cur,"SAND8N")||kw(&L->cur,"STACKAND8N")||kw(&L->cur,"AND8N")||
       kw(&L->cur,"SANDBN")||kw(&L->cur,"SANDBIMM")||kw(&L->cur,"SKEEP8N")){
