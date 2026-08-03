@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.160-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack unsigned div/mod.
+
+### Language
+- `DUDIV`/`2UDIV`/`DUDIVIDE` — pairwise unsigned divide (`/0→0`)
+- `DUMOD`/`2UMOD`/`DUREM` — pairwise unsigned remainder (`%0→0`)
+- Proof `183_dudiv_dumod.cubalc`
+
+### Prior
+See 1.12.159-universal.
+
 ## 1.12.159-universal — 2026-08-03
 
 ### Direction

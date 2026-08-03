@@ -180,6 +180,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MULADD")==0 ||
             strcasecmp(tail,"MULHI")==0 || strcasecmp(tail,"MULH")==0 ||
             strcasecmp(tail,"HMUL")==0 ||
+            strcasecmp(tail,"UDIV")==0 || strcasecmp(tail,"UMOD")==0 ||
+            strcasecmp(tail,"UREM")==0 || strcasecmp(tail,"UDIVIDE")==0 ||
             strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
             strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0 ||
             strcasecmp(tail,"EQ")==0 || strcasecmp(tail,"NE")==0 ||
@@ -6266,6 +6268,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     __int128 py = (__int128)b * (__int128)d;
     long x = (long)(px >> 64);
     long y = (long)(py >> 64);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack unsigned div/mod: DUDIV · DUMOD */
+  if (kw(&L->cur,"DUDIV")||kw(&L->cur,"2UDIV")||kw(&L->cur,"S2UDIV")||
+      kw(&L->cur,"STACK2UDIV")||kw(&L->cur,"PAIRUDIV")||kw(&L->cur,"DUDIVIDE")||
+      kw(&L->cur,"2UDIVIDE")||
+      kw(&L->cur,"DUMOD")||kw(&L->cur,"2UMOD")||kw(&L->cur,"S2UMOD")||
+      kw(&L->cur,"STACK2UMOD")||kw(&L->cur,"PAIRUMOD")||kw(&L->cur,"DUREM")||
+      kw(&L->cur,"2UREM")){
+    /* a b c d → unsigned a⋆c , b⋆d ; /0 or %0 → 0 */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_div = (strcmp(op,"DUDIV")==0 || strcmp(op,"2UDIV")==0 ||
+                  strcmp(op,"S2UDIV")==0 || strcmp(op,"STACK2UDIV")==0 ||
+                  strcmp(op,"PAIRUDIV")==0 || strcmp(op,"DUDIVIDE")==0 ||
+                  strcmp(op,"2UDIVIDE")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    long x = 0, y = 0;
+    if (is_div){
+      if (uc != 0) x = (long)(ua / uc);
+      if (ud != 0) y = (long)(ub / ud);
+    } else {
+      if (uc != 0) x = (long)(ua % uc);
+      if (ud != 0) y = (long)(ub % ud);
+    }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
