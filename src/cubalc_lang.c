@@ -232,6 +232,12 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"SEL2")==0 || strcasecmp(tail,"MUX2")==0 ||
             strcasecmp(tail,"NIPIF")==0 || strcasecmp(tail,"KEEPIF")==0 ||
             strcasecmp(tail,"CNIP")==0 || strcasecmp(tail,"QKEEP")==0 ||
+            strcasecmp(tail,"SWAPIF")==0 || strcasecmp(tail,"QSWAP")==0 ||
+            strcasecmp(tail,"CSWAP")==0 ||
+            strcasecmp(tail,"DROPIF")==0 || strcasecmp(tail,"QDROP")==0 ||
+            strcasecmp(tail,"DROPWHEN")==0 ||
+            strcasecmp(tail,"DUPIF")==0 || strcasecmp(tail,"2QDUP")==0 ||
+            strcasecmp(tail,"DUPWHEN")==0 ||
             strcasecmp(tail,"INC")==0 || strcasecmp(tail,"DEC")==0 ||
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
@@ -7600,6 +7606,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
       var_set_num(vm,"LAST_N",last); vm->last_n=last;
     }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack conditionals ext: DSWAPIF · DDROPIF · DDUPIF */
+  if (kw(&L->cur,"DSWAPIF")||kw(&L->cur,"2SWAPIF")||kw(&L->cur,"S2SWAPIF")||
+      kw(&L->cur,"STACK2SWAPIF")||kw(&L->cur,"PAIRSWAPIF")||kw(&L->cur,"DQSWAP")||
+      kw(&L->cur,"2QSWAP")||kw(&L->cur,"DCSWAP")||kw(&L->cur,"2CSWAP")){
+    /* a b f → if f then b a else a b  (pair conditional swap; dual of SSWAPIF) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){ long t = a; a = b; b = t; }
+    vm->stack[vm->sp++] = a;
+    vm->stack[vm->sp++] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDROPIF")||kw(&L->cur,"2DROPIF")||kw(&L->cur,"S2DROPIF")||
+      kw(&L->cur,"STACK2DROPIF")||kw(&L->cur,"PAIRDROPIF")||kw(&L->cur,"DQDROP")||
+      kw(&L->cur,"2QDROP")||kw(&L->cur,"DDROPWHEN")||kw(&L->cur,"2DROPWHEN")){
+    /* a b f → if f drop both else leave a b  (inverse of DKEEPIF) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (!f){
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    } else {
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDUPIF")||kw(&L->cur,"2DUPIF")||kw(&L->cur,"S2DUPIF")||
+      kw(&L->cur,"STACK2DUPIF")||kw(&L->cur,"PAIRDUPIF")||kw(&L->cur,"D2QDUP")||
+      kw(&L->cur,"2QDUP")||kw(&L->cur,"DDUPWHEN")||kw(&L->cur,"2DUPWHEN")){
+    /* a b f → if f then a b a b else a b  (conditional pair-dup)
+     * alias D2QDUP avoids clobbering single-stack QDUP/?DUP */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[vm->sp - 1];
+    long a = vm->stack[vm->sp - 2];
+    if (f){
+      if (vm->sp + 2 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+    }
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-6 dual-stack flow metrics: DAVG · DDIST · DHAMM (energy-style distance) */

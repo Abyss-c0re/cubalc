@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.185-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack control conditionals (complete after `DKEEPIF`).
+
+### Language
+- `DSWAPIF`/`2SWAPIF`/`PAIRSWAPIF` — `a b f →` swap pair if flag (dual of `SSWAPIF`)
+- `DDROPIF`/`2DROPIF`/`PAIRDROPIF` — drop pair if flag (inverse of `DKEEPIF`)
+- `DDUPIF`/`2DUPIF`/`PAIRDUPIF` — duplicate pair if flag
+- Proof `208_dswapif_ddropif_ddupif.cubalc`
+
+### Prior
+See 1.12.184-universal.
+
+
 ## 1.12.184-universal — 2026-08-03
 
 ### Direction
