@@ -1,3 +1,17 @@
+## 1.12.262-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack imm inverted ANDN plane (after SANDNI + SNANDI; dual pending DNANDNI).
+
+### Language
+- `SNANDNI`/`NANDNI` n — TOS = ~(TOS & ~n) (= ~TOS | n)
+- `SNORNI`/`NORNI` n — TOS = ~(TOS | ~n) (= ~TOS & n)
+- `SXNORNI`/`XNORNI`/`SEQUIVNI` n — TOS = ~(TOS ^ ~n) (equiv `SXORI`)
+- Proof `285_snandni_snorni.cubalc`
+
+### Prior
+See 1.12.261-universal.
+
 ## 1.12.261-universal — 2026-08-03
 
 ### Direction

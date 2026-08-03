@@ -15242,6 +15242,40 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm inverted ANDN plane: SNANDNI · SNORNI · SXNORNI (after SANDNI + SNANDI) */
+  if (kw(&L->cur,"SNANDNI")||kw(&L->cur,"STACKNANDNI")||kw(&L->cur,"NANDNI")||
+      kw(&L->cur,"SINVERTANDNI")||kw(&L->cur,"NANDNOTI")||kw(&L->cur,"SNANDNOTI")){
+    /* SNANDNI n — TOS = ~(TOS & ~n)  (= ~TOS | n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] & ~n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNORNI")||kw(&L->cur,"STACKNORNI")||kw(&L->cur,"NORNI")||
+      kw(&L->cur,"SINVERTORNI")||kw(&L->cur,"NORNOTI")||kw(&L->cur,"SNORNOTI")){
+    /* SNORNI n — TOS = ~(TOS | ~n)  (= ~TOS & n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] | ~n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXNORNI")||kw(&L->cur,"STACKXNORNI")||kw(&L->cur,"XNORNI")||
+      kw(&L->cur,"SEQUIVNI")||kw(&L->cur,"XNORNOTI")||kw(&L->cur,"SXNORNOTI")){
+    /* SXNORNI n — TOS = ~(TOS ^ ~n)  (equiv SXORI / TOS ^ n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = ~(vm->stack[vm->sp - 1] ^ ~n);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 stack low-n field reverse/rotate: SBREVN · SROLBN · SRORBN (dual of DBREVN/DROLBN/DRORBN) */
   if (kw(&L->cur,"SBREVN")||kw(&L->cur,"STACKBREVN")||kw(&L->cur,"BREVNS")||
       kw(&L->cur,"SREVLOWN")||kw(&L->cur,"SBITREVN")||kw(&L->cur,"STACKREVLOWN")){
