@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T10:55:23+0300",
-  "iter": 269,
+  "ts": "2026-08-03T11:04:27+0300",
+  "iter": 270,
   "algocube_digit": 1,
-  "version": "1.12.194-universal",
-  "pass": 232,
+  "version": "1.12.195-universal",
+  "pass": 233,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "DROTIF",
-    "DRROTIF"
+    "DSHGATE",
+    "DZEROIF"
   ],
-  "proof": "programs/proof/217_drotif_drrotif.cubalc"
+  "proof": "programs/proof/218_dshgate_dzeroif.cubalc"
 }

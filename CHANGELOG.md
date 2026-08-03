@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.195-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack shared-flag control gates (complete after per-lane DGATE).
+
+### Language
+- `DSHGATE`/`2SHGATE`/`DGATES` — shared-flag gate: `a b f → (f?a:0) (f?b:0)`
+- `DZEROIF`/`2ZEROIF`/`DZAPIF` — shared-flag zero-if: `a b f → (f?0:a) (f?0:b)`
+- Proof `218_dshgate_dzeroif.cubalc`
+
+### Prior
+See 1.12.194-universal.
+
+
 ## 1.12.194-universal — 2026-08-03
 
 ### Direction
