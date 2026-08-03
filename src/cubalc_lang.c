@@ -16538,6 +16538,56 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack imm saturating ALU: SSATADDN · SSATSUBN · SSATMULN (imm dual of SSATADD plane) */
+  if (kw(&L->cur,"SSATADDN")||kw(&L->cur,"STACKSATADDN")||kw(&L->cur,"SATADDN")||
+      kw(&L->cur,"SSATADDIMM")||kw(&L->cur,"SADDSATN")){
+    /* SSATADDN n — TOS = sat(TOS + n) to LONG_MIN..LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (n > 0 && a > LONG_MAX - n) r = LONG_MAX;
+    else if (n < 0 && a < LONG_MIN - n) r = LONG_MIN;
+    else r = a + n;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATSUBN")||kw(&L->cur,"STACKSATSUBN")||kw(&L->cur,"SATSUBN")||
+      kw(&L->cur,"SSATSUBIMM")||kw(&L->cur,"SSUBSATN")){
+    /* SSATSUBN n — TOS = sat(TOS - n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (n > 0 && a < LONG_MIN + n) r = LONG_MIN;
+    else if (n < 0 && a > LONG_MAX + n) r = LONG_MAX;
+    else r = a - n;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATMULN")||kw(&L->cur,"STACKSATMULN")||kw(&L->cur,"SATMULN")||
+      kw(&L->cur,"SSATMULIMM")||kw(&L->cur,"SMULSATN")){
+    /* SSATMULN n — TOS = sat(TOS * n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (a == 0 || n == 0) r = 0;
+    else {
+      __int128 p = (__int128)a * (__int128)n;
+      if (p > (__int128)LONG_MAX) r = LONG_MAX;
+      else if (p < (__int128)LONG_MIN) r = LONG_MIN;
+      else r = (long)p;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SWMOD")||kw(&L->cur,"SWRAPMOD")||kw(&L->cur,"STACKWRAPMOD")){
     /* n m → n mod m in [0,m); m<=0 → 0 */
     lex_next(L);

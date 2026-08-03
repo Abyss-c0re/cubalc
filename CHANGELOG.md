@@ -1,3 +1,17 @@
+## 1.12.269-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack imm saturating ALU (imm dual of SSATADD/SSATSUB/SSATMUL).
+
+### Language
+- `SSATADDN`/`SATADDN`/`SADDSATN` n — TOS = sat(TOS+n) to LONG_MIN..LONG_MAX
+- `SSATSUBN`/`SATSUBN`/`SSUBSATN` n — TOS = sat(TOS−n)
+- `SSATMULN`/`SATMULN`/`SMULSATN` n — TOS = sat(TOS*n)
+- Proof `292_ssataddn_ssatsubn.cubalc`
+
+### Prior
+See 1.12.268-universal.
+
 ## 1.12.268-universal — 2026-08-03
 
 ### Direction
