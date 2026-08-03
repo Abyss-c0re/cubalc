@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.130-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack bit-path: DORN DBREV DPARITY.
+
+### Language
+- `DORN`/`2ORN` — a b c d → (a|~c) (b|~d) (complements DANDN)
+- `DBREV`/`2BREV`/`DBITREV` — reverse low 32 bits of each of top pair
+- `DPARITY`/`2PARITY` — pairwise popcount mod 2 (0/1)
+- Lexer 2-prefix: ORN BREV BITREV PARITY PAR
+- Completes dual-stack bit metrics + ANDN/ORN plane
+- Proof `153_dorn_dparity.cubalc`
+
+### Prior
+See 1.12.129-universal.
+
 ## 1.12.129-universal — 2026-08-03
 
 ### Direction

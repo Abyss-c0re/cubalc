@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:13:11+0300",
-  "iter": 225,
-  "algocube_digit": 0,
-  "version": "1.12.129-universal",
-  "pass": 167,
+  "ts": "2026-08-03T04:19:45+0300",
+  "iter": 226,
+  "algocube_digit": 3,
+  "version": "1.12.130-universal",
+  "pass": 168,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DPOPCNT DCLZ DCTZ 2POPCNT 2CLZ 2CTZ",
-  "proof": "programs/proof/152_dpopcnt_dclz.cubalc"
+  "delta": "DORN DBREV DPARITY 2ORN 2BREV 2PARITY",
+  "proof": "programs/proof/153_dorn_dparity.cubalc"
 }

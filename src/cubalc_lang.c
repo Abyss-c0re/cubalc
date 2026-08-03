@@ -194,7 +194,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NAND")==0 || strcasecmp(tail,"NOR")==0 ||
             strcasecmp(tail,"XNOR")==0 || strcasecmp(tail,"ANDN")==0 ||
             strcasecmp(tail,"POPCNT")==0 || strcasecmp(tail,"PCNT")==0 ||
-            strcasecmp(tail,"CLZ")==0 || strcasecmp(tail,"CTZ")==0)
+            strcasecmp(tail,"CLZ")==0 || strcasecmp(tail,"CTZ")==0 ||
+            strcasecmp(tail,"ORN")==0 || strcasecmp(tail,"BREV")==0 ||
+            strcasecmp(tail,"BITREV")==0 || strcasecmp(tail,"PARITY")==0 ||
+            strcasecmp(tail,"PAR")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6429,6 +6432,61 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       else { while ((ua & 1ul) == 0){ x++; ua >>= 1; } }
       if (ub == 0) y = 64;
       else { while ((ub & 1ul) == 0){ y++; ub >>= 1; } }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack bit-path: DORN · DBREV · DPARITY */
+  if (kw(&L->cur,"DORN")||kw(&L->cur,"2ORN")||kw(&L->cur,"S2ORN")||
+      kw(&L->cur,"STACK2ORN")||kw(&L->cur,"PAIRORN")||kw(&L->cur,"DORNOT")){
+    /* a b c d → (a|~c) (b|~d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a | ~c;
+    long y = b | ~d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBREV")||kw(&L->cur,"2BREV")||kw(&L->cur,"S2BREV")||
+      kw(&L->cur,"STACK2BREV")||kw(&L->cur,"PAIRBREV")||kw(&L->cur,"DBITREV")||
+      kw(&L->cur,"2BITREV")||kw(&L->cur,"DREVBITS")||
+      kw(&L->cur,"DPARITY")||kw(&L->cur,"2PARITY")||kw(&L->cur,"S2PARITY")||
+      kw(&L->cur,"STACK2PARITY")||kw(&L->cur,"PAIRPARITY")||kw(&L->cur,"2PAR")||
+      kw(&L->cur,"DPAR")){
+    /* a b → f(a) f(b); BREV = reverse low 32 bits; PARITY = popcount mod 2 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_brev = (strcmp(op,"DBREV")==0 || strcmp(op,"2BREV")==0 || strcmp(op,"S2BREV")==0 ||
+                   strcmp(op,"STACK2BREV")==0 || strcmp(op,"PAIRBREV")==0 ||
+                   strcmp(op,"DBITREV")==0 || strcmp(op,"2BITREV")==0 ||
+                   strcmp(op,"DREVBITS")==0);
+    long x, y;
+    if (is_brev){
+      unsigned int wa = (unsigned int)a, wb = (unsigned int)b;
+      unsigned int ra = 0, rb = 0;
+      for (int i = 0; i < 32; i++){
+        ra = (ra << 1) | (wa & 1u); wa >>= 1;
+        rb = (rb << 1) | (wb & 1u); wb >>= 1;
+      }
+      x = (long)ra; y = (long)rb;
+    } else {
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      int na = 0, nb = 0;
+      while (ua){ na ^= (int)(ua & 1u); ua >>= 1; }
+      while (ub){ nb ^= (int)(ub & 1u); ub >>= 1; }
+      x = (long)na; y = (long)nb;
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
