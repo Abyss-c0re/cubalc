@@ -178,6 +178,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ADDOVF")==0 || strcasecmp(tail,"ADDOVER")==0 ||
             strcasecmp(tail,"SUBOVF")==0 || strcasecmp(tail,"SUBOVER")==0 ||
             strcasecmp(tail,"MULOVF")==0 || strcasecmp(tail,"MULOVER")==0 ||
+            strcasecmp(tail,"UADDOVF")==0 || strcasecmp(tail,"UADDOVER")==0 ||
+            strcasecmp(tail,"USUBOVF")==0 || strcasecmp(tail,"USUBOVER")==0 ||
+            strcasecmp(tail,"UMULOVF")==0 || strcasecmp(tail,"UMULOVER")==0 ||
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
@@ -6409,6 +6412,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       if (b != 0 && d != 0){
         __int128 p = (__int128)b * (__int128)d;
         if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) y = 1;
+      }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack unsigned overflow: DUADDOVF · DUSUBOVF · DUMULOVF (0/1) */
+  if (kw(&L->cur,"DUADDOVF")||kw(&L->cur,"2UADDOVF")||kw(&L->cur,"S2UADDOVF")||
+      kw(&L->cur,"STACK2UADDOVF")||kw(&L->cur,"PAIRUADDOVF")||kw(&L->cur,"DUADDOVER")||
+      kw(&L->cur,"2UADDOVER")||
+      kw(&L->cur,"DUSUBOVF")||kw(&L->cur,"2USUBOVF")||kw(&L->cur,"S2USUBOVF")||
+      kw(&L->cur,"STACK2USUBOVF")||kw(&L->cur,"PAIRUSUBOVF")||kw(&L->cur,"DUSUBOVER")||
+      kw(&L->cur,"2USUBOVER")||
+      kw(&L->cur,"DUMULOVF")||kw(&L->cur,"2UMULOVF")||kw(&L->cur,"S2UMULOVF")||
+      kw(&L->cur,"STACK2UMULOVF")||kw(&L->cur,"PAIRUMULOVF")||kw(&L->cur,"DUMULOVER")||
+      kw(&L->cur,"2UMULOVER")){
+    /* a b c d → uovf(a⋆c) uovf(b⋆d) as 0/1 (unsigned long wrap) */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_add = (strcmp(op,"DUADDOVF")==0 || strcmp(op,"2UADDOVF")==0 ||
+                  strcmp(op,"S2UADDOVF")==0 || strcmp(op,"STACK2UADDOVF")==0 ||
+                  strcmp(op,"PAIRUADDOVF")==0 || strcmp(op,"DUADDOVER")==0 ||
+                  strcmp(op,"2UADDOVER")==0);
+    int is_sub = (strcmp(op,"DUSUBOVF")==0 || strcmp(op,"2USUBOVF")==0 ||
+                  strcmp(op,"S2USUBOVF")==0 || strcmp(op,"STACK2USUBOVF")==0 ||
+                  strcmp(op,"PAIRUSUBOVF")==0 || strcmp(op,"DUSUBOVER")==0 ||
+                  strcmp(op,"2USUBOVER")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long uc = (unsigned long)c, ud = (unsigned long)d;
+    long x = 0, y = 0;
+    if (is_add){
+      /* carry out: sum wraps past ULONG_MAX */
+      x = (ua + uc) < ua ? 1 : 0;
+      y = (ub + ud) < ub ? 1 : 0;
+    } else if (is_sub){
+      /* borrow: minuend < subtrahend */
+      x = (ua < uc) ? 1 : 0;
+      y = (ub < ud) ? 1 : 0;
+    } else {
+      /* unsigned mul: product exceeds ULONG_MAX */
+      if (ua != 0 && uc != 0){
+        unsigned __int128 p = (unsigned __int128)ua * (unsigned __int128)uc;
+        if (p > (unsigned __int128)ULONG_MAX) x = 1;
+      }
+      if (ub != 0 && ud != 0){
+        unsigned __int128 p = (unsigned __int128)ub * (unsigned __int128)ud;
+        if (p > (unsigned __int128)ULONG_MAX) y = 1;
       }
     }
     vm->stack[vm->sp++] = x;

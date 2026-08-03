@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.173-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack unsigned overflow predicates.
+
+### Language
+- `DUADDOVF`/`2UADDOVF`/`DUADDOVER` — pairwise unsigned add wrap → 0/1
+- `DUSUBOVF`/`2USUBOVF`/`DUSUBOVER` — pairwise unsigned sub borrow → 0/1
+- `DUMULOVF`/`2UMULOVF`/`DUMULOVER` — pairwise unsigned mul wrap → 0/1
+- Proof `196_duaddovf_dumulovf.cubalc`
+
+### Prior
+See 1.12.172-universal.
+
+
 ## 1.12.172-universal — 2026-08-03
 
 ### Direction
