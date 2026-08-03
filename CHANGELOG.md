@@ -1,3 +1,16 @@
+## 1.12.303-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack↔cell rotate dual (complete shift/rotate TOC after SSHL/SHR/SAR TOC plane).
+
+### Language
+- `SROLTOC`/`SROLTOCELL`/`ROLTOC`/`SCELLROL` — stack `i n → cells[i]=rotl(cells[i],n mod 64)` leave result
+- `SRORTOC`/`SRORTOCELL`/`RORTOC`/`SCELLROR` — stack `i n → cells[i]=rotr(cells[i],n mod 64)` leave result
+- Proof `326_sroltoc_srortoc.cubalc`
+
+### Prior
+See 1.12.302-universal.
+
 ## 1.12.302-universal — 2026-08-03
 
 ### Direction

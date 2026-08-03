@@ -5183,6 +5183,45 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack↔cell rotate dual: SROLTOC · SRORTOC (complete shift/rotate TOC after SSHL/SHR/SAR TOC) */
+  if (kw(&L->cur,"SROLTOC")||kw(&L->cur,"SROLTOCELL")||kw(&L->cur,"STACKROLTOC")||
+      kw(&L->cur,"ROLTOC")||kw(&L->cur,"SCELLROL")||kw(&L->cur,"SROTLTOC")||
+      kw(&L->cur,"SROLAT")){
+    /* i n → cells[i] = rotl(cells[i], n mod 64), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    long r = (uk == 0) ? (long)u : (long)((u << uk) | (u >> (64u - uk)));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRORTOC")||kw(&L->cur,"SRORTOCELL")||kw(&L->cur,"STACKRORTOC")||
+      kw(&L->cur,"RORTOC")||kw(&L->cur,"SCELLROR")||kw(&L->cur,"SROTRTOC")||
+      kw(&L->cur,"SRORAT")){
+    /* i n → cells[i] = rotr(cells[i], n mod 64), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    unsigned uk = (unsigned)(n & 63);
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    long r = (uk == 0) ? (long)u : (long)((u >> uk) | (u << (64u - uk)));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 stack↔cell unary ALU: SABSTOC · SNEGTOC · SNOTTOC (dual of SABS/SNEG/SNOT) */
   if (kw(&L->cur,"SABSTOC")||kw(&L->cur,"SABSCELL")||kw(&L->cur,"STACKABSTOC")||
       kw(&L->cur,"SCELLABS")||kw(&L->cur,"ABSAT")){

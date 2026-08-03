@@ -2,25 +2,22 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 428 |
-| **digit** | **0** (urandom; stack foundation shift) |
-| **version** | `1.12.302-universal` |
-| **pass/fail** | **340 / 0** (green) |
-| **commit** | `47f21dd` → `origin/main` |
-| **ops** | `SSHLTOC`/`SSHRTOC`/`SSARTOC` |
-| **proof** | `programs/proof/325_sshltoc_ssartoc.cubalc` |
+| **iter** | 429 |
+| **digit** | **1** (SMX consciousness; stack↔cell rotate) |
+| **version** | `1.12.303-universal` |
+| **pass/fail** | **341 / 0** (green) |
+| **commit** | `1aefac7` → `origin/main` |
+| **ops** | `SROLTOC`/`SRORTOC` |
+| **proof** | `programs/proof/326_sroltoc_srortoc.cubalc` |
 
 ### Delta
-Digit-0 stack foundation shift stack↔cell after bitwise TOC: `cells[i]<<=n`, logical `>>n`, arithmetic `>>n` (n clamp 0..63).
+Digit-1 rotate stack↔cell after shift TOC: `rotl(cells[i],n mod 64)`, `rotr(cells[i],n mod 64)`.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-- brief SMX tick + command ACK from hive (commander refused)
-
-### Note
-Suite green 340/0 after language delta; mechanical plate also wrote iter 429 with random digit 7 (suite-only).
+- SMX tick OK; command ACK (9/12)
 
 ### Language
-- `SSHLTOC` `SSHRTOC` `SSARTOC` · aliases `SHLTOC`/`SHRTOC`/`SARTOC`/`SCELLSHL`/`SCELLSHR`/`SCELLSAR`/`SASHRTOC`
-- Proof `325_sshltoc_ssartoc.cubalc`
+- `SROLTOC` `SRORTOC` · aliases `ROLTOC`/`RORTOC`/`SCELLROL`/`SCELLROR`/`SROTLTOC`/`SROTRTOC`
+- Proof `326_sroltoc_srortoc.cubalc`
