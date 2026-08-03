@@ -1,3 +1,18 @@
+## 1.12.280-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → depth-7 rotate/nip ext (parity with 6NIP/6ROT after 7DUP foundation).
+
+### Language
+- `7NIP`/`NIP7` — a…g → a g (keep ends of top 7)
+- `7ROT`/`ROT7` — a b c d e f g → b c d e f g a
+- `7RROT`/`RROT7` — a b c d e f g → g a b c d e f
+- Lexer: `7…` tails include NIP/ROT/RROT
+- Proof `303_7nip_7rot.cubalc`
+
+### Prior
+See 1.12.279-universal.
+
 ## 1.12.279-universal — 2026-08-03
 
 ### Direction
