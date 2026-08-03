@@ -1,3 +1,17 @@
+## 1.12.265-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack imm reverse ALU plane (n op TOS after SSUBN/SDIVN/SMODN).
+
+### Language
+- `SSUBFROMN`/`SRSUBN`/`RSUBN` n — TOS = n − TOS
+- `SDIVFROMN`/`SRDIVN`/`RDIVN` n — TOS = n / TOS (TOS==0 → 0)
+- `SMODFROMN`/`SRMODN`/`REMFROMN` n — TOS = n % TOS (TOS==0 → 0)
+- Proof `288_ssubfromn_sdivfromn.cubalc`
+
+### Prior
+See 1.12.264-universal.
+
 ## 1.12.264-universal — 2026-08-03
 
 ### Direction

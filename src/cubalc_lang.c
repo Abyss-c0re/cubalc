@@ -6241,6 +6241,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm reverse ALU: SSUBFROMN · SDIVFROMN · SMODFROMN (n op TOS after SSUBN/SDIVN/SMODN) */
+  if (kw(&L->cur,"SSUBFROMN")||kw(&L->cur,"SRSUBN")||kw(&L->cur,"RSUBN")||
+      kw(&L->cur,"STACKSUBFROMN")||kw(&L->cur,"NSUBN")||kw(&L->cur,"SSUBFROMIMM")){
+    /* SSUBFROMN n — TOS = n - TOS */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = n - vm->stack[vm->sp - 1];
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVFROMN")||kw(&L->cur,"SRDIVN")||kw(&L->cur,"RDIVN")||
+      kw(&L->cur,"STACKDIVFROMN")||kw(&L->cur,"NDIVFROMN")||kw(&L->cur,"SDIVFROMIMM")){
+    /* SDIVFROMN n — TOS = n / TOS (TOS==0 → 0, soft) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[vm->sp - 1];
+    long v = (d == 0) ? 0 : (n / d);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODFROMN")||kw(&L->cur,"SRMODN")||kw(&L->cur,"RMODN")||
+      kw(&L->cur,"STACKMODFROMN")||kw(&L->cur,"NMODFROMN")||kw(&L->cur,"SMODFROMIMM")||
+      kw(&L->cur,"REMFROMN")){
+    /* SMODFROMN n — TOS = n % TOS (TOS==0 → 0, soft) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[vm->sp - 1];
+    long v = (d == 0) ? 0 : (n % d);
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack pair ALU: DADD · DSUB · DMUL (vector pairs a b + c d) */
   if (kw(&L->cur,"DADD")||kw(&L->cur,"2ADD")||kw(&L->cur,"S2ADD")||
       kw(&L->cur,"STACK2ADD")||kw(&L->cur,"PAIRADD")){
