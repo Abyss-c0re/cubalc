@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.120-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack pair bitwise + unary: DAND DOR DXOR DNEG DABS.
+
+### Language
+- `DAND`/`2AND` · `DOR`/`2OR` · `DXOR`/`2XOR` — pairwise bitwise
+- `DNEG`/`2NEG` · `DABS`/`2ABS` — unary pair negate/abs
+- Completes dual-stack arith + logic plane
+- Proof `143_dand_dneg.cubalc`
+
+### Prior
+See 1.12.119-universal.
+
 ## 1.12.119-universal — 2026-08-03
 
 ### Direction

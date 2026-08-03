@@ -172,7 +172,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
-            strcasecmp(tail,"MAX")==0)
+            strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
+            strcasecmp(tail,"OR")==0 || strcasecmp(tail,"XOR")==0 ||
+            strcasecmp(tail,"NEG")==0 || strcasecmp(tail,"ABS")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -5913,6 +5915,80 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack pair bitwise + unary: DAND · DOR · DXOR · DNEG · DABS */
+  if (kw(&L->cur,"DAND")||kw(&L->cur,"2AND")||kw(&L->cur,"S2AND")||
+      kw(&L->cur,"STACK2AND")||kw(&L->cur,"PAIRAND")){
+    /* a b c d → (a&c) (b&d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a & c;
+    long y = b & d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DOR")||kw(&L->cur,"2OR")||kw(&L->cur,"S2OR")||
+      kw(&L->cur,"STACK2OR")||kw(&L->cur,"PAIROR")){
+    /* a b c d → (a|c) (b|d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a | c;
+    long y = b | d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXOR")||kw(&L->cur,"2XOR")||kw(&L->cur,"S2XOR")||
+      kw(&L->cur,"STACK2XOR")||kw(&L->cur,"PAIRXOR")){
+    /* a b c d → (a^c) (b^d) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a ^ c;
+    long y = b ^ d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNEG")||kw(&L->cur,"2NEG")||kw(&L->cur,"S2NEG")||
+      kw(&L->cur,"STACK2NEG")||kw(&L->cur,"PAIRNEG")){
+    /* a b → (-a) (-b) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp - 2] = -vm->stack[vm->sp - 2];
+    vm->stack[vm->sp - 1] = -vm->stack[vm->sp - 1];
+    long y = vm->stack[vm->sp - 1];
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DABS")||kw(&L->cur,"2ABS")||kw(&L->cur,"S2ABS")||
+      kw(&L->cur,"STACK2ABS")||kw(&L->cur,"PAIRABS")){
+    /* a b → |a| |b| */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = -a;
+    if (b < 0) b = -b;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack number theory / div modes: SPOW SGCD SLCM SSQR SISQRT SDIVCEIL SDIVFLOOR */
