@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.132-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack ones-metrics + power-of-two predicates.
+
+### Language
+- `DCLO`/`2CLO`/`PAIRCLO` — count leading ones (64-bit) on pair
+- `DCTO`/`2CTO`/`PAIRCTO` — count trailing ones on pair
+- `DISPOW2`/`2ISPOW2`/`DPOW2P`/`2POW2P` — 1 if value is power of two (>0, single bit)
+- Lexer: digit-prefix compound tails accept alnum (enables `2ISPOW2` / `2POW2P`)
+- Proof `155_dclo_dispow2.cubalc`
+
+### Prior
+See 1.12.131-universal.
+
 ## 1.12.131-universal — 2026-08-03
 
 ### Direction

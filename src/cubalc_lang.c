@@ -160,7 +160,8 @@ static void lex_next(Lex *L) {
     if (k==1 && (b[0]=='2' || b[0]=='3' || b[0]=='4' || b[0]=='5') && L->i<L->n && isalpha((unsigned char)L->s[L->i])){
       size_t j = L->i;
       char tail[16]; size_t t=0;
-      while (j<L->n && isalpha((unsigned char)L->s[j]) && t+1<sizeof tail)
+      /* alnum: allow 2ISPOW2 / 2POW2P style (digits inside tail) */
+      while (j<L->n && (isalpha((unsigned char)L->s[j]) || isdigit((unsigned char)L->s[j])) && t+1<sizeof tail)
         tail[t++]=L->s[j++];
       tail[t]=0;
       int ok = 0;
@@ -200,7 +201,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"PAR")==0 ||
             strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
             strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
-            strcasecmp(tail,"BWIDTH")==0 || strcasecmp(tail,"BITWIDTH")==0)
+            strcasecmp(tail,"BWIDTH")==0 || strcasecmp(tail,"BITWIDTH")==0 ||
+            strcasecmp(tail,"CLO")==0 || strcasecmp(tail,"CTO")==0 ||
+            strcasecmp(tail,"ISPOW2")==0 || strcasecmp(tail,"POW2P")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6548,6 +6551,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
         }
       }
       (void)is_fls; /* FLS == BWIDTH numeric result for unsigned words */
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack ones-metrics + power-of-2: DCLO · DCTO · DISPOW2 */
+  if (kw(&L->cur,"DCLO")||kw(&L->cur,"2CLO")||kw(&L->cur,"S2CLO")||
+      kw(&L->cur,"STACK2CLO")||kw(&L->cur,"PAIRCLO")||
+      kw(&L->cur,"DCTO")||kw(&L->cur,"2CTO")||kw(&L->cur,"S2CTO")||
+      kw(&L->cur,"STACK2CTO")||kw(&L->cur,"PAIRCTO")||
+      kw(&L->cur,"DISPOW2")||kw(&L->cur,"2ISPOW2")||kw(&L->cur,"S2ISPOW2")||
+      kw(&L->cur,"STACK2ISPOW2")||kw(&L->cur,"PAIRISPOW2")||kw(&L->cur,"2POW2P")||
+      kw(&L->cur,"DPOW2P")){
+    /* a b → metric(a) metric(b)
+     * CLO: count leading ones in 64-bit word
+     * CTO: count trailing ones
+     * ISPOW2: 1 if exactly one bit set and value > 0 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_clo = (strcmp(op,"DCLO")==0 || strcmp(op,"2CLO")==0 || strcmp(op,"S2CLO")==0 ||
+                  strcmp(op,"STACK2CLO")==0 || strcmp(op,"PAIRCLO")==0);
+    int is_cto = (strcmp(op,"DCTO")==0 || strcmp(op,"2CTO")==0 || strcmp(op,"S2CTO")==0 ||
+                  strcmp(op,"STACK2CTO")==0 || strcmp(op,"PAIRCTO")==0);
+    long x = 0, y = 0;
+    if (is_clo){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      for (int i = 63; i >= 0; i--){
+        if ((ua & (1ul << (unsigned)i)) == 0) break;
+        x++;
+      }
+      for (int i = 63; i >= 0; i--){
+        if ((ub & (1ul << (unsigned)i)) == 0) break;
+        y++;
+      }
+    } else if (is_cto){
+      unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+      while (ua & 1ul){ x++; ua >>= 1; if (x >= 64) break; }
+      while (ub & 1ul){ y++; ub >>= 1; if (y >= 64) break; }
+    } else {
+      /* ISPOW2 / POW2P */
+      if (a > 0){
+        unsigned long ua = (unsigned long)a;
+        x = ((ua & (ua - 1ul)) == 0ul) ? 1 : 0;
+      }
+      if (b > 0){
+        unsigned long ub = (unsigned long)b;
+        y = ((ub & (ub - 1ul)) == 0ul) ? 1 : 0;
+      }
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
