@@ -1,3 +1,17 @@
+## 1.12.336-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack reverse imm inverted ANDN (dual of SNANDNFROMN after DANDNFROMN).
+
+### Language
+- `DNANDNFROMN`/`PAIRNANDNFROMN`/`DRNANDNFROMN` n — `a b → ~(n&~a) ~(n&~b)`
+- `DNORNFROMN`/`PAIRNORNFROMN`/`DRNORNFROMN` n — `a b → ~(n|~a) ~(n|~b)`
+- `DXNORNFROMN`/`PAIRXNORNFROMN`/`DRXNORNFROMN` n — `a b → ~(n^~a) ~(n^~b)` (equiv `n^a` / `n^b`)
+- Proof `359_dnandnfromn_dxnornfromn.cubalc`
+
+### Prior
+See 1.12.335-universal.
+
 ## 1.12.335-universal — 2026-08-04
 
 ### Direction

@@ -1,0 +1,78 @@
+# Proof 359 — digit-8 dual-stack reverse imm inverted ANDN: DNANDNFROMN DNORNFROMN DXNORNFROMN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# DNANDNFROMN: n=15, a=240, b=0 → ~(15&~240)= -16, ~(15&~0)= -1
+# ~240 = ...0F, 15&~240=15, ~15=-16; 15&~0=15, ~15=-16? Wait ~0=-1, 15&-1=15, ~15=-16
+# For b=0: ~(15 & ~0) = ~(15 & -1) = ~15 = -16
+PUSH 240
+PUSH 0
+DNANDNFROMN 15
+POP y
+POP x
+ASSERT x == (-16)
+ASSERT y == (-16)
+
+# PAIRNANDNFROMN: n=0, a=5, b=7 → ~(0&~5)=~0=-1 both
+PUSH 5
+PUSH 7
+PAIRNANDNFROMN 0
+POP y
+POP x
+ASSERT x == (-1)
+ASSERT y == (-1)
+
+# DRNANDNFROMN: n=-1, a=0, b=42 → 0, 42 (~(-1&~0)=0; ~(-1&~42)=42)
+PUSH 0
+PUSH 42
+DRNANDNFROMN (-1)
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 42
+
+# DNORNFROMN: n=15, a=255, b=0 → ~(15|~255)=240; ~(15|~0)= ~(15|-1)= ~(-1)=0
+PUSH 255
+PUSH 0
+DNORNFROMN 15
+POP y
+POP x
+ASSERT x == 240
+ASSERT y == 0
+
+# DRNORNFROMN: n=-1, a=7, b=1 → 0, 0
+PUSH 7
+PUSH 1
+DRNORNFROMN (-1)
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# DXNORNFROMN: n=5, a=5, b=1 → 0, 4 (5^5=0, 5^1=4)
+PUSH 5
+PUSH 1
+DXNORNFROMN 5
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 4
+
+# DRXNORNFROMN: n=7, a=0, b=7 → 7, 0
+PUSH 0
+PUSH 7
+DRXNORNFROMN 7
+POP y
+POP x
+ASSERT x == 7
+ASSERT y == 0
+
+# soft short stack
+CLEARSTACK
+PUSH 1
+DNANDNFROMN 1
+ASSERT OK == 0
+
+PRINT "359_dnandnfromn_dxnornfromn OK"
