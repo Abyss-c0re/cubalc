@@ -15157,6 +15157,41 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack immediate ANDN plane: SANDNI · SORNI · SXORNI (TOS op ~imm after SANDI/SORI/SXORI + SNANDI) */
+  if (kw(&L->cur,"SANDNI")||kw(&L->cur,"STACKANDNI")||kw(&L->cur,"ANDNI")||
+      kw(&L->cur,"SBICI")||kw(&L->cur,"BICIMM")||kw(&L->cur,"SANDNOTI")||
+      kw(&L->cur,"ANDNOTI")){
+    /* SANDNI n — TOS &= ~n  (clear bits set in n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] & ~n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORNI")||kw(&L->cur,"STACKORNI")||kw(&L->cur,"ORNI")||
+      kw(&L->cur,"SORNOTI")||kw(&L->cur,"ORNOTI")||kw(&L->cur,"SORNIMM")){
+    /* SORNI n — TOS |= ~n */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] | ~n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXORNI")||kw(&L->cur,"STACKXORNI")||kw(&L->cur,"XORNI")||
+      kw(&L->cur,"SXORNOTI")||kw(&L->cur,"XORNOTI")||kw(&L->cur,"SXORNOTIMM")){
+    /* SXORNI n — TOS ^= ~n  (equiv SXNORI / ~(TOS ^ n)) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[vm->sp - 1] ^ ~n;
+    vm->stack[vm->sp - 1] = v;
+    var_set_num(vm,"LAST_N",v); vm->last_n=v;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 stack low-n field reverse/rotate: SBREVN · SROLBN · SRORBN (dual of DBREVN/DROLBN/DRORBN) */
   if (kw(&L->cur,"SBREVN")||kw(&L->cur,"STACKBREVN")||kw(&L->cur,"BREVNS")||
       kw(&L->cur,"SREVLOWN")||kw(&L->cur,"SBITREVN")||kw(&L->cur,"STACKREVLOWN")){

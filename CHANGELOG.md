@@ -1,3 +1,17 @@
+## 1.12.260-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → stack immediate ANDN plane (TOS op ~imm after SANDI/SORI/SXORI + SNANDI family).
+
+### Language
+- `SANDNI`/`SBICI`/`ANDNI` n — TOS &= ~n (clear bits set in n)
+- `SORNI`/`ORNI` n — TOS |= ~n
+- `SXORNI`/`XORNI` n — TOS ^= ~n (equiv `SXNORI`)
+- Proof `283_sandni_sorni.cubalc`
+
+### Prior
+See 1.12.259-universal.
+
 ## 1.12.259-universal — 2026-08-03
 
 ### Direction
