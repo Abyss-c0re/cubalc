@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T04:19:45+0300",
-  "iter": 226,
-  "algocube_digit": 3,
-  "version": "1.12.130-universal",
-  "pass": 168,
+  "ts": "2026-08-03T04:25:21+0300",
+  "iter": 229,
+  "algocube_digit": 7,
+  "version": "1.12.131-universal",
+  "pass": 169,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,14 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DORN DBREV DPARITY 2ORN 2BREV 2PARITY",
-  "proof": "programs/proof/153_dorn_dparity.cubalc"
+  "ops": [
+    "DFFS",
+    "2FFS",
+    "DFLS",
+    "2FLS",
+    "DBWIDTH",
+    "2BWIDTH"
+  ],
+  "proof": "programs/proof/154_dffs_dbwidth.cubalc",
+  "delta": "digit-7 dual-stack bit-position metrics"
 }

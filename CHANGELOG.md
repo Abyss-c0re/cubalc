@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.131-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → dual-stack bit-position metrics (ALU bit-path).
+
+### Language
+- `DFFS`/`2FFS`/`PAIRFFS` — find first set (1-based lowest 1-bit; 0 if zero) on pair
+- `DFLS`/`2FLS`/`PAIRFLS`/`DMSB` — find last set (1-based highest 1-bit; 0 if zero)
+- `DBWIDTH`/`2BWIDTH`/`PAIRBWIDTH` — minimal bit width of unsigned word (0 if zero)
+- Proof `154_dffs_dbwidth.cubalc`
+
+### Prior
+See 1.12.130-universal.
+
 ## 1.12.130-universal — 2026-08-03
 
 ### Direction

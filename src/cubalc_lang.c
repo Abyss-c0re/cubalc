@@ -197,7 +197,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"CLZ")==0 || strcasecmp(tail,"CTZ")==0 ||
             strcasecmp(tail,"ORN")==0 || strcasecmp(tail,"BREV")==0 ||
             strcasecmp(tail,"BITREV")==0 || strcasecmp(tail,"PARITY")==0 ||
-            strcasecmp(tail,"PAR")==0)
+            strcasecmp(tail,"PAR")==0 ||
+            strcasecmp(tail,"FFS")==0 || strcasecmp(tail,"FINDLS")==0 ||
+            strcasecmp(tail,"FLS")==0 || strcasecmp(tail,"MSB")==0 ||
+            strcasecmp(tail,"BWIDTH")==0 || strcasecmp(tail,"BITWIDTH")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6487,6 +6490,64 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       while (ua){ na ^= (int)(ua & 1u); ua >>= 1; }
       while (ub){ nb ^= (int)(ub & 1u); ub >>= 1; }
       x = (long)na; y = (long)nb;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack bit-position metrics: DFFS · DFLS · DBWIDTH (unary pair) */
+  if (kw(&L->cur,"DFFS")||kw(&L->cur,"2FFS")||kw(&L->cur,"S2FFS")||
+      kw(&L->cur,"STACK2FFS")||kw(&L->cur,"PAIRFFS")||kw(&L->cur,"2FINDLS")||
+      kw(&L->cur,"DFINDFS")||
+      kw(&L->cur,"DFLS")||kw(&L->cur,"2FLS")||kw(&L->cur,"S2FLS")||
+      kw(&L->cur,"STACK2FLS")||kw(&L->cur,"PAIRFLS")||kw(&L->cur,"2MSB")||
+      kw(&L->cur,"DMSB")||
+      kw(&L->cur,"DBWIDTH")||kw(&L->cur,"2BWIDTH")||kw(&L->cur,"S2BWIDTH")||
+      kw(&L->cur,"STACK2BWIDTH")||kw(&L->cur,"PAIRBWIDTH")||kw(&L->cur,"2BITWIDTH")||
+      kw(&L->cur,"DBITWIDTH")){
+    /* a b → metric(a) metric(b)
+     * FFS: 1-based index of lowest 1-bit (0 if zero)
+     * FLS: 1-based index of highest 1-bit (0 if zero)
+     * BWIDTH: minimal bits to represent unsigned (0 if zero) = FLS */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_ffs = (strcmp(op,"DFFS")==0 || strcmp(op,"2FFS")==0 || strcmp(op,"S2FFS")==0 ||
+                  strcmp(op,"STACK2FFS")==0 || strcmp(op,"PAIRFFS")==0 ||
+                  strcmp(op,"2FINDLS")==0 || strcmp(op,"DFINDFS")==0);
+    int is_fls = (strcmp(op,"DFLS")==0 || strcmp(op,"2FLS")==0 || strcmp(op,"S2FLS")==0 ||
+                  strcmp(op,"STACK2FLS")==0 || strcmp(op,"PAIRFLS")==0 ||
+                  strcmp(op,"2MSB")==0 || strcmp(op,"DMSB")==0);
+    /* else DBWIDTH / BITWIDTH */
+    long x = 0, y = 0;
+    if (is_ffs){
+      if (a != 0){
+        unsigned long ua = (unsigned long)a; x = 1;
+        while ((ua & 1ul) == 0){ x++; ua >>= 1; }
+      }
+      if (b != 0){
+        unsigned long ub = (unsigned long)b; y = 1;
+        while ((ub & 1ul) == 0){ y++; ub >>= 1; }
+      }
+    } else {
+      /* FLS and BWIDTH share highest-bit position; both return 0 for zero */
+      if (a != 0){
+        unsigned long ua = (unsigned long)a;
+        for (int i = 63; i >= 0; i--){
+          if (ua & (1ul << (unsigned)i)){ x = (long)(i + 1); break; }
+        }
+      }
+      if (b != 0){
+        unsigned long ub = (unsigned long)b;
+        for (int i = 63; i >= 0; i--){
+          if (ub & (1ul << (unsigned)i)){ y = (long)(i + 1); break; }
+        }
+      }
+      (void)is_fls; /* FLS == BWIDTH numeric result for unsigned words */
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
