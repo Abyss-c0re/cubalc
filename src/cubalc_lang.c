@@ -4894,6 +4894,45 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 reverse sat stack↔cell: SSATSUBFROMTOC · SSATDIVFROMTOC (sat dual of reverse TOC) */
+  if (kw(&L->cur,"SSATSUBFROMTOC")||kw(&L->cur,"SCELLSATSUBFROM")||kw(&L->cur,"SSATRSUBCELL")||
+      kw(&L->cur,"STACKSATSUBFROMCELL")||kw(&L->cur,"SSATSUBFROMCELL")||kw(&L->cur,"SATSUBFROMTOC")){
+    /* i v → cells[i] = sat(v - cells[i]) to LONG_MIN..LONG_MAX, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a > 0 && v < LONG_MIN + a) r = LONG_MIN;
+    else if (a < 0 && v > LONG_MAX + a) r = LONG_MAX;
+    else r = v - a;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATDIVFROMTOC")||kw(&L->cur,"SCELLSATDIVFROM")||kw(&L->cur,"SSATRDIVCELL")||
+      kw(&L->cur,"STACKSATDIVFROMCELL")||kw(&L->cur,"SSATDIVFROMCELL")||kw(&L->cur,"SATDIVFROMTOC")){
+    /* i v → cells[i] = sat(v / cells[i]); cell==0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a == 0) r = 0;
+    else if (v == LONG_MIN && a == -1) r = LONG_MAX;
+    else r = v / a;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

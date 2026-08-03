@@ -1,3 +1,16 @@
+## 1.12.294-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → reverse saturating stack↔cell (sat dual of SSUBFROMTOC/SDIVFROMTOC).
+
+### Language
+- `SSATSUBFROMTOC`/`SCELLSATSUBFROM`/`SATSUBFROMTOC` — stack `i v → cells[i]=sat(v-cells[i])` leave result
+- `SSATDIVFROMTOC`/`SCELLSATDIVFROM`/`SATDIVFROMTOC` — stack `i v → cells[i]=sat(v/cells[i])` (0 if cell 0; LONG_MIN/-1 → LONG_MAX)
+- Proof `317_ssatsubfromtoc_ssatdivfromtoc.cubalc`
+
+### Prior
+See 1.12.293-universal.
+
 ## 1.12.293-universal — 2026-08-03
 
 ### Direction
