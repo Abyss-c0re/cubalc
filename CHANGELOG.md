@@ -1,3 +1,17 @@
+## 1.12.323-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm accumulate TOC (imm dual of SADDTOC/SSUBTOC/SMULTOC after SADDN plane).
+
+### Language
+- `SADDTOCN`/`ADDTOCN`/`SADDATN` n — stack `i → cells[i]+=n` leave result
+- `SSUBTOCN`/`SUBTOCN`/`SSUBATN` n — stack `i → cells[i]-=n` leave result
+- `SMULTOCN`/`MULTOCN`/`SMULATN` n — stack `i → cells[i]*=n` leave result
+- Proof `346_saddtocn_smultocn.cubalc`
+
+### Prior
+See 1.12.322-universal.
+
 ## 1.12.322-universal — 2026-08-04
 
 ### Direction
