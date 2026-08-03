@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.123-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack pair shifts: DSHL DSHR DSAR.
+
+### Language
+- `DSHL`/`2SHL` — a b c d → (a≪c) (b≪d) amounts clamped 0..63
+- `DSHR`/`2SHR` — pairwise logical right shift
+- `DSAR`/`2SAR` — pairwise arithmetic right shift
+- Lexer 2-prefix: SHL SHR SAR
+- Complements dual-stack ALU/bitwise with vector data-path shifts
+- Proof `146_dshl_dsar.cubalc`
+
+### Prior
+See 1.12.122-universal.
+
 ## 1.12.122-universal — 2026-08-03
 
 ### Direction

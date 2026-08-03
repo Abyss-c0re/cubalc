@@ -1,0 +1,106 @@
+# Proof 146 — digit-8 dual-stack pair shifts: DSHL DSHR DSAR
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DSHL — a b c d → (a<<c) (b<<d)
+CLEARSTACK
+PUSH 1
+PUSH 3
+PUSH 4
+PUSH 2
+DSHL
+POP y
+POP x
+ASSERT x == 16
+ASSERT y == 12
+
+# DSHR logical
+CLEARSTACK
+PUSH 0xF0
+PUSH 0x80
+PUSH 4
+PUSH 7
+DSHR
+POP y
+POP x
+ASSERT x == 15
+ASSERT y == 1
+
+# DSAR arithmetic (sign preserve)
+CLEARSTACK
+PUSH -16
+PUSH 16
+PUSH 2
+PUSH 2
+DSAR
+POP y
+POP x
+ASSERT x == -4
+ASSERT y == 4
+
+# 2SHL / PAIRSAR aliases
+CLEARSTACK
+PUSH 5
+PUSH 7
+PUSH 1
+PUSH 1
+2SHL
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == 14
+
+CLEARSTACK
+PUSH -8
+PUSH -4
+PUSH 1
+PUSH 1
+PAIRSAR
+POP y
+POP x
+ASSERT x == -4
+ASSERT y == -2
+
+# clamp: neg amount → 0 shift; large amount for mid-range
+CLEARSTACK
+PUSH 8
+PUSH 4
+PUSH 1
+PUSH -5
+DSHL
+POP y
+POP x
+ASSERT x == 16
+ASSERT y == 4
+
+CLEARSTACK
+PUSH 0xFF
+PUSH 0xAA
+PUSH 100
+PUSH 4
+DSHR
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 10
+
+# soft fails
+CLEARSTACK
+DSHL
+ASSERT OK == 0
+DSHR
+ASSERT OK == 0
+DSAR
+ASSERT OK == 0
+PUSH 1
+PUSH 2
+PUSH 3
+2SHR
+ASSERT OK == 0
+
+CUBE z ROLE matrix PROTON 1
+ENERGYFLOW 1
+ASSERT ENERGY >= 0
+ASSERT OK == 1
+
+PRINT "proof146_dshl_dsar" LAST_N SP

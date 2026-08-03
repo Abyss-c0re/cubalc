@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T03:31:06+0300",
-  "iter": 218,
-  "algocube_digit": 2,
-  "version": "1.12.122-universal",
-  "pass": 160,
+  "ts": "2026-08-03T03:37:00+0300",
+  "iter": 219,
+  "algocube_digit": 8,
+  "version": "1.12.123-universal",
+  "pass": 161,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "DGCD DLCM DPOW 2GCD 2LCM 2POW",
-  "proof": "programs/proof/145_dgcd_dlcm.cubalc"
+  "delta": "DSHL DSHR DSAR 2SHL 2SHR 2SAR",
+  "proof": "programs/proof/146_dshl_dsar.cubalc"
 }

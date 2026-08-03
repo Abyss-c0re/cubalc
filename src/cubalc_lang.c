@@ -179,7 +179,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"LT")==0 || strcasecmp(tail,"LE")==0 ||
             strcasecmp(tail,"GT")==0 || strcasecmp(tail,"GE")==0 ||
             strcasecmp(tail,"GCD")==0 || strcasecmp(tail,"LCM")==0 ||
-            strcasecmp(tail,"POW")==0)
+            strcasecmp(tail,"POW")==0 ||
+            strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
+            strcasecmp(tail,"SAR")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6081,6 +6083,45 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       else { x = 1; long e = c; while (e-- > 0) x *= a; }
       if (d < 0) y = 0;
       else { y = 1; long e = d; while (e-- > 0) y *= b; }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 dual-stack pair shifts: DSHL · DSHR · DSAR (a b c d → a≪c b≪d etc) */
+  if (kw(&L->cur,"DSHL")||kw(&L->cur,"2SHL")||kw(&L->cur,"S2SHL")||
+      kw(&L->cur,"STACK2SHL")||kw(&L->cur,"PAIRSHL")||
+      kw(&L->cur,"DSHR")||kw(&L->cur,"2SHR")||kw(&L->cur,"S2SHR")||
+      kw(&L->cur,"STACK2SHR")||kw(&L->cur,"PAIRSHR")||
+      kw(&L->cur,"DSAR")||kw(&L->cur,"2SAR")||kw(&L->cur,"S2SAR")||
+      kw(&L->cur,"STACK2SAR")||kw(&L->cur,"PAIRSAR")){
+    /* a b c d → shift(a,c) shift(b,d); amounts clamped 0..63 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long kc = c < 0 ? 0 : (c > 63 ? 63 : c);
+    long kd = d < 0 ? 0 : (d > 63 ? 63 : d);
+    int is_shl = (strcmp(op,"DSHL")==0 || strcmp(op,"2SHL")==0 || strcmp(op,"S2SHL")==0 ||
+                  strcmp(op,"STACK2SHL")==0 || strcmp(op,"PAIRSHL")==0);
+    int is_shr = (strcmp(op,"DSHR")==0 || strcmp(op,"2SHR")==0 || strcmp(op,"S2SHR")==0 ||
+                  strcmp(op,"STACK2SHR")==0 || strcmp(op,"PAIRSHR")==0);
+    long x, y;
+    if (is_shl){
+      x = (long)((unsigned long)a << (unsigned)kc);
+      y = (long)((unsigned long)b << (unsigned)kd);
+    } else if (is_shr){
+      x = (long)((unsigned long)a >> (unsigned)kc);
+      y = (long)((unsigned long)b >> (unsigned)kd);
+    } else {
+      /* arithmetic right */
+      x = a >> kc;
+      y = b >> kd;
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
