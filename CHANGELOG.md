@@ -1,3 +1,18 @@
+## 1.12.274-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → multiword shift-through-CARRY flag (bitfield path; stack dual of DSHLC plane).
+
+### Language
+- `SSHLC`/`SHLCY`/`SSHLCF` — TOS = (TOS≪1)|cin(CARRY); CARRY = old MSB
+- `SSHRC`/`SHRCY`/`SSHRCF` — TOS = (TOS≫1)|(cin≪MSB); CARRY = old LSB
+- `DSHLCC`/`PAIRSHLCC`/`DSHLCF` — pair shift-left through shared CARRY
+- `DSHRCC`/`PAIRSHRCC`/`DSHRCF` — pair shift-right through shared CARRY
+- Proof `297_sshlc_sshrc.cubalc`
+
+### Prior
+See 1.12.273-universal.
+
 ## 1.12.273-universal — 2026-08-03
 
 ### Direction
