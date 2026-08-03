@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T11:32:04+0300",
-  "iter": 280,
-  "algocube_digit": 8,
-  "version": "1.12.199-universal",
-  "pass": 237,
+  "ts": "2026-08-03T11:37:42+0300",
+  "iter": 282,
+  "algocube_digit": 3,
+  "version": "1.12.200-universal",
+  "pass": 238,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,8 +18,9 @@
     "flow_compile"
   ],
   "ops": [
-    "6SWAP",
-    "6NIP"
+    "DSHLN",
+    "DSHRN",
+    "DSARN"
   ],
-  "proof": "programs/proof/222_6swap_6nip.cubalc"
+  "proof": "programs/proof/223_dshln_dsarn.cubalc"
 }

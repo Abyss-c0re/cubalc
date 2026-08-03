@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.200-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack immediate shift (dual of SSHLN/SSHRN/SSARN).
+
+### Language
+- `DSHLN`/`2SHLN`/`PAIRSHLN` n — pairwise logical left shift by n (0..63)
+- `DSHRN`/`2SHRN`/`PAIRSHRN` n — pairwise logical right shift by n
+- `DSARN`/`2SARN`/`DASHRN` n — pairwise arithmetic right shift by n
+- Proof `223_dshln_dsarn.cubalc`
+
+### Prior
+See 1.12.199-universal.
+
+
 ## 1.12.199-universal — 2026-08-03
 
 ### Direction
