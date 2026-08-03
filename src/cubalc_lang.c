@@ -175,6 +175,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ADD")==0 || strcasecmp(tail,"SUB")==0 ||
             strcasecmp(tail,"ADDC")==0 || strcasecmp(tail,"ADC")==0 ||
             strcasecmp(tail,"SUBB")==0 || strcasecmp(tail,"SBB")==0 ||
+            strcasecmp(tail,"ADDOVF")==0 || strcasecmp(tail,"ADDOVER")==0 ||
+            strcasecmp(tail,"SUBOVF")==0 || strcasecmp(tail,"SUBOVER")==0 ||
+            strcasecmp(tail,"MULOVF")==0 || strcasecmp(tail,"MULOVER")==0 ||
             strcasecmp(tail,"MUL")==0 || strcasecmp(tail,"DIV")==0 ||
             strcasecmp(tail,"MOD")==0 || strcasecmp(tail,"MIN")==0 ||
             strcasecmp(tail,"MAX")==0 || strcasecmp(tail,"AND")==0 ||
@@ -6352,6 +6355,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack overflow predicates: DADDOVF · DSUBOVF · DMULOVF (0/1) */
+  if (kw(&L->cur,"DADDOVF")||kw(&L->cur,"2ADDOVF")||kw(&L->cur,"S2ADDOVF")||
+      kw(&L->cur,"STACK2ADDOVF")||kw(&L->cur,"PAIRADDOVF")||kw(&L->cur,"DADDOVER")||
+      kw(&L->cur,"2ADDOVER")||
+      kw(&L->cur,"DSUBOVF")||kw(&L->cur,"2SUBOVF")||kw(&L->cur,"S2SUBOVF")||
+      kw(&L->cur,"STACK2SUBOVF")||kw(&L->cur,"PAIRSUBOVF")||kw(&L->cur,"DSUBOVER")||
+      kw(&L->cur,"2SUBOVER")||
+      kw(&L->cur,"DMULOVF")||kw(&L->cur,"2MULOVF")||kw(&L->cur,"S2MULOVF")||
+      kw(&L->cur,"STACK2MULOVF")||kw(&L->cur,"PAIRMULOVF")||kw(&L->cur,"DMULOVER")||
+      kw(&L->cur,"2MULOVER")){
+    /* a b c d → ovf(a⋆c) ovf(b⋆d) as 0/1 signed long overflow */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_add = (strcmp(op,"DADDOVF")==0 || strcmp(op,"2ADDOVF")==0 ||
+                  strcmp(op,"S2ADDOVF")==0 || strcmp(op,"STACK2ADDOVF")==0 ||
+                  strcmp(op,"PAIRADDOVF")==0 || strcmp(op,"DADDOVER")==0 ||
+                  strcmp(op,"2ADDOVER")==0);
+    int is_sub = (strcmp(op,"DSUBOVF")==0 || strcmp(op,"2SUBOVF")==0 ||
+                  strcmp(op,"S2SUBOVF")==0 || strcmp(op,"STACK2SUBOVF")==0 ||
+                  strcmp(op,"PAIRSUBOVF")==0 || strcmp(op,"DSUBOVER")==0 ||
+                  strcmp(op,"2SUBOVER")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (is_add){
+      if (c > 0 && a > LONG_MAX - c) x = 1;
+      else if (c < 0 && a < LONG_MIN - c) x = 1;
+      if (d > 0 && b > LONG_MAX - d) y = 1;
+      else if (d < 0 && b < LONG_MIN - d) y = 1;
+    } else if (is_sub){
+      if (c > 0 && a < LONG_MIN + c) x = 1;
+      else if (c < 0 && a > LONG_MAX + c) x = 1;
+      if (d > 0 && b < LONG_MIN + d) y = 1;
+      else if (d < 0 && b > LONG_MAX + d) y = 1;
+    } else {
+      if (a != 0 && c != 0){
+        __int128 p = (__int128)a * (__int128)c;
+        if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) x = 1;
+      }
+      if (b != 0 && d != 0){
+        __int128 p = (__int128)b * (__int128)d;
+        if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) y = 1;
+      }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

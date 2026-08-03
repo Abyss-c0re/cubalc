@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.170-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack signed overflow predicates.
+
+### Language
+- `DADDOVF`/`2ADDOVF`/`DADDOVER` — pairwise signed add overflow → 0/1
+- `DSUBOVF`/`2SUBOVF`/`DSUBOVER` — pairwise signed sub overflow → 0/1
+- `DMULOVF`/`2MULOVF`/`DMULOVER` — pairwise signed mul overflow → 0/1
+- Proof `193_daddovf_dmulovf.cubalc`
+
+### Prior
+See 1.12.169-universal.
+
+
 ## 1.12.169-universal — 2026-08-03
 
 ### Direction
