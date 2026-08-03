@@ -236,6 +236,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"CMP3")==0 || strcasecmp(tail,"UCMP")==0 ||
             strcasecmp(tail,"UCMP3")==0 ||
             strcasecmp(tail,"GCD")==0 || strcasecmp(tail,"LCM")==0 ||
+            strcasecmp(tail,"GCDN")==0 || strcasecmp(tail,"LCMN")==0 ||
+            strcasecmp(tail,"GCDIMM")==0 || strcasecmp(tail,"LCMIMM")==0 ||
             strcasecmp(tail,"POW")==0 ||
             strcasecmp(tail,"SHL")==0 || strcasecmp(tail,"SHR")==0 ||
             strcasecmp(tail,"SAR")==0 ||
@@ -7666,6 +7668,54 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack imm numthy: DGCDN · DLCMN (shared-n dual of SGCDN/SLCMN) */
+  if (kw(&L->cur,"DGCDN")||kw(&L->cur,"2GCDN")||kw(&L->cur,"S2GCDN")||
+      kw(&L->cur,"STACK2GCDN")||kw(&L->cur,"PAIRGCDN")||kw(&L->cur,"DGCDIMM")||
+      kw(&L->cur,"2GCDIMM")||kw(&L->cur,"PAIRGCDIMM")){
+    /* a b + n → gcd(a,n) gcd(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long nn = n < 0 ? -n : n;
+    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
+    long gx = ax, hy = nn;
+    while (hy){ long t = gx % hy; gx = hy; hy = t; }
+    long gy = bx, hz = nn;
+    while (hz){ long t = gy % hz; gy = hz; hz = t; }
+    vm->stack[vm->sp - 2] = gx;
+    vm->stack[vm->sp - 1] = gy;
+    var_set_num(vm,"LAST_N",gy); vm->last_n=gy;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DLCMN")||kw(&L->cur,"2LCMN")||kw(&L->cur,"S2LCMN")||
+      kw(&L->cur,"STACK2LCMN")||kw(&L->cur,"PAIRLCMN")||kw(&L->cur,"DLCMIMM")||
+      kw(&L->cur,"2LCMIMM")||kw(&L->cur,"PAIRLCMIMM")){
+    /* a b + n → lcm(a,n) lcm(b,n); 0 if either side 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long nn = n < 0 ? -n : n;
+    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
+    long x = 0, y = 0;
+    if (ax && nn){
+      long g = ax, h = nn;
+      while (h){ long t = g % h; g = h; h = t; }
+      x = (ax / g) * nn;
+    }
+    if (bx && nn){
+      long g = bx, h = nn;
+      while (h){ long t = g % h; g = h; h = t; }
+      y = (bx / g) * nn;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-8 dual-stack pair shifts: DSHL · DSHR · DSAR (a b c d → a≪c b≪d etc) */
   if (kw(&L->cur,"DSHL")||kw(&L->cur,"2SHL")||kw(&L->cur,"S2SHL")||
       kw(&L->cur,"STACK2SHL")||kw(&L->cur,"PAIRSHL")||
@@ -13542,6 +13592,38 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     vm->stack[vm->sp++] = r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 stack imm numthy: SGCDN · SLCMN (imm dual of SGCD/SLCM) */
+  if (kw(&L->cur,"SGCDN")||kw(&L->cur,"STACKGCDN")||kw(&L->cur,"GCDN")||
+      kw(&L->cur,"SGCDIMM")||kw(&L->cur,"GCDIMM")){
+    /* SGCDN n — TOS = gcd(|TOS|,|n|) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long x = a < 0 ? -a : a, y = n < 0 ? -n : n;
+    while (y){ long t = x % y; x = y; y = t; }
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLCMN")||kw(&L->cur,"STACKLCMN")||kw(&L->cur,"LCMN")||
+      kw(&L->cur,"SLCMIMM")||kw(&L->cur,"LCMIMM")){
+    /* SLCMN n — TOS = lcm(|TOS|,|n|); 0 if either side 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long x = a < 0 ? -a : a, y = n < 0 ? -n : n;
+    long r = 0;
+    if (x && y){
+      long g = x, h = y;
+      while (h){ long t = g % h; g = h; h = t; }
+      r = (x / g) * y;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
   /* digit-2 stack: SCOPRIME · SCEILPOW2 · SEGCD */
   if (kw(&L->cur,"SCOPRIME")||kw(&L->cur,"SISCOPRIME")||kw(&L->cur,"STACKCOPRIME")){

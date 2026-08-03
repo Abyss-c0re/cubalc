@@ -1,3 +1,18 @@
+## 1.12.285-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → imm GCD/LCM (imm dual of SGCD/SLCM + shared-n dual-stack).
+
+### Language
+- `SGCDN`/`GCDN` n — TOS = gcd(|TOS|,|n|)
+- `SLCMN`/`LCMN` n — TOS = lcm(|TOS|,|n|); 0 if either side 0
+- `DGCDN`/`PAIRGCDN` n — a b → gcd(a,n) gcd(b,n)
+- `DLCMN`/`PAIRLCMN` n — a b → lcm(a,n) lcm(b,n)
+- Proof `308_sgcdn_dlcmn.cubalc`
+
+### Prior
+See 1.12.284-universal.
+
 ## 1.12.284-universal — 2026-08-03
 
 ### Direction
