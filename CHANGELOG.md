@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.148-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack parallel extract/deposit (bit-path).
+
+### Language
+- `DPEXT`/`2PEXT` — pair BMI2-style parallel extract under masks: `a b ma mb → pext(a,ma) pext(b,mb)`
+- `DPDEP`/`2PDEP` — pair parallel deposit of low bits into mask positions
+- Proof `171_dpext_dpdep.cubalc`
+
+### Prior
+See 1.12.147-universal.
+
 ## 1.12.147-universal — 2026-08-03
 
 ### Direction
