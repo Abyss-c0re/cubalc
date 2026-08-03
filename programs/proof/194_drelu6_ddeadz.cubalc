@@ -1,0 +1,103 @@
+# Proof 194 — digit-6 dual-stack energy: DRELU6 DDEADZ
+HOLD_FLASH 1
+SCIENCE LOAD
+
+# DRELU6: clamp to [0,6]
+CLEARSTACK
+PUSH -3
+PUSH 9
+DRELU6
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 6
+
+# interior unchanged
+CLEARSTACK
+PUSH 0
+PUSH 6
+2RELU6
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 6
+
+# mid band
+CLEARSTACK
+PUSH 3
+PUSH 5
+DCLAMP6
+POP y
+POP x
+ASSERT x == 3
+ASSERT y == 5
+
+# PAIRRELU6 alias
+CLEARSTACK
+PUSH 7
+PUSH -1
+PAIRRELU6
+POP y
+POP x
+ASSERT x == 6
+ASSERT y == 0
+
+# DDEADZ: |x|<=z → 0 else x
+CLEARSTACK
+PUSH 5
+PUSH -3
+PUSH 4
+PUSH 3
+DDEADZ
+POP y
+POP x
+ASSERT x == 5
+ASSERT y == 0
+
+# both zeroed
+CLEARSTACK
+PUSH 2
+PUSH -2
+PUSH 2
+PUSH 2
+2DEADZ
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0
+
+# both pass
+CLEARSTACK
+PUSH 10
+PUSH -10
+PUSH 3
+PUSH 3
+DDEADZONE
+POP y
+POP x
+ASSERT x == 10
+ASSERT y == -10
+
+# negative zone treated as 0
+CLEARSTACK
+PUSH 1
+PUSH -1
+PUSH -5
+PUSH -2
+PAIRDEADZ
+POP y
+POP x
+ASSERT x == 1
+ASSERT y == -1
+
+# DDEAD alias
+CLEARSTACK
+PUSH 0
+PUSH 4
+PUSH 0
+PUSH 5
+DDEAD
+POP y
+POP x
+ASSERT x == 0
+ASSERT y == 0

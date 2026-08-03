@@ -263,6 +263,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"LTZ")==0 || strcasecmp(tail,"GTZ")==0 ||
             strcasecmp(tail,"LEZ")==0 || strcasecmp(tail,"GEZ")==0 ||
             strcasecmp(tail,"RELU")==0 || strcasecmp(tail,"CLAMP0")==0 ||
+            strcasecmp(tail,"RELU6")==0 || strcasecmp(tail,"CLAMP6")==0 ||
+            strcasecmp(tail,"DEADZ")==0 || strcasecmp(tail,"DEADZONE")==0 ||
+            strcasecmp(tail,"DEAD")==0 ||
             strcasecmp(tail,"COPYSIGN")==0 || strcasecmp(tail,"CSIGN")==0 ||
             strcasecmp(tail,"MEDIAN")==0 || strcasecmp(tail,"MID3")==0 ||
             strcasecmp(tail,"MED")==0 ||
@@ -7473,6 +7476,47 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy activations: DRELU6 · DDEADZ (gate/noise) */
+  if (kw(&L->cur,"DRELU6")||kw(&L->cur,"2RELU6")||kw(&L->cur,"S2RELU6")||
+      kw(&L->cur,"STACK2RELU6")||kw(&L->cur,"PAIRRELU6")||kw(&L->cur,"DCLAMP6")||
+      kw(&L->cur,"2CLAMP6")||kw(&L->cur,"S2CLAMP6")||kw(&L->cur,"PAIRCLAMP6")){
+    /* a b → clamp(a,0,6) clamp(b,0,6) — classic ReLU6 energy activation */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (a > 6) a = 6;
+    if (b < 0) b = 0;
+    if (b > 6) b = 6;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDEADZ")||kw(&L->cur,"2DEADZ")||kw(&L->cur,"S2DEADZ")||
+      kw(&L->cur,"STACK2DEADZ")||kw(&L->cur,"PAIRDEADZ")||kw(&L->cur,"DDEADZONE")||
+      kw(&L->cur,"2DEADZONE")||kw(&L->cur,"S2DEADZONE")||kw(&L->cur,"PAIRDEADZONE")||
+      kw(&L->cur,"DDEAD")||kw(&L->cur,"2DEAD")){
+    /* a b za zb → (|a|<=za?0:a) (|b|<=zb?0:b); z<0 treated as 0
+     * energy-style deadzone / noise gate on dual channel */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long zb = vm->stack[--vm->sp];
+    long za = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (za < 0) za = 0;
+    if (zb < 0) zb = 0;
+    long aa = a < 0 ? -a : a;
+    long bb = b < 0 ? -b : b;
+    long x = (aa <= za) ? 0 : a;
+    long y = (bb <= zb) ? 0 : b;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

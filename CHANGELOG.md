@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.171-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy activations (ReLU6 + deadzone).
+
+### Language
+- `DRELU6`/`2RELU6`/`DCLAMP6` — pairwise clamp to energy band `[0, 6]`
+- `DDEADZ`/`2DEADZ`/`DDEADZONE` — pairwise deadzone noise gate (`|x|≤z → 0`)
+- Proof `194_drelu6_ddeadz.cubalc`
+
+### Prior
+See 1.12.170-universal.
+
+
 ## 1.12.170-universal — 2026-08-03
 
 ### Direction
