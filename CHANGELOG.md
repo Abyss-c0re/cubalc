@@ -1,3 +1,17 @@
+## 1.12.256-universal — 2026-08-03
+
+### Direction
+- Algocube digit **2** → dual-stack imm inverted 16-bit halfword field (dual of SNAND16N/SNOR16N/SXNOR16N).
+
+### Language
+- `DNAND16N`/`PAIRNAND16N` field n — halfword n of each = ~(half & field) & 0xFFFF (n 0..3)
+- `DNOR16N`/`PAIRNOR16N` field n — halfword n of each = ~(half | field) & 0xFFFF
+- `DXNOR16N`/`PAIRXNOR16N`/`DEQUIV16N` field n — halfword n of each = ~(half ^ field) & 0xFFFF
+- Proof `279_dnand16n_dnor16n.cubalc`
+
+### Prior
+See 1.12.255-universal.
+
 ## 1.12.255-universal — 2026-08-03
 
 ### Direction
