@@ -5483,6 +5483,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 data-path unsigned compare TOC: SULTTOC · SUGTTOC · SULETOC · SUGETOC
+   * (unsigned dual of SEQ/SLT signed plane into cell; EQ/NE bit-identical so omitted) */
+  if (kw(&L->cur,"SULTTOC")||kw(&L->cur,"SULTTOCELL")||kw(&L->cur,"STACKULTTOC")||
+      kw(&L->cur,"CMPULTTOC")||kw(&L->cur,"SULTAT")){
+    /* i v → cells[i] = ((unsigned)cells[i] < (unsigned)v)?1:0, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] < (unsigned long)v) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGTTOC")||kw(&L->cur,"SUGTTOCELL")||kw(&L->cur,"STACKUGTTOC")||
+      kw(&L->cur,"CMPUGTTOC")||kw(&L->cur,"SUGTAT")){
+    /* i v → cells[i] = ((unsigned)cells[i] > (unsigned)v)?1:0, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] > (unsigned long)v) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SULETOC")||kw(&L->cur,"SULETOCELL")||kw(&L->cur,"STACKULETOC")||
+      kw(&L->cur,"CMPULETOC")||kw(&L->cur,"SULEAT")){
+    /* i v → cells[i] = ((unsigned)cells[i] <= (unsigned)v)?1:0, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] <= (unsigned long)v) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUGETOC")||kw(&L->cur,"SUGETOCELL")||kw(&L->cur,"STACKUGETOC")||
+      kw(&L->cur,"CMPUGETOC")||kw(&L->cur,"SUGEAT")){
+    /* i v → cells[i] = ((unsigned)cells[i] >= (unsigned)v)?1:0, leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = ((unsigned long)vm->cells[(int)i] >= (unsigned long)v) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){

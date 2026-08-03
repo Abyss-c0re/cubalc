@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T23:44:17+0300",
-  "iter": 438,
-  "algocube_digit": 6,
-  "version": "1.12.311-universal",
-  "pass": 349,
+  "ts": "2026-08-03T23:50:49+0300",
+  "iter": 440,
+  "algocube_digit": 9,
+  "version": "1.12.312-universal",
+  "pass": 350,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,9 +18,10 @@
     "flow_compile"
   ],
   "ops": [
-    "SNETOC",
-    "SLETOC",
-    "SGETOC"
+    "SULTTOC",
+    "SUGTTOC",
+    "SULETOC",
+    "SUGETOC"
   ],
-  "proof": "programs/proof/334_snetoc_sgetoc.cubalc"
+  "proof": "programs/proof/335_sulttoc_sugtoc.cubalc"
 }

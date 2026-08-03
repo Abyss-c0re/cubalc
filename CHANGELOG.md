@@ -1,3 +1,18 @@
+## 1.12.312-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → data-path unsigned compare TOC (unsigned dual of signed SEQ/SLT plane into cell).
+
+### Language
+- `SULTTOC`/`CMPULTTOC`/`SULTAT` — stack `i v → cells[i]=((u)cells[i]<(u)v)?1:0` leave result
+- `SUGTTOC`/`CMPUGTTOC`/`SUGTAT` — stack `i v → cells[i]=((u)cells[i]>(u)v)?1:0` leave result
+- `SULETOC`/`CMPULETOC`/`SULEAT` — stack `i v → cells[i]=((u)cells[i]<=(u)v)?1:0` leave result
+- `SUGETOC`/`CMPUGETOC`/`SUGEAT` — stack `i v → cells[i]=((u)cells[i]>=(u)v)?1:0` leave result
+- Proof `335_sulttoc_sugtoc.cubalc`
+
+### Prior
+See 1.12.311-universal.
+
 ## 1.12.311-universal — 2026-08-03
 
 ### Direction
