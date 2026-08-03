@@ -1,3 +1,17 @@
+## 1.12.271-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → imm saturating divide (completes sat energy ALU plane + dual-stack form).
+
+### Language
+- `SATDIV(a,b)` — trunc-toward-zero; `/0→0`; `LONG_MIN/-1→LONG_MAX`
+- `SSATDIVN`/`SATDIVN`/`SDIVSATN` n — TOS = sat(TOS/n)
+- `DSATDIVN`/`PAIRSATDIVN`/`DDIVSATN` n — a b → sat(a/n) sat(b/n)
+- Proof `294_ssatdivn_dsatdivn.cubalc`
+
+### Prior
+See 1.12.270-universal.
+
 ## 1.12.270-universal — 2026-08-03
 
 ### Direction

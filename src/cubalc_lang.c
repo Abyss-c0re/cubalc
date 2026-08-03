@@ -1384,7 +1384,7 @@ static long parse_prim(VM *vm, Lex *L){
         strcmp(name,"BOUND")==0 ||
         /* digit-1 clamp/bound: saturating arith + modular wrap */
         strcmp(name,"SATADD")==0 || strcmp(name,"SATSUB")==0 ||
-        strcmp(name,"SATMUL")==0 ||
+        strcmp(name,"SATMUL")==0 || strcmp(name,"SATDIV")==0 ||
         strcmp(name,"WRAPMOD")==0 || strcmp(name,"WMOD")==0 ||
         strcmp(name,"CLIP8")==0 || strcmp(name,"CLIP16")==0 ||
         /* digit-1 overflow predicates + single-bit ops */
@@ -1689,6 +1689,12 @@ static long parse_prim(VM *vm, Lex *L){
             if (p < (__int128)LONG_MIN) return LONG_MIN;
             return (long)p;
           }
+        }
+        if (strcmp(name,"SATDIV")==0){
+          /* SATDIV(a,b) — trunc-toward-zero; /0 → 0; LONG_MIN/-1 → LONG_MAX */
+          if (b == 0) return 0;
+          if (a == LONG_MIN && b == -1) return LONG_MAX;
+          return a / b;
         }
         if (strcmp(name,"WRAPMOD")==0 || strcmp(name,"WMOD")==0){
           /* WRAPMOD(n, m) — n mod m in [0, m); m<=0 → 0 */
@@ -10804,6 +10810,28 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 dual-stack imm sat div: DSATDIVN (completes sat imm ALU + energy plane) */
+  if (kw(&L->cur,"DSATDIVN")||kw(&L->cur,"S2SATDIVN")||kw(&L->cur,"STACK2SATDIVN")||
+      kw(&L->cur,"PAIRSATDIVN")||kw(&L->cur,"DDIVSATN")||kw(&L->cur,"PAIRDIVSATN")||
+      kw(&L->cur,"DSATDIVIMM")){
+    /* a b + n → sat(a/n) sat(b/n); n==0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    if (n == 0) x = 0;
+    else if (a == LONG_MIN && n == -1) x = LONG_MAX;
+    else x = a / n;
+    if (n == 0) y = 0;
+    else if (b == LONG_MIN && n == -1) y = LONG_MAX;
+    else y = b / n;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack immediate div/mod: DDIVN · DMODN (dual of SDIVN/SMODN; complete imm ALU) */
   if (kw(&L->cur,"DDIVN")||kw(&L->cur,"2DIVN")||kw(&L->cur,"S2DIVN")||
       kw(&L->cur,"STACK2DIVN")||kw(&L->cur,"PAIRDIVN")||kw(&L->cur,"DDIVIMM")||
@@ -16656,6 +16684,22 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       else if (p < (__int128)LONG_MIN) r = LONG_MIN;
       else r = (long)p;
     }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack imm sat div: SSATDIVN (completes sat imm ALU plane) */
+  if (kw(&L->cur,"SSATDIVN")||kw(&L->cur,"STACKSATDIVN")||kw(&L->cur,"SATDIVN")||
+      kw(&L->cur,"SSATDIVIMM")||kw(&L->cur,"SDIVSATN")){
+    /* SSATDIVN n — TOS = sat(TOS / n); n==0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (n == 0) r = 0;
+    else if (a == LONG_MIN && n == -1) r = LONG_MAX;
+    else r = a / n;
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
