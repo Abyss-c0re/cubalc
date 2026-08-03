@@ -232,7 +232,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0 ||
             strcasecmp(tail,"LO16")==0 || strcasecmp(tail,"HI16")==0 ||
             strcasecmp(tail,"PACK16")==0 || strcasecmp(tail,"PACKW")==0 ||
-            strcasecmp(tail,"LOWW")==0 || strcasecmp(tail,"HIW")==0)
+            strcasecmp(tail,"LOWW")==0 || strcasecmp(tail,"HIW")==0 ||
+            strcasecmp(tail,"LO32")==0 || strcasecmp(tail,"HI32")==0 ||
+            strcasecmp(tail,"PACK32")==0 || strcasecmp(tail,"PACKDW")==0 ||
+            strcasecmp(tail,"LOWD")==0 || strcasecmp(tail,"HID")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -7152,6 +7155,57 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long a = vm->stack[--vm->sp];
     long x = ((a & 0xFFFFL) << 16) | (c & 0xFFFFL);
     long y = ((b & 0xFFFFL) << 16) | (d & 0xFFFFL);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-8 dual-stack word pack: DLO32 · DHI32 · DPACK32 */
+  if (kw(&L->cur,"DLO32")||kw(&L->cur,"2LO32")||kw(&L->cur,"S2LO32")||
+      kw(&L->cur,"STACK2LO32")||kw(&L->cur,"PAIRLO32")||kw(&L->cur,"DLOWD")||
+      kw(&L->cur,"2LOWD")||
+      kw(&L->cur,"DHI32")||kw(&L->cur,"2HI32")||kw(&L->cur,"S2HI32")||
+      kw(&L->cur,"STACK2HI32")||kw(&L->cur,"PAIRHI32")||kw(&L->cur,"DHID")||
+      kw(&L->cur,"2HID")){
+    /* a b → lo32/hi32 of each (bits 0..31 / 32..63) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_lo = (strcmp(op,"DLO32")==0 || strcmp(op,"2LO32")==0 || strcmp(op,"S2LO32")==0 ||
+                 strcmp(op,"STACK2LO32")==0 || strcmp(op,"PAIRLO32")==0 ||
+                 strcmp(op,"DLOWD")==0 || strcmp(op,"2LOWD")==0);
+    long x, y;
+    if (is_lo){
+      x = (long)(unsigned int)(unsigned long)a;
+      y = (long)(unsigned int)(unsigned long)b;
+    } else {
+      x = (long)(unsigned int)((unsigned long long)(unsigned long)a >> 32);
+      y = (long)(unsigned int)((unsigned long long)(unsigned long)b >> 32);
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPACK32")||kw(&L->cur,"2PACK32")||kw(&L->cur,"S2PACK32")||
+      kw(&L->cur,"STACK2PACK32")||kw(&L->cur,"PAIRPACK32")||kw(&L->cur,"DPACKDW")||
+      kw(&L->cur,"2PACKDW")){
+    /* a b c d → ((a&0xFFFFFFFF)<<32)|(c&0xFFFFFFFF)  same for b,d — hi,lo words */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    unsigned long long xa = ((unsigned long long)(unsigned int)a << 32) |
+                            (unsigned long long)(unsigned int)c;
+    unsigned long long ya = ((unsigned long long)(unsigned int)b << 32) |
+                            (unsigned long long)(unsigned int)d;
+    long x = (long)xa;
+    long y = (long)ya;
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

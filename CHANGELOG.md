@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.143-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → dual-stack 32-bit word pack (data-path).
+
+### Language
+- `DLO32`/`2LO32` · `DHI32`/`2HI32` — low/high 32-bit word of each of pair
+- `DPACK32`/`2PACK32` — pack hi,lo words: `a b c d → (a<<32|c) (b<<32|d)` (masked)
+- Proof `166_dlo32_dpack32.cubalc`
+
+### Prior
+See 1.12.142-universal.
+
 ## 1.12.142-universal — 2026-08-03
 
 ### Direction
