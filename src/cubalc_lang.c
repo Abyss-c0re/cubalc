@@ -319,6 +319,8 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ORMN")==0 || strcasecmp(tail,"XORMN")==0 ||
             strcasecmp(tail,"NANDMN")==0 || strcasecmp(tail,"NORMN")==0 ||
             strcasecmp(tail,"XNORMN")==0 ||
+            strcasecmp(tail,"NANDHN")==0 || strcasecmp(tail,"NORHN")==0 ||
+            strcasecmp(tail,"XNORHN")==0 ||
             strcasecmp(tail,"HMASKN")==0 || strcasecmp(tail,"ANDHN")==0 ||
             strcasecmp(tail,"KEEPHN")==0 || strcasecmp(tail,"CLRLN")==0 ||
             strcasecmp(tail,"ORHN")==0 || strcasecmp(tail,"XORHN")==0 ||
@@ -9868,6 +9870,74 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (long)((unsigned long)a & ~m);
     long y = (long)((unsigned long)b & ~m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-0 dual-stack inverted high-n mask: DNANDHN · DNORHN · DXNORHN (complete high plane after DNANDMN) */
+  if (kw(&L->cur,"DNANDHN")||kw(&L->cur,"2NANDHN")||kw(&L->cur,"S2NANDHN")||
+      kw(&L->cur,"STACK2NANDHN")||kw(&L->cur,"PAIRNANDHN")||kw(&L->cur,"DHIGHNANDN")||
+      kw(&L->cur,"2HIGHNANDN")||kw(&L->cur,"DMASKNANDH")||kw(&L->cur,"2MASKNANDH")){
+    /* a b + n → ~(a&hm) ~(b&hm); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a & m);
+    long y = (long)~((unsigned long)b & m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNORHN")||kw(&L->cur,"2NORHN")||kw(&L->cur,"S2NORHN")||
+      kw(&L->cur,"STACK2NORHN")||kw(&L->cur,"PAIRNORHN")||kw(&L->cur,"DHIGHNORN")||
+      kw(&L->cur,"2HIGHNORN")||kw(&L->cur,"DMASKNORH")||kw(&L->cur,"2MASKNORH")){
+    /* a b + n → ~(a|hm) ~(b|hm); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a | m);
+    long y = (long)~((unsigned long)b | m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXNORHN")||kw(&L->cur,"2XNORHN")||kw(&L->cur,"S2XNORHN")||
+      kw(&L->cur,"STACK2XNORHN")||kw(&L->cur,"PAIRXNORHN")||kw(&L->cur,"DHIGHXNORN")||
+      kw(&L->cur,"2HIGHXNORN")||kw(&L->cur,"DMASKXNORH")||kw(&L->cur,"2MASKXNORH")||
+      kw(&L->cur,"DEQUIVHN")||kw(&L->cur,"2EQUIVHN")){
+    /* a b + n → ~(a^hm) ~(b^hm); n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a ^ m);
+    long y = (long)~((unsigned long)b ^ m);
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

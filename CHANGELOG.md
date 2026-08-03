@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.216-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → dual-stack inverted high-n mask plane (complete DANDHN/DORHN/DXORHN + DNANDMN family).
+
+### Language
+- `DNANDHN`/`2NANDHN`/`PAIRNANDHN` n — pairwise `~(x & himask)`
+- `DNORHN`/`2NORHN`/`PAIRNORHN` n — pairwise `~(x | himask)`
+- `DXNORHN`/`DEQUIVHN`/`2XNORHN` n — pairwise `~(x ^ himask)`
+- Proof `239_dnandhn_dxnorhn.cubalc`
+
+### Prior
+See 1.12.215-universal.
+
+
 ## 1.12.215-universal — 2026-08-03
 
 ### Direction
