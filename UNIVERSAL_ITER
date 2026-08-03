@@ -1,22 +1,21 @@
-{
-  "schema": "cubalc.universal_iter.v1",
-  "to": "NexusCore",
-  "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T15:55:00+0300",
-  "iter": 340,
-  "algocube_digit": 9,
-  "version": "1.12.240-universal",
-  "pass": 278,
-  "fail": 0,
-  "ok": true,
-  "interval_sec": 360,
-  "goal": "more_universal_each_iteration",
-  "hold_flash": 1,
-  "law": [
-    "pure_science",
-    "evolve",
-    "flow_compile"
-  ],
-  "delta": "SWORDN SSET16N SCLR16N",
-  "proof": "263_swordn_sset16n.cubalc"
-}
+## UNIVERSAL_ITER plate
+
+| field | value |
+|--------|--------|
+| **iter** | 408 |
+| **digit** | **1** (urandom; data plane) |
+| **version** | `1.12.292-universal` |
+| **pass/fail** | **330 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SMODTOC`/`SMINTOC`/`SMAXTOC` |
+| **proof** | `programs/proof/315_smodtoc_smintoc.cubalc` |
+
+### Delta
+Digit-1 stack↔cell accumulate bound after arithmetic plane: mod remainder into cell; min/max clamp-store.
+
+### NexusCore
+- unity 1.0, alive 3, smx_tick OK; command ACK (commander offline / no route)
+- daemon running; tree dirty from evolve mass-delete (lang delta isolated)
+
+### Note
+Fir…

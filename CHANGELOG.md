@@ -1,3 +1,17 @@
+## 1.12.292-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → stack↔cell accumulate bound (mod + min/max after SADDTOC/SSUBTOC/SMULTOC/SDIVTOC).
+
+### Language
+- `SMODTOC`/`SCELLMOD`/`SMODCELL` — stack `i v → cells[i]%=v` (0 if v==0) leave remainder
+- `SMINTOC`/`SCELLMIN`/`SMINCELL` — stack `i v → cells[i]=min(cells[i],v)` leave result
+- `SMAXTOC`/`SCELLMAX`/`SMAXCELL` — stack `i v → cells[i]=max(cells[i],v)` leave result
+- Proof `315_smodtoc_smintoc.cubalc`
+
+### Prior
+See 1.12.291-universal.
+
 ## 1.12.291-universal — 2026-08-03
 
 ### Direction
