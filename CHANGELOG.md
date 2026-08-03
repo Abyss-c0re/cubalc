@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.155-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack select: median + abs extremum.
+
+### Language
+- `DMEDIAN`/`2MED`/`DMID3` — pairwise median of three pairs
+- `DMAXABS`/`DMINABS` — pairwise max/min of absolute values
+- Proof `178_dmedian_dmaxabs.cubalc`
+
+### Prior
+See 1.12.154-universal.
+
 ## 1.12.154-universal — 2026-08-03
 
 ### Direction
