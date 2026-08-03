@@ -1,3 +1,17 @@
+## 1.12.331-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → imm ANDN-plane TOC (imm dual of SANDNTOC after SNANDTOCN/SANDTOCN plane).
+
+### Language
+- `SANDNTOCN`/`BICTOCN`/`SANDNATN` n — stack `i → cells[i]&=~n` leave result
+- `SORNTOCN`/`ORNTOCN`/`SORNATN` n — stack `i → cells[i]|=~n` leave result
+- `SXORNTOCN`/`XORNTOCN`/`SXORNATN` n — stack `i → cells[i]^=~n` leave result
+- Proof `354_sandntocn_sxorntocn.cubalc`
+
+### Prior
+See 1.12.330-universal.
+
 ## 1.12.330-universal — 2026-08-04
 
 ### Direction
