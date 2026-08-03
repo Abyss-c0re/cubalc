@@ -13774,6 +13774,58 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",x); vm->last_n=x;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack high-n mask plane: SANDHN · SORHN · SXORHN (dual of DANDHN/DORHN/DXORHN; complete SANDMN) */
+  if (kw(&L->cur,"SANDHN")||kw(&L->cur,"STACKANDHN")||kw(&L->cur,"SKEEPHN")||
+      kw(&L->cur,"SHIGHANDN")||kw(&L->cur,"ANDHN")||kw(&L->cur,"KEEPHN")){
+    /* SANDHN n — TOS &= high-n mask; keep high n bits; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 1] & m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SORHN")||kw(&L->cur,"STACKORHN")||kw(&L->cur,"SSETHN")||
+      kw(&L->cur,"SHIGHORN")||kw(&L->cur,"ORHN")||kw(&L->cur,"SETHN")){
+    /* SORHN n — TOS |= high-n mask; set high n bits; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 1] | m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SXORHN")||kw(&L->cur,"STACKXORHN")||kw(&L->cur,"SFLIPHN")||
+      kw(&L->cur,"SHIGHXORN")||kw(&L->cur,"XORHN")||kw(&L->cur,"FLIPHN")){
+    /* SXORHN n — TOS ^= high-n mask; toggle high n bits; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long x = (long)((unsigned long)vm->stack[vm->sp - 1] ^ m);
+    vm->stack[vm->sp - 1] = x;
+    var_set_num(vm,"LAST_N",x); vm->last_n=x;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SSHLN")||kw(&L->cur,"SHLN")||kw(&L->cur,"STACKSHLN")||
       kw(&L->cur,"SLSHLN")||kw(&L->cur,"SSHLIMM")){
     /* SSHLN n — TOS <<= n (n clamped 0..63) */

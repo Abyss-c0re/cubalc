@@ -1,3 +1,18 @@
+## 1.12.225-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → stack high-n mask plane (dual of dual-stack DANDHN/DORHN/DXORHN; complete SANDMN low plane).
+
+### Language
+- `SANDHN`/`STACKANDHN`/`KEEPHN` n — TOS &= high-n mask (keep high n bits)
+- `SORHN`/`STACKORHN`/`SETHN` n — TOS |= high-n mask (set high n bits)
+- `SXORHN`/`STACKXORHN`/`FLIPHN` n — TOS ^= high-n mask (toggle high n bits)
+- Proof `248_sandhn_sorhn.cubalc`
+
+### Prior
+See 1.12.224-universal.
+
+
 ## 1.12.224-universal — 2026-08-03
 
 ### Direction
