@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.12.118-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → complete depth-5 stack foundation plane.
+
+### Language
+- `5NIP`/`NIP5` — a b c d e → a e
+- `5ROT`/`ROT5` · `5RROT`/`RROT5` — rotate top 5
+- `5OVER`/`OVER5` — copy under quintet (needs 10)
+- `5TUCK`/`TUCK5` — e a b c d e
+- Lexer whitelist for 5NIP/5ROT/5RROT/5OVER/5TUCK
+- Proof `141_5nip_5rot.cubalc`
+
+### Prior
+See 1.12.117-universal.
+
 ## 1.12.117-universal — 2026-08-03
 
 ### Direction
