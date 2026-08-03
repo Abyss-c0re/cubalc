@@ -1,3 +1,17 @@
+## 1.12.310-universal — 2026-08-03
+
+### Direction
+- Algocube digit **4** → stack↔cell compare plane (predicate dual of SEQ/SLT/SGT into cell).
+
+### Language
+- `SEQTOC`/`CMPEQTOC`/`SEQAT` — stack `i v → cells[i]=(cells[i]==v)?1:0` leave result
+- `SLTTOC`/`CMPLTTOC`/`SLTAT` — stack `i v → cells[i]=(cells[i]<v)?1:0` leave result
+- `SGTTOC`/`CMPGTTOC`/`SGTAT` — stack `i v → cells[i]=(cells[i]>v)?1:0` leave result
+- Proof `333_seqtoc_sgttoc.cubalc`
+
+### Prior
+See 1.12.309-universal.
+
 ## 1.12.309-universal — 2026-08-03
 
 ### Direction

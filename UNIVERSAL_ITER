@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 436 |
-| **digit** | **9** (urandom+genome; depth-9 over/tuck complete) |
-| **version** | `1.12.309-universal` |
-| **pass/fail** | **347 / 0** (green) |
-| **commit** | `caf9a74` → `origin/main` |
-| **ops** | `9OVER`/`9TUCK` |
-| **proof** | `programs/proof/332_9over_9tuck.cubalc` |
+| **iter** | 437 |
+| **digit** | **4** (urandom+genome; compare TOC) |
+| **version** | `1.12.310-universal` |
+| **pass/fail** | **348 / 0** (green) |
+| **commit** | `880a0f9` → `origin/main` |
+| **ops** | `SEQTOC`/`SLTTOC`/`SGTTOC` |
+| **proof** | `programs/proof/333_seqtoc_sgttoc.cubalc` |
 
 ### Delta
-Digit-9 complete depth-9 plane: copy under nonet / tuck TOS under top 8.
+Digit-4 stack↔cell compare: eq/lt/gt predicate into cell (avoided SCELLEQ alias clash with range plane).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `9OVER` `9TUCK` · aliases `OVER9`/`TUCK9`
-- Proof `332_9over_9tuck.cubalc`
+- `SEQTOC` `SLTTOC` `SGTTOC` · aliases `CMPEQTOC`/`CMPLTTOC`/`CMPGTTOC`
+- Proof `333_seqtoc_sgttoc.cubalc`
