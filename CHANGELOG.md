@@ -1,3 +1,17 @@
+## 1.12.268-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack imm overflow predicates (dual of SADDOVFN/SSUBOVFN/SMULOVFN).
+
+### Language
+- `DADDOVFN`/`PAIRADDOVFN` n — a b → ovf(a+n) ovf(b+n) as 0/1
+- `DSUBOVFN`/`PAIRSUBOVFN` n — a b → ovf(a−n) ovf(b−n) as 0/1
+- `DMULOVFN`/`PAIRMULOVFN` n — a b → ovf(a*n) ovf(b*n) as 0/1
+- Proof `291_daddovfn_dsubovfn.cubalc`
+
+### Prior
+See 1.12.267-universal.
+
 ## 1.12.267-universal — 2026-08-03
 
 ### Direction

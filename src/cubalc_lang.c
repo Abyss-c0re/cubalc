@@ -6714,6 +6714,65 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm overflow predicates: DADDOVFN · DSUBOVFN · DMULOVFN (dual of SADDOVFN) */
+  if (kw(&L->cur,"DADDOVFN")||kw(&L->cur,"S2ADDOVFN")||kw(&L->cur,"STACK2ADDOVFN")||
+      kw(&L->cur,"PAIRADDOVFN")||kw(&L->cur,"DADDOVERIMM")||kw(&L->cur,"PAIRADDOVERIMM")){
+    /* a b + n → ovf(a+n) ovf(b+n) as 0/1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n > 0 && a > LONG_MAX - n) x = 1;
+    else if (n < 0 && a < LONG_MIN - n) x = 1;
+    if (n > 0 && b > LONG_MAX - n) y = 1;
+    else if (n < 0 && b < LONG_MIN - n) y = 1;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSUBOVFN")||kw(&L->cur,"S2SUBOVFN")||kw(&L->cur,"STACK2SUBOVFN")||
+      kw(&L->cur,"PAIRSUBOVFN")||kw(&L->cur,"DSUBOVERIMM")||kw(&L->cur,"PAIRSUBOVERIMM")){
+    /* a b + n → ovf(a-n) ovf(b-n) as 0/1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n > 0 && a < LONG_MIN + n) x = 1;
+    else if (n < 0 && a > LONG_MAX + n) x = 1;
+    if (n > 0 && b < LONG_MIN + n) y = 1;
+    else if (n < 0 && b > LONG_MAX + n) y = 1;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMULOVFN")||kw(&L->cur,"S2MULOVFN")||kw(&L->cur,"STACK2MULOVFN")||
+      kw(&L->cur,"PAIRMULOVFN")||kw(&L->cur,"DMULOVERIMM")||kw(&L->cur,"PAIRMULOVERIMM")){
+    /* a b + n → ovf(a*n) ovf(b*n) as 0/1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (a != 0 && n != 0){
+      __int128 p = (__int128)a * (__int128)n;
+      if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) x = 1;
+    }
+    if (b != 0 && n != 0){
+      __int128 p = (__int128)b * (__int128)n;
+      if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) y = 1;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 dual-stack unsigned overflow: DUADDOVF · DUSUBOVF · DUMULOVF (0/1) */
   if (kw(&L->cur,"DUADDOVF")||kw(&L->cur,"2UADDOVF")||kw(&L->cur,"S2UADDOVF")||
       kw(&L->cur,"STACK2UADDOVF")||kw(&L->cur,"PAIRUADDOVF")||kw(&L->cur,"DUADDOVER")||
