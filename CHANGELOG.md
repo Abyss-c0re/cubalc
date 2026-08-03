@@ -1,3 +1,18 @@
+## 1.12.286-universal — 2026-08-03
+
+### Direction
+- Algocube digit **7** → imm ceil/floor div (imm dual of SDIVCEIL/SDIVFLOOR + dual-stack after SDIVN plane).
+
+### Language
+- `SDIVCEILN`/`CEILDIVN`/`CEILN` n — TOS = ceil(TOS/n); n==0 → 0
+- `SDIVFLOORN`/`FLOORDIVN`/`FLOORN` n — TOS = floor(TOS/n); n==0 → 0
+- `DDIVCEILN`/`PAIRDIVCEILN` n — a b → ceil(a/n) ceil(b/n)
+- `DDIVFLOORN`/`PAIRDIVFLOORN` n — a b → floor(a/n) floor(b/n)
+- Proof `309_sdivceiln_ddivfloorn.cubalc`
+
+### Prior
+See 1.12.285-universal.
+
 ## 1.12.285-universal — 2026-08-03
 
 ### Direction

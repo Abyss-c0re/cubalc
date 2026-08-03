@@ -6360,6 +6360,43 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm ceil/floor div: SDIVCEILN · SDIVFLOORN (imm dual of SDIVCEIL/SDIVFLOOR) */
+  if (kw(&L->cur,"SDIVCEILN")||kw(&L->cur,"SCEILDIVN")||kw(&L->cur,"CEILDIVN")||
+      kw(&L->cur,"STACKDIVCEILN")||kw(&L->cur,"SDIVCEILIMM")||kw(&L->cur,"CEILN")){
+    /* SDIVCEILN n — TOS = ceil(TOS/n); n==0 → 0 soft (match SDIVCEIL) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n == 0) r = 0;
+    else if (a >= 0 && n > 0) r = (a + n - 1) / n;
+    else if (a <= 0 && n < 0){
+      long aa = -a, nn = -n;
+      r = (aa + nn - 1) / nn;
+    } else r = a / n;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVFLOORN")||kw(&L->cur,"SFLOORDIVN")||kw(&L->cur,"FLOORDIVN")||
+      kw(&L->cur,"STACKDIVFLOORN")||kw(&L->cur,"SDIVFLOORIMM")||kw(&L->cur,"FLOORN")){
+    /* SDIVFLOORN n — TOS = floor(TOS/n); n==0 → 0 soft (match SDIVFLOOR) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n == 0) r = 0;
+    else {
+      long q = a / n, rem = a % n;
+      if (rem != 0 && ((a < 0) != (n < 0))) q--;
+      r = q;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 stack imm unsigned div/mod: SUDIVN · SUMODN (imm dual of SUDIV/SUMOD) */
   if (kw(&L->cur,"SUDIVN")||kw(&L->cur,"STACKUDIVN")||kw(&L->cur,"UDIVN")||
       kw(&L->cur,"SUDIVIMM")||kw(&L->cur,"UDIVIMM")||kw(&L->cur,"SUQUOTN")){
@@ -11461,6 +11498,53 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long b = vm->stack[vm->sp - 1];
     long x = (n == 0) ? 0 : (a % n);
     long y = (n == 0) ? 0 : (b % n);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 dual-stack imm ceil/floor div: DDIVCEILN · DDIVFLOORN (dual of SDIVCEILN plane) */
+  if (kw(&L->cur,"DDIVCEILN")||kw(&L->cur,"2DIVCEILN")||kw(&L->cur,"S2DIVCEILN")||
+      kw(&L->cur,"STACK2DIVCEILN")||kw(&L->cur,"PAIRDIVCEILN")||kw(&L->cur,"DCEILDIVN")||
+      kw(&L->cur,"2CEILDIVN")||kw(&L->cur,"PAIRCEILDIVN")||kw(&L->cur,"DDIVCEILIMM")){
+    /* a b + n → ceil(a/n) ceil(b/n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n != 0){
+      if (a >= 0 && n > 0) x = (a + n - 1) / n;
+      else if (a <= 0 && n < 0){ long aa = -a, nn = -n; x = (aa + nn - 1) / nn; }
+      else x = a / n;
+      if (b >= 0 && n > 0) y = (b + n - 1) / n;
+      else if (b <= 0 && n < 0){ long bb = -b, nn = -n; y = (bb + nn - 1) / nn; }
+      else y = b / n;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDIVFLOORN")||kw(&L->cur,"2DIVFLOORN")||kw(&L->cur,"S2DIVFLOORN")||
+      kw(&L->cur,"STACK2DIVFLOORN")||kw(&L->cur,"PAIRDIVFLOORN")||kw(&L->cur,"DFLOORDIVN")||
+      kw(&L->cur,"2FLOORDIVN")||kw(&L->cur,"PAIRFLOORDIVN")||kw(&L->cur,"DDIVFLOORIMM")){
+    /* a b + n → floor(a/n) floor(b/n); n==0 → 0,0 soft */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n != 0){
+      long qx = a / n, rx = a % n;
+      if (rx != 0 && ((a < 0) != (n < 0))) qx--;
+      x = qx;
+      long qy = b / n, ry = b % n;
+      if (ry != 0 && ((b < 0) != (n < 0))) qy--;
+      y = qy;
+    }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
