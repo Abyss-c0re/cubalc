@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 408 |
-| **digit** | **1** (urandom; data plane) |
-| **version** | `1.12.292-universal` |
-| **pass/fail** | **330 / 0** (green) |
+| **iter** | 410 |
+| **digit** | **9** (urandom; reverse plane) |
+| **version** | `1.12.293-universal` |
+| **pass/fail** | **331 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SMODTOC`/`SMINTOC`/`SMAXTOC` |
-| **proof** | `programs/proof/315_smodtoc_smintoc.cubalc` |
+| **ops** | `SSUBFROMTOC`/`SDIVFROMTOC`/`SMODFROMTOC` |
+| **proof** | `programs/proof/316_ssubfromtoc_smodfromtoc.cubalc` |
 
 ### Delta
-Digit-1 stack↔cell accumulate bound after arithmetic plane: mod remainder into cell; min/max clamp-store.
+Digit-9 reverse stack↔cell accumulate: `v op cells[i]` after forward SSUBTOC/SDIVTOC/SMODTOC plane.
 
 ### NexusCore
 - unity 1.0, alive 3, smx_tick OK; command ACK (commander offline / no route)
-- daemon running; tree dirty from evolve mass-delete (lang delta isolated)
+- daemon running
 
 ### Note
 Fir…

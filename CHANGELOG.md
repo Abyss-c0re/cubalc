@@ -1,3 +1,17 @@
+## 1.12.293-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → stack↔cell reverse accumulate (v op cells[i] after SSUBTOC/SDIVTOC/SMODTOC plane).
+
+### Language
+- `SSUBFROMTOC`/`SCELLSUBFROM` — stack `i v → cells[i]=v-cells[i]` leave result
+- `SDIVFROMTOC`/`SCELLDIVFROM` — stack `i v → cells[i]=v/cells[i]` (0 if cell 0) leave quotient
+- `SMODFROMTOC`/`SCELLMODFROM` — stack `i v → cells[i]=v%cells[i]` (0 if cell 0) leave remainder
+- Proof `316_ssubfromtoc_smodfromtoc.cubalc`
+
+### Prior
+See 1.12.292-universal.
+
 ## 1.12.292-universal — 2026-08-03
 
 ### Direction

@@ -4846,6 +4846,54 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack↔cell reverse accumulate: SSUBFROMTOC · SDIVFROMTOC · SMODFROMTOC */
+  if (kw(&L->cur,"SSUBFROMTOC")||kw(&L->cur,"SCELLSUBFROM")||kw(&L->cur,"SRSUBCELL")||
+      kw(&L->cur,"STACKSUBFROMCELL")||kw(&L->cur,"SSUBFROMCELL")){
+    /* i v → cells[i] = v - cells[i], leave result (reverse of SSUBTOC) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = v - vm->cells[(int)i];
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVFROMTOC")||kw(&L->cur,"SCELLDIVFROM")||kw(&L->cur,"SRDIVCELL")||
+      kw(&L->cur,"STACKDIVFROMCELL")||kw(&L->cur,"SDIVFROMCELL")){
+    /* i v → cells[i] = v / cells[i] (cells[i]==0 → 0), leave quotient */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long c = vm->cells[(int)i];
+    long r = c ? (v / c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODFROMTOC")||kw(&L->cur,"SCELLMODFROM")||kw(&L->cur,"SRMODCELL")||
+      kw(&L->cur,"STACKMODFROMCELL")||kw(&L->cur,"SMODFROMCELL")||kw(&L->cur,"SREMFROMCELL")){
+    /* i v → cells[i] = v % cells[i] (cells[i]==0 → 0), leave remainder */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long c = vm->cells[(int)i];
+    long r = c ? (v % c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){
