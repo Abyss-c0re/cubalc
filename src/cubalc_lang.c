@@ -303,6 +303,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ZEXT8")==0 || strcasecmp(tail,"ZEXT16")==0 ||
             strcasecmp(tail,"ZEXTB")==0 || strcasecmp(tail,"ZEXTW")==0 ||
             strcasecmp(tail,"ZEXT32")==0 || strcasecmp(tail,"ZEXTD")==0 ||
+            strcasecmp(tail,"LO4")==0 || strcasecmp(tail,"HI4")==0 ||
+            strcasecmp(tail,"PACK4")==0 || strcasecmp(tail,"PACKN")==0 ||
+            strcasecmp(tail,"LOWN")==0 || strcasecmp(tail,"HIN")==0 ||
+            strcasecmp(tail,"NIBLO")==0 || strcasecmp(tail,"NIBHI")==0 ||
             strcasecmp(tail,"LO8")==0 || strcasecmp(tail,"HI8")==0 ||
             strcasecmp(tail,"PACK8")==0 || strcasecmp(tail,"PACKB")==0 ||
             strcasecmp(tail,"LOWB")==0 || strcasecmp(tail,"HIB")==0 ||
@@ -8820,6 +8824,54 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack nibble plane: DLO4 · DHI4 · DPACK4 */
+  if (kw(&L->cur,"DLO4")||kw(&L->cur,"2LO4")||kw(&L->cur,"S2LO4")||
+      kw(&L->cur,"STACK2LO4")||kw(&L->cur,"PAIRLO4")||kw(&L->cur,"DLOWN")||
+      kw(&L->cur,"2LOWN")||kw(&L->cur,"DNIBLO")||kw(&L->cur,"2NIBLO")||
+      kw(&L->cur,"DHI4")||kw(&L->cur,"2HI4")||kw(&L->cur,"S2HI4")||
+      kw(&L->cur,"STACK2HI4")||kw(&L->cur,"PAIRHI4")||kw(&L->cur,"DHIN")||
+      kw(&L->cur,"2HIN")||kw(&L->cur,"DNIBHI")||kw(&L->cur,"2NIBHI")){
+    /* a b → lo4/hi4 nibble of each (bits 0..3 / 4..7) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_lo = (strcmp(op,"DLO4")==0 || strcmp(op,"2LO4")==0 || strcmp(op,"S2LO4")==0 ||
+                 strcmp(op,"STACK2LO4")==0 || strcmp(op,"PAIRLO4")==0 ||
+                 strcmp(op,"DLOWN")==0 || strcmp(op,"2LOWN")==0 ||
+                 strcmp(op,"DNIBLO")==0 || strcmp(op,"2NIBLO")==0);
+    long x, y;
+    if (is_lo){
+      x = a & 0xFL;
+      y = b & 0xFL;
+    } else {
+      x = (a >> 4) & 0xFL;
+      y = (b >> 4) & 0xFL;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPACK4")||kw(&L->cur,"2PACK4")||kw(&L->cur,"S2PACK4")||
+      kw(&L->cur,"STACK2PACK4")||kw(&L->cur,"PAIRPACK4")||kw(&L->cur,"DPACKN")||
+      kw(&L->cur,"2PACKN")){
+    /* a b c d → ((a&0xF)<<4)|(c&0xF)  ((b&0xF)<<4)|(d&0xF) — hi,lo nibbles → byte */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = ((a & 0xFL) << 4) | (c & 0xFL);
+    long y = ((b & 0xFL) << 4) | (d & 0xFL);
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

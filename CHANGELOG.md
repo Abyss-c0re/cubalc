@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.177-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack nibble plane (bit-path pack).
+
+### Language
+- `DLO4`/`2LO4`/`DNIBLO` — pairwise low nibble (`x & 0xF`)
+- `DHI4`/`2HI4`/`DNIBHI` — pairwise high nibble (`(x>>4) & 0xF`)
+- `DPACK4`/`2PACK4`/`DPACKN` — pairwise pack two nibbles into a byte
+- Proof `200_dlo4_dpack4.cubalc`
+
+### Prior
+See 1.12.176-universal.
+
+
 ## 1.12.176-universal — 2026-08-03
 
 ### Direction
