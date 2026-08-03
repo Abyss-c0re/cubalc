@@ -1,3 +1,16 @@
+## 1.12.319-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → data-path imm compare bounds TOC (LE/GE complete SEQ/NE/LT/GT TOCN plane).
+
+### Language
+- `SLETOCN`/`LETOCN`/`SLEATN` n — stack `i → cells[i]=(cells[i]<=n)?1:0` leave result
+- `SGETOCN`/`GETOCN`/`SGEATN` n — stack `i → cells[i]=(cells[i]>=n)?1:0` leave result
+- Proof `342_sletocn_sgetocn.cubalc`
+
+### Prior
+See 1.12.318-universal.
+
 ## 1.12.318-universal — 2026-08-04
 
 ### Direction

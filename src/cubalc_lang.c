@@ -5815,6 +5815,41 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 data-path imm compare bounds TOC: SLETOCN · SGETOCN
+   * (complete SEQ/NE/LT/GT TOCN plane with LE/GE imm dual of SLETOC/SGETOC) */
+  if (kw(&L->cur,"SLETOCN")||kw(&L->cur,"SLETOCIMM")||kw(&L->cur,"STACKLETOCN")||
+      kw(&L->cur,"CMPLETOCN")||kw(&L->cur,"SLEATN")||kw(&L->cur,"LETOCN")||
+      kw(&L->cur,"SLEQNTOC")){
+    /* i + n → cells[i]=(cells[i]<=n)?1:0, leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] <= n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGETOCN")||kw(&L->cur,"SGETOCIMM")||kw(&L->cur,"STACKGETOCN")||
+      kw(&L->cur,"CMPGETOCN")||kw(&L->cur,"SGEATN")||kw(&L->cur,"GETOCN")||
+      kw(&L->cur,"SGEQNTOC")){
+    /* i + n → cells[i]=(cells[i]>=n)?1:0, leave result
+     * note: SGETOCN != SGETOC (two-arg stack GE TOC) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)i] >= n) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell range dual: SLOADCELLS · SPOPCELLS · CELLXFER */
   if (kw(&L->cur,"SLOADCELLS")||kw(&L->cur,"SLOADN")||kw(&L->cur,"SPUSHCELLS")||
       kw(&L->cur,"SPUSHRANGE")||kw(&L->cur,"SLOADRANGE")||kw(&L->cur,"STACKLOADCELLS")){
