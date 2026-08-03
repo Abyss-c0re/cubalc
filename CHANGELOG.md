@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.214-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack high-plane or/xor/clear (complete DHMASKN/DANDHN bitfield).
+
+### Language
+- `DORHN`/`DSETHN`/`2ORHN` n — pairwise set high n bits: `x |= himask`
+- `DXORHN`/`DFLIPHN`/`2XORHN` n — pairwise toggle high n bits: `x ^= himask`
+- `DCLRHN`/`2CLRHN`/`PAIRCLRHN` n — pairwise clear high n bits: `x &= ~himask`
+- Proof `237_dorhn_dclrh.cubalc`
+
+### Prior
+See 1.12.213-universal.
+
+
 ## 1.12.213-universal — 2026-08-03
 
 ### Direction
