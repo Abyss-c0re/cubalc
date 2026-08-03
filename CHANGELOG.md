@@ -1,3 +1,17 @@
+## 1.12.267-universal — 2026-08-03
+
+### Direction
+- Algocube digit **0** → stack imm overflow predicates (imm dual of SADDOVF/SSUBOVF/SMULOVF).
+
+### Language
+- `SADDOVFN`/`ADDOVFN` n — TOS = 1 if TOS+n signed overflow else 0
+- `SSUBOVFN`/`SUBOVFN` n — TOS = 1 if TOS−n signed overflow else 0
+- `SMULOVFN`/`MULOVFN` n — TOS = 1 if TOS*n signed overflow else 0
+- Proof `290_saddovfn_ssubovfn.cubalc`
+
+### Prior
+See 1.12.266-universal.
+
 ## 1.12.266-universal — 2026-08-03
 
 ### Direction

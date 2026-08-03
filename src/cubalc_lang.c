@@ -16879,6 +16879,51 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack imm overflow predicates: SADDOVFN · SSUBOVFN · SMULOVFN (TOS op n → 0/1) */
+  if (kw(&L->cur,"SADDOVFN")||kw(&L->cur,"STACKADDOVFN")||kw(&L->cur,"ADDOVFN")||
+      kw(&L->cur,"SADDOVERIMM")||kw(&L->cur,"SADDOVFIMM")){
+    /* SADDOVFN n — TOS = 1 if TOS+n signed overflow, else 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n > 0 && a > LONG_MAX - n) r = 1;
+    else if (n < 0 && a < LONG_MIN - n) r = 1;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSUBOVFN")||kw(&L->cur,"STACKSUBOVFN")||kw(&L->cur,"SUBOVFN")||
+      kw(&L->cur,"SSUBOVERIMM")||kw(&L->cur,"SSUBOVFIMM")){
+    /* SSUBOVFN n — TOS = 1 if TOS-n signed overflow, else 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (n > 0 && a < LONG_MIN + n) r = 1;
+    else if (n < 0 && a > LONG_MAX + n) r = 1;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMULOVFN")||kw(&L->cur,"STACKMULOVFN")||kw(&L->cur,"MULOVFN")||
+      kw(&L->cur,"SMULOVERIMM")||kw(&L->cur,"SMULOVFIMM")){
+    /* SMULOVFN n — TOS = 1 if TOS*n signed overflow, else 0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r = 0;
+    if (a != 0 && n != 0){
+      __int128 p = (__int128)a * (__int128)n;
+      if (p > (__int128)LONG_MAX || p < (__int128)LONG_MIN) r = 1;
+    }
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-6 stack fold/reduce: SSUM SPROD SFAND SFOR SFXOR FOLDMIN FOLDMAX
    * SMEAN SCOUNTNZ — optional trailing n = fold only top n; omit n → whole stack.
    * empty identities: sum/or/xor/countnz=0, prod=1, and=-1; min/max/mean empty → OK=0. */
