@@ -1,3 +1,17 @@
+## 1.12.270-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → dual-stack imm saturating ALU (dual of SSATADDN/SSATSUBN/SSATMULN).
+
+### Language
+- `DSATADDN`/`PAIRSATADDN`/`DADDSATN` n — a b → sat(a+n) sat(b+n)
+- `DSATSUBN`/`PAIRSATSUBN`/`DSUBSATN` n — a b → sat(a−n) sat(b−n)
+- `DSATMULN`/`PAIRSATMULN`/`DMULSATN` n — a b → sat(a*n) sat(b*n)
+- Proof `293_dsataddn_dsatsubn.cubalc`
+
+### Prior
+See 1.12.269-universal.
+
 ## 1.12.269-universal — 2026-08-03
 
 ### Direction
