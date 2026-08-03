@@ -17059,8 +17059,9 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-1 clamp/bound stack: SSATADD SSATSUB SSATMUL SWMOD SCLIP8 SCLIP16 SBOUND */
+  /* digit-1/3 clamp/bound stack: SSATADD SSATSUB SSATMUL SSATDIV SWMOD SCLIP8 SCLIP16 SBOUND */
   if (kw(&L->cur,"SSATADD")||kw(&L->cur,"SSATSUB")||kw(&L->cur,"SSATMUL")||
+      kw(&L->cur,"SSATDIV")||kw(&L->cur,"STACKSATDIV")||kw(&L->cur,"SATDIVST")||
       kw(&L->cur,"STACKSATADD")||kw(&L->cur,"STACKSATSUB")||kw(&L->cur,"STACKSATMUL")){
     char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
@@ -17071,6 +17072,8 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     long r = 0;
     int is_add = (strcmp(op,"SSATADD")==0 || strcmp(op,"STACKSATADD")==0);
     int is_sub = (strcmp(op,"SSATSUB")==0 || strcmp(op,"STACKSATSUB")==0);
+    int is_div = (strcmp(op,"SSATDIV")==0 || strcmp(op,"STACKSATDIV")==0 ||
+                  strcmp(op,"SATDIVST")==0);
     if (is_add){
       if (b > 0 && a > LONG_MAX - b) r = LONG_MAX;
       else if (b < 0 && a < LONG_MIN - b) r = LONG_MIN;
@@ -17079,6 +17082,11 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       if (b > 0 && a < LONG_MIN + b) r = LONG_MIN;
       else if (b < 0 && a > LONG_MAX + b) r = LONG_MAX;
       else r = a - b;
+    } else if (is_div){
+      /* SSATDIV — trunc-toward-zero; /0 → 0; LONG_MIN/-1 → LONG_MAX */
+      if (b == 0) r = 0;
+      else if (a == LONG_MIN && b == -1) r = LONG_MAX;
+      else r = a / b;
     } else {
       /* SSATMUL / STACKSATMUL */
       if (a == 0 || b == 0) r = 0;
@@ -17093,6 +17101,7 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack shared-divisor sat div: DSATDIVN already imm; stack form SSATDIV completes +/−/* plane */
   /* digit-1 stack imm saturating ALU: SSATADDN · SSATSUBN · SSATMULN (imm dual of SSATADD plane) */
   if (kw(&L->cur,"SSATADDN")||kw(&L->cur,"STACKSATADDN")||kw(&L->cur,"SATADDN")||
       kw(&L->cur,"SSATADDIMM")||kw(&L->cur,"SADDSATN")){

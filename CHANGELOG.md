@@ -1,3 +1,15 @@
+## 1.12.281-universal — 2026-08-03
+
+### Direction
+- Algocube digit **3** → stack saturating divide (complete SSATADD/SSATSUB/SSATMUL plane; dual of DSATDIV path).
+
+### Language
+- `SSATDIV`/`STACKSATDIV`/`SATDIVST` — a b → sat(a/b); `/0→0`; `LONG_MIN/-1→LONG_MAX`
+- Proof `304_ssatdiv.cubalc`
+
+### Prior
+See 1.12.280-universal.
+
 ## 1.12.280-universal — 2026-08-03
 
 ### Direction
