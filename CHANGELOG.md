@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.138-universal — 2026-08-03
+
+### Direction
+- Algocube digit **9** → dual-stack data-path clip + sign-extend.
+
+### Language
+- `DCLIP8`/`2CLIP8` · `DCLIP16`/`2CLIP16` — clamp pair to u8/u16 ranges
+- `DSEXT8`/`2SEXT8` · `DSEXT16`/`2SEXT16` — sign-extend low 8/16 bits on pair
+- Proof `161_dclip_dsext.cubalc`
+
+### Prior
+See 1.12.137-universal.
+
 ## 1.12.137-universal — 2026-08-03
 
 ### Direction
