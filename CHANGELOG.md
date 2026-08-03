@@ -1,3 +1,17 @@
+## 1.12.235-universal — 2026-08-03
+
+### Direction
+- Algocube digit **1** → dual-stack immediate modular inv/pow/div (dual of SMODINVN/SPOWMODN/SMODDIVN).
+
+### Language
+- `DMODINVN`/`2MODINVN`/`PAIRMODINVN` m — pair inverses mod m
+- `DPOWMODN`/`2POWMODN`/`PAIRPOWMODN` exp m — pair pow mod m
+- `DMODDIVN`/`2MODDIVN`/`PAIRMODDIVN` c m — pair · c⁻¹ mod m
+- Proof `258_dmodinvn_dpowmodn.cubalc`
+
+### Prior
+See 1.12.234-universal.
+
 ## 1.12.234-universal — 2026-08-03
 
 ### Direction

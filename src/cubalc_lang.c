@@ -263,6 +263,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"MULMOD")==0 || strcasecmp(tail,"POWMOD")==0 ||
             strcasecmp(tail,"MODINV")==0 || strcasecmp(tail,"INVMOD")==0 ||
             strcasecmp(tail,"MODDIV")==0 || strcasecmp(tail,"DIVMODM")==0 ||
+            strcasecmp(tail,"MODINVN")==0 || strcasecmp(tail,"INVMODN")==0 ||
+            strcasecmp(tail,"POWMODN")==0 || strcasecmp(tail,"POWMODIMM")==0 ||
+            strcasecmp(tail,"MODDIVN")==0 || strcasecmp(tail,"DIVMODMN")==0 ||
+            strcasecmp(tail,"MODINVIMM")==0 || strcasecmp(tail,"MODDIVIMM")==0 ||
             strcasecmp(tail,"SIGN")==0 || strcasecmp(tail,"CLAMP")==0 ||
             strcasecmp(tail,"SEL")==0 || strcasecmp(tail,"MUX")==0 ||
             strcasecmp(tail,"SEL2")==0 || strcasecmp(tail,"MUX2")==0 ||
@@ -7909,6 +7913,136 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack immediate modular inv/pow/div: DMODINVN · DPOWMODN · DMODDIVN (dual of SMODINVN/SPOWMODN/SMODDIVN) */
+  if (kw(&L->cur,"DMODINVN")||kw(&L->cur,"2MODINVN")||kw(&L->cur,"S2MODINVN")||
+      kw(&L->cur,"STACK2MODINVN")||kw(&L->cur,"PAIRMODINVN")||kw(&L->cur,"DINVMODN")||
+      kw(&L->cur,"2INVMODN")||kw(&L->cur,"DMODINVIMM")){
+    /* a b + m → a^{-1} mod m , b^{-1} mod m ; 0 if none / m<=1 */
+    lex_next(L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = aa;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += m; x = t; }
+      }
+      long bb = b % m; if (bb < 0) bb += m;
+      if (bb != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = bb;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += m; y = t; }
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOWMODN")||kw(&L->cur,"2POWMODN")||kw(&L->cur,"S2POWMODN")||
+      kw(&L->cur,"STACK2POWMODN")||kw(&L->cur,"PAIRPOWMODN")||kw(&L->cur,"DPOWMODIMM")||
+      kw(&L->cur,"2POWMODIMM")){
+    /* a b + exp m → a^exp mod m , b^exp mod m ; m<=0 → 0; exp<0 → 0 */
+    lex_next(L);
+    long exp = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (m > 0 && exp >= 0){
+      long basea = a % m; if (basea < 0) basea += m;
+      long baseb = b % m; if (baseb < 0) baseb += m;
+      x = 1 % m; y = 1 % m;
+      long e = exp;
+      long ba = basea, bb = baseb;
+      while (e > 0){
+        if (e & 1){
+          long ya = x, xa = ba, acca = 0;
+          long yb = y, xb = bb, accb = 0;
+          while (ya > 0 || yb > 0){
+            if (ya & 1) acca = (acca + xa) % m;
+            if (yb & 1) accb = (accb + xb) % m;
+            xa = (xa + xa) % m; xb = (xb + xb) % m;
+            ya >>= 1; yb >>= 1;
+          }
+          x = acca; y = accb;
+        }
+        {
+          long xa = ba, acca = 0, ya = ba;
+          long xb = bb, accb = 0, yb = bb;
+          while (ya > 0 || yb > 0){
+            if (ya & 1) acca = (acca + xa) % m;
+            if (yb & 1) accb = (accb + xb) % m;
+            xa = (xa + xa) % m; xb = (xb + xb) % m;
+            ya >>= 1; yb >>= 1;
+          }
+          ba = acca; bb = accb;
+        }
+        e >>= 1;
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMODDIVN")||kw(&L->cur,"2MODDIVN")||kw(&L->cur,"S2MODDIVN")||
+      kw(&L->cur,"STACK2MODDIVN")||kw(&L->cur,"PAIRMODDIVN")||kw(&L->cur,"DDIVMODMN")||
+      kw(&L->cur,"2DIVMODMN")||kw(&L->cur,"DMODDIVIMM")){
+    /* a b + c m → a*c^{-1} mod m , b*c^{-1} mod m ; 0 if none / m<=0 */
+    lex_next(L);
+    long c = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (m > 0){
+      long cc = c % m; if (cc < 0) cc += m;
+      if (cc != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = cc;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += m;
+          long aa = a % m; if (aa < 0) aa += m;
+          long bb = b % m; if (bb < 0) bb += m;
+          long acca = 0, xa = aa, ya = t;
+          long accb = 0, xb = bb, yb = t;
+          while (ya > 0 || yb > 0){
+            if (ya & 1) acca = (acca + xa) % m;
+            if (yb & 1) accb = (accb + xb) % m;
+            xa = (xa + xa) % m; xb = (xb + xb) % m;
+            ya >>= 1; yb >>= 1;
+          }
+          x = acca; y = accb;
+        }
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
