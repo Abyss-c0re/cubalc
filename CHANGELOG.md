@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.144-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack sat-div + n-bit RNG (energy/flow).
+
+### Language
+- `DSATDIV`/`2SATDIV` — pairwise saturating divide (`/0→0`, `LONG_MIN/-1→LONG_MAX`)
+- `DRANDBITS`/`2RANDBITS` — pair uniform in `[0, 2^n)` from width pair (n clamped 0..62)
+- Proof `167_dsatdiv_drandbits.cubalc`
+
+### Prior
+See 1.12.143-universal.
+
 ## 1.12.143-universal — 2026-08-03
 
 ### Direction
