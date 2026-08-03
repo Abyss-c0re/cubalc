@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.191-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → dual-stack energy soft activations (after residual/step).
+
+### Language
+- `DLEAKY`/`2LEAKY`/`DLEAKYRELU` — pairwise leaky ReLU (`x≥0 → x`, else `x/4`)
+- `DSOFTSIGN`/`2SOFTSIGN`/`DSOFTSGN` — pairwise soft-sign on energy plane `±100·|x|/(100+|x|)`
+- Proof `214_dleaky_dsoftsign.cubalc`
+
+### Prior
+See 1.12.190-universal.
+
+
 ## 1.12.190-universal — 2026-08-03
 
 ### Direction

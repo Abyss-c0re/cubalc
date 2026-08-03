@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-03T05:25:52+0300",
-  "iter": 250,
+  "ts": "2026-08-03T10:38:25+0300",
+  "iter": 263,
   "algocube_digit": 6,
-  "version": "1.12.140-universal",
-  "pass": 178,
+  "version": "1.12.191-universal",
+  "pass": 229,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -18,12 +18,8 @@
     "flow_compile"
   ],
   "ops": [
-    "DSATMUL",
-    "2SATMUL",
-    "DRANDRANGE",
-    "2RANDRANGE",
-    "DRANDIN"
+    "DLEAKY",
+    "DSOFTSIGN"
   ],
-  "proof": "programs/proof/163_dsatmul_drandrange.cubalc",
-  "delta": "digit-6 dual-stack sat-mul + range RNG"
+  "proof": "programs/proof/214_dleaky_dsoftsign.cubalc"
 }
