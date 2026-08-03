@@ -1,3 +1,18 @@
+## 1.12.291-universal — 2026-08-03
+
+### Direction
+- Algocube digit **8** → depth-8 foundation (extend after complete depth-7 plane).
+- Lexer: promote `8…` depth idents (DUP/DROP/SWAP) like 2…7.
+
+### Language
+- `8DUP`/`DUP8`/`STACK8DUP` — duplicate top 8
+- `8DROP`/`DROP8`/`STACK8DROP` — drop top 8
+- `8SWAP`/`SWAP8`/`STACK8SWAP` — reverse top 8
+- Proof `314_8dup_8drop.cubalc`
+
+### Prior
+See 1.12.290-universal.
+
 ## 1.12.290-universal — 2026-08-03
 
 ### Direction
