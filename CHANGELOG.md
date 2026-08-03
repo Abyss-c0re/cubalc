@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.12.128-universal — 2026-08-03
+
+### Direction
+- Algocube digit **5** → dual-stack extended bitwise: DNAND DNOR DXNOR DANDN.
+
+### Language
+- `DNAND`/`2NAND` — a b c d → ~(a&c) ~(b&d)
+- `DNOR`/`2NOR` — a b c d → ~(a|c) ~(b|d)
+- `DXNOR`/`2XNOR`/`DEQV` — a b c d → ~(a^c) ~(b^d)
+- `DANDN`/`2ANDN`/`DBIC` — a b c d → (a&~c) (b&~d)
+- Lexer 2-prefix: NAND NOR XNOR ANDN
+- Completes dual-stack bitwise plane after DAND/DOR/DXOR/DNOT
+- Proof `151_dnand_dandn.cubalc`
+
+### Prior
+See 1.12.127-universal.
+
 ## 1.12.127-universal — 2026-08-03
 
 ### Direction

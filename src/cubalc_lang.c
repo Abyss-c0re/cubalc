@@ -190,7 +190,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"NOT")==0 || strcasecmp(tail,"EQZ")==0 ||
             strcasecmp(tail,"NEZ")==0 ||
             strcasecmp(tail,"ROL")==0 || strcasecmp(tail,"ROR")==0 ||
-            strcasecmp(tail,"WITHIN")==0 || strcasecmp(tail,"BETWEEN")==0)
+            strcasecmp(tail,"WITHIN")==0 || strcasecmp(tail,"BETWEEN")==0 ||
+            strcasecmp(tail,"NAND")==0 || strcasecmp(tail,"NOR")==0 ||
+            strcasecmp(tail,"XNOR")==0 || strcasecmp(tail,"ANDN")==0)
           ok = 1;
       } else if (b[0]=='3'){
         if (strcasecmp(tail,"DUP")==0 || strcasecmp(tail,"DROP")==0 ||
@@ -6345,6 +6347,42 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = (a >= lo2 && a <= hi2) ? 1 : 0;
       y = (b >= lo2 && b <= hi2) ? 1 : 0;
     }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-5 dual-stack extended bitwise: DNAND · DNOR · DXNOR · DANDN */
+  if (kw(&L->cur,"DNAND")||kw(&L->cur,"2NAND")||kw(&L->cur,"S2NAND")||
+      kw(&L->cur,"STACK2NAND")||kw(&L->cur,"PAIRNAND")||
+      kw(&L->cur,"DNOR")||kw(&L->cur,"2NOR")||kw(&L->cur,"S2NOR")||
+      kw(&L->cur,"STACK2NOR")||kw(&L->cur,"PAIRNOR")||
+      kw(&L->cur,"DXNOR")||kw(&L->cur,"2XNOR")||kw(&L->cur,"S2XNOR")||
+      kw(&L->cur,"STACK2XNOR")||kw(&L->cur,"PAIRXNOR")||kw(&L->cur,"DEQV")||
+      kw(&L->cur,"DANDN")||kw(&L->cur,"2ANDN")||kw(&L->cur,"S2ANDN")||
+      kw(&L->cur,"STACK2ANDN")||kw(&L->cur,"PAIRANDN")||kw(&L->cur,"DBIC")){
+    /* a b c d → f(a,c) f(b,d) */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_nand = (strcmp(op,"DNAND")==0 || strcmp(op,"2NAND")==0 || strcmp(op,"S2NAND")==0 ||
+                   strcmp(op,"STACK2NAND")==0 || strcmp(op,"PAIRNAND")==0);
+    int is_nor = (strcmp(op,"DNOR")==0 || strcmp(op,"2NOR")==0 || strcmp(op,"S2NOR")==0 ||
+                  strcmp(op,"STACK2NOR")==0 || strcmp(op,"PAIRNOR")==0);
+    int is_xnor = (strcmp(op,"DXNOR")==0 || strcmp(op,"2XNOR")==0 || strcmp(op,"S2XNOR")==0 ||
+                   strcmp(op,"STACK2XNOR")==0 || strcmp(op,"PAIRXNOR")==0 ||
+                   strcmp(op,"DEQV")==0);
+    /* else DANDN / BIC */
+    long x, y;
+    if (is_nand){ x = ~(a & c); y = ~(b & d); }
+    else if (is_nor){ x = ~(a | c); y = ~(b | d); }
+    else if (is_xnor){ x = ~(a ^ c); y = ~(b ^ d); }
+    else { x = a & ~c; y = b & ~d; }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
