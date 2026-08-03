@@ -1,3 +1,18 @@
+## 1.12.282-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → reverse imm sat ALU (energy/sat dual of SSUBFROMN/SDIVFROMN + dual-stack).
+
+### Language
+- `SSATSUBFROMN`/`SATSUBFROMN`/`SSRSUBN` n — TOS = sat(n − TOS)
+- `SSATDIVFROMN`/`SATDIVFROMN`/`SSRDIVN` n — TOS = sat(n / TOS); TOS==0 → 0; `LONG_MIN/-1→LONG_MAX`
+- `DSATSUBFROMN`/`PAIRSATSUBFROMN` n — a b → sat(n−a) sat(n−b)
+- `DSATDIVFROMN`/`PAIRSATDIVFROMN` n — a b → sat(n/a) sat(n/b); lane0 → 0
+- Proof `305_ssatsubfromn_dsatdivfromn.cubalc`
+
+### Prior
+See 1.12.281-universal.
+
 ## 1.12.281-universal — 2026-08-03
 
 ### Direction

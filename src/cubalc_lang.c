@@ -11242,6 +11242,49 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 dual-stack imm reverse sat: DSATSUBFROMN · DSATDIVFROMN (dual of SSATSUBFROMN plane) */
+  if (kw(&L->cur,"DSATSUBFROMN")||kw(&L->cur,"S2SATSUBFROMN")||kw(&L->cur,"STACK2SATSUBFROMN")||
+      kw(&L->cur,"PAIRSATSUBFROMN")||kw(&L->cur,"DSATRSUBN")||kw(&L->cur,"PAIRSATRSUBN")||
+      kw(&L->cur,"DSATSUBFROMIMM")||kw(&L->cur,"DNSATSUBN")){
+    /* a b + n → sat(n-a) sat(n-b) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    if (a > 0 && n < LONG_MIN + a) x = LONG_MIN;
+    else if (a < 0 && n > LONG_MAX + a) x = LONG_MAX;
+    else x = n - a;
+    if (b > 0 && n < LONG_MIN + b) y = LONG_MIN;
+    else if (b < 0 && n > LONG_MAX + b) y = LONG_MAX;
+    else y = n - b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSATDIVFROMN")||kw(&L->cur,"S2SATDIVFROMN")||kw(&L->cur,"STACK2SATDIVFROMN")||
+      kw(&L->cur,"PAIRSATDIVFROMN")||kw(&L->cur,"DSATRDIVN")||kw(&L->cur,"PAIRSATRDIVN")||
+      kw(&L->cur,"DSATDIVFROMIMM")||kw(&L->cur,"DNSATDIVN")){
+    /* a b + n → sat(n/a) sat(n/b); lane0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    if (a == 0) x = 0;
+    else if (n == LONG_MIN && a == -1) x = LONG_MAX;
+    else x = n / a;
+    if (b == 0) y = 0;
+    else if (n == LONG_MIN && b == -1) y = LONG_MAX;
+    else y = n / b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack immediate div/mod: DDIVN · DMODN (dual of SDIVN/SMODN; complete imm ALU) */
   if (kw(&L->cur,"DDIVN")||kw(&L->cur,"2DIVN")||kw(&L->cur,"S2DIVN")||
       kw(&L->cur,"STACK2DIVN")||kw(&L->cur,"PAIRDIVN")||kw(&L->cur,"DDIVIMM")||
@@ -17164,6 +17207,39 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     if (n == 0) r = 0;
     else if (a == LONG_MIN && n == -1) r = LONG_MAX;
     else r = a / n;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack imm reverse sat ALU: SSATSUBFROMN · SSATDIVFROMN (sat dual of SSUBFROMN/SDIVFROMN) */
+  if (kw(&L->cur,"SSATSUBFROMN")||kw(&L->cur,"STACKSATSUBFROMN")||kw(&L->cur,"SATSUBFROMN")||
+      kw(&L->cur,"SSRSUBN")||kw(&L->cur,"SSATRSUBN")||kw(&L->cur,"SSATSUBFROMIMM")||
+      kw(&L->cur,"NSATSUBN")){
+    /* SSATSUBFROMN n — TOS = sat(n - TOS) to LONG_MIN..LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (a > 0 && n < LONG_MIN + a) r = LONG_MIN;
+    else if (a < 0 && n > LONG_MAX + a) r = LONG_MAX;
+    else r = n - a;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATDIVFROMN")||kw(&L->cur,"STACKSATDIVFROMN")||kw(&L->cur,"SATDIVFROMN")||
+      kw(&L->cur,"SSRDIVN")||kw(&L->cur,"SSATRDIVN")||kw(&L->cur,"SSATDIVFROMIMM")||
+      kw(&L->cur,"NSATDIVN")){
+    /* SSATDIVFROMN n — TOS = sat(n / TOS); TOS==0 → 0; LONG_MIN/-1 → LONG_MAX */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 1];
+    long r;
+    if (a == 0) r = 0;
+    else if (n == LONG_MIN && a == -1) r = LONG_MAX;
+    else r = n / a;
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
