@@ -1,3 +1,17 @@
+## 1.12.301-universal — 2026-08-03
+
+### Direction
+- Algocube digit **6** → energy inverted bitwise stack↔cell (NAND/NOR/XNOR after SANDTOC/SORTOC/SXORTOC plane).
+
+### Language
+- `SNANDTOC`/`SNANDTOCELL`/`BNANDTOC` — stack `i v → cells[i]=~(cells[i]&v)` leave result
+- `SNORTOC`/`SNORTOCELL`/`BNORTOC` — stack `i v → cells[i]=~(cells[i]|v)` leave result
+- `SXNORTOC`/`SEQUIVTOC`/`BXNORTOC` — stack `i v → cells[i]=~(cells[i]^v)` leave result
+- Proof `324_snandtoc_sxnortoc.cubalc`
+
+### Prior
+See 1.12.300-universal.
+
 ## 1.12.300-universal — 2026-08-03
 
 ### Direction
