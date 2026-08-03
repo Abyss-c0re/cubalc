@@ -11,11 +11,11 @@
 | **proof** | `programs/proof/319_sandtoc_sxortoc.cubalc` |
 
 ### Delta
-Digit-1 stack↔cell bitwise accumulate: &=, |=, ^= single cell (dual of range SANDCELL).
+Digit-1 stack↔cell bitwise accumulate: &=, |=, ^= single cell (dual of range SANDCELL). Tree restored after evolve mass-delete mid-tick.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
-- daemon running; evolve mass-deleted proofs/scripts mid-tick — restored from HEAD
+- daemon running
 
 ### Note
 Fir…
