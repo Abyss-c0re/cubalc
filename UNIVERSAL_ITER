@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 500 |
+| **iter** | 501 |
 | **digit** | **3** (urandom) |
-| **version** | `1.14.15-universal` |
-| **pass/fail** | **487 / 0** (green) |
-| **commit** | `99bf89b` → `origin/main` |
-| **ops** | `SMAX8N` / `SEQ8N` / `SNE8N` |
-| **proof** | `programs/proof/472_smax8n_sne8n.cubalc` |
+| **version** | `1.14.16-universal` |
+| **pass/fail** | **488 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SADD16N` / `SSUB16N` / `SMUL16N` |
+| **proof** | `programs/proof/473_sadd16n_smul16n.cubalc` |
 
 ### Delta
-Digit-3 stack imm byte-field max+eq: max merge; equality/inequality bool into selected byte. Completes min/max+eq compare plane after SMIN8N.
+Digit-3 stack imm halfword-field arith merge: add/sub/mul wrap into selected 16-bit field of TOS. Ladder after byte SADD8N plane.
 
-**Status:** 1.14.14→1.14.15-universal; suite green 487/0; push ok.
+**Status:** 1.14.15→1.14.16-universal; suite green 488/0; push pending.

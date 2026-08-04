@@ -1,3 +1,17 @@
+## 1.14.16-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack imm 16-bit field arith merge (halfword dual of SADD8N/SSUB8N/SMUL8N; wrap uint16 ALU foundation after SAND16N plane).
+
+### Language
+- `SADD16N` — `field n → halfword n = (hw + field) & 0xFFFF`
+- `SSUB16N` — `field n → halfword n = (hw - field) & 0xFFFF`
+- `SMUL16N` — `field n → halfword n = (hw * field) & 0xFFFF`
+- Proof `473_sadd16n_smul16n.cubalc`
+
+### Prior
+See 1.14.15-universal.
+
 ## 1.14.15-universal — 2026-08-04
 
 ### Direction
