@@ -1,3 +1,18 @@
+## 1.14.80-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack imm 4-bit field signed ordered-cmp (int4 plane after unsigned SLT/SGT/SLTE/SGTE).
+
+### Language
+- `SLTS4N` — `field n → nibble n = (int4(nib) < int4(field)) ? 1 : 0`
+- `SGTS4N` — `field n → nibble n = (int4(nib) > int4(field)) ? 1 : 0`
+- `SLTES4N` — `field n → nibble n = (int4(nib) <= int4(field)) ? 1 : 0`
+- `SGTES4N` — `field n → nibble n = (int4(nib) >= int4(field)) ? 1 : 0`
+- Proof `537_slts4n_sgtes4n.cubalc`
+
+### Prior
+See 1.14.79-universal.
+
 ## 1.14.79-universal — 2026-08-04
 
 ### Direction

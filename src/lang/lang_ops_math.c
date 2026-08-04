@@ -2705,6 +2705,92 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack imm 4-bit field signed ordered-cmp: SLTS4N · SGTS4N · SLTES4N · SGTES4N
+   * (signed int4 plane after unsigned SLT/SGT/SLTE/SGTE; nibble as -8..7) */
+  if (kw(&L->cur,"SLTS4N")||kw(&L->cur,"STACKLTS4N")||kw(&L->cur,"LTS4N")||
+      kw(&L->cur,"SCMPLTS4N")||kw(&L->cur,"SLTSSIGN4N")||kw(&L->cur,"SLTS4IMM")){
+    /* SLTS4N field n — nibble n = (int4(nib) < int4(field)) ? 1 : 0; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul);
+    if (v & 0x8) v -= 16;
+    long f = (long)((unsigned long)field & 0xFul);
+    if (f & 0x8) f -= 16;
+    unsigned long w = (v < f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGTS4N")||kw(&L->cur,"STACKGTS4N")||kw(&L->cur,"GTS4N")||
+      kw(&L->cur,"SCMPGTS4N")||kw(&L->cur,"SGTSSIGN4N")||kw(&L->cur,"SGTS4IMM")){
+    /* SGTS4N field n — nibble n = (int4(nib) > int4(field)) ? 1 : 0; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul);
+    if (v & 0x8) v -= 16;
+    long f = (long)((unsigned long)field & 0xFul);
+    if (f & 0x8) f -= 16;
+    unsigned long w = (v > f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLTES4N")||kw(&L->cur,"STACKLTES4N")||kw(&L->cur,"LTES4N")||
+      kw(&L->cur,"SCMPLES4N")||kw(&L->cur,"SLEQS4N")||kw(&L->cur,"SLTES4IMM")){
+    /* SLTES4N field n — nibble n = (int4(nib) <= int4(field)) ? 1 : 0; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul);
+    if (v & 0x8) v -= 16;
+    long f = (long)((unsigned long)field & 0xFul);
+    if (f & 0x8) f -= 16;
+    unsigned long w = (v <= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGTES4N")||kw(&L->cur,"STACKGTES4N")||kw(&L->cur,"GTES4N")||
+      kw(&L->cur,"SCMPGES4N")||kw(&L->cur,"SGEQS4N")||kw(&L->cur,"SGTES4IMM")){
+    /* SGTES4N field n — nibble n = (int4(nib) >= int4(field)) ? 1 : 0; n clamped 0..15 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul);
+    if (v & 0x8) v -= 16;
+    long f = (long)((unsigned long)field & 0xFul);
+    if (f & 0x8) f -= 16;
+    unsigned long w = (v >= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 stack imm 8-bit field arith merge: SADD8N · SSUB8N · SMUL8N
    * (byte-field dual of SADD4N/SSUB4N/SMUL4N; wrap uint8 ALU foundation after SAND8N plane) */
   if (kw(&L->cur,"SADD8N")||kw(&L->cur,"STACKADD8N")||kw(&L->cur,"ADD8N")||

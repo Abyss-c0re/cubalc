@@ -1,0 +1,166 @@
+# Proof 537 — digit-5 stack imm 4-bit signed ordered-cmp: SLTS4N SGTS4N SLTES4N SGTES4N
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# SLTS4N: int4(-1=0xF) < int4(1=0x1) → 1
+PUSH 0xF
+SLTS4N 0x1 0
+POP x
+ASSERT x == 1
+
+# unsigned would say 0xF > 0x1, signed less
+CLEARSTACK
+PUSH 0xF
+SLT4N 0x1 0
+POP x
+ASSERT x == 0
+
+# equal signed → 0 for SLTS
+CLEARSTACK
+PUSH 0x8
+LTS4N 0x8 0
+POP x
+ASSERT x == 0
+
+# positive less: 0x2 < 0x3 → 1
+CLEARSTACK
+PUSH 0x2
+SLTS4N 0x3 0
+POP x
+ASSERT x == 1
+
+# greater signed: 0x1 < 0xF (-1) → 0
+CLEARSTACK
+PUSH 0x1
+SLTS4N 0xF 0
+POP x
+ASSERT x == 0
+
+# preserved other nibbles
+CLEARSTACK
+PUSH 0x9AF
+SLTS4N 0x1 0
+POP x
+ASSERT x == 0x9A1
+
+# STACKLTS4N n1: nibble1 0xF (-1) < 0x0 → 1
+CLEARSTACK
+PUSH 0x00F0
+STACKLTS4N 0x0 1
+POP x
+ASSERT x == 0x0010
+
+# SGTS4N: 0x1 > 0xF (-1) → 1
+CLEARSTACK
+PUSH 0x1
+SGTS4N 0xF 0
+POP x
+ASSERT x == 1
+
+# 0xF > 0x1 → 0 signed
+CLEARSTACK
+PUSH 0xF
+GTS4N 0x1 0
+POP x
+ASSERT x == 0
+
+# equal → 0
+CLEARSTACK
+PUSH 0x5
+SGTS4N 0x5 0
+POP x
+ASSERT x == 0
+
+# 0x8 (-8) > 0x7 (7) → 0
+CLEARSTACK
+PUSH 0x8
+SGTS4N 0x7 0
+POP x
+ASSERT x == 0
+
+# preserved gt
+CLEARSTACK
+PUSH 0xAB1
+SGTS4N 0xF 0
+POP x
+ASSERT x == 0xAB1
+
+# SLTES4N: equal → 1
+CLEARSTACK
+PUSH 0x8
+SLTES4N 0x8 0
+POP x
+ASSERT x == 1
+
+# -1 <= 0 → 1
+CLEARSTACK
+PUSH 0xF
+LTES4N 0x0 0
+POP x
+ASSERT x == 1
+
+# 1 <= -1 → 0
+CLEARSTACK
+PUSH 0x1
+SLTES4N 0xF 0
+POP x
+ASSERT x == 0
+
+# SLEQS4N alias
+CLEARSTACK
+PUSH 0x2
+SLEQS4N 0x3 0
+POP x
+ASSERT x == 1
+
+# SGTES4N: equal → 1
+CLEARSTACK
+PUSH 0x5
+SGTES4N 0x5 0
+POP x
+ASSERT x == 1
+
+# 1 >= -1 → 1
+CLEARSTACK
+PUSH 0x1
+GTES4N 0xF 0
+POP x
+ASSERT x == 1
+
+# -8 >= 7 → 0
+CLEARSTACK
+PUSH 0x8
+SGTES4N 0x7 0
+POP x
+ASSERT x == 0
+
+# SGEQS4N alias: -1 >= -2 (0xE) → 1
+CLEARSTACK
+PUSH 0xF
+SGEQS4N 0xE 0
+POP x
+ASSERT x == 1
+
+# SCMPLTS4N / SCMPGES4N
+CLEARSTACK
+PUSH 0xE
+SCMPLTS4N 0xF 0
+POP x
+ASSERT x == 1
+
+CLEARSTACK
+PUSH 0xF
+SCMPGES4N 0xE 0
+POP x
+ASSERT x == 1
+
+# n2 signed
+CLEARSTACK
+PUSH 0x0F00
+SLTS4N 0x0 2
+POP x
+ASSERT x == 0x0100
+
+HOLD_FLASH 0
