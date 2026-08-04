@@ -6239,6 +6239,93 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 imm sat TOC: SSATADDTOCN · SSATSUBTOCN · SSATMULTOCN · SCLAMPTOCN
+   * (imm dual of SSATADDTOC/SSATSUBTOC/SSATMULTOC/SCLAMPTOC; peer of SSATADDN into cell) */
+  if (kw(&L->cur,"SSATADDTOCN")||kw(&L->cur,"SSATADDTOCIMM")||kw(&L->cur,"STACKSATADDTOCN")||
+      kw(&L->cur,"SSATADDATN")||kw(&L->cur,"SATADDTOCN")||kw(&L->cur,"SCELLSATADDN")||
+      kw(&L->cur,"SADDSATTOCN")){
+    /* i + n → cells[i] = sat(cells[i]+n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (n > 0 && a > LONG_MAX - n) r = LONG_MAX;
+    else if (n < 0 && a < LONG_MIN - n) r = LONG_MIN;
+    else r = a + n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATSUBTOCN")||kw(&L->cur,"SSATSUBTOCIMM")||kw(&L->cur,"STACKSATSUBTOCN")||
+      kw(&L->cur,"SSATSUBATN")||kw(&L->cur,"SATSUBTOCN")||kw(&L->cur,"SCELLSATSUBN")||
+      kw(&L->cur,"SSUBSATTOCN")){
+    /* i + n → cells[i] = sat(cells[i]-n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (n > 0 && a < LONG_MIN + n) r = LONG_MIN;
+    else if (n < 0 && a > LONG_MAX + n) r = LONG_MAX;
+    else r = a - n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATMULTOCN")||kw(&L->cur,"SSATMULTOCIMM")||kw(&L->cur,"STACKSATMULTOCN")||
+      kw(&L->cur,"SSATMULATN")||kw(&L->cur,"SATMULTOCN")||kw(&L->cur,"SCELLSATMULN")||
+      kw(&L->cur,"SMULSATTOCN")){
+    /* i + n → cells[i] = sat(cells[i]*n), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a == 0 || n == 0) r = 0;
+    else {
+      __int128 p = (__int128)a * (__int128)n;
+      if (p > (__int128)LONG_MAX) r = LONG_MAX;
+      else if (p < (__int128)LONG_MIN) r = LONG_MIN;
+      else r = (long)p;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLAMPTOCN")||kw(&L->cur,"SCLAMPTOCIMM")||kw(&L->cur,"STACKCLAMPTOCN")||
+      kw(&L->cur,"SCLAMPATN")||kw(&L->cur,"CLAMPTOCN")||kw(&L->cur,"SCELLCLAMPN")||
+      kw(&L->cur,"SBOUNDTOCN")||kw(&L->cur,"BOUNDTOCN")){
+    /* i + lo hi → cells[i] = clamp(cells[i], lo, hi), leave result */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (lo > hi){ long t = lo; lo = hi; hi = t; }
+    long a = vm->cells[(int)i];
+    long r = a;
+    if (r < lo) r = lo;
+    if (r > hi) r = hi;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack↔cell bitwise accumulate: SANDTOC · SORTOC · SXORTOC
    * (single-index dual of range SANDCELL; names avoid SCELLAND/SANDCELL) */
   if (kw(&L->cur,"SANDTOC")||kw(&L->cur,"SANDTOCELL")||kw(&L->cur,"STACKANDTOC")||

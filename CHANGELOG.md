@@ -1,3 +1,18 @@
+## 1.12.348-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → imm sat TOC (imm dual of SSATADDTOC/SCLAMPTOC after SSATADDN plane).
+
+### Language
+- `SSATADDTOCN`/`SATADDTOCN` n — stack `i → cells[i]=sat(cells[i]+n)` leave result
+- `SSATSUBTOCN`/`SATSUBTOCN` n — stack `i → cells[i]=sat(cells[i]-n)` leave result
+- `SSATMULTOCN`/`SATMULTOCN` n — stack `i → cells[i]=sat(cells[i]*n)` leave result
+- `SCLAMPTOCN`/`CLAMPTOCN` lo hi — stack `i → cells[i]=clamp(cells[i],lo,hi)` leave result
+- Proof `371_ssataddtocn_sclamptocn.cubalc`
+
+### Prior
+See 1.12.347-universal.
+
 ## 1.12.347-universal — 2026-08-04
 
 ### Direction
