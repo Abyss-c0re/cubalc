@@ -24621,6 +24621,48 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack word path 32: SSAR32 · SROTL32 · SROTR32
+   * (arith SHR32 dual of SSHR32; rotate32 dual of SROTL8/16 plane) */
+  if (kw(&L->cur,"SSAR32")||kw(&L->cur,"SASHR32")||kw(&L->cur,"STACKSAR32")||
+      kw(&L->cur,"SSARL")||kw(&L->cur,"ASHR32")){
+    /* a k → arithmetic right shift low 32 of a by k (k>=32 → all sign) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    long va = (long)(int)(unsigned int)a; /* sign-extend low 32 to long */
+    long r;
+    if (kk >= 32) r = (va < 0) ? -1L : 0L;
+    else r = va >> kk;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTL32")||kw(&L->cur,"SROL32")||kw(&L->cur,"STACKROTL32")||
+      kw(&L->cur,"SROTR32")||kw(&L->cur,"SROR32")||kw(&L->cur,"STACKROTR32")){
+    /* a k → rotate left/right within low 32 bits */
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *q=op;*q;q++) if (*q>='a'&&*q<='z') *q=(char)(*q-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)a;
+    kk &= 31;
+    long r;
+    int is_left = (strcmp(op,"SROTL32")==0 || strcmp(op,"SROL32")==0 ||
+                   strcmp(op,"STACKROTL32")==0);
+    if (kk == 0) r = (long)w;
+    else if (is_left) r = (long)(((w << kk) | (w >> (32 - kk))));
+    else r = (long)(((w >> kk) | (w << (32 - kk))));
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SSEXT32")||kw(&L->cur,"SSEXTL")||kw(&L->cur,"STACKSEXT32")||
       kw(&L->cur,"SZEXT32")||kw(&L->cur,"SZEXTL")||kw(&L->cur,"STACKZEXT32")){
     char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);

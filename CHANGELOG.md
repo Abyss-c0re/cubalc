@@ -1,3 +1,17 @@
+## 1.12.399-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack word path 32 (arith SHR32 dual of SSHR32; rotate32 dual of SROTL8/16).
+
+### Language
+- `SSAR32`/`SASHR32` — stack `a k → arithmetic right shift low 32 of a by k`
+- `SROTL32`/`SROL32` — stack `a k → rotate left within low 32 bits`
+- `SROTR32`/`SROR32` — stack `a k → rotate right within low 32 bits`
+- Proof `422_ssar32_srotr32.cubalc`
+
+### Prior
+See 1.12.398-universal.
+
 ## 1.12.398-universal — 2026-08-04
 
 ### Direction

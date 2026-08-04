@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 467 |
-| **digit** | **5** (urandom) |
-| **version** | `1.12.398-universal` |
-| **pass/fail** | **436 / 0** (green) |
-| **commit** | `7d58c44` → `origin/main` |
-| **ops** | `DSHL32` / `DSHR32` / `DSAR32` |
-| **proof** | `programs/proof/421_dshl32_dsar32.cubalc` |
+| **iter** | 469 |
+| **digit** | **1** (urandom) |
+| **version** | `1.12.399-universal` |
+| **pass/fail** | **437 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SSAR32` / `SROTL32` / `SROTR32` |
+| **proof** | `programs/proof/422_ssar32_srotr32.cubalc` |
 
 ### Delta
-Digit-5 dual-stack fixed-width shift32: complete dual-stack fixed shift 4/8/16/32; lexer 2SHL32/2SHR32/2SAR32.
+Digit-1 stack word path 32: arith SHR32 dual of SSHR32; rotate32 dual of SROTL8/16 plane.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 - tree healthy
 
-**Status:** 1.12.397→1.12.398; suite green 436/0.
+**Status:** 1.12.398→1.12.399; suite green 437/0.
