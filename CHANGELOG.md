@@ -1,3 +1,17 @@
+## 1.14.33-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 8-bit field unary+rotate (byte ladder of DNOT4N/DROL4N/DROR4N; start dual 8n unary plane).
+
+### Language
+- `DNOT8N` — `n → byte n of each = ~byte & 0xFF`
+- `DROL8N` — `k n → rotl8 byte n of each by k&7`
+- `DROR8N` — `k n → rotr8 byte n of each by k&7`
+- Proof `490_dnot8n_dror8n.cubalc`
+
+### Prior
+See 1.14.32-universal.
+
 ## 1.14.32-universal — 2026-08-04
 
 ### Direction
