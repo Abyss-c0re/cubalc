@@ -6,7 +6,7 @@
 | **digit** | **4** (urandom; imm nibble field TOC) |
 | **version** | `1.12.358-universal` |
 | **pass/fail** | **396 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `c63f292` → `origin/main` |
 | **ops** | `SNIBTOCN` / `SSETNIBTOCN` / `SCLRNIBTOCN` |
 | **proof** | `programs/proof/381_snibtocn_sclrnibtocn.cubalc` |
 
