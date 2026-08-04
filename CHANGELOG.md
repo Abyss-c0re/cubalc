@@ -1,3 +1,17 @@
+## 1.12.413-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → cell fixed-width 16 bit-metrics (width-16 dual of POPCNT/CLZ/CTZ after SAR16/SEXT16/ABS16 plane).
+
+### Language
+- `POPCNT16CELL`/`POPCNT16RANGE` — `lo hi → cells[i] = popcount(low16)`
+- `CLZ16CELL`/`CLZ16RANGE` — `lo hi → cells[i] = clz16(low16)` (0 → 16)
+- `CTZ16CELL`/`CTZ16RANGE` — `lo hi → cells[i] = ctz16(low16)` (0 → 16)
+- Proof `436_popcnt16cell_ctz16cell.cubalc`
+
+### Prior
+See 1.12.412-universal.
+
 ## 1.12.412-universal — 2026-08-04
 
 ### Direction
