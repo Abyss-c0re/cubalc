@@ -3887,6 +3887,62 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack imm 32-bit field arith merge: SADD32N · SSUB32N · SMUL32N
+   * (word ladder of SADD16N/SSUB16N/SMUL16N; wrap uint32 ALU after SPARITY32N metrics) */
+  if (kw(&L->cur,"SADD32N")||kw(&L->cur,"STACKADD32N")||kw(&L->cur,"ADD32N")||
+      kw(&L->cur,"SADDDWN")||kw(&L->cur,"SADD32IMM")||kw(&L->cur,"SINC32N")){
+    /* SADD32N field n — word n of TOS = (w + field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (((base >> sh) & 0xFFFFFFFFul) + f) & 0xFFFFFFFFul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSUB32N")||kw(&L->cur,"STACKSUB32N")||kw(&L->cur,"SUB32N")||
+      kw(&L->cur,"SSUBDWN")||kw(&L->cur,"SSUB32IMM")||kw(&L->cur,"SDEC32N")){
+    /* SSUB32N field n — word n of TOS = (w - field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (((base >> sh) & 0xFFFFFFFFul) - f) & 0xFFFFFFFFul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMUL32N")||kw(&L->cur,"STACKMUL32N")||kw(&L->cur,"MUL32N")||
+      kw(&L->cur,"SMULDWN")||kw(&L->cur,"SMUL32IMM")||kw(&L->cur,"STIMES32N")){
+    /* SMUL32N field n — word n of TOS = (w * field) & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (((base >> sh) & 0xFFFFFFFFul) * f) & 0xFFFFFFFFul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

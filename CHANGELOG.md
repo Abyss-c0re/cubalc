@@ -1,3 +1,17 @@
+## 1.14.63-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack imm 32-bit field arith merge (word ladder of SADD16N/SSUB16N/SMUL16N after SPARITY32N metrics).
+
+### Language
+- `SADD32N` — `field n → word n of TOS = (w + field) & 0xFFFFFFFF` wrap
+- `SSUB32N` — `field n → word n of TOS = (w - field) & 0xFFFFFFFF` wrap
+- `SMUL32N` — `field n → word n of TOS = (w * field) & 0xFFFFFFFF` wrap
+- Proof `520_sadd32n_smul32n.cubalc`
+
+### Prior
+See 1.14.62-universal.
+
 ## 1.14.62-universal — 2026-08-04
 
 ### Direction
