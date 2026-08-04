@@ -1,3 +1,17 @@
+## 1.14.22-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → dual-stack imm 8-bit field arith (dual of SADD8N/SSUB8N/SMUL8N; wrap uint8 byte plane after dual halfword ALU).
+
+### Language
+- `DADD8N` — `field n → byte n of each = (byte + field) & 0xFF`
+- `DSUB8N` — `field n → byte n of each = (byte - field) & 0xFF`
+- `DMUL8N` — `field n → byte n of each = (byte * field) & 0xFF`
+- Proof `479_dadd8n_dmul8n.cubalc`
+
+### Prior
+See 1.14.21-universal.
+
 ## 1.14.21-universal — 2026-08-04
 
 ### Direction
