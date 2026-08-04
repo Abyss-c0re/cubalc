@@ -10482,6 +10482,108 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 dual-stack imm 32-bit field signed ordered-cmp: DLTS32N · DGTS32N · DLTES32N · DGTES32N
+   * (dual of SLTS32N/SGTS32N/SLTES32N/SGTES32N; signed int32 plane on top two) */
+  if (kw(&L->cur,"DLTS32N")||kw(&L->cur,"S2LTS32N")||kw(&L->cur,"STACK2LTS32N")||
+      kw(&L->cur,"PAIRLTS32N")||kw(&L->cur,"DCMPLTS32N")||kw(&L->cur,"DLTSSIGN32N")||
+      kw(&L->cur,"DLTS32IMM")){
+    /* a b + field n → word n of each = (int32(w) < int32(field)) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    unsigned long wa = (va < f) ? 1ul : 0ul;
+    unsigned long wb = (vb < f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DGTS32N")||kw(&L->cur,"S2GTS32N")||kw(&L->cur,"STACK2GTS32N")||
+      kw(&L->cur,"PAIRGTS32N")||kw(&L->cur,"DCMPGTS32N")||kw(&L->cur,"DGTSSIGN32N")||
+      kw(&L->cur,"DGTS32IMM")){
+    /* a b + field n → word n of each = (int32(w) > int32(field)) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    unsigned long wa = (va > f) ? 1ul : 0ul;
+    unsigned long wb = (vb > f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DLTES32N")||kw(&L->cur,"S2LTES32N")||kw(&L->cur,"STACK2LTES32N")||
+      kw(&L->cur,"PAIRLTES32N")||kw(&L->cur,"DCMPLES32N")||kw(&L->cur,"DLEQS32N")||
+      kw(&L->cur,"DLTES32IMM")){
+    /* a b + field n → word n of each = (int32(w) <= int32(field)) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    unsigned long wa = (va <= f) ? 1ul : 0ul;
+    unsigned long wb = (vb <= f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DGTES32N")||kw(&L->cur,"S2GTES32N")||kw(&L->cur,"STACK2GTES32N")||
+      kw(&L->cur,"PAIRGTES32N")||kw(&L->cur,"DCMPGES32N")||kw(&L->cur,"DGEQS32N")||
+      kw(&L->cur,"DGTES32IMM")){
+    /* a b + field n → word n of each = (int32(w) >= int32(field)) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    unsigned long wa = (va >= f) ? 1ul : 0ul;
+    unsigned long wb = (vb >= f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||

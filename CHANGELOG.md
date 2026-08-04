@@ -1,3 +1,18 @@
+## 1.14.87-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → dual-stack imm 32-bit field signed ordered-cmp (dual of SLTS32N plane after DGTE32N; complete signed ordered plane all widths).
+
+### Language
+- `DLTS32N` — `field n → word n of each = (int32(w) < int32(field)) ? 1 : 0`
+- `DGTS32N` — `field n → word n of each = (int32(w) > int32(field)) ? 1 : 0`
+- `DLTES32N` — `field n → word n of each = (int32(w) <= int32(field)) ? 1 : 0`
+- `DGTES32N` — `field n → word n of each = (int32(w) >= int32(field)) ? 1 : 0`
+- Proof `544_dlts32n_dgtes32n.cubalc`
+
+### Prior
+See 1.14.86-universal.
+
 ## 1.14.86-universal — 2026-08-04
 
 ### Direction
