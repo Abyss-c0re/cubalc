@@ -1,3 +1,17 @@
+## 1.12.389-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack dual fixed clip TOC (complete unsigned clip 4/8/16/32 plane after SCLIP8TOC).
+
+### Language
+- `SCLIP4TOC`/`CLIP4TOC` — stack `i → cells[i] = clamp to unsigned nibble [0,15]`
+- `SCLIP16TOC`/`CLIP16TOC` — stack `i → cells[i] = clamp to unsigned 16-bit [0,65535]`
+- `SCLIP32TOC`/`CLIP32TOC` — stack `i → cells[i] = clamp to unsigned 32-bit [0,0xFFFFFFFF]`
+- Proof `412_sclip4toc_sclip32toc.cubalc`
+
+### Prior
+See 1.12.388-universal.
+
 ## 1.12.388-universal — 2026-08-04
 
 ### Direction
