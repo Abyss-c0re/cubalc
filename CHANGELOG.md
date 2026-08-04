@@ -1,3 +1,17 @@
+## 1.12.344-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → stack↔cell modular inv/pow/div TOC (stack dual of SPOWMODTOCN plane).
+
+### Language
+- `SPOWMODTOC`/`POWMODTOC` — stack `i exp m → cells[i]=cells[i]^exp mod m` leave result
+- `SMODDIVTOC`/`MODDIVTOC` — stack `i b m → cells[i]=cells[i]·b⁻¹ mod m` leave result
+- `SMODINVTOC`/`INVMODTOC` — stack `i m → cells[i]=cells[i]⁻¹ mod m` leave result
+- Proof `367_spowmodtoc_smodinvtoc.cubalc`
+
+### Prior
+See 1.12.343-universal.
+
 ## 1.12.343-universal — 2026-08-04
 
 ### Direction
