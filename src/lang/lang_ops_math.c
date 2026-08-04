@@ -3331,6 +3331,66 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack imm 16-bit field unary+rotate: SNOT16N · SROL16N · SROR16N
+   * (halfword ladder of SNOT8N/SROL8N/SROR8N; stack dual of DNOT16N after SZEXT16N) */
+  if (kw(&L->cur,"SNOT16N")||kw(&L->cur,"STACKNOT16N")||kw(&L->cur,"NOT16N")||
+      kw(&L->cur,"SNOTWORDN")||kw(&L->cur,"SINV16N")||kw(&L->cur,"SINVERT16N")){
+    /* SNOT16N n — halfword n of TOS = ~hw & 0xFFFF; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (~((base >> sh) & 0xFFFFul)) & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROL16N")||kw(&L->cur,"STACKROL16N")||kw(&L->cur,"ROL16N")||
+      kw(&L->cur,"SROTL16N")||kw(&L->cur,"SROLWORDN")||kw(&L->cur,"SROTWORDL")){
+    /* SROL16N k n — rotl16 halfword n of TOS by k&15; n clamped 0..3 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (base >> sh) & 0xFFFFul;
+    unsigned long rot = (kk == 0) ? w : (((w << (unsigned)kk) | (w >> (unsigned)(16 - kk))) & 0xFFFFul);
+    long r = (long)((base & ~(0xFFFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROR16N")||kw(&L->cur,"STACKROR16N")||kw(&L->cur,"ROR16N")||
+      kw(&L->cur,"SROTR16N")||kw(&L->cur,"SRORWORDN")||kw(&L->cur,"SROTWORDR")){
+    /* SROR16N k n — rotr16 halfword n of TOS by k&15; n clamped 0..3 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (base >> sh) & 0xFFFFul;
+    unsigned long rot = (kk == 0) ? w : (((w >> (unsigned)kk) | (w << (unsigned)(16 - kk))) & 0xFFFFul);
+    long r = (long)((base & ~(0xFFFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

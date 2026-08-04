@@ -1,3 +1,17 @@
+## 1.14.46-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack imm 16-bit field unary+rotate (halfword ladder of SNOT8N/SROL8N/SROR8N; stack dual of DNOT16N).
+
+### Language
+- `SNOT16N` — `n → halfword n of TOS = ~hw & 0xFFFF`
+- `SROL16N` — `k n → rotl16 halfword n of TOS by k&15`
+- `SROR16N` — `k n → rotr16 halfword n of TOS by k&15`
+- Proof `503_snot16n_sror16n.cubalc`
+
+### Prior
+See 1.14.45-universal.
+
 ## 1.14.45-universal — 2026-08-04
 
 ### Direction
