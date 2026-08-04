@@ -1,3 +1,18 @@
+## 1.14.84-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack imm 16-bit field signed ordered-cmp (halfword ladder of SLTS8N after unsigned SGTE16N).
+
+### Language
+- `SLTS16N` — `field n → halfword n = (int16(hw) < int16(field)) ? 1 : 0`
+- `SGTS16N` — `field n → halfword n = (int16(hw) > int16(field)) ? 1 : 0`
+- `SLTES16N` — `field n → halfword n = (int16(hw) <= int16(field)) ? 1 : 0`
+- `SGTES16N` — `field n → halfword n = (int16(hw) >= int16(field)) ? 1 : 0`
+- Proof `541_slts16n_sgtes16n.cubalc`
+
+### Prior
+See 1.14.83-universal.
+
 ## 1.14.83-universal — 2026-08-04
 
 ### Direction
