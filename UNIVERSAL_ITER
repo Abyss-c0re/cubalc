@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 473 |
-| **digit** | **7** (urandom) |
-| **version** | `1.12.392-universal` |
-| **pass/fail** | **430 / 0** (green) |
-| **commit** | `48456d2` → `origin/main` |
-| **ops** | `SCLIPS4TOC` / `SCLIPS32TOC` / `SCLIPS8TOCN` |
-| **proof** | `programs/proof/415_sclips4toc_sclips8tocn.cubalc` |
+| **iter** | 474 |
+| **digit** | **4** (urandom) |
+| **version** | `1.12.393-universal` |
+| **pass/fail** | **431 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SCLIPS4TOCN` / `SCLIPS16TOCN` / `SCLIPS32TOCN` |
+| **proof** | `programs/proof/416_sclips4tocn_sclips32tocn.cubalc` |
 
 ### Delta
-Digit-7 signed clip 4/32 + imm signed8 TOC: complete signed clip 4/8/16/32 plane; imm dual of SCLIPS8TOC.
+Digit-4 imm dual signed clip TOC: complete signed clip imm plane 4/8/16/32 (with prior SCLIPS8TOCN).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 - tree healthy
 
-**Status:** 1.12.391→1.12.392; signed clip ladder complete 4/8/16/32 + imm8.
+**Status:** 1.12.392→1.12.393; signed clip imm duals complete.

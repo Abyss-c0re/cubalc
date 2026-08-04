@@ -1,3 +1,17 @@
+## 1.12.393-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm dual signed clip TOC (imm dual of SCLIPS4/16/32TOC; complete signed clip imm plane with SCLIPS8TOCN).
+
+### Language
+- `SCLIPS4TOCN`/`CLIPS4TOCN` — stack `i → cells[i] = clamp to signed 4-bit [-8,7]` (i replaced)
+- `SCLIPS16TOCN`/`CLIPS16TOCN` — stack `i → cells[i] = clamp to signed 16-bit [-32768,32767]` (i replaced)
+- `SCLIPS32TOCN`/`CLIPS32TOCN` — stack `i → cells[i] = clamp to signed 32-bit [INT32_MIN,INT32_MAX]` (i replaced)
+- Proof `416_sclips4tocn_sclips32tocn.cubalc`
+
+### Prior
+See 1.12.392-universal.
+
 ## 1.12.392-universal — 2026-08-04
 
 ### Direction
