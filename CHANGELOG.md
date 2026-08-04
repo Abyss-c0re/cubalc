@@ -1,3 +1,17 @@
+## 1.14.25-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → dual-stack imm 4-bit field arith (dual of SADD4N/SSUB4N/SMUL4N; wrap uint4 nibble plane after dual 8n ALU).
+
+### Language
+- `DADD4N` — `field n → nibble n of each = (nib + field) & 0xF`
+- `DSUB4N` — `field n → nibble n of each = (nib - field) & 0xF`
+- `DMUL4N` — `field n → nibble n of each = (nib * field) & 0xF`
+- Proof `482_dadd4n_dmul4n.cubalc`
+
+### Prior
+See 1.14.24-universal.
+
 ## 1.14.24-universal — 2026-08-04
 
 ### Direction
