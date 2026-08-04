@@ -1,3 +1,17 @@
+## 1.12.376-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack dual low-n reverse/rotate TOC (stack dual of SBREVTOCN plane after SCLRMNTOC).
+
+### Language
+- `SBREVTOC`/`BREVTOC` — stack `i n → reverse low n bits of cells[i]` (high kept; n 0..64)
+- `SROLBTOC`/`ROLBTOC` — stack `i n → rotl-1 within low n bits of cells[i]`
+- `SRORBTOC`/`RORBTOC` — stack `i n → rotr-1 within low n bits of cells[i]`
+- Proof `399_sbrevtoc_srorbtoc.cubalc`
+
+### Prior
+See 1.12.375-universal.
+
 ## 1.12.375-universal — 2026-08-04
 
 ### Direction

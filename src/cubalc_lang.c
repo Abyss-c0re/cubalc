@@ -6595,6 +6595,99 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack dual low-n reverse/rotate TOC: SBREVTOC · SROLBTOC · SRORBTOC
+   * (stack dual of SBREVTOCN/SROLBTOCN/SRORBTOCN after SCLRMNTOC plane) */
+  if (kw(&L->cur,"SBREVTOC")||kw(&L->cur,"STACKBREVTOC")||kw(&L->cur,"SREVLOWTOC")||
+      kw(&L->cur,"BREVTOC")||kw(&L->cur,"SCELLBREVNS")||kw(&L->cur,"SBITREVTOC")||
+      kw(&L->cur,"BREVNTOC")||kw(&L->cur,"SBREVAT")){
+    /* i n → reverse low n bits of cells[i]; high kept; n 0..64; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->cells[(int)i];
+    long r = a;
+    if (n > 0 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      unsigned long ra = 0;
+      for (long k = 0; k < n; k++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      r = (long)(((unsigned long)a & ~m) | (ra & m));
+    } else if (n >= 64){
+      unsigned long la = (unsigned long)a;
+      unsigned long ra = 0;
+      for (int k = 0; k < 64; k++){
+        ra = (ra << 1) | (la & 1ul); la >>= 1;
+      }
+      r = (long)ra;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROLBTOC")||kw(&L->cur,"STACKROLBTOC")||kw(&L->cur,"SROTLBTOC")||
+      kw(&L->cur,"ROLBTOC")||kw(&L->cur,"SCELLROLBNS")||kw(&L->cur,"SLOWROLTOC")||
+      kw(&L->cur,"ROLBNTOC")||kw(&L->cur,"SROLBAT")){
+    /* i n → rotate left by 1 within low n bits of cells[i]; high kept; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->cells[(int)i];
+    long r = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      la = ((la << 1) | (la >> (unsigned)(n - 1))) & m;
+      r = (long)(((unsigned long)a & ~m) | la);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      r = (long)((ua << 1) | (ua >> 63));
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SRORBTOC")||kw(&L->cur,"STACKRORBTOC")||kw(&L->cur,"SROTRBTOC")||
+      kw(&L->cur,"RORBTOC")||kw(&L->cur,"SCELLRORBNS")||kw(&L->cur,"SLOWRORTOC")||
+      kw(&L->cur,"RORBNTOC")||kw(&L->cur,"SRORBAT")){
+    /* i n → rotate right by 1 within low n bits of cells[i]; high kept; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    long a = vm->cells[(int)i];
+    long r = a;
+    if (n >= 2 && n < 64){
+      unsigned long m = (1ul << (unsigned)n) - 1ul;
+      unsigned long la = (unsigned long)a & m;
+      la = ((la >> 1) | (la << (unsigned)(n - 1))) & m;
+      r = (long)(((unsigned long)a & ~m) | la);
+    } else if (n >= 64){
+      unsigned long ua = (unsigned long)a;
+      r = (long)((ua >> 1) | (ua << 63));
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||
