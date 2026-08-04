@@ -1,3 +1,17 @@
+## 1.14.44-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack imm 16-bit field abs+extend (halfword ladder of DABS8N; dual of SABS16N plane).
+
+### Language
+- `DABS16N` — `n → halfword n of each = abs(int16)` (min -32768 → 0x8000)
+- `DSEXT16N` — `n → each cell = sign-extend halfword n to full width`
+- `DZEXT16N` — `n → each cell = zero-extend halfword n`
+- Proof `501_dabs16n_dzext16n.cubalc`
+
+### Prior
+See 1.14.43-universal.
+
 ## 1.14.43-universal — 2026-08-04
 
 ### Direction
