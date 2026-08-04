@@ -6,7 +6,7 @@
 | **digit** | **9** (urandom) |
 | **version** | `1.12.401-universal` |
 | **pass/fail** | **439 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `f873dcc` → `origin/main` |
 | **ops** | `NANDCELL` / `NORCELL` / `XNORCELL` |
 | **proof** | `programs/proof/424_nandcell_xnorcell.cubalc` |
 
