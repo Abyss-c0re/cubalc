@@ -1,3 +1,17 @@
+## 1.14.58-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack imm 32-bit field abs+extend (word ladder of SABS16N/SSEXT16N/SZEXT16N after SNEG32N plane).
+
+### Language
+- `SABS32N` — `n → word n of TOS = abs(int32)` (min stays 0x80000000)
+- `SSEXT32N` — `n → TOS = sign-extend word n of TOS to full width`
+- `SZEXT32N` — `n → TOS = zero-extend word n of TOS`
+- Proof `515_sabs32n_szext32n.cubalc`
+
+### Prior
+See 1.14.57-universal.
+
 ## 1.14.57-universal — 2026-08-04
 
 ### Direction
