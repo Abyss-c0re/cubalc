@@ -8149,6 +8149,34 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm 8-bit field signed WITHIN: DWITHINS8N (dual of SWITHINS8N) */
+  if (kw(&L->cur,"DWITHINS8N")||kw(&L->cur,"S2WITHINS8N")||kw(&L->cur,"STACK2WITHINS8N")||
+      kw(&L->cur,"PAIRWITHINS8N")||kw(&L->cur,"DWITHINSIGN8N")||kw(&L->cur,"DWITHINS8IMM")||
+      kw(&L->cur,"DINTERVALS8N")){
+    /* a b + lo hi n → byte n of each = (lo <= int8(b) < hi) ? 1 : 0; n 0..7; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    long slo = (long)((unsigned long)lo & 0xFFul); if (slo & 0x80) slo -= 256;
+    long shi = (long)((unsigned long)hi & 0xFFul); if (shi & 0x80) shi -= 256;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFul); if (va & 0x80) va -= 256;
+    long vb = (long)((mb >> sh) & 0xFFul); if (vb & 0x80) vb -= 256;
+    unsigned long wa = (va >= slo && va < shi) ? 1ul : 0ul;
+    unsigned long wb = (vb >= slo && vb < shi) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack imm 8-bit field bitwise: DAND8N · DOR8N · DXOR8N (dual of SAND8N/SOR8N/SXOR8N) */
   if (kw(&L->cur,"DAND8N")||kw(&L->cur,"S2AND8N")||kw(&L->cur,"STACK2AND8N")||
       kw(&L->cur,"PAIRAND8N")||kw(&L->cur,"DANDBIMM")||kw(&L->cur,"DKEEP8N")||
@@ -8834,6 +8862,34 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     long vb = (long)((mb >> sh) & 0xFul); if (vb & 0x8) vb -= 16;
     unsigned long wa = (va >= slo && va <= shi) ? 1ul : 0ul;
     unsigned long wb = (vb >= slo && vb <= shi) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack imm 4-bit field signed WITHIN: DWITHINS4N (completes WITHIN all widths dual) */
+  if (kw(&L->cur,"DWITHINS4N")||kw(&L->cur,"S2WITHINS4N")||kw(&L->cur,"STACK2WITHINS4N")||
+      kw(&L->cur,"PAIRWITHINS4N")||kw(&L->cur,"DWITHINSIGN4N")||kw(&L->cur,"DWITHINS4IMM")||
+      kw(&L->cur,"DINTERVALS4N")){
+    /* a b + lo hi n → nibble n of each = (lo <= int4(nib) < hi) ? 1 : 0; n 0..15; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    long slo = (long)((unsigned long)lo & 0xFul); if (slo & 0x8) slo -= 16;
+    long shi = (long)((unsigned long)hi & 0xFul); if (shi & 0x8) shi -= 16;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFul); if (va & 0x8) va -= 16;
+    long vb = (long)((mb >> sh) & 0xFul); if (vb & 0x8) vb -= 16;
+    unsigned long wa = (va >= slo && va < shi) ? 1ul : 0ul;
+    unsigned long wb = (vb >= slo && vb < shi) ? 1ul : 0ul;
     long x = (long)((ma & ~(0xFul << sh)) | (wa << sh));
     long y = (long)((mb & ~(0xFul << sh)) | (wb << sh));
     vm->stack[vm->sp - 2] = x;

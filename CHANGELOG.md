@@ -1,3 +1,17 @@
+## 1.14.97-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack+dual imm 8/4-bit field signed WITHIN (completes hi-exclusive interval plane all widths).
+
+### Language
+- `SWITHINS8N` — `lo hi n → byte n = (lo <= int8(b) < hi) ? 1 : 0`
+- `SWITHINS4N` — nibble form
+- `DWITHINS8N` / `DWITHINS4N` — dual-stack forms
+- Proof `554_swithins8n_dwithins4n.cubalc`
+
+### Prior
+See 1.14.96-universal.
+
 ## 1.14.96-universal — 2026-08-04
 
 ### Direction

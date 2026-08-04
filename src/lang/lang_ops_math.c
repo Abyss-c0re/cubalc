@@ -2885,6 +2885,28 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack imm 4-bit field signed WITHIN: SWITHINS4N (nibble ladder; completes WITHIN plane) */
+  if (kw(&L->cur,"SWITHINS4N")||kw(&L->cur,"STACKWITHINS4N")||kw(&L->cur,"WITHINS4N")||
+      kw(&L->cur,"SWITHINSIGN4N")||kw(&L->cur,"SWITHINS4IMM")||kw(&L->cur,"SINTERVALS4N")){
+    /* SWITHINS4N lo hi n — nibble n = (lo <= int4(nib) < hi) ? 1 : 0; n 0..15; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    long slo = (long)((unsigned long)lo & 0xFul); if (slo & 0x8) slo -= 16;
+    long shi = (long)((unsigned long)hi & 0xFul); if (shi & 0x8) shi -= 16;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul); if (v & 0x8) v -= 16;
+    unsigned long w = (v >= slo && v < shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 stack imm 8-bit field arith merge: SADD8N · SSUB8N · SMUL8N
    * (byte-field dual of SADD4N/SSUB4N/SMUL4N; wrap uint8 ALU foundation after SAND8N plane) */
   if (kw(&L->cur,"SADD8N")||kw(&L->cur,"STACKADD8N")||kw(&L->cur,"ADD8N")||
@@ -3315,6 +3337,28 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 8);
     long v = (long)((base >> sh) & 0xFFul); if (v & 0x80) v -= 256;
     unsigned long w = (v >= slo && v <= shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 stack imm 8-bit field signed WITHIN: SWITHINS8N (byte ladder of SWITHINS16N) */
+  if (kw(&L->cur,"SWITHINS8N")||kw(&L->cur,"STACKWITHINS8N")||kw(&L->cur,"WITHINS8N")||
+      kw(&L->cur,"SWITHINSIGN8N")||kw(&L->cur,"SWITHINS8IMM")||kw(&L->cur,"SINTERVALS8N")){
+    /* SWITHINS8N lo hi n — byte n = (lo <= int8(b) < hi) ? 1 : 0; n 0..7; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    long slo = (long)((unsigned long)lo & 0xFFul); if (slo & 0x80) slo -= 256;
+    long shi = (long)((unsigned long)hi & 0xFFul); if (shi & 0x80) shi -= 256;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    long v = (long)((base >> sh) & 0xFFul); if (v & 0x80) v -= 256;
+    unsigned long w = (v >= slo && v < shi) ? 1ul : 0ul;
     long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
