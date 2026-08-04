@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 494 |
-| **digit** | **7** (urandom) |
-| **version** | `1.14.9-universal` |
-| **pass/fail** | **481 / 0** (green) |
-| **commit** | `8b70fa5` → `origin/main` |
-| **ops** | `SABS4N` / `SSEXT4N` / `SZEXT4N` |
-| **proof** | `programs/proof/466_sabs4n_szext4n.cubalc` |
+| **iter** | 495 |
+| **digit** | **0** (urandom) |
+| **version** | `1.14.10-universal` |
+| **pass/fail** | **482 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SADD4N` / `SSUB4N` / `SMUL4N` |
+| **proof** | `programs/proof/467_sadd4n_smul4n.cubalc` |
 
 ### Delta
-Digit-7 stack imm nibble-field abs+extend: abs on selected nibble; extract+sign/zero-extend to TOS. Completes stack nibble signed extract after SNEG4N.
+Digit-0 stack imm nibble-field arith merge: add / sub / mul wrap into selected nibble of TOS. Completes nibble field ALU foundation after SAND4N bitwise plane.
 
-**Status:** 1.14.8→1.14.9-universal; suite green 481/0; push ok.
+**Status:** 1.14.9→1.14.10-universal; suite green 482/0; push pending.

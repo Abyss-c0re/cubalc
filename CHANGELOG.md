@@ -1,3 +1,17 @@
+## 1.14.10-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack imm 4-bit field arith merge (nibble-field dual of bitwise SAND4N plane; wrap uint4 ALU foundation after SZEXT4N).
+
+### Language
+- `SADD4N` — `field n → nibble n = (nibble + field) & 0xF`
+- `SSUB4N` — `field n → nibble n = (nibble - field) & 0xF`
+- `SMUL4N` — `field n → nibble n = (nibble * field) & 0xF`
+- Proof `467_sadd4n_smul4n.cubalc`
+
+### Prior
+See 1.14.9-universal.
+
 ## 1.14.9-universal — 2026-08-04
 
 ### Direction
