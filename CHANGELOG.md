@@ -1,3 +1,17 @@
+## 1.14.57-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack imm 32-bit field zeros+signed (word ladder of SCLZ16N/SCTZ16N/SNEG16N after SSHL32N plane).
+
+### Language
+- `SCLZ32N` — `n → word n of TOS = clz32(w)` (0 → 32)
+- `SCTZ32N` — `n → word n of TOS = ctz32(w)` (0 → 32)
+- `SNEG32N` — `n → word n of TOS = -(int32)` as uint32 (min stays 0x80000000)
+- Proof `514_sclz32n_sneg32n.cubalc`
+
+### Prior
+See 1.14.56-universal.
+
 ## 1.14.56-universal — 2026-08-04
 
 ### Direction
