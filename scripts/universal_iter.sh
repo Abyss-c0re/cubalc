@@ -413,7 +413,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             429_shl32cell_sar32cell \
             430_rol32cell_bitrev32cell \
             431_paritycell_popcntcell \
-            432_clzcell_bswap16cell; do
+            432_clzcell_bswap16cell \
+            433_bswap64cell_rol16cell; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done

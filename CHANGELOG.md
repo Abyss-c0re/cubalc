@@ -1,3 +1,17 @@
+## 1.12.410-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell bitfield width ladder (complete bswap 16/32/64 + bitrev 16/32 + rotate16 after BSWAP16CELL).
+
+### Language
+- `BSWAP64CELL`/`BSWAP64RANGE` — `lo hi → cells[i] = bswap64(cells[i])`
+- `BITREV16CELL`/`BREV16CELL` — `lo hi → cells[i] = bitrev16(low16 cells[i])`
+- `ROL16CELL`/`ROL16RANGE` — `lo hi k → cells[i] = rotl16(low16 cells[i], k&15)`
+- Proof `433_bswap64cell_rol16cell.cubalc`
+
+### Prior
+See 1.12.409-universal.
+
 ## 1.12.409-universal — 2026-08-04
 
 ### Direction
