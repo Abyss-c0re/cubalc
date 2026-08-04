@@ -1,3 +1,17 @@
+## 1.12.377-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack dual high-n reverse/rotate TOC (stack dual of SBREVHNTOCN plane; high dual of SBREVTOC).
+
+### Language
+- `SBREVHNTOC`/`SREVHIGHTOC` — stack `i n → reverse high n bits of cells[i]` (low kept; n 0..64)
+- `SROLHNTOC`/`SHIGHROLTOC` — stack `i n → rotl-1 within high n bits of cells[i]`
+- `SRORHNTOC`/`SHIGHRORTOC` — stack `i n → rotr-1 within high n bits of cells[i]`
+- Proof `400_sbrevhntoc_srorhntoc.cubalc`
+
+### Prior
+See 1.12.376-universal.
+
 ## 1.12.376-universal — 2026-08-04
 
 ### Direction
