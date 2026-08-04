@@ -5378,6 +5378,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
+   * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
+  if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||
+      kw(&L->cur,"SGET32TOCIMM")||kw(&L->cur,"GET32TOCN")||kw(&L->cur,"SCELLGET32N")||
+      kw(&L->cur,"SDWORDTOCN")||kw(&L->cur,"WORD32TOCN")){
+    /* i + n → cells[i] = LE 32-bit word n of cells[i]; n clamped 0..1; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 32)) & 0xFFFFFFFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSET32TOCN")||kw(&L->cur,"SSET32TOCIMM")||kw(&L->cur,"STACKSET32TOCN")||
+      kw(&L->cur,"SET32TOCN")||kw(&L->cur,"SCELLSET32N")||kw(&L->cur,"SSETDWORDTOCN")||
+      kw(&L->cur,"PUT32TOCN")||kw(&L->cur,"SSETW32TOCN")){
+    /* i + field + n → deposit low 32 bits of field into LE word n of cells[i] */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long shift = (unsigned long)(n * 32);
+    long r = (long)((base & ~(0xFFFFFFFFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLR32TOCN")||kw(&L->cur,"SCLR32TOCIMM")||kw(&L->cur,"STACKCLR32TOCN")||
+      kw(&L->cur,"CLR32TOCN")||kw(&L->cur,"SCELLCLR32N")||kw(&L->cur,"SCLRDWORDTOCN")||
+      kw(&L->cur,"ZAP32TOCN")||kw(&L->cur,"SCLRW32TOCN")){
+    /* i + n → clear LE 32-bit word n of cells[i]; n clamped 0..1; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 32);
+    long r = (long)(base & ~(0xFFFFFFFFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||

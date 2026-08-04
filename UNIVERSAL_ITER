@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 455 |
-| **digit** | **4** (urandom; imm nibble field TOC) |
-| **version** | `1.12.358-universal` |
-| **pass/fail** | **396 / 0** (green) |
-| **commit** | `c63f292` → `origin/main` |
-| **ops** | `SNIBTOCN` / `SSETNIBTOCN` / `SCLRNIBTOCN` |
-| **proof** | `programs/proof/381_snibtocn_sclrnibtocn.cubalc` |
+| **iter** | 456 |
+| **digit** | **7** (urandom; imm 32-bit field TOC) |
+| **version** | `1.12.359-universal` |
+| **pass/fail** | **397 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SGET32TOCN` / `SSET32TOCN` / `SCLR32TOCN` |
+| **proof** | `programs/proof/382_sget32tocn_sclr32tocn.cubalc` |
 
 ### Delta
-Digit-4 imm nibble field TOC: extract/deposit/clear LE 4-bit nibble n of cells[i] (imm dual of SNIBN/SSETNIBN/SCLRNIBN; completes 4/8/16 field ladder).
+Digit-7 imm 32-bit field TOC: extract/deposit/clear LE 32-bit word n of cells[i] (imm dual of SGET32N plane; completes 4/8/16/32 field ladder).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SNIBTOCN` `SSETNIBTOCN` `SCLRNIBTOCN` · aliases `NIBTOCN`/`SETNIBTOCN`/`CLRNIBTOCN`
-- Proof `381_snibtocn_sclrnibtocn.cubalc`
+- `SGET32TOCN` `SSET32TOCN` `SCLR32TOCN` · aliases `GET32TOCN`/`SET32TOCN`/`CLR32TOCN`
+- Proof `382_sget32tocn_sclr32tocn.cubalc`

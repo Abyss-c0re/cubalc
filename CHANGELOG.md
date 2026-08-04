@@ -1,3 +1,17 @@
+## 1.12.359-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → imm 32-bit field TOC (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 ladder).
+
+### Language
+- `SGET32TOCN`/`GET32TOCN` n — stack `i → cells[i]=LE 32-bit word n`; leave result (n 0..1)
+- `SSET32TOCN`/`SET32TOCN` field n — deposit low 32 bits of field into LE word n of cells[i]
+- `SCLR32TOCN`/`CLR32TOCN` n — clear LE 32-bit word n of cells[i]; leave result
+- Proof `382_sget32tocn_sclr32tocn.cubalc`
+
+### Prior
+See 1.12.358-universal.
+
 ## 1.12.358-universal — 2026-08-04
 
 ### Direction
