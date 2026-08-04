@@ -1,3 +1,17 @@
+## 1.14.78-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm field GTE (unsigned >= predicates DGTE32N/DGTE16N/DGTE8N after stack SGTE + dual DLTE ladder).
+
+### Language
+- `DGTE32N` — `field n → word n of each = (w >= field) ? 1 : 0` on top two
+- `DGTE16N` — `field n → halfword n of each = (hw >= field) ? 1 : 0`
+- `DGTE8N` — `field n → byte n of each = (b >= field) ? 1 : 0`
+- Proof `535_dgte32n_dgte8n.cubalc`
+
+### Prior
+See 1.14.77-universal.
+
 ## 1.14.77-universal — 2026-08-04
 
 ### Direction
