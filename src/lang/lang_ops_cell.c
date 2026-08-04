@@ -2308,6 +2308,44 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 cell fixed-width 4 nibble unary/signed: NOT4CELL · CLIPS4CELL
+   * (nibble dual of NOT8 + CLIPS8 after metrics plane; complete 4/8/16/32 unary+sclip) */
+  if (kw(&L->cur,"NOT4CELL")||kw(&L->cur,"CELLNOT4")||kw(&L->cur,"BNOT4CELL")||
+      kw(&L->cur,"RANGENOT4")||kw(&L->cur,"NOT4RANGE")||kw(&L->cur,"INV4CELL")||
+      kw(&L->cur,"NOTNIBCELL")){
+    /* NOT4CELL lo hi — cells[i] = ~low4 & 0xF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((~((unsigned int)vm->cells[(int)i] & 0xFu)) & 0xFu);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIPS4CELL")||kw(&L->cur,"SCLIPS4CELL")||kw(&L->cur,"BCLIPS4CELL")||
+      kw(&L->cur,"RANGECLIPS4")||kw(&L->cur,"CLIPS4RANGE")||kw(&L->cur,"SCLIP4CELL")||
+      kw(&L->cur,"CLIPSNIBCELL")){
+    /* CLIPS4CELL lo hi — clamp cells[i] to signed 4-bit [-8,7] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < -8L) r = -8L;
+      if (r > 7L) r = 7L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

@@ -1,3 +1,16 @@
+## 1.14.4-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → cell fixed-width 4 nibble unary/signed (nibble dual of NOT8 + CLIPS8 after metrics; complete 4/8/16/32 unary+sclip).
+
+### Language
+- `NOT4CELL`/`NOT4RANGE` — `lo hi → ~low4 & 0xF`
+- `CLIPS4CELL`/`CLIPS4RANGE` — `lo hi → clamp to signed [-8,7]`
+- Proof `461_not4cell_clips4cell.cubalc`
+
+### Prior
+See 1.14.3-universal.
+
 ## 1.14.3-universal — 2026-08-04
 
 ### Direction
