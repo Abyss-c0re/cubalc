@@ -6001,6 +6001,59 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 imm dual fixed clip TOC: SCLIP4TOCN · SCLIP8TOCN · SCLIP16TOCN
+   * (imm dual of SCLIP4TOC/SCLIP8TOC/SCLIP16TOC; keep i on stack) */
+  if (kw(&L->cur,"SCLIP4TOCN")||kw(&L->cur,"CLIP4TOCN")||kw(&L->cur,"SCLIPNTOCN")||
+      kw(&L->cur,"STACKCLIP4TOCN")||kw(&L->cur,"SCELLCLIP4N")||kw(&L->cur,"UCLIP4TOCN")||
+      kw(&L->cur,"SCLIP4TOCIMM")){
+    /* i → cells[i] = clamp to [0,15]; leave result on stack (i replaced) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < 0) r = 0;
+    if (r > 15) r = 15;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIP8TOCN")||kw(&L->cur,"CLIP8TOCN")||kw(&L->cur,"SCLIPBTOCN")||
+      kw(&L->cur,"STACKCLIP8TOCN")||kw(&L->cur,"SCELLCLIP8N")||kw(&L->cur,"UCLIP8TOCN")||
+      kw(&L->cur,"SCLIP8TOCIMM")){
+    /* i → cells[i] = clamp to [0,255]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < 0) r = 0;
+    if (r > 255) r = 255;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIP16TOCN")||kw(&L->cur,"CLIP16TOCN")||kw(&L->cur,"SCLIPWTOCN")||
+      kw(&L->cur,"STACKCLIP16TOCN")||kw(&L->cur,"SCELLCLIP16N")||kw(&L->cur,"UCLIP16TOCN")||
+      kw(&L->cur,"SCLIP16TOCIMM")){
+    /* i → cells[i] = clamp to [0,65535]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < 0) r = 0;
+    if (r > 65535L) r = 65535L;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
    * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
   if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||

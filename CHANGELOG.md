@@ -1,3 +1,17 @@
+## 1.12.390-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm dual fixed clip TOC (imm dual of SCLIP4/8/16TOC; keep i on stack).
+
+### Language
+- `SCLIP4TOCN`/`CLIP4TOCN` — stack `i → cells[i] = clamp to [0,15]`
+- `SCLIP8TOCN`/`CLIP8TOCN` — stack `i → cells[i] = clamp to [0,255]`
+- `SCLIP16TOCN`/`CLIP16TOCN` — stack `i → cells[i] = clamp to [0,65535]`
+- Proof `413_sclip4tocn_sclip16tocn.cubalc`
+
+### Prior
+See 1.12.389-universal.
+
 ## 1.12.389-universal — 2026-08-04
 
 ### Direction
