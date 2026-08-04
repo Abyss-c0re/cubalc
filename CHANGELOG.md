@@ -1,3 +1,17 @@
+## 1.12.385-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack dual fixed zext + nibble sext TOC (complete zext 8/16/32; close 4-bit extend).
+
+### Language
+- `SZEXT16TOC`/`ZEXT16TOC` — stack `i → cells[i] = zero-extend low 16 bits of cells[i]`
+- `SZEXT32TOC`/`ZEXT32TOC` — stack `i → cells[i] = zero-extend low 32 bits of cells[i]`
+- `SSEXT4TOC`/`SEXT4TOC` — stack `i → cells[i] = sign-extend low 4 bits of cells[i]`
+- Proof `408_szext16toc_ssext4toc.cubalc`
+
+### Prior
+See 1.12.384-universal.
+
 ## 1.12.384-universal — 2026-08-04
 
 ### Direction

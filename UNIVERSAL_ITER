@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 490 |
-| **digit** | **9** (urandom) |
-| **version** | `1.12.384-universal` |
-| **pass/fail** | **422 / 0** (green) |
+| **iter** | 493 |
+| **digit** | **4** (urandom) |
+| **version** | `1.12.385-universal` |
+| **pass/fail** | **423 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSEXT16TOC` / `SSEXT32TOC` / `SZEXT8TOC` |
-| **proof** | `programs/proof/407_ssext16toc_szext8toc.cubalc` |
+| **ops** | `SZEXT16TOC` / `SZEXT32TOC` / `SSEXT4TOC` |
+| **proof** | `programs/proof/408_szext16toc_ssext4toc.cubalc` |
 
 ### Delta
-Digit-9 stack dual fixed-width extend TOC: complete 8/16/32 fixed extend plane after SSEXT8TOC (sext16/sext32/zext8 into cells).
+Digit-4 stack dual fixed zext + nibble sext TOC: complete zext 8/16/32 plane; close 4-bit sign-extend into cells.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline

@@ -5750,6 +5750,55 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack dual fixed zext + nibble sext TOC: SZEXT16TOC · SZEXT32TOC · SSEXT4TOC
+   * (complete zext 8/16/32 plane after SZEXT8TOC; nibble sext closes 4-bit extend) */
+  if (kw(&L->cur,"SZEXT16TOC")||kw(&L->cur,"ZEXT16TOC")||kw(&L->cur,"SZEXTWTOC")||
+      kw(&L->cur,"STACKZEXT16TOC")||kw(&L->cur,"SCELLZEXT16")||kw(&L->cur,"ZEROEXT16TOC")||
+      kw(&L->cur,"SZEXT16AT")){
+    /* i → cells[i] = zero-extend low 16 bits of cells[i]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (long)((unsigned long)vm->cells[(int)i] & 0xFFFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZEXT32TOC")||kw(&L->cur,"ZEXT32TOC")||kw(&L->cur,"SZEXTLTOC")||
+      kw(&L->cur,"STACKZEXT32TOC")||kw(&L->cur,"SCELLZEXT32")||kw(&L->cur,"ZEROEXT32TOC")||
+      kw(&L->cur,"SZEXT32AT")||kw(&L->cur,"SZEXTDTOC")){
+    /* i → cells[i] = zero-extend low 32 bits of cells[i]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = (long)((unsigned long)vm->cells[(int)i] & 0xFFFFFFFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT4TOC")||kw(&L->cur,"SEXT4TOC")||kw(&L->cur,"SSEXTNTOC")||
+      kw(&L->cur,"STACKSEXT4TOC")||kw(&L->cur,"SCELLSEXT4")||kw(&L->cur,"SIGNEXT4TOC")||
+      kw(&L->cur,"SSEXT4AT")||kw(&L->cur,"SNIBSEXTTOC")){
+    /* i → cells[i] = sign-extend low 4 bits of cells[i]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = a & 0xFL;
+    if (r & 0x8L) r |= ~0xFL;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
    * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
   if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||
