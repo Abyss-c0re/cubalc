@@ -5144,6 +5144,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 imm byte field TOC: SBYTETOCN · SSETBYTETOCN · SCLRBYTETOCN
+   * (imm dual of SBYTEN/SSETBYTEN/SCLRBYTEN into cell; complete bitfield TOC with LE bytes) */
+  if (kw(&L->cur,"SBYTETOCN")||kw(&L->cur,"SGETBYTETOCN")||kw(&L->cur,"STACKBYTETOCN")||
+      kw(&L->cur,"SBYTETOCIMM")||kw(&L->cur,"BYTETOCN")||kw(&L->cur,"SCELLBYTEN")||
+      kw(&L->cur,"GETBYTETOCN")){
+    /* i + n → cells[i] = LE byte n of cells[i]; n clamped 0..7; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 8)) & 0xFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETBYTETOCN")||kw(&L->cur,"SSETBYTOCIMM")||kw(&L->cur,"STACKSETBYTETOCN")||
+      kw(&L->cur,"SETBYTETOCN")||kw(&L->cur,"SCELLSETBYTEN")||kw(&L->cur,"PUTBYTETOCN")||
+      kw(&L->cur,"SSETBYATN")){
+    /* i + field + n → deposit low 8 bits of field into LE byte n of cells[i]; leave result */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)((base & ~(0xFFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRBYTETOCN")||kw(&L->cur,"SCLRBYTOCIMM")||kw(&L->cur,"STACKCLRBYTETOCN")||
+      kw(&L->cur,"CLRBYTETOCN")||kw(&L->cur,"SCELLCLRBYTEN")||kw(&L->cur,"ZAPBYTETOCN")||
+      kw(&L->cur,"SCLRBYATN")){
+    /* i + n → clear LE byte n of cells[i]; n clamped 0..7; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)(base & ~(0xFFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||

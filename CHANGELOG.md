@@ -1,3 +1,17 @@
+## 1.12.355-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → imm byte field TOC (imm dual of SBYTEN/SSETBYTEN/SCLRBYTEN into cell).
+
+### Language
+- `SBYTETOCN`/`BYTETOCN` n — stack `i → cells[i]=LE byte n`; leave result (n 0..7)
+- `SSETBYTETOCN`/`SETBYTETOCN` field n — deposit low 8 bits of field into LE byte n of cells[i]
+- `SCLRBYTETOCN`/`CLRBYTETOCN` n — clear LE byte n of cells[i]; leave result
+- Proof `378_sbytetocn_sclrbytetocn.cubalc`
+
+### Prior
+See 1.12.354-universal.
+
 ## 1.12.354-universal — 2026-08-04
 
 ### Direction

@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 449 |
-| **digit** | **7** (urandom+genome; stack bitfield TOC dual) |
-| **version** | `1.12.354-universal` |
-| **pass/fail** | **392 / 0** (green) |
-| **commit** | `d050e06` → `origin/main` |
-| **ops** | `SSETBTOC` / `SCLRBTOC` / `SFLPBTOC` |
-| **proof** | `programs/proof/377_ssetbtoc_sflpbtoc.cubalc` |
+| **iter** | 451 |
+| **digit** | **1** (urandom; imm byte field TOC) |
+| **version** | `1.12.355-universal` |
+| **pass/fail** | **393 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SBYTETOCN` / `SSETBYTETOCN` / `SCLRBYTETOCN` |
+| **proof** | `programs/proof/378_sbytetocn_sclrbytetocn.cubalc` |
 
 ### Delta
-Digit-7 stack bitfield TOC: `i + bit → cells[i] |= / &= ~ / ^= (1<<bit)` (stack dual of SSETBTOCN plane).
+Digit-1 imm byte field TOC: extract/deposit/clear little-endian byte n of cells[i] (imm dual of SBYTEN/SSETBYTEN/SCLRBYTEN into cell).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SSETBTOC` `SCLRBTOC` `SFLPBTOC` · aliases `SETBTOC`/`CLRBTOC`/`FLPBTOC`
-- Proof `377_ssetbtoc_sflpbtoc.cubalc`
+- `SBYTETOCN` `SSETBYTETOCN` `SCLRBYTETOCN` · aliases `BYTETOCN`/`SETBYTETOCN`/`CLRBYTETOCN`
+- Proof `378_sbytetocn_sclrbytetocn.cubalc`
