@@ -32,14 +32,16 @@ Proof: `programs/proof/11_core_protect.cubalc`.
 
 ```bash
 cubalc protect              # all checks
+cubalc protect status       # JSON summary only (no board/smx run) — agents
 cubalc protect law          # law plate only
 cubalc protect smx          # SMX selftest
 cubalc protect bus          # smx-bus prove
 cubalc protect board        # run core_protect.cubalc
-# aliases: core-protect | core-guard | guard
+# aliases: core-protect | core-guard | guard · status aliases: plate|show
 ```
 
-Writes `state/CORE_PROTECT.json` for NexusCore / host ingest.
+Writes `state/CORE_PROTECT.json` for NexusCore / host ingest.  
+`protect status` reports plate path, last `ok`, HOLD_FLASH/budget, without re-running checks.
 
 ## Host protect mode
 

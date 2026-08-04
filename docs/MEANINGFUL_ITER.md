@@ -25,7 +25,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 ### B. Host / mesh usability
 
 6. ~~**`SMX SERVE` timeout**~~ **done** (`CUBALC_P2P_TIMEOUT` ms, default 30s).
-7. **`cubalc protect status`** JSON summary without full board run.
+7. ~~**`cubalc protect status`**~~ **done** (JSON plate summary, no board run).
 8. ~~**`SYS ENV` default**~~ **done** (`SYS ENV "NAME" OR "fallback"`).
 9. ~~**Soft-fail DIAL**~~ **done** (`CUBALC_P2P_SOFT=1`).
 

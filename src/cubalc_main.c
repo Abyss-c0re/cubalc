@@ -876,6 +876,47 @@ static int cmd_protect(int argc, char **argv) {
   ensure_dir(dir);
   snprintf(plate_path, sizeof plate_path, "%s/CORE_PROTECT.json", dir);
 
+  /* protect status|plate — JSON summary without board/smx run (agents) */
+  if (strcmp(mode, "status") == 0 || strcmp(mode, "plate") == 0 ||
+      strcmp(mode, "show") == 0) {
+    int plate = (access(plate_path, R_OK) == 0);
+    int last_ok = -1; /* -1 unknown, 0 false, 1 true */
+    const char *pe = getenv("CUBALC_PROTECT");
+    int protect_env = (pe && pe[0] && pe[0] != '0');
+    int prog_ok = (access(prog, R_OK) == 0);
+    if (plate) {
+      FILE *f = fopen(plate_path, "r");
+      if (f) {
+        char buf[4096];
+        size_t n = fread(buf, 1, sizeof buf - 1, f);
+        buf[n] = 0;
+        fclose(f);
+        if (strstr(buf, "\"ok\": true") || strstr(buf, "\"ok\":true"))
+          last_ok = 1;
+        else if (strstr(buf, "\"ok\": false") || strstr(buf, "\"ok\":false"))
+          last_ok = 0;
+      }
+    }
+    printf("{\"schema\":\"cubalc.protect_status.v1\",\"ok\":true,"
+           "\"cmd\":\"protect\",\"mode\":\"status\","
+           "\"hold_flash\":%d,\"budget\":%d,\"share\":\"%s\","
+           "\"http_required\":false,\"law\":\"core_protect\","
+           "\"protect_env\":%s,\"program_present\":%s,"
+           "\"plate_present\":%s,\"plate\":\"%s\","
+           "\"last_plate_ok\":%s,\"version\":\"%s\","
+           "\"program\":\"%s\","
+           "\"note\":\"status only — no board/smx; run cubalc protect all for checks\","
+           "\"hints\":[\"HOLD_FLASH 1 before PLUG\","
+           "\"cubalc protect all · cubalc doctor\"]}\n",
+           CUBALC_HOLD_FLASH, CUBALC_BUDGET, CUBALC_SHARE,
+           protect_env ? "true" : "false",
+           prog_ok ? "true" : "false",
+           plate ? "true" : "false", plate_path,
+           last_ok < 0 ? "null" : (last_ok ? "true" : "false"),
+           CUBALC_LANG_VERSION, prog);
+    return 0;
+  }
+
   /* always set protect host mode for this process subtree semantics */
   setenv("CUBALC_PROTECT", "1", 0);
 
@@ -1519,6 +1560,7 @@ int main(int argc, char **argv) {
       "  Law & Core safety\n"
       "    law|manifest           law plate JSON\n"
       "    protect|core-guard     Core protect checks → state/CORE_PROTECT.json\n"
+      "    protect status         JSON summary only (no board/smx run)\n"
       "    HOLD_FLASH 1           user permission BEFORE any PLUG (not auto-flash)\n"
       "\n"
       "  P2P / SMX2 (binary wire)\n"

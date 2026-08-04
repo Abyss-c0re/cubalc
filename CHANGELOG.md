@@ -14,6 +14,13 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — protect status CLI — 2026-08-05
+
+### Usability
+- `cubalc protect status` (aliases: `plate`, `show`) — one JSON plate without board/smx run
+- Reports hold_flash, budget, plate path, last_plate_ok, program presence for agents
+- Full checks still: `cubalc protect all`
+
 ## Meaningful — PRINT_JSON / DUMP — 2026-08-05
 
 ### Usability
