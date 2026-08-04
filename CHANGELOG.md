@@ -1,3 +1,17 @@
+## 1.12.375-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack dual clear + high-mask TOC (stack dual of SCLRMNTOCN plane after SNANDHNTOC).
+
+### Language
+- `SCLRMNTOC`/`CLRMNTOC` — stack `i n → cells[i] &= ~low-n mask`; clear low n bits (n 0..64)
+- `SCLRHNTOC`/`CLRHNTOC` — stack `i n → cells[i] &= ~high-n mask`; clear high n bits
+- `SHMASKTOC`/`HMASKTOC` — stack `i n → cells[i] = high-n-bit mask`
+- Proof `398_sclrmntoc_shmasktoc.cubalc`
+
+### Prior
+See 1.12.374-universal.
+
 ## 1.12.374-universal — 2026-08-04
 
 ### Direction
