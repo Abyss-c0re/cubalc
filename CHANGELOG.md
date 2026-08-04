@@ -1,3 +1,16 @@
+## 1.15.15-universal — 2026-08-05
+
+### Direction
+- Algocube digit **1** → pure-imm cell parity TOC (imm cell-index dual of SODDTOC/SEVENTOC after complete zero-rel TOCN plane).
+
+### Language
+- `SODDTOCN` — `n → cells[n]=(cells[n]&1)?1:0; push`
+- `SEVENTOCN` — `n → cells[n]=((cells[n]&1)==0)?1:0; push`
+- Proof `572_soddtocn_seventocn.cubalc`
+
+### Prior
+See 1.15.14-universal.
+
 ## 1.15.14-universal — 2026-08-05
 
 ### Direction

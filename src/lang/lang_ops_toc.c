@@ -5444,7 +5444,39 @@ int cubalc_lang_ops_toc(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-/* digit-1 unary parity TOC: SODDTOC · SEVENTOC (dual of SODD/SEVEN after zero-rel TOC) */
+  /* digit-1 pure-imm cell parity TOC: SODDTOCN · SEVENTOCN
+   * (imm cell-index dual of SODDTOC/SEVENTOC after complete zero-rel TOCN plane) */
+  if (kw(&L->cur,"SODDTOCN")||kw(&L->cur,"STACKEODDTOCN")||kw(&L->cur,"SODDTOCIMM")||
+      kw(&L->cur,"SODDATN")||kw(&L->cur,"ODDTOCN")||kw(&L->cur,"SCELLODDN")||
+      kw(&L->cur,"SISODDTOCN")||kw(&L->cur,"SPARITY1TOCN")){
+    /* n → cells[n]=(cells[n]&1)?1:0; push result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] & 1L) ? 1 : 0;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEVENTOCN")||kw(&L->cur,"STACKEVENTOCN")||kw(&L->cur,"SEVENTOCIMM")||
+      kw(&L->cur,"SEVENATN")||kw(&L->cur,"EVENTOCN")||kw(&L->cur,"SCELLEVENN")||
+      kw(&L->cur,"SISEVENTOCN")||kw(&L->cur,"SPARITY0TOCN")){
+    /* n → cells[n]=((cells[n]&1)==0)?1:0; push result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] & 1L) ? 0 : 1;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 unary parity TOC: SODDTOC · SEVENTOC (dual of SODD/SEVEN after zero-rel TOC) */
   if (kw(&L->cur,"SODDTOC")||kw(&L->cur,"SODDTOCELL")||kw(&L->cur,"STACKODDTOC")||
       kw(&L->cur,"SODDAT")||kw(&L->cur,"SCELLODD")||kw(&L->cur,"ODDTOC")||
       kw(&L->cur,"SISODDTOC")){
