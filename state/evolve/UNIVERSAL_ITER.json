@@ -2,20 +2,20 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_improve_tick",
-  "ts": "2026-08-04T15:43:15+0300",
-  "iter": 504,
-  "algocube_digit": 2,
-  "version": "1.14.19-universal",
-  "pass": 491,
+  "ts": "2026-08-04T15:49:11+0300",
+  "iter": 505,
+  "algocube_digit": 0,
+  "version": "1.14.20-universal",
+  "pass": 492,
   "fail": 0,
   "ok": true,
   "ops": [
-    "DADD16N",
-    "DSUB16N",
-    "DMUL16N"
+    "DDIV16N",
+    "DMOD16N",
+    "DMIN16N"
   ],
-  "proof": "programs/proof/476_dadd16n_dmul16n.cubalc",
-  "commit": "328adf7",
+  "proof": "programs/proof/477_ddiv16n_dmin16n.cubalc",
+  "commit": "322745b",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "law": [
@@ -23,5 +23,5 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "Digit-2 dual-stack imm halfword arith after S*16N; wrap uint16 pair plane."
+  "delta": "Digit-0 dual-stack imm halfword div/mod/min; zero-safe after DADD16N plane."
 }
