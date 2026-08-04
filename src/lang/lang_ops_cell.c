@@ -2177,6 +2177,66 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 cell fixed-width 4 nibble math: NEG4CELL · ZEXT4CELL · CLIP4CELL
+   * (nibble dual of NEG8/ZEXT8/CLIP8 after ROL4 plane; complete 4/8/16/32 arithmetic foundation) */
+  if (kw(&L->cur,"NEG4CELL")||kw(&L->cur,"CELLNEG4")||kw(&L->cur,"BNEG4CELL")||
+      kw(&L->cur,"RANGENEG4")||kw(&L->cur,"NEG4RANGE")||kw(&L->cur,"INEG4CELL")||
+      kw(&L->cur,"NEGNIBCELL")){
+    /* NEG4CELL lo hi — cells[i] = -(int4)low4; min int4 -8 stays -8 (0x8 as -8 after sext) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)((unsigned int)vm->cells[(int)i] & 0xFu);
+      if (va & 0x8) va -= 16;
+      long r;
+      if (va == -8L) r = -8L; /* keep min int4 */
+      else r = -va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ZEXT4CELL")||kw(&L->cur,"ZEROEXT4CELL")||kw(&L->cur,"BZEXT4CELL")||
+      kw(&L->cur,"RANGEZEXT4")||kw(&L->cur,"ZEXT4RANGE")||kw(&L->cur,"CELLZEXTNIB")||
+      kw(&L->cur,"ZEXTNIBCELL")){
+    /* ZEXT4CELL lo hi — cells[i] = low4 only (clear high bits) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned long)vm->cells[(int)i] & 0xFul);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIP4CELL")||kw(&L->cur,"CELLCLIP4")||kw(&L->cur,"BCLIP4CELL")||
+      kw(&L->cur,"RANGECLIP4")||kw(&L->cur,"CLIP4RANGE")||kw(&L->cur,"UCLIP4CELL")||
+      kw(&L->cur,"CLIPNIBCELL")){
+    /* CLIP4CELL lo hi — clamp cells[i] to unsigned 4-bit [0,15] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < 0) r = 0;
+      if (r > 15) r = 15;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

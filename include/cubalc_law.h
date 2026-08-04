@@ -29,7 +29,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.14.0-p2p"
+#define CUBALC_LANG_VERSION "1.15.0-core-protect"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)
@@ -86,14 +86,16 @@
 #define CUBALC_LAW_PURE_SCIENCE     15
 /* Continuous evolve: language must keep flowing */
 #define CUBALC_LAW_EVOLVE           16
-#define CUBALC_LAW_COUNT            17
+/* Core protection: HOLD_FLASH · SMX fail-closed · budget · one_cmd · nanobot mesh */
+#define CUBALC_LAW_CORE_PROTECT     17
+#define CUBALC_LAW_COUNT            18
 
 /* law ids: snake tokens for JSON only */
 static const char *const CUBALC_LAW_NAME[CUBALC_LAW_COUNT] = {
   "sot", "in_out", "core_io", "bin_talk", "smx_key",
   "hold_flash", "no_bci", "share_smx", "dev_free", "one_cmd",
   "manifest_smx", "algocube", "energy_flow",
-  "flow_compile", "nest", "pure_science", "evolve"
+  "flow_compile", "nest", "pure_science", "evolve", "core_protect"
 };
 
 /* Resolved algocube blueprint genome (deep-opt champion — The Cube watches) */

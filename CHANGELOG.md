@@ -1,3 +1,17 @@
+## 1.14.2-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → cell fixed-width 4 nibble math (nibble dual of NEG8/ZEXT8/CLIP8 after ROL4; complete 4/8/16/32 arithmetic foundation).
+
+### Language
+- `NEG4CELL`/`NEG4RANGE` — `lo hi → -(int4)low4`; min int4 −8 stays −8
+- `ZEXT4CELL`/`ZEXT4RANGE` — `lo hi → low4` zero-extend (mask 0xF)
+- `CLIP4CELL`/`CLIP4RANGE` — `lo hi → clamp to [0,15]`
+- Proof `459_neg4cell_clip4cell.cubalc`
+
+### Prior
+See 1.14.0-p2p / 1.14.1-universal.
+
 ## 1.14.1-universal — 2026-08-04
 
 ### Direction
