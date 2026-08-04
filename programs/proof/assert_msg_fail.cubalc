@@ -1,0 +1,4 @@
+# Must fail with message in err field (prove fail-closed + reason)
+HOLD_FLASH 1
+LET ready = 0
+ASSERT ready == 1 "peer not ready — hold flash before plug"

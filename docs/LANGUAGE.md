@@ -21,7 +21,8 @@ Plugs wire cubes; **REVERSE** flips I/O direction when needed.
 
 ## Statements
 
-`LET` `LOOP`/`WHILE` `FOR`/`EACH` `IF`/`END` `ASSERT` `PRINT`  
+`LET` `LOOP`/`WHILE` `FOR`/`EACH` `IF`/`END` `ASSERT` [`"why"`] `PRINT`  
+
 `CUBE` `PLUG` `UNPLUG` `REVERSE` `IO` `FLOW`/`FLOW DIR` `IMPULSE`  
 `DECIDE` `COMPARE` `HARMONY` `RESOLVE` `ENERGYFLOW`  
 `SETBIT` `SETDIGIT` `FOLDBITS`  

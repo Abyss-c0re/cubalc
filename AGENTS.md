@@ -36,7 +36,8 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 
 1. Start with `HOLD_FLASH 1` (or `[hold]`): **user permission** before any unit is plugged in (safeguard — not device auto-flash).
 2. Prefer `SYS` for host effects; do not invent flash/device writes.
-3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.
+3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.  
+   Optional reason: `ASSERT ready == 1 "peer not ready"` → err includes line + message.
 4. Keep strings short; dump machine facts with `PRINT` / `?`.
 5. **Do not hardcode devices, product paths, or peer file formats** in `.cubalc`.
 6. Peer digits: env (`CUBALC_PEER0_DIGIT=…`) or literals; `SETDIGIT` after flow when needed.

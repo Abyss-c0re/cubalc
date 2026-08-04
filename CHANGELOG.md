@@ -1,3 +1,10 @@
+## Meaningful — ASSERT message strings — 2026-08-05
+
+### Usability
+- `ASSERT expr ["why"]` — optional quoted reason on failure for agents/humans
+- Fail text includes source line: `ASSERT failed line N: why` (or bare line when no message)
+- Proofs: `programs/proof/assert_msg.cubalc`, `programs/proof/assert_msg_fail.cubalc`
+
 ## 1.15.15-universal — 2026-08-05
 
 ### Direction

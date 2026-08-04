@@ -1100,11 +1100,29 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
     bump(vm); return 1;
   }
+  /* ASSERT expr ["why"] — optional message for agent/human-readable failures */
   if (kw(&L->cur,"ASSERT")){
+    int aln = L->cur.line;
     lex_next(L);
     long v=parse_expr(vm,L);
-    if (v){ if (vm->res) vm->res->asserts_ok++; if (vm->trace) fprintf(vm->trace,"# ok\n"); }
-    else { if (vm->res) vm->res->asserts_fail++; fail(vm,"ASSERT failed"); return -1; }
+    char why[120]; why[0]=0;
+    if (L->cur.kind==TK_STR){
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (v){
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace) fprintf(vm->trace,"# ok\n");
+    } else {
+      if (vm->res) vm->res->asserts_fail++;
+      char msg[160];
+      if (why[0])
+        snprintf(msg, sizeof msg, "ASSERT failed line %d: %s", aln, why);
+      else
+        snprintf(msg, sizeof msg, "ASSERT failed line %d", aln);
+      fail(vm, msg);
+      return -1;
+    }
     bump(vm); return 1;
   }
   if (kw(&L->cur,"LET")){

@@ -1,0 +1,18 @@
+# ASSERT with optional message string — agent-readable failures
+# Form: ASSERT expr ["why"]
+
+HOLD_FLASH 1
+
+LET x = 1
+LET y = 2
+
+# truthy asserts may carry a reason (ignored on success)
+ASSERT x == 1 "x must stay 1"
+ASSERT y == 2 "y must stay 2"
+ASSERT x + y == 3 "sum of x and y"
+
+# bare ASSERT still works
+ASSERT 1
+ASSERT x
+
+PRINT "assert_msg ok"
