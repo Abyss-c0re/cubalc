@@ -1,3 +1,17 @@
+## 1.14.23-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 8-bit field div/mod/min (dual of SDIV8N/SMOD8N/SMIN8N; field 0 → div/mod 0).
+
+### Language
+- `DDIV8N` — `field n → byte n of each = byte / field` (field 0 → 0)
+- `DMOD8N` — `field n → byte n of each = byte % field` (field 0 → 0)
+- `DMIN8N` — `field n → byte n of each = min(byte, field)`
+- Proof `480_ddiv8n_dmin8n.cubalc`
+
+### Prior
+See 1.14.22-universal.
+
 ## 1.14.22-universal — 2026-08-04
 
 ### Direction
