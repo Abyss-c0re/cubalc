@@ -6,7 +6,7 @@
 | **digit** | **3** (urandom) |
 | **version** | `1.12.396-universal` |
 | **pass/fail** | **434 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `37bd7ea` → `origin/main` |
 | **ops** | `DCLIPS4` / `DCLIPS8` / `DCLIPS16` |
 | **proof** | `programs/proof/419_dclips4_dclips16.cubalc` |
 
