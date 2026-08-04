@@ -1,3 +1,17 @@
+## 1.12.386-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → imm dual fixed nibble/byte extend TOC (imm dual of SSEXT8TOC/SSEXT4TOC; nibble zext).
+
+### Language
+- `SSEXT8TOCN`/`SEXT8TOCN` — stack `i → cells[i] = sign-extend low 8 bits of cells[i]`
+- `SSEXT4TOCN`/`SEXT4TOCN` — stack `i → cells[i] = sign-extend low 4 bits of cells[i]`
+- `SZEXT4TOCN`/`ZEXT4TOCN` — stack `i → cells[i] = zero-extend low 4 bits of cells[i]`
+- Proof `409_ssext8tocn_szext4tocn.cubalc`
+
+### Prior
+See 1.12.385-universal.
+
 ## 1.12.385-universal — 2026-08-04
 
 ### Direction
