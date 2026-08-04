@@ -1,3 +1,17 @@
+## 1.14.59-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 32-bit field abs+extend (word ladder of DABS16N/DSEXT16N/DZEXT16N; dual of SABS32N after DSHL32N).
+
+### Language
+- `DABS32N` — `n → word n of each = abs(int32)` on top two (min stays 0x80000000)
+- `DSEXT32N` — `n → each = sign-extend word n to full width`
+- `DZEXT32N` — `n → each = zero-extend word n`
+- Proof `516_dabs32n_dzext32n.cubalc`
+
+### Prior
+See 1.14.58-universal.
+
 ## 1.14.58-universal — 2026-08-04
 
 ### Direction

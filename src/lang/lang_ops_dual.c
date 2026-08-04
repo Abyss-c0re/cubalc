@@ -9300,6 +9300,76 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 dual-stack imm 32-bit field abs+extend: DABS32N · DSEXT32N · DZEXT32N
+   * (word ladder of DABS16N/DSEXT16N/DZEXT16N; dual of SABS32N after DSHL32N) */
+  if (kw(&L->cur,"DABS32N")||kw(&L->cur,"S2ABS32N")||kw(&L->cur,"STACK2ABS32N")||
+      kw(&L->cur,"PAIRABS32N")||kw(&L->cur,"DIABS32N")||kw(&L->cur,"DABSDWN")||
+      kw(&L->cur,"DDWABSN")){
+    /* a b + n → word n of each = abs(int32); min -2147483648 → 0x80000000; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFFFFFFFul);
+    long vb = (long)((mb >> sh) & 0xFFFFFFFFul);
+    if (va & 0x80000000L) va -= 4294967296L;
+    if (vb & 0x80000000L) vb -= 4294967296L;
+    long ara = (va < 0) ? -va : va;
+    long arb = (vb < 0) ? -vb : vb;
+    /* min int32 -2147483648 → +2147483648 does not fit uint32; keep 0x80000000 */
+    unsigned long nva = (unsigned long)(ara & 0xFFFFFFFFul);
+    unsigned long nvb = (unsigned long)(arb & 0xFFFFFFFFul);
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (nva << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (nvb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSEXT32N")||kw(&L->cur,"S2SEXT32N")||kw(&L->cur,"STACK2SEXT32N")||
+      kw(&L->cur,"PAIRSEXT32N")||kw(&L->cur,"DSIGNEXT32N")||kw(&L->cur,"DSEXTDWN")||
+      kw(&L->cur,"DDWSEXTN")){
+    /* a b + n → each cell = sign-extend word n to full width; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFFFFFFFul);
+    long vb = (long)((mb >> sh) & 0xFFFFFFFFul);
+    if (va & 0x80000000L) va -= 4294967296L;
+    if (vb & 0x80000000L) vb -= 4294967296L;
+    vm->stack[vm->sp - 2] = va;
+    vm->stack[vm->sp - 1] = vb;
+    var_set_num(vm,"LAST_N",vb); vm->last_n=vb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DZEXT32N")||kw(&L->cur,"S2ZEXT32N")||kw(&L->cur,"STACK2ZEXT32N")||
+      kw(&L->cur,"PAIRZEXT32N")||kw(&L->cur,"DZEROEXT32N")||kw(&L->cur,"DZEXTDWN")||
+      kw(&L->cur,"DDWZEXTN")){
+    /* a b + n → each cell = zero-extend word n; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long xa = (long)((ma >> sh) & 0xFFFFFFFFul);
+    long yb = (long)((mb >> sh) & 0xFFFFFFFFul);
+    vm->stack[vm->sp - 2] = xa;
+    vm->stack[vm->sp - 1] = yb;
+    var_set_num(vm,"LAST_N",yb); vm->last_n=yb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
