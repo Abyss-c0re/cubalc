@@ -1,3 +1,17 @@
+## 1.15.1-universal — 2026-08-05
+
+### Direction
+- Algocube digit **7** → stack+dual imm 8/4-bit field zero-eq (completes field zero-eq plane all widths).
+
+### Language
+- `S0EQ8N` — `n → byte n = (b == 0) ? 1 : 0`
+- `S0EQ4N` — nibble form of `S0EQ8N`
+- `D0EQ8N` / `D0EQ4N` — dual-stack forms
+- Proof `558_s0eq8n_d0eq4n.cubalc`
+
+### Prior
+See 1.15.0-universal.
+
 ## 1.15.0-universal — 2026-08-04
 
 ### Direction

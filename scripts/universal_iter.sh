@@ -538,7 +538,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             554_swithins8n_dwithins4n \
             555_ssign32n_dsign16n \
             556_ssign8n_dsign4n \
-            557_s0eq32n_d0eq16n; do
+            557_s0eq32n_d0eq16n \
+            558_s0eq8n_d0eq4n; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
