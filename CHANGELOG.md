@@ -1,3 +1,16 @@
+## 1.15.12-universal — 2026-08-05
+
+### Direction
+- Algocube digit **2** → pure-imm cell zero-rel LE0/GE0 TOC (imm cell-index dual of SLEZTOC/SGEZTOC after complete field S0LE/S0GE plane).
+
+### Language
+- `SLEZTOCN` / `S0LETOCN` — `n → cells[n]=(cells[n]<=0)?1:0; push`
+- `SGEZTOCN` / `S0GEZTOCN` — `n → cells[n]=(cells[n]>=0)?1:0; push`
+- Proof `569_sleztocn_sgeztocn.cubalc`
+
+### Prior
+See 1.15.11-universal.
+
 ## 1.15.11-universal — 2026-08-05
 
 ### Direction

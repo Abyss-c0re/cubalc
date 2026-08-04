@@ -5342,6 +5342,43 @@ int cubalc_lang_ops_toc(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 pure-imm cell zero-rel LE0/GE0 TOC: SLEZTOCN · SGEZTOCN
+   * (imm cell-index dual of SLEZTOC/SGEZTOC after complete field S0LE/S0GE plane) */
+  if (kw(&L->cur,"SLEZTOCN")||kw(&L->cur,"S0LETOCN")||kw(&L->cur,"STACKLEZTOCN")||
+      kw(&L->cur,"SLEZTOCIMM")||kw(&L->cur,"SNONPOSTOCN")||kw(&L->cur,"S0LEATN")||
+      kw(&L->cur,"LEZTOCN")||kw(&L->cur,"SCELLLEZN")){
+    /* n → cells[n]=(cells[n]<=0)?1:0; push result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] <= 0) ? 1 : 0;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGEZTOCN")||kw(&L->cur,"S0GEZTOCN")||kw(&L->cur,"STACKGEZTOCN")||
+      kw(&L->cur,"SGEZTOCIMM")||kw(&L->cur,"SNONNEGTOCN")||kw(&L->cur,"S0GEZATN")||
+      kw(&L->cur,"GEZTOCN")||kw(&L->cur,"SCELLGEZN")){
+    /* n → cells[n]=(cells[n]>=0)?1:0; push result
+     * note: not SGETOCN (signed imm GE compare) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] >= 0) ? 1 : 0;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){
+      var_set_num(vm,"OK",0); bump(vm); return 1;
+    }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 unary parity TOC: SODDTOC · SEVENTOC (dual of SODD/SEVEN after zero-rel TOC) */
   if (kw(&L->cur,"SODDTOC")||kw(&L->cur,"SODDTOCELL")||kw(&L->cur,"STACKODDTOC")||
       kw(&L->cur,"SODDAT")||kw(&L->cur,"SCELLODD")||kw(&L->cur,"ODDTOC")||
