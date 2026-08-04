@@ -461,6 +461,10 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"CLIPS4")==0 || strcasecmp(tail,"CLIPSN")==0 ||
             strcasecmp(tail,"CLIPS8")==0 || strcasecmp(tail,"CLIPSB")==0 ||
             strcasecmp(tail,"CLIPS16")==0 || strcasecmp(tail,"CLIPSW")==0 ||
+            strcasecmp(tail,"CLIPS32")==0 || strcasecmp(tail,"CLIPSL")==0 ||
+            strcasecmp(tail,"CLIPSD")==0 ||
+            strcasecmp(tail,"ROL32")==0 || strcasecmp(tail,"ROTL32")==0 ||
+            strcasecmp(tail,"ROR32")==0 || strcasecmp(tail,"ROTR32")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
             strcasecmp(tail,"SEXT32")==0 || strcasecmp(tail,"SEXTD")==0 ||
@@ -19577,6 +19581,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     if (y < lo) y = lo; if (y > hi) y = hi;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack signed clip32 + fixed rotate32: DCLIPS32 · DROL32 · DROR32
+   * (complete dual-stack signed clip 4/8/16/32; complete fixed rotate 4/8/16/32) */
+  if (kw(&L->cur,"DCLIPS32")||kw(&L->cur,"2CLIPS32")||kw(&L->cur,"S2CLIPS32")||
+      kw(&L->cur,"STACK2CLIPS32")||kw(&L->cur,"PAIRCLIPS32")||kw(&L->cur,"DCLIPSL")||
+      kw(&L->cur,"2CLIPSL")||kw(&L->cur,"DCLIPSD")||kw(&L->cur,"2CLIPSD")){
+    /* a b → signed-clamp pair to INT32 bounds */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long lo = (-2147483647L - 1);
+    long hi = 2147483647L;
+    long x = a, y = b;
+    if (x < lo) x = lo; if (x > hi) x = hi;
+    if (y < lo) y = lo; if (y > hi) y = hi;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DROL32")||kw(&L->cur,"2ROL32")||kw(&L->cur,"S2ROL32")||
+      kw(&L->cur,"STACK2ROL32")||kw(&L->cur,"PAIRROL32")||kw(&L->cur,"DROTL32")||
+      kw(&L->cur,"2ROTL32")||
+      kw(&L->cur,"DROR32")||kw(&L->cur,"2ROR32")||kw(&L->cur,"S2ROR32")||
+      kw(&L->cur,"STACK2ROR32")||kw(&L->cur,"PAIRROR32")||kw(&L->cur,"DROTR32")||
+      kw(&L->cur,"2ROTR32")){
+    /* a b c d → rot32(a,c) rot32(b,d); amount mod 32; result low 32 bits */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *q=op;*q;q++) if (*q>='a'&&*q<='z') *q=(char)(*q-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (c < 0) c = 0;
+    if (d < 0) d = 0;
+    int is_rol = (strstr(op,"ROL") != NULL || strstr(op,"ROTL") != NULL);
+    unsigned mask = 0xFFFFFFFFu;
+    unsigned bits = 32u;
+    unsigned uc = (unsigned)c & (bits - 1u);
+    unsigned ud = (unsigned)d & (bits - 1u);
+    unsigned wa = (unsigned)a & mask, wb = (unsigned)b & mask;
+    long x, y;
+    if (is_rol){
+      x = (uc == 0) ? (long)wa : (long)(((wa << uc) | (wa >> (bits - uc))) & mask);
+      y = (ud == 0) ? (long)wb : (long)(((wb << ud) | (wb >> (bits - ud))) & mask);
+    } else {
+      x = (uc == 0) ? (long)wa : (long)(((wa >> uc) | (wa << (bits - uc))) & mask);
+      y = (ud == 0) ? (long)wb : (long)(((wb >> ud) | (wb << (bits - ud))) & mask);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }

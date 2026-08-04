@@ -1,3 +1,17 @@
+## 1.12.397-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack signed clip32 + fixed rotate32 (complete signed clip 4/8/16/32; fixed rotate 4/8/16/32).
+
+### Language
+- `DCLIPS32`/`2CLIPS32` — dual-stack clamp pair to signed 32-bit [INT32_MIN,INT32_MAX]
+- `DROL32`/`2ROL32` — dual-stack rotate-left within low 32 bits (a b c d → rot(a,c) rot(b,d))
+- `DROR32`/`2ROR32` — dual-stack rotate-right within low 32 bits
+- Proof `420_dclips32_drol32.cubalc`
+
+### Prior
+See 1.12.396-universal.
+
 ## 1.12.396-universal — 2026-08-04
 
 ### Direction
