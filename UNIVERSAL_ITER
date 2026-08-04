@@ -6,7 +6,7 @@
 | **digit** | **4** (urandom) |
 | **version** | `1.12.393-universal` |
 | **pass/fail** | **431 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `836321b` → `origin/main` |
 | **ops** | `SCLIPS4TOCN` / `SCLIPS16TOCN` / `SCLIPS32TOCN` |
 | **proof** | `programs/proof/416_sclips4tocn_sclips32tocn.cubalc` |
 
