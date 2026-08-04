@@ -6,7 +6,7 @@
 | **digit** | **9** (urandom; imm halfword field TOC) |
 | **version** | `1.12.356-universal` |
 | **pass/fail** | **394 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `f402087` → `origin/main` |
 | **ops** | `SWORDTOCN` / `SSET16TOCN` / `SCLR16TOCN` |
 | **proof** | `programs/proof/379_swordtocn_sclr16tocn.cubalc` |
 
