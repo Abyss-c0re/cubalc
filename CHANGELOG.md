@@ -1,3 +1,17 @@
+## 1.13.1-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → cell fixed-width 4 nibble inverted bitwise (inverted dual of AND4/OR4/XOR4 after base nibble plane; complete 4/8/16/32 inverted ladder).
+
+### Language
+- `NAND4CELL`/`NAND4RANGE` — `lo hi mask → ~(low4 & low4(mask)) & 0xF`
+- `NOR4CELL`/`NOR4RANGE` — `lo hi mask → ~(low4 | low4(mask)) & 0xF`
+- `XNOR4CELL`/`XNOR4RANGE` — `lo hi mask → ~(low4 ^ low4(mask)) & 0xF`
+- Proof `455_nand4cell_xnor4cell.cubalc`
+
+### Prior
+See 1.13.0-modular.
+
 ## 1.13.0-modular — 2026-08-04
 
 ### Direction
