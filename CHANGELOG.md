@@ -1,3 +1,17 @@
+## 1.14.99-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack+dual imm 8/4-bit field signed signum (completes field signum plane all widths).
+
+### Language
+- `SSIGN8N` — `n → byte n = sgn(int8): +1 / 0 / 0xFF(-1)`
+- `SSIGN4N` — nibble form of `SSIGN8N`
+- `DSIGN8N` / `DSIGN4N` — dual-stack forms
+- Proof `556_ssign8n_dsign4n.cubalc`
+
+### Prior
+See 1.14.98-universal.
+
 ## 1.14.98-universal — 2026-08-04
 
 ### Direction

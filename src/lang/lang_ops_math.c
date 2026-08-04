@@ -2907,6 +2907,24 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 4-bit field signed signum: SSIGN4N (nibble ladder; completes field signum all widths) */
+  if (kw(&L->cur,"SSIGN4N")||kw(&L->cur,"STACKSIGN4N")||kw(&L->cur,"SIGN4N")||
+      kw(&L->cur,"SSIGNUM4N")||kw(&L->cur,"SGN4N")||kw(&L->cur,"SSIGN4IMM")){
+    /* SSIGN4N n — nibble n = sgn(int4): +1 / 0 / 0xF(-1); n 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long v = (long)((base >> sh) & 0xFul); if (v & 0x8) v -= 16;
+    unsigned long w = (v > 0) ? 1ul : ((v < 0) ? 0xFul : 0ul);
+    long r = (long)((base & ~(0xFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 stack imm 8-bit field arith merge: SADD8N · SSUB8N · SMUL8N
    * (byte-field dual of SADD4N/SSUB4N/SMUL4N; wrap uint8 ALU foundation after SAND8N plane) */
   if (kw(&L->cur,"SADD8N")||kw(&L->cur,"STACKADD8N")||kw(&L->cur,"ADD8N")||
@@ -3359,6 +3377,24 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 8);
     long v = (long)((base >> sh) & 0xFFul); if (v & 0x80) v -= 256;
     unsigned long w = (v >= slo && v < shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 stack imm 8-bit field signed signum: SSIGN8N (byte ladder of SSIGN16N) */
+  if (kw(&L->cur,"SSIGN8N")||kw(&L->cur,"STACKSIGN8N")||kw(&L->cur,"SIGN8N")||
+      kw(&L->cur,"SSIGNUM8N")||kw(&L->cur,"SGN8N")||kw(&L->cur,"SSIGN8IMM")){
+    /* SSIGN8N n — byte n = sgn(int8): +1 / 0 / 0xFF(-1); n 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    long v = (long)((base >> sh) & 0xFFul); if (v & 0x80) v -= 256;
+    unsigned long w = (v > 0) ? 1ul : ((v < 0) ? 0xFFul : 0ul);
     long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
