@@ -5206,6 +5206,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack dual byte field TOC: SBYTETOC · SSETBYTETOC · SCLRBYTETOC
+   * (stack dual of SBYTETOCN/SSETBYTETOCN/SCLRBYTETOCN; LE bytes from stack) */
+  if (kw(&L->cur,"SBYTETOC")||kw(&L->cur,"SGETBYTETOC")||kw(&L->cur,"STACKBYTETOC")||
+      kw(&L->cur,"BYTETOC")||kw(&L->cur,"SCELLBYTES")||kw(&L->cur,"GETBYTETOC")||
+      kw(&L->cur,"SBYTEAT")){
+    /* i n → cells[i] = LE byte n of cells[i]; n clamped 0..7; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 8)) & 0xFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETBYTETOC")||kw(&L->cur,"STACKSETBYTETOC")||kw(&L->cur,"SETBYTETOC")||
+      kw(&L->cur,"SCELLSETBYTES")||kw(&L->cur,"PUTBYTETOC")||kw(&L->cur,"SSETBYAT")||
+      kw(&L->cur,"SDEPOSITBYTE")){
+    /* i field n → deposit low 8 bits of field into LE byte n of cells[i]; leave result */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)((base & ~(0xFFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRBYTETOC")||kw(&L->cur,"STACKCLRBYTETOC")||kw(&L->cur,"CLRBYTETOC")||
+      kw(&L->cur,"SCELLCLRBYTES")||kw(&L->cur,"ZAPBYTETOC")||kw(&L->cur,"SCLRBYAT")||
+      kw(&L->cur,"SZAPBYTE")){
+    /* i n → clear LE byte n of cells[i]; n clamped 0..7; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 8);
+    long r = (long)(base & ~(0xFFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 imm halfword field TOC: SWORDTOCN · SSET16TOCN · SCLR16TOCN
    * (imm dual of SWORDN/SSET16N/SCLR16N into cell; complete byte TOC ladder with 16-bit) */
   if (kw(&L->cur,"SWORDTOCN")||kw(&L->cur,"SGET16TOCN")||kw(&L->cur,"STACKWORDTOCN")||

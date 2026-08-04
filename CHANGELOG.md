@@ -1,3 +1,17 @@
+## 1.12.378-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack dual LE byte-field TOC (stack dual of SBYTETOCN plane after bitfield TOC).
+
+### Language
+- `SBYTETOC`/`BYTETOC` — stack `i n → cells[i] = LE byte n of cells[i]` (n 0..7)
+- `SSETBYTETOC`/`SETBYTETOC` — stack `i field n → deposit low 8 bits of field into LE byte n`
+- `SCLRBYTETOC`/`CLRBYTETOC` — stack `i n → clear LE byte n of cells[i]`
+- Proof `401_sbytetoc_sclrbytetoc.cubalc`
+
+### Prior
+See 1.12.377-universal.
+
 ## 1.12.377-universal — 2026-08-04
 
 ### Direction
