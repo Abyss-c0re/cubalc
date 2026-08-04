@@ -2798,6 +2798,60 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack imm 8-bit field abs+extend: SABS8N · SSEXT8N · SZEXT8N
+   * (byte ladder of SABS4N/SSEXT4N/SZEXT4N; stack dual of DABS8N/DSEXT8N/DZEXT8N after SNE8N) */
+  if (kw(&L->cur,"SABS8N")||kw(&L->cur,"STACKABS8N")||kw(&L->cur,"ABS8N")||
+      kw(&L->cur,"SIABS8N")||kw(&L->cur,"SABSBYTEN")||kw(&L->cur,"SBYTEABSN")){
+    /* SABS8N n — byte n of TOS = abs(int8); min int8 -128 → 0x80; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    long va = (long)((base >> sh) & 0xFFul);
+    if (va & 0x80) va -= 256;
+    long ar = (va < 0) ? -va : va;
+    /* min int8 -128 → +128 does not fit uint8; keep 0x80 (same as DABS8N/SABS4N) */
+    unsigned long nv = (unsigned long)(ar & 0xFF);
+    long r = (long)((base & ~(0xFFul << sh)) | (nv << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT8N")||kw(&L->cur,"STACKSEXT8N")||kw(&L->cur,"SEXT8N")||
+      kw(&L->cur,"SSIGNEXT8N")||kw(&L->cur,"SSEXTBYTEN")||kw(&L->cur,"SBYTESEXTN")){
+    /* SSEXT8N n — TOS = sign-extend byte n of TOS to full width; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    long va = (long)((base >> sh) & 0xFFul);
+    if (va & 0x80) va -= 256; /* sign-extend int8 */
+    long r = va;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZEXT8N")||kw(&L->cur,"STACKZEXT8N")||kw(&L->cur,"ZEXT8N")||
+      kw(&L->cur,"SZEROEXT8N")||kw(&L->cur,"SZEXTBYTEN")||kw(&L->cur,"SBYTEZEXTN")){
+    /* SZEXT8N n — TOS = zero-extend byte n of TOS; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    long r = (long)((base >> sh) & 0xFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack imm 16-bit field arith merge: SADD16N · SSUB16N · SMUL16N
    * (halfword dual of SADD8N/SSUB8N/SMUL8N; wrap uint16 ALU foundation after SAND16N plane) */
   if (kw(&L->cur,"SADD16N")||kw(&L->cur,"STACKADD16N")||kw(&L->cur,"ADD16N")||

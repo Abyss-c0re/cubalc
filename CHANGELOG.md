@@ -1,3 +1,17 @@
+## 1.14.38-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack imm 8-bit field abs+extend (byte ladder of SABS4N/SSEXT4N/SZEXT4N; stack dual of DABS8N plane).
+
+### Language
+- `SABS8N` — `n → byte n of TOS = abs(int8)` (min -128 → 0x80)
+- `SSEXT8N` — `n → TOS = sign-extend byte n to full width`
+- `SZEXT8N` — `n → TOS = zero-extend byte n`
+- Proof `495_sabs8n_szext8n.cubalc`
+
+### Prior
+See 1.14.37-universal.
+
 ## 1.14.37-universal — 2026-08-04
 
 ### Direction
