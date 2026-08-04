@@ -2,23 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 465 |
-| **digit** | **3** (urandom) |
-| **version** | `1.12.397-universal` |
-| **pass/fail** | **435 / 0** (green) |
-| **commit** | `60e816c` → `origin/main` |
-| **ops** | `DCLIPS32` / `DROL32` / `DROR32` |
-| **proof** | `programs/proof/420_dclips32_drol32.cubalc` |
+| **iter** | 467 |
+| **digit** | **5** (urandom) |
+| **version** | `1.12.398-universal` |
+| **pass/fail** | **436 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `DSHL32` / `DSHR32` / `DSAR32` |
+| **proof** | `programs/proof/421_dshl32_dsar32.cubalc` |
 
 ### Delta
-Digit-3 dual-stack signed clip32 + fixed rotate32: complete signed clip 4/8/16/32; fixed rotate 4/8/16/32; lexer 2CLIPS32/2ROL32/2ROR32.
-
-### Note
-Tree mass-delete mid-tick; restored from HEAD then reapplied delta.
+Digit-5 dual-stack fixed-width shift32: complete dual-stack fixed shift 4/8/16/32; lexer 2SHL32/2SHR32/2SAR32.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-- tree healthy after restore
+- tree healthy
 
-**Status:** 1.12.396→1.12.397; suite green 435/0.
+**Status:** 1.12.397→1.12.398; suite green 436/0.

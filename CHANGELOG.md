@@ -1,3 +1,17 @@
+## 1.12.398-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack fixed-width shift32 (complete dual-stack fixed shift 4/8/16/32 after DROL32/DROR32).
+
+### Language
+- `DSHL32`/`2SHL32` — dual-stack logical left within low 32 (a b c d → a≪c b≪d, masked)
+- `DSHR32`/`2SHR32` — dual-stack logical right within low 32
+- `DSAR32`/`2SAR32` — dual-stack arithmetic right (sign-extend bit31)
+- Proof `421_dshl32_dsar32.cubalc`
+
+### Prior
+See 1.12.397-universal.
+
 ## 1.12.397-universal — 2026-08-04
 
 ### Direction
