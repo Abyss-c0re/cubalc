@@ -1,0 +1,71 @@
+# Proof 387 — digit-3 imm inverted high-n mask TOC: SNANDHNTOCN SNORHNTOCN SXNORHNTOCN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARCELLS
+CLEARSTACK
+
+# all-ones via SORMNTOCN 64 (avoid CELLSET unary minus)
+CELLSET 1 0
+PUSH 1
+SORMNTOCN 64
+POP
+# SNANDHNTOCN: ~(all-ones & high-4) = ~high-4 = low 60 bits set → positive
+PUSH 1
+SNANDHNTOCN 4
+ASSERT LAST_N > 0
+ASSERT CELL(1) > 0
+POP a
+ASSERT a > 0
+
+# NANDHNTOCN n=0: ~(x & 0) = ~0 → all ones (negative)
+CELLSET 2 99
+PUSH 2
+NANDHNTOCN 0
+ASSERT LAST_N < 0
+ASSERT CELL(2) < 0
+POP
+
+# SNORHNTOCN: ~(0 | high-1) = ~MSB → all bits except MSB → positive
+CELLSET 3 0
+PUSH 3
+SNORHNTOCN 1
+ASSERT LAST_N > 0
+ASSERT CELL(3) > 0
+POP
+
+# NORHNTOCN n=0: ~(7 | 0) = ~7 = -8
+CELLSET 4 7
+PUSH 4
+NORHNTOCN 0
+ASSERT LAST_N == -8
+ASSERT CELL(4) == -8
+POP
+
+# SXNORHNTOCN: ~(0 ^ high-2) = ~high-2 → positive; then check toggle path soft
+CELLSET 5 0
+PUSH 5
+SXNORHNTOCN 2
+ASSERT LAST_N > 0
+ASSERT CELL(5) > 0
+POP
+
+# XNORHNTOCN on all-ones: ~(all ^ high-1) = ~(~MSB) wait:
+# all-ones ^ MSB = all bits except clear MSB flipped... use n=0: ~(x^0)=~x
+CELLSET 6 0
+PUSH 6
+SORMNTOCN 64
+POP
+PUSH 6
+XNORHNTOCN 0
+# ~(all ^ 0) = ~all = 0
+ASSERT LAST_N == 0
+ASSERT CELL(6) == 0
+POP
+
+# soft empty OK=0
+CLEARSTACK
+SNANDHNTOCN 3
+ASSERT OK == 0
+
+PRINT "387_snandhntocn_sxnorhntocn OK"
