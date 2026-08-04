@@ -6,7 +6,7 @@
 | **digit** | **3** (urandom) |
 | **version** | `1.12.395-universal` |
 | **pass/fail** | **433 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `0aeb71e` → `origin/main` |
 | **ops** | `SCLIP4` / `SCLIP32` / `SCLIPS32` |
 | **proof** | `programs/proof/418_sclip4_sclips32.cubalc` |
 
