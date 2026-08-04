@@ -8522,6 +8522,82 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 dual-stack imm 8-bit field metrics: DBITREV8N · DPOPCNT8N · DPARITY8N
+   * (byte ladder of DBITREV4N/DPOPCNT4N/DPARITY4N; dual 8n metrics after DSHL8N) */
+  if (kw(&L->cur,"DBITREV8N")||kw(&L->cur,"S2BITREV8N")||kw(&L->cur,"STACK2BITREV8N")||
+      kw(&L->cur,"PAIRBITREV8N")||kw(&L->cur,"DBREV8N")||kw(&L->cur,"DREV8N")||
+      kw(&L->cur,"DBITREVBYTEN")){
+    /* a b + n → byte n of each = bitrev8(byte); n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long ra = 0, rb = 0, ta = va, tb = vb;
+    for (int b = 0; b < 8; b++){
+      ra = (ra << 1) | (ta & 1u); ta >>= 1;
+      rb = (rb << 1) | (tb & 1u); tb >>= 1;
+    }
+    long x = (long)((ma & ~(0xFFul << sh)) | (ra << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (rb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOPCNT8N")||kw(&L->cur,"S2POPCNT8N")||kw(&L->cur,"STACK2POPCNT8N")||
+      kw(&L->cur,"PAIRPOPCNT8N")||kw(&L->cur,"DPCNT8N")||kw(&L->cur,"DPOPBYTEN")||
+      kw(&L->cur,"DBYTEPOPN")){
+    /* a b + n → byte n of each = popcount(byte); n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long pa = 0, pb = 0;
+    while (va){ pa += (va & 1u); va >>= 1; }
+    while (vb){ pb += (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFFul << sh)) | ((pa & 0xFFul) << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | ((pb & 0xFFul) << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPARITY8N")||kw(&L->cur,"S2PARITY8N")||kw(&L->cur,"STACK2PARITY8N")||
+      kw(&L->cur,"PAIRPARITY8N")||kw(&L->cur,"DXORRED8N")||kw(&L->cur,"DPARITYBYTEN")||
+      kw(&L->cur,"DBYTEPARN")){
+    /* a b + n → byte n of each = xor-reduce(byte) in low bit; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long pra = 0, prb = 0;
+    while (va){ pra ^= (va & 1u); va >>= 1; }
+    while (vb){ prb ^= (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFFul << sh)) | (pra << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (prb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||

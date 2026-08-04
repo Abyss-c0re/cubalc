@@ -1,3 +1,17 @@
+## 1.14.35-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm 8-bit field metrics (byte ladder of DBITREV4N/DPOPCNT4N/DPARITY4N; dual 8n metrics after DSHL8N).
+
+### Language
+- `DBITREV8N` — `n → byte n of each = bitrev8(byte)`
+- `DPOPCNT8N` — `n → byte n of each = popcount(byte)`
+- `DPARITY8N` — `n → byte n of each = xor-reduce(byte) in low bit`
+- Proof `492_dbitrev8n_dparity8n.cubalc`
+
+### Prior
+See 1.14.34-universal.
+
 ## 1.14.34-universal — 2026-08-04
 
 ### Direction
