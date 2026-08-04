@@ -1,3 +1,17 @@
+## 1.12.346-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → reverse modular stack↔cell TOC (stack dual of SSUBMODFROMTOCN plane).
+
+### Language
+- `SSUBMODFROMTOC`/`RSUBMODTOC` — stack `i k m → cells[i]=(k-cells[i]) mod m` leave result
+- `SPOWMODFROMTOC`/`RPOWMODTOC` — stack `i base m → cells[i]=base^cells[i] mod m` leave result
+- `SMODDIVFROMTOC`/`RMODDIVTOC` — stack `i a m → cells[i]=a·cells[i]⁻¹ mod m` leave result
+- Proof `369_ssubmodfromtoc_smoddivfromtoc.cubalc`
+
+### Prior
+See 1.12.345-universal.
+
 ## 1.12.345-universal — 2026-08-04
 
 ### Direction
