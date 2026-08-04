@@ -1,3 +1,17 @@
+## 1.12.423-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → cell fixed-width 32 metrics foundation (dword dual of CLZ8/CTZ8/PARITY8 after POPCNT32; complete 8/16/32 metrics).
+
+### Language
+- `CLZ32CELL`/`CLZ32RANGE` — `lo hi → clz32(low32)` (0 → 32)
+- `CTZ32CELL`/`CTZ32RANGE` — `lo hi → ctz32(low32)` (0 → 32)
+- `PARITY32CELL`/`PARITY32RANGE` — `lo hi → xor-reduce low32 bits`
+- Proof `446_clz32cell_parity32cell.cubalc`
+
+### Prior
+See 1.12.422-universal.
+
 ## 1.12.422-universal — 2026-08-04
 
 ### Direction
