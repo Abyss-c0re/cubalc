@@ -6,11 +6,11 @@
 | **digit** | **2** (urandom) |
 | **version** | `1.14.14-universal` |
 | **pass/fail** | **486 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `1683da7` → `origin/main` |
 | **ops** | `SDIV8N` / `SMOD8N` / `SMIN8N` |
 | **proof** | `programs/proof/471_sdiv8n_smin8n.cubalc` |
 
 ### Delta
 Digit-2 stack imm byte-field div/mod/min: complete uint8 field ALU after SADD8N/SSUB8N/SMUL8N; div0/mod0 → 0.
 
-**Status:** 1.14.13→1.14.14-universal; suite green 486/0; push pending.
+**Status:** 1.14.13→1.14.14-universal; suite green 486/0; push ok.
