@@ -1,3 +1,18 @@
+## 1.14.86-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack imm 32-bit field signed ordered-cmp (word ladder of SLTS16N after unsigned SGTE32N).
+
+### Language
+- `SLTS32N` — `field n → word n = (int32(w) < int32(field)) ? 1 : 0`
+- `SGTS32N` — `field n → word n = (int32(w) > int32(field)) ? 1 : 0`
+- `SLTES32N` — `field n → word n = (int32(w) <= int32(field)) ? 1 : 0`
+- `SGTES32N` — `field n → word n = (int32(w) >= int32(field)) ? 1 : 0`
+- Proof `543_slts32n_sgtes32n.cubalc`
+
+### Prior
+See 1.14.85-universal.
+
 ## 1.14.85-universal — 2026-08-04
 
 ### Direction
