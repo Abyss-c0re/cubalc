@@ -1,3 +1,17 @@
+## 1.14.76-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 4-bit field ordered-cmp (dual of SLT4N/SGT4N/SLTE4N after DEQ4N/DNE4N).
+
+### Language
+- `DLT4N` — `field n → nibble n of each = (nib < field) ? 1 : 0` on top two
+- `DGT4N` — `field n → nibble n of each = (nib > field) ? 1 : 0`
+- `DLTE4N` — `field n → nibble n of each = (nib <= field) ? 1 : 0`
+- Proof `533_dlt4n_dlte4n.cubalc`
+
+### Prior
+See 1.14.75-universal.
+
 ## 1.14.75-universal — 2026-08-04
 
 ### Direction
