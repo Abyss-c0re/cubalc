@@ -1,3 +1,17 @@
+## 1.14.20-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm 16-bit field div/mod/min (dual of SDIV16N/SMOD16N/SMIN16N; field 0 → div/mod 0).
+
+### Language
+- `DDIV16N` — `field n → halfword n of each = hw / field` (field 0 → 0)
+- `DMOD16N` — `field n → halfword n of each = hw % field` (field 0 → 0)
+- `DMIN16N` — `field n → halfword n of each = min(hw, field)`
+- Proof `477_ddiv16n_dmin16n.cubalc`
+
+### Prior
+See 1.14.19-universal.
+
 ## 1.14.19-universal — 2026-08-04
 
 ### Direction
