@@ -1,3 +1,17 @@
+## 1.14.62-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack imm 32-bit field metrics (word ladder of DBITREV16N/DPOPCNT16N/DPARITY16N; dual of SBITREV32N after DCLZ32N).
+
+### Language
+- `DBITREV32N` — `n → word n of each = bitrev32(w)` on top two
+- `DPOPCNT32N` — `n → word n of each = popcount(w)` (0..32)
+- `DPARITY32N` — `n → word n of each = xor-reduce(w)` low bit
+- Proof `519_dbitrev32n_dparity32n.cubalc`
+
+### Prior
+See 1.14.61-universal.
+
 ## 1.14.61-universal — 2026-08-04
 
 ### Direction
