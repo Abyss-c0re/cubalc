@@ -6,11 +6,11 @@
 | **digit** | **0** (urandom) |
 | **version** | `1.14.10-universal` |
 | **pass/fail** | **482 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `8a6b3cb` → `origin/main` |
 | **ops** | `SADD4N` / `SSUB4N` / `SMUL4N` |
 | **proof** | `programs/proof/467_sadd4n_smul4n.cubalc` |
 
 ### Delta
 Digit-0 stack imm nibble-field arith merge: add / sub / mul wrap into selected nibble of TOS. Completes nibble field ALU foundation after SAND4N bitwise plane.
 
-**Status:** 1.14.9→1.14.10-universal; suite green 482/0; push pending.
+**Status:** 1.14.9→1.14.10-universal; suite green 482/0; push ok.
