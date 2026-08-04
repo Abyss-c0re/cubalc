@@ -1,3 +1,18 @@
+## 1.12.343-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → foundation forward unsigned imm TOC (unsigned peer of SDIVTOCN plane after SUDIVN/SUMINN).
+
+### Language
+- `SUDIVTOCN`/`UDIVTOCN`/`SUDIVATN` n — stack `i → cells[i]=(u)cells[i]/(u)n` leave quotient
+- `SUMODTOCN`/`UMODTOCN`/`SUMODATN` n — stack `i → cells[i]=(u)cells[i]%(u)n` leave remainder
+- `SUMINTOCN`/`UMINTOCN`/`SUMINATN` n — stack `i → cells[i]=umin(cells[i],n)` leave result
+- `SUMAXTOCN`/`UMAXTOCN`/`SUMAXATN` n — stack `i → cells[i]=umax(cells[i],n)` leave result
+- Proof `366_sudivtocn_sumaxtocn.cubalc`
+
+### Prior
+See 1.12.342-universal.
+
 ## 1.12.342-universal — 2026-08-04
 
 ### Direction
