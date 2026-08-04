@@ -1,3 +1,17 @@
+## 1.12.425-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell fixed-width 32 inverted bitwise (inverted dual of AND32/OR32/XOR32; complete low32 logic plane).
+
+### Language
+- `NAND32CELL`/`NAND32RANGE` — `lo hi mask → ~(low32 & mask) as u32`
+- `NOR32CELL`/`NOR32RANGE` — `lo hi mask → ~(low32 | mask) as u32`
+- `XNOR32CELL`/`XNOR32RANGE` — `lo hi mask → ~(low32 ^ mask) as u32`
+- Proof `448_nand32cell_xnor32cell.cubalc`
+
+### Prior
+See 1.12.424-universal.
+
 ## 1.12.424-universal — 2026-08-04
 
 ### Direction

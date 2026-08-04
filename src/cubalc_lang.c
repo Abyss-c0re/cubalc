@@ -27074,6 +27074,60 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 cell fixed-width 32 inverted bitwise: NAND32CELL · NOR32CELL · XNOR32CELL
+   * (inverted dual of AND32/OR32/XOR32; result low32 only — complete 32 cell logic plane) */
+  if (kw(&L->cur,"NAND32CELL")||kw(&L->cur,"CELLNAND32")||kw(&L->cur,"BNAND32CELL")||
+      kw(&L->cur,"RANGENAND32")||kw(&L->cur,"NAND32RANGE")||kw(&L->cur,"UNAND32CELL")){
+    /* NAND32CELL lo hi mask — cells[i] = ~(low32 & low32(mask)) & 0xFFFFFFFF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(~((unsigned int)vm->cells[(int)i] & m));
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NOR32CELL")||kw(&L->cur,"CELLNOR32")||kw(&L->cur,"BNOR32CELL")||
+      kw(&L->cur,"RANGENOR32")||kw(&L->cur,"NOR32RANGE")||kw(&L->cur,"UNOR32CELL")){
+    /* NOR32CELL lo hi mask — cells[i] = ~(low32 | low32(mask)) & 0xFFFFFFFF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(~((unsigned int)vm->cells[(int)i] | m));
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XNOR32CELL")||kw(&L->cur,"CELLXNOR32")||kw(&L->cur,"BXNOR32CELL")||
+      kw(&L->cur,"RANGEXNOR32")||kw(&L->cur,"XNOR32RANGE")||kw(&L->cur,"NXOR32CELL")||
+      kw(&L->cur,"UXNOR32CELL")){
+    /* XNOR32CELL lo hi mask — cells[i] = ~(low32 ^ low32(mask)) & 0xFFFFFFFF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(~((unsigned int)vm->cells[(int)i] ^ m));
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
