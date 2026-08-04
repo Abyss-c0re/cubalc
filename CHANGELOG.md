@@ -1,3 +1,17 @@
+## 1.14.74-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack imm 8-bit field ordered-cmp (dual of SLT8N/SGT8N/SLTE8N after DEQ8N/DNE8N).
+
+### Language
+- `DLT8N` — `field n → byte n of each = (b < field) ? 1 : 0` on top two
+- `DGT8N` — `field n → byte n of each = (b > field) ? 1 : 0`
+- `DLTE8N` — `field n → byte n of each = (b <= field) ? 1 : 0`
+- Proof `531_dlt8n_dlte8n.cubalc`
+
+### Prior
+See 1.14.73-universal.
+
 ## 1.14.73-universal — 2026-08-04
 
 ### Direction

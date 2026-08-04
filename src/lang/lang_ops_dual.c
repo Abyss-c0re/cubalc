@@ -7544,6 +7544,83 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm 8-bit field ordered-cmp: DLT8N · DGT8N · DLTE8N
+   * (dual of SLT8N/SGT8N/SLTE8N; unsigned byte predicates after DEQ8N/DNE8N) */
+  if (kw(&L->cur,"DLT8N")||kw(&L->cur,"S2LT8N")||kw(&L->cur,"STACK2LT8N")||
+      kw(&L->cur,"PAIRLT8N")||kw(&L->cur,"DCMPLT8N")||kw(&L->cur,"DLTBIMM")||
+      kw(&L->cur,"DLTBN")){
+    /* a b + field n → byte n of each = (b < field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long wa = (va < f) ? 1ul : 0ul;
+    unsigned long wb = (vb < f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DGT8N")||kw(&L->cur,"S2GT8N")||kw(&L->cur,"STACK2GT8N")||
+      kw(&L->cur,"PAIRGT8N")||kw(&L->cur,"DCMPGT8N")||kw(&L->cur,"DGTBIMM")||
+      kw(&L->cur,"DGTBN")){
+    /* a b + field n → byte n of each = (b > field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long wa = (va > f) ? 1ul : 0ul;
+    unsigned long wb = (vb > f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DLTE8N")||kw(&L->cur,"S2LTE8N")||kw(&L->cur,"STACK2LTE8N")||
+      kw(&L->cur,"PAIRLTE8N")||kw(&L->cur,"DCMPLE8N")||kw(&L->cur,"DLEQ8N")||
+      kw(&L->cur,"DLTEBIMM")||kw(&L->cur,"DLTEBN")){
+    /* a b + field n → byte n of each = (b <= field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long wa = (va <= f) ? 1ul : 0ul;
+    unsigned long wb = (vb <= f) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack imm 8-bit field bitwise: DAND8N · DOR8N · DXOR8N (dual of SAND8N/SOR8N/SXOR8N) */
   if (kw(&L->cur,"DAND8N")||kw(&L->cur,"S2AND8N")||kw(&L->cur,"STACK2AND8N")||
       kw(&L->cur,"PAIRAND8N")||kw(&L->cur,"DANDBIMM")||kw(&L->cur,"DKEEP8N")||
