@@ -1,3 +1,17 @@
+## 1.14.55-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 32-bit field unary+rotate (word ladder of DNOT16N/DROL16N/DROR16N; dual of SNOT32N).
+
+### Language
+- `DNOT32N` — `n → word n of each = ~w & 0xFFFFFFFF` on top two
+- `DROL32N` — `k n → rotl32 word n of each by k&31`
+- `DROR32N` — `k n → rotr32 word n of each by k&31`
+- Proof `512_dnot32n_dror32n.cubalc`
+
+### Prior
+See 1.14.54-universal.
+
 ## 1.14.54-universal — 2026-08-04
 
 ### Direction
