@@ -1,3 +1,17 @@
+## 1.12.361-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → imm low-n metric TOC (imm dual of SPOPMN/SANYMN/SALLMN into cell after SANDMNTOCN).
+
+### Language
+- `SPOPMNTOCN`/`POPMNTOCN` n — stack `i → cells[i]=popcount(cells[i]&low-n mask)` (n 0..64)
+- `SANYMNTOCN`/`ANYMNTOCN` n — stack `i → cells[i]=1 if any low-n bit set else 0`
+- `SALLMNTOCN`/`ALLMNTOCN` n — stack `i → cells[i]=1 if all low-n bits set else 0` (n=0 vacuous 1)
+- Proof `384_spopmntocn_sallmntocn.cubalc`
+
+### Prior
+See 1.12.360-universal.
+
 ## 1.12.360-universal — 2026-08-04
 
 ### Direction

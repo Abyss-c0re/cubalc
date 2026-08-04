@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 442 (plate after tree restore + 360) |
-| **digit** | **8** (urandom; imm low-n mask TOC) |
-| **version** | `1.12.360-universal` |
-| **pass/fail** | **398 / 0** (green) |
-| **commit** | `ca16bda` → `origin/main` |
-| **ops** | `SANDMNTOCN` / `SORMNTOCN` / `SXORMNTOCN` |
-| **proof** | `programs/proof/383_sandmntocn_sxormntocn.cubalc` |
+| **iter** | 443 |
+| **digit** | **9** (urandom; imm low-n metric TOC) |
+| **version** | `1.12.361-universal` |
+| **pass/fail** | **399 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SPOPMNTOCN` / `SANYMNTOCN` / `SALLMNTOCN` |
+| **proof** | `programs/proof/384_spopmntocn_sallmntocn.cubalc` |
 
 ### Delta
-Digit-8 imm low-n mask TOC: `i + n → cells[i] &= / |= / ^= low-n mask` (imm dual of SANDMN/SORMN/SXORMN into cell).
+Digit-9 imm low-n metric TOC: `i + n → cells[i] = popcount/any/all of low-n bits` (imm dual of SPOPMN/SANYMN/SALLMN into cell).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
-- daemon running; tree restored after evolve mass-delete
+- daemon running
 
 ### Language
-- `SANDMNTOCN` `SORMNTOCN` `SXORMNTOCN` · aliases `ANDMNTOCN`/`ORMNTOCN`/`XORMNTOCN`
-- Proof `383_sandmntocn_sxormntocn.cubalc`
+- `SPOPMNTOCN` `SANYMNTOCN` `SALLMNTOCN` · aliases `POPMNTOCN`/`ANYMNTOCN`/`ALLMNTOCN`
+- Proof `384_spopmntocn_sallmntocn.cubalc`
