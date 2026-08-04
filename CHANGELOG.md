@@ -1,3 +1,17 @@
+## 1.12.384-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack dual fixed-width extend TOC (complete 8/16/32 fixed extend plane after SSEXT8TOC).
+
+### Language
+- `SSEXT16TOC`/`SEXT16TOC` — stack `i → cells[i] = sign-extend low 16 bits of cells[i]`
+- `SSEXT32TOC`/`SEXT32TOC` — stack `i → cells[i] = sign-extend low 32 bits of cells[i]`
+- `SZEXT8TOC`/`ZEXT8TOC` — stack `i → cells[i] = zero-extend low 8 bits of cells[i]`
+- Proof `407_ssext16toc_szext8toc.cubalc`
+
+### Prior
+See 1.12.383-universal.
+
 ## 1.12.383-universal — 2026-08-04
 
 ### Direction
