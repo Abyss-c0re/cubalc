@@ -1,3 +1,17 @@
+## 1.14.26-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → dual-stack imm 4-bit field div/mod/min (dual of SDIV4N/SMOD4N/SMIN4N; field 0 → div/mod 0).
+
+### Language
+- `DDIV4N` — `field n → nibble n of each = nib / field` (field 0 → 0)
+- `DMOD4N` — `field n → nibble n of each = nib % field` (field 0 → 0)
+- `DMIN4N` — `field n → nibble n of each = min(nib, field)`
+- Proof `483_ddiv4n_dmin4n.cubalc`
+
+### Prior
+See 1.14.25-universal.
+
 ## 1.14.25-universal — 2026-08-04
 
 ### Direction
