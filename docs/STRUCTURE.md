@@ -28,6 +28,7 @@ cubalc/
       lang_ops_bit.c         # bitfield / mask / sat
       lang_ops_cell.c        # *CELL range plane
       lang_ops_flow.c        # FN / LET / control / ASSERT
+      lang_ops_smx.c         # SMX/P2P: KEY TALK EXCHANGE SEAL OPEN SERVE DIAL
       lang_parse.c           # parse_form dispatcher (planes)
       lang_run.c             # cubalc_run_source / run_file
       README.md

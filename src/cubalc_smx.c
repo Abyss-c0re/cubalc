@@ -1,11 +1,33 @@
 #define _POSIX_C_SOURCE 200809L
 #include "cubalc_smx.h"
+#include "cubalc_platform.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
+#if defined(CUBALC_OS_WINDOWS)
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+#  pragma comment(lib, "ws2_32.lib")
+   static int cubalc_sock_init(void) {
+     static int once;
+     if (!once) { WSADATA w; WSAStartup(MAKEWORD(2,2), &w); once = 1; }
+     return 0;
+   }
+#  define CUBALC_CLOSESOCK closesocket
+#else
+#  include <sys/socket.h>
+#  include <sys/un.h>
+#  include <sys/stat.h>
+#  include <netinet/in.h>
+#  include <arpa/inet.h>
+#  include <netdb.h>
+   static int cubalc_sock_init(void) { return 0; }
+#  define CUBALC_CLOSESOCK close
+#endif
 
 /* --- minimal SHA-256 (public domain style compact) --- */
 typedef struct {
@@ -386,4 +408,185 @@ int cubalc_smx_read_frame(const char *path, uint8_t *out, size_t cap, size_t *n_
   fclose(f);
   if (n_out) *n_out = n;
   return n > 0 ? 0 : -1;
+}
+
+/* ---- binary bus (no HTTP): u32le length + SMX2 frame ---- */
+static int write_full(int fd, const void *buf, size_t n) {
+  const uint8_t *p = (const uint8_t *)buf;
+  size_t o = 0;
+  while (o < n) {
+#if defined(CUBALC_OS_WINDOWS)
+    int w = send(fd, (const char *)(p + o), (int)(n - o), 0);
+#else
+    ssize_t w = write(fd, p + o, n - o);
+#endif
+    if (w < 0) {
+      if (errno == EINTR) continue;
+      return -1;
+    }
+    if (w == 0) return -1;
+    o += (size_t)w;
+  }
+  return 0;
+}
+
+static int read_full(int fd, void *buf, size_t n) {
+  uint8_t *p = (uint8_t *)buf;
+  size_t o = 0;
+  while (o < n) {
+#if defined(CUBALC_OS_WINDOWS)
+    int r = recv(fd, (char *)(p + o), (int)(n - o), 0);
+#else
+    ssize_t r = read(fd, p + o, n - o);
+#endif
+    if (r < 0) {
+      if (errno == EINTR) continue;
+      return -1;
+    }
+    if (r == 0) return -1;
+    o += (size_t)r;
+  }
+  return 0;
+}
+
+int cubalc_smx_send_frame(int fd, const uint8_t *frame, size_t n) {
+  uint8_t hdr[4];
+  if (fd < 0 || !frame || n == 0 || n > 0xffffu) return -1;
+  cubalc_sock_init();
+  hdr[0] = (uint8_t)(n & 0xff);
+  hdr[1] = (uint8_t)((n >> 8) & 0xff);
+  hdr[2] = (uint8_t)((n >> 16) & 0xff);
+  hdr[3] = (uint8_t)((n >> 24) & 0xff);
+  if (write_full(fd, hdr, 4) != 0) return -1;
+  return write_full(fd, frame, n);
+}
+
+int cubalc_smx_recv_frame(int fd, uint8_t *out, size_t cap, size_t *n_out) {
+  uint8_t hdr[4];
+  uint32_t n;
+  if (fd < 0 || !out || cap < 16) return -1;
+  cubalc_sock_init();
+  if (read_full(fd, hdr, 4) != 0) return -1;
+  n = (uint32_t)hdr[0] | ((uint32_t)hdr[1] << 8) |
+      ((uint32_t)hdr[2] << 16) | ((uint32_t)hdr[3] << 24);
+  if (n < 16 || n > cap || n > 0xffffu) return -1;
+  if (read_full(fd, out, n) != 0) return -1;
+  if (n_out) *n_out = n;
+  return 0;
+}
+
+int cubalc_smx_unix_listen(const char *sock_path, int backlog) {
+#if defined(CUBALC_OS_WINDOWS)
+  (void)sock_path; (void)backlog;
+  return -1; /* AF_UNIX not available on classic Winsock */
+#else
+  int fd;
+  struct sockaddr_un addr;
+  if (!sock_path || !sock_path[0] || strlen(sock_path) >= sizeof addr.sun_path)
+    return -1;
+  unlink(sock_path);
+  fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0) return -1;
+  memset(&addr, 0, sizeof addr);
+  addr.sun_family = AF_UNIX;
+  snprintf(addr.sun_path, sizeof addr.sun_path, "%s", sock_path);
+  if (bind(fd, (struct sockaddr *)&addr, sizeof addr) != 0) {
+    close(fd);
+    return -1;
+  }
+  if (listen(fd, backlog > 0 ? backlog : 1) != 0) {
+    close(fd);
+    unlink(sock_path);
+    return -1;
+  }
+  return fd;
+#endif
+}
+
+int cubalc_smx_unix_connect(const char *sock_path) {
+#if defined(CUBALC_OS_WINDOWS)
+  (void)sock_path;
+  return -1;
+#else
+  int fd;
+  struct sockaddr_un addr;
+  if (!sock_path || !sock_path[0] || strlen(sock_path) >= sizeof addr.sun_path)
+    return -1;
+  fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0) return -1;
+  memset(&addr, 0, sizeof addr);
+  addr.sun_family = AF_UNIX;
+  snprintf(addr.sun_path, sizeof addr.sun_path, "%s", sock_path);
+  if (connect(fd, (struct sockaddr *)&addr, sizeof addr) != 0) {
+    close(fd);
+    return -1;
+  }
+  return fd;
+#endif
+}
+
+int cubalc_smx_tcp_listen(const char *host, int port, int backlog) {
+  int fd, on = 1;
+  struct sockaddr_in addr;
+  if (port <= 0 || port > 65535) return -1;
+  cubalc_sock_init();
+  fd = (int)socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) return -1;
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&on, sizeof on);
+  memset(&addr, 0, sizeof addr);
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons((uint16_t)port);
+  if (!host || !host[0] || strcmp(host, "0.0.0.0") == 0 ||
+      strcmp(host, "*") == 0 || strcmp(host, "any") == 0) {
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  } else if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+    CUBALC_CLOSESOCK(fd);
+    return -1;
+  }
+  if (bind(fd, (struct sockaddr *)&addr, sizeof addr) != 0) {
+    CUBALC_CLOSESOCK(fd);
+    return -1;
+  }
+  if (listen(fd, backlog > 0 ? backlog : 4) != 0) {
+    CUBALC_CLOSESOCK(fd);
+    return -1;
+  }
+  return fd;
+}
+
+int cubalc_smx_tcp_connect(const char *host, int port) {
+  int fd;
+  struct sockaddr_in addr;
+  struct addrinfo hints, *res = NULL, *rp;
+  char portstr[16];
+  if (!host || !host[0] || port <= 0 || port > 65535) return -1;
+  cubalc_sock_init();
+  /* fast path: dotted IPv4 */
+  memset(&addr, 0, sizeof addr);
+  if (inet_pton(AF_INET, host, &addr.sin_addr) == 1) {
+    fd = (int)socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((uint16_t)port);
+    if (connect(fd, (struct sockaddr *)&addr, sizeof addr) != 0) {
+      CUBALC_CLOSESOCK(fd);
+      return -1;
+    }
+    return fd;
+  }
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  snprintf(portstr, sizeof portstr, "%d", port);
+  if (getaddrinfo(host, portstr, &hints, &res) != 0) return -1;
+  fd = -1;
+  for (rp = res; rp; rp = rp->ai_next) {
+    fd = (int)socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (fd < 0) continue;
+    if (connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) break;
+    CUBALC_CLOSESOCK(fd);
+    fd = -1;
+  }
+  freeaddrinfo(res);
+  return fd;
 }

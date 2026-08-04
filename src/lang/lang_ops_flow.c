@@ -994,6 +994,21 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         lex_next(L); skip_nl(L);
         Lex body=*L;
         if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+        /* advance outer L from ELSE-body start to matching END (body is a copy) */
+        depth=1;
+        while (L->cur.kind!=TK_EOF && depth>0){
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||
+              kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
+              kw(&L->cur,"UNTIL")||kw(&L->cur,"TIMES")||kw(&L->cur,"UNLESS")||kw(&L->cur,"CASE"))
+            depth++;
+          else if (kw(&L->cur,"END")){ depth--; if(depth==0) break; }
+          lex_next(L);
+        }
         if (kw(&L->cur,"END")) lex_next(L);
         bump(vm); return 1;
       }

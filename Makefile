@@ -39,6 +39,7 @@ CORE_SRC = \
 LANG_SRC = \
 	src/lang/lang_core.c \
 	src/lang/lang_ops_core.c \
+	src/lang/lang_ops_smx.c \
 	src/lang/lang_ops_toc.c \
 	src/lang/lang_ops_stack.c \
 	src/lang/lang_ops_dual.c \

@@ -1325,6 +1325,15 @@ long cubalc_lang_parse_prim(VM *vm, Lex *L){
     if (strcmp(name,"WORKERS")==0) return cubalc_async_workers();
     if (strcmp(name,"GPU")==0) return cubalc_async_gpu_ok();
     if (strcmp(name,"HTTP_CODE")==0) return vm->last_code;
+    if (strcmp(name,"SMX_OK")==0){
+      Var *vv=var_get(vm,"SMX_OK",0); return vv?vv->val:(long)vm->smx_ok;
+    }
+    if (strcmp(name,"SMX_TALKS")==0){
+      Var *vv=var_get(vm,"SMX_TALKS",0); return vv?vv->val:(long)vm->smx_talks;
+    }
+    if (strcmp(name,"SMX_N")==0){
+      Var *vv=var_get(vm,"SMX_N",0); return vv?vv->val:0;
+    }
     if (strcmp(name,"OK")==0){ Var *vv=var_get(vm,"OK",0); return vv?vv->val:0; }
     if (strcmp(name,"EXIT")==0){ Var *vv=var_get(vm,"EXIT",0); return vv?vv->val:0; }
     if (strcmp(name,"LAST_N")==0){ Var *vn=var_get(vm,"LAST_N",0); if(vn) return vn->val; return vm->last_n; }

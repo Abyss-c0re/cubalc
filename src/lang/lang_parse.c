@@ -7,6 +7,7 @@ int cubalc_lang_parse_form(VM *vm, Lex *L){
 
   int r;
   if ((r = cubalc_lang_ops_core(vm, L)) != 0) return r;
+  if ((r = cubalc_lang_ops_smx(vm, L)) != 0) return r;
   if ((r = cubalc_lang_ops_toc(vm, L)) != 0) return r;
   if ((r = cubalc_lang_ops_stack(vm, L)) != 0) return r;
   if ((r = cubalc_lang_ops_dual(vm, L)) != 0) return r;

@@ -11,6 +11,7 @@
 #include "cubalc_async.h"
 #include "cubalc_hw.h"
 #include "cubalc_hostops.h"
+#include "cubalc_smx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +64,10 @@ typedef struct {
   long cells[CUBALC_CELL_N];
   long stack[CUBALC_STACK_N];
   int sp; /* stack depth 0..CUBALC_STACK_N */
+  /* SMX2 / P2P — Law of Manifestation (binary talk, no HTTP) */
+  cubalc_smx_ctx smx;
+  int smx_ok;
+  int smx_talks;
 } VM;
 
 
@@ -120,6 +125,7 @@ int cubalc_lang_ops_math(VM *vm, Lex *L);
 int cubalc_lang_ops_bit(VM *vm, Lex *L);
 int cubalc_lang_ops_cell(VM *vm, Lex *L);
 int cubalc_lang_ops_flow(VM *vm, Lex *L);
+int cubalc_lang_ops_smx(VM *vm, Lex *L);
 
 #define fail(vm,msg)          cubalc_lang_fail((vm),(msg))
 #define bump(vm)              cubalc_lang_bump((vm))
