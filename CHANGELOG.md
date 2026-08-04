@@ -1,3 +1,17 @@
+## 1.14.52-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 16-bit field zeros+signed (halfword ladder of DCLZ8N/DCTZ8N/DNEG8N; dual of SCLZ16N after DPARITY16N).
+
+### Language
+- `DCLZ16N` — `n → halfword n of each = clz16(hw)` (0 → 16) on top two
+- `DCTZ16N` — `n → halfword n of each = ctz16(hw)` (0 → 16)
+- `DNEG16N` — `n → halfword n of each = -(int16)` as uint16 (min stays 0x8000)
+- Proof `509_dclz16n_dneg16n.cubalc`
+
+### Prior
+See 1.14.51-universal.
+
 ## 1.14.51-universal — 2026-08-04
 
 ### Direction
