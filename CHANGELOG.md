@@ -1,3 +1,18 @@
+## 1.14.85-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack imm 16-bit field signed ordered-cmp (dual of SLTS16N plane after DGTE16N).
+
+### Language
+- `DLTS16N` — `field n → halfword n of each = (int16(hw) < int16(field)) ? 1 : 0`
+- `DGTS16N` — `field n → halfword n of each = (int16(hw) > int16(field)) ? 1 : 0`
+- `DLTES16N` — `field n → halfword n of each = (int16(hw) <= int16(field)) ? 1 : 0`
+- `DGTES16N` — `field n → halfword n of each = (int16(hw) >= int16(field)) ? 1 : 0`
+- Proof `542_dlts16n_dgtes16n.cubalc`
+
+### Prior
+See 1.14.84-universal.
+
 ## 1.14.84-universal — 2026-08-04
 
 ### Direction
