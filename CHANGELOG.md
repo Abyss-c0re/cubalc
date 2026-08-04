@@ -1,3 +1,17 @@
+## 1.12.373-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack dual high-n mask TOC (stack dual of SANDHNTOCN plane; high dual of SANDMNTOC).
+
+### Language
+- `SANDHNTOC`/`ANDHNTOC` — stack `i n → cells[i] &= high-n mask`; keep high n bits (n 0..64)
+- `SORHNTOC`/`ORHNTOC` — stack `i n → cells[i] |= high-n mask`; set high n bits
+- `SXORHNTOC`/`XORHNTOC` — stack `i n → cells[i] ^= high-n mask`; toggle high n bits
+- Proof `396_sandhntoc_sxorhntoc.cubalc`
+
+### Prior
+See 1.12.372-universal.
+
 ## 1.12.372-universal — 2026-08-04
 
 ### Direction
