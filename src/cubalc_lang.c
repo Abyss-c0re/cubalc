@@ -6043,6 +6043,76 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 imm high-n metric TOC: SPOPHNTOCN · SANYHNTOCN · SALLHNTOCN
+   * (imm dual of SPOPHN/SANYHN/SALLHN into cell; high dual of SPOPMNTOCN plane) */
+  if (kw(&L->cur,"SPOPHNTOCN")||kw(&L->cur,"SPOPHNTOCIMM")||kw(&L->cur,"STACKPOPHNTOCN")||
+      kw(&L->cur,"SONESHNTOCN")||kw(&L->cur,"POPHNTOCN")||kw(&L->cur,"SCELLPOPHN")||
+      kw(&L->cur,"SHIGHPOPTOCN")||kw(&L->cur,"SPCNTHNTOCN")){
+    /* i + n → cells[i] = popcount(cells[i] & high-n mask); n 0..64; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    unsigned long ua = (unsigned long)vm->cells[(int)i] & m;
+    long r = 0;
+    while (ua){ r += (long)(ua & 1ul); ua >>= 1; }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SANYHNTOCN")||kw(&L->cur,"SANYHNTOCIMM")||kw(&L->cur,"STACKANYHNTOCN")||
+      kw(&L->cur,"SHIGHANYTOCN")||kw(&L->cur,"ANYHNTOCN")||kw(&L->cur,"SCELLANYHN")||
+      kw(&L->cur,"STESTANYHNTOCN")){
+    /* i + n → cells[i] = ((cells[i] & high-n mask) != 0) ? 1 : 0; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long r = (((unsigned long)vm->cells[(int)i] & m) != 0) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SALLHNTOCN")||kw(&L->cur,"SALLHNTOCIMM")||kw(&L->cur,"STACKALLHNTOCN")||
+      kw(&L->cur,"SHIGHALLTOCN")||kw(&L->cur,"ALLHNTOCN")||kw(&L->cur,"SCELLALLHN")||
+      kw(&L->cur,"STESTALLHNTOCN")){
+    /* i + n → cells[i] = ((cells[i] & high-n mask) == mask) ? 1 : 0; n=0 → 1 vacuous */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = ~0ul << (unsigned)(64 - n);
+    long r = (((unsigned long)vm->cells[(int)i] & m) == m) ? 1 : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||

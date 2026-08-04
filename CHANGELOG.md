@@ -1,3 +1,17 @@
+## 1.12.368-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → imm high-n metric TOC (imm dual of SPOPHN/SANYHN/SALLHN into cell; high dual of SPOPMNTOCN).
+
+### Language
+- `SPOPHNTOCN`/`POPHNTOCN` n — stack `i → cells[i]=popcount(cells[i]&high-n mask)` (n 0..64)
+- `SANYHNTOCN`/`ANYHNTOCN` n — stack `i → cells[i]=1 if any high-n bit set else 0`
+- `SALLHNTOCN`/`ALLHNTOCN` n — stack `i → cells[i]=1 if all high-n bits set else 0` (n=0 vacuous 1)
+- Proof `391_spophntocn_sallhntocn.cubalc`
+
+### Prior
+See 1.12.367-universal.
+
 ## 1.12.367-universal — 2026-08-04
 
 ### Direction
