@@ -1,3 +1,17 @@
+## 1.12.369-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack dual low-n metric TOC (stack dual of SPOPMNTOCN plane; n from stack).
+
+### Language
+- `SPOPMNTOC`/`POPMNTOC` — stack `i n → cells[i]=popcount(cells[i]&low-n mask)` (n 0..64)
+- `SANYMNTOC`/`ANYMNTOC` — stack `i n → cells[i]=1 if any low-n bit set else 0`
+- `SALLMNTOC`/`ALLMNTOC` — stack `i n → cells[i]=1 if all low-n bits set else 0` (n=0 vacuous 1)
+- Proof `392_spopmntoc_sallmntoc.cubalc`
+
+### Prior
+See 1.12.368-universal.
+
 ## 1.12.368-universal — 2026-08-04
 
 ### Direction
