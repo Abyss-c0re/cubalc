@@ -1,3 +1,17 @@
+## 1.12.409-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell bit-metrics ext (complete popcnt/clz/ctz + bswap16 ladder after PARITYCELL plane).
+
+### Language
+- `CLZCELL`/`CLZRANGE` — `lo hi → cells[i] = clz64(cells[i])` (0 → 64)
+- `CTZCELL`/`CTZRANGE` — `lo hi → cells[i] = ctz64(cells[i])` (0 → 64)
+- `BSWAP16CELL`/`BSWAP16RANGE` — `lo hi → cells[i] = bswap16(low16 cells[i])`
+- Proof `432_clzcell_bswap16cell.cubalc`
+
+### Prior
+See 1.12.408-universal.
+
 ## 1.12.408-universal — 2026-08-04
 
 ### Direction
