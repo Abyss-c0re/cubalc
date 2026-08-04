@@ -1,3 +1,17 @@
+## 1.12.356-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → imm halfword field TOC (imm dual of SWORDN/SSET16N/SCLR16N into cell after byte TOC).
+
+### Language
+- `SWORDTOCN`/`WORDTOCN` n — stack `i → cells[i]=LE halfword n`; leave result (n 0..3)
+- `SSET16TOCN`/`SET16TOCN` field n — deposit low 16 bits of field into LE halfword n of cells[i]
+- `SCLR16TOCN`/`CLR16TOCN` n — clear LE halfword n of cells[i]; leave result
+- Proof `379_swordtocn_sclr16tocn.cubalc`
+
+### Prior
+See 1.12.355-universal.
+
 ## 1.12.355-universal — 2026-08-04
 
 ### Direction
