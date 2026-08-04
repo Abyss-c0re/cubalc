@@ -2798,6 +2798,66 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack imm 8-bit field ordered-cmp: SLT8N · SGT8N · SLTE8N
+   * (byte ladder of SLT16N/SGT16N/SLTE16N; unsigned predicates after SEQ8N/SNE8N) */
+  if (kw(&L->cur,"SLT8N")||kw(&L->cur,"STACKLT8N")||kw(&L->cur,"LT8N")||
+      kw(&L->cur,"SCMPLT8N")||kw(&L->cur,"SLTBYTEN")||kw(&L->cur,"SLT8IMM")){
+    /* SLT8N field n — byte n of TOS = (b < field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v < f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGT8N")||kw(&L->cur,"STACKGT8N")||kw(&L->cur,"GT8N")||
+      kw(&L->cur,"SCMPGT8N")||kw(&L->cur,"SGTBYTEN")||kw(&L->cur,"SGT8IMM")){
+    /* SGT8N field n — byte n of TOS = (b > field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v > f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLTE8N")||kw(&L->cur,"STACKLTE8N")||kw(&L->cur,"LTE8N")||
+      kw(&L->cur,"SCMPLE8N")||kw(&L->cur,"SLEQ8N")||kw(&L->cur,"SLTEBYTEN")||
+      kw(&L->cur,"SLTE8IMM")){
+    /* SLTE8N field n — byte n of TOS = (b <= field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v <= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 stack imm 8-bit field abs+extend: SABS8N · SSEXT8N · SZEXT8N
    * (byte ladder of SABS4N/SSEXT4N/SZEXT4N; stack dual of DABS8N/DSEXT8N/DZEXT8N after SNE8N) */
   if (kw(&L->cur,"SABS8N")||kw(&L->cur,"STACKABS8N")||kw(&L->cur,"ABS8N")||

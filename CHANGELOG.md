@@ -1,3 +1,17 @@
+## 1.14.73-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack imm 8-bit field ordered-cmp (byte ladder of SLT16N/SGT16N/SLTE16N after SEQ8N/SNE8N).
+
+### Language
+- `SLT8N` — `field n → byte n of TOS = (b < field) ? 1 : 0`
+- `SGT8N` — `field n → byte n of TOS = (b > field) ? 1 : 0`
+- `SLTE8N` — `field n → byte n of TOS = (b <= field) ? 1 : 0`
+- Proof `530_slt8n_slte8n.cubalc`
+
+### Prior
+See 1.14.72-universal.
+
 ## 1.14.72-universal — 2026-08-04
 
 ### Direction
