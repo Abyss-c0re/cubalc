@@ -1,3 +1,17 @@
+## 1.14.14-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → stack imm 8-bit field div/mod/min (complete uint8 field ALU after SADD8N/SSUB8N/SMUL8N; field 0 → div/mod 0).
+
+### Language
+- `SDIV8N` — `field n → byte n = byte / field` (field 0 → 0)
+- `SMOD8N` — `field n → byte n = byte % field` (field 0 → 0)
+- `SMIN8N` — `field n → byte n = min(byte, field)`
+- Proof `471_sdiv8n_smin8n.cubalc`
+
+### Prior
+See 1.14.13-universal.
+
 ## 1.14.13-universal — 2026-08-04
 
 ### Direction

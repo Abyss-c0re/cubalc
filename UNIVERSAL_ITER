@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 498 |
-| **digit** | **0** (urandom) |
-| **version** | `1.14.13-universal` |
-| **pass/fail** | **485 / 0** (green) |
-| **commit** | `1636c30` → `origin/main` |
-| **ops** | `SADD8N` / `SSUB8N` / `SMUL8N` |
-| **proof** | `programs/proof/470_sadd8n_smul8n.cubalc` |
+| **iter** | 499 |
+| **digit** | **2** (urandom) |
+| **version** | `1.14.14-universal` |
+| **pass/fail** | **486 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SDIV8N` / `SMOD8N` / `SMIN8N` |
+| **proof** | `programs/proof/471_sdiv8n_smin8n.cubalc` |
 
 ### Delta
-Digit-0 stack imm byte-field arith merge: add / sub / mul wrap into selected byte of TOS. Ladder after nibble SADD4N plane; aliases avoid multiword SSUBBN collision.
+Digit-2 stack imm byte-field div/mod/min: complete uint8 field ALU after SADD8N/SSUB8N/SMUL8N; div0/mod0 → 0.
 
-**Status:** 1.14.12→1.14.13-universal; suite green 485/0; push ok.
+**Status:** 1.14.13→1.14.14-universal; suite green 486/0; push pending.
