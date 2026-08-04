@@ -1,3 +1,17 @@
+## 1.15.6-universal — 2026-08-05
+
+### Direction
+- Algocube digit **9** → stack+dual imm 32/16-bit field signed GT0 (field dual of S0GT after complete S0LT plane).
+
+### Language
+- `S0GT32N` — `n → word n = (int32(w) > 0) ? 1 : 0`
+- `S0GT16N` — halfword form of `S0GT32N`
+- `D0GT32N` / `D0GT16N` — dual-stack forms
+- Proof `563_s0gt32n_d0gt16n.cubalc`
+
+### Prior
+See 1.15.5-universal.
+
 ## 1.15.5-universal — 2026-08-05
 
 ### Direction

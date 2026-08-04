@@ -4342,6 +4342,24 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm 16-bit field signed GT0: S0GT16N (halfword ladder of S0GT32N; field dual of S0GT) */
+  if (kw(&L->cur,"S0GT16N")||kw(&L->cur,"STACK0GT16N")||kw(&L->cur,"SGT016N")||
+      kw(&L->cur,"SPOSZ16N")||kw(&L->cur,"SISPOS16N")||kw(&L->cur,"S0GT16IMM")){
+    /* S0GT16N n — halfword n = (int16(hw) > 0) ? 1 : 0; n 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long v = (long)((base >> sh) & 0xFFFFul); if (v & 0x8000) v -= 65536;
+    unsigned long w = (v > 0) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack imm 16-bit field abs+extend: SABS16N · SSEXT16N · SZEXT16N
    * (halfword ladder of SABS8N/SSEXT8N/SZEXT8N; signed extract after SNE16N ALU plane) */
   if (kw(&L->cur,"SABS16N")||kw(&L->cur,"STACKABS16N")||kw(&L->cur,"ABS16N")||
@@ -5469,6 +5487,25 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 32);
     long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
     unsigned long w = (v < 0) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-9 stack imm 32-bit field signed GT0: S0GT32N
+   * (word ladder of S0GT16N; field dual of S0GT after S0LT plane) */
+  if (kw(&L->cur,"S0GT32N")||kw(&L->cur,"STACK0GT32N")||kw(&L->cur,"SGT032N")||
+      kw(&L->cur,"SPOSZ32N")||kw(&L->cur,"SISPOS32N")||kw(&L->cur,"S0GT32IMM")){
+    /* S0GT32N n — word n = (int32(w) > 0) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
+    unsigned long w = (v > 0) ? 1ul : 0ul;
     long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
