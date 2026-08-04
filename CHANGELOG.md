@@ -1,3 +1,17 @@
+## 1.14.8-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack imm 4-bit field zeros+signed (nibble-field dual of CLZ4/CTZ4/NEG4 after SPARITY4N; complete stack nibble zeros+negate).
+
+### Language
+- `SCLZ4N` — `n → nibble n = clz4(nibble)`; 0 → 4
+- `SCTZ4N` — `n → nibble n = ctz4(nibble)`; 0 → 4
+- `SNEG4N` — `n → nibble n = -(int4)nibble` as uint4; min −8 stays −8
+- Proof `465_sclz4n_sneg4n.cubalc`
+
+### Prior
+See 1.14.7-universal.
+
 ## 1.14.7-universal — 2026-08-04
 
 ### Direction

@@ -2,20 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 473 |
-| **digit** | **9** (urandom) |
-| **version** | `1.12.401-universal` |
-| **pass/fail** | **439 / 0** (green) |
-| **commit** | `f873dcc` → `origin/main` |
-| **ops** | `NANDCELL` / `NORCELL` / `XNORCELL` |
-| **proof** | `programs/proof/424_nandcell_xnorcell.cubalc` |
+| **iter** | 493 |
+| **digit** | **6** (urandom) |
+| **version** | `1.14.8-universal` |
+| **pass/fail** | **480 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SCLZ4N` / `SCTZ4N` / `SNEG4N` |
+| **proof** | `programs/proof/465_sclz4n_sneg4n.cubalc` |
 
 ### Delta
-Digit-9 inverted cell logic: complete AND/OR/XOR cell plane with NAND/NOR/XNOR duals.
+Digit-6 stack imm nibble-field zeros+signed: clz / ctz / negate on selected nibble of TOS. Completes stack nibble zeros+negate after SPARITY4N.
 
-### NexusCore
-- unity 1.0, alive 3; commander offline
-- daemon running
-- tree healthy
-
-**Status:** 1.12.400→1.12.401; suite green 439/0.
+**Status:** 1.14.7→1.14.8-universal; suite green 480/0; push pending.

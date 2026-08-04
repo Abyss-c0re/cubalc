@@ -2329,6 +2329,74 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 stack imm 4-bit field zeros+signed: SCLZ4N · SCTZ4N · SNEG4N
+   * (nibble-field dual of CLZ4CELL/CTZ4CELL/NEG4CELL after SPARITY4N; complete stack nibble zeros+negate) */
+  if (kw(&L->cur,"SCLZ4N")||kw(&L->cur,"STACKCLZ4N")||kw(&L->cur,"CLZ4N")||
+      kw(&L->cur,"SNLZ4N")||kw(&L->cur,"SCLZNIBN")||kw(&L->cur,"SNIBCLZN")){
+    /* SCLZ4N n — nibble n of TOS = clz4(nibble); 0 → 4; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned int w = (unsigned int)((base >> sh) & 0xFul);
+    unsigned long cz = 0;
+    if (w == 0) cz = 4;
+    else {
+      for (int b = 3; b >= 0; b--){
+        if (w & (1u << (unsigned)b)) break;
+        cz++;
+      }
+    }
+    long r = (long)((base & ~(0xFul << sh)) | (cz << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCTZ4N")||kw(&L->cur,"STACKCTZ4N")||kw(&L->cur,"CTZ4N")||
+      kw(&L->cur,"SNTZ4N")||kw(&L->cur,"SCTZNIBN")||kw(&L->cur,"SNIBCTZN")){
+    /* SCTZ4N n — nibble n of TOS = ctz4(nibble); 0 → 4; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned int w = (unsigned int)((base >> sh) & 0xFul);
+    unsigned long tz = 0;
+    if (w == 0) tz = 4;
+    else {
+      while ((w & 1u) == 0){ tz++; w >>= 1; }
+    }
+    long r = (long)((base & ~(0xFul << sh)) | (tz << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNEG4N")||kw(&L->cur,"STACKNEG4N")||kw(&L->cur,"NEG4N")||
+      kw(&L->cur,"SINEG4N")||kw(&L->cur,"SNEGNIBN")||kw(&L->cur,"SNIBNEGN")){
+    /* SNEG4N n — nibble n of TOS = -(int4)nibble as uint4; min int4 -8 stays -8 (0x8) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long va = (long)((base >> sh) & 0xFul);
+    if (va & 0x8) va -= 16;
+    long nr;
+    if (va == -8L) nr = -8L; /* keep min int4 */
+    else nr = -va;
+    unsigned long nv = (unsigned long)(nr & 0xF);
+    long r = (long)((base & ~(0xFul << sh)) | (nv << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
