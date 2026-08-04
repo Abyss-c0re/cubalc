@@ -1,3 +1,17 @@
+## 1.12.419-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → cell fixed-width 16 math (word dual of NEG8/ZEXT8/CLIP8 after signed16 plane).
+
+### Language
+- `NEG16CELL`/`NEG16RANGE` — `lo hi → -(int16)low16` (min int16 stays `0x8000`)
+- `ZEXT16CELL`/`ZEXT16RANGE` — `lo hi → cells[i] &= 0xFFFF`
+- `CLIP16CELL`/`CLIP16RANGE` — `lo hi → clamp cells[i] to [0,65535]`
+- Proof `442_neg16cell_clip16cell.cubalc`
+
+### Prior
+See 1.12.418-universal.
+
 ## 1.12.418-universal — 2026-08-04
 
 ### Direction

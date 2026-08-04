@@ -26723,6 +26723,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 cell fixed-width 16 math: NEG16CELL · ZEXT16CELL · CLIP16CELL
+   * (word dual of NEG8/ZEXT8/CLIP8 after SAR16/SEXT16/ABS16 plane; complete 16-bit math) */
+  if (kw(&L->cur,"NEG16CELL")||kw(&L->cur,"CELLNEG16")||kw(&L->cur,"BNEG16CELL")||
+      kw(&L->cur,"RANGENEG16")||kw(&L->cur,"NEG16RANGE")||kw(&L->cur,"INEG16CELL")){
+    /* NEG16CELL lo hi — cells[i] = -(int16)low16; min int16 0x8000 stays 0x8000 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(short)(unsigned short)(vm->cells[(int)i] & 0xFFFFu);
+      long r;
+      if (va == (long)(short)0x8000) r = 0x8000L;
+      else r = -va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ZEXT16CELL")||kw(&L->cur,"ZEROEXT16CELL")||kw(&L->cur,"BZEXT16CELL")||
+      kw(&L->cur,"RANGEZEXT16")||kw(&L->cur,"ZEXT16RANGE")||kw(&L->cur,"CELLZEXTW")){
+    /* ZEXT16CELL lo hi — cells[i] = low16 only (clear high bits) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned long)vm->cells[(int)i] & 0xFFFFul);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIP16CELL")||kw(&L->cur,"CELLCLIP16")||kw(&L->cur,"BCLIP16CELL")||
+      kw(&L->cur,"RANGECLIP16")||kw(&L->cur,"CLIP16RANGE")||kw(&L->cur,"UCLIP16CELL")){
+    /* CLIP16CELL lo hi — clamp cells[i] to unsigned 16-bit [0,65535] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < 0) r = 0;
+      if (r > 65535L) r = 65535L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
