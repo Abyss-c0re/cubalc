@@ -3582,6 +3582,66 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 stack imm 32-bit field unary+rotate: SNOT32N · SROL32N · SROR32N
+   * (word ladder of SNOT16N/SROL16N/SROR16N; start stack 32n unary after SNAND32N plane) */
+  if (kw(&L->cur,"SNOT32N")||kw(&L->cur,"STACKNOT32N")||kw(&L->cur,"NOT32N")||
+      kw(&L->cur,"SNOTDWN")||kw(&L->cur,"SINV32N")||kw(&L->cur,"SINVERT32N")){
+    /* SNOT32N n — word n of TOS = ~w & 0xFFFFFFFF; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (~((base >> sh) & 0xFFFFFFFFul)) & 0xFFFFFFFFul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROL32N")||kw(&L->cur,"STACKROL32N")||kw(&L->cur,"ROL32N")||
+      kw(&L->cur,"SROTL32N")||kw(&L->cur,"SROLDWN")||kw(&L->cur,"SROTDWL")){
+    /* SROL32N k n — rotl32 word n of TOS by k&31; n clamped 0..1 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 31;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (base >> sh) & 0xFFFFFFFFul;
+    unsigned long rot = (kk == 0) ? w : (((w << (unsigned)kk) | (w >> (unsigned)(32 - kk))) & 0xFFFFFFFFul);
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROR32N")||kw(&L->cur,"STACKROR32N")||kw(&L->cur,"ROR32N")||
+      kw(&L->cur,"SROTR32N")||kw(&L->cur,"SRORDWN")||kw(&L->cur,"SROTDWR")){
+    /* SROR32N k n — rotr32 word n of TOS by k&31; n clamped 0..1 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 31;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long w = (base >> sh) & 0xFFFFFFFFul;
+    unsigned long rot = (kk == 0) ? w : (((w >> (unsigned)kk) | (w << (unsigned)(32 - kk))) & 0xFFFFFFFFul);
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

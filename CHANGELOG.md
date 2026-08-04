@@ -1,3 +1,17 @@
+## 1.14.53-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack imm 32-bit field unary+rotate (word ladder of SNOT16N/SROL16N/SROR16N; start stack 32n unary after SNAND32N).
+
+### Language
+- `SNOT32N` — `n → word n of TOS = ~w & 0xFFFFFFFF`
+- `SROL32N` — `k n → rotl32 word n of TOS by k&31`
+- `SROR32N` — `k n → rotr32 word n of TOS by k&31`
+- Proof `510_snot32n_sror32n.cubalc`
+
+### Prior
+See 1.14.52-universal.
+
 ## 1.14.52-universal — 2026-08-04
 
 ### Direction
