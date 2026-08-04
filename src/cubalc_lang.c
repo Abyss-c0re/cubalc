@@ -23976,6 +23976,44 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack signed clip word path: SCLIPS4 · SCLIPS8 · SCLIPS16
+   * (signed dual of SCLIP8/SCLIP16; complete stack clamp 4/8/16 plane) */
+  if (kw(&L->cur,"SCLIPS4")||kw(&L->cur,"CLIPS4")||kw(&L->cur,"SSCLIP4")||
+      kw(&L->cur,"STACKSCLIPS4")||kw(&L->cur,"SCLIPSN")||kw(&L->cur,"STACKCLIPS4")){
+    /* TOS = clamp to signed 4-bit [-8,7] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < -8L) r = -8L;
+    if (r > 7L) r = 7L;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIPS8")||kw(&L->cur,"CLIPS8")||kw(&L->cur,"SSCLIP8")||
+      kw(&L->cur,"STACKSCLIPS8")||kw(&L->cur,"SCLIPSB")||kw(&L->cur,"STACKCLIPS8")){
+    /* TOS = clamp to signed 8-bit [-128,127] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < -128L) r = -128L;
+    if (r > 127L) r = 127L;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIPS16")||kw(&L->cur,"CLIPS16")||kw(&L->cur,"SSCLIP16")||
+      kw(&L->cur,"STACKSCLIPS16")||kw(&L->cur,"SCLIPSW")||kw(&L->cur,"STACKCLIPS16")){
+    /* TOS = clamp to signed 16-bit [-32768,32767] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < -32768L) r = -32768L;
+    if (r > 32767L) r = 32767L;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SBOUND")||kw(&L->cur,"STACKBOUND")){
     /* alias of SCLAMP: n lo hi → clamp */
     lex_next(L);

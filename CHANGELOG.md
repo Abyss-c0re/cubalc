@@ -1,3 +1,17 @@
+## 1.12.394-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack signed clip word path (signed dual of SCLIP8/SCLIP16; complete stack clamp 4/8/16 plane).
+
+### Language
+- `SCLIPS4`/`CLIPS4` — stack `TOS = clamp to signed 4-bit [-8,7]`
+- `SCLIPS8`/`CLIPS8` — stack `TOS = clamp to signed 8-bit [-128,127]`
+- `SCLIPS16`/`CLIPS16` — stack `TOS = clamp to signed 16-bit [-32768,32767]`
+- Proof `417_sclips4_sclips16.cubalc`
+
+### Prior
+See 1.12.393-universal.
+
 ## 1.12.393-universal — 2026-08-04
 
 ### Direction
