@@ -1,0 +1,20 @@
+# PRINT_JSON / DUMP — stable one-line JSON for agents
+HOLD_FLASH 1
+
+LET a = 42
+LET b = 7
+LET tag = "agent-ok"
+
+# named dump
+PRINT_JSON a b tag
+ASSERT LAST_N >= 0
+
+# bare runtime snapshot
+PRINT_JSON
+
+# DUMP alias with builtins
+DUMP a CUBES LAST_N HOLD_FLASH
+
+PRINT "print_json ok" a b
+ASSERT a == 42 "a preserved"
+ASSERT b == 7 "b preserved"

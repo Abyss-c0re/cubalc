@@ -1106,11 +1106,81 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     char line[256]; size_t o=0; line[0]=0;
     if (L->cur.kind==TK_STR){ snprintf(line,sizeof line,"%s",L->cur.text); o=strlen(line); lex_next(L); }
     while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF && L->cur.kind!=TK_LBRACK){
-      if (L->cur.kind==TK_IDENT && (kw(&L->cur,"ASSERT")||kw(&L->cur,"LET")||kw(&L->cur,"CUBE")||kw(&L->cur,"PRINT"))) break;
+      if (L->cur.kind==TK_IDENT && (kw(&L->cur,"ASSERT")||kw(&L->cur,"LET")||kw(&L->cur,"CUBE")||
+            kw(&L->cur,"PRINT")||kw(&L->cur,"PRINT_JSON")||kw(&L->cur,"DUMP")||kw(&L->cur,"PRINTJSON"))) break;
       long v=parse_expr(vm,L);
       int n=snprintf(line+o,sizeof line-o,"%s%ld",o?" ":"",v); if(n>0)o+=(size_t)n;
       if (o>=sizeof line) break;
     }
+    if (vm->trace) fprintf(vm->trace,"%s\n",line);
+    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
+    bump(vm); return 1;
+  }
+  /* PRINT_JSON / DUMP [ident…] — one stable JSON line for agents
+   * bare: runtime snapshot; with idents: {"name":value,…} (str vars quoted) */
+  if (kw(&L->cur,"PRINT_JSON")||kw(&L->cur,"DUMP")||kw(&L->cur,"PRINTJSON")){
+    lex_next(L);
+    char line[512]; size_t o=0; line[0]=0;
+    int first=1;
+    o += (size_t)snprintf(line+o, sizeof line-o, "{");
+    if (L->cur.kind==TK_NL || L->cur.kind==TK_EOF || L->cur.kind==TK_LBRACK){
+      /* bare snapshot of host-facing scalars */
+      long okv=0, dec=0, smx=0, talks=0;
+      Var *vo=var_get(vm,"OK",0); if (vo && !vo->is_str) okv=vo->val;
+      Var *vd=var_get(vm,"DECIDE",0); if (vd && !vd->is_str) dec=vd->val;
+      Var *vs=var_get(vm,"SMX_OK",0); smx = vs ? vs->val : (long)vm->smx_ok;
+      Var *vt=var_get(vm,"SMX_TALKS",0); talks = vt ? vt->val : (long)vm->smx_talks;
+      o += (size_t)snprintf(line+o, sizeof line-o,
+        "\"schema\":\"cubalc.print_json.v1\",\"CUBES\":%d,\"LAST_N\":%ld,"
+        "\"OK\":%ld,\"SP\":%d,\"UNITY\":%ld,\"DECIDE\":%ld,\"SMX_OK\":%ld,"
+        "\"SMX_TALKS\":%ld,\"hold_flash\":%d",
+        vm->ch.n_cubes, vm->last_n, okv, vm->sp,
+        (long)lround(vm->ch.unity * 100.0), dec, smx, talks, vm->hold_flash);
+      first=0;
+    } else {
+      while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF && L->cur.kind!=TK_LBRACK){
+        if (L->cur.kind!=TK_IDENT) break;
+        if (kw(&L->cur,"ASSERT")||kw(&L->cur,"LET")||kw(&L->cur,"CUBE")||
+            kw(&L->cur,"PRINT")||kw(&L->cur,"PRINT_JSON")||kw(&L->cur,"DUMP")||
+            kw(&L->cur,"PRINTJSON")||kw(&L->cur,"SYS")||kw(&L->cur,"IF")||
+            kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"END")||
+            kw(&L->cur,"RET")||kw(&L->cur,"ELSE")) break;
+        char name[48];
+        snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+        if (o + 64 >= sizeof line) break;
+        if (!first) o += (size_t)snprintf(line+o, sizeof line-o, ",");
+        first=0;
+        /* string var or LAST */
+        Var *vv = var_get(vm, name, 0);
+        if ((vv && vv->is_str) || strcmp(name,"LAST")==0){
+          const char *sv = (vv && vv->is_str) ? vv->sval : vm->last_str;
+          char esc[240]; size_t eo=0;
+          for (const char *p=sv?sv:""; *p && eo+2<sizeof esc; p++){
+            if (*p=='"' || *p=='\\'){ esc[eo++]='\\'; esc[eo++]=*p; }
+            else if ((unsigned char)*p < 0x20) continue;
+            else esc[eo++]=*p;
+          }
+          esc[eo]=0;
+          o += (size_t)snprintf(line+o, sizeof line-o, "\"%s\":\"%s\"", name, esc);
+        } else {
+          long val=0;
+          if (vv) val=vv->val;
+          else if (strcmp(name,"CUBES")==0) val=(long)vm->ch.n_cubes;
+          else if (strcmp(name,"LAST_N")==0) val=vm->last_n;
+          else if (strcmp(name,"SP")==0 || strcmp(name,"STACKLEN")==0) val=(long)vm->sp;
+          else if (strcmp(name,"UNITY")==0) val=(long)lround(vm->ch.unity*100.0);
+          else if (strcmp(name,"SMX_OK")==0) val=(long)vm->smx_ok;
+          else if (strcmp(name,"SMX_TALKS")==0) val=(long)vm->smx_talks;
+          else if (strcmp(name,"HTTP_CODE")==0) val=(long)vm->last_code;
+          else if (strcmp(name,"CELLS")==0) val=(long)CUBALC_CELL_N;
+          else if (strcmp(name,"HOLD_FLASH")==0) val=(long)vm->hold_flash;
+          o += (size_t)snprintf(line+o, sizeof line-o, "\"%s\":%ld", name, val);
+        }
+      }
+    }
+    if (o + 2 < sizeof line) snprintf(line+o, sizeof line-o, "}");
+    else line[sizeof line - 2] = '}';
     if (vm->trace) fprintf(vm->trace,"%s\n",line);
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
     bump(vm); return 1;

@@ -14,6 +14,14 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — PRINT_JSON / DUMP — 2026-08-05
+
+### Usability
+- `PRINT_JSON` / `DUMP` [idents] — one stable JSON line for agents
+- Bare form: runtime snapshot (`schema`, CUBES, LAST_N, OK, SP, UNITY, DECIDE, SMX_*, hold_flash)
+- Named form: `{"a":42,"tag":"…"}` with string-var escaping
+- Proof: `programs/proof/print_json.cubalc`
+
 ## Meaningful — ASSERT message strings — 2026-08-05
 
 ### Usability
