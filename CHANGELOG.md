@@ -1,3 +1,17 @@
+## 1.14.70-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → dual-stack imm 32-bit field ordered-cmp (unsigned lt/gt/lte after DEQ32N/DNE32N; dual of SLT32N/SGT32N/SLTE32N).
+
+### Language
+- `DLT32N` — `field n → word n of each = (w < field) ? 1 : 0` on top two
+- `DGT32N` — `field n → word n of each = (w > field) ? 1 : 0`
+- `DLTE32N` — `field n → word n of each = (w <= field) ? 1 : 0`
+- Proof `527_dlt32n_dlte32n.cubalc`
+
+### Prior
+See 1.14.69-universal.
+
 ## 1.14.69-universal — 2026-08-04
 
 ### Direction
