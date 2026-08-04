@@ -1,3 +1,17 @@
+## 1.12.415-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → cell fixed-width 8 rotate/bitrev (byte dual of ROL16/ROR16/BITREV16 after SHL8 plane).
+
+### Language
+- `ROL8CELL`/`ROL8RANGE` — `lo hi k → cells[i] = rotl8(low8, k&7)`
+- `ROR8CELL`/`ROR8RANGE` — `lo hi k → cells[i] = rotr8(low8, k&7)`
+- `BITREV8CELL`/`BITREV8RANGE` — `lo hi → cells[i] = bitrev8(low8)`
+- Proof `438_rol8cell_bitrev8cell.cubalc`
+
+### Prior
+See 1.12.414-universal.
+
 ## 1.12.414-universal — 2026-08-04
 
 ### Direction
