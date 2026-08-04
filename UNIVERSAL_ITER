@@ -2,18 +2,18 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 497 |
-| **digit** | **6** (urandom) |
-| **version** | `1.12.387-universal` |
-| **pass/fail** | **425 / 0** (green) |
+| **iter** | 465 |
+| **digit** | **5** (urandom) |
+| **version** | `1.12.388-universal` |
+| **pass/fail** | **426 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SZEXT4TOC` / `SZEXT8TOCN` / `SZEXT16TOCN` |
-| **proof** | `programs/proof/410_szext4toc_szext16tocn.cubalc` |
+| **ops** | `SZEXT32TOCN` / `SSEXT32TOCN` / `SCLIP8TOC` |
+| **proof** | `programs/proof/411_szext32tocn_sclip8toc.cubalc` |
 
 ### Delta
-Digit-6 stack/imm zext dual ladder: stack dual of SZEXT4TOCN; imm dual of SZEXT8TOC/SZEXT16TOC.
+Digit-5 imm dual 32-bit extend + clip8 TOC: complete zext/sext imm 4/8/16/32 ladder; CLIP8 into cells. Tree restored after evolve corruption mid-tick.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-- tree healthy
+- tree healthy (restored)

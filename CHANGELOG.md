@@ -1,3 +1,17 @@
+## 1.12.388-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → imm dual 32-bit extend + clip8 TOC (complete zext/sext imm 4/8/16/32; CLIP8 into cell).
+
+### Language
+- `SZEXT32TOCN`/`ZEXT32TOCN` — stack `i → cells[i] = zero-extend low 32 bits of cells[i]`
+- `SSEXT32TOCN`/`SEXT32TOCN` — stack `i → cells[i] = sign-extend low 32 bits of cells[i]`
+- `SCLIP8TOC`/`CLIP8TOC` — stack `i → cells[i] = clamp to unsigned 8-bit [0,255]`
+- Proof `411_szext32tocn_sclip8toc.cubalc`
+
+### Prior
+See 1.12.387-universal.
+
 ## 1.12.387-universal — 2026-08-04
 
 ### Direction
