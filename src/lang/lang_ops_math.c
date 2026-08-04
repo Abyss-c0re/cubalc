@@ -3457,6 +3457,65 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 stack imm 16-bit field metrics: SBITREV16N · SPOPCNT16N · SPARITY16N
+   * (halfword ladder of SBITREV8N/SPOPCNT8N/SPARITY8N; metrics after SSHL16N plane) */
+  if (kw(&L->cur,"SBITREV16N")||kw(&L->cur,"STACKBITREV16N")||kw(&L->cur,"BITREV16N")||
+      kw(&L->cur,"SBREV16N")||kw(&L->cur,"SREV16N")||kw(&L->cur,"SBITREVWORDN")){
+    /* SBITREV16N n — halfword n of TOS = bitrev16(hw); n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (base >> sh) & 0xFFFFul;
+    unsigned long rv = 0;
+    for (int b = 0; b < 16; b++){
+      rv = (rv << 1) | (w & 1u);
+      w >>= 1;
+    }
+    long r = (long)((base & ~(0xFFFFul << sh)) | ((rv & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOPCNT16N")||kw(&L->cur,"STACKPOPCNT16N")||kw(&L->cur,"POPCNT16N")||
+      kw(&L->cur,"SPCNT16N")||kw(&L->cur,"SPOPWORDN")||kw(&L->cur,"SWORDPOPN")){
+    /* SPOPCNT16N n — halfword n of TOS = popcount(hw); n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (base >> sh) & 0xFFFFul;
+    unsigned long pc = 0;
+    while (w){ pc += (w & 1u); w >>= 1; }
+    long r = (long)((base & ~(0xFFFFul << sh)) | ((pc & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPARITY16N")||kw(&L->cur,"STACKPARITY16N")||kw(&L->cur,"PARITY16N")||
+      kw(&L->cur,"SXORRED16N")||kw(&L->cur,"SPARITYWORDN")||kw(&L->cur,"SWORDPARN")){
+    /* SPARITY16N n — halfword n of TOS = xor-reduce(hw) in low bit; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long w = (base >> sh) & 0xFFFFul;
+    unsigned long pr = 0;
+    while (w){ pr ^= (w & 1u); w >>= 1; }
+    long r = (long)((base & ~(0xFFFFul << sh)) | (pr << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

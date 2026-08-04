@@ -1,3 +1,17 @@
+## 1.14.49-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack imm 16-bit field metrics (halfword ladder of SBITREV8N/SPOPCNT8N/SPARITY8N after SSHL16N plane).
+
+### Language
+- `SBITREV16N` — `n → halfword n of TOS = bitrev16(hw)`
+- `SPOPCNT16N` — `n → halfword n of TOS = popcount(hw)` (0..16)
+- `SPARITY16N` — `n → halfword n of TOS = xor-reduce(hw)` low bit
+- Proof `506_sbitrev16n_sparity16n.cubalc`
+
+### Prior
+See 1.14.48-universal.
+
 ## 1.14.48-universal — 2026-08-04
 
 ### Direction
