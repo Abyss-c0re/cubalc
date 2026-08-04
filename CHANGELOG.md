@@ -1,3 +1,17 @@
+## 1.14.15-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack imm 8-bit field max+eq (complete min/max + equality compare plane after SMIN8N; bool writes 0/1 into byte).
+
+### Language
+- `SMAX8N` — `field n → byte n = max(byte, field)`
+- `SEQ8N` — `field n → byte n = (byte == field) ? 1 : 0`
+- `SNE8N` — `field n → byte n = (byte != field) ? 1 : 0`
+- Proof `472_smax8n_sne8n.cubalc`
+
+### Prior
+See 1.14.14-universal.
+
 ## 1.14.14-universal — 2026-08-04
 
 ### Direction

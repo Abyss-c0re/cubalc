@@ -2739,6 +2739,65 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack imm 8-bit field max+eq: SMAX8N · SEQ8N · SNE8N
+   * (complete min/max + equality compare plane after SMIN8N; bool writes 0/1 into byte) */
+  if (kw(&L->cur,"SMAX8N")||kw(&L->cur,"STACKMAX8N")||kw(&L->cur,"MAX8N")||
+      kw(&L->cur,"SMAXBYTEN")||kw(&L->cur,"SMAX8IMM")||kw(&L->cur,"SGE8N")){
+    /* SMAX8N field n — byte n of TOS = max(byte, field); n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v > f) ? v : f;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEQ8N")||kw(&L->cur,"STACKEQ8N")||kw(&L->cur,"EQ8N")||
+      kw(&L->cur,"SEQBYTEN")||kw(&L->cur,"SEQ8IMM")||kw(&L->cur,"SCMPEQ8N")){
+    /* SEQ8N field n — byte n of TOS = (byte == field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v == f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNE8N")||kw(&L->cur,"STACKNE8N")||kw(&L->cur,"NE8N")||
+      kw(&L->cur,"SNEBYTEN")||kw(&L->cur,"SNE8IMM")||kw(&L->cur,"SCMPNE8N")){
+    /* SNE8N field n — byte n of TOS = (byte != field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v != f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
