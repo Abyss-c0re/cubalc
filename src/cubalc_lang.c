@@ -27235,6 +27235,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 cell fixed-width 16 bitwise: AND16CELL · OR16CELL · XOR16CELL
+   * (word dual of AND8/OR8/XOR8 after inverted8 plane; complete 8/16/32 bitwise ladder) */
+  if (kw(&L->cur,"AND16CELL")||kw(&L->cur,"CELLAND16")||kw(&L->cur,"BAND16CELL")||
+      kw(&L->cur,"RANGEAND16")||kw(&L->cur,"AND16RANGE")||kw(&L->cur,"UAND16CELL")){
+    /* AND16CELL lo hi mask — cells[i] = low16(cells[i]) & low16(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFFFu) & m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"OR16CELL")||kw(&L->cur,"CELLOR16")||kw(&L->cur,"BOR16CELL")||
+      kw(&L->cur,"RANGEOR16")||kw(&L->cur,"OR16RANGE")||kw(&L->cur,"UOR16CELL")){
+    /* OR16CELL lo hi mask — cells[i] = low16(cells[i]) | low16(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFFFu) | m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XOR16CELL")||kw(&L->cur,"CELLXOR16")||kw(&L->cur,"BXOR16CELL")||
+      kw(&L->cur,"RANGEXOR16")||kw(&L->cur,"XOR16RANGE")||kw(&L->cur,"UXOR16CELL")){
+    /* XOR16CELL lo hi mask — cells[i] = low16(cells[i]) ^ low16(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFFFu) ^ m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
