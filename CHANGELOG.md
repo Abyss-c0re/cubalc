@@ -1,3 +1,17 @@
+## 1.14.27-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → dual-stack imm 4-bit field max+eq (dual of SMAX4N/SEQ4N/SNE4N; complete min/max + equality on pair nibbles).
+
+### Language
+- `DMAX4N` — `field n → nibble n of each = max(nib, field)`
+- `DEQ4N` — `field n → nibble n of each = (nib == field) ? 1 : 0`
+- `DNE4N` — `field n → nibble n of each = (nib != field) ? 1 : 0`
+- Proof `484_dmax4n_dne4n.cubalc`
+
+### Prior
+See 1.14.26-universal.
+
 ## 1.14.26-universal — 2026-08-04
 
 ### Direction
