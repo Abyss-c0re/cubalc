@@ -1,3 +1,16 @@
+## 1.12.350-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → reverse unsigned stack↔cell TOC (stack dual of SUDIVFROMTOCN; reverse of SUDIVTOC).
+
+### Language
+- `SUDIVFROMTOC`/`RUDIVTOC` — stack `i v → cells[i]=(u)v/(u)cells[i]` leave quotient
+- `SUMODFROMTOC`/`RUMODTOC` — stack `i v → cells[i]=(u)v%(u)cells[i]` leave remainder
+- Proof `373_sudivfromtoc_sumodfromtoc.cubalc`
+
+### Prior
+See 1.12.349-universal.
+
 ## 1.12.349-universal — 2026-08-04
 
 ### Direction

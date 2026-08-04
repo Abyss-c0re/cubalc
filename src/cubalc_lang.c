@@ -5777,6 +5777,42 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 reverse unsigned stack↔cell TOC: SUDIVFROMTOC · SUMODFROMTOC
+   * (stack dual of SUDIVFROMTOCN/SUMODFROMTOCN; reverse of SUDIVTOC/SUMODTOC unsigned plane) */
+  if (kw(&L->cur,"SUDIVFROMTOC")||kw(&L->cur,"SCELLUDIVFROM")||kw(&L->cur,"STACKUDIVFROMTOC")||
+      kw(&L->cur,"SUDIVFROMCELL")||kw(&L->cur,"UDIVFROMTOC")||kw(&L->cur,"SRUDIVTOC")||
+      kw(&L->cur,"RUDIVTOC")){
+    /* i v → cells[i] = (u)v / (u)cells[i]; cell0 → 0 soft; leave quotient */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    long r = c ? (long)((unsigned long)v / c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMODFROMTOC")||kw(&L->cur,"SCELLUMODFROM")||kw(&L->cur,"STACKUMODFROMTOC")||
+      kw(&L->cur,"SUMODFROMCELL")||kw(&L->cur,"UMODFROMTOC")||kw(&L->cur,"SRUMODTOC")||
+      kw(&L->cur,"RUMODTOC")||kw(&L->cur,"SUREMFROMTOC")||kw(&L->cur,"UREMFROMTOC")){
+    /* i v → cells[i] = (u)v % (u)cells[i]; cell0 → 0 soft; leave remainder */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    long r = c ? (long)((unsigned long)v % c) : 0;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 reverse imm modular TOC: SSUBMODFROMTOCN · SPOWMODFROMTOCN · SMODDIVFROMTOCN
    * (i + args → cells[i] = reverse-mod; imm dual of SSUBMODFROMN after SMODFROMTOCN plane) */
   if (kw(&L->cur,"SSUBMODFROMTOCN")||kw(&L->cur,"SSUBMODFROMTOCIMM")||kw(&L->cur,"STACKSUBMODFROMTOCN")||
