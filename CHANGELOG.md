@@ -1,3 +1,17 @@
+## 1.14.69-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack imm 32-bit field ordered-cmp (unsigned lt/gt/lte after SEQ32N/SNE32N; complete stack 32n field compare plane).
+
+### Language
+- `SLT32N` — `field n → word n of TOS = (w < field) ? 1 : 0`
+- `SGT32N` — `field n → word n of TOS = (w > field) ? 1 : 0`
+- `SLTE32N` — `field n → word n of TOS = (w <= field) ? 1 : 0`
+- Proof `526_slt32n_slte32n.cubalc`
+
+### Prior
+See 1.14.68-universal.
+
 ## 1.14.68-universal — 2026-08-04
 
 ### Direction
