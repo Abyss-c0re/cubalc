@@ -1,3 +1,17 @@
+## 1.12.382-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack dual sign/zero extend TOC (stack dual of SSEXT/SZEXT/SSEXT8 into cell after field ladder).
+
+### Language
+- `SSEXTTOC`/`SEXTTOC` — stack `i w → cells[i] = sign-extend low w bits of cells[i]` (w 0..63)
+- `SZEXTTOC`/`ZEXTTOC` — stack `i w → cells[i] = zero-extend low w bits of cells[i]`
+- `SSEXT8TOC`/`SEXT8TOC` — stack `i → cells[i] = sign-extend low 8 bits of cells[i]`
+- Proof `405_ssexttoc_szexttoc.cubalc`
+
+### Prior
+See 1.12.381-universal.
+
 ## 1.12.381-universal — 2026-08-04
 
 ### Direction

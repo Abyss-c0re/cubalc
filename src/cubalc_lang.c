@@ -5564,6 +5564,74 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack dual sign/zero extend TOC: SSEXTTOC · SZEXTTOC · SSEXT8TOC
+   * (stack dual of SSEXT/SZEXT/SSEXT8 into cell; width from stack after field ladder) */
+  if (kw(&L->cur,"SSEXTTOC")||kw(&L->cur,"SEXTTOC")||kw(&L->cur,"SSIGNEXTTOC")||
+      kw(&L->cur,"STACKSEXTTOC")||kw(&L->cur,"SCELLSEXT")||kw(&L->cur,"SIGNEXTTOC")||
+      kw(&L->cur,"SSEXTAT")){
+    /* i w → cells[i] = sign-extend low w bits of cells[i]; w 0..63; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long w = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (w <= 0) r = 0;
+    else if (w >= 63) r = a;
+    else {
+      unsigned long mask = (1ul << (unsigned)w) - 1ul;
+      unsigned long v = (unsigned long)a & mask;
+      unsigned long sign = 1ul << (unsigned)(w - 1);
+      if (v & sign) v |= ~mask;
+      r = (long)v;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZEXTTOC")||kw(&L->cur,"ZEXTTOC")||kw(&L->cur,"SZEROEXTTOC")||
+      kw(&L->cur,"STACKZEXTTOC")||kw(&L->cur,"SCELLZEXT")||kw(&L->cur,"ZEROEXTTOC")||
+      kw(&L->cur,"SZEXTAT")){
+    /* i w → cells[i] = zero-extend low w bits of cells[i]; w 0..63; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long w = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (w <= 0) r = 0;
+    else if (w >= 63) r = a;
+    else {
+      unsigned long mask = (1ul << (unsigned)w) - 1ul;
+      r = (long)((unsigned long)a & mask);
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT8TOC")||kw(&L->cur,"SEXT8TOC")||kw(&L->cur,"SSEXTBTOC")||
+      kw(&L->cur,"STACKSEXT8TOC")||kw(&L->cur,"SCELLSEXT8")||kw(&L->cur,"SIGNEXT8TOC")||
+      kw(&L->cur,"SSEXT8AT")){
+    /* i → cells[i] = sign-extend low 8 bits of cells[i]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = a & 0xFFL;
+    if (r & 0x80L) r |= ~0xFFL;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
    * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
   if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||

@@ -2,21 +2,18 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 443 |
-| **digit** | **9** (urandom; imm low-n metric TOC) |
-| **version** | `1.12.361-universal` |
-| **pass/fail** | **399 / 0** (green) |
-| **commit** | `e38d53b` → `origin/main` |
-| **ops** | `SPOPMNTOCN` / `SANYMNTOCN` / `SALLMNTOCN` |
-| **proof** | `programs/proof/384_spopmntocn_sallmntocn.cubalc` |
+| **iter** | 486 |
+| **digit** | **8** (urandom) |
+| **version** | `1.12.382-universal` |
+| **pass/fail** | **420 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SSEXTTOC` / `SZEXTTOC` / `SSEXT8TOC` |
+| **proof** | `programs/proof/405_ssexttoc_szexttoc.cubalc` |
 
 ### Delta
-Digit-9 imm low-n metric TOC: `i + n → cells[i] = popcount/any/all of low-n bits` (imm dual of SPOPMN/SANYMN/SALLMN into cell).
+Digit-8 stack dual sign/zero extend TOC: sign/zero-extend low w bits of `cells[i]` (stack dual of SSEXT/SZEXT/SSEXT8 into cell after field ladder).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
-
-### Language
-- `SPOPMNTOCN` `SANYMNTOCN` `SALLMNTOCN` · aliases `POPMNTOCN`/`ANYMNTOCN`/`ALLMNTOCN`
-- Proof `384_spopmntocn_sallmntocn.cubalc`
+- tree healthy
