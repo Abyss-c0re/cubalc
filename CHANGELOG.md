@@ -1,3 +1,17 @@
+## 1.12.341-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → forward imm modular TOC (imm dual of SADDMODN after reverse modular TOC plane).
+
+### Language
+- `SADDMODTOCN`/`ADDMODTOCN`/`SADDMODATN` k m — stack `i → cells[i]=(cells[i]+k) mod m` leave result
+- `SSUBMODTOCN`/`SUBMODTOCN`/`SSUBMODATN` k m — stack `i → cells[i]=(cells[i]-k) mod m` leave result
+- `SMULMODTOCN`/`MULMODTOCN`/`SMULMODATN` k m — stack `i → cells[i]=(cells[i]*k) mod m` leave result
+- Proof `364_saddmodtocn_smulmodtocn.cubalc`
+
+### Prior
+See 1.12.340-universal.
+
 ## 1.12.340-universal — 2026-08-04
 
 ### Direction
