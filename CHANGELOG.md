@@ -1,3 +1,17 @@
+## 1.14.77-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack imm field GTE (unsigned >= predicates SGTE32N/SGTE16N/SGTE8N after SLTE ladder; complete ordered plane).
+
+### Language
+- `SGTE32N` — `field n → word n of TOS = (w >= field) ? 1 : 0`
+- `SGTE16N` — `field n → halfword n of TOS = (hw >= field) ? 1 : 0`
+- `SGTE8N` — `field n → byte n of TOS = (b >= field) ? 1 : 0`
+- Proof `534_sgte32n_sgte8n.cubalc`
+
+### Prior
+See 1.14.76-universal.
+
 ## 1.14.76-universal — 2026-08-04
 
 ### Direction

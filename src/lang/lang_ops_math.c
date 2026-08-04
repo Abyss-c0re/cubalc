@@ -2918,6 +2918,27 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 stack imm 8-bit field GTE: SGTE8N (ladder after SLTE8N) */
+  if (kw(&L->cur,"SGTE8N")||kw(&L->cur,"STACKGTE8N")||kw(&L->cur,"GTE8N")||
+      kw(&L->cur,"SCMPGE8N")||kw(&L->cur,"SGEQ8N")||kw(&L->cur,"SGTEBYTEN")||
+      kw(&L->cur,"SGTE8IMM")){
+    /* SGTE8N field n — byte n of TOS = (b >= field) ? 1 : 0; n clamped 0..7 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFul;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long v = (base >> sh) & 0xFFul;
+    unsigned long w = (v >= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 stack imm 8-bit field abs+extend: SABS8N · SSEXT8N · SZEXT8N
    * (byte ladder of SABS4N/SSEXT4N/SZEXT4N; stack dual of DABS8N/DSEXT8N/DZEXT8N after SNE8N) */
   if (kw(&L->cur,"SABS8N")||kw(&L->cur,"STACKABS8N")||kw(&L->cur,"ABS8N")||
@@ -3452,6 +3473,27 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 16);
     unsigned long v = (base >> sh) & 0xFFFFul;
     unsigned long w = (v <= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack imm 16-bit field GTE: SGTE16N (ladder after SLTE16N) */
+  if (kw(&L->cur,"SGTE16N")||kw(&L->cur,"STACKGTE16N")||kw(&L->cur,"GTE16N")||
+      kw(&L->cur,"SCMPGE16N")||kw(&L->cur,"SGEQ16N")||kw(&L->cur,"SGTEWORDN")||
+      kw(&L->cur,"SGTE16IMM")){
+    /* SGTE16N field n — halfword n of TOS = (hw >= field) ? 1 : 0; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (v >= f) ? 1ul : 0ul;
     long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
@@ -4296,6 +4338,27 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 32);
     unsigned long v = (base >> sh) & 0xFFFFFFFFul;
     unsigned long w = (v <= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 stack imm field GTE: SGTE32N (complete ordered plane after SLTE32N) */
+  if (kw(&L->cur,"SGTE32N")||kw(&L->cur,"STACKGTE32N")||kw(&L->cur,"GTE32N")||
+      kw(&L->cur,"SCMPGE32N")||kw(&L->cur,"SGEQ32N")||kw(&L->cur,"SGTEDWN")||
+      kw(&L->cur,"SGTE32IMM")){
+    /* SGTE32N field n — word n of TOS = (w >= field) ? 1 : 0; n clamped 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFFFFFul;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long v = (base >> sh) & 0xFFFFFFFFul;
+    unsigned long w = (v >= f) ? 1ul : 0ul;
     long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
