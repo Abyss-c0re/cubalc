@@ -1,3 +1,17 @@
+## 1.14.28-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 4-bit field unary+rotate (dual of SNOT4N/SROL4N/SROR4N; nibble unary plane on pair after dual 4n bitwise).
+
+### Language
+- `DNOT4N` — `n → nibble n of each = ~nibble & 0xF`
+- `DROL4N` — `k n → rotl4 nibble n of each by k&3`
+- `DROR4N` — `k n → rotr4 nibble n of each by k&3`
+- Proof `485_dnot4n_dror4n.cubalc`
+
+### Prior
+See 1.14.27-universal.
+
 ## 1.14.27-universal — 2026-08-04
 
 ### Direction
