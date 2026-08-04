@@ -1,3 +1,17 @@
+## 1.14.65-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 32-bit field div/mod/min (word ladder of SDIV16N/SMOD16N/SMIN16N after SMUL32N).
+
+### Language
+- `SDIV32N` — `field n → word n of TOS = w / field` (field 0 → 0)
+- `SMOD32N` — `field n → word n of TOS = w % field` (field 0 → 0)
+- `SMIN32N` — `field n → word n of TOS = min(w, field)` unsigned
+- Proof `522_sdiv32n_smin32n.cubalc`
+
+### Prior
+See 1.14.64-universal.
+
 ## 1.14.64-universal — 2026-08-04
 
 ### Direction
