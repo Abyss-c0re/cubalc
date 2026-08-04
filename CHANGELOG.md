@@ -1,3 +1,17 @@
+## 1.12.362-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → imm inverted low-n mask TOC (imm dual of SNANDMN/SNORMN/SXNORMN into cell after SANDMNTOCN).
+
+### Language
+- `SNANDMNTOCN`/`NANDMNTOCN` n — stack `i → cells[i]=~(cells[i]&low-n mask)`; leave result (n 0..64)
+- `SNORMNTOCN`/`NORMNTOCN` n — stack `i → cells[i]=~(cells[i]|low-n mask)`; leave result
+- `SXNORMNTOCN`/`XNORMNTOCN` n — stack `i → cells[i]=~(cells[i]^low-n mask)`; leave result
+- Proof `385_snandmntocn_sxnormntocn.cubalc`
+
+### Prior
+See 1.12.361-universal.
+
 ## 1.12.361-universal — 2026-08-04
 
 ### Direction
