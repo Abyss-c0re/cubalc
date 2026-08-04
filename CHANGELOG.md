@@ -1,3 +1,17 @@
+## 1.12.374-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack dual inverted high-n mask TOC (stack dual of SNANDHNTOCN plane after SANDHNTOC).
+
+### Language
+- `SNANDHNTOC`/`NANDHNTOC` — stack `i n → cells[i] = ~(cells[i] & high-n mask)` (n 0..64)
+- `SNORHNTOC`/`NORHNTOC` — stack `i n → cells[i] = ~(cells[i] | high-n mask)`
+- `SXNORHNTOC`/`XNORHNTOC` — stack `i n → cells[i] = ~(cells[i] ^ high-n mask)`
+- Proof `397_snandhntoc_sxnorhntoc.cubalc`
+
+### Prior
+See 1.12.373-universal.
+
 ## 1.12.373-universal — 2026-08-04
 
 ### Direction

@@ -1,0 +1,80 @@
+# Proof 397 — digit-7 stack dual inverted high-n mask TOC: SNANDHNTOC SNORHNTOC SXNORHNTOC
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARCELLS
+CLEARSTACK
+
+# all-ones via SORMNTOC 64
+CELLSET 1 0
+PUSH 1
+PUSH 64
+SORMNTOC
+POP
+# SNANDHNTOC: ~(all-ones & high-4) = ~high-4 → low 60 bits → positive
+PUSH 1
+PUSH 4
+SNANDHNTOC
+ASSERT LAST_N > 0
+ASSERT CELL(1) > 0
+POP a
+ASSERT a > 0
+
+# NANDHNTOC n=0: ~(x & 0) = ~0 → all ones (negative)
+CELLSET 2 99
+PUSH 2
+PUSH 0
+NANDHNTOC
+ASSERT LAST_N < 0
+ASSERT CELL(2) < 0
+POP
+
+# SNORHNTOC: ~(0 | high-1) = ~MSB → positive
+CELLSET 3 0
+PUSH 3
+PUSH 1
+SNORHNTOC
+ASSERT LAST_N > 0
+ASSERT CELL(3) > 0
+POP
+
+# NORHNTOC n=0: ~(7 | 0) = ~7 = -8
+CELLSET 4 7
+PUSH 4
+PUSH 0
+NORHNTOC
+ASSERT LAST_N == -8
+ASSERT CELL(4) == -8
+POP
+
+# SXNORHNTOC: ~(0 ^ high-2) → positive
+CELLSET 5 0
+PUSH 5
+PUSH 2
+SXNORHNTOC
+ASSERT LAST_N > 0
+ASSERT CELL(5) > 0
+POP
+
+# XNORHNTOC n=0 on all-ones: ~(all ^ 0) = ~all = 0
+CELLSET 6 0
+PUSH 6
+PUSH 64
+SORMNTOC
+POP
+PUSH 6
+PUSH 0
+XNORHNTOC
+ASSERT LAST_N == 0
+ASSERT CELL(6) == 0
+POP
+
+# soft short stack OK=0
+CLEARSTACK
+SNANDHNTOC
+ASSERT OK == 0
+PUSH 1
+SNORHNTOC
+ASSERT OK == 0
+
+PRINT "397_snandhntoc_sxnorhntoc OK"
