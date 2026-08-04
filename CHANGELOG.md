@@ -1,3 +1,17 @@
+## 1.12.420-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → cell signed-clip dual ladder (signed dual of CLIP8/16 after SCLIPS*TOC; complete 8/16/32 signed clamp).
+
+### Language
+- `CLIPS8CELL`/`CLIPS8RANGE` — `lo hi → clamp to [-128,127]`
+- `CLIPS16CELL`/`CLIPS16RANGE` — `lo hi → clamp to [-32768,32767]`
+- `CLIPS32CELL`/`CLIPS32RANGE` — `lo hi → clamp to signed 32-bit`
+- Proof `443_clips8cell_clips32cell.cubalc`
+
+### Prior
+See 1.12.419-universal.
+
 ## 1.12.419-universal — 2026-08-04
 
 ### Direction

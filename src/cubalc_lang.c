@@ -26779,6 +26779,65 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 cell signed-clip dual ladder: CLIPS8CELL · CLIPS16CELL · CLIPS32CELL
+   * (signed dual of CLIP8/CLIP16 after SCLIPS*TOC; complete 8/16/32 signed clamp plane) */
+  if (kw(&L->cur,"CLIPS8CELL")||kw(&L->cur,"SCLIPS8CELL")||kw(&L->cur,"BCLIPS8CELL")||
+      kw(&L->cur,"RANGECLIPS8")||kw(&L->cur,"CLIPS8RANGE")||kw(&L->cur,"SCLIP8CELL")){
+    /* CLIPS8CELL lo hi — clamp cells[i] to signed 8-bit [-128,127] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < -128L) r = -128L;
+      if (r > 127L) r = 127L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIPS16CELL")||kw(&L->cur,"SCLIPS16CELL")||kw(&L->cur,"BCLIPS16CELL")||
+      kw(&L->cur,"RANGECLIPS16")||kw(&L->cur,"CLIPS16RANGE")||kw(&L->cur,"SCLIP16CELL")){
+    /* CLIPS16CELL lo hi — clamp cells[i] to signed 16-bit [-32768,32767] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < -32768L) r = -32768L;
+      if (r > 32767L) r = 32767L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIPS32CELL")||kw(&L->cur,"SCLIPS32CELL")||kw(&L->cur,"BCLIPS32CELL")||
+      kw(&L->cur,"RANGECLIPS32")||kw(&L->cur,"CLIPS32RANGE")||kw(&L->cur,"SCLIP32CELL")){
+    /* CLIPS32CELL lo hi — clamp cells[i] to signed 32-bit [-2147483648,2147483647] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < -2147483648L) r = -2147483648L;
+      if (r > 2147483647L) r = 2147483647L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
