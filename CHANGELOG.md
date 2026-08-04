@@ -1,3 +1,18 @@
+## 1.14.93-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack+dual imm 16-bit field signed clamp+between (halfword ladder of SCLAMPS32N/DCLAMPS32N after SMINS16N plane).
+
+### Language
+- `SCLAMPS16N` — `lo hi n → halfword n = clamp_signed(int16(hw), [lo,hi])`
+- `SBETWEENS16N` — `lo hi n → halfword n = (lo <= int16(hw) <= hi) ? 1 : 0`
+- `DCLAMPS16N` — dual-stack form of `SCLAMPS16N`
+- `DBETWEENS16N` — dual-stack form of `SBETWEENS16N`
+- Proof `550_sclamps16n_dbetweens16n.cubalc`
+
+### Prior
+See 1.14.92-universal.
+
 ## 1.14.92-universal — 2026-08-04
 
 ### Direction
