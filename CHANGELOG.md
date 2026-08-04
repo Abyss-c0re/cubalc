@@ -1,3 +1,17 @@
+## 1.14.39-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack imm 8-bit field metrics (byte ladder of SBITREV4N/SPOPCNT4N/SPARITY4N; stack dual of DBITREV8N plane).
+
+### Language
+- `SBITREV8N` — `n → byte n of TOS = bitrev8(byte)`
+- `SPOPCNT8N` — `n → byte n of TOS = popcount(byte)`
+- `SPARITY8N` — `n → byte n of TOS = xor-reduce(byte) in low bit`
+- Proof `496_sbitrev8n_sparity8n.cubalc`
+
+### Prior
+See 1.14.38-universal.
+
 ## 1.14.38-universal — 2026-08-04
 
 ### Direction
