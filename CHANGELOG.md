@@ -1,3 +1,17 @@
+## 1.14.56-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack imm 32-bit field shift (word ladder of DSHL16N/DSHR16N/DSAR16N; dual of SSHL32N after DNOT32N).
+
+### Language
+- `DSHL32N` — `k n → word n of each = (uint32)<<k` (k≥32 → 0) on top two
+- `DSHR32N` — `k n → word n of each = (uint32)>>k` logical (k≥32 → 0)
+- `DSAR32N` — `k n → word n of each = (int32)>>k` arithmetic (k≥32 → all sign)
+- Proof `513_dshl32n_dsar32n.cubalc`
+
+### Prior
+See 1.14.55-universal.
+
 ## 1.14.55-universal — 2026-08-04
 
 ### Direction
