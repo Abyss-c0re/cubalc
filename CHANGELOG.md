@@ -1,3 +1,17 @@
+## 1.12.406-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → cell fixed-width shift32 plane (range dual of SSHL32/SSHR32/SSAR32 after NANDCELL logic).
+
+### Language
+- `SHL32CELL`/`SHL32RANGE` — `lo hi k → cells[i] = (uint32)cells[i] ≪ k` (k≥32 → 0)
+- `SHR32CELL`/`SHR32RANGE` — `lo hi k → logical ≫ low32`
+- `SAR32CELL`/`ASHR32CELL` — `lo hi k → arithmetic ≫ low32` (sign-extend)
+- Proof `429_shl32cell_sar32cell.cubalc`
+
+### Prior
+See 1.12.405-universal.
+
 ## 1.12.405-universal — 2026-08-04
 
 ### Direction

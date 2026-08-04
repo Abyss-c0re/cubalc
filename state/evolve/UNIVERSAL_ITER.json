@@ -2,26 +2,25 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-04T10:04:01+0300",
-  "iter": 481,
-  "algocube_digit": 0,
-  "version": "1.12.405-universal",
-  "pass": 443,
+  "ts": "2026-08-04T10:07:46+0300",
+  "iter": 484,
+  "algocube_digit": 9,
+  "version": "1.12.406-universal",
+  "pass": 444,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "ops": [
-    "SSHL32TOCN",
-    "SSHR32TOCN",
-    "SSAR32TOCN"
+    "SHL32CELL",
+    "SHR32CELL",
+    "SAR32CELL"
   ],
-  "proof": "programs/proof/428_sshl32tocn_ssar32tocn.cubalc",
+  "proof": "programs/proof/429_shl32cell_sar32cell.cubalc",
   "law": [
     "pure_science",
     "evolve",
     "flow_compile"
-  ],
-  "note": "tree restored from evolve mass-delete before commit"
+  ]
 }
