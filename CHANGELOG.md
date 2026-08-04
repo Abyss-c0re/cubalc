@@ -1,3 +1,17 @@
+## 1.12.347-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack↔cell modular accumulate TOC (stack dual of SADDMODTOCN plane).
+
+### Language
+- `SADDMODTOC`/`ADDMODTOC` — stack `i k m → cells[i]=(cells[i]+k) mod m` leave result
+- `SSUBMODTOC`/`SUBMODTOC` — stack `i k m → cells[i]=(cells[i]-k) mod m` leave result
+- `SMULMODTOC`/`MULMODTOC` — stack `i k m → cells[i]=(cells[i]*k) mod m` leave result
+- Proof `370_saddmodtoc_smulmodtoc.cubalc`
+
+### Prior
+See 1.12.346-universal.
+
 ## 1.12.346-universal — 2026-08-04
 
 ### Direction
