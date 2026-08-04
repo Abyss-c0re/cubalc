@@ -4,9 +4,63 @@
  */
 #include "lang/cubalc_lang_internal.h"
 #include <unistd.h>
+#include <poll.h>
+#include <errno.h>
 #if !defined(CUBALC_OS_WINDOWS)
 #  include <sys/socket.h>
 #endif
+
+/* CUBALC_P2P_TIMEOUT ms (default 30000). 0 = wait forever. */
+static int p2p_timeout_ms(void){
+  const char *e = getenv("CUBALC_P2P_TIMEOUT");
+  if (!e || !e[0]) return 30000;
+  int ms = atoi(e);
+  if (ms < 0) ms = 0;
+  if (ms > 600000) ms = 600000;
+  return ms;
+}
+
+/* 1 if CUBALC_P2P_SOFT is non-empty / 1 / true / yes */
+static int p2p_soft(void){
+  const char *e = getenv("CUBALC_P2P_SOFT");
+  if (!e || !e[0]) return 0;
+  if (e[0]=='0' && e[1]==0) return 0;
+  if (strcmp(e,"false")==0 || strcmp(e,"no")==0 || strcmp(e,"off")==0) return 0;
+  return 1;
+}
+
+/* Accept with optional timeout. Returns client fd or -1 (sets *timed_out). */
+static int accept_timeout(int lfd, int timeout_ms, int *timed_out){
+  if (timed_out) *timed_out = 0;
+  if (timeout_ms <= 0){
+    int cfd = accept(lfd, NULL, NULL);
+    return cfd;
+  }
+  {
+    struct pollfd pfd;
+    int pr;
+    pfd.fd = lfd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    pr = poll(&pfd, 1, timeout_ms);
+    if (pr == 0){
+      if (timed_out) *timed_out = 1;
+      return -1;
+    }
+    if (pr < 0) return -1;
+    return accept(lfd, NULL, NULL);
+  }
+}
+
+/* Soft-fail: SMX_OK=0, OK=0, continue program (no fatal). */
+static void smx_soft_fail(VM *vm, const char *why){
+  vm->smx_ok = 0;
+  var_set_num(vm, "SMX_OK", 0);
+  var_set_num(vm, "OK", 0);
+  var_set_str(vm, "LAST", why ? why : "smx soft fail");
+  if (vm->trace)
+    fprintf(vm->trace, "# SMX soft-fail: %s\n", why ? why : "");
+}
 
 /* Ensure SMX2 key is loaded (env / token / demo key for local proof) */
 static int ensure_smx_key(VM *vm){
@@ -247,10 +301,23 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       if (ib < 0){ place_cube(vm, remote, "host", 1); ib = find_cube(vm, remote); }
       lfd = cubalc_smx_tcp_listen(host, port, 4);
       if (lfd < 0){ fail(vm,"SMX SERVE listen fail"); return -1; }
-      if (vm->trace) fprintf(vm->trace, "# SMX SERVE %s:%d wait peer\n", host, port);
-      cfd = accept(lfd, NULL, NULL);
-      close(lfd);
-      if (cfd < 0){ fail(vm,"SMX SERVE accept fail"); return -1; }
+      {
+        int to_ms = p2p_timeout_ms();
+        int timed = 0;
+        if (vm->trace)
+          fprintf(vm->trace, "# SMX SERVE %s:%d wait peer timeout_ms=%d\n",
+                  host, port, to_ms);
+        cfd = accept_timeout(lfd, to_ms, &timed);
+        close(lfd);
+        if (cfd < 0){
+          if (timed){
+            /* Timeout is a host/mesh condition — soft so boards do not hang forever */
+            smx_soft_fail(vm, "SMX SERVE timeout");
+            bump(vm); return 1;
+          }
+          fail(vm,"SMX SERVE accept fail"); return -1;
+        }
+      }
       n = 0;
       if (cubalc_smx_recv_frame(cfd, frame, sizeof frame, &n) != 0){
         close(cfd); fail(vm,"SMX SERVE recv"); return -1;
@@ -326,21 +393,38 @@ int cubalc_lang_ops_smx(VM *vm, Lex *L){
       if (ia < 0){ place_cube(vm, a, "host", 1); ia = find_cube(vm, a); }
       if (ib < 0){ place_cube(vm, b, "body", 1); ib = find_cube(vm, b); }
       fd = cubalc_smx_tcp_connect(host, port);
-      if (fd < 0){ fail(vm,"SMX DIAL connect fail"); return -1; }
+      if (fd < 0){
+        if (p2p_soft()){
+          smx_soft_fail(vm, "SMX DIAL connect fail");
+          bump(vm); return 1;
+        }
+        fail(vm,"SMX DIAL connect fail"); return -1;
+      }
       if (cubalc_smx_seal(&vm->smx, &vm->ch.cubes[ia].atom, a, b,
                           frame, sizeof frame, &n) != 0){
-        close(fd); fail(vm,"SMX DIAL seal"); return -1;
+        close(fd);
+        if (p2p_soft()){ smx_soft_fail(vm, "SMX DIAL seal"); bump(vm); return 1; }
+        fail(vm,"SMX DIAL seal"); return -1;
       }
       if (cubalc_smx_send_frame(fd, frame, n) != 0){
-        close(fd); fail(vm,"SMX DIAL send"); return -1;
+        close(fd);
+        if (p2p_soft()){ smx_soft_fail(vm, "SMX DIAL send"); bump(vm); return 1; }
+        fail(vm,"SMX DIAL send"); return -1;
       }
       n = 0;
       if (cubalc_smx_recv_frame(fd, frame, sizeof frame, &n) != 0){
-        close(fd); fail(vm,"SMX DIAL recv"); return -1;
+        close(fd);
+        if (p2p_soft()){ smx_soft_fail(vm, "SMX DIAL recv"); bump(vm); return 1; }
+        fail(vm,"SMX DIAL recv"); return -1;
       }
       if (cubalc_smx_open(&vm->smx, frame, n, &recv, fr, to,
                           &vm->ch.cubes[ib].atom.matrix) != 0){
-        close(fd); fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX DIAL open"); return -1;
+        close(fd);
+        if (p2p_soft()){
+          smx_soft_fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX DIAL open");
+          bump(vm); return 1;
+        }
+        fail(vm, vm->smx.last_err[0]?vm->smx.last_err:"SMX DIAL open"); return -1;
       }
       for (int i = 0; i < recv.matrix.n && i < CUBALC_ATOM_BITS; i++)
         if (cubalc_matrix_get(&recv.matrix, i))

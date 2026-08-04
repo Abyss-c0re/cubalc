@@ -88,10 +88,14 @@ Wire: `[u32le N][SMX2 frame]`. Docs: [`docs/P2P_SMX.md`](docs/P2P_SMX.md).
 |-----|---------|
 | `CUBALC_SMX_KEY` | 64-hex shared secret |
 | `CUBALC_P2P_BIND` / `PEER` / `SERVE` | serve/dial control |
+| `CUBALC_P2P_TIMEOUT` | SERVE accept timeout ms (default 30000) |
+| `CUBALC_P2P_SOFT` | DIAL soft-fail (`SMX_OK=0`) |
 | `CUBALC_PEER0_DIGIT` / `PEER1` | digit 0–9 text |
 | `CUBALC_PEER0_BITS` / `PEER1` | path or raw 01 stream |
 | `CUBALC_STATE` | state directory |
 | `CUBALC_SPAWN_ALLOW` | extra SPAWN basenames `a:b:c` |
+
+Quick readiness: `./out/cubalc doctor` · recipes: `docs/COOKBOOK.md` · `cubalc cookbook`
 
 ## Humans (optional)
 

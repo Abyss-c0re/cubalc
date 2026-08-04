@@ -16,35 +16,38 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 
 ### A. Ergonomics (agents + humans)
 
-1. **`INCLUDE "path"`** reliability + `programs/lib/` standard snippets (assert helpers, peer seed).
-2. **Better fail messages** on PLUG/SMX/ASSERT (line + hint, not opaque fail).
-3. **`ASSERT` with message string** · `ASSERT expr "why"`.
+1. ~~**`INCLUDE "path"`** + `programs/lib/`~~ **done** (`lib/hold_seed`, `lib/peer_decide`, proof 574).
+2. **Better fail messages** on SMX still thin (keep improving).
+3. ~~**`ASSERT` with message string**~~ **done** (core + proof 573).
 4. **`PRINT` formatting** · stable JSON line mode for agents (`PRINT_JSON` / `DUMP`).
 5. **`HELP form`** or CLI `cubalc forms [prefix]` listing live ops from one plane.
 
 ### B. Host / mesh usability
 
-6. **`SMX SERVE` timeout** (ms env `CUBALC_P2P_TIMEOUT`) so boards don’t hang forever.
+6. ~~**`SMX SERVE` timeout**~~ **done** (`CUBALC_P2P_TIMEOUT` ms, default 30s).
 7. **`cubalc protect status`** JSON summary without full board run.
-8. **`SYS ENV` default** · `SYS ENV "NAME" OR "fallback"`.
-9. **Soft-fail flag for DIAL** so mesh demos can retry without fatal.
+8. ~~**`SYS ENV` default**~~ **done** (`SYS ENV "NAME" OR "fallback"`).
+9. ~~**Soft-fail DIAL**~~ **done** (`CUBALC_P2P_SOFT=1`).
 
 ### C. Standard library (CubalC source)
 
-10. `programs/lib/hold.cubalc` · require hold before plug patterns.
+10. ~~`programs/lib/hold_seed.cubalc`~~ **done**.
 11. `programs/lib/mesh_exchange.cubalc` · documented EXCHANGE loop snippet.
-12. `programs/lib/decide_peer.cubalc` · FOLDBITS + SETDIGIT + DECIDE recipe.
+12. ~~`programs/lib/peer_decide.cubalc`~~ **done** (recipe).
 
 ### D. CLI product
 
-13. **`cubalc doctor`** — binary path, state dir, SMX key present?, modular layout, last protect plate.
-14. **`cubalc cookbook`** — print paths to 5 starter programs.
-15. **Help rewrite** — group commands: run / law / protect / smx / evolve.
+13. ~~**`cubalc doctor`**~~ **done**.
+14. ~~**`cubalc cookbook`**~~ **done**.
+15. ~~**Help rewrite**~~ **done** (grouped).
 
 ### E. Proof & docs that unlock use
 
-16. One **end-to-end cookbook** under `docs/COOKBOOK.md` (hold → place → plug → decide → smx).
+16. ~~**Cookbook**~~ **done** (`docs/COOKBOOK.md`).
 17. Wire a **missing doc form that is promised** only if you implement the form too (no doc-only lies).
+18. **`PRINT_JSON`** / agent dump of vars.
+19. **`cubalc forms [prefix]`** live op listing.
+20. SERVE/DIAL remaining error hints + retry helpers.
 
 ## Tick protocol
 

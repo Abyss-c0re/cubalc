@@ -1,0 +1,19 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+// Soft dial: missing peer must not fatal when CUBALC_P2P_SOFT=1
+// host: CUBALC_P2P_SOFT=1 CUBALC_P2P_PEER=127.0.0.1:1 cubalc run this
+
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+PLUG self remote
+SETBIT self 0 1
+SETBIT self 2 1
+SMX KEY
+SMX DIAL self remote "127.0.0.1:1"
+
+PRINT "soft_dial" SMX_OK OK CUBES
+ASSERT SMX_OK == 0 "soft dial: peer absent → SMX_OK 0"
+ASSERT OK == 0 "soft dial: OK 0 not fatal exit"
+ASSERT CUBES == 2

@@ -1,0 +1,16 @@
+// INCLUDE lib from programs/ root resolution
+INCLUDE "lib/hold_seed.cubalc"
+
+CUBE self ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG self brain
+SETBIT self 0 1
+SETBIT self 3 1
+IMPULSE self 1
+FLOW 1
+DECIDE brain
+
+PRINT "include_lib" CUBES DECIDE OK
+ASSERT CUBES == 2 "lib hold + two cubes"
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9

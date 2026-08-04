@@ -1,0 +1,15 @@
+{
+  "schema": "cubalc.meaningful_iter.v1",
+  "iter": 1,
+  "version": "1.15.16-usability",
+  "item": "doctor + ENV OR + SERVE timeout + soft DIAL + lib/INCLUDE + cookbook",
+  "summary": "Main-agent usability ship: cubalc doctor/cookbook/help; SYS ENV OR fallback; CUBALC_P2P_TIMEOUT soft SERVE; CUBALC_P2P_SOFT dial; programs/lib; INCLUDE path resolve; proofs 573-576.",
+  "proofs": [
+    "573_env_or_assert_msg",
+    "574_include_lib",
+    "575_p2p_soft_dial",
+    "576_p2p_serve_timeout"
+  ],
+  "when": "2026-08-05",
+  "agent": "main"
+}

@@ -1440,16 +1440,104 @@ int main(int argc, char **argv) {
     /* Pure C: braincube solves · algocube optimizes · emits .cubalc */
     return cubalc_cmd_evolve(argc - 1, argv + 1);
   }
+  if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
+    /* Usability: one JSON plate for agents/humans — is this install ready? */
+    char dir[512], protect_path[640], key_preview[16];
+    int modular = 0, smx_key = 0, protect_plate = 0, bin_ok = 1;
+    const char *hx = getenv("CUBALC_SMX_KEY");
+    const char *kf = getenv("CUBALC_SMX_KEY_FILE");
+    state_dir(dir, sizeof dir);
+    snprintf(protect_path, sizeof protect_path, "%s/CORE_PROTECT.json", dir);
+    modular = (access("src/lang/lang_parse.c", R_OK) == 0 &&
+               access("include/lang/cubalc_lang_internal.h", R_OK) == 0 &&
+               access("src/lang/lang_ops_smx.c", R_OK) == 0);
+    if (hx && strlen(hx) >= 64) smx_key = 1;
+    else if (kf && kf[0] && access(kf, R_OK) == 0) smx_key = 1;
+    protect_plate = (access(protect_path, R_OK) == 0);
+    key_preview[0] = 0;
+    if (hx && strlen(hx) >= 8) {
+      snprintf(key_preview, sizeof key_preview, "%.8s…", hx);
+    }
+    {
+      int ok = modular && (CUBALC_HOLD_FLASH == 1);
+      printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,"
+             "\"version\":\"%s\",\"paradigm\":\"%s\",\"creed\":\"%s\","
+             "\"hold_flash\":%d,\"hold_flash_means\":\"user_permission_before_plug\","
+             "\"share\":\"%s\",\"http_required\":false,"
+             "\"modular_lang\":%s,\"smx_key_configured\":%s,"
+             "\"smx_key_preview\":\"%s\","
+             "\"state_dir\":\"%s\",\"core_protect_plate\":%s,"
+             "\"core_protect_path\":\"%s\","
+             "\"bin_ok\":%s,"
+             "\"hints\":["
+             "\"HOLD_FLASH 1 before PLUG\","
+             "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
+             "\"cubalc protect · cubalc smx-bus prove-tcp\","
+             "\"docs/COOKBOOK.md · programs/lib/\""
+             "],"
+             "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
+             "\"docs/HOLD_FLASH.md\",\"docs/CORE_PROTECT.md\","
+             "\"programs/hello_cube.cubalc\",\"programs/p2p/mesh_local.cubalc\"]"
+             "}\n",
+             ok ? "true" : "false",
+             CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM, CUBALC_CREED,
+             CUBALC_HOLD_FLASH, CUBALC_SHARE,
+             modular ? "true" : "false",
+             smx_key ? "true" : "false",
+             key_preview,
+             dir,
+             protect_plate ? "true" : "false",
+             protect_path,
+             bin_ok ? "true" : "false");
+      return ok ? 0 : 1;
+    }
+  }
+  if (strcmp(cmd, "cookbook") == 0 || strcmp(cmd, "start") == 0) {
+    printf("CubalC cookbook paths (read these first):\n"
+           "  docs/COOKBOOK.md          # hold → place → plug → decide → smx\n"
+           "  docs/HOLD_FLASH.md        # user permission before plug-in\n"
+           "  docs/P2P_SMX.md           # SERVE/DIAL mesh\n"
+           "  docs/CORE_PROTECT.md      # Core protection\n"
+           "  programs/lib/             # INCLUDE snippets\n"
+           "  programs/hello_cube.cubalc\n"
+           "  programs/proof/12_hold_flash_plug.cubalc\n"
+           "  programs/p2p/mesh_local.cubalc\n"
+           "  programs/protect/core_protect.cubalc\n"
+           "Commands: cubalc doctor · cubalc run <file> · cubalc protect · cubalc smx-bus prove-tcp\n");
+    return 0;
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
-      "CubalC %s\n"
-      "  boot|os|run|compile|jit|cflow|disasm|translate|decide|sync|peers\n"
-      "  genesis|impulse|flow|cubes|law|cubechain|smx|smx-bus|smx-exchange\n"
-      "  evolve [--once|--loop|--hz N|--cycles N|--reset]  # C self-improve\n"
-      "  evolve-loop [--hz N]   # constant evolve→algo cycle (no Python)\n"
-      "  showcase|demo|symphony # multi-act COP demonstration\n"
-      "  SETDIGIT · FOLDBITS · DECIDE · COMPARE · HARMONY · JIT flow\n"
-      "  ASYNC HTTP · AWAIT · PARALLEL\n"
+      "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
+      "\n"
+      "  Run & learn\n"
+      "    doctor|health          install readiness JSON (agents/humans)\n"
+      "    cookbook|start         paths to starters\n"
+      "    run|eval <file.cubalc> execute a program\n"
+      "    help|-h                this text\n"
+      "\n"
+      "  Law & Core safety\n"
+      "    law|manifest           law plate JSON\n"
+      "    protect|core-guard     Core protect checks → state/CORE_PROTECT.json\n"
+      "    HOLD_FLASH 1           user permission BEFORE any PLUG (not auto-flash)\n"
+      "\n"
+      "  P2P / SMX2 (binary wire)\n"
+      "    smx|smx-selftest       seal/open/anti-replay\n"
+      "    smx-exchange           file-bus two-peer proof\n"
+      "    smx-bus prove|prove-tcp|serve|dial\n"
+      "    env: CUBALC_SMX_KEY · CUBALC_P2P_BIND/PEER · CUBALC_P2P_TIMEOUT · CUBALC_P2P_SOFT\n"
+      "\n"
+      "  Machine / OS\n"
+      "    boot|os|genesis|impulse|flow|cubes|cubechain\n"
+      "    compile|jit|cflow|disasm|translate|decide\n"
+      "    sync|hive|peers|showcase\n"
+      "    evolve|evolve-loop     pure-C self-improve (optional)\n"
+      "\n"
+      "  Language surface (in .cubalc)\n"
+      "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
+      "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
+      "    ASSERT expr [\"message\"] · ASYNC/AWAIT/PARALLEL\n"
+      "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,
       CUBALC_LANG_PARADIGM);

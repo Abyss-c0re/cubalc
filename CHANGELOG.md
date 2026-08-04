@@ -1,3 +1,19 @@
+## 1.15.16-usability — 2026-08-05
+
+### Usability (agents + humans)
+- `cubalc doctor|health` — install readiness JSON (`cubalc.doctor.v1`)
+- `cubalc cookbook|start` — starter paths; grouped `help`
+- `SYS ENV "NAME" OR "fallback"` — unset/empty → default string (`DEFAULT`/`ELSE`/`FALLBACK` aliases)
+- `SMX SERVE` respects `CUBALC_P2P_TIMEOUT` ms (default 30000); timeout → soft `SMX_OK=0` (no hang)
+- `CUBALC_P2P_SOFT=1` — `SMX DIAL` soft-fail on connect/wire errors
+- `INCLUDE` resolves `programs/<rel>` from any program dir
+- `programs/lib/hold_seed.cubalc`, `programs/lib/peer_decide.cubalc`
+- `docs/COOKBOOK.md` recipes
+- Proofs: `573_env_or_assert_msg`, `574_include_lib`, `575_p2p_soft_dial`, `576_p2p_serve_timeout`
+
+### Prior
+ASSERT message strings (1c2693e); 1.15.15-universal ISA.
+
 ## Meaningful — ASSERT message strings — 2026-08-05
 
 ### Usability

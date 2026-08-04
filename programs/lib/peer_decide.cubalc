@@ -1,0 +1,22 @@
+// Recipe: seed bits + decide brain (INCLUDE after placing cubes named peer0/brain)
+// Expects cubes: peer0, brain already placed and plugged.
+
+SYS ENV "CUBALC_PEER0_BITS" OR ""
+IF LAST_N > 0 THEN
+  FOLDBITS peer0 LAST
+ELSE
+  SETBIT peer0 0 1
+  SETBIT peer0 2 1
+  SETBIT peer0 4 1
+END
+
+SYS ENV "CUBALC_PEER0_DIGIT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  SETDIGIT peer0 LAST_N
+END
+
+IMPULSE peer0 1
+IMPULSE brain 1
+FLOW 2
+DECIDE brain

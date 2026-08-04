@@ -1,0 +1,21 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+// Usability: SYS ENV OR fallback + ASSERT message string
+SYS ENV "CUBALC_PROOF_MISSING_ENV_XYZ" OR "fallback-ok"
+ASSERT LAST_N > 0 "ENV OR must supply fallback when unset"
+ASSERT OK == 1 "LAST non-empty sets OK"
+
+LET n = 1
+ASSERT n == 1 "simple truth"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+SETBIT a 0 1
+SETBIT b 0 1
+PLUG a b
+ASSERT OK == 1 "HOLD_FLASH permits plug"
+
+PRINT "env_or_assert" LAST LAST_N OK CUBES
+ASSERT CUBES == 2

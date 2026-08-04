@@ -25,6 +25,8 @@ Env (no hard-coded devices in programs):
 | `CUBALC_P2P_BIND` | serve bind `host:port` |
 | `CUBALC_P2P_PEER` | dial target `host:port` |
 | `CUBALC_P2P_SERVE` | set non-empty → `nanobot_peer.cubalc` serves |
+| `CUBALC_P2P_TIMEOUT` | SERVE accept timeout ms (default 30000; 0 = forever) |
+| `CUBALC_P2P_SOFT` | non-empty → DIAL soft-fail (`SMX_OK=0`, program continues) |
 
 ## Programs
 

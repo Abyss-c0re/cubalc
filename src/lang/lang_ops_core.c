@@ -193,15 +193,30 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     if (kw(&L->cur,"ENV")){
+      /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS ENV name"); return -1; }
       cubalc_host_result hr;
       cubalc_host_env(L->cur.text, &hr);
       lex_next(L);
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK")){
+        lex_next(L);
+        char fb[512];
+        if (resolve_str_arg(vm, L, fb, sizeof fb) != 0){
+          fail(vm,"SYS ENV name OR \"fallback\""); return -1;
+        }
+        if (!hr.str[0] || hr.n <= 0){
+          snprintf(hr.str, sizeof hr.str, "%s", fb);
+          hr.n = (long)strlen(hr.str);
+          hr.ok = 1;
+        }
+      }
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n;
       var_set_str(vm, "LAST", hr.str);
       var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
     if (kw(&L->cur,"EXIST") || kw(&L->cur,"EXISTS")){

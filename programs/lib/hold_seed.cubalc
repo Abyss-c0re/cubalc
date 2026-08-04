@@ -1,0 +1,5 @@
+// INCLUDE "lib/hold_seed.cubalc"  (from a programs/* path) or absolute path
+// HOLD_FLASH = user permission before plug-in (safeguard, not auto-flash)
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only

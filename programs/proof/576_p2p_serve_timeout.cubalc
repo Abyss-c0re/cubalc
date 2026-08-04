@@ -1,0 +1,18 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+// SERVE accept timeout: CUBALC_P2P_TIMEOUT ms, no peer → soft SMX_OK=0
+// host: CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_BIND=127.0.0.1:17992 cubalc run this
+
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+PLUG self remote
+SETBIT self 1 1
+SMX KEY
+SMX SERVE self remote "127.0.0.1:17992"
+
+PRINT "serve_timeout" SMX_OK OK CUBES
+ASSERT SMX_OK == 0 "serve timeout soft"
+ASSERT OK == 0
+ASSERT CUBES == 2

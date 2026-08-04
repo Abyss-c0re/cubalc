@@ -5327,25 +5327,30 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     if (ms > 0){ struct timespec ts; ts.tv_sec = ms/1000; ts.tv_nsec = (ms%1000)*1000000L; nanosleep(&ts, NULL); }
     bump(vm); return 1;
   }
-  /* INCLUDE "path.cubalc" — practical modules (same VM / world) */
+  /* INCLUDE "path.cubalc" — practical modules (same VM / world)
+   * Resolve order: absolute · include_base/rel · rel · programs/rel ·
+   * programs/basename · CUBALC_ROOT variants · cwd programs/lib style. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
     lex_next(L);
     if (L->cur.kind!=TK_STR){ fail(vm,"INCLUDE \"path.cubalc\""); return -1; }
     char path[768];
-    if (L->cur.text[0]=='/' || (vm->include_base[0]==0))
-      snprintf(path,sizeof path,"%s",L->cur.text);
+    char orig[512];
+    snprintf(orig, sizeof orig, "%s", L->cur.text);
+    if (orig[0]=='/' || (vm->include_base[0]==0))
+      snprintf(path,sizeof path,"%s",orig);
     else
-      snprintf(path,sizeof path,"%s/%s", vm->include_base, L->cur.text);
+      snprintf(path,sizeof path,"%s/%s", vm->include_base, orig);
     lex_next(L);
     FILE *f=fopen(path,"rb");
-    if (!f){
-      const char *root=getenv("CUBALC_ROOT");
-      if (root && root[0]) {
-        char p2[768];
-        snprintf(p2, sizeof p2, "%s/%s", root, path);
-        f = fopen(p2, "rb");
-        if (f) snprintf(path, sizeof path, "%s", p2);
-      }
+    if (!f && orig[0] != '/'){
+      f = fopen(orig, "rb");
+      if (f) snprintf(path, sizeof path, "%s", orig);
+    }
+    if (!f && orig[0] != '/'){
+      char p3[768];
+      snprintf(p3, sizeof p3, "programs/%s", orig);
+      f = fopen(p3, "rb");
+      if (f) snprintf(path, sizeof path, "%s", p3);
     }
     if (!f){
       char p3[768];
@@ -5353,7 +5358,18 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       f = fopen(p3, "rb");
       if (f) snprintf(path, sizeof path, "%s", p3);
     }
-    if (!f){ snprintf(vm->err,sizeof vm->err,"INCLUDE cannot open %s", path); fail(vm,vm->err); return -1; }
+    if (!f){
+      const char *root=getenv("CUBALC_ROOT");
+      if (root && root[0]) {
+        char p2[768];
+        snprintf(p2, sizeof p2, "%s/%s", root, orig[0]?orig:path);
+        f = fopen(p2, "rb");
+        if (!f){ snprintf(p2, sizeof p2, "%s/programs/%s", root, orig); f = fopen(p2, "rb"); }
+        if (!f){ snprintf(p2, sizeof p2, "%s/%s", root, path); f = fopen(p2, "rb"); }
+        if (f) snprintf(path, sizeof path, "%s", p2);
+      }
+    }
+    if (!f){ snprintf(vm->err,sizeof vm->err,"INCLUDE cannot open %s (tried programs/%s)", path, orig); fail(vm,vm->err); return -1; }
     fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
     if (sz<0 || sz>CUBALC_MAX_SRC){ fclose(f); fail(vm,"INCLUDE too large"); return -1; }
     char *buf=malloc((size_t)sz+1); if(!buf){ fclose(f); fail(vm,"oom"); return -1; }
