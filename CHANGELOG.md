@@ -1,3 +1,17 @@
+## 1.15.0-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack+dual imm 32/16-bit field zero-eq (field dual of S0EQ/SZ after signum plane; opens field zero-pred plane).
+
+### Language
+- `S0EQ32N` — `n → word n = (w == 0) ? 1 : 0`
+- `S0EQ16N` — halfword form of `S0EQ32N`
+- `D0EQ32N` / `D0EQ16N` — dual-stack forms
+- Proof `557_s0eq32n_d0eq16n.cubalc`
+
+### Prior
+See 1.14.99-universal.
+
 ## 1.14.99-universal — 2026-08-04
 
 ### Direction
