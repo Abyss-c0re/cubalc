@@ -1,3 +1,17 @@
+## 1.14.75-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack imm 4-bit field ordered-cmp (nibble ladder of SLT8N/SGT8N/SLTE8N after SEQ4N/SNE4N).
+
+### Language
+- `SLT4N` — `field n → nibble n of TOS = (nib < field) ? 1 : 0`
+- `SGT4N` — `field n → nibble n of TOS = (nib > field) ? 1 : 0`
+- `SLTE4N` — `field n → nibble n of TOS = (nib <= field) ? 1 : 0`
+- Proof `532_slt4n_slte4n.cubalc`
+
+### Prior
+See 1.14.74-universal.
+
 ## 1.14.74-universal — 2026-08-04
 
 ### Direction

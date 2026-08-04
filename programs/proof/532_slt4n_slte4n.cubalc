@@ -1,0 +1,151 @@
+# Proof 532 — digit-8 stack imm 4-bit field ordered-cmp: SLT4N SGT4N SLTE4N
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# SLT4N: 0x1 < 0xC → 1
+PUSH 0x1
+SLT4N 0xC 0
+POP x
+ASSERT x == 1
+
+# equal → 0
+CLEARSTACK
+PUSH 0xC
+LT4N 0xC 0
+POP x
+ASSERT x == 0
+
+# greater → 0
+CLEARSTACK
+PUSH 0xF
+SLT4N 0x2 0
+POP x
+ASSERT x == 0
+
+# other nibbles preserved: nibble0 0 < 2 → 1
+CLEARSTACK
+PUSH 0xABC0
+SLT4N 0x2 0
+POP x
+ASSERT x == 0xABC1
+
+# STACKLT4N n1: nibble1 0x1 < 0x2 → nibble1=1
+CLEARSTACK
+PUSH 0x0010
+STACKLT4N 0x2 1
+POP x
+ASSERT x == 0x0010
+
+# nibble1 0x3 < 0x2 → 0
+CLEARSTACK
+PUSH 0x0030
+SLT4N 0x2 1
+POP x
+ASSERT x == 0x0000
+
+# n2
+CLEARSTACK
+PUSH 0x0100
+SLT4N 0x2 2
+POP x
+ASSERT x == 0x0100
+
+# SGT4N: 0xF > 0x2 → 1
+CLEARSTACK
+PUSH 0xF
+SGT4N 0x2 0
+POP x
+ASSERT x == 1
+
+# equal → 0
+CLEARSTACK
+PUSH 0x5
+GT4N 0x5 0
+POP x
+ASSERT x == 0
+
+# less → 0
+CLEARSTACK
+PUSH 0x1
+SGT4N 0x2 0
+POP x
+ASSERT x == 0
+
+# preserved gt: nibble0 0x8 > 0x1 → 1
+CLEARSTACK
+PUSH 0x9A8
+SGT4N 0x1 0
+POP x
+ASSERT x == 0x9A1
+
+# STACKGT4N n1: nibble1 0x9 > 0x1 → 1
+CLEARSTACK
+PUSH 0x0090
+STACKGT4N 0x1 1
+POP x
+ASSERT x == 0x0010
+
+# SLTE4N less → 1
+CLEARSTACK
+PUSH 0x1
+SLTE4N 0xC 0
+POP x
+ASSERT x == 1
+
+# equal → 1
+CLEARSTACK
+PUSH 0xA
+LTE4N 0xA 0
+POP x
+ASSERT x == 1
+
+# greater → 0
+CLEARSTACK
+PUSH 0xF
+SLEQ4N 0xE 0
+POP x
+ASSERT x == 0
+
+# preserved lte: nibble0 0x4 <= 0x4 → 1
+CLEARSTACK
+PUSH 0x124
+SLTE4N 0x4 0
+POP x
+ASSERT x == 0x121
+
+# STACKLTE4N n1: 0x5 <= 0x4 → 0
+CLEARSTACK
+PUSH 0x0050
+STACKLTE4N 0x4 1
+POP x
+ASSERT x == 0x0000
+
+# aliases
+CLEARSTACK
+PUSH 1
+SCMPLT4N 2 0
+POP x
+ASSERT x == 1
+
+CLEARSTACK
+PUSH 3
+SCMPGT4N 2 0
+POP x
+ASSERT x == 1
+
+CLEARSTACK
+PUSH 2
+SCMPLE4N 2 0
+POP x
+ASSERT x == 1
+
+# unsigned: 0x8 > 0x7 → 1
+CLEARSTACK
+PUSH 0x8
+SGT4N 0x7 0
+POP x
+ASSERT x == 1
+
+HOLD_FLASH 0
