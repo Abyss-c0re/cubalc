@@ -1,3 +1,17 @@
+## 1.13.2-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → cell fixed-width 4 nibble shift ALU (nibble dual of SHL8/SHR8/SAR8 after inverted nibble; complete 4/8/16/32 shift ladder).
+
+### Language
+- `SHL4CELL`/`SHL4RANGE` — `lo hi k → (uint4)<<k` (k≥4 → 0)
+- `SHR4CELL`/`SHR4RANGE` — `lo hi k → (uint4)>>k` logical (k≥4 → 0)
+- `SAR4CELL`/`SAR4RANGE` — `lo hi k → (int4)>>k` arithmetic (k≥4 → all sign)
+- Proof `456_shl4cell_sar4cell.cubalc`
+
+### Prior
+See 1.13.1-universal.
+
 ## 1.13.1-universal — 2026-08-04
 
 ### Direction

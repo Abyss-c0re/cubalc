@@ -1971,6 +1971,77 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 cell fixed-width 4 nibble shift ALU: SHL4CELL · SHR4CELL · SAR4CELL
+   * (nibble dual of SHL8/SHR8/SAR8 after inverted nibble plane; complete 4/8/16/32 shift ladder) */
+  if (kw(&L->cur,"SHL4CELL")||kw(&L->cur,"LSH4CELL")||kw(&L->cur,"BSHL4CELL")||
+      kw(&L->cur,"RANGESHL4")||kw(&L->cur,"SHL4RANGE")||kw(&L->cur,"CELLLSH4")||
+      kw(&L->cur,"SHLNIBCELL")){
+    /* SHL4CELL lo hi k — cells[i] = (uint4)cells[i] << k (k>=4 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      long r = (kk >= 4) ? 0L : (long)((w << kk) & 0xFu);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHR4CELL")||kw(&L->cur,"LSHR4CELL")||kw(&L->cur,"BSHR4CELL")||
+      kw(&L->cur,"RANGESHR4")||kw(&L->cur,"SHR4RANGE")||kw(&L->cur,"CELLLSHR4")||
+      kw(&L->cur,"SHRNIBCELL")){
+    /* SHR4CELL lo hi k — cells[i] = (uint4)cells[i] >> k logical (k>=4 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      long r = (kk >= 4) ? 0L : (long)(w >> kk);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SAR4CELL")||kw(&L->cur,"ASHR4CELL")||kw(&L->cur,"BSAR4CELL")||
+      kw(&L->cur,"RANGESAR4")||kw(&L->cur,"SAR4RANGE")||kw(&L->cur,"CELLASHR4")||
+      kw(&L->cur,"SARNIBCELL")){
+    /* SAR4CELL lo hi k — arithmetic right shift low4 as int4 (k>=4 → all sign) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      long va = (long)((unsigned int)vm->cells[(int)i] & 0xFu);
+      if (va & 0x8) va -= 16; /* sign-extend nibble → int4 [-8..7] */
+      long r;
+      if (kk >= 4) r = (va < 0) ? -1L : 0L;
+      else r = va >> kk;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
