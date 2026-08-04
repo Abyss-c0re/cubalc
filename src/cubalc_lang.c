@@ -6326,6 +6326,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 reverse imm sat TOC: SSATDIVTOCN · SSATSUBFROMTOCN · SSATDIVFROMTOCN
+   * (complete SSATADDTOCN plane with /; reverse sat dual of SSATSUBFROMTOC/SSATDIVFROMTOC) */
+  if (kw(&L->cur,"SSATDIVTOCN")||kw(&L->cur,"SSATDIVTOCIMM")||kw(&L->cur,"STACKSATDIVTOCN")||
+      kw(&L->cur,"SSATDIVATN")||kw(&L->cur,"SATDIVTOCN")||kw(&L->cur,"SCELLSATDIVN")||
+      kw(&L->cur,"SDIVSATTOCN")){
+    /* i + n → cells[i] = sat(cells[i]/n); n==0 → 0; LONG_MIN/-1 → LONG_MAX; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (n == 0) r = 0;
+    else if (a == LONG_MIN && n == -1) r = LONG_MAX;
+    else r = a / n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATSUBFROMTOCN")||kw(&L->cur,"SSATSUBFROMTOCIMM")||kw(&L->cur,"STACKSATSUBFROMTOCN")||
+      kw(&L->cur,"SSATSUBFROMATN")||kw(&L->cur,"SATSUBFROMTOCN")||kw(&L->cur,"SCELLSATSUBFROMN")||
+      kw(&L->cur,"SSATRSUBTOCN")||kw(&L->cur,"SRSATSUBTOCN")||kw(&L->cur,"RSATSUBTOCN")){
+    /* i + n → cells[i] = sat(n - cells[i]), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a > 0 && n < LONG_MIN + a) r = LONG_MIN;
+    else if (a < 0 && n > LONG_MAX + a) r = LONG_MAX;
+    else r = n - a;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSATDIVFROMTOCN")||kw(&L->cur,"SSATDIVFROMTOCIMM")||kw(&L->cur,"STACKSATDIVFROMTOCN")||
+      kw(&L->cur,"SSATDIVFROMATN")||kw(&L->cur,"SATDIVFROMTOCN")||kw(&L->cur,"SCELLSATDIVFROMN")||
+      kw(&L->cur,"SSATRDIVTOCN")||kw(&L->cur,"SRSATDIVTOCN")||kw(&L->cur,"RSATDIVTOCN")){
+    /* i + n → cells[i] = sat(n / cells[i]); cell0 → 0; LONG_MIN/-1 → LONG_MAX; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r;
+    if (a == 0) r = 0;
+    else if (n == LONG_MIN && a == -1) r = LONG_MAX;
+    else r = n / a;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-1 stack↔cell bitwise accumulate: SANDTOC · SORTOC · SXORTOC
    * (single-index dual of range SANDCELL; names avoid SCELLAND/SANDCELL) */
   if (kw(&L->cur,"SANDTOC")||kw(&L->cur,"SANDTOCELL")||kw(&L->cur,"STACKANDTOC")||

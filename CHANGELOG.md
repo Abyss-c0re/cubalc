@@ -1,3 +1,17 @@
+## 1.12.349-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → reverse imm sat TOC (complete SSATADDTOCN with /; reverse dual of SSATSUBFROMTOC).
+
+### Language
+- `SSATDIVTOCN`/`SATDIVTOCN` n — stack `i → cells[i]=sat(cells[i]/n)` leave result
+- `SSATSUBFROMTOCN`/`RSATSUBTOCN` n — stack `i → cells[i]=sat(n-cells[i])` leave result
+- `SSATDIVFROMTOCN`/`RSATDIVTOCN` n — stack `i → cells[i]=sat(n/cells[i])` leave result
+- Proof `372_ssatdivtocn_ssatdivfromtocn.cubalc`
+
+### Prior
+See 1.12.348-universal.
+
 ## 1.12.348-universal — 2026-08-04
 
 ### Direction
