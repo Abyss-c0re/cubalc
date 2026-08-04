@@ -1,3 +1,18 @@
+## 1.14.89-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack+dual imm 16-bit field signed min/max (halfword ladder of SMINS32N/DMINS32N after SLTS16N plane).
+
+### Language
+- `SMINS16N` — `field n → halfword n = min_signed(int16(hw), int16(field))`
+- `SMAXS16N` — `field n → halfword n = max_signed(int16(hw), int16(field))`
+- `DMINS16N` — `field n → halfword n of each = min_signed(int16(hw), int16(field))`
+- `DMAXS16N` — `field n → halfword n of each = max_signed(int16(hw), int16(field))`
+- Proof `546_smins16n_dmaxs16n.cubalc`
+
+### Prior
+See 1.14.88-universal.
+
 ## 1.14.88-universal — 2026-08-04
 
 ### Direction

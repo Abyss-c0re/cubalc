@@ -3778,6 +3778,52 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack imm 16-bit field signed min/max: SMINS16N · SMAXS16N
+   * (halfword ladder of SMINS32N plane; signed select after SLTS16N) */
+  if (kw(&L->cur,"SMINS16N")||kw(&L->cur,"STACKMINS16N")||kw(&L->cur,"MINS16N")||
+      kw(&L->cur,"SMINSIGN16N")||kw(&L->cur,"SMINS16IMM")||kw(&L->cur,"SMINSI16N")){
+    /* SMINS16N field n — halfword n = min_signed(int16(hw), int16(field)); n 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long v = (long)((base >> sh) & 0xFFFFul);
+    if (v & 0x8000) v -= 65536;
+    long f = (long)((unsigned long)field & 0xFFFFul);
+    if (f & 0x8000) f -= 65536;
+    long m = (v < f) ? v : f;
+    unsigned long w = (unsigned long)m & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMAXS16N")||kw(&L->cur,"STACKMAXS16N")||kw(&L->cur,"MAXS16N")||
+      kw(&L->cur,"SMAXSIGN16N")||kw(&L->cur,"SMAXS16IMM")||kw(&L->cur,"SMAXSI16N")){
+    /* SMAXS16N field n — halfword n = max_signed(int16(hw), int16(field)); n 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long v = (long)((base >> sh) & 0xFFFFul);
+    if (v & 0x8000) v -= 65536;
+    long f = (long)((unsigned long)field & 0xFFFFul);
+    if (f & 0x8000) f -= 65536;
+    long m = (v > f) ? v : f;
+    unsigned long w = (unsigned long)m & 0xFFFFul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack imm 16-bit field abs+extend: SABS16N · SSEXT16N · SZEXT16N
    * (halfword ladder of SABS8N/SSEXT8N/SZEXT8N; signed extract after SNE16N ALU plane) */
   if (kw(&L->cur,"SABS16N")||kw(&L->cur,"STACKABS16N")||kw(&L->cur,"ABS16N")||
