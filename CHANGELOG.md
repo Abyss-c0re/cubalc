@@ -1,3 +1,17 @@
+## 1.12.417-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → cell fixed-width 8 metrics foundation (CLZ/CTZ + parity after POPCNT8; complete 8-bit metrics).
+
+### Language
+- `CLZ8CELL`/`CLZ8RANGE` — `lo hi → clz8(low8)` (0 → 8)
+- `CTZ8CELL`/`CTZ8RANGE` — `lo hi → ctz8(low8)` (0 → 8)
+- `PARITY8CELL`/`PARITY8RANGE` — `lo hi → xor-reduce low8 bits`
+- Proof `440_clz8cell_parity8cell.cubalc`
+
+### Prior
+See 1.12.416-universal.
+
 ## 1.12.416-universal — 2026-08-04
 
 ### Direction
