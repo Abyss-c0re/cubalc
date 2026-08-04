@@ -1,3 +1,18 @@
+## 1.12.404-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → foundation fixed-width rotate32 TOC (complete shift/rotate 32 into cell after SSHL32TOC plane).
+
+### Language
+- `SROTL32TOC`/`ROL32TOC` — stack `i k → cells[i] = rotl32(low32 cells[i], k&31)`
+- `SROTR32TOC`/`ROR32TOC` — stack `i k → cells[i] = rotr32(low32 cells[i], k&31)`
+- `SROTL32TOCN`/`ROL32TOCN` — stack `i + imm k → rotl32 into cell`
+- `SROTR32TOCN`/`ROR32TOCN` — stack `i + imm k → rotr32 into cell`
+- Proof `427_srotl32toc_srotr32tocn.cubalc`
+
+### Prior
+See 1.12.403-universal.
+
 ## 1.12.403-universal — 2026-08-04
 
 ### Direction

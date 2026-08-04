@@ -10244,6 +10244,88 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 foundation fixed-width rotate32 TOC: SROTL32TOC · SROTR32TOC · SROTL32TOCN · SROTR32TOCN
+   * (complete shift/rotate 32 into cell after SSHL32TOC plane; dual of SROLTOC + SROTL32 stack) */
+  if (kw(&L->cur,"SROTL32TOC")||kw(&L->cur,"SROL32TOC")||kw(&L->cur,"STACKROTL32TOC")||
+      kw(&L->cur,"ROL32TOC")||kw(&L->cur,"SROTL32AT")||kw(&L->cur,"SCELLROL32")||
+      kw(&L->cur,"S32ROLTOC")){
+    /* i k → cells[i] = rotl32(low32 cells[i], k&31), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    kk &= 31;
+    long r = (kk == 0) ? (long)w : (long)(((w << kk) | (w >> (32 - kk))));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTR32TOC")||kw(&L->cur,"SROR32TOC")||kw(&L->cur,"STACKROTR32TOC")||
+      kw(&L->cur,"ROR32TOC")||kw(&L->cur,"SROTR32AT")||kw(&L->cur,"SCELLROR32")||
+      kw(&L->cur,"S32RORTOC")){
+    /* i k → cells[i] = rotr32(low32 cells[i], k&31), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long k = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    kk &= 31;
+    long r = (kk == 0) ? (long)w : (long)(((w >> kk) | (w << (32 - kk))));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTL32TOCN")||kw(&L->cur,"SROL32TOCN")||kw(&L->cur,"STACKROTL32TOCN")||
+      kw(&L->cur,"ROL32TOCN")||kw(&L->cur,"SROTL32TOCIMM")||kw(&L->cur,"SCELLROL32N")||
+      kw(&L->cur,"S32ROLTOCN")){
+    /* i + k → cells[i] = rotl32(low32 cells[i], k&31), leave result (imm dual) */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    kk &= 31;
+    long r = (kk == 0) ? (long)w : (long)(((w << kk) | (w >> (32 - kk))));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROTR32TOCN")||kw(&L->cur,"SROR32TOCN")||kw(&L->cur,"STACKROTR32TOCN")||
+      kw(&L->cur,"ROR32TOCN")||kw(&L->cur,"SROTR32TOCIMM")||kw(&L->cur,"SCELLROR32N")||
+      kw(&L->cur,"S32RORTOCN")){
+    /* i + k → cells[i] = rotr32(low32 cells[i], k&31), leave result (imm dual) */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    kk &= 31;
+    long r = (kk == 0) ? (long)w : (long)(((w >> kk) | (w << (32 - kk))));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 imm compare TOC: SEQTOCN · SNETOCN · SLTTOCN · SGTTOCN
    * (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN/SNEN/SLTN/SGTN) */
   if (kw(&L->cur,"SEQTOCN")||kw(&L->cur,"SEQTOCIMM")||kw(&L->cur,"STACKEQTOCN")||
