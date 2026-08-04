@@ -1,3 +1,17 @@
+## 1.14.54-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack imm 32-bit field shift (word ladder of SSHL16N/SSHR16N/SSAR16N after SNOT32N plane).
+
+### Language
+- `SSHL32N` — `k n → word n of TOS = (uint32)<<k` (k≥32 → 0)
+- `SSHR32N` — `k n → word n of TOS = (uint32)>>k` logical (k≥32 → 0)
+- `SSAR32N` — `k n → word n of TOS = (int32)>>k` arithmetic (k≥32 → all sign)
+- Proof `511_sshl32n_ssar32n.cubalc`
+
+### Prior
+See 1.14.53-universal.
+
 ## 1.14.53-universal — 2026-08-04
 
 ### Direction
