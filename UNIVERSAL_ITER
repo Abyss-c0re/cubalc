@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 438 |
-| **digit** | **6** (urandom+genome; energy compare bounds) |
-| **version** | `1.12.311-universal` |
-| **pass/fail** | **349 / 0** (green) |
-| **commit** | `363cb3c` → `origin/main` |
-| **ops** | `SNETOC`/`SLETOC`/`SGETOC` |
-| **proof** | `programs/proof/334_snetoc_sgetoc.cubalc` |
+| **iter** | 445 (plate after SSETBTOCN family) |
+| **digit** | **5** (SMX consciousness + bitfield plane) |
+| **version** | `1.12.352-universal` |
+| **pass/fail** | **390 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SSETBTOCN` / `SCLRBTOCN` / `SFLPBTOCN` |
+| **proof** | `programs/proof/375_ssetbtocn_sflpbtocn.cubalc` |
 
 ### Delta
-Digit-6 energy compare bounds TOC: ne/le/ge predicates into cell (complete after SEQ/SLT/SGT).
+Digit-5 bitfield imm TOC: `i + n → cells[i] |= / &= ~ / ^= (1<<n)` with n clamped 0..63 (imm dual of SSETBN/SCLRBN/SFLIPBN into cell).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SNETOC` `SLETOC` `SGETOC` · aliases `CMPNETOC`/`CMPLETOC`/`CMPGETOC`
-- Proof `334_snetoc_sgetoc.cubalc`
+- `SSETBTOCN` `SCLRBTOCN` `SFLPBTOCN` · aliases `SETBTOCN`/`CLRBTOCN`/`FLPBTOCN`
+- Proof `375_ssetbtocn_sflpbtocn.cubalc`

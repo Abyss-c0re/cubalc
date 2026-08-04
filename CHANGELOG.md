@@ -1,3 +1,17 @@
+## 1.12.352-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → bitfield imm TOC (imm dual of SSETBN/SCLRBN/SFLIPBN into cell after SANDTOCN).
+
+### Language
+- `SSETBTOCN`/`SETBTOCN` n — stack `i → cells[i] |= (1<<n)`; leave result (n 0..63)
+- `SCLRBTOCN`/`CLRBTOCN` n — stack `i → cells[i] &= ~(1<<n)`; leave result
+- `SFLPBTOCN`/`FLPBTOCN` n — stack `i → cells[i] ^= (1<<n)`; leave result
+- Proof `375_ssetbtocn_sflpbtocn.cubalc`
+
+### Prior
+See 1.12.351-universal.
+
 ## 1.12.351-universal — 2026-08-04
 
 ### Direction
