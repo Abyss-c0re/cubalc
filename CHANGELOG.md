@@ -1,3 +1,17 @@
+## 1.14.34-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm 8-bit field shift (byte ladder of DSHL4N/DSHR4N/DSAR4N; dual 8n shift after DNOT8N/DROL8N).
+
+### Language
+- `DSHL8N` — `k n → (uint8 byte n)<<k` (k≥8 → 0) on each of top two
+- `DSHR8N` — `k n → (uint8 byte n)>>k` logical (k≥8 → 0) on each
+- `DSAR8N` — `k n → (int8 byte n)>>k` arithmetic (k≥8 → all sign) on each
+- Proof `491_dshl8n_dsar8n.cubalc`
+
+### Prior
+See 1.14.33-universal.
+
 ## 1.14.33-universal — 2026-08-04
 
 ### Direction

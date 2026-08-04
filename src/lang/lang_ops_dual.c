@@ -8437,6 +8437,91 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 dual-stack imm 8-bit field shift: DSHL8N · DSHR8N · DSAR8N
+   * (byte ladder of DSHL4N/DSHR4N/DSAR4N; dual 8n shift plane after DNOT8N/DROL8N) */
+  if (kw(&L->cur,"DSHL8N")||kw(&L->cur,"S2SHL8N")||kw(&L->cur,"STACK2SHL8N")||
+      kw(&L->cur,"PAIRSHL8N")||kw(&L->cur,"DLSH8N")||kw(&L->cur,"DSHLBYTEN")||
+      kw(&L->cur,"DSHIFTBYTEL")){
+    /* a b + k n → byte n of each = (uint8)<<k (k>=8 → 0); n clamped 0..7 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long wa = (kk >= 8) ? 0ul : ((va << (unsigned)kk) & 0xFFul);
+    unsigned long wb = (kk >= 8) ? 0ul : ((vb << (unsigned)kk) & 0xFFul);
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSHR8N")||kw(&L->cur,"S2SHR8N")||kw(&L->cur,"STACK2SHR8N")||
+      kw(&L->cur,"PAIRSHR8N")||kw(&L->cur,"DLSHR8N")||kw(&L->cur,"DSHRBYTEN")||
+      kw(&L->cur,"DSHIFTBYTER")){
+    /* a b + k n → byte n of each = (uint8)>>k logical (k>=8 → 0); n clamped 0..7 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFul;
+    unsigned long vb = (mb >> sh) & 0xFFul;
+    unsigned long wa = (kk >= 8) ? 0ul : (va >> (unsigned)kk);
+    unsigned long wb = (kk >= 8) ? 0ul : (vb >> (unsigned)kk);
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSAR8N")||kw(&L->cur,"S2SAR8N")||kw(&L->cur,"STACK2SAR8N")||
+      kw(&L->cur,"PAIRSAR8N")||kw(&L->cur,"DASHR8N")||kw(&L->cur,"DSARBYTEN")||
+      kw(&L->cur,"DSARSHIFTBYTE")){
+    /* a b + k n → byte n of each = (int8)>>k arithmetic (k>=8 → all sign); n clamped 0..7 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFul);
+    long vb = (long)((mb >> sh) & 0xFFul);
+    if (va & 0x80) va -= 256;
+    if (vb & 0x80) vb -= 256;
+    long sa, sb;
+    if (kk >= 8){ sa = (va < 0) ? -1L : 0L; sb = (vb < 0) ? -1L : 0L; }
+    else { sa = va >> kk; sb = vb >> kk; }
+    unsigned long wa = (unsigned long)sa & 0xFFul;
+    unsigned long wb = (unsigned long)sb & 0xFFul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
