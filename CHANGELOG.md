@@ -14,6 +14,13 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — SMX fail hints — 2026-08-05
+
+### Usability
+- SMX errors include source line + `hint:` (SERVE/DIAL/TALK/EXCHANGE/SEAL/OPEN)
+- Soft-fail LAST/trace text also carries recovery hints (timeout, connect, keys)
+- Proof: `programs/proof/smx_fail_hint.cubalc` (must fail with SERVE bind hint)
+
 ## Meaningful — lib mesh_exchange — 2026-08-05
 
 ### Usability

@@ -1,0 +1,7 @@
+# Must fail with line + hint (agent-readable SMX errors)
+HOLD_FLASH 1
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+PLUG self remote
+# missing bind and no CUBALC_P2P_BIND → syntax/hint fail
+SMX SERVE self remote
