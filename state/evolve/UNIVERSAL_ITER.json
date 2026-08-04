@@ -2,11 +2,11 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-04T06:12:03+0300",
-  "iter": 462,
-  "algocube_digit": 4,
-  "version": "1.12.370-universal",
-  "pass": 408,
+  "ts": "2026-08-04T06:19:53+0300",
+  "iter": 464,
+  "algocube_digit": 5,
+  "version": "1.12.371-universal",
+  "pass": 409,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
@@ -17,6 +17,6 @@
     "evolve",
     "flow_compile"
   ],
-  "ops": "SPOPHNTOC SANYHNTOC SALLHNTOC",
-  "proof": "programs/proof/393_spophntoc_sallhntoc.cubalc"
+  "ops": "SANDMNTOC SORMNTOC SXORMNTOC",
+  "proof": "programs/proof/394_sandmntoc_sxormntoc.cubalc"
 }

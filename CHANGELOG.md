@@ -1,3 +1,17 @@
+## 1.12.371-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack dual low-n mask TOC (stack dual of SANDMNTOCN plane; n from stack).
+
+### Language
+- `SANDMNTOC`/`ANDMNTOC` — stack `i n → cells[i] &= low-n mask`; keep low n bits (n 0..64)
+- `SORMNTOC`/`ORMNTOC` — stack `i n → cells[i] |= low-n mask`; set low n bits
+- `SXORMNTOC`/`XORMNTOC` — stack `i n → cells[i] ^= low-n mask`; toggle low n bits
+- Proof `394_sandmntoc_sxormntoc.cubalc`
+
+### Prior
+See 1.12.370-universal.
+
 ## 1.12.370-universal — 2026-08-04
 
 ### Direction
