@@ -1,3 +1,17 @@
+## 1.14.29-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → dual-stack imm 4-bit field shift (dual of SSHL4N/SSHR4N/SSAR4N; nibble shift plane on pair after DNOT4N/DROL4N).
+
+### Language
+- `DSHL4N` — `k n → (uint4 nibble n)<<k` (k≥4 → 0) on each of top two
+- `DSHR4N` — `k n → (uint4 nibble n)>>k` logical (k≥4 → 0) on each
+- `DSAR4N` — `k n → (int4 nibble n)>>k` arithmetic (k≥4 → all sign) on each
+- Proof `486_dshl4n_dsar4n.cubalc`
+
+### Prior
+See 1.14.28-universal.
+
 ## 1.14.28-universal — 2026-08-04
 
 ### Direction
