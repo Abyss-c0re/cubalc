@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 486 |
-| **digit** | **8** (urandom) |
-| **version** | `1.12.382-universal` |
-| **pass/fail** | **420 / 0** (green) |
+| **iter** | 488 |
+| **digit** | **5** (urandom) |
+| **version** | `1.12.383-universal` |
+| **pass/fail** | **421 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSEXTTOC` / `SZEXTTOC` / `SSEXT8TOC` |
-| **proof** | `programs/proof/405_ssexttoc_szexttoc.cubalc` |
+| **ops** | `SSEXTTOCN` / `SZEXTTOCN` / `SSEXT16TOCN` |
+| **proof** | `programs/proof/406_ssexttocn_szexttocn.cubalc` |
 
 ### Delta
-Digit-8 stack dual sign/zero extend TOC: sign/zero-extend low w bits of `cells[i]` (stack dual of SSEXT/SZEXT/SSEXT8 into cell after field ladder).
+Digit-5 imm dual sign/zero extend TOC: imm-width sign/zero-extend of `cells[i]` plus fixed 16-bit path (imm dual of SSEXTTOC/SZEXTTOC after SSEXT8TOC plane).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline

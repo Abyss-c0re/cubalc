@@ -1,3 +1,17 @@
+## 1.12.383-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → imm dual sign/zero extend TOC (imm dual of SSEXTTOC/SZEXTTOC; fixed 16-bit path).
+
+### Language
+- `SSEXTTOCN`/`SEXTTOCN` w — stack `i → cells[i] = sign-extend low w bits of cells[i]` (w 0..63)
+- `SZEXTTOCN`/`ZEXTTOCN` w — stack `i → cells[i] = zero-extend low w bits of cells[i]`
+- `SSEXT16TOCN`/`SEXT16TOCN` — stack `i → cells[i] = sign-extend low 16 bits of cells[i]`
+- Proof `406_ssexttocn_szexttocn.cubalc`
+
+### Prior
+See 1.12.382-universal.
+
 ## 1.12.382-universal — 2026-08-04
 
 ### Direction
