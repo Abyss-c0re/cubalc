@@ -1,3 +1,17 @@
+## 1.12.427-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → cell fixed-width 8 inverted bitwise (inverted dual of AND8/OR8/XOR8; complete low8 logic foundation).
+
+### Language
+- `NAND8CELL`/`NAND8RANGE` — `lo hi mask → ~(low8 & mask) as u8`
+- `NOR8CELL`/`NOR8RANGE` — `lo hi mask → ~(low8 | mask) as u8`
+- `XNOR8CELL`/`XNOR8RANGE` — `lo hi mask → ~(low8 ^ mask) as u8`
+- Proof `450_nand8cell_xnor8cell.cubalc`
+
+### Prior
+See 1.12.426-universal.
+
 ## 1.12.426-universal — 2026-08-04
 
 ### Direction
