@@ -2,20 +2,20 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_improve_tick",
-  "ts": "2026-08-04T15:55:25+0300",
-  "iter": 506,
-  "algocube_digit": 0,
-  "version": "1.14.21-universal",
-  "pass": 493,
+  "ts": "2026-08-04T16:03:44+0300",
+  "iter": 507,
+  "algocube_digit": 7,
+  "version": "1.14.22-universal",
+  "pass": 494,
   "fail": 0,
   "ok": true,
   "ops": [
-    "DMAX16N",
-    "DEQ16N",
-    "DNE16N"
+    "DADD8N",
+    "DSUB8N",
+    "DMUL8N"
   ],
-  "proof": "programs/proof/478_dmax16n_dne16n.cubalc",
-  "commit": "2dd398f",
+  "proof": "programs/proof/479_dadd8n_dmul8n.cubalc",
+  "commit": "d368cc9",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "law": [
@@ -23,5 +23,5 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "Digit-0 dual-stack imm halfword max+eq after DMIN16N; complete dual uint16 compare plane."
+  "delta": "Digit-7 dual-stack imm byte-field arith after dual halfword complete; tree restored from evolve wipe mid-tick."
 }
