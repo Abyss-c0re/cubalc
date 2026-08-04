@@ -26838,6 +26838,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 cell fixed-width 32 math dual ladder: NEG32CELL · ZEXT32CELL · CLIP32CELL
+   * (dword dual of NEG16/ZEXT16/CLIP16 after CLIPS32 plane; complete 8/16/32 math) */
+  if (kw(&L->cur,"NEG32CELL")||kw(&L->cur,"CELLNEG32")||kw(&L->cur,"BNEG32CELL")||
+      kw(&L->cur,"RANGENEG32")||kw(&L->cur,"NEG32RANGE")||kw(&L->cur,"INEG32CELL")){
+    /* NEG32CELL lo hi — cells[i] = -(int32)low32; min int32 stays 0x80000000 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(int)(unsigned int)vm->cells[(int)i];
+      long r;
+      if (va == (long)(int)0x80000000) r = (long)(int)0x80000000;
+      else r = -va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ZEXT32CELL")||kw(&L->cur,"ZEROEXT32CELL")||kw(&L->cur,"BZEXT32CELL")||
+      kw(&L->cur,"RANGEZEXT32")||kw(&L->cur,"ZEXT32RANGE")||kw(&L->cur,"CELLZEXTL")){
+    /* ZEXT32CELL lo hi — cells[i] = low32 only (clear high bits) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned long)vm->cells[(int)i] & 0xFFFFFFFFul);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIP32CELL")||kw(&L->cur,"CELLCLIP32")||kw(&L->cur,"BCLIP32CELL")||
+      kw(&L->cur,"RANGECLIP32")||kw(&L->cur,"CLIP32RANGE")||kw(&L->cur,"UCLIP32CELL")){
+    /* CLIP32CELL lo hi — clamp cells[i] to unsigned 32-bit [0,4294967295] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < 0) r = 0;
+      if (r > 4294967295L) r = 4294967295L;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

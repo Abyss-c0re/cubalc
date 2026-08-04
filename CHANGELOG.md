@@ -1,3 +1,17 @@
+## 1.12.421-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → cell fixed-width 32 math dual ladder (dword dual of NEG16/ZEXT16/CLIP16; complete 8/16/32 math).
+
+### Language
+- `NEG32CELL`/`NEG32RANGE` — `lo hi → -(int32)low32` (min int32 stays `0x80000000`)
+- `ZEXT32CELL`/`ZEXT32RANGE` — `lo hi → cells[i] &= 0xFFFFFFFF`
+- `CLIP32CELL`/`CLIP32RANGE` — `lo hi → clamp to [0,4294967295]`
+- Proof `444_neg32cell_clip32cell.cubalc`
+
+### Prior
+See 1.12.420-universal.
+
 ## 1.12.420-universal — 2026-08-04
 
 ### Direction
