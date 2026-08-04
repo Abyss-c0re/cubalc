@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 497 |
-| **digit** | **9** (urandom) |
-| **version** | `1.14.12-universal` |
-| **pass/fail** | **484 / 0** (green) |
-| **commit** | `c287b77` → `origin/main` |
-| **ops** | `SMAX4N` / `SEQ4N` / `SNE4N` |
-| **proof** | `programs/proof/469_smax4n_sne4n.cubalc` |
+| **iter** | 498 |
+| **digit** | **0** (urandom) |
+| **version** | `1.14.13-universal` |
+| **pass/fail** | **485 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SADD8N` / `SSUB8N` / `SMUL8N` |
+| **proof** | `programs/proof/470_sadd8n_smul8n.cubalc` |
 
 ### Delta
-Digit-9 stack imm nibble-field max+eq: max merge; equality/inequality bool into selected nibble. Completes min/max+eq compare plane after SMIN4N.
+Digit-0 stack imm byte-field arith merge: add / sub / mul wrap into selected byte of TOS. Ladder after nibble SADD4N plane; aliases avoid multiword SSUBBN collision.
 
-**Status:** 1.14.11→1.14.12-universal; suite green 484/0; push ok.
+**Status:** 1.14.12→1.14.13-universal; suite green 485/0; push pending.

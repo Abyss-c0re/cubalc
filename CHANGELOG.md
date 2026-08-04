@@ -1,3 +1,17 @@
+## 1.14.13-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack imm 8-bit field arith merge (byte-field dual of SADD4N/SSUB4N/SMUL4N; wrap uint8 ALU foundation after SAND8N plane).
+
+### Language
+- `SADD8N` — `field n → byte n = (byte + field) & 0xFF`
+- `SSUB8N` — `field n → byte n = (byte - field) & 0xFF`
+- `SMUL8N` — `field n → byte n = (byte * field) & 0xFF`
+- Proof `470_sadd8n_smul8n.cubalc`
+
+### Prior
+See 1.14.12-universal.
+
 ## 1.14.12-universal — 2026-08-04
 
 ### Direction
