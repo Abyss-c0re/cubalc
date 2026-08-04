@@ -6,7 +6,7 @@
 | **digit** | **2** (urandom; imm ceil/floor div TOC) |
 | **version** | `1.12.357-universal` |
 | **pass/fail** | **395 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `0ac1da7` → `origin/main` |
 | **ops** | `SDIVCEILTOCN` / `SDIVFLOORTOCN` |
 | **proof** | `programs/proof/380_sdivceiltocn_sdivfloortocn.cubalc` |
 
