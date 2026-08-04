@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 447 |
-| **digit** | **2** (urandom; math/numthy plane) |
-| **version** | `1.12.353-universal` |
-| **pass/fail** | **391 / 0** (green) |
-| **commit** | `7013eb7` → `origin/main` |
-| **ops** | `SGCDTOCN` / `SLCMTOCN` |
-| **proof** | `programs/proof/376_sgcdtocn_slcmtocn.cubalc` |
+| **iter** | 449 |
+| **digit** | **7** (urandom+genome; stack bitfield TOC dual) |
+| **version** | `1.12.354-universal` |
+| **pass/fail** | **392 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SSETBTOC` / `SCLRBTOC` / `SFLPBTOC` |
+| **proof** | `programs/proof/377_ssetbtoc_sflpbtoc.cubalc` |
 
 ### Delta
-Digit-2 imm numthy TOC: `i + n → cells[i] = gcd/lcm(|cells[i]|,|n|)` (imm dual of SGCDN/SLCMN into cell after SSQRTOC).
+Digit-7 stack bitfield TOC: `i + bit → cells[i] |= / &= ~ / ^= (1<<bit)` (stack dual of SSETBTOCN plane).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SGCDTOCN` `SLCMTOCN` · aliases `GCDTOCN`/`LCMTOCN`
-- Proof `376_sgcdtocn_slcmtocn.cubalc`
+- `SSETBTOC` `SCLRBTOC` `SFLPBTOC` · aliases `SETBTOC`/`CLRBTOC`/`FLPBTOC`
+- Proof `377_ssetbtoc_sflpbtoc.cubalc`

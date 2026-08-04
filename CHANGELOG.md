@@ -1,3 +1,17 @@
+## 1.12.354-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack bitfield TOC (stack dual of SSETBTOCN plane; i+bit into cell).
+
+### Language
+- `SSETBTOC`/`SETBTOC` — stack `i bit → cells[i] |= (1<<bit)`; leave result (bit 0..63)
+- `SCLRBTOC`/`CLRBTOC` — stack `i bit → cells[i] &= ~(1<<bit)`; leave result
+- `SFLPBTOC`/`FLPBTOC` — stack `i bit → cells[i] ^= (1<<bit)`; leave result
+- Proof `377_ssetbtoc_sflpbtoc.cubalc`
+
+### Prior
+See 1.12.353-universal.
+
 ## 1.12.353-universal — 2026-08-04
 
 ### Direction

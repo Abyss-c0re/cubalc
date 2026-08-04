@@ -5081,6 +5081,69 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack bitfield TOC: SSETBTOC · SCLRBTOC · SFLPBTOC
+   * (stack dual of SSETBTOCN/SCLRBTOCN/SFLPBTOCN; i bit → set/clear/flip bit in cell) */
+  if (kw(&L->cur,"SSETBTOC")||kw(&L->cur,"SSETBITTOC")||kw(&L->cur,"STACKSETBTOC")||
+      kw(&L->cur,"SETBTOC")||kw(&L->cur,"SCELLSETB")||kw(&L->cur,"SBSETTOC")||
+      kw(&L->cur,"BSETTOC")||kw(&L->cur,"SSETBAT")){
+    /* i bit → cells[i] |= (1<<bit), leave result; bit clamped 0..63 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long bit = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (bit < 0) bit = 0;
+    if (bit > 63) bit = 63;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    u |= (1ul << (unsigned)bit);
+    long r = (long)u;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRBTOC")||kw(&L->cur,"SCLRBITTOC")||kw(&L->cur,"STACKCLRBTOC")||
+      kw(&L->cur,"CLRBTOC")||kw(&L->cur,"SCELLCLRB")||kw(&L->cur,"SBCLRTOC")||
+      kw(&L->cur,"BCLRTOC")||kw(&L->cur,"SCLRBAT")){
+    /* i bit → cells[i] &= ~(1<<bit), leave result; bit clamped 0..63 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long bit = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (bit < 0) bit = 0;
+    if (bit > 63) bit = 63;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    u &= ~(1ul << (unsigned)bit);
+    long r = (long)u;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SFLPBTOC")||kw(&L->cur,"SFLIPBTOC")||kw(&L->cur,"STACKFLPBTOC")||
+      kw(&L->cur,"SFLIPBITTOC")||kw(&L->cur,"FLPBTOC")||kw(&L->cur,"SCELLFLIPB")||
+      kw(&L->cur,"STGLBTOC")||kw(&L->cur,"SBFLIPTOC")||kw(&L->cur,"BFLIPTOC")||
+      kw(&L->cur,"SFLPBAT")){
+    /* i bit → cells[i] ^= (1<<bit), leave result; bit clamped 0..63 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long bit = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (bit < 0) bit = 0;
+    if (bit > 63) bit = 63;
+    unsigned long u = (unsigned long)vm->cells[(int)i];
+    u ^= (1ul << (unsigned)bit);
+    long r = (long)u;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||
