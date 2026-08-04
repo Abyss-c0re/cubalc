@@ -6,7 +6,7 @@
 | **digit** | **7** (urandom; imm 32-bit field TOC) |
 | **version** | `1.12.359-universal` |
 | **pass/fail** | **397 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `8e1ce12` → `origin/main` |
 | **ops** | `SGET32TOCN` / `SSET32TOCN` / `SCLR32TOCN` |
 | **proof** | `programs/proof/382_sget32tocn_sclr32tocn.cubalc` |
 
