@@ -6,11 +6,11 @@
 | **digit** | **6** (urandom) |
 | **version** | `1.14.8-universal` |
 | **pass/fail** | **480 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `412d0c5` → `origin/main` |
 | **ops** | `SCLZ4N` / `SCTZ4N` / `SNEG4N` |
 | **proof** | `programs/proof/465_sclz4n_sneg4n.cubalc` |
 
 ### Delta
 Digit-6 stack imm nibble-field zeros+signed: clz / ctz / negate on selected nibble of TOS. Completes stack nibble zeros+negate after SPARITY4N.
 
-**Status:** 1.14.7→1.14.8-universal; suite green 480/0; push pending.
+**Status:** 1.14.7→1.14.8-universal; suite green 480/0; push ok.
