@@ -26405,6 +26405,73 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 cell fixed-width 8 shift ALU: SHL8CELL · SHR8CELL · SAR8CELL
+   * (byte-width dual of SHL16/SHR16/SAR16 after 16-metrics plane; complete 8/16/32 shift ladder) */
+  if (kw(&L->cur,"SHL8CELL")||kw(&L->cur,"LSH8CELL")||kw(&L->cur,"BSHL8CELL")||
+      kw(&L->cur,"RANGESHL8")||kw(&L->cur,"SHL8RANGE")||kw(&L->cur,"CELLLSH8")){
+    /* SHL8CELL lo hi k — cells[i] = (uint8)cells[i] << k (k>=8 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFu;
+      long r = (kk >= 8) ? 0L : (long)((w << kk) & 0xFFu);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHR8CELL")||kw(&L->cur,"LSHR8CELL")||kw(&L->cur,"BSHR8CELL")||
+      kw(&L->cur,"RANGESHR8")||kw(&L->cur,"SHR8RANGE")||kw(&L->cur,"CELLLSHR8")){
+    /* SHR8CELL lo hi k — cells[i] = (uint8)cells[i] >> k logical (k>=8 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFu;
+      long r = (kk >= 8) ? 0L : (long)(w >> kk);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SAR8CELL")||kw(&L->cur,"ASHR8CELL")||kw(&L->cur,"BSAR8CELL")||
+      kw(&L->cur,"RANGESAR8")||kw(&L->cur,"SAR8RANGE")||kw(&L->cur,"CELLASHR8")){
+    /* SAR8CELL lo hi k — arithmetic right shift low8 as int8 (k>=8 → all sign) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(signed char)(unsigned char)(vm->cells[(int)i] & 0xFFu);
+      long r;
+      if (kk >= 8) r = (va < 0) ? -1L : 0L;
+      else r = va >> kk;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

@@ -1,3 +1,17 @@
+## 1.12.414-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → cell fixed-width 8 shift ALU (byte dual of SHL16/SHR16/SAR16; complete 8/16/32 shift ladder).
+
+### Language
+- `SHL8CELL`/`SHL8RANGE` — `lo hi k → cells[i] = (uint8)cells[i] ≪ k` (k≥8 → 0)
+- `SHR8CELL`/`SHR8RANGE` — `lo hi k → logical ≫ low8`
+- `SAR8CELL`/`SAR8RANGE` — `lo hi k → (int8)low8 ≫ k` arithmetic (k≥8 → all sign)
+- Proof `437_shl8cell_sar8cell.cubalc`
+
+### Prior
+See 1.12.413-universal.
+
 ## 1.12.413-universal — 2026-08-04
 
 ### Direction
