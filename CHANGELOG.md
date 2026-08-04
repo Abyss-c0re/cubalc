@@ -1,3 +1,17 @@
+## 1.14.37-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack imm 8-bit field abs+extend (byte ladder of DABS4N/DSEXT4N/DZEXT4N; complete dual 8n unary plane).
+
+### Language
+- `DABS8N` — `n → byte n of each = abs(int8)` (min -128 → 0x80)
+- `DSEXT8N` — `n → each cell = sign-extend byte n to full width`
+- `DZEXT8N` — `n → each cell = zero-extend byte n`
+- Proof `494_dabs8n_dzext8n.cubalc`
+
+### Prior
+See 1.14.36-universal.
+
 ## 1.14.36-universal — 2026-08-04
 
 ### Direction

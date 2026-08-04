@@ -8679,6 +8679,76 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 dual-stack imm 8-bit field abs+extend: DABS8N · DSEXT8N · DZEXT8N
+   * (byte ladder of DABS4N/DSEXT4N/DZEXT4N; complete dual 8n unary plane after DNEG8N) */
+  if (kw(&L->cur,"DABS8N")||kw(&L->cur,"S2ABS8N")||kw(&L->cur,"STACK2ABS8N")||
+      kw(&L->cur,"PAIRABS8N")||kw(&L->cur,"DIABS8N")||kw(&L->cur,"DABSBYTEN")||
+      kw(&L->cur,"DBYTEABSN")){
+    /* a b + n → byte n of each = abs(int8); min -128 → 0x80; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFul);
+    long vb = (long)((mb >> sh) & 0xFFul);
+    if (va & 0x80) va -= 256;
+    if (vb & 0x80) vb -= 256;
+    long ara = (va < 0) ? -va : va;
+    long arb = (vb < 0) ? -vb : vb;
+    /* min int8 -128 → +128 does not fit uint8; keep 0x80 (same as SABS4N min path) */
+    unsigned long nva = (unsigned long)(ara & 0xFF);
+    unsigned long nvb = (unsigned long)(arb & 0xFF);
+    long x = (long)((ma & ~(0xFFul << sh)) | (nva << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (nvb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSEXT8N")||kw(&L->cur,"S2SEXT8N")||kw(&L->cur,"STACK2SEXT8N")||
+      kw(&L->cur,"PAIRSEXT8N")||kw(&L->cur,"DSIGNEXT8N")||kw(&L->cur,"DSEXTBYTEN")||
+      kw(&L->cur,"DBYTESEXTN")){
+    /* a b + n → each cell = sign-extend byte n to full width; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFul);
+    long vb = (long)((mb >> sh) & 0xFFul);
+    if (va & 0x80) va -= 256;
+    if (vb & 0x80) vb -= 256;
+    vm->stack[vm->sp - 2] = va;
+    vm->stack[vm->sp - 1] = vb;
+    var_set_num(vm,"LAST_N",vb); vm->last_n=vb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DZEXT8N")||kw(&L->cur,"S2ZEXT8N")||kw(&L->cur,"STACK2ZEXT8N")||
+      kw(&L->cur,"PAIRZEXT8N")||kw(&L->cur,"DZEROEXT8N")||kw(&L->cur,"DZEXTBYTEN")||
+      kw(&L->cur,"DBYTEZEXTN")){
+    /* a b + n → each cell = zero-extend byte n; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long xa = (long)((ma >> sh) & 0xFFul);
+    long yb = (long)((mb >> sh) & 0xFFul);
+    vm->stack[vm->sp - 2] = xa;
+    vm->stack[vm->sp - 1] = yb;
+    var_set_num(vm,"LAST_N",yb); vm->last_n=yb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
