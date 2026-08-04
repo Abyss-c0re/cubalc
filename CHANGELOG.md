@@ -1,3 +1,17 @@
+## 1.14.47-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack imm 16-bit field shift (halfword ladder of DSHL8N/DSHR8N/DSAR8N after DNOT16N).
+
+### Language
+- `DSHL16N` — `k n → (uint16 half n)<<k` (k≥16 → 0) on each of top two
+- `DSHR16N` — `k n → (uint16 half n)>>k` logical (k≥16 → 0) on each
+- `DSAR16N` — `k n → (int16 half n)>>k` arithmetic (k≥16 → all sign) on each
+- Proof `504_dshl16n_dsar16n.cubalc`
+
+### Prior
+See 1.14.46-universal.
+
 ## 1.14.46-universal — 2026-08-04
 
 ### Direction
