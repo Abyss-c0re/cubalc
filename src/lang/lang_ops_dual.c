@@ -8134,6 +8134,82 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 dual-stack imm 4-bit field metrics: DBITREV4N · DPOPCNT4N · DPARITY4N
+   * (dual of SBITREV4N/SPOPCNT4N/SPARITY4N; nibble metrics plane on top two after DSHL4N) */
+  if (kw(&L->cur,"DBITREV4N")||kw(&L->cur,"S2BITREV4N")||kw(&L->cur,"STACK2BITREV4N")||
+      kw(&L->cur,"PAIRBITREV4N")||kw(&L->cur,"DBREV4N")||kw(&L->cur,"DREV4N")||
+      kw(&L->cur,"DBITREVNIBN")){
+    /* a b + n → nibble n of each = bitrev4(nibble); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFul;
+    unsigned long vb = (mb >> sh) & 0xFul;
+    unsigned long ra = 0, rb = 0, ta = va, tb = vb;
+    for (int b = 0; b < 4; b++){
+      ra = (ra << 1) | (ta & 1u); ta >>= 1;
+      rb = (rb << 1) | (tb & 1u); tb >>= 1;
+    }
+    long x = (long)((ma & ~(0xFul << sh)) | (ra << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (rb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOPCNT4N")||kw(&L->cur,"S2POPCNT4N")||kw(&L->cur,"STACK2POPCNT4N")||
+      kw(&L->cur,"PAIRPOPCNT4N")||kw(&L->cur,"DPCNT4N")||kw(&L->cur,"DPOPNIBN")||
+      kw(&L->cur,"DNIBPOPN")){
+    /* a b + n → nibble n of each = popcount(nibble); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFul;
+    unsigned long vb = (mb >> sh) & 0xFul;
+    unsigned long pa = 0, pb = 0;
+    while (va){ pa += (va & 1u); va >>= 1; }
+    while (vb){ pb += (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFul << sh)) | (pa << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (pb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPARITY4N")||kw(&L->cur,"S2PARITY4N")||kw(&L->cur,"STACK2PARITY4N")||
+      kw(&L->cur,"PAIRPARITY4N")||kw(&L->cur,"DXORRED4N")||kw(&L->cur,"DPARITYNIBN")||
+      kw(&L->cur,"DNIBPARN")){
+    /* a b + n → nibble n of each = xor-reduce(nibble) in low bit; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFul;
+    unsigned long vb = (mb >> sh) & 0xFul;
+    unsigned long pra = 0, prb = 0;
+    while (va){ pra ^= (va & 1u); va >>= 1; }
+    while (vb){ prb ^= (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFul << sh)) | (pra << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (prb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||

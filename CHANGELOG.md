@@ -1,3 +1,17 @@
+## 1.14.30-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm 4-bit field metrics (dual of SBITREV4N/SPOPCNT4N/SPARITY4N; nibble metrics on pair after DSHL4N).
+
+### Language
+- `DBITREV4N` — `n → nibble n of each = bitrev4(nibble)`
+- `DPOPCNT4N` — `n → nibble n of each = popcount(nibble)`
+- `DPARITY4N` — `n → nibble n of each = xor-reduce(nibble) in low bit`
+- Proof `487_dbitrev4n_dparity4n.cubalc`
+
+### Prior
+See 1.14.29-universal.
+
 ## 1.14.29-universal — 2026-08-04
 
 ### Direction
