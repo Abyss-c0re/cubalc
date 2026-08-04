@@ -10584,6 +10584,62 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 dual-stack imm 32-bit field signed min/max: DMINS32N · DMAXS32N
+   * (dual of SMINS32N/SMAXS32N; signed select after DLTS32N plane) */
+  if (kw(&L->cur,"DMINS32N")||kw(&L->cur,"S2MINS32N")||kw(&L->cur,"STACK2MINS32N")||
+      kw(&L->cur,"PAIRMINS32N")||kw(&L->cur,"DMINSIGN32N")||kw(&L->cur,"DMINS32IMM")||
+      kw(&L->cur,"DMINSI32N")){
+    /* a b + field n → word n of each = min_signed(int32(w), int32(field)); n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    long ma_m = (va < f) ? va : f;
+    long mb_m = (vb < f) ? vb : f;
+    unsigned long wa = (unsigned long)(unsigned int)ma_m;
+    unsigned long wb = (unsigned long)(unsigned int)mb_m;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DMAXS32N")||kw(&L->cur,"S2MAXS32N")||kw(&L->cur,"STACK2MAXS32N")||
+      kw(&L->cur,"PAIRMAXS32N")||kw(&L->cur,"DMAXSIGN32N")||kw(&L->cur,"DMAXS32IMM")||
+      kw(&L->cur,"DMAXSI32N")){
+    /* a b + field n → word n of each = max_signed(int32(w), int32(field)); n 0..1 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    long f = (long)(int)((unsigned int)((unsigned long)field & 0xFFFFFFFFul));
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    long ma_m = (va > f) ? va : f;
+    long mb_m = (vb > f) ? vb : f;
+    unsigned long wa = (unsigned long)(unsigned int)ma_m;
+    unsigned long wb = (unsigned long)(unsigned int)mb_m;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||

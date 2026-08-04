@@ -1,3 +1,18 @@
+## 1.14.88-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack+dual imm 32-bit field signed min/max (signed select after SLTS32N/DLTS32N plane; dual of unsigned SMIN32N/SMAX32N).
+
+### Language
+- `SMINS32N` — `field n → word n = min_signed(int32(w), int32(field))`
+- `SMAXS32N` — `field n → word n = max_signed(int32(w), int32(field))`
+- `DMINS32N` — `field n → word n of each = min_signed(int32(w), int32(field))`
+- `DMAXS32N` — `field n → word n of each = max_signed(int32(w), int32(field))`
+- Proof `545_smins32n_dmaxs32n.cubalc`
+
+### Prior
+See 1.14.87-universal.
+
 ## 1.14.87-universal — 2026-08-04
 
 ### Direction
