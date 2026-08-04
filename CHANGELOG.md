@@ -1,3 +1,17 @@
+## 1.12.403-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack↔cell fixed-width shift32 TOC (cell dual of SSHL32/SSHR32/SSAR32 after dual-stack DSHL32 plane).
+
+### Language
+- `SSHL32TOC`/`SHL32TOC` — stack `i k → cells[i] = (uint32)cells[i] ≪ k` (k≥32 → 0)
+- `SSHR32TOC`/`SHR32TOC` — stack `i k → cells[i] = (uint32)cells[i] ≫ k` logical
+- `SSAR32TOC`/`SAR32TOC` — stack `i k → cells[i] = arithmetic ≫ of low32` (sign-extend)
+- Proof `426_sshl32toc_ssar32toc.cubalc`
+
+### Prior
+See 1.12.402-universal.
+
 ## 1.12.402-universal — 2026-08-04
 
 ### Direction
