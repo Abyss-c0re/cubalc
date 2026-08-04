@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 496 |
-| **digit** | **1** (urandom) |
-| **version** | `1.14.11-universal` |
-| **pass/fail** | **483 / 0** (green) |
-| **commit** | `224ae64` → `origin/main` |
-| **ops** | `SDIV4N` / `SMOD4N` / `SMIN4N` |
-| **proof** | `programs/proof/468_sdiv4n_smin4n.cubalc` |
+| **iter** | 497 |
+| **digit** | **9** (urandom) |
+| **version** | `1.14.12-universal` |
+| **pass/fail** | **484 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SMAX4N` / `SEQ4N` / `SNE4N` |
+| **proof** | `programs/proof/469_smax4n_sne4n.cubalc` |
 
 ### Delta
-Digit-1 stack imm nibble-field div/mod/min: complete uint4 field ALU after add/sub/mul; div0/mod0 → 0.
+Digit-9 stack imm nibble-field max+eq: max merge; equality/inequality bool into selected nibble. Completes min/max+eq compare plane after SMIN4N.
 
-**Status:** 1.14.10→1.14.11-universal; suite green 483/0; push ok.
+**Status:** 1.14.11→1.14.12-universal; suite green 484/0; push pending.

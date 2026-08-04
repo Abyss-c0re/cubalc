@@ -1,3 +1,17 @@
+## 1.14.12-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack imm 4-bit field max+eq (complete min/max + equality compare plane after SMIN4N; bool writes 0/1 into nibble).
+
+### Language
+- `SMAX4N` — `field n → nibble n = max(nibble, field)`
+- `SEQ4N` — `field n → nibble n = (nibble == field) ? 1 : 0`
+- `SNE4N` — `field n → nibble n = (nibble != field) ? 1 : 0`
+- Proof `469_smax4n_sne4n.cubalc`
+
+### Prior
+See 1.14.11-universal.
+
 ## 1.14.11-universal — 2026-08-04
 
 ### Direction
