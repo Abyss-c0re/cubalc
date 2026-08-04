@@ -1,3 +1,31 @@
+## 1.12.412-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → cell fixed-width 16 signed/bitfield (complete arithmetic shift + sign-extend + abs after logical SHL16/SHR16).
+
+### Language
+- `SAR16CELL`/`SAR16RANGE` — `lo hi k → cells[i] = (int16)low16 ≫ k` arithmetic (k≥16 → all sign)
+- `SEXT16CELL`/`SEXT16RANGE` — `lo hi → cells[i] = (long)(int16)low16`
+- `ABS16CELL`/`ABS16RANGE` — `lo hi → cells[i] = abs((int16)low16)` (min int16 stays `0x8000`)
+- Proof `435_sar16cell_abs16cell.cubalc`
+
+### Prior
+See 1.12.411-universal.
+
+## 1.12.411-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → cell fixed-width 16 shift/rotate (complete 16-bit rotate + logical shift plane after ROL16CELL).
+
+### Language
+- `ROR16CELL`/`ROR16RANGE` — `lo hi k → cells[i] = rotr16(low16 cells[i], k&15)`
+- `SHL16CELL`/`SHL16RANGE` — `lo hi k → cells[i] = (uint16)cells[i] ≪ k` (k≥16 → 0)
+- `SHR16CELL`/`SHR16RANGE` — `lo hi k → logical ≫ low16`
+- Proof `434_ror16cell_shr16cell.cubalc`
+
+### Prior
+See 1.12.410-universal.
+
 ## 1.12.410-universal — 2026-08-04
 
 ### Direction

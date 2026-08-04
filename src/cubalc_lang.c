@@ -26208,6 +26208,135 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 cell fixed-width 16 shift/rotate: ROR16CELL · SHL16CELL · SHR16CELL
+   * (complete 16-bit rotate + logical shift plane after ROL16CELL; dual of SROTR16/SSHL path) */
+  if (kw(&L->cur,"ROR16CELL")||kw(&L->cur,"ROTR16CELL")||kw(&L->cur,"BROR16CELL")||
+      kw(&L->cur,"RANGEROR16")||kw(&L->cur,"ROR16RANGE")||kw(&L->cur,"CELLROTR16")){
+    /* ROR16CELL lo hi k — cells[i] = rotr16(low16 cells[i], k&15) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 15;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFFFu;
+      long r = (kk == 0) ? (long)w : (long)((((w >> kk) | (w << (16 - kk))) & 0xFFFFu));
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHL16CELL")||kw(&L->cur,"LSH16CELL")||kw(&L->cur,"BSHL16CELL")||
+      kw(&L->cur,"RANGESHL16")||kw(&L->cur,"SHL16RANGE")||kw(&L->cur,"CELLLSH16")){
+    /* SHL16CELL lo hi k — cells[i] = (uint16)cells[i] << k (k>=16 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFFFu;
+      long r = (kk >= 16) ? 0L : (long)((w << kk) & 0xFFFFu);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHR16CELL")||kw(&L->cur,"LSHR16CELL")||kw(&L->cur,"BSHR16CELL")||
+      kw(&L->cur,"RANGESHR16")||kw(&L->cur,"SHR16RANGE")||kw(&L->cur,"CELLLSHR16")){
+    /* SHR16CELL lo hi k — cells[i] = (uint16)cells[i] >> k logical (k>=16 → 0) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFFFu;
+      long r = (kk >= 16) ? 0L : (long)(w >> kk);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-2 cell fixed-width 16 signed/bitfield: SAR16CELL · SEXT16CELL · ABS16CELL
+   * (complete arithmetic shift + sign-extend + abs16 after logical SHL16/SHR16 plane) */
+  if (kw(&L->cur,"SAR16CELL")||kw(&L->cur,"ASHR16CELL")||kw(&L->cur,"BSAR16CELL")||
+      kw(&L->cur,"RANGESAR16")||kw(&L->cur,"SAR16RANGE")||kw(&L->cur,"CELLASHR16")){
+    /* SAR16CELL lo hi k — arithmetic right shift low16 as int16 (k>=16 → all sign) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(short)(unsigned short)(vm->cells[(int)i] & 0xFFFFu);
+      long r;
+      if (kk >= 16) r = (va < 0) ? -1L : 0L;
+      else r = va >> kk;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SEXT16CELL")||kw(&L->cur,"SIGNEXT16CELL")||kw(&L->cur,"BSEXT16CELL")||
+      kw(&L->cur,"RANGESEXT16")||kw(&L->cur,"SEXT16RANGE")||kw(&L->cur,"CELLSEXTW")){
+    /* SEXT16CELL lo hi — cells[i] = (long)(int16)low16 cells[i] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = (long)(short)(unsigned short)(vm->cells[(int)i] & 0xFFFFu);
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ABS16CELL")||kw(&L->cur,"CELLABS16")||kw(&L->cur,"BABS16CELL")||
+      kw(&L->cur,"RANGEABS16")||kw(&L->cur,"ABS16RANGE")||kw(&L->cur,"IABS16CELL")){
+    /* ABS16CELL lo hi — cells[i] = abs((int16)low16); min int16 stays 0x8000 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(short)(unsigned short)(vm->cells[(int)i] & 0xFFFFu);
+      long r;
+      if (va == (long)(short)0x8000) r = 0x8000L; /* keep min int16 */
+      else if (va < 0) r = -va;
+      else r = va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
