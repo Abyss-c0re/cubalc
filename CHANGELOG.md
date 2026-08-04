@@ -1,3 +1,17 @@
+## 1.14.9-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 4-bit field abs+extend (nibble-field dual of ABS4/SEXT4/ZEXT4 after SNEG4N; complete stack nibble signed extract).
+
+### Language
+- `SABS4N` — `n → nibble n = abs(int4)`; min −8 → +8
+- `SSEXT4N` — `n → TOS = sign-extend nibble n`
+- `SZEXT4N` — `n → TOS = zero-extend nibble n`
+- Proof `466_sabs4n_szext4n.cubalc`
+
+### Prior
+See 1.14.8-universal.
+
 ## 1.14.8-universal — 2026-08-04
 
 ### Direction

@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 493 |
-| **digit** | **6** (urandom) |
-| **version** | `1.14.8-universal` |
-| **pass/fail** | **480 / 0** (green) |
-| **commit** | `412d0c5` → `origin/main` |
-| **ops** | `SCLZ4N` / `SCTZ4N` / `SNEG4N` |
-| **proof** | `programs/proof/465_sclz4n_sneg4n.cubalc` |
+| **iter** | 494 |
+| **digit** | **7** (urandom) |
+| **version** | `1.14.9-universal` |
+| **pass/fail** | **481 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SABS4N` / `SSEXT4N` / `SZEXT4N` |
+| **proof** | `programs/proof/466_sabs4n_szext4n.cubalc` |
 
 ### Delta
-Digit-6 stack imm nibble-field zeros+signed: clz / ctz / negate on selected nibble of TOS. Completes stack nibble zeros+negate after SPARITY4N.
+Digit-7 stack imm nibble-field abs+extend: abs on selected nibble; extract+sign/zero-extend to TOS. Completes stack nibble signed extract after SNEG4N.
 
-**Status:** 1.14.7→1.14.8-universal; suite green 480/0; push ok.
+**Status:** 1.14.8→1.14.9-universal; suite green 481/0; push pending.

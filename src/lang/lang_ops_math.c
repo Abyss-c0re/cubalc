@@ -2397,6 +2397,59 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 4-bit field abs+extend: SABS4N · SSEXT4N · SZEXT4N
+   * (nibble-field dual of ABS4CELL/SEXT4CELL/ZEXT4CELL after SNEG4N; complete stack nibble signed extract) */
+  if (kw(&L->cur,"SABS4N")||kw(&L->cur,"STACKABS4N")||kw(&L->cur,"ABS4N")||
+      kw(&L->cur,"SIABS4N")||kw(&L->cur,"SABSNIBN")||kw(&L->cur,"SNIBABSN")){
+    /* SABS4N n — nibble n of TOS = abs(int4); min int4 -8 → +8 (0x8); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long va = (long)((base >> sh) & 0xFul);
+    if (va & 0x8) va -= 16;
+    long ar = (va < 0) ? -va : va; /* -8 → 8 fits in nibble */
+    unsigned long nv = (unsigned long)(ar & 0xF);
+    long r = (long)((base & ~(0xFul << sh)) | (nv << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT4N")||kw(&L->cur,"STACKSEXT4N")||kw(&L->cur,"SEXT4N")||
+      kw(&L->cur,"SSIGNEXT4N")||kw(&L->cur,"SSEXTNIBN")||kw(&L->cur,"SNIBSEXTN")){
+    /* SSEXT4N n — TOS = sign-extend nibble n of TOS to full width; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long va = (long)((base >> sh) & 0xFul);
+    if (va & 0x8) va -= 16; /* sign-extend int4 */
+    long r = va;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZEXT4N")||kw(&L->cur,"STACKZEXT4N")||kw(&L->cur,"ZEXT4N")||
+      kw(&L->cur,"SZEROEXT4N")||kw(&L->cur,"SZEXTNIBN")||kw(&L->cur,"SNIBZEXTN")){
+    /* SZEXT4N n — TOS = zero-extend nibble n of TOS (low4 only); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    long r = (long)((base >> sh) & 0xFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
