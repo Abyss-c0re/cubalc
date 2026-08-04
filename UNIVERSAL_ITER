@@ -6,11 +6,11 @@
 | **digit** | **1** (urandom) |
 | **version** | `1.14.11-universal` |
 | **pass/fail** | **483 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `224ae64` → `origin/main` |
 | **ops** | `SDIV4N` / `SMOD4N` / `SMIN4N` |
 | **proof** | `programs/proof/468_sdiv4n_smin4n.cubalc` |
 
 ### Delta
 Digit-1 stack imm nibble-field div/mod/min: complete uint4 field ALU after add/sub/mul; div0/mod0 → 0.
 
-**Status:** 1.14.10→1.14.11-universal; suite green 483/0; push pending.
+**Status:** 1.14.10→1.14.11-universal; suite green 483/0; push ok.
