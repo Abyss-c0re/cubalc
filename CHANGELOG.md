@@ -1,3 +1,16 @@
+## 1.14.79-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack+dual imm 4-bit field GTE (nibble ladder after SLTE4N/DLTE4N; complete ordered plane for all field widths).
+
+### Language
+- `SGTE4N` — `field n → nibble n of TOS = (nib >= field) ? 1 : 0`
+- `DGTE4N` — `field n → nibble n of each = (nib >= field) ? 1 : 0` on top two
+- Proof `536_sgte4n_dgte4n.cubalc`
+
+### Prior
+See 1.14.78-universal.
+
 ## 1.14.78-universal — 2026-08-04
 
 ### Direction
