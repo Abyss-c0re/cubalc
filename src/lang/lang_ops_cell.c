@@ -2042,6 +2042,70 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 cell fixed-width 4 nibble signed/metrics: SEXT4CELL · ABS4CELL · POPCNT4CELL
+   * (nibble dual of SEXT8/ABS8/POPCNT8 after SAR4 plane; complete 4/8/16/32 signed+pop) */
+  if (kw(&L->cur,"SEXT4CELL")||kw(&L->cur,"SIGNEXT4CELL")||kw(&L->cur,"BSEXT4CELL")||
+      kw(&L->cur,"RANGESEXT4")||kw(&L->cur,"SEXT4RANGE")||kw(&L->cur,"CELLSEXTNIB")||
+      kw(&L->cur,"SEXTNIBCELL")){
+    /* SEXT4CELL lo hi — cells[i] = (long)(int4)low4 cells[i] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)((unsigned int)vm->cells[(int)i] & 0xFu);
+      if (va & 0x8) va -= 16;
+      vm->cells[(int)i] = va;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ABS4CELL")||kw(&L->cur,"CELLABS4")||kw(&L->cur,"BABS4CELL")||
+      kw(&L->cur,"RANGEABS4")||kw(&L->cur,"ABS4RANGE")||kw(&L->cur,"IABS4CELL")||
+      kw(&L->cur,"ABSNIBCELL")){
+    /* ABS4CELL lo hi — cells[i] = abs((int4)low4); min int4 -8 stays 8 (0x8) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)((unsigned int)vm->cells[(int)i] & 0xFu);
+      if (va & 0x8) va -= 16;
+      long r;
+      if (va == -8L) r = 8L; /* keep min int4 magnitude as 0x8 */
+      else if (va < 0) r = -va;
+      else r = va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"POPCNT4CELL")||kw(&L->cur,"PCNT4CELL")||kw(&L->cur,"BPOPCNT4CELL")||
+      kw(&L->cur,"RANGEPOPCNT4")||kw(&L->cur,"POPCNT4RANGE")||kw(&L->cur,"CELLPOPCNT4")||
+      kw(&L->cur,"POPCNTNIBCELL")){
+    /* POPCNT4CELL lo hi — cells[i] = popcount(low4 cells[i]) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      long r = 0;
+      while (w){ r += (long)(w & 1u); w >>= 1; }
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

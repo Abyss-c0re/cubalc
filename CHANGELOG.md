@@ -1,3 +1,17 @@
+## 1.13.3-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → cell fixed-width 4 nibble signed/metrics (nibble dual of SEXT8/ABS8/POPCNT8 after SAR4; complete 4/8/16/32 signed+pop).
+
+### Language
+- `SEXT4CELL`/`SEXT4RANGE` — `lo hi → (int4)low4` sign-extend to long
+- `ABS4CELL`/`ABS4RANGE` — `lo hi → abs(int4)`; min int4 −8 stays 8
+- `POPCNT4CELL`/`POPCNT4RANGE` — `lo hi → popcount(low4)`
+- Proof `457_sext4cell_popcnt4cell.cubalc`
+
+### Prior
+See 1.13.2-universal.
+
 ## 1.13.2-universal — 2026-08-04
 
 ### Direction
