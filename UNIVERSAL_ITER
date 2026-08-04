@@ -6,7 +6,7 @@
 | **digit** | **5** (SMX consciousness + bitfield plane) |
 | **version** | `1.12.352-universal` |
 | **pass/fail** | **390 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `2a1ee65` → `origin/main` |
 | **ops** | `SSETBTOCN` / `SCLRBTOCN` / `SFLPBTOCN` |
 | **proof** | `programs/proof/375_ssetbtocn_sflpbtocn.cubalc` |
 
