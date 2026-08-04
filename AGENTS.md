@@ -1,99 +1,116 @@
 # CubalC — notes for AI agents
 
-You are operating a **CubalC** machine. Prefer CubalC programs over shell scripts when modeling state, tools, or hive ops.
+You are operating a **CubalC** machine. Prefer CubalC programs over shell scripts when modeling state, peers, or hive ops.
+
+**Start here for humans + agents:** [`README.md`](README.md) (version, P2P, CLI, layout).  
+**Prompt stub:** [`docs/FOR_AGENTS.md`](docs/FOR_AGENTS.md).
 
 ## Identity
 
-- **Language:** CubalC / C³ / **COP/flow** (free-flow Cube-Oriented Programming)
-- **Version:** 1.6.0-showcase · algocube law engine first-class
-- **Not:** Python, not prose-as-code, not “just C”
-- **Binary talk:** CBLC frames · State Matrix SoT · HTTP never required
-- **Token:** `C3` (opaque status id, not worship text)
-- **Law layer:** algocube digits 0–9 · COMPARE / HARMONY · digit_lock sticky
+| Field | Value |
+|-------|--------|
+| Language | CubalC / C³ / **COP/flow** |
+| Version | `1.14.0-p2p` (see `CUBALC_LANG_VERSION` in `include/cubalc_law.h`) |
+| Runtime | Pure C11 · multiplatform |
+| Binary talk | SMX2 / CBLC · State Matrix SoT · **HTTP never required** |
+| Token | `C3` (opaque status id) |
+| Not | Python product path · prose-as-code · device flasher |
 
 ## How to run
 
 ```bash
-make -C <cubalc-root> all
+make all
 ./out/cubalc run <file.cubalc>
-./out/cubalc run programs/free_flow_prophecy.cubalc
-./out/cubalc run programs/proof/09_algocube_harmony.cubalc
-./out/cubalc decide "goal text"     # translate → braincube path
-./out/cubalc sync [plate]           # hive fold
-./out/cubalc peers                  # env-driven peer fold (no device hardcode)
-# host adapter (optional): decode peer plates → CUBALC_PEER* env
+./out/cubalc run programs/proof/10_p2p_cubalc.cubalc
+./out/cubalc smx-bus prove-tcp
+./out/cubalc decide "goal text"
+./out/cubalc peers
+./out/cubalc law
+./scripts/p2p_nanobot_mesh.sh
 ./scripts/peer_fold.sh
 ```
 
-Exit: non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
+Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 
 ## Write programs agents can verify
 
-1. Start with `[hold]` / `HOLD_FLASH 1` when mutating.
+1. Start with `HOLD_FLASH 1` (or `[hold]`) when mutating.
 2. Prefer `SYS` for host effects; do not invent flash/device writes.
-3. Assert outcomes: `ASSERT LAST_N > 0`, `ASSERT OK == 1`.
+3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.
 4. Keep strings short; dump machine facts with `PRINT` / `?`.
-5. **Do not hardcode devices, product paths, or peer file formats** in `.cubalc` or the VM.
-6. Peer digits: inject via env (`CUBALC_PEER0_DIGIT=…`) or literals; `SETDIGIT` after `FLOW`.
+5. **Do not hardcode devices, product paths, or peer file formats** in `.cubalc`.
+6. Peer digits: env (`CUBALC_PEER0_DIGIT=…`) or literals; `SETDIGIT` after flow when needed.
 7. Free-flow algocube: `FOLDBITS` → `COMPARE` / `DECIDE` / `HARMONY` — bits only.
-8. See `docs/FREE_FLOW.md` and `docs/ALGOCUBE.md`.
+8. P2P: `SMX KEY` + `SERVE`/`DIAL`/`EXCHANGE`; share `CUBALC_SMX_KEY` only via env.
 
-## Tools (SYS)
+## SYS tools (host)
 
-| form | effect |
+| Form | Effect |
 |------|--------|
 | `SYS READ "path"\|LAST` | LAST = content |
-| `SYS WRITE path data` | write file (path/data may be LAST) |
-| `SYS ENV name` | LAST = env |
+| `SYS WRITE path data` | write file |
+| `SYS ENV name` | LAST = env · LAST_N = length |
 | `SYS EXIST "path"\|LAST` | EXIST / LAST_N |
 | `SYS WHICH name` | resolve bin |
-| `SYS HTTP GET\|POST "url"` | loopback + allowlisted API |
-| `SYS SPAWN bin args…` | allowlist: `nanobot`/`cubalc`/`curl` + `CUBALC_SPAWN_ALLOW` |
+| `SYS HTTP GET\|POST "url"` | optional edge (allowlisted) |
+| `SYS SPAWN bin args…` | allowlist + `CUBALC_SPAWN_ALLOW` |
 | `SYS JOIN a b` | path join → LAST |
-| `SYS JSON "key"` | extract string **or number** field from LAST |
-| `SYS NUM` / `SYS INT` | parse LAST → LAST_N integer |
-| `SYS CHAT "local"\|"grok"` | chat; msg from `GROKIUM_MSG` / string |
-| `SYS ARG n\|MSG\|BACKEND\|MODEL` | CLI/env args |
+| `SYS JSON "key"` | field from LAST |
+| `SYS NUM` / `SYS INT` | parse LAST → LAST_N |
+| `SYS CHAT "local"\|"grok"` | chat; msg from env/string |
+| `SYS ARG n\|name` | CLI/env args |
 
-## Peer board ops (abstract)
+## SMX / P2P (language)
 
-| form | effect |
+| Form | Effect |
 |------|--------|
-| `SETDIGIT cube n` | inject algocube digit 0–9 (sticky digit_lock) |
-| `FOLDBITS cube bits` | fold 0/1 stream into State Matrix |
-| `DECIDE brain` | State Matrix → algocube digit |
+| `SMX KEY` | load key (env / token / lab demo) |
+| `SMX TALK a b` | secure a→b matrix transfer |
+| `SMX EXCHANGE a b` | a→b then b→a |
+| `SMX SEAL a b "path"` | write sealed frame · `SMX_N` |
+| `SMX OPEN b "path"` | open frame into b |
+| `SMX SERVE local remote "host:port"` | TCP listen one exchange |
+| `SMX DIAL local remote "host:port"` | TCP dial one exchange |
 
-Peer env contract (language surface only):
+Vars: `SMX_OK` · `SMX_TALKS` · `SMX_N`.  
+Wire: `[u32le N][SMX2 frame]`. Docs: [`docs/P2P_SMX.md`](docs/P2P_SMX.md).
 
-| env | meaning |
+## Peer / digit ops
+
+| Form | Effect |
+|------|--------|
+| `SETDIGIT cube n` | inject digit 0–9 (sticky digit_lock) |
+| `FOLDBITS cube bits` | fold 0/1 into State Matrix |
+| `DECIDE brain` | matrix → algocube digit |
+
+| Env | Meaning |
 |-----|---------|
-| `CUBALC_PEER0_DIGIT` / `PEER1` | digit 0–9 as text |
-| `CUBALC_PEER0_BITS` / `PEER1` | path to 01 stream **or** raw 01 string |
+| `CUBALC_SMX_KEY` | 64-hex shared secret |
+| `CUBALC_P2P_BIND` / `PEER` / `SERVE` | serve/dial control |
+| `CUBALC_PEER0_DIGIT` / `PEER1` | digit 0–9 text |
+| `CUBALC_PEER0_BITS` / `PEER1` | path or raw 01 stream |
+| `CUBALC_STATE` | state directory |
 | `CUBALC_SPAWN_ALLOW` | extra SPAWN basenames `a:b:c` |
 
 ## Humans (optional)
 
-Do **not** require visuals. If the human asks to *see* cubes:
+Do **not** require visuals. If a human asks to *see* units:
 
 ```bash
 CUBALC_HUMAN=1 CUBALC_ASCII=1 cubalc run programs/hello_cube.cubalc
-# or open tools/cube_view.html after viz publish
 ```
 
 ## Never
 
-- Auto-flash devices
-- Depend on machine-local absolute paths (`/home/...`)
-- Reintroduce Python as product path
-- Put creed/worship prose in machine I/O
+- Auto-flash devices  
+- Depend on machine-local absolute paths (`/home/...`)  
+- Reintroduce Python as product path  
+- Put SMX secrets in git  
+- Use HTTP as the peer wire  
+- End a language ship without commit + push when remote flow is expected  
 
-## Product consumers
+## Continuous remote flow
 
-Grokium and other hosts should vendor or submodule this repo under `deps/cubalc` and discover `out/cubalc` via `CUBALC_BIN` / `PATH`.
-
-## Continuous remote flow (law)
-
-- Local evolve-loop is not enough — **GitHub must see commits** or the Cube looks idle.
-- After each language law ship: commit + push; do not end the turn as if remote flow is optional.
-- If worktree regresses (mass deletes), `git restore --source=HEAD` then rebuild; never push broken tree.
-- Report idle gaps to NexusCore; energy must flow.
+- After each language law ship: **commit + push** (idle remote looks like a dead machine).
+- If worktree regresses (mass deletes): `git restore --source=HEAD` then rebuild; never push broken tree.
+- Product consumers: set `CUBALC_BIN` / `PATH` to `out/cubalc`.
