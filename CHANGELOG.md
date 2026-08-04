@@ -1,3 +1,17 @@
+## 1.14.60-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 32-bit field zeros+signed (word ladder of DCLZ16N/DCTZ16N/DNEG16N; dual of SCLZ32N after DABS32N).
+
+### Language
+- `DCLZ32N` — `n → word n of each = clz32(w)` (0 → 32) on top two
+- `DCTZ32N` — `n → word n of each = ctz32(w)` (0 → 32)
+- `DNEG32N` — `n → word n of each = -(int32)` as uint32 (min stays 0x80000000)
+- Proof `517_dclz32n_dneg32n.cubalc`
+
+### Prior
+See 1.14.59-universal.
+
 ## 1.14.59-universal — 2026-08-04
 
 ### Direction

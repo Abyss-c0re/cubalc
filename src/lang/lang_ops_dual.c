@@ -9370,6 +9370,87 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",yb); vm->last_n=yb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 dual-stack imm 32-bit field zeros+signed: DCLZ32N · DCTZ32N · DNEG32N
+   * (word ladder of DCLZ16N/DCTZ16N/DNEG16N; dual of SCLZ32N after DABS32N) */
+  if (kw(&L->cur,"DCLZ32N")||kw(&L->cur,"S2CLZ32N")||kw(&L->cur,"STACK2CLZ32N")||
+      kw(&L->cur,"PAIRCLZ32N")||kw(&L->cur,"DNLZ32N")||kw(&L->cur,"DCLZDWN")||
+      kw(&L->cur,"DDWCLZN")){
+    /* a b + n → word n of each = clz32(w); 0 → 32; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned int wa = (unsigned int)((ma >> sh) & 0xFFFFFFFFul);
+    unsigned int wb = (unsigned int)((mb >> sh) & 0xFFFFFFFFul);
+    unsigned long cza = 0, czb = 0;
+    if (wa == 0) cza = 32;
+    else { for (int b = 31; b >= 0; b--){ if (wa & (1u << (unsigned)b)) break; cza++; } }
+    if (wb == 0) czb = 32;
+    else { for (int b = 31; b >= 0; b--){ if (wb & (1u << (unsigned)b)) break; czb++; } }
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | ((cza & 0xFFFFFFFFul) << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | ((czb & 0xFFFFFFFFul) << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCTZ32N")||kw(&L->cur,"S2CTZ32N")||kw(&L->cur,"STACK2CTZ32N")||
+      kw(&L->cur,"PAIRCTZ32N")||kw(&L->cur,"DNTZ32N")||kw(&L->cur,"DCTZDWN")||
+      kw(&L->cur,"DDWCTZN")){
+    /* a b + n → word n of each = ctz32(w); 0 → 32; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned int wa = (unsigned int)((ma >> sh) & 0xFFFFFFFFul);
+    unsigned int wb = (unsigned int)((mb >> sh) & 0xFFFFFFFFul);
+    unsigned long tza = 0, tzb = 0;
+    if (wa == 0) tza = 32;
+    else { while ((wa & 1u) == 0){ tza++; wa >>= 1; } }
+    if (wb == 0) tzb = 32;
+    else { while ((wb & 1u) == 0){ tzb++; wb >>= 1; } }
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | ((tza & 0xFFFFFFFFul) << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | ((tzb & 0xFFFFFFFFul) << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNEG32N")||kw(&L->cur,"S2NEG32N")||kw(&L->cur,"STACK2NEG32N")||
+      kw(&L->cur,"PAIRNEG32N")||kw(&L->cur,"DINEG32N")||kw(&L->cur,"DNEGDWN")||
+      kw(&L->cur,"DDWNEGN")){
+    /* a b + n → word n of each = -(int32) as uint32; min int32 stays 0x80000000; n clamped 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFFFFFFFul);
+    long vb = (long)((mb >> sh) & 0xFFFFFFFFul);
+    if (va & 0x80000000L) va -= 4294967296L;
+    if (vb & 0x80000000L) vb -= 4294967296L;
+    long na = (va == -2147483648L) ? -2147483648L : -va;
+    long nb = (vb == -2147483648L) ? -2147483648L : -vb;
+    unsigned long nva = (unsigned long)(na & 0xFFFFFFFFul);
+    unsigned long nvb = (unsigned long)(nb & 0xFFFFFFFFul);
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (nva << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (nvb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
