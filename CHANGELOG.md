@@ -1,3 +1,17 @@
+## 1.14.42-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack imm 8-bit field shift (byte ladder of SSHL4N/SSHR4N/SSAR4N; stack dual of DSHL8N; complete stack 8n unary plane).
+
+### Language
+- `SSHL8N` — `k n → (uint8 byte n)<<k` (k≥8 → 0)
+- `SSHR8N` — `k n → (uint8 byte n)>>k` logical (k≥8 → 0)
+- `SSAR8N` — `k n → (int8 byte n)>>k` arithmetic (k≥8 → all sign)
+- Proof `499_sshl8n_ssar8n.cubalc`
+
+### Prior
+See 1.14.41-universal.
+
 ## 1.14.41-universal — 2026-08-04
 
 ### Direction
