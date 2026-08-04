@@ -5502,6 +5502,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 stack dual nibble field TOC: SNIBTOC · SSETNIBTOC · SCLRNIBTOC
+   * (stack dual of SNIBTOCN/SSETNIBTOCN/SCLRNIBTOCN; foundation completes 4/8/16/32 stack ladder) */
+  if (kw(&L->cur,"SNIBTOC")||kw(&L->cur,"SGETNIBTOC")||kw(&L->cur,"STACKNIBTOC")||
+      kw(&L->cur,"NIBTOC")||kw(&L->cur,"SCELLNIBS")||kw(&L->cur,"GETNIBTOC")||
+      kw(&L->cur,"SNIBBLETOC")||kw(&L->cur,"SNIBAT")){
+    /* i n → cells[i] = LE nibble n of cells[i]; n clamped 0..15; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 4)) & 0xFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETNIBTOC")||kw(&L->cur,"STACKSETNIBTOC")||kw(&L->cur,"SETNIBTOC")||
+      kw(&L->cur,"SCELLSETNIBS")||kw(&L->cur,"PUTNIBTOC")||kw(&L->cur,"SSETNIBAT")||
+      kw(&L->cur,"SDEPOSITNIB")){
+    /* i field n → deposit low 4 bits of field into LE nibble n of cells[i] */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)((base & ~(0xFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRNIBTOC")||kw(&L->cur,"STACKCLRNIBTOC")||kw(&L->cur,"CLRNIBTOC")||
+      kw(&L->cur,"SCELLCLRNIBS")||kw(&L->cur,"ZAPNIBTOC")||kw(&L->cur,"SCLRNIBAT")||
+      kw(&L->cur,"SZAPNIB")){
+    /* i n → clear LE nibble n of cells[i]; n clamped 0..15; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)(base & ~(0xFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
    * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
   if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||

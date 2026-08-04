@@ -1,3 +1,17 @@
+## 1.12.381-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack dual LE nibble field TOC (stack dual of SNIBTOCN; foundation completes 4/8/16/32 stack ladder).
+
+### Language
+- `SNIBTOC`/`NIBTOC` — stack `i n → cells[i] = LE nibble n of cells[i]` (n 0..15)
+- `SSETNIBTOC`/`SETNIBTOC` — stack `i field n → deposit low 4 bits of field into LE nibble n`
+- `SCLRNIBTOC`/`CLRNIBTOC` — stack `i n → clear LE nibble n of cells[i]`
+- Proof `404_snibtoc_sclrnibtoc.cubalc`
+
+### Prior
+See 1.12.380-universal.
+
 ## 1.12.380-universal — 2026-08-04
 
 ### Direction
