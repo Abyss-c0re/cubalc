@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -1533,6 +1534,140 @@ int main(int argc, char **argv) {
       return ok ? 0 : 1;
     }
   }
+  if (strcmp(cmd, "forms") == 0 || strcmp(cmd, "ops") == 0 ||
+      strcmp(cmd, "forms-list") == 0) {
+    /* Usability: live human/agent catalog of play forms (not opcode soup).
+     * cubalc forms [prefix] — case-insensitive substring filter. */
+    static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
+      {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
+      {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
+      {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
+      {"UNPLUG", "core", "remove plug edge"},
+      {"REVERSE", "core", "flip I/O direction on plug"},
+      {"IMPULSE", "core", "pulse proton on cube"},
+      {"FLOW", "core", "board ticks · FLOW n"},
+      {"SETBIT", "matrix", "SETBIT cube idx 0|1"},
+      {"SETDIGIT", "matrix", "SETDIGIT cube 0..9 algocube digit"},
+      {"FOLDBITS", "matrix", "FOLDBITS cube bits stream into State Matrix"},
+      {"DECIDE", "matrix", "State Matrix → algocube digit 0..9"},
+      {"COMPARE", "matrix", "Hamming/unity between two cubes"},
+      {"HARMONY", "matrix", "hive consensus + mean unity"},
+      {"RESOLVE", "matrix", "harmony + decide + energy pulse"},
+      {"ENERGYFLOW", "matrix", "multi-hop energy flow"},
+      {"LET", "flow", "LET name = expr | string"},
+      {"LOOP", "flow", "LOOP n … END"},
+      {"WHILE", "flow", "WHILE expr … END"},
+      {"FOR", "flow", "FOR … END"},
+      {"IF", "flow", "IF expr THEN … END"},
+      {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
+      {"PRINT", "flow", "PRINT str|expr…"},
+      {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
+      {"DUMP", "flow", "alias of PRINT_JSON"},
+      {"INCLUDE", "flow", "INCLUDE \"path.cubalc\" load module into same VM"},
+      {"SYS ENV", "host", "SYS ENV \"NAME\" [OR \"fallback\"]"},
+      {"SYS READ", "host", "SYS READ path|LAST"},
+      {"SYS WRITE", "host", "SYS WRITE path data"},
+      {"SYS EXIST", "host", "SYS EXIST path → LAST_N 0|1"},
+      {"SYS WHICH", "host", "SYS WHICH name → LAST path"},
+      {"SYS NUM", "host", "parse LAST → LAST_N"},
+      {"SYS JSON", "host", "SYS JSON \"key\" extract field"},
+      {"SYS SPAWN", "host", "allowlisted spawn (protect mode tight)"},
+      {"SMX KEY", "smx", "load/set SMX2 key"},
+      {"SMX TALK", "smx", "binary peer talk (no HTTP wire)"},
+      {"SMX EXCHANGE", "smx", "file-bus exchange"},
+      {"SMX SERVE", "smx", "listen · CUBALC_P2P_TIMEOUT ms"},
+      {"SMX DIAL", "smx", "connect · CUBALC_P2P_SOFT soft-fail"},
+      {"ASYNC", "async", "ASYNC HTTP|… job"},
+      {"AWAIT", "async", "wait async job"},
+      {"PARALLEL", "async", "parallel board work"},
+      {"BUDGET", "law", "BUDGET n statement budget"},
+      {"SHARE", "law", "SHARE state_matrix_only|smx"},
+      {"NEST", "core", "NEST outer inner cube nesting"},
+      {"?", "play", "show board (free-standing)"},
+      {"[name]", "play", "place cube short form"},
+      {"[a~b]", "play", "plug chain short form"},
+      {"[hold]", "play", "HOLD_FLASH short form"},
+    };
+    const char *prefix = (argc > 2) ? argv[2] : "";
+    int json_only = 0;
+    int i, nmatch = 0, nall = (int)(sizeof forms / sizeof forms[0]);
+    char pref_up[64];
+    if (prefix && (!strcmp(prefix, "--json") || !strcmp(prefix, "-j"))) {
+      json_only = 1;
+      prefix = (argc > 3) ? argv[3] : "";
+    } else if (argc > 3 && (!strcmp(argv[3], "--json") || !strcmp(argv[3], "-j"))) {
+      json_only = 1;
+    }
+    pref_up[0] = 0;
+    if (prefix && prefix[0]) {
+      size_t k;
+      for (k = 0; prefix[k] && k + 1 < sizeof pref_up; k++)
+        pref_up[k] = (char)toupper((unsigned char)prefix[k]);
+      pref_up[k] = 0;
+    }
+    if (!json_only) {
+      printf("# CubalC forms (human plane catalog) prefix=%s version=%s\n",
+             pref_up[0] ? pref_up : "*", CUBALC_LANG_VERSION);
+      printf("# plane\tform\thint\n");
+    }
+    /* first pass: count + print human lines */
+    for (i = 0; i < nall; i++) {
+      char name_up[48];
+      size_t k;
+      int hit = 1;
+      for (k = 0; forms[i].name[k] && k + 1 < sizeof name_up; k++)
+        name_up[k] = (char)toupper((unsigned char)forms[i].name[k]);
+      name_up[k] = 0;
+      if (pref_up[0] && !strstr(name_up, pref_up) &&
+          !strstr(forms[i].plane, prefix) /* plane may be lower */) {
+        /* also match plane case-insensitive */
+        char plane_up[24];
+        size_t p;
+        for (p = 0; forms[i].plane[p] && p + 1 < sizeof plane_up; p++)
+          plane_up[p] = (char)toupper((unsigned char)forms[i].plane[p]);
+        plane_up[p] = 0;
+        if (!strstr(plane_up, pref_up))
+          hit = 0;
+      }
+      if (!hit) continue;
+      nmatch++;
+      if (!json_only)
+        printf("%s\t%s\t%s\n", forms[i].plane, forms[i].name, forms[i].hint);
+    }
+    /* JSON plate for agents */
+    printf("{\"schema\":\"cubalc.forms.v1\",\"ok\":true,\"cmd\":\"forms\","
+           "\"prefix\":\"%s\",\"n\":%d,\"n_catalog\":%d,\"version\":\"%s\","
+           "\"note\":\"human-meaningful forms only — not full dual/width ISA\","
+           "\"forms\":[",
+           pref_up[0] ? pref_up : "", nmatch, nall, CUBALC_LANG_VERSION);
+    {
+      int first = 1;
+      for (i = 0; i < nall; i++) {
+        char name_up[48];
+        size_t k;
+        int hit = 1;
+        for (k = 0; forms[i].name[k] && k + 1 < sizeof name_up; k++)
+          name_up[k] = (char)toupper((unsigned char)forms[i].name[k]);
+        name_up[k] = 0;
+        if (pref_up[0]) {
+          char plane_up[24];
+          size_t p;
+          for (p = 0; forms[i].plane[p] && p + 1 < sizeof plane_up; p++)
+            plane_up[p] = (char)toupper((unsigned char)forms[i].plane[p]);
+          plane_up[p] = 0;
+          if (!strstr(name_up, pref_up) && !strstr(plane_up, pref_up))
+            hit = 0;
+        }
+        if (!hit) continue;
+        /* escape hints lightly — hints are static ASCII without quotes */
+        printf("%s{\"name\":\"%s\",\"plane\":\"%s\",\"hint\":\"%s\"}",
+               first ? "" : ",", forms[i].name, forms[i].plane, forms[i].hint);
+        first = 0;
+      }
+    }
+    printf("]}\n");
+    return 0;
+  }
   if (strcmp(cmd, "cookbook") == 0 || strcmp(cmd, "start") == 0) {
     printf("CubalC cookbook paths (read these first):\n"
            "  docs/COOKBOOK.md          # hold → place → plug → decide → smx\n"
@@ -1554,6 +1689,7 @@ int main(int argc, char **argv) {
       "  Run & learn\n"
       "    doctor|health          install readiness JSON (agents/humans)\n"
       "    cookbook|start         paths to starters\n"
+      "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    run|eval <file.cubalc> execute a program\n"
       "    help|-h                this text\n"
       "\n"

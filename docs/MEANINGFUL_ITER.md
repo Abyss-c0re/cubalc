@@ -20,7 +20,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 2. **Better fail messages** on SMX still thin (keep improving).
 3. ~~**`ASSERT` with message string**~~ **done** (core + proof 573).
 4. ~~**`PRINT` formatting** · `PRINT_JSON` / `DUMP`~~ **done** (named + bare snapshot).
-5. **`HELP form`** or CLI `cubalc forms [prefix]` listing live ops from one plane.
+5. ~~**`HELP form`** / CLI `cubalc forms [prefix]`~~ **done** (human plane catalog + JSON).
 
 ### B. Host / mesh usability
 
@@ -46,7 +46,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 16. ~~**Cookbook**~~ **done** (`docs/COOKBOOK.md`).
 17. Wire a **missing doc form that is promised** only if you implement the form too (no doc-only lies).
 18. ~~**`PRINT_JSON`** / agent dump of vars~~ **done**.
-19. **`cubalc forms [prefix]`** live op listing.
+19. ~~**`cubalc forms [prefix]`** live op listing~~ **done**.
 20. SERVE/DIAL remaining error hints + retry helpers.
 
 ## Tick protocol

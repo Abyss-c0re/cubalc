@@ -70,6 +70,7 @@ Extend: `CUBALC_SPAWN_ALLOW=tool1:tool2`
 
 ```bash
 cubalc run <file.cubalc>
+cubalc forms [prefix]     # play-form catalog + JSON (filter SMX, PRINT, …)
 cubalc peers              # programs/peer_fold.cubalc (env-driven)
 cubalc decide "goal"      # translate → braincube path
 cubalc law

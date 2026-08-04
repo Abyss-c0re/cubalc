@@ -14,6 +14,13 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — cubalc forms catalog — 2026-08-05
+
+### Usability
+- `cubalc forms [prefix]` (aliases: `ops`) — human-meaningful form catalog + JSON plate
+- Filter by name/plane substring (case-insensitive); `--json` for plate-only
+- Catalog covers law/core/matrix/flow/host/smx/async/play — not dual/width ISA soup
+
 ## Meaningful — protect status CLI — 2026-08-05
 
 ### Usability
