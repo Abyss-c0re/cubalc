@@ -1,3 +1,17 @@
+## 1.14.31-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → dual-stack imm 4-bit field zeros+signed (dual of SCLZ4N/SCTZ4N/SNEG4N; nibble zeros+negate on pair after DPARITY4N).
+
+### Language
+- `DCLZ4N` — `n → nibble n of each = clz4(nibble)` (0 → 4)
+- `DCTZ4N` — `n → nibble n of each = ctz4(nibble)` (0 → 4)
+- `DNEG4N` — `n → nibble n of each = -(int4)` as uint4 (min -8 stays 0x8)
+- Proof `488_dclz4n_dneg4n.cubalc`
+
+### Prior
+See 1.14.30-universal.
+
 ## 1.14.30-universal — 2026-08-04
 
 ### Direction

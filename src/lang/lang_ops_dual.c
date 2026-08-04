@@ -8210,6 +8210,87 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack imm 4-bit field zeros+signed: DCLZ4N · DCTZ4N · DNEG4N
+   * (dual of SCLZ4N/SCTZ4N/SNEG4N; nibble zeros+negate plane on top two after DPARITY4N) */
+  if (kw(&L->cur,"DCLZ4N")||kw(&L->cur,"S2CLZ4N")||kw(&L->cur,"STACK2CLZ4N")||
+      kw(&L->cur,"PAIRCLZ4N")||kw(&L->cur,"DNLZ4N")||kw(&L->cur,"DCLZNIBN")||
+      kw(&L->cur,"DNIBCLZN")){
+    /* a b + n → nibble n of each = clz4(nibble); 0 → 4; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned int wa = (unsigned int)((ma >> sh) & 0xFul);
+    unsigned int wb = (unsigned int)((mb >> sh) & 0xFul);
+    unsigned long cza = 0, czb = 0;
+    if (wa == 0) cza = 4;
+    else { for (int b = 3; b >= 0; b--){ if (wa & (1u << (unsigned)b)) break; cza++; } }
+    if (wb == 0) czb = 4;
+    else { for (int b = 3; b >= 0; b--){ if (wb & (1u << (unsigned)b)) break; czb++; } }
+    long x = (long)((ma & ~(0xFul << sh)) | (cza << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (czb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCTZ4N")||kw(&L->cur,"S2CTZ4N")||kw(&L->cur,"STACK2CTZ4N")||
+      kw(&L->cur,"PAIRCTZ4N")||kw(&L->cur,"DNTZ4N")||kw(&L->cur,"DCTZNIBN")||
+      kw(&L->cur,"DNIBCTZN")){
+    /* a b + n → nibble n of each = ctz4(nibble); 0 → 4; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned int wa = (unsigned int)((ma >> sh) & 0xFul);
+    unsigned int wb = (unsigned int)((mb >> sh) & 0xFul);
+    unsigned long tza = 0, tzb = 0;
+    if (wa == 0) tza = 4;
+    else { while ((wa & 1u) == 0){ tza++; wa >>= 1; } }
+    if (wb == 0) tzb = 4;
+    else { while ((wb & 1u) == 0){ tzb++; wb >>= 1; } }
+    long x = (long)((ma & ~(0xFul << sh)) | (tza << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (tzb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNEG4N")||kw(&L->cur,"S2NEG4N")||kw(&L->cur,"STACK2NEG4N")||
+      kw(&L->cur,"PAIRNEG4N")||kw(&L->cur,"DINEG4N")||kw(&L->cur,"DNEGNIBN")||
+      kw(&L->cur,"DNIBNEGN")){
+    /* a b + n → nibble n of each = -(int4) as uint4; min int4 -8 stays 0x8; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFul);
+    long vb = (long)((mb >> sh) & 0xFul);
+    if (va & 0x8) va -= 16;
+    if (vb & 0x8) vb -= 16;
+    long na = (va == -8L) ? -8L : -va;
+    long nb = (vb == -8L) ? -8L : -vb;
+    unsigned long nva = (unsigned long)(na & 0xF);
+    unsigned long nvb = (unsigned long)(nb & 0xF);
+    long x = (long)((ma & ~(0xFul << sh)) | (nva << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (nvb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
