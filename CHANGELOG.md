@@ -1,3 +1,17 @@
+## 1.14.36-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack imm 8-bit field zeros+signed (byte ladder of DCLZ4N/DCTZ4N/DNEG4N; dual 8n zeros+negate after DPARITY8N).
+
+### Language
+- `DCLZ8N` — `n → byte n of each = clz8(byte)` (0 → 8)
+- `DCTZ8N` — `n → byte n of each = ctz8(byte)` (0 → 8)
+- `DNEG8N` — `n → byte n of each = -(int8)` as uint8 (min -128 stays 0x80)
+- Proof `493_dclz8n_dneg8n.cubalc`
+
+### Prior
+See 1.14.35-universal.
+
 ## 1.14.35-universal — 2026-08-04
 
 ### Direction
