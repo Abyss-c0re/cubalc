@@ -25578,6 +25578,51 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 cell inverted logic: NANDCELL · NORCELL · XNORCELL
+   * (complete AND/OR/XOR cell plane with inverted duals) */
+  if (kw(&L->cur,"NANDCELL")||kw(&L->cur,"CELLNAND")||kw(&L->cur,"BNANDCELL")){
+    /* NANDCELL lo hi mask — cells[i] = ~(cells[i] & mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] = ~(vm->cells[(int)i] & mask);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NORCELL")||kw(&L->cur,"CELLNOR")||kw(&L->cur,"BNORCELL")){
+    /* NORCELL lo hi mask — cells[i] = ~(cells[i] | mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] = ~(vm->cells[(int)i] | mask);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XNORCELL")||kw(&L->cur,"CELLXNOR")||kw(&L->cur,"BXNORCELL")||
+      kw(&L->cur,"NXORCELL")||kw(&L->cur,"CELLEQX")){
+    /* XNORCELL lo hi mask — cells[i] = ~(cells[i] ^ mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++) vm->cells[(int)i] = ~(vm->cells[(int)i] ^ mask);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

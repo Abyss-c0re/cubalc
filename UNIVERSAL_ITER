@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 471 |
-| **digit** | **8** (urandom) |
-| **version** | `1.12.400-universal` |
-| **pass/fail** | **438 / 0** (green) |
-| **commit** | `53c5311` → `origin/main` |
-| **ops** | `SPARITYTOC` / `SBSWAPTOC` / `SBITREV32TOC` |
-| **proof** | `programs/proof/423_sparitytoc_sbitrev32toc.cubalc` |
+| **iter** | 473 |
+| **digit** | **9** (urandom) |
+| **version** | `1.12.401-universal` |
+| **pass/fail** | **439 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `NANDCELL` / `NORCELL` / `XNORCELL` |
+| **proof** | `programs/proof/424_nandcell_xnorcell.cubalc` |
 
 ### Delta
-Digit-8 stack↔cell word bit metrics TOC: dual of SPARITY/SBSWAP/SBITREV into cell after SPOPCNT/CLZ/CTZ TOC.
+Digit-9 inverted cell logic: complete AND/OR/XOR cell plane with NAND/NOR/XNOR duals.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 - tree healthy
 
-**Status:** 1.12.399→1.12.400; suite green 438/0.
+**Status:** 1.12.400→1.12.401; suite green 439/0.

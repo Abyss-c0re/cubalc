@@ -1,3 +1,17 @@
+## 1.12.401-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → inverted cell logic (complete AND/OR/XOR cell plane with NAND/NOR/XNOR duals).
+
+### Language
+- `NANDCELL`/`CELLNAND` — `lo hi mask → cells[i] = ~(cells[i] & mask)` over range
+- `NORCELL`/`CELLNOR` — `lo hi mask → cells[i] = ~(cells[i] | mask)` over range
+- `XNORCELL`/`CELLXNOR` — `lo hi mask → cells[i] = ~(cells[i] ^ mask)` over range
+- Proof `424_nandcell_xnorcell.cubalc`
+
+### Prior
+See 1.12.400-universal.
+
 ## 1.12.400-universal — 2026-08-04
 
 ### Direction
