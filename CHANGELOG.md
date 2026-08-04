@@ -1,3 +1,18 @@
+## 1.12.345-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → foundation stack↔cell unsigned TOC (stack dual of SUDIVTOCN plane).
+
+### Language
+- `SUDIVTOC`/`UDIVTOC` — stack `i v → cells[i]=(u)cells[i]/(u)v` leave quotient
+- `SUMODTOC`/`UMODTOC` — stack `i v → cells[i]=(u)cells[i]%(u)v` leave remainder
+- `SUMINTOC`/`UMINTOC` — stack `i v → cells[i]=umin(cells[i],v)` leave result
+- `SUMAXTOC`/`UMAXTOC` — stack `i v → cells[i]=umax(cells[i],v)` leave result
+- Proof `368_sudivtoc_sumaxtoc.cubalc`
+
+### Prior
+See 1.12.344-universal.
+
 ## 1.12.344-universal — 2026-08-04
 
 ### Direction

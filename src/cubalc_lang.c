@@ -5191,6 +5191,75 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 foundation stack↔cell unsigned TOC: SUDIVTOC · SUMODTOC · SUMINTOC · SUMAXTOC
+   * (stack dual of SUDIVTOCN/SUMODTOCN/SUMINTOCN/SUMAXTOCN; unsigned peer of SDIVTOC/SMODTOC/SMINTOC/SMAXTOC) */
+  if (kw(&L->cur,"SUDIVTOC")||kw(&L->cur,"SCELLUDIV")||kw(&L->cur,"STACKUDIVTOC")||
+      kw(&L->cur,"SUDIVTOCELL")||kw(&L->cur,"UDIVTOC")||kw(&L->cur,"SUQUOTTOC")){
+    /* i v → cells[i] = (u)cells[i] / (u)v; v==0 → 0 soft; leave quotient */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = 0;
+    if (v != 0) r = (long)((unsigned long)vm->cells[(int)i] / (unsigned long)v);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMODTOC")||kw(&L->cur,"SCELLUMOD")||kw(&L->cur,"STACKUMODTOC")||
+      kw(&L->cur,"SUMODTOCELL")||kw(&L->cur,"UMODTOC")||kw(&L->cur,"SUREMTOC")||
+      kw(&L->cur,"UREMTOC")){
+    /* i v → cells[i] = (u)cells[i] % (u)v; v==0 → 0 soft; leave remainder */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = 0;
+    if (v != 0) r = (long)((unsigned long)vm->cells[(int)i] % (unsigned long)v);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMINTOC")||kw(&L->cur,"SCELLUMIN")||kw(&L->cur,"STACKUMINTOC")||
+      kw(&L->cur,"SUMINTOCELL")||kw(&L->cur,"UMINTOC")||kw(&L->cur,"SUMINTO")){
+    /* i v → cells[i]=umin(cells[i],v), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    unsigned long uv = (unsigned long)v;
+    long r = (long)((c < uv) ? c : uv);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SUMAXTOC")||kw(&L->cur,"SCELLUMAX")||kw(&L->cur,"STACKUMAXTOC")||
+      kw(&L->cur,"SUMAXTOCELL")||kw(&L->cur,"UMAXTOC")||kw(&L->cur,"SUMAXTO")){
+    /* i v → cells[i]=umax(cells[i],v), leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long v = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long c = (unsigned long)vm->cells[(int)i];
+    unsigned long uv = (unsigned long)v;
+    long r = (long)((c > uv) ? c : uv);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 forward imm modular TOC: SADDMODTOCN · SSUBMODTOCN · SMULMODTOCN
    * (i + k m → cells[i] = (cells[i] op k) mod m; imm dual of SADDMODN after reverse modular TOC) */
   if (kw(&L->cur,"SADDMODTOCN")||kw(&L->cur,"SADDMODTOCIMM")||kw(&L->cur,"STACKADDMODTOCN")||
