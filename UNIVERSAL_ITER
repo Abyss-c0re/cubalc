@@ -6,11 +6,11 @@
 | **digit** | **7** (urandom) |
 | **version** | `1.14.17-universal` |
 | **pass/fail** | **489 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `e1378e6` → `origin/main` |
 | **ops** | `SDIV16N` / `SMOD16N` / `SMIN16N` |
 | **proof** | `programs/proof/474_sdiv16n_smin16n.cubalc` |
 
 ### Delta
 Digit-7 stack imm halfword-field div/mod/min: complete uint16 field ALU after SADD16N/SSUB16N/SMUL16N; div0/mod0 → 0.
 
-**Status:** 1.14.16→1.14.17-universal; suite green 489/0; push pending.
+**Status:** 1.14.16→1.14.17-universal; suite green 489/0; push ok.
