@@ -6,7 +6,7 @@
 | **digit** | **3** (urandom) |
 | **version** | `1.12.397-universal` |
 | **pass/fail** | **435 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `60e816c` → `origin/main` |
 | **ops** | `DCLIPS32` / `DROL32` / `DROR32` |
 | **proof** | `programs/proof/420_dclips32_drol32.cubalc` |
 
