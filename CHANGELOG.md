@@ -1,3 +1,18 @@
+## 1.14.90-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → stack+dual imm 8-bit field signed min/max (byte ladder of SMINS16N/DMINS16N after SLTS8N plane).
+
+### Language
+- `SMINS8N` — `field n → byte n = min_signed(int8(b), int8(field))`
+- `SMAXS8N` — `field n → byte n = max_signed(int8(b), int8(field))`
+- `DMINS8N` — `field n → byte n of each = min_signed(int8(b), int8(field))`
+- `DMAXS8N` — `field n → byte n of each = max_signed(int8(b), int8(field))`
+- Proof `547_smins8n_dmaxs8n.cubalc`
+
+### Prior
+See 1.14.89-universal.
+
 ## 1.14.89-universal — 2026-08-04
 
 ### Direction
