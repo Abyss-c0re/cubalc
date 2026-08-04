@@ -1,3 +1,17 @@
+## 1.14.1-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → cell fixed-width 4 nibble rotate/bitrev (nibble dual of ROL8/ROR8/BITREV8 after SEXT4 plane; complete 4/8/16/32 rotate ladder).
+
+### Language
+- `ROL4CELL`/`ROL4RANGE` — `lo hi k → rotl4(low4, k&3)`
+- `ROR4CELL`/`ROR4RANGE` — `lo hi k → rotr4(low4, k&3)`
+- `BITREV4CELL`/`BITREV4RANGE` — `lo hi → bitrev4(low4)`
+- Proof `458_rol4cell_bitrev4cell.cubalc`
+
+### Prior
+See 1.13.3-universal (p2p WIP at 1.14.0-p2p local only).
+
 ## 1.13.3-universal — 2026-08-04
 
 ### Direction

@@ -2106,6 +2106,77 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 cell fixed-width 4 nibble rotate/bitrev: ROL4CELL · ROR4CELL · BITREV4CELL
+   * (nibble dual of ROL8/ROR8/BITREV8 after SEXT4/ABS4/POPCNT4; complete 4/8/16/32 rotate ladder) */
+  if (kw(&L->cur,"ROL4CELL")||kw(&L->cur,"ROTL4CELL")||kw(&L->cur,"BROL4CELL")||
+      kw(&L->cur,"RANGEROL4")||kw(&L->cur,"ROL4RANGE")||kw(&L->cur,"CELLROTL4")||
+      kw(&L->cur,"ROLNIBCELL")){
+    /* ROL4CELL lo hi k — cells[i] = rotl4(low4 cells[i], k&3) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 3;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      long r = (kk == 0) ? (long)w : (long)((((w << kk) | (w >> (4 - kk))) & 0xFu));
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ROR4CELL")||kw(&L->cur,"ROTR4CELL")||kw(&L->cur,"BROR4CELL")||
+      kw(&L->cur,"RANGEROR4")||kw(&L->cur,"ROR4RANGE")||kw(&L->cur,"CELLROTR4")||
+      kw(&L->cur,"RORNIBCELL")){
+    /* ROR4CELL lo hi k — cells[i] = rotr4(low4 cells[i], k&3) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long k = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 3;
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      long r = (kk == 0) ? (long)w : (long)((((w >> kk) | (w << (4 - kk))) & 0xFu));
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"BITREV4CELL")||kw(&L->cur,"BREV4CELL")||kw(&L->cur,"REV4CELL")||
+      kw(&L->cur,"RANGEBITREV4")||kw(&L->cur,"BITREV4RANGE")||kw(&L->cur,"CELLBITREV4")||
+      kw(&L->cur,"BITREVNIBCELL")){
+    /* BITREV4CELL lo hi — cells[i] = bitrev4(low4 cells[i]) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFu;
+      unsigned int rv = 0;
+      for (int b = 0; b < 4; b++){
+        rv = (rv << 1) | (w & 1u);
+        w >>= 1;
+      }
+      vm->cells[(int)i] = (long)rv;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
