@@ -1,3 +1,17 @@
+## 1.12.426-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → cell fixed-width 8 bitwise (byte dual of AND32/OR32/XOR32 after inverted32 plane; start 8/32 bitwise ladder).
+
+### Language
+- `AND8CELL`/`AND8RANGE` — `lo hi mask → low8(cells[i]) & low8(mask)`
+- `OR8CELL`/`OR8RANGE` — `lo hi mask → low8(cells[i]) | low8(mask)`
+- `XOR8CELL`/`XOR8RANGE` — `lo hi mask → low8(cells[i]) ^ low8(mask)`
+- Proof `449_and8cell_xor8cell.cubalc`
+
+### Prior
+See 1.12.425-universal.
+
 ## 1.12.425-universal — 2026-08-04
 
 ### Direction

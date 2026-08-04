@@ -27128,6 +27128,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 cell fixed-width 8 bitwise: AND8CELL · OR8CELL · XOR8CELL
+   * (byte dual of AND32/OR32/XOR32 after inverted32 plane; complete 8/32 bitwise ladder start) */
+  if (kw(&L->cur,"AND8CELL")||kw(&L->cur,"CELLAND8")||kw(&L->cur,"BAND8CELL")||
+      kw(&L->cur,"RANGEAND8")||kw(&L->cur,"AND8RANGE")||kw(&L->cur,"UAND8CELL")){
+    /* AND8CELL lo hi mask — cells[i] = low8(cells[i]) & low8(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFu) & m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"OR8CELL")||kw(&L->cur,"CELLOR8")||kw(&L->cur,"BOR8CELL")||
+      kw(&L->cur,"RANGEOR8")||kw(&L->cur,"OR8RANGE")||kw(&L->cur,"UOR8CELL")){
+    /* OR8CELL lo hi mask — cells[i] = low8(cells[i]) | low8(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFu) | m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XOR8CELL")||kw(&L->cur,"CELLXOR8")||kw(&L->cur,"BXOR8CELL")||
+      kw(&L->cur,"RANGEXOR8")||kw(&L->cur,"XOR8RANGE")||kw(&L->cur,"UXOR8CELL")){
+    /* XOR8CELL lo hi mask — cells[i] = low8(cells[i]) ^ low8(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask & 0xFFu;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(((unsigned int)vm->cells[(int)i] & 0xFFu) ^ m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
