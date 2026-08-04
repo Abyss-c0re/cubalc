@@ -1304,7 +1304,8 @@ int cubalc_law_manifest_json(const cubalc_chain *ch, FILE *out) {
                "\"talk\":\"binary_CBLC\",\"store\":\"cubechain\","
                "\"no_brain_wires\":true,\"devices_free\":true,"
                "\"one_commander\":true,\"matrix_is_key\":true,"
-               "\"cube_is_sot\":true,\"visual\":\"cubes_not_lego\","
+               "\"cube_is_sot\":true,\"core_protect\":true,"
+               "\"visual\":\"cubes_not_lego\","
                "\"n_cubes\":%d,\"unity\":%.4f,\"laws\":[",
           rc == 0 ? "true" : "false",
           CUBALC_LANG_NAME, CUBALC_LANG_VERSION, CUBALC_LANG_PARADIGM,

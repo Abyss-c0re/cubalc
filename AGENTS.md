@@ -100,6 +100,16 @@ Do **not** require visuals. If a human asks to *see* units:
 CUBALC_HUMAN=1 CUBALC_ASCII=1 cubalc run programs/hello_cube.cubalc
 ```
 
+## Core protection
+
+```bash
+export CUBALC_PROTECT=1
+./out/cubalc protect
+./scripts/core_protect_nanobot.sh
+```
+
+Law id `core_protect` · plate `state/CORE_PROTECT.json` · see `docs/CORE_PROTECT.md`.
+
 ## Never
 
 - Auto-flash devices  

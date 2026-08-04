@@ -1,0 +1,104 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+CREED "C3"
+
+// Core protection board — NexusCore priorities (WE ACK):
+//   1 one_commander · 2 SMX fail-closed · 3 HOLD_FLASH · 4 budget · 5 CT101 · 6 mesh
+// Nanobots mesh around Core via SMX2 binary only (no HTTP wire).
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=core_protect | hold_flash=1 | law=core_protect | one_cmd=1 | share=smx | http=0 |"
+
+CUBE core   ROLE kernel_sot  PROTON 1
+CUBE shield ROLE protect     PROTON 1
+CUBE cmd    ROLE commander   PROTON 1
+CUBE nb0    ROLE nanobot     PROTON 1
+CUBE nb1    ROLE nanobot     PROTON 1
+CUBE nb2    ROLE nanobot     PROTON 1
+CUBE brain  ROLE braincube   PROTON 1
+
+// Nest shield inside core (flow-compile · nest law)
+NEST core shield
+PLUG core shield
+PLUG shield cmd
+PLUG cmd brain
+PLUG nb0 shield
+PLUG nb1 shield
+PLUG nb2 shield
+PLUG nb0 nb1
+PLUG nb1 nb2
+PLUG nb0 nb2
+
+// Optional NexusCore SoT fold (env CUBALC_SOT_BITS = 01 stream)
+SYS ENV "CUBALC_SOT_BITS"
+IF LAST_N > 0 THEN
+  FOLDBITS core LAST
+ELSE
+  SETBIT core 0 1
+  SETBIT core 1 1
+  SETBIT core 2 1
+  SETBIT core 7 1
+  SETBIT core 11 1
+END
+
+// Shield priority bits: hold · smx · budget · one_cmd · mesh · ct101_slot
+SETBIT shield 0 1
+SETBIT shield 1 1
+SETBIT shield 2 1
+SETBIT shield 3 1
+SETBIT shield 4 1
+SETBIT cmd 9 1
+
+// Nanobot identity bits (abstract peers — no device hardcode)
+SETBIT nb0 4 1
+SETBIT nb0 8 1
+SETBIT nb1 5 1
+SETBIT nb1 9 1
+SETBIT nb2 6 1
+SETBIT nb2 10 1
+
+IMPULSE core 1
+IMPULSE shield 1
+IMPULSE cmd 1
+IMPULSE nb0 1
+IMPULSE nb1 1
+IMPULSE nb2 1
+FLOW 4
+
+// Priority 2: SMX key fail-closed path (demo key only if env unset in lab)
+SMX KEY
+
+// Priority 6: nanobot mesh + shield/core talk (in-process SMX)
+SMX EXCHANGE nb0 nb1
+SMX EXCHANGE nb1 nb2
+SMX EXCHANGE nb0 nb2
+SMX EXCHANGE nb0 shield
+SMX EXCHANGE nb1 shield
+SMX EXCHANGE nb2 shield
+SMX EXCHANGE shield core
+SMX EXCHANGE core cmd
+
+// Priority 5: CT101 protect flag from host doctor (env)
+SYS ENV "CUBALC_CT101_PROTECT"
+IF LAST_N > 0 THEN
+  SETDIGIT cmd 1
+  SETBIT shield 5 1
+ELSE
+  SETDIGIT cmd 0
+END
+
+IMPULSE brain 1
+DECIDE brain
+HARMONY
+COMPARE core shield
+
+PRINT "core_protect" CUBES SMX_OK SMX_TALKS SMX_N SET(core) SET(shield) DIGIT(cmd) DIGIT(brain) HARMONY UNITY COMPAT(core,shield) NESTED(shield)
+
+ASSERT CUBES >= 7
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 8
+ASSERT SET(core) >= 1
+ASSERT SET(shield) >= 4
+ASSERT UNITY >= 50
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT NESTED(shield) == 1

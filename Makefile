@@ -91,6 +91,7 @@ modular-check:
 test: all
 	@bash tests/lang_suite.sh
 	./$(BIN) smx-selftest
+	@./$(BIN) protect board || true
 	@if [ -f programs/proof/08_peer_fold.cubalc ]; then ./$(BIN) run programs/proof/08_peer_fold.cubalc; fi
 	@if [ -x tests/jit_suite.sh ]; then bash tests/jit_suite.sh; fi
 	@CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 ./$(BIN) peers || true

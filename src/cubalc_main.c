@@ -193,6 +193,10 @@ static int cmd_law_manifest(void) {
   return cubalc_law_manifest_json(&ch, stdout) == 0 ? 0 : 1;
 }
 
+
+
+
+
 /* Sync with peer hive mind: fold plate + run hive join program in-memory */
 static int cmd_sync(const char *plate) {
   static const char src[] =
@@ -857,6 +861,134 @@ static int cmd_smx_bus(int argc, char **argv) {
   
 }
 
+/* Core protection layer — NexusCore + nanobot mesh enforcement under Cube Laws.
+ * Priorities (WE ACK): one_cmd · SMX fail-closed · HOLD_FLASH · budget · CT101 · mesh
+ */
+static int cmd_protect(int argc, char **argv) {
+  const char *mode = (argc > 2) ? argv[2] : "all";
+  char dir[512], plate_path[640];
+  int fail = 0, checks = 0;
+  cubalc_run_result rr;
+  const char *prog = "programs/protect/core_protect.cubalc";
+  (void)argv;
+
+  state_dir(dir, sizeof dir);
+  ensure_dir(dir);
+  snprintf(plate_path, sizeof plate_path, "%s/CORE_PROTECT.json", dir);
+
+  /* always set protect host mode for this process subtree semantics */
+  setenv("CUBALC_PROTECT", "1", 0);
+
+  printf("# CubalC core-protect mode=%s version=%s\n", mode, CUBALC_LANG_VERSION);
+
+  if (strcmp(mode, "all") == 0 || strcmp(mode, "law") == 0) {
+    checks++;
+    if (cmd_law_manifest() != 0) {
+      printf("{\"ok\":false,\"check\":\"law\"}\n");
+      fail++;
+    } else {
+      printf("{\"ok\":true,\"check\":\"law\",\"law\":\"core_protect\"}\n");
+    }
+    if (strcmp(mode, "law") == 0)
+      return fail ? 1 : 0;
+  }
+
+  if (strcmp(mode, "all") == 0 || strcmp(mode, "smx") == 0) {
+    checks++;
+    if (cmd_smx_selftest() != 0) {
+      printf("{\"ok\":false,\"check\":\"smx-selftest\"}\n");
+      fail++;
+    } else {
+      printf("{\"ok\":true,\"check\":\"smx-selftest\"}\n");
+    }
+    if (strcmp(mode, "smx") == 0)
+      return fail ? 1 : 0;
+  }
+
+  if (strcmp(mode, "all") == 0 || strcmp(mode, "bus") == 0 ||
+      strcmp(mode, "mesh") == 0) {
+    checks++;
+    {
+      char *av[] = { "cubalc", "smx-bus", "prove", NULL };
+      if (cmd_smx_bus(3, av) != 0) {
+        printf("{\"ok\":false,\"check\":\"smx-bus-prove\"}\n");
+        fail++;
+      } else {
+        printf("{\"ok\":true,\"check\":\"smx-bus-prove\",\"http\":false}\n");
+      }
+    }
+    if (strcmp(mode, "bus") == 0 || strcmp(mode, "mesh") == 0)
+      return fail ? 1 : 0;
+  }
+
+  if (strcmp(mode, "all") == 0 || strcmp(mode, "board") == 0 ||
+      strcmp(mode, "run") == 0) {
+    checks++;
+    memset(&rr, 0, sizeof rr);
+    if (cubalc_run_file(prog, &rr, stdout) != 0 || !rr.ok) {
+      printf("{\"ok\":false,\"check\":\"core_protect_board\",\"err\":\"%s\","
+             "\"asserts_fail\":%d}\n",
+             rr.err[0] ? rr.err : "fail", rr.asserts_fail);
+      fail++;
+    } else {
+      printf("{\"ok\":true,\"check\":\"core_protect_board\",\"asserts_ok\":%d,"
+             "\"n\":%d,\"unity\":%.3f}\n",
+             rr.asserts_ok, rr.n_cubes, rr.unity);
+    }
+  }
+
+  /* write protect plate for NexusCore / nanobot hosts */
+  {
+    FILE *f = fopen(plate_path, "w");
+    if (f) {
+      fprintf(f,
+        "{\n"
+        "  \"schema\": \"cubalc.core_protect.v1\",\n"
+        "  \"ok\": %s,\n"
+        "  \"to\": \"NexusCore\",\n"
+        "  \"from\": \"cubalc\",\n"
+        "  \"version\": \"%s\",\n"
+        "  \"language\": \"CubalC\",\n"
+        "  \"tok\": \"C3\",\n"
+        "  \"hold_flash\": %d,\n"
+        "  \"budget\": %d,\n"
+        "  \"share\": \"smx\",\n"
+        "  \"http_required\": false,\n"
+        "  \"protect_mode\": true,\n"
+        "  \"law\": \"core_protect\",\n"
+        "  \"priorities\": [\n"
+        "    \"one_commander\",\n"
+        "    \"smx_fail_closed\",\n"
+        "    \"hold_flash\",\n"
+        "    \"budget\",\n"
+        "    \"ct101\",\n"
+        "    \"nanobot_mesh\"\n"
+        "  ],\n"
+        "  \"checks\": %d,\n"
+        "  \"fail\": %d,\n"
+        "  \"program\": \"%s\",\n"
+        "  \"note\": \"Core stability under Cube Laws · nanobot SMX mesh\"\n"
+        "}\n",
+        fail == 0 ? "true" : "false",
+        CUBALC_LANG_VERSION,
+        CUBALC_HOLD_FLASH,
+        CUBALC_BUDGET,
+        checks,
+        fail,
+        prog);
+      fclose(f);
+    }
+  }
+
+  printf("{\"ok\":%s,\"cmd\":\"protect\",\"mode\":\"%s\",\"checks\":%d,"
+         "\"fail\":%d,\"plate\":\"%s\",\"version\":\"%s\","
+         "\"law\":\"core_protect\",\"http\":false}\n",
+         fail == 0 ? "true" : "false", mode, checks, fail, plate_path,
+         CUBALC_LANG_VERSION);
+  return fail == 0 ? 0 : 1;
+}
+
+
 /* ── CubalC Showcase — multi-act COP demonstration ── */
 static void showcase_root(char *out, size_t n) {
   const char *e = getenv("CUBALC_ROOT");
@@ -1082,6 +1214,9 @@ int main(int argc, char **argv) {
     return cmd_smx_bus(argc, argv);
   if (strcmp(cmd, "law") == 0 || strcmp(cmd, "manifest") == 0)
     return cmd_law_manifest();
+  if (strcmp(cmd, "protect") == 0 || strcmp(cmd, "core-protect") == 0 ||
+      strcmp(cmd, "core-guard") == 0 || strcmp(cmd, "guard") == 0)
+    return cmd_protect(argc, argv);
   if (strcmp(cmd, "sync") == 0 || strcmp(cmd, "hive") == 0)
     return cmd_sync(argc > 2 ? argv[2] : NULL);
   if (strcmp(cmd, "boot") == 0 || strcmp(cmd, "os") == 0) {

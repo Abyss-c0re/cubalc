@@ -103,6 +103,23 @@ Full card: [`docs/LANGUAGE.md`](docs/LANGUAGE.md).
 
 ---
 
+## Core protection (NexusCore + nanobots)
+
+Enforces Core stability under Cube Laws (HOLD_FLASH · SMX fail-closed · budget · one commander · CT101 · nanobot mesh).
+
+```bash
+export CUBALC_PROTECT=1
+export CUBALC_SMX_KEY="$(openssl rand -hex 32)"
+./out/cubalc protect              # law + smx + bus + board → state/CORE_PROTECT.json
+./out/cubalc run programs/proof/11_core_protect.cubalc
+./scripts/core_protect_nanobot.sh # full mesh proof
+```
+
+Host protect mode (`CUBALC_PROTECT=1`): SPAWN only `nanobot`/`cubalc`; HTTP loopback-only.  
+Detail: [`docs/CORE_PROTECT.md`](docs/CORE_PROTECT.md).
+
+---
+
 ## P2P networking (SMX2)
 
 Peers exchange **State Matrix frames**, not HTTP JSON.

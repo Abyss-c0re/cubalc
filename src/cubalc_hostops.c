@@ -15,11 +15,22 @@ static void r_clear(cubalc_host_result *r) {
   memset(r, 0, sizeof *r);
 }
 
+/* Core protect: CUBALC_PROTECT=1 tightens host edge (fail-closed for Core stability). */
+static int protect_mode(void) {
+  const char *p = getenv("CUBALC_PROTECT");
+  return (p && p[0] && p[0] != '0') ? 1 : 0;
+}
+
 static int url_allowed(const char *url) {
   if (!url) return 0;
   if (strncmp(url, "http://127.0.0.1", 16) == 0) return 1;
   if (strncmp(url, "http://localhost", 16) == 0) return 1;
   if (strncmp(url, "http://[::1]", 12) == 0) return 1;
+  /* protect mode: loopback only unless explicit protect-http override */
+  if (protect_mode()) {
+    const char *ph = getenv("CUBALC_PROTECT_HTTP");
+    if (!(ph && ph[0] && ph[0] != '0')) return 0;
+  }
   if (strncmp(url, "https://api.x.ai/", 17) == 0) return 1;
   const char *extra = getenv("CUBALC_HTTP_ALLOW");
   if (extra && extra[0] && strstr(url, extra)) return 1;
@@ -47,9 +58,20 @@ static int bin_allowed(const char *bin) {
   const char *base = strrchr(bin, '/');
   base = base ? base + 1 : bin;
   /* core hive tools only — extend via CUBALC_SPAWN_ALLOW (no device hardcode) */
+  /* protect mode: nanobot + cubalc only (curl needs CUBALC_PROTECT_HTTP=1) */
   if (strcmp(base, "nanobot") == 0) return 1;
   if (strcmp(base, "cubalc") == 0) return 1;
-  if (strcmp(base, "curl") == 0) return 1; /* internal HTTP helper */
+  if (strcmp(base, "curl") == 0) {
+    if (protect_mode()) {
+      const char *ph = getenv("CUBALC_PROTECT_HTTP");
+      if (!(ph && ph[0] && ph[0] != '0')) return 0;
+    }
+    return 1; /* internal HTTP helper */
+  }
+  if (protect_mode()) {
+    /* fail-closed: no extra SPAWN basenames under Core protect */
+    return 0;
+  }
   const char *extra = getenv("CUBALC_SPAWN_ALLOW");
   if (base_in_allowlist(base, extra)) return 1;
   /* absolute path only if basename already allowed */

@@ -1,0 +1,54 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Unit proof: Core protection surface (language-only, no devices)
+GENESIS "NEXUS_COORD v1 | from=proof | type=core_protect | hold_flash=1 |"
+
+CUBE core   ROLE kernel_sot PROTON 1
+CUBE shield ROLE protect    PROTON 1
+CUBE cmd    ROLE commander  PROTON 1
+CUBE nb0    ROLE nanobot    PROTON 1
+CUBE nb1    ROLE nanobot    PROTON 1
+CUBE brain  ROLE braincube  PROTON 1
+
+NEST core shield
+PLUG core shield
+PLUG shield cmd
+PLUG cmd brain
+PLUG nb0 shield
+PLUG nb1 shield
+PLUG nb0 nb1
+
+SETBIT core 0 1
+SETBIT core 3 1
+SETBIT shield 0 1
+SETBIT shield 1 1
+SETBIT shield 2 1
+SETBIT shield 3 1
+SETBIT cmd 9 1
+SETBIT nb0 4 1
+SETBIT nb1 5 1
+
+IMPULSE core 1
+IMPULSE shield 1
+IMPULSE nb0 1
+IMPULSE nb1 1
+FLOW 3
+
+SMX KEY
+SMX EXCHANGE nb0 nb1
+SMX EXCHANGE nb0 shield
+SMX EXCHANGE shield core
+
+DECIDE brain
+HARMONY
+
+PRINT "protect_proof" CUBES SMX_OK SMX_TALKS SET(core) SET(shield) DIGIT(brain) UNITY
+ASSERT CUBES >= 6
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 4
+ASSERT SET(core) >= 2
+ASSERT SET(shield) >= 4
+ASSERT NESTED(shield) == 1
+ASSERT UNITY >= 50

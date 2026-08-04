@@ -1,0 +1,55 @@
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+// Single nanobot guard peer for Core protect mesh (serve or dial via env)
+//   CUBALC_P2P_SERVE=1 CUBALC_P2P_BIND=host:port  → SERVE
+//   CUBALC_P2P_PEER=host:port                     → DIAL
+GENESIS "NEXUS_COORD v1 | from=nanobot_guard | type=protect_peer | hold_flash=1 | share=smx | http=0 |"
+
+CUBE self   ROLE nanobot PROTON 1
+CUBE remote ROLE protect PROTON 1
+CUBE core   ROLE kernel_sot PROTON 1
+CUBE brain  ROLE braincube PROTON 1
+
+PLUG self remote
+PLUG remote core
+PLUG core brain
+
+SETBIT self 0 1
+SETBIT self 2 1
+SETBIT self 4 1
+SETBIT self 6 1
+SETBIT core 1 1
+SETBIT core 3 1
+IMPULSE self 1
+IMPULSE core 1
+FLOW 2
+
+SMX KEY
+
+SYS ENV "CUBALC_P2P_SERVE"
+IF LAST_N > 0 THEN
+  SYS ENV "CUBALC_P2P_BIND"
+  IF LAST_N > 0 THEN
+    SMX SERVE self remote LAST
+  ELSE
+    SMX SERVE self remote "127.0.0.1:17780"
+  END
+ELSE
+  SYS ENV "CUBALC_P2P_PEER"
+  IF LAST_N > 0 THEN
+    SMX DIAL self remote LAST
+  ELSE
+    SMX DIAL self remote "127.0.0.1:17780"
+  END
+END
+
+IMPULSE brain 1
+DECIDE brain
+
+PRINT "nanobot_guard" CUBES SMX_OK SMX_TALKS SMX_N SET(self) SET(remote) DIGIT(brain) COMPAT(self,remote) UNITY
+ASSERT CUBES >= 4
+ASSERT SMX_OK == 1
+ASSERT SMX_TALKS >= 1
+ASSERT SET(self) >= 1
