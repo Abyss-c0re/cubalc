@@ -2,21 +2,25 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-04T06:19:53+0300",
-  "iter": 464,
-  "algocube_digit": 5,
-  "version": "1.12.371-universal",
-  "pass": 409,
+  "ts": "2026-08-04T09:41:00+0300",
+  "iter": 475,
+  "algocube_digit": 8,
+  "version": "1.12.402-universal",
+  "pass": 440,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
+  "ops": [
+    "SBSWAP16TOC",
+    "SBSWAP64TOC",
+    "SBITREV16TOC"
+  ],
+  "proof": "programs/proof/425_sbswap16toc_sbitrev16toc.cubalc",
   "law": [
     "pure_science",
     "evolve",
     "flow_compile"
-  ],
-  "ops": "SANDMNTOC SORMNTOC SXORMNTOC",
-  "proof": "programs/proof/394_sandmntoc_sxormntoc.cubalc"
+  ]
 }

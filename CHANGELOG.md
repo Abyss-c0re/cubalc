@@ -1,3 +1,17 @@
+## 1.12.402-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack↔cell endian/bitrev width ladder TOC (complete bswap 16/32/64 + bitrev 16/32 into cell).
+
+### Language
+- `SBSWAP16TOC`/`BSWAP16TOC` — stack `i → cells[i] = bswap16(low16 cells[i])`
+- `SBSWAP64TOC`/`BSWAP64TOC` — stack `i → cells[i] = bswap64(cells[i])`
+- `SBITREV16TOC`/`SREV16TOC` — stack `i → cells[i] = bitrev16(low16 cells[i])`
+- Proof `425_sbswap16toc_sbitrev16toc.cubalc`
+
+### Prior
+See 1.12.401-universal.
+
 ## 1.12.401-universal — 2026-08-04
 
 ### Direction

@@ -10127,6 +10127,64 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 stack↔cell endian/bitrev width ladder TOC: SBSWAP16TOC · SBSWAP64TOC · SBITREV16TOC
+   * (complete bswap 16/32/64 + bitrev 16/32 into cell after SPARITY/SBSWAP/SBITREV32 TOC) */
+  if (kw(&L->cur,"SBSWAP16TOC")||kw(&L->cur,"STACKBSWAP16TOC")||kw(&L->cur,"SCELLBSWAP16")||
+      kw(&L->cur,"BSWAP16TOC")||kw(&L->cur,"SBSWAP16AT")||kw(&L->cur,"SBS16TOC")){
+    /* i → cells[i]=bswap16(low16 cells[i]), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFFFu;
+    w = ((w & 0x00FFu) << 8) | ((w & 0xFF00u) >> 8);
+    long r = (long)w;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBSWAP64TOC")||kw(&L->cur,"STACKBSWAP64TOC")||kw(&L->cur,"SCELLBSWAP64")||
+      kw(&L->cur,"BSWAP64TOC")||kw(&L->cur,"SBSWAP64AT")||kw(&L->cur,"SBS64TOC")){
+    /* i → cells[i]=bswap64(cells[i]), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned long w = (unsigned long)vm->cells[(int)i];
+    w = ((w & 0x00000000000000FFul) << 56) | ((w & 0x000000000000FF00ul) << 40) |
+        ((w & 0x0000000000FF0000ul) << 24) | ((w & 0x00000000FF000000ul) << 8) |
+        ((w & 0x000000FF00000000ul) >> 8) | ((w & 0x0000FF0000000000ul) >> 24) |
+        ((w & 0x00FF000000000000ul) >> 40) | ((w & 0xFF00000000000000ul) >> 56);
+    long r = (long)w;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBITREV16TOC")||kw(&L->cur,"SREV16TOC")||kw(&L->cur,"STACKBITREV16TOC")||
+      kw(&L->cur,"SCELLBITREV16")||kw(&L->cur,"BITREV16TOC")||kw(&L->cur,"SBITREV16AT")||
+      kw(&L->cur,"SREVBITSTOC16")){
+    /* i → cells[i]=bitrev16(low16 cells[i]), leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    unsigned int w = (unsigned int)vm->cells[(int)i] & 0xFFFFu;
+    unsigned int rv = 0;
+    for (int b = 0; b < 16; b++){
+      rv = (rv << 1) | (w & 1u);
+      w >>= 1;
+    }
+    long r = (long)rv;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 imm compare TOC: SEQTOCN · SNETOCN · SLTTOCN · SGTTOCN
    * (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN/SNEN/SLTN/SGTN) */
   if (kw(&L->cur,"SEQTOCN")||kw(&L->cur,"SEQTOCIMM")||kw(&L->cur,"STACKEQTOCN")||
