@@ -1,3 +1,17 @@
+## 1.12.407-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell fixed-width rotate32 + bitrev plane (range dual of SROTL32/SROTR32/SBITREV32 after SHL32CELL).
+
+### Language
+- `ROL32CELL`/`ROL32RANGE` — `lo hi k → cells[i] = rotl32(low32 cells[i], k&31)`
+- `ROR32CELL`/`ROR32RANGE` — `lo hi k → cells[i] = rotr32(low32 cells[i], k&31)`
+- `BITREV32CELL`/`BREV32CELL` — `lo hi → cells[i] = bitrev32(low32 cells[i])`
+- Proof `430_rol32cell_bitrev32cell.cubalc`
+
+### Prior
+See 1.12.406-universal.
+
 ## 1.12.406-universal — 2026-08-04
 
 ### Direction
