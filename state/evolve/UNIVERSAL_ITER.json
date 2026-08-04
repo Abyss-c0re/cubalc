@@ -2,26 +2,26 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_loop",
-  "ts": "2026-08-04T09:56:07+0300",
-  "iter": 479,
+  "ts": "2026-08-04T10:04:01+0300",
+  "iter": 481,
   "algocube_digit": 0,
-  "version": "1.12.404-universal",
-  "pass": 442,
+  "version": "1.12.405-universal",
+  "pass": 443,
   "fail": 0,
   "ok": true,
   "interval_sec": 360,
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "ops": [
-    "SROTL32TOC",
-    "SROTR32TOC",
-    "SROTL32TOCN",
-    "SROTR32TOCN"
+    "SSHL32TOCN",
+    "SSHR32TOCN",
+    "SSAR32TOCN"
   ],
-  "proof": "programs/proof/427_srotl32toc_srotr32tocn.cubalc",
+  "proof": "programs/proof/428_sshl32tocn_ssar32tocn.cubalc",
   "law": [
     "pure_science",
     "evolve",
     "flow_compile"
-  ]
+  ],
+  "note": "tree restored from evolve mass-delete before commit"
 }

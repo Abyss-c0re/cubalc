@@ -10326,6 +10326,65 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-0 foundation imm fixed-width shift32 TOC: SSHL32TOCN · SSHR32TOCN · SSAR32TOCN
+   * (imm dual of SSHL32TOC/SSHR32TOC/SSAR32TOC; peer of SROTL32TOCN after rotate32 plane) */
+  if (kw(&L->cur,"SSHL32TOCN")||kw(&L->cur,"STACKSHL32TOCN")||kw(&L->cur,"SCELLSHL32N")||
+      kw(&L->cur,"SHL32TOCN")||kw(&L->cur,"SSHL32TOCIMM")||kw(&L->cur,"S32SHLTOCN")){
+    /* i + k → cells[i] = (uint32)cells[i] << k (k>=32 → 0), leave result */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    long r = (kk >= 32) ? 0L : (long)(w << kk);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSHR32TOCN")||kw(&L->cur,"STACKSHR32TOCN")||kw(&L->cur,"SCELLSHR32N")||
+      kw(&L->cur,"SHR32TOCN")||kw(&L->cur,"SSHR32TOCIMM")||kw(&L->cur,"S32SHRTOCN")){
+    /* i + k → cells[i] = (uint32)cells[i] >> k (k>=32 → 0), leave result */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    unsigned int w = (unsigned int)vm->cells[(int)i];
+    long r = (kk >= 32) ? 0L : (long)(w >> kk);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSAR32TOCN")||kw(&L->cur,"SASHR32TOCN")||kw(&L->cur,"STACKSAR32TOCN")||
+      kw(&L->cur,"SAR32TOCN")||kw(&L->cur,"SSAR32TOCIMM")||kw(&L->cur,"SCELLSAR32N")||
+      kw(&L->cur,"S32SARTOCN")||kw(&L->cur,"ASHR32TOCN")){
+    /* i + k → cells[i] = arithmetic right shift low32 (k>=32 → all sign), leave result */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    long va = (long)(int)(unsigned int)vm->cells[(int)i];
+    long r;
+    if (kk >= 32) r = (va < 0) ? -1L : 0L;
+    else r = va >> kk;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 imm compare TOC: SEQTOCN · SNETOCN · SLTTOCN · SGTTOCN
    * (imm dual of SEQTOC/SNETOC/SLTTOC/SGTTOC; peer of SEQN/SNEN/SLTN/SGTN) */
   if (kw(&L->cur,"SEQTOCN")||kw(&L->cur,"SEQTOCIMM")||kw(&L->cur,"STACKEQTOCN")||

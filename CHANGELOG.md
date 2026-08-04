@@ -1,3 +1,17 @@
+## 1.12.405-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → foundation imm fixed-width shift32 TOC (imm dual of SSHL32TOC plane; peer of SROTL32TOCN).
+
+### Language
+- `SSHL32TOCN`/`SHL32TOCN` — stack `i + imm k → cells[i] = (uint32)cells[i] ≪ k` (k≥32 → 0)
+- `SSHR32TOCN`/`SHR32TOCN` — stack `i + imm k → logical ≫ low32`
+- `SSAR32TOCN`/`SAR32TOCN` — stack `i + imm k → arithmetic ≫ low32` (sign-extend)
+- Proof `428_sshl32tocn_ssar32tocn.cubalc`
+
+### Prior
+See 1.12.404-universal.
+
 ## 1.12.404-universal — 2026-08-04
 
 ### Direction
