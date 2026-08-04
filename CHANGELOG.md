@@ -1,3 +1,17 @@
+## 1.12.379-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack dual LE halfword field TOC (stack dual of SWORDTOCN plane after SBYTETOC).
+
+### Language
+- `SWORDTOC`/`WORDTOC` — stack `i n → cells[i] = LE halfword n of cells[i]` (n 0..3)
+- `SSET16TOC`/`SET16TOC` — stack `i field n → deposit low 16 bits of field into LE halfword n`
+- `SCLR16TOC`/`CLR16TOC` — stack `i n → clear LE halfword n of cells[i]`
+- Proof `402_swordtoc_sclr16toc.cubalc`
+
+### Prior
+See 1.12.378-universal.
+
 ## 1.12.378-universal — 2026-08-04
 
 ### Direction

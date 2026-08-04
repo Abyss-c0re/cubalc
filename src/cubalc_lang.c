@@ -5330,6 +5330,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack dual halfword field TOC: SWORDTOC · SSET16TOC · SCLR16TOC
+   * (stack dual of SWORDTOCN/SSET16TOCN/SCLR16TOCN; LE 16-bit after SBYTETOC plane) */
+  if (kw(&L->cur,"SWORDTOC")||kw(&L->cur,"SGET16TOC")||kw(&L->cur,"STACKWORDTOC")||
+      kw(&L->cur,"WORDTOC")||kw(&L->cur,"SCELLWORDS")||kw(&L->cur,"SHALFWORDTOC")||
+      kw(&L->cur,"GET16TOC")||kw(&L->cur,"SWORDAT")){
+    /* i n → cells[i] = LE 16-bit halfword n of cells[i]; n clamped 0..3; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 16)) & 0xFFFFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSET16TOC")||kw(&L->cur,"STACKSET16TOC")||kw(&L->cur,"SET16TOC")||
+      kw(&L->cur,"SCELLSET16S")||kw(&L->cur,"SSETWORDTOC")||kw(&L->cur,"PUT16TOC")||
+      kw(&L->cur,"SSETHALFTOC")||kw(&L->cur,"SSET16AT")){
+    /* i field n → deposit low 16 bits of field into LE halfword n of cells[i] */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long field = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long shift = (unsigned long)(n * 16);
+    long r = (long)((base & ~(0xFFFFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLR16TOC")||kw(&L->cur,"STACKCLR16TOC")||kw(&L->cur,"CLR16TOC")||
+      kw(&L->cur,"SCELLCLR16S")||kw(&L->cur,"SCLRWORDTOC")||kw(&L->cur,"ZAP16TOC")||
+      kw(&L->cur,"SCLRHAFTOC")||kw(&L->cur,"SCLR16AT")){
+    /* i n → clear LE halfword n of cells[i]; n clamped 0..3; leave result */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long n = vm->stack[--vm->sp];
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 16);
+    long r = (long)(base & ~(0xFFFFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-2 imm ceil/floor div TOC: SDIVCEILTOCN · SDIVFLOORTOCN
    * (imm dual of SDIVCEILN/SDIVFLOORN into cell; complete SDIVTOCN plane with rounding modes) */
   if (kw(&L->cur,"SDIVCEILTOCN")||kw(&L->cur,"SCEILDIVTOCN")||kw(&L->cur,"STACKDIVCEILTOCN")||
