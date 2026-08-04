@@ -6107,6 +6107,59 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 signed clip 4/32 + imm signed8 TOC: SCLIPS4TOC · SCLIPS32TOC · SCLIPS8TOCN
+   * (complete signed clip 4/8/16/32 plane; imm dual of SCLIPS8TOC) */
+  if (kw(&L->cur,"SCLIPS4TOC")||kw(&L->cur,"CLIPS4TOC")||kw(&L->cur,"SSCLIP4TOC")||
+      kw(&L->cur,"STACKSCLIPS4TOC")||kw(&L->cur,"SCELLSCLIP4")||kw(&L->cur,"SCLIPNSTO")||
+      kw(&L->cur,"SCLIPS4AT")){
+    /* i → cells[i] = clamp to signed 4-bit [-8,7]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < -8L) r = -8L;
+    if (r > 7L) r = 7L;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIPS32TOC")||kw(&L->cur,"CLIPS32TOC")||kw(&L->cur,"SSCLIP32TOC")||
+      kw(&L->cur,"STACKSCLIPS32TOC")||kw(&L->cur,"SCELLSCLIP32")||kw(&L->cur,"SCLIPLSTO")||
+      kw(&L->cur,"SCLIPS32AT")||kw(&L->cur,"SCLIPSDTOC")){
+    /* i → cells[i] = clamp to signed 32-bit [INT32_MIN,INT32_MAX]; leave result */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[--vm->sp];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < (-2147483647L - 1)) r = (-2147483647L - 1);
+    if (r > 2147483647L) r = 2147483647L;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIPS8TOCN")||kw(&L->cur,"CLIPS8TOCN")||kw(&L->cur,"SSCLIP8TOCN")||
+      kw(&L->cur,"STACKSCLIPS8TOCN")||kw(&L->cur,"SCELLSCLIP8N")||kw(&L->cur,"SCLIPBSTON")||
+      kw(&L->cur,"SCLIPS8TOCIMM")){
+    /* i → cells[i] = clamp to signed 8-bit [-128,127]; leave result (i replaced) */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long r = vm->cells[(int)i];
+    if (r < -128L) r = -128L;
+    if (r > 127L) r = 127L;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 imm 32-bit field TOC: SGET32TOCN · SSET32TOCN · SCLR32TOCN
    * (imm dual of SGET32N/SSET32N/SCLR32N into cell; complete 4/8/16/32 field ladder) */
   if (kw(&L->cur,"SGET32TOCN")||kw(&L->cur,"SWORD32TOCN")||kw(&L->cur,"STACKGET32TOCN")||

@@ -1,3 +1,17 @@
+## 1.12.392-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → signed clip 4/32 + imm signed8 TOC (complete signed clip 4/8/16/32 plane; imm dual of SCLIPS8TOC).
+
+### Language
+- `SCLIPS4TOC`/`CLIPS4TOC` — stack `i → cells[i] = clamp to signed 4-bit [-8,7]`
+- `SCLIPS32TOC`/`CLIPS32TOC` — stack `i → cells[i] = clamp to signed 32-bit [INT32_MIN,INT32_MAX]`
+- `SCLIPS8TOCN`/`CLIPS8TOCN` — stack `i → cells[i] = clamp to signed 8-bit [-128,127]` (i replaced)
+- Proof `415_sclips4toc_sclips8tocn.cubalc`
+
+### Prior
+See 1.12.391-universal.
+
 ## 1.12.391-universal — 2026-08-04
 
 ### Direction
