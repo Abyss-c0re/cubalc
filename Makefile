@@ -1,57 +1,114 @@
-# CubalC — AI language runtime (agents first; humans optional)
-CC ?= gcc
-PREFIX ?= $(HOME)/.local
+# CubalC — pure C COP/flow runtime (multiplatform)
+# Law: cube is SoT · flow before compile · devices free · HTTP never required
+
+CC       ?= gcc
+PREFIX   ?= $(HOME)/.local
 USE_OPENCL ?= 0
-CFLAGS ?= -O2 -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200809L -Iinclude -march=native
-LDFLAGS ?= -lm -lpthread
-SRC = src/cubalc_main.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
-      src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_lang.c \
-      src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_async.c src/cubalc_isa.c \
-      src/cubalc_jit.c
-HDR = include/cubalc.h include/cubalc_law.h include/cubalc_algocube.h include/cubalc_evolve.h \
-      include/cubalc_smx.h include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_lang.h \
-      include/cubalc_translate.h include/cubalc_hostops.h include/cubalc_async.h \
-      include/cubalc_isa.h include/cubalc_jit.h
+BUILD    ?= out
+
+UNAME_S := $(shell uname -s 2>/dev/null || echo unknown)
+ifeq ($(OS),Windows_NT)
+  CUBALC_TARGET := windows
+  EXE := .exe
+  LDFLAGS_SYS := -lm
+else ifeq ($(UNAME_S),Darwin)
+  CUBALC_TARGET := darwin
+  EXE :=
+  LDFLAGS_SYS := -lm -lpthread
+else
+  CUBALC_TARGET := posix
+  EXE :=
+  LDFLAGS_SYS := -lm -lpthread
+endif
+
+CFLAGS_COMMON := -O2 -Wall -Wextra -std=c11 -Iinclude
+ifeq ($(CUBALC_CROSS),)
+  ifneq ($(CUBALC_TARGET),windows)
+    CFLAGS_COMMON += -march=native
+  endif
+endif
+CFLAGS  ?= $(CFLAGS_COMMON)
+LDFLAGS ?= $(LDFLAGS_SYS)
+
+CORE_SRC = \
+	src/cubalc_main.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
+	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c \
+	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_async.c \
+	src/cubalc_isa.c src/cubalc_jit.c
+
+LANG_SRC = \
+	src/lang/lang_core.c \
+	src/lang/lang_ops_core.c \
+	src/lang/lang_ops_toc.c \
+	src/lang/lang_ops_stack.c \
+	src/lang/lang_ops_dual.c \
+	src/lang/lang_ops_math.c \
+	src/lang/lang_ops_bit.c \
+	src/lang/lang_ops_cell.c \
+	src/lang/lang_ops_flow.c \
+	src/lang/lang_parse.c \
+	src/lang/lang_run.c
+
+SRC = $(CORE_SRC) $(LANG_SRC)
+
+HDR = \
+	include/cubalc.h include/cubalc_law.h include/cubalc_platform.h \
+	include/cubalc_algocube.h include/cubalc_evolve.h include/cubalc_smx.h \
+	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_lang.h \
+	include/lang/cubalc_lang_internal.h \
+	include/cubalc_translate.h include/cubalc_hostops.h include/cubalc_async.h \
+	include/cubalc_isa.h include/cubalc_jit.h
 
 ifeq ($(USE_OPENCL),1)
   CFLAGS += -DCUBALC_HAVE_OPENCL
-  LDFLAGS += -lOpenCL
+  ifeq ($(CUBALC_TARGET),darwin)
+    LDFLAGS += -framework OpenCL
+  else
+    LDFLAGS += -lOpenCL
+  endif
 endif
 
-.PHONY: all clean test law install human demo peers oversee jit-test evolve evolve-loop showcase science universal-iter
+BIN := $(BUILD)/cubalc$(EXE)
 
-all: out/cubalc
+.PHONY: all clean test law install human demo peers oversee jit-test \
+	evolve evolve-loop showcase science universal-iter modular-check
 
-out/cubalc: $(SRC) $(HDR)
-	@mkdir -p out
+all: $(BIN)
+
+$(BIN): $(SRC) $(HDR)
+	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $(SRC) $(LDFLAGS)
+	@echo "built $@ ($(CUBALC_TARGET))"
 
 clean:
-	rm -f out/cubalc
+	rm -f $(BIN)
+
+modular-check:
+	@test -f src/lang/lang_parse.c && test -f include/lang/cubalc_lang_internal.h
+	@echo modular-ok
 
 test: all
 	@bash tests/lang_suite.sh
-	./out/cubalc smx-selftest
-	@if [[ -f programs/proof/08_peer_fold.cubalc ]]; then ./out/cubalc run programs/proof/08_peer_fold.cubalc; fi
-	@if [[ -x tests/jit_suite.sh ]]; then bash tests/jit_suite.sh; fi
-	@CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 ./out/cubalc peers || true
-	@./out/cubalc evolve --once
+	./$(BIN) smx-selftest
+	@if [ -f programs/proof/08_peer_fold.cubalc ]; then ./$(BIN) run programs/proof/08_peer_fold.cubalc; fi
+	@if [ -x tests/jit_suite.sh ]; then bash tests/jit_suite.sh; fi
+	@CUBALC_PEER0_DIGIT=5 CUBALC_PEER1_DIGIT=3 ./$(BIN) peers || true
+	@./$(BIN) evolve --once
 
 law: all
-	./out/cubalc law
+	./$(BIN) law
 
-# Braincube solves · algocube optimizes — pure C continuous loop
 evolve: all
-	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./out/cubalc evolve --once
+	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./$(BIN) evolve --once
 
 evolve-loop: all
-	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./out/cubalc evolve-loop --hz $${EVOLVE_HZ:-5}
+	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./$(BIN) evolve-loop --hz $${EVOLVE_HZ:-5}
 
 peers oversee: all
 	@bash scripts/peer_fold.sh
 
 human: all
-	@CUBALC_HUMAN=1 CUBALC_ASCII=1 ./out/cubalc run programs/hello_cube.cubalc
+	@CUBALC_HUMAN=1 CUBALC_ASCII=1 ./$(BIN) run programs/hello_cube.cubalc
 
 demo: human
 	@echo "viz JSON: $$PWD/state/cubalc_viz_frame.json"
@@ -61,20 +118,18 @@ jit-test: all
 
 install: all
 	install -d $(PREFIX)/bin
-	install -m755 out/cubalc $(PREFIX)/bin/cubalc
-	@echo "installed $(PREFIX)/bin/cubalc"
+	install -m755 $(BIN) $(PREFIX)/bin/cubalc$(EXE)
+	@echo "installed $(PREFIX)/bin/cubalc$(EXE)"
 
 .PHONY: sync
 sync:
 	@ROOT=$$(cd $$(CURDIR)/../.. && pwd); bash "$$ROOT/scripts/sync_cubalc_product.sh"
 
 showcase: all
-	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./out/cubalc showcase
+	CUBALC_STATE=$${CUBALC_STATE:-$(CURDIR)/state} ./$(BIN) showcase
 
-# Pure-science language demos (not a school — exercises SCIENCE surface)
 science: all
 	@bash programs/science/run_demos.sh
 
-# One universal improve tick (build + proofs + science + iter plate)
 universal-iter: all
 	@bash scripts/universal_iter.sh

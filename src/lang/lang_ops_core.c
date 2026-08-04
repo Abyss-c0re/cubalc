@@ -1,0 +1,1154 @@
+/* CubalC lang — lang_ops_core.c (COP/flow · pure C · cube is SoT) */
+#include "lang/cubalc_lang_internal.h"
+
+int cubalc_lang_ops_core(VM *vm, Lex *L){
+  /* plane ops_core: L3495-4641 */
+  skip_nl(L);
+  if (L->cur.kind==TK_EOF) return 0;
+
+  /* free-standing look */
+  if (L->cur.kind==TK_QMARK){
+    lex_next(L);
+    do_show(vm, NULL); bump(vm); return 1;
+  }
+  /* free-standing flow dots: ... or ~~~ */
+  if (L->cur.kind==TK_TILDE){
+    int n=0;
+    while (L->cur.kind==TK_TILDE){ n++; lex_next(L); }
+    if (L->cur.kind==TK_NUM){ n=(int)L->cur.num; lex_next(L); }
+    if (n<1) n=1;
+    do_flow(vm,n); bump(vm); return 1;
+  }
+
+  /* primary: cube form */
+  if (L->cur.kind==TK_LBRACK)
+    return parse_cube(vm, L);
+
+  /* bare hold */
+  if (kw(&L->cur,"hold")){
+    lex_next(L);
+    vm->hold_flash=1; vm->ch.hold_flash=1; bump(vm); return 1;
+  }
+
+
+  /* ASYNC / AWAIT / PARALLEL — energy must flow (thread pool + GPU-shaped lanes) */
+  if (kw(&L->cur,"ASYNC")){
+    lex_next(L);
+    if (kw(&L->cur,"HTTP") || kw(&L->cur,"GET") || kw(&L->cur,"POST")){
+      char method[8]="GET";
+      if (kw(&L->cur,"POST")) snprintf(method,sizeof method,"POST");
+      if (kw(&L->cur,"HTTP")){
+        lex_next(L);
+        if (L->cur.kind==TK_IDENT||L->cur.kind==TK_STR){
+          snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);
+        }
+      } else lex_next(L);
+      if (L->cur.kind!=TK_STR){ fail(vm,"ASYNC HTTP method \"url\" …"); return -1; }
+      char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      char body[CUBALC_HOST_STR_MAX]; body[0]=0;
+      if (kw(&L->cur,"FILE")||kw(&L->cur,"FROM")){
+        lex_next(L);
+        if (L->cur.kind!=TK_STR){ fail(vm,"ASYNC HTTP FILE \"path\""); return -1; }
+        cubalc_host_result fr;
+        if (cubalc_host_read(L->cur.text,&fr)!=0){ fail(vm,fr.err[0]?fr.err:"body file"); return -1; }
+        snprintf(body,sizeof body,"%s",fr.str); lex_next(L);
+      } else if (L->cur.kind==TK_STR){
+        snprintf(body,sizeof body,"%s",L->cur.text); lex_next(L);
+      }
+      int timeout_ms = 120000;
+      if (L->cur.kind==TK_NUM){ timeout_ms=(int)L->cur.num; if(timeout_ms<1000) timeout_ms*=1000; lex_next(L); }
+      int jid = cubalc_async_http(method, url, body, timeout_ms);
+      if (jid < 0){ fail(vm,"ASYNC HTTP submit failed"); return -1; }
+      var_set_num(vm, "ASYNC_ID", jid);
+      var_set_num(vm, "JOB", jid);
+      if (vm->trace) fprintf(vm->trace, "# async job %d submitted (%s)\n", jid, cubalc_async_backend());
+      bump(vm); return 1;
+    }
+    fail(vm,"ASYNC HTTP …"); return -1;
+  }
+  if (kw(&L->cur,"AWAIT") || kw(&L->cur,"WAIT_JOB")){
+    lex_next(L);
+    if (kw(&L->cur,"ALL")){
+      lex_next(L);
+      int ms = 120000;
+      if (L->cur.kind==TK_NUM){ ms=(int)L->cur.num; lex_next(L); }
+      if (cubalc_async_await_all(ms)!=0){
+        if (vm->trace) fprintf(vm->trace,"# await all timeout\n");
+        var_set_num(vm,"OK",0);
+      } else var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    long jid = 0;
+    if (L->cur.kind==TK_NUM){ jid=L->cur.num; lex_next(L); }
+    else if (L->cur.kind==TK_IDENT){
+      /* AWAIT ASYNC_ID or AWAIT JOB */
+      for (int i=0;i<vm->n_vars;i++)
+        if (strcmp(vm->vars[i].name,L->cur.text)==0){ jid=vm->vars[i].val; break; }
+      if (jid==0 && (kw(&L->cur,"ASYNC_ID")||kw(&L->cur,"JOB"))){
+        for (int i=0;i<vm->n_vars;i++)
+          if (strcmp(vm->vars[i].name,"ASYNC_ID")==0 || strcmp(vm->vars[i].name,"JOB")==0)
+            { jid=vm->vars[i].val; break; }
+      }
+      lex_next(L);
+    } else {
+      for (int i=0;i<vm->n_vars;i++)
+        if (strcmp(vm->vars[i].name,"ASYNC_ID")==0){ jid=vm->vars[i].val; break; }
+    }
+    int ms = 180000;
+    if (L->cur.kind==TK_NUM){ ms=(int)L->cur.num; lex_next(L); }
+    cubalc_async_job job;
+    memset(&job,0,sizeof job);
+    if (cubalc_async_wait((int)jid, ms, &job)!=0){
+      var_set_num(vm,"OK",0);
+      var_set_num(vm,"HTTP_CODE",0);
+      if (vm->trace) fprintf(vm->trace,"# await timeout job %ld\n", jid);
+      bump(vm); return 1;
+    }
+    snprintf(vm->last_str,sizeof vm->last_str,"%s", job.str);
+    vm->last_code = job.code;
+    vm->last_n = job.n;
+    var_set_str(vm,"LAST", job.str);
+    var_set_num(vm,"HTTP_CODE", job.code);
+    var_set_num(vm,"LAST_N", job.n);
+    var_set_num(vm,"OK", job.ok?1:0);
+    if (vm->trace) fprintf(vm->trace,"# await job %ld → code %d ok=%d\n", jid, job.code, job.ok);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PARALLEL") || kw(&L->cur,"PAR")){
+    lex_next(L);
+    if (kw(&L->cur,"FLOW") || kw(&L->cur,"TICK")){
+      lex_next(L);
+      int n=8;
+      if (L->cur.kind==TK_NUM){ n=(int)L->cur.num; lex_next(L); }
+      ensure_world(vm);
+      cubalc_async_chain_flow(&vm->ch, n);
+      if (vm->trace) fprintf(vm->trace,"# parallel flow %d (%s)\n", n, cubalc_async_backend());
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"COMPAT") || kw(&L->cur,"MATRIX")){
+      lex_next(L);
+      ensure_world(vm);
+      float out[CUBALC_MAX_CUBES*CUBALC_MAX_CUBES];
+      int n = cubalc_async_compat_batch(&vm->ch, out, CUBALC_MAX_CUBES);
+      long avg = 0;
+      if (n>0){
+        double s=0; int c=0;
+        for (int i=0;i<n;i++) for (int j=0;j<n;j++){ s+=out[i*n+j]; c++; }
+        avg = c ? (long)lround(100.0*s/c) : 0;
+      }
+      var_set_num(vm,"COMPAT_AVG", avg);
+      var_set_num(vm,"LAST_N", n);
+      if (vm->trace) fprintf(vm->trace,"# parallel compat n=%d avg=%ld (%s)\n",
+                             n, avg, cubalc_async_backend());
+      bump(vm); return 1;
+    }
+    fail(vm,"PARALLEL FLOW|COMPAT"); return -1;
+  }
+
+  /* SYS host ops — C runtime (Grokium without Python) */
+  if (kw(&L->cur,"SYS") || kw(&L->cur,"HOST")){
+    lex_next(L);
+    skip_nl(L);
+    if (kw(&L->cur,"READ")){
+      lex_next(L);
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS READ \"path\"|LAST"); return -1;
+      }
+      cubalc_host_result hr;
+      if (cubalc_host_read(path, &hr)!=0){ fail(vm, hr.err[0]?hr.err:"SYS READ fail"); return -1; }
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n; vm->last_code = 0;
+      var_set_str(vm, "LAST", hr.str);
+      var_set_num(vm, "LAST_N", hr.n);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"WRITE")){
+      lex_next(L);
+      char path[512]; path[0]=0;
+      if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
+        else {
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && v->is_str) snprintf(path,sizeof path,"%s",v->sval);
+          else { fail(vm,"SYS WRITE path"); return -1; }
+        }
+        lex_next(L);
+      } else { fail(vm,"SYS WRITE \"path\" \"data\""); return -1; }
+      const char *data = "";
+      char dbuf[CUBALC_HOST_STR_MAX];
+      if (L->cur.kind==TK_STR){ snprintf(dbuf,sizeof dbuf,"%s",L->cur.text); data=dbuf; lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) data = v->sval;
+        else if (strcmp(L->cur.text,"LAST")==0) data = vm->last_str;
+        else data = "";
+        lex_next(L);
+      }
+      cubalc_host_result hr;
+      if (cubalc_host_write(path, data, &hr)!=0){ fail(vm, hr.err[0]?hr.err:"SYS WRITE fail"); return -1; }
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"ENV")){
+      lex_next(L);
+      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS ENV name"); return -1; }
+      cubalc_host_result hr;
+      cubalc_host_env(L->cur.text, &hr);
+      lex_next(L);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm, "LAST", hr.str);
+      var_set_num(vm, "LAST_N", hr.n);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"EXIST") || kw(&L->cur,"EXISTS")){
+      lex_next(L);
+      char path[512];
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS EXIST \"path\"|LAST"); return -1;
+      }
+      int e = cubalc_host_exists(path);
+      var_set_num(vm, "LAST_N", e);
+      var_set_num(vm, "EXIST", e);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"WHICH")){
+      lex_next(L);
+      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
+      cubalc_host_result hr;
+      if (cubalc_host_which(L->cur.text, &hr)!=0){
+        var_set_str(vm, "LAST", "");
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+      } else {
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", hr.str);
+        var_set_num(vm, "LAST_N", 1);
+      }
+      lex_next(L);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"HTTP") || kw(&L->cur,"GET") || kw(&L->cur,"POST")){
+      char method[8] = "GET";
+      if (kw(&L->cur,"POST")) snprintf(method,sizeof method,"POST");
+      if (kw(&L->cur,"HTTP")){ lex_next(L); if (L->cur.kind==TK_IDENT||L->cur.kind==TK_STR){ snprintf(method,sizeof method,"%s",L->cur.text); lex_next(L);} }
+      else lex_next(L);
+      if (L->cur.kind!=TK_STR){ fail(vm,"SYS HTTP method \"url\" [\"body\"|FILE \"path\"]"); return -1; }
+      char url[512]; snprintf(url,sizeof url,"%s",L->cur.text); lex_next(L);
+      char body[CUBALC_HOST_STR_MAX]; body[0]=0;
+      if (kw(&L->cur,"FILE") || kw(&L->cur,"FROM")){
+        lex_next(L);
+        if (L->cur.kind!=TK_STR){ fail(vm,"SYS HTTP ... FILE \"path\""); return -1; }
+        cubalc_host_result fr;
+        if (cubalc_host_read(L->cur.text, &fr)!=0){ fail(vm, fr.err[0]?fr.err:"body file"); return -1; }
+        snprintf(body,sizeof body,"%s", fr.str);
+        lex_next(L);
+      } else if (L->cur.kind==TK_STR){
+        snprintf(body,sizeof body,"%s",L->cur.text); lex_next(L);
+      }
+      cubalc_host_result hr;
+      int rc = cubalc_host_http(method, url, body, &hr);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_code = hr.code;
+      vm->last_n = hr.n;
+      var_set_str(vm, "LAST", hr.str);
+      var_set_num(vm, "HTTP_CODE", hr.code);
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", hr.ok ? 1 : 0);
+      if (rc!=0 && !hr.ok){
+        /* soft-fail for probe: OK=0 not fatal */
+        if (vm->trace) fprintf(vm->trace, "# http soft-fail %s\n", hr.err);
+      }
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"SPAWN")){
+      lex_next(L);
+      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS SPAWN bin [args…]"); return -1; }
+      char bin[512];
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        /* if not path, which */
+        if (strchr(L->cur.text, '/')) snprintf(bin,sizeof bin,"%s",L->cur.text);
+        else {
+          cubalc_host_result wh;
+          if (cubalc_host_which(L->cur.text, &wh)==0) snprintf(bin,sizeof bin,"%s",wh.str);
+          else snprintf(bin,sizeof bin,"%s",L->cur.text);
+        }
+        lex_next(L);
+      }
+      char *av[16]; char abuf[16][256]; int ac=0;
+      av[ac++] = bin;
+      while (ac < 15 && (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT || L->cur.kind==TK_NUM)){
+        snprintf(abuf[ac], sizeof abuf[ac], "%s", L->cur.text);
+        av[ac] = abuf[ac];
+        ac++; lex_next(L);
+      }
+      av[ac] = NULL;
+      cubalc_host_result hr;
+      cubalc_host_spawn(bin, av, &hr);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "EXIT", hr.code);
+      var_set_num(vm, "OK", hr.ok ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS JOIN a b → LAST = a/b */
+    if (kw(&L->cur,"JOIN") || kw(&L->cur,"PATH")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      if (L->cur.kind==TK_STR){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(a,sizeof a,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if (v&&v->is_str) snprintf(a,sizeof a,"%s",v->sval); }
+        lex_next(L);
+      }
+      if (L->cur.kind==TK_STR){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(b,sizeof b,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if (v&&v->is_str) snprintf(b,sizeof b,"%s",v->sval); }
+        lex_next(L);
+      }
+      cubalc_host_result hr;
+      if (cubalc_host_join(a,b,&hr)!=0){ fail(vm, hr.err[0]?hr.err:"JOIN"); return -1; }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      bump(vm); return 1;
+    }
+    /* SYS JSON "key" [from LAST] → LAST = field */
+    if (kw(&L->cur,"JSON") || kw(&L->cur,"JGET")){
+      lex_next(L);
+      char key[96]="content";
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        snprintf(key,sizeof key,"%s",L->cur.text); lex_next(L);
+      }
+      const char *src = vm->last_str;
+      cubalc_host_result hr;
+      if (cubalc_host_json_get(src, key, &hr)!=0){
+        var_set_str(vm,"LAST","");
+        var_set_num(vm,"LAST_N",0);
+        var_set_num(vm,"OK",0);
+        bump(vm); return 1;
+      }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    /* SYS CHAT "local"|"grok" ["model"] — msg from GROKIUM_MSG / CUBALC_MSG env */
+    if (kw(&L->cur,"CHAT") || kw(&L->cur,"ASK")){
+      lex_next(L);
+      char be[32]="local", model[128]="";
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        snprintf(be,sizeof be,"%s",L->cur.text); lex_next(L);
+      }
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        /* model or message string */
+        if (strcmp(L->cur.text,"local")==0 || strcmp(L->cur.text,"grok")==0 ||
+            strncmp(L->cur.text,"grok",4)==0 || strstr(L->cur.text,"/") ||
+            strstr(L->cur.text,".gguf")) {
+          snprintf(model,sizeof model,"%s",L->cur.text); lex_next(L);
+        }
+      }
+      char msg[2000]; msg[0]=0;
+      if (L->cur.kind==TK_STR){
+        snprintf(msg,sizeof msg,"%s",L->cur.text); lex_next(L);
+      } else {
+        const char *e = getenv("GROKIUM_MSG");
+        if (!e || !e[0]) e = getenv("CUBALC_MSG");
+        if (e) snprintf(msg,sizeof msg,"%s",e);
+      }
+      if (!msg[0]){ fail(vm,"SYS CHAT needs msg or GROKIUM_MSG"); return -1; }
+      if (!model[0]){
+        const char *em = getenv("GROKIUM_MODEL");
+        if (em && em[0]) snprintf(model,sizeof model,"%s",em);
+      }
+      const char *st = getenv("CUBALC_STATE");
+      cubalc_host_result hr;
+      if (cubalc_host_chat(be, model, msg, st, &hr)!=0){
+        var_set_str(vm,"LAST", hr.err[0]?hr.err:"chat fail");
+        var_set_num(vm,"OK",0);
+        var_set_num(vm,"HTTP_CODE", hr.code);
+        if (vm->trace) fprintf(vm->trace, "# chat fail %s\n", hr.err);
+        bump(vm); return 1; /* soft */
+      }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      vm->last_code = hr.code;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"HTTP_CODE",hr.code);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    /* SYS ARG n | SYS ARG "NAME" — CUBALC_ARG0… or named env */
+    if (kw(&L->cur,"ARG") || kw(&L->cur,"ARGV")){
+      lex_next(L);
+      char name[64];
+      if (L->cur.kind==TK_NUM){
+        snprintf(name,sizeof name,"CUBALC_ARG%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"MSG")==0) snprintf(name,sizeof name,"GROKIUM_MSG");
+        else if (strcmp(L->cur.text,"BACKEND")==0) snprintf(name,sizeof name,"GROKIUM_BACKEND");
+        else if (strcmp(L->cur.text,"MODEL")==0) snprintf(name,sizeof name,"GROKIUM_MODEL");
+        else snprintf(name,sizeof name,"%s", L->cur.text);
+        lex_next(L);
+      } else { fail(vm,"SYS ARG n|name"); return -1; }
+      cubalc_host_result hr;
+      cubalc_host_env(name, &hr);
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      bump(vm); return 1;
+    }
+    /* SYS NUM|INT — parse LAST as integer → LAST_N (CubeBrain digit fold) */
+    if (kw(&L->cur,"NUM") || kw(&L->cur,"INT") || kw(&L->cur,"ATOI")){
+      lex_next(L);
+      const char *s = vm->last_str;
+      if (L->cur.kind==TK_STR){ s = L->cur.text; lex_next(L); }
+      else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")!=0){
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) s = v->sval;
+        else if (v) { var_set_num(vm,"LAST_N", v->val); vm->last_n = v->val; bump(vm); return 1; }
+        lex_next(L);
+      } else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")==0){
+        lex_next(L);
+      }
+      long n = 0;
+      if (s && s[0]) n = strtol(s, NULL, 10);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
+      lex_next(L);
+      long n = 0;
+      if (L->cur.kind==TK_STR){ n = (long)strlen(L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0){ n = (long)strlen(vm->last_str); lex_next(L); }
+        else {
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && v->is_str) n = (long)strlen(v->sval);
+          else if (v) n = v->val;
+          lex_next(L);
+        }
+      } else n = (long)strlen(vm->last_str);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"TIME") || kw(&L->cur,"NOW") || kw(&L->cur,"EPOCH")){
+      lex_next(L);
+      long n = (long)time(NULL);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "TIME", n); var_set_num(vm, "OK", 1);
+      char buf[32]; snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf); snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
+      lex_next(L);
+      char path[512]="", data[4096]; data[0]=0;
+      if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(path,sizeof path,"%s",v->sval); }
+        lex_next(L);
+      }
+      if (L->cur.kind==TK_STR){ snprintf(data,sizeof data,"%s",L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0) snprintf(data,sizeof data,"%s",vm->last_str);
+        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(data,sizeof data,"%s",v->sval);
+               else if(v) snprintf(data,sizeof data,"%ld",v->val); }
+        lex_next(L);
+      }
+      FILE *af = fopen(path, "a");
+      if (!af){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      fputs(data, af); fputc('\n', af); fclose(af);
+      var_set_num(vm,"OK",1); bump(vm); return 1;
+    }
+    /* SYS HEX|FROMHEX — parse hex string (LAST default) → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"HEX") || kw(&L->cur,"FROMHEX") || kw(&L->cur,"XTOI")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      /* skip optional 0x / 0X prefix */
+      const char *p = s;
+      if (p[0]=='0' && (p[1]=='x' || p[1]=='X')) p += 2;
+      long n = 0;
+      if (p[0]) n = strtol(p, NULL, 16);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS TOHEX [expr] — format int as lowercase hex → LAST (I/O codec) */
+    if (kw(&L->cur,"TOHEX") || kw(&L->cur,"ITOH") || kw(&L->cur,"HEXOUT")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      char buf[40];
+      snprintf(buf, sizeof buf, "%lx", (unsigned long)n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ORD [str|LAST] — first byte code → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"ORD") || kw(&L->cur,"CODE") || kw(&L->cur,"BYTE")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long n = s[0] ? (long)(unsigned char)s[0] : 0;
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CHR [expr] — integer → single-byte string LAST  (I/O codec) */
+    if (kw(&L->cur,"CHR") || kw(&L->cur,"CHAR")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      n &= 0xFF;
+      char buf[4];
+      buf[0] = (char)(unsigned char)n;
+      buf[1] = 0;
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MID|SUBSTR|SLICE str start [len] — substring → LAST  (I/O codec) */
+    if (kw(&L->cur,"MID") || kw(&L->cur,"SUBSTR") || kw(&L->cur,"SLICE")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long start = 0, len = -1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT){
+        start = parse_expr(vm, L);
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+            L->cur.kind==TK_IDENT)
+          len = parse_expr(vm, L);
+      }
+      size_t slen = strlen(s);
+      if (start < 0) start = 0;
+      if ((size_t)start > slen) start = (long)slen;
+      size_t remain = slen - (size_t)start;
+      size_t take = (len < 0) ? remain : (size_t)len;
+      if (take > remain) take = remain;
+      char out[512];
+      if (take >= sizeof out) take = sizeof out - 1;
+      memcpy(out, s + (size_t)start, take);
+      out[take] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)take;
+      var_set_num(vm, "LAST_N", (long)take);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CAT|STRCAT a b — concatenate strings → LAST (digit-3 string plane) */
+    if (kw(&L->cur,"CAT") || kw(&L->cur,"STRCAT") || kw(&L->cur,"CONCAT")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
+      char out[1024];
+      snprintf(out, sizeof out, "%s%s", a, b);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FIND|INDEX hay needle — first index of needle in hay → LAST_N (-1 miss) */
+    if (kw(&L->cur,"FIND") || kw(&L->cur,"INDEX") || kw(&L->cur,"STRFIND")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long idx = -1;
+      if (needle[0]){
+        const char *p = strstr(hay, needle);
+        if (p) idx = (long)(p - hay);
+      } else if (hay[0]) idx = 0;
+      vm->last_n = idx;
+      var_set_num(vm, "LAST_N", idx);
+      var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
+    if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
+      long eq = (strcmp(a, b) == 0) ? 1 : 0;
+      vm->last_n = eq;
+      var_set_num(vm, "LAST_N", eq);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HAS|CONTAINS hay needle — 1 if needle in hay */
+    if (kw(&L->cur,"HAS") || kw(&L->cur,"CONTAINS") || kw(&L->cur,"INSTR")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long hit = (needle[0] && strstr(hay, needle)) ? 1 : 0;
+      if (!needle[0]) hit = 1;
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE) */
+    if (kw(&L->cur,"REVS") || kw(&L->cur,"STRREV") || kw(&L->cur,"SREV")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      size_t n = strlen(s);
+      char out[512];
+      if (n >= sizeof out) n = sizeof out - 1;
+      for (size_t i=0;i<n;i++) out[i] = s[n-1-i];
+      out[n] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UPPER|UCASE [str] — ASCII upper → LAST */
+    if (kw(&L->cur,"UPPER") || kw(&L->cur,"UCASE") || kw(&L->cur,"TOUPPER")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      for (char *p=s; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      var_set_str(vm, "LAST", s);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", s);
+      vm->last_n = (long)strlen(s);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LOWER|LCASE [str] — ASCII lower → LAST */
+    if (kw(&L->cur,"LOWER") || kw(&L->cur,"LCASE") || kw(&L->cur,"TOLOWER")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      for (char *p=s; *p; p++)
+        if (*p >= 'A' && *p <= 'Z') *p = (char)(*p - 'A' + 'a');
+      var_set_str(vm, "LAST", s);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", s);
+      vm->last_n = (long)strlen(s);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* digit-7 string plane: TRIM / STARTS / ENDS / REPLACE */
+    if (kw(&L->cur,"TRIM") || kw(&L->cur,"STRIP") ||
+        kw(&L->cur,"LTRIM") || kw(&L->cur,"RTRIM")){
+      char op[12]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      char *a = s, *b = s + strlen(s);
+      int do_l = (strcmp(op,"TRIM")==0 || strcmp(op,"STRIP")==0 || strcmp(op,"LTRIM")==0);
+      int do_r = (strcmp(op,"TRIM")==0 || strcmp(op,"STRIP")==0 || strcmp(op,"RTRIM")==0);
+      if (do_l) while (*a==' '||*a=='\t'||*a=='\n'||*a=='\r') a++;
+      if (do_r){
+        while (b > a && (b[-1]==' '||b[-1]=='\t'||b[-1]=='\n'||b[-1]=='\r')) b--;
+      }
+      char out[512];
+      size_t n = (size_t)(b - a);
+      if (n >= sizeof out) n = sizeof out - 1;
+      memcpy(out, a, n); out[n] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"STARTS") || kw(&L->cur,"STARTSWITH") || kw(&L->cur,"HASPREFIX") ||
+        kw(&L->cur,"PREFIX") ||
+        kw(&L->cur,"ENDS") || kw(&L->cur,"ENDSWITH") || kw(&L->cur,"HASSUFFIX") ||
+        kw(&L->cur,"SUFFIX")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      lex_next(L);
+      char hay[512]="", pref[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, pref, sizeof pref) != 0) pref[0]=0;
+      int is_end = (strcmp(op,"ENDS")==0 || strcmp(op,"ENDSWITH")==0 ||
+                    strcmp(op,"HASSUFFIX")==0 || strcmp(op,"SUFFIX")==0);
+      long hit = 0;
+      size_t hn = strlen(hay), pn = strlen(pref);
+      if (pn == 0) hit = 1;
+      else if (pn <= hn){
+        if (!is_end) hit = (strncmp(hay, pref, pn) == 0) ? 1 : 0;
+        else hit = (strcmp(hay + (hn - pn), pref) == 0) ? 1 : 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"REPLACE") || kw(&L->cur,"SUBST") || kw(&L->cur,"STRREP")){
+      /* SYS REPLACE hay old new — first occurrence; LAST = result; LAST_N = 1 if replaced */
+      lex_next(L);
+      char hay[512]="", olds[256]="", news[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0]=0;
+      if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0]=0;
+      char out[512];
+      long did = 0;
+      if (olds[0] == 0){
+        snprintf(out, sizeof out, "%s", hay);
+      } else {
+        char *p = strstr(hay, olds);
+        if (!p){
+          snprintf(out, sizeof out, "%s", hay);
+        } else {
+          size_t pre = (size_t)(p - hay);
+          size_t oldn = strlen(olds), newn = strlen(news), tail = strlen(p + oldn);
+          if (pre + newn + tail >= sizeof out){
+            /* truncate carefully */
+            size_t maxpre = pre;
+            if (maxpre >= sizeof out) maxpre = sizeof out - 1;
+            memcpy(out, hay, maxpre);
+            size_t o = maxpre;
+            size_t take = newn;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, news, take); o += take;
+            take = tail;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, p + oldn, take); o += take;
+            out[o] = 0;
+          } else {
+            memcpy(out, hay, pre);
+            memcpy(out + pre, news, newn);
+            memcpy(out + pre + newn, p + oldn, tail + 1);
+          }
+          did = 1;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = did;
+      var_set_num(vm, "LAST_N", did);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* digit-3 string pad/repeat: LPAD RPAD STREPEAT (SYS REPEAT alias) */
+    if (kw(&L->cur,"LPAD") || kw(&L->cur,"RPAD") || kw(&L->cur,"PADLEFT") ||
+        kw(&L->cur,"PADRIGHT") || kw(&L->cur,"STRPAD") ||
+        kw(&L->cur,"STREPEAT") || kw(&L->cur,"STRREPEAT") ||
+        kw(&L->cur,"REPEATSTR") || kw(&L->cur,"SREPEAT")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      int is_rep = (strcmp(op,"STREPEAT")==0 || strcmp(op,"STRREPEAT")==0 ||
+                    strcmp(op,"REPEATSTR")==0 || strcmp(op,"SREPEAT")==0);
+      int is_left = (strcmp(op,"LPAD")==0 || strcmp(op,"PADLEFT")==0 ||
+                     strcmp(op,"STRPAD")==0);
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      if (is_rep){
+        long times = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+            L->cur.kind==TK_IDENT)
+          times = parse_expr(vm, L);
+        if (times < 0) times = 0;
+        if (times > 512) times = 512;
+        char out[512]; size_t o = 0;
+        size_t sn = strlen(s);
+        if (sn == 0){ out[0]=0; }
+        else {
+          for (long t=0; t<times && o+1 < sizeof out; t++){
+            size_t take = sn;
+            if (o + take >= sizeof out) take = sizeof out - 1 - o;
+            memcpy(out + o, s, take); o += take;
+          }
+          out[o] = 0;
+        }
+        var_set_str(vm, "LAST", out);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)o;
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* LPAD/RPAD str width [padchar] */
+      long width = 0;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT)
+        width = parse_expr(vm, L);
+      if (width < 0) width = 0;
+      if (width > 511) width = 511;
+      char padc = ' ';
+      char pad[16]; pad[0]=0;
+      if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
+        padc = pad[0];
+      size_t sn = strlen(s);
+      char out[512];
+      if ((long)sn >= width){
+        size_t take = (size_t)width;
+        if (take >= sizeof out) take = sizeof out - 1;
+        memcpy(out, s, take); out[take] = 0;
+      } else {
+        size_t need = (size_t)width - sn;
+        if (is_left){
+          size_t o = 0;
+          for (size_t i=0; i<need && o+1 < sizeof out; i++) out[o++] = padc;
+          size_t take = sn;
+          if (o + take >= sizeof out) take = sizeof out - 1 - o;
+          memcpy(out + o, s, take); o += take; out[o] = 0;
+        } else {
+          size_t o = 0;
+          size_t take = sn;
+          if (take >= sizeof out) take = sizeof out - 1;
+          memcpy(out, s, take); o = take;
+          for (size_t i=0; i<need && o+1 < sizeof out; i++) out[o++] = padc;
+          out[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* digit-3 string duals: LEFT/RIGHT slice + COUNT occurrences */
+    if (kw(&L->cur,"LEFT") || kw(&L->cur,"STRLEFT") || kw(&L->cur,"TAKELEFT") ||
+        kw(&L->cur,"PREFIXN") ||
+        kw(&L->cur,"RIGHT") || kw(&L->cur,"STRRIGHT") || kw(&L->cur,"TAKERIGHT") ||
+        kw(&L->cur,"SUFFIXN")){
+      char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      int is_right = (strcmp(op,"RIGHT")==0 || strcmp(op,"STRRIGHT")==0 ||
+                      strcmp(op,"TAKERIGHT")==0 || strcmp(op,"SUFFIXN")==0);
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long n = 0;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT)
+        n = parse_expr(vm, L);
+      if (n < 0) n = 0;
+      size_t slen = strlen(s);
+      char out[512];
+      if (!is_right){
+        size_t take = (size_t)n;
+        if (take > slen) take = slen;
+        if (take >= sizeof out) take = sizeof out - 1;
+        memcpy(out, s, take); out[take] = 0;
+      } else {
+        size_t take = (size_t)n;
+        if (take > slen) take = slen;
+        if (take >= sizeof out) take = sizeof out - 1;
+        size_t start = slen - take;
+        memcpy(out, s + start, take); out[take] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"COUNT") || kw(&L->cur,"STRCOUNT") || kw(&L->cur,"COUNTSTR") ||
+        kw(&L->cur,"OCCURS") || kw(&L->cur,"COUNTOCC")){
+      lex_next(L);
+      char hay[512]="", needle[256]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long cnt = 0;
+      if (needle[0] == 0){
+        cnt = (long)strlen(hay);
+      } else {
+        size_t nn = strlen(needle);
+        const char *p = hay;
+        while ((p = strstr(p, needle)) != NULL){
+          cnt++;
+          p += nn;
+        }
+      }
+      vm->last_n = cnt;
+      var_set_num(vm, "LAST_N", cnt);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    return -1;
+  }
+
+  /* ---- legacy verbose (compat) ---- */
+  if (kw(&L->cur,"CREED")){
+    lex_next(L);
+    if (L->cur.kind==TK_STR){
+      snprintf(vm->creed,sizeof vm->creed,"%s",L->cur.text);
+      snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",L->cur.text);
+      lex_next(L);
+    }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"HOLD_FLASH")){
+    lex_next(L);
+    if (L->cur.kind==TK_NUM){ vm->hold_flash=L->cur.num?1:0; vm->ch.hold_flash=(uint8_t)vm->hold_flash; lex_next(L); }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SHARE")||kw(&L->cur,"BUDGET")){
+    lex_next(L); while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF) lex_next(L);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"GENESIS")){
+    lex_next(L);
+    char plate[512]="NEXUS_COORD v1 | from=play | hold_flash=1 |";
+    if (kw(&L->cur,"FROM")){ lex_next(L); if (L->cur.kind==TK_IDENT) lex_next(L); }
+    else if (L->cur.kind==TK_STR){ snprintf(plate,sizeof plate,"%s",L->cur.text); lex_next(L); }
+    cubalc_matrix gen; cubalc_coord_to_matrix(plate,&gen);
+    cubalc_chain_from_initial(&vm->ch,&gen,1);
+    vm->ch.hold_flash=(uint8_t)vm->hold_flash;
+    bump(vm); return 1;
+  }
+  /* SCIENCE [LOAD] — inject pure-science constants (public domain; language design) */
+  if (kw(&L->cur,"SCIENCE")||kw(&L->cur,"PURESCIENCE")){
+    lex_next(L);
+    if (kw(&L->cur,"LOAD")||kw(&L->cur,"CONST")||kw(&L->cur,"CONSTANTS")) lex_next(L);
+    var_set_num(vm, "PI100", CUBALC_SCI_PI100);
+    var_set_num(vm, "E100", CUBALC_SCI_E100);
+    var_set_num(vm, "G_EARTH", CUBALC_SCI_G_EARTH10);
+    var_set_num(vm, "C_LIGHT", CUBALC_SCI_C_LIGHT);
+    var_set_num(vm, "ATM_KPA", CUBALC_SCI_ATM_KPA);
+    var_set_num(vm, "WATER_K", CUBALC_SCI_WATER_K);
+    var_set_num(vm, "H2O_BP", CUBALC_SCI_H2O_BP_C);
+    var_set_num(vm, "R_GAS", CUBALC_SCI_R_J);
+    var_set_num(vm, "NA_ORDER", CUBALC_SCI_AVOGADRO_E23);
+    var_set_num(vm, "EARTH_R", CUBALC_SCI_EARTH_R_KM);
+    var_set_num(vm, "AU_KM", CUBALC_SCI_AU_KM);
+    var_set_num(vm, "YEAR_D", CUBALC_SCI_YEAR_D);
+    var_set_num(vm, "MOON_D", CUBALC_SCI_MOON_D);
+    var_set_num(vm, "SOLAR_C", CUBALC_SCI_SOLAR_C);
+    var_set_num(vm, "ATM_O2", CUBALC_SCI_ATM_O2_PCT);
+    var_set_num(vm, "ATM_N2", CUBALC_SCI_ATM_N2_PCT);
+    var_set_num(vm, "OK", 1);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CUBE")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"CUBE id"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    char role[48]; snprintf(role,sizeof role,"%s",id); int proton=1;
+    while (L->cur.kind==TK_IDENT){
+      if (kw(&L->cur,"ROLE")){ lex_next(L); if (L->cur.kind==TK_IDENT){ snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);} }
+      else if (kw(&L->cur,"PROTON")){ lex_next(L); if (L->cur.kind==TK_NUM){ proton=L->cur.num?1:0; lex_next(L);} }
+      else break;
+    }
+    place_cube(vm,id,role,proton); bump(vm); return 1;
+  }
+  /* PLUG — only cubes; pluggable I/O wire (matrix-compatible) */
+  if (kw(&L->cur,"PLUG")||kw(&L->cur,"WIRE")||kw(&L->cur,"IO_PLUG")){
+    lex_next(L);
+    if (kw(&L->cur,"RING")){ lex_next(L); do_ring(vm); bump(vm); return 1; }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_a cube_b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    do_plug(vm,a,b); bump(vm); return 1;
+  }
+  /* UNPLUG a b — detach pluggable I/O */
+  if (kw(&L->cur,"UNPLUG")||kw(&L->cur,"DETACH")||kw(&L->cur,"DISCONNECT")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNPLUG a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNPLUG a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    do_unplug(vm,a,b); bump(vm); return 1;
+  }
+  /* REVERSE a b — reverse pluggable I/O direction (IN↔OUT) */
+  if (kw(&L->cur,"REVERSE")||kw(&L->cur,"REV")||kw(&L->cur,"FLIP_IO")||kw(&L->cur,"IOR")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"REVERSE a b"); return -1; }
+    char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"REVERSE a b"); return -1; }
+    char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
+    do_reverse(vm,a,b); bump(vm); return 1;
+  }
+  /* IO cube IN|OUT [face] — declare pluggable port direction on a cube */
+  if (kw(&L->cur,"IO")||kw(&L->cur,"PORT")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"IO cube IN|OUT [face]"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int is_out = 1;
+    if (kw(&L->cur,"IN")||kw(&L->cur,"RECV")||kw(&L->cur,"RX")){ is_out=0; lex_next(L); }
+    else if (kw(&L->cur,"OUT")||kw(&L->cur,"EMIT")||kw(&L->cur,"TX")||kw(&L->cur,"SEND")){ is_out=1; lex_next(L); }
+    int face = 0;
+    if (L->cur.kind==TK_NUM){ face=(int)L->cur.num; lex_next(L); }
+    do_io(vm, id, face, is_out); bump(vm); return 1;
+  }
+  /* NEST parent child — cubes may nest */
+  if (kw(&L->cur,"NEST")||kw(&L->cur,"INSIDE")||kw(&L->cur,"CONTAIN")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"NEST parent child"); return -1; }
+    char p[48]; snprintf(p,sizeof p,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"NEST parent child"); return -1; }
+    char c[48]; snprintf(c,sizeof c,"%s",L->cur.text); lex_next(L);
+    do_nest(vm, p, c); bump(vm); return 1;
+  }
+  /* UNNEST child — detach from parent */
+  if (kw(&L->cur,"UNNEST")||kw(&L->cur,"EJECT")||kw(&L->cur,"DETACH_NEST")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNNEST child"); return -1; }
+    char c[48]; snprintf(c,sizeof c,"%s",L->cur.text); lex_next(L);
+    do_unnest(vm, c); bump(vm); return 1;
+  }
+  /* COMPILE cube | COMPILE ALL — each cube → matrix; no flow → no compile */
+  if (kw(&L->cur,"COMPILE")||kw(&L->cur,"TOMATRIX")||kw(&L->cur,"MATERIALIZE")){
+    lex_next(L);
+    if (kw(&L->cur,"ALL")||kw(&L->cur,"CHAIN")||kw(&L->cur,"WORLD")){
+      lex_next(L);
+      do_compile_all(vm); bump(vm); return 1;
+    }
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"COMPILE cube|ALL"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    do_compile_cube(vm, id); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"IMPULSE")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"IMPULSE"); return -1; }
+    char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
+    int p=1; if (L->cur.kind==TK_NUM){ p=L->cur.num?1:0; lex_next(L); }
+    cubalc_chain_impulse(&vm->ch,id,(uint8_t)p); bump(vm); return 1;
+  }
+  /* FLOW [DIR|IO] n — free-flow energy; DIR respects OUT→IN only (pluggable I/O) */
+  if (kw(&L->cur,"FLOW")||kw(&L->cur,"TICK")){
+    lex_next(L);
+    int directed = 0;
+    if (kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTED")||kw(&L->cur,"IO")||kw(&L->cur,"OUT")){
+      directed = 1; lex_next(L);
+    }
+    int n=8;
+    if (L->cur.kind==TK_NUM){ n=(int)L->cur.num; lex_next(L); }
+    if (n < 1) n = 1;
+    if (n > 1000) n = 1000;
+    ensure_world(vm);
+    if (directed) {
+      for (int i = 0; i < n; i++) cubalc_chain_flow_directed(&vm->ch);
+    } else {
+      do_flow(vm, n);
+    }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"OS_ASPECTS")||kw(&L->cur,"SPAWN_OS")){
+    lex_next(L); ensure_world(vm); cubalc_chain_os_aspects(&vm->ch); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PRINT")){
+    lex_next(L);
+    char line[256]; size_t o=0; line[0]=0;
+    if (L->cur.kind==TK_STR){ snprintf(line,sizeof line,"%s",L->cur.text); o=strlen(line); lex_next(L); }
+    while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF && L->cur.kind!=TK_LBRACK){
+      if (L->cur.kind==TK_IDENT && (kw(&L->cur,"ASSERT")||kw(&L->cur,"LET")||kw(&L->cur,"CUBE")||kw(&L->cur,"PRINT"))) break;
+      long v=parse_expr(vm,L);
+      int n=snprintf(line+o,sizeof line-o,"%s%ld",o?" ":"",v); if(n>0)o+=(size_t)n;
+      if (o>=sizeof line) break;
+    }
+    if (vm->trace) fprintf(vm->trace,"%s\n",line);
+    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ASSERT")){
+    lex_next(L);
+    long v=parse_expr(vm,L);
+    if (v){ if (vm->res) vm->res->asserts_ok++; if (vm->trace) fprintf(vm->trace,"# ok\n"); }
+    else { if (vm->res) vm->res->asserts_fail++; fail(vm,"ASSERT failed"); return -1; }
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"LET")){
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"LET"); return -1; }
+    char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_EQ){ fail(vm,"LET ="); return -1; }
+    lex_next(L);
+    if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
+          strcmp(L->cur.text,"LAST")==0 ||
+          (var_get(vm,L->cur.text,0) && var_get(vm,L->cur.text,0)->is_str)))){
+      char buf[CUBALC_HOST_STR_MAX]; buf[0]=0;
+      for(;;){
+        if (L->cur.kind==TK_STR){
+          size_t bl=strlen(buf), al=strlen(L->cur.text);
+          if (bl+al+1 < sizeof buf) memcpy(buf+bl, L->cur.text, al+1);
+          lex_next(L);
+        } else if (L->cur.kind==TK_IDENT){
+          if (strcmp(L->cur.text,"LAST")==0){
+            size_t bl=strlen(buf), al=strlen(vm->last_str);
+            if (bl+al+1 < sizeof buf) memcpy(buf+bl, vm->last_str, al+1);
+            lex_next(L);
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str){
+              size_t bl=strlen(buf), al=strlen(v->sval);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, v->sval, al+1);
+            } else if (v){
+              char nb[32]; snprintf(nb,sizeof nb,"%ld", v->val);
+              size_t bl=strlen(buf), al=strlen(nb);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, nb, al+1);
+            } else break;
+            lex_next(L);
+          }
+        } else break;
+        if (L->cur.kind==TK_PLUS){ lex_next(L); continue; }
+        break;
+      }
+      var_set_str(vm, name, buf);
+      bump(vm); return 1;
+    }
+    long v=parse_expr(vm,L);
+    var_set_num(vm, name, v);
+    bump(vm); return 1;
+  }
+  return 0;
+}

@@ -1,3 +1,25 @@
+## 1.13.0-modular — 2026-08-04
+
+### Direction
+- **Project structure modularization** (Cube laws: pure C · multiplatform · SoT · devices free).
+- Split monolithic `cubalc_lang.c` (~31k lines) into plane modules under `src/lang/`.
+
+### Structure
+- `include/cubalc_platform.h` — POSIX / Darwin / Windows shims
+- `include/lang/cubalc_lang_internal.h` — VM / lexer / plane API (internal)
+- `src/lang/lang_core.c` · `lang_ops_{core,toc,stack,dual,math,bit,cell,flow}.c`
+- `src/lang/lang_parse.c` — plane dispatcher · `lang_run.c` — public run API
+- Multiplatform `Makefile` (`CUBALC_TARGET`, optional OpenCL framework on Darwin)
+- Docs: `docs/STRUCTURE.md` · `src/lang/README.md`
+- Tool: `tools/modularize_lang.py` (re-split if thrash restores a monolith)
+
+### Law
+- Public API unchanged (`cubalc_lang.h`: `cubalc_run_source` / `cubalc_run_file`)
+- Behavior proof-gated: universal suite green after split
+
+### Prior
+See 1.12.431-universal.
+
 ## 1.12.431-universal — 2026-08-04
 
 ### Direction
