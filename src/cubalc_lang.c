@@ -7023,6 +7023,50 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",v); vm->last_n=v;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 imm numthy TOC: SGCDTOCN · SLCMTOCN
+   * (imm dual of SGCDN/SLCMN into cell; complete SSQRTOC plane with gcd/lcm) */
+  if (kw(&L->cur,"SGCDTOCN")||kw(&L->cur,"SGCDTOCIMM")||kw(&L->cur,"STACKGCDTOCN")||
+      kw(&L->cur,"SGCDATN")||kw(&L->cur,"GCDTOCN")||kw(&L->cur,"SCELLGCDN")||
+      kw(&L->cur,"GCDINTOCN")){
+    /* i + n → cells[i] = gcd(|cells[i]|,|n|), leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long x = a < 0 ? -a : a, y = n < 0 ? -n : n;
+    while (y){ long t = x % y; x = y; y = t; }
+    long r = x;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLCMTOCN")||kw(&L->cur,"SLCMTOCIMM")||kw(&L->cur,"STACKLCMTOCN")||
+      kw(&L->cur,"SLCMATN")||kw(&L->cur,"LCMTOCN")||kw(&L->cur,"SCELLLCMN")||
+      kw(&L->cur,"LCMINTOCN")){
+    /* i + n → cells[i] = lcm(|cells[i]|,|n|); 0 if either side 0; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long x = a < 0 ? -a : a, y = n < 0 ? -n : n;
+    long r = 0;
+    if (x && y){
+      long g = x, h = y;
+      while (h){ long t = g % h; g = h; h = t; }
+      r = (x / g) * y;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-4 stack↔cell compare plane: SEQTOC · SLTTOC · SGTTOC (predicate dual of SEQ/SLT/SGT) */
   if (kw(&L->cur,"SEQTOC")||kw(&L->cur,"SEQTOCELL")||kw(&L->cur,"STACKEQTOC")||
       kw(&L->cur,"CMPEQTOC")||kw(&L->cur,"SEQAT")){

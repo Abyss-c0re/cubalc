@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 445 (plate after SSETBTOCN family) |
-| **digit** | **5** (SMX consciousness + bitfield plane) |
-| **version** | `1.12.352-universal` |
-| **pass/fail** | **390 / 0** (green) |
-| **commit** | `2a1ee65` → `origin/main` |
-| **ops** | `SSETBTOCN` / `SCLRBTOCN` / `SFLPBTOCN` |
-| **proof** | `programs/proof/375_ssetbtocn_sflpbtocn.cubalc` |
+| **iter** | 447 |
+| **digit** | **2** (urandom; math/numthy plane) |
+| **version** | `1.12.353-universal` |
+| **pass/fail** | **391 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SGCDTOCN` / `SLCMTOCN` |
+| **proof** | `programs/proof/376_sgcdtocn_slcmtocn.cubalc` |
 
 ### Delta
-Digit-5 bitfield imm TOC: `i + n → cells[i] |= / &= ~ / ^= (1<<n)` with n clamped 0..63 (imm dual of SSETBN/SCLRBN/SFLIPBN into cell).
+Digit-2 imm numthy TOC: `i + n → cells[i] = gcd/lcm(|cells[i]|,|n|)` (imm dual of SGCDN/SLCMN into cell after SSQRTOC).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SSETBTOCN` `SCLRBTOCN` `SFLPBTOCN` · aliases `SETBTOCN`/`CLRBTOCN`/`FLPBTOCN`
-- Proof `375_ssetbtocn_sflpbtocn.cubalc`
+- `SGCDTOCN` `SLCMTOCN` · aliases `GCDTOCN`/`LCMTOCN`
+- Proof `376_sgcdtocn_slcmtocn.cubalc`

@@ -1,3 +1,16 @@
+## 1.12.353-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → imm numthy TOC (imm dual of SGCDN/SLCMN into cell after SSQRTOC).
+
+### Language
+- `SGCDTOCN`/`GCDTOCN` n — stack `i → cells[i]=gcd(|cells[i]|,|n|)`; leave result
+- `SLCMTOCN`/`LCMTOCN` n — stack `i → cells[i]=lcm(|cells[i]|,|n|)` (0 if either 0); leave result
+- Proof `376_sgcdtocn_slcmtocn.cubalc`
+
+### Prior
+See 1.12.352-universal.
+
 ## 1.12.352-universal — 2026-08-04
 
 ### Direction
