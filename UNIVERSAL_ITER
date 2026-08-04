@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 453 |
-| **digit** | **2** (urandom; imm ceil/floor div TOC) |
-| **version** | `1.12.357-universal` |
-| **pass/fail** | **395 / 0** (green) |
-| **commit** | `0ac1da7` → `origin/main` |
-| **ops** | `SDIVCEILTOCN` / `SDIVFLOORTOCN` |
-| **proof** | `programs/proof/380_sdivceiltocn_sdivfloortocn.cubalc` |
+| **iter** | 455 |
+| **digit** | **4** (urandom; imm nibble field TOC) |
+| **version** | `1.12.358-universal` |
+| **pass/fail** | **396 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SNIBTOCN` / `SSETNIBTOCN` / `SCLRNIBTOCN` |
+| **proof** | `programs/proof/381_snibtocn_sclrnibtocn.cubalc` |
 
 ### Delta
-Digit-2 imm ceil/floor div TOC: `i + n → cells[i] = ceil/floor(cells[i]/n)` (imm dual of SDIVCEILN/SDIVFLOORN into cell after SDIVTOCN).
+Digit-4 imm nibble field TOC: extract/deposit/clear LE 4-bit nibble n of cells[i] (imm dual of SNIBN/SSETNIBN/SCLRNIBN; completes 4/8/16 field ladder).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SDIVCEILTOCN` `SDIVFLOORTOCN` · aliases `CEILDIVTOCN`/`FLOORDIVTOCN`
-- Proof `380_sdivceiltocn_sdivfloortocn.cubalc`
+- `SNIBTOCN` `SSETNIBTOCN` `SCLRNIBTOCN` · aliases `NIBTOCN`/`SETNIBTOCN`/`CLRNIBTOCN`
+- Proof `381_snibtocn_sclrnibtocn.cubalc`

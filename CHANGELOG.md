@@ -1,3 +1,17 @@
+## 1.12.358-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm nibble field TOC (imm dual of SNIBN/SSETNIBN/SCLRNIBN into cell; complete 4/8/16 field ladder).
+
+### Language
+- `SNIBTOCN`/`NIBTOCN` n — stack `i → cells[i]=LE nibble n`; leave result (n 0..15)
+- `SSETNIBTOCN`/`SETNIBTOCN` field n — deposit low 4 bits of field into LE nibble n of cells[i]
+- `SCLRNIBTOCN`/`CLRNIBTOCN` n — clear LE nibble n of cells[i]; leave result
+- Proof `381_snibtocn_sclrnibtocn.cubalc`
+
+### Prior
+See 1.12.357-universal.
+
 ## 1.12.357-universal — 2026-08-04
 
 ### Direction

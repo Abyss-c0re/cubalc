@@ -5316,6 +5316,68 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 imm nibble field TOC: SNIBTOCN · SSETNIBTOCN · SCLRNIBTOCN
+   * (imm dual of SNIBN/SSETNIBN/SCLRNIBN into cell; complete field ladder 4/8/16) */
+  if (kw(&L->cur,"SNIBTOCN")||kw(&L->cur,"SGETNIBTOCN")||kw(&L->cur,"STACKNIBTOCN")||
+      kw(&L->cur,"SNIBTOCIMM")||kw(&L->cur,"NIBTOCN")||kw(&L->cur,"SCELLNIBN")||
+      kw(&L->cur,"GETNIBTOCN")||kw(&L->cur,"SNIBBLETOCN")){
+    /* i + n → cells[i] = LE nibble n of cells[i]; n clamped 0..15; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    long r = (long)(((unsigned long)vm->cells[(int)i] >> (unsigned)(n * 4)) & 0xFul);
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSETNIBTOCN")||kw(&L->cur,"SSETNIBTOCIMM")||kw(&L->cur,"STACKSETNIBTOCN")||
+      kw(&L->cur,"SETNIBTOCN")||kw(&L->cur,"SCELLSETNIBN")||kw(&L->cur,"PUTNIBTOCN")||
+      kw(&L->cur,"SSETNIBATN")){
+    /* i + field + n → deposit low 4 bits of field into LE nibble n of cells[i] */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long f = (unsigned long)field & 0xFul;
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)((base & ~(0xFul << shift)) | (f << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLRNIBTOCN")||kw(&L->cur,"SCLRNIBTOCIMM")||kw(&L->cur,"STACKCLRNIBTOCN")||
+      kw(&L->cur,"CLRNIBTOCN")||kw(&L->cur,"SCELLCLRNIBN")||kw(&L->cur,"ZAPNIBTOCN")||
+      kw(&L->cur,"SCLRNIBATN")){
+    /* i + n → clear LE nibble n of cells[i]; n clamped 0..15; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->cells[(int)i];
+    unsigned long shift = (unsigned long)(n * 4);
+    long r = (long)(base & ~(0xFul << shift));
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||
