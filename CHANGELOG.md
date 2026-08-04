@@ -1,3 +1,16 @@
+## 1.15.13-universal — 2026-08-05
+
+### Direction
+- Algocube digit **1** → pure-imm cell zero-rel LT0/GT0 TOC (imm cell-index dual of SLTZTOC/SGTZTOC; complete signed zero-rel TOCN after SLEZTOCN/SGEZTOCN).
+
+### Language
+- `SLTZTOCN` / `S0LTTOCN` — `n → cells[n]=(cells[n]<0)?1:0; push`
+- `SGTZTOCN` / `S0GTTOCN` — `n → cells[n]=(cells[n]>0)?1:0; push`
+- Proof `570_sltztocn_sgtztocn.cubalc`
+
+### Prior
+See 1.15.12-universal.
+
 ## 1.15.12-universal — 2026-08-05
 
 ### Direction
