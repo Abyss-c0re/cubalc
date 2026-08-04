@@ -1,3 +1,16 @@
+## 1.15.14-universal — 2026-08-05
+
+### Direction
+- Algocube digit **3** → pure-imm cell zero-eq/ne TOC (imm cell-index dual of SEQZTOC/SNEZTOC; completes zero-rel TOCN ladder).
+
+### Language
+- `SEQZTOCN` / `S0EQTOCN` — `n → cells[n]=(cells[n]==0)?1:0; push`
+- `SNEZTOCN` / `S0NETOCN` — `n → cells[n]=(cells[n]!=0)?1:0; push`
+- Proof `571_seqztocn_sneztocn.cubalc`
+
+### Prior
+See 1.15.13-universal.
+
 ## 1.15.13-universal — 2026-08-05
 
 ### Direction

@@ -5411,7 +5411,40 @@ int cubalc_lang_ops_toc(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
-  /* digit-1 unary parity TOC: SODDTOC · SEVENTOC (dual of SODD/SEVEN after zero-rel TOC) */
+    /* digit-3 pure-imm cell zero-eq/ne TOC: SEQZTOCN · SNEZTOCN
+   * (imm cell-index dual of SEQZTOC/SNEZTOC; complete zero-rel TOCN after SLTZTOCN/SGTZTOCN/SLEZTOCN/SGEZTOCN) */
+  if (kw(&L->cur,"SEQZTOCN")||kw(&L->cur,"S0EQTOCN")||kw(&L->cur,"STACKEQZTOCN")||
+      kw(&L->cur,"SEQZTOCIMM")||kw(&L->cur,"S0EQATN")||kw(&L->cur,"EQZTOCN")||
+      kw(&L->cur,"SCELLEQZN")||kw(&L->cur,"SISZEROTOCN")||kw(&L->cur,"SZTOCN")){
+    /* n → cells[n]=(cells[n]==0)?1:0; push result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] == 0) ? 1 : 0;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SNEZTOCN")||kw(&L->cur,"S0NETOCN")||kw(&L->cur,"STACKNEZTOCN")||
+      kw(&L->cur,"SNEZTOCIMM")||kw(&L->cur,"S0NEATN")||kw(&L->cur,"NEZTOCN")||
+      kw(&L->cur,"SCELLNEZN")||kw(&L->cur,"SISNZTOCN")||kw(&L->cur,"SNONZEROTOCN")||
+      kw(&L->cur,"SNZTOCN")){
+    /* n → cells[n]=(cells[n]!=0)?1:0; push result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (n < 0) n = 0;
+    if (n >= CUBALC_CELL_N) n = CUBALC_CELL_N - 1;
+    long r = (vm->cells[(int)n] != 0) ? 1 : 0;
+    vm->cells[(int)n] = r;
+    if (vm->sp >= CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    vm->stack[vm->sp++] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+/* digit-1 unary parity TOC: SODDTOC · SEVENTOC (dual of SODD/SEVEN after zero-rel TOC) */
   if (kw(&L->cur,"SODDTOC")||kw(&L->cur,"SODDTOCELL")||kw(&L->cur,"STACKODDTOC")||
       kw(&L->cur,"SODDAT")||kw(&L->cur,"SCELLODD")||kw(&L->cur,"ODDTOC")||
       kw(&L->cur,"SISODDTOC")){
