@@ -6,7 +6,7 @@
 | **digit** | **5** (urandom) |
 | **version** | `1.12.398-universal` |
 | **pass/fail** | **436 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `7d58c44` → `origin/main` |
 | **ops** | `DSHL32` / `DSHR32` / `DSAR32` |
 | **proof** | `programs/proof/421_dshl32_dsar32.cubalc` |
 
