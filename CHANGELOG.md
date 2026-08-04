@@ -1,3 +1,17 @@
+## 1.15.7-universal — 2026-08-05
+
+### Direction
+- Algocube digit **0** → stack+dual imm 8/4-bit field signed GT0 (completes field signed GT0 plane all widths).
+
+### Language
+- `S0GT8N` — `n → byte n = (int8(b) > 0) ? 1 : 0`
+- `S0GT4N` — nibble form of `S0GT8N`
+- `D0GT8N` / `D0GT4N` — dual-stack forms
+- Proof `564_s0gt8n_d0gt4n.cubalc`
+
+### Prior
+See 1.15.6-universal.
+
 ## 1.15.6-universal — 2026-08-05
 
 ### Direction
