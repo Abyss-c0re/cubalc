@@ -1,3 +1,17 @@
+## 1.14.64-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → dual-stack imm 32-bit field arith (word ladder of DADD16N/DSUB16N/DMUL16N; dual of SADD32N after DPARITY32N).
+
+### Language
+- `DADD32N` — `field n → word n of each = (w + field) & 0xFFFFFFFF` wrap on top two
+- `DSUB32N` — `field n → word n of each = (w - field) & 0xFFFFFFFF` wrap
+- `DMUL32N` — `field n → word n of each = (w * field) & 0xFFFFFFFF` wrap
+- Proof `521_dadd32n_dmul32n.cubalc`
+
+### Prior
+See 1.14.63-universal.
+
 ## 1.14.63-universal — 2026-08-04
 
 ### Direction
