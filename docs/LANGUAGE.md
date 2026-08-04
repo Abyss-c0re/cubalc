@@ -43,6 +43,7 @@ Plugs wire cubes; **REVERSE** flips I/O direction when needed.
 | `RESOLVE [target]` | harmony + decide + energy pulse (algocubes resolved) |
 | `ENERGYFLOW n` | multi-hop flow; energy must flow; sets ENERGY |
 | `SYS NUM` / `SYS INT` | parse LAST → LAST_N |
+| `SYS ARG n` [OR fallback] | CUBALC_ARGn (or named) with optional default |
 | `SYS READ path\|LAST` | read file |
 | `SYS JSON "key"` | extract string or number field (generic JSON) |
 

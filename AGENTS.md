@@ -59,7 +59,7 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 | `SYS JSON "key"` | field from LAST |
 | `SYS NUM` / `SYS INT` | parse LAST → LAST_N |
 | `SYS CHAT "local"\|"grok"` | chat; msg from env/string |
-| `SYS ARG n\|name` | CLI/env args |
+| `SYS ARG n\|name` [OR fallback] | CLI/env args (`CUBALC_ARGn`) with optional default |
 
 ## SMX / P2P (language)
 

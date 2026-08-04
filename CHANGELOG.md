@@ -14,6 +14,13 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — SYS ARG OR fallback — 2026-08-05
+
+### Usability
+- `SYS ARG n|name OR "fallback"` — same default pattern as `SYS ENV … OR`
+- Sets LAST / LAST_N / OK; prefers CUBALC_ARGn when present
+- Proof: `programs/proof/sys_arg_or.cubalc`
+
 ## Meaningful — SMX fail hints — 2026-08-05
 
 ### Usability

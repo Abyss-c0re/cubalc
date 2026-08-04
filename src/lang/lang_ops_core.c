@@ -403,7 +403,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm,"OK",1);
       bump(vm); return 1;
     }
-    /* SYS ARG n | SYS ARG "NAME" — CUBALC_ARG0… or named env */
+    /* SYS ARG n|name [OR "fallback"] — CUBALC_ARGn / named env with default */
     if (kw(&L->cur,"ARG") || kw(&L->cur,"ARGV")){
       lex_next(L);
       char name[64];
@@ -416,13 +416,27 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         else if (strcmp(L->cur.text,"MODEL")==0) snprintf(name,sizeof name,"GROKIUM_MODEL");
         else snprintf(name,sizeof name,"%s", L->cur.text);
         lex_next(L);
-      } else { fail(vm,"SYS ARG n|name"); return -1; }
+      } else { fail(vm,"SYS ARG n|name [OR fallback]"); return -1; }
       cubalc_host_result hr;
       cubalc_host_env(name, &hr);
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK")){
+        lex_next(L);
+        char fb[512];
+        if (resolve_str_arg(vm, L, fb, sizeof fb) != 0){
+          fail(vm,"SYS ARG n|name OR \"fallback\""); return -1;
+        }
+        if (!hr.str[0] || hr.n <= 0){
+          snprintf(hr.str, sizeof hr.str, "%s", fb);
+          hr.n = (long)strlen(hr.str);
+          hr.ok = 1;
+        }
+      }
       snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
       vm->last_n = hr.n;
       var_set_str(vm,"LAST",hr.str);
       var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"OK", hr.n > 0 ? 1 : 0);
       bump(vm); return 1;
     }
     /* SYS NUM|INT — parse LAST as integer → LAST_N (CubeBrain digit fold) */

@@ -119,12 +119,17 @@ ASSERT SMX_TALKS >= 4
 Libs: `hold_seed` · `peer_decide` · `mesh_exchange` under `programs/lib/`.  
 Proof: `programs/proof/include_mesh_exchange.cubalc`.
 
-## 7. SYS ENV with default
+## 7. SYS ENV / ARG with default
 
 ```cubalc
 SYS ENV "CUBALC_P2P_BIND" OR "127.0.0.1:7733"
 PRINT "bind" LAST LAST_N
 ASSERT LAST_N > 0 "bind string present"
+
+# Script args: host sets CUBALC_ARG0… or program supplies fallback
+SYS ARG 0 OR "peer0"
+SYS ARG 1 OR "7733"
+PRINT "args" LAST
 ```
 
 ## Env cheat sheet

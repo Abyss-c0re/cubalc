@@ -1,0 +1,18 @@
+# SYS ARG n OR "fallback" — agent script defaults without shell glue
+HOLD_FLASH 1
+
+# Missing CUBALC_ARG0 → fallback
+SYS ARG 0 OR "default-peer"
+ASSERT LAST_N > 0 "ARG OR must supply fallback when unset"
+ASSERT OK == 1 "non-empty LAST sets OK"
+
+# Named arg with fallback
+SYS ARG "CUBALC_PROOF_NO_SUCH_ARG" OR "named-ok"
+ASSERT LAST_N > 0 "named ARG OR fallback"
+
+# When CUBALC_ARG1 is set by host, prefer it over fallback
+SYS ARG 1 OR "should-not-win-if-set"
+PRINT "sys_arg_or" LAST LAST_N OK
+PRINT_JSON LAST_N OK
+
+ASSERT 1 == 1 "proof complete"
