@@ -6,7 +6,7 @@
 | **digit** | **9** (urandom; imm low-n metric TOC) |
 | **version** | `1.12.361-universal` |
 | **pass/fail** | **399 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `e38d53b` → `origin/main` |
 | **ops** | `SPOPMNTOCN` / `SANYMNTOCN` / `SALLMNTOCN` |
 | **proof** | `programs/proof/384_spopmntocn_sallmntocn.cubalc` |
 
