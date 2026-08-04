@@ -6,7 +6,7 @@
 | **digit** | **2** (urandom; math/numthy plane) |
 | **version** | `1.12.353-universal` |
 | **pass/fail** | **391 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `7013eb7` → `origin/main` |
 | **ops** | `SGCDTOCN` / `SLCMTOCN` |
 | **proof** | `programs/proof/376_sgcdtocn_slcmtocn.cubalc` |
 
