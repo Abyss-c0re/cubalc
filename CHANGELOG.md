@@ -1,3 +1,17 @@
+## 1.14.68-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack imm 32-bit field max+eq (word ladder of DMAX16N/DEQ16N/DNE16N; dual of SMAX32N after DMIN32N).
+
+### Language
+- `DMAX32N` — `field n → word n of each = max(w, field)` unsigned on top two
+- `DEQ32N` — `field n → word n of each = (w == field) ? 1 : 0`
+- `DNE32N` — `field n → word n of each = (w != field) ? 1 : 0`
+- Proof `525_dmax32n_dne32n.cubalc`
+
+### Prior
+See 1.14.67-universal.
+
 ## 1.14.67-universal — 2026-08-04
 
 ### Direction
