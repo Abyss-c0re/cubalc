@@ -1,3 +1,18 @@
+## 1.14.91-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack+dual imm 4-bit field signed min/max (nibble ladder of SMINS8N/DMINS8N after SLTS4N; **completes signed select plane all widths**).
+
+### Language
+- `SMINS4N` — `field n → nibble n = min_signed(int4(nib), int4(field))`
+- `SMAXS4N` — `field n → nibble n = max_signed(int4(nib), int4(field))`
+- `DMINS4N` — `field n → nibble n of each = min_signed(int4(nib), int4(field))`
+- `DMAXS4N` — `field n → nibble n of each = max_signed(int4(nib), int4(field))`
+- Proof `548_smins4n_dmaxs4n.cubalc`
+
+### Prior
+See 1.14.90-universal.
+
 ## 1.14.90-universal — 2026-08-04
 
 ### Direction
