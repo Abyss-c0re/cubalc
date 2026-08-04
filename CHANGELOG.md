@@ -1,3 +1,18 @@
+## 1.14.94-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack+dual imm 8-bit field signed clamp+between (byte ladder of SCLAMPS16N/DCLAMPS16N after SMINS8N plane).
+
+### Language
+- `SCLAMPS8N` — `lo hi n → byte n = clamp_signed(int8(b), [lo,hi])`
+- `SBETWEENS8N` — `lo hi n → byte n = (lo <= int8(b) <= hi) ? 1 : 0`
+- `DCLAMPS8N` — dual-stack form of `SCLAMPS8N`
+- `DBETWEENS8N` — dual-stack form of `SBETWEENS8N`
+- Proof `551_sclamps8n_dbetweens8n.cubalc`
+
+### Prior
+See 1.14.93-universal.
+
 ## 1.14.93-universal — 2026-08-04
 
 ### Direction
