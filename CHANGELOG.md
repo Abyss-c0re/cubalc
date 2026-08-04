@@ -1,3 +1,17 @@
+## 1.14.61-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → stack imm 32-bit field metrics (word ladder of SBITREV16N/SPOPCNT16N/SPARITY16N after SABS32N plane).
+
+### Language
+- `SBITREV32N` — `n → word n of TOS = bitrev32(w)`
+- `SPOPCNT32N` — `n → word n of TOS = popcount(w)` (0..32)
+- `SPARITY32N` — `n → word n of TOS = xor-reduce(w)` low bit
+- Proof `518_sbitrev32n_sparity32n.cubalc`
+
+### Prior
+See 1.14.60-universal.
+
 ## 1.14.60-universal — 2026-08-04
 
 ### Direction
