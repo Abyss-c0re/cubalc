@@ -1,3 +1,17 @@
+## 1.12.418-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → cell fixed-width 8 math (NEG/ZEXT/CLIP after CLZ8 metrics; complete 8-bit arithmetic foundation).
+
+### Language
+- `NEG8CELL`/`NEG8RANGE` — `lo hi → -(int8)low8` (min int8 stays `0x80`)
+- `ZEXT8CELL`/`ZEXT8RANGE` — `lo hi → cells[i] &= 0xFF`
+- `CLIP8CELL`/`CLIP8RANGE` — `lo hi → clamp cells[i] to [0,255]`
+- Proof `441_neg8cell_clip8cell.cubalc`
+
+### Prior
+See 1.12.417-universal.
+
 ## 1.12.417-universal — 2026-08-04
 
 ### Direction

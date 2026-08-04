@@ -26667,6 +26667,62 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 cell fixed-width 8 math: NEG8CELL · ZEXT8CELL · CLIP8CELL
+   * (byte dual of signed/zext/clip after CLZ8 metrics; complete 8-bit arithmetic foundation) */
+  if (kw(&L->cur,"NEG8CELL")||kw(&L->cur,"CELLNEG8")||kw(&L->cur,"BNEG8CELL")||
+      kw(&L->cur,"RANGENEG8")||kw(&L->cur,"NEG8RANGE")||kw(&L->cur,"INEG8CELL")){
+    /* NEG8CELL lo hi — cells[i] = -(int8)low8; min int8 0x80 stays 0x80 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(signed char)(unsigned char)(vm->cells[(int)i] & 0xFFu);
+      long r;
+      if (va == (long)(signed char)0x80) r = 0x80L;
+      else r = -va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ZEXT8CELL")||kw(&L->cur,"ZEROEXT8CELL")||kw(&L->cur,"BZEXT8CELL")||
+      kw(&L->cur,"RANGEZEXT8")||kw(&L->cur,"ZEXT8RANGE")||kw(&L->cur,"CELLZEXTB")){
+    /* ZEXT8CELL lo hi — cells[i] = low8 only (clear high bits) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned long)vm->cells[(int)i] & 0xFFul);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"CLIP8CELL")||kw(&L->cur,"CELLCLIP8")||kw(&L->cur,"BCLIP8CELL")||
+      kw(&L->cur,"RANGECLIP8")||kw(&L->cur,"CLIP8RANGE")||kw(&L->cur,"UCLIP8CELL")){
+    /* CLIP8CELL lo hi — clamp cells[i] to unsigned 8-bit [0,255] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = vm->cells[(int)i];
+      if (r < 0) r = 0;
+      if (r > 255) r = 255;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
