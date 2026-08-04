@@ -1,0 +1,75 @@
+# Proof 390 — digit-3 imm high-n reverse/rotate TOC: SBREVHNTOCN SROLHNTOCN SRORHNTOCN
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARCELLS
+CLEARSTACK
+
+# SHMASKTOCN 4 sets high-4 = 0xF000000000000000
+# reverse high-4 of that pattern: 0b1111 reverse is same
+CELLSET 1 0
+PUSH 1
+SHMASKTOCN 4
+POP
+PUSH 1
+SBREVHNTOCN 4
+ASSERT LAST_N < 0
+ASSERT CELL(1) < 0
+POP a
+ASSERT a < 0
+
+# BREVHNTOCN n=0: no-op leave 7
+CELLSET 2 7
+PUSH 2
+BREVHNTOCN 0
+ASSERT LAST_N == 7
+ASSERT CELL(2) == 7
+POP
+
+# SROLHNTOCN: high-4 of 0x1 << 60 pattern
+# set high-1 only, rotl within high-4: bit63 -> bit62 within field...
+# MSB only: high-4 field bits 60..63 = 1000; rotl-1 -> 0001 = bit60 only (positive if only bit60)
+CELLSET 3 0
+PUSH 3
+SHMASKTOCN 1
+POP
+PUSH 3
+SROLHNTOCN 4
+# after rotl of high-4: should still be nonzero
+ASSERT LAST_N != 0
+ASSERT CELL(3) != 0
+POP
+
+# ROLHNTOCN n=1: width 1 no-op
+CELLSET 4 5
+PUSH 4
+ROLHNTOCN 1
+ASSERT LAST_N == 5
+ASSERT CELL(4) == 5
+POP
+
+# SRORHNTOCN: high-1 (MSB) rotr within high-4 -> bit62 position still negative or nonzero high
+CELLSET 5 0
+PUSH 5
+SHMASKTOCN 1
+POP
+PUSH 5
+SRORHNTOCN 4
+ASSERT LAST_N != 0
+ASSERT CELL(5) != 0
+POP
+
+# RORHNTOCN n=0 no-op leave 9
+CELLSET 6 9
+PUSH 6
+RORHNTOCN 0
+ASSERT LAST_N == 9
+ASSERT CELL(6) == 9
+POP
+
+# soft empty OK=0
+CLEARSTACK
+SBREVHNTOCN 3
+ASSERT OK == 0
+
+PRINT "390_sbrevhntocn_srorhntocn OK"

@@ -1,3 +1,17 @@
+## 1.12.367-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → imm high-n reverse/rotate TOC (imm dual of SBREVHN/SROLHN/SRORHN into cell after SBREVTOCN).
+
+### Language
+- `SBREVHNTOCN`/`BREVHNTOCN` n — stack `i → reverse high n bits of cells[i]`; low kept (n 0..64)
+- `SROLHNTOCN`/`ROLHNTOCN` n — stack `i → rotl-1 within high n bits of cells[i]`; low kept
+- `SRORHNTOCN`/`RORHNTOCN` n — stack `i → rotr-1 within high n bits of cells[i]`; low kept
+- Proof `390_sbrevhntocn_srorhntocn.cubalc`
+
+### Prior
+See 1.12.366-universal.
+
 ## 1.12.366-universal — 2026-08-04
 
 ### Direction
