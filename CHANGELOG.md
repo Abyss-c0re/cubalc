@@ -1,3 +1,18 @@
+## 1.14.92-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack+dual imm 32-bit field signed clamp+between (signed range plane after SMINS32N/DMINS32N; field dual of SCLAMPN/SBETWEENN).
+
+### Language
+- `SCLAMPS32N` — `lo hi n → word n = clamp_signed(int32(w), [lo,hi])`
+- `SBETWEENS32N` — `lo hi n → word n = (lo <= int32(w) <= hi) ? 1 : 0`
+- `DCLAMPS32N` — dual-stack form of `SCLAMPS32N`
+- `DBETWEENS32N` — dual-stack form of `SBETWEENS32N`
+- Proof `549_sclamps32n_dbetweens32n.cubalc`
+
+### Prior
+See 1.14.91-universal.
+
 ## 1.14.91-universal — 2026-08-04
 
 ### Direction

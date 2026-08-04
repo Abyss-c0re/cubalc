@@ -4901,6 +4901,54 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm 32-bit field signed clamp+between: SCLAMPS32N · SBETWEENS32N
+   * (signed range plane after SMINS32N/SMAXS32N; field dual of SCLAMPN/SBETWEENN) */
+  if (kw(&L->cur,"SCLAMPS32N")||kw(&L->cur,"STACKCLAMPS32N")||kw(&L->cur,"CLAMPS32N")||
+      kw(&L->cur,"SCLAMPSIGN32N")||kw(&L->cur,"SCLAMPS32IMM")||kw(&L->cur,"SBOUNDS32N")){
+    /* SCLAMPS32N lo hi n — word n = clamp_signed(int32(w),[lo,hi]); swap lo/hi if needed; n 0..1 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long slo = (long)(int)((unsigned int)((unsigned long)lo & 0xFFFFFFFFul));
+    long shi = (long)(int)((unsigned int)((unsigned long)hi & 0xFFFFFFFFul));
+    if (slo > shi){ long t = slo; slo = shi; shi = t; }
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
+    if (v < slo) v = slo;
+    if (v > shi) v = shi;
+    unsigned long w = (unsigned long)(unsigned int)v;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SBETWEENS32N")||kw(&L->cur,"STACKBETWEENS32N")||kw(&L->cur,"BETWEENS32N")||
+      kw(&L->cur,"SINRANGES32N")||kw(&L->cur,"SBETWEENS32IMM")||kw(&L->cur,"SINRANGESIGN32N")){
+    /* SBETWEENS32N lo hi n — word n = (lo <= int32(w) <= hi) ? 1 : 0; swap lo/hi; n 0..1 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long slo = (long)(int)((unsigned int)((unsigned long)lo & 0xFFFFFFFFul));
+    long shi = (long)(int)((unsigned int)((unsigned long)hi & 0xFFFFFFFFul));
+    if (slo > shi){ long t = slo; slo = shi; shi = t; }
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
+    unsigned long w = (v >= slo && v <= shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

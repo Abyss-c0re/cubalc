@@ -10814,6 +10814,66 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 dual-stack imm 32-bit field signed clamp+between: DCLAMPS32N · DBETWEENS32N
+   * (dual of SCLAMPS32N/SBETWEENS32N; signed range after DMINS32N/DMAXS32N) */
+  if (kw(&L->cur,"DCLAMPS32N")||kw(&L->cur,"S2CLAMPS32N")||kw(&L->cur,"STACK2CLAMPS32N")||
+      kw(&L->cur,"PAIRCLAMPS32N")||kw(&L->cur,"DCLAMPSIGN32N")||kw(&L->cur,"DCLAMPS32IMM")||
+      kw(&L->cur,"DBOUNDS32N")){
+    /* a b + lo hi n → word n of each = clamp_signed(int32(w),[lo,hi]); n 0..1 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long slo = (long)(int)((unsigned int)((unsigned long)lo & 0xFFFFFFFFul));
+    long shi = (long)(int)((unsigned int)((unsigned long)hi & 0xFFFFFFFFul));
+    if (slo > shi){ long t = slo; slo = shi; shi = t; }
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    if (va < slo) va = slo; if (va > shi) va = shi;
+    if (vb < slo) vb = slo; if (vb > shi) vb = shi;
+    unsigned long wa = (unsigned long)(unsigned int)va;
+    unsigned long wb = (unsigned long)(unsigned int)vb;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DBETWEENS32N")||kw(&L->cur,"S2BETWEENS32N")||kw(&L->cur,"STACK2BETWEENS32N")||
+      kw(&L->cur,"PAIRBETWEENS32N")||kw(&L->cur,"DINRANGES32N")||kw(&L->cur,"DBETWEENS32IMM")||
+      kw(&L->cur,"DINRANGESIGN32N")){
+    /* a b + lo hi n → word n of each = (lo <= int32(w) <= hi) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long slo = (long)(int)((unsigned int)((unsigned long)lo & 0xFFFFFFFFul));
+    long shi = (long)(int)((unsigned int)((unsigned long)hi & 0xFFFFFFFFul));
+    if (slo > shi){ long t = slo; slo = shi; shi = t; }
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)(int)((unsigned int)((ma >> sh) & 0xFFFFFFFFul));
+    long vb = (long)(int)((unsigned int)((mb >> sh) & 0xFFFFFFFFul));
+    unsigned long wa = (va >= slo && va <= shi) ? 1ul : 0ul;
+    unsigned long wb = (vb >= slo && vb <= shi) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
