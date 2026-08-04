@@ -27342,6 +27342,53 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 cell fixed-width unary NOT: NOT8CELL · NOT16CELL · NOT32CELL
+   * (width dual of NOTCELL; complete 8/16/32 bitwise unary after inverted ladder) */
+  if (kw(&L->cur,"NOT8CELL")||kw(&L->cur,"CELLNOT8")||kw(&L->cur,"BNOT8CELL")||
+      kw(&L->cur,"RANGENOT8")||kw(&L->cur,"NOT8RANGE")||kw(&L->cur,"INV8CELL")){
+    /* NOT8CELL lo hi — cells[i] = ~low8 & 0xFF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((~((unsigned int)vm->cells[(int)i] & 0xFFu)) & 0xFFu);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NOT16CELL")||kw(&L->cur,"CELLNOT16")||kw(&L->cur,"BNOT16CELL")||
+      kw(&L->cur,"RANGENOT16")||kw(&L->cur,"NOT16RANGE")||kw(&L->cur,"INV16CELL")){
+    /* NOT16CELL lo hi — cells[i] = ~low16 & 0xFFFF */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((~((unsigned int)vm->cells[(int)i] & 0xFFFFu)) & 0xFFFFu);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"NOT32CELL")||kw(&L->cur,"CELLNOT32")||kw(&L->cur,"BNOT32CELL")||
+      kw(&L->cur,"RANGENOT32")||kw(&L->cur,"NOT32RANGE")||kw(&L->cur,"INV32CELL")){
+    /* NOT32CELL lo hi — cells[i] = ~low32 as u32 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)(~(unsigned int)vm->cells[(int)i]);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

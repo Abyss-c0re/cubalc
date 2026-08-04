@@ -1,3 +1,17 @@
+## 1.12.430-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → cell fixed-width unary NOT (width dual of NOTCELL after 8/16/32 inverted ladder; complete bitwise unary).
+
+### Language
+- `NOT8CELL`/`NOT8RANGE` — `lo hi → ~low8 as u8`
+- `NOT16CELL`/`NOT16RANGE` — `lo hi → ~low16 as u16`
+- `NOT32CELL`/`NOT32RANGE` — `lo hi → ~low32 as u32`
+- Proof `453_not8cell_not32cell.cubalc`
+
+### Prior
+See 1.12.429-universal.
+
 ## 1.12.429-universal — 2026-08-04
 
 ### Direction
