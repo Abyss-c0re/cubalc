@@ -1,3 +1,17 @@
+## 1.14.48-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack imm 16-bit field shift (halfword ladder of SSHL8N/SSHR8N/SSAR8N; stack dual of DSHL16N after SNOT16N).
+
+### Language
+- `SSHL16N` — `k n → halfword n of TOS = (uint16)<<k` (k≥16 → 0)
+- `SSHR16N` — `k n → halfword n of TOS = (uint16)>>k` logical (k≥16 → 0)
+- `SSAR16N` — `k n → halfword n of TOS = (int16)>>k` arithmetic (k≥16 → all sign)
+- Proof `505_sshl16n_ssar16n.cubalc`
+
+### Prior
+See 1.14.47-universal.
+
 ## 1.14.47-universal — 2026-08-04
 
 ### Direction
