@@ -2270,6 +2270,65 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack imm 4-bit field metrics: SBITREV4N · SPOPCNT4N · SPARITY4N
+   * (nibble-field dual of BITREV4CELL/POPCNT4CELL/PARITY4CELL after SSHL4N; complete stack nibble metrics) */
+  if (kw(&L->cur,"SBITREV4N")||kw(&L->cur,"STACKBITREV4N")||kw(&L->cur,"BITREV4N")||
+      kw(&L->cur,"SBREV4N")||kw(&L->cur,"SREV4N")||kw(&L->cur,"SBITREVNIBN")){
+    /* SBITREV4N n — nibble n of TOS = bitrev4(nibble); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (base >> sh) & 0xFul;
+    unsigned long rv = 0;
+    for (int b = 0; b < 4; b++){
+      rv = (rv << 1) | (w & 1u);
+      w >>= 1;
+    }
+    long r = (long)((base & ~(0xFul << sh)) | (rv << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPOPCNT4N")||kw(&L->cur,"STACKPOPCNT4N")||kw(&L->cur,"POPCNT4N")||
+      kw(&L->cur,"SPCNT4N")||kw(&L->cur,"SPOPNIBN")||kw(&L->cur,"SNIBPOPN")){
+    /* SPOPCNT4N n — nibble n of TOS = popcount(nibble); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (base >> sh) & 0xFul;
+    unsigned long pc = 0;
+    while (w){ pc += (w & 1u); w >>= 1; }
+    long r = (long)((base & ~(0xFul << sh)) | (pc << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SPARITY4N")||kw(&L->cur,"STACKPARITY4N")||kw(&L->cur,"PARITY4N")||
+      kw(&L->cur,"SXORRED4N")||kw(&L->cur,"SPARITYNIBN")||kw(&L->cur,"SNIBPARN")){
+    /* SPARITY4N n — nibble n of TOS = xor-reduce(nibble) in low bit; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long w = (base >> sh) & 0xFul;
+    unsigned long pr = 0;
+    while (w){ pr ^= (w & 1u); w >>= 1; }
+    long r = (long)((base & ~(0xFul << sh)) | (pr << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

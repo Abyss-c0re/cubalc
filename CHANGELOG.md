@@ -1,3 +1,17 @@
+## 1.14.7-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack imm 4-bit field metrics (nibble-field dual of BITREV4/POPCNT4/PARITY4 after SSHL4N; complete stack nibble metrics).
+
+### Language
+- `SBITREV4N` — `n → nibble n = bitrev4(nibble)`
+- `SPOPCNT4N` — `n → nibble n = popcount(nibble)`
+- `SPARITY4N` — `n → nibble n = xor-reduce(nibble)`
+- Proof `464_sbitrev4n_sparity4n.cubalc`
+
+### Prior
+See 1.14.6-universal.
+
 ## 1.14.6-universal — 2026-08-04
 
 ### Direction
