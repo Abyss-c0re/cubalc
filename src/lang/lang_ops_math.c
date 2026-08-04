@@ -3277,6 +3277,66 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 stack imm 16-bit field ordered-cmp: SLT16N · SGT16N · SLTE16N
+   * (halfword ladder of SLT32N/SGT32N/SLTE32N; unsigned predicates after SEQ16N/SNE16N) */
+  if (kw(&L->cur,"SLT16N")||kw(&L->cur,"STACKLT16N")||kw(&L->cur,"LT16N")||
+      kw(&L->cur,"SCMPLT16N")||kw(&L->cur,"SLTWORDN")||kw(&L->cur,"SLT16IMM")){
+    /* SLT16N field n — halfword n of TOS = (hw < field) ? 1 : 0; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (v < f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SGT16N")||kw(&L->cur,"STACKGT16N")||kw(&L->cur,"GT16N")||
+      kw(&L->cur,"SCMPGT16N")||kw(&L->cur,"SGTWORDN")||kw(&L->cur,"SGT16IMM")){
+    /* SGT16N field n — halfword n of TOS = (hw > field) ? 1 : 0; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (v > f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SLTE16N")||kw(&L->cur,"STACKLTE16N")||kw(&L->cur,"LTE16N")||
+      kw(&L->cur,"SCMPLE16N")||kw(&L->cur,"SLEQ16N")||kw(&L->cur,"SLTEWORDN")||
+      kw(&L->cur,"SLTE16IMM")){
+    /* SLTE16N field n — halfword n of TOS = (hw <= field) ? 1 : 0; n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (v <= f) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack imm 16-bit field abs+extend: SABS16N · SSEXT16N · SZEXT16N
    * (halfword ladder of SABS8N/SSEXT8N/SZEXT8N; signed extract after SNE16N ALU plane) */
   if (kw(&L->cur,"SABS16N")||kw(&L->cur,"STACKABS16N")||kw(&L->cur,"ABS16N")||

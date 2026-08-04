@@ -1,3 +1,17 @@
+## 1.14.71-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack imm 16-bit field ordered-cmp (halfword ladder of SLT32N/SGT32N/SLTE32N after SEQ16N/SNE16N).
+
+### Language
+- `SLT16N` — `field n → halfword n of TOS = (hw < field) ? 1 : 0`
+- `SGT16N` — `field n → halfword n of TOS = (hw > field) ? 1 : 0`
+- `SLTE16N` — `field n → halfword n of TOS = (hw <= field) ? 1 : 0`
+- Proof `528_slt16n_slte16n.cubalc`
+
+### Prior
+See 1.14.70-universal.
+
 ## 1.14.70-universal — 2026-08-04
 
 ### Direction
