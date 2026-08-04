@@ -1,3 +1,17 @@
+## 1.15.2-universal — 2026-08-05
+
+### Direction
+- Algocube digit **1** → stack+dual imm 32/16-bit field nonzero (field dual of S0NE/SNZ after S0EQ plane).
+
+### Language
+- `S0NE32N` — `n → word n = (w != 0) ? 1 : 0`
+- `S0NE16N` — halfword form of `S0NE32N`
+- `D0NE32N` / `D0NE16N` — dual-stack forms
+- Proof `559_s0ne32n_d0ne16n.cubalc`
+
+### Prior
+See 1.15.1-universal.
+
 ## 1.15.1-universal — 2026-08-05
 
 ### Direction

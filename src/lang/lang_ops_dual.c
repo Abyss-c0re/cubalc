@@ -7645,6 +7645,30 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 dual-stack imm 16-bit field nonzero: D0NE16N (dual of S0NE16N) */
+  if (kw(&L->cur,"D0NE16N")||kw(&L->cur,"S20NE16N")||kw(&L->cur,"STACK20NE16N")||
+      kw(&L->cur,"PAIR0NE16N")||kw(&L->cur,"DNZ16N")||kw(&L->cur,"DNEZ16N")||
+      kw(&L->cur,"D0NE16IMM")){
+    /* a b + n → halfword n of each = (hw != 0) ? 1 : 0; n 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFFFul;
+    unsigned long vb = (mb >> sh) & 0xFFFFul;
+    unsigned long wa = (va != 0) ? 1ul : 0ul;
+    unsigned long wb = (vb != 0) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-7 dual-stack imm 8-bit field arith: DADD8N · DSUB8N · DMUL8N
    * (dual of SADD8N/SSUB8N/SMUL8N; wrap uint8 byte plane on top two cells after dual halfword ALU) */
   if (kw(&L->cur,"DADD8N")||kw(&L->cur,"S2ADD8N")||kw(&L->cur,"STACK2ADD8N")||
@@ -11351,6 +11375,30 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     unsigned long vb = (mb >> sh) & 0xFFFFFFFFul;
     unsigned long wa = (va == 0) ? 1ul : 0ul;
     unsigned long wb = (vb == 0) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack imm 32-bit field nonzero: D0NE32N (dual of S0NE32N) */
+  if (kw(&L->cur,"D0NE32N")||kw(&L->cur,"S20NE32N")||kw(&L->cur,"STACK20NE32N")||
+      kw(&L->cur,"PAIR0NE32N")||kw(&L->cur,"DNZ32N")||kw(&L->cur,"DNEZ32N")||
+      kw(&L->cur,"D0NE32IMM")){
+    /* a b + n → word n of each = (w != 0) ? 1 : 0; n 0..1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    unsigned long sh = (unsigned long)(n * 32);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFFFFFFFul;
+    unsigned long vb = (mb >> sh) & 0xFFFFFFFFul;
+    unsigned long wa = (va != 0) ? 1ul : 0ul;
+    unsigned long wb = (vb != 0) ? 1ul : 0ul;
     long x = (long)((ma & ~(0xFFFFFFFFul << sh)) | (wa << sh));
     long y = (long)((mb & ~(0xFFFFFFFFul << sh)) | (wb << sh));
     vm->stack[vm->sp - 2] = x;
