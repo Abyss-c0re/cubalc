@@ -1,3 +1,17 @@
+## 1.14.45-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 16-bit field unary+rotate (halfword ladder of DNOT8N/DROL8N/DROR8N; start dual 16n unary plane).
+
+### Language
+- `DNOT16N` — `n → halfword n of each = ~hw & 0xFFFF`
+- `DROL16N` — `k n → rotl16 halfword n of each by k&15`
+- `DROR16N` — `k n → rotr16 halfword n of each by k&15`
+- Proof `502_dnot16n_dror16n.cubalc`
+
+### Prior
+See 1.14.44-universal.
+
 ## 1.14.44-universal — 2026-08-04
 
 ### Direction
