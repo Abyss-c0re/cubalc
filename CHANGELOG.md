@@ -1,3 +1,17 @@
+## 1.12.380-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack dual LE 32-bit field TOC (stack dual of SGET32TOCN; foundation completes 4/8/16/32 ladder).
+
+### Language
+- `SGET32TOC`/`GET32TOC` — stack `i n → cells[i] = LE 32-bit word n of cells[i]` (n 0..1)
+- `SSET32TOC`/`SET32TOC` — stack `i field n → deposit low 32 bits of field into LE word n`
+- `SCLR32TOC`/`CLR32TOC` — stack `i n → clear LE 32-bit word n of cells[i]`
+- Proof `403_sget32toc_sclr32toc.cubalc`
+
+### Prior
+See 1.12.379-universal.
+
 ## 1.12.379-universal — 2026-08-04
 
 ### Direction
