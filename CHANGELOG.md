@@ -1,3 +1,17 @@
+## 1.15.3-universal — 2026-08-05
+
+### Direction
+- Algocube digit **3** → stack+dual imm 8/4-bit field nonzero (completes field nonzero plane all widths).
+
+### Language
+- `S0NE8N` — `n → byte n = (b != 0) ? 1 : 0`
+- `S0NE4N` — nibble form of `S0NE8N`
+- `D0NE8N` / `D0NE4N` — dual-stack forms
+- Proof `560_s0ne8n_d0ne4n.cubalc`
+
+### Prior
+See 1.15.2-universal.
+
 ## 1.15.2-universal — 2026-08-05
 
 ### Direction
