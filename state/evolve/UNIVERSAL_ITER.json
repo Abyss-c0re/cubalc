@@ -1,26 +1,27 @@
 {
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
-  "from": "cubalc_universal_loop",
-  "ts": "2026-08-04T10:31:31+0300",
-  "iter": 490,
-  "algocube_digit": 4,
-  "version": "1.12.410-universal",
-  "pass": 448,
+  "from": "cubalc_universal_improve_tick",
+  "ts": "2026-08-04T15:37:51+0300",
+  "iter": 503,
+  "algocube_digit": 7,
+  "version": "1.14.18-universal",
+  "pass": 490,
   "fail": 0,
   "ok": true,
-  "interval_sec": 360,
+  "ops": [
+    "SMAX16N",
+    "SEQ16N",
+    "SNE16N"
+  ],
+  "proof": "programs/proof/475_smax16n_sne16n.cubalc",
+  "commit": "5d9a287",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
-  "ops": [
-    "BSWAP64CELL",
-    "BITREV16CELL",
-    "ROL16CELL"
-  ],
-  "proof": "programs/proof/433_bswap64cell_rol16cell.cubalc",
   "law": [
     "pure_science",
     "evolve",
     "flow_compile"
-  ]
+  ],
+  "delta": "Digit-7 stack imm halfword max+eq after SMIN16N; complete uint16 field min/max/eq/ne plane."
 }
