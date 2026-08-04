@@ -1,3 +1,17 @@
+## 1.15.10-universal — 2026-08-05
+
+### Direction
+- Algocube digit **4** → stack+dual imm 8/4-bit field signed LE0 (completes field signed LE0 plane all widths).
+
+### Language
+- `S0LE8N` — `n → byte n = (int8(b) <= 0) ? 1 : 0`
+- `S0LE4N` — nibble form of `S0LE8N`
+- `D0LE8N` / `D0LE4N` — dual-stack forms
+- Proof `567_s0le8n_d0le4n.cubalc`
+
+### Prior
+See 1.15.9-universal.
+
 ## 1.15.9-universal — 2026-08-05
 
 ### Direction
