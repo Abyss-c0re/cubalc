@@ -1,3 +1,18 @@
+## 1.14.83-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack imm 8-bit field signed ordered-cmp (dual of SLTS8N plane after DGTE8N).
+
+### Language
+- `DLTS8N` — `field n → byte n of each = (int8(b) < int8(field)) ? 1 : 0`
+- `DGTS8N` — `field n → byte n of each = (int8(b) > int8(field)) ? 1 : 0`
+- `DLTES8N` — `field n → byte n of each = (int8(b) <= int8(field)) ? 1 : 0`
+- `DGTES8N` — `field n → byte n of each = (int8(b) >= int8(field)) ? 1 : 0`
+- Proof `540_dlts8n_dgtes8n.cubalc`
+
+### Prior
+See 1.14.82-universal.
+
 ## 1.14.82-universal — 2026-08-04
 
 ### Direction
