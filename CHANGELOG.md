@@ -1,3 +1,17 @@
+## 1.14.50-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack imm 16-bit field zeros+signed (halfword ladder of SCLZ8N/SCTZ8N/SNEG8N after SPARITY16N).
+
+### Language
+- `SCLZ16N` — `n → halfword n of TOS = clz16(hw)` (0 → 16)
+- `SCTZ16N` — `n → halfword n of TOS = ctz16(hw)` (0 → 16)
+- `SNEG16N` — `n → halfword n of TOS = -(int16)` as uint16 (min stays 0x8000)
+- Proof `507_sclz16n_sneg16n.cubalc`
+
+### Prior
+See 1.14.49-universal.
+
 ## 1.14.49-universal — 2026-08-04
 
 ### Direction
