@@ -1,3 +1,17 @@
+## 1.12.342-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → forward imm modular inv/pow/div TOC (imm dual of SPOWMODN after SADDMODTOCN plane).
+
+### Language
+- `SPOWMODTOCN`/`POWMODTOCN`/`SPOWMODATN` exp m — stack `i → cells[i]=cells[i]^exp mod m` leave result
+- `SMODDIVTOCN`/`MODDIVTOCN`/`SMODDIVATN` b m — stack `i → cells[i]=cells[i]·b⁻¹ mod m` leave result
+- `SMODINVTOCN`/`MODINVTOCN`/`SINVMODTOCN` m — stack `i → cells[i]=cells[i]⁻¹ mod m` leave result
+- Proof `365_spowmodtocn_smodinvtocn.cubalc`
+
+### Prior
+See 1.12.341-universal.
+
 ## 1.12.341-universal — 2026-08-04
 
 ### Direction

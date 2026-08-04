@@ -5193,6 +5193,123 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 forward imm modular inv/pow/div TOC: SPOWMODTOCN · SMODDIVTOCN · SMODINVTOCN
+   * (i + args → cells[i] = inv/pow/div-mod; imm dual of SPOWMODN after SADDMODTOCN plane) */
+  if (kw(&L->cur,"SPOWMODTOCN")||kw(&L->cur,"SPOWMODTOCIMM")||kw(&L->cur,"STACKPOWMODTOCN")||
+      kw(&L->cur,"SPOWMODATN")||kw(&L->cur,"POWMODTOCN")||kw(&L->cur,"SCELLPOWMODN")||
+      kw(&L->cur,"SEXPMMODTOCN")){
+    /* i + exp m → cells[i] = cells[i]^exp mod m; m<=0 or exp<0 → 0; leave result */
+    lex_next(L);
+    long exp = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (m > 0 && exp >= 0){
+      long base = a % m; if (base < 0) base += m;
+      r = 1 % m;
+      long e = exp;
+      while (e > 0){
+        if (e & 1){
+          long y = r, x = base, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          r = acc;
+        }
+        {
+          long x = base, acc = 0, y = base;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          base = acc;
+        }
+        e >>= 1;
+      }
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODDIVTOCN")||kw(&L->cur,"SMODDIVTOCIMM")||kw(&L->cur,"STACKMODDIVTOCN")||
+      kw(&L->cur,"SMODDIVATN")||kw(&L->cur,"MODDIVTOCN")||kw(&L->cur,"SCELLMODDIVN")||
+      kw(&L->cur,"SDIVMODTOCN")||kw(&L->cur,"DIVMODMTOCN")){
+    /* i + b m → cells[i] = cells[i] * b^{-1} mod m; 0 if none / m<=0; leave result */
+    lex_next(L);
+    long b = parse_expr(vm,L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (m > 0){
+      long bb = b % m; if (bb < 0) bb += m;
+      if (bb != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = bb;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){
+          if (t < 0) t += m;
+          long x = a % m; if (x < 0) x += m;
+          long y = t, acc = 0;
+          while (y > 0){
+            if (y & 1) acc = (acc + x) % m;
+            x = (x + x) % m;
+            y >>= 1;
+          }
+          r = acc;
+        }
+      }
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMODINVTOCN")||kw(&L->cur,"SMODINVTOCIMM")||kw(&L->cur,"STACKMODINVTOCN")||
+      kw(&L->cur,"SMODINVATN")||kw(&L->cur,"MODINVTOCN")||kw(&L->cur,"SCELLMODINVN")||
+      kw(&L->cur,"SINVMODTOCN")||kw(&L->cur,"INVMODTOCN")){
+    /* i + m → cells[i] = cells[i]^{-1} mod m; 0 if none / m<=1; leave result */
+    lex_next(L);
+    long m = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (m > 1){
+      long aa = a % m; if (aa < 0) aa += m;
+      if (aa != 0){
+        long t = 0, nt = 1;
+        long rr = m, nr = aa;
+        while (nr != 0){
+          long q = rr / nr;
+          long tmp = nt; nt = t - q * nt; t = tmp;
+          tmp = nr; nr = rr - q * nr; rr = tmp;
+        }
+        if (rr == 1){ if (t < 0) t += m; r = t; }
+      }
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack↔cell reverse accumulate: SSUBFROMTOC · SDIVFROMTOC · SMODFROMTOC */
   if (kw(&L->cur,"SSUBFROMTOC")||kw(&L->cur,"SCELLSUBFROM")||kw(&L->cur,"SRSUBCELL")||
       kw(&L->cur,"STACKSUBFROMCELL")||kw(&L->cur,"SSUBFROMCELL")){
