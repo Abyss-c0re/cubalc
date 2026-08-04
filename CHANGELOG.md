@@ -1,3 +1,17 @@
+## 1.14.40-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack imm 8-bit field zeros+signed (byte ladder of SCLZ4N/SCTZ4N/SNEG4N; stack dual of DCLZ8N plane after SPARITY8N).
+
+### Language
+- `SCLZ8N` — `n → byte n of TOS = clz8(byte)` (0 → 8)
+- `SCTZ8N` — `n → byte n of TOS = ctz8(byte)` (0 → 8)
+- `SNEG8N` — `n → byte n of TOS = -(int8)` as uint8 (min -128 stays 0x80)
+- Proof `497_sclz8n_sneg8n.cubalc`
+
+### Prior
+See 1.14.39-universal.
+
 ## 1.14.39-universal — 2026-08-04
 
 ### Direction
