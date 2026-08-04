@@ -1,3 +1,17 @@
+## 1.14.66-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 32-bit field div/mod/min (word ladder of DDIV16N/DMOD16N/DMIN16N; dual of SDIV32N after DMUL32N).
+
+### Language
+- `DDIV32N` — `field n → word n of each = w / field` (field 0 → 0) on top two
+- `DMOD32N` — `field n → word n of each = w % field` (field 0 → 0)
+- `DMIN32N` — `field n → word n of each = min(w, field)` unsigned
+- Proof `523_ddiv32n_dmin32n.cubalc`
+
+### Prior
+See 1.14.65-universal.
+
 ## 1.14.65-universal — 2026-08-04
 
 ### Direction
