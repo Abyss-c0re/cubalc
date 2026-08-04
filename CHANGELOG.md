@@ -1,3 +1,17 @@
+## 1.14.3-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → cell fixed-width 4 nibble metrics foundation (nibble dual of CLZ8/CTZ8/PARITY8 after NEG4 plane; complete 4/8/16/32 metrics).
+
+### Language
+- `CLZ4CELL`/`CLZ4RANGE` — `lo hi → clz4(low4)`; 0 → 4
+- `CTZ4CELL`/`CTZ4RANGE` — `lo hi → ctz4(low4)`; 0 → 4
+- `PARITY4CELL`/`PARITY4RANGE` — `lo hi → xor-reduce low4 bits`
+- Proof `460_clz4cell_parity4cell.cubalc`
+
+### Prior
+See 1.14.2-universal.
+
 ## 1.14.2-universal — 2026-08-04
 
 ### Direction
