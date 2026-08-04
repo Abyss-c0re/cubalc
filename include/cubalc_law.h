@@ -10,6 +10,8 @@
 /* creed = opaque status token, not human language */
 #define CUBALC_CREED        "C3"
 #define CUBALC_SHARE        "smx"
+/* HOLD_FLASH: user-permission safeguard BEFORE any device/unit is "plugged in".
+ * Sticky ack — not auto-flash firmware. Devices free: no host flash without hold. */
 #define CUBALC_HOLD_FLASH   1
 #define CUBALC_MAGIC_BIN    0x43424C43u  /* CBLC */
 #define CUBALC_PROTO_V1     1
@@ -29,7 +31,7 @@
 #define CUBALC_LANG_NAME    "CubalC"
 #define CUBALC_LANG_AKA     "C3"
 #define CUBALC_LANG_PARADIGM "COP/flow"
-#define CUBALC_LANG_VERSION "1.14.23-universal"
+#define CUBALC_LANG_VERSION "1.14.24-universal"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
 #define CUBALC_MAX_SRC      (256 * 1024)

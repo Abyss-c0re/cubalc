@@ -1,3 +1,17 @@
+## 1.14.24-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → dual-stack imm 8-bit field max+eq (dual of SMAX8N/SEQ8N/SNE8N; complete min/max + equality on pair bytes).
+
+### Language
+- `DMAX8N` — `field n → byte n of each = max(byte, field)`
+- `DEQ8N` — `field n → byte n of each = (byte == field) ? 1 : 0`
+- `DNE8N` — `field n → byte n of each = (byte != field) ? 1 : 0`
+- Proof `481_dmax8n_dne8n.cubalc`
+
+### Prior
+See 1.14.23-universal.
+
 ## 1.14.23-universal — 2026-08-04
 
 ### Direction
