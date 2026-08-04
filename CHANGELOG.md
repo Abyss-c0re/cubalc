@@ -1,3 +1,17 @@
+## 1.12.363-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → imm high-n mask TOC (imm dual of SANDHN/SORHN/SXORHN into cell; high dual of SANDMNTOCN).
+
+### Language
+- `SANDHNTOCN`/`ANDHNTOCN` n — stack `i → cells[i] &= high-n mask`; keep high n bits (n 0..64)
+- `SORHNTOCN`/`ORHNTOCN` n — stack `i → cells[i] |= high-n mask`; set high n bits
+- `SXORHNTOCN`/`XORHNTOCN` n — stack `i → cells[i] ^= high-n mask`; toggle high n bits
+- Proof `386_sandhntocn_sxorhntocn.cubalc`
+
+### Prior
+See 1.12.362-universal.
+
 ## 1.12.362-universal — 2026-08-04
 
 ### Direction
