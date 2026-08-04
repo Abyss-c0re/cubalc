@@ -4903,6 +4903,72 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 multiword carry/borrow imm TOC: SADDCTOCN · SSUBBTOCN
+   * (imm dual of SADDCN/SSUBBN into cell; complete SADDTOCN plane with carry chain) */
+  if (kw(&L->cur,"SADDCTOCN")||kw(&L->cur,"SADDCTOCIMM")||kw(&L->cur,"STACKADDCTOCN")||
+      kw(&L->cur,"SADDCATN")||kw(&L->cur,"ADDCTOCN")||kw(&L->cur,"SCELLADDCN")||
+      kw(&L->cur,"SADDCINTOCN")||kw(&L->cur,"SADCINTOCN")){
+    /* i + n → cells[i] = cells[i] + n + cin(CARRY); update CARRY/CY; leave sum */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a;
+    unsigned long ub = (unsigned long)n;
+    unsigned long uc = (unsigned long)cin;
+    unsigned long s = ua + ub;
+    int c1 = (s < ua) ? 1 : 0;
+    unsigned long sum = s + uc;
+    int c2 = (sum < s) ? 1 : 0;
+    int carry = c1 | c2;
+    long r = (long)sum;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"CARRY",carry); var_set_num(vm,"CY",carry);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSUBBTOCN")||kw(&L->cur,"SSUBBTOCIMM")||kw(&L->cur,"STACKSUBBTOCN")||
+      kw(&L->cur,"SSUBBATN")||kw(&L->cur,"SUBBTOCN")||kw(&L->cur,"SCELLSUBBN")||
+      kw(&L->cur,"SSBBTOCN")||kw(&L->cur,"SSUBBINTOCN")){
+    /* i + n → cells[i] = cells[i] - n - bin(BORROW|CARRY); update BORROW/BW/CARRY; leave diff */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "BORROW", 0);
+      if (!vc) vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    unsigned long ua = (unsigned long)a;
+    unsigned long ub = (unsigned long)n;
+    unsigned long uc = (unsigned long)cin;
+    int b1 = (ua < ub) ? 1 : 0;
+    unsigned long d = ua - ub;
+    int b2 = (d < uc) ? 1 : 0;
+    unsigned long diff = d - uc;
+    int borrow = b1 | b2;
+    long r = (long)diff;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"BORROW",borrow); var_set_num(vm,"BW",borrow);
+    var_set_num(vm,"CARRY",borrow);
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-5 imm bitwise TOC: SANDTOCN · SORTOCN · SXORTOCN
    * (imm dual of SANDTOC/SORTOC/SXORTOC; bitfield peer of SADDTOCN after SANDIMM plane) */
   if (kw(&L->cur,"SANDTOCN")||kw(&L->cur,"SANDTOCIMM")||kw(&L->cur,"STACKANDTOCN")||

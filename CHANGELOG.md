@@ -1,3 +1,16 @@
+## 1.12.351-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → multiword carry/borrow imm TOC (imm dual of SADDCN/SSUBBN into cell after SADDTOCN).
+
+### Language
+- `SADDCTOCN`/`ADDCTOCN` n — stack `i → cells[i]+=n+cin(CARRY)`; update CARRY/CY leave sum
+- `SSUBBTOCN`/`SUBBTOCN` n — stack `i → cells[i]-=n+bin(BORROW|CARRY)`; update BORROW/CARRY leave diff
+- Proof `374_saddctocn_ssubbtocn.cubalc`
+
+### Prior
+See 1.12.350-universal.
+
 ## 1.12.350-universal — 2026-08-04
 
 ### Direction
