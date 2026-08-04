@@ -1,3 +1,17 @@
+## 1.12.408-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → cell bit-metrics plane (range dual of SPARITY/SBSWAP/SPOPCNT after BITREV32CELL).
+
+### Language
+- `PARITYCELL`/`PARITYRANGE` — `lo hi → cells[i] = parity(cells[i])` (xor of bits)
+- `BSWAPCELL`/`BSWAP32CELL` — `lo hi → cells[i] = bswap32(low32 cells[i])`
+- `POPCNTCELL`/`PCNTCELL` — `lo hi → cells[i] = popcount(cells[i])`
+- Proof `431_paritycell_popcntcell.cubalc`
+
+### Prior
+See 1.12.407-universal.
+
 ## 1.12.407-universal — 2026-08-04
 
 ### Direction
