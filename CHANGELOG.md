@@ -1,3 +1,17 @@
+## 1.14.67-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack imm 32-bit field max+eq (word ladder of SMAX16N/SEQ16N/SNE16N after SMIN32N).
+
+### Language
+- `SMAX32N` — `field n → word n of TOS = max(w, field)` unsigned
+- `SEQ32N` — `field n → word n of TOS = (w == field) ? 1 : 0`
+- `SNE32N` — `field n → word n of TOS = (w != field) ? 1 : 0`
+- Proof `524_smax32n_sne32n.cubalc`
+
+### Prior
+See 1.14.66-universal.
+
 ## 1.14.66-universal — 2026-08-04
 
 ### Direction
