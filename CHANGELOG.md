@@ -1,3 +1,17 @@
+## 1.12.365-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → imm clear + high-mask TOC (imm dual of SCLRMN/SCLRHN/SHMASKN into cell after SANDMNTOCN plane).
+
+### Language
+- `SCLRMNTOCN`/`CLRMNTOCN` n — stack `i → cells[i] &= ~low-n mask`; clear low n bits (n 0..64)
+- `SCLRHNTOCN`/`CLRHNTOCN` n — stack `i → cells[i] &= ~high-n mask`; clear high n bits
+- `SHMASKTOCN`/`HMASKTOCN` n — stack `i → cells[i] = high-n mask`; leave result
+- Proof `388_sclrmntocn_shmasktocn.cubalc`
+
+### Prior
+See 1.12.364-universal.
+
 ## 1.12.364-universal — 2026-08-04
 
 ### Direction
