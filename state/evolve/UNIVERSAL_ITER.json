@@ -2,20 +2,20 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_improve_tick",
-  "ts": "2026-08-04T16:19:25+0300",
-  "iter": 510,
-  "algocube_digit": 2,
-  "version": "1.14.25-universal",
-  "pass": 497,
+  "ts": "2026-08-04T16:25:09+0300",
+  "iter": 511,
+  "algocube_digit": 4,
+  "version": "1.14.26-universal",
+  "pass": 498,
   "fail": 0,
   "ok": true,
   "ops": [
-    "DADD4N",
-    "DSUB4N",
-    "DMUL4N"
+    "DDIV4N",
+    "DMOD4N",
+    "DMIN4N"
   ],
-  "proof": "programs/proof/482_dadd4n_dmul4n.cubalc",
-  "commit": "3b24c6a",
+  "proof": "programs/proof/483_ddiv4n_dmin4n.cubalc",
+  "commit": "5404ef1",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "law": [
@@ -23,5 +23,5 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "Digit-2 dual-stack imm nibble arith after dual 8n complete; wrap uint4 pair plane."
+  "delta": "Digit-4 dual-stack imm nibble div/mod/min zero-safe after DADD4N plane."
 }
