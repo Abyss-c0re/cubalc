@@ -6,11 +6,11 @@
 | **digit** | **7** (urandom) |
 | **version** | `1.14.9-universal` |
 | **pass/fail** | **481 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `8b70fa5` → `origin/main` |
 | **ops** | `SABS4N` / `SSEXT4N` / `SZEXT4N` |
 | **proof** | `programs/proof/466_sabs4n_szext4n.cubalc` |
 
 ### Delta
 Digit-7 stack imm nibble-field abs+extend: abs on selected nibble; extract+sign/zero-extend to TOS. Completes stack nibble signed extract after SNEG4N.
 
-**Status:** 1.14.8→1.14.9-universal; suite green 481/0; push pending.
+**Status:** 1.14.8→1.14.9-universal; suite green 481/0; push ok.
