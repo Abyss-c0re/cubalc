@@ -2,20 +2,20 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_improve_tick",
-  "ts": "2026-08-04T16:13:14+0300",
-  "iter": 509,
-  "algocube_digit": 7,
-  "version": "1.14.24-universal",
-  "pass": 496,
+  "ts": "2026-08-04T16:19:25+0300",
+  "iter": 510,
+  "algocube_digit": 2,
+  "version": "1.14.25-universal",
+  "pass": 497,
   "fail": 0,
   "ok": true,
   "ops": [
-    "DMAX8N",
-    "DEQ8N",
-    "DNE8N"
+    "DADD4N",
+    "DSUB4N",
+    "DMUL4N"
   ],
-  "proof": "programs/proof/481_dmax8n_dne8n.cubalc",
-  "commit": "004c4fc",
+  "proof": "programs/proof/482_dadd4n_dmul4n.cubalc",
+  "commit": "3b24c6a",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "law": [
@@ -23,5 +23,5 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "Digit-7 dual-stack imm byte max+eq after DMIN8N; complete dual uint8 compare plane."
+  "delta": "Digit-2 dual-stack imm nibble arith after dual 8n complete; wrap uint4 pair plane."
 }
