@@ -1,3 +1,17 @@
+## 1.12.360-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → imm low-n mask TOC (imm dual of SANDMN/SORMN/SXORMN into cell; data-path bit fill).
+
+### Language
+- `SANDMNTOCN`/`ANDMNTOCN` n — stack `i → cells[i] &= low-n mask`; keep low n bits (n 0..64)
+- `SORMNTOCN`/`ORMNTOCN` n — stack `i → cells[i] |= low-n mask`; set low n bits
+- `SXORMNTOCN`/`XORMNTOCN` n — stack `i → cells[i] ^= low-n mask`; toggle low n bits
+- Proof `383_sandmntocn_sxormntocn.cubalc`
+
+### Prior
+See 1.12.359-universal.
+
 ## 1.12.359-universal — 2026-08-04
 
 ### Direction
