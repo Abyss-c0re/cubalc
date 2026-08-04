@@ -458,6 +458,9 @@ static void lex_next(Lex *L) {
             strcasecmp(tail,"ZEXT4")==0 || strcasecmp(tail,"ZEXTN")==0 ||
             strcasecmp(tail,"CLIP8")==0 || strcasecmp(tail,"CLIP16")==0 ||
             strcasecmp(tail,"CLIP32")==0 ||
+            strcasecmp(tail,"CLIPS4")==0 || strcasecmp(tail,"CLIPSN")==0 ||
+            strcasecmp(tail,"CLIPS8")==0 || strcasecmp(tail,"CLIPSB")==0 ||
+            strcasecmp(tail,"CLIPS16")==0 || strcasecmp(tail,"CLIPSW")==0 ||
             strcasecmp(tail,"SEXT8")==0 || strcasecmp(tail,"SEXT16")==0 ||
             strcasecmp(tail,"SEXTB")==0 || strcasecmp(tail,"SEXTW")==0 ||
             strcasecmp(tail,"SEXT32")==0 || strcasecmp(tail,"SEXTD")==0 ||
@@ -19534,6 +19537,44 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
       x = a & 0xFFFFFFFFL;
       y = b & 0xFFFFFFFFL;
     }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack signed clip: DCLIPS4 · DCLIPS8 · DCLIPS16
+   * (signed dual of DCLIP4/8/16; pair of SCLIPS4/8/16 stack forms) */
+  if (kw(&L->cur,"DCLIPS4")||kw(&L->cur,"2CLIPS4")||kw(&L->cur,"S2CLIPS4")||
+      kw(&L->cur,"STACK2CLIPS4")||kw(&L->cur,"PAIRCLIPS4")||kw(&L->cur,"DCLIPSN")||
+      kw(&L->cur,"2CLIPSN")||
+      kw(&L->cur,"DCLIPS8")||kw(&L->cur,"2CLIPS8")||kw(&L->cur,"S2CLIPS8")||
+      kw(&L->cur,"STACK2CLIPS8")||kw(&L->cur,"PAIRCLIPS8")||kw(&L->cur,"DCLIPSB")||
+      kw(&L->cur,"2CLIPSB")||
+      kw(&L->cur,"DCLIPS16")||kw(&L->cur,"2CLIPS16")||kw(&L->cur,"S2CLIPS16")||
+      kw(&L->cur,"STACK2CLIPS16")||kw(&L->cur,"PAIRCLIPS16")||kw(&L->cur,"DCLIPSW")||
+      kw(&L->cur,"2CLIPSW")){
+    /* a b → signed-clamp pair at 4/8/16-bit bounds */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *q=op;*q;q++) if (*q>='a'&&*q<='z') *q=(char)(*q-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is4 = (strcmp(op,"DCLIPS4")==0 || strcmp(op,"2CLIPS4")==0 ||
+               strcmp(op,"S2CLIPS4")==0 || strcmp(op,"STACK2CLIPS4")==0 ||
+               strcmp(op,"PAIRCLIPS4")==0 || strcmp(op,"DCLIPSN")==0 ||
+               strcmp(op,"2CLIPSN")==0);
+    int is8 = (strcmp(op,"DCLIPS8")==0 || strcmp(op,"2CLIPS8")==0 ||
+               strcmp(op,"S2CLIPS8")==0 || strcmp(op,"STACK2CLIPS8")==0 ||
+               strcmp(op,"PAIRCLIPS8")==0 || strcmp(op,"DCLIPSB")==0 ||
+               strcmp(op,"2CLIPSB")==0);
+    long lo, hi;
+    if (is4){ lo = -8L; hi = 7L; }
+    else if (is8){ lo = -128L; hi = 127L; }
+    else { lo = -32768L; hi = 32767L; }
+    long x = a, y = b;
+    if (x < lo) x = lo; if (x > hi) x = hi;
+    if (y < lo) y = lo; if (y > hi) y = hi;
     vm->stack[vm->sp - 2] = x;
     vm->stack[vm->sp - 1] = y;
     var_set_num(vm,"LAST_N",y); vm->last_n=y;

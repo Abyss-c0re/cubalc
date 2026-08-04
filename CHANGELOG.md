@@ -1,3 +1,17 @@
+## 1.12.396-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack signed clip (signed dual of DCLIP4/8/16; pair of SCLIPS4/8/16).
+
+### Language
+- `DCLIPS4`/`2CLIPS4` — dual-stack clamp pair to signed 4-bit [-8,7]
+- `DCLIPS8`/`2CLIPS8` — dual-stack clamp pair to signed 8-bit [-128,127]
+- `DCLIPS16`/`2CLIPS16` — dual-stack clamp pair to signed 16-bit [-32768,32767]
+- Proof `419_dclips4_dclips16.cubalc`
+
+### Prior
+See 1.12.395-universal.
+
 ## 1.12.395-universal — 2026-08-04
 
 ### Direction
