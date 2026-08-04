@@ -9,7 +9,7 @@
 | `[name!]` / `[name!0\|1]` | pulse proton |
 | `[~n]` | flow n ticks |
 | `?` | show board |
-| `[hold]` | hold_flash |
+| `[hold]` / `HOLD_FLASH 1` | **User permission** safeguard before any unit is plugged in (not auto-flash) |
 | `[genesis "plate"]` | fold plate → matrix |
 | `[sync]` | hive join cubes |
 | `[fleet]` | fleet map cubes |

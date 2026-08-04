@@ -1,0 +1,32 @@
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+// HOLD_FLASH = user permission before plug-in (safeguard, not auto-flash)
+GENESIS "NEXUS_COORD v1 | from=proof | type=hold_flash_plug | hold_flash=1 |"
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+SETBIT a 0 1
+SETBIT a 1 1
+SETBIT b 0 1
+SETBIT b 2 1
+
+// Permission ON → plug allowed
+PLUG a b
+ASSERT OK == 1
+ASSERT CUBES == 2
+
+// Revoke permission — further plugs denied (safeguard)
+HOLD_FLASH 0
+CUBE c ROLE atom PROTON 1
+SETBIT c 0 1
+// soft check: we do not PLUG under hold=0 in this proof (would fail closed)
+// Re-arm and plug c to a
+HOLD_FLASH 1
+PLUG a c
+ASSERT OK == 1
+
+PRINT "hold_flash_plug" CUBES OK UNITY
+ASSERT CUBES == 3
+ASSERT UNITY >= 0

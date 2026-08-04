@@ -34,7 +34,7 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 
 ## Write programs agents can verify
 
-1. Start with `HOLD_FLASH 1` (or `[hold]`) when mutating.
+1. Start with `HOLD_FLASH 1` (or `[hold]`): **user permission** before any unit is plugged in (safeguard — not device auto-flash).
 2. Prefer `SYS` for host effects; do not invent flash/device writes.
 3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.
 4. Keep strings short; dump machine facts with `PRINT` / `?`.

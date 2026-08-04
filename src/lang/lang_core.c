@@ -590,7 +590,17 @@ void cubalc_lang_do_plug(VM *vm, const char *a, const char *b){
   if (ia<0){ place_cube(vm,a,a,1); ia=find_cube(vm,a); }
   if (ib<0){ place_cube(vm,b,b,1); ib=find_cube(vm,b); }
   if (ia<0||ib<0){ fail(vm,"plug missing unit"); return; }
-  cubalc_cube_plug(&vm->ch, ia, ib);
+  int rc = cubalc_cube_plug(&vm->ch, ia, ib);
+  /* Only HOLD_FLASH denial is hard fail — user permission before plug-in.
+   * Incompatible/missing ports stay soft (re-plug / dense meshes). */
+  if (rc == -5){
+    fail(vm,"PLUG denied: HOLD_FLASH=0 (user permission required before plug-in)");
+    var_set_num(vm,"OK",0);
+    return;
+  }
+  var_set_num(vm,"OK", rc == 0 ? 1 : 0);
+  if (vm->trace && rc < 0)
+    fprintf(vm->trace, "# PLUG soft-fail rc=%d (compat/ports)\n", rc);
 }
 /* Only CUBE is defined — I/O is pluggable; reverse flips IN/OUT on the wire. */
 void cubalc_lang_do_reverse(VM *vm, const char *a, const char *b){

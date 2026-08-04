@@ -239,7 +239,7 @@ emit .cubalc  →  cubalc run  →  JSON / PRINT / ASSERT  →  next action
 
 ### Contract
 
-1. **HOLD_FLASH 1** when mutating state.
+1. **HOLD_FLASH 1** = user permission before any unit is **plugged in** (safeguard; not auto-flash).
 2. **ASSERT** outcomes (`ASSERT SMX_OK == 1`, `ASSERT OK == 1`).
 3. Use **SYS** for host effects; do not invent device flashes.
 4. **No hard-coded device paths** or machine-local absolute homes in programs.
@@ -307,7 +307,7 @@ Optional OpenCL: `make USE_OPENCL=1 all`.
 | Matrix is SoT | Bits decide; prose does not |
 | Flow before compile | No flow → no compile |
 | Binary talk | SMX2/CBLC; HTTP is optional host edge |
-| HOLD_FLASH sticky | Secure frames require hold |
+| HOLD_FLASH sticky | User permission before plug-in; SMX frames require hold; no auto-flash |
 | Devices free | No auto-flash; no layout hardcode |
 | Fail closed | No SMX key → no secure talk (lab may use demo key) |
 | Share matrix only | Peer share is state_matrix, not prose dumps |
