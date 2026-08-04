@@ -6,11 +6,11 @@
 | **digit** | **0** (urandom) |
 | **version** | `1.14.13-universal` |
 | **pass/fail** | **485 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `1636c30` → `origin/main` |
 | **ops** | `SADD8N` / `SSUB8N` / `SMUL8N` |
 | **proof** | `programs/proof/470_sadd8n_smul8n.cubalc` |
 
 ### Delta
 Digit-0 stack imm byte-field arith merge: add / sub / mul wrap into selected byte of TOS. Ladder after nibble SADD4N plane; aliases avoid multiword SSUBBN collision.
 
-**Status:** 1.14.12→1.14.13-universal; suite green 485/0; push pending.
+**Status:** 1.14.12→1.14.13-universal; suite green 485/0; push ok.
