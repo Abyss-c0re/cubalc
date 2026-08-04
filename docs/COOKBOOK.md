@@ -106,10 +106,18 @@ From a program under `programs/…` (INCLUDE resolves relative to file dir and `
 
 ```cubalc
 INCLUDE "lib/hold_seed.cubalc"
-CUBE self ROLE host PROTON 1
-CUBE brain ROLE braincube PROTON 1
-PLUG self brain
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+PLUG peer0 peer1
+SETBIT peer0 0 1
+SETBIT peer1 1 1
+INCLUDE "lib/mesh_exchange.cubalc"   # SMX KEY + EXCHANGE rounds
+ASSERT SMX_OK == 1 "mesh talk"
+ASSERT SMX_TALKS >= 4
 ```
+
+Libs: `hold_seed` · `peer_decide` · `mesh_exchange` under `programs/lib/`.  
+Proof: `programs/proof/include_mesh_exchange.cubalc`.
 
 ## 7. SYS ENV with default
 

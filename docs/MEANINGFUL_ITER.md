@@ -32,7 +32,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 ### C. Standard library (CubalC source)
 
 10. ~~`programs/lib/hold_seed.cubalc`~~ **done**.
-11. `programs/lib/mesh_exchange.cubalc` · documented EXCHANGE loop snippet.
+11. ~~`programs/lib/mesh_exchange.cubalc`~~ **done** (INCLUDE EXCHANGE loop + proof).
 12. ~~`programs/lib/peer_decide.cubalc`~~ **done** (recipe).
 
 ### D. CLI product

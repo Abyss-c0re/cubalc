@@ -1,0 +1,26 @@
+# Proof: INCLUDE lib/mesh_exchange.cubalc after peer board
+HOLD_FLASH 1
+BUDGET 40
+SHARE state_matrix_only
+
+INCLUDE "lib/hold_seed.cubalc"
+
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+PLUG peer0 peer1
+
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+SETBIT peer1 1 1
+SETBIT peer1 3 1
+SETBIT peer1 5 1
+
+INCLUDE "lib/mesh_exchange.cubalc"
+
+PRINT_JSON SMX_OK SMX_TALKS CUBES
+PRINT "mesh_lib" SMX_OK SMX_TALKS CUBES
+
+ASSERT SMX_OK == 1 "mesh_exchange must set SMX_OK"
+ASSERT SMX_TALKS >= 4 "two EXCHANGE rounds → ≥4 talks"
+ASSERT CUBES == 2 "two peers"

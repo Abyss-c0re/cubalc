@@ -1,0 +1,17 @@
+// lib/mesh_exchange.cubalc — documented SMX EXCHANGE loop snippet
+// INCLUDE after cubes peer0 + peer1 exist (placed, plugged, bits optional).
+//
+// Form: SMX EXCHANGE a b  ≡  SMX TALK a→b then b→a  (binary SMX2, no HTTP)
+// Env:  CUBALC_SMX_KEY  (64-hex; demo key used if unset for local proof)
+// Out:  SMX_OK · SMX_TALKS  (caller ASSERTs)
+
+SMX KEY
+
+// Round 1 — seed mutual matrix
+SMX EXCHANGE peer0 peer1
+
+// Round 2 — second pass keeps hive unity after further FOLDBITS/SETBIT
+// (copy these lines or re-INCLUDE for more rounds)
+SMX EXCHANGE peer0 peer1
+
+// Agents: PRINT_JSON SMX_OK SMX_TALKS after INCLUDE to inspect

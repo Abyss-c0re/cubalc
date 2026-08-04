@@ -32,11 +32,13 @@ Env (no hard-coded devices in programs):
 
 | file | role |
 |------|------|
+| `programs/lib/mesh_exchange.cubalc` | INCLUDE snippet: SMX KEY + EXCHANGE loop on `peer0`/`peer1` |
 | `programs/p2p/mesh_local.cubalc` | 3-peer in-process mesh |
 | `programs/p2p/peer_serve.cubalc` | SERVE node |
 | `programs/p2p/peer_dial.cubalc` | DIAL node |
 | `programs/p2p/nanobot_peer.cubalc` | nanobot home board (serve or dial) |
 | `programs/proof/10_p2p_cubalc.cubalc` | unit proof |
+| `programs/proof/include_mesh_exchange.cubalc` | INCLUDE lib mesh proof |
 
 ## Run mesh (two CubalC processes = two nanobot homes)
 

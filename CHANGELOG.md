@@ -14,6 +14,12 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — lib mesh_exchange — 2026-08-05
+
+### Usability
+- `programs/lib/mesh_exchange.cubalc` — documented SMX KEY + dual EXCHANGE rounds for `peer0`/`peer1`
+- Proof: `programs/proof/include_mesh_exchange.cubalc` (INCLUDE hold_seed + mesh_exchange)
+
 ## Meaningful — cubalc forms catalog — 2026-08-05
 
 ### Usability
