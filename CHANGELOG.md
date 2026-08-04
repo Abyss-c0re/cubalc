@@ -1,3 +1,17 @@
+## 1.14.18-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 16-bit field max+eq (complete min/max + equality compare plane after SMIN16N; bool writes 0/1 into halfword).
+
+### Language
+- `SMAX16N` — `field n → halfword n = max(hw, field)`
+- `SEQ16N` — `field n → halfword n = (hw == field) ? 1 : 0`
+- `SNE16N` — `field n → halfword n = (hw != field) ? 1 : 0`
+- Proof `475_smax16n_sne16n.cubalc`
+
+### Prior
+See 1.14.17-universal.
+
 ## 1.14.17-universal — 2026-08-04
 
 ### Direction
