@@ -1,3 +1,17 @@
+## 1.15.11-universal — 2026-08-05
+
+### Direction
+- Algocube digit **3** → stack+dual imm 8/4-bit field signed GE0 (completes field signed GE0 plane all widths).
+
+### Language
+- `S0GE8N` — `n → byte n = (int8(b) >= 0) ? 1 : 0`
+- `S0GE4N` — nibble form of `S0GE8N`
+- `D0GE8N` / `D0GE4N` — dual-stack forms
+- Proof `568_s0ge8n_d0ge4n.cubalc`
+
+### Prior
+See 1.15.10-universal.
+
 ## 1.15.10-universal — 2026-08-05
 
 ### Direction

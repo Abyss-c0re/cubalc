@@ -8489,6 +8489,30 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack imm 8-bit field signed GE0: D0GE8N (dual of S0GE8N) */
+  if (kw(&L->cur,"D0GE8N")||kw(&L->cur,"S20GE8N")||kw(&L->cur,"STACK20GE8N")||
+      kw(&L->cur,"PAIR0GE8N")||kw(&L->cur,"DGE08N")||kw(&L->cur,"DNONNEG8N")||
+      kw(&L->cur,"D0GE8IMM")){
+    /* a b + n → byte n of each = (int8(b) >= 0) ? 1 : 0; n 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFFul); if (va & 0x80) va -= 256;
+    long vb = (long)((mb >> sh) & 0xFFul); if (vb & 0x80) vb -= 256;
+    unsigned long wa = (va >= 0) ? 1ul : 0ul;
+    unsigned long wb = (vb >= 0) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 dual-stack imm 8-bit field bitwise: DAND8N · DOR8N · DXOR8N (dual of SAND8N/SOR8N/SXOR8N) */
   if (kw(&L->cur,"DAND8N")||kw(&L->cur,"S2AND8N")||kw(&L->cur,"STACK2AND8N")||
       kw(&L->cur,"PAIRAND8N")||kw(&L->cur,"DANDBIMM")||kw(&L->cur,"DKEEP8N")||
@@ -9346,6 +9370,30 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     long vb = (long)((mb >> sh) & 0xFul); if (vb & 0x8) vb -= 16;
     unsigned long wa = (va <= 0) ? 1ul : 0ul;
     unsigned long wb = (vb <= 0) ? 1ul : 0ul;
+    long x = (long)((ma & ~(0xFul << sh)) | (wa << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (wb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-3 dual-stack imm 4-bit field signed GE0: D0GE4N (completes field signed GE0 all widths dual) */
+  if (kw(&L->cur,"D0GE4N")||kw(&L->cur,"S20GE4N")||kw(&L->cur,"STACK20GE4N")||
+      kw(&L->cur,"PAIR0GE4N")||kw(&L->cur,"DGE04N")||kw(&L->cur,"DNONNEG4N")||
+      kw(&L->cur,"D0GE4IMM")){
+    /* a b + n → nibble n of each = (int4(nib) >= 0) ? 1 : 0; n 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFul); if (va & 0x8) va -= 16;
+    long vb = (long)((mb >> sh) & 0xFul); if (vb & 0x8) vb -= 16;
+    unsigned long wa = (va >= 0) ? 1ul : 0ul;
+    unsigned long wb = (vb >= 0) ? 1ul : 0ul;
     long x = (long)((ma & ~(0xFul << sh)) | (wa << sh));
     long y = (long)((mb & ~(0xFul << sh)) | (wb << sh));
     vm->stack[vm->sp - 2] = x;
