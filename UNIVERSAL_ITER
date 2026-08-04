@@ -6,7 +6,7 @@
 | **digit** | **7** (urandom+genome; stack bitfield TOC dual) |
 | **version** | `1.12.354-universal` |
 | **pass/fail** | **392 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `d050e06` → `origin/main` |
 | **ops** | `SSETBTOC` / `SCLRBTOC` / `SFLPBTOC` |
 | **proof** | `programs/proof/377_ssetbtoc_sflpbtoc.cubalc` |
 
