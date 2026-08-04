@@ -2,20 +2,20 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 476 |
-| **digit** | **8** (urandom) |
-| **version** | `1.12.394-universal` |
-| **pass/fail** | **432 / 0** (green) |
-| **commit** | `2f4f5ce` → `origin/main` |
-| **ops** | `SCLIPS4` / `SCLIPS8` / `SCLIPS16` |
-| **proof** | `programs/proof/417_sclips4_sclips16.cubalc` |
+| **iter** | 478 |
+| **digit** | **3** (urandom) |
+| **version** | `1.12.395-universal` |
+| **pass/fail** | **433 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SCLIP4` / `SCLIP32` / `SCLIPS32` |
+| **proof** | `programs/proof/418_sclip4_sclips32.cubalc` |
 
 ### Delta
-Digit-8 stack signed clip word path: signed dual of SCLIP8/SCLIP16; stack clamp 4/8/16 plane.
+Digit-3 stack clip complete 4/32 u+s: unsigned stack clip 4/8/16/32; signed 32 dual of SCLIPS4/8/16.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 - tree healthy
 
-**Status:** 1.12.393→1.12.394; stack signed clips 4/8/16.
+**Status:** 1.12.394→1.12.395; pure-stack clip ladder complete.

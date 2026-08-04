@@ -1,3 +1,17 @@
+## 1.12.395-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → stack clip complete 4/32 u+s (unsigned stack clip 4/8/16/32; signed 32 dual of SCLIPS4/8/16).
+
+### Language
+- `SCLIP4`/`CLIP4`/`UCLIP4` — stack `TOS = clamp to unsigned nibble [0,15]`
+- `SCLIP32`/`CLIP32`/`UCLIP32` — stack `TOS = clamp to unsigned 32-bit [0,0xFFFFFFFF]`
+- `SCLIPS32`/`CLIPS32` — stack `TOS = clamp to signed 32-bit [INT32_MIN,INT32_MAX]`
+- Proof `418_sclip4_sclips32.cubalc`
+
+### Prior
+See 1.12.394-universal.
+
 ## 1.12.394-universal — 2026-08-04
 
 ### Direction

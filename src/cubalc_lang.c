@@ -24014,6 +24014,46 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 stack clip complete 4/32 u+s: SCLIP4 · SCLIP32 · SCLIPS32
+   * (complete unsigned stack clip 4/8/16/32 with prior SCLIP8/16; signed 32 dual of SCLIPS4/8/16) */
+  if (kw(&L->cur,"SCLIP4")||kw(&L->cur,"CLIP4")||kw(&L->cur,"UCLIP4")||
+      kw(&L->cur,"STACKCLIP4")||kw(&L->cur,"SCLIPN")||kw(&L->cur,"UCLIPN")){
+    /* TOS = clamp to unsigned nibble [0,15] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < 0) r = 0;
+    if (r > 15) r = 15;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIP32")||kw(&L->cur,"CLIP32")||kw(&L->cur,"UCLIP32")||
+      kw(&L->cur,"STACKCLIP32")||kw(&L->cur,"SCLIPL")||kw(&L->cur,"SCLIPD")||
+      kw(&L->cur,"UCLIPL")){
+    /* TOS = clamp to unsigned 32-bit [0,0xFFFFFFFF] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < 0) r = 0;
+    if ((unsigned long)r > 0xFFFFFFFFul) r = (long)0xFFFFFFFFul;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SCLIPS32")||kw(&L->cur,"CLIPS32")||kw(&L->cur,"SSCLIP32")||
+      kw(&L->cur,"STACKSCLIPS32")||kw(&L->cur,"SCLIPSL")||kw(&L->cur,"SCLIPSD")||
+      kw(&L->cur,"STACKCLIPS32")){
+    /* TOS = clamp to signed 32-bit [INT32_MIN,INT32_MAX] */
+    lex_next(L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long r = vm->stack[vm->sp - 1];
+    if (r < (-2147483647L - 1)) r = (-2147483647L - 1);
+    if (r > 2147483647L) r = 2147483647L;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SBOUND")||kw(&L->cur,"STACKBOUND")){
     /* alias of SCLAMP: n lo hi → clamp */
     lex_next(L);

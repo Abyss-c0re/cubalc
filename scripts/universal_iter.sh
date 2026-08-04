@@ -398,7 +398,8 @@ for base in 01_arithmetic 02_cop_matrix 06_decide 09_algocube_harmony \
             414_sclip32tocn_sclips16toc \
             415_sclips4toc_sclips8tocn \
             416_sclips4tocn_sclips32tocn \
-            417_sclips4_sclips16; do
+            417_sclips4_sclips16 \
+            418_sclip4_sclips32; do
   f="$ROOT/programs/proof/${base}.cubalc"
   [[ -f "$f" ]] && run_one "$f"
 done
