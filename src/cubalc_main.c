@@ -1566,6 +1566,7 @@ int main(int argc, char **argv) {
       {"INCLUDE", "flow", "INCLUDE \"path.cubalc\" load module into same VM"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
+      {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS READ", "host", "SYS READ path|LAST"},
       {"SYS WRITE", "host", "SYS WRITE path data"},
       {"SYS EXIST", "host", "SYS EXIST path → LAST_N 0|1"},

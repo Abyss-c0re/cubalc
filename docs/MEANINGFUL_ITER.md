@@ -49,6 +49,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 19. ~~**`cubalc forms [prefix]`** live op listing~~ **done**.
 20. ~~SERVE/DIAL error hints + soft timeout/connect messages~~ **done**.
 21. ~~**`SYS ARG` OR fallback**~~ **done** (script defaults without shell glue).
+22. ~~**In-language `HELP [form]`**~~ **done** (LAST/OK/HELP_N + CLI forms).
 
 ## Tick protocol
 

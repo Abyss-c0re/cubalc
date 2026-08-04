@@ -1115,6 +1115,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   if (kw(&L->cur,"OS_ASPECTS")||kw(&L->cur,"SPAWN_OS")){
     lex_next(L); ensure_world(vm); cubalc_chain_os_aspects(&vm->ch); bump(vm); return 1;
   }
+  /* HELP [prefix|form] — in-program form discovery for agents/humans
+   * Sets LAST to first match "NAME: hint", LAST_N=len, OK=1 if found.
+   * Bare HELP → catalog tip pointing at cubalc forms CLI. */
+  if (kw(&L->cur,"HELP")||kw(&L->cur,"MAN")||kw(&L->cur,"DOC")){
+    static const struct { const char *name; const char *hint; } help[] = {
+      {"HOLD_FLASH", "HOLD_FLASH 1 — user permission BEFORE PLUG (not auto-flash)"},
+      {"CUBE", "CUBE name ROLE host|body PROTON 0|1"},
+      {"PLUG", "PLUG a b — wire cubes (needs HOLD_FLASH 1)"},
+      {"IMPULSE", "IMPULSE cube [0|1] — pulse proton"},
+      {"FLOW", "FLOW n — board ticks"},
+      {"SETBIT", "SETBIT cube idx 0|1"},
+      {"SETDIGIT", "SETDIGIT cube 0..9"},
+      {"FOLDBITS", "FOLDBITS cube bits — fold 01 stream into matrix"},
+      {"DECIDE", "DECIDE [cube] — matrix → algocube digit 0..9"},
+      {"ASSERT", "ASSERT expr [\"why\"] — fail with line + reason"},
+      {"PRINT", "PRINT str|expr…"},
+      {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
+      {"DUMP", "DUMP — alias of PRINT_JSON"},
+      {"INCLUDE", "INCLUDE \"path.cubalc\" — load module same VM"},
+      {"LET", "LET name = expr|string"},
+      {"SYS", "SYS ENV|ARG|READ|WRITE … · ENV/ARG support OR fallback"},
+      {"SYS ENV", "SYS ENV NAME [OR fallback]"},
+      {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
+      {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
+      {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
+      {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},
+      {"SMX SERVE", "SMX SERVE local remote host:port · CUBALC_P2P_TIMEOUT"},
+      {"SMX DIAL", "SMX DIAL local remote host:port · CUBALC_P2P_SOFT soft-fail"},
+      {"HARMONY", "HARMONY [target] — hive consensus + unity"},
+      {"RESOLVE", "RESOLVE [target] — harmony + decide + energy"},
+      {"COMPARE", "COMPARE a b — Hamming / unity"},
+      {"NEST", "NEST parent child — cube nesting"},
+    };
+    int nhelp = (int)(sizeof help / sizeof help[0]);
+    char q[64]; q[0]=0;
+    lex_next(L);
+    /* Topic may be a keyword (ASSERT, SMX, PLUG…) — always consume as help query. */
+    if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+      snprintf(q, sizeof q, "%s", L->cur.text);
+      lex_next(L);
+    }
+    /* uppercase query for match */
+    {
+      size_t i;
+      for (i = 0; q[i]; i++)
+        if (q[i] >= 'a' && q[i] <= 'z') q[i] = (char)(q[i] - 'a' + 'A');
+    }
+    char out[CUBALC_HOST_STR_MAX]; out[0]=0;
+    int found = 0, hits = 0;
+    if (!q[0]){
+      snprintf(out, sizeof out,
+               "HELP [form] · cubalc forms [prefix] · cookbook: docs/COOKBOOK.md · "
+               "HOLD_FLASH 1 before PLUG · SMX binary mesh");
+      found = 1; hits = nhelp;
+    } else {
+      size_t o = 0;
+      int i;
+      for (i = 0; i < nhelp; i++){
+        char nm[48]; size_t k;
+        for (k = 0; help[i].name[k] && k + 1 < sizeof nm; k++)
+          nm[k] = (char)((help[i].name[k] >= 'a' && help[i].name[k] <= 'z')
+                         ? help[i].name[k] - 'a' + 'A' : help[i].name[k]);
+        nm[k] = 0;
+        if (strstr(nm, q) || strstr(help[i].hint, q)){
+          int n = snprintf(out + o, sizeof out - o, "%s%s: %s",
+                           o ? " | " : "", help[i].name, help[i].hint);
+          if (n > 0) o += (size_t)n;
+          hits++; found = 1;
+          if (o + 32 >= sizeof out) break;
+        }
+      }
+      if (!found)
+        snprintf(out, sizeof out, "no form match for '%s' — try cubalc forms %s", q, q);
+    }
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = (long)strlen(out);
+    var_set_str(vm, "LAST", out);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", found ? 1 : 0);
+    var_set_num(vm, "HELP_N", (long)hits);
+    if (vm->trace) fprintf(vm->trace, "%s\n", out);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
+  }
   if (kw(&L->cur,"PRINT")){
     lex_next(L);
     char line[256]; size_t o=0; line[0]=0;

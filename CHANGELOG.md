@@ -14,6 +14,14 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — HELP form in-language — 2026-08-05
+
+### Usability
+- `HELP` / `HELP form` — discover play forms inside a program (agents)
+- Sets LAST (hint text), LAST_N, OK (found?), HELP_N (hit count)
+- Complements CLI `cubalc forms [prefix]`
+- Proof: `programs/proof/help_form.cubalc`
+
 ## Meaningful — SYS ARG OR fallback — 2026-08-05
 
 ### Usability

@@ -1,0 +1,23 @@
+# In-language HELP [form] — agent discovers forms without leaving the VM
+HOLD_FLASH 1
+
+HELP
+ASSERT LAST_N > 0 "bare HELP fills LAST"
+ASSERT OK == 1 "bare HELP is a catalog tip"
+
+HELP ASSERT
+ASSERT OK == 1 "ASSERT topic found"
+ASSERT LAST_N > 10 "hint text in LAST"
+
+HELP SMX
+ASSERT OK == 1 "SMX family found"
+PRINT "help_smx" LAST_N
+
+HELP PRINT_JSON
+ASSERT OK == 1 "PRINT_JSON found"
+
+HELP ZZZ_NO_SUCH_FORM_XYZ
+ASSERT OK == 0 "unknown topic → OK 0"
+ASSERT LAST_N > 0 "still explains no match"
+
+PRINT "help_form ok"

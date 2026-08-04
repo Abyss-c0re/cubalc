@@ -22,6 +22,7 @@ Plugs wire cubes; **REVERSE** flips I/O direction when needed.
 ## Statements
 
 `LET` `LOOP`/`WHILE` `FOR`/`EACH` `IF`/`END` `ASSERT` [`"why"`] `PRINT`  
+`HELP` [form] — in-program form hint → LAST / OK / HELP_N  
 `PRINT_JSON` / `DUMP` [idents] — one JSON line (bare = runtime snapshot)  
 
 
