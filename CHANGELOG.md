@@ -1,3 +1,17 @@
+## 1.12.400-universal — 2026-08-04
+
+### Direction
+- Algocube digit **8** → stack↔cell word bit metrics TOC (dual of SPARITY/SBSWAP/SBITREV into cell after SPOPCNT/CLZ/CTZ TOC).
+
+### Language
+- `SPARITYTOC`/`PARITYTOC` — stack `i → cells[i] = parity(cells[i])` (xor of bits)
+- `SBSWAPTOC`/`BSWAPTOC` — stack `i → cells[i] = bswap32(low32 cells[i])`
+- `SBITREV32TOC`/`SREV32TOC` — stack `i → cells[i] = bitrev32(low32 cells[i])`
+- Proof `423_sparitytoc_sbitrev32toc.cubalc`
+
+### Prior
+See 1.12.399-universal.
+
 ## 1.12.399-universal — 2026-08-04
 
 ### Direction
