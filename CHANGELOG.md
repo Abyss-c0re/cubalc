@@ -1,3 +1,17 @@
+## 1.12.391-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → imm clip32 + signed clip TOC (complete uclip imm 4/8/16/32; signed 8/16 clamp into cell).
+
+### Language
+- `SCLIP32TOCN`/`CLIP32TOCN` — stack `i → cells[i] = clamp to [0,0xFFFFFFFF]`
+- `SCLIPS8TOC`/`CLIPS8TOC` — stack `i → cells[i] = clamp to signed 8-bit [-128,127]`
+- `SCLIPS16TOC`/`CLIPS16TOC` — stack `i → cells[i] = clamp to signed 16-bit [-32768,32767]`
+- Proof `414_sclip32tocn_sclips16toc.cubalc`
+
+### Prior
+See 1.12.390-universal.
+
 ## 1.12.390-universal — 2026-08-04
 
 ### Direction

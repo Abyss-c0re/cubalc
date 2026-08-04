@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 469 |
-| **digit** | **4** (urandom) |
-| **version** | `1.12.390-universal` |
-| **pass/fail** | **428 / 0** (green) |
+| **iter** | 470 |
+| **digit** | **6** (urandom) |
+| **version** | `1.12.391-universal` |
+| **pass/fail** | **429 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SCLIP4TOCN` / `SCLIP8TOCN` / `SCLIP16TOCN` |
-| **proof** | `programs/proof/413_sclip4tocn_sclip16tocn.cubalc` |
+| **ops** | `SCLIP32TOCN` / `SCLIPS8TOC` / `SCLIPS16TOC` |
+| **proof** | `programs/proof/414_sclip32tocn_sclips16toc.cubalc` |
 
 ### Delta
-Digit-4 imm dual fixed clip TOC: imm dual of SCLIP4/8/16TOC (keep i on stack).
+Digit-6 imm clip32 + signed clip TOC: complete uclip imm 4/8/16/32; signed 8/16 clamp into cells.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
