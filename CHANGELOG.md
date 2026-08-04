@@ -1,3 +1,17 @@
+## 1.14.72-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → dual-stack imm 16-bit field ordered-cmp (dual of SLT16N/SGT16N/SLTE16N after DEQ16N/DNE16N).
+
+### Language
+- `DLT16N` — `field n → halfword n of each = (hw < field) ? 1 : 0` on top two
+- `DGT16N` — `field n → halfword n of each = (hw > field) ? 1 : 0`
+- `DLTE16N` — `field n → halfword n of each = (hw <= field) ? 1 : 0`
+- Proof `529_dlt16n_dlte16n.cubalc`
+
+### Prior
+See 1.14.71-universal.
+
 ## 1.14.71-universal — 2026-08-04
 
 ### Direction
