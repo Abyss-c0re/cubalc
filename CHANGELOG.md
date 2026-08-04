@@ -1,3 +1,18 @@
+## 1.14.82-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → stack imm 8-bit field signed ordered-cmp (byte ladder of SLTS4N after unsigned SGTE8N).
+
+### Language
+- `SLTS8N` — `field n → byte n = (int8(b) < int8(field)) ? 1 : 0`
+- `SGTS8N` — `field n → byte n = (int8(b) > int8(field)) ? 1 : 0`
+- `SLTES8N` — `field n → byte n = (int8(b) <= int8(field)) ? 1 : 0`
+- `SGTES8N` — `field n → byte n = (int8(b) >= int8(field)) ? 1 : 0`
+- Proof `539_slts8n_sgtes8n.cubalc`
+
+### Prior
+See 1.14.81-universal.
+
 ## 1.14.81-universal — 2026-08-04
 
 ### Direction
