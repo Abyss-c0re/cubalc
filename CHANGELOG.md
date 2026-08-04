@@ -1,3 +1,18 @@
+## 1.14.96-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack+dual imm 32/16-bit field signed WITHIN (hi exclusive; Forth WITHIN after SBETWEENS plane).
+
+### Language
+- `SWITHINS32N` — `lo hi n → word n = (lo <= int32(w) < hi) ? 1 : 0` (no lo/hi swap)
+- `SWITHINS16N` — halfword form of `SWITHINS32N`
+- `DWITHINS32N` — dual-stack form of `SWITHINS32N`
+- `DWITHINS16N` — dual-stack form of `SWITHINS16N`
+- Proof `553_swithins32n_dwithins16n.cubalc`
+
+### Prior
+See 1.14.95-universal.
+
 ## 1.14.95-universal — 2026-08-04
 
 ### Direction

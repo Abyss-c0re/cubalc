@@ -4060,6 +4060,28 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 16-bit field signed WITHIN: SWITHINS16N (halfword ladder of SWITHINS32N) */
+  if (kw(&L->cur,"SWITHINS16N")||kw(&L->cur,"STACKWITHINS16N")||kw(&L->cur,"WITHINS16N")||
+      kw(&L->cur,"SWITHINSIGN16N")||kw(&L->cur,"SWITHINS16IMM")||kw(&L->cur,"SINTERVALS16N")){
+    /* SWITHINS16N lo hi n — halfword n = (lo <= int16(hw) < hi) ? 1 : 0; n 0..3; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    long slo = (long)((unsigned long)lo & 0xFFFFul); if (slo & 0x8000) slo -= 65536;
+    long shi = (long)((unsigned long)hi & 0xFFFFul); if (shi & 0x8000) shi -= 65536;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long v = (long)((base >> sh) & 0xFFFFul); if (v & 0x8000) v -= 65536;
+    unsigned long w = (v >= slo && v < shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 stack imm 16-bit field abs+extend: SABS16N · SSEXT16N · SZEXT16N
    * (halfword ladder of SABS8N/SSEXT8N/SZEXT8N; signed extract after SNE16N ALU plane) */
   if (kw(&L->cur,"SABS16N")||kw(&L->cur,"STACKABS16N")||kw(&L->cur,"ABS16N")||
@@ -5088,6 +5110,29 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     unsigned long sh = (unsigned long)(n * 32);
     long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
     unsigned long w = (v >= slo && v <= shi) ? 1ul : 0ul;
+    long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-7 stack imm 32-bit field signed WITHIN (hi exclusive): SWITHINS32N
+   * (Forth WITHIN dual of SWITHINN; no lo/hi swap; after SBETWEENS32N inclusive) */
+  if (kw(&L->cur,"SWITHINS32N")||kw(&L->cur,"STACKWITHINS32N")||kw(&L->cur,"WITHINS32N")||
+      kw(&L->cur,"SWITHINSIGN32N")||kw(&L->cur,"SWITHINS32IMM")||kw(&L->cur,"SINTERVALS32N")){
+    /* SWITHINS32N lo hi n — word n = (lo <= int32(w) < hi) ? 1 : 0; n 0..1; no swap */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 1) n = 1;
+    long slo = (long)(int)((unsigned int)((unsigned long)lo & 0xFFFFFFFFul));
+    long shi = (long)(int)((unsigned int)((unsigned long)hi & 0xFFFFFFFFul));
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 32);
+    long v = (long)(int)((unsigned int)((base >> sh) & 0xFFFFFFFFul));
+    unsigned long w = (v >= slo && v < shi) ? 1ul : 0ul;
     long r = (long)((base & ~(0xFFFFFFFFul << sh)) | (w << sh));
     vm->stack[vm->sp - 1] = r;
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
