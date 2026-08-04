@@ -1,3 +1,17 @@
+## 1.12.429-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → cell fixed-width 16 inverted bitwise (inverted dual of AND16/OR16/XOR16; complete 8/16/32 inverted ladder).
+
+### Language
+- `NAND16CELL`/`NAND16RANGE` — `lo hi mask → ~(low16 & mask) as u16`
+- `NOR16CELL`/`NOR16RANGE` — `lo hi mask → ~(low16 | mask) as u16`
+- `XNOR16CELL`/`XNOR16RANGE` — `lo hi mask → ~(low16 ^ mask) as u16`
+- Proof `452_nand16cell_xnor16cell.cubalc`
+
+### Prior
+See 1.12.428-universal.
+
 ## 1.12.428-universal — 2026-08-04
 
 ### Direction
