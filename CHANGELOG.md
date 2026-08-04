@@ -1,3 +1,17 @@
+## 1.12.387-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → stack/imm zext dual ladder (stack dual of SZEXT4TOCN; imm dual of SZEXT8/16TOC).
+
+### Language
+- `SZEXT4TOC`/`ZEXT4TOC` — stack `i → cells[i] = zero-extend low 4 bits of cells[i]`
+- `SZEXT8TOCN`/`ZEXT8TOCN` — stack `i → cells[i] = zero-extend low 8 bits of cells[i]`
+- `SZEXT16TOCN`/`ZEXT16TOCN` — stack `i → cells[i] = zero-extend low 16 bits of cells[i]`
+- Proof `410_szext4toc_szext16tocn.cubalc`
+
+### Prior
+See 1.12.386-universal.
+
 ## 1.12.386-universal — 2026-08-04
 
 ### Direction

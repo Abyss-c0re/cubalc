@@ -2,16 +2,16 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 495 |
-| **digit** | **1** (urandom) |
-| **version** | `1.12.386-universal` |
-| **pass/fail** | **424 / 0** (green) |
+| **iter** | 497 |
+| **digit** | **6** (urandom) |
+| **version** | `1.12.387-universal` |
+| **pass/fail** | **425 / 0** (green) |
 | **commit** | pending → `origin/main` |
-| **ops** | `SSEXT8TOCN` / `SSEXT4TOCN` / `SZEXT4TOCN` |
-| **proof** | `programs/proof/409_ssext8tocn_szext4tocn.cubalc` |
+| **ops** | `SZEXT4TOC` / `SZEXT8TOCN` / `SZEXT16TOCN` |
+| **proof** | `programs/proof/410_szext4toc_szext16tocn.cubalc` |
 
 ### Delta
-Digit-1 imm dual fixed nibble/byte extend TOC: imm dual of SSEXT8TOC/SSEXT4TOC; nibble zext closes 4-bit zext plane.
+Digit-6 stack/imm zext dual ladder: stack dual of SZEXT4TOCN; imm dual of SZEXT8TOC/SZEXT16TOC.
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
