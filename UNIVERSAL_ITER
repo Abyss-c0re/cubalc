@@ -6,7 +6,7 @@
 | **digit** | **8** (urandom; imm low-n mask TOC) |
 | **version** | `1.12.360-universal` |
 | **pass/fail** | **398 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `ca16bda` → `origin/main` |
 | **ops** | `SANDMNTOCN` / `SORMNTOCN` / `SXORMNTOCN` |
 | **proof** | `programs/proof/383_sandmntocn_sxormntocn.cubalc` |
 
