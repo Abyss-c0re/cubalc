@@ -1,3 +1,17 @@
+## 1.12.431-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell fixed-width 4 nibble bitwise (nibble dual of AND8/OR8/XOR8 after NOT width; complete 4/8/16/32 bitwise base).
+
+### Language
+- `AND4CELL`/`AND4RANGE` — `lo hi mask → low4(cells[i]) & low4(mask)`
+- `OR4CELL`/`OR4RANGE` — `lo hi mask → low4(cells[i]) | low4(mask)`
+- `XOR4CELL`/`XOR4RANGE` — `lo hi mask → low4(cells[i]) ^ low4(mask)`
+- Proof `454_and4cell_xor4cell.cubalc`
+
+### Prior
+See 1.12.430-universal.
+
 ## 1.12.430-universal — 2026-08-04
 
 ### Direction
