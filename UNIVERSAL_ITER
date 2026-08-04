@@ -6,7 +6,7 @@
 | **digit** | **1** (urandom; imm byte field TOC) |
 | **version** | `1.12.355-universal` |
 | **pass/fail** | **393 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `3cbd65f` → `origin/main` |
 | **ops** | `SBYTETOCN` / `SSETBYTETOCN` / `SCLRBYTETOCN` |
 | **proof** | `programs/proof/378_sbytetocn_sclrbytetocn.cubalc` |
 
