@@ -1,0 +1,111 @@
+# Proof 468 — digit-1 stack imm 4-bit field div/mod/min: SDIV4N SMOD4N SMIN4N
+HOLD_FLASH 1
+SCIENCE LOAD
+
+CLEARSTACK
+
+# SDIV4N: 0xC / 0x3 → 0x4
+PUSH 0xC
+SDIV4N 3 0
+POP x
+ASSERT x == 4
+
+# floor: 0x7 / 0x2 → 0x3
+CLEARSTACK
+PUSH 0x7
+DIV4N 2 0
+POP x
+ASSERT x == 3
+
+# div by zero → 0
+CLEARSTACK
+PUSH 0xF
+SDIV4N 0 0
+POP x
+ASSERT x == 0
+
+# high preserved: 0x...7C / 4 → 0x...73
+CLEARSTACK
+PUSH 0x112233445566777C
+SDIV4N 4 0
+POP x
+ASSERT x == 0x1122334455667773
+
+# STACKDIV4N n1: nibble1 of 0x...A0 / 2 → 0x...50
+CLEARSTACK
+PUSH 0xA0
+STACKDIV4N 2 1
+POP x
+ASSERT x == 0x50
+
+# SMOD4N: 0xB % 0x3 → 0x2
+CLEARSTACK
+PUSH 0xB
+SMOD4N 3 0
+POP x
+ASSERT x == 2
+
+# exact: 0x8 % 0x4 → 0
+CLEARSTACK
+PUSH 0x8
+MOD4N 4 0
+POP x
+ASSERT x == 0
+
+# mod by zero → 0
+CLEARSTACK
+PUSH 0x9
+SREM4N 0 0
+POP x
+ASSERT x == 0
+
+# STACKMOD4N n1: nibble1 of 0x...D0 % 5 → 0x...30 (13%5=3)
+CLEARSTACK
+PUSH 0xD0
+STACKMOD4N 5 1
+POP x
+ASSERT x == 0x30
+
+# SMIN4N: min(0xA, 0x3) → 0x3
+CLEARSTACK
+PUSH 0xA
+SMIN4N 3 0
+POP x
+ASSERT x == 3
+
+# min keeps smaller nibble
+CLEARSTACK
+PUSH 0x2
+MIN4N 9 0
+POP x
+ASSERT x == 2
+
+# high preserved min: 0x...7E min 5 → 0x...75
+CLEARSTACK
+PUSH 0x112233445566777E
+SMIN4N 5 0
+POP x
+ASSERT x == 0x1122334455667775
+
+# STACKMIN4N n1: nibble1 of 0x...F0 min 4 → 0x...40
+CLEARSTACK
+PUSH 0xF0
+STACKMIN4N 4 1
+POP x
+ASSERT x == 0x40
+
+# SLE4N alias min
+CLEARSTACK
+PUSH 0x7
+SLE4N 7 0
+POP x
+ASSERT x == 7
+
+# SQUO4N alias div
+CLEARSTACK
+PUSH 0x9
+SQUO4N 2 0
+POP x
+ASSERT x == 4
+
+HOLD_FLASH 0

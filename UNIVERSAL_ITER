@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 495 |
-| **digit** | **0** (urandom) |
-| **version** | `1.14.10-universal` |
-| **pass/fail** | **482 / 0** (green) |
-| **commit** | `8a6b3cb` → `origin/main` |
-| **ops** | `SADD4N` / `SSUB4N` / `SMUL4N` |
-| **proof** | `programs/proof/467_sadd4n_smul4n.cubalc` |
+| **iter** | 496 |
+| **digit** | **1** (urandom) |
+| **version** | `1.14.11-universal` |
+| **pass/fail** | **483 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SDIV4N` / `SMOD4N` / `SMIN4N` |
+| **proof** | `programs/proof/468_sdiv4n_smin4n.cubalc` |
 
 ### Delta
-Digit-0 stack imm nibble-field arith merge: add / sub / mul wrap into selected nibble of TOS. Completes nibble field ALU foundation after SAND4N bitwise plane.
+Digit-1 stack imm nibble-field div/mod/min: complete uint4 field ALU after add/sub/mul; div0/mod0 → 0.
 
-**Status:** 1.14.9→1.14.10-universal; suite green 482/0; push ok.
+**Status:** 1.14.10→1.14.11-universal; suite green 483/0; push pending.

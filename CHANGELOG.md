@@ -1,3 +1,17 @@
+## 1.14.11-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack imm 4-bit field div/mod/min (complete uint4 field ALU after SADD4N/SSUB4N/SMUL4N; field 0 → div/mod 0).
+
+### Language
+- `SDIV4N` — `field n → nibble n = nibble / field` (field 0 → 0)
+- `SMOD4N` — `field n → nibble n = nibble % field` (field 0 → 0)
+- `SMIN4N` — `field n → nibble n = min(nibble, field)`
+- Proof `468_sdiv4n_smin4n.cubalc`
+
+### Prior
+See 1.14.10-universal.
+
 ## 1.14.10-universal — 2026-08-04
 
 ### Direction
