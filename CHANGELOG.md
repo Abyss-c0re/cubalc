@@ -1,3 +1,17 @@
+## 1.14.19-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → dual-stack imm 16-bit field arith (dual of SADD16N/SSUB16N/SMUL16N; wrap uint16 halfword plane on top two cells).
+
+### Language
+- `DADD16N` — `field n → halfword n of each = (hw + field) & 0xFFFF`
+- `DSUB16N` — `field n → halfword n of each = (hw - field) & 0xFFFF`
+- `DMUL16N` — `field n → halfword n of each = (hw * field) & 0xFFFF`
+- Proof `476_dadd16n_dmul16n.cubalc`
+
+### Prior
+See 1.14.18-universal.
+
 ## 1.14.18-universal — 2026-08-04
 
 ### Direction
