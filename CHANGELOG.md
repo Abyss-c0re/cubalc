@@ -1,3 +1,17 @@
+## 1.14.17-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 16-bit field div/mod/min (complete uint16 field ALU after SADD16N/SSUB16N/SMUL16N; field 0 → div/mod 0).
+
+### Language
+- `SDIV16N` — `field n → halfword n = hw / field` (field 0 → 0)
+- `SMOD16N` — `field n → halfword n = hw % field` (field 0 → 0)
+- `SMIN16N` — `field n → halfword n = min(hw, field)`
+- Proof `474_sdiv16n_smin16n.cubalc`
+
+### Prior
+See 1.14.16-universal.
+
 ## 1.14.16-universal — 2026-08-04
 
 ### Direction

@@ -2854,6 +2854,65 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 16-bit field div/mod/min: SDIV16N · SMOD16N · SMIN16N
+   * (complete uint16 field ALU after SADD16N/SSUB16N/SMUL16N; field 0 → div/mod 0) */
+  if (kw(&L->cur,"SDIV16N")||kw(&L->cur,"STACKDIV16N")||kw(&L->cur,"DIV16N")||
+      kw(&L->cur,"SDIVWORDN")||kw(&L->cur,"SDIV16IMM")||kw(&L->cur,"SQUO16N")){
+    /* SDIV16N field n — halfword n of TOS = hw / field (field 0 → 0); n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (f == 0) ? 0ul : (v / f);
+    long r = (long)((base & ~(0xFFFFul << sh)) | ((w & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMOD16N")||kw(&L->cur,"STACKMOD16N")||kw(&L->cur,"MOD16N")||
+      kw(&L->cur,"SMODWORDN")||kw(&L->cur,"SMOD16IMM")||kw(&L->cur,"SREM16N")){
+    /* SMOD16N field n — halfword n of TOS = hw % field (field 0 → 0); n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (f == 0) ? 0ul : (v % f);
+    long r = (long)((base & ~(0xFFFFul << sh)) | ((w & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SMIN16N")||kw(&L->cur,"STACKMIN16N")||kw(&L->cur,"MIN16N")||
+      kw(&L->cur,"SMINWORDN")||kw(&L->cur,"SMIN16IMM")||kw(&L->cur,"SLE16N")){
+    /* SMIN16N field n — halfword n of TOS = min(hw, field); n clamped 0..3 */
+    lex_next(L);
+    long field = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long f = (unsigned long)field & 0xFFFFul;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long v = (base >> sh) & 0xFFFFul;
+    unsigned long w = (v < f) ? v : f;
+    long r = (long)((base & ~(0xFFFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

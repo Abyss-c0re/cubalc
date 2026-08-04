@@ -2,15 +2,15 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 501 |
-| **digit** | **3** (urandom) |
-| **version** | `1.14.16-universal` |
-| **pass/fail** | **488 / 0** (green) |
-| **commit** | `abf0ab9` → `origin/main` |
-| **ops** | `SADD16N` / `SSUB16N` / `SMUL16N` |
-| **proof** | `programs/proof/473_sadd16n_smul16n.cubalc` |
+| **iter** | 502 |
+| **digit** | **7** (urandom) |
+| **version** | `1.14.17-universal` |
+| **pass/fail** | **489 / 0** (green) |
+| **commit** | `(pending)` → `origin/main` |
+| **ops** | `SDIV16N` / `SMOD16N` / `SMIN16N` |
+| **proof** | `programs/proof/474_sdiv16n_smin16n.cubalc` |
 
 ### Delta
-Digit-3 stack imm halfword-field arith merge: add/sub/mul wrap into selected 16-bit field of TOS. Ladder after byte SADD8N plane.
+Digit-7 stack imm halfword-field div/mod/min: complete uint16 field ALU after SADD16N/SSUB16N/SMUL16N; div0/mod0 → 0.
 
-**Status:** 1.14.15→1.14.16-universal; suite green 488/0; push ok.
+**Status:** 1.14.16→1.14.17-universal; suite green 489/0; push pending.
