@@ -1,3 +1,17 @@
+## 1.12.416-universal — 2026-08-04
+
+### Direction
+- Algocube digit **6** → cell fixed-width 8 signed/metrics (byte dual of SEXT16/ABS16/POPCNT16 after ROL8 plane).
+
+### Language
+- `SEXT8CELL`/`SEXT8RANGE` — `lo hi → cells[i] = (long)(int8)low8`
+- `ABS8CELL`/`ABS8RANGE` — `lo hi → abs((int8)low8)` (min int8 stays `0x80`)
+- `POPCNT8CELL`/`POPCNT8RANGE` — `lo hi → popcount(low8)`
+- Proof `439_sext8cell_popcnt8cell.cubalc`
+
+### Prior
+See 1.12.415-universal.
+
 ## 1.12.415-universal — 2026-08-04
 
 ### Direction
