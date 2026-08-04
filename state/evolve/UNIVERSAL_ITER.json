@@ -2,20 +2,20 @@
   "schema": "cubalc.universal_iter.v1",
   "to": "NexusCore",
   "from": "cubalc_universal_improve_tick",
-  "ts": "2026-08-04T15:37:51+0300",
-  "iter": 503,
-  "algocube_digit": 7,
-  "version": "1.14.18-universal",
-  "pass": 490,
+  "ts": "2026-08-04T15:43:15+0300",
+  "iter": 504,
+  "algocube_digit": 2,
+  "version": "1.14.19-universal",
+  "pass": 491,
   "fail": 0,
   "ok": true,
   "ops": [
-    "SMAX16N",
-    "SEQ16N",
-    "SNE16N"
+    "DADD16N",
+    "DSUB16N",
+    "DMUL16N"
   ],
-  "proof": "programs/proof/475_smax16n_sne16n.cubalc",
-  "commit": "5d9a287",
+  "proof": "programs/proof/476_dadd16n_dmul16n.cubalc",
+  "commit": "328adf7",
   "goal": "more_universal_each_iteration",
   "hold_flash": 1,
   "law": [
@@ -23,5 +23,5 @@
     "evolve",
     "flow_compile"
   ],
-  "delta": "Digit-7 stack imm halfword max+eq after SMIN16N; complete uint16 field min/max/eq/ne plane."
+  "delta": "Digit-2 dual-stack imm halfword arith after S*16N; wrap uint16 pair plane."
 }
