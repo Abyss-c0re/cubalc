@@ -3277,6 +3277,60 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-9 stack imm 16-bit field abs+extend: SABS16N · SSEXT16N · SZEXT16N
+   * (halfword ladder of SABS8N/SSEXT8N/SZEXT8N; signed extract after SNE16N ALU plane) */
+  if (kw(&L->cur,"SABS16N")||kw(&L->cur,"STACKABS16N")||kw(&L->cur,"ABS16N")||
+      kw(&L->cur,"SIABS16N")||kw(&L->cur,"SABSWORDN")||kw(&L->cur,"SWORDABSN")){
+    /* SABS16N n — halfword n of TOS = abs(int16); min int16 -32768 → 0x8000; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long va = (long)((base >> sh) & 0xFFFFul);
+    if (va & 0x8000) va -= 65536;
+    long ar = (va < 0) ? -va : va;
+    /* min int16 -32768 → +32768 does not fit uint16; keep 0x8000 (same as SABS8N min path) */
+    unsigned long nv = (unsigned long)(ar & 0xFFFF);
+    long r = (long)((base & ~(0xFFFFul << sh)) | (nv << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SSEXT16N")||kw(&L->cur,"STACKSEXT16N")||kw(&L->cur,"SEXT16N")||
+      kw(&L->cur,"SSIGNEXT16N")||kw(&L->cur,"SSEXTWORDN")||kw(&L->cur,"SWORDSEXTN")){
+    /* SSEXT16N n — TOS = sign-extend halfword n of TOS to full width; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long va = (long)((base >> sh) & 0xFFFFul);
+    if (va & 0x8000) va -= 65536; /* sign-extend int16 */
+    long r = va;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SZEXT16N")||kw(&L->cur,"STACKZEXT16N")||kw(&L->cur,"ZEXT16N")||
+      kw(&L->cur,"SZEROEXT16N")||kw(&L->cur,"SZEXTWORDN")||kw(&L->cur,"SWORDZEXTN")){
+    /* SZEXT16N n — TOS = zero-extend halfword n of TOS; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 16);
+    long r = (long)((base >> sh) & 0xFFFFul);
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"SALIGN")||kw(&L->cur,"SROUNDUP")||kw(&L->cur,"STACKALIGN")||
       kw(&L->cur,"SALIGNDN")||kw(&L->cur,"SROUNDDN")||kw(&L->cur,"STACKALIGNDN")){
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);

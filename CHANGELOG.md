@@ -1,3 +1,17 @@
+## 1.14.43-universal — 2026-08-04
+
+### Direction
+- Algocube digit **9** → stack imm 16-bit field abs+extend (halfword ladder of SABS8N/SSEXT8N/SZEXT8N after SNE16N).
+
+### Language
+- `SABS16N` — `n → halfword n of TOS = abs(int16)` (min -32768 → 0x8000)
+- `SSEXT16N` — `n → TOS = sign-extend halfword n to full width`
+- `SZEXT16N` — `n → TOS = zero-extend halfword n`
+- Proof `500_sabs16n_szext16n.cubalc`
+
+### Prior
+See 1.14.42-universal.
+
 ## 1.14.42-universal — 2026-08-04
 
 ### Direction
