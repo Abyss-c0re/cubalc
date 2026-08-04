@@ -1,3 +1,17 @@
+## 1.15.8-universal — 2026-08-05
+
+### Direction
+- Algocube digit **4** → stack+dual imm 32/16-bit field signed LE0 (field dual of S0LE after complete S0GT plane).
+
+### Language
+- `S0LE32N` — `n → word n = (int32(w) <= 0) ? 1 : 0`
+- `S0LE16N` — halfword form of `S0LE32N`
+- `D0LE32N` / `D0LE16N` — dual-stack forms
+- Proof `565_s0le32n_d0le16n.cubalc`
+
+### Prior
+See 1.15.7-universal.
+
 ## 1.15.7-universal — 2026-08-05
 
 ### Direction
