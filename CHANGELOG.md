@@ -1,3 +1,18 @@
+## 1.14.95-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → stack+dual imm 4-bit field signed clamp+between (nibble ladder of SCLAMPS8N; **completes signed range plane all widths**).
+
+### Language
+- `SCLAMPS4N` — `lo hi n → nibble n = clamp_signed(int4(nib), [lo,hi])`
+- `SBETWEENS4N` — `lo hi n → nibble n = (lo <= int4(nib) <= hi) ? 1 : 0`
+- `DCLAMPS4N` — dual-stack form of `SCLAMPS4N`
+- `DBETWEENS4N` — dual-stack form of `SBETWEENS4N`
+- Proof `552_sclamps4n_dbetweens4n.cubalc`
+
+### Prior
+See 1.14.94-universal.
+
 ## 1.14.94-universal — 2026-08-04
 
 ### Direction
