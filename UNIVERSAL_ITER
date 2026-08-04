@@ -2,21 +2,21 @@
 
 | field | value |
 |--------|--------|
-| **iter** | 452 |
-| **digit** | **9** (urandom; imm halfword field TOC) |
-| **version** | `1.12.356-universal` |
-| **pass/fail** | **394 / 0** (green) |
-| **commit** | `f402087` → `origin/main` |
-| **ops** | `SWORDTOCN` / `SSET16TOCN` / `SCLR16TOCN` |
-| **proof** | `programs/proof/379_swordtocn_sclr16tocn.cubalc` |
+| **iter** | 453 |
+| **digit** | **2** (urandom; imm ceil/floor div TOC) |
+| **version** | `1.12.357-universal` |
+| **pass/fail** | **395 / 0** (green) |
+| **commit** | pending → `origin/main` |
+| **ops** | `SDIVCEILTOCN` / `SDIVFLOORTOCN` |
+| **proof** | `programs/proof/380_sdivceiltocn_sdivfloortocn.cubalc` |
 
 ### Delta
-Digit-9 imm halfword field TOC: extract/deposit/clear little-endian 16-bit halfword n of cells[i] (imm dual of SWORDN/SSET16N/SCLR16N into cell after byte TOC).
+Digit-2 imm ceil/floor div TOC: `i + n → cells[i] = ceil/floor(cells[i]/n)` (imm dual of SDIVCEILN/SDIVFLOORN into cell after SDIVTOCN).
 
 ### NexusCore
 - unity 1.0, alive 3; commander offline
 - daemon running
 
 ### Language
-- `SWORDTOCN` `SSET16TOCN` `SCLR16TOCN` · aliases `WORDTOCN`/`SET16TOCN`/`CLR16TOCN`
-- Proof `379_swordtocn_sclr16tocn.cubalc`
+- `SDIVCEILTOCN` `SDIVFLOORTOCN` · aliases `CEILDIVTOCN`/`FLOORDIVTOCN`
+- Proof `380_sdivceiltocn_sdivfloortocn.cubalc`

@@ -5268,6 +5268,54 @@ static int parse_form(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 imm ceil/floor div TOC: SDIVCEILTOCN · SDIVFLOORTOCN
+   * (imm dual of SDIVCEILN/SDIVFLOORN into cell; complete SDIVTOCN plane with rounding modes) */
+  if (kw(&L->cur,"SDIVCEILTOCN")||kw(&L->cur,"SCEILDIVTOCN")||kw(&L->cur,"STACKDIVCEILTOCN")||
+      kw(&L->cur,"SDIVCEILTOCIMM")||kw(&L->cur,"CEILDIVTOCN")||kw(&L->cur,"SCELLDIVCEILN")||
+      kw(&L->cur,"CEILTOCN")){
+    /* i + n → cells[i] = ceil(cells[i]/n); n==0 → 0 soft; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (n == 0) r = 0;
+    else if (a >= 0 && n > 0) r = (a + n - 1) / n;
+    else if (a <= 0 && n < 0){
+      long aa = -a, nn = -n;
+      r = (aa + nn - 1) / nn;
+    } else r = a / n;
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SDIVFLOORTOCN")||kw(&L->cur,"SFLOORDIVTOCN")||kw(&L->cur,"STACKDIVFLOORTOCN")||
+      kw(&L->cur,"SDIVFLOORTOCIMM")||kw(&L->cur,"FLOORDIVTOCN")||kw(&L->cur,"SCELLDIVFLOORN")||
+      kw(&L->cur,"FLOORTOCN")){
+    /* i + n → cells[i] = floor(cells[i]/n); n==0 → 0 soft; leave result */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long i = vm->stack[vm->sp - 1];
+    if (i < 0) i = 0;
+    if (i >= CUBALC_CELL_N) i = CUBALC_CELL_N - 1;
+    long a = vm->cells[(int)i];
+    long r = 0;
+    if (n == 0) r = 0;
+    else {
+      long q = a / n, rem = a % n;
+      if (rem != 0 && ((a < 0) != (n < 0))) q--;
+      r = q;
+    }
+    vm->cells[(int)i] = r;
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-0 foundation imm inverted bitwise TOC: SNANDTOCN · SNORTOCN · SXNORTOCN
    * (imm dual of SNANDTOC/SNORTOC/SXNORTOC after SANDTOCN plane) */
   if (kw(&L->cur,"SNANDTOCN")||kw(&L->cur,"SNANDTOCIMM")||kw(&L->cur,"STACKNANDTOCN")||

@@ -1,3 +1,16 @@
+## 1.12.357-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → imm ceil/floor div TOC (imm dual of SDIVCEILN/SDIVFLOORN into cell after SDIVTOCN).
+
+### Language
+- `SDIVCEILTOCN`/`CEILDIVTOCN` n — stack `i → cells[i]=ceil(cells[i]/n)`; n==0→0 soft; leave result
+- `SDIVFLOORTOCN`/`FLOORDIVTOCN` n — stack `i → cells[i]=floor(cells[i]/n)`; n==0→0 soft; leave result
+- Proof `380_sdivceiltocn_sdivfloortocn.cubalc`
+
+### Prior
+See 1.12.356-universal.
+
 ## 1.12.356-universal — 2026-08-04
 
 ### Direction
