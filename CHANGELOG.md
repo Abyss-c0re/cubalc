@@ -1,3 +1,17 @@
+## 1.14.6-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 4-bit field shift (nibble-field dual of SHL4/SHR4/SAR4 after SROL4N; complete stack nibble shift).
+
+### Language
+- `SSHL4N` — `k n → (uint4 nibble n)<<k` (k≥4 → 0)
+- `SSHR4N` — `k n → (uint4)>>k` logical
+- `SSAR4N` — `k n → (int4)>>k` arithmetic
+- Proof `463_sshl4n_ssar4n.cubalc`
+
+### Prior
+See 1.14.5-universal.
+
 ## 1.14.5-universal — 2026-08-04
 
 ### Direction
