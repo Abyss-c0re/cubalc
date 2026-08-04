@@ -1,3 +1,17 @@
+## 1.14.51-universal — 2026-08-04
+
+### Direction
+- Algocube digit **5** → dual-stack imm 16-bit field metrics (halfword ladder of DBITREV8N/DPOPCNT8N/DPARITY8N; dual of SBITREV16N after DSHL16N).
+
+### Language
+- `DBITREV16N` — `n → halfword n of each = bitrev16(hw)` on top two
+- `DPOPCNT16N` — `n → halfword n of each = popcount(hw)` (0..16)
+- `DPARITY16N` — `n → halfword n of each = xor-reduce(hw)` low bit
+- Proof `508_dbitrev16n_dparity16n.cubalc`
+
+### Prior
+See 1.14.50-universal.
+
 ## 1.14.50-universal — 2026-08-04
 
 ### Direction

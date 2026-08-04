@@ -8981,6 +8981,82 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-5 dual-stack imm 16-bit field metrics: DBITREV16N · DPOPCNT16N · DPARITY16N
+   * (halfword ladder of DBITREV8N/DPOPCNT8N/DPARITY8N; dual of SBITREV16N after DSHL16N) */
+  if (kw(&L->cur,"DBITREV16N")||kw(&L->cur,"S2BITREV16N")||kw(&L->cur,"STACK2BITREV16N")||
+      kw(&L->cur,"PAIRBITREV16N")||kw(&L->cur,"DBREV16N")||kw(&L->cur,"DREV16N")||
+      kw(&L->cur,"DBITREVWORDN")){
+    /* a b + n → halfword n of each = bitrev16(hw); n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFFFul;
+    unsigned long vb = (mb >> sh) & 0xFFFFul;
+    unsigned long ra = 0, rb = 0, ta = va, tb = vb;
+    for (int b = 0; b < 16; b++){
+      ra = (ra << 1) | (ta & 1u); ta >>= 1;
+      rb = (rb << 1) | (tb & 1u); tb >>= 1;
+    }
+    long x = (long)((ma & ~(0xFFFFul << sh)) | ((ra & 0xFFFFul) << sh));
+    long y = (long)((mb & ~(0xFFFFul << sh)) | ((rb & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOPCNT16N")||kw(&L->cur,"S2POPCNT16N")||kw(&L->cur,"STACK2POPCNT16N")||
+      kw(&L->cur,"PAIRPOPCNT16N")||kw(&L->cur,"DPCNT16N")||kw(&L->cur,"DPOPWORDN")||
+      kw(&L->cur,"DWORDPOPN")){
+    /* a b + n → halfword n of each = popcount(hw); n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFFFul;
+    unsigned long vb = (mb >> sh) & 0xFFFFul;
+    unsigned long pa = 0, pb = 0;
+    while (va){ pa += (va & 1u); va >>= 1; }
+    while (vb){ pb += (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFFFFul << sh)) | ((pa & 0xFFFFul) << sh));
+    long y = (long)((mb & ~(0xFFFFul << sh)) | ((pb & 0xFFFFul) << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPARITY16N")||kw(&L->cur,"S2PARITY16N")||kw(&L->cur,"STACK2PARITY16N")||
+      kw(&L->cur,"PAIRPARITY16N")||kw(&L->cur,"DXORRED16N")||kw(&L->cur,"DPARITYWORDN")||
+      kw(&L->cur,"DWORDPARN")){
+    /* a b + n → halfword n of each = xor-reduce(hw) in low bit; n clamped 0..3 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 3) n = 3;
+    unsigned long sh = (unsigned long)(n * 16);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long va = (ma >> sh) & 0xFFFFul;
+    unsigned long vb = (mb >> sh) & 0xFFFFul;
+    unsigned long pra = 0, prb = 0;
+    while (va){ pra ^= (va & 1u); va >>= 1; }
+    while (vb){ prb ^= (vb & 1u); vb >>= 1; }
+    long x = (long)((ma & ~(0xFFFFul << sh)) | (pra << sh));
+    long y = (long)((mb & ~(0xFFFFul << sh)) | (prb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
