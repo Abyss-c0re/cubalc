@@ -1,3 +1,17 @@
+## 1.12.422-universal — 2026-08-04
+
+### Direction
+- Algocube digit **4** → cell fixed-width 32 signed/metrics (dword dual of SEXT8/ABS8/POPCNT8 after NEG32 plane; complete 8/16/32 signed+pop).
+
+### Language
+- `SEXT32CELL`/`SEXT32RANGE` — `lo hi → (long)(int32)low32`
+- `ABS32CELL`/`ABS32RANGE` — `lo hi → abs((int32)low32)` (min int32 stays `0x80000000`)
+- `POPCNT32CELL`/`POPCNT32RANGE` — `lo hi → popcount(low32)`
+- Proof `445_sext32cell_popcnt32cell.cubalc`
+
+### Prior
+See 1.12.421-universal.
+
 ## 1.12.421-universal — 2026-08-04
 
 ### Direction

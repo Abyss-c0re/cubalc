@@ -26894,6 +26894,65 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-4 cell fixed-width 32 signed/metrics: SEXT32CELL · ABS32CELL · POPCNT32CELL
+   * (dword dual of SEXT8/ABS8/POPCNT8 after NEG32/ZEXT32/CLIP32; complete 8/16/32 signed+pop) */
+  if (kw(&L->cur,"SEXT32CELL")||kw(&L->cur,"SIGNEXT32CELL")||kw(&L->cur,"BSEXT32CELL")||
+      kw(&L->cur,"RANGESEXT32")||kw(&L->cur,"SEXT32RANGE")||kw(&L->cur,"CELLSEXTL")){
+    /* SEXT32CELL lo hi — cells[i] = (long)(int32)low32 cells[i] */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long r = (long)(int)(unsigned int)vm->cells[(int)i];
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"ABS32CELL")||kw(&L->cur,"CELLABS32")||kw(&L->cur,"BABS32CELL")||
+      kw(&L->cur,"RANGEABS32")||kw(&L->cur,"ABS32RANGE")||kw(&L->cur,"IABS32CELL")){
+    /* ABS32CELL lo hi — cells[i] = abs((int32)low32); min int32 stays 0x80000000 */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      long va = (long)(int)(unsigned int)vm->cells[(int)i];
+      long r;
+      if (va == (long)(int)0x80000000) r = (long)(int)0x80000000; /* keep min int32 */
+      else if (va < 0) r = -va;
+      else r = va;
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"POPCNT32CELL")||kw(&L->cur,"PCNT32CELL")||kw(&L->cur,"BPOPCNT32CELL")||
+      kw(&L->cur,"RANGEPOPCNT32")||kw(&L->cur,"POPCNT32RANGE")||kw(&L->cur,"CELLPOPCNT32")){
+    /* POPCNT32CELL lo hi — cells[i] = popcount(low32 cells[i]) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    for (long i=lo;i<=hi;i++){
+      unsigned int w = (unsigned int)vm->cells[(int)i];
+      long r = 0;
+      while (w){ r += (long)(w & 1u); w >>= 1; }
+      vm->cells[(int)i] = r;
+    }
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);
