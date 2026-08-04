@@ -27021,6 +27021,59 @@ if (kw(&L->cur,"DEPTH")||kw(&L->cur,"STACKDEPTH")){
     var_set_num(vm,"LAST_N",n); vm->last_n=n;
     var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 cell fixed-width 32 bitwise: AND32CELL · OR32CELL · XOR32CELL
+   * (dword dual of ANDCELL/ORCELL/XORCELL; result low32 only after 32 metrics plane) */
+  if (kw(&L->cur,"AND32CELL")||kw(&L->cur,"CELLAND32")||kw(&L->cur,"BAND32CELL")||
+      kw(&L->cur,"RANGEAND32")||kw(&L->cur,"AND32RANGE")||kw(&L->cur,"UAND32CELL")){
+    /* AND32CELL lo hi mask — cells[i] = low32(cells[i]) & low32(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned int)vm->cells[(int)i] & m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"OR32CELL")||kw(&L->cur,"CELLOR32")||kw(&L->cur,"BOR32CELL")||
+      kw(&L->cur,"RANGEOR32")||kw(&L->cur,"OR32RANGE")||kw(&L->cur,"UOR32CELL")){
+    /* OR32CELL lo hi mask — cells[i] = low32(cells[i]) | low32(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned int)vm->cells[(int)i] | m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"XOR32CELL")||kw(&L->cur,"CELLXOR32")||kw(&L->cur,"BXOR32CELL")||
+      kw(&L->cur,"RANGEXOR32")||kw(&L->cur,"XOR32RANGE")||kw(&L->cur,"UXOR32CELL")){
+    /* XOR32CELL lo hi mask — cells[i] = low32(cells[i]) ^ low32(mask) */
+    lex_next(L);
+    long lo = parse_expr(vm,L);
+    long hi = parse_expr(vm,L);
+    long mask = parse_expr(vm,L);
+    if (lo < 0) lo = 0;
+    if (hi >= CUBALC_CELL_N) hi = CUBALC_CELL_N - 1;
+    if (hi < lo){ long t=lo; lo=hi; hi=t; }
+    unsigned int m = (unsigned int)mask;
+    for (long i=lo;i<=hi;i++)
+      vm->cells[(int)i] = (long)((unsigned int)vm->cells[(int)i] ^ m);
+    long n = hi - lo + 1;
+    var_set_num(vm,"LAST_N",n); vm->last_n=n;
+    var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   if (kw(&L->cur,"NOTCELL")||kw(&L->cur,"CELLNOT")||kw(&L->cur,"BNOTCELL")||kw(&L->cur,"INVCELL")){
     /* NOTCELL lo hi — bitwise NOT (~) each cell in range */
     lex_next(L);

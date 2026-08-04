@@ -1,3 +1,17 @@
+## 1.12.424-universal — 2026-08-04
+
+### Direction
+- Algocube digit **3** → cell fixed-width 32 bitwise (dword dual of ANDCELL/ORCELL/XORCELL after 32 metrics; complete low32 logic plane).
+
+### Language
+- `AND32CELL`/`AND32RANGE` — `lo hi mask → low32(cells[i]) & low32(mask)`
+- `OR32CELL`/`OR32RANGE` — `lo hi mask → low32(cells[i]) | low32(mask)`
+- `XOR32CELL`/`XOR32RANGE` — `lo hi mask → low32(cells[i]) ^ low32(mask)`
+- Proof `447_and32cell_xor32cell.cubalc`
+
+### Prior
+See 1.12.423-universal.
+
 ## 1.12.423-universal — 2026-08-04
 
 ### Direction
