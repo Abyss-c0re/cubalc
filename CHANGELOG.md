@@ -1,3 +1,17 @@
+## 1.15.9-universal — 2026-08-05
+
+### Direction
+- Algocube digit **1** → stack+dual imm 32/16-bit field signed GE0 (field dual of S0GE after S0LE plane open).
+
+### Language
+- `S0GE32N` — `n → word n = (int32(w) >= 0) ? 1 : 0`
+- `S0GE16N` — halfword form of `S0GE32N`
+- `D0GE32N` / `D0GE16N` — dual-stack forms
+- Proof `566_s0ge32n_d0ge16n.cubalc`
+
+### Prior
+See 1.15.8-universal.
+
 ## 1.15.8-universal — 2026-08-05
 
 ### Direction
