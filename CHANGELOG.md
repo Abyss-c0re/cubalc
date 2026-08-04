@@ -1,3 +1,18 @@
+## 1.14.98-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → stack+dual imm 32/16-bit field signed signum (field dual of SSIGN/DSIGN after signed WITHIN plane).
+
+### Language
+- `SSIGN32N` — `n → word n = sgn(int32): +1 / 0 / 0xFFFFFFFF(-1)`
+- `SSIGN16N` — halfword form of `SSIGN32N`
+- `DSIGN32N` — dual-stack form of `SSIGN32N`
+- `DSIGN16N` — dual-stack form of `SSIGN16N`
+- Proof `555_ssign32n_dsign16n.cubalc`
+
+### Prior
+See 1.14.97-universal.
+
 ## 1.14.97-universal — 2026-08-04
 
 ### Direction
