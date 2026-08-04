@@ -1,3 +1,18 @@
+## 1.14.81-universal — 2026-08-04
+
+### Direction
+- Algocube digit **1** → dual-stack imm 4-bit field signed ordered-cmp (dual of SLTS4N plane after DGTE4N).
+
+### Language
+- `DLTS4N` — `field n → nibble n of each = (int4(nib) < int4(field)) ? 1 : 0`
+- `DGTS4N` — `field n → nibble n of each = (int4(nib) > int4(field)) ? 1 : 0`
+- `DLTES4N` — `field n → nibble n of each = (int4(nib) <= int4(field)) ? 1 : 0`
+- `DGTES4N` — `field n → nibble n of each = (int4(nib) >= int4(field)) ? 1 : 0`
+- Proof `538_dlts4n_dgtes4n.cubalc`
+
+### Prior
+See 1.14.80-universal.
+
 ## 1.14.80-universal — 2026-08-04
 
 ### Direction
