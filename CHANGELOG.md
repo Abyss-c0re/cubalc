@@ -1,3 +1,16 @@
+## 1.14.5-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 4-bit field unary (nibble-field dual of NOT4/ROL4 after SNAND4N; complete stack nibble unary+rotate).
+
+### Language
+- `SNOT4N` — `n → nibble n of TOS = ~nibble & 0xF`
+- `SROL4N`/`SROR4N` — `k n → rotl4/rotr4 nibble n by k&3`
+- Proof `462_snot4n_sror4n.cubalc`
+
+### Prior
+See 1.14.4-universal.
+
 ## 1.14.4-universal — 2026-08-04
 
 ### Direction
