@@ -6,7 +6,7 @@
 | **digit** | **8** (urandom) |
 | **version** | `1.12.400-universal` |
 | **pass/fail** | **438 / 0** (green) |
-| **commit** | pending → `origin/main` |
+| **commit** | `53c5311` → `origin/main` |
 | **ops** | `SPARITYTOC` / `SBSWAPTOC` / `SBITREV32TOC` |
 | **proof** | `programs/proof/423_sparitytoc_sbitrev32toc.cubalc` |
 
