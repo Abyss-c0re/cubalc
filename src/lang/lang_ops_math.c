@@ -2977,6 +2977,66 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",r); vm->last_n=r;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-7 stack imm 8-bit field unary+rotate: SNOT8N · SROL8N · SROR8N
+   * (byte ladder of SNOT4N/SROL4N/SROR4N; stack dual of DNOT8N plane; close stack 8n unary hole) */
+  if (kw(&L->cur,"SNOT8N")||kw(&L->cur,"STACKNOT8N")||kw(&L->cur,"NOT8N")||
+      kw(&L->cur,"SNOTBYTEN")||kw(&L->cur,"SINV8N")||kw(&L->cur,"SINVERT8N")){
+    /* SNOT8N n — byte n of TOS = ~byte & 0xFF; n clamped 0..7 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long w = (~((base >> sh) & 0xFFul)) & 0xFFul;
+    long r = (long)((base & ~(0xFFul << sh)) | (w << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROL8N")||kw(&L->cur,"STACKROL8N")||kw(&L->cur,"ROL8N")||
+      kw(&L->cur,"SROTL8N")||kw(&L->cur,"SROLBYTEN")||kw(&L->cur,"SROTBYTEL")){
+    /* SROL8N k n — rotl8 byte n of TOS by k&7; n clamped 0..7 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long w = (base >> sh) & 0xFFul;
+    unsigned long rot = (kk == 0) ? w : (((w << (unsigned)kk) | (w >> (unsigned)(8 - kk))) & 0xFFul);
+    long r = (long)((base & ~(0xFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"SROR8N")||kw(&L->cur,"STACKROR8N")||kw(&L->cur,"ROR8N")||
+      kw(&L->cur,"SROTR8N")||kw(&L->cur,"SRORBYTEN")||kw(&L->cur,"SROTBYTER")){
+    /* SROR8N k n — rotr8 byte n of TOS by k&7; n clamped 0..7 */
+    lex_next(L);
+    long k = parse_expr(vm,L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 1){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 7) n = 7;
+    int kk = (int)k;
+    if (kk < 0) kk = 0;
+    kk &= 7;
+    unsigned long base = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long sh = (unsigned long)(n * 8);
+    unsigned long w = (base >> sh) & 0xFFul;
+    unsigned long rot = (kk == 0) ? w : (((w >> (unsigned)kk) | (w << (unsigned)(8 - kk))) & 0xFFul);
+    long r = (long)((base & ~(0xFFul << sh)) | (rot << sh));
+    vm->stack[vm->sp - 1] = r;
+    var_set_num(vm,"LAST_N",r); vm->last_n=r;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-3 stack imm 16-bit field arith merge: SADD16N · SSUB16N · SMUL16N
    * (halfword dual of SADD8N/SSUB8N/SMUL8N; wrap uint16 ALU foundation after SAND16N plane) */
   if (kw(&L->cur,"SADD16N")||kw(&L->cur,"STACKADD16N")||kw(&L->cur,"ADD16N")||

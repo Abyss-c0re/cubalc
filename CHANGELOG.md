@@ -1,3 +1,17 @@
+## 1.14.41-universal — 2026-08-04
+
+### Direction
+- Algocube digit **7** → stack imm 8-bit field unary+rotate (byte ladder of SNOT4N/SROL4N/SROR4N; stack dual of DNOT8N; close stack 8n unary hole).
+
+### Language
+- `SNOT8N` — `n → byte n of TOS = ~byte & 0xFF`
+- `SROL8N` — `k n → rotl8 byte n of TOS by k&7`
+- `SROR8N` — `k n → rotr8 byte n of TOS by k&7`
+- Proof `498_snot8n_sror8n.cubalc`
+
+### Prior
+See 1.14.40-universal.
+
 ## 1.14.40-universal — 2026-08-04
 
 ### Direction
