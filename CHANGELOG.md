@@ -1,3 +1,17 @@
+## 1.14.32-universal — 2026-08-04
+
+### Direction
+- Algocube digit **2** → dual-stack imm 4-bit field abs+extend (dual of SABS4N/SSEXT4N/SZEXT4N; complete dual nibble unary plane).
+
+### Language
+- `DABS4N` — `n → nibble n of each = abs(int4)` (min -8 → 0x8)
+- `DSEXT4N` — `n → each cell = sign-extend nibble n to full width`
+- `DZEXT4N` — `n → each cell = zero-extend nibble n`
+- Proof `489_dabs4n_dzext4n.cubalc`
+
+### Prior
+See 1.14.31-universal.
+
 ## 1.14.31-universal — 2026-08-04
 
 ### Direction

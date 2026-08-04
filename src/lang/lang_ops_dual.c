@@ -8291,6 +8291,75 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-2 dual-stack imm 4-bit field abs+extend: DABS4N · DSEXT4N · DZEXT4N
+   * (dual of SABS4N/SSEXT4N/SZEXT4N; complete dual nibble unary plane after DNEG4N) */
+  if (kw(&L->cur,"DABS4N")||kw(&L->cur,"S2ABS4N")||kw(&L->cur,"STACK2ABS4N")||
+      kw(&L->cur,"PAIRABS4N")||kw(&L->cur,"DIABS4N")||kw(&L->cur,"DABSNIBN")||
+      kw(&L->cur,"DNIBABSN")){
+    /* a b + n → nibble n of each = abs(int4); min -8 → 0x8; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFul);
+    long vb = (long)((mb >> sh) & 0xFul);
+    if (va & 0x8) va -= 16;
+    if (vb & 0x8) vb -= 16;
+    long ara = (va < 0) ? -va : va;
+    long arb = (vb < 0) ? -vb : vb;
+    unsigned long nva = (unsigned long)(ara & 0xF);
+    unsigned long nvb = (unsigned long)(arb & 0xF);
+    long x = (long)((ma & ~(0xFul << sh)) | (nva << sh));
+    long y = (long)((mb & ~(0xFul << sh)) | (nvb << sh));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSEXT4N")||kw(&L->cur,"S2SEXT4N")||kw(&L->cur,"STACK2SEXT4N")||
+      kw(&L->cur,"PAIRSEXT4N")||kw(&L->cur,"DSIGNEXT4N")||kw(&L->cur,"DSEXTNIBN")||
+      kw(&L->cur,"DNIBSEXTN")){
+    /* a b + n → each cell = sign-extend nibble n to full width; n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long va = (long)((ma >> sh) & 0xFul);
+    long vb = (long)((mb >> sh) & 0xFul);
+    if (va & 0x8) va -= 16;
+    if (vb & 0x8) vb -= 16;
+    vm->stack[vm->sp - 2] = va;
+    vm->stack[vm->sp - 1] = vb;
+    var_set_num(vm,"LAST_N",vb); vm->last_n=vb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DZEXT4N")||kw(&L->cur,"S2ZEXT4N")||kw(&L->cur,"STACK2ZEXT4N")||
+      kw(&L->cur,"PAIRZEXT4N")||kw(&L->cur,"DZEROEXT4N")||kw(&L->cur,"DZEXTNIBN")||
+      kw(&L->cur,"DNIBZEXTN")){
+    /* a b + n → each cell = zero-extend nibble n (low4 only); n clamped 0..15 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 15) n = 15;
+    unsigned long sh = (unsigned long)(n * 4);
+    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
+    long xa = (long)((ma >> sh) & 0xFul);
+    long yb = (long)((mb >> sh) & 0xFul);
+    vm->stack[vm->sp - 2] = xa;
+    vm->stack[vm->sp - 1] = yb;
+    var_set_num(vm,"LAST_N",yb); vm->last_n=yb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   /* digit-9 dual-stack data-path 32-bit: DCLIP32 · DSEXT32 · DZEXT32 */
   if (kw(&L->cur,"DCLIP32")||kw(&L->cur,"2CLIP32")||kw(&L->cur,"S2CLIP32")||
       kw(&L->cur,"STACK2CLIP32")||kw(&L->cur,"PAIRCLIP32")||
