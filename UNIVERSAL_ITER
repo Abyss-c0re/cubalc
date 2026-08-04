@@ -6,11 +6,11 @@
 | **digit** | **3** (urandom) |
 | **version** | `1.14.16-universal` |
 | **pass/fail** | **488 / 0** (green) |
-| **commit** | `(pending)` → `origin/main` |
+| **commit** | `abf0ab9` → `origin/main` |
 | **ops** | `SADD16N` / `SSUB16N` / `SMUL16N` |
 | **proof** | `programs/proof/473_sadd16n_smul16n.cubalc` |
 
 ### Delta
 Digit-3 stack imm halfword-field arith merge: add/sub/mul wrap into selected 16-bit field of TOS. Ladder after byte SADD8N plane.
 
-**Status:** 1.14.15→1.14.16-universal; suite green 488/0; push pending.
+**Status:** 1.14.15→1.14.16-universal; suite green 488/0; push ok.
