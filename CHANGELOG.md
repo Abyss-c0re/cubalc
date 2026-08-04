@@ -1,3 +1,17 @@
+## 1.14.21-universal — 2026-08-04
+
+### Direction
+- Algocube digit **0** → dual-stack imm 16-bit field max+eq (dual of SMAX16N/SEQ16N/SNE16N; complete min/max + equality on pair halfwords).
+
+### Language
+- `DMAX16N` — `field n → halfword n of each = max(hw, field)`
+- `DEQ16N` — `field n → halfword n of each = (hw == field) ? 1 : 0`
+- `DNE16N` — `field n → halfword n of each = (hw != field) ? 1 : 0`
+- Proof `478_dmax16n_dne16n.cubalc`
+
+### Prior
+See 1.14.20-universal.
+
 ## 1.14.20-universal — 2026-08-04
 
 ### Direction
