@@ -5,7 +5,7 @@
   "item": "SYS POP / POPLINE bag field peel",
   "item_id": 92,
   "title": "SYS POP peels last bag field with POP_REST",
-  "commit": "pending",
+  "commit": "3c27c2febc93836c2d5f1a9f106c22b232d5d408",
   "summary": "SYS POP|POPLINE bag \u2192 LAST=last field, POP_REST/REST=remaining, LAST_N=found, POP_N=rest count; dual of PUSH.",
   "proofs": [
     "633_sys_pop",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T11:33:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "3c27c2febc93836c2d5f1a9f106c22b232d5d408"
 }
