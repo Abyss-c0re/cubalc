@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 110,
-  "version": "1.15.135-usability",
-  "item": "SYS FIRSTMATCH / GREP1 first bag field hit",
-  "item_id": 143,
-  "title": "SYS FIRSTMATCH|GREP1 bag needle \u2014 first field containing needle",
-  "commit": "a58b5e73d85a0db828db2f7a67cce2888fb87bdf",
-  "summary": "SYS FIRSTMATCH/GREP1 return first bag field with needle (icase). No GREP+TAKE. selftest 110.",
+  "iter": 111,
+  "version": "1.15.136-usability",
+  "item": "SYS CHUNK / BATCH group bag fields by n",
+  "item_id": 144,
+  "title": "SYS CHUNK|BATCH n [bag] [join] \u2014 group fields into batches of n",
+  "commit": "4543a426260e8cc70c3453085b5e114d2adeb4e4",
+  "summary": "SYS CHUNK/BATCH group bag fields into batches of n joined by sep. Work-list paging. selftest 111.",
   "proofs": [
-    "683_sys_firstmatch",
-    "selftest n_pass=110"
+    "684_sys_chunk",
+    "selftest n_pass=111"
   ],
-  "when": "2026-08-05T20:03:48Z",
+  "when": "2026-08-05T20:13:43Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a58b5e73d85a0db828db2f7a67cce2888fb87bdf"
+  "sha": "4543a426260e8cc70c3453085b5e114d2adeb4e4"
 }
