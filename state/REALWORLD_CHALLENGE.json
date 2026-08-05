@@ -10,7 +10,7 @@
       "name": "seed_on_toggle_pin",
       "cmd": "seed beta dark_mode legacy; on beta; toggle dark_mode; pin dark_mode",
       "ok": true,
-      "note": "SETMATCH off→on; MOVELINE dark_mode to front; plate dark_mode,beta,legacy"
+      "note": "SETMATCH off\u2192on; MOVELINE dark_mode to front; plate dark_mode,beta,legacy"
     },
     {
       "name": "set_insert_drop",
@@ -28,11 +28,11 @@
       "name": "countline_exact_not_suffix",
       "cmd": "COUNTLINE bag ':on' vs GREP ':on'+LINES",
       "ok": true,
-      "note": "COUNTLINE ':on'→0; GREP+LINES→2 — suffix tallies need GREP"
+      "note": "COUNTLINE ':on'\u21920; GREP+LINES\u21922 \u2014 suffix tallies need GREP"
     },
     {
       "name": "setmatch_first_only",
-      "cmd": "SETMATCH two beta:on → one off residual on",
+      "cmd": "SETMATCH two beta:on \u2192 one off residual on",
       "ok": true,
       "note": "first match only; COUNTLINE residual beta:on=1"
     },
@@ -54,17 +54,17 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "COUNTLINE is exact-field only — cannot tally status suffixes",
+      "title": "COUNTLINE is exact-field only \u2014 cannot tally status suffixes",
       "detail": "COUNTLINE bag ':on' returns 0 even when many name:on rows exist. Agents expecting suffix/role counts must GREP ':on' then LINES. The form name invites 'count lines matching' but means 'count exact field equality'.",
-      "repro": "COUNTLINE 'beta:on\\ndark:on' ':on' → LAST_N=0; GREP ':on' + LINES → 2"
+      "repro": "COUNTLINE 'beta:on\\ndark:on' ':on' \u2192 LAST_N=0; GREP ':on' + LINES \u2192 2"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host|bag",
-      "title": "SETMATCH replaces first exact match only — duplicates residual",
-      "detail": "Two beta:on fields → SETMATCH beta:on→beta:off leaves one beta:on. No SETMATCHALL. Flag boards with accidental dupes stay inconsistent after toggle.",
-      "repro": "SETMATCH 'beta:on\\nbeta:on' 'beta:on' 'beta:off' → beta:off\\nbeta:on"
+      "title": "SETMATCH replaces first exact match only \u2014 duplicates residual",
+      "detail": "Two beta:on fields \u2192 SETMATCH beta:on\u2192beta:off leaves one beta:on. No SETMATCHALL. Flag boards with accidental dupes stay inconsistent after toggle.",
+      "repro": "SETMATCH 'beta:on\\nbeta:on' 'beta:on' 'beta:off' \u2192 beta:off\\nbeta:on"
     },
     {
       "id": "W3",
@@ -78,7 +78,7 @@
       "id": "W4",
       "severity": "med",
       "area": "host",
-      "title": "No string concat — flag tokens via REPLACEALL template",
+      "title": "No string concat \u2014 flag tokens via REPLACEALL template",
       "detail": "name:on built as REPLACEALL on NAME:VAL placeholders. Names equal to VAL/NAME tokens can corrupt. Same class as roster board.",
       "repro": "template NAME:VAL with NAME containing VAL"
     },
@@ -87,7 +87,7 @@
       "severity": "med",
       "area": "cli",
       "title": "PRINT_JSON collapses multi-line flag bags",
-      "detail": "list dumps flags as dark_mode:onbeta:onlegacy:off — unparseable for agents.",
+      "detail": "list dumps flags as dark_mode:onbeta:onlegacy:off \u2014 unparseable for agents.",
       "repro": "PRINT_JSON flags after seed+on"
     },
     {
@@ -100,7 +100,7 @@
     }
   ],
   "workarounds": [
-    "Suffix tallies: GREP ':on'|':off' then SYS LINES — not COUNTLINE",
+    "Suffix tallies: GREP ':on'|':off' then SYS LINES \u2014 not COUNTLINE",
     "Identity: EACH LINE + BEFORE ':' + EQS name before SETMATCH/MOVELINE",
     "Dedup flags before toggle; or loop SETMATCH until COUNTLINE old==0",
     "PRINT_JSON only on_n/off_n scalars; keep bag on FLAGS.txt plate",
@@ -113,6 +113,6 @@
     "PRINT_JSON newline escape in strings",
     "Doc cross-link RENAME vs MOVELINE clearly in forms catalog"
   ],
-  "commit": null,
+  "commit": "8972b76275fab592e38845143153552fcd48e3e7",
   "ts": "2026-08-05T14:28:20Z"
 }
