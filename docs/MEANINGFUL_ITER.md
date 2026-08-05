@@ -140,6 +140,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 110. ~~**`cubalc run -e` / `--expr`**~~ **done** (inline program · multi -e · no temp file).
 111. ~~**`SYS CHDIR` / `CD`**~~ **done** (change process cwd · relative plate I/O without shell).
 112. ~~**`SYS RAND` / `RANDOM`**~~ **done** (uniform int · agent jitter/sample without shell).
+113. ~~**`SYS MIN` / `MAX` / `CLAMP`**~~ **done** (host-plane numeric bounds · cap retries/jitter).
 
 ## Tick protocol
 

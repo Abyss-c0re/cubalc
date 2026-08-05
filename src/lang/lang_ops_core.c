@@ -1400,6 +1400,61 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS MIN|MAX a b [c…] — host-plane min/max of integer args → LAST_N.
+     * SYS CLAMP x lo hi — bound x into [lo,hi] (lo/hi swapped if inverted).
+     * Distinct from cube ISA MIN/MAX/CLAMP stack ops. Usability: cap retries/jitter. */
+    if (kw(&L->cur,"MIN") || kw(&L->cur,"MINIMUM") || kw(&L->cur,"MAX") ||
+        kw(&L->cur,"MAXIMUM") || kw(&L->cur,"CLAMP") || kw(&L->cur,"BOUND") ||
+        kw(&L->cur,"CLIP") || kw(&L->cur,"SATURATE")){
+      char op[16];
+      long vals[16];
+      int n = 0, i, is_min, is_max, is_clamp;
+      long out = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_min = (strcmp(op, "MIN") == 0 || strcmp(op, "MINIMUM") == 0);
+      is_max = (strcmp(op, "MAX") == 0 || strcmp(op, "MAXIMUM") == 0);
+      is_clamp = (strcmp(op, "CLAMP") == 0 || strcmp(op, "BOUND") == 0 ||
+                  strcmp(op, "CLIP") == 0 || strcmp(op, "SATURATE") == 0);
+      lex_next(L);
+      /* parse_prim (not parse_expr): spaces between args must not become binary minus.
+       * SYS MIN -3 -1 → [-3,-1] not one expr (-3 - 1). */
+      while (n < 16 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                        L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
+        vals[n++] = parse_prim(vm, L);
+      }
+      if (is_clamp) {
+        long x, lo, hi;
+        if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
+        else if (n == 1) { x = vals[0]; lo = 0; hi = vals[0]; }
+        else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
+        else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
+        if (lo > hi) { long t = lo; lo = hi; hi = t; }
+        out = x;
+        if (out < lo) out = lo;
+        if (out > hi) out = hi;
+      } else if (n <= 0) {
+        out = vm->last_n;
+      } else {
+        out = vals[0];
+        for (i = 1; i < n; i++) {
+          if (is_min && vals[i] < out) out = vals[i];
+          if (is_max && vals[i] > out) out = vals[i];
+        }
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      if (is_min) var_set_num(vm, "MIN", out);
+      if (is_max) var_set_num(vm, "MAX", out);
+      if (is_clamp) var_set_num(vm, "CLAMP", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -3872,7 +3927,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4180,6 +4235,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
       {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
+      {"SYS MIN", "SYS MIN a b [c…] — host-plane minimum → LAST_N"},
+      {"SYS MAX", "SYS MAX a b [c…] — host-plane maximum → LAST_N"},
+      {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},

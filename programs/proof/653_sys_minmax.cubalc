@@ -1,0 +1,56 @@
+# SYS MIN / MAX / CLAMP — host-plane numeric bounds
+# Usability: cap retries/jitter/backoff without cube ISA or shell
+
+HOLD_FLASH 1
+
+# min / max of two
+SYS MIN 3 7
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS MAX 3 7
+ASSERT LAST_N == 7
+
+# multi-arg
+SYS MIN 9 2 5 1 8
+ASSERT LAST_N == 1
+SYS MAX 9 2 5 1 8
+ASSERT LAST_N == 9
+
+# negatives
+SYS MIN -3 -1 0 2
+ASSERT LAST_N == -3
+SYS MAX -3 -1 0 2
+ASSERT LAST_N == 2
+
+# clamp
+SYS CLAMP 5 0 10
+ASSERT LAST_N == 5
+SYS CLAMP -3 0 10
+ASSERT LAST_N == 0
+SYS CLAMP 99 0 10
+ASSERT LAST_N == 10
+# inverted bounds
+SYS CLAMP 5 10 0
+ASSERT LAST_N == 5
+SYS CLAMP 15 10 0
+ASSERT LAST_N == 10
+
+# aliases
+SYS BOUND 50 0 100
+ASSERT LAST_N == 50
+SYS CLIP -1 0 1
+ASSERT LAST_N == 0
+SYS MINIMUM 4 4
+ASSERT LAST_N == 4
+SYS MAXIMUM 4 4
+ASSERT LAST_N == 4
+
+# agent pattern: jitter then clamp into poll window
+SYS RAND 0 500
+LET j = LAST_N
+SYS CLAMP j 50 200
+LET wait = LAST_N
+ASSERT wait >= 50
+ASSERT wait <= 200
+
+PRINT "sys_minmax ok"

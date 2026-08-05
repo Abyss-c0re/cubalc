@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 79,
-  "version": "1.15.104-usability",
-  "item": "SYS RAND / RANDOM uniform int for agent jitter",
-  "item_id": 112,
-  "title": "SYS RAND|RANDOM [n]|[lo hi] uniform integer",
-  "commit": "316c55f97039942de6b5abbf67e6b52839b1f3cb",
-  "summary": "SYS RAND|RANDOM [n]|[lo hi] host-plane uniform int. Default 0..999999; single 0..n-1; range inclusive. CUBALC_SEED. Distinct from cube RAND. selftest 79.",
+  "iter": 80,
+  "version": "1.15.105-usability",
+  "item": "SYS MIN / MAX / CLAMP host-plane numeric bounds",
+  "item_id": 113,
+  "title": "SYS MIN|MAX a b [c\u2026] \u00b7 SYS CLAMP x lo hi",
+  "commit": "644aa53f9bfc1c05e6ffd8ccd210f6f48b526785",
+  "summary": "SYS MIN/MAX multi-arg host bounds; SYS CLAMP x lo hi. parse_prim so spaced negatives work. Cap retries/jitter without cube ISA. selftest 80.",
   "proofs": [
-    "652_sys_rand",
-    "selftest n_pass=79"
+    "653_sys_minmax",
+    "selftest n_pass=80"
   ],
-  "when": "2026-08-05T14:55:35Z",
+  "when": "2026-08-05T15:05:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "316c55f97039942de6b5abbf67e6b52839b1f3cb"
+  "sha": "644aa53f9bfc1c05e6ffd8ccd210f6f48b526785"
 }
