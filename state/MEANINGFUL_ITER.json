@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 63,
-  "version": "1.15.88-usability",
-  "item": "SYS FINDI / INDEXI case-insensitive index",
-  "item_id": 96,
-  "title": "SYS FINDI|INDEXI|FIND I hay needle case-insensitive index",
-  "commit": "00f31be9ab73326210608c5c5051d490a582060e",
-  "summary": "SYS FINDI|INDEXI|IFIND|FIND I case-insensitive first index → LAST_N (-1 miss). Completes GREPI/EQSI/HASI/STARTSI for locate+MID without UPPER. selftest 63.",
+  "iter": 64,
+  "version": "1.15.89-usability",
+  "item": "SYS ENV SET / UNSET process env",
+  "item_id": 97,
+  "title": "SYS ENV SET|UNSET · SETENV/UNSETENV process setenv without shell",
+  "commit": "379177af27f7fa7dd9e85689024fca5427b95b98",
+  "summary": "SYS ENV SET|SETENV|EXPORT and ENV UNSET|UNSETENV process setenv/unsetenv for CUBALC_* agent config without shell. Soft unset LAST_N was-set. selftest 64.",
   "proofs": [
-    "637_sys_findi",
-    "selftest n_pass=63"
+    "638_sys_env_set",
+    "selftest n_pass=64"
   ],
-  "when": "2026-08-05T12:13:41Z",
+  "when": "2026-08-05T12:23:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "00f31be9ab73326210608c5c5051d490a582060e"
+  "sha": "379177af27f7fa7dd9e85689024fca5427b95b98"
 }
