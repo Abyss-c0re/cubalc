@@ -1,0 +1,69 @@
+# SYS FLATTEN / UNCHUNK — expand joined bag fields into a flat bag
+# Usability: reverse of SYS CHUNK join without EACH+SPLIT+PUSH glue
+
+HOLD_FLASH 1
+
+LET peers = "p1\np2\np3\np4\np5\np6"
+
+# CHUNK then FLATTEN round-trip (default space join)
+SYS CHUNK 2 peers
+ASSERT LAST_N == 3
+SYS EQS LAST "p1 p2\np3 p4\np5 p6"
+ASSERT LAST_N == 1
+SYS FLATTEN LAST
+ASSERT OK == 1
+ASSERT LAST_N == 6
+ASSERT FLATTEN_N == 6
+ASSERT FLATTEN_LINES == 3
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# custom join sep
+SYS CHUNK 3 peers ","
+SYS EQS LAST "p1,p2,p3\np4,p5,p6"
+ASSERT LAST_N == 1
+SYS UNCHUNK LAST ","
+ASSERT LAST_N == 6
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# aliases
+SYS SPLITALL "a|b\nc|d" "|"
+ASSERT LAST_N == 4
+SYS EQS LAST "a\nb\nc\nd"
+ASSERT LAST_N == 1
+
+# MAPSPLIT alias
+SYS MAPSPLIT "x y z"
+ASSERT LAST_N == 3
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+
+# empty sep keeps whole fields
+SYS FLATTEN "keep me\nalso" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "keep me\nalso"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS FLATTEN ""
+ASSERT LAST_N == 0
+ASSERT FLATTEN_LINES == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# trailing sep yields empty token (like SPLIT)
+SYS FLATTEN "a,b," ","
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\n"
+ASSERT LAST_N == 1
+
+# agent pattern: batch waves → process subset → flatten survivors
+SYS CHUNK 2 peers
+SYS TAKE 2 LAST
+SYS FLATTEN LAST
+ASSERT LAST_N == 4
+SYS EQS LAST "p1\np2\np3\np4"
+ASSERT LAST_N == 1
+
+PRINT "sys_flatten ok"

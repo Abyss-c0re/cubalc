@@ -4807,6 +4807,91 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS FLATTEN|UNCHUNK|EXPAND|SPLITALL [bag] [sep]
+     * — split every bag field by sep (default space) and emit all tokens as
+     * a flat newline bag → LAST. Empty sep concatenates nothing extra (each
+     * non-empty field kept as one token). LAST_N/FLATTEN_N = token count;
+     * FLATTEN_LINES = input field count.
+     * Usability: reverse of SYS CHUNK join — re-expand batched peer/work
+     * lists without EACH+SPLIT+PUSH glue. */
+    if (kw(&L->cur,"FLATTEN") || kw(&L->cur,"UNCHUNK") || kw(&L->cur,"EXPAND") ||
+        kw(&L->cur,"SPLITALL") || kw(&L->cur,"MAPSPLIT") || kw(&L->cur,"FLATSPLIT") ||
+        kw(&L->cur,"UNBATCH") || kw(&L->cur,"FLATM") || kw(&L->cur,"BAGFLATTEN")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[64];
+      const char *p, *lstart, *lp, *tstart;
+      size_t olen = 0, sepn, lflen, tlen;
+      long tokens = 0, lines = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          lstart = p;
+          while (*p && *p != '\n') p++;
+          lflen = (size_t)(p - lstart);
+          lines++;
+          if (sepn == 0) {
+            /* empty sep: emit whole field as one token (if non-empty) */
+            if (lflen > 0) {
+              if (tokens > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + lflen < sizeof out) {
+                memcpy(out + olen, lstart, lflen);
+                olen += lflen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, lstart, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              tokens++;
+            }
+          } else {
+            const char *lend = lstart + lflen;
+            lp = lstart;
+            for (;;) {
+              tstart = lp;
+              while (lp < lend &&
+                     !(sepn > 0 && (size_t)(lend - lp) >= sepn &&
+                       memcmp(lp, sep, sepn) == 0))
+                lp++;
+              tlen = (size_t)(lp - tstart);
+              if (tokens > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + tlen < sizeof out) {
+                memcpy(out + olen, tstart, tlen);
+                olen += tlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, tstart, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              tokens++;
+              if (lp >= lend) break;
+              /* consume sep; if it was trailing, loop emits empty token */
+              lp += sepn;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = tokens;
+      var_set_num(vm, "LAST_N", tokens);
+      var_set_num(vm, "FLATTEN_N", tokens);
+      var_set_num(vm, "FLATTEN_LINES", lines);
+      var_set_num(vm, "UNCHUNK_N", tokens);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
      * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
      * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
@@ -6803,7 +6888,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -7101,6 +7186,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROTATE", "SYS ROTATE|ROTL k [bag] — left-rotate bag fields by k · round-robin"},
       {"SYS ROTL", "SYS ROTL k [bag] — alias of SYS ROTATE (left)"},
       {"SYS ROTR", "SYS ROTR k [bag] — right-rotate bag fields by k"},
+      {"SYS FLATTEN", "SYS FLATTEN|UNCHUNK [bag] [sep] — split every field by sep → flat bag"},
+      {"SYS UNCHUNK", "SYS UNCHUNK [bag] [sep] — alias of SYS FLATTEN · reverse CHUNK join"},
+      {"SYS SPLITALL", "SYS SPLITALL [bag] [sep] — alias of SYS FLATTEN · map-split bag lines"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},
