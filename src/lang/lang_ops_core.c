@@ -1935,6 +1935,53 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS WORDS|TOKENIZE|FIELDSW [str|LAST] — whitespace tokenize → newline fields.
+     * Collapses runs of space/tab/CR/LF; trims ends. LAST_N/WORDS_N = token count.
+     * Usability: free text / "a b  c" → EACH LINE/GREP/SORT without SPLIT " " glue. */
+    if (kw(&L->cur,"WORDS") || kw(&L->cur,"TOKENIZE") || kw(&L->cur,"TOKENS") ||
+        kw(&L->cur,"FIELDSW") || kw(&L->cur,"WSSPLIT") || kw(&L->cur,"SPLITWS") ||
+        kw(&L->cur,"WORDLIST")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      size_t olen = 0;
+      long ntok = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      p = src;
+      while (*p) {
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+        if (!*p) break;
+        {
+          const char *start = p;
+          size_t flen;
+          while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
+          flen = (size_t)(p - start);
+          if (ntok > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, start, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          ntok++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "WORDS", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = ntok;
+      var_set_num(vm, "LAST_N", ntok);
+      var_set_num(vm, "WORDS_N", ntok);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUT|COLUMN|FIELDN hay sep n — peel Nth field by separator → LAST.
      * CUT/FIELDN: 0-based index. COLUMN/COL/COLN: 1-based (like SYS LINE).
      * LAST_N = 1 if field exists, 0 if miss/out-of-range. Empty sep → whole as field 0.
@@ -2909,7 +2956,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3145,6 +3192,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
       {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
+      {"SYS WORDS", "SYS WORDS|TOKENIZE [str] — whitespace → newline fields · collapse runs"},
+      {"SYS TOKENIZE", "SYS TOKENIZE [str] — alias of SYS WORDS"},
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},

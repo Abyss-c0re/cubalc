@@ -1,0 +1,65 @@
+# SYS WORDS / TOKENIZE — whitespace tokenize → newline fields
+# Usability: free text / "a b  c" → EACH LINE/GREP/SORT without SPLIT " " glue
+
+HOLD_FLASH 1
+
+# basic tokens + collapse runs
+SYS WORDS "a  b\tc  d"
+ASSERT OK == 1
+ASSERT LAST_N == 4
+SYS EQS LAST "a\nb\nc\nd"
+ASSERT LAST_N == 1
+
+# trim ends
+SYS WORDS "  edge  "
+ASSERT LAST_N == 1
+SYS EQS LAST "edge"
+ASSERT LAST_N == 1
+
+# empty / whitespace only
+SYS WORDS ""
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+SYS WORDS "  \t\n "
+ASSERT LAST_N == 0
+
+# single token
+SYS WORDS "solo"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# aliases
+SYS TOKENIZE "x y z"
+ASSERT LAST_N == 3
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+SYS TOKENS "1\t2"
+ASSERT LAST_N == 2
+SYS EQS LAST "1\n2"
+ASSERT LAST_N == 1
+SYS WSSPLIT "p  q"
+SYS EQS LAST "p\nq"
+ASSERT LAST_N == 1
+
+# default hay LAST
+LET s = "host port role"
+SYS WORDS s
+ASSERT LAST_N == 3
+SYS NTH 1 LAST
+SYS EQS LAST "port"
+ASSERT LAST_N == 1
+
+# agent pattern: free line → bag → GREP keep tags
+LET line = "ALERT disk path=/var full=1"
+SYS WORDS line
+SYS GREP "path=" LAST
+SYS EQS LAST "path=/var"
+ASSERT LAST_N == 1
+SYS WORDS line
+SYS HEAD LAST
+SYS EQS LAST "ALERT"
+ASSERT LAST_N == 1
+
+PRINT "sys_words ok"
