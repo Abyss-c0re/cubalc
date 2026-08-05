@@ -1,103 +1,98 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 15,
-  "program": "programs/realworld/alert_template_digest.cubalc",
-  "theme": "alert digest GREPI + REPLACEALL template + APPEND",
-  "version": "1.15.76-usability",
+  "iter": 16,
+  "program": "programs/realworld/kv_config_loader.cubalc",
+  "theme": "kv config load BEFORE/AFTER + STR template plate",
+  "version": "1.15.78-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_grepi_template",
-      "cmd": "logs with Error/ERROR/error; template with {{DATE}}/{{HITS}}/{{COUNT}}; run -s",
+      "name": "positive_kv_parse",
+      "cmd": "config.kv with role/max_jobs/peer/mode/note=hello=world; run -s",
       "ok": true,
-      "note": "hit_total=3 window_n=3 GREPI; rendered plate; unfilled=1 leaves {{COUNT}}; APPEND log"
+      "note": "keys_ok=5; note preserves nested '='; max_jobs=4 via STR in plate; unfilled=0"
     },
     {
-      "name": "quiet_strict",
-      "cmd": "run -q -s",
+      "name": "missing_soft_defaults",
+      "cmd": "no config.kv; run -q -s",
       "ok": true,
-      "note": "exit 0 under strict after CLEAR_ERR"
+      "note": "READ OR miss + CLEAR_ERR; defaults role=worker max_jobs=1"
     },
     {
-      "name": "require_no_hits",
-      "cmd": "CUBALC_ALERT_REQUIRE=1 INFO-only log",
+      "name": "env_override",
+      "cmd": "CUBALC_CFG_ROLE=boss CUBALC_CFG_MAX_JOBS=9",
       "ok": true,
-      "note": "EXIT 2 no hits"
+      "note": "plate role=boss max_jobs=9"
     },
     {
-      "name": "action_status",
-      "cmd": "CUBALC_ARG0=status on prior STATE",
+      "name": "require_empty_role",
+      "cmd": "role= empty + ARG0=require",
       "ok": true,
-      "note": "soft READ OR ALERT.txt; EXIT 0"
-    },
-    {
-      "name": "bad_action",
-      "cmd": "CUBALC_ARG0=nope",
-      "ok": true,
-      "note": "EXIT 2 bad action"
+      "note": "EXIT 2 role missing"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "51/51 pass incl grepi replaceall append"
+      "note": "53/53 pass incl sys_str + sys_before"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|report",
-      "title": "No itoa/SYS STR \u2014 template {{COUNT}} cannot be filled from hit_n",
-      "detail": "REPLACEALL fills string placeholders well, but numeric hit_total/window_n cannot enter the plate text without a number\u2192string form. Template leftover {{COUNT}} is detected via SYS HAS tpl '{{' (unfilled=1). Agents must dual-path PRINT_JSON for counts.",
-      "repro": "Template count={{COUNT}}; after REPLACEALL of DATE/HOST/HITS, ALERT.txt still contains {{COUNT}}."
+      "area": "flow",
+      "title": "NOTE form clobbers program var NOTE",
+      "detail": "NOTE breadcrumb writes the NOTE string var. Storing config in LET NOTE = val then later NOTE \"unknown key\" overwrites config silently. Plate showed note=unknown key until renamed CFG_NOTE. Same class risk for other dual-purpose names (LAST, OK, STATUS).",
+      "repro": "LET NOTE = \"hello\"; NOTE \"x\"; PRINT_JSON NOTE \u2192 breadcrumb text, not hello."
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "host",
-      "title": "REPLACEALL is literal only \u2014 no capture groups / regex templates",
-      "detail": "Cannot map 'Error: (.*)' into structured fields. Multi-placeholder templates need sequential REPLACEALL chains on LAST. Empty old is silent no-op (LAST_N=0).",
-      "repro": "SYS REPLACEALL with regex-like old never matches; need N chained REPLACEALL for N keys."
+      "severity": "high",
+      "area": "flow",
+      "title": "No dynamic LET from key string \u2014 hardcoded key map only",
+      "detail": "Cannot LET $key = val from BEFORE peel. Real kv loaders need a switch of EQS key \"role\"/\"max_jobs\"/\u2026 for every known key. Unknown keys only counted, not stored. Blocks generic config agents.",
+      "repro": "Parse arbitrary keys in config.kv \u2014 only allowlisted keys bind to vars."
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "flow",
-      "title": "No list-push \u2014 multi-file hit accumulate is CAT glue",
-      "detail": "Collecting GREPI hits across files requires SYS CAT hit_blob chunk with manual newline glue. Easy to get wrong separators; no APPEND_LINE to a string list form.",
-      "repro": "Each file GREPI chunk; CAT blob + chunk between files in EACH LINE."
+      "area": "host",
+      "title": "BEFORE miss keeps whole line as key (LAST_N=0 only signal)",
+      "detail": "SYS BEFORE \"noequals\" \"=\" \u2192 LAST=\"noequals\" LAST_N=0. Agents that forget to check found flag treat garbage as keys. AFTER miss \u2192 empty string.",
+      "repro": "SYS BEFORE noequals = ; without IF found==0 CONTINUE."
     },
     {
       "id": "W4",
-      "severity": "low",
-      "area": "host",
-      "title": "REPLACEALL self-expand is one-pass (safe) but undocumented in forms hint",
-      "detail": "REPLACEALL 'a'\u2192'aa' yields 'aa' once (no infinite loop). Good behavior; forms hint does not say non-rescanning. Agents may fear expansion loops.",
-      "repro": "SYS REPLACEALL 'a' 'a' 'aa' \u2192 LAST len 2, LAST_N 1"
+      "severity": "med",
+      "area": "docs|cli",
+      "title": "SYS TRIM and LPAD exist but missing from forms/search",
+      "detail": "TRIM used successfully for key/val whitespace; forms TRIM and search TRIM return n=0. Same for LPAD. Agents may shell out for strip/pad.",
+      "repro": "./out/cubalc forms TRIM; search TRIM \u2192 empty while SYS TRIM works."
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "cli",
-      "title": "PRINT_JSON under -q is suppressed \u2014 status action hard for quiet agents",
-      "detail": "run -q plate-only hides PRINT_JSON line from status path; agents need non-quiet or STATUS plate fields only.",
-      "repro": "CUBALC_ARG0=status run -q \u2192 final ok plate only, no has_alert JSON line"
+      "area": "host",
+      "title": "GREPV # drops any line containing hash, not only full-line comments",
+      "detail": "Comment filter SYS GREPV \"#\" removes values that contain #. No full-line-only comment form.",
+      "repro": "note=use #tag in config \u2192 line dropped by GREPV #."
     }
   ],
   "workarounds": [
-    "Put counts only in PRINT_JSON; leave {{COUNT}} out of human templates or accept unfilled marker",
-    "Chain REPLACEALL LAST for each placeholder",
-    "GREPI for log triage; keep GREP for exact-case tokens",
-    "SYS APPEND for history (now forms-discoverable)",
-    "Run status without -q when PRINT_JSON metrics required"
+    "Never name application vars NOTE/LAST/OK; use CFG_NOTE etc.",
+    "Hardcode known-key EQS branches; document allowlist",
+    "Always check BEFORE/AFTER LAST_N (found) before accepting peel",
+    "Use SYS TRIM despite missing catalog entry",
+    "Prefer leading-# only: GREPV after ensuring values avoid # or strip comments with STARTS"
   ],
   "language_gaps": [
-    "SYS STR / itoa for numeric template fields",
-    "Named template map or multi-replace in one op",
-    "String-list push/append field helper for multi-file GREP collect",
-    "Quiet mode still emits PRINT_JSON (or -q -j) for agent metrics"
+    "Map/dict or dynamic var bind from string key",
+    "Reserve NOTE breadcrumb under different slot than user NOTE var (or NOTE_MSG)",
+    "Catalog SYS TRIM/LPAD/RPAD in forms/search",
+    "Comment-aware line filter (full-line # only)",
+    "Optional trim-on-BEFORE/AFTER peel"
   ],
-  "commit": "df8f342ffa8173fff3fd48ad7fded1dd7bddee95",
-  "ts": "2026-08-05T10:17:29Z"
+  "commit": "c383625d935652fbe7ff7cccd51f5a40d4fd441c",
+  "ts": "2026-08-05T10:43:05Z"
 }

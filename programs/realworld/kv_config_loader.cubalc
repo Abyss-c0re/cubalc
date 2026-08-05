@@ -1,0 +1,285 @@
+# kv_config_loader.cubalc — key=value plate load via BEFORE/AFTER + STR counts
+#
+# Real use: agents drop STATE/config.kv (or path via ARG1/ENV). This program:
+#   READ config · strip comments · EACH LINE peel key=value with BEFORE/AFTER
+#   map known keys into vars (role, max_jobs, peer, mode, note)
+#   optional ENV override CUBALC_CFG_ROLE / MAX_JOBS / PEER / MODE
+#   SYS STR max_jobs for template plate {{COUNT}} (closes prior itoa gap)
+#   WRITE CONFIG_PLATE.txt · APPEND CONFIG_LOG.txt
+#   actions: load (default) | show | require
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE"
+#   cat > "$CUBALC_STATE/config.kv" <<EOF
+#   # agent config
+#   role=worker
+#   max_jobs=4
+#   peer=127.0.0.1:7733
+#   mode=full
+#   note=hello=world
+#   EOF
+#   ./out/cubalc run -q -s programs/realworld/kv_config_loader.cubalc
+#
+# Optional:
+#   CUBALC_ARG0=load|show|require
+#   CUBALC_ARG1=rel/or/abs path to kv (default config.kv under STATE)
+#   CUBALC_CFG_ROLE / CUBALC_CFG_MAX_JOBS / CUBALC_CFG_PEER / CUBALC_CFG_MODE
+#   CUBALC_CFG_REQUIRE=1  # with action require or env — EXIT 2 if role empty
+#
+# Edges:
+#   BEFORE/AFTER first-needle only (values may contain '=')
+#   BEFORE miss keeps whole line as key (silent) — must check LAST_N
+#   no dynamic LET from key string — hardcoded known-key map (gap)
+#   NOTE form clobbers var NOTE — never store config in NOTE (high)
+#   SYS TRIM/LPAD implemented but not in forms/search (gap)
+#   SYS STR fills {{COUNT}} in REPLACEALL templates
+#   soft READ OR missing config + defaults under -s
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "kv_config_loader: start"
+DEFAULT ACTION = "load"
+DEFAULT CFG_REL = "config.kv"
+DEFAULT ROLE = "worker"
+DEFAULT MAX_JOBS = 1
+DEFAULT PEER = ""
+DEFAULT MODE = "local"
+DEFAULT CFG_NOTE = ""
+DEFAULT REQUIRE_ROLE = 0
+LET keys_ok = 0
+LET keys_skip = 0
+LET keys_unknown = 0
+# Do not name vars NOTE — NOTE form breadcrumb clobbers program var NOTE
+IDENTITY
+SYS DATE
+LET cfg_date = DATE
+SYS HOSTNAME
+LET cfg_host = LAST
+
+# --- action / path ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CFG_ACTION" OR "load"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET CFG_REL = LAST
+ELSE
+  SYS ENV "CUBALC_CFG_PATH" OR "config.kv"
+  IF LAST_N > 0 THEN
+    LET CFG_REL = LAST
+  END
+END
+SYS ENV "CUBALC_CFG_REQUIRE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ROLE = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR out_dir
+
+SYS STARTS CFG_REL "/"
+IF LAST_N == 1 THEN
+  LET cfg_path = CFG_REL
+ELSE
+  SYS JOIN state_dir CFG_REL
+  LET cfg_path = LAST
+END
+
+# --- show: soft-read prior plate ---
+SYS EQS ACTION "show"
+IF LAST_N == 1 THEN
+  SYS JOIN out_dir "CONFIG_PLATE.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has_plate = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has_plate ACTION STATUS_OK ROLE MAX_JOBS
+  CLEAR_ERR
+  EXIT 0 "show ok"
+END
+
+# --- load kv (soft miss → defaults) ---
+SYS READ OR cfg_path OR ""
+IF OK == 0 THEN
+  FAIL "config missing — defaults"
+  CLEAR_ERR "soft config miss"
+  LET body = ""
+  LET loaded = 0
+  NOTE "using defaults"
+ELSE
+  LET body = LAST
+  LET loaded = 1
+  NOTE "config loaded"
+END
+
+# drop comment lines and blanks
+SYS GREPV "#" body
+LET body = LAST
+# empty lines: GREPV won't drop blanks easily — EACH skips
+
+EACH LINE AS row IN body
+  SYS TRIM row
+  LET row = LAST
+  SYS EQS row ""
+  IF LAST_N == 1 THEN
+    LET keys_skip = keys_skip + 1
+    CONTINUE
+  END
+  # peel key=value (first =)
+  SYS BEFORE row "="
+  LET found = LAST_N
+  LET key = LAST
+  IF found == 0 THEN
+    LET keys_skip = keys_skip + 1
+    NOTE "skip non-kv line"
+    CONTINUE
+  END
+  SYS AFTER row "="
+  LET val = LAST
+  SYS TRIM key
+  LET key = LAST
+  SYS TRIM val
+  LET val = LAST
+
+  SYS EQS key "role"
+  IF LAST_N == 1 THEN
+    LET ROLE = val
+    LET keys_ok = keys_ok + 1
+    CONTINUE
+  END
+  SYS EQS key "max_jobs"
+  IF LAST_N == 1 THEN
+    SYS NUM
+    # NUM reads LAST which is val after TRIM... need val as LAST
+    # re-seed LAST via CAT
+    SYS CAT val ""
+    SYS NUM
+    IF OK == 1 THEN
+      LET MAX_JOBS = LAST_N
+      LET keys_ok = keys_ok + 1
+    ELSE
+      CLEAR_ERR
+      LET keys_skip = keys_skip + 1
+    END
+    CONTINUE
+  END
+  SYS EQS key "peer"
+  IF LAST_N == 1 THEN
+    LET PEER = val
+    LET keys_ok = keys_ok + 1
+    CONTINUE
+  END
+  SYS EQS key "mode"
+  IF LAST_N == 1 THEN
+    LET MODE = val
+    LET keys_ok = keys_ok + 1
+    CONTINUE
+  END
+  SYS EQS key "note"
+  IF LAST_N == 1 THEN
+    LET CFG_NOTE = val
+    LET keys_ok = keys_ok + 1
+    CONTINUE
+  END
+  LET keys_unknown = keys_unknown + 1
+  NOTE "unknown_key"
+END
+CLEAR_ERR "parse clean"
+
+# --- ENV overrides (host wins) ---
+SYS ENV "CUBALC_CFG_ROLE" OR ""
+IF LAST_N > 0 THEN
+  LET ROLE = LAST
+END
+SYS ENV "CUBALC_CFG_MAX_JOBS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_JOBS = LAST_N
+  END
+END
+SYS ENV "CUBALC_CFG_PEER" OR ""
+IF LAST_N > 0 THEN
+  LET PEER = LAST
+END
+SYS ENV "CUBALC_CFG_MODE" OR ""
+IF LAST_N > 0 THEN
+  LET MODE = LAST
+END
+
+# require path
+SYS EQS ACTION "require"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ROLE = 1
+END
+IF REQUIRE_ROLE == 1 THEN
+  SYS EQS ROLE ""
+  IF LAST_N == 1 THEN
+    FAIL "role required empty"
+    EXIT 2 "role missing"
+  END
+END
+
+# --- plate with STR for {{COUNT}} ---
+SYS STR MAX_JOBS
+LET jobs_s = LAST
+SYS STR keys_ok
+LET ok_s = LAST
+SYS STR keys_unknown
+LET unk_s = LAST
+LET tpl = "schema=cubalc.kv_config.v1 date={{DATE}} host={{HOST}} role={{ROLE}} mode={{MODE}} peer={{PEER}} max_jobs={{COUNT}} keys_ok={{OK}} keys_unknown={{UNK}} note={{NOTE}}"
+SYS REPLACEALL tpl "{{DATE}}" cfg_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" cfg_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{ROLE}}" ROLE
+LET tpl = LAST
+SYS REPLACEALL tpl "{{MODE}}" MODE
+LET tpl = LAST
+SYS REPLACEALL tpl "{{PEER}}" PEER
+LET tpl = LAST
+SYS REPLACEALL tpl "{{COUNT}}" jobs_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{OK}}" ok_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{UNK}}" unk_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{NOTE}}" CFG_NOTE
+LET tpl = LAST
+SYS HAS tpl "{{"
+LET unfilled = LAST_N
+LET rendered = tpl
+
+SYS JOIN out_dir "CONFIG_PLATE.txt"
+LET plate = LAST
+SYS WRITE plate rendered
+SYS EXIST plate
+ASSERT EXIST == 1
+
+SYS JOIN out_dir "CONFIG_LOG.txt"
+LET logp = LAST
+SYS APPEND logp rendered
+ASSERT OK == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "kv_config_loader: done"
+PRINT "cfg" loaded keys_ok keys_skip keys_unknown MAX_JOBS unfilled
+PRINT_JSON loaded keys_ok keys_skip keys_unknown MAX_JOBS ROLE MODE PEER unfilled ACTION STATUS_OK
+STATUS
+CLEAR_ERR "cfg clean"
+EXIT 0 "cfg ok"
