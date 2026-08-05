@@ -5,13 +5,13 @@
   "item": "SYS MIN / MAX / CLAMP host-plane numeric bounds",
   "item_id": 113,
   "title": "SYS MIN|MAX a b [c\u2026] \u00b7 SYS CLAMP x lo hi",
-  "commit": "644aa53f9bfc1c05e6ffd8ccd210f6f48b526785",
+  "commit": "d4e5041732270542c69f86c7037fb69b0a155f86",
   "summary": "SYS MIN/MAX multi-arg host bounds; SYS CLAMP x lo hi. parse_prim so spaced negatives work. Cap retries/jitter without cube ISA. selftest 80.",
   "proofs": [
     "653_sys_minmax",
     "selftest n_pass=80"
   ],
-  "when": "2026-08-05T15:05:54Z",
+  "when": "2026-08-05T15:05:55Z",
   "agent": "meaningful_iter_10m",
-  "sha": "644aa53f9bfc1c05e6ffd8ccd210f6f48b526785"
+  "sha": "d4e5041732270542c69f86c7037fb69b0a155f86"
 }
