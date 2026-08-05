@@ -103,6 +103,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 73. ~~**`SYS LIST` / `LS`**~~ **done** (dir basenames → LAST · count in LAST_N).
 74. ~~**`SYS NTH` / `LINE` / `HEAD` / `TAIL`**~~ **done** (newline field peel · LIST walk).
 75. ~~**`SYS GREP` / `FILTER` / `GREPV`**~~ **done** (keep/drop newline fields · LIST filter).
+76. ~~**`EACH LINE`**~~ **done** (walk newline fields after LIST/GREP · no NTH index glue).
 
 ## Tick protocol
 

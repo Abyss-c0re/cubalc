@@ -322,13 +322,96 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* EACH CUBE as name ... END  |  EACH CELL [as name] [FROM lo TO hi] ... END
+   * EACH LINE [as name] [IN str|LAST] ... END — walk newline fields (LIST/GREP).
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
     lex_next(L);
     int is_cell = (kw(&L->cur,"CELL")||kw(&L->cur,"CELLS")||kw(&L->cur,"SLOT")||kw(&L->cur,"SLOTS"));
     int is_cube = (kw(&L->cur,"CUBE")||kw(&L->cur,"CUBES"));
-    if (!is_cell && !is_cube){ fail(vm,"EACH CUBE|CELL as name"); return -1; }
+    int is_line = (kw(&L->cur,"LINE")||kw(&L->cur,"LINES")||kw(&L->cur,"FIELD")||
+                   kw(&L->cur,"FIELDS")||kw(&L->cur,"ROW")||kw(&L->cur,"ROWS")||
+                   kw(&L->cur,"ENTRY")||kw(&L->cur,"ENTRIES"));
+    if (!is_cell && !is_cube && !is_line){ fail(vm,"EACH CUBE|CELL|LINE as name"); return -1; }
     lex_next(L);
+    if (is_line){
+      /* EACH LINE [AS name] [IN|OF|FROM str] ... END
+       * Binds each newline field to name (default LINE); IT=0-based, LINE_N=1-based.
+       * Source defaults to LAST/last_str — chain after SYS LIST / SYS GREP.
+       * Snapshot source before loop so body may clobber LAST. */
+      char lname[48];
+      char src[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long idx = 0, nlines = 0;
+      snprintf(lname, sizeof lname, "LINE");
+      if (kw(&L->cur,"AS")||kw(&L->cur,"->")){
+        lex_next(L);
+        if (L->cur.kind!=TK_IDENT){ fail(vm,"EACH LINE as name"); return -1; }
+        snprintf(lname, sizeof lname, "%s", L->cur.text); lex_next(L);
+      } else if (L->cur.kind==TK_IDENT &&
+                 strcmp(L->cur.text,"IN")!=0 && strcmp(L->cur.text,"OF")!=0 &&
+                 strcmp(L->cur.text,"FROM")!=0 && strcmp(L->cur.text,"IN")!=0){
+        snprintf(lname, sizeof lname, "%s", L->cur.text); lex_next(L);
+      }
+      src[0] = 0;
+      if (kw(&L->cur,"IN")||kw(&L->cur,"OF")||kw(&L->cur,"FROM")||kw(&L->cur,"OVER")){
+        lex_next(L);
+        if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+          snprintf(src, sizeof src, "%s", vm->last_str);
+      } else {
+        /* Prefer last_str (full host buffer after LIST/GREP); fallback LAST var. */
+        if (vm->last_str[0])
+          snprintf(src, sizeof src, "%s", vm->last_str);
+        else {
+          Var *lv = var_get(vm, "LAST", 0);
+          if (lv && lv->is_str)
+            snprintf(src, sizeof src, "%s", lv->sval);
+        }
+      }
+      skip_nl(L);
+      Lex body_start=*L;
+      int depth=1;
+      while (L->cur.kind!=TK_EOF){
+        if (block_scan_step(L, &depth, 0)) break;
+      }
+      if (depth!=0){ fail(vm,"EACH LINE without END"); return -1; }
+      /* Walk fields like SYS NTH/GREP: trailing newline does not add empty last field. */
+      if (src[0]) {
+        p = src;
+        while (*p && !vm->fatal && !vm->halt) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          /* end-of-string with empty span after a newline → stop (no field) */
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            char field[512];
+            if (flen >= sizeof field) flen = sizeof field - 1;
+            memcpy(field, start, flen);
+            field[flen] = 0;
+            var_set_str(vm, lname, field);
+            var_set_str(vm, "LINE", field);
+            var_set_num(vm, "IT", idx);
+            var_set_num(vm, "IDX", idx);
+            var_set_num(vm, "LINE_N", idx + 1);
+            var_set_num(vm, "OK", 1);
+            vm->break_loop=0; vm->continue_loop=0;
+            Lex body=body_start;
+            if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+            if (vm->break_loop){ vm->break_loop=0; idx++; nlines = idx; break; }
+            vm->continue_loop=0;
+            idx++;
+            nlines = idx;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, "LAST_N", nlines);
+      var_set_num(vm, "EACH_N", nlines);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (is_cube){
       if (kw(&L->cur,"AS")||kw(&L->cur,"->")){ lex_next(L); }
       if (L->cur.kind!=TK_IDENT){ fail(vm,"EACH CUBE as name"); return -1; }

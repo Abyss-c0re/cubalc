@@ -1,0 +1,88 @@
+# EACH LINE — walk newline fields (pairs with SYS LIST / GREP)
+# Usability: agents iterate basenames without WHILE + NTH index glue
+
+HOLD_FLASH 1
+
+# pure string walk with IN
+LET S = "alpha\nbeta\ngamma"
+LET n = 0
+LET joined = ""
+EACH LINE AS name IN S
+  LET n = n + 1
+  IF n == 1 THEN
+    LET joined = name
+  ELSE
+    SYS CAT joined ","
+    LET joined = LAST
+    SYS CAT joined name
+    LET joined = LAST
+  END
+  ASSERT LINE_N == n
+  ASSERT IT == n - 1
+END
+ASSERT n == 3
+ASSERT EACH_N == 3
+ASSERT LAST_N == 3
+SYS EQS joined "alpha,beta,gamma"
+ASSERT LAST_N == 1
+
+# default bind name is LINE; default source is LAST/last_str
+LET T = "one\ntwo"
+# seed last_str via HEAD of explicit string path
+SYS HEAD T
+# re-load full text into last plane
+LET U = "x\ny\nz"
+# use IN for multi-line (LAST alone is one field after HEAD)
+LET c = 0
+EACH LINE IN U
+  LET c = c + 1
+  ASSERT LINE_N == c
+END
+ASSERT c == 3
+ASSERT EACH_N == 3
+
+# BREAK stops early
+LET b = 0
+EACH LINE AS w IN "a\nb\nc\nd"
+  LET b = b + 1
+  IF b == 2 THEN
+    BREAK
+  END
+END
+ASSERT b == 2
+ASSERT EACH_N == 2
+
+# chain after LIST + GREP
+SYS LIST "programs/lib"
+ASSERT OK == 1
+SYS GREP ".cubalc"
+ASSERT GREP_N > 0
+LET hits = 0
+LET saw_hold = 0
+EACH LINE AS lib
+  LET hits = hits + 1
+  SYS ENDS lib ".cubalc"
+  ASSERT LAST_N == 1
+  SYS EQS lib "hold_seed.cubalc"
+  IF LAST_N == 1 THEN
+    LET saw_hold = 1
+  END
+END
+ASSERT hits > 0
+ASSERT hits == EACH_N
+ASSERT saw_hold == 1 "hold_seed.cubalc in lib list"
+
+# empty source → zero iterations
+EACH LINE AS z IN ""
+  ASSERT 0 == 1 "must not enter empty"
+END
+ASSERT EACH_N == 0
+
+# FOREACH alias + LINES synonym
+LET k = 0
+FOREACH LINES AS row IN "p\nq"
+  LET k = k + 1
+END
+ASSERT k == 2
+
+PRINT "each_line ok"

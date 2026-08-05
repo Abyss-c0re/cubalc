@@ -2088,6 +2088,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TAIL", "SYS TAIL [str] — last newline field"},
       {"SYS GREP", "SYS GREP|FILTER needle [str] — keep newline fields containing needle"},
       {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
+      {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
+      {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
