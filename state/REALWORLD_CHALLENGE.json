@@ -1,98 +1,118 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 21,
-  "program": "programs/realworld/soft_mesh_fanout.cubalc",
-  "theme": "soft mesh fanout ENV SET WORDS REVL dial recovery",
-  "version": "1.15.91-usability",
+  "iter": 22,
+  "program": "programs/realworld/priority_fifo_inbox.cubalc",
+  "theme": "priority FIFO inbox PREPEND POPHEAD HASLINE bag queue",
+  "version": "1.15.94-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_no_host_soft",
-      "cmd": "host CUBALC_P2P_SOFT unset; ARG0 two dead peers; run -s",
+      "name": "positive_priority_fifo",
+      "cmd": "CUBALC_QUEUE_PUSH='jobA jobB jobC' CUBALC_QUEUE_PRIORITY=urgent1 CUBALC_QUEUE_MAX=3 run -q -s",
       "ok": true,
-      "note": "ENV SET soft+timeout; soft dial miss x2; local mesh fallback dig=3; plate path=local; parent shell still unset"
+      "note": "prio PREPEND first; processed urgent1,jobA,jobB; remain jobC; enq=3 prio=1 proc=3"
     },
     {
-      "name": "quiet_strict",
-      "cmd": "run -q -s single dead peer",
+      "name": "second_tick_dedupe_done",
+      "cmd": "re-run with PUSH jobA jobC after first tick",
       "ok": true,
-      "note": "CLEAR_ERR after FAIL keeps -s green"
+      "note": "HASLINE skip done jobA + already-queued jobC; process remain jobC; queue empty"
     },
     {
-      "name": "require_live",
-      "cmd": "CUBALC_MESH_REQUIRE_LIVE=1 dead peer",
+      "name": "empty_require_exit2",
+      "cmd": "CUBALC_QUEUE_REQUIRE=1 empty STATE run -q -s",
       "ok": true,
-      "note": "EXIT 2 fanout empty after local path"
+      "note": "EXIT 2 inbox empty; plate ok=false exit_code=2"
     },
     {
       "name": "words_comma_one_token",
-      "cmd": "WORDS 'a:1,b:2'",
+      "cmd": "CUBALC_QUEUE_PUSH=a,b,c",
       "ok": true,
-      "note": "LAST_N=1 \u2014 commas not split by WORDS"
+      "note": "WORDS keeps a,b,c as single job id \u2014 same class as prior W2"
+    },
+    {
+      "name": "print_json_bag_collapse",
+      "cmd": "PRINT_JSON processed after multi POPHEAD",
+      "ok": true,
+      "note": "processed shows as p2p1 \u2014 newlines collapsed in JSON string"
+    },
+    {
+      "name": "write_append_glue",
+      "cmd": "SYS WRITE path line1; SYS APPEND path line2",
+      "ok": true,
+      "note": "file becomes line1line2 \u2014 no auto NL between WRITE body and APPEND"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "66/66 pass incl env_set revl words"
+      "note": "68/68 pass incl hasline prepend"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "med",
-      "area": "env|p2p",
-      "title": "ENV SET is process-local only \u2014 parent shell unchanged after exit",
-      "detail": "SYS ENV SET CUBALC_P2P_SOFT works for same-process DIAL (closes prior shell-export gap) but does not persist to the invoking shell. Follow-on shell cubalc runs still need host export unless each program re-SET. Documented parent soft=unset after run.",
-      "repro": "Program ENV SETs soft; after exit echo $CUBALC_P2P_SOFT still empty"
+      "severity": "high",
+      "area": "host|plate",
+      "title": "WRITE body has no trailing NL \u2014 APPEND glues next line",
+      "detail": "SYS WRITE path 'line1' then SYS APPEND path 'line2' yields file bytes 'line1line2\\n'. Line-oriented report plates built with WRITE header + APPEND fields silently corrupt the first boundary. Agents must PUSH into a bag then single WRITE, or ensure header ends with \\n (no easy in-lang ensure-NL form).",
+      "repro": "WRITE /tmp/t 'line1'; APPEND /tmp/t 'line2' \u2192 cat -A shows line1line2$"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "host",
-      "title": "WORDS is whitespace-only \u2014 comma peer lists stay one token",
-      "detail": "SYS WORDS '127.0.0.1:1,127.0.0.1:2' \u2192 1 field. Agents must SPLIT ',' first or use spaces. Easy misconfig for CSV-style peer env.",
-      "repro": "WORDS 'a:1,b:2' \u2192 LAST_N=1"
+      "area": "cli",
+      "title": "PRINT_JSON collapses newlines inside bag strings",
+      "detail": "PRINT_JSON processed after multi-job FIFO shows 'p2p1' not 'p2\\np1'. Agents cannot re-parse multi-line bag fields from JSON dumps; must use scalar counts or plate files.",
+      "repro": "LET bag='a\\nb'; PRINT_JSON bag \u2192 \"bag\":\"ab\" class collapse"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON / plate strings still collapse newlines in multi-line bags",
-      "detail": "REVL of a\\nb\\nc shows as 'cba' in PRINT_JSON LAST (newlines lost). Same class as VARS collapse \u2014 agents re-parsing JSON strings cannot recover bag structure.",
-      "repro": "SYS REVL a\\nb\\nc; PRINT_JSON LAST \u2192 cba without \\n"
+      "area": "host",
+      "title": "WORDS is whitespace-only \u2014 comma job lists stay one token",
+      "detail": "CUBALC_QUEUE_PUSH=a,b,c enqueues one job id 'a,b,c'. Same WORDS edge as mesh fanout; agents need SPLIT ',' first for CSV-style env.",
+      "repro": "WORDS 'a,b,c' \u2192 single field; DONE plate has a,b,c"
     },
     {
       "id": "W4",
-      "severity": "low",
-      "area": "p2p|error",
-      "title": "Soft dial still emits FAIL sticky \u2014 must CLEAR_ERR per peer for -s",
-      "detail": "Intentional soft miss uses FAIL then CLEAR_ERR. Forgetting CLEAR_ERR fails entire fanout under -s after first dead peer.",
-      "repro": "SMX DIAL dead peer with SOFT; omit CLEAR_ERR; run -s \u2192 ok=false"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "SYS PUSH of a multi-line string expands into multiple fields",
+      "detail": "SYS PUSH bag 'a\\nb' increases field count by 2 (hdr\u21923 fields). Cannot push a multi-line blob as one opaque field; report 'processed' section becomes flat fields after the key. Agents needing opaque blobs need REPLACEALL of \\n or a dedicated escape.",
+      "repro": "PUSH 'hdr' + 'a\\nb' \u2192 LINES=3"
     },
     {
       "id": "W5",
       "severity": "low",
+      "area": "host|plate",
+      "title": "WRITE of bag often omits final trailing newline",
+      "detail": "QUEUE.txt after single remain field is 'jobC' without trailing $. Multi-line bags write internal \\n but last field has no final NL. Harmless for CubalC READ/LINES; shell wc -l and some editors undercount.",
+      "repro": "WRITE q_path 'jobC'; cat -A \u2192 jobC (no $)"
+    },
+    {
+      "id": "W6",
+      "severity": "low",
       "area": "flow",
-      "title": "Comments in .cubalc source are not free-form English sentences",
-      "detail": "Inline comment lines without # can parse as forms (unknown form 'not'). Agents writing prose comments mid-program break runs. Prefer // or # comment style only.",
-      "repro": "Line 'unset is not available' \u2192 unknown form 'not'"
+      "title": "Multi-PREPEND reverses listed priority order",
+      "detail": "EACH PREPEND p1 then p2 leaves p2 at front (POPHEAD first). Documented intentional for stack-front insert; agents who want list-order priority must REVL the prio list first or PREPEND in reverse.",
+      "repro": "PRIORITY='p1 p2' \u2192 processed p2 then p1"
     }
   ],
   "workarounds": [
-    "ENV SET CUBALC_P2P_SOFT 1 and TIMEOUT at start of every dial program",
-    "Use space-separated peer lists or SPLIT ',' before WORDS",
-    "Use PRINT_JSON scalar counts not multi-line bag strings",
-    "CLEAR_ERR after every intentional soft FAIL/DIAL miss under -s",
-    "Only // or # comments in program bodies"
+    "Build report bags with SYS PUSH then one SYS WRITE (avoid WRITE+APPEND for multi-field plates)",
+    "PRINT_JSON only scalar counters; put multi-line lists on STATE plates",
+    "SPLIT ',' before WORDS for CSV job env lists",
+    "REVL prio list before EACH PREPEND if list order should match POPHEAD order",
+    "APPEND alone for line logs (DONE.txt) \u2014 it terminates lines; do not mix bare WRITE without NL"
   ],
   "language_gaps": [
-    "Optional persist-env / dotenv plate for multi-process agents",
-    "WORDS with custom sep or auto CSV split",
-    "JSON string escape of newlines in PRINT_JSON/VARS",
-    "Soft dial without FAIL sticky (SMX_OK-only probe form)",
-    "Doc: comment syntax only"
+    "WRITE that always ends plates with trailing newline (or APPEND that separates if missing NL)",
+    "PRINT_JSON escape of \\n \\t in string values",
+    "PUSH_FIELD / push with escape so multi-line blobs stay one field",
+    "WORDS sep=',' or TOKENIZE with custom delimiter (SPLIT already exists \u2014 doc recipe)",
+    "Optional FIFO plate form (enqueue/dequeue durable queue without manual WRITE loop)"
   ],
-  "commit": "8177b3d37391a3dc445cd0138330b6531060ec8e",
-  "ts": "2026-08-05T12:47:54Z"
+  "commit": "e5697f4588cc36204150981206e29a63bc3d39f0",
+  "ts": "2026-08-05T13:14:31Z"
 }

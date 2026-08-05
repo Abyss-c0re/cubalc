@@ -1,0 +1,326 @@
+# priority_fifo_inbox.cubalc — priority FIFO work inbox under STATE
+#
+# Real use: agents share a durable job inbox plate (QUEUE.txt) under
+# CUBALC_STATE. This tick:
+#   1) soft-load queue + done plates (READ OR — miss is empty, not fatal)
+#   2) PUSH normal jobs from ENV/ARG (space-separated via WORDS)
+#   3) PREPEND priority jobs to the front (urgent before normal)
+#   4) HASLINE skip if already in queue or done (exact field dedupe)
+#   5) POPHEAD / DEQUEUE up to MAX jobs (true FIFO: priority first)
+#   6) optional job plate under jobs/<id> (soft READ OR)
+#   7) APPEND done log · WRITE remaining queue · report plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_QUEUE_PUSH="jobA jobB" CUBALC_QUEUE_PRIORITY="urgent1" \
+#     ./out/cubalc run -q -s programs/realworld/priority_fifo_inbox.cubalc
+#
+# Optional env / args:
+#   CUBALC_QUEUE_PUSH / CUBALC_ARG0   — space-separated normal enqueue
+#   CUBALC_QUEUE_PRIORITY / CUBALC_ARG1 — space-separated priority front
+#   CUBALC_QUEUE_MAX=3               — POPHEAD budget (default 4)
+#   CUBALC_QUEUE_REQUIRE=1           — EXIT 2 if zero processed
+#   CUBALC_QUEUE_FILE=QUEUE.txt      — plate names
+#   CUBALC_DONE_FILE=DONE.txt
+#
+# Edges deliberately hit:
+#   PREPEND vs PUSH order (priority must POPHEAD first)
+#   HASLINE exact-only (prefix "job" does not match "jobA")
+#   WORDS whitespace-only (comma lists stay one token — W2 class)
+#   POPHEAD empty bag → LAST_N=0 soft (no FAIL sticky)
+#   POP_REST rebinding loop for remaining queue
+#   multi-line bag WRITE preserves \n; PRINT_JSON still collapses
+#   READ miss of jobs/<id> soft with CLEAR_ERR for -s
+#   empty inbox + REQUIRE gate
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "priority_fifo_inbox: start"
+DEFAULT MAX = 4
+DEFAULT REQUIRE_ONE = 0
+DEFAULT QFILE = "QUEUE.txt"
+DEFAULT DFILE = "DONE.txt"
+DEFAULT RFILE = "INBOX_REPORT.txt"
+DEFAULT PUSH_SPEC = ""
+DEFAULT PRIO_SPEC = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+LET act_pid = PID
+LET act_id = IDENTITY
+
+# --- config ---
+SYS ENV "CUBALC_QUEUE_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX = LAST_N
+  END
+END
+SYS ENV "CUBALC_QUEUE_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_ONE = LAST_N
+  END
+END
+SYS ENV "CUBALC_QUEUE_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET QFILE = LAST
+END
+SYS ENV "CUBALC_DONE_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET DFILE = LAST
+END
+SYS ENV "CUBALC_REPORT_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+
+# ARG0 = push list, ARG1 = priority list (override env when present)
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET PUSH_SPEC = LAST
+ELSE
+  SYS ENV "CUBALC_QUEUE_PUSH" OR ""
+  LET PUSH_SPEC = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET PRIO_SPEC = LAST
+ELSE
+  SYS ENV "CUBALC_QUEUE_PRIORITY" OR ""
+  LET PRIO_SPEC = LAST
+END
+
+# --- state paths ---
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "jobs"
+LET jobs_dir = LAST
+SYS MKDIR jobs_dir
+CLEAR_ERR
+
+SYS JOIN state_dir QFILE
+LET q_path = LAST
+SYS JOIN state_dir DFILE
+LET d_path = LAST
+SYS JOIN state_dir RFILE
+LET r_path = LAST
+
+# soft-load durable plates
+SYS READ OR q_path OR ""
+LET queue = LAST
+SYS READ OR d_path OR ""
+LET done_bag = LAST
+CLEAR_ERR "soft plate load"
+
+LET enq_n = 0
+LET prio_n = 0
+LET skip_n = 0
+LET proc_n = 0
+LET miss_job = 0
+LET ok_job = 0
+LET processed = ""
+
+# --- enqueue normal (PUSH back) with HASLINE dedupe vs queue+done ---
+SYS BLANK PUSH_SPEC
+IF LAST_N == 0 THEN
+  SYS WORDS PUSH_SPEC
+  LET push_list = LAST
+  EACH LINE AS job IN push_list
+    SYS BLANK job
+    IF LAST_N == 0 THEN
+      SYS HASLINE queue job
+      LET in_q = LAST_N
+      SYS HASLINE done_bag job
+      LET in_d = LAST_N
+      IF in_q == 0 THEN
+        IF in_d == 0 THEN
+          SYS PUSH queue job
+          LET queue = LAST
+          LET enq_n = enq_n + 1
+        ELSE
+          LET skip_n = skip_n + 1
+          NOTE "skip done"
+        END
+      ELSE
+        LET skip_n = skip_n + 1
+        NOTE "skip already queued"
+      END
+    END
+  END
+END
+
+# --- priority inject (PREPEND front) — still skip if done/queued ---
+# Order: reverse WORDS so last-listed priority still ends first after PREPEND?
+# We PREPEND each in list order → first token ends deepest among priorities;
+# last priority token is front (POPHEAD first). Documented intentional.
+SYS BLANK PRIO_SPEC
+IF LAST_N == 0 THEN
+  SYS WORDS PRIO_SPEC
+  LET prio_list = LAST
+  EACH LINE AS pjob IN prio_list
+    SYS BLANK pjob
+    IF LAST_N == 0 THEN
+      SYS HASLINE queue pjob
+      LET in_q = LAST_N
+      SYS HASLINE done_bag pjob
+      LET in_d = LAST_N
+      IF in_q == 0 THEN
+        IF in_d == 0 THEN
+          SYS PREPEND queue pjob
+          LET queue = LAST
+          LET prio_n = prio_n + 1
+        ELSE
+          LET skip_n = skip_n + 1
+        END
+      ELSE
+        LET skip_n = skip_n + 1
+      END
+    END
+  END
+END
+
+SYS LINES queue
+LET q_depth = LAST_N
+NOTE "enqueue done"
+
+# --- FIFO process with POPHEAD budget ---
+LET left = MAX
+WHILE left > 0
+  SYS POPHEAD queue
+  IF LAST_N == 0 THEN
+    # empty queue soft — no FAIL sticky from POPHEAD
+    LET left = 0
+  ELSE
+    LET job = LAST
+    LET queue = POP_REST
+    LET proc_n = proc_n + 1
+    LET left = left - 1
+
+    # optional job plate under jobs/<id>
+    SYS JOIN jobs_dir job
+    LET jpath = LAST
+    SYS READ OR jpath OR ""
+    LET jbody = LAST
+    LET j_ok = READ_OK
+    CLEAR_ERR "job plate soft"
+    IF j_ok == 1 THEN
+      LET ok_job = ok_job + 1
+      NOTE "job plate present"
+    ELSE
+      LET miss_job = miss_job + 1
+      NOTE "job plate miss soft"
+    END
+
+    # mark done + accumulate processed bag
+    SYS APPEND d_path job
+    SYS PUSH done_bag job
+    LET done_bag = LAST
+    SYS PUSH processed job
+    LET processed = LAST
+  END
+END
+
+# persist remaining queue (overwrite)
+SYS WRITE q_path queue
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "queue write failed"
+END
+CLEAR_ERR
+
+SYS LINES queue
+LET remain_n = LAST_N
+SYS LINES processed
+LET processed_n = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# report plate: build bag then single WRITE (WRITE+APPEND glues if no NL —
+# see weakness W1; APPEND alone is fine for done log lines)
+LET report = "schema=cubalc.inbox.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "pid"
+LET report = LAST
+SYS STR act_pid
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "enq"
+LET report = LAST
+SYS STR enq_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "prio"
+LET report = LAST
+SYS STR prio_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "skip"
+LET report = LAST
+SYS STR skip_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "proc"
+LET report = LAST
+SYS STR proc_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "remain"
+LET report = LAST
+SYS STR remain_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss_job"
+LET report = LAST
+SYS STR miss_job
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ok_job"
+LET report = LAST
+SYS STR ok_job
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "processed"
+LET report = LAST
+SYS PUSH report processed
+LET report = LAST
+SYS WRITE r_path report
+
+STATUS
+PRINT "inbox" enq_n prio_n skip_n proc_n remain_n miss_job ok_job
+PRINT_JSON enq_n prio_n skip_n proc_n remain_n miss_job ok_job elapsed STATUS_OK
+# Challenge: multi-line bag in JSON collapses — intentional edge
+PRINT_JSON processed
+
+IF REQUIRE_ONE > 0 THEN
+  IF proc_n == 0 THEN
+    FAIL "require at least one processed"
+    CLEAR_ERR "exit will set rc"
+    EXIT 2 "inbox empty after tick"
+  END
+END
+
+PASS "inbox tick ok"
+NOTE "priority_fifo_inbox: done"
+CLEAR_ERR
+EXIT 0 "inbox ok"
