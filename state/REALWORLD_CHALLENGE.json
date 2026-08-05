@@ -1,159 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 38,
-  "program": "programs/realworld/api_noise_rank.cubalc",
-  "theme": "api noise rank CUTALL FREQ SORTFREQ TAKE access path soft",
-  "version": "1.15.133-usability",
+  "iter": 39,
+  "program": "programs/realworld/deploy_wave_batcher.cubalc",
+  "theme": "deploy wave batcher CHUNK FIRSTMATCH BEFOREALL SETMATCH soft",
+  "version": "1.15.136-usability",
   "pass": true,
   "tests": [
     {
-      "name": "loadlines_peel",
-      "cmd": "loadlines ||| access lines; peel col1 paths",
+      "name": "seed_waves",
+      "cmd": "seed h1..h5; waves size2 → h1 h2 / h3 h4 / h5",
       "ok": true,
-      "note": "SPLIT ||| glue + CUTALL path column"
+      "note": "BEFOREALL pending + CHUNK default space join"
     },
     {
-      "name": "rank_sortfreq",
-      "cmd": "rank top5 \u2192 /api/users:5 /api/orders:3 \u2026 DESC",
+      "name": "next_pop",
+      "cmd": "next pops HEAD wave + DROPNTH 0; empty REQUIRE EXIT 2",
       "ok": true,
-      "note": "FREQ+SORTFREQ+TAKE pipeline"
+      "note": "wave queue drain"
     },
     {
-      "name": "storm_thresh",
-      "cmd": "storm 3 hot; storm 10 calm soft/REQUIRE EXIT 2",
+      "name": "advance_fail_pin",
+      "cmd": "advance h1 h2 live; fail h4; findfail; pinfail front",
       "ok": true,
-      "note": "rank count peel + CMP"
+      "note": "SETMATCH + FIRSTMATCH + MOVELINE"
     },
     {
-      "name": "top_take",
-      "cmd": "top 2 from rank plate",
+      "name": "waves_no_pending",
+      "cmd": "waves soft calm; REQUIRE EXIT 2",
       "ok": true,
-      "note": "TAKE soft short bag ok"
+      "note": "soft+REQUIRE miss"
     },
     {
-      "name": "pin_grep_moveline",
-      "cmd": "pin /api/orders \u2192 first raw line; ghost REQUIRE",
+      "name": "findfail_none_require",
+      "cmd": "findfail empty fleet REQUIRE EXIT 2",
       "ok": true,
-      "note": "GREP needle substring + MOVELINE"
+      "note": "FIRSTMATCH miss LAST empty"
     },
     {
-      "name": "peel_empty_require",
-      "cmd": "peel empty raw REQUIRE EXIT 2",
+      "name": "firstmatch_substring",
+      "cmd": "FIRSTMATCH fail hits prefail:live before h2:fail",
       "ok": true,
-      "note": "soft empty path"
+      "note": "substring false friend"
     },
     {
-      "name": "cutall_ghost_empty",
-      "cmd": "CUTALL col OOR \u2192 empty fields \u2192 FREQ :N ghost",
+      "name": "chunk_var_sep",
+      "cmd": "SYS CHUNK n bag JSEP → unknown form 'JSEP'",
       "ok": true,
-      "note": "missing column pollutes heatmap"
+      "note": "join sep must be string literal not var"
     },
     {
-      "name": "url_colon_freq",
-      "cmd": "FREQ http://heavy \u2192 http://heavy:3; SORTFREQ still DESC",
+      "name": "beforeall_plain",
+      "cmd": "BEFOREALL keeps orphan whole; AFTERALL empty field",
       "ok": true,
-      "note": "SORTFREQ appears last-colon peel; storm AFTER first still breaks"
+      "note": "miss semantics pollute host lists"
     },
     {
-      "name": "drop_has",
-      "cmd": "has/drop exact; drop miss REQUIRE",
+      "name": "skip_drop_has",
+      "cmd": "skip/has/drop; drop ghost REQUIRE",
       "ok": true,
-      "note": "exact-field ops"
+      "note": "identity ops"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "108/108 pass incl cutall sortfreq"
+      "note": "111/111 pass incl chunk firstmatch beforeall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag",
-      "title": "CUTALL missing column yields empty fields that FREQ as ghost :N",
-      "detail": "CUTALL col past end keeps line count with empty strings; FREQ produces ':2' style rows that look like real rank entries. Agents ranking wrong column pollute top-N silently.",
-      "repro": "CUTALL log ' ' 5; FREQ \u2192 ':N'"
+      "area": "lang|parse",
+      "title": "SYS CHUNK join separator cannot be a variable",
+      "detail": "SYS CHUNK n bag JSEP parses JSEP as a form name → unknown form 'JSEP' (same for JOIN). Only string literals work for join sep. Agents cannot pass CUBALC_* env join through a LET binding.",
+      "repro": "LET s=\",\"; SYS CHUNK 2 peers s → unknown form 's'"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|cli",
-      "title": "No multi-line ARG \u2014 loadlines needs ||| glue hack",
-      "detail": "Cannot pass real access log lines with spaces via WORDS; agents invent separators. Soft READ file is alternative but loadlines is ARG-bound.",
-      "repro": "WORDS 'GET /api 200' splits to three tokens"
+      "area": "host|bag",
+      "title": "FIRSTMATCH is substring GREP1 — false friends",
+      "detail": "FIRSTMATCH bag \"fail\" matches prefail:live before h2:fail. Needle :fail safer but still matches host:failsoft. No whole-field or suffix-anchor match.",
+      "repro": "FIRSTMATCH 'prefail:live\\nh2:fail' fail → prefail:live"
     },
     {
       "id": "W3",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "FREQ encoding path:count still ambiguous for URLs with ://",
-      "detail": "FREQ of http://heavy \u2192 http://heavy:3. SORTFREQ sorted correctly (likely last-colon peel) but storm/agent AFTER first ':' peels '//heavy:3' and NUM fails \u2014 dual peel semantics across forms.",
-      "repro": "AFTER 'http://heavy:3' ':' \u2192 '//heavy:3'"
+      "title": "CHUNK space-joins hosts — irreversible if host contains space",
+      "detail": "Wave field 'h1 h2' WORDS-split for advance; hostnames with spaces corrupt. No structured batch bag (nested fields).",
+      "repro": "CHUNK 2 of hosts with spaces flattens"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "CUTALL/FREQ/SORTFREQ/TAKE all non-mutate",
-      "detail": "Pipeline needs LET after every step; easy to WRITE stale raw instead of rank.",
-      "repro": "FREQ paths; SORTFREQ paths still unsorted without LET"
+      "title": "BEFOREALL miss keeps whole field; AFTERALL miss empty",
+      "detail": "Plain orphan rows become fake host ids on peel; AFTERALL injects empty fields needing SQUEEZE. BEFOREALL_HIT not checked by agents by default.",
+      "repro": "BEFOREALL 'h1:p\\norphan' → h1\\norphan"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "Pin uses GREP substring \u2014 false friends",
-      "detail": "pin /api matches /api/users and /api/orders and /apiv2. No whole-field or word-boundary GREP.",
-      "repro": "GREP /api on raw access bag"
+      "title": "No atomic multi-host SETMATCH / advance wave",
+      "detail": "advance loops EACH host SETMATCH; partial success leaves mixed wave state. No transaction over bag mutations.",
+      "repro": "advance h1 h2 when only h1 pending → hit=1 miss=1"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "No SQUEEZE empty after CUTALL in pipeline",
-      "detail": "Agents must remember SQUEEZE BLANK after bad peels; rank does not auto-drop empty path tokens.",
-      "repro": "CUTALL OOR then FREQ counts empties"
+      "title": "GREP :fail / :live suffix tallies are substring-unsafe",
+      "detail": "list tallies GREP :live matches :live and :livez. Same class as prior GREP gaps.",
+      "repro": "GREP :live on host:livez"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last rank/access line without $.",
-      "repro": "rank; cat -A RANK.txt"
+      "detail": "cat -A last fleet/wave line without $.",
+      "repro": "seed; cat -A FLEET.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "host|bag",
-      "title": "Inconsistent colon peel: SORTFREQ vs AFTER",
-      "detail": "SORTFREQ ranks URL paths correctly; manual storm peel with AFTER first colon fails. Agents need documented last-colon form (RAFTER) or FREQ with safer sep default for paths.",
-      "repro": "SORTFREQ ok on http://x:N; AFTER first breaks"
+      "area": "lang|args",
+      "title": "SYS form trailing args: bare idents are forms not values",
+      "detail": "General footgun beyond CHUNK: agents expect var expansion for optional host args; parser form-dispatch steals the token. String literals or LAST pipeline only.",
+      "repro": "SYS CHUNK 2 bag sep_var"
     }
   ],
   "workarounds": [
-    "Validate CUTALL_HIT / reject empty path tokens with SQUEEZE BLANK before FREQ",
-    "Use loadlines ||| or READ file for multi-token access lines",
-    "Prefer SORTFREQ over manual AFTER peel for rank order",
-    "For storm on URL paths use SPLIT+TAIL count or FREQ custom sep '='",
-    "Always LET after CUTALL/FREQ/SORTFREQ/TAKE"
+    "CHUNK with default space join only; hardcode SYS CHUNK n bag \",\" if comma needed",
+    "FIRSTMATCH with \":fail\" not bare fail; still prefer status field EQS walk for safety",
+    "Ban spaces in host ids; WORDS advance assumes space-separated wave",
+    "Filter bag to host:status shape before BEFOREALL; check BEFOREALL_HIT",
+    "Always LET waves = LAST after CHUNK"
   ],
   "language_gaps": [
-    "CUTALL option to drop missing-column lines",
-    "Multi-line ARG or ARG-file ingest form",
-    "RAFTER last-delimiter + unified FREQ encoding",
-    "FREQ sep default that cannot appear in keys",
-    "Word-boundary GREP for pin needles",
-    "WRITE force trailing NL; PRINT_JSON newlines"
+    "CHUNK/BATCH accept variable join separator (or LAST as sep)",
+    "FIRSTMATCH whole-field / ENDS-with modes",
+    "Nested batch bags (list-of-lists) without join flatten",
+    "BEFOREALL option drop-miss vs keep-whole",
+    "Multi-row atomic SETMATCH / bag transaction",
+    "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "WORDS cannot ingest 'METHOD path status' \u2014 invented ||| loadlines",
-    "CUTALL OOR silent empty fields \u2192 ghost FREQ rows (high agent footgun)",
-    "URL paths work with SORTFREQ but break AFTER-based storm peel \u2014 dual semantics",
-    "SORTFREQ closed prior top-N gap from iter37 W2 \u2014 still encoding/colon gaps remain"
+    "Hard fail: SYS CHUNK … JOIN → unknown form JOIN — renamed and then removed var sep path",
+    "Confirmed FIRSTMATCH fail hits prefail:live (high ops footgun for findfail)",
+    "Default space CHUNK works for wave batching; next+DROPNTH drains queue",
+    "No language fix this fire — CHUNK var-sep is MEANINGFUL_ITER candidate"
   ],
-  "commit": "93beba56abe9bb0fed4a8cb343ffc6071afb5167",
-  "ts": "2026-08-05T19:54:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T20:18:47Z"
 }
