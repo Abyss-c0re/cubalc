@@ -1775,6 +1775,111 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS ARGMAX|ARGMIN a b [c…]|bag — 0-based index of first extreme → LAST_N.
+     * LAST = extreme value as decimal; ARGMAX_V/ARGMIN_V = value; COUNT = n.
+     * Empty / no numbers → LAST_N=-1, OK=0. Bag mode like MIN/MAX/SUM.
+     * Usability: LENALL → ARGMAX → NTH to pick longest field without EACH. */
+    if (kw(&L->cur,"ARGMAX") || kw(&L->cur,"ARGMIN") || kw(&L->cur,"MAXIDX") ||
+        kw(&L->cur,"MINIDX") || kw(&L->cur,"WHICHMAX") || kw(&L->cur,"WHICHMIN") ||
+        kw(&L->cur,"IMAX") || kw(&L->cur,"IMIN") || kw(&L->cur,"INDEXMAX") ||
+        kw(&L->cur,"INDEXMIN") || kw(&L->cur,"MAXI") || kw(&L->cur,"MINI")){
+      char op[20];
+      long vals[64];
+      int n = 0, i, is_min, bag = 0;
+      long best_i = -1, best_v = 0;
+      char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_min = (strcmp(op, "ARGMIN") == 0 || strcmp(op, "MINIDX") == 0 ||
+                strcmp(op, "WHICHMIN") == 0 || strcmp(op, "IMIN") == 0 ||
+                strcmp(op, "INDEXMIN") == 0 || strcmp(op, "MINI") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_STR) {
+        bag = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) bag = 1;
+      } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                   L->cur.kind == TK_LPAREN)) {
+        bag = 1;
+      }
+      if (bag) {
+        src[0] = 0;
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+            snprintf(src, sizeof src, "%s", vm->last_str);
+        } else {
+          snprintf(src, sizeof src, "%s", vm->last_str);
+        }
+        {
+          const char *p = src;
+          while (*p && n < 64) {
+            const char *start = p;
+            char *end = NULL;
+            long v;
+            while (*p && *p != '\n') p++;
+            if (start == p) {
+              if (*p == '\n') p++;
+              continue;
+            }
+            {
+              char tmp[48];
+              size_t flen = (size_t)(p - start);
+              if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+              memcpy(tmp, start, flen);
+              tmp[flen] = 0;
+              v = strtol(tmp, &end, 10);
+              if (end != tmp) {
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end == 0)
+                  vals[n++] = v;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        while (n < 64 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
+        }
+      }
+      if (n <= 0) {
+        best_i = -1;
+        best_v = 0;
+        var_set_num(vm, "OK", 0);
+      } else {
+        best_i = 0;
+        best_v = vals[0];
+        for (i = 1; i < n; i++) {
+          if (is_min) {
+            if (vals[i] < best_v) { best_v = vals[i]; best_i = i; }
+          } else {
+            if (vals[i] > best_v) { best_v = vals[i]; best_i = i; }
+          }
+        }
+        var_set_num(vm, "OK", 1);
+      }
+      vm->last_n = best_i;
+      var_set_num(vm, "LAST_N", best_i);
+      if (is_min) {
+        var_set_num(vm, "ARGMIN_I", best_i);
+        var_set_num(vm, "ARGMIN_V", best_v);
+        var_set_num(vm, "MINIDX", best_i);
+      } else {
+        var_set_num(vm, "ARGMAX_I", best_i);
+        var_set_num(vm, "ARGMAX_V", best_v);
+        var_set_num(vm, "MAXIDX", best_i);
+      }
+      var_set_num(vm, "COUNT", (long)n);
+      snprintf(buf, sizeof buf, "%ld", best_v);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS IN|WITHIN|INRANGE x lo hi — inclusive numeric range membership → LAST_N 0|1.
      * lo/hi swapped if inverted. Distinct from SYS BETWEEN (string peel).
      * Usability: IF/guard retries and score bands without dual CMP tests. */
@@ -7086,7 +7191,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -7474,6 +7579,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MAX", "SYS MAX a b [c…]|bag — host-plane maximum → LAST_N · after LENALL width"},
       {"SYS MINBAG", "SYS MINBAG [bag] — min of newline numeric fields · alias of bag MIN"},
       {"SYS MAXBAG", "SYS MAXBAG [bag] — max of newline numeric fields · alias of bag MAX"},
+      {"SYS ARGMAX", "SYS ARGMAX a b [c…]|bag — 0-based index of first max → LAST_N · LAST=value"},
+      {"SYS ARGMIN", "SYS ARGMIN a b [c…]|bag — 0-based index of first min → LAST_N · LAST=value"},
+      {"SYS MAXIDX", "SYS MAXIDX [bag] — alias of SYS ARGMAX"},
+      {"SYS MINIDX", "SYS MINIDX [bag] — alias of SYS ARGMIN"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
       {"SYS IN", "SYS IN|WITHIN x lo hi — inclusive range membership → LAST_N 0|1"},
       {"SYS WITHIN", "SYS WITHIN x lo hi — alias of SYS IN · score/retry bands"},

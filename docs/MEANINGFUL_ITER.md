@@ -179,6 +179,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 149. ~~**`SYS COUNTMATCH` / `GREPCOUNT`**~~ **done** (count fields containing needle · log tallies without GREP clobber).
 150. ~~**`SYS LENALL` / `MAPLEN`**~~ **done** (length of every bag field → decimal bag · LENALL_SUM size rollups).
 151. ~~**`SYS MIN` / `MAX` bag mode**~~ **done** (min/max over newline numeric bags like SUM · after LENALL width).
+152. ~~**`SYS ARGMAX` / `ARGMIN`**~~ **done** (0-based index of first extreme · LENALL→ARGMAX→NTH longest field).
 
 ## Tick protocol
 

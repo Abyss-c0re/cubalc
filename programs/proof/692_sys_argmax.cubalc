@@ -1,0 +1,74 @@
+# SYS ARGMAX / ARGMIN — 0-based index of first extreme value
+# Usability: LENALL → ARGMAX → NTH pick longest field without EACH
+
+HOLD_FLASH 1
+
+# multi-arg
+SYS ARGMAX 3 10 7 10
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ARGMAX_I == 1
+ASSERT ARGMAX_V == 10
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+
+SYS ARGMIN 3 10 -2 7
+ASSERT LAST_N == 2
+ASSERT ARGMIN_I == 2
+ASSERT ARGMIN_V == -2
+SYS EQS LAST "-2"
+ASSERT LAST_N == 1
+
+# bag mode
+LET scores = "3\n10\n-2\n7"
+SYS ARGMAX scores
+ASSERT LAST_N == 1
+ASSERT COUNT == 4
+ASSERT ARGMAX_V == 10
+SYS ARGMIN scores
+ASSERT LAST_N == 2
+ASSERT ARGMIN_V == -2
+
+# aliases
+SYS MAXIDX scores
+ASSERT LAST_N == 1
+SYS MINIDX scores
+ASSERT LAST_N == 2
+SYS WHICHMAX scores
+ASSERT LAST_N == 1
+SYS WHICHMIN scores
+ASSERT LAST_N == 2
+
+# empty → -1 soft fail
+SYS ARGMAX ""
+ASSERT LAST_N == -1
+ASSERT OK == 0
+ASSERT COUNT == 0
+
+# first-wins on ties
+SYS ARGMAX 5 5 5
+ASSERT LAST_N == 0
+SYS ARGMIN 2 2 1 1
+ASSERT LAST_N == 2
+
+# agent pattern: longest field via LENALL + ARGMAX + NTH
+LET bag = "hi\nworld\nx\nab"
+SYS LENALL bag
+SYS ARGMAX LAST
+ASSERT LAST_N == 1
+ASSERT ARGMAX_V == 5
+LET i = LAST_N
+SYS NTH i bag
+SYS EQS LAST "world"
+ASSERT LAST_N == 1
+
+# shortest
+SYS LENALL bag
+SYS ARGMIN LAST
+ASSERT LAST_N == 2
+LET j = LAST_N
+SYS NTH j bag
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+PRINT "sys_argmax ok"
