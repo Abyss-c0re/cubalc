@@ -1,0 +1,66 @@
+# SYS FIRSTMATCH / GREP1 — first bag field containing needle
+# Usability: pick one log/peer line without GREP+TAKE 1
+
+HOLD_FLASH 1
+
+LET log = "INFO boot\nERROR disk full\nWARN mem\nERROR timeout\nFATAL panic"
+
+SYS FIRSTMATCH log "ERROR"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT FIRSTMATCH_N == 1
+ASSERT FIRSTMATCH_I == 1
+SYS EQS LAST "ERROR disk full"
+ASSERT LAST_N == 1
+
+# second distinct needle
+SYS FIRSTMATCH log "FATAL"
+ASSERT LAST_N == 1
+ASSERT FIRSTMATCH_I == 4
+SYS EQS LAST "FATAL panic"
+ASSERT LAST_N == 1
+
+# miss
+SYS FIRSTMATCH log "CRIT"
+ASSERT LAST_N == 0
+ASSERT FIRSTMATCH_I == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# aliases
+SYS GREP1 log "WARN"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN mem"
+ASSERT LAST_N == 1
+
+# case-insensitive
+SYS FIRSTMATCHI log "error"
+ASSERT LAST_N == 1
+ASSERT FIRSTMATCH_I == 1
+SYS EQS LAST "ERROR disk full"
+ASSERT LAST_N == 1
+SYS GREP1 I log "fatal"
+ASSERT LAST_N == 1
+SYS EQS LAST "FATAL panic"
+ASSERT LAST_N == 1
+
+# empty needle → first field
+SYS FIRSTMATCH log ""
+ASSERT LAST_N == 1
+ASSERT FIRSTMATCH_I == 0
+SYS EQS LAST "INFO boot"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS FIRSTMATCH "" "x"
+ASSERT LAST_N == 0
+ASSERT FIRSTMATCH_I == -1
+
+# agent: first ERROR line then AFTER peel detail
+SYS FIRSTMATCH log "ERROR"
+SYS AFTER LAST "ERROR "
+ASSERT LAST_N == 1
+SYS EQS LAST "disk full"
+ASSERT LAST_N == 1
+
+PRINT "sys_firstmatch ok"
