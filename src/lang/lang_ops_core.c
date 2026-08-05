@@ -1922,44 +1922,70 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    if (kw(&L->cur,"REPLACE") || kw(&L->cur,"SUBST") || kw(&L->cur,"STRREP")){
-      /* SYS REPLACE hay old new — first occurrence; LAST = result; LAST_N = 1 if replaced */
+    if (kw(&L->cur,"REPLACE") || kw(&L->cur,"SUBST") || kw(&L->cur,"STRREP") ||
+        kw(&L->cur,"REPLACEALL") || kw(&L->cur,"GSUB") || kw(&L->cur,"SUBSTALL") ||
+        kw(&L->cur,"STRREPALL") || kw(&L->cur,"REPALL")){
+      /* SYS REPLACE hay old new — first occurrence.
+       * SYS REPLACE ALL hay old new | SYS REPLACEALL|GSUB — all occurrences.
+       * LAST = result; LAST_N = number of replacements (0 if none).
+       * Usability: plate templates {{DATE}}/{{HOST}} without shell sed. */
+      int do_all = (kw(&L->cur,"REPLACEALL") || kw(&L->cur,"GSUB") ||
+                    kw(&L->cur,"SUBSTALL") || kw(&L->cur,"STRREPALL") ||
+                    kw(&L->cur,"REPALL"));
       lex_next(L);
+      if (!do_all && (kw(&L->cur,"ALL") || kw(&L->cur,"GLOBAL") ||
+                      kw(&L->cur,"EVERY") || kw(&L->cur,"G"))){
+        do_all = 1;
+        lex_next(L);
+      }
       char hay[512]="", olds[256]="", news[256]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0]=0;
       if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0]=0;
-      char out[512];
+      char out[1024];
       long did = 0;
+      size_t oldn = strlen(olds), newn = strlen(news);
       if (olds[0] == 0){
         snprintf(out, sizeof out, "%s", hay);
       } else {
-        char *p = strstr(hay, olds);
-        if (!p){
-          snprintf(out, sizeof out, "%s", hay);
-        } else {
-          size_t pre = (size_t)(p - hay);
-          size_t oldn = strlen(olds), newn = strlen(news), tail = strlen(p + oldn);
-          if (pre + newn + tail >= sizeof out){
-            /* truncate carefully */
-            size_t maxpre = pre;
-            if (maxpre >= sizeof out) maxpre = sizeof out - 1;
-            memcpy(out, hay, maxpre);
-            size_t o = maxpre;
-            size_t take = newn;
-            if (o + take >= sizeof out) take = sizeof out - 1 - o;
-            memcpy(out + o, news, take); o += take;
-            take = tail;
-            if (o + take >= sizeof out) take = sizeof out - 1 - o;
-            memcpy(out + o, p + oldn, take); o += take;
+        const char *src = hay;
+        size_t o = 0;
+        out[0] = 0;
+        for (;;) {
+          const char *p = strstr(src, olds);
+          if (!p) {
+            size_t rest = strlen(src);
+            if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+            memcpy(out + o, src, rest);
+            o += rest;
             out[o] = 0;
-          } else {
-            memcpy(out, hay, pre);
-            memcpy(out + pre, news, newn);
-            memcpy(out + pre + newn, p + oldn, tail + 1);
+            break;
           }
-          did = 1;
+          {
+            size_t pre = (size_t)(p - src);
+            if (o + pre >= sizeof out) pre = sizeof out - 1 - o;
+            memcpy(out + o, src, pre); o += pre;
+            if (o + newn < sizeof out) {
+              memcpy(out + o, news, newn); o += newn;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, news, take); o += take;
+            }
+            out[o] = 0;
+            did++;
+            src = p + oldn;
+            /* empty old would infinite-loop; already guarded by olds[0] */
+            if (!do_all) {
+              size_t rest = strlen(src);
+              if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+              memcpy(out + o, src, rest);
+              o += rest;
+              out[o] = 0;
+              break;
+            }
+            if (o >= sizeof out - 1) break;
+          }
         }
       }
       var_set_str(vm, "LAST", out);
@@ -2112,7 +2138,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2347,6 +2373,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"SYS JOINLINES", "SYS JOINLINES|PASTE sep [str] — join newline fields with sep (anti-SPLIT)"},
+      {"SYS REPLACE", "SYS REPLACE hay old new — first occurrence · LAST_N=1 if replaced"},
+      {"SYS REPLACEALL", "SYS REPLACEALL|GSUB hay old new — all occurrences · LAST_N=count"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

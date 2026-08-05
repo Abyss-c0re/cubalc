@@ -1,0 +1,69 @@
+# SYS REPLACEALL / GSUB — replace all occurrences (templates without shell sed)
+# Usability: plate stamps {{DATE}}/{{HOST}} in one form; REPLACE stays first-only
+
+HOLD_FLASH 1
+
+# first-only REPLACE unchanged
+SYS REPLACE "aa-aa-aa" "aa" "X"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "X-aa-aa"
+ASSERT LAST_N == 1
+
+# REPLACEALL all hits
+SYS REPLACEALL "aa-aa-aa" "aa" "X"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS EQS LAST "X-X-X"
+ASSERT LAST_N == 1
+
+# GSUB alias
+SYS GSUB "foo.foo.foo" "foo" "bar"
+ASSERT LAST_N == 3
+SYS EQS LAST "bar.bar.bar"
+ASSERT LAST_N == 1
+
+# SYS REPLACE ALL form
+SYS REPLACE ALL "1.1.1" "1" "0"
+ASSERT LAST_N == 3
+SYS EQS LAST "0.0.0"
+ASSERT LAST_N == 1
+
+# no match → LAST_N 0, string unchanged
+SYS REPLACEALL "hello" "ZZ" "Y"
+ASSERT LAST_N == 0
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# empty old → no-op
+SYS REPLACEALL "abc" "" "x"
+ASSERT LAST_N == 0
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# template fill: chain on LAST
+LET T = "host={{HOST}} date={{DATE}} host={{HOST}}"
+SYS REPLACEALL T "{{HOST}}" "cube1"
+ASSERT LAST_N == 2
+SYS REPLACEALL LAST "{{DATE}}" "2026-08-05"
+ASSERT LAST_N == 1
+SYS HAS LAST "cube1"
+ASSERT LAST_N == 1
+SYS HAS LAST "2026-08-05"
+ASSERT LAST_N == 1
+SYS HAS LAST "{{"
+ASSERT LAST_N == 0
+
+# multi-char + delete (empty new)
+SYS REPLACEALL "a--b--c" "--" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# SUBSTALL alias
+SYS SUBSTALL "xxYxx" "xx" "z"
+ASSERT LAST_N == 2
+SYS EQS LAST "zYz"
+ASSERT LAST_N == 1
+
+PRINT "sys_replaceall ok"
