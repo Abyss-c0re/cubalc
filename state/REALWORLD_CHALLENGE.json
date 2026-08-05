@@ -1,182 +1,118 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
   "iter": 25,
-  "program": "programs/realworld/work_slot_pool.cubalc",
-  "theme": "work slot pool SETMATCH first-claim COUNTLINE capacity HASLINE REMOVELINE MOVELINE pinfree",
+  "program": "programs/realworld/feature_flag_board.cubalc",
+  "theme": "feature flag board SETMATCH COUNTLINE MOVELINE name:on|off",
   "version": "1.15.101-usability",
   "pass": true,
-  "ts": "2026-08-05T14:27:13Z",
   "tests": [
     {
-      "name": "seed_list_counts",
-      "cmd": "seed 4; list",
+      "name": "seed_on_toggle_pin",
+      "cmd": "seed beta dark_mode legacy; on beta; toggle dark_mode; pin dark_mode",
       "ok": true,
-      "note": "4 idle tokens; COUNTLINE idle/busy/done/hold on list; report bag written"
+      "note": "SETMATCH off→on; MOVELINE dark_mode to front; plate dark_mode,beta,legacy"
     },
     {
-      "name": "claim_first_only",
-      "cmd": "claim; claim",
+      "name": "set_insert_drop",
+      "cmd": "set canary on; drop legacy",
       "ok": true,
-      "note": "SETMATCH idle\u2192busy first field only \u2192 busy,busy,idle,idle"
+      "note": "missing name PUSH insert; REMOVELINE by exact old_entry"
     },
     {
-      "name": "count_exact",
-      "cmd": "count idle",
+      "name": "toggle_miss_require",
+      "cmd": "CUBALC_FF_REQUIRE=1 toggle ghost",
       "ok": true,
-      "note": "n_match=2 after two claims"
+      "note": "EXIT 2 toggle miss"
     },
     {
-      "name": "finish_recycle",
-      "cmd": "finish; recycle",
+      "name": "countline_exact_not_suffix",
+      "cmd": "COUNTLINE bag ':on' vs GREP ':on'+LINES",
       "ok": true,
-      "note": "busy\u2192done then done\u2192idle via SETMATCH chain"
+      "note": "COUNTLINE ':on'→0; GREP+LINES→2 — suffix tallies need GREP"
     },
     {
-      "name": "claim_require_miss",
-      "cmd": "seed 1; claim; CUBALC_POOL_REQUIRE=1 claim",
+      "name": "setmatch_first_only",
+      "cmd": "SETMATCH two beta:on → one off residual on",
       "ok": true,
-      "note": "EXIT 2 claim miss; shell exit 2; pool stays busy"
-    },
-    {
-      "name": "release_soft_miss",
-      "cmd": "all idle then release",
-      "ok": true,
-      "note": "soft miss miss=1 note=release miss no busy; no EXIT without REQUIRE"
-    },
-    {
-      "name": "rewritex_has_drop_pin",
-      "cmd": "rewritex idle hold; has hold; dropone hold; inject; pinfree",
-      "ok": true,
-      "note": "SETMATCH rewrite; HASLINE; REMOVELINE; MOVELINE first free front"
-    },
-    {
-      "name": "setmatch_empty_new_hole",
-      "cmd": "rewritex idle ''",
-      "ok": true,
-      "note": "SETMATCH to empty leaves blank bag field \u2014 capacity hole"
-    },
-    {
-      "name": "countline_not_substring",
-      "cmd": "bag peer:idle\\nidle; count idle \u2192 1; count peer:idle \u2192 1",
-      "ok": true,
-      "note": "COUNTLINE exact field only \u2014 peer:idle does not count as idle"
+      "note": "first match only; COUNTLINE residual beta:on=1"
     },
     {
       "name": "print_json_collapse",
-      "cmd": "PRINT_JSON pool",
+      "cmd": "list PRINT_JSON flags",
       "ok": true,
-      "note": "pool becomes idleidleidlebusyidle \u2014 newlines gone"
-    },
-    {
-      "name": "write_no_trailing_nl",
-      "cmd": "seed 2; cat -A POOL.txt",
-      "ok": true,
-      "note": "ends_with_nl False; last line glue risk on APPEND hosts"
+      "note": "dark_mode:onbeta:onlegacy:off collapsed"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "76/76 pass incl setmatch countline moveline"
+      "note": "76/76 pass incl moveline countline setmatch"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag|concurrency",
-      "title": "SETMATCH is first-match only \u2014 no multi-claim / no CAS",
-      "detail": "claim() replaces only the first exact free token. Claiming N slots needs N process runs. Concurrent agents race on the same first field with no atomic compare-and-swap or flock; last writer wins on WRITE. No O_EXCL lock plate.",
-      "repro": "seed 4; two parallel claim \u2192 both may rewrite same first idle if interleaved before WRITE"
+      "area": "host|bag",
+      "title": "COUNTLINE is exact-field only — cannot tally status suffixes",
+      "detail": "COUNTLINE bag ':on' returns 0 even when many name:on rows exist. Agents expecting suffix/role counts must GREP ':on' then LINES. The form name invites 'count lines matching' but means 'count exact field equality'.",
+      "repro": "COUNTLINE 'beta:on\\ndark:on' ':on' → LAST_N=0; GREP ':on' + LINES → 2"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "host|loop",
-      "title": "No native repeat-N / FOR range \u2014 seed uses unrolled IF ladder",
-      "detail": "Seeding N idle tokens required either EACH over a prebuilt marker bag or 32 unrolled IF n_match > k PUSH. No FOR i=1..N, no REPEAT n. Agents invent marker bags or cap capacity.",
-      "repro": "action seed ARG1=4 builds markers via IF ladder then EACH LINE PUSH idle"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "SETMATCH replaces first exact match only — duplicates residual",
+      "detail": "Two beta:on fields → SETMATCH beta:on→beta:off leaves one beta:on. No SETMATCHALL. Flag boards with accidental dupes stay inconsistent after toggle.",
+      "repro": "SETMATCH 'beta:on\\nbeta:on' 'beta:on' 'beta:off' → beta:off\\nbeta:on"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|bag",
-      "title": "SETMATCH empty new leaves blank field hole",
-      "detail": "SETMATCH bag idle \"\" succeeds with LAST_N=1 and inserts an empty line. COUNTLINE idle drops but LINES still counts the hole. Easy to create silent capacity ghosts.",
-      "repro": "rewritex idle \"\" \u2192 bag starts with empty field (cat -A shows $ alone)"
+      "area": "host|docs",
+      "title": "SYS RENAME (file) vs SYS MOVELINE (bag) name collision",
+      "detail": "Agents say 'rename flag' or 'move flag to front' and may call RENAME (filesystem) instead of MOVELINE/SETMATCH. Catalog planes differ (host file vs bag) but both are SYS *MOVE* family in mental model.",
+      "repro": "forms: RENAME path; MOVELINE bag from to"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "COUNTLINE/HASLINE/SETMATCH exact-field only \u2014 status suffixes need pure tokens",
-      "detail": "Bag peer:idle\\nidle; COUNTLINE idle \u2192 1 (not 2). Real rosters with name:status cannot use COUNTLINE on status alone without GREP/EACH first. Forces pure-token pool design or GREP then count.",
-      "repro": "printf 'peer:idle\\nidle\\n' > POOL; count idle \u2192 n_match=1"
+      "area": "host",
+      "title": "No string concat — flag tokens via REPLACEALL template",
+      "detail": "name:on built as REPLACEALL on NAME:VAL placeholders. Names equal to VAL/NAME tokens can corrupt. Same class as roster board.",
+      "repro": "template NAME:VAL with NAME containing VAL"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses bag newlines",
-      "detail": "PRINT_JSON pool yields idleidleidlebusyidle \u2014 agents cannot recover slot order from JSON; must READ plate file.",
-      "repro": "list action PRINT_JSON pool"
+      "title": "PRINT_JSON collapses multi-line flag bags",
+      "detail": "list dumps flags as dark_mode:onbeta:onlegacy:off — unparseable for agents.",
+      "repro": "PRINT_JSON flags after seed+on"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|io",
-      "title": "WRITE omits final trailing newline",
-      "detail": "seed 2 \u2192 b'idle\\nidle' ends_with_nl False. Hosts that APPEND glue last field to next write.",
-      "repro": "seed 2; python open(POOL).read() ends without \\n"
-    },
-    {
-      "id": "W7",
-      "severity": "med",
-      "area": "host|flow",
-      "title": "SYS NUM only parses LAST \u2014 seed count needs PREPEND/HEAD shuttle",
-      "detail": "ARG1 count arrives as string. Cannot SYS NUM A; must PREPEND \"\" A; HEAD LAST; NUM. Same shuttle as prior runbook index ops.",
-      "repro": "seed ARG1=4 path in program"
-    },
-    {
-      "id": "W8",
       "severity": "low",
-      "area": "host|docs",
-      "title": "SYS STR is itoa not string-format \u2014 report glue is PUSH bag only",
-      "detail": "Attempted SYS STR \"action=\" ACTION failed with unknown form. STR coerces numbers to decimal strings; free-form report lines need REPLACEALL templates or PUSH key/value bags.",
-      "repro": "SYS STR \"action=\" ACTION \u2192 parse error unknown form"
-    },
-    {
-      "id": "W9",
-      "severity": "low",
-      "area": "host|soft",
-      "title": "SETMATCH miss soft LAST_N=0 without FAIL sticky unless agent adds FAIL",
-      "detail": "Program must FAIL+CLEAR_ERR+REQUIRE discipline. Soft miss alone leaves OK green in -s unless FAIL used. Consistent with other soft bag ops but easy to miss in agent code.",
-      "repro": "release on all-idle with REQUIRE=0 \u2192 miss=1 exit 0"
+      "area": "host|bag",
+      "title": "GREP still substring-unsafe for name: prefix identity",
+      "detail": "GREP 'beta:' matches mybeta:on. Program uses EACH+BEFORE+EQS for identity; list tallies via GREP ':on' are OK (suffix) but name filters must not use GREP name:.",
+      "repro": "GREP 'beta:' on mybeta:on\\nbeta:off keeps both"
     }
   ],
   "workarounds": [
-    "Use pure status tokens (idle/busy/done) not name:status when COUNTLINE/SETMATCH by status",
-    "Claim N times in host loop; do not expect multi-claim in one run",
-    "REQUIRE=1 + FAIL for hard miss exits; CLEAR_ERR after soft FAIL",
-    "Build reports as PUSH key/value bags or REPLACEALL templates \u2014 never SYS STR as printf",
-    "READ plate file for order; never trust PRINT_JSON on multi-line bags",
-    "Avoid SETMATCH to empty unless intentionally creating blank fields"
+    "Suffix tallies: GREP ':on'|':off' then SYS LINES — not COUNTLINE",
+    "Identity: EACH LINE + BEFORE ':' + EQS name before SETMATCH/MOVELINE",
+    "Dedup flags before toggle; or loop SETMATCH until COUNTLINE old==0",
+    "PRINT_JSON only on_n/off_n scalars; keep bag on FLAGS.txt plate",
+    "Use MOVELINE for bag reorder; RENAME only for filesystem paths"
   ],
   "language_gaps": [
-    "no multi-SETMATCH / SETMATCH_N / replace-all-fields-exact",
-    "no FOR range or REPEAT n",
-    "no atomic plate lock (O_EXCL / flock)",
-    "no SYS NUM var \u2014 LAST-only numeric parse",
-    "no string concat / printf \u2014 STR is itoa only",
-    "PRINT_JSON newline collapse",
-    "WRITE trailing NL missing"
+    "COUNTLINE suffix / field-pattern tally (or GREP count without materialize)",
+    "SETMATCHALL replace all exact fields",
+    "String concatenation for name:val tokens",
+    "PRINT_JSON newline escape in strings",
+    "Doc cross-link RENAME vs MOVELINE clearly in forms catalog"
   ],
-  "commit": "6be9844",
-  "issues_faced": [
-    "First draft used SYS EQS hit 0 \u2014 unknown form; numeric IF hit == 0 required",
-    "Report builder used SYS STR as printf \u2014 STR is itoa only; rewritten to PUSH bag",
-    "REQUIRE miss test false green when one idle remained \u2014 harness order bug, not language",
-    "Seed N without loop forced unrolled IF marker ladder \u2014 painful agent code",
-    "Empty ARG2 for rewritex initially EXIT 2 on BLANK B \u2014 relaxed to surface blank-field hole"
-  ]
+  "commit": null,
+  "ts": "2026-08-05T14:28:20Z"
 }

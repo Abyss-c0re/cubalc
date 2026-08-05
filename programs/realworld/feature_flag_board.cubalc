@@ -1,0 +1,589 @@
+# feature_flag_board.cubalc — durable name:on|off flag plate under STATE
+#
+# Real use: agents keep a living feature-flag bag without shell sed.
+# Lines are exact fields "name:on" or "name:off".
+#
+# Actions (CUBALC_ARG0 / CUBALC_FF_ACTION):
+#   list     — depth + on/off tallies (default)
+#   seed     — PUSH defaults if missing (ARG1 space names, all off)
+#   set      — ensure name:on or name:off (SETMATCH or PUSH)
+#   on       — set name on
+#   off      — set name off
+#   toggle   — flip first name:* via SETMATCH
+#   pin      — MOVELINE first name:* to front
+#   drop     — REMOVELINE first name:on or name:off (try both)
+#   count    — COUNTLINE exact token (ARG1=name:on|name:off)
+#   has      — HASLINE exact
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="beta dark_mode" \
+#     ./out/cubalc run -q -s programs/realworld/feature_flag_board.cubalc
+#   CUBALC_ARG0=on CUBALC_ARG1=beta ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_FF_FILE=FLAGS.txt
+#   CUBALC_FF_REQUIRE=1   # EXIT 2 on set/toggle/drop miss
+#
+# Edges:
+#   SETMATCH first exact only — duplicate name:on leaves residual
+#   COUNTLINE exact-field — cannot tally ":on" suffix (use GREP+LINES)
+#   GREP "beta:" matches mybeta: (substring) — use BEFORE+EQS for identity
+#   MOVELINE dest past end clamps; from OOR soft
+#   SYS RENAME is file move — not bag MOVELINE (name collision risk)
+#   NUM shuttle for pin index; PRINT_JSON bag collapse; WRITE trailing NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "feature_flag_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT VAL = "on"
+DEFAULT RFILE = "FLAGS.txt"
+DEFAULT REPORT = "FLAGS_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET VAL = LAST
+ELSE
+  SYS ENV "CUBALC_FF_VAL" OR "on"
+  LET VAL = LAST
+END
+SYS ENV "CUBALC_FF_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_FF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET flag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR flag_path OR ""
+LET flags = LAST
+CLEAR_ERR "soft flags load"
+SYS LINES flags
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET on_n = 0
+LET off_n = 0
+LET idx = -1
+LET old_entry = ""
+LET entry = ""
+LET note_msg = "ok"
+
+# build name:val via REPLACEALL template (no string concat form)
+LET entry = "NAME:VAL"
+SYS REPLACEALL entry "NAME" NAME
+LET entry = LAST
+SYS REPLACEALL entry "VAL" VAL
+LET entry = LAST
+LET entry_on = "NAME:on"
+SYS REPLACEALL entry_on "NAME" NAME
+LET entry_on = LAST
+LET entry_off = "NAME:off"
+SYS REPLACEALL entry_off "NAME" NAME
+LET entry_off = LAST
+
+# --- helpers inlined: find first name:* exact identity (not GREP) ---
+# sets old_entry, idx, name_hit
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  # tally on/off via GREP suffix then LINES (COUNTLINE cannot suffix)
+  SYS GREP ":on" flags
+  SYS LINES LAST
+  LET on_n = LAST_N
+  SYS GREP ":off" flags
+  SYS LINES LAST
+  LET off_n = LAST_N
+  # exact COUNTLINE sample for fully-on token if NAME given
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS COUNTLINE flags entry_on
+    LET hit = LAST_N
+  END
+  STATUS
+  PRINT "flags" depth0 on_n off_n ACTION
+  PRINT_JSON depth0 on_n off_n hit ACTION STATUS_OK
+  PRINT_JSON flags
+  LET note_msg = "list ok"
+END
+
+# --- seed: WORDS names → PUSH name:off if absent ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs names (ARG1 space-separated)"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      LET name_hit = 0
+      EACH LINE AS row IN flags
+        SYS BEFORE row ":"
+        SYS EQS LAST n
+        IF LAST_N == 1 THEN
+          LET name_hit = 1
+        END
+      END
+      IF name_hit == 0 THEN
+        LET e = "NAME:off"
+        SYS REPLACEALL e "NAME" n
+        LET e = LAST
+        SYS PUSH flags e
+        LET flags = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- set / on / off ---
+SYS EQS ACTION "on"
+IF LAST_N == 1 THEN
+  LET VAL = "on"
+  LET ACTION = "set"
+  LET entry = entry_on
+END
+SYS EQS ACTION "off"
+IF LAST_N == 1 THEN
+  LET VAL = "off"
+  LET ACTION = "set"
+  LET entry = entry_off
+END
+
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs name"
+  END
+  # rebuild entry for on/off path
+  LET entry = "NAME:VAL"
+  SYS REPLACEALL entry "NAME" NAME
+  LET entry = LAST
+  SYS REPLACEALL entry "VAL" VAL
+  LET entry = LAST
+  LET entry_on = "NAME:on"
+  SYS REPLACEALL entry_on "NAME" NAME
+  LET entry_on = LAST
+  LET entry_off = "NAME:off"
+  SYS REPLACEALL entry_off "NAME" NAME
+  LET entry_off = LAST
+
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN flags
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    SYS PUSH flags entry
+    LET flags = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "set inserted"
+  ELSE
+    # SETMATCH old→new (value replace without FINDLINE+SETLINE)
+    SYS SETMATCH flags old_entry entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "setmatch miss"
+      FAIL "setmatch miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "set miss"
+      END
+    ELSE
+      LET flags = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "set matched"
+      SYS HASLINE flags entry
+      EXPECT LAST_N == 1
+      CLEAR_ERR
+    END
+  END
+END
+
+# --- toggle ---
+SYS EQS ACTION "toggle"
+IF LAST_N == 1 THEN
+  NOTE "action toggle"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "toggle needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN flags
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "toggle miss"
+    FAIL "toggle name not found"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "toggle miss"
+    END
+  ELSE
+    SYS EQS old_entry entry_on
+    IF LAST_N == 1 THEN
+      LET entry = entry_off
+    ELSE
+      LET entry = entry_on
+    END
+    SYS SETMATCH flags old_entry entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "toggle setmatch miss"
+      FAIL "toggle fail"
+      CLEAR_ERR
+    ELSE
+      LET flags = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "toggled"
+    END
+  END
+END
+
+# --- pin: MOVELINE first name:* to front ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN flags
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin name not found"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS FINDLINE flags old_entry
+    LET idx = LAST_N
+    SYS MOVELINE flags idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "moveline miss"
+      FAIL "moveline miss"
+      CLEAR_ERR
+    ELSE
+      LET flags = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned"
+      LET idx = 0
+    END
+  END
+END
+
+# --- drop first name:* ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN flags
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE flags old_entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline miss"
+      CLEAR_ERR
+    ELSE
+      LET flags = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "dropped"
+    END
+  END
+END
+
+# --- count exact token ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs exact token or name"
+  END
+  # if NAME contains :, treat as exact token; else count name:on
+  SYS HASI NAME ":"
+  IF LAST_N == 1 THEN
+    SYS COUNTLINE flags NAME
+    LET hit = LAST_N
+  ELSE
+    SYS COUNTLINE flags entry_on
+    LET on_n = LAST_N
+    SYS COUNTLINE flags entry_off
+    LET off_n = LAST_N
+    LET hit = on_n + off_n
+  END
+  LET note_msg = "counted"
+END
+
+# --- has exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs token"
+  END
+  SYS HASI NAME ":"
+  IF LAST_N == 1 THEN
+    SYS HASLINE flags NAME
+    LET hit = LAST_N
+  ELSE
+    SYS HASLINE flags entry_on
+    LET on_n = LAST_N
+    SYS HASLINE flags entry_off
+    LET off_n = LAST_N
+    LET hit = on_n + off_n
+    IF hit > 1 THEN
+      LET hit = 1
+    END
+  END
+  LET note_msg = "has"
+END
+
+# unknown action?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "on"
+LET k = k + LAST_N
+SYS EQS ACTION "off"
+LET k = k + LAST_N
+SYS EQS ACTION "toggle"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+# post-tally for report
+SYS GREP ":on" flags
+SYS LINES LAST
+LET on_n = LAST_N
+SYS GREP ":off" flags
+SYS LINES LAST
+LET off_n = LAST_N
+
+IF changed > 0 THEN
+  SYS WRITE flag_path flags
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "flags write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES flags
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.flags.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report VAL
+LET report = LAST
+SYS PUSH report "entry"
+LET report = LAST
+SYS PUSH report entry
+LET report = LAST
+SYS PUSH report "old_entry"
+LET report = LAST
+SYS PUSH report old_entry
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "on_n"
+LET report = LAST
+SYS STR on_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "off_n"
+LET report = LAST
+SYS STR off_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "flags" ACTION hit miss changed on_n off_n depth0 depth1
+PRINT_JSON ACTION hit miss changed on_n off_n depth0 depth1 idx elapsed STATUS_OK
+PASS "flags tick"
+NOTE "feature_flag_board: done"
+CLEAR_ERR
+EXIT 0 "flags ok"
