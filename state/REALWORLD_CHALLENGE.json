@@ -1,98 +1,104 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 16,
-  "program": "programs/realworld/kv_config_loader.cubalc",
-  "theme": "kv config load BEFORE/AFTER + STR template plate",
-  "version": "1.15.78-usability",
+  "iter": 17,
+  "program": "programs/realworld/multi_probe_rollup.cubalc",
+  "theme": "multi-probe health PUSH bag LINES EQSI rollup",
+  "version": "1.15.81-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_kv_parse",
-      "cmd": "config.kv with role/max_jobs/peer/mode/note=hello=world; run -s",
+      "name": "positive_rollup",
+      "cmd": "run -s multi_probe_rollup.cubalc",
       "ok": true,
-      "note": "keys_ok=5; note preserves nested '='; max_jobs=4 via STR in plate; unfilled=0"
+      "note": "n_pass=5 n_soft=1 total=6 fail_lines=0; PROBE_ROLLUP.txt JOINLINES detail"
     },
     {
-      "name": "missing_soft_defaults",
-      "cmd": "no config.kv; run -q -s",
+      "name": "quiet_strict",
+      "cmd": "run -q -s",
       "ok": true,
-      "note": "READ OR miss + CLEAR_ERR; defaults role=worker max_jobs=1"
+      "note": "INCLUDE OR soft + CLEAR_ERR under -s"
     },
     {
-      "name": "env_override",
-      "cmd": "CUBALC_CFG_ROLE=boss CUBALC_CFG_MAX_JOBS=9",
+      "name": "eqsi_action_Check",
+      "cmd": "CUBALC_ARG0=Check run -q -s",
       "ok": true,
-      "note": "plate role=boss max_jobs=9"
+      "note": "EQSI maps Check\u2192status path; EXIT 0"
     },
     {
-      "name": "require_empty_role",
-      "cmd": "role= empty + ARG0=require",
+      "name": "soft_dial_peer",
+      "cmd": "CUBALC_P2P_SOFT=1 TIMEOUT=400 PEER=127.0.0.1:1 -q -s",
       "ok": true,
-      "note": "EXIT 2 role missing"
+      "note": "soft dial miss recovered; plate ok"
+    },
+    {
+      "name": "unknown_sys_err_plate",
+      "cmd": "SYS NOTAFORM under -q -s",
+      "ok": true,
+      "note": "ok=false; last_err=full SYS catalog dump; err_line=0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "53/53 pass incl sys_str + sys_before"
+      "note": "56/56 pass incl push eqsi lines"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "flow",
-      "title": "NOTE form clobbers program var NOTE",
-      "detail": "NOTE breadcrumb writes the NOTE string var. Storing config in LET NOTE = val then later NOTE \"unknown key\" overwrites config silently. Plate showed note=unknown key until renamed CFG_NOTE. Same class risk for other dual-purpose names (LAST, OK, STATUS).",
-      "repro": "LET NOTE = \"hello\"; NOTE \"x\"; PRINT_JSON NOTE \u2192 breadcrumb text, not hello."
+      "area": "error|cli",
+      "title": "Unknown SYS form: err_line=0 and last_err is entire catalog dump",
+      "detail": "Typo like SYS LINES_N or SYS NOTAFORM fails with last_err equal to the long SYS: READ|WRITE|\u2026 help string and err_line=0. Agents cannot locate the bad line; plate is nearly useless for recovery. Caught mid-program as ok=false under -s.",
+      "repro": "SYS NOTAFORM or SYS LINES_N \u2192 err_line=0 last_err starts with 'SYS: READ|WRITE|\u2026'"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "flow",
-      "title": "No dynamic LET from key string \u2014 hardcoded key map only",
-      "detail": "Cannot LET $key = val from BEFORE peel. Real kv loaders need a switch of EQS key \"role\"/\"max_jobs\"/\u2026 for every known key. Unknown keys only counted, not stored. Blocks generic config agents.",
-      "repro": "Parse arbitrary keys in config.kv \u2014 only allowlisted keys bind to vars."
+      "severity": "med",
+      "area": "host|flow",
+      "title": "PUSH does not update bag var in place \u2014 must LET bag = LAST each time",
+      "detail": "SYS PUSH bag line returns new bag in LAST/PUSH_N but does not write back to bag. Forgetting LET bag = LAST silently drops prior pushes. Real multi-probe loops are error-prone without in-place bag mutate.",
+      "repro": "SYS PUSH bag a; SYS PUSH bag b without LET bag=LAST between \u2192 second push uses original empty/old bag."
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host",
-      "title": "BEFORE miss keeps whole line as key (LAST_N=0 only signal)",
-      "detail": "SYS BEFORE \"noequals\" \"=\" \u2192 LAST=\"noequals\" LAST_N=0. Agents that forget to check found flag treat garbage as keys. AFTER miss \u2192 empty string.",
-      "repro": "SYS BEFORE noequals = ; without IF found==0 CONTINUE."
+      "area": "docs|cli",
+      "title": "SYS TRIM still missing from forms/search",
+      "detail": "Carry-over: TRIM works in kv loader but catalog still empty. Multi-probe did not need TRIM but agents still cannot discover it.",
+      "repro": "./out/cubalc search TRIM \u2192 n=0"
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "docs|cli",
-      "title": "SYS TRIM and LPAD exist but missing from forms/search",
-      "detail": "TRIM used successfully for key/val whitespace; forms TRIM and search TRIM return n=0. Same for LPAD. Agents may shell out for strip/pad.",
-      "repro": "./out/cubalc forms TRIM; search TRIM \u2192 empty while SYS TRIM works."
+      "severity": "low",
+      "area": "flow",
+      "title": "LAST_N still ephemeral \u2014 every probe needs LINES to re-count bag",
+      "detail": "LINES exists and works, but agents must remember to re-count after EXIST/EQS/TOUCH. No sticky bag.length field updated by PUSH alone beyond PUSH_N on LAST only.",
+      "repro": "After SYS EXIST, LAST_N is 0|1 not bag size; SYS LINES bag restores count."
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "host",
-      "title": "GREPV # drops any line containing hash, not only full-line comments",
-      "detail": "Comment filter SYS GREPV \"#\" removes values that contain #. No full-line-only comment form.",
-      "repro": "note=use #tag in config \u2192 line dropped by GREPV #."
+      "area": "p2p",
+      "title": "Peer probe still host-env gated (CUBALC_P2P_SOFT)",
+      "detail": "Without SOFT, program skips dial as SOFT line rather than hard-fail \u2014 good \u2014 but cannot set soft policy in-language.",
+      "repro": "CUBALC_P2P_PEER set, SOFT unset \u2192 SOFT dial_skipped_no_soft"
     }
   ],
   "workarounds": [
-    "Never name application vars NOTE/LAST/OK; use CFG_NOTE etc.",
-    "Hardcode known-key EQS branches; document allowlist",
-    "Always check BEFORE/AFTER LAST_N (found) before accepting peel",
-    "Use SYS TRIM despite missing catalog entry",
-    "Prefer leading-# only: GREPV after ensuring values avoid # or strip comments with STARTS"
+    "Never invent SYS aliases; check forms/search; treat catalog-dump last_err as typo",
+    "Always LET bag = LAST immediately after every SYS PUSH",
+    "SYS LINES bag after any LAST_N-clobbering op before using count",
+    "EQSI for CLI actions (Check/STATUS/run)",
+    "CLEAR_ERR after INCLUDE OR and soft dial under -s"
   ],
   "language_gaps": [
-    "Map/dict or dynamic var bind from string key",
-    "Reserve NOTE breadcrumb under different slot than user NOTE var (or NOTE_MSG)",
-    "Catalog SYS TRIM/LPAD/RPAD in forms/search",
-    "Comment-aware line filter (full-line # only)",
-    "Optional trim-on-BEFORE/AFTER peel"
+    "err_line + err_src for unknown SYS / parse failures",
+    "In-place PUSH bag (mutate var) or PUSH! form",
+    "Catalog TRIM/LPAD",
+    "PUSH_N sticky on bag var metadata",
+    "In-language P2P soft default"
   ],
-  "commit": "c383625d935652fbe7ff7cccd51f5a40d4fd441c",
-  "ts": "2026-08-05T10:43:05Z"
+  "commit": "3621979eea6d3588f9397bd8ea274565eb66510e",
+  "ts": "2026-08-05T11:08:38Z"
 }

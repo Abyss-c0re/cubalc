@@ -1,0 +1,286 @@
+# multi_probe_rollup.cubalc — multi-probe health → PUSH bag → LINES rollup plate
+#
+# Real use: agent/cron preflight before heavier mesh/jobs. Collects probe
+# lines into a bag (no CAT+"\\n" glue), counts with LINES after LAST_N clobber,
+# accepts action via EQSI (Check/STATUS/check), writes PROBE_ROLLUP.txt.
+#
+# Probes:
+#   P1 VERSION floor (REQUIRE already) + IDENTITY
+#   P2 STATE/ROOT/CWD layout + MKDIR out/
+#   P3 optional INCLUDE OR plugin
+#   P4 plate marker TOUCH + EXIST
+#   P5 optional soft SMX DIAL if CUBALC_P2P_PEER set
+#   P6 LIST programs/lib sample (LIBS_N via LINES)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   ./out/cubalc run -q -s programs/realworld/multi_probe_rollup.cubalc
+#   CUBALC_ARG0=status ./out/cubalc run -q -s …
+#   CUBALC_P2P_SOFT=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_PEER=127.0.0.1:1 \
+#     ./out/cubalc run -q -s …
+#
+# Optional:
+#   CUBALC_ARG0 / CUBALC_PROBE_ACTION = run|status|check (EQSI)
+#   CUBALC_PROBE_REQUIRE=1  → EXIT 2 if any fail line in bag
+#   CUBALC_P2P_* for soft dial probe
+#
+# Edges:
+#   SYS PUSH accumulates probe lines (closes multi-file CAT glue gap)
+#   SYS LINES recovers count after EQS/EXIST clobber LAST_N
+#   SYS EQSI action matching without UPPER glue
+#   INCLUDE OR + soft dial + CLEAR_ERR for -s
+#   NOTE still clobbers NOTE var — use breadcrumbs carefully
+#   TRIM still undiscoverable via forms/search
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "multi_probe_rollup: start"
+DEFAULT ACTION = "run"
+DEFAULT REQUIRE_CLEAN = 0
+LET DECIDE = -1
+LET DIGIT = -1
+LET bag = ""
+LET n_pass = 0
+LET n_fail = 0
+LET n_soft = 0
+IDENTITY
+SYS DATE
+LET probe_date = DATE
+SYS MS
+LET t0 = MS
+SYS HOSTNAME
+LET probe_host = LAST
+SYS USER
+LET probe_user = LAST
+
+# --- action via ARG/ENV (case-insensitive) ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PROBE_ACTION" OR "run"
+  LET ACTION = LAST
+END
+SYS ENV "CUBALC_PROBE_REQUIRE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_CLEAN = 1
+END
+
+# normalize action: status|check → status path; else run
+SYS EQSI ACTION "status"
+LET is_status = LAST_N
+SYS EQSI ACTION "check"
+IF LAST_N == 1 THEN
+  LET is_status = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR out_dir
+
+# --- status: soft-read prior rollup ---
+IF is_status == 1 THEN
+  SYS JOIN out_dir "PROBE_ROLLUP.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has_plate = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has_plate ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+# ========== probes ==========
+
+# P1 identity/version plate present
+VERSION
+SYS HAS LAST "1.15"
+IF LAST_N == 1 THEN
+  SYS PUSH bag "PASS version_ok"
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+ELSE
+  SYS PUSH bag "FAIL version_unexpected"
+  LET bag = LAST
+  LET n_fail = n_fail + 1
+END
+
+# P2 layout STATE ROOT CWD
+SYS CWD
+LET cwd = LAST
+SYS ROOT
+LET root = LAST
+SYS STATE
+LET st = LAST
+SYS EQS st state_dir
+IF LAST_N == 1 THEN
+  SYS PUSH bag "PASS state_layout"
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+ELSE
+  SYS PUSH bag "FAIL state_layout"
+  LET bag = LAST
+  LET n_fail = n_fail + 1
+END
+# LAST_N clobbered — count bag with LINES
+SYS LINES bag
+LET bag_n = LAST_N
+
+# P3 optional INCLUDE OR
+INCLUDE OR soft_probe_plugin
+IF INCLUDE_OK == 0 THEN
+  SYS PUSH bag "SOFT plugin_absent"
+  LET bag = LAST
+  LET n_soft = n_soft + 1
+  PASS "optional plugin miss"
+  CLEAR_ERR "plugin soft"
+ELSE
+  SYS PUSH bag "PASS plugin_loaded"
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+END
+
+# P4 marker plate under STATE
+SYS JOIN state_dir "PROBE.marker"
+LET marker = LAST
+SYS TOUCH marker
+SYS EXIST marker
+IF LAST_N == 1 THEN
+  SYS PUSH bag "PASS marker_touch"
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+ELSE
+  SYS PUSH bag "FAIL marker_touch"
+  LET bag = LAST
+  LET n_fail = n_fail + 1
+  CLEAR_ERR
+END
+
+# P5 soft dial if peer configured
+SYS ENV "CUBALC_P2P_PEER" OR ""
+IF LAST_N > 0 THEN
+  LET peer = LAST
+  SYS ENV "CUBALC_P2P_SOFT" OR "0"
+  SYS EQSI LAST "1"
+  IF LAST_N == 0 THEN
+    SYS PUSH bag "SOFT dial_skipped_no_soft"
+    LET bag = LAST
+    LET n_soft = n_soft + 1
+    NOTE "peer set without P2P_SOFT"
+  ELSE
+    CUBE self ROLE host PROTON 1
+    CUBE remote ROLE body PROTON 1
+    PLUG self remote
+    SMX KEY
+    CLEAR_ERR
+    SMX DIAL self remote peer
+    IF SMX_OK == 1 THEN
+      SYS PUSH bag "PASS dial_live"
+      LET bag = LAST
+      LET n_pass = n_pass + 1
+    ELSE
+      SYS PUSH bag "SOFT dial_miss"
+      LET bag = LAST
+      LET n_soft = n_soft + 1
+      FAIL "soft dial miss"
+      CLEAR_ERR "dial recovered"
+    END
+  END
+ELSE
+  SYS PUSH bag "PASS dial_unconfigured"
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+END
+
+# P6 lib catalog sample
+SYS LIST "programs/lib"
+IF OK == 1 THEN
+  SYS GREP ".cubalc"
+  LET libs = LAST
+  SYS LINES libs
+  LET libs_n = LAST_N
+  SYS STR libs_n
+  LET libs_s = LAST
+  SYS CAT "PASS libs_n=" libs_s
+  SYS PUSH bag LAST
+  LET bag = LAST
+  LET n_pass = n_pass + 1
+ELSE
+  SYS PUSH bag "FAIL list_libs"
+  LET bag = LAST
+  LET n_fail = n_fail + 1
+  CLEAR_ERR
+END
+
+# final bag size (LINES after many LAST_N clobbers)
+SYS LINES bag
+LET total = LAST_N
+
+# require clean: no FAIL lines
+SYS GREP "FAIL " bag
+LET fail_lines = GREP_N
+IF REQUIRE_CLEAN == 1 THEN
+  IF fail_lines > 0 THEN
+    FAIL "probe failures present"
+    EXIT 2 "probes failed"
+  END
+END
+
+# rollup plate
+SYS JOINLINES " | " bag
+LET summary = LAST
+SYS STR n_pass
+LET pass_s = LAST
+SYS STR n_fail
+LET fail_s = LAST
+SYS STR n_soft
+LET soft_s = LAST
+SYS STR total
+LET total_s = LAST
+LET tpl = "schema=cubalc.multi_probe_rollup.v1 date={{DATE}} host={{HOST}} user={{USER}} pass={{PASS}} fail={{FAIL}} soft={{SOFT}} total={{TOTAL}} detail={{DETAIL}}"
+SYS REPLACEALL tpl "{{DATE}}" probe_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" probe_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{USER}}" probe_user
+LET tpl = LAST
+SYS REPLACEALL tpl "{{PASS}}" pass_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{FAIL}}" fail_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{SOFT}}" soft_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{TOTAL}}" total_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{DETAIL}}" summary
+LET tpl = LAST
+
+SYS JOIN out_dir "PROBE_ROLLUP.txt"
+LET plate = LAST
+SYS WRITE plate tpl
+SYS EXIST plate
+ASSERT EXIST == 1
+
+SYS JOIN out_dir "PROBE_LOG.txt"
+LET logp = LAST
+SYS APPEND logp tpl
+ASSERT OK == 1
+
+SYS MS
+LET elapsed_ms = MS - t0
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "multi_probe_rollup: done"
+PRINT "probe" n_pass n_fail n_soft total fail_lines
+PRINT_JSON n_pass n_fail n_soft total fail_lines bag_n elapsed_ms STATUS_OK
+STATUS
+CLEAR_ERR "probe clean"
+EXIT 0 "probe ok"
