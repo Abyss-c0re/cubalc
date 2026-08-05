@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 127,
-  "version": "1.15.152-usability",
-  "item": "SYS STRIPPREFIX / STRIPSUFFIX / STRIPCOMMON relative bag paths",
-  "item_id": 160,
-  "title": "SYS STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON — strip ends / LCP from bag",
-  "commit": "232ea8c649331c27e8d08e40da4c9e8ff27f6be2",
-  "summary": "SYS STRIPPREFIX/STRIPCOMMON strip bag field ends for relative paths without EACH. selftest 127.",
+  "iter": 128,
+  "version": "1.15.153-usability",
+  "item": "SYS DRAWN / SAMPLEK sample k unique bag fields",
+  "item_id": 161,
+  "title": "SYS DRAWN|SAMPLEK|NPICK k [bag] — sample k without replacement",
+  "commit": "aa84fbbc182e5a687ff6c8a23f579350d1479c91",
+  "summary": "SYS DRAWN/SAMPLEK multi-field sample without SHUFFLE+TAKE. selftest 128.",
   "proofs": [
-    "700_sys_stripprefix",
-    "selftest n_pass=127"
+    "701_sys_drawn",
+    "selftest n_pass=128"
   ],
-  "when": "2026-08-05T22:54:49Z",
+  "when": "2026-08-05T23:04:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "232ea8c649331c27e8d08e40da4c9e8ff27f6be2"
+  "sha": "aa84fbbc182e5a687ff6c8a23f579350d1479c91"
 }
