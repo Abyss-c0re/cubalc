@@ -5,7 +5,7 @@
   "item": "SYS EQSI / HASI case-insensitive probes",
   "item_id": 88,
   "title": "SYS EQSI|HASI case-insensitive equality and contains",
-  "commit": "pending",
+  "commit": "5f84251310ab675f495eaecddf43189d00021044",
   "summary": "SYS EQSI|IEQS|EQS I and HASI|ICONTAINS|HAS I for case-insensitive string probes; IF companion to GREPI without UPPER/LOWER glue.",
   "proofs": [
     "629_sys_eqsi",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T10:53:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "5f84251310ab675f495eaecddf43189d00021044"
 }
