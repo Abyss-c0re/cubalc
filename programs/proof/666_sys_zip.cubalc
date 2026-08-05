@@ -1,0 +1,100 @@
+# SYS ZIP / KEYS / VALS — pair bags and peel kv columns
+# Usability: roster name+status plates without EACH+CAT glue
+
+HOLD_FLASH 1
+
+# basic ZIP with default ":"
+SYS ZIP "alice\nbob" "ok\nbusy"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT ZIP_N == 2
+SYS EQS LAST "alice:ok\nbob:busy"
+ASSERT LAST_N == 1
+
+# custom sep
+SYS ZIP "a\nb" "1\n2" "="
+ASSERT LAST_N == 2
+SYS EQS LAST "a=1\nb=2"
+ASSERT LAST_N == 1
+
+# unequal lengths pad empty partner
+SYS ZIP "x\ny\nz" "1\n2"
+ASSERT LAST_N == 3
+SYS EQS LAST "x:1\ny:2\nz:"
+ASSERT LAST_N == 1
+
+SYS ZIP "only" "a\nb"
+ASSERT LAST_N == 2
+SYS EQS LAST "only:a\n:b"
+ASSERT LAST_N == 1
+
+# PAIR / ZIPLINES aliases
+SYS PAIR "p" "q"
+ASSERT LAST_N == 1
+SYS EQS LAST "p:q"
+ASSERT LAST_N == 1
+
+SYS ZIPLINES "m\nn" "u\nv" "|"
+ASSERT LAST_N == 2
+SYS EQS LAST "m|u\nn|v"
+ASSERT LAST_N == 1
+
+# KEYS peel left of sep
+SYS KEYS "alice:ok\nbob:busy"
+ASSERT LAST_N == 2
+SYS EQS LAST "alice\nbob"
+ASSERT LAST_N == 1
+
+SYS COL0 "a=1\nb=2" "="
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# field without sep → whole field as key
+SYS KEYS "solo\nk:v"
+ASSERT LAST_N == 2
+SYS EQS LAST "solo\nk"
+ASSERT LAST_N == 1
+
+# VALS peel right of sep
+SYS VALS "alice:ok\nbob:busy"
+ASSERT LAST_N == 2
+SYS EQS LAST "ok\nbusy"
+ASSERT LAST_N == 1
+
+SYS COL1 "a=1\nb=2" "="
+ASSERT LAST_N == 2
+SYS EQS LAST "1\n2"
+ASSERT LAST_N == 1
+
+# no sep → empty val field
+SYS VALS "solo\nk:v"
+ASSERT LAST_N == 2
+SYS EQS LAST "\nv"
+ASSERT LAST_N == 1
+
+# empty bags
+SYS ZIP "" ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+SYS KEYS ""
+ASSERT LAST_N == 0
+
+# agent pattern: build roster plate then peel names
+LET names = "alice\nbob\ncarol"
+LET st = "idle\nbusy\nidle"
+SYS ZIP names st
+LET board = LAST
+ASSERT ZIP_N == 3
+SYS EQS board "alice:idle\nbob:busy\ncarol:idle"
+ASSERT LAST_N == 1
+SYS KEYS board
+SYS EQS LAST "alice\nbob\ncarol"
+ASSERT LAST_N == 1
+SYS VALS board
+SYS EQS LAST "idle\nbusy\nidle"
+ASSERT LAST_N == 1
+
+PRINT "sys_zip ok"

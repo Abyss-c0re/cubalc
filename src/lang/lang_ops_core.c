@@ -3244,6 +3244,189 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ZIP|PAIR|ZIPLINES a b [sep] — pair newline fields by index with sep → LAST.
+     * Default sep ":". Shorter bag pads empty partner. LAST_N = pair count.
+     * SYS KEYS|COL0|LEFTCOL bag [sep] — peel left of first sep each field → bag.
+     * SYS VALS|COL1|RIGHTCOL bag [sep] — peel right of first sep each field → bag.
+     * Usability: roster name+status plates without EACH+CAT glue; peel kv bags. */
+    if (kw(&L->cur,"ZIP") || kw(&L->cur,"PAIR") || kw(&L->cur,"ZIPLINES") ||
+        kw(&L->cur,"ZIPL") || kw(&L->cur,"PAIRS") ||
+        kw(&L->cur,"KEYS") || kw(&L->cur,"COL0") || kw(&L->cur,"LEFTCOL") ||
+        kw(&L->cur,"KEYCOL") || kw(&L->cur,"KVKEYS") ||
+        kw(&L->cur,"VALS") || kw(&L->cur,"COL1") || kw(&L->cur,"RIGHTCOL") ||
+        kw(&L->cur,"VALCOL") || kw(&L->cur,"KVVALS") || kw(&L->cur,"VALUES")){
+      char op[20];
+      int mode; /* 0=zip 1=keys 2=vals */
+      enum { ZIP_MAX = 256, ZIP_FLEN = 192 };
+      char af[ZIP_MAX][ZIP_FLEN], bf[ZIP_MAX][ZIP_FLEN];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      char sep[32], out[CUBALC_HOST_STR_MAX];
+      int na = 0, nb = 0, n = 0, i;
+      size_t olen = 0, sepn;
+      const char *p, *start;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "KEYS") == 0 || strcmp(op, "COL0") == 0 ||
+          strcmp(op, "LEFTCOL") == 0 || strcmp(op, "KEYCOL") == 0 ||
+          strcmp(op, "KVKEYS") == 0)
+        mode = 1;
+      else if (strcmp(op, "VALS") == 0 || strcmp(op, "COL1") == 0 ||
+               strcmp(op, "RIGHTCOL") == 0 || strcmp(op, "VALCOL") == 0 ||
+               strcmp(op, "KVVALS") == 0 || strcmp(op, "VALUES") == 0)
+        mode = 2;
+      else
+        mode = 0;
+      lex_next(L);
+      a[0] = 0; b[0] = 0; sep[0] = ':'; sep[1] = 0; out[0] = 0;
+      if (mode == 0) {
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+          b[0] = 0;
+        /* optional sep: string only (avoid eating next form); default ":" */
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+            { sep[0] = ':'; sep[1] = 0; }
+          if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+        }
+        /* split a and b into fields */
+        if (a[0]) {
+          p = a;
+          while (*p && na < ZIP_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > a && start[-1] == '\n') break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= ZIP_FLEN) flen = ZIP_FLEN - 1;
+              memcpy(af[na], start, flen);
+              af[na][flen] = 0;
+              na++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        if (b[0]) {
+          p = b;
+          while (*p && nb < ZIP_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > b && start[-1] == '\n') break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= ZIP_FLEN) flen = ZIP_FLEN - 1;
+              memcpy(bf[nb], start, flen);
+              bf[nb][flen] = 0;
+              nb++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        n = na > nb ? na : nb;
+        sepn = strlen(sep);
+        for (i = 0; i < n; i++) {
+          const char *la = (i < na) ? af[i] : "";
+          const char *lb = (i < nb) ? bf[i] : "";
+          size_t fla = strlen(la), flb = strlen(lb);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + fla < sizeof out) {
+            memcpy(out + olen, la, fla);
+            olen += fla;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, la, take);
+            olen += take;
+          }
+          if (olen + sepn < sizeof out) {
+            memcpy(out + olen, sep, sepn);
+            olen += sepn;
+          }
+          if (olen + flb < sizeof out) {
+            memcpy(out + olen, lb, flb);
+            olen += flb;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, lb, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          kept++;
+        }
+      } else {
+        /* KEYS / VALS: peel each field at first sep */
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+            { sep[0] = ':'; sep[1] = 0; }
+          if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+        }
+        sepn = strlen(sep);
+        if (a[0]) {
+          p = a;
+          while (*p) {
+            const char *hit = 0;
+            size_t flen, take;
+            start = p;
+            while (*p && *p != '\n') p++;
+            flen = (size_t)(p - start);
+            /* find first sep in field */
+            if (sepn == 0) {
+              hit = start; /* empty sep: all left empty right? treat as no sep */
+              hit = 0;
+            } else if (flen >= sepn) {
+              size_t k;
+              for (k = 0; k + sepn <= flen; k++) {
+                if (memcmp(start + k, sep, sepn) == 0) {
+                  hit = start + k;
+                  break;
+                }
+              }
+            }
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (mode == 1) {
+              /* keys: left of sep, or whole field if no sep */
+              take = hit ? (size_t)(hit - start) : flen;
+              if (olen + take < sizeof out) {
+                memcpy(out + olen, start, take);
+                olen += take;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, start, t);
+                olen += t;
+              }
+            } else {
+              /* vals: right of sep, or empty if no sep */
+              if (hit) {
+                const char *rs = hit + sepn;
+                take = (size_t)((start + flen) - rs);
+                if (olen + take < sizeof out) {
+                  memcpy(out + olen, rs, take);
+                  olen += take;
+                } else if (olen < sizeof out - 1) {
+                  size_t t = sizeof out - 1 - olen;
+                  memcpy(out + olen, rs, t);
+                  olen += t;
+                }
+              }
+              /* else empty field */
+            }
+            out[olen] = 0;
+            kept++;
+            if (*p == '\n') p++;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "ZIP_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
      * Lex SORT orders "10" before "2"; SORTN orders by integer value.
      * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
@@ -4986,7 +5169,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5234,6 +5417,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DISTINCT", "SYS DISTINCT|UNIQUEALL [bag] — order-preserving full unique (vs adjacent UNIQ)"},
       {"SYS INTERSECT", "SYS INTERSECT|ANDLINES a b — fields of a also in b (order of a)"},
       {"SYS DIFF", "SYS DIFF|EXCEPT|SETDIFF a b — fields of a not in b (order of a)"},
+      {"SYS ZIP", "SYS ZIP|PAIR a b [sep] — pair bag fields by index with sep (default :)"},
+      {"SYS KEYS", "SYS KEYS|COL0 bag [sep] — peel left of first sep each field → bag"},
+      {"SYS VALS", "SYS VALS|COL1 bag [sep] — peel right of first sep each field → bag"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
       {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},
