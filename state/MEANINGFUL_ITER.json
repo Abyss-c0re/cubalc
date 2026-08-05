@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 83,
-  "version": "1.15.108-usability",
-  "item": "SYS SORTN / NSORT numeric bag sort",
-  "item_id": 116,
-  "title": "SYS SORTN|NSORT [DESC] numeric newline field sort",
-  "commit": "76001c3122a2a1da38be458bb8b4614985d6d373",
-  "summary": "SYS SORTN/NSORT numeric bag sort; DESC optional. Lex SORT footgun fix for scores/sizes. selftest 83.",
+  "iter": 84,
+  "version": "1.15.109-usability",
+  "item": "SYS RANGE / SEQ / IOTA number bags",
+  "item_id": 117,
+  "title": "SYS RANGE|SEQ|IOTA integer sequence \u2192 newline bag",
+  "commit": "65fda77b3ea38d77e15db3729c2b11c0b69a36b1",
+  "summary": "SYS RANGE lo hi [step], SEQ 1..n, IOTA 0..n-1 \u2192 bags for EACH/SUM/SORTN without shell seq. selftest 84.",
   "proofs": [
-    "656_sys_sortn",
-    "selftest n_pass=83"
+    "657_sys_range",
+    "selftest n_pass=84"
   ],
-  "when": "2026-08-05T15:34:31Z",
+  "when": "2026-08-05T15:45:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "76001c3122a2a1da38be458bb8b4614985d6d373"
+  "sha": "65fda77b3ea38d77e15db3729c2b11c0b69a36b1"
 }
