@@ -1800,6 +1800,7 @@ int main(int argc, char **argv) {
       {"sys_sortn", "programs/proof/656_sys_sortn.cubalc", "SYS SORTN numeric bag sort"},
       {"sys_range", "programs/proof/657_sys_range.cubalc", "SYS RANGE/SEQ/IOTA number bags"},
       {"sys_div", "programs/proof/658_sys_div.cubalc", "SYS SIGN/DIV/MOD host arithmetic"},
+      {"sys_pick", "programs/proof/659_sys_pick.cubalc", "SYS PICK/CHOICE random bag field"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2011,6 +2012,8 @@ int main(int argc, char **argv) {
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS RAND", "host", "SYS RAND|RANDOM [n]|[lo hi] — uniform int for jitter"},
       {"SYS RANDOM", "host", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
+      {"SYS PICK", "host", "SYS PICK|CHOICE [str] — random newline field from bag"},
+      {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
       {"SYS MIN", "host", "SYS MIN a b [c…] — host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX a b [c…] — host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi — bound x into [lo,hi]"},
@@ -3058,6 +3061,8 @@ int main(int argc, char **argv) {
       {"SYS SLEEP", "host", "SYS SLEEP pause milliseconds"},
       {"SYS RAND", "host", "SYS RAND uniform int jitter"},
       {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
+      {"SYS PICK", "host", "SYS PICK random bag field"},
+      {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP bound into range"},
@@ -3352,6 +3357,8 @@ int main(int argc, char **argv) {
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP n pause ms cap 60s"},
       {"SYS RAND", "host", "SYS RAND|RANDOM [n]|[lo hi] uniform int"},
       {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
+      {"SYS PICK", "host", "SYS PICK random bag field"},
+      {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi bound"},
@@ -3522,6 +3529,7 @@ int main(int argc, char **argv) {
       {"programs/proof/656_sys_sortn.cubalc", "sys_sortn", "SYS SORTN numeric bag sort"},
       {"programs/proof/657_sys_range.cubalc", "sys_range", "SYS RANGE/SEQ/IOTA number bags"},
       {"programs/proof/658_sys_div.cubalc", "sys_div", "SYS SIGN/DIV/MOD host arithmetic"},
+      {"programs/proof/659_sys_pick.cubalc", "sys_pick", "SYS PICK/CHOICE random bag field"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

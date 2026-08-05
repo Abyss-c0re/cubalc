@@ -1400,6 +1400,72 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS PICK|CHOICE|SAMPLE [str|LAST] — random newline field → LAST.
+     * LAST_N/PICK_N = 0-based index chosen; empty bag → LAST="", LAST_N=-1, OK=0 soft.
+     * Shares RAND seed (CUBALC_SEED). Usability: sample LIST/RANGE bag without shell. */
+    if (kw(&L->cur,"PICK") || kw(&L->cur,"CHOICE") || kw(&L->cur,"SAMPLE") ||
+        kw(&L->cur,"RANDLINE") || kw(&L->cur,"PICKLINE") || kw(&L->cur,"ANYLINE") ||
+        kw(&L->cur,"DRAW") || kw(&L->cur,"LOT")){
+      static int pick_seeded = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      enum { PICK_MAX = 256, PICK_FLEN = 192 };
+      char fields[PICK_MAX][PICK_FLEN];
+      int n = 0, idx = -1;
+      const char *p, *start;
+      const char *se;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p && n < PICK_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= PICK_FLEN) flen = PICK_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!pick_seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        pick_seeded = 1;
+      }
+      if (n <= 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = -1;
+        var_set_num(vm, "LAST_N", -1);
+        var_set_num(vm, "PICK_N", -1);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      idx = (int)(rand() % n);
+      var_set_str(vm, "LAST", fields[idx]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fields[idx]);
+      vm->last_n = (long)idx;
+      var_set_num(vm, "LAST_N", (long)idx);
+      var_set_num(vm, "PICK_N", (long)idx);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIN|MAX a b [c…] — host-plane min/max of integer args → LAST_N.
      * SYS CLAMP x lo hi — bound x into [lo,hi] (lo/hi swapped if inverted).
      * Distinct from cube ISA MIN/MAX/CLAMP stack ops. Usability: cap retries/jitter. */
@@ -4415,7 +4481,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4725,6 +4791,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
       {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
+      {"SYS PICK", "SYS PICK|CHOICE|SAMPLE [str] — random newline field → LAST · index LAST_N"},
+      {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},
       {"SYS MIN", "SYS MIN a b [c…] — host-plane minimum → LAST_N"},
       {"SYS MAX", "SYS MAX a b [c…] — host-plane maximum → LAST_N"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},

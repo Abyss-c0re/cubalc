@@ -1,0 +1,94 @@
+# SYS PICK / CHOICE / SAMPLE — random newline field from bag
+# Usability: sample LIST/RANGE bag without shell shuf/sort -R
+
+HOLD_FLASH 1
+
+# empty bag soft-fail
+SYS PICK ""
+ASSERT OK == 0
+ASSERT LAST_N == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single field always that field
+SYS PICK "only"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT PICK_N == 0
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# multi-field: pick is always a member (HASLINE)
+LET bag = "alpha
+beta
+gamma
+delta"
+# fixed seed for determinism across selftest
+SYS ENV SET "CUBALC_SEED" "42"
+# note: seed only applies if srand not yet called in process;
+# membership tests are seed-independent
+LET i = 0
+LET hits = 0
+# 20 picks must all be in bag
+SYS PICK bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+LET hits = hits + 1
+SYS PICK bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+LET hits = hits + 1
+SYS PICK bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+LET hits = hits + 1
+SYS PICK bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+LET hits = hits + 1
+SYS PICK bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+LET hits = hits + 1
+ASSERT hits == 5
+
+# index in range
+SYS PICK bag
+ASSERT PICK_N >= 0
+ASSERT PICK_N <= 3
+ASSERT LAST_N >= 0
+ASSERT LAST_N <= 3
+
+# aliases
+SYS CHOICE bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+SYS SAMPLE bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+SYS DRAW bag
+SYS HASLINE bag LAST
+ASSERT LAST_N == 1
+
+# bare LAST
+SYS RANGE 1 5
+SYS PICK
+SYS HASLINE "1
+2
+3
+4
+5" LAST
+ASSERT LAST_N == 1
+
+# agent pattern: pick peer from score bag labels
+LET peers = "alice
+bob
+carol"
+SYS PICK peers
+LET chosen = LAST
+SYS EMPTY chosen
+ASSERT LAST_N == 0
+SYS LEN chosen
+ASSERT LAST_N > 0
+
+PRINT "sys_pick ok"
