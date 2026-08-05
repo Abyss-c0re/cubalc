@@ -1813,6 +1813,7 @@ int main(int argc, char **argv) {
       {"sys_enumerate", "programs/proof/669_sys_enumerate.cubalc", "SYS ENUMERATE index-prefix bag fields"},
       {"sys_squeeze", "programs/proof/670_sys_squeeze.cubalc", "SYS SQUEEZE drop empty bag fields"},
       {"sys_median", "programs/proof/671_sys_median.cubalc", "SYS MEDIAN integer bag/args median"},
+      {"sys_trimall", "programs/proof/672_sys_trimall.cubalc", "SYS TRIMALL trim every bag field"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2090,6 +2091,8 @@ int main(int argc, char **argv) {
       {"SYS NUMBER", "host", "SYS NUMBER bag [start] [sep] — alias of SYS ENUMERATE"},
       {"SYS SQUEEZE", "host", "SYS SQUEEZE|COMPACT [BLANK] bag — drop empty/blank fields"},
       {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
+      {"SYS TRIMALL", "host", "SYS TRIMALL|MAPTRIM [L|R] bag — trim every field"},
+      {"SYS MAPTRIM", "host", "SYS MAPTRIM alias of SYS TRIMALL"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path — mtime epoch → LAST_N · soft miss"},
@@ -3171,6 +3174,8 @@ int main(int argc, char **argv) {
       {"SYS NUMBER", "host", "SYS NUMBER alias of SYS ENUMERATE"},
       {"SYS SQUEEZE", "host", "SYS SQUEEZE drop empty bag fields"},
       {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
+      {"SYS TRIMALL", "host", "SYS TRIMALL trim every bag field"},
+      {"SYS MAPTRIM", "host", "SYS MAPTRIM alias of SYS TRIMALL"},
       {"SYS POP", "host", "SYS POP last bag field"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME file mtime epoch"},
@@ -3493,6 +3498,8 @@ int main(int argc, char **argv) {
       {"SYS NUMBER", "host", "SYS NUMBER alias of SYS ENUMERATE"},
       {"SYS SQUEEZE", "host", "SYS SQUEEZE|COMPACT [BLANK] bag drop empty/blank fields"},
       {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
+      {"SYS TRIMALL", "host", "SYS TRIMALL|MAPTRIM [L|R] bag trim every field"},
+      {"SYS MAPTRIM", "host", "SYS MAPTRIM alias of SYS TRIMALL"},
       {"SYS POP", "host", "SYS POP|POPLINE bag last field → LAST rest→POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path mtime epoch soft miss"},
@@ -3629,6 +3636,7 @@ int main(int argc, char **argv) {
       {"programs/proof/669_sys_enumerate.cubalc", "sys_enumerate", "SYS ENUMERATE index-prefix bag fields"},
       {"programs/proof/670_sys_squeeze.cubalc", "sys_squeeze", "SYS SQUEEZE drop empty bag fields"},
       {"programs/proof/671_sys_median.cubalc", "sys_median", "SYS MEDIAN integer bag/args median"},
+      {"programs/proof/672_sys_trimall.cubalc", "sys_trimall", "SYS TRIMALL trim every bag field"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

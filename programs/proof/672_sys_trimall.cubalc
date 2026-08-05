@@ -1,0 +1,72 @@
+# SYS TRIMALL / MAPTRIM — trim whitespace on every bag field
+# Usability: clean READ/SPLIT plate lines before SQUEEZE/EQS without EACH
+
+HOLD_FLASH 1
+
+# both sides (default)
+SYS TRIMALL "  a  \n b\nc  "
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT TRIMALL_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# left only
+SYS TRIMALL L "  a  \n  b"
+ASSERT LAST_N == 2
+SYS EQS LAST "a  \nb"
+ASSERT LAST_N == 1
+
+# right only
+SYS TRIMALL R "  a  \nb  "
+ASSERT LAST_N == 2
+SYS EQS LAST "  a\nb"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPTRIM " x \n y "
+ASSERT LAST_N == 2
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+
+SYS STRIPALL "\tz\t"
+ASSERT LAST_N == 1
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+SYS LTRIMALL "  p  \n  q  "
+ASSERT LAST_N == 2
+SYS EQS LAST "p  \nq  "
+ASSERT LAST_N == 1
+
+SYS RTRIMALL "  p  \n  q  "
+ASSERT LAST_N == 2
+SYS EQS LAST "  p\n  q"
+ASSERT LAST_N == 1
+
+# empty / all-space fields kept (use SQUEEZE BLANK to drop)
+SYS TRIMALL "a\n   \nb"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\n\nb"
+ASSERT LAST_N == 1
+SYS SQUEEZE BLANK LAST
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS TRIMALL ""
+ASSERT LAST_N == 0
+
+# no whitespace unchanged
+SYS TRIMALL "x\ny"
+ASSERT LAST_N == 2
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+
+# agent pattern: messy plate lines
+LET raw = "  alice:ok  \n bob:busy\n  carol:idle  "
+SYS TRIMALL raw
+SYS EQS LAST "alice:ok\nbob:busy\ncarol:idle"
+ASSERT LAST_N == 1
+
+PRINT "sys_trimall ok"
