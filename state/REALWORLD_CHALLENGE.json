@@ -10,11 +10,11 @@
       "name": "ingest_trim",
       "cmd": "ingest 6 dirty lines; trim whitespace",
       "ok": true,
-      "note": "ERROR/WARN padded → trimmed exact fields"
+      "note": "ERROR/WARN padded \u2192 trimmed exact fields"
     },
     {
       "name": "page_next",
-      "cmd": "page 0 size2; next → page1",
+      "cmd": "page 0 size2; next \u2192 page1",
       "ok": true,
       "note": "MIDLINES window + cursor plate"
     },
@@ -32,13 +32,13 @@
     },
     {
       "name": "grepany_bag_needles",
-      "cmd": "GREPANY bag needles_bag → 0; separate strings → 2",
+      "cmd": "GREPANY bag needles_bag \u2192 0; separate strings \u2192 2",
       "ok": true,
       "note": "needles as bag field fails"
     },
     {
       "name": "let_end_reserved",
-      "cmd": "LET end = ... → unknown form (END keyword)",
+      "cmd": "LET end = ... \u2192 unknown form (END keyword)",
       "ok": true,
       "note": "renamed page_end; high agent footgun"
     },
@@ -66,9 +66,9 @@
       "id": "W1",
       "severity": "high",
       "area": "lang|parse",
-      "title": "LET end is illegal — END is reserved block terminator",
+      "title": "LET end is illegal \u2014 END is reserved block terminator",
       "detail": "LET end = start + PSIZE parses as unknown form ''. Any var named end/END breaks agents writing page windows. Must use page_end/end_i. No clear error naming reserved words.",
-      "repro": "LET end = 1 → unknown form ''"
+      "repro": "LET end = 1 \u2192 unknown form ''"
     },
     {
       "id": "W2",
@@ -76,7 +76,7 @@
       "area": "host|bag",
       "title": "GREPANY multi-needle bag argument does not expand fields",
       "detail": "SYS GREPANY bag needles with needles='ERROR\\nWARN' yields 0 hits. Need separate string args GREPANY bag \"ERROR\" \"WARN\". Agents building needle bags from ENV fail silently.",
-      "repro": "GREPANY log needles_bag → empty; GREPANY log \"ERROR\" \"WARN\" → hits"
+      "repro": "GREPANY log needles_bag \u2192 empty; GREPANY log \"ERROR\" \"WARN\" \u2192 hits"
     },
     {
       "id": "W3",
@@ -84,15 +84,15 @@
       "area": "host|bag",
       "title": "TRIMALL leaves empty fields for former whitespace lines",
       "detail": "All-space field becomes empty field; SQUEEZE BLANK required to drop. Depth can still include empties after trim-only.",
-      "repro": "TRIMALL 'a\\n   \\nb' → a\\n\\nb"
+      "repro": "TRIMALL 'a\\n   \\nb' \u2192 a\\n\\nb"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
       "title": "MIDLINES OOR returns empty soft without FAIL sticky",
-      "detail": "start past end → empty bag OK. Good for paging but agents must check LINES; program uses REQUIRE for hard miss.",
-      "repro": "MIDLINES bag 50 → LAST empty"
+      "detail": "start past end \u2192 empty bag OK. Good for paging but agents must check LINES; program uses REQUIRE for hard miss.",
+      "repro": "MIDLINES bag 50 \u2192 LAST empty"
     },
     {
       "id": "W5",
@@ -128,7 +128,7 @@
     }
   ],
   "workarounds": [
-    "Never name vars end/END/IF/THEN — use page_end",
+    "Never name vars end/END/IF/THEN \u2014 use page_end",
     "GREPANY with quoted separate needles not bag of needles",
     "TRIMALL then SQUEEZE BLANK for clean log plates",
     "Check LINES after MIDLINES; REQUIRE for hard page OOR",
@@ -144,8 +144,8 @@
   "issues_faced": [
     "LET end reserved keyword broke entire program until renamed page_end",
     "Also found LET end = start + PSIZE - 1 chained minus awkward; split to two LETs",
-    "GREPANY bag-of-needles silent empty — documented W2"
+    "GREPANY bag-of-needles silent empty \u2014 documented W2"
   ],
-  "commit": "",
-  "ts": "2026-08-05T18:40:30Z"
+  "commit": "53fa7c0d1ccc9612fa7b62383258d63252974d5d",
+  "ts": "2026-08-05T18:40:50Z"
 }
