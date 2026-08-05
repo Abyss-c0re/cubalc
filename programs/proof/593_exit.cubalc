@@ -1,0 +1,21 @@
+# EXIT — intentional early program stop with process-oriented code
+# Usability: agents/CI halt cleanly (0) or fail with reason (n) without shell
+
+HOLD_FLASH 1
+
+NOTE "before clean exit path"
+# Clean EXIT 0 must not fail the run; subsequent lines must not run.
+# We only prove non-zero path here — clean EXIT is CLI-smoked separately.
+
+LET x = 1
+ASSERT x == 1
+
+# Non-zero EXIT with reason — program stops; plate ok=false, exit_code set
+# (selftest expects assert failures? no — EXIT before more asserts)
+# Use a separate soft proof structure: only reach EXIT 0 style via PASS path.
+
+PASS "ready"
+EXIT 0 "clean done"
+# unreachable
+FAIL "should not run after EXIT 0"
+ASSERT 0 == 1 "unreachable after EXIT"

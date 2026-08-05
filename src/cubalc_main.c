@@ -1537,11 +1537,12 @@ int main(int argc, char **argv) {
              "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
              "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
              "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
-             "\"quiet\":%s,\"strict\":%s}\n",
+             "\"quiet\":%s,\"strict\":%s,\"exit_code\":%d,\"halted\":%s}\n",
              plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
              rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
              CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
-             quiet ? "true" : "false", strict ? "true" : "false");
+             quiet ? "true" : "false", strict ? "true" : "false",
+             rr.exit_code, rr.halted ? "true" : "false");
     }
     return rc;
   }
@@ -1651,6 +1652,7 @@ int main(int argc, char **argv) {
       {"clear_err", "programs/proof/589_clear_err.cubalc", "CLEAR_ERR wipe sticky LAST_ERR"},
       {"sys_ms", "programs/proof/591_sys_ms.cubalc", "SYS MS wall milliseconds"},
       {"note", "programs/proof/592_note.cubalc", "NOTE agent breadcrumb"},
+      {"exit", "programs/proof/593_exit.cubalc", "EXIT early halt with code"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1773,6 +1775,7 @@ int main(int argc, char **argv) {
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
       {"NOTE", "flow", "NOTE [text] agent breadcrumb · no OK/ERR change"},
+      {"EXIT", "flow", "EXIT [code] [why] — halt; non-zero fails plate + rc"},
       {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"REQUIRE", "flow", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast"},
@@ -2253,6 +2256,8 @@ int main(int argc, char **argv) {
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
        "NOTE agent breadcrumb without OK/ERR change"},
+      {"programs/proof/593_exit.cubalc", "exit",
+       "EXIT [code] early program halt"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2586,6 +2591,7 @@ int main(int argc, char **argv) {
       {"FAIL", "flow", "FAIL soft status OK=0"},
       {"PASS", "flow", "PASS soft status OK=1"},
       {"NOTE", "flow", "NOTE agent breadcrumb"},
+      {"EXIT", "flow", "EXIT [code] halt program"},
       {"CLEAR_ERR", "flow", "CLEAR_ERR wipe sticky LAST_ERR"},
       {"VERSION", "flow", "VERSION → LAST language version"},
       {"PRINT_JSON", "flow", "one JSON line for agents"},
@@ -2758,6 +2764,7 @@ int main(int argc, char **argv) {
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
       {"NOTE", "flow", "NOTE [text] agent breadcrumb · no OK/ERR change"},
+      {"EXIT", "flow", "EXIT [code] [why] — halt; non-zero fails plate + rc"},
       {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"REQUIRE", "flow", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast"},
@@ -2790,6 +2797,7 @@ int main(int argc, char **argv) {
       {"programs/proof/590_require_lib.cubalc", "require_lib", "REQUIRE LIB fail-fast gate"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
+      {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -3042,7 +3050,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|CLEAR_ERR · STATUS · PRINT_JSON · INCLUDE · ASYNC\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · STATUS · PRINT_JSON · INCLUDE\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

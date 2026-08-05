@@ -186,7 +186,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           matched = 1; ran = 1;
           Lex body=body_start;
           /* arm body: stop before next WHEN/DEFAULT/END (body copy only) */
-          while (!vm->fatal){
+          while (!vm->fatal && !vm->halt){
             skip_nl(&body);
             if (body.cur.kind==TK_EOF) break;
             if (kw(&body.cur,"END")||kw(&body.cur,"WHEN")||kw(&body.cur,"OF")||
@@ -217,7 +217,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         skip_nl(L);
         if (!matched && !ran){
           Lex body=*L;
-          while (!vm->fatal){
+          while (!vm->fatal && !vm->halt){
             skip_nl(&body);
             if (body.cur.kind==TK_EOF || kw(&body.cur,"END")) break;
             if (vm->return_fn || vm->break_loop) break;
@@ -269,7 +269,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         if (block_scan_step(L, &depth, 0)) break;
       }
       if (depth!=0){ fail(vm,"FOR without END"); return -1; }
-      for (long i=lo;i<=hi && !vm->fatal;i+=step){
+      for (long i=lo;i<=hi && !vm->fatal && !vm->halt;i+=step){
         var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
         vm->break_loop=0; vm->continue_loop=0;
         Lex body=body_start;
@@ -300,7 +300,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     if (depth!=0){ fail(vm,"FOR without END"); return -1; }
     if (step>0){
-      for (long i=lo;i<=hi && !vm->fatal;i+=step){
+      for (long i=lo;i<=hi && !vm->fatal && !vm->halt;i+=step){
         var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
         vm->break_loop=0; vm->continue_loop=0;
         Lex body=body_start;
@@ -309,7 +309,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         vm->continue_loop=0;
       }
     } else {
-      for (long i=lo;i>=hi && !vm->fatal;i+=step){
+      for (long i=lo;i>=hi && !vm->fatal && !vm->halt;i+=step){
         var_set_num(vm,vname,i); var_set_num(vm,"IT",i);
         vm->break_loop=0; vm->continue_loop=0;
         Lex body=body_start;
@@ -341,7 +341,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
       if (depth!=0){ fail(vm,"EACH without END"); return -1; }
       ensure_world(vm);
-      for (int i=0;i<vm->ch.n_cubes && !vm->fatal;i++){
+      for (int i=0;i<vm->ch.n_cubes && !vm->fatal && !vm->halt;i++){
         var_set_str(vm, cname, vm->ch.cubes[i].id);
         var_set_num(vm, "IT", i);
         var_set_num(vm, "DIGIT", vm->ch.cubes[i].atom.digit);
@@ -397,7 +397,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"EACH CELL without END"); return -1; }
-    for (long i=lo;i<=hi && !vm->fatal;i++){
+    for (long i=lo;i<=hi && !vm->fatal && !vm->halt;i++){
       long val = vm->cells[(int)i];
       var_set_num(vm, vname, val);
       var_set_num(vm, "VAL", val);
@@ -444,7 +444,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"FORCELL without END"); return -1; }
-    for (long i=lo;i<=hi && !vm->fatal;i++){
+    for (long i=lo;i<=hi && !vm->fatal && !vm->halt;i++){
       long val = vm->cells[(int)i];
       var_set_num(vm, vname, val);
       var_set_num(vm, "VAL", val);
@@ -491,7 +491,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int n = m->n > 0 ? m->n : CUBALC_ATOM_BITS;
     if (n > CUBALC_ATOM_BITS) n = CUBALC_ATOM_BITS;
     long count = 0;
-    for (int bi=0; bi<n && !vm->fatal; bi++){
+    for (int bi=0; bi<n && !vm->fatal && !vm->halt; bi++){
       if (!cubalc_matrix_get(m, bi)) continue;
       var_set_num(vm, vname, bi);
       var_set_num(vm, "IT", bi);
@@ -786,7 +786,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     if (depth!=0){ fail(vm,"FOREVER without END"); return -1; }
     long guard=0;
-    for (; !vm->fatal && guard++<100000;){
+    for (; !vm->fatal && !vm->halt && guard++<100000;){
       long *it=var_slot(vm,"IT",1); if (it) *it=guard-1;
       vm->break_loop=0; vm->continue_loop=0;
       Lex body=save;
@@ -810,7 +810,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"LOOP without END"); return -1; }
-    for (long t=0;t<times && !vm->fatal;t++){
+    for (long t=0;t<times && !vm->fatal && !vm->halt;t++){
       long *it=var_slot(vm,"IT",1); if (it) *it=t;
       vm->break_loop=0; vm->continue_loop=0;
       Lex body=save;
@@ -842,7 +842,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"SLOOP without END"); return -1; }
-    for (long t=0;t<times && !vm->fatal;t++){
+    for (long t=0;t<times && !vm->fatal && !vm->halt;t++){
       long *it=var_slot(vm,"IT",1); if (it) *it=t;
       vm->break_loop=0; vm->continue_loop=0;
       Lex body=save;
@@ -879,7 +879,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         Lex clex=cond_start;
         long done = parse_expr(vm,&clex);
         if (done) break;
-      } while (!vm->fatal && guard++<100000);
+      } while (!vm->fatal && !vm->halt && guard++<100000);
       *L=after_cond;
     } else {
       /* REPEAT ... END  (same as LOOP 1..∞ with break only — run once as block) */
@@ -904,7 +904,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (depth!=0){ fail(vm,"WHILE without END"); return -1; }
     Lex end_tok=*L;
     long guard=0;
-    while (cond && !vm->fatal && guard++<100000){
+    while (cond && !vm->fatal && !vm->halt && guard++<100000){
       vm->break_loop=0; vm->continue_loop=0;
       Lex body=body_start;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
@@ -931,7 +931,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (depth!=0){ fail(vm,"UNTIL without END"); return -1; }
     Lex end_tok=*L;
     long guard=0;
-    while (!cond && !vm->fatal && guard++<100000){
+    while (!cond && !vm->fatal && !vm->halt && guard++<100000){
       vm->break_loop=0; vm->continue_loop=0;
       Lex body=body_start;
       if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;

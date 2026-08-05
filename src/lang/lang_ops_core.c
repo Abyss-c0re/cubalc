@@ -1214,6 +1214,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
+      {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
       {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast gates"},
@@ -1623,6 +1624,60 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     var_set_num(vm, "EXPECT_OK", 1);
     if (vm->trace) fprintf(vm->trace, "# pass: %s\n", msg);
+    bump(vm); return 1;
+  }
+  /* EXIT [code] ["why"] — intentional early program stop for agents/CI.
+   * EXIT / EXIT 0 → clean halt (ok if no asserts_fail). EXIT n → fail plate + rc.
+   * Stops further statements (including outer loops). */
+  if (kw(&L->cur,"EXIT")||kw(&L->cur,"HALT")||kw(&L->cur,"QUIT")||
+      kw(&L->cur,"STOP_PROG")||kw(&L->cur,"DIE")){
+    int aln = L->cur.line;
+    long code = 0;
+    char why[120];
+    lex_next(L);
+    why[0] = 0;
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        (L->cur.kind == TK_IDENT && (strcmp(L->cur.text,"OK")==0 ||
+         strcmp(L->cur.text,"LAST_N")==0 || strcmp(L->cur.text,"EXIT")==0))){
+      code = parse_expr(vm, L);
+    }
+    if (L->cur.kind == TK_STR){
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (code < 0) code = 1;
+    if (code > 125) code = 1;
+    vm->halt = 1;
+    vm->exit_code = (int)code;
+    vm->break_loop = 1;
+    vm->return_fn = 1;
+    var_set_num(vm, "EXIT", code);
+    var_set_num(vm, "LAST_N", code);
+    vm->last_n = code;
+    if (code != 0) {
+      char msg[160];
+      if (why[0])
+        snprintf(msg, sizeof msg, "EXIT %ld line %d: %s", code, aln, why);
+      else
+        snprintf(msg, sizeof msg, "EXIT %ld line %d", code, aln);
+      var_set_str(vm, "ERR", msg);
+      var_set_str(vm, "LAST_ERR", msg);
+      var_set_str(vm, "LAST", msg);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "EXPECT_OK", 0);
+      if (vm->trace) fprintf(vm->trace, "# exit %ld: %s\n", code, why[0]?why:"");
+    } else {
+      if (why[0]) {
+        var_set_str(vm, "LAST", why);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", why);
+      } else {
+        var_set_str(vm, "LAST", "exit:0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "exit:0");
+      }
+      var_set_num(vm, "OK", 1);
+      if (vm->trace) fprintf(vm->trace, "# exit 0\n");
+    }
     bump(vm); return 1;
   }
   /* NOTE ["text"] — agent breadcrumb / step log. Sets LAST + NOTE, does not

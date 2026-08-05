@@ -53,16 +53,16 @@ static void fill_err_src(cubalc_run_result *out, const char *src, size_t n) {
 }
 
 int cubalc_lang_exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2){
-  while (!vm->fatal){
+  while (!vm->fatal && !vm->halt){
     skip_nl(L);
     if (L->cur.kind==TK_EOF) break;
     if (stop1 && kw(&L->cur,stop1)) break;
     if (stop2 && kw(&L->cur,stop2)) break;
-    if (vm->break_loop || vm->continue_loop || vm->return_fn) break;
+    if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
     int r=parse_form(vm,L);
     if (r<0) return -1;
     if (r==0) break;
-    if (vm->break_loop || vm->continue_loop || vm->return_fn) break;
+    if (vm->break_loop || vm->continue_loop || vm->return_fn || vm->halt) break;
   }
   return vm->fatal ? -1 : 0;
 }
@@ -96,7 +96,7 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   }
 
   Lex L; lex_init(&L, src, n);
-  while (!vm.fatal && L.cur.kind != TK_EOF){
+  while (!vm.fatal && !vm.halt && L.cur.kind != TK_EOF){
     skip_nl(&L);
     if (L.cur.kind==TK_EOF) break;
     if (parse_form(&vm, &L) < 0) break;
@@ -104,7 +104,10 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   if (vm.ch.n_cubes>0) cubalc_chain_tick(&vm.ch);
 
   if (out){
-    out->ok = !vm.fatal && out->asserts_fail==0;
+    out->halted = vm.halt ? 1 : 0;
+    out->exit_code = vm.exit_code;
+    /* EXIT n: non-zero fails plate; clean EXIT 0 stays ok if no asserts_fail/fatal */
+    out->ok = !vm.fatal && out->asserts_fail==0 && !(vm.halt && vm.exit_code != 0);
     out->n_cubes = vm.ch.n_cubes;
     out->unity = vm.ch.unity;
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
@@ -126,6 +129,13 @@ static int run_source_inner(const char *src, size_t n, const char *name,
   if (vm.ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */
     cubalc_chain_publish_united(&vm.ch);
+  }
+  /* Prefer EXIT code for process rc when halted with non-zero. */
+  if (vm.halt && vm.exit_code != 0) {
+    int ec = vm.exit_code;
+    if (ec < 0) ec = 1;
+    if (ec > 125) ec = 1;
+    return ec;
   }
   return out && out->ok ? 0 : 1;
 }

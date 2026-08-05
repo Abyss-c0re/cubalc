@@ -20,6 +20,8 @@ typedef struct cubalc_run_result {
   /* Usability: source line context for agent-readable failures (from "line N" in err). */
   int err_line;       /* 0 if unknown */
   char err_src[200];  /* trimmed source text at err_line */
+  int exit_code;      /* EXIT n — process-oriented; 0 default */
+  int halted;         /* 1 if EXIT stopped the program */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);

@@ -48,6 +48,8 @@ typedef struct {
   FILE *trace;
   int hold_flash;
   int fatal;
+  int halt;       /* EXIT form: stop program (may be clean exit_code==0) */
+  int exit_code;  /* process-oriented code from EXIT n */
   int break_loop;
   int continue_loop;
   int return_fn; /* digit-4: RET from FN body */

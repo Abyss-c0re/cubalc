@@ -1,3 +1,13 @@
+## Meaningful — EXIT early program halt — 2026-08-05
+
+### Usability
+- `EXIT [code] ["why"]` (aliases `HALT` `QUIT`) — stop further statements
+- `EXIT` / `EXIT 0` → clean halt (plate ok if no assert fails); `EXIT n` → fail + process rc
+- Plate fields: `exit_code`, `halted`; sticky LAST_ERR on non-zero
+- Loops/blocks respect halt (with break/return flags)
+- Proof: `programs/proof/593_exit.cubalc` · selftest id `exit`
+- Version: `1.15.44-usability`
+
 ## Meaningful — NOTE agent breadcrumb — 2026-08-05
 
 ### Usability
