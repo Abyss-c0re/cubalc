@@ -1,0 +1,28 @@
+# STATUS — compact agent health plate (cubalc.status.v1)
+# Usability: one form for ok / last_err / version / time / hold / n
+# without guessing PRINT_JSON names or calling VARS.
+
+HOLD_FLASH 1
+
+# clean probe
+STATUS
+ASSERT STATUS_OK == 1 "STATUS_OK mirrors OK on clean path"
+ASSERT LAST_N == 1 "LAST_N is ok bit"
+ASSERT TIME > 0 "STATUS stamps TIME epoch"
+PRINT "status_clean" LAST STATUS_OK TIME
+
+# soft-fail path — STATUS reports, does not clear sticky err
+FAIL "status probe soft"
+STATUS
+ASSERT STATUS_OK == 0 "STATUS reports soft fail"
+ASSERT OK == 0 "STATUS does not rewrite OK"
+ASSERT LAST_N == 0 "LAST_N is ok bit after soft fail"
+# sticky LAST_ERR survives STATUS (report-only); length via PRINT, not string ASSERT
+
+# recover soft OK but sticky LAST_ERR remains until intentional clear path
+PASS "recovered"
+STATUS
+ASSERT STATUS_OK == 1 "PASS then STATUS → ok"
+ASSERT OK == 1
+
+PRINT "status ok" STATUS_OK TIME

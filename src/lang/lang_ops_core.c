@@ -1196,6 +1196,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
+      {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
       {"INCLUDE", "INCLUDE [OR|SOFT] path|libname — short name → programs/lib/"},
       {"LET", "LET name = expr|string"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT … · ENV/ARG OR fallback"},
@@ -1424,6 +1425,67 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "LAST", note);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", note);
     }
+    bump(vm); return 1;
+  }
+  /* STATUS / HEALTH / AGENT_STATUS — one compact runtime health plate for agents.
+   * Complements VARS (full table) and PRINT_JSON (named/snapshot): surfaces OK,
+   * sticky LAST_ERR, version, wall time, hold, cubes — without guessing names.
+   * Does not rewrite OK (reports current soft status). */
+  if (kw(&L->cur,"STATUS")||kw(&L->cur,"HEALTH")||kw(&L->cur,"AGENT_STATUS")||
+      kw(&L->cur,"STATUS_JSON")||kw(&L->cur,"PROBE_STATUS")){
+    long okv = 1, exp_ok = 1, smx = 0, talks = 0;
+    long tsec;
+    const char *err = "";
+    char esc[240];
+    size_t eo = 0;
+    char line[CUBALC_HOST_STR_MAX];
+    char note[64];
+    Var *vo, *ve, *vs, *vt, *vle;
+    lex_next(L);
+    vo = var_get(vm, "OK", 0);
+    if (vo && !vo->is_str) okv = vo->val;
+    ve = var_get(vm, "EXPECT_OK", 0);
+    if (ve && !ve->is_str) exp_ok = ve->val;
+    vs = var_get(vm, "SMX_OK", 0);
+    smx = vs ? vs->val : (long)vm->smx_ok;
+    vt = var_get(vm, "SMX_TALKS", 0);
+    talks = vt ? vt->val : (long)vm->smx_talks;
+    vle = var_get(vm, "LAST_ERR", 0);
+    if (vle && vle->is_str && vle->sval[0]) err = vle->sval;
+    else if (vm->err[0]) err = vm->err;
+    for (const char *p = err; *p && eo + 2 < sizeof esc; p++) {
+      if (*p == '"' || *p == '\\') { esc[eo++] = '\\'; esc[eo++] = *p; }
+      else if ((unsigned char)*p < 0x20) continue;
+      else esc[eo++] = *p;
+    }
+    esc[eo] = 0;
+    tsec = (long)time(NULL);
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.status.v1\",\"ok\":%s,\"last_err\":\"%s\","
+      "\"version\":\"%s\",\"time\":%ld,\"n\":%d,\"hold\":%d,\"unity\":%ld,"
+      "\"last_n\":%ld,\"expect_ok\":%ld,\"smx_ok\":%ld,\"smx_talks\":%ld,"
+      "\"sp\":%d,\"stmts\":%d}",
+      okv ? "true" : "false", esc, CUBALC_LANG_VERSION, tsec,
+      vm->ch.n_cubes, vm->hold_flash,
+      (long)lround(vm->ch.unity * 100.0), vm->last_n, exp_ok, smx, talks,
+      vm->sp, vm->res ? vm->res->stmts : 0);
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    var_set_num(vm, "STATUS_OK", okv);
+    var_set_num(vm, "TIME", tsec);
+    /* short LAST summary — full plate is last_print / trace JSON */
+    if (okv)
+      snprintf(note, sizeof note, "status:ok");
+    else if (esc[0])
+      snprintf(note, sizeof note, "status:err");
+    else
+      snprintf(note, sizeof note, "status:soft");
+    var_set_str(vm, "LAST", note);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", note);
+    vm->last_n = okv;
+    var_set_num(vm, "LAST_N", okv);
+    /* report-only: leave OK/EXPECT_OK/LAST_ERR as they were */
+    if (vm->trace) fprintf(vm->trace, "# status ok=%ld err=%s\n", okv, esc[0] ? esc : "-");
     bump(vm); return 1;
   }
   /* ASSERT expr ["why"] — optional message for agent/human-readable failures */

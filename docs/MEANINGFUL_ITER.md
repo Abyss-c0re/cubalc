@@ -72,6 +72,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 42. ~~**`VARS`**~~ **done** (dump all program vars as cubalc.vars.v1 JSON for agents).
 43. ~~**`cubalc run -q` / `CUBALC_QUIET`**~~ **done** (plate-only run · no board noise).
 44. ~~**`programs/lib/agent_boot`**~~ **done** (INCLUDE agent_boot = REQUIRE + hold_seed + VERSION).
+45. ~~**`STATUS`**~~ **done** (cubalc.status.v1 health plate · ok/last_err/version/time).
 
 ## Tick protocol
 

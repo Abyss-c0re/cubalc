@@ -1627,6 +1627,7 @@ int main(int argc, char **argv) {
       {"include_soft", "programs/proof/585_include_soft.cubalc", "INCLUDE OR soft miss"},
       {"vars", "programs/proof/586_vars.cubalc", "VARS full var table JSON"},
       {"agent_boot", "programs/proof/587_agent_boot.cubalc", "INCLUDE agent_boot preamble"},
+      {"status", "programs/proof/588_status.cubalc", "STATUS agent health plate"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1753,6 +1754,7 @@ int main(int argc, char **argv) {
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
+      {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2120,6 +2122,8 @@ int main(int argc, char **argv) {
        "INCLUDE agent_boot REQUIRE+hold_seed+VERSION"},
       {"programs/proof/587_agent_boot.cubalc", "agent",
        "agent_boot stdlib preamble proof"},
+      {"programs/proof/588_status.cubalc", "status",
+       "STATUS cubalc.status.v1 agent health plate"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2454,6 +2458,8 @@ int main(int argc, char **argv) {
       {"PASS", "flow", "PASS soft status OK=1"},
       {"VERSION", "flow", "VERSION → LAST language version"},
       {"PRINT_JSON", "flow", "one JSON line for agents"},
+      {"VARS", "flow", "VARS full var table JSON"},
+      {"STATUS", "flow", "STATUS agent health plate"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2624,6 +2630,7 @@ int main(int argc, char **argv) {
       {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
+      {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2643,6 +2650,7 @@ int main(int argc, char **argv) {
       {"programs/proof/578_expect_soft.cubalc", "expect", "EXPECT soft assert"},
       {"programs/proof/579_fail_pass.cubalc", "fail", "FAIL/PASS soft status"},
       {"programs/proof/582_sys_which_lib.cubalc", "which", "SYS WHICH lib resolve"},
+      {"programs/proof/588_status.cubalc", "status", "STATUS agent health plate"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -2891,7 +2899,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS · PRINT_JSON · INCLUDE · ASYNC\n"
+      "    ASSERT|EXPECT|FAIL|PASS · STATUS · PRINT_JSON · INCLUDE · ASYNC\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

@@ -1,3 +1,13 @@
+## Meaningful — STATUS agent health plate — 2026-08-05
+
+### Usability
+- `STATUS` (aliases `HEALTH` `AGENT_STATUS`) — one JSON line `cubalc.status.v1`
+- Surfaces ok / last_err / version / time / hold / n / unity / smx without guessing names
+- Report-only: does not rewrite OK or sticky LAST_ERR
+- Sets `STATUS_OK`, `TIME`, short `LAST` (`status:ok`|`status:err`); full plate on trace/`last_print`
+- Proof: `programs/proof/588_status.cubalc` · selftest id `status`
+- Version: `1.15.37-usability`
+
 ## 1.15.16-usability — 2026-08-05
 
 ### Usability (agents + humans)
