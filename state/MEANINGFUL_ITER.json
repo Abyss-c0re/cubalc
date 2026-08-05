@@ -1,17 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 5,
-  "version": "1.15.30-usability",
-  "item": "REQUIRE VERSION fail-fast gate",
-  "item_id": 38,
-  "title": "REQUIRE VERSION x.y[.z] refuses older runtime",
-  "commit": "cb2b29bbcb36505e97bd98c225ff7a04adb3f5ad",
-  "summary": "In-language REQUIRE VERSION compares major.minor.patch so scripts/agents fail fast with line+have version on plate.",
+  "iter": 6,
+  "version": "1.15.31-usability",
+  "item": "cubalc selftest live usability proofs",
+  "item_id": 39,
+  "title": "cubalc selftest runs curated usability proofs JSON",
+  "commit": "e12a6c1169537ce13a7b3753b068742a70acb687",
+  "summary": "CLI selftest|smoke executes 9 curated usability proofs (INCLUDE/ASSERT/EXPECT/VERSION/WHICH/REQUIRE) and emits cubalc.selftest.v1 plate; complements static doctor.",
   "proofs": [
-    "583_require_version",
-    "CLI REQUIRE 99.0 fail"
+    "selftest n_pass=9"
   ],
-  "when": "2026-08-05T02:34:05Z",
+  "when": "2026-08-05T02:44:29Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cb2b29bbcb36505e97bd98c225ff7a04adb3f5ad"
+  "sha": "e12a6c1169537ce13a7b3753b068742a70acb687"
 }

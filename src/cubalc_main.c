@@ -1552,6 +1552,7 @@ int main(int argc, char **argv) {
              "\"HOLD_FLASH 1 before PLUG\","
              "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
+             "\"cubalc selftest — live usability proofs\","
              "\"cubalc env · docs/COOKBOOK.md · programs/lib/\""
              "],"
              "\"cookbook\":[\"docs/COOKBOOK.md\",\"docs/P2P_SMX.md\","
@@ -1570,6 +1571,116 @@ int main(int argc, char **argv) {
              bin_ok ? "true" : "false");
       return ok ? 0 : 1;
     }
+  }
+  if (strcmp(cmd, "selftest") == 0 || strcmp(cmd, "smoke") == 0 ||
+      strcmp(cmd, "usability-test") == 0 || strcmp(cmd, "prove-usability") == 0) {
+    /* Usability: live curated proof runner — doctor is static; this executes.
+     * Agents: cubalc selftest → cubalc.selftest.v1 plate (pass/fail per item).
+     * Skips network P2P proofs; focuses INCLUDE/ASSERT/EXPECT/VERSION/WHICH. */
+    static const struct {
+      const char *id;
+      const char *path;
+      const char *hint;
+    } tests[] = {
+      {"hello", "programs/hello_cube.cubalc", "hold place plug short form"},
+      {"hold", "programs/proof/12_hold_flash_plug.cubalc", "HOLD_FLASH before PLUG"},
+      {"env_assert", "programs/proof/573_env_or_assert_msg.cubalc", "ENV OR + ASSERT msg"},
+      {"include", "programs/proof/577_include_shortname.cubalc", "INCLUDE short lib name"},
+      {"expect", "programs/proof/578_expect_soft.cubalc", "EXPECT soft assert"},
+      {"fail_pass", "programs/proof/579_fail_pass.cubalc", "FAIL/PASS soft status"},
+      {"version", "programs/proof/580_version.cubalc", "VERSION form plate"},
+      {"which_lib", "programs/proof/582_sys_which_lib.cubalc", "SYS WHICH lib resolve"},
+      {"require", "programs/proof/583_require_version.cubalc", "REQUIRE VERSION gate"},
+    };
+    int i, n = (int)(sizeof tests / sizeof tests[0]);
+    int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
+    int json_only = 0;
+    struct {
+      char id[32];
+      char path[96];
+      int ok;
+      int missing;
+      int asserts_ok;
+      int asserts_fail;
+      char err[120];
+    } rows[16];
+    int nrow = 0;
+    if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
+      json_only = 1;
+    if (!json_only) {
+      printf("# CubalC selftest usability proofs n=%d version=%s\n",
+             n, CUBALC_LANG_VERSION);
+      printf("# id\tok\tasserts\thint\n");
+    }
+    for (i = 0; i < n && nrow < 16; i++) {
+      cubalc_run_result rr;
+      int missing = (access(tests[i].path, R_OK) != 0);
+      int ok = 0;
+      memset(&rr, 0, sizeof rr);
+      snprintf(rows[nrow].id, sizeof rows[0].id, "%s", tests[i].id);
+      snprintf(rows[nrow].path, sizeof rows[0].path, "%s", tests[i].path);
+      rows[nrow].missing = missing;
+      rows[nrow].err[0] = 0;
+      if (missing) {
+        n_miss++;
+        n_fail++;
+        snprintf(rows[nrow].err, sizeof rows[0].err, "missing file");
+        rows[nrow].ok = 0;
+        rows[nrow].asserts_ok = 0;
+        rows[nrow].asserts_fail = 0;
+        if (!json_only)
+          printf("%s\tFAIL\t-\t%s (missing)\n", tests[i].id, tests[i].hint);
+      } else {
+        int rc = cubalc_run_file(tests[i].path, &rr, NULL);
+        ok = (rc == 0 && rr.ok);
+        rows[nrow].ok = ok ? 1 : 0;
+        rows[nrow].asserts_ok = rr.asserts_ok;
+        rows[nrow].asserts_fail = rr.asserts_fail;
+        aok += rr.asserts_ok;
+        afail += rr.asserts_fail;
+        if (ok) {
+          n_pass++;
+          if (!json_only)
+            printf("%s\tPASS\t%d\t%s\n", tests[i].id, rr.asserts_ok,
+                   tests[i].hint);
+        } else {
+          n_fail++;
+          snprintf(rows[nrow].err, sizeof rows[0].err, "%s",
+                   rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "fail"));
+          if (!json_only)
+            printf("%s\tFAIL\t%d/%d\t%s — %s\n", tests[i].id, rr.asserts_ok,
+                   rr.asserts_fail, tests[i].hint, rows[nrow].err);
+        }
+      }
+      nrow++;
+    }
+    printf("{\"schema\":\"cubalc.selftest.v1\",\"ok\":%s,\"cmd\":\"selftest\","
+           "\"n\":%d,\"n_pass\":%d,\"n_fail\":%d,\"n_missing\":%d,"
+           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"version\":\"%s\","
+           "\"note\":\"curated usability proofs — not full ISA suite; "
+           "skip P2P net; doctor=static selftest=live\","
+           "\"tests\":[",
+           n_fail == 0 ? "true" : "false", n, n_pass, n_fail, n_miss, aok,
+           afail, CUBALC_LANG_VERSION);
+    for (i = 0; i < nrow; i++) {
+      char eesc[140];
+      size_t k, o = 0;
+      for (k = 0; rows[i].err[k] && o + 2 < sizeof eesc; k++) {
+        char c = rows[i].err[k];
+        if (c == '"' || c == '\\') eesc[o++] = '_';
+        else if ((unsigned char)c < 32) eesc[o++] = ' ';
+        else eesc[o++] = c;
+      }
+      eesc[o] = 0;
+      printf("%s{\"id\":\"%s\",\"path\":\"%s\",\"ok\":%s,\"missing\":%s,"
+             "\"asserts_ok\":%d,\"asserts_fail\":%d,\"err\":\"%s\"}",
+             i ? "," : "", rows[i].id, rows[i].path,
+             rows[i].ok ? "true" : "false",
+             rows[i].missing ? "true" : "false", rows[i].asserts_ok,
+             rows[i].asserts_fail, eesc);
+    }
+    printf("]}\n");
+    return n_fail == 0 ? 0 : 1;
   }
   if (strcmp(cmd, "forms") == 0 || strcmp(cmd, "ops") == 0 ||
       strcmp(cmd, "forms-list") == 0) {
@@ -2694,6 +2805,7 @@ int main(int argc, char **argv) {
       "\n"
       "  Run & learn\n"
       "    doctor|health          install readiness JSON (agents/humans)\n"
+      "    selftest|smoke         live curated usability proofs JSON\n"
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"
       "    which|locate|resolve   resolve name → path/kind (lib/form/bin)\n"
