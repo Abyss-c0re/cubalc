@@ -1805,6 +1805,7 @@ int main(int argc, char **argv) {
       {"sys_in", "programs/proof/661_sys_in.cubalc", "SYS IN/WITHIN numeric range membership"},
       {"sys_pow", "programs/proof/662_sys_pow.cubalc", "SYS POW/ISQRT host power and sqrt"},
       {"sys_shuffle", "programs/proof/663_sys_shuffle.cubalc", "SYS SHUFFLE randomize bag field order"},
+      {"sys_coalesce", "programs/proof/664_sys_coalesce.cubalc", "SYS COALESCE first non-empty string"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2065,6 +2066,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length"},
       {"SYS BLANK", "host", "SYS BLANK|ISBLANK [str] — empty or whitespace only"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY [str] — LAST_N 1 if any character"},
+      {"SYS COALESCE", "host", "SYS COALESCE|NVL a b [c…] — first non-empty string"},
+      {"SYS NVL", "host", "SYS NVL alias of SYS COALESCE"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path — mtime epoch → LAST_N · soft miss"},
@@ -3129,6 +3132,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY zero-length probe"},
       {"SYS BLANK", "host", "SYS BLANK whitespace-only probe"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY any-char probe"},
+      {"SYS COALESCE", "host", "SYS COALESCE first non-empty string"},
+      {"SYS NVL", "host", "SYS NVL alias of SYS COALESCE"},
       {"SYS POP", "host", "SYS POP last bag field"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME file mtime epoch"},
@@ -3434,6 +3439,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY|ISEMPTY zero-length probe"},
       {"SYS BLANK", "host", "SYS BLANK|ISBLANK whitespace-only probe"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY any-character probe"},
+      {"SYS COALESCE", "host", "SYS COALESCE|NVL first non-empty string"},
+      {"SYS NVL", "host", "SYS NVL alias of SYS COALESCE"},
       {"SYS POP", "host", "SYS POP|POPLINE bag last field → LAST rest→POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path mtime epoch soft miss"},
@@ -3562,6 +3569,7 @@ int main(int argc, char **argv) {
       {"programs/proof/661_sys_in.cubalc", "sys_in", "SYS IN/WITHIN numeric range membership"},
       {"programs/proof/662_sys_pow.cubalc", "sys_pow", "SYS POW/ISQRT host power and sqrt"},
       {"programs/proof/663_sys_shuffle.cubalc", "sys_shuffle", "SYS SHUFFLE randomize bag field order"},
+      {"programs/proof/664_sys_coalesce.cubalc", "sys_coalesce", "SYS COALESCE first non-empty string"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

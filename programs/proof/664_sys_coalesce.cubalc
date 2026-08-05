@@ -1,0 +1,68 @@
+# SYS COALESCE / NVL — first non-empty string among args
+# Usability: default chains for ENV/ARG plates without nested IF EMPTY
+
+HOLD_FLASH 1
+
+# basic first non-empty
+SYS COALESCE "" "hello" "world"
+ASSERT OK == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT COALESCE_N == 5
+
+# first already good
+SYS COALESCE "a" "b" "c"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# all empty
+SYS COALESCE "" ""
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+ASSERT COALESCE_N == 0
+
+# vars
+LET a = ""
+LET b = "beta"
+LET c = "gamma"
+SYS COALESCE a b c
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# numeric args stringified
+SYS COALESCE "" 42 "x"
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# aliases
+SYS NVL "" "ok"
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+SYS FIRSTS "" "" "z"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+SYS IFNUL "kept" "other"
+SYS EQS LAST "kept"
+ASSERT LAST_N == 1
+
+# BLANK mode: skip whitespace-only
+SYS COALESCE BLANK "   " "\t" "real" "more"
+SYS EQS LAST "real"
+ASSERT LAST_N == 1
+SYS COALESCE NB "  " "yes"
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# agent pattern: config default chain
+LET from_env = ""
+LET from_arg = ""
+LET hard = "localhost"
+SYS COALESCE from_env from_arg hard
+SYS EQS LAST "localhost"
+ASSERT LAST_N == 1
+LET from_env = "prod.example"
+SYS COALESCE from_env from_arg hard
+SYS EQS LAST "prod.example"
+ASSERT LAST_N == 1
+
+PRINT "sys_coalesce ok"

@@ -1269,6 +1269,56 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS COALESCE|FIRSTS|NVL|IFNUL a b [c…] — first non-empty string arg → LAST.
+     * SYS COALESCE BLANK|NB a b… — first non-blank (not only whitespace).
+     * LAST_N = length of chosen; all empty → "" LAST_N=0 OK=1.
+     * Usability: default chain for ENV/ARG plates without nested IF EMPTY. */
+    if (kw(&L->cur,"COALESCE") || kw(&L->cur,"FIRSTS") || kw(&L->cur,"NVL") ||
+        kw(&L->cur,"IFNUL") || kw(&L->cur,"IFNULL") || kw(&L->cur,"FIRSTNON") ||
+        kw(&L->cur,"ORSTR") || kw(&L->cur,"FIRSTNONEMPTY")){
+      char chosen[CUBALC_HOST_STR_MAX];
+      char arg[CUBALC_HOST_STR_MAX];
+      int skip_blank = 0, got = 0;
+      long out_n = 0;
+      lex_next(L);
+      if (kw(&L->cur,"BLANK") || kw(&L->cur,"NB") || kw(&L->cur,"NONBLANK") ||
+          kw(&L->cur,"TRIM") || kw(&L->cur,"WS")) {
+        skip_blank = 1;
+        lex_next(L);
+      }
+      chosen[0] = 0;
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+             L->cur.kind == TK_NUM) {
+        arg[0] = 0;
+        if (L->cur.kind == TK_NUM) {
+          snprintf(arg, sizeof arg, "%ld", L->cur.num);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+          break;
+        }
+        if (!got) {
+          int empty = (arg[0] == 0);
+          if (skip_blank && !empty) {
+            const char *p = arg;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+            empty = (*p == 0);
+          }
+          if (!empty) {
+            snprintf(chosen, sizeof chosen, "%s", arg);
+            got = 1;
+          }
+        }
+        /* still consume remaining args even after choice */
+      }
+      out_n = (long)strlen(chosen);
+      var_set_str(vm, "LAST", chosen);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", chosen);
+      vm->last_n = out_n;
+      var_set_num(vm, "LAST_N", out_n);
+      var_set_num(vm, "COALESCE_N", out_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"TIME") || kw(&L->cur,"NOW") || kw(&L->cur,"EPOCH")){
       lex_next(L);
       long n = (long)time(NULL);
@@ -4722,7 +4772,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5019,6 +5069,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EMPTY", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length · soft plate IF"},
       {"SYS BLANK", "SYS BLANK|ISBLANK [str] — LAST_N 1 if empty or whitespace only"},
       {"SYS NONEMPTY", "SYS NONEMPTY|NOTEMPTY [str] — LAST_N 1 if any character"},
+      {"SYS COALESCE", "SYS COALESCE|NVL a b [c…] — first non-empty string → LAST"},
+      {"SYS NVL", "SYS NVL a b [c…] — alias of SYS COALESCE · default chain"},
       {"SYS MTIME", "SYS MTIME|MODTIME path — file mtime epoch → LAST_N · soft miss"},
       {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
