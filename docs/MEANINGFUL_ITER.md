@@ -166,6 +166,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 136. ~~**`REQUIRE ENV` / `VAR`**~~ **done** (fail-fast if host env missing/empty · agent host config gate).
 137. ~~**`SYS UPPERALL` / `LOWERALL`**~~ **done** (ASCII case-map every bag field · normalize before HASLINE/set ops).
 138. ~~**`SYS MAPREPLACE` / `GSUBALL`**~~ **done** (REPLACEALL on every bag field · path/tag rewrite without EACH).
+139. ~~**`SYS FREQ` / `HIST`**~~ **done** (bag field frequency histogram key:count · status rollups without EACH).
 
 ## Tick protocol
 

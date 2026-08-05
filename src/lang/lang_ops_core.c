@@ -4185,6 +4185,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS FREQ|HIST|COUNTS|TALLY [bag] [sep] — frequency of each exact field.
+     * LAST = "key{sep}count" bag (first-seen order). Default sep ":".
+     * LAST_N/FREQ_N = unique keys; FREQ_TOTAL = input field count (cap 64 uniques).
+     * Usability: status/severity rollups without EACH LINE + COUNTLINE rebuild. */
+    if (kw(&L->cur,"FREQ") || kw(&L->cur,"HIST") || kw(&L->cur,"COUNTS") ||
+        kw(&L->cur,"FREQUENCY") || kw(&L->cur,"HISTOGRAM") ||
+        kw(&L->cur,"COUNTBAG") || kw(&L->cur,"BAGCOUNT") || kw(&L->cur,"FREQBAG")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[16];
+      char keys[64][128];
+      long counts[64];
+      int nk = 0, k;
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long total = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional sep if next is a short string (not a form keyword start) */
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      memset(counts, 0, sizeof counts);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          char field[128];
+          size_t take;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          total++;
+          for (k = 0; k < nk; k++) {
+            if (strcmp(keys[k], field) == 0) {
+              counts[k]++;
+              break;
+            }
+          }
+          if (k == nk && nk < 64) {
+            snprintf(keys[nk], sizeof keys[0], "%s", field);
+            counts[nk] = 1;
+            nk++;
+          } else if (k == nk) {
+            /* overflow uniques: drop further new keys but still count total */
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      for (k = 0; k < nk; k++) {
+        char line[160];
+        int n;
+        n = snprintf(line, sizeof line, "%s%s%ld", keys[k], sep, counts[k]);
+        if (n < 0) n = 0;
+        if ((size_t)n >= sizeof line) n = (int)sizeof line - 1;
+        if (k > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + (size_t)n < sizeof out) {
+          memcpy(out + olen, line, (size_t)n);
+          olen += (size_t)n;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, line, t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "FREQ", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nk;
+      var_set_num(vm, "LAST_N", nk);
+      var_set_num(vm, "FREQ_N", nk);
+      var_set_num(vm, "FREQ_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIDLINES|SLICEBAG|FIELDSLICE|LINESLICE bag start [end]
      * — keep newline fields [start..end] inclusive, 0-based.
      * end omitted → through last field. start/end clamp; start>end → empty.
@@ -5991,7 +6073,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6264,6 +6346,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MAPREPLACE", "SYS MAPREPLACE|GSUBALL bag old new — REPLACEALL on every field · LAST_N=subs"},
       {"SYS GSUBALL", "SYS GSUBALL bag old new — alias of SYS MAPREPLACE · bag path/tag rewrite"},
       {"SYS REPLACEBAG", "SYS REPLACEBAG bag old new — alias of SYS MAPREPLACE"},
+      {"SYS FREQ", "SYS FREQ|HIST [bag] [sep] — field frequency bag key:count · LAST_N=uniques"},
+      {"SYS HIST", "SYS HIST [bag] [sep] — alias of SYS FREQ · severity/status rollups"},
+      {"SYS COUNTS", "SYS COUNTS [bag] [sep] — alias of SYS FREQ"},
       {"SYS MIDLINES", "SYS MIDLINES|SLICEBAG bag start [end] — keep fields [start..end] 0-based"},
       {"SYS SLICEBAG", "SYS SLICEBAG bag start [end] — alias of SYS MIDLINES · middle bag window"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},

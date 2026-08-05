@@ -1,0 +1,63 @@
+# SYS FREQ / HIST — frequency of each exact bag field
+# Usability: severity/status rollups without EACH + COUNTLINE rebuild
+
+HOLD_FLASH 1
+
+LET log = "ERROR\nWARN\nERROR\nINFO\nERROR\nWARN\nFATAL"
+
+SYS FREQ log
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT FREQ_N == 4
+ASSERT FREQ_TOTAL == 7
+SYS EQS LAST "ERROR:3\nWARN:2\nINFO:1\nFATAL:1"
+ASSERT LAST_N == 1
+
+# custom sep
+SYS FREQ log "="
+ASSERT LAST_N == 4
+SYS EQS LAST "ERROR=3\nWARN=2\nINFO=1\nFATAL=1"
+ASSERT LAST_N == 1
+
+# aliases
+SYS HIST log
+ASSERT LAST_N == 4
+SYS EQS FREQ "ERROR:3\nWARN:2\nINFO:1\nFATAL:1"
+ASSERT LAST_N == 1
+
+SYS COUNTS log
+ASSERT LAST_N == 4
+SYS HISTOGRAM log
+ASSERT LAST_N == 4
+
+# empty bag
+SYS FREQ ""
+ASSERT LAST_N == 0
+ASSERT FREQ_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single unique
+SYS FREQ "a\na\na"
+ASSERT LAST_N == 1
+ASSERT FREQ_TOTAL == 3
+SYS EQS LAST "a:3"
+ASSERT LAST_N == 1
+
+# all unique first-seen order
+SYS FREQ "z\ny\nx"
+ASSERT LAST_N == 3
+SYS EQS LAST "z:1\ny:1\nx:1"
+ASSERT LAST_N == 1
+
+# agent pattern: peel severity tokens then FREQ rollup
+LET sev = "ERROR\nWARN\nERROR\nFATAL\nERROR\nWARN"
+SYS FREQ sev
+ASSERT FREQ_TOTAL == 6
+ASSERT FREQ_N == 3
+SYS EQS LAST "ERROR:3\nWARN:2\nFATAL:1"
+ASSERT LAST_N == 1
+SYS HAS LAST "ERROR:3"
+ASSERT LAST_N == 1
+
+PRINT "sys_freq ok"
