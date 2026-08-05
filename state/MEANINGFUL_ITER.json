@@ -5,13 +5,13 @@
   "item": "cubalc run -e / --expr inline program",
   "item_id": 110,
   "title": "cubalc run -e|--expr|--code|-c inline source no temp file",
-  "commit": "64a0814889835680fa0dd4afa39ddf3fede4df7d",
+  "commit": "9ce1a33c075692ff734d8aa6bbaf3ed87f1b28b7",
   "summary": "cubalc run -e CODE (multi -e join; \\n escapes). Top-level cubalc -e alias. plate file=<expr>. selftest run_expr CLI smoke. selftest 77.",
   "proofs": [
     "cli:run -e",
     "selftest run_expr n_pass=77"
   ],
-  "when": "2026-08-05T14:38:56Z",
+  "when": "2026-08-05T14:39:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "64a0814889835680fa0dd4afa39ddf3fede4df7d"
+  "sha": "9ce1a33c075692ff734d8aa6bbaf3ed87f1b28b7"
 }
