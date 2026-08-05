@@ -1,0 +1,823 @@
+# probe_latency_board.cubalc — durable probe name:ms latency SLO plate under STATE
+#
+# Real use: agents record last latency sample per probe without shell awk.
+# Lines are exact fields "name:ms". Aggregates need peeled pure-ms bags —
+# SUM/SORTN ignore or fail on composite name:ms tokens.
+#
+# Actions (CUBALC_ARG0 / CUBALC_LAT_ACTION):
+#   list     — depth + sum/avg/min/max of peeled ms + plate AGE (default)
+#   seed     — PUSH name:ms tokens (ARG1 space list); skip existing names
+#   observe  — set name latency ms (ARG1=name ARG2=ms); insert or SETMATCH
+#   set      — alias of observe
+#   get      — remaining/hit = ms for name
+#   pinhot   — MOVELINE highest-ms row to front (manual max walk)
+#   sortpeek — peel ms → SORTN DESC → hit=hottest ms (does not reorder plate)
+#   breach   — count samples where ms > threshold (ARG1 or CUBALC_LAT_THRESH)
+#   drop     — REMOVELINE first name:*
+#   has      — identity present
+#   count    — COUNTLINE exact name:ms token
+#   touch    — TOUCH plate only (refresh mtime for AGE tests)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="api:120 db:50 mesh:200" \
+#     ./out/cubalc run -q -s programs/realworld/probe_latency_board.cubalc
+#   CUBALC_ARG0=observe CUBALC_ARG1=api CUBALC_ARG2=95 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_LAT_FILE=LATENCY.txt
+#   CUBALC_LAT_REQUIRE=1     # EXIT 2 on get/drop/pinhot miss
+#   CUBALC_LAT_THRESH=100    # breach threshold ms
+#   CUBALC_LAT_STALE=60      # list warns if AGE > N seconds (soft)
+#
+# Edges deliberately stressed:
+#   SUM/AVG/SORTN on name:ms bag → 0 / useless — must peel AFTER ':' first
+#   lex SORT of name:ms is not latency order; SORTN needs pure ints
+#   no bag-field mutate — observe rebuilds via STR+REPLACEALL+SETMATCH
+#   SYS NUM only on LAST — AFTER/AMT shuttle
+#   GREP "api" matches api_v2; identity BEFORE+EQS
+#   SETMATCH first-only residual dups
+#   pinhot is O(n) max walk not SORTN of composites
+#   plate AGE/MTIME soft miss on missing file
+#   PRINT_JSON bag collapse; WRITE trailing NL often missing
+#   soft READ empty; REQUIRE miss EXIT path
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "probe_latency_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT MS_S = "0"
+DEFAULT RFILE = "LATENCY.txt"
+DEFAULT REPORT = "LATENCY_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 100
+DEFAULT STALE_S = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LAT_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LAT_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET MS_S = LAST
+ELSE
+  SYS ENV "CUBALC_LAT_MS" OR "0"
+  LET MS_S = LAST
+END
+SYS ENV "CUBALC_LAT_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_LAT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LAT_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+SYS ENV "CUBALC_LAT_STALE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET STALE_S = LAST_N
+  END
+END
+
+# parse ms amount (NUM only LAST)
+SYS PREPEND "" MS_S
+SYS HEAD LAST
+SYS NUM
+LET sample_ms = 0
+IF OK == 1 THEN
+  LET sample_ms = LAST_N
+END
+SYS MAX sample_ms 0
+LET sample_ms = LAST_N
+
+# for breach, ARG1 may be threshold when action=breach and no name
+SYS EQS ACTION "breach"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    # if NAME looks numeric-only (no colon), treat as threshold
+    SYS HASI NAME ":"
+    IF LAST_N == 0 THEN
+      SYS PREPEND "" NAME
+      SYS HEAD LAST
+      SYS NUM
+      IF OK == 1 THEN
+        LET THRESH = LAST_N
+        LET NAME = ""
+      END
+    END
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft latency load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET sum_ms = 0
+LET avg_ms = 0
+LET min_ms = 0
+LET max_ms = 0
+LET n_breach = 0
+LET plate_age = -1
+LET idx = -1
+LET old_entry = ""
+LET entry = ""
+LET note_msg = "ok"
+LET name_hit = 0
+LET scores = ""
+LET hot_row = ""
+LET hot_ms = -1
+LET remaining = 0
+
+# peel helper inline where needed
+
+# plate AGE (soft miss if no file yet)
+SYS EXIST bag_path
+IF LAST_N == 1 THEN
+  SYS AGE bag_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET scores = ""
+  LET min_ms = 0
+  LET max_ms = 0
+  LET name_hit = 0
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      SYS AFTER row ":"
+      SYS NUM
+      IF OK == 1 THEN
+        LET remaining = LAST_N
+        SYS STR remaining
+        SYS PUSH scores LAST
+        LET scores = LAST
+        IF name_hit == 0 THEN
+          LET min_ms = remaining
+          LET max_ms = remaining
+          LET name_hit = 1
+        ELSE
+          SYS MIN min_ms remaining
+          LET min_ms = LAST_N
+          SYS MAX max_ms remaining
+          LET max_ms = LAST_N
+        END
+      END
+    END
+  END
+  # SUM/AVG on pure scores — NOT on composite bag (would be 0)
+  SYS LINES scores
+  IF LAST_N > 0 THEN
+    SYS SUM scores
+    LET sum_ms = LAST_N
+    SYS AVG scores
+    LET avg_ms = LAST_N
+  END
+  # stale soft note
+  IF STALE_S > 0 THEN
+    IF plate_age >= 0 THEN
+      SYS CMP plate_age STALE_S
+      IF LAST_N > 0 THEN
+        LET note_msg = "list stale plate"
+        FAIL "latency plate stale"
+        CLEAR_ERR
+      ELSE
+        LET note_msg = "list ok fresh"
+      END
+    END
+  ELSE
+    LET note_msg = "list ok"
+  END
+  STATUS
+  PRINT "latency" depth0 sum_ms avg_ms min_ms max_ms plate_age ACTION
+  PRINT_JSON depth0 sum_ms avg_ms min_ms max_ms plate_age ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON scores
+END
+
+# --- seed name:ms ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs name:ms tokens"
+  END
+  SYS WORDS NAME
+  LET tokens = LAST
+  EACH LINE AS tok IN tokens
+    SYS BLANK tok
+    IF LAST_N == 0 THEN
+      SYS HASI tok ":"
+      IF LAST_N == 1 THEN
+        SYS BEFORE tok ":"
+        LET n = LAST
+        SYS AFTER tok ":"
+        SYS NUM
+        LET v = 0
+        IF OK == 1 THEN
+          LET v = LAST_N
+        END
+        SYS MAX v 0
+        LET v = LAST_N
+        LET name_hit = 0
+        EACH LINE AS row IN bag
+          SYS BEFORE row ":"
+          SYS EQS LAST n
+          IF LAST_N == 1 THEN
+            LET name_hit = 1
+          END
+        END
+        IF name_hit == 0 THEN
+          SYS STR v
+          LET vs = LAST
+          LET e = "NAME:VAL"
+          SYS REPLACEALL e "NAME" n
+          LET e = LAST
+          SYS REPLACEALL e "VAL" vs
+          LET e = LAST
+          SYS PUSH bag e
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- observe / set ---
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  LET ACTION = "observe"
+END
+SYS EQS ACTION "observe"
+IF LAST_N == 1 THEN
+  NOTE "action observe"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "observe needs name"
+  END
+  SYS STR sample_ms
+  LET vs = LAST
+  LET entry = "NAME:VAL"
+  SYS REPLACEALL entry "NAME" NAME
+  LET entry = LAST
+  SYS REPLACEALL entry "VAL" vs
+  LET entry = LAST
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    SYS PUSH bag entry
+    LET bag = LAST
+    LET changed = 1
+    LET hit = sample_ms
+    LET note_msg = "observe inserted"
+  ELSE
+    SYS SETMATCH bag old_entry entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "observe setmatch miss"
+      FAIL "observe setmatch"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "observe miss"
+      END
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = sample_ms
+      LET note_msg = "observed"
+    END
+  END
+END
+
+# --- get ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs name"
+  END
+  LET name_hit = 0
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+        SYS AFTER row ":"
+        SYS NUM
+        IF OK == 1 THEN
+          LET remaining = LAST_N
+          LET hit = remaining
+        END
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "get miss"
+    FAIL "get miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get miss"
+    END
+  ELSE
+    LET note_msg = "got"
+  END
+END
+
+# --- pinhot: highest ms to front ---
+SYS EQS ACTION "pinhot"
+IF LAST_N == 1 THEN
+  NOTE "action pinhot"
+  LET hot_ms = -1
+  LET hot_row = ""
+  LET name_hit = 0
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      SYS AFTER row ":"
+      SYS NUM
+      IF OK == 1 THEN
+        LET remaining = LAST_N
+        IF name_hit == 0 THEN
+          LET hot_ms = remaining
+          LET hot_row = row
+          LET name_hit = 1
+        ELSE
+          SYS CMP remaining hot_ms
+          IF LAST_N > 0 THEN
+            LET hot_ms = remaining
+            LET hot_row = row
+          END
+        END
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "pinhot empty"
+    FAIL "pinhot empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pinhot miss"
+    END
+  ELSE
+    SYS FINDLINE bag hot_row
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pinhot moveline miss"
+      FAIL "pinhot moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = hot_ms
+      LET idx = 0
+      LET note_msg = "pinned hot"
+    END
+  END
+END
+
+# --- sortpeek: peel + SORTN DESC → hottest ms ---
+SYS EQS ACTION "sortpeek"
+IF LAST_N == 1 THEN
+  NOTE "action sortpeek"
+  LET scores = ""
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      SYS AFTER row ":"
+      SYS NUM
+      IF OK == 1 THEN
+        SYS STR LAST_N
+        SYS PUSH scores LAST
+        LET scores = LAST
+      END
+    END
+  END
+  SYS LINES scores
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "sortpeek empty"
+    FAIL "sortpeek empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sortpeek miss"
+    END
+  ELSE
+    # composite bag SORTN is useless — only pure scores work
+    SYS SORTN DESC scores
+    LET scores = LAST
+    SYS HEAD scores
+    SYS NUM
+    IF OK == 1 THEN
+      LET hit = LAST_N
+      LET max_ms = LAST_N
+    END
+    SYS SUM scores
+    LET sum_ms = LAST_N
+    SYS AVG scores
+    LET avg_ms = LAST_N
+    LET note_msg = "sortpeek ok"
+  END
+END
+
+# --- breach count ---
+SYS EQS ACTION "breach"
+IF LAST_N == 1 THEN
+  NOTE "action breach"
+  LET n_breach = 0
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      SYS AFTER row ":"
+      SYS NUM
+      IF OK == 1 THEN
+        LET remaining = LAST_N
+        SYS CMP remaining THRESH
+        IF LAST_N > 0 THEN
+          LET n_breach = n_breach + 1
+        END
+      END
+    END
+  END
+  LET hit = n_breach
+  LET note_msg = "breach counted"
+END
+
+# --- drop ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag old_entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "dropped"
+    END
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs name"
+  END
+  SYS HASI NAME ":"
+  IF LAST_N == 1 THEN
+    SYS HASLINE bag NAME
+    LET hit = LAST_N
+  ELSE
+    LET name_hit = 0
+    EACH LINE AS row IN bag
+      SYS BEFORE row ":"
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET name_hit = 1
+      END
+    END
+    LET hit = name_hit
+  END
+  LET note_msg = "has"
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs token"
+  END
+  SYS HASI NAME ":"
+  IF LAST_N == 1 THEN
+    SYS COUNTLINE bag NAME
+    LET hit = LAST_N
+  ELSE
+    LET hit = 0
+    EACH LINE AS row IN bag
+      SYS BEFORE row ":"
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET hit = hit + 1
+      END
+    END
+  END
+  LET note_msg = "counted"
+END
+
+# --- touch plate ---
+SYS EQS ACTION "touch"
+IF LAST_N == 1 THEN
+  NOTE "action touch"
+  SYS TOUCH bag_path
+  EXPECT OK == 1
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "touched"
+  SYS AGE bag_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "observe"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "pinhot"
+LET k = k + LAST_N
+SYS EQS ACTION "sortpeek"
+LET k = k + LAST_N
+SYS EQS ACTION "breach"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "touch"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+# post peel aggregates for report
+LET scores = ""
+LET sum_ms = 0
+LET avg_ms = 0
+LET min_ms = 0
+LET max_ms = 0
+LET name_hit = 0
+EACH LINE AS row IN bag
+  SYS BLANK row
+  IF LAST_N == 0 THEN
+    SYS AFTER row ":"
+    SYS NUM
+    IF OK == 1 THEN
+      LET remaining = LAST_N
+      SYS STR remaining
+      SYS PUSH scores LAST
+      LET scores = LAST
+      IF name_hit == 0 THEN
+        LET min_ms = remaining
+        LET max_ms = remaining
+        LET name_hit = 1
+      ELSE
+        SYS MIN min_ms remaining
+        LET min_ms = LAST_N
+        SYS MAX max_ms remaining
+        LET max_ms = LAST_N
+      END
+    END
+  END
+END
+SYS LINES scores
+IF LAST_N > 0 THEN
+  SYS SUM scores
+  LET sum_ms = LAST_N
+  SYS AVG scores
+  LET avg_ms = LAST_N
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "latency write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# refresh age after write
+SYS EXIST bag_path
+IF LAST_N == 1 THEN
+  SYS AGE bag_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+LET report = "schema=cubalc.latency.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "sample_ms"
+LET report = LAST
+SYS STR sample_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sum_ms"
+LET report = LAST
+SYS STR sum_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "avg_ms"
+LET report = LAST
+SYS STR avg_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min_ms"
+LET report = LAST
+SYS STR min_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_ms"
+LET report = LAST
+SYS STR max_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n_breach"
+LET report = LAST
+SYS STR n_breach
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "thresh"
+LET report = LAST
+SYS STR THRESH
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "plate_age"
+LET report = LAST
+SYS STR plate_age
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "latency" ACTION hit miss changed sum_ms avg_ms min_ms max_ms n_breach plate_age depth0 depth1
+PRINT_JSON ACTION hit miss changed sum_ms avg_ms min_ms max_ms n_breach THRESH plate_age depth0 depth1 idx elapsed STATUS_OK
+PASS "latency tick"
+NOTE "probe_latency_board: done"
+CLEAR_ERR
+EXIT 0 "latency ok"

@@ -1,70 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 27,
-  "program": "programs/realworld/rate_budget_ledger.cubalc",
-  "theme": "rate budget ledger name:N debit/credit NUM CMP MIN CLAMP SETMATCH pinzero",
-  "version": "1.15.106-usability",
+  "iter": 28,
+  "program": "programs/realworld/probe_latency_board.cubalc",
+  "theme": "probe latency board name:ms peel SUM AVG SORTN pinhot AGE breach",
+  "version": "1.15.108-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_debit_credit",
-      "cmd": "seed api:10 db:3 mesh:0 api_v2:5; debit api 2\u21928; debit db 3\u21920; credit mesh 4 max3\u21923",
+      "name": "seed_observe_list",
+      "cmd": "seed api:120 db:50 mesh:200 api_v2:50; observe api 95; list",
       "ok": true,
-      "note": "NUM+STR rebuild tokens; CLAMP/MIN cap credit"
+      "note": "sum_ms=395 avg=98 min=50 max=200 after peel"
     },
     {
-      "name": "insufficient_require",
-      "cmd": "CUBALC_BUDGET_REQUIRE=1 debit db 1 on zero",
+      "name": "pinhot_moveline",
+      "cmd": "pinhot → mesh:200 to front",
       "ok": true,
-      "note": "EXIT 2 debit insufficient; soft miss rc0 without REQUIRE"
+      "note": "O(n) CMP max walk + FINDLINE+MOVELINE"
     },
     {
-      "name": "pinzero_moveline",
-      "cmd": "pinzero \u2192 db:0 to front",
+      "name": "sortpeek",
+      "cmd": "sortpeek peel SORTN DESC hit=200",
       "ok": true,
-      "note": "EACH+AFTER+NUM+CMP 0 then FINDLINE+MOVELINE"
+      "note": "pure scores SORTN; composite bag SORTN useless"
     },
     {
-      "name": "get_and_ghost",
-      "cmd": "get api hit=8; REQUIRE get ghost EXIT 2",
+      "name": "breach_thresh",
+      "cmd": "CUBALC_LAT_THRESH=100 breach → n=1 (mesh:200)",
       "ok": true,
-      "note": "identity walk not GREP"
+      "note": "EACH+AFTER+NUM+CMP threshold"
     },
     {
-      "name": "countline_zero_suffix",
-      "cmd": "COUNTLINE ':0' vs GREP ':0'+LINES",
+      "name": "require_miss",
+      "cmd": "CUBALC_LAT_REQUIRE=1 get ghost EXIT 2; soft miss rc0",
       "ok": true,
-      "note": "COUNTLINE\u21920 GREP\u21921; zero budgets need EACH+NUM"
+      "note": "soft+REQUIRE paths"
     },
     {
-      "name": "grep_api_false_friend",
-      "cmd": "GREP api keeps api+api_v2; GREP api: only api:8",
+      "name": "sum_composite_zero",
+      "cmd": "SYS SUM name:ms bag → 0 COUNT 0",
       "ok": true,
-      "note": "bare GREP name matches name_v2 cousin"
+      "note": "must peel AFTER colon first; high severity gap"
     },
     {
-      "name": "setmatch_residual",
-      "cmd": "two api:1 SETMATCH \u2192 residual api:1",
+      "name": "grep_api_cousin",
+      "cmd": "GREP api → api+api_v2 n=2; COUNTLINE ':200'→0",
       "ok": true,
-      "note": "first only residual_api1=1"
+      "note": "substring + exact COUNTLINE limits"
     },
     {
-      "name": "print_json_collapse_write_nl",
-      "cmd": "list PRINT_JSON bag; cat -A plate",
+      "name": "print_json_scores_collapse",
+      "cmd": "PRINT_JSON scores → 955020050 collapsed",
       "ok": true,
-      "note": "db:0api:8... collapsed; last field often no trailing $"
+      "note": "same bag newline collapse"
     },
     {
-      "name": "report_let_after_push",
-      "cmd": "miss value requires LET report=LAST after every PUSH",
+      "name": "write_nl_touch_age",
+      "cmd": "cat -A last field no $; touch plate_age=0",
       "ok": true,
-      "note": "forgot LET dropped miss field value \u2014 agent footgun"
+      "note": "WRITE NL + AGE soft"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "81/81 pass incl minmax cmp rand"
+      "note": "83/83 pass incl sum sortn"
     }
   ],
   "weaknesses": [
@@ -72,98 +72,98 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "No in-place numeric field mutate \u2014 debit is STR+REPLACEALL+SETMATCH rebuild",
-      "detail": "Budgets stored as name:N cannot N-- in place. Agents must AFTER, NUM, arithmetic, STR, template rebuild, SETMATCH. Race-prone multi-step; no atomic debit form.",
-      "repro": "debit api 2: find api:10 \u2192 build api:8 \u2192 SETMATCH"
+      "title": "SUM/AVG/SORTN ignore composite name:ms fields",
+      "detail": "SYS SUM on 'api:120\\ndb:50' returns LAST_N=0 COUNT=0 — non-numeric whole fields skipped. Agents must EACH+AFTER+PUSH peel scores first. No field-after-sep aggregate form.",
+      "repro": "SYS SUM 'api:120\\ndb:50' → 0; peel THEN SUM → 170"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "COUNTLINE cannot tally zero budgets by suffix",
-      "detail": "COUNTLINE bag ':0' \u2192 0 even when mesh:0 exists. Zero-count requires EACH LINE + AFTER + NUM + CMP 0. GREP ':0' works for exact :0 but still substring-risky for :01 etc.",
-      "repro": "COUNTLINE 'mesh:0' ':0' \u2192 0; GREP ':0' + LINES \u2192 1"
+      "title": "SORTN cannot order name:ms by latency",
+      "detail": "SORTN DESC on composite plate does not yield hottest-first plate. pinhot must O(n) max walk + MOVELINE. No key-field numeric sort.",
+      "repro": "SORTN DESC 'mesh:200\\napi:95' not ordered by ms"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host",
-      "title": "SYS NUM only parses LAST \u2014 amount/remaining need PREPEND/HEAD or AFTER shuttle",
-      "detail": "Cannot SYS NUM amount_var directly from named string without landing value in LAST. Debit amount ARG must PREPEND \"\" AMT_S; HEAD; NUM.",
-      "repro": "forms: SYS NUM uses LAST only"
+      "area": "host|bag",
+      "title": "COUNTLINE exact — cannot COUNTLINE ':200' or breach by pattern",
+      "detail": "COUNTLINE bag ':200' → 0. Breach counts need EACH+CMP. Same exact-field class as prior iters.",
+      "repro": "COUNTLINE 'mesh:200' ':200' → 0"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "GREP bare name matches name_v2 cousins",
-      "detail": "GREP 'api' keeps api:8 and api_v2:5. Identity requires BEFORE ':' + EQS name.",
-      "repro": "GREP api on api+api_v2 \u2192 n=2"
+      "title": "GREP bare probe name matches cousins",
+      "detail": "GREP 'api' keeps api:95 and api_v2:50. Identity needs BEFORE+EQS.",
+      "repro": "GREP api → n=2"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "SETMATCH first-only leaves duplicate budget residuals",
-      "detail": "Two api:1 fields \u2192 one SETMATCH leaves residual api:1. No SETMATCHALL; double-seed corrupts ledger.",
-      "repro": "SETMATCH 'api:1\\napi:1' api:1\u2192api:0 \u2192 residual api:1"
+      "area": "host",
+      "title": "No string concat — observe tokens via REPLACEALL NAME:VAL",
+      "detail": "Latency token rebuild same REPLACEALL footgun as budget/flag boards.",
+      "repro": "template NAME:VAL"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses multi-line budget bags",
-      "detail": "list bag dumps as db:0api:8mesh:3api_v2:5 \u2014 unparseable. Prefer sum_rem/n_zero scalars + plate file.",
-      "repro": "PRINT_JSON bag after seed"
+      "title": "PRINT_JSON collapses multi-line bags and score peels",
+      "detail": "bag and scores both collapse (955020050). Aggregates must be scalars.",
+      "repro": "PRINT_JSON scores after peel"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE bag often omits final trailing newline",
-      "detail": "cat -A shows last name:N without $. Shell tools see incomplete last line.",
-      "repro": "seed; cat -A BUDGETS.txt"
+      "title": "WRITE often omits final trailing newline",
+      "detail": "cat -A last field without $ after seed/observe.",
+      "repro": "seed; cat -A LATENCY.txt"
     },
     {
       "id": "W8",
-      "severity": "med",
-      "area": "flow|bag",
-      "title": "SYS PUSH bag line result must be re-bound with LET bag = LAST every time",
-      "detail": "Missed LET report = LAST after PUSH of miss value silently dropped the field. Accumulate pattern is error-prone; no bag-append that mutates named var in place.",
-      "repro": "PUSH report val without LET report=LAST \u2192 next PUSH uses stale bag"
+      "severity": "low",
+      "area": "flow",
+      "title": "PRINT_JSON idents are case-sensitive var names",
+      "detail": "PRINT_JSON ... thresh ... with var THRESH emitted thresh:0 (missing). Must match exact case THRESH.",
+      "repro": "DEFAULT THRESH=100; PRINT_JSON thresh → 0 or absent"
     },
     {
       "id": "W9",
-      "severity": "low",
-      "area": "cli",
-      "title": "PRINT of LAST when LAST is string \"0\" can look like 1",
-      "detail": "PRINT LAST after SYS STR 0 printed '1' while PRINT_JSON correctly shows LAST=0. Agents debugging zero budgets with PRINT alone get false friends; prefer PRINT_JSON.",
-      "repro": "SYS STR 0; PRINT LAST \u2192 1; PRINT_JSON LAST \u2192 {\"LAST\":\"0\"}"
+      "severity": "med",
+      "area": "host",
+      "title": "Plate reorder by metric needs peel+sort+rejoin — no keyed MOVELINE",
+      "detail": "Cannot SORTN plate in place by after-colon key then rewrite rows. Agents either pinhot single max or rebuild whole plate.",
+      "repro": "no form: SORTBY bag sep field_n"
     }
   ],
   "workarounds": [
-    "Debit/credit: AFTER+NUM+math+STR+REPLACEALL NAME:VAL+SETMATCH",
-    "Zero tally: EACH+AFTER+NUM+CMP 0 \u2014 not COUNTLINE ':0'",
-    "Identity: BEFORE ':' + EQS \u2014 not GREP name",
-    "Amount parse: PREPEND empty + HEAD + NUM shuttle",
-    "Always LET bag = LAST after every PUSH/SETMATCH/MOVELINE/REMOVELINE",
-    "PRINT_JSON for zero-ish scalars; avoid bare PRINT LAST for \"0\"",
-    "Credit ceiling: SYS MIN / SYS CLAMP with CUBALC_BUDGET_MAX"
+    "Aggregates: EACH AFTER ':' PUSH pure scores then SUM/AVG/SORTN/MIN/MAX",
+    "pinhot: walk CMP max + FINDLINE + MOVELINE (not SORTN composite)",
+    "breach: EACH + CMP remaining THRESH",
+    "Identity: BEFORE ':' + EQS — not GREP name",
+    "PRINT_JSON only scalar sum/avg/min/max; keep bag on plate file",
+    "PRINT_JSON idents must match var case exactly (THRESH not thresh)",
+    "Always LET bag = LAST after PUSH/SETMATCH/MOVELINE"
   ],
   "language_gaps": [
-    "Atomic bag field numeric debit/credit (or SETMATCH with expr)",
-    "COUNTLINE suffix / field-pattern tally for :N classes",
-    "In-place bag PUSH into named var (auto-bind)",
-    "SYS NUM from named string without LAST shuttle",
-    "String concatenation for name:N tokens",
-    "PRINT_JSON newline escape; WRITE force trailing NL",
-    "PRINT of string \"0\" should not look truthy/confusing"
+    "SUM/AVG/SORTN by field after separator (keyed aggregates)",
+    "In-place bag sort by numeric key field",
+    "COUNTLINE suffix / pattern tally",
+    "String concat for name:ms tokens",
+    "PRINT_JSON newline escape",
+    "WRITE force trailing NL",
+    "Case-insensitive PRINT_JSON ident resolution (or docs)"
   ],
   "issues_faced": [
-    "Forgot LET report=LAST after PUSH miss value \u2014 report missing miss field until fixed",
-    "PRINT LAST after STR 0 printed 1 \u2014 misleading for zero remaining debug",
-    "Post-tally EACH overwrites remaining with last row (report remaining not always action remaining)"
+    "SUM on composite latency bag silently 0 — easy agent footgun without peel",
+    "PRINT_JSON thresh vs THRESH case mismatch reported thresh:0 until fixed",
+    "scores bag also PRINT_JSON-collapses so sortpeek must expose hit scalar"
   ],
-  "commit": "c945cfe5725c239358595402063a223ffaf3c149",
-  "ts": "2026-08-05T15:20:00Z"
+  "commit": "",
+  "ts": "2026-08-05T15:43:30Z"
 }
