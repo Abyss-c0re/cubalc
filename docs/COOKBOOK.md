@@ -10,6 +10,7 @@ make all
 ./out/cubalc doctor      # JSON readiness
 ./out/cubalc cookbook    # paths
 ./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
+./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc forms SMX   # play-form catalog
 ./out/cubalc help
 ```
@@ -135,6 +136,8 @@ PRINT "args" LAST
 ```
 
 ## Env cheat sheet
+
+Live catalog (set/default/hint JSON): `./out/cubalc env` · filter `cubalc env P2P`.
 
 | env | use |
 |-----|-----|
