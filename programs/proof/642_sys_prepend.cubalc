@@ -1,0 +1,80 @@
+# SYS PREPEND / UNSHIFT + POPHEAD / DEQUEUE — FIFO bag front plane
+# Usability: priority insert + FIFO dequeue without REVL/NTH glue (dual of PUSH/POP)
+
+HOLD_FLASH 1
+
+# PREPEND front of bag
+SYS PREPEND "b\nc" "a"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS PREPEND "" "only"
+ASSERT LAST_N == 1
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# aliases
+SYS UNSHIFT "y\nz" "x"
+ASSERT LAST_N == 3
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+SYS PUSHFRONT "2" "1"
+SYS EQS LAST "1\n2"
+ASSERT LAST_N == 1
+
+# POPHEAD peels first (FIFO)
+SYS POPHEAD "a\nb\nc"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS EQS POP_REST "b\nc"
+ASSERT LAST_N == 1
+ASSERT POP_N == 2
+
+# single field
+SYS POPHEAD "solo"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+SYS EMPTY POP_REST
+ASSERT LAST_N == 1
+ASSERT POP_N == 0
+
+# empty bag soft
+SYS POPHEAD ""
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# DEQUEUE alias
+SYS DEQUEUE "q1\nq2"
+SYS EQS LAST "q1"
+ASSERT LAST_N == 1
+SYS EQS POP_REST "q2"
+ASSERT LAST_N == 1
+
+# agent pattern: priority front + FIFO process
+LET q = "normal1\nnormal2"
+SYS PREPEND q "urgent"
+SYS EQS LAST "urgent\nnormal1\nnormal2"
+ASSERT LAST_N == 1
+SYS POPHEAD LAST
+SYS EQS LAST "urgent"
+ASSERT LAST_N == 1
+SYS EQS POP_REST "normal1\nnormal2"
+ASSERT LAST_N == 1
+SYS POPHEAD POP_REST
+SYS EQS LAST "normal1"
+ASSERT LAST_N == 1
+
+# PUSH still appends (back); PREPEND is front
+SYS PUSH "a" "b"
+SYS PREPEND LAST "z"
+SYS EQS LAST "z\na\nb"
+ASSERT LAST_N == 1
+
+PRINT "sys_prepend ok"

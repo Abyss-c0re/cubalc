@@ -128,6 +128,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 98. ~~**`SYS REVL` / `REVLINES` / `TAC`**~~ **done** (reverse newline bag order · LIFO/newest-first without shell).
 99. ~~**`SYS WORDS` / `TOKENIZE`**~~ **done** (whitespace → newline fields · free text → bag pipeline).
 100. ~~**`SYS HASLINE` / `HASLINEI`**~~ **done** (exact bag-field membership · work bags without EACH+EQS).
+101. ~~**`SYS PREPEND` / `POPHEAD`**~~ **done** (FIFO bag front · dual of PUSH/POP without REVL/NTH).
 
 ## Tick protocol
 

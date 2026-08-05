@@ -2321,6 +2321,64 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PREPEND|UNSHIFT|PUSHFRONT bag [line|LAST] — insert field at front of bag.
+     * Dual of PUSH (append). LAST = bag; LAST_N/PREPEND_N = field count.
+     * Usability: priority / FIFO enqueue front without REVL+PUSH glue. */
+    if (kw(&L->cur,"PREPEND") || kw(&L->cur,"UNSHIFT") || kw(&L->cur,"PUSHFRONT") ||
+        kw(&L->cur,"PREPENDLINE") || kw(&L->cur,"LINEPREPEND") || kw(&L->cur,"BAGPREPEND") ||
+        kw(&L->cur,"INSERTFRONT")){
+      char bag[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      size_t blen, llen, o;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) bag[0] = 0;
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0)
+        snprintf(line, sizeof line, "%s", vm->last_str);
+      blen = strlen(bag);
+      llen = strlen(line);
+      out[0] = 0;
+      o = 0;
+      /* front field */
+      if (llen < sizeof out) {
+        memcpy(out, line, llen);
+        o = llen;
+      } else {
+        o = sizeof out - 1;
+        memcpy(out, line, o);
+      }
+      out[o] = 0;
+      if (blen > 0) {
+        if (o + 1 < sizeof out) out[o++] = '\n';
+        if (o + blen < sizeof out) {
+          memcpy(out + o, bag, blen);
+          o += blen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, bag, take);
+          o += take;
+        }
+        out[o] = 0;
+        nfields = 1; /* new front */
+        p = bag;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      } else {
+        nfields = 1; /* only the new front field (even if empty) */
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "PREPEND", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "PREPEND_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS POP|POPLINE|SHIFT [bag|LAST] — remove last newline field from bag.
      * LAST = popped field; POP_REST/REST = remaining bag; LAST_N = 1 if popped, 0 if empty.
      * POP_N = remaining field count. Empty bag → LAST "", REST "", LAST_N=0.
@@ -2378,6 +2436,60 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", lastf);
       vm->last_n = found;
       var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POP_N", rest_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS POPHEAD|HEADPOP|SHIFTF [bag|LAST] — peel first newline field (FIFO).
+     * LAST = first field; POP_REST/REST = remaining; LAST_N = 1 if peeled, 0 empty.
+     * Complements POP (last/LIFO). Note: SYS SHIFT remains POP alias (compat).
+     * Usability: FIFO work queue without NTH 0 + DROP 1 glue. */
+    if (kw(&L->cur,"POPHEAD") || kw(&L->cur,"HEADPOP") || kw(&L->cur,"SHIFTF") ||
+        kw(&L->cur,"SHIFTFRONT") || kw(&L->cur,"DEQUEUE") || kw(&L->cur,"POPFIRST") ||
+        kw(&L->cur,"FIRSTPOP") || kw(&L->cur,"UNSHIFT_POP")){
+      char bag[CUBALC_HOST_STR_MAX], first[512], rest[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long rest_n = 0, found = 0;
+      size_t flen;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      first[0] = 0;
+      rest[0] = 0;
+      if (!bag[0]) {
+        found = 0;
+      } else {
+        p = bag;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - bag);
+        if (flen >= sizeof first) flen = sizeof first - 1;
+        memcpy(first, bag, flen);
+        first[flen] = 0;
+        found = 1;
+        if (*p == '\n') {
+          snprintf(rest, sizeof rest, "%s", p + 1);
+          if (rest[0]) {
+            const char *q = rest;
+            while (*q) {
+              while (*q && *q != '\n') q++;
+              rest_n++;
+              if (*q == '\n') q++;
+            }
+          }
+        } else {
+          rest[0] = 0;
+          rest_n = 0;
+        }
+      }
+      var_set_str(vm, "LAST", first);
+      var_set_str(vm, "POPHEAD", first);
+      var_set_str(vm, "POP_REST", rest);
+      var_set_str(vm, "REST", rest);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", first);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POPHEAD_N", rest_n);
       var_set_num(vm, "POP_N", rest_n);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
@@ -3017,7 +3129,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|HASLINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3274,8 +3386,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EXTRACT", "SYS EXTRACT open close [hay] — alias of SYS BETWEEN"},
       {"SYS PUSH", "SYS PUSH|ADDLINE bag [line] — append newline field · multi-file accumulate"},
       {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
+      {"SYS PREPEND", "SYS PREPEND|UNSHIFT bag [line] — insert field at front · FIFO/priority"},
+      {"SYS UNSHIFT", "SYS UNSHIFT bag line — alias of SYS PREPEND"},
       {"SYS POP", "SYS POP|POPLINE [bag] — last field → LAST; rest → POP_REST · process bags"},
       {"SYS POPLINE", "SYS POPLINE bag — alias of SYS POP (not stack POP)"},
+      {"SYS POPHEAD", "SYS POPHEAD|DEQUEUE [bag] — first field → LAST; rest → POP_REST · FIFO"},
+      {"SYS DEQUEUE", "SYS DEQUEUE bag — alias of SYS POPHEAD"},
       {"SYS EQSI", "SYS EQSI|IEQS|EQS I a b — case-insensitive string equality · LAST_N 0|1"},
       {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
       {"SYS LINES", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N/LINES_N"},
