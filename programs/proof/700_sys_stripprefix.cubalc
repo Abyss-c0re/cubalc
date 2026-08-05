@@ -1,0 +1,63 @@
+# SYS STRIPPREFIX / STRIPSUFFIX / STRIPCOMMON — strip ends from bag fields
+# Usability: relative paths after COMMONPREFIX without EACH+AFTER glue
+
+HOLD_FLASH 1
+
+LET paths = "/var/log/a.log\n/var/log/b.log\n/tmp/c.log"
+
+# strip explicit prefix (only matching fields)
+SYS STRIPPREFIX paths "/var/log/"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT STRIPPREFIX_HIT == 2
+SYS EQS LAST "a.log\nb.log\n/tmp/c.log"
+ASSERT LAST_N == 1
+
+# strip suffix
+SYS STRIPSUFFIX paths ".log"
+ASSERT LAST_N == 3
+ASSERT STRIPSUFFIX_HIT == 3
+SYS EQS LAST "/var/log/a\n/var/log/b\n/tmp/c"
+ASSERT LAST_N == 1
+
+# STRIPCOMMON = LCP then strip (one step relative)
+LET peers = "state/peer_a/plate.json\nstate/peer_b/plate.json\nstate/peer_c/meta.json"
+SYS STRIPCOMMON peers
+ASSERT LAST_N == 3
+ASSERT STRIPCOMMON_HIT == 3
+ASSERT STRIPCOMMON_LEN == 11
+SYS EQS STRIPCOMMON_PRE "state/peer_"
+ASSERT LAST_N == 1
+SYS EQS LAST "a/plate.json\nb/plate.json\nc/meta.json"
+ASSERT LAST_N == 1
+
+# aliases
+SYS STRIPLCP peers
+SYS EQS LAST "a/plate.json\nb/plate.json\nc/meta.json"
+ASSERT LAST_N == 1
+SYS RELPATHS peers
+SYS EQS LAST "a/plate.json\nb/plate.json\nc/meta.json"
+ASSERT LAST_N == 1
+
+# empty prefix / no-op
+SYS STRIPPREFIX paths ""
+SYS EQS LAST paths
+ASSERT LAST_N == 1
+ASSERT STRIPPREFIX_HIT == 0
+
+# empty bag
+SYS STRIPCOMMON ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent: COMMONPREFIX discover + STRIPPREFIX apply
+LET abs = "/data/work/a.cubalc\n/data/work/b.cubalc"
+SYS COMMONPREFIX abs
+LET root = LAST
+ASSERT LAST_N == 11
+SYS STRIPPREFIX abs root
+SYS EQS LAST "a.cubalc\nb.cubalc"
+ASSERT LAST_N == 1
+
+PRINT "sys_stripprefix ok"

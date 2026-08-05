@@ -187,6 +187,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 157. ~~**`SYS TRUNCALL` / `CLIPALL`**~~ **done** (truncate every bag field to width · clip logs without EACH+LEFT · dual of PADALL).
 158. ~~**`SYS LONGEST` / `SHORTEST`**~~ **done** (first longest/shortest bag field text · no MAXLEN_I+NTH glue).
 159. ~~**`SYS COMMONPREFIX` / `LCP` · `COMMONSUFFIX`**~~ **done** (shared bag prefix/suffix · path roots without EACH).
+160. ~~**`SYS STRIPPREFIX` / `STRIPSUFFIX` / `STRIPCOMMON`**~~ **done** (strip ends / LCP from bag fields · relative paths one-shot).
 
 ## Tick protocol
 

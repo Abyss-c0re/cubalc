@@ -1516,6 +1516,137 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS STRIPPREFIX|MAPSTRIPPRE bag [prefix] — remove leading prefix from each field
+     * if present (only when field starts with prefix). Empty prefix → no-op copy.
+     * SYS STRIPSUFFIX|MAPSTRIPSUF bag [suffix] — strip trailing suffix when present.
+     * SYS STRIPCOMMON|STRIPLCP [bag] — compute LCP then strip it from every field
+     * (relative paths in one step). LAST = bag; LAST_N = field count;
+     * STRIPPREFIX_HIT / STRIPSUFFIX_HIT / STRIPCOMMON_HIT = fields shortened;
+     * STRIPCOMMON_PRE = prefix removed (STRIPCOMMON only).
+     * Usability: path relative after COMMONPREFIX without EACH+AFTER glue. */
+    if (kw(&L->cur,"STRIPPREFIX") || kw(&L->cur,"MAPSTRIPPRE") || kw(&L->cur,"DROPPREFIX") ||
+        kw(&L->cur,"REMOVEPREFIX") || kw(&L->cur,"CHOPPREFIX") || kw(&L->cur,"UNPREFIX") ||
+        kw(&L->cur,"STRIPSUFFIX") || kw(&L->cur,"MAPSTRIPSUF") || kw(&L->cur,"DROPSUFFIX") ||
+        kw(&L->cur,"REMOVESUFFIX") || kw(&L->cur,"CHOPSUFFIX") || kw(&L->cur,"UNSUFFIX") ||
+        kw(&L->cur,"STRIPCOMMON") || kw(&L->cur,"STRIPLCP") || kw(&L->cur,"RELPATHS") ||
+        kw(&L->cur,"STRIPROOT") || kw(&L->cur,"COMMONSTRIP")){
+      char op[20];
+      int is_suf = 0, is_common = 0;
+      char bag[CUBALC_HOST_STR_MAX], needle[512], out[CUBALC_HOST_STR_MAX];
+      char field[512], clipped[512];
+      char fields[64][256];
+      size_t flens[64];
+      const char *p, *start;
+      size_t flen, nlen, olen = 0, sn, i, j, n = 0, plen = 0;
+      long kept = 0, hit = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "STRIPSUFFIX") == 0 || strcmp(op, "MAPSTRIPSUF") == 0 ||
+          strcmp(op, "DROPSUFFIX") == 0 || strcmp(op, "REMOVESUFFIX") == 0 ||
+          strcmp(op, "CHOPSUFFIX") == 0 || strcmp(op, "UNSUFFIX") == 0)
+        is_suf = 1;
+      if (strcmp(op, "STRIPCOMMON") == 0 || strcmp(op, "STRIPLCP") == 0 ||
+          strcmp(op, "RELPATHS") == 0 || strcmp(op, "STRIPROOT") == 0 ||
+          strcmp(op, "COMMONSTRIP") == 0)
+        is_common = 1;
+      lex_next(L);
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (!is_common) {
+        if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      }
+      /* parse fields; for STRIPCOMMON also compute LCP into needle */
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof fields[0]) flen = sizeof fields[0] - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          flens[n] = flen;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (is_common && n > 0) {
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m && fields[0][j] == fields[i][j]) j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof needle) plen = sizeof needle - 1;
+        memcpy(needle, fields[0], plen);
+        needle[plen] = 0;
+      }
+      nlen = strlen(needle);
+      for (i = 0; i < n; i++) {
+        flen = flens[i];
+        memcpy(field, fields[i], flen + 1);
+        sn = flen;
+        if (nlen > 0 && flen >= nlen) {
+          if (!is_suf) {
+            if (memcmp(field, needle, nlen) == 0) {
+              sn = flen - nlen;
+              memcpy(clipped, field + nlen, sn);
+              clipped[sn] = 0;
+              hit++;
+            } else {
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+            }
+          } else {
+            if (memcmp(field + (flen - nlen), needle, nlen) == 0) {
+              sn = flen - nlen;
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+              hit++;
+            } else {
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+            }
+          }
+        } else {
+          memcpy(clipped, field, sn);
+          clipped[sn] = 0;
+        }
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + sn < sizeof out) {
+          memcpy(out + olen, clipped, sn);
+          olen += sn;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, clipped, t);
+          olen += t;
+        }
+        out[olen] = 0;
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "STRIPPREFIX_N", kept);
+      var_set_num(vm, "STRIPSUFFIX_N", kept);
+      var_set_num(vm, "STRIPCOMMON_N", kept);
+      if (is_common) {
+        var_set_num(vm, "STRIPCOMMON_HIT", hit);
+        var_set_str(vm, "STRIPCOMMON_PRE", needle);
+        var_set_num(vm, "STRIPCOMMON_LEN", (long)nlen);
+      } else if (is_suf) {
+        var_set_num(vm, "STRIPSUFFIX_HIT", hit);
+      } else {
+        var_set_num(vm, "STRIPPREFIX_HIT", hit);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
      * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
      * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
@@ -7795,7 +7926,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -8131,6 +8262,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LCP", "SYS LCP [bag] — alias of SYS COMMONPREFIX · path/peer roots"},
       {"SYS COMMONSUFFIX", "SYS COMMONSUFFIX|LCS [bag] — longest common suffix of fields → LAST"},
       {"SYS LCS", "SYS LCS [bag] — alias of SYS COMMONSUFFIX · shared ext peel"},
+      {"SYS STRIPPREFIX", "SYS STRIPPREFIX bag prefix — drop leading prefix from each field if present"},
+      {"SYS STRIPSUFFIX", "SYS STRIPSUFFIX bag suffix — drop trailing suffix from each field if present"},
+      {"SYS STRIPCOMMON", "SYS STRIPCOMMON|STRIPLCP [bag] — strip LCP from every field · relative paths"},
+      {"SYS STRIPLCP", "SYS STRIPLCP [bag] — alias of SYS STRIPCOMMON"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},
