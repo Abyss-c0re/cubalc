@@ -4020,6 +4020,74 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS UPPERALL|MAPUPPER|UCASEALL [bag] — ASCII upper every newline field → LAST.
+     * SYS LOWERALL|MAPLOWER|LCASEALL [bag] — ASCII lower every field.
+     * LAST_N = field count. Usability: normalize LIST/severity bags before HASLINE/set ops
+     * without EACH LINE + UPPER/LOWER glue. */
+    if (kw(&L->cur,"UPPERALL") || kw(&L->cur,"MAPUPPER") || kw(&L->cur,"UCASEALL") ||
+        kw(&L->cur,"TOUPPERALL") || kw(&L->cur,"UPCASEALL") ||
+        kw(&L->cur,"LOWERALL") || kw(&L->cur,"MAPLOWER") || kw(&L->cur,"LCASEALL") ||
+        kw(&L->cur,"TOLOWERALL") || kw(&L->cur,"DOWNCASEALL")){
+      char op[20];
+      int to_upper = 1;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen, i;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LOWERALL") == 0 || strcmp(op, "MAPLOWER") == 0 ||
+          strcmp(op, "LCASEALL") == 0 || strcmp(op, "TOLOWERALL") == 0 ||
+          strcmp(op, "DOWNCASEALL") == 0)
+        to_upper = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            for (i = 0; i < flen; i++) {
+              char c = start[i];
+              if (to_upper) {
+                if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+              } else {
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              }
+              out[olen++] = c;
+            }
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            for (i = 0; i < t; i++) {
+              char c = start[i];
+              if (to_upper) {
+                if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+              } else {
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              }
+              out[olen++] = c;
+            }
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "UPPERALL_N", kept);
+      var_set_num(vm, "LOWERALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIDLINES|SLICEBAG|FIELDSLICE|LINESLICE bag start [end]
      * — keep newline fields [start..end] inclusive, 0-based.
      * end omitted → through last field. start/end clamp; start>end → empty.
@@ -5826,7 +5894,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6092,6 +6160,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS COMPACT", "SYS COMPACT [BLANK] [bag] — alias of SYS SQUEEZE · clean VALS/SPLIT bags"},
       {"SYS TRIMALL", "SYS TRIMALL|MAPTRIM [L|R] [bag] — trim whitespace on every field → LAST"},
       {"SYS MAPTRIM", "SYS MAPTRIM [L|R] [bag] — alias of SYS TRIMALL · clean READ/SPLIT lines"},
+      {"SYS UPPERALL", "SYS UPPERALL|MAPUPPER [bag] — ASCII upper every bag field → LAST"},
+      {"SYS MAPUPPER", "SYS MAPUPPER [bag] — alias of SYS UPPERALL · normalize before HASLINE"},
+      {"SYS LOWERALL", "SYS LOWERALL|MAPLOWER [bag] — ASCII lower every bag field → LAST"},
+      {"SYS MAPLOWER", "SYS MAPLOWER [bag] — alias of SYS LOWERALL · case-fold bags"},
       {"SYS MIDLINES", "SYS MIDLINES|SLICEBAG bag start [end] — keep fields [start..end] 0-based"},
       {"SYS SLICEBAG", "SYS SLICEBAG bag start [end] — alias of SYS MIDLINES · middle bag window"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},

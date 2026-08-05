@@ -1,0 +1,54 @@
+# SYS UPPERALL / LOWERALL — ASCII case-map every bag field
+# Usability: normalize LIST/severity bags before HASLINE/set ops without EACH+UPPER
+
+HOLD_FLASH 1
+
+LET bag = "Error Disk\nWARN mem\nfatal Panic\nINFO ok"
+
+SYS UPPERALL bag
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT UPPERALL_N == 4
+SYS EQS LAST "ERROR DISK\nWARN MEM\nFATAL PANIC\nINFO OK"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPUPPER bag
+ASSERT LAST_N == 4
+SYS EQS LAST "ERROR DISK\nWARN MEM\nFATAL PANIC\nINFO OK"
+ASSERT LAST_N == 1
+
+SYS LOWERALL bag
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT LOWERALL_N == 4
+SYS EQS LAST "error disk\nwarn mem\nfatal panic\ninfo ok"
+ASSERT LAST_N == 1
+
+SYS MAPLOWER bag
+ASSERT LAST_N == 4
+SYS EQS LAST "error disk\nwarn mem\nfatal panic\ninfo ok"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS UPPERALL ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single field (no newlines)
+SYS LOWERALL "MiXeD"
+ASSERT LAST_N == 1
+SYS EQS LAST "mixed"
+ASSERT LAST_N == 1
+
+# agent pattern: case-fold then HASLINE exact
+LET peers = "Alpha\nbravo\nCHARLIE"
+SYS LOWERALL peers
+LET norm = LAST
+SYS HASLINE norm "bravo"
+ASSERT LAST_N == 1
+SYS HASLINE norm "ALPHA"
+ASSERT LAST_N == 0
+
+PRINT "sys_upperall ok"

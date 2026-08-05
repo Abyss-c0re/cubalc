@@ -164,6 +164,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 134. ~~**`SYS GREPANY` / `GREPOR`**~~ **done** (keep fields matching any of several needles · multi-severity log triage).
 135. ~~**`SYS GREPALL` / `GREPAND`**~~ **done** (keep fields matching every needle · multi-tag AND triage).
 136. ~~**`REQUIRE ENV` / `VAR`**~~ **done** (fail-fast if host env missing/empty · agent host config gate).
+137. ~~**`SYS UPPERALL` / `LOWERALL`**~~ **done** (ASCII case-map every bag field · normalize before HASLINE/set ops).
 
 ## Tick protocol
 
