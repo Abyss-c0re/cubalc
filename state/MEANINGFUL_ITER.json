@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 124,
-  "version": "1.15.149-usability",
-  "item": "SYS TRUNCALL / CLIPALL truncate bag fields to width",
-  "item_id": 157,
-  "title": "SYS TRUNCALL|CLIPALL [RIGHT] bag width — clip fields no pad",
-  "commit": "f552e3852914ab3de4fed47b19589b8b02d81091",
-  "summary": "SYS TRUNCALL/CLIPALL truncate every bag field to width (log clip without EACH). selftest 124.",
+  "iter": 125,
+  "version": "1.15.150-usability",
+  "item": "SYS LONGEST / SHORTEST pick bag field by length",
+  "item_id": 158,
+  "title": "SYS LONGEST|SHORTEST [bag] — first extreme-length field text",
+  "commit": "2983b7c085195c5b2578ab4d2f1c64108ab2847d",
+  "summary": "SYS LONGEST/SHORTEST pick longest/shortest bag field text without MAXLEN_I+NTH. selftest 125.",
   "proofs": [
-    "697_sys_truncall",
-    "selftest n_pass=124"
+    "698_sys_longest",
+    "selftest n_pass=125"
   ],
-  "when": "2026-08-05T22:24:02Z",
+  "when": "2026-08-05T22:34:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f552e3852914ab3de4fed47b19589b8b02d81091"
+  "sha": "2983b7c085195c5b2578ab4d2f1c64108ab2847d"
 }
