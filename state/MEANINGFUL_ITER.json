@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 90,
-  "version": "1.15.115-usability",
-  "item": "SYS SHUFFLE / SHUF bag field order",
-  "item_id": 123,
-  "title": "SYS SHUFFLE|SHUF Fisher-Yates newline bag shuffle",
-  "commit": "1885bef8b83f934a96b1c425d304acb622ab6424",
-  "summary": "SYS SHUFFLE/SHUF Fisher-Yates bag shuffle \u2192 LAST. Randomize peers/work without shell shuf. selftest 90.",
+  "iter": 91,
+  "version": "1.15.116-usability",
+  "item": "SYS COALESCE / NVL first non-empty string",
+  "item_id": 124,
+  "title": "SYS COALESCE|NVL a b [c\u2026] first non-empty string",
+  "commit": "38690768667391852c07e52ad06d1df38dfc8ebb",
+  "summary": "SYS COALESCE/NVL first non-empty (or BLANK) string \u2192 LAST. Default chains without nested IF EMPTY. selftest 91.",
   "proofs": [
-    "663_sys_shuffle",
-    "selftest n_pass=90"
+    "664_sys_coalesce",
+    "selftest n_pass=91"
   ],
-  "when": "2026-08-05T16:43:24Z",
+  "when": "2026-08-05T16:53:35Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1885bef8b83f934a96b1c425d304acb622ab6424"
+  "sha": "38690768667391852c07e52ad06d1df38dfc8ebb"
 }
