@@ -3030,6 +3030,220 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS UNION|ORLINES|SETUNION a [b…] — merge bags · first-seen unique fields → LAST.
+     * SYS DISTINCT|UNIQUEALL [bag] — order-preserving full unique (unlike adjacent UNIQ).
+     * SYS INTERSECT|ANDLINES|SETAND a b — fields of a also in b (order of a).
+     * SYS DIFF|EXCEPT|SETDIFF|MINUSLINES a b — fields of a not in b (order of a).
+     * LAST_N = kept count. Cap 256 fields × 192 chars.
+     * Usability: work-bag merge/dedup/subtract without EACH+HASLINE rebuild. */
+    if (kw(&L->cur,"UNION") || kw(&L->cur,"ORLINES") || kw(&L->cur,"SETUNION") ||
+        kw(&L->cur,"SETOR") || kw(&L->cur,"DISTINCT") || kw(&L->cur,"UNIQUEALL") ||
+        kw(&L->cur,"UALL") || kw(&L->cur,"DEDUPALL") ||
+        kw(&L->cur,"INTERSECT") || kw(&L->cur,"ANDLINES") || kw(&L->cur,"SETAND") ||
+        kw(&L->cur,"SETINTERSECT") ||
+        kw(&L->cur,"DIFF") || kw(&L->cur,"EXCEPT") || kw(&L->cur,"SETDIFF") ||
+        kw(&L->cur,"MINUSLINES") || kw(&L->cur,"LINEDIFF") || kw(&L->cur,"BAGDIFF")){
+      char op[24];
+      int mode; /* 0=union/distinct 1=intersect 2=diff */
+      enum { SET_MAX = 256, SET_FLEN = 192 };
+      char fields[SET_MAX][SET_FLEN];
+      char bag[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      int n = 0, i;
+      size_t olen = 0;
+      long kept = 0;
+      const char *p, *start;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "INTERSECT") == 0 || strcmp(op, "ANDLINES") == 0 ||
+          strcmp(op, "SETAND") == 0 || strcmp(op, "SETINTERSECT") == 0)
+        mode = 1;
+      else if (strcmp(op, "DIFF") == 0 || strcmp(op, "EXCEPT") == 0 ||
+               strcmp(op, "SETDIFF") == 0 || strcmp(op, "MINUSLINES") == 0 ||
+               strcmp(op, "LINEDIFF") == 0 || strcmp(op, "BAGDIFF") == 0)
+        mode = 2;
+      else
+        mode = 0; /* UNION / DISTINCT */
+      lex_next(L);
+      out[0] = 0;
+      n = 0;
+      if (mode == 0) {
+        /* UNION / DISTINCT: absorb all args; keep first-seen order */
+        int any = 0;
+        while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+               L->cur.kind == TK_NUM) {
+          bag[0] = 0;
+          if (L->cur.kind == TK_NUM) {
+            snprintf(bag, sizeof bag, "%ld", L->cur.num);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) {
+            break;
+          }
+          any = 1;
+          if (!bag[0]) continue;
+          p = bag;
+          while (*p && n < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              int seen = 0;
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              for (i = 0; i < n; i++) {
+                if (strlen(fields[i]) == flen &&
+                    (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                  seen = 1;
+                  break;
+                }
+              }
+              if (!seen) {
+                memcpy(fields[n], start, flen);
+                fields[n][flen] = 0;
+                n++;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        if (!any) {
+          /* zero args → LAST bag */
+          snprintf(bag, sizeof bag, "%s", vm->last_str);
+          if (bag[0]) {
+            p = bag;
+            while (*p && n < SET_MAX) {
+              start = p;
+              while (*p && *p != '\n') p++;
+              if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+                break;
+              {
+                size_t flen = (size_t)(p - start);
+                int seen = 0;
+                if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+                for (i = 0; i < n; i++) {
+                  if (strlen(fields[i]) == flen &&
+                      (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                    seen = 1;
+                    break;
+                  }
+                }
+                if (!seen) {
+                  memcpy(fields[n], start, flen);
+                  fields[n][flen] = 0;
+                  n++;
+                }
+              }
+              if (*p == '\n') p++;
+            }
+          }
+        }
+        for (i = 0; i < n; i++) {
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t flen = strlen(fields[i]);
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fields[i], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, fields[i], take);
+              olen += take;
+            }
+            out[olen] = 0;
+          }
+          kept++;
+        }
+      } else {
+        /* INTERSECT / DIFF: a then b */
+        char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+        char bfields[SET_MAX][SET_FLEN];
+        int bn = 0;
+        a[0] = 0; b[0] = 0;
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+          b[0] = 0;
+        /* index fields of b */
+        if (b[0]) {
+          p = b;
+          while (*p && bn < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > b && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              memcpy(bfields[bn], start, flen);
+              bfields[bn][flen] = 0;
+              bn++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        /* walk a; keep if (intersect && in b) or (diff && not in b); first-seen only */
+        if (a[0]) {
+          p = a;
+          while (*p && n < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > a && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              int in_b = 0, seen = 0;
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              for (i = 0; i < bn; i++) {
+                if (strlen(bfields[i]) == flen &&
+                    (flen == 0 || memcmp(bfields[i], start, flen) == 0)) {
+                  in_b = 1;
+                  break;
+                }
+              }
+              for (i = 0; i < n; i++) {
+                if (strlen(fields[i]) == flen &&
+                    (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                  seen = 1;
+                  break;
+                }
+              }
+              if (!seen && ((mode == 1 && in_b) || (mode == 2 && !in_b))) {
+                memcpy(fields[n], start, flen);
+                fields[n][flen] = 0;
+                n++;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        for (i = 0; i < n; i++) {
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t flen = strlen(fields[i]);
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fields[i], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, fields[i], take);
+              olen += take;
+            }
+            out[olen] = 0;
+          }
+          kept++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "UNION_N", kept);
+      var_set_num(vm, "SET_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
      * Lex SORT orders "10" before "2"; SORTN orders by integer value.
      * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
@@ -4772,7 +4986,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5016,6 +5230,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SORTN", "SYS SORTN|NSORT [DESC] [str] — numeric sort of newline fields (vs lex SORT)"},
       {"SYS NSORT", "SYS NSORT [DESC] [str] — alias of SYS SORTN · score bags / sizes"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
+      {"SYS UNION", "SYS UNION|ORLINES a [b…] — merge bags · first-seen unique fields → LAST"},
+      {"SYS DISTINCT", "SYS DISTINCT|UNIQUEALL [bag] — order-preserving full unique (vs adjacent UNIQ)"},
+      {"SYS INTERSECT", "SYS INTERSECT|ANDLINES a b — fields of a also in b (order of a)"},
+      {"SYS DIFF", "SYS DIFF|EXCEPT|SETDIFF a b — fields of a not in b (order of a)"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
       {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},

@@ -152,6 +152,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 122. ~~**`SYS POW` / `ISQRT`**~~ **done** (integer power + floor sqrt · backoff/geometry without ISA soup).
 123. ~~**`SYS SHUFFLE` / `SHUF`**~~ **done** (Fisher–Yates bag shuffle · randomize peers/work without shell shuf).
 124. ~~**`SYS COALESCE` / `NVL`**~~ **done** (first non-empty string · default chains without nested IF EMPTY).
+125. ~~**`SYS UNION` / `INTERSECT` / `DIFF`**~~ **done** (bag set ops · merge/dedup/subtract work lists without EACH+HASLINE).
 
 ## Tick protocol
 

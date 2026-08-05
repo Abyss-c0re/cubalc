@@ -1,0 +1,102 @@
+# SYS UNION / INTERSECT / DIFF — bag set ops on newline fields
+# Usability: work-bag merge/dedup/subtract without EACH+HASLINE rebuild
+
+HOLD_FLASH 1
+
+# UNION two bags — first-seen order, unique
+SYS UNION "a\nb\nc" "b\nd\na"
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT UNION_N == 4
+ASSERT SET_N == 4
+SYS EQS LAST "a\nb\nc\nd"
+ASSERT LAST_N == 1
+
+# multi-arg UNION
+SYS UNION "x" "y" "x\nz"
+ASSERT LAST_N == 3
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+
+# DISTINCT — order-preserving full unique (vs adjacent UNIQ)
+SYS DISTINCT "a\nb\na\nc\nb"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# UNIQUEALL alias
+SYS UNIQUEALL "1\n2\n1\n3"
+ASSERT LAST_N == 3
+SYS EQS LAST "1\n2\n3"
+ASSERT LAST_N == 1
+
+# INTERSECT — fields of a also in b (order of a)
+SYS INTERSECT "a\nb\nc\nd" "c\na\nx"
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# ANDLINES alias
+SYS ANDLINES "p\nq" "q\nr"
+ASSERT LAST_N == 1
+SYS EQS LAST "q"
+ASSERT LAST_N == 1
+
+# DIFF / EXCEPT — fields of a not in b
+SYS DIFF "a\nb\nc\nd" "b\nd"
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+SYS EXCEPT "1\n2\n3" "2"
+ASSERT LAST_N == 2
+SYS EQS LAST "1\n3"
+ASSERT LAST_N == 1
+
+SYS SETDIFF "alpha\nbeta" "gamma"
+ASSERT LAST_N == 2
+SYS EQS LAST "alpha\nbeta"
+ASSERT LAST_N == 1
+
+# empty / miss edges
+SYS UNION "" "a"
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+SYS INTERSECT "a\nb" ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+SYS DIFF "a" ""
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+SYS DIFF "" "a"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent pattern: merge peers, subtract done
+LET peers = "alice\nbob\ncarol"
+LET done = "bob"
+SYS DIFF peers done
+ASSERT LAST_N == 2
+SYS EQS LAST "alice\ncarol"
+ASSERT LAST_N == 1
+
+LET more = "carol\ndave"
+SYS UNION peers more
+ASSERT LAST_N == 4
+SYS EQS LAST "alice\nbob\ncarol\ndave"
+ASSERT LAST_N == 1
+
+# SETUNION alias
+SYS SETUNION "m\nn" "n\no"
+ASSERT LAST_N == 3
+SYS EQS LAST "m\nn\no"
+ASSERT LAST_N == 1
+
+PRINT "sys_union ok"
