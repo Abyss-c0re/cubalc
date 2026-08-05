@@ -1,0 +1,232 @@
+# drop_folder_scan.cubalc — LIST-driven drop folder intake (no fixed filenames)
+#
+# Real use: agents drop mixed files under CUBALC_STATE/in/; this program:
+#   SYS LIST in/ → walk basenames with NTH
+#   route by EXTNAME: .bits → FOLDBITS+DECIDE, .json → SYS JSON ok
+#   skip dirs / unknown / empty / oversize
+#   optional short SLEEP backoff before scan (poll loops)
+#   write SCAN_REPORT.txt under out/
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/in"   # or let program MKDIR
+#   printf '10101011' > "$CUBALC_STATE/in/any_name.bits"
+#   ./out/cubalc run -q -s programs/realworld/drop_folder_scan.cubalc
+#
+# Optional:
+#   CUBALC_SCAN_MAX_BYTES=65536
+#   CUBALC_SCAN_SLEEP_MS=0        # backoff before LIST (cap 60s)
+#   CUBALC_SCAN_REQUIRE=1         # EXIT 2 if zero accepted
+#
+# Edges:
+#   LIST soft miss / file-not-dir sticky last_err
+#   NTH out-of-range soft
+#   WHILE walk + JOIN (JOIN still off forms)
+#   LIST returns basenames only — must JOIN for full path
+#   LIST order not guaranteed — agents must not assume sort
+#   no recursive LIST
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "drop_folder_scan: start"
+DEFAULT MAX_BYTES = 65536
+DEFAULT SLEEP_MS = 0
+DEFAULT REQUIRE_ONE = 0
+IDENTITY
+SYS DATE
+LET scan_date = DATE
+
+SYS ENV "CUBALC_SCAN_MAX_BYTES" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_BYTES = LAST_N
+  END
+END
+SYS ENV "CUBALC_SCAN_SLEEP_MS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET SLEEP_MS = LAST_N
+  END
+END
+SYS ENV "CUBALC_SCAN_REQUIRE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "in"
+LET in_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS JOIN state_dir "done"
+LET done_dir = LAST
+SYS MKDIR in_dir
+SYS MKDIR out_dir
+SYS MKDIR done_dir
+
+# optional poll backoff
+IF SLEEP_MS > 0 THEN
+  SYS SLEEP SLEEP_MS
+  NOTE "slept before scan"
+END
+
+SYS ISDIR in_dir
+ASSERT LAST_N == 1 "in is dir"
+
+SYS LIST in_dir
+LET list_ok = OK
+IF list_ok == 0 THEN
+  FAIL "LIST in failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET listing = LAST
+LET n = LIST_N
+NOTE "listed entries"
+CLEAR_ERR "list clean"
+
+LET accepted = 0
+LET skipped = 0
+LET dig = -1
+LET json_ok = -1
+LET i = 0
+
+WHILE i < n
+  SYS NTH i listing
+  IF OK == 0 THEN
+    LET skipped = skipped + 1
+    LET i = i + 1
+    CONTINUE
+  END
+  LET name = LAST
+  SYS JOIN in_dir name
+  LET path = LAST
+
+  SYS ISDIR path
+  IF LAST_N == 1 THEN
+    LET skipped = skipped + 1
+    NOTE "skip dir entry"
+    LET i = i + 1
+    CONTINUE
+  END
+
+  SYS ISFILE path
+  IF LAST_N == 0 THEN
+    LET skipped = skipped + 1
+    LET i = i + 1
+    CONTINUE
+  END
+
+  SYS SIZE path
+  IF OK == 0 THEN
+    CLEAR_ERR
+    LET skipped = skipped + 1
+    LET i = i + 1
+    CONTINUE
+  END
+  IF SIZE == 0 THEN
+    LET skipped = skipped + 1
+    LET i = i + 1
+    CONTINUE
+  END
+  IF SIZE > MAX_BYTES THEN
+    LET skipped = skipped + 1
+    LET i = i + 1
+    CONTINUE
+  END
+
+  SYS EXTNAME path
+  LET ext = LAST
+  SYS EQS ext ".bits"
+  IF LAST_N == 1 THEN
+    SYS READ path
+    LET bits = LAST
+    CUBE peer0 ROLE host PROTON 1
+    CUBE brain ROLE braincube PROTON 1
+    PLUG peer0 brain
+    FOLDBITS peer0 bits
+    IMPULSE peer0 1
+    IMPULSE brain 1
+    FLOW 2
+    DECIDE brain
+    LET dig = DECIDE
+    LET accepted = accepted + 1
+    # move to done/ via RENAME
+    SYS JOIN done_dir name
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      CLEAR_ERR
+      SYS RM path
+      CLEAR_ERR
+    END
+    NOTE "accepted bits"
+    LET i = i + 1
+    CONTINUE
+  END
+
+  SYS EQS ext ".json"
+  IF LAST_N == 1 THEN
+    SYS READ path
+    SYS JSON "ok"
+    SYS CAT LAST ""
+    SYS NUM
+    LET json_ok = LAST_N
+    LET accepted = accepted + 1
+    SYS JOIN done_dir name
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      CLEAR_ERR
+      SYS RM path
+      CLEAR_ERR
+    END
+    NOTE "accepted json"
+    LET i = i + 1
+    CONTINUE
+  END
+
+  LET skipped = skipped + 1
+  LET i = i + 1
+END
+
+IF REQUIRE_ONE == 1 THEN
+  IF accepted == 0 THEN
+    FAIL "nothing accepted"
+    EXIT 2 "scan empty"
+  END
+END
+
+SYS JOIN out_dir "SCAN_REPORT.txt"
+LET report = LAST
+SYS CAT "cubalc.drop_folder_scan.v1 ok=1 date=" scan_date
+LET line = LAST
+SYS WRITE report line
+SYS EXIST report
+ASSERT EXIST == 1
+
+# re-list in/ after moves
+SYS LIST in_dir
+LET remain = LIST_N
+CLEAR_ERR
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "drop_folder_scan: done"
+PRINT "scan" accepted skipped remain dig json_ok n
+PRINT_JSON accepted skipped remain dig json_ok n STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "scan clean"
+EXIT 0 "scan ok"

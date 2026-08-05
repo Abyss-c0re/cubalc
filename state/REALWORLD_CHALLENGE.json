@@ -1,120 +1,114 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 10,
-  "program": "programs/realworld/lease_lock.cubalc",
-  "theme": "multi-probe agent lease/lock: TOUCH + REALPATH + READ OR acquire/status/renew/release",
-  "version": "1.15.63-usability",
+  "iter": 11,
+  "program": "programs/realworld/drop_folder_scan.cubalc",
+  "theme": "local file/state drop-folder scan: SYS LIST+NTH walk \u00b7 EXT route \u00b7 RENAME done/",
+  "version": "1.15.66-usability",
   "pass": true,
   "tests": [
     {
-      "name": "status_free",
-      "cmd": "CUBALC_ARG0=status empty STATE run -q -s",
+      "name": "mixed_drop_scan",
+      "cmd": "in/{.bits,.json,.txt,subdir}; run -q -s",
       "ok": true,
-      "note": "held=0; EXIT 0"
+      "note": "accepts bits+json \u2192 done/; skips txt+dir; SCAN_REPORT.txt"
     },
     {
-      "name": "acquire",
-      "cmd": "CUBALC_ARG0=acquire run -q -s",
-      "ok": true,
-      "note": "agent.lock empty + agent.lease identity date; TOUCH_N=1"
-    },
-    {
-      "name": "acquire_busy_exit_4",
-      "cmd": "second acquire while held",
+      "name": "require_empty_exit_2",
+      "cmd": "CUBALC_SCAN_REQUIRE=1 empty in run -q",
       "ok": false,
-      "note": "expected EXIT 4 lock busy"
+      "note": "expected EXIT 2 scan empty"
     },
     {
-      "name": "renew_and_release",
-      "cmd": "renew then release run -q -s",
+      "name": "sleep_backoff",
+      "cmd": "CUBALC_SCAN_SLEEP_MS=40 with one .bits run -q -s",
       "ok": true,
-      "note": "TOUCH update TOUCH_N=0; RM both; second release idempotent"
+      "note": "SYS SLEEP before LIST"
     },
     {
-      "name": "unknown_action_exit_2",
-      "cmd": "CUBALC_ARG0=nope run -q",
+      "name": "empty_ok_without_require",
+      "cmd": "empty in run -q -s",
+      "ok": true,
+      "note": "LIST_N=0 still writes report EXIT 0"
+    },
+    {
+      "name": "list_file_strict_sticky",
+      "cmd": "SYS LIST on a file; PASS; no CLEAR_ERR; run -q -s",
       "ok": false,
-      "note": "expected EXIT 2"
-    },
-    {
-      "name": "realpath_missing_ok",
-      "cmd": "SYS REALPATH /tmp/missing; EXIST 0",
-      "ok": true,
-      "note": "REALPATH OK=1 even when path does not exist"
+      "note": "last_err list: not a directory; err_line=0; rc=1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "38/38 green"
+      "note": "41/41 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "io|concurrency",
-      "title": "No atomic exclusive create (O_EXCL) \u2014 TOUCH lock is TOCTOU",
-      "detail": "Acquire is ISFILE then TOUCH. Two agents can both see free and both TOUCH; second TOUCH_N=0 is only detected if we EXPECT create, but TOUCH never fails when file appears mid-race\u2014it becomes an update. Not a real mutex vs flock/lockf. Agents still need shell flock for critical sections.",
-      "repro": "two concurrent acquire processes on same CUBALC_STATE \u2014 both can 'succeed'"
+      "area": "io|list",
+      "title": "SYS LIST is non-recursive and order-unstable",
+      "detail": "LIST returns only immediate basenames. Nested drop folders need manual recursion (agents re-LIST each subdir). Order is filesystem order, not sorted \u2014 agents must not assume lexical order for NTH 0 as 'first file'. No LIST -R / GLOB **.",
+      "repro": "drop files only under in/sub/; top LIST sees 'sub' as dir and skips content"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "path|semantics",
-      "title": "SYS REALPATH returns OK=1 for missing paths",
-      "detail": "REALPATH/ABSPATH on a non-existent path still OK=1 and returns an absolute string (cwd-join or as-is). Agents cannot use REALPATH as existence proof; must pair EXIST/ISFILE. Easy to stamp lock_abs that does not yet exist and assume it is live.",
-      "repro": "SYS REALPATH \"/tmp/no_such\"; ASSERT OK==1; SYS EXIST same \u2192 0"
+      "area": "error|io",
+      "title": "LIST soft fail sticky last_err with err_line=0",
+      "detail": "LIST on a file or missing path sets last_err (e.g. list: not a directory) with err_line=0 empty err_src. PASS without CLEAR_ERR fails run -s. Same host-I/O plate gap as SIZE/COPY.",
+      "repro": "SYS LIST hold_seed.cubalc; PASS; run -q -s \u2192 rc=1 err_line:0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "io",
-      "title": "No mtime/atime probe \u2014 cannot expire leases in-language",
-      "detail": "TOUCH refreshes mtime but nothing reads mtime back. Lease expiry requires host date math or external watcher. TOUCH without STAT_MTIME cannot implement TTL locks purely in CubalC.",
-      "repro": "want: if lock mtime older than N seconds then RM \u2014 no form"
+      "area": "flow",
+      "title": "LIST walk requires manual WHILE+NTH+JOIN boilerplate",
+      "detail": "No FOR-EACH-file form. Every scan program reimplements i/n/NTH/JOIN/CONTINUE. Error-prone when CONTINUE/i increment order wrong. Human forms still lack FN/foreach for agents.",
+      "repro": "see WHILE i < n block in drop_folder_scan.cubalc"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "string",
-      "title": "Lease body multi-CAT still painful for IDENTITY+DATE",
-      "detail": "Three SYS CAT steps to build holder=\u2026 date=\u2026. No format/sprintf. WRITE_JSON still missing for structured leases.",
-      "repro": "see lease_body construction in lease_lock.cubalc"
+      "area": "docs|discovery",
+      "title": "SYS JOIN still missing from forms/search",
+      "detail": "LIST returns basenames that must JOIN with dir; JOIN remains uncatalogued (iters 7\u201310). LIST is discoverable; path rebuild is not.",
+      "repro": "./out/cubalc forms JOIN \u2192 n=0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "docs|discovery",
-      "title": "SYS JOIN still absent from forms/search",
-      "detail": "Unfixed since iter7; every path worker hardcodes JOIN knowledge.",
-      "repro": "./out/cubalc forms JOIN \u2192 n=0"
+      "area": "io",
+      "title": "No filter flags on LIST (ext/glob)",
+      "detail": "Cannot LIST only *.bits; must pull all names and EXTNAME-filter in-loop. Large drop dirs pay full LIST cost and large LAST strings.",
+      "repro": "want SYS LIST dir \"*.bits\" \u2014 no form"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "cli",
-      "title": "Busy lock EXIT 4 after FAIL still needs CLEAR for pure -s paths that continue",
-      "detail": "EXIT non-zero is fine for CI, but if agents PASS after busy without EXIT, sticky FAIL remains. Documented pattern only.",
-      "repro": "FAIL lock held; PASS; run -s without EXIT/CLEAR \u2192 rc=1"
+      "area": "report",
+      "title": "SCAN_REPORT cannot stamp accepted/skipped/remain live counts",
+      "detail": "Static DATE line only; metrics live in PRINT_JSON/VARS. Ongoing WRITE_JSON gap.",
+      "repro": "SCAN_REPORT.txt lacks accepted integer"
     }
   ],
   "workarounds": [
-    "Treat TOUCH lock as advisory only; use EXIT 4 busy for single-agent serial CI",
-    "Always EXIST/ISFILE after REALPATH before trusting a path is live",
-    "Host cron for TTL expiry until STAT_MTIME exists",
-    "SYS CAT chain for lease lines; VARS for full identity",
-    "Hardcode SYS JOIN; watch catalog",
-    "EXIT non-zero on busy rather than soft continue under -s"
+    "Flatten drops into in/ (no nested dirs) or recurse manually with second LIST",
+    "CLEAR_ERR after LIST soft fails when using run -s",
+    "Snapshot LIST into LET listing before NTH walk (LAST gets overwritten)",
+    "Hardcode SYS JOIN after each NTH basename",
+    "EXTNAME filter in-loop instead of shell glob",
+    "PRINT_JSON for scan metrics; file report as coarse stamp"
   ],
   "language_gaps": [
-    "SYS TOUCH EXCL / atomic create-only lock form",
-    "REALPATH that soft-fails or flags missing vs resolve-only",
-    "SYS MTIME / STAT plate fields",
-    "String format / WRITE_JSON for lease plates",
-    "SYS JOIN in forms/search",
-    "Optional flock-backed SYS LOCK for real mutex"
+    "Recursive LIST / GLOB patterns",
+    "err_line/err_src on LIST soft fails",
+    "FOR-EACH path over LIST or SYS EACH DIR",
+    "SYS JOIN in forms/search catalog",
+    "LIST filter by extension/glob",
+    "WRITE_JSON / template report with counts"
   ],
-  "commit": "90cd8b5",
-  "ts": "2026-08-05T08:12:20Z"
+  "commit": "2028f4c",
+  "ts": "2026-08-05T08:37:34Z"
 }
