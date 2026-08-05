@@ -3568,6 +3568,86 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ENUMERATE|NUMBER|INDEXLINES|NL|ENUM bag [start] [sep]
+     * — prefix each field with start+i and sep (default start=0, sep=":").
+     * LAST_N = field count. Empty bag → "" OK=1.
+     * Usability: ranked/priority plates without EACH+STR+CAT index glue. */
+    /* Note: SYS ENUM is IOTA alias (RANGE plane) — do not claim ENUM here. */
+    if (kw(&L->cur,"ENUMERATE") || kw(&L->cur,"NUMBER") || kw(&L->cur,"INDEXLINES") ||
+        kw(&L->cur,"NUMBERLINES") || kw(&L->cur,"NLNUM") ||
+        kw(&L->cur,"IDXLINES") || kw(&L->cur,"WITHINDEX") || kw(&L->cur,"RANKLINES")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], out[CUBALC_HOST_STR_MAX], ibuf[40];
+      const char *p, *start;
+      size_t olen = 0, sepn, flen, ilen;
+      long kept = 0, base = 0, idx;
+      lex_next(L);
+      bag[0] = 0; sep[0] = ':'; sep[1] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional start index (num/ident/paren); then optional sep string */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+        /* Ambiguity: IDENT could be next form. Only treat as start if num/minus/paren
+         * or IDENT that resolves as number var. Prefer: num or minus always start;
+         * IDENT only if looks numeric after resolve as number via parse_prim when
+         * next is also present or kind is clearly numeric. */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN) {
+          base = parse_prim(vm, L);
+        } else if (L->cur.kind == TK_IDENT) {
+          /* peek: if IDENT is a known numeric-ish we still parse_prim (var num) */
+          base = parse_prim(vm, L);
+        }
+      }
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+          { sep[0] = ':'; sep[1] = 0; }
+        if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          idx = base + kept;
+          snprintf(ibuf, sizeof ibuf, "%ld", idx);
+          ilen = strlen(ibuf);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + ilen < sizeof out) {
+            memcpy(out + olen, ibuf, ilen);
+            olen += ilen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, ibuf, t);
+            olen += t;
+          }
+          if (olen + sepn < sizeof out) {
+            memcpy(out + olen, sep, sepn);
+            olen += sepn;
+          }
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, start, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "ENUM_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
      * Lex SORT orders "10" before "2"; SORTN orders by integer value.
      * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
@@ -5310,7 +5390,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5564,6 +5644,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PREFIXALL", "SYS PREFIXALL|MAPPRE bag prefix — prepend string to every field → LAST"},
       {"SYS SUFFIXALL", "SYS SUFFIXALL|MAPSUF bag suffix — append string to every field → LAST"},
       {"SYS FILL", "SYS FILL|REPEATL n value — bag of n copies of value → LAST (cap 256)"},
+      {"SYS ENUMERATE", "SYS ENUMERATE|NUMBER bag [start] [sep] — index-prefix each field (default 0:)"},
+      {"SYS NUMBER", "SYS NUMBER bag [start] [sep] — alias of SYS ENUMERATE · ranked plates"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
       {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},

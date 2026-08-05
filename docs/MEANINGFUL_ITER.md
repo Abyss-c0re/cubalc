@@ -156,6 +156,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 126. ~~**`SYS ZIP` / `KEYS` / `VALS`**~~ **done** (pair bag fields by index · peel kv columns without EACH+CAT).
 127. ~~**`SYS PREFIXALL` / `SUFFIXALL`**~~ **done** (tag every bag field · path/peer labels without EACH+CAT).
 128. ~~**`SYS FILL` / `REPEATL`**~~ **done** (bag of n copies · default ZIP columns without EACH).
+129. ~~**`SYS ENUMERATE` / `NUMBER`**~~ **done** (index-prefix bag fields · ranked plates without EACH+STR+CAT).
 
 ## Tick protocol
 

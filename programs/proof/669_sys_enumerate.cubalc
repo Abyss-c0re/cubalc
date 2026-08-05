@@ -1,0 +1,66 @@
+# SYS ENUMERATE / NUMBER — index-prefix every bag field
+# Usability: ranked/priority plates without EACH+STR+CAT glue
+
+HOLD_FLASH 1
+
+# default 0-based with ":"
+SYS ENUMERATE "a\nb\nc"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT ENUM_N == 3
+SYS EQS LAST "0:a\n1:b\n2:c"
+ASSERT LAST_N == 1
+
+# 1-based start
+SYS ENUMERATE "a\nb\nc" 1
+ASSERT LAST_N == 3
+SYS EQS LAST "1:a\n2:b\n3:c"
+ASSERT LAST_N == 1
+
+# custom sep (index then sep then field)
+SYS ENUMERATE "x\ny" 0 "="
+ASSERT LAST_N == 2
+SYS EQS LAST "0=x\n1=y"
+ASSERT LAST_N == 1
+
+# aliases
+SYS NUMBER "p\nq"
+ASSERT LAST_N == 2
+SYS EQS LAST "0:p\n1:q"
+ASSERT LAST_N == 1
+
+SYS INDEXLINES "z" 10
+ASSERT LAST_N == 1
+SYS EQS LAST "10:z"
+ASSERT LAST_N == 1
+
+SYS NUMBERLINES "a\nb" 1 "."
+ASSERT LAST_N == 2
+SYS EQS LAST "1.a\n2.b"
+ASSERT LAST_N == 1
+
+# empty
+SYS ENUMERATE ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single
+SYS ENUMERATE "solo" 5
+ASSERT LAST_N == 1
+SYS EQS LAST "5:solo"
+ASSERT LAST_N == 1
+
+# agent pattern: rank peers after SHUFFLE
+LET peers = "alice\nbob\ncarol"
+SYS ENUMERATE peers 1
+SYS EQS LAST "1:alice\n2:bob\n3:carol"
+ASSERT LAST_N == 1
+
+# start from var
+LET base = 100
+SYS ENUMERATE "a\nb" base
+SYS EQS LAST "100:a\n101:b"
+ASSERT LAST_N == 1
+
+PRINT "sys_enumerate ok"
