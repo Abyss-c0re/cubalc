@@ -1,58 +1,64 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 42,
-  "program": "programs/realworld/payload_size_gate.cubalc",
-  "theme": "payload size gate LENALL MINMAX bag ZIP soft oversize",
-  "version": "1.15.143-usability",
+  "iter": 43,
+  "program": "programs/realworld/column_align_export.cubalc",
+  "theme": "column align export PADALL SORTLEN ARGMAX soft truncate",
+  "version": "1.15.146-usability",
   "pass": true,
   "tests": [
     {
-      "name": "ingest_measure",
-      "cmd": "ingest 4 payloads; measure \u2192 sizes 2,5,1,10 + ZIP labeled",
+      "name": "seed_align",
+      "cmd": "seed db api gateway edge; align width 8 space pad",
       "ok": true,
-      "note": "LENALL+ZIP plates"
+      "note": "PADALL right-pad plate"
     },
     {
-      "name": "gate_oversize",
-      "cmd": "gate thresh5 max10 soft rc0; REQUIRE EXIT 2; gate 20 under",
+      "name": "align_auto",
+      "cmd": "align WIDTH=0 → LENALL+MAX auto width 7 (gateway)",
       "ok": true,
-      "note": "MAX bag vs thresh CMP"
+      "note": "auto width path"
     },
     {
-      "name": "fat_scan",
-      "cmd": "fat >=5 hits; fat 50 none REQUIRE",
+      "name": "lpad_rank",
+      "cmd": "lpad 8; rank DESC → gateway first",
       "ok": true,
-      "note": "EACH+NTH index walk no LENWHERE"
+      "note": "LPADALL + SORTLEN DESC"
     },
     {
-      "name": "pin_drop",
-      "cmd": "pin fat payload; drop x; drop ghost REQUIRE",
+      "name": "longest_pinlong",
+      "cmd": "ARGMAX+NTH longest; MOVELINE pinlong",
       "ok": true,
-      "note": "MOVELINE exact"
+      "note": "index pick longest field"
     },
     {
-      "name": "measure_empty",
-      "cmd": "measure empty REQUIRE EXIT 2",
+      "name": "truncate",
+      "cmd": "align width 3 → gateway→gat edge→edg data loss",
       "ok": true,
-      "note": "soft empty path"
+      "note": "PADALL truncates silent"
     },
     {
-      "name": "zip_pad_minmax_empty",
-      "cmd": "ZIP pad empty partner; MIN/MAX empty bag \u2192 0",
+      "name": "pad_char_zero",
+      "cmd": "CUBALC_CA_PAD=0 align 6 zero-pad",
       "ok": true,
-      "note": "empty max 0 not fail"
+      "note": "pad char var worked for PADALL"
     },
     {
-      "name": "zip_sep_var",
-      "cmd": "SYS ZIP a b sep \u2192 unknown form sep",
+      "name": "empty_require",
+      "cmd": "align/longest empty REQUIRE EXIT 2",
       "ok": true,
-      "note": "same bare-ident form steal as CHUNK"
+      "note": "soft empty + hard gate"
+    },
+    {
+      "name": "argmax_empty",
+      "cmd": "ARGMAX \"\" → -1 OK=0",
+      "ok": true,
+      "note": "soft index miss"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "118/118 pass incl lenall minmax_bag"
+      "note": "121/121 pass incl padall sortlen argmax"
     }
   ],
   "weaknesses": [
@@ -60,88 +66,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "MIN/MAX empty bag returns 0 without FAIL",
-      "detail": "SYS MAX \"\" \u2192 LAST_N=0 looks like a real max of zero. Agents gating on empty sizes plate may pass falsely if they forget BLANK/LINES check.",
-      "repro": "MAX \"\" \u2192 0; COUNT==0 metadata only if checked"
+      "title": "PADALL silently truncates fields longer than width",
+      "detail": "PADALL 'hello' 3 → 'hel' with no FAIL/sticky. Align export can destroy gateway→gat. No PADALL STRICT or refuse-truncate mode.",
+      "repro": "PADALL 'gateway\\nedge' 3 → gat\\nedg"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "No LENWHERE / filter fields by length threshold",
-      "detail": "fat action rebuilds via EACH sizes + NTH bag index. O(n) glue and index desync if bags diverge. Common ops need keep-if-len>=N.",
-      "repro": "manual fat scan in payload_size_gate"
+      "title": "PADALL padding is invisible in PRINT_JSON / hard to inspect",
+      "detail": "Space-padded fields collapse visually in JSON; agents must cat -A plates. No visible pad mark option.",
+      "repro": "PRINT_JSON after PADALL spaces"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "lang|parse",
-      "title": "ZIP join sep bare var \u2192 unknown form",
-      "detail": "SYS ZIP a b sep with LET sep=\"=\" fails form-steal. Same class as CHUNK/WINDOW join seps.",
-      "repro": "LET sep=\"=\"; SYS ZIP x y sep"
+      "title": "SORTLEN DESC keyword steals DESC identifier",
+      "detail": "Same class as OFF/RIGHT. Agents naming vars DESC near SORTLEN risk form steal.",
+      "repro": "DEFAULT DESC near SYS SORTLEN DESC bag"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "ZIP unequal length pads empty \u2014 silent mispair",
-      "detail": "ZIP three payloads with two sizes yields trailing ':'. Agents measure after drop without re-measure get wrong labels.",
-      "repro": "ZIP a\\nb\\nc with 1\\n2 \u2192 c:"
+      "title": "ARGMAX empty returns -1 with OK=0 but easy to NTH wrong",
+      "detail": "Must CMP idx 0 before NTH; NTH -1 behavior may soft-miss. Inconsistent with MAX empty→0.",
+      "repro": "ARGMAX \"\" → -1; MAX \"\" → 0"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "LENALL is char/code-unit length not display width",
-      "detail": "No UTF-8/byte/display modes documented for multi-byte payloads. Ops size gates may under/over count.",
-      "repro": "LENALL multi-byte strings"
+      "title": "PADALL/SORTLEN/ARGMAX non-mutate",
+      "detail": "Must LET aligned/ranked/raw = LAST after ops.",
+      "repro": "PADALL raw 8; WRITE without LET keeps raw"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "LENALL/MIN/MAX/ZIP non-mutate",
-      "detail": "Must LET sizes/labeled = LAST or WRITE stale.",
-      "repro": "LENALL bag; WRITE sizes bag still payloads"
+      "title": "Auto width via MAX empty still 0 footgun",
+      "detail": "If LENALL empty, MAX→0 then MAX WIDTH 1 forces width 1 — pads nothing useful without clear error.",
+      "repro": "align empty handled by BLANK path; mid-empty sizes plate risk"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last payload/size line without $.",
-      "repro": "measure; cat -A SIZES.txt"
+      "detail": "cat -A last raw/align line without $.",
+      "repro": "seed; cat -A RAW.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|bag",
-      "title": "Payload fields with colon break ZIP labeled plate",
-      "detail": "ZIP default ':' sep; body containing ':' makes AFTER peel ambiguous for reverse parse.",
-      "repro": "ZIP 'a:b' '3' \u2192 a:b:3"
+      "title": "No PADALL keep-long / no-truncate flag",
+      "detail": "Ops want align short fields only and leave long fields intact. Currently all-or-truncate.",
+      "repro": "need EACH length check before pad"
     }
   ],
   "workarounds": [
-    "Always BLANK/LINES sizes before MIN/MAX; never treat max==0 as authoritative alone",
-    "Re-measure after any drop/pin that changes bag order or membership",
-    "ZIP with default colon only on colon-free ids; use ids not raw bodies for keys",
-    "Hardcode SYS ZIP a b \"=\" if custom sep; no var sep",
-    "Always LET after LENALL/ZIP"
+    "Always set width >= LENALL MAX before PADALL to avoid truncate",
+    "Inspect ALIGN with cat -A not PRINT_JSON for spaces",
+    "CMP ARGMAX idx >= 0 before NTH",
+    "Never name vars DESC/ASC/OFF/RIGHT/LEFT",
+    "Always LET after PADALL/SORTLEN"
   ],
   "language_gaps": [
-    "LENWHERE / keep fields by length predicate",
-    "MIN/MAX empty \u2192 soft fail or NaN-like sticky",
-    "ZIP sep as variable / LAST",
-    "UTF-8 byte length mode for LENALL",
-    "ZIP safe encoding when key contains sep",
+    "PADALL STRICT / no-truncate / keep-long modes",
+    "Visible pad debug form",
+    "Reserved-word diagnostic on DESC/ASC DEFAULT",
+    "Consistent empty extreme semantics (MAX 0 vs ARGMAX -1)",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Empty MAX=0 is a silent gate footgun \u2014 documented W1",
-    "fat requires index walk; no host form for length filter",
-    "ZIP sep var confirmed unknown form",
-    "Positive path clean: measure\u2192gate\u2192fat\u2192pin/drop"
+    "Confirmed silent truncate gateway→gat — highest agent footgun this fire",
+    "PADCH var worked for zero pad (unlike ZIP sep) — inconsistent form binding",
+    "ARGMAX+MOVELINE pinlong clean for attention",
+    "No language fix — PADALL truncate mode for MEANINGFUL_ITER"
   ],
-  "commit": "96572a892c5b2c2c0ba493a6f06da57d7b7d7d31",
-  "ts": "2026-08-05T21:33:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T21:58:00Z"
 }

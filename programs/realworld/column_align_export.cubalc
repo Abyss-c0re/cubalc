@@ -1,0 +1,628 @@
+# column_align_export.cubalc — fixed-width field export under STATE
+#
+# Real use: agents align inventory/host/ticket labels for terminal digests
+# with SYS PADALL, rank by length (SORTLEN), and pin longest via ARGMAX+NTH
+# without shell printf/column.
+#
+# Plates:
+#   RAW.txt    — source fields (exact)
+#   ALIGN.txt  — last PADALL export
+#   RANKED.txt — last SORTLEN order
+#
+# Actions (CUBALC_ARG0 / CUBALC_CA_ACTION):
+#   list     — depth + max width (default)
+#   seed     — WORDS unique tokens
+#   ingest   — PUSH raw field (ARG1)
+#   align    — PADALL width (ARG1 or auto LENALL+MAX); persist ALIGN
+#   lpad     — LPADALL same
+#   rank     — SORTLEN DESC|ASC → RANKED plate
+#   longest  — LENALL → ARGMAX → NTH raw; soft empty
+#   pinlong  — MOVELINE longest field to front of raw
+#   drop     — REMOVELINE exact
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   clear    — empty raw
+#   clearall — wipe all plates
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="db api gateway edge" \
+#     ./out/cubalc run -q -s programs/realworld/column_align_export.cubalc
+#   CUBALC_ARG0=align CUBALC_ARG1=8 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=rank ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CA_FILE=RAW.txt
+#   CUBALC_CA_REQUIRE=1
+#   CUBALC_CA_WIDTH=0   # 0 = auto max
+#   CUBALC_CA_PAD=      # pad char default space
+#
+# Edges deliberately stressed:
+#   PADALL truncates fields longer than width (data loss)
+#   PADALL pad char bare var → unknown form (CHUNK class)
+#   SORTLEN DESC keyword — var named DESC risky
+#   ARGMAX empty → -1 soft OK==0
+#   LENALL+MAX for auto width; empty MAX=0 footgun
+#   PADALL space padding invisible in PRINT_JSON
+#   WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "column_align_export: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "RAW.txt"
+DEFAULT AFILE = "ALIGN.txt"
+DEFAULT KFILE = "RANKED.txt"
+DEFAULT REPORT = "ALIGN_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT WIDTH = 0
+DEFAULT PADCH = " "
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CA_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CA_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CA_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CA_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_CA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CA_WIDTH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET WIDTH = LAST_N
+  END
+END
+SYS ENV "CUBALC_CA_PAD" OR ""
+IF LAST_N > 0 THEN
+  LET PADCH = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET raw_path = LAST
+SYS JOIN state_dir AFILE
+LET align_path = LAST
+SYS JOIN state_dir KFILE
+LET rank_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR raw_path OR ""
+LET raw = LAST
+CLEAR_ERR "soft raw load"
+SYS LINES raw
+LET depth0 = LAST_N
+
+SYS READ OR align_path OR ""
+LET aligned = LAST
+CLEAR_ERR
+SYS READ OR rank_path OR ""
+LET ranked = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET align_changed = 0
+LET rank_changed = 0
+LET note_msg = "ok"
+LET max_w = 0
+LET idx = -1
+LET filtered = ""
+LET lens = ""
+
+# width override for align/lpad
+SYS EQS ACTION "align"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET WIDTH = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "lpad"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET WIDTH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK raw
+  IF LAST_N == 0 THEN
+    SYS LENALL raw
+    LET lens = LAST
+    SYS MAX lens
+    LET max_w = LAST_N
+  END
+  SYS LINES raw
+  LET depth0 = LAST_N
+  STATUS
+  PRINT "colalign" depth0 max_w WIDTH ACTION
+  PRINT_JSON depth0 max_w WIDTH ACTION STATUS_OK
+  PRINT_JSON raw
+  PRINT_JSON aligned
+  PRINT_JSON ranked
+  LET note_msg = "list ok"
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE raw n
+      IF LAST_N == 0 THEN
+        SYS PUSH raw n
+        LET raw = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs field"
+  END
+  SYS PUSH raw NAME
+  LET raw = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# helper: resolve width
+# WIDTH 0 → auto LENALL MAX; if still 0 empty
+
+# --- align RPAD ---
+SYS EQS ACTION "align"
+IF LAST_N == 1 THEN
+  NOTE "action align"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "align empty"
+    FAIL "align empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "align empty"
+    END
+  ELSE
+    SYS CMP WIDTH 1
+    IF LAST_N < 0 THEN
+      SYS LENALL raw
+      LET lens = LAST
+      SYS MAX lens
+      LET WIDTH = LAST_N
+    END
+    SYS MAX WIDTH 1
+    LET WIDTH = LAST_N
+    LET max_w = WIDTH
+    # pad char: only string literal safe; default space via PADALL w/o third arg
+    SYS EQS PADCH " "
+    IF LAST_N == 1 THEN
+      SYS PADALL raw WIDTH
+      LET aligned = LAST
+    ELSE
+      # custom pad char must be literal-ish — try PADCH var (may form-steal)
+      SYS PADALL raw WIDTH PADCH
+      LET aligned = LAST
+    END
+    LET align_changed = 1
+    SYS LINES aligned
+    LET hit = LAST_N
+    LET note_msg = "aligned"
+    PRINT_JSON aligned
+  END
+END
+
+# --- lpad ---
+SYS EQS ACTION "lpad"
+IF LAST_N == 1 THEN
+  NOTE "action lpad"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "lpad empty"
+    FAIL "lpad empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lpad empty"
+    END
+  ELSE
+    SYS CMP WIDTH 1
+    IF LAST_N < 0 THEN
+      SYS LENALL raw
+      LET lens = LAST
+      SYS MAX lens
+      LET WIDTH = LAST_N
+    END
+    SYS MAX WIDTH 1
+    LET WIDTH = LAST_N
+    LET max_w = WIDTH
+    SYS LPADALL raw WIDTH
+    LET aligned = LAST
+    LET align_changed = 1
+    SYS LINES aligned
+    LET hit = LAST_N
+    LET note_msg = "lpadded"
+    PRINT_JSON aligned
+  END
+END
+
+# --- rank SORTLEN ---
+SYS EQS ACTION "rank"
+IF LAST_N == 1 THEN
+  NOTE "action rank"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "rank empty"
+    FAIL "rank empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rank empty"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS EQSI NAME "asc"
+      IF LAST_N == 1 THEN
+        SYS SORTLEN raw
+        LET ranked = LAST
+      ELSE
+        SYS SORTLEN DESC raw
+        LET ranked = LAST
+      END
+    ELSE
+      SYS SORTLEN DESC raw
+      LET ranked = LAST
+    END
+    LET rank_changed = 1
+    SYS LINES ranked
+    LET hit = LAST_N
+    LET note_msg = "ranked"
+    PRINT_JSON ranked
+  END
+END
+
+# --- longest: ARGMAX index ---
+SYS EQS ACTION "longest"
+IF LAST_N == 1 THEN
+  NOTE "action longest"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "longest empty"
+    FAIL "longest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "longest empty"
+    END
+  ELSE
+    SYS LENALL raw
+    LET lens = LAST
+    SYS ARGMAX lens
+    LET idx = LAST_N
+    SYS CMP idx 0
+    IF LAST_N < 0 THEN
+      LET miss = 1
+      LET note_msg = "longest argmax miss"
+      FAIL "longest argmax"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "longest argmax miss"
+      END
+    ELSE
+      SYS NTH idx raw
+      LET filtered = LAST
+      LET hit = 1
+      LET note_msg = "longest ok"
+      PRINT_JSON filtered
+    END
+  END
+END
+
+# --- pinlong ---
+SYS EQS ACTION "pinlong"
+IF LAST_N == 1 THEN
+  NOTE "action pinlong"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pinlong empty"
+    FAIL "pinlong empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pinlong empty"
+    END
+  ELSE
+    SYS LENALL raw
+    LET lens = LAST
+    SYS ARGMAX lens
+    LET idx = LAST_N
+    SYS CMP idx 0
+    IF LAST_N < 0 THEN
+      LET miss = 1
+      LET note_msg = "pinlong argmax miss"
+      FAIL "pinlong argmax"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pinlong argmax miss"
+      END
+    ELSE
+      SYS MOVELINE raw idx 0
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "pinlong moveline miss"
+        FAIL "pinlong moveline"
+        CLEAR_ERR
+      ELSE
+        LET raw = LAST
+        LET changed = 1
+        LET hit = 1
+        LET note_msg = "pinlong ok"
+      END
+    END
+  END
+END
+
+# --- drop / has / count ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact field"
+  END
+  SYS HASLINE raw NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE raw NAME
+    LET raw = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs field"
+  END
+  SYS HASLINE raw NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs field"
+  END
+  SYS COUNTLINE raw NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET raw = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared raw"
+END
+
+SYS EQS ACTION "clearall"
+IF LAST_N == 1 THEN
+  NOTE "action clearall"
+  LET raw = ""
+  LET aligned = ""
+  LET ranked = ""
+  LET changed = 1
+  LET align_changed = 1
+  LET rank_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared all"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "align"
+LET k = k + LAST_N
+SYS EQS ACTION "lpad"
+LET k = k + LAST_N
+SYS EQS ACTION "rank"
+LET k = k + LAST_N
+SYS EQS ACTION "longest"
+LET k = k + LAST_N
+SYS EQS ACTION "pinlong"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearall"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE raw_path raw
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "raw write failed"
+  END
+  CLEAR_ERR
+END
+IF align_changed > 0 THEN
+  SYS WRITE align_path aligned
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "align write failed"
+  END
+  CLEAR_ERR
+END
+IF rank_changed > 0 THEN
+  SYS WRITE rank_path ranked
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rank write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES raw
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.colalign.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "width"
+LET report = LAST
+SYS STR WIDTH
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_w"
+LET report = LAST
+SYS STR max_w
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "colalign" ACTION hit miss WIDTH max_w depth1
+PRINT_JSON ACTION hit miss WIDTH max_w depth1 elapsed STATUS_OK
+PASS "colalign tick"
+NOTE "column_align_export: done"
+CLEAR_ERR
+EXIT 0 "colalign ok"
