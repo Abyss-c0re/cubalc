@@ -76,6 +76,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 46. ~~**`CLEAR_ERR`**~~ **done** (wipe sticky ERR/LAST_ERR after soft recovery).
 47. ~~**`cubalc init`**~~ **done** (scaffold agent_boot starter · cubalc.init.v1).
 48. ~~**`cubalc run -s` / `CUBALC_STRICT`**~~ **done** (soft last_err fails exit + plate ok).
+49. ~~**`REQUIRE LIB`**~~ **done** (fail-fast if INCLUDE-style module missing).
 
 ## Tick protocol
 

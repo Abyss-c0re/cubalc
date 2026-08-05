@@ -1,3 +1,12 @@
+## Meaningful — REQUIRE LIB fail-fast module gate — 2026-08-05
+
+### Usability
+- `REQUIRE LIB name` (aliases `MODULE` `INCLUDE` `FILE` `STDLIB`) — resolve like INCLUDE/`cubalc which`
+- Missing → fatal with line + hint (`programs/lib · cubalc libs`); hit → LAST=path, OK=1, REQUIRE_LIB
+- Complements `INCLUDE OR|SOFT` (optional) and `REQUIRE VERSION` (runtime floor)
+- Proof: `programs/proof/590_require_lib.cubalc` · selftest id `require_lib`
+- Version: `1.15.41-usability`
+
 ## Meaningful — cubalc run --strict soft last_err fails — 2026-08-05
 
 ### Usability

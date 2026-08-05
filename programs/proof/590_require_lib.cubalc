@@ -1,0 +1,22 @@
+# REQUIRE LIB — fail-fast if INCLUDE-style module is missing
+# Usability: gate stdlib deps before INCLUDE; agents get clear fatal + path on LAST
+
+HOLD_FLASH 1
+
+REQUIRE LIB hold_seed
+ASSERT OK == 1 "hold_seed present"
+ASSERT LAST_N == 1 "LAST_N set on hit"
+# LAST holds resolved path (programs/lib/hold_seed.cubalc)
+PRINT "lib" LAST
+
+REQUIRE LIB agent_boot
+ASSERT OK == 1 "agent_boot present"
+
+REQUIRE MODULE peer_decide
+ASSERT OK == 1 "MODULE alias"
+
+# known good short name still works after VERSION gate
+REQUIRE VERSION "1.15"
+ASSERT OK == 1
+
+PRINT "require_lib ok" LAST

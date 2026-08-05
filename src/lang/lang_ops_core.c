@@ -1192,7 +1192,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
+      {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast gates"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -1641,14 +1641,46 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
-   * Compares leading numeric triple (major.minor.patch); suffix ignored.
-   * Usability: scripts/agents refuse incompatible CubalC without shell glue. */
+   * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
+   * Usability: agents refuse missing stdlib / old runtime without shell glue. */
   if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE LIB|MODULE|INCLUDE|FILE name — resolve like INCLUDE / cubalc which */
+    if (kw(&L->cur,"LIB")||kw(&L->cur,"MODULE")||kw(&L->cur,"INCLUDE")||
+        kw(&L->cur,"FILE")||kw(&L->cur,"STDLIB")||kw(&L->cur,"SRC")){
+      char name[160];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT){
+        fail(vm, "REQUIRE LIB name|path");
+        return -1;
+      }
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+      if (cubalc_host_find_cubalc(name, &hr) != 0){
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE LIB '%s' missing line %d — tried programs/lib · cubalc libs",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "REQUIRE_LIB", hr.str);
+      if (vm->trace)
+        fprintf(vm->trace, "# require lib %s → %s\n", name, hr.str);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION \"x.y[.z]\"");
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB name");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

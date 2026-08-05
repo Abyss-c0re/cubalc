@@ -1642,6 +1642,7 @@ int main(int argc, char **argv) {
       {"version", "programs/proof/580_version.cubalc", "VERSION form plate"},
       {"which_lib", "programs/proof/582_sys_which_lib.cubalc", "SYS WHICH lib resolve"},
       {"require", "programs/proof/583_require_version.cubalc", "REQUIRE VERSION gate"},
+      {"require_lib", "programs/proof/590_require_lib.cubalc", "REQUIRE LIB fail-fast gate"},
       {"cwd", "programs/proof/584_sys_cwd_state_root.cubalc", "SYS CWD/STATE/ROOT paths"},
       {"include_soft", "programs/proof/585_include_soft.cubalc", "INCLUDE OR soft miss"},
       {"vars", "programs/proof/586_vars.cubalc", "VARS full var table JSON"},
@@ -1770,7 +1771,7 @@ int main(int argc, char **argv) {
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
       {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
-      {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
+      {"REQUIRE", "flow", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast"},
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
@@ -2240,6 +2241,8 @@ int main(int argc, char **argv) {
        "STATUS cubalc.status.v1 agent health plate"},
       {"programs/proof/589_clear_err.cubalc", "clear_err",
        "CLEAR_ERR wipe sticky LAST_ERR after soft recovery"},
+      {"programs/proof/590_require_lib.cubalc", "require_lib",
+       "REQUIRE LIB fail-fast if module missing"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2745,7 +2748,7 @@ int main(int argc, char **argv) {
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
       {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
-      {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
+      {"REQUIRE", "flow", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
@@ -2770,6 +2773,7 @@ int main(int argc, char **argv) {
       {"programs/proof/582_sys_which_lib.cubalc", "which", "SYS WHICH lib resolve"},
       {"programs/proof/588_status.cubalc", "status", "STATUS agent health plate"},
       {"programs/proof/589_clear_err.cubalc", "clear_err", "CLEAR_ERR wipe sticky LAST_ERR"},
+      {"programs/proof/590_require_lib.cubalc", "require_lib", "REQUIRE LIB fail-fast gate"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
