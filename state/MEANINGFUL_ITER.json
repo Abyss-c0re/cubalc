@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 92,
-  "version": "1.15.117-usability",
-  "item": "SYS UNION / INTERSECT / DIFF bag set ops",
-  "item_id": 125,
-  "title": "SYS UNION|INTERSECT|DIFF bag set ops · DISTINCT full unique",
-  "commit": "3cdad0a53a4f05f43bd1f9586a2f6df12ff3af1b",
-  "summary": "SYS UNION/INTERSECT/DIFF/DISTINCT bag set ops → LAST. Work-list merge/dedup/subtract without EACH+HASLINE. selftest 92.",
+  "iter": 93,
+  "version": "1.15.118-usability",
+  "item": "SYS ZIP / KEYS / VALS bag pair and peel",
+  "item_id": 126,
+  "title": "SYS ZIP|KEYS|VALS pair bag fields · peel kv columns",
+  "commit": "dc3967e765013794bf3170f5118f34402bfdc2cc",
+  "summary": "SYS ZIP/PAIR bags by index; KEYS/VALS peel sep columns → LAST. Roster plates without EACH+CAT. selftest 93.",
   "proofs": [
-    "665_sys_union",
-    "selftest n_pass=92"
+    "666_sys_zip",
+    "selftest n_pass=93"
   ],
-  "when": "2026-08-05T17:05:51Z",
+  "when": "2026-08-05T17:14:31Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3cdad0a53a4f05f43bd1f9586a2f6df12ff3af1b"
+  "sha": "dc3967e765013794bf3170f5118f34402bfdc2cc"
 }
