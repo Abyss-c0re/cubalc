@@ -1,0 +1,749 @@
+# canary_stride_sampler.cubalc — fleet canary partition + neighbor windows under STATE
+#
+# Real use: agents split a host roster into canary/control via SYS STRIDE,
+# build adjacent neighbor pairs with SYS WINDOW for blast-radius checks, and
+# DIFF desired vs observed allowlists without shell awk.
+#
+# Plates:
+#   FLEET.txt   — host ids (exact fields)
+#   CANARY.txt  — stride partition (canary cohort)
+#   CONTROL.txt — complementary stride offset
+#   PAIRS.txt   — WINDOW 2 neighbor pairs (space-joined)
+#   DESIRED.txt — desired allowlist (optional)
+#
+# Actions (CUBALC_ARG0 / CUBALC_CS_ACTION):
+#   list     — depths of fleet/canary/control/pairs (default)
+#   seed     — WORDS hosts → PUSH if not HASLINE
+#   ingest   — PUSH single host
+#   stride   — STRIDE STEP [OFF] fleet → CANARY; STRIDE STEP OFF+1 → CONTROL
+#   pairs    — WINDOW 2 fleet → PAIRS plate
+#   drift    — DIFF desired fleet (or ARG1 bag path via NAME=desired token list)
+#   onlycan  — INTERSECT fleet canary
+#   pin      — MOVELINE first exact host to front
+#   drop     — REMOVELINE exact host
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   find     — FIRSTMATCH needle in fleet
+#   clear    — empty fleet
+#   clearall — wipe all plates
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="h0 h1 h2 h3 h4 h5" \
+#     ./out/cubalc run -q -s programs/realworld/canary_stride_sampler.cubalc
+#   CUBALC_ARG0=stride CUBALC_ARG1=2 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=pairs ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CS_FILE=FLEET.txt
+#   CUBALC_CS_REQUIRE=1
+#   CUBALC_CS_STEP=2
+#   CUBALC_CS_OFF=0
+#   CUBALC_CS_DESIRED=DESIRED.txt
+#
+# Edges deliberately stressed:
+#   STRIDE keyword OFF steals var name OFF — use OFFS + form SYS STRIDE n OFF k bag
+#   Bare mid-arg offset var → unknown form (same CHUNK join-sep class)
+#   STRIDE step<=0 → empty soft; WINDOW n > total → empty soft
+#   STRIDE/WINDOW non-mutate — LET rebind
+#   WINDOW join sep: bare var → unknown form
+#   DIFF/INTERSECT exact field only — no substring set match
+#   FIRSTMATCH substring false friends (h1 vs h10)
+#   seed HASLINE exact — host vs host_extra
+#   PRINT_JSON collapse; WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "canary_stride_sampler: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "FLEET.txt"
+DEFAULT CFILE = "CANARY.txt"
+DEFAULT TFILE = "CONTROL.txt"
+DEFAULT PFILE = "PAIRS.txt"
+DEFAULT DFILE = "DESIRED.txt"
+DEFAULT REPORT = "CANARY_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT STEP = 2
+DEFAULT OFFS = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CS_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_CS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CS_STEP" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET STEP = LAST_N
+  END
+END
+SYS ENV "CUBALC_CS_OFF" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET OFFS = LAST_N
+  END
+END
+SYS ENV "CUBALC_CS_DESIRED" OR ""
+IF LAST_N > 0 THEN
+  LET DFILE = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET fleet_path = LAST
+SYS JOIN state_dir CFILE
+LET canary_path = LAST
+SYS JOIN state_dir TFILE
+LET control_path = LAST
+SYS JOIN state_dir PFILE
+LET pairs_path = LAST
+SYS JOIN state_dir DFILE
+LET desired_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR fleet_path OR ""
+LET fleet = LAST
+CLEAR_ERR "soft fleet load"
+SYS LINES fleet
+LET depth0 = LAST_N
+
+SYS READ OR canary_path OR ""
+LET canary = LAST
+CLEAR_ERR
+SYS READ OR control_path OR ""
+LET control = LAST
+CLEAR_ERR
+SYS READ OR pairs_path OR ""
+LET pairs = LAST
+CLEAR_ERR
+SYS READ OR desired_path OR ""
+LET desired = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET canary_changed = 0
+LET control_changed = 0
+LET pairs_changed = 0
+LET desired_changed = 0
+LET note_msg = "ok"
+LET filtered = ""
+LET idx = -1
+LET c_n = 0
+LET t_n = 0
+LET p_n = 0
+
+# numeric overrides
+SYS EQS ACTION "stride"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET STEP = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET OFFS = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES fleet
+  LET depth0 = LAST_N
+  SYS LINES canary
+  LET c_n = LAST_N
+  SYS LINES control
+  LET t_n = LAST_N
+  SYS LINES pairs
+  LET p_n = LAST_N
+  STATUS
+  PRINT "canarystride" depth0 c_n t_n p_n STEP OFFS ACTION
+  PRINT_JSON depth0 c_n t_n p_n STEP OFFS ACTION STATUS_OK
+  PRINT_JSON fleet
+  PRINT_JSON canary
+  PRINT_JSON control
+  PRINT_JSON pairs
+  LET note_msg = "list ok"
+END
+
+# --- seed unique hosts ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs hosts"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE fleet n
+      IF LAST_N == 0 THEN
+        SYS PUSH fleet n
+        LET fleet = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs host"
+  END
+  SYS PUSH fleet NAME
+  LET fleet = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- desire: seed desired allowlist WORDS ---
+SYS EQS ACTION "desire"
+IF LAST_N == 1 THEN
+  NOTE "action desire"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "desire needs host list"
+  END
+  SYS WORDS NAME
+  LET desired = LAST
+  LET desired_changed = 1
+  SYS LINES desired
+  LET hit = LAST_N
+  LET note_msg = "desired set"
+END
+
+# --- stride: canary + control partitions ---
+SYS EQS ACTION "stride"
+IF LAST_N == 1 THEN
+  NOTE "action stride"
+  SYS BLANK fleet
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stride empty fleet"
+    FAIL "stride empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stride empty"
+    END
+  ELSE
+    SYS MAX STEP 1
+    LET STEP = LAST_N
+    SYS MAX OFFS 0
+    LET OFFS = LAST_N
+    # OFF is a STRIDE keyword (SYS STRIDE n OFF k bag) — never name vars OFF.
+    # Bare offset var mid-args is also form-parsed (unknown form). Use OFF keyword + num.
+    # Prefer: STRIDE step OFF offs; control = DIFF fleet canary (complement).
+    SYS STRIDE STEP OFF OFFS fleet
+    LET canary = LAST
+    LET canary_changed = 1
+    SYS DIFF fleet canary
+    LET control = LAST
+    LET control_changed = 1
+    SYS LINES canary
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "stride empty canary"
+      FAIL "stride empty canary"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stride empty canary"
+      END
+    ELSE
+      LET note_msg = "strided"
+    END
+    PRINT_JSON canary
+    PRINT_JSON control
+  END
+END
+
+# --- pairs: WINDOW 2 ---
+SYS EQS ACTION "pairs"
+IF LAST_N == 1 THEN
+  NOTE "action pairs"
+  SYS BLANK fleet
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pairs empty fleet"
+    FAIL "pairs empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pairs empty"
+    END
+  ELSE
+    SYS WINDOW 2 fleet
+    LET pairs = LAST
+    LET pairs_changed = 1
+    SYS LINES pairs
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "pairs empty window"
+      FAIL "pairs empty window"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pairs empty window"
+      END
+    ELSE
+      LET note_msg = "paired"
+    END
+    PRINT_JSON pairs
+  END
+END
+
+# --- drift: DIFF desired fleet (missing from fleet) ---
+SYS EQS ACTION "drift"
+IF LAST_N == 1 THEN
+  NOTE "action drift"
+  SYS BLANK desired
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drift no desired"
+    FAIL "drift no desired"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drift no desired"
+    END
+  ELSE
+    SYS DIFF desired fleet
+    LET filtered = LAST
+    SYS LINES filtered
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET miss = 0
+      LET note_msg = "drift clean"
+    ELSE
+      LET miss = 1
+      LET note_msg = "drift missing"
+      FAIL "drift missing hosts"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drift missing"
+      END
+    END
+    PRINT_JSON filtered
+  END
+END
+
+# --- onlycan: INTERSECT fleet canary ---
+SYS EQS ACTION "onlycan"
+IF LAST_N == 1 THEN
+  NOTE "action onlycan"
+  SYS BLANK canary
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "onlycan no canary"
+    FAIL "onlycan no canary"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "onlycan no canary"
+    END
+  ELSE
+    SYS INTERSECT fleet canary
+    LET filtered = LAST
+    SYS LINES filtered
+    LET hit = LAST_N
+    LET note_msg = "onlycan ok"
+    PRINT_JSON filtered
+  END
+END
+
+# --- extra: DIFF fleet desired (unexpected hosts) ---
+SYS EQS ACTION "extra"
+IF LAST_N == 1 THEN
+  NOTE "action extra"
+  SYS BLANK desired
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "extra no desired"
+    FAIL "extra no desired"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "extra no desired"
+    END
+  ELSE
+    SYS DIFF fleet desired
+    LET filtered = LAST
+    SYS LINES filtered
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET note_msg = "extra none"
+    ELSE
+      LET miss = 1
+      LET note_msg = "extra hosts"
+      FAIL "extra hosts"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "extra hosts"
+      END
+    END
+    PRINT_JSON filtered
+  END
+END
+
+# --- pin / drop / has / count / find ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs host"
+  END
+  SYS FINDLINE fleet NAME
+  LET idx = LAST_N
+  SYS CMP idx 0
+  IF LAST_N < 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS MOVELINE fleet idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+    ELSE
+      LET fleet = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs host"
+  END
+  SYS HASLINE fleet NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE fleet NAME
+    LET fleet = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs host"
+  END
+  SYS HASLINE fleet NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs host"
+  END
+  SYS COUNTLINE fleet NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "find"
+IF LAST_N == 1 THEN
+  NOTE "action find"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "find needs needle"
+  END
+  SYS FIRSTMATCH fleet NAME
+  LET filtered = LAST
+  SYS BLANK filtered
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "find miss"
+    FAIL "find miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "find miss"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "find hit"
+  END
+  PRINT_JSON filtered
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET fleet = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared fleet"
+END
+
+SYS EQS ACTION "clearall"
+IF LAST_N == 1 THEN
+  NOTE "action clearall"
+  LET fleet = ""
+  LET canary = ""
+  LET control = ""
+  LET pairs = ""
+  LET desired = ""
+  LET changed = 1
+  LET canary_changed = 1
+  LET control_changed = 1
+  LET pairs_changed = 1
+  LET desired_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared all"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "desire"
+LET k = k + LAST_N
+SYS EQS ACTION "stride"
+LET k = k + LAST_N
+SYS EQS ACTION "pairs"
+LET k = k + LAST_N
+SYS EQS ACTION "drift"
+LET k = k + LAST_N
+SYS EQS ACTION "onlycan"
+LET k = k + LAST_N
+SYS EQS ACTION "extra"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "find"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearall"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE fleet_path fleet
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "fleet write failed"
+  END
+  CLEAR_ERR
+END
+IF canary_changed > 0 THEN
+  SYS WRITE canary_path canary
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "canary write failed"
+  END
+  CLEAR_ERR
+END
+IF control_changed > 0 THEN
+  SYS WRITE control_path control
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "control write failed"
+  END
+  CLEAR_ERR
+END
+IF pairs_changed > 0 THEN
+  SYS WRITE pairs_path pairs
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "pairs write failed"
+  END
+  CLEAR_ERR
+END
+IF desired_changed > 0 THEN
+  SYS WRITE desired_path desired
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "desired write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES fleet
+LET depth1 = LAST_N
+SYS LINES canary
+LET c_n = LAST_N
+SYS LINES control
+LET t_n = LAST_N
+SYS LINES pairs
+LET p_n = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.canarystride.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "step"
+LET report = LAST
+SYS STR STEP
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "off"
+LET report = LAST
+SYS STR OFFS
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "canary_n"
+LET report = LAST
+SYS STR c_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "control_n"
+LET report = LAST
+SYS STR t_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pairs_n"
+LET report = LAST
+SYS STR p_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "canarystride" ACTION hit miss STEP OFFS depth1 c_n t_n p_n
+PRINT_JSON ACTION hit miss STEP OFFS depth1 c_n t_n p_n elapsed STATUS_OK
+PASS "canarystride tick"
+NOTE "canary_stride_sampler: done"
+CLEAR_ERR
+EXIT 0 "canarystride ok"

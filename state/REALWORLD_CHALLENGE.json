@@ -1,70 +1,64 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 39,
-  "program": "programs/realworld/deploy_wave_batcher.cubalc",
-  "theme": "deploy wave batcher CHUNK FIRSTMATCH BEFOREALL SETMATCH soft",
-  "version": "1.15.136-usability",
+  "iter": 40,
+  "program": "programs/realworld/canary_stride_sampler.cubalc",
+  "theme": "canary stride sampler STRIDE WINDOW DIFF INTERSECT soft partition",
+  "version": "1.15.139-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_waves",
-      "cmd": "seed h1..h5; waves size2 \u2192 h1 h2 / h3 h4 / h5",
+      "name": "seed_stride",
+      "cmd": "seed h0..h5; stride 2 → canary h0,h2,h4 control h1,h3,h5",
       "ok": true,
-      "note": "BEFOREALL pending + CHUNK default space join"
+      "note": "STRIDE OFF offs + DIFF complement"
     },
     {
-      "name": "next_pop",
-      "cmd": "next pops HEAD wave + DROPNTH 0; empty REQUIRE EXIT 2",
+      "name": "pairs_window",
+      "cmd": "pairs WINDOW 2 → overlapping neighbor pairs",
       "ok": true,
-      "note": "wave queue drain"
+      "note": "blast-radius adjacent pairs"
     },
     {
-      "name": "advance_fail_pin",
-      "cmd": "advance h1 h2 live; fail h4; findfail; pinfail front",
+      "name": "stride_offset",
+      "cmd": "stride step3 off1 → canary h1,h4",
       "ok": true,
-      "note": "SETMATCH + FIRSTMATCH + MOVELINE"
+      "note": "OFF keyword + var offs"
     },
     {
-      "name": "waves_no_pending",
-      "cmd": "waves soft calm; REQUIRE EXIT 2",
+      "name": "drift_extra",
+      "cmd": "desire+DIFF miss soft/REQUIRE; extra hosts REQUIRE",
       "ok": true,
-      "note": "soft+REQUIRE miss"
+      "note": "set drift gates"
     },
     {
-      "name": "findfail_none_require",
-      "cmd": "findfail empty fleet REQUIRE EXIT 2",
+      "name": "pairs_solo_oor",
+      "cmd": "WINDOW 2 on single host empty soft/REQUIRE",
       "ok": true,
-      "note": "FIRSTMATCH miss LAST empty"
+      "note": "n > total empty"
     },
     {
-      "name": "firstmatch_substring",
-      "cmd": "FIRSTMATCH fail hits prefail:live before h2:fail",
+      "name": "find_substring",
+      "cmd": "FIRSTMATCH h1 hits before h10 if ordered; substring class",
       "ok": true,
-      "note": "substring false friend"
+      "note": "false friend risk"
     },
     {
-      "name": "chunk_var_sep",
-      "cmd": "SYS CHUNK n bag JSEP \u2192 unknown form 'JSEP'",
+      "name": "pin_drop",
+      "cmd": "pin h3 front; drop exact; drop miss REQUIRE",
       "ok": true,
-      "note": "join sep must be string literal not var"
+      "note": "MOVELINE + REMOVELINE"
     },
     {
-      "name": "beforeall_plain",
-      "cmd": "BEFOREALL keeps orphan whole; AFTERALL empty field",
+      "name": "off_keyword_footgun",
+      "cmd": "var named OFF / bare off2 mid-arg → parse error",
       "ok": true,
-      "note": "miss semantics pollute host lists"
-    },
-    {
-      "name": "skip_drop_has",
-      "cmd": "skip/has/drop; drop ghost REQUIRE",
-      "ok": true,
-      "note": "identity ops"
+      "note": "fixed via OFFS + OFF keyword form"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "111/111 pass incl chunk firstmatch beforeall"
+      "note": "114/114 pass incl window stride rotate"
     }
   ],
   "weaknesses": [
@@ -72,88 +66,87 @@
       "id": "W1",
       "severity": "high",
       "area": "lang|parse",
-      "title": "SYS CHUNK join separator cannot be a variable",
-      "detail": "SYS CHUNK n bag JSEP parses JSEP as a form name \u2192 unknown form 'JSEP' (same for JOIN). Only string literals work for join sep. Agents cannot pass CUBALC_* env join through a LET binding.",
-      "repro": "LET s=\",\"; SYS CHUNK 2 peers s \u2192 unknown form 's'"
+      "title": "STRIDE keyword OFF collides with common var names",
+      "detail": "SYS STRIDE STEP OFF fleet treats OFF as keyword needing offset number, not the var. Agents naming offset OFF break silently or parse-error. Must use OFFS + form SYS STRIDE n OFF k bag.",
+      "repro": "DEFAULT OFF=0; SYS STRIDE STEP OFF fleet"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|bag",
-      "title": "FIRSTMATCH is substring GREP1 \u2014 false friends",
-      "detail": "FIRSTMATCH bag \"fail\" matches prefail:live before h2:fail. Needle :fail safer but still matches host:failsoft. No whole-field or suffix-anchor match.",
-      "repro": "FIRSTMATCH 'prefail:live\\nh2:fail' fail \u2192 prefail:live"
+      "area": "lang|parse",
+      "title": "Bare mid-arg numeric vars form-stolen (STRIDE offset)",
+      "detail": "SYS STRIDE STEP off2 fleet → unknown form 'off2'. Same class as CHUNK join sep: only keywords+literals or carefully ordered vars work for mid-args.",
+      "repro": "LET off2=1; SYS STRIDE 2 off2 fleet"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "CHUNK space-joins hosts \u2014 irreversible if host contains space",
-      "detail": "Wave field 'h1 h2' WORDS-split for advance; hostnames with spaces corrupt. No structured batch bag (nested fields).",
-      "repro": "CHUNK 2 of hosts with spaces flattens"
+      "title": "WINDOW/STRIDE non-mutate + join flatten",
+      "detail": "Must LET rebind. WINDOW pairs space-join hosts — hostnames with spaces irreversible. No nested pair bag.",
+      "repro": "WINDOW 2 fleet without LET loses result"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "BEFOREALL miss keeps whole field; AFTERALL miss empty",
-      "detail": "Plain orphan rows become fake host ids on peel; AFTERALL injects empty fields needing SQUEEZE. BEFOREALL_HIT not checked by agents by default.",
-      "repro": "BEFOREALL 'h1:p\\norphan' \u2192 h1\\norphan"
+      "title": "FIRSTMATCH substring false friends on host ids",
+      "detail": "find h1 can match h10 depending on order. Prefer HASLINE for exact host identity.",
+      "repro": "FIRSTMATCH fleet h1 with h10 present"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "No atomic multi-host SETMATCH / advance wave",
-      "detail": "advance loops EACH host SETMATCH; partial success leaves mixed wave state. No transaction over bag mutations.",
-      "repro": "advance h1 h2 when only h1 pending \u2192 hit=1 miss=1"
+      "title": "DIFF/INTERSECT exact-field only",
+      "detail": "No normalized/case-fold set ops; host vs HOST are distinct. Agents must UPPERALL first.",
+      "repro": "DIFF 'Host' 'host' → residual"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "GREP :fail / :live suffix tallies are substring-unsafe",
-      "detail": "list tallies GREP :live matches :live and :livez. Same class as prior GREP gaps.",
-      "repro": "GREP :live on host:livez"
+      "title": "WINDOW n>total and STRIDE step<=0 soft empty",
+      "detail": "Good for soft miss but no FAIL sticky; agents need LINES check + REQUIRE. Documented pattern.",
+      "repro": "WINDOW 9 on 5 hosts → empty"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last fleet/wave line without $.",
+      "detail": "cat -A last fleet/canary line without $.",
       "repro": "seed; cat -A FLEET.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "lang|args",
-      "title": "SYS form trailing args: bare idents are forms not values",
-      "detail": "General footgun beyond CHUNK: agents expect var expansion for optional host args; parser form-dispatch steals the token. String literals or LAST pipeline only.",
-      "repro": "SYS CHUNK 2 bag sep_var"
+      "title": "SYS form keywords steal identifier namespace from vars",
+      "detail": "Generalization of W1: OFF, and likely other keyword args across SYS forms. No reserved-name diagnostic on DEFAULT OFF.",
+      "repro": "DEFAULT OFF=0 near STRIDE"
     }
   ],
   "workarounds": [
-    "CHUNK with default space join only; hardcode SYS CHUNK n bag \",\" if comma needed",
-    "FIRSTMATCH with \":fail\" not bare fail; still prefer status field EQS walk for safety",
-    "Ban spaces in host ids; WORDS advance assumes space-separated wave",
-    "Filter bag to host:status shape before BEFOREALL; check BEFOREALL_HIT",
-    "Always LET waves = LAST after CHUNK"
+    "Never name vars OFF/END/IF; use OFFS and SYS STRIDE n OFF OFFS bag",
+    "Control partition via DIFF fleet canary instead of second STRIDE offset",
+    "HASLINE not FIRSTMATCH for exact host identity",
+    "Always LET after STRIDE/WINDOW/DIFF",
+    "Check LINES after WINDOW; REQUIRE for hard empty"
   ],
   "language_gaps": [
-    "CHUNK/BATCH accept variable join separator (or LAST as sep)",
-    "FIRSTMATCH whole-field / ENDS-with modes",
-    "Nested batch bags (list-of-lists) without join flatten",
-    "BEFOREALL option drop-miss vs keep-whole",
-    "Multi-row atomic SETMATCH / bag transaction",
+    "Reserved-word diagnostic on DEFAULT/LET of SYS keywords (OFF)",
+    "Uniform mid-arg var binding for STRIDE/CHUNK/WINDOW optional params",
+    "FIRSTMATCH exact-field mode",
+    "Nested WINDOW pairs without space flatten",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Hard fail: SYS CHUNK \u2026 JOIN \u2192 unknown form JOIN \u2014 renamed and then removed var sep path",
-    "Confirmed FIRSTMATCH fail hits prefail:live (high ops footgun for findfail)",
-    "Default space CHUNK works for wave batching; next+DROPNTH drains queue",
-    "No language fix this fire \u2014 CHUNK var-sep is MEANINGFUL_ITER candidate"
+    "Hard fail: SYS STRIDE STEP off2 fleet unknown form off2",
+    "Hard fail class: var named OFF collides with STRIDE OFF keyword",
+    "Fixed with SYS STRIDE STEP OFF OFFS fleet + DIFF complement for control",
+    "WINDOW 2 solo host soft empty works with REQUIRE path"
   ],
-  "commit": "a21febb9785d2b45c051eae61008cee2e942d997",
-  "ts": "2026-08-05T20:18:47Z"
+  "commit": "pending",
+  "ts": "2026-08-05T20:43:00Z"
 }
