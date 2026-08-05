@@ -1,151 +1,156 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 31,
-  "program": "programs/realworld/canary_cohort_board.cubalc",
-  "theme": "canary cohort board SHUFFLE TAKE DROP COALESCE COPY snapshot PICK",
-  "version": "1.15.116-usability",
+  "iter": 32,
+  "program": "programs/realworld/fleet_allowlist_merge.cubalc",
+  "theme": "fleet allowlist merge UNION INTERSECT DIFF DISTINCT ZIP KEYS VALS",
+  "version": "1.15.119-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_dedup",
-      "cmd": "seed h1..h10 with dup h1 \u2192 6 hosts",
+      "name": "seed_ab",
+      "cmd": "seed_a api db mesh api api_v2; seed_b db cache api",
       "ok": true,
-      "note": "HASLINE skip dups"
+      "note": "A=4 B=3 HASLINE dedup"
     },
     {
-      "name": "snapshot_shuffle_canary",
-      "cmd": "snapshot COPY; shuffle; canary 2 \u2192 CANARY plate",
+      "name": "union_intersect_diff",
+      "cmd": "union→5; intersect→api,db; diff→mesh,api_v2",
       "ok": true,
-      "note": "h10,h3 canary; snap 18 bytes"
+      "note": "set ops overwrite A with LET rebind"
     },
     {
-      "name": "restore_pin",
-      "cmd": "restore pre-shuffle order; pin h3 front",
+      "name": "distinct_vs_uniq",
+      "cmd": "UNIQ non-adj dups n=5; DISTINCT n=3",
       "ok": true,
-      "note": "READ snap \u2192 WRITE hosts; MOVELINE"
+      "note": "UNIQ adjacent-only; DISTINCT full unique"
     },
     {
-      "name": "empty_require",
-      "cmd": "REQUIRE canary empty EXIT 2; soft shuffle empty rc0",
+      "name": "zip_unequal_pad",
+      "cmd": "zip 4x3 → api_v2: empty partner",
       "ok": true,
-      "note": "soft+REQUIRE paths"
+      "note": "api:db db:cache mesh:api api_v2:"
     },
     {
-      "name": "grep_h1_cousin",
-      "cmd": "GREP h1 \u2192 h1+h10 n=2; HASLINE h1=1 COUNTLINE=1",
+      "name": "keys_vals",
+      "cmd": "keys/vals peel roles plate",
       "ok": true,
-      "note": "substring false friend on pure names"
+      "note": "after zip"
     },
     {
-      "name": "take_drop_oor",
-      "cmd": "TAKE 100 of 6 \u2192 6; DROP 100 \u2192 0",
+      "name": "zip_sep_var_fail",
+      "cmd": "SYS ZIP a b SEP → unknown form SEP",
       "ok": true,
-      "note": "TAKE clamps to available; DROP past end empties"
+      "note": "sep must be string literal; fixed to \":\""
     },
     {
-      "name": "shuffle_no_mutate",
-      "cmd": "SYS SHUFFLE b2 leaves b2 unchanged without LET",
+      "name": "intersect_empty_require",
+      "cmd": "REQUIRE intersect disjoint EXIT 2; soft rc0",
       "ok": true,
-      "note": "must LET bag = LAST after SHUFFLE"
-    },
-    {
-      "name": "coalesce_n",
-      "cmd": "canary without ARG uses COALESCE ENV/default 2",
-      "ok": true,
-      "note": "canary_n=2 hit=2"
+      "note": "soft+REQUIRE"
     },
     {
       "name": "drop_miss_require",
-      "cmd": "REQUIRE drop ghost EXIT 2",
+      "cmd": "REQUIRE drop_a ghost EXIT 2",
       "ok": true,
       "note": "soft+REQUIRE"
+    },
+    {
+      "name": "setops_no_mutate",
+      "cmd": "UNION a b without LET leaves a unchanged",
+      "ok": true,
+      "note": "a_no_rebind=2 last_n=3 after union"
+    },
+    {
+      "name": "print_json_collapse",
+      "cmd": "list bag_a apidbmeshapi_v2",
+      "ok": true,
+      "note": "PRINT_JSON collapse"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "91/91 pass incl shuffle coalesce"
+      "note": "94/94 pass incl union zip prefixall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag",
-      "title": "SHUFFLE/TAKE/DROP do not mutate named bags \u2014 need LET bag = LAST",
-      "detail": "SYS SHUFFLE bag leaves var bag unchanged; only LAST holds shuffled result. Same for TAKE/DROP/SETMATCH class. Agents that SHUFFLE then WRITE bag persist old order silently.",
-      "repro": "LET b2=a\\nb\\nc; SHUFFLE b2; LINES b2 still 3 original order"
+      "area": "host|parse",
+      "title": "ZIP/KEYS/VALS sep arg rejects bare string vars (unknown form)",
+      "detail": "SYS ZIP bag_a bag_b SEP fails parse: unknown form 'SEP'. Same class as REPLACEALL with bare numeric vars. Sep must be quoted literal \":\". Agents cannot pass CUBALC_AL_SEP through a var into ZIP third arg.",
+      "repro": "LET SEP=\":\"; SYS ZIP a b SEP → unknown form SEP"
     },
     {
       "id": "W2",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "GREP bare host id matches longer cousins (h1\u2192h10)",
-      "detail": "Pure-name rosters still suffer GREP substring. HASLINE/COUNTLINE exact are safe.",
-      "repro": "GREP h1 on h1+h10 \u2192 n=2"
+      "title": "UNION/INTERSECT/DIFF/DISTINCT/ZIP do not mutate named bags",
+      "detail": "Must LET bag_a = LAST after every set op or WRITE persists pre-op bag. Silent footgun.",
+      "repro": "UNION a b; LINES a unchanged without LET"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "TAKE N>depth returns all; DROP N>depth empties \u2014 no soft miss flag",
-      "detail": "TAKE 100 of 6 \u2192 6 lines OK; DROP 100 \u2192 empty bag. Canary split with oversize N silently assigns all hosts to canary.",
-      "repro": "TAKE 100 bag(6) \u2192 LINES 6; DROP 100 \u2192 LINES 0"
+      "title": "UNIQ only adjacent — DISTINCT needed for full unique",
+      "detail": "UNIQ on api\\ndb\\napi\\nmesh\\ndb keeps 5 fields; DISTINCT yields 3. Agents still reach for UNIQ+SORT habit.",
+      "repro": "UNIQ non-adj → n=5; DISTINCT → n=3"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses multi-line host/canary bags",
-      "detail": "list dumps hosts as h1h2h3...; canary plate separate. Prefer depth scalars.",
-      "repro": "PRINT_JSON bag after seed"
+      "area": "host|bag",
+      "title": "ZIP unequal lengths pad empty partner silently",
+      "detail": "4 hosts × 3 roles → last host: with empty role; extra roles become :role. No OK soft miss when lengths differ.",
+      "repro": "ZIP 3 vs 2 → pad empty"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last host without $ after seed/shuffle.",
-      "repro": "seed; cat -A HOSTS.txt"
+      "severity": "med",
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line allowlist bags",
+      "detail": "apidbmeshapi_v2 unparseable. Prefer depth scalars.",
+      "repro": "PRINT_JSON bag_a after seed"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|rand",
-      "title": "SHUFFLE/PICK share process RNG; CUBALC_SEED only before first srand",
-      "detail": "Cannot reseed mid-process for reproducible canary redraws after prior RAND/PICK/SHUFFLE.",
-      "repro": "CUBALC_SEED only if srand not yet called"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE often omits final trailing newline",
+      "detail": "cat -A last field without $.",
+      "repro": "seed_a; cat -A ALLOW_A.txt"
     },
     {
       "id": "W7",
-      "severity": "low",
-      "area": "host|docs",
-      "title": "SYS DROP bag-skip vs SYS DROPLINE/REMOVELINE name collision",
-      "detail": "DROP n skips first n fields; DROPLINE removes exact field. Canary control path uses DROP canary_n bag \u2014 easy to call DROPLINE by mistake.",
-      "repro": "forms: DROP n str vs REMOVELINE bag needle"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "GREP still substring-unsafe on pure service names",
+      "detail": "GREP api matches api_v2. Use HASLINE/COUNTLINE exact.",
+      "repro": "GREP api on api+api_v2 → n=2"
     }
   ],
   "workarounds": [
-    "Always LET bag = LAST after SHUFFLE/TAKE/DROP/SETMATCH/MOVELINE",
-    "Clamp canary_n with MIN canary_n depth before TAKE",
-    "HASLINE/COUNTLINE for identity \u2014 not GREP on host ids",
-    "COPY snapshot before shuffle; restore soft READ OR",
-    "COALESCE ENV N and default string before NUM shuttle",
-    "PRINT_JSON only depth/c_depth/canary_n scalars"
+    "ZIP/KEYS/VALS use literal \":\" not SEP var",
+    "Always LET bag_a = LAST after UNION/INTERSECT/DIFF/DISTINCT/ZIP",
+    "Prefer DISTINCT over UNIQ for allowlist dedup",
+    "Assert LINES A == LINES B before ZIP if pad is dangerous",
+    "HASLINE not GREP for membership",
+    "PRINT_JSON only depth_a/depth_b/n_out scalars"
   ],
   "language_gaps": [
-    "In-place SHUFFLE/TAKE into named bag (or auto-bind option)",
-    "TAKE/DROP soft miss when N>depth with distinct OK/LAST_N",
-    "PRINT_JSON newline escape",
-    "WRITE force trailing NL",
-    "Reseed RNG without process restart",
-    "Doc cross-link DROP vs DROPLINE clearly"
+    "String-var coercion for ZIP/KEYS/VALS/REPLACEALL separator/args",
+    "In-place set ops or auto-bind into named bags",
+    "ZIP soft miss when lengths differ (strict mode)",
+    "PRINT_JSON newline escape; WRITE force NL",
+    "Doc UNIQ vs DISTINCT prominently"
   ],
   "issues_faced": [
-    "SHUFFLE without LET would have left seed order on disk \u2014 rebind is mandatory",
-    "GREP h1 vs h10 confirmed on pure-name bags (not only name:status)",
-    "canary oversize N would assign all hosts \u2014 program relies on TAKE clamp"
+    "ZIP with SEP var failed unknown form — forced literal colon",
+    "UNION without rebind would leave A unchanged on disk",
+    "UNIQ vs DISTINCT difference is easy agent trap for allowlist merge"
   ],
-  "commit": "8c0f2e0b02e48564d6eb4d25dd6ddb0163bb57ac",
-  "ts": "2026-08-05T16:58:30Z"
+  "commit": "",
+  "ts": "2026-08-05T17:24:00Z"
 }
