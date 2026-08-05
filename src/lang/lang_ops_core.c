@@ -5769,6 +5769,81 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS COUNTMATCH|GREPCOUNT bag needle — count fields containing needle (substring).
+     * SYS COUNTMATCHI|GREPCOUNTI — case-insensitive. Empty needle counts all fields.
+     * LAST_N/COUNTMATCH_N = hits; does not replace LAST with filtered bag (unlike GREP).
+     * Distinct from COUNTLINE (exact field) and LINES (total). Usability: log severity
+     * tallies without GREP clobber or EACH+HAS glue. */
+    if (kw(&L->cur,"COUNTMATCH") || kw(&L->cur,"GREPCOUNT") || kw(&L->cur,"COUNTGREP") ||
+        kw(&L->cur,"MATCHCOUNT") || kw(&L->cur,"SUBCOUNT") || kw(&L->cur,"CONTAINSCOUNT") ||
+        kw(&L->cur,"COUNTMATCHI") || kw(&L->cur,"GREPCOUNTI") || kw(&L->cur,"COUNTGREPI") ||
+        kw(&L->cur,"MATCHCOUNTI") || kw(&L->cur,"SUBCOUNTI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "COUNTMATCHI") == 0 || strcmp(op, "GREPCOUNTI") == 0 ||
+                   strcmp(op, "COUNTGREPI") == 0 || strcmp(op, "MATCHCOUNTI") == 0 ||
+                   strcmp(op, "SUBCOUNTI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0, total = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          total++;
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              match = 1;
+            } else if (!icase) {
+              if (strstr(field, needle) != NULL) match = 1;
+            } else {
+              size_t fi, j;
+              for (fi = 0; field[fi] && !match; fi++) {
+                for (j = 0; j < nn; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nn) match = 1;
+              }
+            }
+          }
+          if (match) hit++;
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "COUNTMATCH_N", hit);
+      var_set_num(vm, "GREPCOUNT_N", hit);
+      var_set_num(vm, "COUNTMATCH_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS FINDLINE|LINEINDEX bag needle — 0-based index of first exact field → LAST_N.
      * Miss → LAST_N=-1, OK=0. SYS FINDLINEI — case-insensitive exact field.
      * Completes HASLINE/REMOVELINE for locate-then-NTH without EACH glue. */
@@ -6888,7 +6963,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -7225,6 +7300,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS HASLINEI", "SYS HASLINEI|ILINEIN bag needle — case-insensitive exact field"},
       {"SYS COUNTLINE", "SYS COUNTLINE|COUNTFIELD bag needle — count exact field matches → LAST_N"},
       {"SYS COUNTLINEI", "SYS COUNTLINEI bag needle — case-insensitive field match count"},
+      {"SYS COUNTMATCH", "SYS COUNTMATCH|GREPCOUNT bag needle — count fields containing needle → LAST_N"},
+      {"SYS GREPCOUNT", "SYS GREPCOUNT bag needle — alias of SYS COUNTMATCH · log severity tallies"},
+      {"SYS COUNTMATCHI", "SYS COUNTMATCHI|GREPCOUNTI bag needle — case-insensitive COUNTMATCH"},
       {"SYS FINDLINE", "SYS FINDLINE|LINEINDEX bag needle — 0-based exact field index · -1 miss"},
       {"SYS LINEINDEX", "SYS LINEINDEX bag needle — alias of SYS FINDLINE"},
       {"SYS FINDLINEI", "SYS FINDLINEI bag needle — case-insensitive field index"},

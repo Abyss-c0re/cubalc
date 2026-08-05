@@ -1830,6 +1830,7 @@ int main(int argc, char **argv) {
       {"sys_stride", "programs/proof/686_sys_stride.cubalc", "SYS STRIDE/EVERY partition bag by step/offset"},
       {"sys_rotate", "programs/proof/687_sys_rotate.cubalc", "SYS ROTATE/ROTL/ROTR bag field round-robin"},
       {"sys_flatten", "programs/proof/688_sys_flatten.cubalc", "SYS FLATTEN/UNCHUNK expand joined bag fields"},
+      {"sys_countmatch", "programs/proof/689_sys_countmatch.cubalc", "SYS COUNTMATCH/GREPCOUNT substring field count"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2153,6 +2154,9 @@ int main(int argc, char **argv) {
       {"SYS FLATTEN", "host", "SYS FLATTEN|UNCHUNK [bag] [sep] — split every field flat"},
       {"SYS UNCHUNK", "host", "SYS UNCHUNK alias of SYS FLATTEN"},
       {"SYS SPLITALL", "host", "SYS SPLITALL alias of SYS FLATTEN"},
+      {"SYS COUNTMATCH", "host", "SYS COUNTMATCH|GREPCOUNT bag needle — substring field count"},
+      {"SYS GREPCOUNT", "host", "SYS GREPCOUNT alias of SYS COUNTMATCH"},
+      {"SYS COUNTMATCHI", "host", "SYS COUNTMATCHI case-insensitive COUNTMATCH"},
       {"SYS MIDLINES", "host", "SYS MIDLINES|SLICEBAG bag start [end] — field window"},
       {"SYS SLICEBAG", "host", "SYS SLICEBAG alias of SYS MIDLINES"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
@@ -2701,6 +2705,8 @@ int main(int argc, char **argv) {
        "SYS ROTATE/ROTL/ROTR bag field round-robin"},
       {"programs/proof/688_sys_flatten.cubalc", "sys_flatten",
        "SYS FLATTEN/UNCHUNK expand joined bag fields"},
+      {"programs/proof/689_sys_countmatch.cubalc", "sys_countmatch",
+       "SYS COUNTMATCH/GREPCOUNT substring field count"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -3308,6 +3314,9 @@ int main(int argc, char **argv) {
       {"SYS FLATTEN", "host", "SYS FLATTEN expand joined bag fields"},
       {"SYS UNCHUNK", "host", "SYS UNCHUNK alias of SYS FLATTEN"},
       {"SYS SPLITALL", "host", "SYS SPLITALL alias of SYS FLATTEN"},
+      {"SYS COUNTMATCH", "host", "SYS COUNTMATCH substring field count"},
+      {"SYS GREPCOUNT", "host", "SYS GREPCOUNT alias of SYS COUNTMATCH"},
+      {"SYS COUNTMATCHI", "host", "SYS COUNTMATCHI case-insensitive COUNTMATCH"},
       {"SYS MIDLINES", "host", "SYS MIDLINES bag field window slice"},
       {"SYS SLICEBAG", "host", "SYS SLICEBAG alias of SYS MIDLINES"},
       {"SYS POP", "host", "SYS POP last bag field"},

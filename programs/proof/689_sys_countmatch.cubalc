@@ -1,0 +1,66 @@
+# SYS COUNTMATCH / GREPCOUNT — count bag fields containing needle (substring)
+# Usability: log severity tallies without GREP clobber or EACH+HAS glue
+# Complements COUNTLINE (exact) and GREP (filter that replaces LAST)
+
+HOLD_FLASH 1
+
+LET logs = "INFO boot\nERROR disk full\nWARN heat\nerror network\nERROR mem\nOK done"
+
+# substring count (case-sensitive)
+SYS COUNTMATCH logs "ERROR"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUNTMATCH_N == 2
+ASSERT COUNTMATCH_TOTAL == 6
+
+# does not replace bag content with filtered lines (LAST_N is the count)
+# re-check original still usable via COUNTMATCH_TOTAL metadata
+
+# GREPCOUNT alias
+SYS GREPCOUNT logs "WARN"
+ASSERT LAST_N == 1
+ASSERT GREPCOUNT_N == 1
+
+# case-insensitive
+SYS COUNTMATCHI logs "error"
+ASSERT LAST_N == 3
+SYS GREPCOUNTI logs "Error"
+ASSERT LAST_N == 3
+
+# I keyword form
+SYS COUNTMATCH I logs "error"
+ASSERT LAST_N == 3
+
+# empty needle → all fields
+SYS COUNTMATCH logs ""
+ASSERT LAST_N == 6
+ASSERT COUNTMATCH_TOTAL == 6
+
+# no hits
+SYS COUNTMATCH logs "FATAL"
+ASSERT LAST_N == 0
+ASSERT COUNTMATCH_TOTAL == 6
+
+# empty bag
+SYS COUNTMATCH "" "x"
+ASSERT LAST_N == 0
+ASSERT COUNTMATCH_TOTAL == 0
+
+# contrast exact COUNTLINE vs substring COUNTMATCH
+LET status = "ready\nnot-ready\nready"
+SYS COUNTLINE status "ready"
+ASSERT LAST_N == 2
+SYS COUNTMATCH status "ready"
+ASSERT LAST_N == 3
+
+# agent pattern: tally errors then still GREP for detail
+# (GREP is needle-first: SYS GREP needle bag)
+SYS COUNTMATCH logs "ERROR"
+LET err_n = LAST_N
+ASSERT err_n == 2
+SYS GREP "ERROR" logs
+ASSERT LAST_N == 2
+SYS EQS LAST "ERROR disk full\nERROR mem"
+ASSERT LAST_N == 1
+
+PRINT "sys_countmatch ok"
