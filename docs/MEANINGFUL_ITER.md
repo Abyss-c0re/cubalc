@@ -107,6 +107,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 77. ~~**`SYS TAKE` / `DROP`**~~ **done** (first-n / drop-n newline windows · LIST page).
 78. ~~**`SYS SPLIT` / `FIELDS`**~~ **done** (sep → newline fields · PATH/CSV → EACH LINE).
 79. ~~**`SYS SORT` / `UNIQ`**~~ **done** (lex sort + adjacent dedupe · stable LIST walks).
+80. ~~**`SYS JOIN` / `PATH` catalog**~~ **done** (forms/search/HELP discover path join · resolve_str_arg).
 
 ## Tick protocol
 

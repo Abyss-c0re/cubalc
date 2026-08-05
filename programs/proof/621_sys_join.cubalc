@@ -1,0 +1,70 @@
+# SYS JOIN / PATH — portable path join + catalog discoverability
+# Usability: agents build STATE/TMP plate paths; forms/search/HELP find JOIN
+
+HOLD_FLASH 1
+
+# basic join
+SYS JOIN "state" "runs"
+ASSERT OK == 1
+SYS HAS LAST "state"
+ASSERT LAST_N == 1
+SYS HAS LAST "runs"
+ASSERT LAST_N == 1
+SYS HAS LAST "/"
+ASSERT LAST_N == 1
+
+# PATH alias
+SYS PATH "a" "b"
+ASSERT OK == 1
+SYS HAS LAST "a"
+ASSERT LAST_N == 1
+SYS HAS LAST "b"
+ASSERT LAST_N == 1
+
+# no double slash when left ends with /
+SYS JOIN "state/" "x"
+SYS HAS LAST "//"
+ASSERT LAST_N == 0 "no double slash"
+
+# vars
+SYS STATE
+LET base = LAST
+SYS JOIN base "plate.json"
+ASSERT OK == 1
+SYS ENDS LAST "plate.json"
+ASSERT LAST_N == 1
+SYS STARTS LAST base
+ASSERT LAST_N == 1
+
+# chain: LIST head → JOIN → ISFILE under programs/lib
+SYS LIST "programs/lib"
+ASSERT OK == 1
+SYS SORT
+SYS GREP ".cubalc"
+SYS HEAD
+LET name = LAST
+SYS JOIN "programs/lib" name
+ASSERT OK == 1
+SYS ISFILE LAST
+ASSERT LAST_N == 1 "joined lib path is a file"
+
+# TMP join
+SYS TMP
+LET t = LAST
+SYS JOIN t "mi_join_probe.txt"
+LET p = LAST
+SYS TOUCH p
+ASSERT OK == 1
+SYS ISFILE p
+ASSERT LAST_N == 1
+SYS RM p
+
+# HELP discovers JOIN (catalog gap closed)
+HELP "JOIN"
+ASSERT HELP_N >= 1
+SYS HAS LAST "JOIN"
+ASSERT LAST_N == 1
+HELP "PATH"
+ASSERT HELP_N >= 1
+
+PRINT "sys_join ok"

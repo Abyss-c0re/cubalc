@@ -875,28 +875,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", hr.ok ? 1 : 0);
       bump(vm); return 1;
     }
-    /* SYS JOIN a b → LAST = a/b */
-    if (kw(&L->cur,"JOIN") || kw(&L->cur,"PATH")){
+    /* SYS JOIN|PATH a b → LAST = a/b (portable path join, no double slash).
+     * Usability: build plate paths from STATE/TMP/LIST names without shell. */
+    if (kw(&L->cur,"JOIN") || kw(&L->cur,"PATH") || kw(&L->cur,"PATHJOIN") ||
+        kw(&L->cur,"JOINPATH")){
       lex_next(L);
       char a[512]="", b[512]="";
-      if (L->cur.kind==TK_STR){ snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L); }
-      else if (L->cur.kind==TK_IDENT){
-        if (strcmp(L->cur.text,"LAST")==0) snprintf(a,sizeof a,"%s",vm->last_str);
-        else { Var *v=var_get(vm,L->cur.text,0); if (v&&v->is_str) snprintf(a,sizeof a,"%s",v->sval); }
-        lex_next(L);
-      }
-      if (L->cur.kind==TK_STR){ snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L); }
-      else if (L->cur.kind==TK_IDENT){
-        if (strcmp(L->cur.text,"LAST")==0) snprintf(b,sizeof b,"%s",vm->last_str);
-        else { Var *v=var_get(vm,L->cur.text,0); if (v&&v->is_str) snprintf(b,sizeof b,"%s",v->sval); }
-        lex_next(L);
-      }
       cubalc_host_result hr;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0){
+        fail(vm,"SYS JOIN a b"); return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0){
+        fail(vm,"SYS JOIN a b"); return -1;
+      }
       if (cubalc_host_join(a,b,&hr)!=0){ fail(vm, hr.err[0]?hr.err:"JOIN"); return -1; }
       snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
       vm->last_n = hr.n;
       var_set_str(vm,"LAST",hr.str);
+      var_set_str(vm,"JOIN",hr.str);
       var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"OK",1);
       bump(vm); return 1;
     }
     /* SYS JSON "key" [from LAST] → LAST = field */
@@ -2263,6 +2261,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
       {"SYS MKDIR", "SYS MKDIR path — mkdir -p · OK if dir exists"},
+      {"SYS JOIN", "SYS JOIN|PATH a b — portable path join a/b → LAST (plate paths)"},
+      {"SYS PATH", "SYS PATH a b — alias of SYS JOIN"},
       {"SYS BASENAME", "SYS BASENAME|LEAF path — final component → LAST"},
       {"SYS DIRNAME", "SYS DIRNAME|PARENT path — parent directory → LAST"},
       {"SYS EXTNAME", "SYS EXTNAME|EXT|SUFFIX path — final .ext → LAST/EXT"},
