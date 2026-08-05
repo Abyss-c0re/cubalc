@@ -1,104 +1,103 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 14,
-  "program": "programs/realworld/inventory_plate.cubalc",
-  "theme": "inventory plate JOINLINES CSV + soft peers + APPEND log",
-  "version": "1.15.73-usability",
+  "iter": 15,
+  "program": "programs/realworld/alert_template_digest.cubalc",
+  "theme": "alert digest GREPI + REPLACEALL template + APPEND",
+  "version": "1.15.76-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_filter_joinlines",
-      "cmd": "assets a/m/z.plate + noise.tmp; CUBALC_INV_FILTER=.plate run -s",
+      "name": "positive_grepi_template",
+      "cmd": "logs with Error/ERROR/error; template with {{DATE}}/{{HITS}}/{{COUNT}}; run -s",
       "ok": true,
-      "note": "assets_csv=a.plate,m.plate,z.plate sorted; join_n=3; INVENTORY.txt + LOG via APPEND"
+      "note": "hit_total=3 window_n=3 GREPI; rendered plate; unfilled=1 leaves {{COUNT}}; APPEND log"
     },
     {
-      "name": "quiet_strict_rerun",
-      "cmd": "./out/cubalc run -q -s \u2026inventory_plate.cubalc",
+      "name": "quiet_strict",
+      "cmd": "run -q -s",
       "ok": true,
-      "note": "INCLUDE OR soft miss + CLEAR_ERR recovers under -s"
+      "note": "exit 0 under strict after CLEAR_ERR"
     },
     {
-      "name": "empty_require",
-      "cmd": "CUBALC_INV_REQUIRE_ASSETS=1 empty assets/",
+      "name": "require_no_hits",
+      "cmd": "CUBALC_ALERT_REQUIRE=1 INFO-only log",
       "ok": true,
-      "note": "EXIT 2 inventory empty"
+      "note": "EXIT 2 no hits"
     },
     {
-      "name": "soft_peers_dial",
-      "cmd": "CUBALC_INV_PEERS=127.0.0.1:1 CUBALC_P2P_SOFT=1 TIMEOUT=300 -q -s",
+      "name": "action_status",
+      "cmd": "CUBALC_ARG0=status on prior STATE",
       "ok": true,
-      "note": "peer_fail=1 peer_ok=0; FAIL+CLEAR_ERR keeps plate ok"
+      "note": "soft READ OR ALERT.txt; EXIT 0"
     },
     {
-      "name": "max_zero_require",
-      "cmd": "CUBALC_INV_MAX=0 REQUIRE=1 with assets present",
+      "name": "bad_action",
+      "cmd": "CUBALC_ARG0=nope",
       "ok": true,
-      "note": "TAKE 0 \u2192 empty batch \u2192 EXIT 2 (NUM zero-safe config)"
+      "note": "EXIT 2 bad action"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "48/48 pass incl sys_join + sys_joinlines"
+      "note": "51/51 pass incl grepi replaceall append"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "docs|cli",
-      "title": "SYS APPEND works but invisible in forms/search/HELP catalog",
-      "detail": "SYS APPEND|LOG is implemented (history logs without READ+CAT+WRITE) and used successfully for INVENTORY_LOG.txt, but forms APPEND and search APPEND return n=0. Agents discover JOINLINES/JOIN but not APPEND \u2014 forces shell or rewrite loops.",
-      "repro": "./out/cubalc forms APPEND; ./out/cubalc search APPEND \u2192 empty. Program APPEND log still writes."
+      "area": "host|report",
+      "title": "No itoa/SYS STR \u2014 template {{COUNT}} cannot be filled from hit_n",
+      "detail": "REPLACEALL fills string placeholders well, but numeric hit_total/window_n cannot enter the plate text without a number\u2192string form. Template leftover {{COUNT}} is detected via SYS HAS tpl '{{' (unfilled=1). Agents must dual-path PRINT_JSON for counts.",
+      "repro": "Template count={{COUNT}}; after REPLACEALL of DATE/HOST/HITS, ALERT.txt still contains {{COUNT}}."
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host",
-      "title": "JOINLINES silent trunc at CUBALC_HOST_STR_MAX (8192)",
-      "detail": "JOINLINES copies into fixed out[8192]; long inventories truncate without OK=0 or truncated flag. JOIN_N still counts all fields even if paste body cut off \u2014 agents can mis-size reports.",
-      "repro": "Large LIST \u2192 JOINLINES ','; compare strlen(LAST) vs sum of field lengths + seps."
+      "title": "REPLACEALL is literal only \u2014 no capture groups / regex templates",
+      "detail": "Cannot map 'Error: (.*)' into structured fields. Multi-placeholder templates need sequential REPLACEALL chains on LAST. Empty old is silent no-op (LAST_N=0).",
+      "repro": "SYS REPLACEALL with regex-like old never matches; need N chained REPLACEALL for N keys."
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "flow|report",
-      "title": "Still no numeric\u2192string for report CAT chains",
-      "detail": "Building INVENTORY body needs counts (batch_n) in text plate but CAT only joins strings; program leaves n= to PRINT_JSON machine plate. Agents still need dual report paths (human CAT plate vs PRINT_JSON).",
-      "repro": "SYS CAT body batch_n does not stringify number cleanly for plate text."
+      "area": "flow",
+      "title": "No list-push \u2014 multi-file hit accumulate is CAT glue",
+      "detail": "Collecting GREPI hits across files requires SYS CAT hit_blob chunk with manual newline glue. Easy to get wrong separators; no APPEND_LINE to a string list form.",
+      "repro": "Each file GREPI chunk; CAT blob + chunk between files in EACH LINE."
     },
     {
       "id": "W4",
       "severity": "low",
-      "area": "p2p",
-      "title": "Peer soft dial still requires host CUBALC_P2P_SOFT=1",
-      "detail": "Language cannot set host soft-dial policy; program must detect ENV and skip or risk hard fail. Documented skip path when peers set without SOFT.",
-      "repro": "CUBALC_INV_PEERS set without CUBALC_P2P_SOFT=1 \u2192 program notes soft_required / skip."
+      "area": "host",
+      "title": "REPLACEALL self-expand is one-pass (safe) but undocumented in forms hint",
+      "detail": "REPLACEALL 'a'\u2192'aa' yields 'aa' once (no infinite loop). Good behavior; forms hint does not say non-rescanning. Agents may fear expansion loops.",
+      "repro": "SYS REPLACEALL 'a' 'a' 'aa' \u2192 LAST len 2, LAST_N 1"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "include",
-      "title": "INCLUDE OR sticky last_err needs CLEAR_ERR for -s (known, still real)",
-      "detail": "Soft plugin miss recovered via PASS+CLEAR_ERR; without CLEAR_ERR, -s fails after intentional optional miss.",
-      "repro": "INCLUDE OR missing; omit CLEAR_ERR; run -q -s \u2192 ok=false"
+      "area": "cli",
+      "title": "PRINT_JSON under -q is suppressed \u2014 status action hard for quiet agents",
+      "detail": "run -q plate-only hides PRINT_JSON line from status path; agents need non-quiet or STATUS plate fields only.",
+      "repro": "CUBALC_ARG0=status run -q \u2192 final ok plate only, no has_alert JSON line"
     }
   ],
   "workarounds": [
-    "Know SYS APPEND from source/error strings; not forms catalog",
-    "TAKE before JOINLINES to bound CSV size under 8KiB",
-    "PRINT_JSON for numeric inventory metrics; CAT for name CSV only",
-    "Always set CUBALC_P2P_SOFT=1 and short TIMEOUT for peer inventory probes",
-    "CLEAR_ERR after every intentional soft FAIL/INCLUDE OR under -s"
+    "Put counts only in PRINT_JSON; leave {{COUNT}} out of human templates or accept unfilled marker",
+    "Chain REPLACEALL LAST for each placeholder",
+    "GREPI for log triage; keep GREP for exact-case tokens",
+    "SYS APPEND for history (now forms-discoverable)",
+    "Run status without -q when PRINT_JSON metrics required"
   ],
   "language_gaps": [
-    "Catalog SYS APPEND|LOG in forms/search/HELP (parity with JOINLINES)",
-    "JOINLINES truncated flag or OK=0 on overflow",
-    "itoa / SYS STR num for plate text without PRINT_JSON dual path",
-    "In-language soft-dial default when peer list present",
-    "Recursive LIST for nested asset trees"
+    "SYS STR / itoa for numeric template fields",
+    "Named template map or multi-replace in one op",
+    "String-list push/append field helper for multi-file GREP collect",
+    "Quiet mode still emits PRINT_JSON (or -q -j) for agent metrics"
   ],
-  "commit": "d3fcd1aae280e18fa8477c4c003f003530b8dd87",
-  "ts": "2026-08-05T09:52:52Z"
+  "commit": "df8f342ffa8173fff3fd48ad7fded1dd7bddee95",
+  "ts": "2026-08-05T10:17:29Z"
 }

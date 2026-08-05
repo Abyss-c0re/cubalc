@@ -1,0 +1,250 @@
+# alert_template_digest.cubalc — GREPI log digest → REPLACEALL template → APPEND
+#
+# Real use: agent/cron scans CUBALC_STATE/logs/ case-insensitively for severity,
+# pastes hits into a plate template, writes ALERT.txt and history-logs it.
+#
+#   LIST logs → EACH READ → GREPI needle → JOINLINES digest
+#   READ template (file or built-in) → REPLACEALL {{DATE}}/{{HOST}}/{{NEEDLE}}/{{HITS}}
+#   WRITE out/ALERT.txt · SYS APPEND out/ALERT_LOG.txt
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/logs"
+#   printf 'INFO ok\nError disk\nERROR fatal\n' > "$CUBALC_STATE/logs/app.log"
+#   ./out/cubalc run -q -s programs/realworld/alert_template_digest.cubalc
+#
+# Optional:
+#   CUBALC_ARG0=digest|status     (default digest)
+#   CUBALC_ALERT_NEEDLE=error     (GREPI; case-insensitive)
+#   CUBALC_ALERT_MAX_HITS=20      (TAKE after collect)
+#   CUBALC_ALERT_TPL=path         (template file under STATE or absolute)
+#   CUBALC_ALERT_REQUIRE=1        (EXIT 2 if zero hits)
+#   CUBALC_ALERT_FILTER=.log      (LIST basename keep)
+#
+# Edges:
+#   GREPI closes prior case-sensitive GREP gap for log triage
+#   REPLACEALL template fill; empty old is no-op; LAST_N = replace count
+#   no itoa — {{COUNT}} cannot be filled from hit_n without shell (gap)
+#   APPEND now cataloged (prior gap closed)
+#   REPLACEALL does not support regex capture groups
+#   multi-file hit accumulate via CAT + JOINLINES (no list-push form)
+#   sticky FAIL if template missing under -s without CLEAR_ERR
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "alert_template_digest: start"
+DEFAULT ACTION = "digest"
+DEFAULT NEEDLE = "error"
+DEFAULT MAX_HITS = 20
+DEFAULT FILTER = ".log"
+DEFAULT REQUIRE_HITS = 0
+DEFAULT TPL_REL = "templates/alert.tpl"
+LET DECIDE = -1
+IDENTITY
+SYS DATE
+LET alert_date = DATE
+SYS MS
+LET t0 = MS
+SYS HOSTNAME
+LET alert_host = LAST
+SYS USER
+LET alert_user = LAST
+
+# --- action / config ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_ALERT_ACTION" OR "digest"
+  LET ACTION = LAST
+END
+SYS ENV "CUBALC_ALERT_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET NEEDLE = LAST
+END
+SYS ENV "CUBALC_ALERT_MAX_HITS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_HITS = LAST_N
+  END
+END
+SYS ENV "CUBALC_ALERT_FILTER" OR ""
+IF LAST_N > 0 THEN
+  LET FILTER = LAST
+END
+SYS ENV "CUBALC_ALERT_TPL" OR ""
+IF LAST_N > 0 THEN
+  LET TPL_REL = LAST
+END
+SYS ENV "CUBALC_ALERT_REQUIRE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_HITS = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "logs"
+LET logs_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS JOIN state_dir "templates"
+LET tpl_dir = LAST
+SYS MKDIR logs_dir
+SYS MKDIR out_dir
+SYS MKDIR tpl_dir
+
+# --- status-only path ---
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  SYS JOIN out_dir "ALERT.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has_alert = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has_alert ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+SYS EQS ACTION "digest"
+IF LAST_N == 0 THEN
+  FAIL "unknown action"
+  EXIT 2 "bad action"
+END
+
+# --- LIST logs → filter → walk → GREPI collect ---
+SYS LIST logs_dir
+IF OK == 0 THEN
+  FAIL "LIST logs failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET raw_n = LIST_N
+LET listing = LAST
+SYS EQS FILTER ""
+IF LAST_N == 0 THEN
+  SYS GREP FILTER listing
+  LET listing = LAST
+END
+SYS SORT listing
+LET listing = LAST
+
+LET hit_blob = ""
+LET files_read = 0
+LET files_with_hits = 0
+LET hit_total = 0
+
+EACH LINE AS fname IN listing
+  SYS JOIN logs_dir fname
+  LET path = LAST
+  SYS ISFILE path
+  IF LAST_N == 0 THEN
+    CONTINUE
+  END
+  SYS READ OR path OR ""
+  IF OK == 0 THEN
+    CLEAR_ERR
+    CONTINUE
+  END
+  LET body = LAST
+  LET files_read = files_read + 1
+  SYS GREPI NEEDLE body
+  LET hn = GREP_N
+  IF hn == 0 THEN
+    CONTINUE
+  END
+  LET files_with_hits = files_with_hits + 1
+  LET hit_total = hit_total + hn
+  LET chunk = LAST
+  SYS EQS hit_blob ""
+  IF LAST_N == 1 THEN
+    LET hit_blob = chunk
+  ELSE
+    # glue multi-file hit fields with newline between chunks
+    SYS CAT hit_blob "\n"
+    LET hit_blob = LAST
+    SYS CAT hit_blob chunk
+    LET hit_blob = LAST
+  END
+END
+
+# window + paste digest
+SYS TAKE MAX_HITS hit_blob
+LET hit_window = LAST
+LET window_n = TAKE_N
+SYS JOINLINES " | " hit_window
+LET hits_line = LAST
+NOTE "hits collected"
+CLEAR_ERR "scan clean"
+
+IF REQUIRE_HITS == 1 THEN
+  IF window_n == 0 THEN
+    FAIL "no alert hits"
+    EXIT 2 "no hits"
+  END
+END
+
+# --- template load (file OR soft default) ---
+SYS STARTS TPL_REL "/"
+IF LAST_N == 1 THEN
+  LET tpl_path = TPL_REL
+ELSE
+  SYS JOIN state_dir TPL_REL
+  LET tpl_path = LAST
+END
+SYS READ OR tpl_path OR ""
+IF OK == 0 THEN
+  CLEAR_ERR
+  # built-in default template
+  LET tpl = "ALERT {{DATE}} host={{HOST}} user={{USER}} needle={{NEEDLE}} hits={{HITS}}"
+  NOTE "default template"
+ELSE
+  LET tpl = LAST
+  NOTE "template from file"
+END
+
+# REPLACEALL fill (COUNT omitted — no itoa; see weaknesses)
+SYS REPLACEALL tpl "{{DATE}}" alert_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" alert_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{USER}}" alert_user
+LET tpl = LAST
+SYS REPLACEALL tpl "{{NEEDLE}}" NEEDLE
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HITS}}" hits_line
+LET tpl = LAST
+# leftover {{COUNT}} stays if present — agents must use PRINT_JSON for counts
+SYS HAS tpl "{{"
+LET unfilled = LAST_N
+LET rendered = tpl
+
+# --- write + append history ---
+SYS JOIN out_dir "ALERT.txt"
+LET plate = LAST
+SYS WRITE plate rendered
+SYS EXIST plate
+ASSERT EXIST == 1
+
+SYS JOIN out_dir "ALERT_LOG.txt"
+LET logp = LAST
+SYS APPEND logp rendered
+ASSERT OK == 1 "append history"
+
+SYS MS
+LET elapsed_ms = MS - t0
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "alert_template_digest: done"
+PRINT "alert" files_read files_with_hits hit_total window_n unfilled
+PRINT_JSON files_read files_with_hits hit_total window_n unfilled raw_n NEEDLE ACTION elapsed_ms STATUS_OK
+STATUS
+CLEAR_ERR "alert clean"
+EXIT 0 "alert ok"
