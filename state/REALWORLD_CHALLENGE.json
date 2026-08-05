@@ -1,161 +1,172 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 46,
-  "program": "programs/realworld/release_relpath_smoke.cubalc",
-  "theme": "release relpath STRIPPREFIX STRIPCOMMON SAMPLEK smoke checklist",
-  "version": "1.15.153-usability",
+  "iter": 47,
+  "program": "programs/realworld/svc_err_kv_board.cubalc",
+  "theme": "service error KV tally LOOKUP KVSET KVINC soft counters",
+  "version": "1.15.156-usability",
   "pass": true,
   "tests": [
     {
-      "name": "loadlines_strip",
-      "cmd": "loadlines /opt/rel/*; strip /opt/rel/ \u2192 bin/a lib/b.so\u2026",
+      "name": "seed_bump_get",
+      "cmd": "seed api:3 db:1 mesh:0; bump api 2 → 5; get api",
       "ok": true,
-      "note": "STRIPPREFIX_HIT=4 full"
+      "note": "KVINC + LOOKUP"
     },
     {
-      "name": "sample_seeded",
-      "cmd": "CUBALC_SEED=42 SAMPLEK 2 deterministic smoke",
+      "name": "geti_case",
+      "cmd": "geti API → 5",
       "ok": true,
-      "note": "etc/c.conf + lib/b.so stable"
+      "note": "LOOKUPI"
     },
     {
-      "name": "peelsuf_partial",
-      "cmd": "STRIPSUFFIX .so peels only matching fields",
+      "name": "bump_insert_set",
+      "cmd": "bump crit insert; set mesh 9",
       "ok": true,
-      "note": "lib/b vs lib/c.s kept"
+      "note": "KVINC_HIT=0 insert; KVSET"
     },
     {
-      "name": "mixed_roots",
-      "cmd": "strip /opt/rel/ leaves /var/other/x absolute in REL",
+      "name": "loadlines_freq",
+      "cmd": "loadlines api|||api|||warn|||api → api+3 warn:1",
       "ok": true,
-      "note": "partial STRIPPREFIX_HIT"
+      "note": "FREQ merge KVINC"
     },
     {
-      "name": "slash_only_relcommon",
-      "cmd": "/etc/a vs /var/b \u2192 STRIPCOMMON_PRE=/ soft miss",
+      "name": "pin_drop",
+      "cmd": "pin db front; drop mesh",
       "ok": true,
-      "note": "REQUIRE exit 2"
+      "note": "MOVELINE LOOKUP_I; REMOVELINE LOOKUP_LINE"
     },
     {
-      "name": "single_stripcommon_empty",
-      "cmd": "one path \u2192 REL empty pre=full path",
+      "name": "get_miss_require",
+      "cmd": "get ghost soft; REQUIRE exit 2",
       "ok": true,
-      "note": "agent footgun success note"
+      "note": "soft+REQUIRE"
     },
     {
-      "name": "sample_empty_k0",
-      "cmd": "empty REQUIRE exit2; k=0 soft miss",
+      "name": "substring_false",
+      "cmd": "get err miss; get error hit",
       "ok": true,
-      "note": "k>n clamps to all"
+      "note": "exact key not GREP"
     },
     {
-      "name": "mid_segment_lcp",
-      "cmd": "state/peer_* \u2192 pre=state/peer_ not state/",
+      "name": "sep_eq_plate",
+      "cmd": "CUBALC_SE_SEP== seed/bump api=3→5",
       "ok": true,
-      "note": "path-segment unsafe"
+      "note": "literal sep branch"
     },
     {
-      "name": "drop_has_unknown",
-      "cmd": "drop ghost REQUIRE; has exact; unknown action 2",
+      "name": "nonnum_coerce",
+      "cmd": "set api abc; bump → api:1",
       "ok": true,
-      "note": "exact field ops"
+      "note": "strtol silent 0"
+    },
+    {
+      "name": "dup_first_wins",
+      "cmd": "error:3\\nerror:9 bump → error:4 residual 9",
+      "ok": true,
+      "note": "first key only"
+    },
+    {
+      "name": "neg_delta_clear",
+      "cmd": "bump -2; clear empty plate",
+      "ok": true,
+      "note": "no floor; WRITE empty"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "128/128 pass incl stripprefix drawn"
+      "note": "131/131 pass incl lookup kvset kvinc"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag",
-      "title": "STRIPCOMMON LCP is character-level mid-segment",
-      "detail": "Peers state/peer_a|b|c strip to pre=state/peer_ leaving a/plate.json. Want dirname-boundary strip (state/) or segment-aware RELPATHS. Same class as COMMONPREFIX path gap.",
-      "repro": "STRIPCOMMON state/peer_a/x\\nstate/peer_b/y \u2192 pre state/peer_"
+      "area": "lang|parse",
+      "title": "LOOKUP/KVSET/KVINC sep cannot be a variable",
+      "detail": "SYS LOOKUP bag key SEP fails unknown form 'SEP'. KVINC/KVSET only accept TK_STR for sep; LOOKUP bare IDENT only if strlen<=2. Configurable CUBALC_SE_SEP forces EQS branch + duplicated ops with \":\"/\"=\" literals. BEFORE/AFTER accept vars — inconsistent.",
+      "repro": "LET SEP=\":\"; SYS LOOKUP bag k SEP → unknown form"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "Single-field STRIPCOMMON empties the relative key",
-      "detail": "One absolute path \u2192 LCP is whole field \u2192 REL becomes empty string while STRIPCOMMON_PRE is the full path and STRIPCOMMON_HIT=1. Agents treat success as usable relative inventory.",
-      "repro": "STRIPCOMMON '/opt/rel/only' \u2192 LAST empty, PRE=/opt/rel/only"
+      "title": "KVINC silently coerces non-numeric values to 0",
+      "detail": "error:abc +1 → error:1 with KVINC_HIT=1. No OK=0 / refuse mode for non-numeric. Corrupts string metadata plates if reused as counters.",
+      "repro": "KVINC 'error:abc' error → error:1"
     },
     {
       "id": "W3",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "STRIPPREFIX partial hit leaves absolute orphans in REL bag",
-      "detail": "Mixed /opt/rel/* + /var/other/x after strip root keeps /var/other/x absolute. No STRICT mode requiring all fields match; agents must check STRIPPREFIX_HIT == LINES.",
-      "repro": "STRIPPREFIX mixed bag '/opt/rel/'"
+      "title": "Duplicate keys: first-wins only; residual siblings stay",
+      "detail": "LOOKUP/KVINC touch only first matching key. error:3\\nerror:9 bump → error:4\\nerror:9. No de-dupe or multi-key bump. Agents must UNIQ/normalize first.",
+      "repro": "KVINC dup-key bag"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|rand",
-      "title": "SAMPLEK non-deterministic without CUBALC_SEED",
-      "detail": "Smoke plates change across runs unless host sets CUBALC_SEED. No in-program SAMPLEK seed arg; ops agents forget ENV contract.",
-      "repro": "SAMPLEK 2 bag without CUBALC_SEED"
+      "area": "host|bag",
+      "title": "No floor/clamp on negative KVINC delta",
+      "detail": "bump -2 from 5 → 3 ok; can go negative freely. Budget-like agents need MIN 0 after every bump.",
+      "repro": "KVINC bag k -99"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "Slash-only STRIPCOMMON still strips and HIT counts",
-      "detail": "STRIPCOMMON_PRE='/' non-blank so BLANK checks pass; program must EQS pre '/'. Same false-useful-root class as path_root_board.",
-      "repro": "STRIPCOMMON '/etc/a\\n/var/b'"
+      "area": "host|json",
+      "title": "PRINT_JSON collapses bag newlines",
+      "detail": "PRINT_JSON LAST shows error:1warn:1 not multi-line. Agents misread plate depth from JSON dump.",
+      "repro": "PRINT_JSON bag"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last ABS/REL/SMOKE line without $. Stable plate hygiene issue.",
-      "repro": "loadlines; cat -A ABS.txt"
+      "detail": "cat -A last key:val without $.",
+      "repro": "seed; cat -A ERRKV.txt"
     },
     {
       "id": "W7",
       "severity": "med",
-      "area": "host|cli",
-      "title": "No STRIPPREFIX_STRICT / all-must-match gate",
-      "detail": "Want hard fail when HIT < N. Agents reimplement with NUM compare every call.",
-      "repro": "STRIPPREFIX partial"
+      "area": "host|bag",
+      "title": "Empty-key KVINC can produce malformed fields",
+      "detail": "KVINC bag '' 1 may yield a:1:1 or :n depending on bag. No key validation.",
+      "repro": "KVINC bag \"\" 1"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|bag",
-      "title": "STRIPSUFFIX is exact string not extension-aware",
-      "detail": "Fine for .so peel; no EXTNAME map form. c.s not confused with .so (good) but agents want map-ext strip.",
-      "repro": "STRIPSUFFIX bag .so"
+      "title": "No KVDEL / drop-by-key primitive",
+      "detail": "Must LOOKUP → LOOKUP_LINE → REMOVELINE. Works but multi-step; residual dups need loop.",
+      "repro": "drop key needs LOOKUP_LINE"
     }
   ],
   "workarounds": [
-    "EQS STRIPCOMMON_PRE '/' or BLANK REL after single-field strip \u2192 treat as no useful rel",
-    "If LINES==1 skip STRIPCOMMON or keep basename via BASENAME EACH",
-    "Assert STRIPPREFIX_HIT == LINES abs for clean REL",
-    "Always export CUBALC_SEED for SAMPLEK smoke plates",
-    "Prefer explicit STRIPPREFIX known root over STRIPCOMMON for release trees",
-    "loadlines ||| not WORDS for absolute paths"
+    "Branch EQS SEP \"=\" then call with \":\" or \"=\" string literals only",
+    "Never store non-numeric values in counter plates; validate before KVINC",
+    "Normalize with UNIQ/FREQ before tallies to avoid duplicate keys",
+    "After negative delta SYS MAX 0 or reject delta < 0 at agent layer",
+    "Drop via LOOKUP_LINE + REMOVELINE; loop while LOOKUP hits for dups"
   ],
   "language_gaps": [
-    "Path-segment STRIPCOMMON / RELPATHS dirname boundary",
-    "STRIPPREFIX STRICT all-fields-must-match",
-    "Single-field STRIPCOMMON keep-as-is or basename option",
-    "SAMPLEK seed argument (not only CUBALC_SEED ENV)",
-    "WRITE force trailing NL",
-    "Map EXTNAME strip bag form"
+    "resolve_str_arg for LOOKUP/KVSET/KVINC optional sep (accept vars)",
+    "KVINC STRICT / non-numeric refuse mode",
+    "KVINC floor 0 / clamp option",
+    "KVDEL / DROPKEY one-shot",
+    "De-dupe or multi-match KVINC policy",
+    "PRINT_JSON preserve bag newlines or bag-as-array",
+    "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Single-field STRIPCOMMON reported pre full path and empty REL with soft success \u2014 agent must special-case",
-    "Slash-only pre needs explicit EQS in program (BLANK insufficient)",
-    "Positive path strip+seeded sample works cleanly",
-    "Mid-segment peer_ LCP expected from character LCP \u2014 document not fix this iter",
-    "No language fix \u2014 path-aware strip for MEANINGFUL_ITER"
+    "First seed failed: unknown form SEP — forced literal-sep rewrite and documented as W1",
+    "Positive seed/bump/get/geti/loadlines/pin/drop clean after fix",
+    "Non-numeric coerce and dup first-wins confirmed as language behavior not bug",
+    "No language fix this iter — sep resolve_str_arg for MEANINGFUL_ITER"
   ],
-  "commit": "7f829f54627941d461d6457d87d847db5d330ded",
-  "ts": "2026-08-05T23:13:24Z"
+  "commit": "",
+  "ts": "2026-08-05T23:40:00Z"
 }
