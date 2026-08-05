@@ -38,6 +38,8 @@ int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r);
 int cubalc_host_abspath(const char *path, cubalc_host_result *r);
 /* create empty file or update mtime; r->n=1 created, 0 updated */
 int cubalc_host_touch(const char *path, cubalc_host_result *r);
+/* list directory entries (skip . ..) → r->str newline-joined names, r->n=count */
+int cubalc_host_listdir(const char *path, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);

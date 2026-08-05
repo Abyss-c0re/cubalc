@@ -1,0 +1,72 @@
+# SYS LIST / LS — list directory basenames without shell ls
+# Usability: agents scan STATE plate dirs for intake/promote
+
+HOLD_FLASH 1
+
+SYS STATE
+LET BASE = LAST
+SYS MS
+LET STAMP = LAST
+SYS JOIN BASE "_mi_list"
+LET ROOT = LAST
+SYS MKDIR ROOT
+SYS JOIN ROOT STAMP
+LET DIR = LAST
+SYS MKDIR DIR
+
+# empty dir
+SYS LIST DIR
+ASSERT OK == 1
+ASSERT LAST_N == 0 "fresh empty"
+ASSERT LIST_N == 0
+
+# create known files
+SYS JOIN DIR "a.txt"
+LET A = LAST
+SYS JOIN DIR "b.json"
+LET B = LAST
+SYS JOIN DIR "sub"
+LET SUB = LAST
+SYS TOUCH A
+SYS TOUCH B
+SYS MKDIR SUB
+
+SYS LIST DIR
+ASSERT OK == 1
+ASSERT LAST_N == 3 "three entries"
+ASSERT LIST_N == 3
+SYS HAS LAST "a.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "b.json"
+ASSERT LAST_N == 1
+SYS HAS LAST "sub"
+ASSERT LAST_N == 1
+
+# aliases
+SYS LS DIR
+ASSERT OK == 1
+ASSERT LIST_N == 3
+SYS LISTDIR DIR
+ASSERT LIST_N == 3
+SYS SCANDIR DIR
+ASSERT LIST_N == 3
+
+# soft miss / not a dir
+SYS LIST "state/meaningful_iter/__no_list_dir__"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LIST A
+ASSERT OK == 0 "file is not dir"
+
+# known system path has entries
+SYS LIST "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS HAS LAST "hold_seed.cubalc"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM A
+SYS RM B
+
+PRINT "sys_list ok"

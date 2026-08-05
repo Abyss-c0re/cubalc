@@ -100,6 +100,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 70. ~~**`SYS REALPATH` / `ABSPATH`**~~ **done** (absolute paths · realpath or cwd-join).
 71. ~~**`SYS TOUCH`**~~ **done** (create empty plate marker / refresh mtime).
 72. ~~**`SYS SLEEP`**~~ **done** (pause n ms for agent backoff · cap 60s).
+73. ~~**`SYS LIST` / `LS`**~~ **done** (dir basenames → LAST · count in LAST_N).
 
 ## Tick protocol
 

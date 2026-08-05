@@ -410,6 +410,37 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LIST|LS|LISTDIR path — directory basenames → LAST (newline-joined).
+     * LAST_N/LIST_N = count. Soft miss / non-dir. Usability: scan STATE plates. */
+    if (kw(&L->cur,"LIST") || kw(&L->cur,"LS") || kw(&L->cur,"LISTDIR") ||
+        kw(&L->cur,"DIRLIST") || kw(&L->cur,"SCANDIR") || kw(&L->cur,"READDIR")){
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS LIST \"path\"|LAST"); return -1;
+      }
+      if (cubalc_host_listdir(path, &hr)!=0){
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "LIST_N", 0);
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      var_set_str(vm, "LIST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "LIST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV")){
       /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
       lex_next(L);
@@ -1705,7 +1736,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1925,6 +1956,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS COPY", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},
       {"SYS REALPATH", "SYS REALPATH|ABSPATH path — absolute path → LAST"},
       {"SYS TOUCH", "SYS TOUCH path — create empty / refresh mtime · LAST_N 0|1"},
+      {"SYS LIST", "SYS LIST|LS path — dir basenames → LAST · LAST_N=count"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},

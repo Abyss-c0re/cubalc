@@ -1673,6 +1673,7 @@ int main(int argc, char **argv) {
       {"sys_realpath", "programs/proof/611_sys_realpath.cubalc", "SYS REALPATH/ABSPATH absolute paths"},
       {"sys_touch", "programs/proof/612_sys_touch.cubalc", "SYS TOUCH plate markers"},
       {"sys_sleep", "programs/proof/613_sys_sleep.cubalc", "SYS SLEEP agent backoff ms"},
+      {"sys_list", "programs/proof/614_sys_list.cubalc", "SYS LIST/LS directory basenames"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1833,6 +1834,7 @@ int main(int argc, char **argv) {
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
+      {"SYS LIST", "host", "SYS LIST|LS path — dir basenames → LAST · count"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
@@ -2344,6 +2346,8 @@ int main(int argc, char **argv) {
        "SYS TOUCH create plate markers"},
       {"programs/proof/613_sys_sleep.cubalc", "sys_sleep",
        "SYS SLEEP agent backoff milliseconds"},
+      {"programs/proof/614_sys_list.cubalc", "sys_list",
+       "SYS LIST/LS directory basenames"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2710,6 +2714,7 @@ int main(int argc, char **argv) {
       {"SYS REALPATH", "host", "SYS REALPATH absolute path"},
       {"SYS TOUCH", "host", "SYS TOUCH plate marker"},
       {"SYS SLEEP", "host", "SYS SLEEP pause milliseconds"},
+      {"SYS LIST", "host", "SYS LIST directory basenames"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2912,6 +2917,7 @@ int main(int argc, char **argv) {
       {"SYS REALPATH", "host", "SYS REALPATH|ABSPATH absolute path"},
       {"SYS TOUCH", "host", "SYS TOUCH create empty / refresh mtime"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP n pause ms cap 60s"},
+      {"SYS LIST", "host", "SYS LIST|LS path dir basenames count"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2958,6 +2964,7 @@ int main(int argc, char **argv) {
       {"programs/proof/611_sys_realpath.cubalc", "sys_realpath", "SYS REALPATH absolute"},
       {"programs/proof/612_sys_touch.cubalc", "sys_touch", "SYS TOUCH plate markers"},
       {"programs/proof/613_sys_sleep.cubalc", "sys_sleep", "SYS SLEEP agent backoff"},
+      {"programs/proof/614_sys_list.cubalc", "sys_list", "SYS LIST dir basenames"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

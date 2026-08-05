@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
+#include <dirent.h>
 
 static void r_clear(cubalc_host_result *r) {
   if (!r) return;
@@ -381,6 +382,56 @@ int cubalc_host_touch(const char *path, cubalc_host_result *r) {
   }
   snprintf(r->str, sizeof r->str, "%s", path);
   r->n = created ? 1 : 0;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS LIST|LS path — directory names for agent plate scans.
+ * r->str = newline-joined basenames (skip . and ..); r->n = entry count.
+ * Truncates safely if buffer fills (still returns partial + count so far). */
+int cubalc_host_listdir(const char *path, cubalc_host_result *r) {
+  DIR *d;
+  struct dirent *ent;
+  struct stat st;
+  size_t used = 0;
+  long count = 0;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "list: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "list: missing");
+    return -1;
+  }
+  if (!S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "list: not a directory");
+    return -1;
+  }
+  d = opendir(path);
+  if (!d) {
+    snprintf(r->err, sizeof r->err, "list: %s", strerror(errno));
+    return -1;
+  }
+  r->str[0] = 0;
+  while ((ent = readdir(d)) != NULL) {
+    size_t nlen;
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    nlen = strlen(ent->d_name);
+    if (nlen == 0) continue;
+    /* need name + optional newline + NUL */
+    if (used + nlen + (used ? 1 : 0) + 1 >= sizeof r->str)
+      break; /* buffer full — stop, keep partial */
+    if (used > 0)
+      r->str[used++] = '\n';
+    memcpy(r->str + used, ent->d_name, nlen);
+    used += nlen;
+    r->str[used] = 0;
+    count++;
+  }
+  closedir(d);
+  r->n = count;
   r->ok = 1;
   return 0;
 }
