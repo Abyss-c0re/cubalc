@@ -1,0 +1,28 @@
+# IDENTITY — one host/process plate (user@host:pid) without SYS chain
+# Usability: peer naming + agent plates in a single form
+
+HOLD_FLASH 1
+
+IDENTITY
+ASSERT OK == 1
+ASSERT PID > 0 "pid filled"
+ASSERT LAST_N == PID
+ASSERT UID >= 0
+DEFINED USER
+ASSERT DEFINED == 1
+DEFINED HOSTNAME
+ASSERT DEFINED == 1
+DEFINED HOME
+ASSERT DEFINED == 1
+DEFINED CWD
+ASSERT DEFINED == 1
+DEFINED VERSION
+ASSERT DEFINED == 1
+DEFINED IDENTITY
+ASSERT DEFINED == 1
+
+# alias
+WHO
+ASSERT PID > 0
+
+PRINT "identity ok" PID USER

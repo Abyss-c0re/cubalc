@@ -1660,6 +1660,7 @@ int main(int argc, char **argv) {
       {"defined", "programs/proof/598_defined.cubalc", "DEFINED var existence probe"},
       {"typeof", "programs/proof/599_typeof.cubalc", "TYPEOF num|str|undef kind probe"},
       {"unset", "programs/proof/600_unset.cubalc", "UNSET remove var for DEFAULT re-apply"},
+      {"identity", "programs/proof/601_identity.cubalc", "IDENTITY host/process plate"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1795,6 +1796,7 @@ int main(int argc, char **argv) {
       {"DUMP", "flow", "alias of PRINT_JSON"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
+      {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2288,6 +2290,8 @@ int main(int argc, char **argv) {
        "TYPEOF name num|str|undef kind probe"},
       {"programs/proof/600_unset.cubalc", "unset",
        "UNSET name remove var for DEFAULT re-apply"},
+      {"programs/proof/601_identity.cubalc", "identity",
+       "IDENTITY cubalc.identity.v1 host plate"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2631,6 +2635,7 @@ int main(int argc, char **argv) {
       {"PRINT_JSON", "flow", "one JSON line for agents"},
       {"VARS", "flow", "VARS full var table JSON"},
       {"STATUS", "flow", "STATUS agent health plate"},
+      {"IDENTITY", "flow", "IDENTITY user@host:pid plate"},
       {"SYS PID", "host", "SYS PID process id"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME machine name"},
       {"SYS USER", "host", "SYS USER login name"},
@@ -2814,6 +2819,7 @@ int main(int argc, char **argv) {
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
+      {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2853,6 +2859,7 @@ int main(int argc, char **argv) {
       {"programs/proof/598_defined.cubalc", "defined", "DEFINED var existence probe"},
       {"programs/proof/599_typeof.cubalc", "typeof", "TYPEOF num|str|undef kind"},
       {"programs/proof/600_unset.cubalc", "unset", "UNSET remove var DEFAULT re-apply"},
+      {"programs/proof/601_identity.cubalc", "identity", "IDENTITY host/process plate"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -3105,7 +3112,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED|TYPEOF|UNSET · STATUS · PRINT_JSON · INCLUDE\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED|TYPEOF|UNSET · STATUS|IDENTITY · PRINT_JSON · INCLUDE\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

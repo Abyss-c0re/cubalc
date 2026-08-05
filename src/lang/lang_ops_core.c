@@ -1354,6 +1354,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
+      {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name = expr|string"},
       {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
@@ -1654,6 +1655,109 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", okv);
     /* report-only: leave OK/EXPECT_OK/LAST_ERR as they were */
     if (vm->trace) fprintf(vm->trace, "# status ok=%ld err=%s\n", okv, esc[0] ? esc : "-");
+    bump(vm); return 1;
+  }
+  /* IDENTITY / WHOAMI_PLATE — one host/process identity plate for agents.
+   * Fills PID HOSTNAME USER UID HOME CWD VERSION without chaining SYS forms.
+   * Full JSON → last_print; short LAST "user@host:pid". */
+  if (kw(&L->cur,"IDENTITY")||kw(&L->cur,"WHO")||kw(&L->cur,"HOST_IDENTITY")||
+      kw(&L->cur,"ID_PLATE")||kw(&L->cur,"PEER_ID")||kw(&L->cur,"WHO_AM_I")){
+    long pid = 0, uid = 0;
+    char host[256], user[128], home[512], cwd[512];
+    char eh[280], eu[160], ehome[560], ecwd[560];
+    char line[CUBALC_HOST_STR_MAX];
+    char note[200];
+    const char *e;
+    size_t eo;
+    const char *p;
+    lex_next(L);
+    host[0] = user[0] = home[0] = cwd[0] = 0;
+#if defined(CUBALC_OS_WINDOWS)
+    pid = (long)_getpid();
+    {
+      const char *ce = getenv("COMPUTERNAME");
+      if (ce && ce[0]) snprintf(host, sizeof host, "%s", ce);
+      else snprintf(host, sizeof host, "localhost");
+    }
+    e = getenv("UID");
+    if (e && e[0]) uid = strtol(e, NULL, 10);
+#else
+    pid = (long)getpid();
+    if (pid < 0) pid = 0;
+    uid = (long)getuid();
+    if (uid < 0) uid = 0;
+    if (gethostname(host, sizeof host) != 0 || !host[0])
+      snprintf(host, sizeof host, "localhost");
+    host[sizeof host - 1] = 0;
+#endif
+    e = getenv("USER");
+    if (!e || !e[0]) e = getenv("LOGNAME");
+    if (!e || !e[0]) e = getenv("USERNAME");
+    if (e && e[0]) snprintf(user, sizeof user, "%s", e);
+#if !defined(CUBALC_OS_WINDOWS)
+    if (!user[0]) {
+      struct passwd *pw = getpwuid(getuid());
+      if (pw && pw->pw_name && pw->pw_name[0])
+        snprintf(user, sizeof user, "%s", pw->pw_name);
+    }
+#endif
+    if (!user[0]) snprintf(user, sizeof user, "user");
+    e = getenv("HOME");
+#if defined(CUBALC_OS_WINDOWS)
+    if (!e || !e[0]) e = getenv("USERPROFILE");
+#endif
+    if (e && e[0]) snprintf(home, sizeof home, "%s", e);
+#if !defined(CUBALC_OS_WINDOWS)
+    if (!home[0]) {
+      struct passwd *pw = getpwuid(getuid());
+      if (pw && pw->pw_dir && pw->pw_dir[0])
+        snprintf(home, sizeof home, "%s", pw->pw_dir);
+    }
+#endif
+    if (!home[0]) {
+      if (getcwd(home, sizeof home) == NULL)
+        snprintf(home, sizeof home, ".");
+    }
+    if (getcwd(cwd, sizeof cwd) == NULL)
+      snprintf(cwd, sizeof cwd, ".");
+    /* JSON-escape helper fields */
+#define CUBALC_ID_ESC(dst, src) do { \
+      eo = 0; \
+      for (p = (src); *p && eo + 2 < sizeof(dst); p++) { \
+        if (*p == '"' || *p == '\\') { (dst)[eo++] = '\\'; (dst)[eo++] = *p; } \
+        else if ((unsigned char)*p < 0x20) continue; \
+        else (dst)[eo++] = *p; \
+      } \
+      (dst)[eo] = 0; \
+    } while (0)
+    CUBALC_ID_ESC(eh, host);
+    CUBALC_ID_ESC(eu, user);
+    CUBALC_ID_ESC(ehome, home);
+    CUBALC_ID_ESC(ecwd, cwd);
+#undef CUBALC_ID_ESC
+    var_set_num(vm, "PID", pid);
+    var_set_num(vm, "UID", uid);
+    var_set_str(vm, "HOSTNAME", host);
+    var_set_str(vm, "USER", user);
+    var_set_str(vm, "USERNAME", user);
+    var_set_str(vm, "HOME", home);
+    var_set_str(vm, "CWD", cwd);
+    var_set_str(vm, "VERSION", CUBALC_LANG_VERSION);
+    snprintf(line, sizeof line,
+      "{\"schema\":\"cubalc.identity.v1\",\"ok\":true,"
+      "\"pid\":%ld,\"uid\":%ld,\"user\":\"%s\",\"hostname\":\"%s\","
+      "\"home\":\"%s\",\"cwd\":\"%s\",\"version\":\"%s\"}",
+      pid, uid, eu, eh, ehome, ecwd, CUBALC_LANG_VERSION);
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    snprintf(note, sizeof note, "%s@%s:%ld", user, host, pid);
+    var_set_str(vm, "IDENTITY", note);
+    var_set_str(vm, "LAST", note);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", note);
+    vm->last_n = pid;
+    var_set_num(vm, "LAST_N", pid);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# identity %s\n", note);
     bump(vm); return 1;
   }
   /* ASSERT expr ["why"] — optional message for agent/human-readable failures */

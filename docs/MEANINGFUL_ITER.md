@@ -87,6 +87,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 57. ~~**`DEFINED name`**~~ **done** (var existence probe · LAST_N 0|1).
 58. ~~**`TYPEOF name`**~~ **done** (kind probe · undef|num|str · LAST_N 0|1|2).
 59. ~~**`UNSET name`**~~ **done** (remove var · DEFAULT re-apply · LAST_N 0|1).
+60. ~~**`IDENTITY`**~~ **done** (cubalc.identity.v1 plate · user@host:pid + vars).
 
 ## Tick protocol
 
