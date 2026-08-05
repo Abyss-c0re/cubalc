@@ -1,0 +1,77 @@
+# SYS LASTMATCH / GREP1L — last bag field containing needle
+# Usability: latest log/error line without REVL+FIRSTMATCH or GREP+TAIL
+
+HOLD_FLASH 1
+
+LET log = "INFO boot\nERROR disk full\nWARN mem\nERROR timeout\nFATAL panic"
+
+SYS LASTMATCH log "ERROR"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LASTMATCH_N == 1
+ASSERT LASTMATCH_I == 3
+SYS EQS LAST "ERROR timeout"
+ASSERT LAST_N == 1
+
+# contrast with FIRSTMATCH (earlier ERROR)
+SYS FIRSTMATCH log "ERROR"
+ASSERT LAST_N == 1
+ASSERT FIRSTMATCH_I == 1
+SYS EQS LAST "ERROR disk full"
+ASSERT LAST_N == 1
+
+# single match
+SYS LASTMATCH log "FATAL"
+ASSERT LAST_N == 1
+ASSERT LASTMATCH_I == 4
+SYS EQS LAST "FATAL panic"
+ASSERT LAST_N == 1
+
+# miss
+SYS LASTMATCH log "CRIT"
+ASSERT LAST_N == 0
+ASSERT LASTMATCH_I == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# aliases
+SYS GREP1L log "WARN"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN mem"
+ASSERT LAST_N == 1
+SYS LASTGREP log "INFO"
+ASSERT LAST_N == 1
+SYS EQS LAST "INFO boot"
+ASSERT LAST_N == 1
+
+# case-insensitive
+SYS LASTMATCHI log "error"
+ASSERT LAST_N == 1
+ASSERT LASTMATCH_I == 3
+SYS EQS LAST "ERROR timeout"
+ASSERT LAST_N == 1
+SYS GREP1L I log "fatal"
+ASSERT LAST_N == 1
+SYS EQS LAST "FATAL panic"
+ASSERT LAST_N == 1
+
+# empty needle → last field
+SYS LASTMATCH log ""
+ASSERT LAST_N == 1
+ASSERT LASTMATCH_I == 4
+SYS EQS LAST "FATAL panic"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS LASTMATCH "" "x"
+ASSERT LAST_N == 0
+ASSERT LASTMATCH_I == -1
+
+# agent: latest ERROR then peel detail
+SYS LASTMATCH log "ERROR"
+SYS AFTER LAST "ERROR "
+ASSERT LAST_N == 1
+SYS EQS LAST "timeout"
+ASSERT LAST_N == 1
+
+PRINT "sys_lastmatch ok"

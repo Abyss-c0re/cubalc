@@ -4777,6 +4777,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
+     * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
+     * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
+     * Usability: latest log/error line without REVL+FIRSTMATCH or GREP+TAIL glue. */
+    if (kw(&L->cur,"LASTMATCH") || kw(&L->cur,"GREP1L") || kw(&L->cur,"FINDFIELDL") ||
+        kw(&L->cur,"LASTGREP") || kw(&L->cur,"MATCHLAST") || kw(&L->cur,"GREPLAST") ||
+        kw(&L->cur,"LASTMATCHI") || kw(&L->cur,"GREP1LI") || kw(&L->cur,"FINDFIELDLI")){
+      char op[20];
+      int icase = 0;
+      char bag[CUBALC_HOST_STR_MAX], needle[256], out[512];
+      const char *p, *start;
+      size_t flen, nn;
+      long idx = 0, found = 0, found_i = -1;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LASTMATCHI") == 0 || strcmp(op, "GREP1LI") == 0 ||
+          strcmp(op, "FINDFIELDLI") == 0)
+        icase = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              hit = 1;
+            } else if (!icase) {
+              if (strstr(field, needle) != NULL) hit = 1;
+            } else {
+              size_t fi, j;
+              for (fi = 0; field[fi] && !hit; fi++) {
+                for (j = 0; j < nn; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nn) hit = 1;
+              }
+            }
+            if (hit) {
+              /* keep scanning — last hit wins */
+              if (flen >= sizeof out) flen = sizeof out - 1;
+              memcpy(out, start, flen);
+              out[flen] = 0;
+              found = 1;
+              found_i = idx;
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GREP", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "LASTMATCH_N", found);
+      var_set_num(vm, "LASTMATCH_I", found_i);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CHUNK|BATCH|GROUPN n [bag] [join_sep]
      * — group bag fields into batches of n; join each batch with join_sep
      * (default space); batches become newline fields → LAST.
@@ -7393,7 +7477,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
     return -1;
   }
 
@@ -7681,6 +7765,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FIRSTMATCH", "SYS FIRSTMATCH|GREP1 bag needle — first field containing needle · LAST_N 0|1"},
       {"SYS GREP1", "SYS GREP1 bag needle — alias of SYS FIRSTMATCH · one-line pick without TAKE"},
       {"SYS FIRSTMATCHI", "SYS FIRSTMATCHI|GREP1I bag needle — case-insensitive FIRSTMATCH"},
+      {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
+      {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
+      {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},
       {"SYS CHUNK", "SYS CHUNK|BATCH n [bag] [join] — group fields into batches of n → LAST"},
       {"SYS BATCH", "SYS BATCH n [bag] [join] — alias of SYS CHUNK · work-list paging"},
       {"SYS GROUPN", "SYS GROUPN n [bag] [join] — alias of SYS CHUNK"},
