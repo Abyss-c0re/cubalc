@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 121,
-  "version": "1.15.146-usability",
-  "item": "SYS SORTLEN / LENSORT sort bag fields by length",
-  "item_id": 154,
-  "title": "SYS SORTLEN|LENSORT [DESC] [bag] — sort fields by string length",
-  "commit": "4567ce0d6e5592733c4c98b777cbe79c81e5abfb",
-  "summary": "SYS SORTLEN/LENSORT sort bag fields by length (longest-first without rebuild). selftest 121.",
+  "iter": 122,
+  "version": "1.15.147-usability",
+  "item": "SYS LASTMATCH / GREP1L last bag field containing needle",
+  "item_id": 155,
+  "title": "SYS LASTMATCH|GREP1L [I] bag needle — last field hit",
+  "commit": "ee806c17c1f3a2f2d6d9f4160e9e75c86fb4e264",
+  "summary": "SYS LASTMATCH/GREP1L last bag field with needle (latest log hit without REVL). selftest 122.",
   "proofs": [
-    "694_sys_sortlen",
-    "selftest n_pass=121"
+    "695_sys_lastmatch",
+    "selftest n_pass=122"
   ],
-  "when": "2026-08-05T21:54:09Z",
+  "when": "2026-08-05T22:04:50Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4567ce0d6e5592733c4c98b777cbe79c81e5abfb"
+  "sha": "ee806c17c1f3a2f2d6d9f4160e9e75c86fb4e264"
 }
