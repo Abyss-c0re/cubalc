@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "loadlines_root",
-      "cmd": "loadlines /var/log/*; root → /var/log/",
+      "cmd": "loadlines /var/log/*; root \u2192 /var/log/",
       "ok": true,
       "note": "COMMONPREFIX shared dir"
     },
     {
       "name": "suffix_mixed",
-      "cmd": ".log vs .err → suffix none soft/REQUIRE",
+      "cmd": ".log vs .err \u2192 suffix none soft/REQUIRE",
       "ok": true,
       "note": "COMMONSUFFIX empty soft"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "slash_only_prefix",
-      "cmd": "/etc/a vs /var/b → COMMONPREFIX / not empty",
+      "cmd": "/etc/a vs /var/b \u2192 COMMONPREFIX / not empty",
       "ok": true,
       "note": "false useful root for path agents"
     },
@@ -62,7 +62,7 @@
       "area": "host|bag",
       "title": "COMMONPREFIX of /etc vs /var is slash-only /",
       "detail": "Agents treating non-empty LCP as a useful path root get '/' for unrelated trees. No path-segment-aware COMMONPREFIX (dirname-safe). BLANK check cannot reject '/' alone without extra EQS.",
-      "repro": "COMMONPREFIX '/etc/a\\n/var/b' → '/'"
+      "repro": "COMMONPREFIX '/etc/a\\n/var/b' \u2192 '/'"
     },
     {
       "id": "W2",
@@ -77,14 +77,14 @@
       "severity": "med",
       "area": "host|bag",
       "title": "Single-field COMMONPREFIX returns whole field",
-      "detail": "One path bag → LCP is the full path, so root action reports success with root=full file path. Agents should special-case LINES==1.",
-      "repro": "COMMONPREFIX '/only/one' → '/only/one'"
+      "detail": "One path bag \u2192 LCP is the full path, so root action reports success with root=full file path. Agents should special-case LINES==1.",
+      "repro": "COMMONPREFIX '/only/one' \u2192 '/only/one'"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|cli",
-      "title": "Paths need loadlines ||| — WORDS splits on /",
+      "title": "Paths need loadlines ||| \u2014 WORDS splits on /",
       "detail": "WORDS '/var/log/a' may not preserve path depending on tokenizer; multi-token paths need ||| or file READ.",
       "repro": "seed WORDS fragile for absolute paths"
     },
@@ -102,7 +102,7 @@
       "area": "host|bag",
       "title": "LONGEST ties pick first only",
       "detail": "Equal-length paths: first wins; no all-longest bag form.",
-      "repro": "LONGEST aa\\nbb\\ncc → aa"
+      "repro": "LONGEST aa\\nbb\\ncc \u2192 aa"
     },
     {
       "id": "W7",
@@ -122,7 +122,7 @@
     }
   ],
   "workarounds": [
-    "EQS root '/' or root len < 2 → treat as no useful root",
+    "EQS root '/' or root len < 2 \u2192 treat as no useful root",
     "Inspect TRUNCALL_HIT; prefer clip only for display plates not SoT",
     "If LINES==1 skip root or treat as whole path intentionally",
     "loadlines ||| or READ path list file",
@@ -136,11 +136,11 @@
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "REQUIRE root none failed to fire for /etc vs /var — LCP is '/' non-blank",
-    "TRUNCALL display clip mangles paths as expected — document hard",
+    "REQUIRE root none failed to fire for /etc vs /var \u2014 LCP is '/' non-blank",
+    "TRUNCALL display clip mangles paths as expected \u2014 document hard",
     "Positive path /var/log/ root works cleanly",
-    "No language fix — path-aware LCP for MEANINGFUL_ITER"
+    "No language fix \u2014 path-aware LCP for MEANINGFUL_ITER"
   ],
-  "commit": "pending",
+  "commit": "68f9f359c3ae882635094ddddbaccd9315556a89",
   "ts": "2026-08-05T22:48:00Z"
 }
