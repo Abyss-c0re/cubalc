@@ -1,120 +1,114 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 6,
-  "program": "programs/realworld/identity_heartbeat.cubalc",
-  "theme": "multi-probe heartbeat: IDENTITY + SYS DATE + STATE write + optional SERVE/DIAL",
-  "version": "1.15.53-usability",
+  "iter": 7,
+  "program": "programs/realworld/plate_workspace.cubalc",
+  "theme": "local file/state workspace bootstrap: SYS MKDIR + JOIN + BASENAME under STATE/TMP",
+  "version": "1.15.56-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_quiet_strict",
-      "cmd": "CUBALC_STATE=/tmp/\u2026 mkdir -p; run -q -s identity_heartbeat.cubalc",
+      "name": "state_auto_mkdir",
+      "cmd": "CUBALC_STATE=/tmp/new_$$ (no pre-mkdir) run -q -s",
       "ok": true,
-      "note": "HEARTBEAT.txt with ISO date; EXIT 0; 17 asserts"
+      "note": "SYS MKDIR creates STATE + runs/<id>/{in,out,log}; RUN_MANIFEST.txt"
     },
     {
-      "name": "serve_timeout_opt_in",
-      "cmd": "CUBALC_HB_SERVE=1 CUBALC_P2P_TIMEOUT=400 BIND=127.0.0.1:18994 run -q -s",
+      "name": "arg_run_id",
+      "cmd": "CUBALC_ARG0=job99 run -q -s",
       "ok": true,
-      "note": "SERVE times out, FAIL/PASS/CLEAR_ERR recovery, exit 0"
+      "note": "nested runs/job99/out/RUN_MANIFEST.txt"
     },
     {
-      "name": "soft_dial_opt_in",
-      "cmd": "CUBALC_HB_DIAL=1 CUBALC_P2P_SOFT=1 PEER=127.0.0.1:1 TIMEOUT=400 run -q -s",
+      "name": "tmp_root",
+      "cmd": "CUBALC_WS_ROOT=tmp CUBALC_ARG0=t1 run -q -s",
       "ok": true,
-      "note": "soft dial miss recovered"
+      "note": "workspace under SYS TMP"
     },
     {
-      "name": "dial_without_soft_skip",
-      "cmd": "CUBALC_HB_DIAL=1 without CUBALC_P2P_SOFT run -q -s",
-      "ok": true,
-      "note": "policy skip hard dial"
-    },
-    {
-      "name": "missing_state_parent",
-      "cmd": "CUBALC_STATE=/tmp/no_hb_$$ (no mkdir) run -q",
+      "name": "custom_root_unwritable",
+      "cmd": "CUBALC_WS_ROOT=/proc/cubalc_ws_nope_$$ run -q",
       "ok": false,
-      "note": "WRITE probe fatal before soft EXIST; err_line=0"
+      "note": "expected EXIT 2 mkdir root failed"
     },
     {
-      "name": "serve_pass_without_clear_strict",
-      "cmd": "SMX SERVE timeout; PASS; no CLEAR_ERR; run -q -s",
+      "name": "mkdir_on_file_strict_sticky",
+      "cmd": "WRITE file; MKDIR same path; PASS; no CLEAR_ERR; run -q -s",
       "ok": false,
-      "note": "expected ok=false rc=1; last_err SERVE timeout; err_line=0"
+      "note": "last_err mkdir: not a directory; err_line=0; rc=1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "28/28 green"
+      "note": "31/31 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "p2p|error",
-      "title": "SMX SERVE timeout sticky last_err has err_line=0 and empty err_src",
-      "detail": "SERVE accept timeout sets a useful last_err hint string but err_line stays 0 and err_src is empty. Combined with PASS without CLEAR_ERR, run -s fails with no source attribution. Heartbeat mesh probes need CLEAR_ERR every time and cannot jump to the SERVE line from the plate.",
-      "repro": "CUBALC_P2P_TIMEOUT=300 SMX SERVE \u2026; PASS; cubalc run -q -s \u2192 last_err SERVE timeout, err_line:0"
+      "area": "docs|discovery",
+      "title": "SYS JOIN missing from forms and search",
+      "detail": "Proofs and plate_workspace use SYS JOIN for path build, but cubalc forms JOIN and search join return n=0. Agents discover MKDIR/TMP/BASENAME in forms but invent SYS CAT glue or fail to find JOIN \u2014 same class of invisible string plane as earlier SYS CAT gap.",
+      "repro": "./out/cubalc forms JOIN \u2192 n=0; ./out/cubalc search join \u2192 n=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "io|soft",
-      "title": "Cannot soft-probe STATE writability \u2014 SYS WRITE is hard-fatal",
-      "detail": "Heartbeat wants EXPECT STATE writable. SYS WRITE to a missing parent dir fatals the whole run (err_line=0) before SYS EXIST can report. No SYS WRITE OR / soft write. Agents must shell mkdir -p and cannot degrade-gracefully inside CubalC when STATE is wrong.",
-      "repro": "CUBALC_STATE=/tmp/missing_$$ (no mkdir) identity_heartbeat \u2192 write fatal stmts mid-boot"
+      "area": "error|io",
+      "title": "SYS MKDIR failure soft with err_line=0 empty err_src",
+      "detail": "MKDIR on an existing file sets OK=0 sticky last_err='mkdir: not a directory' but does not hard-stop; run plate ok can still be true without -s. err_line=0 err_src empty. Under -s, PASS without CLEAR_ERR fails process with no source line. Agents cannot distinguish mkdir soft from other soft errs by line.",
+      "repro": "SYS WRITE path \"x\"; SYS MKDIR path; run -q -s without CLEAR_ERR"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "p2p|env",
-      "title": "CUBALC_P2P_TIMEOUT cannot be set from program",
-      "detail": "Heartbeat can read timeout via SYS ENV OR \"400\" into LAST but SERVE still uses host getenv only. Agents must export CUBALC_P2P_TIMEOUT before run or risk 30s default hang. Same class as CUBALC_P2P_SOFT footgun.",
-      "repro": "unset CUBALC_P2P_TIMEOUT; CUBALC_HB_SERVE=1 run \u2014 may wait default 30s"
+      "area": "path",
+      "title": "SYS JOIN is 2-arg only; multi-segment needs nested JOIN",
+      "detail": "SYS JOIN a b c parse-errors on leftover 'c'. Building root/runs/id/out requires four JOINs. Ugly for agents vs shell path join of N parts.",
+      "repro": "SYS JOIN \"/tmp\" \"a\" \"b\" \u2192 unknown form 'b'"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "cli|identity",
-      "title": "IDENTITY plate is stdout-only; run -q JSON omits identity fields",
-      "detail": "IDENTITY emits cubalc.identity.v1 on the human stream and sets vars, but the final run plate has no pid/user/hostname fields. Quiet agent pipelines that only parse the last JSON line must VARS or PRINT_JSON explicitly \u2014 easy to miss under -q.",
-      "repro": "cubalc run -q program with IDENTITY \u2192 final plate lacks user/host/pid"
+      "area": "path",
+      "title": "DIRNAME/BASENAME trailing-slash quirks",
+      "detail": "SYS DIRNAME \"/a/b/\" yields \"/a\" (length 2) not \"/a/b\"; BASENAME \"/a/b/\" yields \"b\". Trailing slashes from JOIN mistakes silently peel wrong component \u2014 agents need path normalize form.",
+      "repro": "SYS DIRNAME \"/a/b/\"; SYS BASENAME \"/a/b/\""
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "string|io",
-      "title": "Stamping DATE into plate needs SYS CAT glue; no WRITE template",
-      "detail": "SYS CAT \"\u2026date=\" hb_date then SYS WRITE works but is awkward; cannot embed IDENTITY string + DATE + dig in one structured plate without multi-CAT. Heartbeat file is a single flat line.",
-      "repro": "see plate write block in identity_heartbeat.cubalc"
+      "severity": "low",
+      "area": "cli",
+      "title": "MKDIR soft fail does not set plate exit_code",
+      "detail": "Like other soft host errs: process may be 0 without -s while last_err set; exit_code stays 0. Workspace bootstrap CI should use -s or ASSERT OK after MKDIR.",
+      "repro": "mkdir-on-file run without -s \u2192 shell 0, last_err set"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "cli",
-      "title": "I/O fatal leaves exit_code=0 on run plate while process rc=1",
-      "detail": "Missing STATE write failure: process exit 1, plate ok=false, but exit_code field remains 0 (not EXIT form). CI that only reads exit_code misclassifies.",
-      "repro": "missing CUBALC_STATE parent run -q \u2192 exit_code:0 ok:false shell rc=1"
+      "area": "print",
+      "title": "PRINT still length-only for path strings",
+      "detail": "Debugging JOIN/BASENAME still needs PRINT_JSON/VARS; PRINT run_dir shows length. Ongoing agent UX gap.",
+      "repro": "LET p=\"/tmp/x\"; PRINT p \u2192 number"
     }
   ],
   "workarounds": [
-    "mkdir -p \"$CUBALC_STATE\" before every heartbeat",
-    "export CUBALC_P2P_TIMEOUT\u2264800 (and SOFT=1) before any SERVE/DIAL probe",
-    "PASS + CLEAR_ERR after every SERVE/DIAL soft outcome when using run -s",
-    "PRINT_JSON / VARS after IDENTITY for quiet agent consumers",
-    "SYS CAT prefix DATE for plate lines; keep file format minimal",
-    "Prefer plate ok + shell rc over exit_code for I/O fatals"
+    "SYS MKDIR STATE (or root) before any WRITE under CUBALC_STATE \u2014 no shell mkdir required when MKDIR works",
+    "Nested SYS JOIN for multi-segment paths; avoid 3+ args",
+    "ASSERT OK == 1 or CLEAR_ERR after every MKDIR when using run -s",
+    "Strip trailing slashes before DIRNAME/BASENAME if host paths are messy",
+    "Rely on forms for MKDIR/TMP/BASENAME; hardcode SYS JOIN knowledge until cataloged",
+    "PRINT_JSON path vars instead of PRINT"
   ],
   "language_gaps": [
-    "Soft SYS WRITE / TRY WRITE for writability probes",
-    "err_line/err_src on SMX SERVE/DIAL timeout and host I/O",
-    "In-language set of P2P timeout/soft (or SYS P2P CONFIG)",
-    "Run plate identity fields when IDENTITY ran (or -q identity merge)",
-    "Plate template / multi-field WRITE with DATE+IDENTITY+metrics",
-    "exit_code non-zero on hard I/O fatal"
+    "Catalog SYS JOIN (and CAT) in forms/search",
+    "err_line/err_src on SYS MKDIR failures",
+    "SYS JOIN multi-arg or path builder for N segments",
+    "Path normalize (trailing slash) form",
+    "Hard-fail option for MKDIR (ASSERT-style) vs soft default",
+    "Optional SYS STATE FILE name one-shot under STATE after MKDIR"
   ],
-  "commit": "1d9214a",
-  "ts": "2026-08-05T06:32:39Z"
+  "commit": "88d95c5",
+  "ts": "2026-08-05T06:57:36Z"
 }

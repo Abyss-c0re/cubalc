@@ -1,0 +1,169 @@
+# plate_workspace.cubalc — bootstrap nested run workspace under STATE or TMP
+#
+# Real use: agent starts a job and needs a private plate directory without shell:
+#   mkdir -p $STATE/runs/<id>/{in,out,log}
+#   write RUN_MANIFEST.txt with DATE + IDENTITY
+#   peel paths with BASENAME/DIRNAME for downstream INCLUDE/READ
+#
+# Host:
+#   # STATE mode (default): may omit pre-mkdir — program SYS MKDIR STATE
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$   # need not exist yet
+#   CUBALC_ARG0=run42 ./out/cubalc run -q -s programs/realworld/plate_workspace.cubalc
+#
+#   # TMP mode:
+#   CUBALC_WS_ROOT=tmp CUBALC_ARG0=job9 ./out/cubalc run -q -s …
+#
+# Edges:
+#   SYS MKDIR creates missing CUBALC_STATE (fixes prior write-fatal footgun)
+#   SYS JOIN for paths (not in forms/search — discoverability gap)
+#   SYS BASENAME/DIRNAME on nested plates
+#   MKDIR on file path → soft last_err, err_line=0, -s fails
+#   IDENTITY + DATE stamp without shell
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_workspace: start"
+DEFAULT WS_KIND = "state"
+DEFAULT RUN_ID = "run"
+IDENTITY
+SYS DATE
+LET ws_date = DATE
+LET ws_pid = PID
+
+# --- resolve run id: ARG0 then ENV then DEFAULT ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET RUN_ID = LAST
+ELSE
+  SYS ENV "CUBALC_WS_RUN" OR ""
+  IF LAST_N > 0 THEN
+    LET RUN_ID = LAST
+  END
+END
+
+# --- root: state | tmp | explicit path ---
+SYS ENV "CUBALC_WS_ROOT" OR "state"
+LET root_kind = LAST
+SYS EQS root_kind "tmp"
+IF LAST_N == 1 THEN
+  SYS TMP
+  LET root = LAST
+  LET WS_KIND = "tmp"
+ELSE
+  SYS EQS root_kind "state"
+  IF LAST_N == 1 THEN
+    SYS STATE
+    LET root = LAST
+    LET WS_KIND = "state"
+  ELSE
+    # treat CUBALC_WS_ROOT as absolute/custom path
+    LET root = root_kind
+    LET WS_KIND = "custom"
+  END
+END
+
+# Ensure root exists (STATE may be missing — MKDIR -p)
+SYS MKDIR root
+EXPECT OK == 1 "root mkdir"
+IF OK == 0 THEN
+  FAIL "cannot mkdir workspace root"
+  STATUS
+  EXIT 2 "mkdir root failed"
+END
+CLEAR_ERR "root ok"
+
+# Nested layout: <root>/runs/<RUN_ID>/{in,out,log}
+SYS JOIN root "runs"
+LET runs_dir = LAST
+SYS MKDIR runs_dir
+ASSERT OK == 1 "runs dir"
+
+SYS JOIN runs_dir RUN_ID
+LET run_dir = LAST
+SYS MKDIR run_dir
+ASSERT OK == 1 "run dir"
+
+SYS JOIN run_dir "in"
+LET in_dir = LAST
+SYS JOIN run_dir "out"
+LET out_dir = LAST
+SYS JOIN run_dir "log"
+LET log_dir = LAST
+SYS MKDIR in_dir
+ASSERT OK == 1
+SYS MKDIR out_dir
+ASSERT OK == 1
+SYS MKDIR log_dir
+ASSERT OK == 1
+
+# Path peel for agents that only store full paths
+SYS BASENAME run_dir
+LET run_leaf = LAST
+SYS DIRNAME run_dir
+LET run_parent = LAST
+SYS EQS run_leaf RUN_ID
+EXPECT LAST_N == 1 "basename matches RUN_ID"
+IF OK == 0 THEN
+  PASS "basename mismatch soft"
+  CLEAR_ERR
+END
+
+# Manifest under out/
+SYS JOIN out_dir "RUN_MANIFEST.txt"
+LET manifest = LAST
+SYS CAT "cubalc.plate_workspace.v1 ok=1 date=" ws_date
+LET line = LAST
+SYS WRITE manifest line
+SYS EXIST manifest
+ASSERT EXIST == 1 "manifest written"
+
+# Log touch
+SYS JOIN log_dir "workspace.log"
+LET log_path = LAST
+SYS WRITE log_path "boot"
+SYS BASENAME log_path
+SYS HAS LAST "workspace"
+ASSERT LAST_N == 1 "log basename"
+
+# Optional: prove MKDIR soft-fail on a file path does not abort non-strict
+# (recovered for -s)
+SYS JOIN out_dir "not_a_dir.txt"
+LET file_path = LAST
+SYS WRITE file_path "x"
+SYS MKDIR file_path
+IF OK == 0 THEN
+  NOTE "mkdir-on-file soft-failed as expected"
+  PASS "mkdir file recovered"
+  CLEAR_ERR "mkdir file soft"
+ELSE
+  FAIL "mkdir on file should not OK"
+  PASS "unexpected"
+  CLEAR_ERR
+END
+
+# Soft optional hooks
+INCLUDE OR ws_hook_zz
+IF OK == 0 THEN
+  PASS "no ws hook"
+  CLEAR_ERR
+END
+
+# Tiny board proof workspace did not break hold/plug
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+PLUG a b
+SETBIT a 0 1
+IMPULSE a 1
+FLOW 1
+ASSERT OK == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "plate_workspace: done"
+PRINT "ws" ws_pid STATUS_OK
+PRINT_JSON WS_KIND RUN_ID ws_pid STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "ws clean"
+EXIT 0 "workspace ready"
