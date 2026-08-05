@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 88,
-  "version": "1.15.113-usability",
-  "item": "SYS IN / WITHIN numeric range membership",
-  "item_id": 121,
-  "title": "SYS IN|WITHIN x lo hi \u2192 LAST_N 0|1",
-  "commit": "68a51707e5479d2761b5b3a9cad5e7c10506c7c2",
-  "summary": "SYS IN/WITHIN inclusive range membership 0|1. Score/retry guards without dual CMP. selftest 88.",
+  "iter": 89,
+  "version": "1.15.114-usability",
+  "item": "SYS POW / ISQRT host power and sqrt",
+  "item_id": 122,
+  "title": "SYS POW|ISQRT integer power and floor square root",
+  "commit": "69b3de66e73620972887263e03f85aa54ecf31c4",
+  "summary": "SYS POW a e and ISQRT/SQRT n \u2192 LAST_N. Backoff/geometry without ISA soup. selftest 89.",
   "proofs": [
-    "661_sys_in",
-    "selftest n_pass=88"
+    "662_sys_pow",
+    "selftest n_pass=89"
   ],
-  "when": "2026-08-05T16:24:06Z",
+  "when": "2026-08-05T16:33:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "68a51707e5479d2761b5b3a9cad5e7c10506c7c2"
+  "sha": "69b3de66e73620972887263e03f85aa54ecf31c4"
 }
