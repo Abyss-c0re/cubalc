@@ -1,0 +1,628 @@
+# oncall_page_wheel.cubalc — durable on-call roster + random page wheel under STATE
+#
+# Real use: agents keep a pure-name roster bag and page someone without shell
+# shuf. Picks go to an APPEND history log with DATE stamps.
+#
+# Actions (CUBALC_ARG0 / CUBALC_OC_ACTION):
+#   list     — depth + log lines + plate AGE/SIZE (default)
+#   seed     — WORDS names into roster (HASLINE skip dups; optional UNIQ)
+#   add      — PUSH name if absent
+#   drop     — REMOVELINE name
+#   page     — SYS PICK roster; APPEND history; MOVELINE pick to front
+#   primary  — HEAD roster (deterministic) without random
+#   rotate   — REVL roster (wheel spin without page)
+#   pin      — MOVELINE exact name to front
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact name
+#   slots    — SYS SEQ n or RANGE 1 n → hit=n (capacity preview; not stored)
+#   history  — READ log soft; depth via LINES
+#   clearlog — WRITE empty log
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="alice bob carol dave" \
+#     ./out/cubalc run -q -s programs/realworld/oncall_page_wheel.cubalc
+#   CUBALC_ARG0=page ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_OC_FILE=ROSTER.txt
+#   CUBALC_OC_LOG=PAGE_LOG.txt
+#   CUBALC_OC_REQUIRE=1   # EXIT 2 on page empty / drop miss / pin miss
+#
+# Edges deliberately stressed:
+#   SYS PICK empty bag soft OK=0 LAST_N=-1 — not FAIL sticky by default
+#   PRINT_JSON collapses multi-line roster/RANGE bags
+#   no string concat for log lines — REPLACEALL template DATE|NAME|PICK
+#   GREP name substring false friends (ali vs alice)
+#   COUNTLINE exact; HASLINE exact
+#   APPEND grows log; SIZE/AGE of log plate soft
+#   MOVELINE needs FINDLINE index after PICK
+#   REVL rotates but does not log
+#   WRITE trailing NL often missing; soft READ empty plates
+#   PICK is non-deterministic without CUBALC_SEED early seed
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "oncall_page_wheel: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT RFILE = "ROSTER.txt"
+DEFAULT LFILE = "PAGE_LOG.txt"
+DEFAULT REPORT = "ONCALL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT N_SLOTS = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_OC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_OC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ENV "CUBALC_OC_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_OC_LOG" OR ""
+IF LAST_N > 0 THEN
+  LET LFILE = LAST
+END
+SYS ENV "CUBALC_OC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET roster_path = LAST
+SYS JOIN state_dir LFILE
+LET log_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR roster_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft roster load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR log_path OR ""
+LET logbag = LAST
+CLEAR_ERR "soft log load"
+SYS LINES logbag
+LET log_n = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET log_changed = 0
+LET pick = ""
+LET pick_n = -1
+LET idx = -1
+LET plate_age = -1
+LET log_age = -1
+LET log_size = -1
+LET note_msg = "ok"
+LET entry = ""
+LET old_entry = ""
+
+SYS EXIST roster_path
+IF LAST_N == 1 THEN
+  SYS AGE roster_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS EXIST log_path
+IF LAST_N == 1 THEN
+  SYS AGE log_path
+  IF OK == 1 THEN
+    LET log_age = LAST_N
+  END
+  CLEAR_ERR
+  SYS SIZE log_path
+  IF OK == 1 THEN
+    LET log_size = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "oncall" depth0 log_n plate_age log_age log_size ACTION
+  PRINT_JSON depth0 log_n plate_age log_age log_size ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON logbag
+  LET note_msg = "list ok"
+END
+
+# --- seed WORDS ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs names"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE bag n
+      IF LAST_N == 0 THEN
+        SYS PUSH bag n
+        LET bag = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  # optional adjacent uniq after sort for cleanliness
+  SYS SORT bag
+  LET bag = LAST
+  SYS UNIQ bag
+  LET bag = LAST
+  LET note_msg = "seeded"
+END
+
+# --- add ---
+SYS EQS ACTION "add"
+IF LAST_N == 1 THEN
+  NOTE "action add"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "add needs name"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 1
+    LET note_msg = "add already present"
+  ELSE
+    SYS PUSH bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "added"
+  END
+END
+
+# --- drop ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs name"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "dropped"
+    END
+  END
+END
+
+# --- page: PICK + APPEND log + pin front ---
+SYS EQS ACTION "page"
+IF LAST_N == 1 THEN
+  NOTE "action page"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "page empty roster"
+    FAIL "page empty"
+    CLEAR_ERR
+    # also exercise PICK empty soft path
+    SYS PICK bag
+    EXPECT OK == 0
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "page empty"
+    END
+  ELSE
+    SYS PICK bag
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pick soft fail"
+      FAIL "pick fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pick fail"
+      END
+    ELSE
+      LET pick = LAST
+      LET pick_n = LAST_N
+      LET hit = 1
+      # log line via REPLACEALL (no concat). REPLACEALL needs string
+      # args — numeric pick_n must STR first (unknown form 'pick_n' otherwise)
+      SYS STR pick_n
+      LET pn = LAST
+      LET entry = "TS|WHO|IDX"
+      SYS REPLACEALL entry "TS" run_date
+      LET entry = LAST
+      SYS REPLACEALL entry "WHO" pick
+      LET entry = LAST
+      SYS REPLACEALL entry "IDX" pn
+      LET entry = LAST
+      SYS APPEND log_path entry
+      EXPECT OK == 1
+      CLEAR_ERR
+      LET log_changed = 1
+      # pin pick to front
+      SYS FINDLINE bag pick
+      LET idx = LAST_N
+      SYS MOVELINE bag idx 0
+      IF LAST_N == 0 THEN
+        LET note_msg = "paged but moveline soft"
+        FAIL "moveline soft"
+        CLEAR_ERR
+      ELSE
+        LET bag = LAST
+        LET changed = 1
+        LET idx = 0
+        LET note_msg = "paged"
+      END
+    END
+  END
+END
+
+# --- primary: HEAD ---
+SYS EQS ACTION "primary"
+IF LAST_N == 1 THEN
+  NOTE "action primary"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "primary empty"
+    FAIL "primary empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "primary empty"
+    END
+  ELSE
+    SYS HEAD bag
+    LET pick = LAST
+    LET hit = 1
+    LET note_msg = "primary"
+  END
+END
+
+# --- rotate REVL ---
+SYS EQS ACTION "rotate"
+IF LAST_N == 1 THEN
+  NOTE "action rotate"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "rotate empty"
+    FAIL "rotate empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rotate empty"
+    END
+  ELSE
+    SYS REVL bag
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    SYS HEAD bag
+    LET pick = LAST
+    LET note_msg = "rotated"
+  END
+END
+
+# --- pin name to front ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs name"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS FINDLINE bag NAME
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET idx = 0
+      LET pick = NAME
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs name"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs name"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+# --- slots: SEQ/RANGE capacity preview ---
+SYS EQS ACTION "slots"
+IF LAST_N == 1 THEN
+  NOTE "action slots"
+  LET N_SLOTS = 4
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET N_SLOTS = LAST_N
+    END
+  END
+  IF N_SLOTS < 1 THEN
+    LET N_SLOTS = 1
+  END
+  IF N_SLOTS > 64 THEN
+    LET N_SLOTS = 64
+  END
+  SYS SEQ N_SLOTS
+  LET entry = LAST
+  SYS LINES entry
+  LET hit = LAST_N
+  # also RANGE 0 n-1 via IOTA
+  SYS IOTA N_SLOTS
+  LET old_entry = LAST
+  SYS LINES old_entry
+  LET note_msg = "slots preview"
+  PRINT_JSON entry
+  PRINT_JSON old_entry
+END
+
+# --- history ---
+SYS EQS ACTION "history"
+IF LAST_N == 1 THEN
+  NOTE "action history"
+  SYS READ OR log_path OR ""
+  LET logbag = LAST
+  CLEAR_ERR
+  SYS LINES logbag
+  LET log_n = LAST_N
+  LET hit = log_n
+  # REVL for newest-first view (in-memory only)
+  SYS REVL logbag
+  LET logbag = LAST
+  PRINT_JSON logbag
+  LET note_msg = "history"
+END
+
+# --- clearlog ---
+SYS EQS ACTION "clearlog"
+IF LAST_N == 1 THEN
+  NOTE "action clearlog"
+  LET logbag = ""
+  SYS WRITE log_path logbag
+  EXPECT OK == 1
+  CLEAR_ERR
+  LET log_changed = 1
+  LET log_n = 0
+  LET hit = 1
+  LET note_msg = "log cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "add"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "page"
+LET k = k + LAST_N
+SYS EQS ACTION "primary"
+LET k = k + LAST_N
+SYS EQS ACTION "rotate"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "slots"
+LET k = k + LAST_N
+SYS EQS ACTION "history"
+LET k = k + LAST_N
+SYS EQS ACTION "clearlog"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE roster_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "roster write failed"
+  END
+  CLEAR_ERR
+END
+
+# reload log depth after append
+SYS READ OR log_path OR ""
+LET logbag = LAST
+CLEAR_ERR
+SYS LINES logbag
+LET log_n = LAST_N
+SYS EXIST log_path
+IF LAST_N == 1 THEN
+  SYS SIZE log_path
+  IF OK == 1 THEN
+    LET log_size = LAST_N
+  END
+  CLEAR_ERR
+  SYS AGE log_path
+  IF OK == 1 THEN
+    LET log_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.oncall.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "pick"
+LET report = LAST
+SYS PUSH report pick
+LET report = LAST
+SYS PUSH report "pick_n"
+LET report = LAST
+SYS STR pick_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "log_n"
+LET report = LAST
+SYS STR log_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "log_size"
+LET report = LAST
+SYS STR log_size
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "oncall" ACTION hit miss changed pick pick_n log_n depth0 depth1
+PRINT_JSON ACTION hit miss changed pick pick_n log_n log_size depth0 depth1 idx elapsed STATUS_OK
+PASS "oncall tick"
+NOTE "oncall_page_wheel: done"
+CLEAR_ERR
+EXIT 0 "oncall ok"
