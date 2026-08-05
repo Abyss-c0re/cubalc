@@ -2412,6 +2412,67 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HASLINE|HASFIELD bag needle — exact newline-field membership → LAST_N 0|1.
+     * SYS HASLINEI|ILINEIN — case-insensitive exact field (not substring GREP).
+     * Usability: work-bag membership after LIST/PUSH without EACH LINE + EQS glue. */
+    if (kw(&L->cur,"HASLINE") || kw(&L->cur,"HASFIELD") || kw(&L->cur,"CONTAINSLINE") ||
+        kw(&L->cur,"INLINES") || kw(&L->cur,"LINEIN") || kw(&L->cur,"MEMBER") ||
+        kw(&L->cur,"HASLINEI") || kw(&L->cur,"HASFIELDI") || kw(&L->cur,"ILINEIN") ||
+        kw(&L->cur,"LINEINI") || kw(&L->cur,"MEMBERI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "HASLINEI") == 0 || strcmp(op, "HASFIELDI") == 0 ||
+                   strcmp(op, "ILINEIN") == 0 || strcmp(op, "LINEINI") == 0 ||
+                   strcmp(op, "MEMBERI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              if (nn == 0 || memcmp(start, needle, nn) == 0) { hit = 1; break; }
+            } else {
+              size_t i; int ok = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { ok = 0; break; }
+              }
+              if (ok) { hit = 1; break; }
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      } else if (nn == 0) {
+        /* empty bag: empty needle is not a field unless bag has empty field */
+        hit = 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "HASLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0
      * SYS EQSI|IEQS|STREQI — case-insensitive equality (IF after GREPI).
      * SYS EQS I|ICASE a b — same as EQSI. */
@@ -2956,7 +3017,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|HASLINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3219,6 +3280,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
       {"SYS LINES", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N/LINES_N"},
       {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
+      {"SYS HASLINE", "SYS HASLINE|HASFIELD bag needle — exact field membership · LAST_N 0|1"},
+      {"SYS HASLINEI", "SYS HASLINEI|ILINEIN bag needle — case-insensitive exact field"},
       {"SYS CUT", "SYS CUT|FIELDN hay sep n — 0-based field by sep · LAST_N=found"},
       {"SYS COLUMN", "SYS COLUMN|COL hay sep n — 1-based field by sep (CSV/path)"},
       {"SYS EMPTY", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length · soft plate IF"},

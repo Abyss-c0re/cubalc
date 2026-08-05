@@ -1700,6 +1700,7 @@ int main(int argc, char **argv) {
       {"sys_env_set", "programs/proof/638_sys_env_set.cubalc", "SYS ENV SET/UNSET process env"},
       {"sys_revl", "programs/proof/639_sys_revl.cubalc", "SYS REVL reverse bag line order"},
       {"sys_words", "programs/proof/640_sys_words.cubalc", "SYS WORDS whitespace tokenize to lines"},
+      {"sys_hasline", "programs/proof/641_sys_hasline.cubalc", "SYS HASLINE exact bag field membership"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1904,6 +1905,8 @@ int main(int argc, char **argv) {
       {"SYS TAC", "host", "SYS TAC [str] — alias of SYS REVL"},
       {"SYS WORDS", "host", "SYS WORDS|TOKENIZE [str] — whitespace → newline fields"},
       {"SYS TOKENIZE", "host", "SYS TOKENIZE [str] — alias of SYS WORDS"},
+      {"SYS HASLINE", "host", "SYS HASLINE|HASFIELD bag needle — exact field membership"},
+      {"SYS HASLINEI", "host", "SYS HASLINEI|ILINEIN bag needle — case-insensitive exact field"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2481,6 +2484,8 @@ int main(int argc, char **argv) {
        "SYS REVL/REVLINES reverse bag line order"},
       {"programs/proof/640_sys_words.cubalc", "sys_words",
        "SYS WORDS/TOKENIZE whitespace to newline fields"},
+      {"programs/proof/641_sys_hasline.cubalc", "sys_hasline",
+       "SYS HASLINE exact bag field membership"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2894,6 +2899,8 @@ int main(int argc, char **argv) {
       {"SYS TAC", "host", "SYS TAC alias of SYS REVL"},
       {"SYS WORDS", "host", "SYS WORDS whitespace tokenize"},
       {"SYS TOKENIZE", "host", "SYS TOKENIZE alias of SYS WORDS"},
+      {"SYS HASLINE", "host", "SYS HASLINE exact bag field membership"},
+      {"SYS HASLINEI", "host", "SYS HASLINEI case-insensitive exact field"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3147,6 +3154,8 @@ int main(int argc, char **argv) {
       {"SYS TAC", "host", "SYS TAC alias of SYS REVL"},
       {"SYS WORDS", "host", "SYS WORDS|TOKENIZE whitespace to newline fields"},
       {"SYS TOKENIZE", "host", "SYS TOKENIZE alias of SYS WORDS"},
+      {"SYS HASLINE", "host", "SYS HASLINE|HASFIELD exact bag field membership"},
+      {"SYS HASLINEI", "host", "SYS HASLINEI|ILINEIN case-insensitive exact field"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3221,6 +3230,7 @@ int main(int argc, char **argv) {
       {"programs/proof/638_sys_env_set.cubalc", "sys_env_set", "SYS ENV SET/UNSET process env"},
       {"programs/proof/639_sys_revl.cubalc", "sys_revl", "SYS REVL reverse bag lines"},
       {"programs/proof/640_sys_words.cubalc", "sys_words", "SYS WORDS whitespace tokenize"},
+      {"programs/proof/641_sys_hasline.cubalc", "sys_hasline", "SYS HASLINE bag membership"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

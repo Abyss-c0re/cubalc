@@ -1,0 +1,71 @@
+# SYS HASLINE / HASFIELD — exact newline-field membership
+# Usability: work-bag checks after LIST/PUSH without EACH LINE + EQS (not GREP substring)
+
+HOLD_FLASH 1
+
+LET bag = "taskA\ntaskB\ntaskC"
+
+# hit / miss
+SYS HASLINE bag "taskB"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS HASLINE bag "taskX"
+ASSERT LAST_N == 0
+SYS HASLINE bag "task"
+ASSERT LAST_N == 0
+
+# not substring: whole field only
+SYS HASLINE "ERROR boom\nWARN disk" "ERROR"
+ASSERT LAST_N == 0
+SYS HASLINE "ERROR boom\nWARN disk" "ERROR boom"
+ASSERT LAST_N == 1
+
+# aliases
+SYS HASFIELD bag "taskA"
+ASSERT LAST_N == 1
+SYS LINEIN bag "taskC"
+ASSERT LAST_N == 1
+SYS MEMBER bag "taskB"
+ASSERT LAST_N == 1
+SYS CONTAINSLINE bag "nope"
+ASSERT LAST_N == 0
+
+# case-insensitive exact field
+SYS HASLINEI bag "TASKB"
+ASSERT LAST_N == 1
+SYS ILINEIN "Warn\nError" "error"
+ASSERT LAST_N == 1
+SYS HASLINE I "Warn\nError" "ERROR"
+ASSERT LAST_N == 1
+SYS HASLINE "Warn\nError" "ERROR"
+ASSERT LAST_N == 0
+
+# empty bag / empty needle
+SYS HASLINE "" "x"
+ASSERT LAST_N == 0
+SYS HASLINE "a\nb" ""
+ASSERT LAST_N == 0
+SYS HASLINE "\nb" ""
+# first field empty before \n — empty needle matches empty field
+ASSERT LAST_N == 1
+
+# default bag LAST after PUSH
+LET work = "a"
+SYS PUSH work "b"
+SYS PUSH LAST "c"
+SYS HASLINE LAST "b"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "z"
+ASSERT LAST_N == 0
+
+# agent pattern: skip duplicate work item
+LET queue = "peer1\npeer2"
+SYS HASLINE queue "peer2"
+ASSERT LAST_N == 1
+SYS HASLINE queue "peer3"
+ASSERT LAST_N == 0
+SYS PUSH queue "peer3"
+SYS HASLINE LAST "peer3"
+ASSERT LAST_N == 1
+
+PRINT "sys_hasline ok"

@@ -127,6 +127,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 97. ~~**`SYS ENV SET` / `UNSET` · `SETENV`**~~ **done** (process setenv/unsetenv · CUBALC_* without shell).
 98. ~~**`SYS REVL` / `REVLINES` / `TAC`**~~ **done** (reverse newline bag order · LIFO/newest-first without shell).
 99. ~~**`SYS WORDS` / `TOKENIZE`**~~ **done** (whitespace → newline fields · free text → bag pipeline).
+100. ~~**`SYS HASLINE` / `HASLINEI`**~~ **done** (exact bag-field membership · work bags without EACH+EQS).
 
 ## Tick protocol
 
