@@ -1,0 +1,82 @@
+# SYS STRIDE / EVERY — partition bag fields by step and offset
+# Usability: multi-worker work split without EACH+MOD index glue
+# Complements CHUNK (batch size) and WINDOW (overlap)
+
+HOLD_FLASH 1
+
+LET peers = "p0\np1\np2\np3\np4\np5"
+
+# every 2nd field, offset 0 (even indices)
+SYS STRIDE 2 peers
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT STRIDE_N == 3
+ASSERT STRIDE_TOTAL == 6
+ASSERT STRIDE_STEP == 2
+ASSERT STRIDE_OFF == 0
+SYS EQS LAST "p0\np2\np4"
+ASSERT LAST_N == 1
+
+# every 2nd field, offset 1 (odd indices)
+SYS STRIDE 2 1 peers
+ASSERT LAST_N == 3
+ASSERT STRIDE_OFF == 1
+SYS EQS LAST "p1\np3\np5"
+ASSERT LAST_N == 1
+
+# OFF keyword form
+SYS STRIDE 3 OFF 2 peers
+ASSERT LAST_N == 2
+ASSERT STRIDE_STEP == 3
+ASSERT STRIDE_OFF == 2
+SYS EQS LAST "p2\np5"
+ASSERT LAST_N == 1
+
+# aliases
+SYS EVERY 2 peers
+SYS EQS LAST "p0\np2\np4"
+ASSERT LAST_N == 1
+SYS STEP 3 1 peers
+SYS EQS LAST "p1\np4"
+ASSERT LAST_N == 1
+
+# step=1 identity
+SYS STRIDE 1 peers
+ASSERT LAST_N == 6
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# step<=0 → empty
+SYS STRIDE 0 peers
+ASSERT LAST_N == 0
+ASSERT STRIDE_STEP == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty bag
+SYS STRIDE 2 ""
+ASSERT LAST_N == 0
+ASSERT STRIDE_TOTAL == 0
+
+# offset >= step normalized
+SYS STRIDE 3 4 peers
+ASSERT STRIDE_OFF == 1
+SYS EQS LAST "p1\np4"
+ASSERT LAST_N == 1
+
+# agent pattern: RANGE work → STRIDE by worker id
+SYS RANGE 0 5
+SYS STRIDE 3 0 LAST
+ASSERT LAST_N == 2
+SYS EQS LAST "0\n3"
+ASSERT LAST_N == 1
+SYS RANGE 0 5
+SYS STRIDE 3 1 LAST
+SYS EQS LAST "1\n4"
+ASSERT LAST_N == 1
+SYS RANGE 0 5
+SYS STRIDE 3 2 LAST
+SYS EQS LAST "2\n5"
+ASSERT LAST_N == 1
+
+PRINT "sys_stride ok"

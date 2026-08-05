@@ -173,6 +173,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 143. ~~**`SYS FIRSTMATCH` / `GREP1`**~~ **done** (first bag field containing needle · one-line pick without GREP+TAKE).
 144. ~~**`SYS CHUNK` / `BATCH`**~~ **done** (group bag fields into batches of n · work-list paging without EACH).
 145. ~~**`SYS WINDOW` / `SLIDE`**~~ **done** (overlapping windows of n bag fields · consecutive pairs/ngrams without EACH).
+146. ~~**`SYS STRIDE` / `EVERY`**~~ **done** (keep index%step==offset fields · multi-worker partition without EACH).
 
 ## Tick protocol
 
