@@ -1,0 +1,77 @@
+# SYS MIDLINES / SLICEBAG — keep bag fields [start..end] 0-based
+# Usability: middle windows without DROP+TAKE two-step glue
+
+HOLD_FLASH 1
+
+# inclusive middle window
+SYS MIDLINES "a\nb\nc\nd\ne" 1 3
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT MIDLINES_N == 3
+SYS EQS LAST "b\nc\nd"
+ASSERT LAST_N == 1
+
+# from start to end omitted → rest
+SYS MIDLINES "a\nb\nc\nd" 2
+ASSERT LAST_N == 2
+SYS EQS LAST "c\nd"
+ASSERT LAST_N == 1
+
+# single field
+SYS MIDLINES "a\nb\nc" 1 1
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# first field only
+SYS MIDLINES "a\nb\nc" 0 0
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# whole bag
+SYS MIDLINES "a\nb" 0 1
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# start past end → empty
+SYS MIDLINES "a\nb" 5
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# start > end → empty
+SYS MIDLINES "a\nb\nc" 2 1
+ASSERT LAST_N == 0
+
+# negative start clamps to 0
+SYS MIDLINES "a\nb\nc" -3 1
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SLICEBAG "x\ny\nz" 0 1
+ASSERT LAST_N == 2
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+
+SYS FIELDSLICE "p\nq\nr" 1
+ASSERT LAST_N == 2
+SYS EQS LAST "q\nr"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS MIDLINES "" 0 2
+ASSERT LAST_N == 0
+
+# agent pattern: page of ranked peers after ENUMERATE
+LET peers = "alice\nbob\ncarol\ndave\neve"
+SYS ENUMERATE peers 1
+LET ranked = LAST
+SYS MIDLINES ranked 1 3
+SYS EQS LAST "2:bob\n3:carol\n4:dave"
+ASSERT LAST_N == 1
+
+PRINT "sys_midlines ok"

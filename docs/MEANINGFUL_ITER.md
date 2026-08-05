@@ -160,6 +160,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 130. ~~**`SYS SQUEEZE` / `COMPACT`**~~ **done** (drop empty/blank bag fields · clean VALS/SPLIT/LIST without EACH).
 131. ~~**`SYS MEDIAN` / `P50`**~~ **done** (integer median of args or bag · score plates without shell).
 132. ~~**`SYS TRIMALL` / `MAPTRIM`**~~ **done** (trim whitespace on every bag field · clean READ/SPLIT before SQUEEZE).
+133. ~~**`SYS MIDLINES` / `SLICEBAG`**~~ **done** (bag field window [start..end] · middle slice without DROP+TAKE).
 
 ## Tick protocol
 
