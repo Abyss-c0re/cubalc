@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "ingest_measure",
-      "cmd": "ingest 4 payloads; measure → sizes 2,5,1,10 + ZIP labeled",
+      "cmd": "ingest 4 payloads; measure \u2192 sizes 2,5,1,10 + ZIP labeled",
       "ok": true,
       "note": "LENALL+ZIP plates"
     },
@@ -38,13 +38,13 @@
     },
     {
       "name": "zip_pad_minmax_empty",
-      "cmd": "ZIP pad empty partner; MIN/MAX empty bag → 0",
+      "cmd": "ZIP pad empty partner; MIN/MAX empty bag \u2192 0",
       "ok": true,
       "note": "empty max 0 not fail"
     },
     {
       "name": "zip_sep_var",
-      "cmd": "SYS ZIP a b sep → unknown form sep",
+      "cmd": "SYS ZIP a b sep \u2192 unknown form sep",
       "ok": true,
       "note": "same bare-ident form steal as CHUNK"
     },
@@ -61,8 +61,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "MIN/MAX empty bag returns 0 without FAIL",
-      "detail": "SYS MAX \"\" → LAST_N=0 looks like a real max of zero. Agents gating on empty sizes plate may pass falsely if they forget BLANK/LINES check.",
-      "repro": "MAX \"\" → 0; COUNT==0 metadata only if checked"
+      "detail": "SYS MAX \"\" \u2192 LAST_N=0 looks like a real max of zero. Agents gating on empty sizes plate may pass falsely if they forget BLANK/LINES check.",
+      "repro": "MAX \"\" \u2192 0; COUNT==0 metadata only if checked"
     },
     {
       "id": "W2",
@@ -76,7 +76,7 @@
       "id": "W3",
       "severity": "med",
       "area": "lang|parse",
-      "title": "ZIP join sep bare var → unknown form",
+      "title": "ZIP join sep bare var \u2192 unknown form",
       "detail": "SYS ZIP a b sep with LET sep=\"=\" fails form-steal. Same class as CHUNK/WINDOW join seps.",
       "repro": "LET sep=\"=\"; SYS ZIP x y sep"
     },
@@ -84,9 +84,9 @@
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "ZIP unequal length pads empty — silent mispair",
+      "title": "ZIP unequal length pads empty \u2014 silent mispair",
       "detail": "ZIP three payloads with two sizes yields trailing ':'. Agents measure after drop without re-measure get wrong labels.",
-      "repro": "ZIP a\\nb\\nc with 1\\n2 → c:"
+      "repro": "ZIP a\\nb\\nc with 1\\n2 \u2192 c:"
     },
     {
       "id": "W5",
@@ -118,7 +118,7 @@
       "area": "host|bag",
       "title": "Payload fields with colon break ZIP labeled plate",
       "detail": "ZIP default ':' sep; body containing ':' makes AFTER peel ambiguous for reverse parse.",
-      "repro": "ZIP 'a:b' '3' → a:b:3"
+      "repro": "ZIP 'a:b' '3' \u2192 a:b:3"
     }
   ],
   "workarounds": [
@@ -130,18 +130,18 @@
   ],
   "language_gaps": [
     "LENWHERE / keep fields by length predicate",
-    "MIN/MAX empty → soft fail or NaN-like sticky",
+    "MIN/MAX empty \u2192 soft fail or NaN-like sticky",
     "ZIP sep as variable / LAST",
     "UTF-8 byte length mode for LENALL",
     "ZIP safe encoding when key contains sep",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Empty MAX=0 is a silent gate footgun — documented W1",
+    "Empty MAX=0 is a silent gate footgun \u2014 documented W1",
     "fat requires index walk; no host form for length filter",
     "ZIP sep var confirmed unknown form",
-    "Positive path clean: measure→gate→fat→pin/drop"
+    "Positive path clean: measure\u2192gate\u2192fat\u2192pin/drop"
   ],
-  "commit": "pending",
+  "commit": "96572a892c5b2c2c0ba493a6f06da57d7b7d7d31",
   "ts": "2026-08-05T21:33:00Z"
 }
