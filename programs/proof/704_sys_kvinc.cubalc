@@ -1,0 +1,75 @@
+# SYS KVINC / INCKV — bump numeric key:val counter in a bag
+# Usability: FREQ/severity counters without LOOKUP+arith+KVSET glue
+
+HOLD_FLASH 1
+
+LET bag = "error:3\nwarn:1\ninfo:10"
+
+# default +1
+SYS KVINC bag "error"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT KVINC_HIT == 1
+ASSERT KVINC_I == 0
+ASSERT KVINC_V == 4
+SYS EQS LAST "error:4\nwarn:1\ninfo:10"
+ASSERT LAST_N == 1
+
+# custom delta
+SYS KVINC bag "warn" 5
+ASSERT KVINC_HIT == 1
+ASSERT KVINC_V == 6
+SYS EQS LAST "error:3\nwarn:6\ninfo:10"
+ASSERT LAST_N == 1
+
+# insert missing key with delta
+SYS KVINC bag "crit"
+ASSERT KVINC_HIT == 0
+ASSERT KVINC_V == 1
+ASSERT LAST_N == 4
+SYS EQS LAST "error:3\nwarn:1\ninfo:10\ncrit:1"
+ASSERT LAST_N == 1
+
+SYS KVINC bag "fatal" 3
+ASSERT KVINC_HIT == 0
+ASSERT KVINC_V == 3
+SYS LOOKUP LAST "fatal"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "retries=2\nport=7700"
+SYS KVINC cfg "retries" 1 "="
+ASSERT KVINC_HIT == 1
+ASSERT KVINC_V == 3
+SYS EQS LAST "retries=3\nport=7700"
+ASSERT LAST_N == 1
+
+# aliases
+SYS INCKV bag "info" 2
+ASSERT KVINC_V == 12
+SYS BUMPKV bag "error"
+ASSERT KVINC_V == 4
+
+# empty bag insert
+SYS KVINC "" "a" 7
+ASSERT LAST_N == 1
+ASSERT KVINC_HIT == 0
+ASSERT KVINC_V == 7
+SYS EQS LAST "a:7"
+ASSERT LAST_N == 1
+
+# agent: FREQ then bump after new ERROR event
+LET sev = "ERROR\nWARN\nERROR\nINFO"
+SYS FREQ sev
+LET hist = LAST
+SYS KVINC hist "ERROR"
+ASSERT KVINC_V == 3
+SYS LOOKUP LAST "ERROR"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS KVINC hist "FATAL"
+ASSERT KVINC_HIT == 0
+ASSERT KVINC_V == 1
+
+PRINT "sys_kvinc ok"
