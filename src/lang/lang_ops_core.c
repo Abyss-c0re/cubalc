@@ -312,6 +312,39 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS COPY|CP|CLONE src dst — duplicate regular file plate.
+     * Usability: agents snapshot plates without shell cp. Soft miss on src. */
+    if (kw(&L->cur,"COPY") || kw(&L->cur,"CP") || kw(&L->cur,"CLONE") ||
+        kw(&L->cur,"FILECOPY") || kw(&L->cur,"FCOPY")){
+      char src[512], dst[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, src, sizeof src)!=0){
+        fail(vm,"SYS COPY \"src\" \"dst\""); return -1;
+      }
+      if (resolve_str_arg(vm, L, dst, sizeof dst)!=0){
+        fail(vm,"SYS COPY \"src\" \"dst\""); return -1;
+      }
+      if (cubalc_host_copy(src, dst, &hr)!=0){
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "COPY_N", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", dst);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dst);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "COPY_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV")){
       /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
       lex_next(L);
@@ -1573,7 +1606,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1790,6 +1823,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS READ", "SYS READ [OR|SOFT] path [OR fallback] — soft/optional plate"},
       {"SYS RM", "SYS RM|UNLINK|DELETE path — remove file · missing soft OK"},
       {"SYS RENAME", "SYS RENAME|MV|MOVE from to — move plate path"},
+      {"SYS COPY", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

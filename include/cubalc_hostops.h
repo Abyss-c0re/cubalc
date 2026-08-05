@@ -32,6 +32,8 @@ int cubalc_host_mkdir(const char *path, cubalc_host_result *r);
 int cubalc_host_rm(const char *path, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
+/* copy regular file src → dst; r->n = bytes written */
+int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);

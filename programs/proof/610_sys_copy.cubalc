@@ -1,0 +1,70 @@
+# SYS COPY — duplicate plate files without shell cp
+# Usability: agents snapshot plates under STATE/TMP
+
+HOLD_FLASH 1
+
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_copy_probe"
+LET DIR = LAST
+SYS MKDIR DIR
+
+SYS JOIN DIR "src.txt"
+LET S = LAST
+SYS JOIN DIR "dst.txt"
+LET D = LAST
+SYS WRITE S "hello-copy"
+SYS SIZE S
+ASSERT LAST_N == 10
+
+SYS COPY S D
+ASSERT OK == 1
+ASSERT LAST_N == 10 "bytes copied"
+ASSERT COPY_N == 10
+SYS EQS LAST D
+ASSERT LAST_N == 1
+SYS EXIST S
+ASSERT LAST_N == 1 "src remains"
+SYS EXIST D
+ASSERT LAST_N == 1
+SYS READ D
+SYS EQS LAST "hello-copy"
+ASSERT LAST_N == 1
+
+# overwrite dst
+SYS WRITE S "new"
+SYS COPY S D
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS READ D
+SYS EQS LAST "new"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JOIN DIR "cp.txt"
+LET C = LAST
+SYS CP S C
+ASSERT OK == 1
+ASSERT COPY_N == 3
+SYS JOIN DIR "cl.txt"
+LET L = LAST
+SYS CLONE S L
+ASSERT OK == 1
+
+# soft miss source
+SYS COPY "state/meaningful_iter/__no_copy_src__" D
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N > 0
+
+# refuse directory source
+SYS COPY DIR D
+ASSERT OK == 0
+
+# cleanup
+SYS RM S
+SYS RM D
+SYS RM C
+SYS RM L
+
+PRINT "sys_copy ok"

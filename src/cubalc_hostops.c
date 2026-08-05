@@ -203,6 +203,71 @@ int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) 
   return 0;
 }
 
+/* Usability: SYS COPY|CP src dst — duplicate plate without shell. */
+int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r) {
+  FILE *in = NULL, *out = NULL;
+  char buf[4096];
+  size_t nr, nw;
+  long total = 0;
+  struct stat st;
+  r_clear(r);
+  if (!src || !src[0] || !dst || !dst[0]) {
+    snprintf(r->err, sizeof r->err, "copy: empty path");
+    return -1;
+  }
+  if (stat(src, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "copy: missing source");
+    return -1;
+  }
+  if (S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "copy: source is a directory");
+    return -1;
+  }
+  /* refuse copy onto self */
+  if (strcmp(src, dst) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", dst);
+    r->n = (long)st.st_size;
+    r->ok = 1;
+    return 0;
+  }
+  in = fopen(src, "rb");
+  if (!in) {
+    snprintf(r->err, sizeof r->err, "copy: open src %s", strerror(errno));
+    return -1;
+  }
+  out = fopen(dst, "wb");
+  if (!out) {
+    fclose(in);
+    snprintf(r->err, sizeof r->err, "copy: open dst %s", strerror(errno));
+    return -1;
+  }
+  while ((nr = fread(buf, 1, sizeof buf, in)) > 0) {
+    nw = fwrite(buf, 1, nr, out);
+    if (nw != nr) {
+      fclose(in);
+      fclose(out);
+      snprintf(r->err, sizeof r->err, "copy: write short");
+      return -1;
+    }
+    total += (long)nw;
+  }
+  if (ferror(in)) {
+    fclose(in);
+    fclose(out);
+    snprintf(r->err, sizeof r->err, "copy: read error");
+    return -1;
+  }
+  fclose(in);
+  if (fclose(out) != 0) {
+    snprintf(r->err, sizeof r->err, "copy: close dst %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", dst);
+  r->n = total;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS MKDIR path — mkdir -p for agent plate dirs under STATE/TMP. */
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r) {
   char buf[512];
