@@ -2901,6 +2901,89 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MOVELINE|MOVEAT bag from to — move 0-based field to final index → LAST bag.
+     * LAST_N = 1 success, 0 soft miss (from OOR / to<0 / empty). to >= n → end.
+     * Usability: promote/demote priority work without EACH rebuild (FINDLINE then MOVE). */
+    if (kw(&L->cur,"MOVELINE") || kw(&L->cur,"MOVEAT") || kw(&L->cur,"MOVEFIELD") ||
+        kw(&L->cur,"LINEMOVE") || kw(&L->cur,"REORDER") || kw(&L->cur,"SHIFTTO") ||
+        kw(&L->cur,"MOVEN") || kw(&L->cur,"RELOCATE")){
+      enum { MV_MAX = 256, MV_FLEN = 192 };
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char fields[MV_MAX][MV_FLEN];
+      char held[MV_FLEN];
+      const char *p, *start;
+      long from_i = 0, to_i = 0, n = 0, hit = 0;
+      size_t flen, o = 0;
+      int i, first = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        from_i = parse_expr(vm, L);
+      else
+        from_i = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        to_i = parse_expr(vm, L);
+      else
+        to_i = 0;
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < MV_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= MV_FLEN) flen = MV_FLEN - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (n <= 0 || from_i < 0 || from_i >= n || to_i < 0) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        hit = 1;
+        if (to_i >= n) to_i = n - 1;
+        if (from_i != to_i) {
+          snprintf(held, sizeof held, "%s", fields[from_i]);
+          if (from_i < to_i) {
+            for (i = (int)from_i; i < (int)to_i; i++)
+              memcpy(fields[i], fields[i + 1], MV_FLEN);
+            memcpy(fields[to_i], held, MV_FLEN);
+          } else {
+            for (i = (int)from_i; i > (int)to_i; i--)
+              memcpy(fields[i], fields[i - 1], MV_FLEN);
+            memcpy(fields[to_i], held, MV_FLEN);
+          }
+        }
+        o = 0; first = 1;
+        for (i = 0; i < (int)n; i++) {
+          flen = strlen(fields[i]);
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (o + flen < sizeof out) {
+            memcpy(out + o, fields[i], flen);
+            o += flen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, fields[i], take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "MOVELINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REMOVELINE|DROPLINE bag needle — drop first exact field match → LAST bag.
      * LAST_N = 1 if removed, 0 if miss (bag unchanged). REST not used.
      * SYS REMOVELINEI — case-insensitive exact field.
@@ -3523,7 +3606,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|INSERTLINE|DROPNTH|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3801,6 +3884,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS INSLINE", "SYS INSLINE bag n value — alias of SYS INSERTLINE"},
       {"SYS DROPNTH", "SYS DROPNTH|DROPAT bag n — drop 0-based field by index · LAST_N 0|1 soft OOR"},
       {"SYS DROPAT", "SYS DROPAT bag n — alias of SYS DROPNTH"},
+      {"SYS MOVELINE", "SYS MOVELINE|MOVEAT bag from to — move field to final index · promote/demote"},
+      {"SYS MOVEAT", "SYS MOVEAT bag from to — alias of SYS MOVELINE"},
       {"SYS REMOVELINE", "SYS REMOVELINE|DROPLINE bag needle — drop first exact field · LAST=bag"},
       {"SYS DROPLINE", "SYS DROPLINE bag needle — alias of SYS REMOVELINE"},
       {"SYS REMOVELINEI", "SYS REMOVELINEI bag needle — case-insensitive drop first field"},

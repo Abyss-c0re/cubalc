@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 73,
-  "version": "1.15.98-usability",
-  "item": "SYS DROPNTH / DROPAT drop bag field by index",
-  "item_id": 106,
-  "title": "SYS DROPNTH|DROPAT bag n drop 0-based field",
-  "commit": "ab8c77b6f0c01cbb6c5b3003adbabd06cc725d83",
-  "summary": "SYS DROPNTH|DROPAT|REMOVEAT bag n drop 0-based field. Soft OOR LAST_N=0. Distinct from DROP first-n and REMOVELINE by value. Pairs with FINDLINE for locate-then-delete. selftest 73.",
+  "iter": 74,
+  "version": "1.15.99-usability",
+  "item": "SYS MOVELINE / MOVEAT move bag field to index",
+  "item_id": 107,
+  "title": "SYS MOVELINE|MOVEAT bag from to move field final index",
+  "commit": "d9f4a2f36edc35560d705849dfbab9b517e671c1",
+  "summary": "SYS MOVELINE|MOVEAT|REORDER bag from to move 0-based field to final index. Soft miss from OOR/to<0. to>=n clamps end. Promote/demote priority after FINDLINE. selftest 74.",
   "proofs": [
-    "647_sys_dropnth",
-    "selftest n_pass=73"
+    "648_sys_moveline",
+    "selftest n_pass=74"
   ],
-  "when": "2026-08-05T13:53:17Z",
+  "when": "2026-08-05T14:05:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ab8c77b6f0c01cbb6c5b3003adbabd06cc725d83"
+  "sha": "d9f4a2f36edc35560d705849dfbab9b517e671c1"
 }

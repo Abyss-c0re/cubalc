@@ -1,0 +1,68 @@
+# SYS MOVELINE / MOVEAT — move bag field to a final 0-based index
+# Usability: promote/demote priority work after FINDLINE without EACH rebuild
+
+HOLD_FLASH 1
+
+# move last to front
+SYS MOVELINE "a\nb\nc\nd" 3 0
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "d\na\nb\nc"
+ASSERT LAST_N == 1
+
+# move first to end
+SYS MOVELINE "a\nb\nc\nd" 0 3
+SYS EQS LAST "b\nc\nd\na"
+ASSERT LAST_N == 1
+
+# move middle forward / back
+SYS MOVELINE "a\nb\nc\nd" 1 2
+SYS EQS LAST "a\nc\nb\nd"
+ASSERT LAST_N == 1
+SYS MOVELINE "a\nb\nc\nd" 2 1
+SYS EQS LAST "a\nc\nb\nd"
+ASSERT LAST_N == 1
+
+# same index no-op success
+SYS MOVELINE "a\nb\nc" 1 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# to past end clamps to last
+SYS MOVELINE "a\nb\nc" 0 99
+SYS EQS LAST "b\nc\na"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS MOVELINE "a\nb" 5 0
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SYS MOVELINE "a\nb" 0 -1
+ASSERT LAST_N == 0
+SYS MOVELINE "" 0 0
+ASSERT LAST_N == 0
+
+# aliases
+SYS MOVEAT "x\ny\nz" 2 0
+SYS EQS LAST "z\nx\ny"
+ASSERT LAST_N == 1
+SYS REORDER "1\n2\n3" 0 2
+SYS EQS LAST "2\n3\n1"
+ASSERT LAST_N == 1
+
+# agent pattern: find idle peer and promote to front
+LET bag = "peer1:busy\npeer2:idle\npeer3:busy"
+SYS FINDLINE bag "peer2:idle"
+LET i = LAST_N
+ASSERT i == 1
+SYS MOVELINE bag i 0
+ASSERT LAST_N == 1
+SYS EQS LAST "peer2:idle\npeer1:busy\npeer3:busy"
+ASSERT LAST_N == 1
+SYS NTH 0 "peer2:idle\npeer1:busy\npeer3:busy"
+SYS EQS LAST "peer2:idle"
+ASSERT LAST_N == 1
+
+PRINT "sys_moveline ok"
