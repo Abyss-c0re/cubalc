@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 84,
-  "version": "1.15.109-usability",
-  "item": "SYS RANGE / SEQ / IOTA number bags",
-  "item_id": 117,
-  "title": "SYS RANGE|SEQ|IOTA integer sequence \u2192 newline bag",
-  "commit": "65fda77b3ea38d77e15db3729c2b11c0b69a36b1",
-  "summary": "SYS RANGE lo hi [step], SEQ 1..n, IOTA 0..n-1 \u2192 bags for EACH/SUM/SORTN without shell seq. selftest 84.",
+  "iter": 85,
+  "version": "1.15.110-usability",
+  "item": "SYS SIGN / DIV / MOD host arithmetic",
+  "item_id": 118,
+  "title": "SYS SIGN|DIV|MOD signum and integer div/mod",
+  "commit": "8901b1f5da574e8973717ec1d6143462561ef641",
+  "summary": "SYS SIGN/SGN, DIV/IDIV/QUOT, MOD/REM host plane. Page/bucket without ISA soup; /0 soft. selftest 85.",
   "proofs": [
-    "657_sys_range",
-    "selftest n_pass=84"
+    "658_sys_div",
+    "selftest n_pass=85"
   ],
-  "when": "2026-08-05T15:45:39Z",
+  "when": "2026-08-05T15:54:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "65fda77b3ea38d77e15db3729c2b11c0b69a36b1"
+  "sha": "8901b1f5da574e8973717ec1d6143462561ef641"
 }
