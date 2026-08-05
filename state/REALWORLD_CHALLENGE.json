@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "seed_waves",
-      "cmd": "seed h1..h5; waves size2 → h1 h2 / h3 h4 / h5",
+      "cmd": "seed h1..h5; waves size2 \u2192 h1 h2 / h3 h4 / h5",
       "ok": true,
       "note": "BEFOREALL pending + CHUNK default space join"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "chunk_var_sep",
-      "cmd": "SYS CHUNK n bag JSEP → unknown form 'JSEP'",
+      "cmd": "SYS CHUNK n bag JSEP \u2192 unknown form 'JSEP'",
       "ok": true,
       "note": "join sep must be string literal not var"
     },
@@ -73,22 +73,22 @@
       "severity": "high",
       "area": "lang|parse",
       "title": "SYS CHUNK join separator cannot be a variable",
-      "detail": "SYS CHUNK n bag JSEP parses JSEP as a form name → unknown form 'JSEP' (same for JOIN). Only string literals work for join sep. Agents cannot pass CUBALC_* env join through a LET binding.",
-      "repro": "LET s=\",\"; SYS CHUNK 2 peers s → unknown form 's'"
+      "detail": "SYS CHUNK n bag JSEP parses JSEP as a form name \u2192 unknown form 'JSEP' (same for JOIN). Only string literals work for join sep. Agents cannot pass CUBALC_* env join through a LET binding.",
+      "repro": "LET s=\",\"; SYS CHUNK 2 peers s \u2192 unknown form 's'"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "FIRSTMATCH is substring GREP1 — false friends",
+      "title": "FIRSTMATCH is substring GREP1 \u2014 false friends",
       "detail": "FIRSTMATCH bag \"fail\" matches prefail:live before h2:fail. Needle :fail safer but still matches host:failsoft. No whole-field or suffix-anchor match.",
-      "repro": "FIRSTMATCH 'prefail:live\\nh2:fail' fail → prefail:live"
+      "repro": "FIRSTMATCH 'prefail:live\\nh2:fail' fail \u2192 prefail:live"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "CHUNK space-joins hosts — irreversible if host contains space",
+      "title": "CHUNK space-joins hosts \u2014 irreversible if host contains space",
       "detail": "Wave field 'h1 h2' WORDS-split for advance; hostnames with spaces corrupt. No structured batch bag (nested fields).",
       "repro": "CHUNK 2 of hosts with spaces flattens"
     },
@@ -98,7 +98,7 @@
       "area": "host|bag",
       "title": "BEFOREALL miss keeps whole field; AFTERALL miss empty",
       "detail": "Plain orphan rows become fake host ids on peel; AFTERALL injects empty fields needing SQUEEZE. BEFOREALL_HIT not checked by agents by default.",
-      "repro": "BEFOREALL 'h1:p\\norphan' → h1\\norphan"
+      "repro": "BEFOREALL 'h1:p\\norphan' \u2192 h1\\norphan"
     },
     {
       "id": "W5",
@@ -106,7 +106,7 @@
       "area": "host|bag",
       "title": "No atomic multi-host SETMATCH / advance wave",
       "detail": "advance loops EACH host SETMATCH; partial success leaves mixed wave state. No transaction over bag mutations.",
-      "repro": "advance h1 h2 when only h1 pending → hit=1 miss=1"
+      "repro": "advance h1 h2 when only h1 pending \u2192 hit=1 miss=1"
     },
     {
       "id": "W6",
@@ -149,11 +149,11 @@
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Hard fail: SYS CHUNK … JOIN → unknown form JOIN — renamed and then removed var sep path",
+    "Hard fail: SYS CHUNK \u2026 JOIN \u2192 unknown form JOIN \u2014 renamed and then removed var sep path",
     "Confirmed FIRSTMATCH fail hits prefail:live (high ops footgun for findfail)",
     "Default space CHUNK works for wave batching; next+DROPNTH drains queue",
-    "No language fix this fire — CHUNK var-sep is MEANINGFUL_ITER candidate"
+    "No language fix this fire \u2014 CHUNK var-sep is MEANINGFUL_ITER candidate"
   ],
-  "commit": "pending",
+  "commit": "a21febb9785d2b45c051eae61008cee2e942d997",
   "ts": "2026-08-05T20:18:47Z"
 }
