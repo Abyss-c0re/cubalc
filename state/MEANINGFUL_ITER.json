@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 89,
-  "version": "1.15.114-usability",
-  "item": "SYS POW / ISQRT host power and sqrt",
-  "item_id": 122,
-  "title": "SYS POW|ISQRT integer power and floor square root",
-  "commit": "69b3de66e73620972887263e03f85aa54ecf31c4",
-  "summary": "SYS POW a e and ISQRT/SQRT n \u2192 LAST_N. Backoff/geometry without ISA soup. selftest 89.",
+  "iter": 90,
+  "version": "1.15.115-usability",
+  "item": "SYS SHUFFLE / SHUF bag field order",
+  "item_id": 123,
+  "title": "SYS SHUFFLE|SHUF Fisher-Yates newline bag shuffle",
+  "commit": "1885bef8b83f934a96b1c425d304acb622ab6424",
+  "summary": "SYS SHUFFLE/SHUF Fisher-Yates bag shuffle \u2192 LAST. Randomize peers/work without shell shuf. selftest 90.",
   "proofs": [
-    "662_sys_pow",
-    "selftest n_pass=89"
+    "663_sys_shuffle",
+    "selftest n_pass=90"
   ],
-  "when": "2026-08-05T16:33:27Z",
+  "when": "2026-08-05T16:43:24Z",
   "agent": "meaningful_iter_10m",
-  "sha": "69b3de66e73620972887263e03f85aa54ecf31c4"
+  "sha": "1885bef8b83f934a96b1c425d304acb622ab6424"
 }
