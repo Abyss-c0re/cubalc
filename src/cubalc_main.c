@@ -1433,14 +1433,36 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (strcmp(cmd, "run") == 0 || strcmp(cmd, "eval") == 0) {
-    /* Real language entry: parse + evaluate a .cubalc source program */
+    /* Real language entry: parse + evaluate a .cubalc source program.
+     * Usability: cubalc run - | eval - reads program from stdin (agents pipe). */
     if (argc < 3) {
-      fprintf(stderr, "usage: cubalc run <file.cubalc>\n");
+      fprintf(stderr, "usage: cubalc run <file.cubalc>|-\n"
+                      "       cubalc eval <file.cubalc>|-   # - = stdin\n");
       return 2;
     }
     cubalc_run_result rr;
     int rc;
-    if (strstr(argv[2], ".cblc")) {
+    const char *src_label = argv[2];
+    if (!strcmp(argv[2], "-") || !strcmp(argv[2], "--stdin") ||
+        !strcmp(argv[2], "/dev/stdin")) {
+      char *buf = malloc((size_t)CUBALC_MAX_SRC + 1);
+      size_t n = 0;
+      if (!buf) {
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\",\"err\":\"oom\"}\n");
+        return 2;
+      }
+      n = fread(buf, 1, (size_t)CUBALC_MAX_SRC, stdin);
+      buf[n] = 0;
+      if (n == 0) {
+        free(buf);
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\","
+               "\"err\":\"empty stdin — pipe a .cubalc program\"}\n");
+        return 2;
+      }
+      src_label = "<stdin>";
+      rc = cubalc_run_source(buf, n, src_label, &rr, stdout);
+      free(buf);
+    } else if (strstr(argv[2], ".cblc")) {
       cubalc_image img;
       if (cubalc_isa_load(&img, argv[2]) != 0) {
         printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
@@ -1453,7 +1475,7 @@ int main(int argc, char **argv) {
     printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
            "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
            "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
-           rr.ok ? "true" : "false", argv[2], rr.stmts, rr.asserts_ok,
+           rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
            rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
            CUBALC_LANG_VERSION, rr.err);
     return rc;
@@ -2014,7 +2036,7 @@ int main(int argc, char **argv) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval <file.cubalc> execute a program\n"
+      "    run|eval <file|->      execute program (file or stdin pipe)\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"

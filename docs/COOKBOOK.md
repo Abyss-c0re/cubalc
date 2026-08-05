@@ -13,6 +13,8 @@ make all
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc forms SMX   # play-form catalog
+# agents: pipe source without a temp file
+printf 'HOLD_FLASH 1\nASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
 ./out/cubalc help
 ```
 

@@ -56,6 +56,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 26. ~~**INCLUDE short lib name**~~ **done** (`INCLUDE hold_seed` → programs/lib/… + INCLUDE_PATH).
 27. ~~**`cubalc examples`**~~ **done** (curated runnable starters JSON · tags/filter).
 28. ~~**`EXPECT` soft assert**~~ **done** (OK/LAST_ERR · no fatal · multi-check probes).
+29. ~~**`cubalc run -` stdin**~~ **done** (pipe programs without temp files).
 
 ## Tick protocol
 
