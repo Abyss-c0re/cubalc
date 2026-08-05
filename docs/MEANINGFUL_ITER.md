@@ -64,6 +64,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 34. ~~**`cubalc paths`**~~ **done** (install/workspace layout JSON · present flags).
 35. ~~**`cubalc which` / SYS WHICH lib**~~ **done** (resolve name → path/kind · INCLUDE-style).
 36. ~~**run plate `err_line` / `err_src`**~~ **done** (source snippet when err cites line N).
+37. ~~**`cubalc search`**~~ **done** (keyword discovery across forms/libs/examples/env/docs).
 
 ## Tick protocol
 

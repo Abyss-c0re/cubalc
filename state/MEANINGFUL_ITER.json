@@ -1,17 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 3,
-  "version": "1.15.28-usability",
-  "item": "run plate err_line/err_src source context",
-  "item_id": 36,
-  "title": "run plate surfaces source line text on failures",
-  "commit": "101574484f25ca6ca070b52aecfafe5000ce9161",
-  "summary": "err_line + err_src on cubalc run plate from 'line N' in err/last_err \u2014 agents see failing source without reopening file.",
+  "iter": 4,
+  "version": "1.15.29-usability",
+  "item": "cubalc search keyword discovery",
+  "item_id": 37,
+  "title": "cubalc search across forms/libs/examples/env/docs",
+  "commit": "58f2865f5cf93b9ece5cfd2343cbfbe195279533",
+  "summary": "CLI search|find|query keyword plate cubalc.search.v1 unifies form/lib/example/doc/env discovery for agents.",
   "proofs": [
-    "assert_msg_fail CLI plate",
-    "soft FAIL err_src"
+    "CLI search include/p2p/ASSERT/timeout/miss"
   ],
-  "when": "2026-08-05T02:13:04Z",
+  "when": "2026-08-05T02:23:35Z",
   "agent": "meaningful_iter_10m",
-  "sha": "101574484f25ca6ca070b52aecfafe5000ce9161"
+  "sha": "58f2865f5cf93b9ece5cfd2343cbfbe195279533"
 }

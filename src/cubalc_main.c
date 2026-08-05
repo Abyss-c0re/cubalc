@@ -2439,6 +2439,253 @@ int main(int argc, char **argv) {
     printf("]}\n");
     return nh > 0 ? 0 : 1;
   }
+  if (strcmp(cmd, "search") == 0 || strcmp(cmd, "find") == 0 ||
+      strcmp(cmd, "query") == 0 || strcmp(cmd, "look") == 0) {
+    /* Usability: one keyword search across forms · libs · examples · env · aliases.
+     * Complements which (exact resolve) with discovery when agents don't know the name. */
+    const char *q = (argc > 2) ? argv[2] : "";
+    char qup[64];
+    struct {
+      char kind[16];
+      char name[64];
+      char path[160];
+      char hint[120];
+    } hits[48];
+    int nh = 0, i;
+    size_t k;
+    static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
+      {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
+      {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
+      {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
+      {"INCLUDE", "flow", "INCLUDE path|libname — short name → programs/lib/"},
+      {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
+      {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
+      {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
+      {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
+      {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
+      {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
+      {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
+      {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
+      {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
+      {"SYS WHICH", "host", "SYS WHICH name → LAST path (bin or lib)"},
+      {"SMX SERVE", "smx", "listen · CUBALC_P2P_TIMEOUT ms"},
+      {"SMX DIAL", "smx", "connect · CUBALC_P2P_SOFT soft-fail"},
+      {"SMX EXCHANGE", "smx", "file-bus exchange"},
+    };
+    static const struct { const char *path; const char *tag; const char *hint; } examples[] = {
+      {"programs/hello_cube.cubalc", "hello", "hold → place → plug short form"},
+      {"programs/proof/12_hold_flash_plug.cubalc", "hold", "HOLD_FLASH before PLUG"},
+      {"programs/proof/573_env_or_assert_msg.cubalc", "assert", "SYS ENV OR + ASSERT msg"},
+      {"programs/proof/577_include_shortname.cubalc", "include", "INCLUDE short lib name"},
+      {"programs/proof/578_expect_soft.cubalc", "expect", "EXPECT soft assert"},
+      {"programs/proof/579_fail_pass.cubalc", "fail", "FAIL/PASS soft status"},
+      {"programs/proof/582_sys_which_lib.cubalc", "which", "SYS WHICH lib resolve"},
+      {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
+      {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
+      {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
+    };
+    static const struct { const char *name; const char *path; const char *hint; } aliases[] = {
+      {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
+      {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "user permission before plug"},
+      {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
+      {"hello", "programs/hello_cube.cubalc", "minimal starter"},
+    };
+    static const struct { const char *name; const char *hint; } envs[] = {
+      {"CUBALC_P2P_TIMEOUT", "SERVE accept timeout ms"},
+      {"CUBALC_P2P_SOFT", "1 → DIAL soft-fail"},
+      {"CUBALC_SMX_KEY", "64-hex SMX2 shared secret"},
+      {"CUBALC_STATE", "state plate directory"},
+      {"CUBALC_ROOT", "install root for INCLUDE"},
+      {"CUBALC_SEED", "RNG seed for reproducible runs"},
+    };
+    if (!q || !q[0]) {
+      fprintf(stderr, "usage: cubalc search <keyword>\n"
+                      "       cubalc find include · cubalc query p2p · cubalc look ASSERT\n");
+      printf("{\"schema\":\"cubalc.search.v1\",\"ok\":false,\"cmd\":\"search\","
+             "\"err\":\"need keyword\",\"version\":\"%s\"}\n", CUBALC_LANG_VERSION);
+      return 2;
+    }
+    qup[0] = 0;
+    for (k = 0; q[k] && k + 1 < sizeof qup; k++)
+      qup[k] = (char)toupper((unsigned char)q[k]);
+    qup[k] = 0;
+
+    /* forms */
+    for (i = 0; i < (int)(sizeof forms / sizeof forms[0]) && nh < 48; i++) {
+      char name_up[48], plane_up[24], hint_up[120];
+      size_t j;
+      for (j = 0; forms[i].name[j] && j + 1 < sizeof name_up; j++)
+        name_up[j] = (char)toupper((unsigned char)forms[i].name[j]);
+      name_up[j] = 0;
+      for (j = 0; forms[i].plane[j] && j + 1 < sizeof plane_up; j++)
+        plane_up[j] = (char)toupper((unsigned char)forms[i].plane[j]);
+      plane_up[j] = 0;
+      for (j = 0; forms[i].hint[j] && j + 1 < sizeof hint_up; j++)
+        hint_up[j] = (char)toupper((unsigned char)forms[i].hint[j]);
+      hint_up[j] = 0;
+      if (!strstr(name_up, qup) && !strstr(plane_up, qup) && !strstr(hint_up, qup))
+        continue;
+      snprintf(hits[nh].kind, sizeof hits[0].kind, "form");
+      snprintf(hits[nh].name, sizeof hits[0].name, "%s", forms[i].name);
+      snprintf(hits[nh].path, sizeof hits[0].path, "%s", forms[i].plane);
+      snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", forms[i].hint);
+      nh++;
+    }
+    /* libs from programs/lib */
+    {
+      DIR *d = opendir("programs/lib");
+      static const struct { const char *file; const char *hint; } known[] = {
+        {"hold_seed.cubalc", "HOLD_FLASH + BUDGET + SHARE seed"},
+        {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
+        {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
+      };
+      if (d) {
+        struct dirent *de;
+        while ((de = readdir(d)) != NULL && nh < 48) {
+          size_t len = strlen(de->d_name);
+          char name_up[64], path[96], hint[120], stem[64];
+          size_t j;
+          int ki;
+          if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0) continue;
+          if (de->d_name[0] == '.') continue;
+          snprintf(stem, sizeof stem, "%s", de->d_name);
+          if (len > 7) stem[len - 7] = 0;
+          snprintf(path, sizeof path, "programs/lib/%s", de->d_name);
+          hint[0] = 0;
+          for (ki = 0; ki < (int)(sizeof known / sizeof known[0]); ki++) {
+            if (strcmp(de->d_name, known[ki].file) == 0) {
+              snprintf(hint, sizeof hint, "%s", known[ki].hint);
+              break;
+            }
+          }
+          if (!hint[0]) snprintf(hint, sizeof hint, "INCLUDE lib snippet");
+          for (j = 0; stem[j] && j + 1 < sizeof name_up; j++)
+            name_up[j] = (char)toupper((unsigned char)stem[j]);
+          name_up[j] = 0;
+          {
+            char path_up[96], hint_up[120];
+            for (j = 0; path[j] && j + 1 < sizeof path_up; j++)
+              path_up[j] = (char)toupper((unsigned char)path[j]);
+            path_up[j] = 0;
+            for (j = 0; hint[j] && j + 1 < sizeof hint_up; j++)
+              hint_up[j] = (char)toupper((unsigned char)hint[j]);
+            hint_up[j] = 0;
+            if (!strstr(name_up, qup) && !strstr(path_up, qup) && !strstr(hint_up, qup))
+              continue;
+          }
+          snprintf(hits[nh].kind, sizeof hits[0].kind, "lib");
+          snprintf(hits[nh].name, sizeof hits[0].name, "%s", stem);
+          snprintf(hits[nh].path, sizeof hits[0].path, "%s", path);
+          snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", hint);
+          nh++;
+        }
+        closedir(d);
+      }
+    }
+    /* examples */
+    for (i = 0; i < (int)(sizeof examples / sizeof examples[0]) && nh < 48; i++) {
+      char path_up[160], tag_up[32], hint_up[120];
+      size_t j;
+      for (j = 0; examples[i].path[j] && j + 1 < sizeof path_up; j++)
+        path_up[j] = (char)toupper((unsigned char)examples[i].path[j]);
+      path_up[j] = 0;
+      for (j = 0; examples[i].tag[j] && j + 1 < sizeof tag_up; j++)
+        tag_up[j] = (char)toupper((unsigned char)examples[i].tag[j]);
+      tag_up[j] = 0;
+      for (j = 0; examples[i].hint[j] && j + 1 < sizeof hint_up; j++)
+        hint_up[j] = (char)toupper((unsigned char)examples[i].hint[j]);
+      hint_up[j] = 0;
+      if (!strstr(path_up, qup) && !strstr(tag_up, qup) && !strstr(hint_up, qup))
+        continue;
+      snprintf(hits[nh].kind, sizeof hits[0].kind, "example");
+      snprintf(hits[nh].name, sizeof hits[0].name, "%s", examples[i].tag);
+      snprintf(hits[nh].path, sizeof hits[0].path, "%s", examples[i].path);
+      snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", examples[i].hint);
+      nh++;
+    }
+    /* path aliases / docs */
+    for (i = 0; i < (int)(sizeof aliases / sizeof aliases[0]) && nh < 48; i++) {
+      char name_up[32], path_up[96], hint_up[120];
+      size_t j;
+      for (j = 0; aliases[i].name[j] && j + 1 < sizeof name_up; j++)
+        name_up[j] = (char)toupper((unsigned char)aliases[i].name[j]);
+      name_up[j] = 0;
+      for (j = 0; aliases[i].path[j] && j + 1 < sizeof path_up; j++)
+        path_up[j] = (char)toupper((unsigned char)aliases[i].path[j]);
+      path_up[j] = 0;
+      for (j = 0; aliases[i].hint[j] && j + 1 < sizeof hint_up; j++)
+        hint_up[j] = (char)toupper((unsigned char)aliases[i].hint[j]);
+      hint_up[j] = 0;
+      if (!strstr(name_up, qup) && !strstr(path_up, qup) && !strstr(hint_up, qup))
+        continue;
+      snprintf(hits[nh].kind, sizeof hits[0].kind, "doc");
+      snprintf(hits[nh].name, sizeof hits[0].name, "%s", aliases[i].name);
+      snprintf(hits[nh].path, sizeof hits[0].path, "%s", aliases[i].path);
+      snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", aliases[i].hint);
+      nh++;
+    }
+    /* env contract */
+    for (i = 0; i < (int)(sizeof envs / sizeof envs[0]) && nh < 48; i++) {
+      char name_up[48], hint_up[120];
+      size_t j;
+      for (j = 0; envs[i].name[j] && j + 1 < sizeof name_up; j++)
+        name_up[j] = (char)toupper((unsigned char)envs[i].name[j]);
+      name_up[j] = 0;
+      for (j = 0; envs[i].hint[j] && j + 1 < sizeof hint_up; j++)
+        hint_up[j] = (char)toupper((unsigned char)envs[i].hint[j]);
+      hint_up[j] = 0;
+      if (!strstr(name_up, qup) && !strstr(hint_up, qup))
+        continue;
+      snprintf(hits[nh].kind, sizeof hits[0].kind, "env");
+      snprintf(hits[nh].name, sizeof hits[0].name, "%s", envs[i].name);
+      hits[nh].path[0] = 0;
+      snprintf(hits[nh].hint, sizeof hits[0].hint, "%s", envs[i].hint);
+      nh++;
+    }
+
+    printf("# CubalC search q=%s n=%d version=%s\n", q, nh, CUBALC_LANG_VERSION);
+    printf("# kind\tname\tpath\thint\n");
+    for (i = 0; i < nh; i++)
+      printf("%s\t%s\t%s\t%s\n", hits[i].kind, hits[i].name,
+             hits[i].path[0] ? hits[i].path : "-", hits[i].hint);
+    if (nh == 0)
+      printf("# (no match — try cubalc forms|libs|examples|which|env)\n");
+    printf("{\"schema\":\"cubalc.search.v1\",\"ok\":%s,\"cmd\":\"search\","
+           "\"query\":\"%s\",\"n\":%d,\"version\":\"%s\","
+           "\"note\":\"keyword discovery — cubalc which for exact path resolve\","
+           "\"matches\":[",
+           nh > 0 ? "true" : "false", q, nh, CUBALC_LANG_VERSION);
+    for (i = 0; i < nh; i++) {
+      char pesc[180], nesc[72], hesc[140];
+      size_t j, o;
+      o = 0;
+      for (j = 0; hits[i].path[j] && o + 2 < sizeof pesc; j++) {
+        char c = hits[i].path[j];
+        if (c == '"' || c == '\\') pesc[o++] = '_';
+        else pesc[o++] = c;
+      }
+      pesc[o] = 0;
+      o = 0;
+      for (j = 0; hits[i].name[j] && o + 2 < sizeof nesc; j++) {
+        char c = hits[i].name[j];
+        if (c == '"' || c == '\\') nesc[o++] = '_';
+        else nesc[o++] = c;
+      }
+      nesc[o] = 0;
+      o = 0;
+      for (j = 0; hits[i].hint[j] && o + 2 < sizeof hesc; j++) {
+        char c = hits[i].hint[j];
+        if (c == '"' || c == '\\') hesc[o++] = '_';
+        else hesc[o++] = c;
+      }
+      hesc[o] = 0;
+      printf("%s{\"kind\":\"%s\",\"name\":\"%s\",\"path\":\"%s\",\"hint\":\"%s\"}",
+             i ? "," : "", hits[i].kind, nesc, pesc, hesc);
+    }
+    printf("]}\n");
+    return nh > 0 ? 0 : 1;
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
@@ -2448,6 +2695,7 @@ int main(int argc, char **argv) {
       "    version|ver|-V         language version JSON plate\n"
       "    paths|where|layout     install/workspace paths JSON\n"
       "    which|locate|resolve   resolve name → path/kind (lib/form/bin)\n"
+      "    search|find|query      keyword search forms/libs/examples/env\n"
       "    cookbook|start         paths to starters\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"
