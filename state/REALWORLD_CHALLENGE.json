@@ -113,6 +113,6 @@
     "PRINT_JSON escape of newlines in string values",
     "WRITE ensure trailing newline option"
   ],
-  "commit": null,
+  "commit": "f599661cf8d3594f8d36f9fe9dcfb99945f067df",
   "ts": "2026-08-05T13:38:55Z"
 }
