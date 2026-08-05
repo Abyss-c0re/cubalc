@@ -1,0 +1,676 @@
+# release_relpath_smoke.cubalc — release tree → relative keys + SAMPLEK smoke
+#
+# Real use: release / deploy agent ingests absolute install paths under STATE,
+# strips a known root (STRIPPREFIX) or shared LCP (STRIPCOMMON/RELPATHS) into a
+# relative-key plate, optionally peels extensions (STRIPSUFFIX), then DRAWN/
+# SAMPLEK picks k unique keys for a smoke checklist without full-tree walk.
+#
+# Plate files under STATE:
+#   ABS.txt      — absolute path bag (source of truth)
+#   REL.txt      — relative keys after strip
+#   SMOKE.txt    — sampled smoke subset
+#   REL_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RR_ACTION):
+#   list      — depths + prefix lens (default)
+#   loadlines — PUSH ||| absolute paths
+#   ingest    — PUSH one absolute path
+#   seed      — WORDS tokens (fragile for /paths)
+#   strip     — STRIPPREFIX with ARG1/ENV root → REL plate
+#   relcommon — STRIPCOMMON/RELPATHS on ABS → REL (discover LCP)
+#   peelsuf   — STRIPSUFFIX ARG1/ENV on REL (or ABS if REL empty)
+#   sample    — SAMPLEK k from REL (or ABS) → SMOKE; seed via CUBALC_SEED
+#   has       — HASLINE exact on ABS
+#   drop      — REMOVELINE exact on ABS
+#   clear     — empty ABS+REL+SMOKE
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rr_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=loadlines \
+#     CUBALC_ARG1='/opt/rel/bin/a|||/opt/rel/lib/b.so|||/opt/rel/etc/c.conf' \
+#     ./out/cubalc run -q -s programs/realworld/release_relpath_smoke.cubalc
+#   CUBALC_ARG0=strip CUBALC_ARG1='/opt/rel/' ./out/cubalc run -q -s ...
+#   CUBALC_SEED=42 CUBALC_ARG0=sample CUBALC_ARG1=2 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_RR_FILE=ABS.txt
+#   CUBALC_RR_REL=REL.txt
+#   CUBALC_RR_SMOKE=SMOKE.txt
+#   CUBALC_RR_REQUIRE=1
+#   CUBALC_RR_ROOT=/opt/rel/
+#   CUBALC_RR_K=3
+#   CUBALC_RR_SUF=.so
+#   CUBALC_SEED=42
+#
+# Edges deliberately stressed:
+#   STRIPPREFIX partial hit (mixed roots leave absolute fields)
+#   STRIPCOMMON mid-segment LCP (state/peer_ style) + slash-only /
+#   single-field STRIPCOMMON → empty relative keys
+#   SAMPLEK k>n clamps; k=0 empty; empty bag soft
+#   non-deterministic sample without CUBALC_SEED
+#   WORDS splits absolute paths — need loadlines
+#   WRITE trailing NL; PRINT_JSON collapse; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "release_relpath_smoke: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ABS.txt"
+DEFAULT RFILE = "REL.txt"
+DEFAULT SFILE = "SMOKE.txt"
+DEFAULT REPORT = "REL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT ROOT = ""
+DEFAULT K = 3
+DEFAULT SUF = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RR_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET AFILE = LAST
+END
+SYS ENV "CUBALC_RR_REL" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_RR_SMOKE" OR ""
+IF LAST_N > 0 THEN
+  LET SFILE = LAST
+END
+SYS ENV "CUBALC_RR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RR_ROOT" OR ""
+IF LAST_N > 0 THEN
+  LET ROOT = LAST
+END
+SYS ENV "CUBALC_RR_K" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET K = LAST_N
+  END
+END
+SYS ENV "CUBALC_RR_SUF" OR ""
+IF LAST_N > 0 THEN
+  LET SUF = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET abs_path = LAST
+SYS JOIN state_dir RFILE
+LET rel_path = LAST
+SYS JOIN state_dir SFILE
+LET smoke_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR abs_path OR ""
+LET abs = LAST
+CLEAR_ERR "soft abs load"
+SYS READ OR rel_path OR ""
+LET rel = LAST
+CLEAR_ERR "soft rel load"
+SYS READ OR smoke_path OR ""
+LET smoke = LAST
+CLEAR_ERR "soft smoke load"
+
+SYS LINES abs
+LET depth_abs = LAST_N
+SYS LINES rel
+LET depth_rel = LAST_N
+SYS LINES smoke
+LET depth_smoke = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET rel_changed = 0
+LET smoke_changed = 0
+LET note_msg = "ok"
+LET pre_s = ""
+LET hit_n = 0
+LET drawn_n = 0
+LET drawn_total = 0
+
+# numeric override for sample/strip args when NAME is numeric/k
+SYS EQS ACTION "sample"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET K = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "strip"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET ROOT = NAME
+  END
+END
+SYS EQS ACTION "peelsuf"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET SUF = NAME
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK abs
+  IF LAST_N == 0 THEN
+    SYS COMMONPREFIX abs
+    LET pre_s = LAST
+  END
+  STATUS
+  PRINT "relsmoke" depth_abs depth_rel depth_smoke ACTION
+  PRINT_JSON depth_abs depth_rel depth_smoke ACTION STATUS_OK
+  PRINT_JSON pre_s
+  PRINT_JSON abs
+  PRINT_JSON rel
+  PRINT_JSON smoke
+  LET note_msg = "list ok"
+END
+
+# --- loadlines ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| paths"
+  END
+  SYS SPLIT "|||" NAME
+  LET lines = LAST
+  EACH LINE AS ln IN lines
+    SYS BLANK ln
+    IF LAST_N == 0 THEN
+      SYS PUSH abs ln
+      LET abs = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "loaded"
+END
+
+# --- seed WORDS ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE abs n
+      IF LAST_N == 0 THEN
+        SYS PUSH abs n
+        LET abs = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs path"
+  END
+  SYS PUSH abs NAME
+  LET abs = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- strip STRIPPREFIX ---
+SYS EQS ACTION "strip"
+IF LAST_N == 1 THEN
+  NOTE "action strip"
+  SYS BLANK abs
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "strip empty abs"
+    FAIL "strip empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "strip empty"
+    END
+  ELSE
+    SYS BLANK ROOT
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "strip no root"
+      FAIL "strip no root"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "strip no root"
+      END
+    ELSE
+      SYS STRIPPREFIX abs ROOT
+      LET rel = LAST
+      LET hit_n = STRIPPREFIX_HIT
+      LET rel_changed = 1
+      LET hit = 1
+      SYS LINES rel
+      LET depth_rel = LAST_N
+      # soft: zero fields shortened → partial/miss signal
+      IF hit_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "strip zero hit"
+        FAIL "strip zero hit"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "strip zero hit"
+        END
+      ELSE
+        LET note_msg = "stripped"
+      END
+      PRINT_JSON ROOT
+      PRINT_JSON rel
+      PRINT_JSON hit_n
+    END
+  END
+END
+
+# --- relcommon STRIPCOMMON ---
+SYS EQS ACTION "relcommon"
+IF LAST_N == 1 THEN
+  NOTE "action relcommon"
+  SYS BLANK abs
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "relcommon empty"
+    FAIL "relcommon empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "relcommon empty"
+    END
+  ELSE
+    SYS STRIPCOMMON abs
+    LET rel = LAST
+    LET pre_s = STRIPCOMMON_PRE
+    LET hit_n = STRIPCOMMON_HIT
+    LET rel_changed = 1
+    LET hit = 1
+    SYS LINES rel
+    LET depth_rel = LAST_N
+    SYS BLANK pre_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "relcommon no lcp"
+      FAIL "relcommon no lcp"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "relcommon no lcp"
+      END
+    ELSE
+      # slash-only prefix is a false useful root for path agents
+      SYS EQS pre_s "/"
+      IF LAST_N == 1 THEN
+        LET miss = 1
+        LET note_msg = "relcommon slash-only"
+        FAIL "relcommon slash-only"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "relcommon slash-only"
+        END
+      ELSE
+        LET note_msg = "relcommon ok"
+      END
+    END
+    PRINT_JSON pre_s
+    PRINT_JSON rel
+    PRINT_JSON hit_n
+  END
+END
+
+# --- peelsuf STRIPSUFFIX ---
+SYS EQS ACTION "peelsuf"
+IF LAST_N == 1 THEN
+  NOTE "action peelsuf"
+  SYS BLANK SUF
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "peelsuf no suffix"
+    FAIL "peelsuf no suffix"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "peelsuf no suffix"
+    END
+  ELSE
+    # prefer REL plate; fall back to ABS
+    LET src = rel
+    SYS BLANK src
+    IF LAST_N == 1 THEN
+      LET src = abs
+    END
+    SYS BLANK src
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "peelsuf empty bag"
+      FAIL "peelsuf empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "peelsuf empty"
+      END
+    ELSE
+      SYS STRIPSUFFIX src SUF
+      LET rel = LAST
+      LET hit_n = STRIPSUFFIX_HIT
+      LET rel_changed = 1
+      LET hit = 1
+      SYS LINES rel
+      LET depth_rel = LAST_N
+      IF hit_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "peelsuf zero hit"
+        FAIL "peelsuf zero hit"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "peelsuf zero hit"
+        END
+      ELSE
+        LET note_msg = "peeled"
+      END
+      PRINT_JSON SUF
+      PRINT_JSON rel
+      PRINT_JSON hit_n
+    END
+  END
+END
+
+# --- sample SAMPLEK ---
+SYS EQS ACTION "sample"
+IF LAST_N == 1 THEN
+  NOTE "action sample"
+  LET src = rel
+  SYS BLANK src
+  IF LAST_N == 1 THEN
+    LET src = abs
+  END
+  SYS BLANK src
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "sample empty"
+    FAIL "sample empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sample empty"
+    END
+  ELSE
+    SYS MAX K 0
+    LET K = LAST_N
+    IF K == 0 THEN
+      LET smoke = ""
+      LET smoke_changed = 1
+      LET drawn_n = 0
+      SYS LINES src
+      LET drawn_total = LAST_N
+      LET miss = 1
+      LET note_msg = "sample k0"
+      FAIL "sample k0"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sample k0"
+      END
+    ELSE
+      SYS SAMPLEK K src
+      LET smoke = LAST
+      LET drawn_n = DRAWN_N
+      LET drawn_total = DRAWN_TOTAL
+      LET smoke_changed = 1
+      LET hit = 1
+      SYS LINES smoke
+      LET depth_smoke = LAST_N
+      LET note_msg = "sampled"
+      PRINT_JSON smoke
+      PRINT_JSON drawn_n
+      PRINT_JSON drawn_total
+    END
+  END
+END
+
+# --- drop / has / clear ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact path"
+  END
+  SYS HASLINE abs NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE abs NAME
+    LET abs = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+  SYS HASLINE abs NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET abs = ""
+  LET rel = ""
+  LET smoke = ""
+  LET changed = 1
+  LET rel_changed = 1
+  LET smoke_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "strip"
+LET k = k + LAST_N
+SYS EQS ACTION "relcommon"
+LET k = k + LAST_N
+SYS EQS ACTION "peelsuf"
+LET k = k + LAST_N
+SYS EQS ACTION "sample"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE abs_path abs
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "abs write failed"
+  END
+  CLEAR_ERR
+END
+IF rel_changed > 0 THEN
+  SYS WRITE rel_path rel
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rel write failed"
+  END
+  CLEAR_ERR
+END
+IF smoke_changed > 0 THEN
+  SYS WRITE smoke_path smoke
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "smoke write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES abs
+LET depth_abs = LAST_N
+SYS LINES rel
+LET depth_rel = LAST_N
+SYS LINES smoke
+LET depth_smoke = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.relsmoke.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pre"
+LET report = LAST
+SYS PUSH report pre_s
+LET report = LAST
+SYS PUSH report "hit_n"
+LET report = LAST
+SYS STR hit_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drawn_n"
+LET report = LAST
+SYS STR drawn_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_abs"
+LET report = LAST
+SYS STR depth_abs
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_rel"
+LET report = LAST
+SYS STR depth_rel
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_smoke"
+LET report = LAST
+SYS STR depth_smoke
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "relsmoke" ACTION hit miss depth_abs depth_rel depth_smoke
+PRINT_JSON ACTION hit miss depth_abs depth_rel depth_smoke elapsed STATUS_OK
+PASS "relsmoke tick"
+NOTE "release_relpath_smoke: done"
+CLEAR_ERR
+EXIT 0 "relsmoke ok"

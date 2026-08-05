@@ -1,50 +1,62 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 45,
-  "program": "programs/realworld/path_root_board.cubalc",
-  "theme": "path root COMMONPREFIX LONGEST TRUNCALL soft shared root",
-  "version": "1.15.151-usability",
+  "iter": 46,
+  "program": "programs/realworld/release_relpath_smoke.cubalc",
+  "theme": "release relpath STRIPPREFIX STRIPCOMMON SAMPLEK smoke checklist",
+  "version": "1.15.153-usability",
   "pass": true,
   "tests": [
     {
-      "name": "loadlines_root",
-      "cmd": "loadlines /var/log/*; root \u2192 /var/log/",
+      "name": "loadlines_strip",
+      "cmd": "loadlines /opt/rel/*; strip /opt/rel/ → bin/a lib/b.so…",
       "ok": true,
-      "note": "COMMONPREFIX shared dir"
+      "note": "STRIPPREFIX_HIT=4 full"
     },
     {
-      "name": "suffix_mixed",
-      "cmd": ".log vs .err \u2192 suffix none soft/REQUIRE",
+      "name": "sample_seeded",
+      "cmd": "CUBALC_SEED=42 SAMPLEK 2 deterministic smoke",
       "ok": true,
-      "note": "COMMONSUFFIX empty soft"
+      "note": "etc/c.conf + lib/b.so stable"
     },
     {
-      "name": "longest_pin",
-      "cmd": "longest nested path; pinlong front",
+      "name": "peelsuf_partial",
+      "cmd": "STRIPSUFFIX .so peels only matching fields",
       "ok": true,
-      "note": "LONGEST + MOVELINE"
+      "note": "lib/b vs lib/c.s kept"
     },
     {
-      "name": "clip_left_right",
-      "cmd": "TRUNCALL 12 left; RIGHT 8 tail clip",
+      "name": "mixed_roots",
+      "cmd": "strip /opt/rel/ leaves /var/other/x absolute in REL",
       "ok": true,
-      "note": "silent path mutilation"
+      "note": "partial STRIPPREFIX_HIT"
     },
     {
-      "name": "slash_only_prefix",
-      "cmd": "/etc/a vs /var/b \u2192 COMMONPREFIX / not empty",
+      "name": "slash_only_relcommon",
+      "cmd": "/etc/a vs /var/b → STRIPCOMMON_PRE=/ soft miss",
       "ok": true,
-      "note": "false useful root for path agents"
+      "note": "REQUIRE exit 2"
     },
     {
-      "name": "single_lcp",
-      "cmd": "single field LCP is whole path",
+      "name": "single_stripcommon_empty",
+      "cmd": "one path → REL empty pre=full path",
       "ok": true,
-      "note": "surprising root=full path"
+      "note": "agent footgun success note"
     },
     {
-      "name": "drop_miss",
-      "cmd": "drop exact; ghost REQUIRE",
+      "name": "sample_empty_k0",
+      "cmd": "empty REQUIRE exit2; k=0 soft miss",
+      "ok": true,
+      "note": "k>n clamps to all"
+    },
+    {
+      "name": "mid_segment_lcp",
+      "cmd": "state/peer_* → pre=state/peer_ not state/",
+      "ok": true,
+      "note": "path-segment unsafe"
+    },
+    {
+      "name": "drop_has_unknown",
+      "cmd": "drop ghost REQUIRE; has exact; unknown action 2",
       "ok": true,
       "note": "exact field ops"
     },
@@ -52,7 +64,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "126/126 pass incl commonprefix longest truncall"
+      "note": "128/128 pass incl stripprefix drawn"
     }
   ],
   "weaknesses": [
@@ -60,87 +72,90 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "COMMONPREFIX of /etc vs /var is slash-only /",
-      "detail": "Agents treating non-empty LCP as a useful path root get '/' for unrelated trees. No path-segment-aware COMMONPREFIX (dirname-safe). BLANK check cannot reject '/' alone without extra EQS.",
-      "repro": "COMMONPREFIX '/etc/a\\n/var/b' \u2192 '/'"
+      "title": "STRIPCOMMON LCP is character-level mid-segment",
+      "detail": "Peers state/peer_a|b|c strip to pre=state/peer_ leaving a/plate.json. Want dirname-boundary strip (state/) or segment-aware RELPATHS. Same class as COMMONPREFIX path gap.",
+      "repro": "STRIPCOMMON state/peer_a/x\\nstate/peer_b/y → pre state/peer_"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "TRUNCALL silently destroys paths",
-      "detail": "clip width 12 turns /var/log/deep/... into /var/log/dee. Same silent truncate class as PADALL. No STRICT/refuse mode; TRUNCALL_HIT counts clips but easy to ignore.",
-      "repro": "TRUNCALL paths 12"
+      "title": "Single-field STRIPCOMMON empties the relative key",
+      "detail": "One absolute path → LCP is whole field → REL becomes empty string while STRIPCOMMON_PRE is the full path and STRIPCOMMON_HIT=1. Agents treat success as usable relative inventory.",
+      "repro": "STRIPCOMMON '/opt/rel/only' → LAST empty, PRE=/opt/rel/only"
     },
     {
       "id": "W3",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "Single-field COMMONPREFIX returns whole field",
-      "detail": "One path bag \u2192 LCP is the full path, so root action reports success with root=full file path. Agents should special-case LINES==1.",
-      "repro": "COMMONPREFIX '/only/one' \u2192 '/only/one'"
+      "title": "STRIPPREFIX partial hit leaves absolute orphans in REL bag",
+      "detail": "Mixed /opt/rel/* + /var/other/x after strip root keeps /var/other/x absolute. No STRICT mode requiring all fields match; agents must check STRIPPREFIX_HIT == LINES.",
+      "repro": "STRIPPREFIX mixed bag '/opt/rel/'"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|cli",
-      "title": "Paths need loadlines ||| \u2014 WORDS splits on /",
-      "detail": "WORDS '/var/log/a' may not preserve path depending on tokenizer; multi-token paths need ||| or file READ.",
-      "repro": "seed WORDS fragile for absolute paths"
+      "area": "host|rand",
+      "title": "SAMPLEK non-deterministic without CUBALC_SEED",
+      "detail": "Smoke plates change across runs unless host sets CUBALC_SEED. No in-program SAMPLEK seed arg; ops agents forget ENV contract.",
+      "repro": "SAMPLEK 2 bag without CUBALC_SEED"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "lang|parse",
-      "title": "TRUNCALL RIGHT keyword steals RIGHT",
-      "detail": "Same OFF/DESC/RIGHT class as prior iters.",
-      "repro": "DEFAULT RIGHT near TRUNCALL RIGHT"
+      "area": "host|bag",
+      "title": "Slash-only STRIPCOMMON still strips and HIT counts",
+      "detail": "STRIPCOMMON_PRE='/' non-blank so BLANK checks pass; program must EQS pre '/'. Same false-useful-root class as path_root_board.",
+      "repro": "STRIPCOMMON '/etc/a\\n/var/b'"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|bag",
-      "title": "LONGEST ties pick first only",
-      "detail": "Equal-length paths: first wins; no all-longest bag form.",
-      "repro": "LONGEST aa\\nbb\\ncc \u2192 aa"
-    },
-    {
-      "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last path line without $.",
-      "repro": "loadlines; cat -A PATHS.txt"
+      "detail": "cat -A last ABS/REL/SMOKE line without $. Stable plate hygiene issue.",
+      "repro": "loadlines; cat -A ABS.txt"
+    },
+    {
+      "id": "W7",
+      "severity": "med",
+      "area": "host|cli",
+      "title": "No STRIPPREFIX_STRICT / all-must-match gate",
+      "detail": "Want hard fail when HIT < N. Agents reimplement with NUM compare every call.",
+      "repro": "STRIPPREFIX partial"
     },
     {
       "id": "W8",
-      "severity": "med",
+      "severity": "low",
       "area": "host|bag",
-      "title": "No COMMONPREFIX min-length / dirname boundary option",
-      "detail": "Want shared root at path segment boundary (last slash). Character LCP can stop mid-segment for similar basenames.",
-      "repro": "COMMONPREFIX is pure string LCP"
+      "title": "STRIPSUFFIX is exact string not extension-aware",
+      "detail": "Fine for .so peel; no EXTNAME map form. c.s not confused with .so (good) but agents want map-ext strip.",
+      "repro": "STRIPSUFFIX bag .so"
     }
   ],
   "workarounds": [
-    "EQS root '/' or root len < 2 \u2192 treat as no useful root",
-    "Inspect TRUNCALL_HIT; prefer clip only for display plates not SoT",
-    "If LINES==1 skip root or treat as whole path intentionally",
-    "loadlines ||| or READ path list file",
-    "Never name vars RIGHT/LEFT/OFF/DESC"
+    "EQS STRIPCOMMON_PRE '/' or BLANK REL after single-field strip → treat as no useful rel",
+    "If LINES==1 skip STRIPCOMMON or keep basename via BASENAME EACH",
+    "Assert STRIPPREFIX_HIT == LINES abs for clean REL",
+    "Always export CUBALC_SEED for SAMPLEK smoke plates",
+    "Prefer explicit STRIPPREFIX known root over STRIPCOMMON for release trees",
+    "loadlines ||| not WORDS for absolute paths"
   ],
   "language_gaps": [
-    "Path-segment COMMONPREFIX (dirname-safe)",
-    "TRUNCALL STRICT / no silent clip",
-    "COMMONPREFIX min-len threshold",
-    "All-ties LONGEST bag",
-    "WRITE force trailing NL"
+    "Path-segment STRIPCOMMON / RELPATHS dirname boundary",
+    "STRIPPREFIX STRICT all-fields-must-match",
+    "Single-field STRIPCOMMON keep-as-is or basename option",
+    "SAMPLEK seed argument (not only CUBALC_SEED ENV)",
+    "WRITE force trailing NL",
+    "Map EXTNAME strip bag form"
   ],
   "issues_faced": [
-    "REQUIRE root none failed to fire for /etc vs /var \u2014 LCP is '/' non-blank",
-    "TRUNCALL display clip mangles paths as expected \u2014 document hard",
-    "Positive path /var/log/ root works cleanly",
-    "No language fix \u2014 path-aware LCP for MEANINGFUL_ITER"
+    "Single-field STRIPCOMMON reported pre full path and empty REL with soft success — agent must special-case",
+    "Slash-only pre needs explicit EQS in program (BLANK insufficient)",
+    "Positive path strip+seeded sample works cleanly",
+    "Mid-segment peer_ LCP expected from character LCP — document not fix this iter",
+    "No language fix — path-aware strip for MEANINGFUL_ITER"
   ],
-  "commit": "68f9f359c3ae882635094ddddbaccd9315556a89",
-  "ts": "2026-08-05T22:48:00Z"
+  "commit": "",
+  "ts": "2026-08-05T23:13:24Z"
 }
