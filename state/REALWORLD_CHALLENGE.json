@@ -10,11 +10,11 @@
       "name": "append_insert_chain",
       "cmd": "append fetch/validate/publish; insert hold@0; insert notify@2",
       "ok": true,
-      "note": "order hold,fetch,notify,validate,publish — INSERTLINE middle+front"
+      "note": "order hold,fetch,notify,validate,publish \u2014 INSERTLINE middle+front"
     },
     {
       "name": "drop_pin_move",
-      "cmd": "drop 1; pin publish; move 2→0",
+      "cmd": "drop 1; pin publish; move 2\u21920",
       "ok": true,
       "note": "DROPNTH peel; pin via FINDLINE+DROPNTH+INSERTLINE 0; move reorder"
     },
@@ -28,7 +28,7 @@
       "name": "insert_past_end_append",
       "cmd": "insert 99 tailz",
       "ok": true,
-      "note": "INSERTLINE n>=count silently appends — no FAIL sticky"
+      "note": "INSERTLINE n>=count silently appends \u2014 no FAIL sticky"
     },
     {
       "name": "list_peek_json_collapse",
@@ -48,9 +48,9 @@
       "id": "W1",
       "severity": "med",
       "area": "host|flow",
-      "title": "SYS NUM only parses LAST — string indices need shuttle glue",
+      "title": "SYS NUM only parses LAST \u2014 string indices need shuttle glue",
       "detail": "ARG/ENV indices arrive as strings. SYS NUM does not take a named var; agents must PREPEND \"\" A; HEAD LAST; NUM (or similar LAST-clobber dance) before INSERTLINE/DROPNTH. Easy to forget and pass 0/garbage.",
-      "repro": "LET A=\"2\"; cannot SYS NUM A — must load A into LAST first"
+      "repro": "LET A=\"2\"; cannot SYS NUM A \u2014 must load A into LAST first"
     },
     {
       "id": "W2",
@@ -58,22 +58,22 @@
       "area": "host|docs",
       "title": "SYS DROP vs SYS DROPNTH name collision risk",
       "detail": "SYS DROP n is skip-first-n window (TAKE dual). SYS DROPNTH bag n drops one field by index. Agents writing runbook 'drop step 1' often call DROP and strip the head window instead of index 1. Catalog hints help but aliases still invite mixups.",
-      "repro": "DROP 1 'a\\nb\\nc' → 'b\\nc'; DROPNTH 'a\\nb\\nc' 1 → 'a\\nc'"
+      "repro": "DROP 1 'a\\nb\\nc' \u2192 'b\\nc'; DROPNTH 'a\\nb\\nc' 1 \u2192 'a\\nc'"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
       "title": "INSERTLINE past end silently appends",
-      "detail": "INSERTLINE bag 99 x with len=4 succeeds and appends — no soft miss. Off-by-one dest indices hide bugs; only negative index soft-misses (LAST_N=0). Agents cannot distinguish intended append from bad index without pre-check LINES.",
-      "repro": "INSERTLINE 'a\\nb' 99 'z' → a\\nb\\nz LAST_N=3 OK"
+      "detail": "INSERTLINE bag 99 x with len=4 succeeds and appends \u2014 no soft miss. Off-by-one dest indices hide bugs; only negative index soft-misses (LAST_N=0). Agents cannot distinguish intended append from bad index without pre-check LINES.",
+      "repro": "INSERTLINE 'a\\nb' 99 'z' \u2192 a\\nb\\nz LAST_N=3 OK"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "cli",
       "title": "PRINT_JSON collapses runbook bag newlines",
-      "detail": "PRINT_JSON book yields 'aXbc' — agents cannot recover stage order from JSON dump; must READ plate file.",
+      "detail": "PRINT_JSON book yields 'aXbc' \u2014 agents cannot recover stage order from JSON dump; must READ plate file.",
       "repro": "list action PRINT_JSON book"
     },
     {
@@ -88,7 +88,7 @@
       "id": "W6",
       "severity": "low",
       "area": "flow",
-      "title": "move/pin are index-identity only — duplicate steps ambiguous",
+      "title": "move/pin are index-identity only \u2014 duplicate steps ambiguous",
       "detail": "Two identical step tokens: FINDLINE pin hits first only; move by index is correct but agents thinking value-identity can reorder the wrong occurrence.",
       "repro": "book with two 'validate' lines; pin validate moves first only"
     }
@@ -101,12 +101,12 @@
     "Deduplicate step tokens or always operate by index after list"
   ],
   "language_gaps": [
-    "SYS NUM name — parse a named string var without LAST shuttle",
+    "SYS NUM name \u2014 parse a named string var without LAST shuttle",
     "INSERTLINE strict mode (OOR = miss, no silent append)",
     "PRINT_JSON escape newlines in string values",
     "Rename/docs emphasis DROP window vs DROPNTH index",
     "Atomic move form (drop+insert with index adjust built-in)"
   ],
-  "commit": null,
+  "commit": "fcedfb0af3c71f3a80b0cfd935b141ee40b8cc03",
   "ts": "2026-08-05T14:03:06Z"
 }
