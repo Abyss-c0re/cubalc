@@ -4267,6 +4267,115 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
+     * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
+     * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
+     * CUTALL_HIT = how many lines had the column. Usability: log column → FREQ
+     * without EACH LINE + CUT glue. */
+    if (kw(&L->cur,"CUTALL") || kw(&L->cur,"MAPCUT") || kw(&L->cur,"FIELDNALL") ||
+        kw(&L->cur,"CUTBAG") || kw(&L->cur,"BAGCUT") ||
+        kw(&L->cur,"COLALL") || kw(&L->cur,"COLUMNALL") || kw(&L->cur,"MAPCOLUMN") ||
+        kw(&L->cur,"COLBAG")){
+      char op[20];
+      int one_based = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[64];
+      long want = 0, lines = 0, hits = 0;
+      const char *lp, *lstart;
+      size_t olen = 0, sepn, lflen;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "COLALL") == 0 || strcmp(op, "COLUMNALL") == 0 ||
+          strcmp(op, "MAPCOLUMN") == 0 || strcmp(op, "COLBAG") == 0)
+        one_based = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; sep[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (one_based) {
+        if (want < 1) want = 1;
+        want = want - 1;
+      } else {
+        if (want < 0) want = 0;
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        lp = bag;
+        while (*lp) {
+          char line[512], cell[512];
+          const char *p, *hit, *start;
+          long idx = 0, found = 0;
+          size_t flen, take;
+          lstart = lp;
+          while (*lp && *lp != '\n') lp++;
+          lflen = (size_t)(lp - lstart);
+          take = lflen;
+          if (take >= sizeof line) take = sizeof line - 1;
+          memcpy(line, lstart, take);
+          line[take] = 0;
+          cell[0] = 0;
+          p = line;
+          if (sepn == 0) {
+            if (want == 0) {
+              snprintf(cell, sizeof cell, "%s", line);
+              found = 1;
+            }
+          } else {
+            while (*p) {
+              start = p;
+              hit = strstr(p, sep);
+              if (hit) {
+                flen = (size_t)(hit - p);
+                p = hit + sepn;
+              } else {
+                flen = strlen(p);
+                p = p + flen;
+              }
+              if (idx == want) {
+                if (flen >= sizeof cell) flen = sizeof cell - 1;
+                memcpy(cell, start, flen);
+                cell[flen] = 0;
+                found = 1;
+                break;
+              }
+              idx++;
+              if (!hit) break;
+            }
+          }
+          if (lines > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = strlen(cell);
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, cell, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, cell, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          if (found) hits++;
+          lines++;
+          if (*lp == '\n') lp++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "CUT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = lines;
+      var_set_num(vm, "LAST_N", lines);
+      var_set_num(vm, "CUTALL_N", lines);
+      var_set_num(vm, "CUTALL_HIT", hits);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIDLINES|SLICEBAG|FIELDSLICE|LINESLICE bag start [end]
      * — keep newline fields [start..end] inclusive, 0-based.
      * end omitted → through last field. start/end clamp; start>end → empty.
@@ -6073,7 +6182,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6349,6 +6458,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FREQ", "SYS FREQ|HIST [bag] [sep] — field frequency bag key:count · LAST_N=uniques"},
       {"SYS HIST", "SYS HIST [bag] [sep] — alias of SYS FREQ · severity/status rollups"},
       {"SYS COUNTS", "SYS COUNTS [bag] [sep] — alias of SYS FREQ"},
+      {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
+      {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
+      {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},
       {"SYS MIDLINES", "SYS MIDLINES|SLICEBAG bag start [end] — keep fields [start..end] 0-based"},
       {"SYS SLICEBAG", "SYS SLICEBAG bag start [end] — alias of SYS MIDLINES · middle bag window"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},

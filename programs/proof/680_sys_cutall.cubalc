@@ -1,0 +1,73 @@
+# SYS CUTALL / MAPCUT — peel Nth sep-field from every bag line
+# Usability: log columns → FREQ without EACH LINE + CUT
+
+HOLD_FLASH 1
+
+LET log = "ERROR disk full\nWARN mem high\nERROR timeout\nINFO boot ok\nFATAL panic now"
+
+# 0-based first token = severity
+SYS CUTALL log " " 0
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT CUTALL_N == 5
+ASSERT CUTALL_HIT == 5
+SYS EQS LAST "ERROR\nWARN\nERROR\nINFO\nFATAL"
+ASSERT LAST_N == 1
+
+# second token
+SYS CUTALL log " " 1
+ASSERT LAST_N == 5
+SYS EQS LAST "disk\nmem\ntimeout\nboot\npanic"
+ASSERT LAST_N == 1
+
+# missing column → empty field, still counted as line
+SYS CUTALL log " " 5
+ASSERT LAST_N == 5
+ASSERT CUTALL_HIT == 0
+SYS EQS LAST "\n\n\n\n"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPCUT log " " 0
+ASSERT LAST_N == 5
+SYS EQS LAST "ERROR\nWARN\nERROR\nINFO\nFATAL"
+ASSERT LAST_N == 1
+
+# 1-based COLALL
+SYS COLALL log " " 1
+ASSERT LAST_N == 5
+SYS EQS LAST "ERROR\nWARN\nERROR\nINFO\nFATAL"
+ASSERT LAST_N == 1
+SYS COLUMNALL log " " 2
+ASSERT LAST_N == 5
+SYS EQS LAST "disk\nmem\ntimeout\nboot\npanic"
+ASSERT LAST_N == 1
+
+# CSV
+LET csv = "a,1,x\nb,2,y\nc,3,z"
+SYS CUTALL csv "," 1
+ASSERT LAST_N == 3
+SYS EQS LAST "1\n2\n3"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS CUTALL "" " " 0
+ASSERT LAST_N == 0
+ASSERT CUTALL_HIT == 0
+
+# empty sep → whole line as field 0 only
+SYS CUTALL "hi\nbye" "" 0
+ASSERT LAST_N == 2
+SYS EQS LAST "hi\nbye"
+ASSERT LAST_N == 1
+
+# agent pattern: severity column → FREQ rollup
+SYS CUTALL log " " 0
+LET sev = LAST
+SYS FREQ sev
+ASSERT FREQ_TOTAL == 5
+ASSERT FREQ_N == 4
+SYS EQS LAST "ERROR:2\nWARN:1\nINFO:1\nFATAL:1"
+ASSERT LAST_N == 1
+
+PRINT "sys_cutall ok"
