@@ -174,6 +174,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 144. ~~**`SYS CHUNK` / `BATCH`**~~ **done** (group bag fields into batches of n · work-list paging without EACH).
 145. ~~**`SYS WINDOW` / `SLIDE`**~~ **done** (overlapping windows of n bag fields · consecutive pairs/ngrams without EACH).
 146. ~~**`SYS STRIDE` / `EVERY`**~~ **done** (keep index%step==offset fields · multi-worker partition without EACH).
+147. ~~**`SYS ROTATE` / `ROTL` / `ROTR`**~~ **done** (cyclic bag field rotate · round-robin peers without EACH).
 
 ## Tick protocol
 

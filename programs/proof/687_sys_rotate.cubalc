@@ -1,0 +1,87 @@
+# SYS ROTATE / ROTL / ROTR — cyclic bag field rotation
+# Usability: round-robin peer/work queues without EACH+NTH rebuild
+# Complements REVL (full reverse) and STRIDE (partition)
+
+HOLD_FLASH 1
+
+LET peers = "a\nb\nc\nd"
+
+# left rotate by 1 (default direction)
+SYS ROTATE 1 peers
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT ROTATE_N == 4
+ASSERT ROTATE_K == 1
+SYS EQS LAST "b\nc\nd\na"
+ASSERT LAST_N == 1
+
+# left rotate by 2
+SYS ROTL 2 peers
+ASSERT ROTATE_K == 2
+SYS EQS LAST "c\nd\na\nb"
+ASSERT LAST_N == 1
+
+# right rotate by 1
+SYS ROTR 1 peers
+ASSERT ROTATE_K == 3
+SYS EQS LAST "d\na\nb\nc"
+ASSERT LAST_N == 1
+
+# RIGHT keyword on ROTATE
+SYS ROTATE RIGHT 1 peers
+SYS EQS LAST "d\na\nb\nc"
+ASSERT LAST_N == 1
+
+# LEFT keyword
+SYS ROTATE LEFT 1 peers
+SYS EQS LAST "b\nc\nd\na"
+ASSERT LAST_N == 1
+
+# k=0 identity
+SYS ROTATE 0 peers
+ASSERT ROTATE_K == 0
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# k mod n (full cycle)
+SYS ROTATE 4 peers
+ASSERT ROTATE_K == 0
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# negative k = opposite of left → right
+SYS ROTATE -1 peers
+SYS EQS LAST "d\na\nb\nc"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS ROTATE 1 ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single field
+SYS ROTATE 3 "only"
+ASSERT LAST_N == 1
+ASSERT ROTATE_K == 0
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# default k=1 when omitted after ROTATE (bare bag)
+# use ROTATE with explicit 1 for portability; CYCLE alias with 1
+SYS CYCLE 1 peers
+SYS EQS LAST "b\nc\nd\na"
+ASSERT LAST_N == 1
+
+# agent pattern: head peer → rotate for next round-robin
+SYS NTH 0 peers
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS ROTATE 1 peers
+LET peers = LAST
+SYS NTH 0 peers
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+PRINT "sys_rotate ok"

@@ -5148,6 +5148,87 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ROTATE|ROTL k [bag] — left-rotate bag fields by k (mod n) → LAST.
+     * SYS ROTR k [bag] — right-rotate. Optional LEFT|RIGHT after ROTATE.
+     * k may be negative (opposite dir). LAST_N/ROTATE_N = field count;
+     * ROTATE_K = normalized left-shift amount [0..n). Empty → "".
+     * Usability: round-robin peer/work queues without EACH+NTH rebuild.
+     * Complements REVL (full reverse) and STRIDE (partition). */
+    if (kw(&L->cur,"ROTATE") || kw(&L->cur,"ROTL") || kw(&L->cur,"ROTR") ||
+        kw(&L->cur,"ROTLEFT") || kw(&L->cur,"ROTRIGHT") || kw(&L->cur,"CYCLE") ||
+        kw(&L->cur,"ROLL") || kw(&L->cur,"SHIFTBAG") || kw(&L->cur,"BAGROT")){
+      char op[20];
+      int right = 0;
+      long k = 0, total = 0, knorm = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      enum { ROT_MAX = 256 };
+      const char *fstart[ROT_MAX];
+      size_t flens[ROT_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen;
+      long i, src;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "ROTR") == 0 || strcmp(op, "ROTRIGHT") == 0)
+        right = 1;
+      lex_next(L);
+      if (kw(&L->cur,"LEFT") || kw(&L->cur,"L") || kw(&L->cur,"CCW")) {
+        right = 0;
+        lex_next(L);
+      } else if (kw(&L->cur,"RIGHT") || kw(&L->cur,"R") || kw(&L->cur,"CW")) {
+        right = 1;
+        lex_next(L);
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        k = parse_expr(vm, L);
+      else
+        k = 1; /* default rotate by 1 */
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p && total < ROT_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          fstart[total] = start;
+          flens[total] = flen;
+          total++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (total > 0) {
+        long kk = k;
+        if (right) kk = -kk;
+        knorm = kk % total;
+        if (knorm < 0) knorm += total;
+        for (i = 0; i < total; i++) {
+          src = (i + knorm) % total;
+          if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          flen = flens[src];
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fstart[src], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, fstart[src], t);
+            olen += t;
+          }
+          out[olen] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = total;
+      var_set_num(vm, "LAST_N", total);
+      var_set_num(vm, "ROTATE_N", total);
+      var_set_num(vm, "ROTATE_K", knorm);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS JOINLINES|PASTE|MERGE sep [str|LAST] — join newline fields with sep.
      * Inverse of SYS SPLIT. LAST = joined string; LAST_N/JOIN_N = field count.
      * Empty sep concatenates with no delimiter.
@@ -6722,7 +6803,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -7017,6 +7098,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS STRIDE", "SYS STRIDE|EVERY step [offset] [bag] — keep index%step==offset fields"},
       {"SYS EVERY", "SYS EVERY step [offset] [bag] — alias of SYS STRIDE · worker partition"},
       {"SYS STEP", "SYS STEP step [offset] [bag] — alias of SYS STRIDE"},
+      {"SYS ROTATE", "SYS ROTATE|ROTL k [bag] — left-rotate bag fields by k · round-robin"},
+      {"SYS ROTL", "SYS ROTL k [bag] — alias of SYS ROTATE (left)"},
+      {"SYS ROTR", "SYS ROTR k [bag] — right-rotate bag fields by k"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},
