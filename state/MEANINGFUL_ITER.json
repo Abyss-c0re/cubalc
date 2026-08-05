@@ -5,13 +5,13 @@
   "item": "SYS DROPNTH / DROPAT drop bag field by index",
   "item_id": 106,
   "title": "SYS DROPNTH|DROPAT bag n drop 0-based field",
-  "commit": "5f7ecab6972c29c448972753b1a47a9c7fcc7478",
+  "commit": "ab8c77b6f0c01cbb6c5b3003adbabd06cc725d83",
   "summary": "SYS DROPNTH|DROPAT|REMOVEAT bag n drop 0-based field. Soft OOR LAST_N=0. Distinct from DROP first-n and REMOVELINE by value. Pairs with FINDLINE for locate-then-delete. selftest 73.",
   "proofs": [
     "647_sys_dropnth",
     "selftest n_pass=73"
   ],
-  "when": "2026-08-05T13:53:11Z",
+  "when": "2026-08-05T13:53:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5f7ecab6972c29c448972753b1a47a9c7fcc7478"
+  "sha": "ab8c77b6f0c01cbb6c5b3003adbabd06cc725d83"
 }
