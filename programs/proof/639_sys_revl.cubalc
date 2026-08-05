@@ -1,0 +1,64 @@
+# SYS REVL / REVLINES / TAC — reverse newline field order
+# Usability: newest-first logs / HEAD=latest after REVL without shell tac
+
+HOLD_FLASH 1
+
+# basic reverse
+SYS REVL "a\nb\nc"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS EQS LAST "c\nb\na"
+ASSERT LAST_N == 1
+
+# single field unchanged
+SYS REVL "only"
+ASSERT LAST_N == 1
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# empty
+SYS REVL ""
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# aliases
+SYS REVLINES "1\n2\n3\n4"
+ASSERT LAST_N == 4
+SYS EQS LAST "4\n3\n2\n1"
+ASSERT LAST_N == 1
+SYS TAC "x\ny"
+ASSERT LAST_N == 2
+SYS EQS LAST "y\nx"
+ASSERT LAST_N == 1
+SYS FLIPLINES "p\nq\nr"
+ASSERT LAST_N == 3
+SYS EQS LAST "r\nq\np"
+ASSERT LAST_N == 1
+
+# default hay LAST
+LET bag = "old\nmid\nnew"
+SYS REVL bag
+ASSERT LAST_N == 3
+SYS HEAD LAST
+SYS EQS LAST "new"
+ASSERT LAST_N == 1
+
+# double reverse is identity
+LET seq = "a\nb\nc\nd"
+SYS REVL seq
+SYS REVL LAST
+SYS EQS LAST seq
+ASSERT LAST_N == 1
+
+# agent pattern: chronological log (oldest first) → REVL so HEAD is latest
+LET log = "INFO boot\nWARN disk\nERROR boom"
+SYS GREPI "WARN" log
+SYS PUSH LAST "ERROR boom"
+# bag may be WARN disk\nERROR boom — REVL puts latest match first
+SYS REVL LAST
+SYS HEAD LAST
+SYS EQSI LAST "error boom"
+ASSERT LAST_N == 1
+
+PRINT "sys_revl ok"

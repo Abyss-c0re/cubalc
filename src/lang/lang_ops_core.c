@@ -2086,6 +2086,62 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS REVL|REVLINES|FLIPLINES [str|LAST] — reverse newline field order → LAST.
+     * LAST_N/REVL_N = field count. Cap 256 fields (same as SORT).
+     * Usability: newest-first logs / LIFO work bags with POP without shell tac. */
+    if (kw(&L->cur,"REVL") || kw(&L->cur,"REVLINES") || kw(&L->cur,"FLIPLINES") ||
+        kw(&L->cur,"REVERSELINES") || kw(&L->cur,"LINEREV") || kw(&L->cur,"TAC") ||
+        kw(&L->cur,"REVLINE")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { REVL_MAX = 256, REVL_FLEN = 192 };
+      char fields[REVL_MAX][REVL_FLEN];
+      int n = 0, i;
+      const char *p, *start;
+      size_t olen = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < REVL_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= REVL_FLEN) flen = REVL_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      for (i = n - 1; i >= 0; i--) {
+        size_t flen = strlen(fields[i]);
+        if (olen > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, fields[i], flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, fields[i], take);
+          olen += take;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "REVL_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS JOINLINES|PASTE|MERGE sep [str|LAST] — join newline fields with sep.
      * Inverse of SYS SPLIT. LAST = joined string; LAST_N/JOIN_N = field count.
      * Empty sep concatenates with no delimiter.
@@ -2853,7 +2909,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3091,6 +3147,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
+      {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
+      {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
+      {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},
       {"SYS JOINLINES", "SYS JOINLINES|PASTE sep [str] — join newline fields with sep (anti-SPLIT)"},
       {"SYS APPEND", "SYS APPEND|LOG path data — append line to file · history/audit log"},
       {"SYS LOG", "SYS LOG path data — alias of SYS APPEND"},
