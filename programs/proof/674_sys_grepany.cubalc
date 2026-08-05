@@ -1,0 +1,66 @@
+# SYS GREPANY / GREPOR — keep bag fields matching any needle
+# Usability: multi-severity log triage without chained GREP/UNION
+
+HOLD_FLASH 1
+
+LET log = "INFO boot\nERROR disk\nWARN mem\nFATAL panic\nDEBUG ok\nerror soft"
+
+# multi-needle keep
+SYS GREPANY log "ERROR" "FATAL" "WARN"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT GREPANY_N == 3
+SYS EQS LAST "ERROR disk\nWARN mem\nFATAL panic"
+ASSERT LAST_N == 1
+
+# single needle behaves like GREP
+SYS GREPANY log "DEBUG"
+ASSERT LAST_N == 1
+SYS EQS LAST "DEBUG ok"
+ASSERT LAST_N == 1
+
+# no match → empty
+SYS GREPANY log "CRIT"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# case-insensitive
+SYS GREPANYI log "error" "fatal"
+ASSERT LAST_N == 3
+SYS EQS LAST "ERROR disk\nFATAL panic\nerror soft"
+ASSERT LAST_N == 1
+
+SYS GREPOR I log "warn"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN mem"
+ASSERT LAST_N == 1
+
+# aliases
+SYS GREPOR log "INFO" "DEBUG"
+ASSERT LAST_N == 2
+SYS EQS LAST "INFO boot\nDEBUG ok"
+ASSERT LAST_N == 1
+
+SYS MULTIGREP log "WARN"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN mem"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS GREPANY "" "x"
+ASSERT LAST_N == 0
+
+# no needles → keep all
+SYS GREPANY log
+ASSERT LAST_N == 6
+
+# agent pattern: severity triage then count
+SYS GREPANY log "ERROR" "FATAL"
+LET hits = LAST
+SYS LINES hits
+ASSERT LAST_N == 2
+SYS GREPANYI log "error"
+ASSERT LAST_N == 2
+
+PRINT "sys_grepany ok"

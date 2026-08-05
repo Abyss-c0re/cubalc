@@ -2740,6 +2740,112 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS GREPANY|GREPOR|MULTIGREP [I] bag n1 [n2…] — keep fields matching any needle.
+     * SYS GREPANYI — case-insensitive. Up to 8 needles. Empty needle list → keep all.
+     * LAST_N/GREP_N = kept count.
+     * Usability: multi-severity log triage without chained GREP/UNION glue. */
+    if (kw(&L->cur,"GREPANY") || kw(&L->cur,"GREPOR") || kw(&L->cur,"MULTIGREP") ||
+        kw(&L->cur,"ANYGREP") || kw(&L->cur,"GREPONEOF") || kw(&L->cur,"MATCHANY") ||
+        kw(&L->cur,"GREPANYI") || kw(&L->cur,"GREPORI") || kw(&L->cur,"MULTIGREPI")){
+      char op[20];
+      int icase = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char needles[8][128];
+      int nn = 0, i;
+      const char *p, *start;
+      size_t olen = 0, flen;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "GREPANYI") == 0 || strcmp(op, "GREPORI") == 0 ||
+          strcmp(op, "MULTIGREPI") == 0)
+        icase = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      while (nn < 8 && (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+                        L->cur.kind == TK_NUM)) {
+        if (L->cur.kind == TK_NUM) {
+          snprintf(needles[nn], sizeof needles[0], "%ld", L->cur.num);
+          lex_next(L);
+          nn++;
+        } else {
+          if (resolve_str_arg(vm, L, needles[nn], sizeof needles[0]) != 0)
+            break;
+          nn++;
+        }
+      }
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              hit = 1; /* no needles → keep all */
+            } else {
+              for (i = 0; i < nn && !hit; i++) {
+                if (needles[i][0] == 0) {
+                  hit = 1;
+                } else if (!icase) {
+                  if (strstr(field, needles[i]) != NULL) hit = 1;
+                } else {
+                  size_t nl = strlen(needles[i]), fi, j;
+                  for (fi = 0; field[fi] && !hit; fi++) {
+                    for (j = 0; j < nl; j++) {
+                      char a = field[fi + j], b = needles[i][j];
+                      if (!a) break;
+                      if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                      if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                      if (a != b) break;
+                    }
+                    if (j == nl) hit = 1;
+                  }
+                }
+              }
+            }
+            if (hit) {
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + flen < sizeof out) {
+                memcpy(out + olen, start, flen);
+                olen += flen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, start, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GREP", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "GREP_N", kept);
+      var_set_num(vm, "GREPANY_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TAKE|FIRSTN n [str|LAST] — first n newline fields → LAST.
      * SYS DROP|SKIP|REST n [str] — drop first n fields (keep the rest).
      * LAST_N/TAKE_N = kept count. n<=0: TAKE empty / DROP all.
@@ -5614,7 +5720,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5849,6 +5955,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
       {"SYS GREPI", "SYS GREPI|IGREP|GREP I needle [str] — case-insensitive GREP"},
       {"SYS GREPVI", "SYS GREPVI|VGREPI needle [str] — case-insensitive invert GREP"},
+      {"SYS GREPANY", "SYS GREPANY|GREPOR bag n1 [n2…] — keep fields matching any needle"},
+      {"SYS GREPOR", "SYS GREPOR bag n1 [n2…] — alias of SYS GREPANY · multi-severity triage"},
+      {"SYS GREPANYI", "SYS GREPANYI|GREPORI bag n1 [n2…] — case-insensitive GREPANY"},
       {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
       {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
