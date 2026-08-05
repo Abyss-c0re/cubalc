@@ -1811,6 +1811,7 @@ int main(int argc, char **argv) {
       {"sys_prefixall", "programs/proof/667_sys_prefixall.cubalc", "SYS PREFIXALL/SUFFIXALL tag bag fields"},
       {"sys_fill", "programs/proof/668_sys_fill.cubalc", "SYS FILL n value bag of repeated fields"},
       {"sys_enumerate", "programs/proof/669_sys_enumerate.cubalc", "SYS ENUMERATE index-prefix bag fields"},
+      {"sys_squeeze", "programs/proof/670_sys_squeeze.cubalc", "SYS SQUEEZE drop empty bag fields"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2085,6 +2086,8 @@ int main(int argc, char **argv) {
       {"SYS FILL", "host", "SYS FILL|REPEATL n value — bag of n copies of value"},
       {"SYS ENUMERATE", "host", "SYS ENUMERATE|NUMBER bag [start] [sep] — index-prefix fields"},
       {"SYS NUMBER", "host", "SYS NUMBER bag [start] [sep] — alias of SYS ENUMERATE"},
+      {"SYS SQUEEZE", "host", "SYS SQUEEZE|COMPACT [BLANK] bag — drop empty/blank fields"},
+      {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path — mtime epoch → LAST_N · soft miss"},
@@ -3163,6 +3166,8 @@ int main(int argc, char **argv) {
       {"SYS FILL", "host", "SYS FILL n value bag of n copies"},
       {"SYS ENUMERATE", "host", "SYS ENUMERATE index-prefix bag fields"},
       {"SYS NUMBER", "host", "SYS NUMBER alias of SYS ENUMERATE"},
+      {"SYS SQUEEZE", "host", "SYS SQUEEZE drop empty bag fields"},
+      {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
       {"SYS POP", "host", "SYS POP last bag field"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME file mtime epoch"},
@@ -3482,6 +3487,8 @@ int main(int argc, char **argv) {
       {"SYS FILL", "host", "SYS FILL|REPEATL n value bag of n copies"},
       {"SYS ENUMERATE", "host", "SYS ENUMERATE|NUMBER bag [start] [sep] index-prefix fields"},
       {"SYS NUMBER", "host", "SYS NUMBER alias of SYS ENUMERATE"},
+      {"SYS SQUEEZE", "host", "SYS SQUEEZE|COMPACT [BLANK] bag drop empty/blank fields"},
+      {"SYS COMPACT", "host", "SYS COMPACT alias of SYS SQUEEZE"},
       {"SYS POP", "host", "SYS POP|POPLINE bag last field → LAST rest→POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path mtime epoch soft miss"},
@@ -3616,6 +3623,7 @@ int main(int argc, char **argv) {
       {"programs/proof/667_sys_prefixall.cubalc", "sys_prefixall", "SYS PREFIXALL/SUFFIXALL tag bag fields"},
       {"programs/proof/668_sys_fill.cubalc", "sys_fill", "SYS FILL n value bag of repeated fields"},
       {"programs/proof/669_sys_enumerate.cubalc", "sys_enumerate", "SYS ENUMERATE index-prefix bag fields"},
+      {"programs/proof/670_sys_squeeze.cubalc", "sys_squeeze", "SYS SQUEEZE drop empty bag fields"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

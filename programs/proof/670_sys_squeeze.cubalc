@@ -1,0 +1,77 @@
+# SYS SQUEEZE / COMPACT — drop empty (or blank) bag fields
+# Usability: clean VALS/SPLIT/LIST bags without EACH rebuild
+
+HOLD_FLASH 1
+
+# drop empty fields (keep real content)
+SYS SQUEEZE "a\n\nb\n\nc"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT SQUEEZE_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# leading/trailing empties
+SYS SQUEEZE "\na\n\nb\n"
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# all empty → empty bag
+SYS SQUEEZE "\n\n"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# no empties unchanged
+SYS SQUEEZE "x\ny"
+ASSERT LAST_N == 2
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+
+# BLANK mode: also drop whitespace-only
+SYS SQUEEZE BLANK "a\n  \nb\n\t\nc"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+SYS SQUEEZE NB " \n\nx\n  "
+ASSERT LAST_N == 1
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# without BLANK, whitespace fields kept
+SYS SQUEEZE "a\n  \nb"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\n  \nb"
+ASSERT LAST_N == 1
+
+# aliases
+SYS COMPACT "p\n\nq"
+ASSERT LAST_N == 2
+SYS EQS LAST "p\nq"
+ASSERT LAST_N == 1
+
+SYS DROPEMPTY "\nz"
+ASSERT LAST_N == 1
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+SYS DROPBLANK "a\n \nb"
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# empty input
+SYS SQUEEZE ""
+ASSERT LAST_N == 0
+
+# agent pattern: peel VALS then clean missing statuses
+LET board = "alice:ok\nbob:\ncarol:busy"
+SYS VALS board
+SYS SQUEEZE LAST
+# bob had empty status — dropped; alice ok, carol busy remain
+SYS EQS LAST "ok\nbusy"
+ASSERT LAST_N == 1
+
+PRINT "sys_squeeze ok"

@@ -3648,6 +3648,74 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SQUEEZE|COMPACT|DROPEMPTY [BLANK|NB] [bag]
+     * — drop empty newline fields (and whitespace-only if BLANK/NB).
+     * LAST_N = kept count. Usability: clean VALS/SPLIT/LIST bags without EACH. */
+    if (kw(&L->cur,"SQUEEZE") || kw(&L->cur,"COMPACT") || kw(&L->cur,"DROPEMPTY") ||
+        kw(&L->cur,"DROPBLANK") || kw(&L->cur,"TRIMLINES") || kw(&L->cur,"STRIPLINES") ||
+        kw(&L->cur,"NOTEMPTYL") || kw(&L->cur,"KEEPEMPTY0")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen;
+      long kept = 0;
+      int drop_blank = 0;
+      char op[20];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "DROPBLANK") == 0 || strcmp(op, "TRIMLINES") == 0 ||
+          strcmp(op, "STRIPLINES") == 0)
+        drop_blank = 1;
+      lex_next(L);
+      if (kw(&L->cur,"BLANK") || kw(&L->cur,"NB") || kw(&L->cur,"WS") ||
+          kw(&L->cur,"WHITESPACE") || kw(&L->cur,"TRIM") || kw(&L->cur,"NONBLANK")) {
+        drop_blank = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int drop = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == 0) {
+            drop = 1;
+          } else if (drop_blank) {
+            size_t i;
+            drop = 1;
+            for (i = 0; i < flen; i++) {
+              char c = start[i];
+              if (c != ' ' && c != '\t' && c != '\r') { drop = 0; break; }
+            }
+          }
+          if (!drop) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SQUEEZE_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
      * Lex SORT orders "10" before "2"; SORTN orders by integer value.
      * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
@@ -5390,7 +5458,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5646,6 +5714,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FILL", "SYS FILL|REPEATL n value — bag of n copies of value → LAST (cap 256)"},
       {"SYS ENUMERATE", "SYS ENUMERATE|NUMBER bag [start] [sep] — index-prefix each field (default 0:)"},
       {"SYS NUMBER", "SYS NUMBER bag [start] [sep] — alias of SYS ENUMERATE · ranked plates"},
+      {"SYS SQUEEZE", "SYS SQUEEZE|COMPACT [BLANK] [bag] — drop empty (or blank) fields → LAST"},
+      {"SYS COMPACT", "SYS COMPACT [BLANK] [bag] — alias of SYS SQUEEZE · clean VALS/SPLIT bags"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
       {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},
