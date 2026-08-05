@@ -556,6 +556,58 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS MTIME|MODTIME path — st_mtime epoch seconds → LAST_N/MTIME; soft miss OK=0.
+     * SYS AGE|FILEAGE path — now - mtime seconds → LAST_N/AGE (0 if miss or future).
+     * Usability: lease/plate freshness without shell stat. */
+    if (kw(&L->cur,"MTIME") || kw(&L->cur,"MODTIME") || kw(&L->cur,"MODIFIED") ||
+        kw(&L->cur,"FILETIME") || kw(&L->cur,"AGE") || kw(&L->cur,"FILEAGE") ||
+        kw(&L->cur,"AGESEC") || kw(&L->cur,"STALE")){
+      int want_age = (kw(&L->cur,"AGE") || kw(&L->cur,"FILEAGE") ||
+                      kw(&L->cur,"AGESEC") || kw(&L->cur,"STALE"));
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, want_age ? "SYS AGE \"path\"|LAST" : "SYS MTIME \"path\"|LAST");
+        return -1;
+      }
+      if (cubalc_host_mtime(path, &hr) != 0 || !hr.ok) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "MTIME", 0);
+        var_set_num(vm, "AGE", 0);
+        vm->last_n = 0;
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", "");
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        }
+        bump(vm); return 1;
+      }
+      if (want_age) {
+        long now = (long)time(NULL);
+        long age = now - hr.n;
+        if (age < 0) age = 0;
+        vm->last_n = age;
+        var_set_num(vm, "LAST_N", age);
+        var_set_num(vm, "AGE", age);
+        var_set_num(vm, "MTIME", hr.n);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      } else {
+        char buf[40];
+        snprintf(buf, sizeof buf, "%ld", hr.n);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "MTIME", hr.n);
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", buf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      }
+      bump(vm); return 1;
+    }
     /* SYS MKDIR|MAKEDIR path — mkdir -p; OK if dir already exists.
      * Usability: agents create STATE/TMP plate trees without shell. */
     if (kw(&L->cur,"MKDIR") || kw(&L->cur,"MAKEDIR") || kw(&L->cur,"MAKE_DIR") ||
@@ -2598,7 +2650,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2856,6 +2908,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EMPTY", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length · soft plate IF"},
       {"SYS BLANK", "SYS BLANK|ISBLANK [str] — LAST_N 1 if empty or whitespace only"},
       {"SYS NONEMPTY", "SYS NONEMPTY|NOTEMPTY [str] — LAST_N 1 if any character"},
+      {"SYS MTIME", "SYS MTIME|MODTIME path — file mtime epoch → LAST_N · soft miss"},
+      {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

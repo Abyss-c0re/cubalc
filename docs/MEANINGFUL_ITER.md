@@ -120,6 +120,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 90. ~~**`SYS CUT` / `COLUMN`**~~ **done** (Nth field by sep · CSV/path without SPLIT+NTH).
 91. ~~**`SYS EMPTY` / `BLANK`**~~ **done** (zero-length / whitespace probes · soft plate IF).
 92. ~~**`SYS POP` / `POPLINE`**~~ **done** (peel last bag field · dual of PUSH · POP_REST).
+93. ~~**`SYS MTIME` / `AGE`**~~ **done** (file mtime epoch / age seconds · plate freshness).
 
 ## Tick protocol
 

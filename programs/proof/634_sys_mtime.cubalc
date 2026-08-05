@@ -1,0 +1,62 @@
+# SYS MTIME / AGE — plate freshness without shell stat
+# Usability: lease age, cache invalidation, soft miss on missing path
+
+HOLD_FLASH 1
+
+# soft miss
+SYS MTIME "/no/such/cubalc_mtime_path_xyz"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT MTIME == 0
+
+SYS AGE "/no/such_age_path_xyz"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT AGE == 0
+
+# create plate and read mtime
+SYS TMP
+SYS JOIN LAST "mi_mtime_probe.txt"
+LET p = LAST
+SYS WRITE p "fresh"
+SYS MTIME p
+ASSERT OK == 1
+ASSERT LAST_N > 1000000000
+ASSERT MTIME == LAST_N
+# LAST is decimal string of mtime
+SYS NONEMPTY LAST
+ASSERT LAST_N == 1
+SYS NUM
+ASSERT LAST_N == MTIME
+
+# AGE is small for just-written file
+SYS AGE p
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+ASSERT LAST_N < 60
+ASSERT AGE == LAST_N
+# MTIME still filled on AGE
+ASSERT MTIME > 1000000000
+
+# MODTIME / FILEAGE aliases
+SYS MODTIME p
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS FILEAGE p
+ASSERT OK == 1
+ASSERT AGE < 60
+
+# TOUCH refreshes mtime (age should stay small)
+SYS TOUCH p
+SYS AGE p
+ASSERT LAST_N < 60
+
+# directory mtime works
+SYS MTIME "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+
+# cleanup
+SYS RM p
+
+PRINT "sys_mtime ok"

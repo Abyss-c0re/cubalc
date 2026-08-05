@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 59,
-  "version": "1.15.84-usability",
-  "item": "SYS POP / POPLINE bag field peel",
-  "item_id": 92,
-  "title": "SYS POP peels last bag field with POP_REST",
-  "commit": "3c27c2febc93836c2d5f1a9f106c22b232d5d408",
-  "summary": "SYS POP|POPLINE bag \u2192 LAST=last field, POP_REST/REST=remaining, LAST_N=found, POP_N=rest count; dual of PUSH.",
+  "iter": 60,
+  "version": "1.15.85-usability",
+  "item": "SYS MTIME / AGE plate freshness",
+  "item_id": 93,
+  "title": "SYS MTIME|AGE file mtime and age seconds",
+  "commit": "pending",
+  "summary": "SYS MTIME|MODTIME path \u2192 epoch LAST_N; SYS AGE|FILEAGE \u2192 seconds since mtime; soft miss OK=0; lease/plate freshness without shell stat.",
   "proofs": [
-    "633_sys_pop",
-    "selftest n_pass=59"
+    "634_sys_mtime",
+    "selftest n_pass=60"
   ],
-  "when": "2026-08-05T11:33:51Z",
+  "when": "2026-08-05T11:44:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3c27c2febc93836c2d5f1a9f106c22b232d5d408"
+  "sha": "pending"
 }

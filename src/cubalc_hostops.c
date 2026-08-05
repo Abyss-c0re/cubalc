@@ -134,6 +134,33 @@ int cubalc_host_path_kind(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS MTIME / AGE — plate freshness without shell stat.
+ * r->n = st_mtime (epoch seconds). Soft miss: ok=0 code=0. */
+int cubalc_host_mtime(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "mtime: empty path");
+    r->code = 0;
+    r->n = 0;
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "mtime: missing");
+    r->code = 0;
+    r->n = 0;
+    r->ok = 0;
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = (long)st.st_mtime;
+  r->ok = 1;
+  if (S_ISREG(st.st_mode)) r->code = 1;
+  else if (S_ISDIR(st.st_mode)) r->code = 2;
+  else r->code = 3;
+  return 0;
+}
+
 int cubalc_host_read(const char *path, cubalc_host_result *r) {
   r_clear(r);
   if (!path || !path[0]) { snprintf(r->err, sizeof r->err, "read: empty path"); return -1; }
