@@ -1804,6 +1804,7 @@ int main(int argc, char **argv) {
       {"sys_gcd", "programs/proof/660_sys_gcd.cubalc", "SYS GCD/LCM multi-arg host math"},
       {"sys_in", "programs/proof/661_sys_in.cubalc", "SYS IN/WITHIN numeric range membership"},
       {"sys_pow", "programs/proof/662_sys_pow.cubalc", "SYS POW/ISQRT host power and sqrt"},
+      {"sys_shuffle", "programs/proof/663_sys_shuffle.cubalc", "SYS SHUFFLE randomize bag field order"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2017,6 +2018,8 @@ int main(int argc, char **argv) {
       {"SYS RANDOM", "host", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS PICK", "host", "SYS PICK|CHOICE [str] — random newline field from bag"},
       {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
+      {"SYS SHUFFLE", "host", "SYS SHUFFLE|SHUF [str] — randomize newline bag order"},
+      {"SYS SHUF", "host", "SYS SHUF alias of SYS SHUFFLE"},
       {"SYS MIN", "host", "SYS MIN a b [c…] — host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX a b [c…] — host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi — bound x into [lo,hi]"},
@@ -3072,6 +3075,8 @@ int main(int argc, char **argv) {
       {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
       {"SYS PICK", "host", "SYS PICK random bag field"},
       {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
+      {"SYS SHUFFLE", "host", "SYS SHUFFLE randomize bag order"},
+      {"SYS SHUF", "host", "SYS SHUF alias of SYS SHUFFLE"},
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP bound into range"},
@@ -3374,6 +3379,8 @@ int main(int argc, char **argv) {
       {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
       {"SYS PICK", "host", "SYS PICK random bag field"},
       {"SYS CHOICE", "host", "SYS CHOICE alias of SYS PICK"},
+      {"SYS SHUFFLE", "host", "SYS SHUFFLE randomize bag order"},
+      {"SYS SHUF", "host", "SYS SHUF alias of SYS SHUFFLE"},
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi bound"},
@@ -3554,6 +3561,7 @@ int main(int argc, char **argv) {
       {"programs/proof/660_sys_gcd.cubalc", "sys_gcd", "SYS GCD/LCM multi-arg host math"},
       {"programs/proof/661_sys_in.cubalc", "sys_in", "SYS IN/WITHIN numeric range membership"},
       {"programs/proof/662_sys_pow.cubalc", "sys_pow", "SYS POW/ISQRT host power and sqrt"},
+      {"programs/proof/663_sys_shuffle.cubalc", "sys_shuffle", "SYS SHUFFLE randomize bag field order"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

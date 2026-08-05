@@ -150,6 +150,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 120. ~~**`SYS GCD` / `LCM`**~~ **done** (multi-arg gcd/lcm · reduce ratios / cycles without ISA soup).
 121. ~~**`SYS IN` / `WITHIN`**~~ **done** (inclusive numeric range membership · IF/guards without dual CMP).
 122. ~~**`SYS POW` / `ISQRT`**~~ **done** (integer power + floor sqrt · backoff/geometry without ISA soup).
+123. ~~**`SYS SHUFFLE` / `SHUF`**~~ **done** (Fisher–Yates bag shuffle · randomize peers/work without shell shuf).
 
 ## Tick protocol
 

@@ -1,0 +1,67 @@
+# SYS SHUFFLE / SHUF — Fisher–Yates shuffle of newline fields
+# Usability: randomize peer/work bags without shell shuf; pairs with PICK/TAKE
+
+HOLD_FLASH 1
+
+# empty
+SYS SHUFFLE ""
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT SHUFFLE_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single unchanged
+SYS SHUFFLE "only"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# multi: same multiset of fields (count + membership), order may change
+LET bag = "a
+b
+c
+d"
+SYS SHUFFLE bag
+ASSERT LAST_N == 4
+ASSERT SHUFFLE_N == 4
+LET out = LAST
+SYS HASLINE out "a"
+ASSERT LAST_N == 1
+SYS HASLINE out "b"
+ASSERT LAST_N == 1
+SYS HASLINE out "c"
+ASSERT LAST_N == 1
+SYS HASLINE out "d"
+ASSERT LAST_N == 1
+SYS LINES out
+ASSERT LAST_N == 4
+
+# aliases
+SYS SHUF bag
+ASSERT SHUFFLE_N == 4
+SYS SCRAMBLE bag
+ASSERT LAST_N == 4
+SYS RANDPERM bag
+ASSERT LAST_N == 4
+
+# bare LAST after RANGE
+SYS RANGE 1 5
+SYS SHUFFLE
+ASSERT LAST_N == 5
+SYS HASLINE LAST "3"
+ASSERT LAST_N == 1
+
+# agent pattern: shuffle peers then TAKE first 2 for canary
+LET peers = "alice
+bob
+carol
+dave"
+SYS SHUFFLE peers
+SYS TAKE 2
+ASSERT LAST_N == 2
+SYS LINES
+ASSERT LAST_N == 2
+
+PRINT "sys_shuffle ok"
