@@ -1,3 +1,13 @@
+## Meaningful — CLEAR_ERR wipe sticky soft errors — 2026-08-05
+
+### Usability
+- `CLEAR_ERR` [note] (aliases `CLEARERR` `WIPE_ERR` `RESET_ERR` `ERR_CLEAR`)
+- Wipes sticky `ERR` / `LAST_ERR` / `vm->err` so run plate `last_err` is clean after recovery
+- Does not rewrite `OK` (pair with `PASS` then `CLEAR_ERR`)
+- Optional note → LAST; bare → LAST=`cleared`
+- Proof: `programs/proof/589_clear_err.cubalc` · selftest id `clear_err`
+- Version: `1.15.38-usability`
+
 ## Meaningful — STATUS agent health plate — 2026-08-05
 
 ### Usability

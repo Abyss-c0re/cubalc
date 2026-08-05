@@ -1628,6 +1628,7 @@ int main(int argc, char **argv) {
       {"vars", "programs/proof/586_vars.cubalc", "VARS full var table JSON"},
       {"agent_boot", "programs/proof/587_agent_boot.cubalc", "INCLUDE agent_boot preamble"},
       {"status", "programs/proof/588_status.cubalc", "STATUS agent health plate"},
+      {"clear_err", "programs/proof/589_clear_err.cubalc", "CLEAR_ERR wipe sticky LAST_ERR"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1748,6 +1749,7 @@ int main(int argc, char **argv) {
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
+      {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT", "flow", "PRINT str|expr…"},
@@ -2124,6 +2126,8 @@ int main(int argc, char **argv) {
        "agent_boot stdlib preamble proof"},
       {"programs/proof/588_status.cubalc", "status",
        "STATUS cubalc.status.v1 agent health plate"},
+      {"programs/proof/589_clear_err.cubalc", "clear_err",
+       "CLEAR_ERR wipe sticky LAST_ERR after soft recovery"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2456,6 +2460,7 @@ int main(int argc, char **argv) {
       {"EXPECT", "flow", "EXPECT soft check · no fatal"},
       {"FAIL", "flow", "FAIL soft status OK=0"},
       {"PASS", "flow", "PASS soft status OK=1"},
+      {"CLEAR_ERR", "flow", "CLEAR_ERR wipe sticky LAST_ERR"},
       {"VERSION", "flow", "VERSION → LAST language version"},
       {"PRINT_JSON", "flow", "one JSON line for agents"},
       {"VARS", "flow", "VARS full var table JSON"},
@@ -2626,6 +2631,7 @@ int main(int argc, char **argv) {
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
+      {"CLEAR_ERR", "flow", "CLEAR_ERR [note] wipe sticky ERR/LAST_ERR after recovery"},
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
@@ -2651,6 +2657,7 @@ int main(int argc, char **argv) {
       {"programs/proof/579_fail_pass.cubalc", "fail", "FAIL/PASS soft status"},
       {"programs/proof/582_sys_which_lib.cubalc", "which", "SYS WHICH lib resolve"},
       {"programs/proof/588_status.cubalc", "status", "STATUS agent health plate"},
+      {"programs/proof/589_clear_err.cubalc", "clear_err", "CLEAR_ERR wipe sticky LAST_ERR"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -2899,7 +2906,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS · STATUS · PRINT_JSON · INCLUDE · ASYNC\n"
+      "    ASSERT|EXPECT|FAIL|PASS|CLEAR_ERR · STATUS · PRINT_JSON · INCLUDE · ASYNC\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

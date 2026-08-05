@@ -1,0 +1,31 @@
+# CLEAR_ERR — wipe sticky ERR/LAST_ERR after soft recovery
+# Usability: PASS restores OK but leaves plate last_err; CLEAR_ERR cleans it.
+
+HOLD_FLASH 1
+
+FAIL "peer not dialed"
+ASSERT OK == 0
+PASS "used mesh fallback"
+ASSERT OK == 1
+# sticky LAST_ERR still set after PASS (by design)
+STATUS
+ASSERT STATUS_OK == 1
+
+CLEAR_ERR "recovered clean"
+ASSERT OK == 1 "CLEAR_ERR does not flip OK"
+ASSERT LAST_N > 0 "optional note in LAST"
+
+STATUS
+ASSERT STATUS_OK == 1
+# plate last_err should be empty after CLEAR_ERR (checked via run plate)
+
+# EXPECT path too
+EXPECT 0 == 1 "soft probe"
+ASSERT OK == 0
+CLEAR_ERR
+ASSERT OK == 0 "CLEAR_ERR does not force OK=1"
+PASS "probe handled"
+CLEAR_ERR
+ASSERT OK == 1
+
+PRINT "clear_err ok"

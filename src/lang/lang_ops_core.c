@@ -1190,6 +1190,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
+      {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
       {"REQUIRE", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT", "PRINT str|expr…"},
@@ -1596,6 +1597,34 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     var_set_num(vm, "EXPECT_OK", 1);
     if (vm->trace) fprintf(vm->trace, "# pass: %s\n", msg);
+    bump(vm); return 1;
+  }
+  /* CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery.
+   * PASS restores OK but leaves LAST_ERR (agents read plate last_err); this
+   * intentionally clears so recovered paths show a clean plate. Does not set OK. */
+  if (kw(&L->cur,"CLEAR_ERR")||kw(&L->cur,"CLEARERR")||kw(&L->cur,"ERR_CLEAR")||
+      kw(&L->cur,"WIPE_ERR")||kw(&L->cur,"RESET_ERR")||kw(&L->cur,"CLRERR")){
+    char note[120];
+    lex_next(L);
+    note[0] = 0;
+    if (L->cur.kind == TK_STR){
+      snprintf(note, sizeof note, "%s", L->cur.text);
+      lex_next(L);
+    }
+    var_set_str(vm, "ERR", "");
+    var_set_str(vm, "LAST_ERR", "");
+    vm->err[0] = 0;
+    if (note[0]) {
+      var_set_str(vm, "LAST", note);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", note);
+      vm->last_n = (long)strlen(note);
+    } else {
+      var_set_str(vm, "LAST", "cleared");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "cleared");
+      vm->last_n = 7;
+    }
+    var_set_num(vm, "LAST_N", vm->last_n);
+    if (vm->trace) fprintf(vm->trace, "# clear_err %s\n", note[0] ? note : "cleared");
     bump(vm); return 1;
   }
   /* VERSION — agent/human plate: language version string → LAST / VERSION / OK */
