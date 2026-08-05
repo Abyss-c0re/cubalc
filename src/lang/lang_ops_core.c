@@ -2585,6 +2585,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS COUNTLINE|COUNTFIELD bag needle — count exact field matches → LAST_N.
+     * SYS COUNTLINEI — case-insensitive exact field. Distinct from SYS LINES/COUNTLINES
+     * (total fields) and HASLINE (0|1). Usability: how many idle peers / ERROR lines. */
+    if (kw(&L->cur,"COUNTLINE") || kw(&L->cur,"COUNTFIELD") || kw(&L->cur,"NMATCH") ||
+        kw(&L->cur,"OCCUR") || kw(&L->cur,"OCCURS") || kw(&L->cur,"TALLY") ||
+        kw(&L->cur,"COUNTLINEI") || kw(&L->cur,"COUNTFIELDI") || kw(&L->cur,"NMATCHI") ||
+        kw(&L->cur,"TALLYI") || kw(&L->cur,"OCCURI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "COUNTLINEI") == 0 || strcmp(op, "COUNTFIELDI") == 0 ||
+                   strcmp(op, "NMATCHI") == 0 || strcmp(op, "TALLYI") == 0 ||
+                   strcmp(op, "OCCURI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+            } else {
+              size_t i; match = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { match = 0; break; }
+              }
+            }
+          }
+          if (match) hit++;
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "COUNTLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS FINDLINE|LINEINDEX bag needle — 0-based index of first exact field → LAST_N.
      * Miss → LAST_N=-1, OK=0. SYS FINDLINEI — case-insensitive exact field.
      * Completes HASLINE/REMOVELINE for locate-then-NTH without EACH glue. */
@@ -3606,7 +3665,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3875,6 +3934,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
       {"SYS HASLINE", "SYS HASLINE|HASFIELD bag needle — exact field membership · LAST_N 0|1"},
       {"SYS HASLINEI", "SYS HASLINEI|ILINEIN bag needle — case-insensitive exact field"},
+      {"SYS COUNTLINE", "SYS COUNTLINE|COUNTFIELD bag needle — count exact field matches → LAST_N"},
+      {"SYS COUNTLINEI", "SYS COUNTLINEI bag needle — case-insensitive field match count"},
       {"SYS FINDLINE", "SYS FINDLINE|LINEINDEX bag needle — 0-based exact field index · -1 miss"},
       {"SYS LINEINDEX", "SYS LINEINDEX bag needle — alias of SYS FINDLINE"},
       {"SYS FINDLINEI", "SYS FINDLINEI bag needle — case-insensitive field index"},

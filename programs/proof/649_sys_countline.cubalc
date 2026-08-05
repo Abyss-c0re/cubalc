@@ -1,0 +1,62 @@
+# SYS COUNTLINE / COUNTFIELD — count exact bag field matches → LAST_N
+# Usability: how many idle peers / ERROR lines without EACH+EQS tally
+# Distinct from SYS LINES (total fields) and HASLINE (0|1 membership)
+
+HOLD_FLASH 1
+
+# basic counts
+SYS COUNTLINE "a\nb\na\nc\na" "a"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS COUNTLINE "a\nb\na\nc\na" "b"
+ASSERT LAST_N == 1
+SYS COUNTLINE "a\nb\na\nc\na" "z"
+ASSERT LAST_N == 0
+
+# exact field only (not substring of a longer field)
+SYS COUNTLINE "ERROR boom\nWARN\nERROR" "ERROR"
+ASSERT LAST_N == 1
+SYS COUNTLINE "ERROR boom\nWARN\nERROR" "ERROR boom"
+ASSERT LAST_N == 1
+SYS COUNTLINE "ERROR boom\nWARN" "ERROR"
+ASSERT LAST_N == 0
+
+# empty / miss
+SYS COUNTLINE "" "x"
+ASSERT LAST_N == 0
+SYS COUNTLINE "a\nb" ""
+ASSERT LAST_N == 0
+
+# case-insensitive
+SYS COUNTLINEI "Idle\nbusy\nIDLE\nidLe" "idle"
+ASSERT LAST_N == 3
+SYS COUNTLINE I "Warn\nERROR\nerror" "error"
+ASSERT LAST_N == 2
+SYS COUNTLINE "Warn\nERROR\nerror" "error"
+ASSERT LAST_N == 1
+
+# aliases
+SYS COUNTFIELD "x\ny\nx" "x"
+ASSERT LAST_N == 2
+SYS TALLY "p\nq\np\np" "p"
+ASSERT LAST_N == 3
+SYS NMATCH "1\n2\n1" "1"
+ASSERT LAST_N == 2
+
+# agent pattern: count idle peers before dispatch
+LET bag = "peer1:idle\npeer2:busy\npeer3:idle\npeer4:idle"
+SYS COUNTLINE bag "peer1:idle"
+ASSERT LAST_N == 1
+SYS COUNTLINE bag "peer2:busy"
+ASSERT LAST_N == 1
+SYS COUNTLINE bag "missing:peer"
+ASSERT LAST_N == 0
+# substring filter then exact tally on kept bag
+SYS GREP ":idle" bag
+ASSERT LAST_N == 3
+SYS COUNTLINE LAST "peer3:idle"
+ASSERT LAST_N == 1
+SYS COUNTLINE LAST "peer2:busy"
+ASSERT LAST_N == 0
+
+PRINT "sys_countline ok"

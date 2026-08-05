@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 74,
-  "version": "1.15.99-usability",
-  "item": "SYS MOVELINE / MOVEAT move bag field to index",
-  "item_id": 107,
-  "title": "SYS MOVELINE|MOVEAT bag from to move field final index",
-  "commit": "3e81766db3b8b087b8dc443c15350846f5d851b0",
-  "summary": "SYS MOVELINE|MOVEAT|REORDER bag from to move 0-based field to final index. Soft miss from OOR/to<0. to>=n clamps end. Promote/demote priority after FINDLINE. selftest 74.",
+  "iter": 75,
+  "version": "1.15.100-usability",
+  "item": "SYS COUNTLINE / COUNTFIELD count exact bag field matches",
+  "item_id": 108,
+  "title": "SYS COUNTLINE|COUNTFIELD bag needle count exact fields",
+  "commit": "74b837f3bc5d9e5fd3baa918e8501789f8db2228",
+  "summary": "SYS COUNTLINE|COUNTFIELD|TALLY bag needle count exact field matches \u2192 LAST_N. COUNTLINEI case-insensitive. Distinct from LINES total and HASLINE 0|1. selftest 75.",
   "proofs": [
-    "648_sys_moveline",
-    "selftest n_pass=74"
+    "649_sys_countline",
+    "selftest n_pass=75"
   ],
-  "when": "2026-08-05T14:05:53Z",
+  "when": "2026-08-05T14:14:09Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3e81766db3b8b087b8dc443c15350846f5d851b0"
+  "sha": "74b837f3bc5d9e5fd3baa918e8501789f8db2228"
 }
