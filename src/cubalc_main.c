@@ -1657,6 +1657,7 @@ int main(int argc, char **argv) {
       {"sys_pid_host", "programs/proof/595_sys_pid_hostname.cubalc", "SYS PID/HOSTNAME host identity"},
       {"sys_user", "programs/proof/596_sys_user_uid_home.cubalc", "SYS USER/UID/HOME user identity"},
       {"default", "programs/proof/597_default.cubalc", "DEFAULT set-if-unset for INCLUDE libs"},
+      {"defined", "programs/proof/598_defined.cubalc", "DEFINED var existence probe"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1771,6 +1772,7 @@ int main(int argc, char **argv) {
       {"ENERGYFLOW", "matrix", "multi-hop energy flow"},
       {"LET", "flow", "LET name = expr | string"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
+      {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"LOOP", "flow", "LOOP n … END"},
       {"WHILE", "flow", "WHILE expr … END"},
       {"FOR", "flow", "FOR … END"},
@@ -2276,6 +2278,8 @@ int main(int argc, char **argv) {
        "SYS USER UID HOME user identity without shell"},
       {"programs/proof/597_default.cubalc", "default",
        "DEFAULT name = value set-only-if-unset"},
+      {"programs/proof/598_defined.cubalc", "defined",
+       "DEFINED name var existence probe"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2605,6 +2609,7 @@ int main(int argc, char **argv) {
       {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
       {"DEFAULT", "flow", "DEFAULT name = value if unset"},
+      {"DEFINED", "flow", "DEFINED name → LAST_N 0|1"},
       {"ASSERT", "flow", "ASSERT expr optional why-string"},
       {"EXPECT", "flow", "EXPECT soft check · no fatal"},
       {"FAIL", "flow", "FAIL soft status OK=0"},
@@ -2784,6 +2789,7 @@ int main(int argc, char **argv) {
       {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
+      {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
@@ -2832,6 +2838,7 @@ int main(int argc, char **argv) {
       {"programs/proof/595_sys_pid_hostname.cubalc", "sys_pid_host", "SYS PID/HOSTNAME identity"},
       {"programs/proof/596_sys_user_uid_home.cubalc", "sys_user", "SYS USER/UID/HOME identity"},
       {"programs/proof/597_default.cubalc", "default", "DEFAULT set-if-unset INCLUDE-safe"},
+      {"programs/proof/598_defined.cubalc", "defined", "DEFINED var existence probe"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -3084,7 +3091,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT · STATUS · PRINT_JSON · INCLUDE\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED · STATUS · PRINT_JSON · INCLUDE\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

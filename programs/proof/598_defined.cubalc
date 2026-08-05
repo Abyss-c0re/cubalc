@@ -1,0 +1,32 @@
+# DEFINED — probe whether a program var exists (pair with DEFAULT)
+# Usability: agents EXPECT/branch without guessing names from VARS
+
+HOLD_FLASH 1
+
+DEFINED MISSING_VAR
+ASSERT OK == 1
+ASSERT LAST_N == 0 "missing → 0"
+ASSERT DEFINED == 0
+
+LET PORT = 42
+DEFINED PORT
+ASSERT LAST_N == 1 "present → 1"
+ASSERT DEFINED == 1
+
+# DEFAULT creates the var; DEFINED sees it
+DEFAULT PEER = 7
+DEFINED PEER
+ASSERT DEFINED == 1
+ASSERT PEER == 7
+
+# still true after skip-default
+DEFAULT PEER = 99
+DEFINED PEER
+ASSERT DEFINED == 1
+ASSERT PEER == 7
+
+# ISSET alias
+ISSET PORT
+ASSERT LAST_N == 1
+
+PRINT "defined ok" PORT PEER

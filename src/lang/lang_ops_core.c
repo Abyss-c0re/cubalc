@@ -1357,6 +1357,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name = expr|string"},
       {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
+      {"DEFINED", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2008,6 +2009,32 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
+  }
+  /* DEFINED name — does a program var exist? (pair with DEFAULT)
+   * Usability: agents branch without guessing; EXPECT DEFINED before use.
+   * LAST_N/DEFINED = 1 if present, 0 if missing; OK always 1. */
+  if (kw(&L->cur,"DEFINED")||kw(&L->cur,"ISDEF")||kw(&L->cur,"ISDEFINED")||
+      kw(&L->cur,"ISSET")||kw(&L->cur,"HAS_VAR")||kw(&L->cur,"VAR_EXISTS")){
+    char name[48];
+    long n;
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT && L->cur.kind!=TK_STR){
+      fail(vm,"DEFINED name"); return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    n = (var_get(vm, name, 0) != NULL) ? 1L : 0L;
+    var_set_num(vm, "DEFINED", n);
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = n;
+    snprintf(buf, sizeof buf, "%ld", n);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# defined %s → %ld\n", name, n);
+    bump(vm); return 1;
   }
   /* DEFAULT name = expr|str — assign only if name is not yet defined.
    * Usability: INCLUDE libs set knobs without clobbering caller LET.

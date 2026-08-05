@@ -84,6 +84,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 54. ~~**`SYS PID` / `HOSTNAME`**~~ **done** (process id + machine name for agents).
 55. ~~**`SYS USER` / `UID` / `HOME`**~~ **done** (login + uid + home dir without shell).
 56. ~~**`DEFAULT name = value`**~~ **done** (set-if-unset · INCLUDE-safe lib knobs).
+57. ~~**`DEFINED name`**~~ **done** (var existence probe · LAST_N 0|1).
 
 ## Tick protocol
 
