@@ -183,6 +183,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 153. ~~**`SYS PADALL` / `LPADALL` / `RPADALL`**~~ **done** (pad every bag field to width · column-align after LENALL+MAX).
 154. ~~**`SYS SORTLEN` / `LENSORT`**~~ **done** (sort bag fields by string length · longest-first without LENALL rebuild).
 155. ~~**`SYS LASTMATCH` / `GREP1L`**~~ **done** (last bag field containing needle · latest hit without REVL+FIRSTMATCH).
+156. ~~**`SYS MAXLEN` / `MINLEN`**~~ **done** (max/min bag field string length → LAST_N · PADALL width without LENALL+MAX).
 
 ## Tick protocol
 

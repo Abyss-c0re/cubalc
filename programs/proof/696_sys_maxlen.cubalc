@@ -1,0 +1,71 @@
+# SYS MAXLEN / MINLEN — max/min string length among bag fields
+# Usability: PADALL column width without LENALL+MAX glue
+
+HOLD_FLASH 1
+
+LET bag = "a\nbb\nccc\nd"
+
+SYS MAXLEN bag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT MAXLEN == 3
+ASSERT MAXLEN_N == 4
+ASSERT MAXLEN_I == 2
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+SYS MINLEN bag
+ASSERT LAST_N == 1
+ASSERT MINLEN == 1
+ASSERT MINLEN_N == 4
+ASSERT MINLEN_I == 0
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAXWIDTH bag
+ASSERT LAST_N == 3
+ASSERT MAXWIDTH == 3
+SYS MINWIDTH bag
+ASSERT LAST_N == 1
+ASSERT MINWIDTH == 1
+SYS FIELDMAX bag
+ASSERT LAST_N == 3
+SYS FIELDMIN bag
+ASSERT LAST_N == 1
+
+# empty bag
+SYS MAXLEN ""
+ASSERT LAST_N == 0
+ASSERT MAXLEN_N == 0
+ASSERT MAXLEN_I == -1
+SYS MINLEN ""
+ASSERT LAST_N == 0
+ASSERT MINLEN_I == -1
+
+# single field
+SYS MAXLEN "hello"
+ASSERT LAST_N == 5
+ASSERT MAXLEN_I == 0
+SYS MINLEN "hello"
+ASSERT LAST_N == 5
+ASSERT MINLEN_I == 0
+
+# agent pattern: MAXLEN → PADALL column plate (no LENALL+MAX)
+LET names = "id\npeer\nhost"
+SYS MAXLEN names
+LET w = LAST_N
+ASSERT w == 4
+SYS PADALL names w
+SYS EQS LAST "id  \npeer\nhost"
+ASSERT LAST_N == 1
+
+# pick longest field via MAXLEN_I + NTH
+SYS MAXLEN bag
+LET i = MAXLEN_I
+ASSERT i == 2
+SYS NTH i bag
+SYS EQS LAST "ccc"
+ASSERT LAST_N == 1
+
+PRINT "sys_maxlen ok"

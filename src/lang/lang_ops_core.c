@@ -1281,6 +1281,76 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MAXLEN|MAXWIDTH|FIELDMAX [bag] — max string length among bag fields → LAST_N.
+     * SYS MINLEN|MINWIDTH|FIELDMIN [bag] — min length. LAST = decimal of that length.
+     * MAXLEN_N/MINLEN_N = field count; MAXLEN_I/MINLEN_I = 0-based index of first extreme
+     * (-1 if empty bag). Empty bag → LAST_N 0.
+     * Usability: column width for PADALL without LENALL+MAX glue. */
+    if (kw(&L->cur,"MAXLEN") || kw(&L->cur,"MAXWIDTH") || kw(&L->cur,"FIELDMAX") ||
+        kw(&L->cur,"LONGEST_LEN") || kw(&L->cur,"MAXSTRLEN") || kw(&L->cur,"BAGMAXLEN") ||
+        kw(&L->cur,"MINLEN") || kw(&L->cur,"MINWIDTH") || kw(&L->cur,"FIELDMIN") ||
+        kw(&L->cur,"SHORTEST_LEN") || kw(&L->cur,"MINSTRLEN") || kw(&L->cur,"BAGMINLEN")){
+      char op[20];
+      int is_min = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[40];
+      const char *p, *start;
+      size_t flen;
+      long kept = 0, best = 0, best_i = -1, idx = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "MINLEN") == 0 || strcmp(op, "MINWIDTH") == 0 ||
+          strcmp(op, "FIELDMIN") == 0 || strcmp(op, "SHORTEST_LEN") == 0 ||
+          strcmp(op, "MINSTRLEN") == 0 || strcmp(op, "BAGMINLEN") == 0)
+        is_min = 1;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept == 0) {
+            best = (long)flen;
+            best_i = idx;
+          } else if (is_min) {
+            if ((long)flen < best) {
+              best = (long)flen;
+              best_i = idx;
+            }
+          } else {
+            if ((long)flen > best) {
+              best = (long)flen;
+              best_i = idx;
+            }
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      snprintf(out, sizeof out, "%ld", kept ? best : 0L);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept ? best : 0;
+      var_set_num(vm, "LAST_N", kept ? best : 0);
+      if (is_min) {
+        var_set_num(vm, "MINLEN", kept ? best : 0);
+        var_set_num(vm, "MINLEN_N", kept);
+        var_set_num(vm, "MINLEN_I", best_i);
+        var_set_num(vm, "MINWIDTH", kept ? best : 0);
+      } else {
+        var_set_num(vm, "MAXLEN", kept ? best : 0);
+        var_set_num(vm, "MAXLEN_N", kept);
+        var_set_num(vm, "MAXLEN_I", best_i);
+        var_set_num(vm, "MAXWIDTH", kept ? best : 0);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
      * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
      * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
@@ -7477,7 +7547,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
     return -1;
   }
 
@@ -7801,6 +7871,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LENALL", "SYS LENALL|MAPLEN [bag] — length of every field → decimal bag · LENALL_SUM"},
       {"SYS MAPLEN", "SYS MAPLEN [bag] — alias of SYS LENALL · size rollups without EACH+LEN"},
       {"SYS FIELDLENS", "SYS FIELDLENS [bag] — alias of SYS LENALL"},
+      {"SYS MAXLEN", "SYS MAXLEN|MAXWIDTH [bag] — max field string length → LAST_N · PADALL width"},
+      {"SYS MINLEN", "SYS MINLEN|MINWIDTH [bag] — min field string length → LAST_N"},
+      {"SYS MAXWIDTH", "SYS MAXWIDTH [bag] — alias of SYS MAXLEN"},
+      {"SYS MINWIDTH", "SYS MINWIDTH [bag] — alias of SYS MINLEN"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},
