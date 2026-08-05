@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 85,
-  "version": "1.15.110-usability",
-  "item": "SYS SIGN / DIV / MOD host arithmetic",
-  "item_id": 118,
-  "title": "SYS SIGN|DIV|MOD signum and integer div/mod",
-  "commit": "8901b1f5da574e8973717ec1d6143462561ef641",
-  "summary": "SYS SIGN/SGN, DIV/IDIV/QUOT, MOD/REM host plane. Page/bucket without ISA soup; /0 soft. selftest 85.",
+  "iter": 86,
+  "version": "1.15.111-usability",
+  "item": "SYS PICK / CHOICE / SAMPLE random bag field",
+  "item_id": 119,
+  "title": "SYS PICK|CHOICE|SAMPLE random newline field from bag",
+  "commit": "cd68fa796c1497f4ee617a31deef361aec7f861d",
+  "summary": "SYS PICK/CHOICE random bag field \u2192 LAST; index LAST_N. Empty soft. Sample LIST/RANGE without shell. selftest 86.",
   "proofs": [
-    "658_sys_div",
-    "selftest n_pass=85"
+    "659_sys_pick",
+    "selftest n_pass=86"
   ],
-  "when": "2026-08-05T15:54:37Z",
+  "when": "2026-08-05T16:03:50Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8901b1f5da574e8973717ec1d6143462561ef641"
+  "sha": "cd68fa796c1497f4ee617a31deef361aec7f861d"
 }
