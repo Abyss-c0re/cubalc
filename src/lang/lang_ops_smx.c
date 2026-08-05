@@ -52,14 +52,18 @@ static int accept_timeout(int lfd, int timeout_ms, int *timed_out){
   }
 }
 
-/* Soft-fail: SMX_OK=0, OK=0, continue program (no fatal). */
+/* Soft-fail: SMX_OK=0, OK=0, continue program (no fatal).
+ * ERR/LAST_ERR sticky for agents after later LAST overwrites. */
 static void smx_soft_fail(VM *vm, const char *why){
+  const char *w = why ? why : "smx soft fail";
   vm->smx_ok = 0;
   var_set_num(vm, "SMX_OK", 0);
   var_set_num(vm, "OK", 0);
-  var_set_str(vm, "LAST", why ? why : "smx soft fail");
+  var_set_str(vm, "LAST", w);
+  var_set_str(vm, "ERR", w);
+  var_set_str(vm, "LAST_ERR", w);
   if (vm->trace)
-    fprintf(vm->trace, "# SMX soft-fail: %s\n", why ? why : "");
+    fprintf(vm->trace, "# SMX soft-fail: %s\n", w);
 }
 
 /* Fatal SMX fail with line + optional agent/human hint (err is 160 bytes). */

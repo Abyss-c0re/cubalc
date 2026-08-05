@@ -14,6 +14,14 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — sticky ERR / LAST_ERR — 2026-08-05
+
+### Usability
+- Fatal `fail()` and SMX soft-fail set string vars `ERR` and `LAST_ERR`
+- Sticky: later `SYS`/`PRINT` LAST overwrites do not clear ERR
+- Agents: `PRINT_JSON ERR` or `SYS LEN ERR` after soft dial
+- Proof: `programs/proof/err_sticky.cubalc` (needs `CUBALC_P2P_SOFT=1`)
+
 ## Meaningful — HELP form in-language — 2026-08-05
 
 ### Usability

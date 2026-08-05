@@ -1,0 +1,28 @@
+# ERR / LAST_ERR sticky after SMX soft-fail (agents inspect after LAST moves)
+# Host: CUBALC_P2P_SOFT=1 cubalc run this
+HOLD_FLASH 1
+BUDGET 20
+SHARE state_matrix_only
+
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+PLUG self remote
+SETBIT self 0 1
+
+SMX KEY
+SMX DIAL self remote "127.0.0.1:1"
+
+ASSERT SMX_OK == 0 "soft dial → SMX_OK 0"
+ASSERT OK == 0 "soft dial → OK 0"
+
+# Overwrite LAST — ERR must remain the soft-fail reason
+SYS ENV "PATH" OR "/usr/bin"
+ASSERT LAST_N > 0 "PATH overwrote LAST"
+
+SYS LEN ERR
+ASSERT LAST_N > 8 "ERR sticky non-empty after LAST overwrite"
+SYS LEN LAST_ERR
+ASSERT LAST_N > 8 "LAST_ERR alias sticky"
+
+PRINT_JSON ERR LAST_ERR SMX_OK OK
+PRINT "err_sticky ok"

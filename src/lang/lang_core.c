@@ -10,6 +10,9 @@ void cubalc_lang_fail(VM *vm, const char *msg) {
   if (vm->fatal) return;
   vm->fatal = 1;
   snprintf(vm->err, sizeof vm->err, "%s", msg);
+  /* Sticky agent-readable error (survives later LAST overwrites). */
+  var_set_str(vm, "ERR", msg ? msg : "fail");
+  var_set_str(vm, "LAST_ERR", msg ? msg : "fail");
   if (vm->res) {
     vm->res->ok = 0;
     snprintf(vm->res->err, sizeof vm->res->err, "%s", msg);

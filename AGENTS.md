@@ -37,7 +37,8 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 1. Start with `HOLD_FLASH 1` (or `[hold]`): **user permission** before any unit is plugged in (safeguard — not device auto-flash).
 2. Prefer `SYS` for host effects; do not invent flash/device writes.
 3. Assert outcomes: `ASSERT SMX_OK == 1`, `ASSERT OK == 1`, `ASSERT LAST_N > 0`.  
-   Optional reason: `ASSERT ready == 1 "peer not ready"` → err includes line + message.
+   Optional reason: `ASSERT ready == 1 "peer not ready"` → err includes line + message.  
+   Soft-fail / fatal set sticky `ERR` / `LAST_ERR` (survives later `LAST` overwrites).
 4. Keep strings short; dump machine facts with `PRINT` / `?`.
 5. **Do not hardcode devices, product paths, or peer file formats** in `.cubalc`.
 6. Peer digits: env (`CUBALC_PEER0_DIGIT=…`) or literals; `SETDIGIT` after flow when needed.
@@ -73,7 +74,7 @@ Exit non-zero on assert fail / hard SYS fail. Soft HTTP may set `OK=0`.
 | `SMX SERVE local remote "host:port"` | TCP listen one exchange |
 | `SMX DIAL local remote "host:port"` | TCP dial one exchange |
 
-Vars: `SMX_OK` · `SMX_TALKS` · `SMX_N`.  
+Vars: `SMX_OK` · `SMX_TALKS` · `SMX_N` · `ERR` / `LAST_ERR` (sticky fail text).  
 Wire: `[u32le N][SMX2 frame]`. Docs: [`docs/P2P_SMX.md`](docs/P2P_SMX.md).
 
 ## Peer / digit ops
