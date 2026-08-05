@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 125,
-  "version": "1.15.150-usability",
-  "item": "SYS LONGEST / SHORTEST pick bag field by length",
-  "item_id": 158,
-  "title": "SYS LONGEST|SHORTEST [bag] — first extreme-length field text",
-  "commit": "2983b7c085195c5b2578ab4d2f1c64108ab2847d",
-  "summary": "SYS LONGEST/SHORTEST pick longest/shortest bag field text without MAXLEN_I+NTH. selftest 125.",
+  "iter": 126,
+  "version": "1.15.151-usability",
+  "item": "SYS COMMONPREFIX / LCP · COMMONSUFFIX shared bag ends",
+  "item_id": 159,
+  "title": "SYS COMMONPREFIX|LCP / COMMONSUFFIX|LCS [bag] — shared prefix/suffix",
+  "commit": "9249531bb99bb48234ca626dda961d32f65a3eac",
+  "summary": "SYS COMMONPREFIX/COMMONSUFFIX longest shared bag ends for path roots. selftest 126.",
   "proofs": [
-    "698_sys_longest",
-    "selftest n_pass=125"
+    "699_sys_commonprefix",
+    "selftest n_pass=126"
   ],
-  "when": "2026-08-05T22:34:06Z",
+  "when": "2026-08-05T22:44:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2983b7c085195c5b2578ab4d2f1c64108ab2847d"
+  "sha": "9249531bb99bb48234ca626dda961d32f65a3eac"
 }
