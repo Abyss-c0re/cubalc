@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 102,
-  "version": "1.15.127-usability",
-  "item": "SYS GREPALL / GREPAND multi-needle AND bag filter",
-  "item_id": 135,
-  "title": "SYS GREPALL|GREPAND bag n1 [n2\u2026] match every needle",
-  "commit": "1b48b466eb28b44ae6dca458aa63321091ef73d1",
-  "summary": "SYS GREPALL/GREPAND keep fields matching all needles (GREPALLI icase). Multi-tag AND triage. selftest 102.",
+  "iter": 103,
+  "version": "1.15.128-usability",
+  "item": "REQUIRE ENV / VAR fail-fast host config",
+  "item_id": 136,
+  "title": "REQUIRE ENV|VAR name \u2014 fail if host env missing/empty",
+  "commit": "8f9136f0e142f34cf9f6dffa056ff46478f38d28",
+  "summary": "REQUIRE ENV/VAR fail-fast if getenv missing/empty; LAST=value. Agent host config gate. selftest 103.",
   "proofs": [
-    "675_sys_grepall",
-    "selftest n_pass=102"
+    "676_require_env",
+    "selftest n_pass=103"
   ],
-  "when": "2026-08-05T18:44:33Z",
+  "when": "2026-08-05T18:54:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1b48b466eb28b44ae6dca458aa63321091ef73d1"
+  "sha": "8f9136f0e142f34cf9f6dffa056ff46478f38d28"
 }
