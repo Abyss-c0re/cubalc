@@ -4642,6 +4642,89 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS WINDOW|SLIDE|NGRAM n [bag] [join_sep]
+     * — overlapping windows of n consecutive bag fields; join within each
+     * window with join_sep (default space); windows → newline fields in LAST.
+     * n<=0 or fields < n → empty. LAST_N/WINDOW_N = window count;
+     * WINDOW_TOTAL = input fields; WINDOW_SIZE = n.
+     * Usability: consecutive pairs/ngrams / rolling peer pairs without
+     * EACH+NTH+CAT glue. Complements non-overlapping SYS CHUNK. */
+    if (kw(&L->cur,"WINDOW") || kw(&L->cur,"SLIDE") || kw(&L->cur,"SLIDING") ||
+        kw(&L->cur,"NGRAM") || kw(&L->cur,"WINS") || kw(&L->cur,"ROLLWIN") ||
+        kw(&L->cur,"PAIRWISE") || kw(&L->cur,"OVERLAP") || kw(&L->cur,"SWINDOW")){
+      long nwant = 0, total = 0, windows = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], jsep[32];
+      enum { WIN_MAX = 256 };
+      const char *fstart[WIN_MAX];
+      size_t flens[WIN_MAX];
+      const char *p, *start;
+      size_t olen = 0, jsepn, flen;
+      long i, j;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      bag[0] = 0; out[0] = 0;
+      snprintf(jsep, sizeof jsep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(jsep, sizeof jsep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      jsepn = strlen(jsep);
+      if (bag[0]) {
+        p = bag;
+        while (*p && total < WIN_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          fstart[total] = start;
+          flens[total] = flen;
+          total++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (nwant > 0 && total >= nwant) {
+        for (i = 0; i <= total - nwant; i++) {
+          if (windows > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          for (j = 0; j < nwant; j++) {
+            if (j > 0 && jsepn > 0) {
+              if (olen + jsepn < sizeof out) {
+                memcpy(out + olen, jsep, jsepn);
+                olen += jsepn;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, jsep, t);
+                olen += t;
+              }
+            }
+            flen = flens[i + j];
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fstart[i + j], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, fstart[i + j], t);
+              olen += t;
+            }
+          }
+          out[olen] = 0;
+          windows++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = windows;
+      var_set_num(vm, "LAST_N", windows);
+      var_set_num(vm, "WINDOW_N", windows);
+      var_set_num(vm, "WINDOW_TOTAL", total);
+      var_set_num(vm, "WINDOW_SIZE", nwant > 0 ? nwant : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
      * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
      * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
@@ -6557,7 +6640,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6846,6 +6929,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CHUNK", "SYS CHUNK|BATCH n [bag] [join] — group fields into batches of n → LAST"},
       {"SYS BATCH", "SYS BATCH n [bag] [join] — alias of SYS CHUNK · work-list paging"},
       {"SYS GROUPN", "SYS GROUPN n [bag] [join] — alias of SYS CHUNK"},
+      {"SYS WINDOW", "SYS WINDOW|SLIDE n [bag] [join] — overlapping windows of n fields → LAST"},
+      {"SYS SLIDE", "SYS SLIDE n [bag] [join] — alias of SYS WINDOW · consecutive pairs/ngrams"},
+      {"SYS NGRAM", "SYS NGRAM n [bag] [join] — alias of SYS WINDOW"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},

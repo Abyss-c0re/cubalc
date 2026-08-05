@@ -1,0 +1,75 @@
+# SYS WINDOW / SLIDE — overlapping bag field windows of n
+# Usability: consecutive pairs/ngrams without EACH+NTH+CAT glue
+# Complements non-overlapping SYS CHUNK
+
+HOLD_FLASH 1
+
+LET peers = "p1\np2\np3\np4\np5"
+
+# pairwise windows (default join space)
+SYS WINDOW 2 peers
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT WINDOW_N == 4
+ASSERT WINDOW_TOTAL == 5
+ASSERT WINDOW_SIZE == 2
+SYS EQS LAST "p1 p2\np2 p3\np3 p4\np4 p5"
+ASSERT LAST_N == 1
+
+# triples with custom join
+SYS WINDOW 3 peers ","
+ASSERT LAST_N == 3
+ASSERT WINDOW_SIZE == 3
+SYS EQS LAST "p1,p2,p3\np2,p3,p4\np3,p4,p5"
+ASSERT LAST_N == 1
+
+# contrast CHUNK (non-overlap) vs WINDOW (overlap)
+SYS CHUNK 2 peers
+SYS EQS LAST "p1 p2\np3 p4\np5"
+ASSERT LAST_N == 1
+SYS WINDOW 2 peers
+SYS EQS LAST "p1 p2\np2 p3\np3 p4\np4 p5"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SLIDE 2 peers
+ASSERT LAST_N == 4
+SYS EQS LAST "p1 p2\np2 p3\np3 p4\np4 p5"
+ASSERT LAST_N == 1
+SYS NGRAM 3 peers "|"
+SYS EQS LAST "p1|p2|p3\np2|p3|p4\np3|p4|p5"
+ASSERT LAST_N == 1
+
+# n=1 identity
+SYS WINDOW 1 peers
+ASSERT LAST_N == 5
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# n > total → empty
+SYS WINDOW 9 peers
+ASSERT LAST_N == 0
+ASSERT WINDOW_TOTAL == 5
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# n<=0 → empty
+SYS WINDOW 0 peers
+ASSERT LAST_N == 0
+ASSERT WINDOW_SIZE == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty bag
+SYS WINDOW 2 ""
+ASSERT LAST_N == 0
+ASSERT WINDOW_TOTAL == 0
+
+# agent pattern: RANGE scores → pairwise WINDOW for consecutive deltas
+SYS RANGE 1 4
+SYS WINDOW 2 LAST
+ASSERT LAST_N == 3
+SYS EQS LAST "1 2\n2 3\n3 4"
+ASSERT LAST_N == 1
+
+PRINT "sys_window ok"

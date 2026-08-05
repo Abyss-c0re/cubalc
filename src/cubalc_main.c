@@ -1826,6 +1826,7 @@ int main(int argc, char **argv) {
       {"sys_beforeall", "programs/proof/682_sys_beforeall.cubalc", "SYS BEFOREALL/AFTERALL peel every bag field"},
       {"sys_firstmatch", "programs/proof/683_sys_firstmatch.cubalc", "SYS FIRSTMATCH/GREP1 first bag field hit"},
       {"sys_chunk", "programs/proof/684_sys_chunk.cubalc", "SYS CHUNK/BATCH group bag fields by n"},
+      {"sys_window", "programs/proof/685_sys_window.cubalc", "SYS WINDOW/SLIDE overlapping bag field windows"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2137,6 +2138,9 @@ int main(int argc, char **argv) {
       {"SYS CHUNK", "host", "SYS CHUNK|BATCH n [bag] [join] — group fields by n"},
       {"SYS BATCH", "host", "SYS BATCH alias of SYS CHUNK"},
       {"SYS GROUPN", "host", "SYS GROUPN alias of SYS CHUNK"},
+      {"SYS WINDOW", "host", "SYS WINDOW|SLIDE n [bag] [join] — overlapping windows of n"},
+      {"SYS SLIDE", "host", "SYS SLIDE alias of SYS WINDOW"},
+      {"SYS NGRAM", "host", "SYS NGRAM alias of SYS WINDOW"},
       {"SYS MIDLINES", "host", "SYS MIDLINES|SLICEBAG bag start [end] — field window"},
       {"SYS SLICEBAG", "host", "SYS SLICEBAG alias of SYS MIDLINES"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
@@ -2677,6 +2681,8 @@ int main(int argc, char **argv) {
        "SYS FIRSTMATCH/GREP1 first bag field hit"},
       {"programs/proof/684_sys_chunk.cubalc", "sys_chunk",
        "SYS CHUNK/BATCH group bag fields by n"},
+      {"programs/proof/685_sys_window.cubalc", "sys_window",
+       "SYS WINDOW/SLIDE overlapping bag field windows"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -3272,6 +3278,9 @@ int main(int argc, char **argv) {
       {"SYS CHUNK", "host", "SYS CHUNK group bag fields by n"},
       {"SYS BATCH", "host", "SYS BATCH alias of SYS CHUNK"},
       {"SYS GROUPN", "host", "SYS GROUPN alias of SYS CHUNK"},
+      {"SYS WINDOW", "host", "SYS WINDOW overlapping bag field windows"},
+      {"SYS SLIDE", "host", "SYS SLIDE alias of SYS WINDOW"},
+      {"SYS NGRAM", "host", "SYS NGRAM alias of SYS WINDOW"},
       {"SYS MIDLINES", "host", "SYS MIDLINES bag field window slice"},
       {"SYS SLICEBAG", "host", "SYS SLICEBAG alias of SYS MIDLINES"},
       {"SYS POP", "host", "SYS POP last bag field"},
