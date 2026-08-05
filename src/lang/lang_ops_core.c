@@ -5237,6 +5237,152 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LOOKUP|KVGET|GETKV [I] bag key [sep]
+     * — find first bag field whose left side (before sep, default ":") equals key;
+     * LAST = right side (value); LOOKUP_LINE = full field; LAST_N 0|1;
+     * LOOKUP_I = index (-1 miss). Empty sep → exact field equality → LAST=field.
+     * LOOKUPI / KVGETI — case-insensitive key match.
+     * Usability: FREQ key:count and plate kv bags without FIRSTMATCH+AFTER glue. */
+    if (kw(&L->cur,"LOOKUP") || kw(&L->cur,"KVGET") || kw(&L->cur,"GETKV") ||
+        kw(&L->cur,"DICTGET") || kw(&L->cur,"MAPGET") || kw(&L->cur,"BAGGET") ||
+        kw(&L->cur,"LOOKUPI") || kw(&L->cur,"KVGETI") || kw(&L->cur,"GETKVI") ||
+        kw(&L->cur,"DICTGETI") || kw(&L->cur,"MAPGETI")){
+      char op[20];
+      int icase = 0;
+      char bag[CUBALC_HOST_STR_MAX], key[256], sep[32], out[512], line[512];
+      const char *p, *start;
+      size_t flen, kn, sn, i;
+      long idx = 0, found = 0, found_i = -1;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LOOKUPI") == 0 || strcmp(op, "KVGETI") == 0 ||
+          strcmp(op, "GETKVI") == 0 || strcmp(op, "DICTGETI") == 0 ||
+          strcmp(op, "MAPGETI") == 0)
+        icase = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; key[0] = 0; out[0] = 0; line[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0) key[0] = 0;
+      /* optional sep (string or bare token) */
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "OR") != 0 &&
+                  strcmp(L->cur.text, "SOFT") != 0)) {
+        /* allow bare = or : only if single-char-ish; skip form keywords by not
+         * consuming unknown idents that are more likely next stmt — only short seps */
+        if (strlen(L->cur.text) <= 2) {
+          snprintf(sep, sizeof sep, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      kn = strlen(key);
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            char left[256];
+            size_t take = flen, left_n = 0;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (sn == 0) {
+              /* exact field match */
+              if (!icase) {
+                hit = (strcmp(field, key) == 0);
+              } else {
+                size_t a = strlen(field), j;
+                if (a == kn) {
+                  hit = 1;
+                  for (j = 0; j < kn; j++) {
+                    char ca = field[j], cb = key[j];
+                    if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+                    if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+                    if (ca != cb) { hit = 0; break; }
+                  }
+                }
+              }
+              if (hit) {
+                snprintf(out, sizeof out, "%s", field);
+              }
+            } else {
+              /* key is left of first sep */
+              const char *sp = strstr(field, sep);
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              } else {
+                left_n = take;
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              }
+              if (!icase) {
+                hit = (strcmp(left, key) == 0);
+              } else {
+                size_t j;
+                if (left_n == kn) {
+                  hit = 1;
+                  for (j = 0; j < kn; j++) {
+                    char ca = left[j], cb = key[j];
+                    if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+                    if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+                    if (ca != cb) { hit = 0; break; }
+                  }
+                }
+              }
+              if (hit) {
+                if (sp) {
+                  snprintf(out, sizeof out, "%s", sp + sn);
+                } else {
+                  out[0] = 0; /* key-only line, empty value */
+                }
+              }
+            }
+            if (hit) {
+              if (flen >= sizeof line) flen = sizeof line - 1;
+              memcpy(line, start, flen);
+              line[flen] = 0;
+              found = 1;
+              found_i = idx;
+              break;
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      (void)i;
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "LOOKUP", out);
+      var_set_str(vm, "LOOKUP_LINE", line);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "LOOKUP_N", found);
+      var_set_num(vm, "LOOKUP_I", found_i);
+      var_set_num(vm, "KVGET_N", found);
+      var_set_num(vm, "OK", found ? 1 : 0);
+      bump(vm); return 1;
+    }
     /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
      * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
      * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
@@ -8020,7 +8166,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -8308,6 +8454,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FIRSTMATCH", "SYS FIRSTMATCH|GREP1 bag needle — first field containing needle · LAST_N 0|1"},
       {"SYS GREP1", "SYS GREP1 bag needle — alias of SYS FIRSTMATCH · one-line pick without TAKE"},
       {"SYS FIRSTMATCHI", "SYS FIRSTMATCHI|GREP1I bag needle — case-insensitive FIRSTMATCH"},
+      {"SYS LOOKUP", "SYS LOOKUP|KVGET bag key [sep] — peel value from key:val bag field · default sep :"},
+      {"SYS KVGET", "SYS KVGET bag key [sep] — alias of SYS LOOKUP · FREQ count peel"},
+      {"SYS LOOKUPI", "SYS LOOKUPI|KVGETI bag key [sep] — case-insensitive LOOKUP"},
+      {"SYS GETKV", "SYS GETKV bag key [sep] — alias of SYS LOOKUP"},
       {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
       {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
       {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},

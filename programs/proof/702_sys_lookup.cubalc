@@ -1,0 +1,80 @@
+# SYS LOOKUP / KVGET — peel value from key:val bag field
+# Usability: FREQ counts and plate kv without FIRSTMATCH+AFTER glue
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10\nerror:old"
+
+# default sep ":" — first matching key wins
+SYS LOOKUP hist "error"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LOOKUP_N == 1
+ASSERT LOOKUP_I == 0
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS EQS LOOKUP_LINE "error:3"
+ASSERT LAST_N == 1
+
+SYS LOOKUP hist "info"
+ASSERT LAST_N == 1
+ASSERT LOOKUP_I == 2
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+
+# miss soft
+SYS LOOKUP hist "crit"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT LOOKUP_I == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "host=peer1\nport=7700\nmode=soft"
+SYS LOOKUP cfg "port" "="
+ASSERT LAST_N == 1
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+SYS KVGET cfg "host" "="
+SYS EQS LAST "peer1"
+ASSERT LAST_N == 1
+
+# aliases
+SYS GETKV hist "warn"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# case-insensitive
+SYS LOOKUPI hist "ERROR"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS KVGET I hist "WARN"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty sep → exact field match returns field
+SYS LOOKUP "alpha\nbeta" "beta" ""
+ASSERT LAST_N == 1
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS LOOKUP "" "x"
+ASSERT LAST_N == 0
+ASSERT LOOKUP_I == -1
+
+# agent: FREQ then LOOKUP severity count
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR"
+SYS FREQ sev
+LET hist2 = LAST
+SYS LOOKUP hist2 "ERROR"
+ASSERT LAST_N == 1
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LOOKUP hist2 "WARN"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PRINT "sys_lookup ok"

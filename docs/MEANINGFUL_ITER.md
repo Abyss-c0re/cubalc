@@ -189,6 +189,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 159. ~~**`SYS COMMONPREFIX` / `LCP` · `COMMONSUFFIX`**~~ **done** (shared bag prefix/suffix · path roots without EACH).
 160. ~~**`SYS STRIPPREFIX` / `STRIPSUFFIX` / `STRIPCOMMON`**~~ **done** (strip ends / LCP from bag fields · relative paths one-shot).
 161. ~~**`SYS DRAWN` / `SAMPLEK` / `NPICK`**~~ **done** (sample k unique bag fields without replacement · multi-peer without SHUFFLE+TAKE).
+162. ~~**`SYS LOOKUP` / `KVGET`**~~ **done** (peel value from key:val bag field · FREQ counts without FIRSTMATCH+AFTER).
 
 ## Tick protocol
 

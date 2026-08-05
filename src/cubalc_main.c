@@ -1843,6 +1843,7 @@ int main(int argc, char **argv) {
       {"sys_commonprefix", "programs/proof/699_sys_commonprefix.cubalc", "SYS COMMONPREFIX/LCP shared bag prefix"},
       {"sys_stripprefix", "programs/proof/700_sys_stripprefix.cubalc", "SYS STRIPPREFIX/STRIPCOMMON relative bag paths"},
       {"sys_drawn", "programs/proof/701_sys_drawn.cubalc", "SYS DRAWN/SAMPLEK sample k unique bag fields"},
+      {"sys_lookup", "programs/proof/702_sys_lookup.cubalc", "SYS LOOKUP/KVGET peel key:val bag value"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1855,7 +1856,7 @@ int main(int argc, char **argv) {
       int asserts_ok;
       int asserts_fail;
       char err[120];
-    } rows[128];
+    } rows[256];
     int nrow = 0;
     if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
       json_only = 1;
@@ -1864,7 +1865,7 @@ int main(int argc, char **argv) {
              n, CUBALC_LANG_VERSION);
       printf("# id\tok\tasserts\thint\n");
     }
-    /* Cap at rows[] size so new usability proofs are not silently skipped. */
+    /* Cap at rows[] size (256) so new usability proofs are not silently skipped. */
     for (i = 0; i < n && nrow < (int)(sizeof rows / sizeof rows[0]); i++) {
       cubalc_run_result rr;
       int is_cli = (strncmp(tests[i].path, "cli:", 4) == 0);
@@ -2167,6 +2168,10 @@ int main(int argc, char **argv) {
       {"SYS FIRSTMATCH", "host", "SYS FIRSTMATCH|GREP1 bag needle — first field hit"},
       {"SYS GREP1", "host", "SYS GREP1 alias of SYS FIRSTMATCH"},
       {"SYS FIRSTMATCHI", "host", "SYS FIRSTMATCHI case-insensitive first hit"},
+      {"SYS LOOKUP", "host", "SYS LOOKUP|KVGET bag key [sep] — peel key:val value"},
+      {"SYS KVGET", "host", "SYS KVGET alias of SYS LOOKUP"},
+      {"SYS LOOKUPI", "host", "SYS LOOKUPI case-insensitive LOOKUP"},
+      {"SYS GETKV", "host", "SYS GETKV alias of SYS LOOKUP"},
       {"SYS LASTMATCH", "host", "SYS LASTMATCH|GREP1L bag needle — last field hit"},
       {"SYS GREP1L", "host", "SYS GREP1L alias of SYS LASTMATCH"},
       {"SYS LASTMATCHI", "host", "SYS LASTMATCHI case-insensitive last hit"},
@@ -2799,6 +2804,8 @@ int main(int argc, char **argv) {
        "SYS STRIPPREFIX/STRIPCOMMON relative bag paths"},
       {"programs/proof/701_sys_drawn.cubalc", "sys_drawn",
        "SYS DRAWN/SAMPLEK sample k unique bag fields"},
+      {"programs/proof/702_sys_lookup.cubalc", "sys_lookup",
+       "SYS LOOKUP/KVGET peel key:val bag value"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -3425,6 +3432,10 @@ int main(int argc, char **argv) {
       {"SYS FIRSTMATCH", "host", "SYS FIRSTMATCH first bag field hit"},
       {"SYS GREP1", "host", "SYS GREP1 alias of SYS FIRSTMATCH"},
       {"SYS FIRSTMATCHI", "host", "SYS FIRSTMATCHI case-insensitive first hit"},
+      {"SYS LOOKUP", "host", "SYS LOOKUP peel key:val bag value"},
+      {"SYS KVGET", "host", "SYS KVGET alias of SYS LOOKUP"},
+      {"SYS LOOKUPI", "host", "SYS LOOKUPI case-insensitive LOOKUP"},
+      {"SYS GETKV", "host", "SYS GETKV alias of SYS LOOKUP"},
       {"SYS LASTMATCH", "host", "SYS LASTMATCH last bag field hit"},
       {"SYS GREP1L", "host", "SYS GREP1L alias of SYS LASTMATCH"},
       {"SYS LASTMATCHI", "host", "SYS LASTMATCHI case-insensitive last hit"},
@@ -3854,6 +3865,10 @@ int main(int argc, char **argv) {
       {"SYS FIRSTMATCH", "host", "SYS FIRSTMATCH|GREP1 bag needle first field hit"},
       {"SYS GREP1", "host", "SYS GREP1 alias of SYS FIRSTMATCH"},
       {"SYS FIRSTMATCHI", "host", "SYS FIRSTMATCHI case-insensitive first hit"},
+      {"SYS LOOKUP", "host", "SYS LOOKUP|KVGET bag key [sep] peel key:val value"},
+      {"SYS KVGET", "host", "SYS KVGET alias of SYS LOOKUP"},
+      {"SYS LOOKUPI", "host", "SYS LOOKUPI case-insensitive LOOKUP"},
+      {"SYS GETKV", "host", "SYS GETKV alias of SYS LOOKUP"},
       {"SYS LASTMATCH", "host", "SYS LASTMATCH|GREP1L bag needle last field hit"},
       {"SYS GREP1L", "host", "SYS GREP1L alias of SYS LASTMATCH"},
       {"SYS LASTMATCHI", "host", "SYS LASTMATCHI case-insensitive last hit"},
@@ -3933,6 +3948,7 @@ int main(int argc, char **argv) {
       {"programs/proof/699_sys_commonprefix.cubalc", "sys_commonprefix", "SYS COMMONPREFIX/LCP shared bag prefix"},
       {"programs/proof/700_sys_stripprefix.cubalc", "sys_stripprefix", "SYS STRIPPREFIX/STRIPCOMMON relative bag paths"},
       {"programs/proof/701_sys_drawn.cubalc", "sys_drawn", "SYS DRAWN/SAMPLEK sample k unique bag fields"},
+      {"programs/proof/702_sys_lookup.cubalc", "sys_lookup", "SYS LOOKUP/KVGET peel key:val bag value"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
       {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
@@ -4034,6 +4050,7 @@ int main(int argc, char **argv) {
       {"programs/proof/699_sys_commonprefix.cubalc", "sys_commonprefix", "SYS COMMONPREFIX/LCP shared bag prefix"},
       {"programs/proof/700_sys_stripprefix.cubalc", "sys_stripprefix", "SYS STRIPPREFIX/STRIPCOMMON relative bag paths"},
       {"programs/proof/701_sys_drawn.cubalc", "sys_drawn", "SYS DRAWN/SAMPLEK sample k unique bag fields"},
+      {"programs/proof/702_sys_lookup.cubalc", "sys_lookup", "SYS LOOKUP/KVGET peel key:val bag value"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
