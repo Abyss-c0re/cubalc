@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 82,
-  "version": "1.15.107-usability",
-  "item": "SYS SUM / PROD / AVG host aggregates",
-  "item_id": 115,
-  "title": "SYS SUM|PROD|AVG multi-arg or newline bag aggregates",
-  "commit": "1be36c3d3fd77f9d203627cbd5c2d8938ba09896",
-  "summary": "SYS SUM/PROD/AVG over int args or newline bags \u2192 LAST_N. Score bags without shell awk; pairs with MIN/MAX. selftest 82.",
+  "iter": 83,
+  "version": "1.15.108-usability",
+  "item": "SYS SORTN / NSORT numeric bag sort",
+  "item_id": 116,
+  "title": "SYS SORTN|NSORT [DESC] numeric newline field sort",
+  "commit": "76001c3122a2a1da38be458bb8b4614985d6d373",
+  "summary": "SYS SORTN/NSORT numeric bag sort; DESC optional. Lex SORT footgun fix for scores/sizes. selftest 83.",
   "proofs": [
-    "655_sys_sum",
-    "selftest n_pass=82"
+    "656_sys_sortn",
+    "selftest n_pass=83"
   ],
-  "when": "2026-08-05T15:26:06Z",
+  "when": "2026-08-05T15:34:31Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1be36c3d3fd77f9d203627cbd5c2d8938ba09896"
+  "sha": "76001c3122a2a1da38be458bb8b4614985d6d373"
 }
