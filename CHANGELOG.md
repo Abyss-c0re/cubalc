@@ -1,3 +1,12 @@
+## Meaningful — SYS PID / HOSTNAME host identity — 2026-08-05
+
+### Usability
+- `SYS PID` (aliases `GETPID`) — process id → LAST_N / PID
+- `SYS HOSTNAME` (aliases `HOST` `NODENAME`) — machine name → LAST / HOSTNAME
+- Peer naming and multi-process plates without shell `hostname`/`echo $$`
+- Proof: `programs/proof/595_sys_pid_hostname.cubalc` · selftest id `sys_pid_host`
+- Version: `1.15.46-usability`
+
 ## Meaningful — INCLUDE ONCE skip reload — 2026-08-05
 
 ### Usability

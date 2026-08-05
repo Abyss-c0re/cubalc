@@ -563,6 +563,50 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS PID — process id → LAST_N/PID (peer identity without shell) */
+    if (kw(&L->cur,"PID") || kw(&L->cur,"GETPID") || kw(&L->cur,"PROCESS_ID")){
+      long n;
+      char buf[32];
+      lex_next(L);
+#if defined(CUBALC_OS_WINDOWS)
+      n = (long)_getpid();
+#else
+      n = (long)getpid();
+#endif
+      if (n < 0) n = 0;
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "PID", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS HOSTNAME|HOST — machine hostname → LAST/HOSTNAME */
+    if (kw(&L->cur,"HOSTNAME") || kw(&L->cur,"HOST") || kw(&L->cur,"NODENAME")){
+      char host[256];
+      lex_next(L);
+      host[0] = 0;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        const char *e = getenv("COMPUTERNAME");
+        if (e && e[0]) snprintf(host, sizeof host, "%s", e);
+        else snprintf(host, sizeof host, "localhost");
+      }
+#else
+      if (gethostname(host, sizeof host) != 0 || !host[0])
+        snprintf(host, sizeof host, "localhost");
+      host[sizeof host - 1] = 0;
+#endif
+      var_set_str(vm, "HOSTNAME", host);
+      var_set_str(vm, "LAST", host);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", host);
+      vm->last_n = (long)strlen(host);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
       lex_next(L);
       char path[512]="", data[4096]; data[0]=0;
@@ -1031,7 +1075,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|PID|HOSTNAME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1233,6 +1277,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
+      {"SYS PID", "SYS PID — process id → LAST_N/PID"},
+      {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

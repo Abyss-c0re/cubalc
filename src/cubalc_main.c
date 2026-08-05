@@ -1654,6 +1654,7 @@ int main(int argc, char **argv) {
       {"note", "programs/proof/592_note.cubalc", "NOTE agent breadcrumb"},
       {"exit", "programs/proof/593_exit.cubalc", "EXIT early halt with code"},
       {"include_once", "programs/proof/594_include_once.cubalc", "INCLUDE ONCE skip reload"},
+      {"sys_pid_host", "programs/proof/595_sys_pid_hostname.cubalc", "SYS PID/HOSTNAME host identity"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1793,6 +1794,8 @@ int main(int argc, char **argv) {
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
+      {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
+      {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS READ", "host", "SYS READ path|LAST"},
       {"SYS WRITE", "host", "SYS WRITE path data"},
@@ -2261,6 +2264,8 @@ int main(int argc, char **argv) {
        "EXIT [code] early program halt"},
       {"programs/proof/594_include_once.cubalc", "include_once",
        "INCLUDE ONCE skips already-loaded module"},
+      {"programs/proof/595_sys_pid_hostname.cubalc", "sys_pid_host",
+       "SYS PID and HOSTNAME host identity"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2600,6 +2605,8 @@ int main(int argc, char **argv) {
       {"PRINT_JSON", "flow", "one JSON line for agents"},
       {"VARS", "flow", "VARS full var table JSON"},
       {"STATUS", "flow", "STATUS agent health plate"},
+      {"SYS PID", "host", "SYS PID process id"},
+      {"SYS HOSTNAME", "host", "SYS HOSTNAME machine name"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2783,6 +2790,8 @@ int main(int argc, char **argv) {
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
+      {"SYS PID", "host", "SYS PID process id"},
+      {"SYS HOSTNAME", "host", "SYS HOSTNAME machine name"},
       {"SMX SERVE", "smx", "listen · CUBALC_P2P_TIMEOUT ms"},
       {"SMX DIAL", "smx", "connect · CUBALC_P2P_SOFT soft-fail"},
       {"SMX EXCHANGE", "smx", "file-bus exchange"},
@@ -2802,6 +2811,7 @@ int main(int argc, char **argv) {
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
       {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
       {"programs/proof/594_include_once.cubalc", "include_once", "INCLUDE ONCE skip reload"},
+      {"programs/proof/595_sys_pid_hostname.cubalc", "sys_pid_host", "SYS PID/HOSTNAME identity"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

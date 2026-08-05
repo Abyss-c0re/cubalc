@@ -1,0 +1,21 @@
+# SYS PID / HOSTNAME — host identity without shell glue
+# Usability: peer naming, plate stamps, multi-process scripts
+
+HOLD_FLASH 1
+
+SYS PID
+ASSERT OK == 1
+ASSERT PID > 0 "process id"
+ASSERT LAST_N == PID
+PRINT "pid" PID
+
+SYS HOSTNAME
+ASSERT OK == 1
+ASSERT LAST_N > 0 "hostname non-empty"
+PRINT "host" LAST HOSTNAME
+
+# re-read still works
+SYS PID
+ASSERT PID > 0
+
+PRINT "sys_pid_hostname ok" PID
