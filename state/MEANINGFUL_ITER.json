@@ -1,16 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 4,
-  "version": "1.15.29-usability",
-  "item": "cubalc search keyword discovery",
-  "item_id": 37,
-  "title": "cubalc search across forms/libs/examples/env/docs",
-  "commit": "58f2865f5cf93b9ece5cfd2343cbfbe195279533",
-  "summary": "CLI search|find|query keyword plate cubalc.search.v1 unifies form/lib/example/doc/env discovery for agents.",
+  "iter": 5,
+  "version": "1.15.30-usability",
+  "item": "REQUIRE VERSION fail-fast gate",
+  "item_id": 38,
+  "title": "REQUIRE VERSION x.y[.z] refuses older runtime",
+  "commit": "cb2b29bbcb36505e97bd98c225ff7a04adb3f5ad",
+  "summary": "In-language REQUIRE VERSION compares major.minor.patch so scripts/agents fail fast with line+have version on plate.",
   "proofs": [
-    "CLI search include/p2p/ASSERT/timeout/miss"
+    "583_require_version",
+    "CLI REQUIRE 99.0 fail"
   ],
-  "when": "2026-08-05T02:23:35Z",
+  "when": "2026-08-05T02:34:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "58f2865f5cf93b9ece5cfd2343cbfbe195279533"
+  "sha": "cb2b29bbcb36505e97bd98c225ff7a04adb3f5ad"
 }

@@ -1,0 +1,16 @@
+# REQUIRE VERSION — fail-fast gate for scripts/agents
+# Usability: refuse incompatible runtime without shell version checks
+
+REQUIRE VERSION "1.0"
+ASSERT OK == 1 "1.0 floor ok"
+REQUIRE VERSION "1.15"
+ASSERT OK == 1 "1.15 floor ok"
+REQUIRE VERSION 1
+ASSERT OK == 1 "major-only need ok"
+
+VERSION
+SYS HAS LAST "1.15"
+ASSERT LAST_N == 1 "VERSION string present"
+
+PRINT "require_version ok" LAST
+PRINT_JSON VERSION OK

@@ -1138,6 +1138,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
+      {"REQUIRE", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -1413,6 +1414,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace) fprintf(vm->trace, "# version %s\n", ver);
     bump(vm); return 1;
+  }
+  /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
+   * Compares leading numeric triple (major.minor.patch); suffix ignored.
+   * Usability: scripts/agents refuse incompatible CubalC without shell glue. */
+  if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
+    int aln = L->cur.line;
+    lex_next(L);
+    if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
+        !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\"");
+      return -1;
+    }
+    if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
+        kw(&L->cur,"CUBALC"))
+      lex_next(L);
+    if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT && L->cur.kind != TK_NUM){
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\"");
+      return -1;
+    }
+    {
+      char need[64];
+      const char *have = CUBALC_LANG_VERSION;
+      long hn[3] = {0, 0, 0}, nn[3] = {0, 0, 0};
+      int hi = 0, ni = 0;
+      char *p;
+      if (L->cur.kind == TK_NUM)
+        snprintf(need, sizeof need, "%ld", L->cur.num);
+      else
+        snprintf(need, sizeof need, "%s", L->cur.text);
+      lex_next(L);
+      /* parse have */
+      p = (char *)have;
+      while (*p && hi < 3) {
+        while (*p && (*p < '0' || *p > '9')) p++;
+        if (!*p) break;
+        hn[hi++] = strtol(p, &p, 10);
+        if (*p == '.') p++;
+        else break;
+      }
+      /* parse need */
+      p = need;
+      while (*p && ni < 3) {
+        while (*p && (*p < '0' || *p > '9')) p++;
+        if (!*p) break;
+        nn[ni++] = strtol(p, &p, 10);
+        if (*p == '.') p++;
+        else break;
+      }
+      if (ni == 0) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE VERSION bad need '%s' line %d", need, aln);
+        fail(vm, msg);
+        return -1;
+      }
+      {
+        int okv = 1, c;
+        for (c = 0; c < 3; c++) {
+          if (hn[c] > nn[c]) break;
+          if (hn[c] < nn[c]) { okv = 0; break; }
+        }
+        var_set_str(vm, "VERSION", have);
+        var_set_str(vm, "LAST", have);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", have);
+        if (!okv) {
+          char msg[160];
+          snprintf(msg, sizeof msg,
+                   "REQUIRE VERSION %s failed line %d: have %s",
+                   need, aln, have);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+        var_set_num(vm, "OK", 1);
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        if (vm->trace)
+          fprintf(vm->trace, "# require version %s ok (have %s)\n", need, have);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+    }
   }
   if (kw(&L->cur,"LET")){
     lex_next(L);
