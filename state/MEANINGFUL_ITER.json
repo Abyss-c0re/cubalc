@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 81,
-  "version": "1.15.106-usability",
-  "item": "SYS CMP / SCMP / IABS three-way compare + abs",
-  "item_id": 114,
-  "title": "SYS CMP|SCMP|IABS numeric/string compare and abs",
-  "commit": "0fc7106c60c61189880829d5f358f4c3118d80ae",
-  "summary": "SYS CMP a b \u2192 -1|0|1; SCMP/SCMPI strings; IABS|NABS integer abs. Sort keys / branch without dual LT+GT. Pairs with MIN/MAX. selftest 81.",
+  "iter": 82,
+  "version": "1.15.107-usability",
+  "item": "SYS SUM / PROD / AVG host aggregates",
+  "item_id": 115,
+  "title": "SYS SUM|PROD|AVG multi-arg or newline bag aggregates",
+  "commit": "1be36c3d3fd77f9d203627cbd5c2d8938ba09896",
+  "summary": "SYS SUM/PROD/AVG over int args or newline bags \u2192 LAST_N. Score bags without shell awk; pairs with MIN/MAX. selftest 82.",
   "proofs": [
-    "654_sys_cmp",
-    "selftest n_pass=81"
+    "655_sys_sum",
+    "selftest n_pass=82"
   ],
-  "when": "2026-08-05T15:13:48Z",
+  "when": "2026-08-05T15:26:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0fc7106c60c61189880829d5f358f4c3118d80ae"
+  "sha": "1be36c3d3fd77f9d203627cbd5c2d8938ba09896"
 }
