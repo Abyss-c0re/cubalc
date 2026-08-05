@@ -2645,6 +2645,83 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS SETLINE|REPLACELINE bag n value — set 0-based field → LAST bag.
+     * LAST_N = 1 if index in range, 0 soft miss (bag unchanged).
+     * Usability: FINDLINE then update status in place without EACH rebuild. */
+    if (kw(&L->cur,"SETLINE") || kw(&L->cur,"REPLACELINE") || kw(&L->cur,"PUTLINE") ||
+        kw(&L->cur,"SETFIELD") || kw(&L->cur,"PUTFIELD") || kw(&L->cur,"REPLACEFIELD") ||
+        kw(&L->cur,"LINESET") || kw(&L->cur,"FIELDSET")){
+      char bag[CUBALC_HOST_STR_MAX], val[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long want = 0, cur = 0, hit = 0;
+      size_t flen, vlen, o = 0;
+      int first = 1;
+      lex_next(L);
+      bag[0] = 0; val[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vlen = strlen(val);
+      if (want < 0 || !bag[0]) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (cur == want) {
+            hit = 1;
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, val, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take);
+              o += take;
+            }
+          } else {
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+          }
+          out[o] = 0;
+          cur++;
+          if (*p == '\n') p++;
+        }
+        if (!hit) {
+          /* out-of-range: restore original */
+          snprintf(out, sizeof out, "%s", bag);
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "SETLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REMOVELINE|DROPLINE bag needle — drop first exact field match → LAST bag.
      * LAST_N = 1 if removed, 0 if miss (bag unchanged). REST not used.
      * SYS REMOVELINEI — case-insensitive exact field.
@@ -3267,7 +3344,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3539,6 +3616,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FINDLINE", "SYS FINDLINE|LINEINDEX bag needle — 0-based exact field index · -1 miss"},
       {"SYS LINEINDEX", "SYS LINEINDEX bag needle — alias of SYS FINDLINE"},
       {"SYS FINDLINEI", "SYS FINDLINEI bag needle — case-insensitive field index"},
+      {"SYS SETLINE", "SYS SETLINE|REPLACELINE bag n value — set 0-based field · LAST=bag"},
+      {"SYS REPLACELINE", "SYS REPLACELINE bag n value — alias of SYS SETLINE"},
       {"SYS REMOVELINE", "SYS REMOVELINE|DROPLINE bag needle — drop first exact field · LAST=bag"},
       {"SYS DROPLINE", "SYS DROPLINE bag needle — alias of SYS REMOVELINE"},
       {"SYS REMOVELINEI", "SYS REMOVELINEI bag needle — case-insensitive drop first field"},

@@ -1,0 +1,64 @@
+# SYS SETLINE / REPLACELINE — set bag field by 0-based index
+# Usability: FINDLINE then update status in place without EACH rebuild
+
+HOLD_FLASH 1
+
+# set middle
+SYS SETLINE "a\nb\nc" 1 "B"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nB\nc"
+ASSERT LAST_N == 1
+
+# set first / last
+SYS SETLINE "a\nb\nc" 0 "A"
+SYS EQS LAST "A\nb\nc"
+ASSERT LAST_N == 1
+SYS SETLINE "a\nb\nc" 2 "C"
+SYS EQS LAST "a\nb\nC"
+ASSERT LAST_N == 1
+
+# out of range soft miss
+SYS SETLINE "a\nb" 5 "z"
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SYS SETLINE "a\nb" -1 "z"
+ASSERT LAST_N == 0
+
+# empty value ok
+SYS SETLINE "a\nb\nc" 1 ""
+ASSERT LAST_N == 1
+SYS EQS LAST "a\n\nc"
+ASSERT LAST_N == 1
+
+# aliases
+SYS REPLACELINE "x\ny" 0 "X"
+SYS EQS LAST "X\ny"
+ASSERT LAST_N == 1
+SYS PUTLINE "1\n2\n3" 2 "9"
+SYS EQS LAST "1\n2\n9"
+ASSERT LAST_N == 1
+SYS SETFIELD "p\nq" 1 "Q"
+SYS EQS LAST "p\nQ"
+ASSERT LAST_N == 1
+
+# numeric value coerced
+SYS SETLINE "a\nb" 1 42
+ASSERT LAST_N == 1
+SYS EQS LAST "a\n42"
+ASSERT LAST_N == 1
+
+# agent pattern: find then set status
+LET bag = "peer1:idle\npeer2:idle\npeer3:busy"
+SYS FINDLINE bag "peer2:idle"
+LET i = LAST_N
+ASSERT i == 1
+SYS SETLINE bag i "peer2:done"
+ASSERT LAST_N == 1
+SYS EQS LAST "peer1:idle\npeer2:done\npeer3:busy"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "peer2:done"
+ASSERT LAST_N == 1
+
+PRINT "sys_setline ok"
