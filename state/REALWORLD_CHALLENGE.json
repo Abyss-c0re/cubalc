@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "loadlines_strip",
-      "cmd": "loadlines /opt/rel/*; strip /opt/rel/ → bin/a lib/b.so…",
+      "cmd": "loadlines /opt/rel/*; strip /opt/rel/ \u2192 bin/a lib/b.so\u2026",
       "ok": true,
       "note": "STRIPPREFIX_HIT=4 full"
     },
@@ -32,13 +32,13 @@
     },
     {
       "name": "slash_only_relcommon",
-      "cmd": "/etc/a vs /var/b → STRIPCOMMON_PRE=/ soft miss",
+      "cmd": "/etc/a vs /var/b \u2192 STRIPCOMMON_PRE=/ soft miss",
       "ok": true,
       "note": "REQUIRE exit 2"
     },
     {
       "name": "single_stripcommon_empty",
-      "cmd": "one path → REL empty pre=full path",
+      "cmd": "one path \u2192 REL empty pre=full path",
       "ok": true,
       "note": "agent footgun success note"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "mid_segment_lcp",
-      "cmd": "state/peer_* → pre=state/peer_ not state/",
+      "cmd": "state/peer_* \u2192 pre=state/peer_ not state/",
       "ok": true,
       "note": "path-segment unsafe"
     },
@@ -74,15 +74,15 @@
       "area": "host|bag",
       "title": "STRIPCOMMON LCP is character-level mid-segment",
       "detail": "Peers state/peer_a|b|c strip to pre=state/peer_ leaving a/plate.json. Want dirname-boundary strip (state/) or segment-aware RELPATHS. Same class as COMMONPREFIX path gap.",
-      "repro": "STRIPCOMMON state/peer_a/x\\nstate/peer_b/y → pre state/peer_"
+      "repro": "STRIPCOMMON state/peer_a/x\\nstate/peer_b/y \u2192 pre state/peer_"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
       "title": "Single-field STRIPCOMMON empties the relative key",
-      "detail": "One absolute path → LCP is whole field → REL becomes empty string while STRIPCOMMON_PRE is the full path and STRIPCOMMON_HIT=1. Agents treat success as usable relative inventory.",
-      "repro": "STRIPCOMMON '/opt/rel/only' → LAST empty, PRE=/opt/rel/only"
+      "detail": "One absolute path \u2192 LCP is whole field \u2192 REL becomes empty string while STRIPCOMMON_PRE is the full path and STRIPCOMMON_HIT=1. Agents treat success as usable relative inventory.",
+      "repro": "STRIPCOMMON '/opt/rel/only' \u2192 LAST empty, PRE=/opt/rel/only"
     },
     {
       "id": "W3",
@@ -134,7 +134,7 @@
     }
   ],
   "workarounds": [
-    "EQS STRIPCOMMON_PRE '/' or BLANK REL after single-field strip → treat as no useful rel",
+    "EQS STRIPCOMMON_PRE '/' or BLANK REL after single-field strip \u2192 treat as no useful rel",
     "If LINES==1 skip STRIPCOMMON or keep basename via BASENAME EACH",
     "Assert STRIPPREFIX_HIT == LINES abs for clean REL",
     "Always export CUBALC_SEED for SAMPLEK smoke plates",
@@ -150,12 +150,12 @@
     "Map EXTNAME strip bag form"
   ],
   "issues_faced": [
-    "Single-field STRIPCOMMON reported pre full path and empty REL with soft success — agent must special-case",
+    "Single-field STRIPCOMMON reported pre full path and empty REL with soft success \u2014 agent must special-case",
     "Slash-only pre needs explicit EQS in program (BLANK insufficient)",
     "Positive path strip+seeded sample works cleanly",
-    "Mid-segment peer_ LCP expected from character LCP — document not fix this iter",
-    "No language fix — path-aware strip for MEANINGFUL_ITER"
+    "Mid-segment peer_ LCP expected from character LCP \u2014 document not fix this iter",
+    "No language fix \u2014 path-aware strip for MEANINGFUL_ITER"
   ],
-  "commit": "",
+  "commit": "7f829f54627941d461d6457d87d847db5d330ded",
   "ts": "2026-08-05T23:13:24Z"
 }
