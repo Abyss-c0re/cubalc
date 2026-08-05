@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 128,
-  "version": "1.15.153-usability",
-  "item": "SYS DRAWN / SAMPLEK sample k unique bag fields",
-  "item_id": 161,
-  "title": "SYS DRAWN|SAMPLEK|NPICK k [bag] — sample k without replacement",
-  "commit": "aa84fbbc182e5a687ff6c8a23f579350d1479c91",
-  "summary": "SYS DRAWN/SAMPLEK multi-field sample without SHUFFLE+TAKE. selftest 128.",
+  "iter": 129,
+  "version": "1.15.154-usability",
+  "item": "SYS LOOKUP / KVGET peel key:val bag value",
+  "item_id": 162,
+  "title": "SYS LOOKUP|KVGET bag key [sep] — peel FREQ/kv values",
+  "commit": "9da3a41c33fcb9fef87f2aaf8ad82a9c7dfe5d15",
+  "summary": "SYS LOOKUP/KVGET peel key:val bag values; selftest rows 256. selftest 129.",
   "proofs": [
-    "701_sys_drawn",
-    "selftest n_pass=128"
+    "702_sys_lookup",
+    "selftest n_pass=129"
   ],
-  "when": "2026-08-05T23:04:16Z",
+  "when": "2026-08-05T23:17:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "aa84fbbc182e5a687ff6c8a23f579350d1479c91"
+  "sha": "9da3a41c33fcb9fef87f2aaf8ad82a9c7dfe5d15"
 }
