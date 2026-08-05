@@ -1,0 +1,743 @@
+# oncall_handoff_rotate.cubalc — oncall stack rotate + incident tally under STATE
+#
+# Real use: agents round-robin primary oncall (SYS ROTATE), batch/reclaim the
+# stack (CHUNK+FLATTEN), and tally open incidents (COUNTMATCH) without shell.
+#
+# Plates:
+#   STACK.txt     — ordered oncall engineers (index 0 = primary)
+#   BATCHES.txt   — CHUNK groups of the stack (space-joined)
+#   INCIDENTS.txt — free-text incident lines for severity tallies
+#
+# Actions (CUBALC_ARG0 / CUBALC_OH_ACTION):
+#   list     — depth + primary HEAD + incident COUNTMATCH tallies (default)
+#   seed     — WORDS engineers → PUSH if not HASLINE (order preserved)
+#   ingest   — PUSH single engineer / incident (see A2=incident)
+#   handoff  — ROTATE K stack (default 1 left); soft empty
+#   handback — ROTATE RIGHT K (primary from tail)
+#   peek     — HEAD primary; soft empty
+#   batch    — CHUNK SIZE stack → BATCHES plate
+#   reclaim  — FLATTEN batches → replace stack (or report only)
+#   open     — PUSH incident line ARG1
+#   tally    — COUNTMATCH needles (error/warn/page) on incidents
+#   find     — FIRSTMATCH needle on incidents
+#   pin      — MOVELINE engineer to front (make primary)
+#   drop     — REMOVELINE exact engineer
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact engineer
+#   clear    — empty stack
+#   clearinc — empty incidents
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="alice bob carol dave" \
+#     ./out/cubalc run -q -s programs/realworld/oncall_handoff_rotate.cubalc
+#   CUBALC_ARG0=handoff ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=open CUBALC_ARG1="ERROR disk on db01" ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_OH_FILE=STACK.txt
+#   CUBALC_OH_INC=INCIDENTS.txt
+#   CUBALC_OH_BATCH=BATCHES.txt
+#   CUBALC_OH_REQUIRE=1
+#   CUBALC_OH_K=1
+#   CUBALC_OH_SIZE=2
+#
+# Edges deliberately stressed:
+#   ROTATE RIGHT keyword — var named RIGHT would collide (like OFF)
+#   ROTATE/CHUNK/FLATTEN non-mutate — LET rebind
+#   FLATTEN default space — hostnames/names with spaces corrupt
+#   CHUNK join sep bare var → unknown form
+#   COUNTMATCH substring — error matches terror / error_soft
+#   COUNTMATCH does not filter bag (only LAST_N count) — contrast GREP
+#   handoff empty soft; peek empty soft; REQUIRE paths
+#   PRINT_JSON collapse; WRITE trailing NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "oncall_handoff_rotate: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "STACK.txt"
+DEFAULT IFILE = "INCIDENTS.txt"
+DEFAULT BFILE = "BATCHES.txt"
+DEFAULT REPORT = "ONCALL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT K = 1
+DEFAULT BSIZE = 2
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_OH_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_OH_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_OH_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_OH_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_OH_INC" OR ""
+IF LAST_N > 0 THEN
+  LET IFILE = LAST
+END
+SYS ENV "CUBALC_OH_BATCH" OR ""
+IF LAST_N > 0 THEN
+  LET BFILE = LAST
+END
+SYS ENV "CUBALC_OH_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_OH_K" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET K = LAST_N
+  END
+END
+SYS ENV "CUBALC_OH_SIZE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BSIZE = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET stack_path = LAST
+SYS JOIN state_dir IFILE
+LET inc_path = LAST
+SYS JOIN state_dir BFILE
+LET batch_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR stack_path OR ""
+LET stack = LAST
+CLEAR_ERR "soft stack load"
+SYS LINES stack
+LET depth0 = LAST_N
+
+SYS READ OR inc_path OR ""
+LET incs = LAST
+CLEAR_ERR
+SYS LINES incs
+LET inc_n0 = LAST_N
+
+SYS READ OR batch_path OR ""
+LET batches = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET inc_changed = 0
+LET batch_changed = 0
+LET note_msg = "ok"
+LET primary = ""
+LET n_error = 0
+LET n_warn = 0
+LET n_page = 0
+LET filtered = ""
+LET idx = -1
+
+# K/BSIZE overrides from ARG1 for handoff/batch
+SYS EQS ACTION "handoff"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET K = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "handback"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET K = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "batch"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET BSIZE = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK stack
+  IF LAST_N == 0 THEN
+    SYS HEAD stack
+    LET primary = LAST
+  END
+  SYS COUNTMATCH incs "ERROR"
+  LET n_error = LAST_N
+  SYS COUNTMATCH incs "WARN"
+  LET n_warn = LAST_N
+  SYS COUNTMATCHI incs "page"
+  LET n_page = LAST_N
+  SYS LINES stack
+  LET depth0 = LAST_N
+  SYS LINES incs
+  LET inc_n0 = LAST_N
+  STATUS
+  PRINT "oncall" depth0 primary n_error n_warn n_page ACTION
+  PRINT_JSON depth0 primary n_error n_warn n_page ACTION STATUS_OK
+  PRINT_JSON stack
+  PRINT_JSON incs
+  LET note_msg = "list ok"
+END
+
+# --- seed engineers ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs names"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE stack n
+      IF LAST_N == 0 THEN
+        SYS PUSH stack n
+        LET stack = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest engineer ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs name"
+  END
+  SYS PUSH stack NAME
+  LET stack = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- open incident ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "open needs incident line"
+  END
+  SYS PUSH incs NAME
+  LET incs = LAST
+  LET inc_changed = 1
+  LET hit = 1
+  LET note_msg = "opened"
+END
+
+# --- handoff: ROTATE left K ---
+SYS EQS ACTION "handoff"
+IF LAST_N == 1 THEN
+  NOTE "action handoff"
+  SYS BLANK stack
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "handoff empty"
+    FAIL "handoff empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "handoff empty"
+    END
+  ELSE
+    SYS MAX K 0
+    LET K = LAST_N
+    SYS ROTATE K stack
+    LET stack = LAST
+    LET changed = 1
+    SYS HEAD stack
+    LET primary = LAST
+    LET hit = 1
+    LET note_msg = "handed off"
+    PRINT_JSON stack
+  END
+END
+
+# --- handback: ROTATE RIGHT K ---
+SYS EQS ACTION "handback"
+IF LAST_N == 1 THEN
+  NOTE "action handback"
+  SYS BLANK stack
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "handback empty"
+    FAIL "handback empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "handback empty"
+    END
+  ELSE
+    SYS MAX K 0
+    LET K = LAST_N
+    # RIGHT is keyword — do not use bare var named RIGHT
+    SYS ROTATE RIGHT K stack
+    LET stack = LAST
+    LET changed = 1
+    SYS HEAD stack
+    LET primary = LAST
+    LET hit = 1
+    LET note_msg = "handed back"
+    PRINT_JSON stack
+  END
+END
+
+# --- peek primary ---
+SYS EQS ACTION "peek"
+IF LAST_N == 1 THEN
+  NOTE "action peek"
+  SYS BLANK stack
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "peek empty"
+    FAIL "peek empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "peek empty"
+    END
+  ELSE
+    SYS HEAD stack
+    LET primary = LAST
+    LET hit = 1
+    LET note_msg = "peek ok"
+    PRINT_JSON primary
+  END
+END
+
+# --- batch CHUNK ---
+SYS EQS ACTION "batch"
+IF LAST_N == 1 THEN
+  NOTE "action batch"
+  SYS BLANK stack
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "batch empty"
+    FAIL "batch empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "batch empty"
+    END
+  ELSE
+    SYS MAX BSIZE 1
+    LET BSIZE = LAST_N
+    SYS CHUNK BSIZE stack
+    LET batches = LAST
+    LET batch_changed = 1
+    SYS LINES batches
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "batch chunk empty"
+      FAIL "batch chunk empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "batch chunk empty"
+      END
+    ELSE
+      LET note_msg = "batched"
+    END
+    PRINT_JSON batches
+  END
+END
+
+# --- reclaim FLATTEN batches → stack ---
+SYS EQS ACTION "reclaim"
+IF LAST_N == 1 THEN
+  NOTE "action reclaim"
+  SYS BLANK batches
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "reclaim empty batches"
+    FAIL "reclaim empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "reclaim empty"
+    END
+  ELSE
+    SYS FLATTEN batches
+    LET stack = LAST
+    LET changed = 1
+    SYS LINES stack
+    LET hit = LAST_N
+    LET note_msg = "reclaimed"
+    PRINT_JSON stack
+  END
+END
+
+# --- tally COUNTMATCH ---
+SYS EQS ACTION "tally"
+IF LAST_N == 1 THEN
+  NOTE "action tally"
+  SYS BLANK incs
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "tally empty incs"
+    FAIL "tally empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tally empty"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      SYS COUNTMATCH incs "ERROR"
+      LET n_error = LAST_N
+      SYS COUNTMATCH incs "WARN"
+      LET n_warn = LAST_N
+      SYS COUNTMATCHI incs "page"
+      LET n_page = LAST_N
+      LET hit = n_error + n_warn
+      LET hit = hit + n_page
+      LET note_msg = "tallied default"
+    ELSE
+      SYS COUNTMATCH incs NAME
+      LET hit = LAST_N
+      LET note_msg = "tallied needle"
+    END
+    IF hit == 0 THEN
+      LET miss = 1
+      FAIL "tally zero"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tally zero"
+      END
+    END
+    PRINT "tally" n_error n_warn n_page hit
+  END
+END
+
+# --- find FIRSTMATCH incident ---
+SYS EQS ACTION "find"
+IF LAST_N == 1 THEN
+  NOTE "action find"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "find needs needle"
+  END
+  SYS FIRSTMATCH incs NAME
+  LET filtered = LAST
+  SYS BLANK filtered
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "find miss"
+    FAIL "find miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "find miss"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "find hit"
+  END
+  PRINT_JSON filtered
+END
+
+# --- pin / drop / has / count ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs name"
+  END
+  SYS FINDLINE stack NAME
+  LET idx = LAST_N
+  SYS CMP idx 0
+  IF LAST_N < 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS MOVELINE stack idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+    ELSE
+      LET stack = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned primary"
+    END
+  END
+END
+
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs name"
+  END
+  SYS HASLINE stack NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE stack NAME
+    LET stack = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs name"
+  END
+  SYS HASLINE stack NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs name"
+  END
+  SYS COUNTLINE stack NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET stack = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared stack"
+END
+
+SYS EQS ACTION "clearinc"
+IF LAST_N == 1 THEN
+  NOTE "action clearinc"
+  LET incs = ""
+  LET inc_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared incidents"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "handoff"
+LET k = k + LAST_N
+SYS EQS ACTION "handback"
+LET k = k + LAST_N
+SYS EQS ACTION "peek"
+LET k = k + LAST_N
+SYS EQS ACTION "batch"
+LET k = k + LAST_N
+SYS EQS ACTION "reclaim"
+LET k = k + LAST_N
+SYS EQS ACTION "tally"
+LET k = k + LAST_N
+SYS EQS ACTION "find"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearinc"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE stack_path stack
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "stack write failed"
+  END
+  CLEAR_ERR
+END
+IF inc_changed > 0 THEN
+  SYS WRITE inc_path incs
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "inc write failed"
+  END
+  CLEAR_ERR
+END
+IF batch_changed > 0 THEN
+  SYS WRITE batch_path batches
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "batch write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES stack
+LET depth1 = LAST_N
+SYS LINES incs
+LET inc_n1 = LAST_N
+SYS LINES batches
+LET batch_n = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.oncall.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "primary"
+LET report = LAST
+SYS PUSH report primary
+LET report = LAST
+SYS PUSH report "n_error"
+LET report = LAST
+SYS STR n_error
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n_warn"
+LET report = LAST
+SYS STR n_warn
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "inc_n1"
+LET report = LAST
+SYS STR inc_n1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "oncall" ACTION hit miss primary n_error n_warn depth1 inc_n1
+PRINT_JSON ACTION hit miss primary n_error n_warn n_page depth1 inc_n1 batch_n elapsed STATUS_OK
+PASS "oncall tick"
+NOTE "oncall_handoff_rotate: done"
+CLEAR_ERR
+EXIT 0 "oncall ok"

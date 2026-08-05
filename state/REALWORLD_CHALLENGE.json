@@ -1,152 +1,146 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 40,
-  "program": "programs/realworld/canary_stride_sampler.cubalc",
-  "theme": "canary stride sampler STRIDE WINDOW DIFF INTERSECT soft partition",
-  "version": "1.15.139-usability",
+  "iter": 41,
+  "program": "programs/realworld/oncall_handoff_rotate.cubalc",
+  "theme": "oncall handoff ROTATE FLATTEN COUNTMATCH CHUNK soft primary",
+  "version": "1.15.141-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_stride",
-      "cmd": "seed h0..h5; stride 2 \u2192 canary h0,h2,h4 control h1,h3,h5",
+      "name": "seed_peek_handoff",
+      "cmd": "seed alice..dave; peek alice; handoff → bob primary; handback → alice",
       "ok": true,
-      "note": "STRIDE OFF offs + DIFF complement"
+      "note": "ROTATE left/RIGHT round-trip"
     },
     {
-      "name": "pairs_window",
-      "cmd": "pairs WINDOW 2 \u2192 overlapping neighbor pairs",
+      "name": "open_tally",
+      "cmd": "open 5 incidents; list/tally ERROR WARN page",
       "ok": true,
-      "note": "blast-radius adjacent pairs"
+      "note": "COUNTMATCH does not clobber bag"
     },
     {
-      "name": "stride_offset",
-      "cmd": "stride step3 off1 \u2192 canary h1,h4",
+      "name": "batch_reclaim",
+      "cmd": "CHUNK 2 → FLATTEN stack restore",
       "ok": true,
-      "note": "OFF keyword + var offs"
-    },
-    {
-      "name": "drift_extra",
-      "cmd": "desire+DIFF miss soft/REQUIRE; extra hosts REQUIRE",
-      "ok": true,
-      "note": "set drift gates"
-    },
-    {
-      "name": "pairs_solo_oor",
-      "cmd": "WINDOW 2 on single host empty soft/REQUIRE",
-      "ok": true,
-      "note": "n > total empty"
-    },
-    {
-      "name": "find_substring",
-      "cmd": "FIRSTMATCH h1 hits before h10 if ordered; substring class",
-      "ok": true,
-      "note": "false friend risk"
+      "note": "round-trip batch plates"
     },
     {
       "name": "pin_drop",
-      "cmd": "pin h3 front; drop exact; drop miss REQUIRE",
+      "cmd": "pin carol primary; drop dave; drop ghost REQUIRE",
       "ok": true,
       "note": "MOVELINE + REMOVELINE"
     },
     {
-      "name": "off_keyword_footgun",
-      "cmd": "var named OFF / bare off2 mid-arg \u2192 parse error",
+      "name": "empty_require",
+      "cmd": "clear; handoff/peek REQUIRE EXIT 2",
       "ok": true,
-      "note": "fixed via OFFS + OFF keyword form"
+      "note": "soft empty + hard gate"
+    },
+    {
+      "name": "countmatch_substring",
+      "cmd": "COUNTMATCH error hits terror (error inside terror)",
+      "ok": true,
+      "note": "high false-friend severity tally"
+    },
+    {
+      "name": "flatten_space_names",
+      "cmd": "CHUNK+FLATTEN splits 'ann lee' into ann/lee",
+      "ok": true,
+      "note": "space join irreversible"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "114/114 pass incl window stride rotate"
+      "note": "116/116 pass incl rotate flatten countmatch"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "lang|parse",
-      "title": "STRIDE keyword OFF collides with common var names",
-      "detail": "SYS STRIDE STEP OFF fleet treats OFF as keyword needing offset number, not the var. Agents naming offset OFF break silently or parse-error. Must use OFFS + form SYS STRIDE n OFF k bag.",
-      "repro": "DEFAULT OFF=0; SYS STRIDE STEP OFF fleet"
+      "area": "host|bag",
+      "title": "COUNTMATCH substring: needle error matches terror",
+      "detail": "COUNTMATCH 'error' on 'terror alert' counts 1 because terror contains error. Severity tallies overcount false friends. No word-boundary / token COUNTMATCH.",
+      "repro": "COUNTMATCH 'terror alert\\nerror soft' error → 2"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "lang|parse",
-      "title": "Bare mid-arg numeric vars form-stolen (STRIDE offset)",
-      "detail": "SYS STRIDE STEP off2 fleet \u2192 unknown form 'off2'. Same class as CHUNK join sep: only keywords+literals or carefully ordered vars work for mid-args.",
-      "repro": "LET off2=1; SYS STRIDE 2 off2 fleet"
+      "area": "host|bag",
+      "title": "CHUNK+FLATTEN space-join destroys multi-word names",
+      "detail": "Engineer 'ann lee' after CHUNK 2 + FLATTEN becomes ann and lee. Same class as deploy wave host spaces. No structured nested bags.",
+      "repro": "CHUNK 2 'ann lee\\nbob\\ncy'; FLATTEN → 4 fields"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|bag",
-      "title": "WINDOW/STRIDE non-mutate + join flatten",
-      "detail": "Must LET rebind. WINDOW pairs space-join hosts \u2014 hostnames with spaces irreversible. No nested pair bag.",
-      "repro": "WINDOW 2 fleet without LET loses result"
+      "area": "lang|parse",
+      "title": "ROTATE RIGHT/LEFT keywords steal identifier space",
+      "detail": "Same class as STRIDE OFF. Vars named RIGHT/LEFT risky near ROTATE forms. SYS ROTATE RIGHT K stack works when K is numeric var.",
+      "repro": "DEFAULT RIGHT=1 near SYS ROTATE RIGHT …"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "FIRSTMATCH substring false friends on host ids",
-      "detail": "find h1 can match h10 depending on order. Prefer HASLINE for exact host identity.",
-      "repro": "FIRSTMATCH fleet h1 with h10 present"
+      "title": "COUNTMATCH returns count only — easy to confuse with GREP filter",
+      "detail": "LAST_N is count; bag not filtered. Agents expecting filtered lines must still GREP. Useful but surprising vs GREPCOUNT name.",
+      "repro": "COUNTMATCH logs ERROR; LAST is not the ERROR lines"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "DIFF/INTERSECT exact-field only",
-      "detail": "No normalized/case-fold set ops; host vs HOST are distinct. Agents must UPPERALL first.",
-      "repro": "DIFF 'Host' 'host' \u2192 residual"
+      "title": "ROTATE/CHUNK/FLATTEN non-mutate",
+      "detail": "Must LET stack = LAST after handoff/reclaim or WRITE stale order.",
+      "repro": "ROTATE 1 stack; WRITE path stack still old without LET"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "WINDOW n>total and STRIDE step<=0 soft empty",
-      "detail": "Good for soft miss but no FAIL sticky; agents need LINES check + REQUIRE. Documented pattern.",
-      "repro": "WINDOW 9 on 5 hosts \u2192 empty"
+      "title": "No exact-token severity tally form",
+      "detail": "COUNTLINE is exact whole field; COUNTMATCH is substring. Missing middle: count fields whose first token is ERROR.",
+      "repro": "need CUTALL 0 then COUNTLINE or FREQ for true severity tokens"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last fleet/canary line without $.",
-      "repro": "seed; cat -A FLEET.txt"
+      "detail": "cat -A last stack line without $.",
+      "repro": "seed; cat -A STACK.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "lang|args",
-      "title": "SYS form keywords steal identifier namespace from vars",
-      "detail": "Generalization of W1: OFF, and likely other keyword args across SYS forms. No reserved-name diagnostic on DEFAULT OFF.",
-      "repro": "DEFAULT OFF=0 near STRIDE"
+      "area": "host|bag",
+      "title": "COUNTMATCHI still substring-unsafe",
+      "detail": "Case-insensitive error still matches terror and ERROR. I flag only helps case, not boundaries.",
+      "repro": "COUNTMATCHI terror+ERROR+error error → 3"
     }
   ],
   "workarounds": [
-    "Never name vars OFF/END/IF; use OFFS and SYS STRIDE n OFF OFFS bag",
-    "Control partition via DIFF fleet canary instead of second STRIDE offset",
-    "HASLINE not FIRSTMATCH for exact host identity",
-    "Always LET after STRIDE/WINDOW/DIFF",
-    "Check LINES after WINDOW; REQUIRE for hard empty"
+    "Tally with CUTALL first-token then FREQ/COUNTLINE not raw COUNTMATCH on free text",
+    "Ban spaces in oncall names before CHUNK/FLATTEN",
+    "Never name vars RIGHT/LEFT/OFF/END",
+    "Always LET after ROTATE/CHUNK/FLATTEN",
+    "Use HASLINE for engineer identity not FIRSTMATCH"
   ],
   "language_gaps": [
-    "Reserved-word diagnostic on DEFAULT/LET of SYS keywords (OFF)",
-    "Uniform mid-arg var binding for STRIDE/CHUNK/WINDOW optional params",
-    "FIRSTMATCH exact-field mode",
-    "Nested WINDOW pairs without space flatten",
+    "Word-boundary / token COUNTMATCH",
+    "Nested bag CHUNK without join flatten",
+    "Reserved-word diagnostic on DEFAULT RIGHT/LEFT/OFF",
+    "COUNTMATCH mode that returns matching fields (or clearer docs vs GREP)",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Hard fail: SYS STRIDE STEP off2 fleet unknown form off2",
-    "Hard fail class: var named OFF collides with STRIDE OFF keyword",
-    "Fixed with SYS STRIDE STEP OFF OFFS fleet + DIFF complement for control",
-    "WINDOW 2 solo host soft empty works with REQUIRE path"
+    "Confirmed terror contains error — COUNTMATCH false friend high for ops tallies",
+    "FLATTEN space-name corruption expected but severe for real person names",
+    "ROTATE handoff/handback round-trip works cleanly with LET rebind",
+    "No language fix this fire — token COUNTMATCH for MEANINGFUL_ITER"
   ],
-  "commit": "9391d26c9c2bf58958c68f42ac65be094067f60a",
-  "ts": "2026-08-05T20:43:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T21:08:00Z"
 }
