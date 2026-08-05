@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 52,
-  "version": "1.15.77-usability",
-  "item": "SYS STR / ITOA integer to decimal string",
-  "item_id": 85,
-  "title": "SYS STR|ITOA converts numbers for REPLACEALL templates",
-  "commit": "d7e0ced133803a364034048dacaf24258f5a590d",
-  "summary": "SYS STR|ITOA|NUMSTR|TOSTR|DECIMAL n \u2192 decimal string LAST/STR; dual of SYS NUM; fills {{COUNT}} without shell.",
+  "iter": 53,
+  "version": "1.15.78-usability",
+  "item": "SYS BEFORE / AFTER peel at needle",
+  "item_id": 86,
+  "title": "SYS BEFORE|AFTER peels log/kv at first needle",
+  "commit": "pending",
+  "summary": "SYS BEFORE|LEFT_OF / AFTER|RIGHT_OF hay needle \u2192 left/right peel; LAST_N=found; log triage without FIND+MID.",
   "proofs": [
-    "626_sys_str",
-    "selftest n_pass=52"
+    "627_sys_before",
+    "selftest n_pass=53"
   ],
-  "when": "2026-08-05T10:26:06Z",
+  "when": "2026-08-05T10:36:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d7e0ced133803a364034048dacaf24258f5a590d"
+  "sha": "pending"
 }

@@ -1899,6 +1899,58 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS BEFORE|AFTER hay needle — peel at first needle (log/kv without FIND+MID).
+     * BEFORE → text left of first match (whole hay if miss).
+     * AFTER  → text right of first match (empty if miss).
+     * LAST_N = 1 if needle found, 0 if miss; empty needle → found at 0. */
+    /* Note: do not alias POST — SYS POST is HTTP POST already. */
+    if (kw(&L->cur,"BEFORE") || kw(&L->cur,"LEFT_OF") || kw(&L->cur,"LEFTOF") ||
+        kw(&L->cur,"PRE") || kw(&L->cur,"HEADOF") || kw(&L->cur,"SPLITLEFT") ||
+        kw(&L->cur,"AFTER") || kw(&L->cur,"RIGHT_OF") || kw(&L->cur,"RIGHTOF") ||
+        kw(&L->cur,"TAILOF") || kw(&L->cur,"SPLITRIGHT")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      int want_after = (strcmp(op, "AFTER") == 0 || strcmp(op, "RIGHT_OF") == 0 ||
+                        strcmp(op, "RIGHTOF") == 0 ||
+                        strcmp(op, "TAILOF") == 0 || strcmp(op, "SPLITRIGHT") == 0);
+      lex_next(L);
+      char hay[512] = "", needle[256] = "";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      char out[512];
+      long found = 0;
+      if (needle[0] == 0) {
+        /* empty needle matches at start */
+        found = 1;
+        if (want_after) snprintf(out, sizeof out, "%s", hay);
+        else out[0] = 0;
+      } else {
+        const char *p = strstr(hay, needle);
+        if (!p) {
+          found = 0;
+          if (want_after) out[0] = 0;
+          else snprintf(out, sizeof out, "%s", hay);
+        } else {
+          found = 1;
+          if (want_after) {
+            snprintf(out, sizeof out, "%s", p + strlen(needle));
+          } else {
+            size_t pre = (size_t)(p - hay);
+            if (pre >= sizeof out) pre = sizeof out - 1;
+            memcpy(out, hay, pre);
+            out[pre] = 0;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE) */
     if (kw(&L->cur,"REVS") || kw(&L->cur,"STRREV") || kw(&L->cur,"SREV")){
       lex_next(L);
@@ -2215,7 +2267,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2458,6 +2510,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS REPLACEALL", "SYS REPLACEALL|GSUB hay old new — all occurrences · LAST_N=count"},
       {"SYS STR", "SYS STR|ITOA|NUMSTR [n|LAST_N] — integer → decimal string LAST · template {{COUNT}}"},
       {"SYS ITOA", "SYS ITOA [n] — alias of SYS STR · dual of SYS NUM/ATOI"},
+      {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
+      {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

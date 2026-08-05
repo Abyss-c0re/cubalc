@@ -1,0 +1,91 @@
+# SYS BEFORE / AFTER — peel at first needle (log/kv without FIND+MID glue)
+# Usability: key=value and "level: msg" extraction for agent triage
+
+HOLD_FLASH 1
+
+# basic peel
+SYS BEFORE "host=box.local" "="
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "host"
+ASSERT LAST_N == 1
+
+SYS AFTER "host=box.local" "="
+ASSERT LAST_N == 1
+SYS EQS LAST "box.local"
+ASSERT LAST_N == 1
+
+# multi-char needle
+SYS BEFORE "Error: disk full" ": "
+ASSERT LAST_N == 1
+SYS EQS LAST "Error"
+ASSERT LAST_N == 1
+SYS AFTER "Error: disk full" ": "
+SYS EQS LAST "disk full"
+ASSERT LAST_N == 1
+
+# first occurrence only
+SYS BEFORE "a:b:c" ":"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS AFTER "a:b:c" ":"
+SYS EQS LAST "b:c"
+ASSERT LAST_N == 1
+
+# miss: BEFORE keeps whole, AFTER empty, LAST_N=0
+SYS BEFORE "nope" "="
+ASSERT LAST_N == 0
+SYS EQS LAST "nope"
+ASSERT LAST_N == 1
+SYS AFTER "nope" "="
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# aliases LEFT_OF / RIGHT_OF
+SYS LEFT_OF "x/y/z" "/"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+SYS RIGHT_OF "x/y/z" "/"
+SYS EQS LAST "y/z"
+ASSERT LAST_N == 1
+
+# PRE / TAILOF (not POST — SYS POST is HTTP)
+SYS PRE "k=v" "="
+SYS EQS LAST "k"
+ASSERT LAST_N == 1
+SYS TAILOF "k=v" "="
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+
+# default hay = LAST
+LET line = "ts=1 level=error msg=boom"
+SYS AFTER line "level="
+ASSERT LAST_N == 1
+SYS BEFORE LAST " "
+ASSERT LAST_N == 1
+SYS EQS LAST "error"
+ASSERT LAST_N == 1
+
+# chain: severity then message after first colon-space
+LET L = "WARN: space low"
+SYS BEFORE L ": "
+LET sev = LAST
+SYS AFTER L ": "
+LET msg = LAST
+SYS EQS sev "WARN"
+ASSERT LAST_N == 1
+SYS EQS msg "space low"
+ASSERT LAST_N == 1
+
+# empty needle → found at 0: BEFORE empty, AFTER whole
+SYS BEFORE "abc" ""
+ASSERT LAST_N == 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS AFTER "abc" ""
+ASSERT LAST_N == 1
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+PRINT "sys_before ok"
