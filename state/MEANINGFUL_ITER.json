@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 67,
-  "version": "1.15.92-usability",
-  "item": "SYS HASLINE / HASLINEI exact bag membership",
-  "item_id": 100,
-  "title": "SYS HASLINE|HASFIELD bag needle exact field membership",
-  "commit": "b0f4ec9eac6a1e8783af155a9701d5c966d5cad7",
-  "summary": "SYS HASLINE|HASFIELD|LINEIN exact newline-field membership; HASLINEI case-insensitive. Work bags without EACH+EQS; not GREP substring. selftest 67.",
+  "iter": 68,
+  "version": "1.15.93-usability",
+  "item": "SYS PREPEND / POPHEAD FIFO bag front",
+  "item_id": 101,
+  "title": "SYS PREPEND|UNSHIFT + POPHEAD|DEQUEUE FIFO bag front ops",
+  "commit": "b3d4e60ccac77e438649e596c9a1e129b0633ab5",
+  "summary": "SYS PREPEND|UNSHIFT insert field at bag front; POPHEAD|DEQUEUE peel first for FIFO queues. Dual of PUSH/POP without REVL/NTH. selftest 68.",
   "proofs": [
-    "641_sys_hasline",
-    "selftest n_pass=67"
+    "642_sys_prepend",
+    "selftest n_pass=68"
   ],
-  "when": "2026-08-05T12:53:33Z",
+  "when": "2026-08-05T13:04:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b0f4ec9eac6a1e8783af155a9701d5c966d5cad7"
+  "sha": "b3d4e60ccac77e438649e596c9a1e129b0633ab5"
 }
