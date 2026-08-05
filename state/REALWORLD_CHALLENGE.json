@@ -1,52 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 25,
-  "program": "programs/realworld/feature_flag_board.cubalc",
-  "theme": "feature flag board SETMATCH COUNTLINE MOVELINE name:on|off",
-  "version": "1.15.101-usability",
+  "iter": 26,
+  "program": "programs/realworld/dlq_retry_board.cubalc",
+  "theme": "dead-letter retry board jobid:status SETMATCH ladder MOVELINE pin GREP suffix false friends",
+  "version": "1.15.104-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_on_toggle_pin",
-      "cmd": "seed beta dark_mode legacy; on beta; toggle dark_mode; pin dark_mode",
+      "name": "seed_fail_ladder",
+      "cmd": "seed job_a..extra; fail a\u2192retry; fail a\u2192dead; fail b; succeed c",
       "ok": true,
-      "note": "SETMATCH off\u2192on; MOVELINE dark_mode to front; plate dark_mode,beta,legacy"
+      "note": "plate job_a:dead job_b:retry job_c:ok job_a_extra:pending"
     },
     {
-      "name": "set_insert_drop",
-      "cmd": "set canary on; drop legacy",
+      "name": "pin_retry_requeue",
+      "cmd": "pin job_a; retry dead\u2192retry; kill; requeue\u2192pending",
       "ok": true,
-      "note": "missing name PUSH insert; REMOVELINE by exact old_entry"
+      "note": "MOVELINE+SETMATCH transitions round-trip"
     },
     {
-      "name": "toggle_miss_require",
-      "cmd": "CUBALC_FF_REQUIRE=1 toggle ghost",
+      "name": "require_miss",
+      "cmd": "CUBALC_DLQ_REQUIRE=1 fail ghost; pin empty attention",
       "ok": true,
-      "note": "EXIT 2 toggle miss"
+      "note": "EXIT 2 soft+REQUIRE paths"
     },
     {
-      "name": "countline_exact_not_suffix",
-      "cmd": "COUNTLINE bag ':on' vs GREP ':on'+LINES",
+      "name": "countline_vs_grep_suffix",
+      "cmd": "COUNTLINE bag ':ok' vs GREP ':ok'+LINES; GREP ':ok' keeps job:okay",
       "ok": true,
-      "note": "COUNTLINE ':on'\u21920; GREP+LINES\u21922 \u2014 suffix tallies need GREP"
+      "note": "COUNTLINE ':ok'\u21920; GREP ':ok'\u21922 (ok+okay false friend)"
     },
     {
       "name": "setmatch_first_only",
-      "cmd": "SETMATCH two beta:on \u2192 one off residual on",
+      "cmd": "SETMATCH two x:dead \u2192 one residual x:dead",
       "ok": true,
-      "note": "first match only; COUNTLINE residual beta:on=1"
+      "note": "first match only; residual_dead=1"
+    },
+    {
+      "name": "grep_prefix_false_friend",
+      "cmd": "GREP job_a matches job_a_extra+job_ab; GREP job_a: exact-ish",
+      "ok": true,
+      "note": "need BEFORE+EQS or STARTS job_a: for identity"
     },
     {
       "name": "print_json_collapse",
-      "cmd": "list PRINT_JSON flags",
+      "cmd": "list PRINT_JSON bag",
       "ok": true,
-      "note": "dark_mode:onbeta:onlegacy:off collapsed"
+      "note": "job_a:pendingjob_b:retry... collapsed"
+    },
+    {
+      "name": "write_no_final_nl",
+      "cmd": "cat -A DLQ.txt after seed",
+      "ok": true,
+      "note": "last field often lacks trailing $ (WRITE bag glue)"
+    },
+    {
+      "name": "rand_neg_fix_selftest",
+      "cmd": "SYS RAND -3 had_a flag; selftest 79/79",
+      "ok": true,
+      "note": "fixed a<0&&b<0 sentinel; non-positive single \u2192 0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "76/76 pass incl moveline countline setmatch"
+      "note": "79/79 pass incl sys_rand after fix"
     }
   ],
   "weaknesses": [
@@ -54,65 +72,89 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "COUNTLINE is exact-field only \u2014 cannot tally status suffixes",
-      "detail": "COUNTLINE bag ':on' returns 0 even when many name:on rows exist. Agents expecting suffix/role counts must GREP ':on' then LINES. The form name invites 'count lines matching' but means 'count exact field equality'.",
-      "repro": "COUNTLINE 'beta:on\\ndark:on' ':on' \u2192 LAST_N=0; GREP ':on' + LINES \u2192 2"
+      "title": "GREP status suffix tallies are substring-unsafe for short statuses",
+      "detail": "GREP ':ok' keeps both job_c:ok and job_d:okay. COUNTLINE cannot suffix-tally so agents must GREP then LINES \u2014 but short suffixes collide with longer status names. DLQ boards need exact AFTER ':' + EQS status walks or pure single-token fields.",
+      "repro": "GREP ':ok' on 'job:ok\\njob:okay' \u2192 2 lines; COUNTLINE bag ':ok' \u2192 0"
     },
     {
       "id": "W2",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "SETMATCH replaces first exact match only \u2014 duplicates residual",
-      "detail": "Two beta:on fields \u2192 SETMATCH beta:on\u2192beta:off leaves one beta:on. No SETMATCHALL. Flag boards with accidental dupes stay inconsistent after toggle.",
-      "repro": "SETMATCH 'beta:on\\nbeta:on' 'beta:on' 'beta:off' \u2192 beta:off\\nbeta:on"
+      "title": "COUNTLINE exact-only \u2014 no status-role tally form",
+      "detail": "COUNTLINE bag ':dead' always 0. Agents expect 'count lines matching status' but get field equality. Same class as feature_flag_board W1; DLQ escalates because four statuses need four GREP+LINES and still false-friend.",
+      "repro": "COUNTLINE 'a:dead\\nb:dead' ':dead' \u2192 LAST_N=0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|docs",
-      "title": "SYS RENAME (file) vs SYS MOVELINE (bag) name collision",
-      "detail": "Agents say 'rename flag' or 'move flag to front' and may call RENAME (filesystem) instead of MOVELINE/SETMATCH. Catalog planes differ (host file vs bag) but both are SYS *MOVE* family in mental model.",
-      "repro": "forms: RENAME path; MOVELINE bag from to"
+      "area": "host|bag",
+      "title": "SETMATCH first exact only \u2014 no multi-status or multi-job batch",
+      "detail": "Duplicate job:dead leaves residual after one SETMATCH. Fail ladder is two sequential transitions not one form. No SETMATCHALL / SETMATCHWHERE status.",
+      "repro": "SETMATCH 'x:dead\\nx:dead' x:dead\u2192x:retry \u2192 residual x:dead"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host",
-      "title": "No string concat \u2014 flag tokens via REPLACEALL template",
-      "detail": "name:on built as REPLACEALL on NAME:VAL placeholders. Names equal to VAL/NAME tokens can corrupt. Same class as roster board.",
-      "repro": "template NAME:VAL with NAME containing VAL"
+      "area": "host|docs",
+      "title": "GREP jobid prefix without colon matches jobid_extra / jobidab",
+      "detail": "GREP 'job_a' keeps job_a, job_a_extra, job_ab. GREP 'job_a:' is safer but still substring inside longer fields. Identity requires EACH+BEFORE+EQS or STARTS 'job_a:'.",
+      "repro": "GREP 'job_a' on three cousins \u2192 n=3; STARTS/EQS identity \u2192 1"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses multi-line flag bags",
-      "detail": "list dumps flags as dark_mode:onbeta:onlegacy:off \u2014 unparseable for agents.",
-      "repro": "PRINT_JSON flags after seed+on"
+      "area": "host",
+      "title": "No string concat \u2014 job:status tokens via REPLACEALL template",
+      "detail": "NAME:VAL REPLACEALL corrupts if job id contains NAME or VAL substrings. Same class as flag/roster boards.",
+      "repro": "template NAME:VAL with NAME containing VAL"
     },
     {
       "id": "W6",
+      "severity": "med",
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line DLQ bags",
+      "detail": "list dumps bag as job_a:pendingjob_b:retryjob_c:ok \u2014 unparseable for agents. Scalars n_pending/n_retry ok; plate remains truth.",
+      "repro": "PRINT_JSON bag after seed+fail"
+    },
+    {
+      "id": "W7",
       "severity": "low",
-      "area": "host|bag",
-      "title": "GREP still substring-unsafe for name: prefix identity",
-      "detail": "GREP 'beta:' matches mybeta:on. Program uses EACH+BEFORE+EQS for identity; list tallies via GREP ':on' are OK (suffix) but name filters must not use GREP name:.",
-      "repro": "GREP 'beta:' on mybeta:on\\nbeta:off keeps both"
+      "area": "host|write",
+      "title": "WRITE bag often omits final trailing newline",
+      "detail": "cat -A shows last job:status without $. Some tools treat as incomplete last line; READ still reloads fields via LINES but plate is ugly for shell pipelines.",
+      "repro": "seed three jobs; cat -A DLQ.txt \u2192 last field no $"
+    },
+    {
+      "id": "W8",
+      "severity": "med",
+      "area": "host|rand",
+      "title": "SYS RAND single negative used a<0&&b<0 sentinel (FIXED this iter)",
+      "detail": "SYS RAND -3 was treated as no-args (0..999999) because negative a plus unset b both looked 'absent'. Fixed with has_a/has_b flags; non-positive single now correctly \u2192 0. Selftest 79/79.",
+      "repro": "pre-fix: SYS RAND -3 LAST_N random; post-fix: LAST_N==0"
     }
   ],
   "workarounds": [
-    "Suffix tallies: GREP ':on'|':off' then SYS LINES \u2014 not COUNTLINE",
-    "Identity: EACH LINE + BEFORE ':' + EQS name before SETMATCH/MOVELINE",
-    "Dedup flags before toggle; or loop SETMATCH until COUNTLINE old==0",
-    "PRINT_JSON only on_n/off_n scalars; keep bag on FLAGS.txt plate",
-    "Use MOVELINE for bag reorder; RENAME only for filesystem paths"
+    "Status tallies: GREP ':pending'|':retry'|':dead' then LINES \u2014 not COUNTLINE; prefer long unique status tokens",
+    "Exact status: EACH LINE + AFTER ':' + EQS status (or COUNTLINE full job:status token)",
+    "Job identity: EACH+BEFORE+EQS or STARTS 'jobid:' \u2014 never bare GREP jobid",
+    "Dedup dead before retry/requeue; or loop SETMATCH until COUNTLINE old==0",
+    "PRINT_JSON only n_* scalars; keep bag on DLQ.txt plate",
+    "After WRITE, optional APPEND empty or ensure final NL in host if shell tools need it"
   ],
   "language_gaps": [
     "COUNTLINE suffix / field-pattern tally (or GREP count without materialize)",
-    "SETMATCHALL replace all exact fields",
-    "String concatenation for name:val tokens",
-    "PRINT_JSON newline escape in strings",
-    "Doc cross-link RENAME vs MOVELINE clearly in forms catalog"
+    "SETMATCHALL and status-where replace (set all job:* \u2192 job:ok)",
+    "String concatenation for job:status tokens",
+    "PRINT_JSON newline escape in multi-line strings",
+    "WRITE option to force trailing newline on bag plates",
+    "Ends-with field match (ENDS bag ':ok' exact field suffix) distinct from GREP substring"
   ],
-  "commit": "8972b76275fab592e38845143153552fcd48e3e7",
-  "ts": "2026-08-05T14:28:20Z"
+  "issues_faced": [
+    "Selftest red on sys_rand (SYS RAND -3) \u2014 sentinel bug, fixed in lang_ops_core.c has_a/has_b",
+    "GREP ':ok' false friend with ':okay' makes short status vocab dangerous for suffix tallies",
+    "fail ladder needs two SETMATCH hops; no atomic multi-step form",
+    "WRITE last-field missing NL visible in cat -A after seed"
+  ],
+  "commit": "c624222fbfc26267c2d7da9f16980ee09786248d",
+  "ts": "2026-08-05T14:54:45Z"
 }
