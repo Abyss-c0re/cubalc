@@ -7485,6 +7485,89 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TRUNCALL|CLIPALL|TRUNCATEALL [RIGHT] bag width — truncate every field
+     * to at most width chars (no pad fill). Default keep left; RIGHT/TAIL keep right.
+     * width<=0 → empty fields. LAST_N/TRUNCALL_N = field count; TRUNCALL_W = width;
+     * TRUNCALL_HIT = fields that were shortened.
+     * Usability: clip log/payload bags without EACH+LEFT/MID glue; dual of PADALL. */
+    if (kw(&L->cur,"TRUNCALL") || kw(&L->cur,"CLIPALL") || kw(&L->cur,"TRUNCATEALL") ||
+        kw(&L->cur,"MAPTRUNC") || kw(&L->cur,"MAPCLIP") || kw(&L->cur,"SHORTENALL") ||
+        kw(&L->cur,"TRIMLEN") || kw(&L->cur,"LIMITALL") || kw(&L->cur,"MAXLENALL")){
+      int keep_right = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char field[512], clipped[512];
+      const char *p, *start;
+      size_t olen = 0, flen, sn, take;
+      long width = 0, kept = 0, hit = 0;
+      lex_next(L);
+      if (kw(&L->cur,"RIGHT") || kw(&L->cur,"R") || kw(&L->cur,"TAIL") ||
+          kw(&L->cur,"END") || kw(&L->cur,"KEEPRIGHT")) {
+        keep_right = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"LEFT") || kw(&L->cur,"L") || kw(&L->cur,"HEAD") ||
+                 kw(&L->cur,"START") || kw(&L->cur,"KEEPLEFT")) {
+        keep_right = 0;
+        lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        width = parse_expr(vm, L);
+      if (width < 0) width = 0;
+      if (width > 511) width = 511;
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof field) flen = sizeof field - 1;
+          memcpy(field, start, flen);
+          field[flen] = 0;
+          if ((long)flen > width) {
+            hit++;
+            take = (size_t)width;
+            if (take >= sizeof clipped) take = sizeof clipped - 1;
+            if (keep_right && flen > take) {
+              memcpy(clipped, field + (flen - take), take);
+            } else {
+              memcpy(clipped, field, take);
+            }
+            clipped[take] = 0;
+            sn = take;
+          } else {
+            sn = flen;
+            memcpy(clipped, field, sn);
+            clipped[sn] = 0;
+          }
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + sn < sizeof out) {
+            memcpy(out + olen, clipped, sn);
+            olen += sn;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, clipped, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "TRUNCALL_N", kept);
+      var_set_num(vm, "CLIPALL_N", kept);
+      var_set_num(vm, "TRUNCALL_W", width);
+      var_set_num(vm, "TRUNCALL_HIT", hit);
+      var_set_num(vm, "CLIPALL_HIT", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* digit-3 string duals: LEFT/RIGHT slice + COUNT occurrences */
     if (kw(&L->cur,"LEFT") || kw(&L->cur,"STRLEFT") || kw(&L->cur,"TAKELEFT") ||
         kw(&L->cur,"PREFIXN") ||
@@ -7547,7 +7630,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -7951,6 +8034,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PADALL", "SYS PADALL|RPADALL bag width [pad] — right-pad every field to width"},
       {"SYS LPADALL", "SYS LPADALL bag width [pad] — left-pad every field to width"},
       {"SYS RPADALL", "SYS RPADALL bag width [pad] — alias of right-pad PADALL"},
+      {"SYS TRUNCALL", "SYS TRUNCALL|CLIPALL [RIGHT] bag width — truncate every field to width (no pad)"},
+      {"SYS CLIPALL", "SYS CLIPALL bag width — alias of SYS TRUNCALL · clip log payloads"},
+      {"SYS MAPTRUNC", "SYS MAPTRUNC bag width — alias of SYS TRUNCALL"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
       {"SYS IN", "SYS IN|WITHIN x lo hi — inclusive range membership → LAST_N 0|1"},
       {"SYS WITHIN", "SYS WITHIN x lo hi — alias of SYS IN · score/retry bands"},

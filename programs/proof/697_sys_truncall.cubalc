@@ -1,0 +1,64 @@
+# SYS TRUNCALL / CLIPALL — truncate every bag field to max width (no pad)
+# Usability: clip log/payload bags without EACH+LEFT glue; dual of PADALL
+
+HOLD_FLASH 1
+
+LET bag = "hello\nxy\nfoobar"
+
+# keep left (default)
+SYS TRUNCALL bag 3
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT TRUNCALL_N == 3
+ASSERT TRUNCALL_W == 3
+ASSERT TRUNCALL_HIT == 2
+SYS EQS LAST "hel\nxy\nfoo"
+ASSERT LAST_N == 1
+
+# keep right (tail)
+SYS TRUNCALL RIGHT bag 3
+SYS EQS LAST "llo\nxy\nbar"
+ASSERT LAST_N == 1
+ASSERT TRUNCALL_HIT == 2
+
+# aliases
+SYS CLIPALL bag 4
+SYS EQS LAST "hell\nxy\nfoob"
+ASSERT LAST_N == 1
+ASSERT CLIPALL_HIT == 2
+SYS MAPTRUNC bag 2
+SYS EQS LAST "he\nxy\nfo"
+ASSERT LAST_N == 1
+
+# LEFT keyword explicit
+SYS TRUNCALL LEFT bag 3
+SYS EQS LAST "hel\nxy\nfoo"
+ASSERT LAST_N == 1
+
+# width 0 → empty fields
+SYS TRUNCALL bag 0
+ASSERT LAST_N == 3
+ASSERT TRUNCALL_HIT == 3
+SYS EQS LAST "\n\n"
+ASSERT LAST_N == 1
+
+# no-op when all shorter
+SYS TRUNCALL "a\nbb" 5
+ASSERT TRUNCALL_HIT == 0
+SYS EQS LAST "a\nbb"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS TRUNCALL "" 3
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent: clip long ERROR payloads for plate
+LET msgs = "ok\nERROR disk full and path too long for plate\nwarn"
+SYS TRUNCALL msgs 16
+SYS EQS LAST "ok\nERROR disk full \nwarn"
+ASSERT LAST_N == 1
+ASSERT TRUNCALL_HIT == 1
+
+PRINT "sys_truncall ok"
