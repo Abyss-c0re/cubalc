@@ -82,6 +82,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 52. ~~**`EXIT`**~~ **done** (halt program · code/reason · plate exit_code/halted).
 53. ~~**`INCLUDE ONCE`**~~ **done** (skip reload of already-loaded module path).
 54. ~~**`SYS PID` / `HOSTNAME`**~~ **done** (process id + machine name for agents).
+55. ~~**`SYS USER` / `UID` / `HOME`**~~ **done** (login + uid + home dir without shell).
 
 ## Tick protocol
 

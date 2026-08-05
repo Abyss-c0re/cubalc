@@ -1,5 +1,8 @@
 /* CubalC lang — lang_ops_core.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
+#if !defined(CUBALC_OS_WINDOWS)
+#  include <pwd.h>
+#endif
 
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
@@ -607,6 +610,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS USER|USERNAME|LOGNAME — login name → LAST/USER (identity without shell)
+     * Prefer USER/LOGNAME/USERNAME env, then getpwuid; fallback "user". */
+    if (kw(&L->cur,"USER") || kw(&L->cur,"USERNAME") || kw(&L->cur,"LOGNAME") ||
+        kw(&L->cur,"WHOAMI")){
+      char user[128];
+      const char *e;
+      lex_next(L);
+      user[0] = 0;
+      e = getenv("USER");
+      if (!e || !e[0]) e = getenv("LOGNAME");
+      if (!e || !e[0]) e = getenv("USERNAME");
+      if (e && e[0]) snprintf(user, sizeof user, "%s", e);
+#if !defined(CUBALC_OS_WINDOWS)
+      if (!user[0]) {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_name && pw->pw_name[0])
+          snprintf(user, sizeof user, "%s", pw->pw_name);
+      }
+#endif
+      if (!user[0]) snprintf(user, sizeof user, "user");
+      var_set_str(vm, "USER", user);
+      var_set_str(vm, "USERNAME", user);
+      var_set_str(vm, "LAST", user);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", user);
+      vm->last_n = (long)strlen(user);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UID|USER_ID|EUID — numeric user id → LAST_N/UID */
+    if (kw(&L->cur,"UID") || kw(&L->cur,"USER_ID") || kw(&L->cur,"USERID") ||
+        kw(&L->cur,"EUID") || kw(&L->cur,"GETUID")){
+      long n = 0;
+      char buf[32];
+      lex_next(L);
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        const char *e = getenv("UID");
+        if (e && e[0]) n = strtol(e, NULL, 10);
+      }
+#else
+      n = (long)getuid();
+      if (n < 0) n = 0;
+#endif
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "UID", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS HOME|HOMEDIR|USER_HOME — home directory → LAST/HOME */
+    if (kw(&L->cur,"HOME") || kw(&L->cur,"HOMEDIR") || kw(&L->cur,"USER_HOME") ||
+        kw(&L->cur,"HOMEPATH")){
+      char home[512];
+      const char *e;
+      lex_next(L);
+      home[0] = 0;
+      e = getenv("HOME");
+#if defined(CUBALC_OS_WINDOWS)
+      if (!e || !e[0]) e = getenv("USERPROFILE");
+#endif
+      if (e && e[0]) snprintf(home, sizeof home, "%s", e);
+#if !defined(CUBALC_OS_WINDOWS)
+      if (!home[0]) {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_dir && pw->pw_dir[0])
+          snprintf(home, sizeof home, "%s", pw->pw_dir);
+      }
+#endif
+      if (!home[0]) {
+        if (getcwd(home, sizeof home) == NULL)
+          snprintf(home, sizeof home, ".");
+      }
+      var_set_str(vm, "HOME", home);
+      var_set_str(vm, "LAST", home);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", home);
+      vm->last_n = (long)strlen(home);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
       lex_next(L);
       char path[512]="", data[4096]; data[0]=0;
@@ -1075,7 +1162,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|PID|HOSTNAME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1279,6 +1366,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
+      {"SYS USER", "SYS USER|USERNAME — login name → LAST/USER"},
+      {"SYS UID", "SYS UID|USER_ID — numeric user id → LAST_N/UID"},
+      {"SYS HOME", "SYS HOME|HOMEDIR — home directory → LAST/HOME"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

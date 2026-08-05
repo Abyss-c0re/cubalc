@@ -1,0 +1,28 @@
+# SYS USER / UID / HOME — host user identity without shell glue
+# Usability: peer naming, plate stamps, portable paths for agents
+
+HOLD_FLASH 1
+
+SYS USER
+ASSERT OK == 1
+ASSERT LAST_N > 0 "user non-empty"
+PRINT "user" LAST USER
+
+SYS UID
+ASSERT OK == 1
+ASSERT LAST_N == UID
+ASSERT UID >= 0 "uid non-negative"
+PRINT "uid" UID
+
+SYS HOME
+ASSERT OK == 1
+ASSERT LAST_N > 0 "home non-empty"
+PRINT "home" LAST HOME
+
+# aliases still populate USER / HOME
+SYS USERNAME
+ASSERT LAST_N > 0 "username alias"
+SYS HOMEDIR
+ASSERT LAST_N > 0 "homedir alias"
+
+PRINT "sys_user_uid_home ok" USER UID
