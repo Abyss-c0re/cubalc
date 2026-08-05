@@ -1,0 +1,25 @@
+# SYS DATE — human-readable UTC ISO stamp without shell date(1)
+# Usability: plate/log timestamps for agents
+
+HOLD_FLASH 1
+
+SYS DATE
+ASSERT OK == 1
+ASSERT LAST_N >= 20 "ISO min length YYYY-MM-DDTHH:MM:SSZ"
+ASSERT TIME > 0 "epoch also set"
+DEFINED DATE
+ASSERT DEFINED == 1
+DEFINED ISO
+ASSERT DEFINED == 1
+
+# aliases
+SYS ISO
+ASSERT LAST_N >= 20
+SYS UTC
+ASSERT LAST_N >= 20
+
+# still coherent with SYS TIME
+SYS TIME
+ASSERT TIME > 0
+
+PRINT "sys_date ok" TIME

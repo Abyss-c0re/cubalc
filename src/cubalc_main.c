@@ -1661,6 +1661,7 @@ int main(int argc, char **argv) {
       {"typeof", "programs/proof/599_typeof.cubalc", "TYPEOF num|str|undef kind probe"},
       {"unset", "programs/proof/600_unset.cubalc", "UNSET remove var for DEFAULT re-apply"},
       {"identity", "programs/proof/601_identity.cubalc", "IDENTITY host/process plate"},
+      {"sys_date", "programs/proof/602_sys_date.cubalc", "SYS DATE UTC ISO stamp"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1805,6 +1806,7 @@ int main(int argc, char **argv) {
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
+      {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
       {"SYS USER", "host", "SYS USER|USERNAME — login name → LAST/USER"},
@@ -2292,6 +2294,8 @@ int main(int argc, char **argv) {
        "UNSET name remove var for DEFAULT re-apply"},
       {"programs/proof/601_identity.cubalc", "identity",
        "IDENTITY cubalc.identity.v1 host plate"},
+      {"programs/proof/602_sys_date.cubalc", "sys_date",
+       "SYS DATE UTC ISO plate stamp"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2641,6 +2645,7 @@ int main(int argc, char **argv) {
       {"SYS USER", "host", "SYS USER login name"},
       {"SYS UID", "host", "SYS UID numeric user id"},
       {"SYS HOME", "host", "SYS HOME home directory"},
+      {"SYS DATE", "host", "SYS DATE UTC ISO stamp"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2829,6 +2834,7 @@ int main(int argc, char **argv) {
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
+      {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID process id"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME machine name"},
       {"SYS USER", "host", "SYS USER login name → LAST/USER"},
@@ -2860,6 +2866,7 @@ int main(int argc, char **argv) {
       {"programs/proof/599_typeof.cubalc", "typeof", "TYPEOF num|str|undef kind"},
       {"programs/proof/600_unset.cubalc", "unset", "UNSET remove var DEFAULT re-apply"},
       {"programs/proof/601_identity.cubalc", "identity", "IDENTITY host/process plate"},
+      {"programs/proof/602_sys_date.cubalc", "sys_date", "SYS DATE UTC ISO stamp"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

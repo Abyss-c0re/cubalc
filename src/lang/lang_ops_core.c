@@ -566,6 +566,42 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
+     * Usability: agents stamp plates without shell date(1).
+     * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
+    if (kw(&L->cur,"DATE") || kw(&L->cur,"ISO") || kw(&L->cur,"DATETIME") ||
+        kw(&L->cur,"UTC") || kw(&L->cur,"ISO8601") || kw(&L->cur,"TIMESTAMP_ISO")){
+      time_t now;
+      struct tm tm_utc;
+      char iso[40];
+      long epoch;
+      lex_next(L);
+      now = time(NULL);
+      epoch = (long)now;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        struct tm *tp = gmtime(&now);
+        if (tp) tm_utc = *tp;
+        else memset(&tm_utc, 0, sizeof tm_utc);
+      }
+#else
+      if (!gmtime_r(&now, &tm_utc))
+        memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+      snprintf(iso, sizeof iso, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+               tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+               tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+      var_set_str(vm, "DATE", iso);
+      var_set_str(vm, "ISO", iso);
+      var_set_str(vm, "DATETIME", iso);
+      var_set_str(vm, "LAST", iso);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso);
+      vm->last_n = (long)strlen(iso);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "TIME", epoch);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS PID — process id → LAST_N/PID (peer identity without shell) */
     if (kw(&L->cur,"PID") || kw(&L->cur,"GETPID") || kw(&L->cur,"PROCESS_ID")){
       long n;
@@ -1162,7 +1198,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1369,6 +1405,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
+      {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
       {"SYS USER", "SYS USER|USERNAME — login name → LAST/USER"},
