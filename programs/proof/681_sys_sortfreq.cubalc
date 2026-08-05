@@ -1,0 +1,73 @@
+# SYS SORTFREQ / SORTBYCOUNT — sort FREQ key:count bag by numeric count
+# Usability: top severities after FREQ without shell sort -t: -k2 -n
+
+HOLD_FLASH 1
+
+LET freq = "WARN:2\nERROR:5\nINFO:1\nFATAL:3"
+
+# default DESC (heaviest first)
+SYS SORTFREQ freq
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT SORTFREQ_N == 4
+SYS EQS LAST "ERROR:5\nFATAL:3\nWARN:2\nINFO:1"
+ASSERT LAST_N == 1
+
+# explicit DESC
+SYS SORTFREQ freq DESC
+ASSERT LAST_N == 4
+SYS EQS LAST "ERROR:5\nFATAL:3\nWARN:2\nINFO:1"
+ASSERT LAST_N == 1
+
+# ASC lightest first
+SYS SORTFREQ freq ASC
+ASSERT LAST_N == 4
+SYS EQS LAST "INFO:1\nWARN:2\nFATAL:3\nERROR:5"
+ASSERT LAST_N == 1
+
+# custom sep
+LET f2 = "a=10\nb=2\nc=7"
+SYS SORTFREQ f2 "="
+ASSERT LAST_N == 3
+SYS EQS LAST "a=10\nc=7\nb=2"
+ASSERT LAST_N == 1
+SYS SORTFREQ f2 "=" ASC
+SYS EQS LAST "b=2\nc=7\na=10"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SORTBYCOUNT freq
+ASSERT LAST_N == 4
+SYS EQS LAST "ERROR:5\nFATAL:3\nWARN:2\nINFO:1"
+ASSERT LAST_N == 1
+SYS FSORT freq ASC
+SYS EQS LAST "INFO:1\nWARN:2\nFATAL:3\nERROR:5"
+ASSERT LAST_N == 1
+
+# empty
+SYS SORTFREQ ""
+ASSERT LAST_N == 0
+
+# single line
+SYS SORTFREQ "solo:9"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo:9"
+ASSERT LAST_N == 1
+
+# stable equal counts (first-seen among ties)
+LET ties = "A:2\nB:5\nC:2\nD:5"
+SYS SORTFREQ ties DESC
+SYS EQS LAST "B:5\nD:5\nA:2\nC:2"
+ASSERT LAST_N == 1
+
+# agent pipeline: CUTALL → FREQ → SORTFREQ → TAKE top
+LET log = "ERROR disk\nWARN mem\nERROR timeout\nINFO boot\nERROR panic\nWARN low\nFATAL stop"
+SYS CUTALL log " " 0
+SYS FREQ LAST
+SYS SORTFREQ LAST
+ASSERT LAST_N == 4
+SYS TAKE 2 LAST
+SYS EQS LAST "ERROR:3\nWARN:2"
+ASSERT LAST_N == 1
+
+PRINT "sys_sortfreq ok"

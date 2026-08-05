@@ -168,6 +168,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 138. ~~**`SYS MAPREPLACE` / `GSUBALL`**~~ **done** (REPLACEALL on every bag field · path/tag rewrite without EACH).
 139. ~~**`SYS FREQ` / `HIST`**~~ **done** (bag field frequency histogram key:count · status rollups without EACH).
 140. ~~**`SYS CUTALL` / `MAPCUT`**~~ **done** (peel Nth sep-field from every bag line · log columns → FREQ).
+141. ~~**`SYS SORTFREQ` / `SORTBYCOUNT`**~~ **done** (sort FREQ key:count bag by count · top severities without shell).
 
 ## Tick protocol
 

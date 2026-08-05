@@ -4267,6 +4267,114 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SORTFREQ|SORTBYCOUNT|FSORT [bag] [sep] [DESC|ASC]
+     * — sort "key{sep}count" FREQ lines by numeric count (default sep ":", DESC).
+     * Count is digits after last sep on each line. Stable for equal counts.
+     * LAST_N = line count. Usability: top severities after FREQ without shell sort -n. */
+    if (kw(&L->cur,"SORTFREQ") || kw(&L->cur,"SORTBYCOUNT") || kw(&L->cur,"FSORT") ||
+        kw(&L->cur,"FREQSORT") || kw(&L->cur,"SORTCOUNTS") || kw(&L->cur,"RANKFREQ") ||
+        kw(&L->cur,"TOPFREQ") || kw(&L->cur,"HEAVYFIRST")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[16];
+      char lines[64][160];
+      long counts[64];
+      int order[64];
+      int n = 0, i, j, desc = 1;
+      const char *p, *start;
+      size_t sepn, olen = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional sep (string) and/or DESC|ASC */
+      for (;;) {
+        if (L->cur.kind == TK_STR) {
+          snprintf(sep, sizeof sep, "%s", L->cur.text);
+          if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+          lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"DESC") || kw(&L->cur,"DOWN") || kw(&L->cur,"REV") ||
+            kw(&L->cur,"HEAVY") || kw(&L->cur,"HIGH")) {
+          desc = 1; lex_next(L); continue;
+        }
+        if (kw(&L->cur,"ASC") || kw(&L->cur,"UP") || kw(&L->cur,"LIGHT") ||
+            kw(&L->cur,"LOW") || kw(&L->cur,"ASCENDING")) {
+          desc = 0; lex_next(L); continue;
+        }
+        break;
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          size_t flen, take;
+          const char *last;
+          char *endc;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof lines[0]) take = sizeof lines[0] - 1;
+          memcpy(lines[n], start, take);
+          lines[n][take] = 0;
+          /* count = number after last sep */
+          counts[n] = 0;
+          if (sepn == 0) {
+            counts[n] = strtol(lines[n], &endc, 10);
+          } else {
+            last = NULL;
+            {
+              const char *q = lines[n];
+              while (*q) {
+                if (strncmp(q, sep, sepn) == 0) last = q;
+                q++;
+              }
+            }
+            if (last) counts[n] = strtol(last + sepn, &endc, 10);
+            else counts[n] = strtol(lines[n], &endc, 10);
+          }
+          order[n] = n;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      /* stable insertion sort by count */
+      for (i = 1; i < n; i++) {
+        int oi = order[i];
+        long ci = counts[oi];
+        j = i - 1;
+        while (j >= 0) {
+          long cj = counts[order[j]];
+          int swap = desc ? (cj < ci) : (cj > ci);
+          if (!swap) break;
+          order[j + 1] = order[j];
+          j--;
+        }
+        order[j + 1] = oi;
+      }
+      for (i = 0; i < n; i++) {
+        size_t ln = strlen(lines[order[i]]);
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + ln < sizeof out) {
+          memcpy(out + olen, lines[order[i]], ln);
+          olen += ln;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, lines[order[i]], t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "FREQ", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "SORTFREQ_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
      * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
      * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
@@ -6182,7 +6290,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6458,6 +6566,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FREQ", "SYS FREQ|HIST [bag] [sep] — field frequency bag key:count · LAST_N=uniques"},
       {"SYS HIST", "SYS HIST [bag] [sep] — alias of SYS FREQ · severity/status rollups"},
       {"SYS COUNTS", "SYS COUNTS [bag] [sep] — alias of SYS FREQ"},
+      {"SYS SORTFREQ", "SYS SORTFREQ|SORTBYCOUNT [bag] [sep] [DESC|ASC] — sort FREQ by count"},
+      {"SYS SORTBYCOUNT", "SYS SORTBYCOUNT [bag] [sep] [DESC|ASC] — alias of SYS SORTFREQ"},
+      {"SYS FSORT", "SYS FSORT [bag] — alias of SYS SORTFREQ · top severities after FREQ"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},
