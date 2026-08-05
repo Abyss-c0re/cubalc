@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 69,
-  "version": "1.15.94-usability",
-  "item": "SYS REMOVELINE / DROPLINE drop exact bag field",
-  "item_id": 102,
-  "title": "SYS REMOVELINE|DROPLINE bag needle drop first exact field",
-  "commit": "76ff7c619a41e4db6410f38550b4c352a4c8bd78",
-  "summary": "SYS REMOVELINE|DROPLINE drop first exact bag field (REMOVELINEI case-insensitive). Work-queue ack after HASLINE without EACH rebuild. selftest 69.",
+  "iter": 70,
+  "version": "1.15.95-usability",
+  "item": "SYS FINDLINE / LINEINDEX exact bag field index",
+  "item_id": 103,
+  "title": "SYS FINDLINE|LINEINDEX bag needle 0-based exact field index",
+  "commit": "0be94723527627c8d69efb7d589f7165523ecb98",
+  "summary": "SYS FINDLINE|LINEINDEX 0-based exact bag field index (FINDLINEI case-insensitive). Miss LAST_N=-1 OK=0. Completes HASLINE/REMOVELINE for locate+NTH. selftest 70.",
   "proofs": [
-    "643_sys_removeline",
-    "selftest n_pass=69"
+    "644_sys_findline",
+    "selftest n_pass=70"
   ],
-  "when": "2026-08-05T13:14:16Z",
+  "when": "2026-08-05T13:23:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "76ff7c619a41e4db6410f38550b4c352a4c8bd78"
+  "sha": "0be94723527627c8d69efb7d589f7165523ecb98"
 }
