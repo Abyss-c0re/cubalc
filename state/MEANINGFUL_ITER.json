@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 72,
-  "version": "1.15.97-usability",
-  "item": "SYS INSERTLINE / INSLINE insert bag field by index",
-  "item_id": 105,
-  "title": "SYS INSERTLINE|INSLINE bag n value insert 0-based field",
-  "commit": "c9af4c118ae5e286fe844c7e1f29f1330d864edc",
-  "summary": "SYS INSERTLINE|INSLINE|INSERTFIELD bag n value insert field at 0-based index. n>=count appends, n==0 front, n<0 soft miss. LAST_N=field count. Completes PUSH/PREPEND/SETLINE for ordered work bags. selftest 72.",
+  "iter": 73,
+  "version": "1.15.98-usability",
+  "item": "SYS DROPNTH / DROPAT drop bag field by index",
+  "item_id": 106,
+  "title": "SYS DROPNTH|DROPAT bag n drop 0-based field",
+  "commit": "5f7ecab6972c29c448972753b1a47a9c7fcc7478",
+  "summary": "SYS DROPNTH|DROPAT|REMOVEAT bag n drop 0-based field. Soft OOR LAST_N=0. Distinct from DROP first-n and REMOVELINE by value. Pairs with FINDLINE for locate-then-delete. selftest 73.",
   "proofs": [
-    "646_sys_insertline",
-    "selftest n_pass=72"
+    "647_sys_dropnth",
+    "selftest n_pass=73"
   ],
-  "when": "2026-08-05T13:44:33Z",
+  "when": "2026-08-05T13:53:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c9af4c118ae5e286fe844c7e1f29f1330d864edc"
+  "sha": "5f7ecab6972c29c448972753b1a47a9c7fcc7478"
 }

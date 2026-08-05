@@ -133,6 +133,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 103. ~~**`SYS FINDLINE` / `LINEINDEX`**~~ **done** (0-based exact field index · locate-then-NTH without EACH).
 104. ~~**`SYS SETLINE` / `REPLACELINE`**~~ **done** (set bag field by index · FINDLINE then update in place).
 105. ~~**`SYS INSERTLINE` / `INSLINE`**~~ **done** (insert bag field at 0-based index · priority/ordered bags).
+106. ~~**`SYS DROPNTH` / `DROPAT`**~~ **done** (drop bag field by 0-based index · FINDLINE then delete).
 
 ## Tick protocol
 

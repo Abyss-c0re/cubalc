@@ -1,0 +1,61 @@
+# SYS DROPNTH / DROPAT — drop bag field by 0-based index
+# Usability: FINDLINE then delete without exact needle; index surgery with SETLINE
+# Distinct from SYS DROP n (first-n window) and REMOVELINE (by value)
+
+HOLD_FLASH 1
+
+# drop middle
+SYS DROPNTH "a\nb\nc" 1
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# drop first / last
+SYS DROPNTH "a\nb\nc" 0
+SYS EQS LAST "b\nc"
+ASSERT LAST_N == 1
+SYS DROPNTH "a\nb\nc" 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# sole field
+SYS DROPNTH "solo" 0
+ASSERT LAST_N == 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# out of range soft miss
+SYS DROPNTH "a\nb" 5
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SYS DROPNTH "a\nb" -1
+ASSERT LAST_N == 0
+SYS DROPNTH "" 0
+ASSERT LAST_N == 0
+
+# aliases
+SYS DROPAT "x\ny\nz" 1
+SYS EQS LAST "x\nz"
+ASSERT LAST_N == 1
+SYS REMOVEAT "1\n2\n3" 0
+SYS EQS LAST "2\n3"
+ASSERT LAST_N == 1
+SYS DROPINDEX "p\nq" 1
+SYS EQS LAST "p"
+ASSERT LAST_N == 1
+
+# agent pattern: find then drop stale peer
+LET bag = "peer1:idle\npeer2:done\npeer3:busy"
+SYS FINDLINE bag "peer2:done"
+LET i = LAST_N
+ASSERT i == 1
+SYS DROPNTH bag i
+ASSERT LAST_N == 1
+SYS EQS LAST "peer1:idle\npeer3:busy"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "peer2:done"
+ASSERT LAST_N == 0
+
+PRINT "sys_dropnth ok"

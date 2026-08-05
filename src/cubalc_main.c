@@ -1706,6 +1706,7 @@ int main(int argc, char **argv) {
       {"sys_findline", "programs/proof/644_sys_findline.cubalc", "SYS FINDLINE exact bag field index"},
       {"sys_setline", "programs/proof/645_sys_setline.cubalc", "SYS SETLINE set bag field by index"},
       {"sys_insertline", "programs/proof/646_sys_insertline.cubalc", "SYS INSERTLINE insert bag field by index"},
+      {"sys_dropnth", "programs/proof/647_sys_dropnth.cubalc", "SYS DROPNTH drop bag field by index"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1926,6 +1927,8 @@ int main(int argc, char **argv) {
       {"SYS REPLACELINE", "host", "SYS REPLACELINE bag n value — alias of SYS SETLINE"},
       {"SYS INSERTLINE", "host", "SYS INSERTLINE|INSLINE bag n value — insert field at 0-based index"},
       {"SYS INSLINE", "host", "SYS INSLINE bag n value — alias of SYS INSERTLINE"},
+      {"SYS DROPNTH", "host", "SYS DROPNTH|DROPAT bag n — drop 0-based field by index"},
+      {"SYS DROPAT", "host", "SYS DROPAT bag n — alias of SYS DROPNTH"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2515,6 +2518,8 @@ int main(int argc, char **argv) {
        "SYS SETLINE set bag field by index"},
       {"programs/proof/646_sys_insertline.cubalc", "sys_insertline",
        "SYS INSERTLINE insert bag field by index"},
+      {"programs/proof/647_sys_dropnth.cubalc", "sys_dropnth",
+       "SYS DROPNTH drop bag field by index"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2941,6 +2946,8 @@ int main(int argc, char **argv) {
       {"SYS REPLACELINE", "host", "SYS REPLACELINE alias of SYS SETLINE"},
       {"SYS INSERTLINE", "host", "SYS INSERTLINE insert bag field by index"},
       {"SYS INSLINE", "host", "SYS INSLINE alias of SYS INSERTLINE"},
+      {"SYS DROPNTH", "host", "SYS DROPNTH drop bag field by index"},
+      {"SYS DROPAT", "host", "SYS DROPAT alias of SYS DROPNTH"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3287,6 +3294,7 @@ int main(int argc, char **argv) {
       {"programs/proof/644_sys_findline.cubalc", "sys_findline", "SYS FINDLINE bag field index"},
       {"programs/proof/645_sys_setline.cubalc", "sys_setline", "SYS SETLINE set bag field"},
       {"programs/proof/646_sys_insertline.cubalc", "sys_insertline", "SYS INSERTLINE insert bag field"},
+      {"programs/proof/647_sys_dropnth.cubalc", "sys_dropnth", "SYS DROPNTH drop bag field by index"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
