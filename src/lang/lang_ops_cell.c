@@ -5330,11 +5330,19 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
   /* INCLUDE "path"|name — practical modules (same VM / world)
    * Resolve: absolute · include_base/rel · rel · programs/rel ·
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
-   * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/… */
+   * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
+   * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
+    int soft = 0;
+    int aln = L->cur.line;
     lex_next(L);
+    if (kw(&L->cur,"OR")||kw(&L->cur,"SOFT")||kw(&L->cur,"TRY")||
+        kw(&L->cur,"OPTIONAL")||kw(&L->cur,"MAYBE")){
+      soft = 1;
+      lex_next(L);
+    }
     if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-      fail(vm,"INCLUDE \"path.cubalc\"|libname"); return -1;
+      fail(vm,"INCLUDE [OR|SOFT] \"path.cubalc\"|libname"); return -1;
     }
     char path[768];
     char orig[512];
@@ -5409,6 +5417,22 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       snprintf(ebuf, sizeof ebuf,
                "INCLUDE cannot open '%s' — tried programs/lib/%s.cubalc · cubalc libs",
                orig, orig);
+      if (soft) {
+        /* Usability: optional module — sticky err, continue (like EXPECT). */
+        char msg[160];
+        snprintf(msg, sizeof msg, "INCLUDE SOFT miss line %d: %s", aln, orig);
+        var_set_str(vm, "ERR", msg);
+        var_set_str(vm, "LAST_ERR", msg);
+        var_set_str(vm, "INCLUDE_PATH", "");
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "INCLUDE_OK", 0);
+        if (vm->trace) fprintf(vm->trace, "# include soft miss: %s\n", orig);
+        bump(vm); return 1;
+      }
       fail(vm, ebuf);
       return -1;
     }
@@ -5430,6 +5454,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     vm->last_n = (long)strlen(path);
     var_set_num(vm, "LAST_N", vm->last_n);
     var_set_num(vm, "OK", 1);
+    var_set_num(vm, "INCLUDE_OK", 1);
     Lex Li; lex_init(&Li, buf, nr);
     int rc = exec_stmts_until(vm, &Li, NULL, NULL);
     snprintf(vm->include_base,sizeof vm->include_base,"%s", save_base);

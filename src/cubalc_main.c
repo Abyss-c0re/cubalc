@@ -1592,6 +1592,7 @@ int main(int argc, char **argv) {
       {"which_lib", "programs/proof/582_sys_which_lib.cubalc", "SYS WHICH lib resolve"},
       {"require", "programs/proof/583_require_version.cubalc", "REQUIRE VERSION gate"},
       {"cwd", "programs/proof/584_sys_cwd_state_root.cubalc", "SYS CWD/STATE/ROOT paths"},
+      {"include_soft", "programs/proof/585_include_soft.cubalc", "INCLUDE OR soft miss"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1717,7 +1718,7 @@ int main(int argc, char **argv) {
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
-      {"INCLUDE", "flow", "INCLUDE path|libname — short name → programs/lib/"},
+      {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
@@ -2573,7 +2574,7 @@ int main(int argc, char **argv) {
       {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
       {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
-      {"INCLUDE", "flow", "INCLUDE path|libname — short name → programs/lib/"},
+      {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
       {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},

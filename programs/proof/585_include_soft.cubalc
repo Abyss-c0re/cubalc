@@ -1,0 +1,26 @@
+# INCLUDE OR|SOFT — optional module without fatal
+# Usability: probe optional libs; hard INCLUDE still fail-closed
+
+# Soft miss continues
+INCLUDE OR no_such_optional_lib_zz
+ASSERT OK == 0 "soft miss OK=0"
+ASSERT INCLUDE_OK == 0 "INCLUDE_OK 0 on miss"
+SYS LEN LAST_ERR
+ASSERT LAST_N > 0 "LAST_ERR set on soft miss"
+
+# Soft hit loads like hard INCLUDE
+INCLUDE SOFT hold_seed
+ASSERT OK == 1 "soft hit OK"
+ASSERT INCLUDE_OK == 1 "INCLUDE_OK 1 on hit"
+SYS HAS INCLUDE_PATH "hold_seed"
+ASSERT LAST_N == 1 "INCLUDE_PATH set"
+
+# Hard miss still fatal — covered by separate fail smoke; keep fail-closed:
+# INCLUDE no_such_hard_zz  would stop the run
+
+# Optional then continue work
+INCLUDE TRY peer_decide
+ASSERT INCLUDE_OK == 1 "try peer_decide"
+
+PRINT "include_soft ok"
+PRINT_JSON INCLUDE_OK OK

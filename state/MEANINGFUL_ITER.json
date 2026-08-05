@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 7,
-  "version": "1.15.32-usability",
-  "item": "SYS CWD STATE ROOT layout paths",
-  "item_id": 40,
-  "title": "SYS CWD/STATE/ROOT for portable path layout",
-  "commit": "a7f33be8ad7f3969480b15dce2f03d4df1d3e078",
-  "summary": "In-language SYS CWD, SYS STATE, SYS ROOT expose working dir, CUBALC_STATE, and CUBALC_ROOT/cwd so scripts locate layout without shell glue.",
+  "iter": 8,
+  "version": "1.15.33-usability",
+  "item": "INCLUDE OR SOFT optional modules",
+  "item_id": 41,
+  "title": "INCLUDE OR|SOFT optional module no fatal",
+  "commit": "2b4ec101a682ab5ce746a1b928b268ff37b7b327",
+  "summary": "INCLUDE OR|SOFT|TRY|OPTIONAL miss sets OK=0 INCLUDE_OK=0 sticky LAST_ERR and continues; hard INCLUDE remains fail-closed.",
   "proofs": [
-    "584_sys_cwd_state_root",
-    "selftest n_pass=10"
+    "585_include_soft",
+    "selftest n_pass=11"
   ],
-  "when": "2026-08-05T02:53:15Z",
+  "when": "2026-08-05T03:03:39Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a7f33be8ad7f3969480b15dce2f03d4df1d3e078"
+  "sha": "2b4ec101a682ab5ce746a1b928b268ff37b7b327"
 }

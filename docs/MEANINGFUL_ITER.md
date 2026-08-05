@@ -68,6 +68,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 38. ~~**`REQUIRE VERSION`**~~ **done** (fail-fast if runtime older than need).
 39. ~~**`cubalc selftest`**~~ **done** (live curated usability proofs JSON plate).
 40. ~~**`SYS CWD` / `STATE` / `ROOT`**~~ **done** (layout paths in-language for portable scripts).
+41. ~~**`INCLUDE OR|SOFT`**~~ **done** (optional module · OK=0 sticky LAST_ERR, no fatal).
 
 ## Tick protocol
 
