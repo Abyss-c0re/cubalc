@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "seed_dedup",
-      "cmd": "seed h1..h10 with dup h1 → 6 hosts",
+      "cmd": "seed h1..h10 with dup h1 \u2192 6 hosts",
       "ok": true,
       "note": "HASLINE skip dups"
     },
     {
       "name": "snapshot_shuffle_canary",
-      "cmd": "snapshot COPY; shuffle; canary 2 → CANARY plate",
+      "cmd": "snapshot COPY; shuffle; canary 2 \u2192 CANARY plate",
       "ok": true,
       "note": "h10,h3 canary; snap 18 bytes"
     },
@@ -22,7 +22,7 @@
       "name": "restore_pin",
       "cmd": "restore pre-shuffle order; pin h3 front",
       "ok": true,
-      "note": "READ snap → WRITE hosts; MOVELINE"
+      "note": "READ snap \u2192 WRITE hosts; MOVELINE"
     },
     {
       "name": "empty_require",
@@ -32,13 +32,13 @@
     },
     {
       "name": "grep_h1_cousin",
-      "cmd": "GREP h1 → h1+h10 n=2; HASLINE h1=1 COUNTLINE=1",
+      "cmd": "GREP h1 \u2192 h1+h10 n=2; HASLINE h1=1 COUNTLINE=1",
       "ok": true,
       "note": "substring false friend on pure names"
     },
     {
       "name": "take_drop_oor",
-      "cmd": "TAKE 100 of 6 → 6; DROP 100 → 0",
+      "cmd": "TAKE 100 of 6 \u2192 6; DROP 100 \u2192 0",
       "ok": true,
       "note": "TAKE clamps to available; DROP past end empties"
     },
@@ -72,7 +72,7 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "SHUFFLE/TAKE/DROP do not mutate named bags — need LET bag = LAST",
+      "title": "SHUFFLE/TAKE/DROP do not mutate named bags \u2014 need LET bag = LAST",
       "detail": "SYS SHUFFLE bag leaves var bag unchanged; only LAST holds shuffled result. Same for TAKE/DROP/SETMATCH class. Agents that SHUFFLE then WRITE bag persist old order silently.",
       "repro": "LET b2=a\\nb\\nc; SHUFFLE b2; LINES b2 still 3 original order"
     },
@@ -80,17 +80,17 @@
       "id": "W2",
       "severity": "med",
       "area": "host|bag",
-      "title": "GREP bare host id matches longer cousins (h1→h10)",
+      "title": "GREP bare host id matches longer cousins (h1\u2192h10)",
       "detail": "Pure-name rosters still suffer GREP substring. HASLINE/COUNTLINE exact are safe.",
-      "repro": "GREP h1 on h1+h10 → n=2"
+      "repro": "GREP h1 on h1+h10 \u2192 n=2"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "TAKE N>depth returns all; DROP N>depth empties — no soft miss flag",
-      "detail": "TAKE 100 of 6 → 6 lines OK; DROP 100 → empty bag. Canary split with oversize N silently assigns all hosts to canary.",
-      "repro": "TAKE 100 bag(6) → LINES 6; DROP 100 → LINES 0"
+      "title": "TAKE N>depth returns all; DROP N>depth empties \u2014 no soft miss flag",
+      "detail": "TAKE 100 of 6 \u2192 6 lines OK; DROP 100 \u2192 empty bag. Canary split with oversize N silently assigns all hosts to canary.",
+      "repro": "TAKE 100 bag(6) \u2192 LINES 6; DROP 100 \u2192 LINES 0"
     },
     {
       "id": "W4",
@@ -121,14 +121,14 @@
       "severity": "low",
       "area": "host|docs",
       "title": "SYS DROP bag-skip vs SYS DROPLINE/REMOVELINE name collision",
-      "detail": "DROP n skips first n fields; DROPLINE removes exact field. Canary control path uses DROP canary_n bag — easy to call DROPLINE by mistake.",
+      "detail": "DROP n skips first n fields; DROPLINE removes exact field. Canary control path uses DROP canary_n bag \u2014 easy to call DROPLINE by mistake.",
       "repro": "forms: DROP n str vs REMOVELINE bag needle"
     }
   ],
   "workarounds": [
     "Always LET bag = LAST after SHUFFLE/TAKE/DROP/SETMATCH/MOVELINE",
     "Clamp canary_n with MIN canary_n depth before TAKE",
-    "HASLINE/COUNTLINE for identity — not GREP on host ids",
+    "HASLINE/COUNTLINE for identity \u2014 not GREP on host ids",
     "COPY snapshot before shuffle; restore soft READ OR",
     "COALESCE ENV N and default string before NUM shuttle",
     "PRINT_JSON only depth/c_depth/canary_n scalars"
@@ -142,10 +142,10 @@
     "Doc cross-link DROP vs DROPLINE clearly"
   ],
   "issues_faced": [
-    "SHUFFLE without LET would have left seed order on disk — rebind is mandatory",
+    "SHUFFLE without LET would have left seed order on disk \u2014 rebind is mandatory",
     "GREP h1 vs h10 confirmed on pure-name bags (not only name:status)",
-    "canary oversize N would assign all hosts — program relies on TAKE clamp"
+    "canary oversize N would assign all hosts \u2014 program relies on TAKE clamp"
   ],
-  "commit": "",
-  "ts": "2026-08-05T16:58:10Z"
+  "commit": "8c0f2e0b02e48564d6eb4d25dd6ddb0163bb57ac",
+  "ts": "2026-08-05T16:58:30Z"
 }
