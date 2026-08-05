@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 93,
-  "version": "1.15.118-usability",
-  "item": "SYS ZIP / KEYS / VALS bag pair and peel",
-  "item_id": 126,
-  "title": "SYS ZIP|KEYS|VALS pair bag fields · peel kv columns",
-  "commit": "dc3967e765013794bf3170f5118f34402bfdc2cc",
-  "summary": "SYS ZIP/PAIR bags by index; KEYS/VALS peel sep columns → LAST. Roster plates without EACH+CAT. selftest 93.",
+  "iter": 94,
+  "version": "1.15.119-usability",
+  "item": "SYS PREFIXALL / SUFFIXALL tag bag fields",
+  "item_id": 127,
+  "title": "SYS PREFIXALL|SUFFIXALL tag every bag field",
+  "commit": "38dee362507162d23dd65117b9536098209dc049",
+  "summary": "SYS PREFIXALL/SUFFIXALL prepend/append affix to every field → LAST. Tag LIST/peer bags without EACH+CAT. selftest 94.",
   "proofs": [
-    "666_sys_zip",
-    "selftest n_pass=93"
+    "667_sys_prefixall",
+    "selftest n_pass=94"
   ],
-  "when": "2026-08-05T17:14:31Z",
+  "when": "2026-08-05T17:23:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dc3967e765013794bf3170f5118f34402bfdc2cc"
+  "sha": "38dee362507162d23dd65117b9536098209dc049"
 }
