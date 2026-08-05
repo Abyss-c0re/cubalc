@@ -1,0 +1,88 @@
+# SYS KVDEL / DELKV — drop first key:val field from a bag
+# Usability: remove FREQ/plate key after ack without FINDLINE+DROPNTH
+
+HOLD_FLASH 1
+
+LET bag = "error:3\nwarn:1\ninfo:10"
+
+# delete existing key
+SYS KVDEL bag "warn"
+ASSERT OK == 1
+ASSERT KVDEL_HIT == 1
+ASSERT KVDEL_I == 1
+SYS EQS KVDEL_V "1"
+ASSERT LAST_N == 1
+ASSERT KVDEL_N == 2
+SYS EQS LAST "error:3\ninfo:10"
+ASSERT LAST_N == 1
+
+# soft miss — bag unchanged, OK still 1
+SYS KVDEL bag "fatal"
+ASSERT OK == 1
+ASSERT KVDEL_HIT == 0
+ASSERT KVDEL_I == -1
+SYS EQS KVDEL_V ""
+ASSERT LAST_N == 1
+ASSERT KVDEL_N == 3
+SYS EQS LAST "error:3\nwarn:1\ninfo:10"
+ASSERT LAST_N == 1
+
+# delete first key
+SYS KVDEL bag "error"
+ASSERT KVDEL_HIT == 1
+ASSERT KVDEL_I == 0
+SYS EQS KVDEL_V "3"
+SYS EQS LAST "warn:1\ninfo:10"
+ASSERT LAST_N == 1
+
+# delete last remaining then empty
+LET one = "solo:9"
+SYS KVDEL one "solo"
+ASSERT KVDEL_HIT == 1
+ASSERT KVDEL_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "host=peer1\nport=7700\nmode=soft"
+SYS KVDEL cfg "port" "="
+ASSERT KVDEL_HIT == 1
+SYS EQS KVDEL_V "7700"
+SYS EQS LAST "host=peer1\nmode=soft"
+ASSERT LAST_N == 1
+
+# aliases
+SYS DELKV bag "info"
+ASSERT DELKV_HIT == 1
+SYS EQS LAST "error:3\nwarn:1"
+ASSERT LAST_N == 1
+SYS RMKV bag "error"
+ASSERT KVDEL_HIT == 1
+SYS EQS LAST "warn:1\ninfo:10"
+ASSERT LAST_N == 1
+SYS UNSETKV bag "warn"
+ASSERT KVDEL_HIT == 1
+SYS EQS LAST "error:3\ninfo:10"
+ASSERT LAST_N == 1
+
+# empty bag miss
+SYS KVDEL "" "a"
+ASSERT KVDEL_HIT == 0
+ASSERT KVDEL_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent: FREQ then drop handled severity
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR"
+SYS FREQ sev
+LET hist = LAST
+SYS KVDEL hist "WARN"
+ASSERT KVDEL_HIT == 1
+LET cleaned = LAST
+SYS LOOKUP cleaned "ERROR"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LOOKUP cleaned "WARN"
+ASSERT LAST_N == 0
+
+PRINT "sys_kvdel ok"

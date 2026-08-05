@@ -192,6 +192,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 162. ~~**`SYS LOOKUP` / `KVGET`**~~ **done** (peel value from key:val bag field · FREQ counts without FIRSTMATCH+AFTER).
 163. ~~**`SYS KVSET` / `SETKV`**~~ **done** (set/update key:val bag field · dual of LOOKUP · plate kv write).
 164. ~~**`SYS KVINC` / `INCKV`**~~ **done** (bump key:val numeric counter · FREQ severity without LOOKUP+arith+KVSET).
+165. ~~**`SYS KVDEL` / `DELKV`**~~ **done** (drop key:val bag field · dual of KVSET · ack without FINDLINE+DROPNTH).
 
 ## Tick protocol
 
