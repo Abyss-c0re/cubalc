@@ -5,13 +5,13 @@
   "item": "SYS MOVELINE / MOVEAT move bag field to index",
   "item_id": 107,
   "title": "SYS MOVELINE|MOVEAT bag from to move field final index",
-  "commit": "d9f4a2f36edc35560d705849dfbab9b517e671c1",
+  "commit": "3e81766db3b8b087b8dc443c15350846f5d851b0",
   "summary": "SYS MOVELINE|MOVEAT|REORDER bag from to move 0-based field to final index. Soft miss from OOR/to<0. to>=n clamps end. Promote/demote priority after FINDLINE. selftest 74.",
   "proofs": [
     "648_sys_moveline",
     "selftest n_pass=74"
   ],
-  "when": "2026-08-05T14:05:51Z",
+  "when": "2026-08-05T14:05:53Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d9f4a2f36edc35560d705849dfbab9b517e671c1"
+  "sha": "3e81766db3b8b087b8dc443c15350846f5d851b0"
 }
