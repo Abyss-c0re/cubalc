@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 86,
-  "version": "1.15.111-usability",
-  "item": "SYS PICK / CHOICE / SAMPLE random bag field",
-  "item_id": 119,
-  "title": "SYS PICK|CHOICE|SAMPLE random newline field from bag",
-  "commit": "cd68fa796c1497f4ee617a31deef361aec7f861d",
-  "summary": "SYS PICK/CHOICE random bag field \u2192 LAST; index LAST_N. Empty soft. Sample LIST/RANGE without shell. selftest 86.",
+  "iter": 87,
+  "version": "1.15.112-usability",
+  "item": "SYS GCD / LCM multi-arg host math",
+  "item_id": 120,
+  "title": "SYS GCD|LCM multi-arg gcd/lcm",
+  "commit": "46414dd862e58d0a703760cc17c1094d4e97dda9",
+  "summary": "SYS GCD/HCF and LCM multi-arg \u2192 LAST_N. Reduce ratios/cycles without ISA soup. selftest 87.",
   "proofs": [
-    "659_sys_pick",
-    "selftest n_pass=86"
+    "660_sys_gcd",
+    "selftest n_pass=87"
   ],
-  "when": "2026-08-05T16:03:50Z",
+  "when": "2026-08-05T16:13:24Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cd68fa796c1497f4ee617a31deef361aec7f861d"
+  "sha": "46414dd862e58d0a703760cc17c1094d4e97dda9"
 }
