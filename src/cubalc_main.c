@@ -1586,6 +1586,7 @@ int main(int argc, char **argv) {
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
       {"PASS", "flow", "PASS [why] soft status OK=1 optional note"},
+      {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
@@ -2140,12 +2141,26 @@ int main(int argc, char **argv) {
     free(buf);
     return 0;
   }
+  if (strcmp(cmd, "version") == 0 || strcmp(cmd, "--version") == 0 ||
+      strcmp(cmd, "-V") == 0 || strcmp(cmd, "ver") == 0) {
+    /* Usability: machine-readable version plate (agents skip parsing help text). */
+    printf("{\"schema\":\"cubalc.version.v1\",\"ok\":true,\"cmd\":\"version\","
+           "\"version\":\"%s\",\"name\":\"%s\",\"paradigm\":\"%s\",\"creed\":\"%s\","
+           "\"share\":\"%s\",\"hold_flash\":%d,"
+           "\"hold_flash_means\":\"user_permission_before_plug\","
+           "\"http_required\":false,\"wire\":\"smx2\","
+           "\"note\":\"in-language: VERSION → LAST/VERSION string\"}\n",
+           CUBALC_LANG_VERSION, CUBALC_LANG_NAME, CUBALC_LANG_PARADIGM,
+           CUBALC_CREED, CUBALC_SHARE, CUBALC_HOLD_FLASH);
+    return 0;
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
       "\n"
       "  Run & learn\n"
       "    doctor|health          install readiness JSON (agents/humans)\n"
+      "    version|ver|-V         language version JSON plate\n"
       "    cookbook|start         paths to starters\n"
       "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    cat|type|source <lib>  dump lib/program source + meta plate\n"

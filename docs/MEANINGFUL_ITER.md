@@ -59,6 +59,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 29. ~~**`cubalc run -` stdin**~~ **done** (pipe programs without temp files).
 30. ~~**`cubalc cat`**~~ **done** (dump lib/program source + cubalc.cat.v1 plate).
 31. ~~**`FAIL` / `PASS` soft status**~~ **done** (sticky OK/LAST_ERR without fake expr).
+32. ~~**`VERSION` + `cubalc version`**~~ **done** (in-lang LAST + CLI JSON plate).
 
 ## Tick protocol
 

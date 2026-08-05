@@ -1,0 +1,13 @@
+# VERSION form — agent-readable language version → LAST / VERSION / OK
+HOLD_FLASH 1
+
+VERSION
+ASSERT OK == 1 "VERSION sets OK"
+ASSERT LAST_N > 5 "version string non-empty"
+PRINT "version" LAST VERSION
+PRINT_JSON VERSION LAST_N OK
+
+# re-read still works
+VERSION
+ASSERT LAST_N > 5
+ASSERT 1 == 1 "proof complete"

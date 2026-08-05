@@ -1133,6 +1133,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
+      {"VERSION", "VERSION — set LAST/VERSION to language version string"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -1394,6 +1395,19 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     var_set_num(vm, "EXPECT_OK", 1);
     if (vm->trace) fprintf(vm->trace, "# pass: %s\n", msg);
+    bump(vm); return 1;
+  }
+  /* VERSION — agent/human plate: language version string → LAST / VERSION / OK */
+  if (kw(&L->cur,"VERSION")||kw(&L->cur,"LANG_VERSION")||kw(&L->cur,"CUBALC_VERSION")){
+    lex_next(L);
+    const char *ver = CUBALC_LANG_VERSION;
+    var_set_str(vm, "VERSION", ver);
+    var_set_str(vm, "LAST", ver);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ver);
+    vm->last_n = (long)strlen(ver);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# version %s\n", ver);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"LET")){
