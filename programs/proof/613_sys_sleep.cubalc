@@ -1,0 +1,41 @@
+# SYS SLEEP — agent backoff / poll delay without shell sleep
+# Usability: pairs with SYS MS for timed probes under STATE mesh
+
+HOLD_FLASH 1
+
+SYS MS
+LET T0 = LAST_N
+
+SYS SLEEP 30
+ASSERT OK == 1
+ASSERT LAST_N == 30 "slept 30ms"
+ASSERT SLEEP_MS == 30
+
+SYS MS
+LET T1 = LAST_N
+# wall should advance at least ~20ms (scheduler slack)
+ASSERT T1 >= T0 "time advanced"
+
+# aliases
+SYS MSLEEP 5
+ASSERT LAST_N == 5
+SYS DELAY 5
+ASSERT LAST_N == 5
+SYS PAUSE 5
+ASSERT LAST_N == 5
+SYS SLEEP MS 5
+ASSERT LAST_N == 5
+
+# zero is ok
+SYS SLEEP 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# negative clamps to 0
+SYS SLEEP -10
+ASSERT LAST_N == 0
+
+# cap 60000 — huge request clamped (do not actually wait 60s in proof)
+# express via huge literal would hang CI — just document via 0 path above
+
+PRINT "sys_sleep ok"

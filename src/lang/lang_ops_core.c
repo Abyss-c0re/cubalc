@@ -1039,6 +1039,40 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS SLEEP|MSLEEP|DELAY [MS] n — pause n milliseconds (cap 60s).
+     * Usability: agent poll/backoff without shell sleep; pairs with SYS MS. */
+    if (kw(&L->cur,"SLEEP") || kw(&L->cur,"MSLEEP") || kw(&L->cur,"DELAY") ||
+        kw(&L->cur,"PAUSE") || kw(&L->cur,"WAIT_MS")){
+      long ms = 0;
+      char buf[40];
+      lex_next(L);
+      /* optional unit keyword MS|MILLIS before or after value is ignored as unit */
+      if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+        lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS)
+        ms = parse_expr(vm, L);
+      else
+        ms = 0;
+      if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+        lex_next(L);
+      if (ms < 0) ms = 0;
+      if (ms > 60000) ms = 60000; /* hard cap — avoid hung agents */
+      if (ms > 0) {
+        struct timespec ts;
+        ts.tv_sec = ms / 1000;
+        ts.tv_nsec = (ms % 1000) * 1000000L;
+        nanosleep(&ts, NULL);
+      }
+      vm->last_n = ms;
+      var_set_num(vm, "LAST_N", ms);
+      var_set_num(vm, "SLEEP_MS", ms);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", ms);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -1671,7 +1705,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1893,6 +1927,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TOUCH", "SYS TOUCH path — create empty / refresh mtime · LAST_N 0|1"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
+      {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
