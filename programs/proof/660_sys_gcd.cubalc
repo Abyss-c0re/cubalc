@@ -1,0 +1,69 @@
+# SYS GCD / LCM — multi-arg greatest common divisor / least common multiple
+# Usability: reduce ratios and cycle periods without cube ISA GCD soup
+
+HOLD_FLASH 1
+
+# two-arg GCD
+SYS GCD 48 18
+ASSERT OK == 1
+ASSERT LAST_N == 6
+SYS GCD 17 13
+ASSERT LAST_N == 1
+SYS GCD 0 5
+ASSERT LAST_N == 5
+SYS GCD 0 0
+ASSERT LAST_N == 0
+
+# negatives use abs
+SYS GCD -48 18
+ASSERT LAST_N == 6
+SYS GCD -48 -18
+ASSERT LAST_N == 6
+
+# multi-arg GCD
+SYS GCD 48 18 12
+ASSERT LAST_N == 6
+SYS GCD 100 50 25 10
+ASSERT LAST_N == 5
+SYS HCF 21 14 7
+ASSERT LAST_N == 7
+SYS GCF 9 6 3
+ASSERT LAST_N == 3
+
+# LCM
+SYS LCM 4 6
+ASSERT LAST_N == 12
+SYS LCM 3 5
+ASSERT LAST_N == 15
+SYS LCM 0 5
+ASSERT LAST_N == 0
+SYS LCM 7 7
+ASSERT LAST_N == 7
+
+# multi-arg LCM
+SYS LCM 4 6 8
+ASSERT LAST_N == 24
+SYS LCM 2 3 5
+ASSERT LAST_N == 30
+SYS LEASTCM 10 15
+ASSERT LAST_N == 30
+
+# agent pattern: reduce ratio num/den by gcd
+LET num = 42
+LET den = 56
+SYS GCD num den
+LET g = LAST_N
+SYS DIV num g
+LET num_r = LAST_N
+SYS DIV den g
+LET den_r = LAST_N
+ASSERT g == 14
+ASSERT num_r == 3
+ASSERT den_r == 4
+
+# agent pattern: common cycle of two poll intervals
+SYS LCM 15 20
+LET cycle = LAST_N
+ASSERT cycle == 60
+
+PRINT "sys_gcd ok"

@@ -1672,6 +1672,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS GCD|HCF a b [c…] — greatest common divisor of integer args → LAST_N.
+     * SYS LCM a b [c…] — least common multiple (via |a*b|/gcd, overflow-safe-ish).
+     * Abs values used; GCD(0,0)=0; LCM with 0 → 0. Multi-arg reduces left-to-right.
+     * Usability: reduce ratios / cycle periods without cube ISA GCD soup. */
+    if (kw(&L->cur,"GCD") || kw(&L->cur,"HCF") || kw(&L->cur,"GCF") ||
+        kw(&L->cur,"LCM") || kw(&L->cur,"LEASTCM") || kw(&L->cur,"LCMM")){
+      char op[16];
+      long vals[32];
+      int n = 0, i, is_lcm;
+      long out = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_lcm = (strcmp(op, "LCM") == 0 || strcmp(op, "LEASTCM") == 0 ||
+                strcmp(op, "LCMM") == 0);
+      lex_next(L);
+      while (n < 32 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                        L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+        vals[n++] = parse_prim(vm, L);
+      }
+      if (n <= 0) {
+        out = is_lcm ? 1 : 0; /* empty LCM=1, empty GCD=0 */
+      } else {
+        /* abs helper */
+        #define CUBALC_IABS_L(x) ((x) < 0 ? -(x) : (x))
+        out = CUBALC_IABS_L(vals[0]);
+        for (i = 1; i < n; i++) {
+          long a = out, b = CUBALC_IABS_L(vals[i]);
+          if (is_lcm) {
+            long g = a, h = b;
+            while (h) { long t = g % h; g = h; h = t; }
+            if (a == 0 || b == 0) out = 0;
+            else {
+              /* out = a / g * b — reduce first to limit overflow */
+              out = (a / g) * b;
+              if (out < 0) out = -out;
+            }
+          } else {
+            long g = a, h = b;
+            while (h) { long t = g % h; g = h; h = t; }
+            out = g;
+          }
+        }
+        #undef CUBALC_IABS_L
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      if (is_lcm) {
+        var_set_num(vm, "LCM", out);
+      } else {
+        var_set_num(vm, "GCD", out);
+      }
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
      * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
      * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
@@ -4481,7 +4540,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4803,6 +4862,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SIGN", "SYS SIGN|SGN x — signum → LAST_N -1|0|1"},
       {"SYS DIV", "SYS DIV|IDIV|QUOT a b — integer divide (trunc) · /0→0"},
       {"SYS MOD", "SYS MOD|REM a b — remainder · %0→0 soft"},
+      {"SYS GCD", "SYS GCD|HCF a b [c…] — greatest common divisor → LAST_N"},
+      {"SYS LCM", "SYS LCM a b [c…] — least common multiple → LAST_N"},
       {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
       {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
       {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},
