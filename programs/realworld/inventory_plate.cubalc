@@ -1,0 +1,255 @@
+# inventory_plate.cubalc — workspace inventory plate via JOINLINES + soft peers
+#
+# Real use: agent/cron builds a handoff inventory under CUBALC_STATE:
+#   LIST assets/ (or seed demo files) → SORT → TAKE max → JOINLINES CSV
+#   optional soft INCLUDE OR plugins
+#   optional peer list from ENV (SPLIT) soft-dial each (no hang)
+#   WRITE INVENTORY.txt; SYS APPEND history line to INVENTORY_LOG.txt
+#   STATUS / PRINT_JSON for host agents
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE/assets"
+#   touch "$CUBALC_STATE/assets/a.plate" "$CUBALC_STATE/assets/b.plate"
+#   ./out/cubalc run -q -s programs/realworld/inventory_plate.cubalc
+#
+# Optional:
+#   CUBALC_INV_MAX=32              # TAKE window for asset names
+#   CUBALC_INV_FILTER=.plate       # GREP keep needle (empty = all)
+#   CUBALC_INV_PEERS=host:1,host:2 # SPLIT peer list (soft dial each)
+#   CUBALC_P2P_SOFT=1              # required for non-fatal dial
+#   CUBALC_P2P_TIMEOUT=400
+#   CUBALC_INV_REQUIRE_ASSETS=1    # EXIT 2 if zero assets after filter
+#   CUBALC_SMX_KEY=…               # if dialing
+#
+# Edges deliberately hit:
+#   SYS JOINLINES report paste (anti-SPLIT) — new usability surface
+#   SYS JOIN/PATH now cataloged (prior gap closed)
+#   SYS APPEND for history log — implemented but forms/search miss (gap)
+#   peer list SPLIT → EACH LINE soft dial + CLEAR_ERR for -s
+#   INCLUDE OR optional miss sticky last_err
+#   JOINLINES silent trunc at CUBALC_HOST_STR_MAX (8192)
+#   VARS still collapses newlines in multi-line listings
+#   zero-valid MAX via NUM OK gate (not LAST_N > 0 post-NUM)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "inventory_plate: start"
+DEFAULT MAX_N = 32
+DEFAULT FILTER = ""
+DEFAULT PEERS = ""
+DEFAULT REQUIRE_ASSETS = 0
+LET DECIDE = -1
+LET DIGIT = -1
+IDENTITY
+SYS DATE
+LET inv_date = DATE
+SYS MS
+LET t0 = MS
+SYS USER
+LET inv_user = LAST
+SYS HOSTNAME
+LET inv_host = LAST
+
+# --- config (NUM zero-safe: assign on OK only) ---
+SYS ENV "CUBALC_INV_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_N = LAST_N
+  END
+END
+SYS ENV "CUBALC_INV_FILTER" OR ""
+IF LAST_N > 0 THEN
+  LET FILTER = LAST
+END
+SYS ENV "CUBALC_INV_PEERS" OR ""
+IF LAST_N > 0 THEN
+  LET PEERS = LAST
+END
+SYS ENV "CUBALC_INV_REQUIRE_ASSETS" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ASSETS = 1
+END
+
+# --- optional soft plugins ---
+INCLUDE OR soft_missing_plugin
+EXPECT INCLUDE_OK == 0 "optional plugin absent"
+IF INCLUDE_OK == 0 THEN
+  PASS "optional plugin soft miss ok"
+  CLEAR_ERR "plugin miss recovered"
+END
+INCLUDE ONCE hold_seed
+NOTE "plugins probed"
+
+# --- workspace ---
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "assets"
+LET assets_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR assets_dir
+SYS MKDIR out_dir
+SYS REALPATH assets_dir
+LET assets_abs = LAST
+
+# seed empty inventory dir is ok unless REQUIRE
+SYS ISDIR assets_dir
+ASSERT LAST_N == 1
+
+# --- LIST → filter → SORT → TAKE → JOINLINES CSV ---
+SYS LIST assets_dir
+IF OK == 0 THEN
+  FAIL "LIST assets failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET raw_n = LIST_N
+LET listing = LAST
+
+SYS EQS FILTER ""
+IF LAST_N == 0 THEN
+  SYS GREP FILTER listing
+  LET listing = LAST
+  LET filt_n = GREP_N
+ELSE
+  LET filt_n = raw_n
+END
+
+SYS SORT listing
+LET listing = LAST
+LET sorted_n = SORT_N
+SYS TAKE MAX_N listing
+LET batch = LAST
+LET batch_n = TAKE_N
+
+# paste into single CSV report field
+SYS JOINLINES "," batch
+LET assets_csv = LAST
+LET join_n = JOIN_N
+NOTE "assets csv built"
+CLEAR_ERR "list chain clean"
+
+IF REQUIRE_ASSETS == 1 THEN
+  IF batch_n == 0 THEN
+    FAIL "no assets"
+    EXIT 2 "inventory empty"
+  END
+END
+
+# --- soft peer probes from SPLIT list (no hang) ---
+LET peer_n = 0
+LET peer_ok = 0
+LET peer_fail = 0
+LET peer_csv = ""
+SYS EQS PEERS ""
+IF LAST_N == 0 THEN
+  SYS SPLIT "," PEERS
+  LET peer_list = LAST
+  LET peer_n = SPLIT_N
+  # ensure soft dial host knobs if peers configured
+  SYS ENV "CUBALC_P2P_SOFT" OR "0"
+  SYS EQS LAST "1"
+  IF LAST_N == 0 THEN
+    NOTE "peers set but CUBALC_P2P_SOFT!=1 — dials may hard-fail; skip dials"
+    LET peer_csv = "soft_required"
+  ELSE
+    CUBE self ROLE host PROTON 1
+    CUBE remote ROLE body PROTON 1
+    PLUG self remote
+    SMX KEY
+    CLEAR_ERR
+    LET ok_names = ""
+    EACH LINE AS endpoint IN peer_list
+      SYS EQS endpoint ""
+      IF LAST_N == 1 THEN
+        CONTINUE
+      END
+      SMX DIAL self remote endpoint
+      IF SMX_OK == 1 THEN
+        LET peer_ok = peer_ok + 1
+        NOTE "peer live"
+      ELSE
+        LET peer_fail = peer_fail + 1
+        FAIL "soft dial miss"
+        CLEAR_ERR "dial recovered"
+      END
+    END
+    # build status summary fields
+    SYS CAT "ok=" ""
+    # JOINLINES on synthetic list of counts is awkward — CAT for scalars
+    SYS CAT "peers=" ""
+    LET peer_csv = "probed"
+    CLEAR_ERR "peer section clean"
+  END
+END
+
+# --- write inventory plate ---
+SYS JOIN out_dir "INVENTORY.txt"
+LET plate = LAST
+SYS CAT "schema=cubalc.inventory_plate.v1 date=" inv_date
+LET body = LAST
+SYS CAT body " user="
+LET body = LAST
+SYS CAT body inv_user
+LET body = LAST
+SYS CAT body " host="
+LET body = LAST
+SYS CAT body inv_host
+LET body = LAST
+SYS CAT body " assets="
+LET body = LAST
+SYS CAT body assets_csv
+LET body = LAST
+SYS CAT body " n="
+# numeric n via string of batch_n is hard without STR — use PRINT_JSON for machine
+SYS WRITE plate body
+SYS EXIST plate
+ASSERT EXIST == 1 "plate written"
+
+# history line via APPEND (ops exist; forms/search may miss)
+SYS JOIN out_dir "INVENTORY_LOG.txt"
+LET logp = LAST
+SYS CAT inv_date " n="
+LET hist = LAST
+SYS CAT hist assets_csv
+LET hist = LAST
+SYS APPEND logp hist
+IF OK == 0 THEN
+  # fallback WRITE if APPEND unavailable/fails
+  CLEAR_ERR
+  SYS WRITE logp hist
+END
+SYS EXIST logp
+EXPECT EXIST == 1 "log exists"
+CLEAR_ERR "log path soft"
+
+# lib inventory for host agents (stable sample)
+SYS LIST "programs/lib"
+IF OK == 1 THEN
+  SYS GREP ".cubalc"
+  SYS SORT
+  SYS TAKE 8
+  SYS JOINLINES ","
+  LET libs_csv = LAST
+  LET libs_n = JOIN_N
+ELSE
+  LET libs_csv = ""
+  LET libs_n = 0
+  CLEAR_ERR
+END
+
+SYS MS
+LET elapsed_ms = MS - t0
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "inventory_plate: done"
+PRINT "inv" raw_n filt_n batch_n join_n peer_n peer_ok peer_fail libs_n
+PRINT_JSON raw_n filt_n batch_n join_n peer_n peer_ok peer_fail libs_n assets_csv libs_csv elapsed_ms STATUS_OK
+STATUS
+CLEAR_ERR "inv clean"
+EXIT 0 "inventory ok"

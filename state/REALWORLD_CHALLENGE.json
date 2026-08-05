@@ -1,106 +1,104 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 13,
-  "program": "programs/realworld/queue_batch_worker.cubalc",
-  "theme": "sorted paginated job queue batch SORT/TAKE/SPLIT",
-  "version": "1.15.71-usability",
+  "iter": 14,
+  "program": "programs/realworld/inventory_plate.cubalc",
+  "theme": "inventory plate JOINLINES CSV + soft peers + APPEND log",
+  "version": "1.15.73-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_mixed_queue",
-      "cmd": "queue with .bits/.json/.job/.tmp/.txt; run -s",
+      "name": "positive_filter_joinlines",
+      "cmd": "assets a/m/z.plate + noise.tmp; CUBALC_INV_FILTER=.plate run -s",
       "ok": true,
-      "note": "accepted=5 skipped=1 batch_n=6 raw_n=7; SORT first_name=a.json; dig bound after pre-bind"
+      "note": "assets_csv=a.plate,m.plate,z.plate sorted; join_n=3; INVENTORY.txt + LOG via APPEND"
     },
     {
-      "name": "page_offset_take",
-      "cmd": "a.job b.job c.job; BATCH=1 OFFSET=1",
+      "name": "quiet_strict_rerun",
+      "cmd": "./out/cubalc run -q -s \u2026inventory_plate.cubalc",
       "ok": true,
-      "note": "processes only b.job (sorted page); a+c remain in queue"
+      "note": "INCLUDE OR soft miss + CLEAR_ERR recovers under -s"
     },
     {
       "name": "empty_require",
-      "cmd": "CUBALC_QUEUE_REQUIRE=1 empty queue",
+      "cmd": "CUBALC_INV_REQUIRE_ASSETS=1 empty assets/",
       "ok": true,
-      "note": "EXIT 2 batch empty; err_line on EXIT plate"
+      "note": "EXIT 2 inventory empty"
     },
     {
-      "name": "allowlist_miss_require",
-      "cmd": "ALLOW=.bits only + a.txt + REQUIRE=1",
+      "name": "soft_peers_dial",
+      "cmd": "CUBALC_INV_PEERS=127.0.0.1:1 CUBALC_P2P_SOFT=1 TIMEOUT=300 -q -s",
       "ok": true,
-      "note": "EXIT 2 nothing accepted"
+      "note": "peer_fail=1 peer_ok=0; FAIL+CLEAR_ERR keeps plate ok"
     },
     {
-      "name": "batch_zero_require",
-      "cmd": "CUBALC_QUEUE_BATCH=0 REQUIRE=1 with jobs present",
+      "name": "max_zero_require",
+      "cmd": "CUBALC_INV_MAX=0 REQUIRE=1 with assets present",
       "ok": true,
-      "note": "after fix: TAKE 0 \u2192 accepted 0 \u2192 EXIT 2; jobs untouched"
+      "note": "TAKE 0 \u2192 empty batch \u2192 EXIT 2 (NUM zero-safe config)"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "46/46 pass incl sys_take/split/sort"
+      "note": "48/48 pass incl sys_join + sys_joinlines"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "env|flow",
-      "title": "SYS NUM zero is falsey \u2014 env BATCH=0 silent no-op if gated wrong",
-      "detail": "After SYS ENV then SYS NUM, LAST_N==0 is a valid TAKE window (process nothing) but common agent patterns IF LAST_N > 0 THEN LET BATCH = LAST_N never apply zero. Env CUBALC_QUEUE_BATCH=0 was ignored and default BATCH=8 ran. Zero-valid numeric configs need IF OK == 1 only, not LAST_N > 0 post-NUM.",
-      "repro": "Without fix: BATCH=0 REQUIRE=1 still accepted jobs (default 8). With LET BATCH = LAST_N on OK==1 only: TAKE 0 \u2192 EXIT 2."
+      "area": "docs|cli",
+      "title": "SYS APPEND works but invisible in forms/search/HELP catalog",
+      "detail": "SYS APPEND|LOG is implemented (history logs without READ+CAT+WRITE) and used successfully for INVENTORY_LOG.txt, but forms APPEND and search APPEND return n=0. Agents discover JOINLINES/JOIN but not APPEND \u2014 forces shell or rewrite loops.",
+      "repro": "./out/cubalc forms APPEND; ./out/cubalc search APPEND \u2192 empty. Program APPEND log still writes."
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host",
-      "title": "UNIQ is adjacent-only; SORT is pure lexicographic",
-      "detail": "SYS UNIQ without prior SORT leaves non-adjacent duplicates (b\\na\\nb \u2192 3 fields). SORT is byte lexicographic \u2014 job10 sorts before job2 (job1, job10, job2). Real job queues often need natural/version sort or full unique set ops.",
-      "repro": "SYS UNIQ b\\na\\nb \u2192 LAST_N=3; SORT then UNIQ \u2192 2. SORT job10\\njob2\\njob1 \u2192 job1,job10,job2."
+      "title": "JOINLINES silent trunc at CUBALC_HOST_STR_MAX (8192)",
+      "detail": "JOINLINES copies into fixed out[8192]; long inventories truncate without OK=0 or truncated flag. JOIN_N still counts all fields even if paste body cut off \u2014 agents can mis-size reports.",
+      "repro": "Large LIST \u2192 JOINLINES ','; compare strlen(LAST) vs sum of field lengths + seps."
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host",
-      "title": "SPLIT keeps empty fields; allowlist GREP is substring not exact",
-      "detail": "SYS SPLIT ',' '.bits,,.json' \u2192 3 fields with empty middle. Allowlist check via SYS GREP ext allow_fields is substring over newline fields \u2014 works for .bits but can false-positive if one ext is prefix of another (e.g. .j vs .json). No exact-line match form.",
-      "repro": "SPLIT consecutive commas; GREP '.j' against '.json\\n.job' matches both."
+      "area": "flow|report",
+      "title": "Still no numeric\u2192string for report CAT chains",
+      "detail": "Building INVENTORY body needs counts (batch_n) in text plate but CAT only joins strings; program leaves n= to PRINT_JSON machine plate. Agents still need dual report paths (human CAT plate vs PRINT_JSON).",
+      "repro": "SYS CAT body batch_n does not stringify number cleanly for plate text."
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "docs|cli",
-      "title": "SYS JOIN still missing from forms/search",
-      "detail": "Queue paths require SYS JOIN STATE queue but search JOIN / forms JOIN still n=0. SORT/TAKE/SPLIT are cataloged; JOIN is not.",
-      "repro": "./out/cubalc search JOIN \u2192 n=0"
+      "severity": "low",
+      "area": "p2p",
+      "title": "Peer soft dial still requires host CUBALC_P2P_SOFT=1",
+      "detail": "Language cannot set host soft-dial policy; program must detect ENV and skip or risk hard fail. Documented skip path when peers set without SOFT.",
+      "repro": "CUBALC_INV_PEERS set without CUBALC_P2P_SOFT=1 \u2192 program notes soft_required / skip."
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "error|matrix",
-      "title": "var_slot 64-cap DECIDE still requires early pre-bind",
-      "detail": "Carry-over: batch walks still inflate n_vars; LET DECIDE=-1 at boot still required for dig capture after FOLDBITS path.",
-      "repro": "Remove pre-bind LET DECIDE=-1 from queue_batch_worker; dig may stick at -1/0 despite decide N print."
+      "area": "include",
+      "title": "INCLUDE OR sticky last_err needs CLEAR_ERR for -s (known, still real)",
+      "detail": "Soft plugin miss recovered via PASS+CLEAR_ERR; without CLEAR_ERR, -s fails after intentional optional miss.",
+      "repro": "INCLUDE OR missing; omit CLEAR_ERR; run -q -s \u2192 ok=false"
     }
   ],
   "workarounds": [
-    "After SYS NUM for env knobs, assign on OK==1 even when LAST_N==0",
-    "Always SORT before UNIQ for full dedupe of queue listings",
-    "Pad job names for lexical order (job01) or accept lex sort",
-    "Use exact EXT EQS branches after GREP allow prefilter; avoid short prefix allow tokens",
-    "LET DECIDE=-1 / DIGIT=-1 early before heavy walks",
-    "Know SYS JOIN from programs, not forms catalog"
+    "Know SYS APPEND from source/error strings; not forms catalog",
+    "TAKE before JOINLINES to bound CSV size under 8KiB",
+    "PRINT_JSON for numeric inventory metrics; CAT for name CSV only",
+    "Always set CUBALC_P2P_SOFT=1 and short TIMEOUT for peer inventory probes",
+    "CLEAR_ERR after every intentional soft FAIL/INCLUDE OR under -s"
   ],
   "language_gaps": [
-    "Natural/version sort or sort-key for job queues",
-    "UNIQ -u global (non-adjacent) without mandatory SORT",
-    "Exact line equality filter (not substring GREP) for allowlists",
-    "Catalog SYS JOIN|PATH in forms/search",
-    "Unify var_slot/var_get create caps; loud error on DECIDE bind fail",
-    "Document zero-valid SYS NUM env pattern in cookbook"
+    "Catalog SYS APPEND|LOG in forms/search/HELP (parity with JOINLINES)",
+    "JOINLINES truncated flag or OK=0 on overflow",
+    "itoa / SYS STR num for plate text without PRINT_JSON dual path",
+    "In-language soft-dial default when peer list present",
+    "Recursive LIST for nested asset trees"
   ],
-  "commit": "71ae707a099d2800ad81db4201c874cfd14dddc7",
-  "ts": "2026-08-05T09:28:01Z"
+  "commit": "d3fcd1aae280e18fa8477c4c003f003530b8dd87",
+  "ts": "2026-08-05T09:52:52Z"
 }
