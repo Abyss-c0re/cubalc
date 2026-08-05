@@ -1,64 +1,58 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 43,
-  "program": "programs/realworld/column_align_export.cubalc",
-  "theme": "column align export PADALL SORTLEN ARGMAX soft truncate",
-  "version": "1.15.146-usability",
+  "iter": 44,
+  "program": "programs/realworld/audit_span_board.cubalc",
+  "theme": "audit span FIRSTMATCH LASTMATCH MAXLEN soft actor window",
+  "version": "1.15.148-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_align",
-      "cmd": "seed db api gateway edge; align width 8 space pad",
+      "name": "loadlines_span",
+      "cmd": "loadlines audit events; span alice first+last",
       "ok": true,
-      "note": "PADALL right-pad plate"
+      "note": "FIRSTMATCH/LASTMATCH pair"
     },
     {
-      "name": "align_auto",
-      "cmd": "align WIDTH=0 \u2192 LENALL+MAX auto width 7 (gateway)",
+      "name": "span_miss",
+      "cmd": "span zzz soft rc0; REQUIRE EXIT 2",
       "ok": true,
-      "note": "auto width path"
+      "note": "soft+REQUIRE"
     },
     {
-      "name": "lpad_rank",
-      "cmd": "lpad 8; rank DESC \u2192 gateway first",
+      "name": "substring_malicex",
+      "cmd": "FIRSTMATCH alice → malicex LOGIN (alice inside malicex)",
       "ok": true,
-      "note": "LPADALL + SORTLEN DESC"
+      "note": "critical actor false friend"
     },
     {
-      "name": "longest_pinlong",
-      "cmd": "ARGMAX+NTH longest; MOVELINE pinlong",
+      "name": "lastmatch_malicex",
+      "cmd": "LASTMATCH alice prefers last field containing alice incl malicex if last",
       "ok": true,
-      "note": "index pick longest field"
+      "note": "pinlast promoted malicex when last"
     },
     {
-      "name": "truncate",
-      "cmd": "align width 3 \u2192 gateway\u2192gat edge\u2192edg data loss",
+      "name": "fat_maxlen",
+      "cmd": "fat thresh10 oversize soft/REQUIRE; thresh100 ok",
       "ok": true,
-      "note": "PADALL truncates silent"
+      "note": "MAXLEN gate without LENALL"
     },
     {
-      "name": "pad_char_zero",
-      "cmd": "CUBALC_CA_PAD=0 align 6 zero-pad",
+      "name": "pinlast_cmatch_drop",
+      "cmd": "pinlast; cmatch ERROR; drop exact; miss REQUIRE",
       "ok": true,
-      "note": "pad char var worked for PADALL"
+      "note": "MOVELINE + COUNTMATCH"
     },
     {
-      "name": "empty_require",
-      "cmd": "align/longest empty REQUIRE EXIT 2",
+      "name": "empty_fat",
+      "cmd": "fat empty REQUIRE EXIT 2",
       "ok": true,
-      "note": "soft empty + hard gate"
-    },
-    {
-      "name": "argmax_empty",
-      "cmd": "ARGMAX \"\" \u2192 -1 OK=0",
-      "ok": true,
-      "note": "soft index miss"
+      "note": "soft empty"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "121/121 pass incl padall sortlen argmax"
+      "note": "123/123 pass incl lastmatch maxlen"
     }
   ],
   "weaknesses": [
@@ -66,87 +60,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "PADALL silently truncates fields longer than width",
-      "detail": "PADALL 'hello' 3 \u2192 'hel' with no FAIL/sticky. Align export can destroy gateway\u2192gat. No PADALL STRICT or refuse-truncate mode.",
-      "repro": "PADALL 'gateway\\nedge' 3 \u2192 gat\\nedg"
+      "title": "FIRSTMATCH/LASTMATCH substring: alice matches malicex",
+      "detail": "Needle alice is a substring of malicex. FIRSTMATCH bag alice returns malicex LOGIN when it appears first. Audit actor span is wrong — security-relevant false friend. No word-boundary or field-token match mode.",
+      "repro": "FIRSTMATCH 'malicex LOGIN\\nalice LOGIN' alice → malicex LOGIN"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "PADALL padding is invisible in PRINT_JSON / hard to inspect",
-      "detail": "Space-padded fields collapse visually in JSON; agents must cat -A plates. No visible pad mark option.",
-      "repro": "PRINT_JSON after PADALL spaces"
+      "title": "LASTMATCH same substring class corrupts pinlast attention",
+      "detail": "If malicex is last field, LASTMATCH alice pins attacker line as 'last alice event'. Ops handoff boards mis-route attention.",
+      "repro": "LASTMATCH with malicex last containing alice"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "lang|parse",
-      "title": "SORTLEN DESC keyword steals DESC identifier",
-      "detail": "Same class as OFF/RIGHT. Agents naming vars DESC near SORTLEN risk form steal.",
-      "repro": "DEFAULT DESC near SYS SORTLEN DESC bag"
+      "area": "host|cli",
+      "title": "No multi-line ARG — loadlines ||| glue required",
+      "detail": "Audit lines have spaces; WORDS splits them. Same multi-line ARG gap as api_noise_rank.",
+      "repro": "WORDS 'alice LOGIN ok' → 3 tokens"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "ARGMAX empty returns -1 with OK=0 but easy to NTH wrong",
-      "detail": "Must CMP idx 0 before NTH; NTH -1 behavior may soft-miss. Inconsistent with MAX empty\u21920.",
-      "repro": "ARGMAX \"\" \u2192 -1; MAX \"\" \u2192 0"
+      "title": "LASTMATCH/FIRSTMATCH empty needle returns edge field",
+      "detail": "Empty needle → last/first field. Agents with blank ARG can silently pick wrong event.",
+      "repro": "LASTMATCH bag \"\" → last field"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "PADALL/SORTLEN/ARGMAX non-mutate",
-      "detail": "Must LET aligned/ranked/raw = LAST after ops.",
-      "repro": "PADALL raw 8; WRITE without LET keeps raw"
+      "title": "MAXLEN empty returns 0 (same class as MAX empty)",
+      "detail": "MAXLEN \"\" → 0; MAXLEN_I -1 only if checked. Fat gate may false-pass if empty not BLANKed.",
+      "repro": "MAXLEN \"\" → 0"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "Auto width via MAX empty still 0 footgun",
-      "detail": "If LENALL empty, MAX\u21920 then MAX WIDTH 1 forces width 1 \u2014 pads nothing useful without clear error.",
-      "repro": "align empty handled by BLANK path; mid-empty sizes plate risk"
+      "title": "No token/field-prefix actor match",
+      "detail": "Need CUTALL 0 + exact EQS walk for safe actor identity. FIRST/LASTMATCH insufficient for audit.",
+      "repro": "prefer BEFORE line space + EQS actor"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last raw/align line without $.",
-      "repro": "seed; cat -A RAW.txt"
+      "detail": "cat -A last audit line without $.",
+      "repro": "loadlines; cat -A AUDIT.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|bag",
-      "title": "No PADALL keep-long / no-truncate flag",
-      "detail": "Ops want align short fields only and leave long fields intact. Currently all-or-truncate.",
-      "repro": "need EACH length check before pad"
+      "title": "COUNTMATCH still substring-unsafe for cmatch tallies",
+      "detail": "Same terror/error class on free-text audit lines.",
+      "repro": "COUNTMATCH error vs terror"
     }
   ],
   "workarounds": [
-    "Always set width >= LENALL MAX before PADALL to avoid truncate",
-    "Inspect ALIGN with cat -A not PRINT_JSON for spaces",
-    "CMP ARGMAX idx >= 0 before NTH",
-    "Never name vars DESC/ASC/OFF/RIGHT/LEFT",
-    "Always LET after PADALL/SORTLEN"
+    "Match 'alice ' with trailing space or 'alice LOGIN' full token — still fragile",
+    "CUTALL first token then HASLINE/EQS for actor identity",
+    "Never trust FIRST/LASTMATCH for security actor spans without field split",
+    "BLANK bag before MAXLEN fat gate",
+    "loadlines ||| or READ file for multi-word events"
   ],
   "language_gaps": [
-    "PADALL STRICT / no-truncate / keep-long modes",
-    "Visible pad debug form",
-    "Reserved-word diagnostic on DESC/ASC DEFAULT",
-    "Consistent empty extreme semantics (MAX 0 vs ARGMAX -1)",
+    "Word-boundary / whole-field / token FIRSTMATCH+LASTMATCH",
+    "STARTS-with field match form",
+    "Multi-line ARG ingest",
+    "MAXLEN empty sticky fail option",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Confirmed silent truncate gateway\u2192gat \u2014 highest agent footgun this fire",
-    "PADCH var worked for zero pad (unlike ZIP sep) \u2014 inconsistent form binding",
-    "ARGMAX+MOVELINE pinlong clean for attention",
-    "No language fix \u2014 PADALL truncate mode for MEANINGFUL_ITER"
+    "Hard security footgun: malicex matched as alice via substring",
+    "pinlast with alice when malicex last promoted attacker line",
+    "FIRST vs LAST pair still valuable when needles are unique tags",
+    "No language fix — word-boundary match for MEANINGFUL_ITER"
   ],
-  "commit": "6adfc3f27250cb7d2228546a7edf0b234264b076",
-  "ts": "2026-08-05T21:58:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T22:23:00Z"
 }

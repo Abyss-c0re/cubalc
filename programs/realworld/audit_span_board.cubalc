@@ -1,0 +1,546 @@
+# audit_span_board.cubalc — durable audit event span plate under STATE
+#
+# Real use: agents track audit/session lines, find first vs last occurrence
+# of an actor/action (FIRSTMATCH/LASTMATCH), and gate fat lines (MAXLEN)
+# without shell tac/awk.
+#
+# Plate rows: free-text audit lines (exact fields), e.g.
+#   "alice LOGIN ok" / "bob DENY path" / "alice LOGOUT ok"
+#
+# Actions (CUBALC_ARG0 / CUBALC_AS_ACTION):
+#   list     — depth + maxlen/minlen (default)
+#   seed     — WORDS not great for multi-word; use loadlines |||
+#   loadlines— PUSH ||| separated lines
+#   ingest   — PUSH one line (ARG1)
+#   first    — FIRSTMATCH needle (ARG1)
+#   last     — LASTMATCH needle (ARG1)
+#   span     — report first+last for needle; soft miss either end
+#   fat      — if MAXLEN >= THRESH soft/REQUIRE oversize
+#   pinlast  — LASTMATCH then MOVELINE to front (attention)
+#   drop     — REMOVELINE exact line
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   cmatch   — COUNTMATCH needle (substring tally)
+#   clear    — empty plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=loadlines CUBALC_ARG1='alice LOGIN|||bob DENY|||alice ACT|||alice LOGOUT' \
+#     ./out/cubalc run -q -s programs/realworld/audit_span_board.cubalc
+#   CUBALC_ARG0=span CUBALC_ARG1=alice ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_AS_FILE=AUDIT.txt
+#   CUBALC_AS_REQUIRE=1
+#   CUBALC_AS_THRESH=40
+#
+# Edges deliberately stressed:
+#   FIRSTMATCH/LASTMATCH substring — alice matches malicex / alice_extra
+#   LASTMATCH empty needle → last field (like FIRSTMATCH first field)
+#   MAXLEN empty → 0 with MAXLEN_I -1; MIN/MAX bag empty also 0
+#   multi-word lines need ||| loadlines (no multi-line ARG)
+#   COUNTMATCH terror/error class on free text
+#   pinlast uses LASTMATCH index LASTMATCH_I + MOVELINE
+#   PRINT_JSON collapse; WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "audit_span_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "AUDIT.txt"
+DEFAULT REPORT = "AUDIT_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 40
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_AS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_AS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_AS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_AS_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_AS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_AS_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft audit load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET note_msg = "ok"
+LET first_hit = ""
+LET last_hit = ""
+LET max_w = 0
+LET min_w = 0
+LET idx = -1
+LET filtered = ""
+
+SYS EQS ACTION "fat"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET THRESH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS MAXLEN bag
+    LET max_w = LAST_N
+    SYS MINLEN bag
+    LET min_w = LAST_N
+  END
+  SYS LINES bag
+  LET depth0 = LAST_N
+  STATUS
+  PRINT "auditspan" depth0 max_w min_w ACTION
+  PRINT_JSON depth0 max_w min_w ACTION STATUS_OK
+  PRINT_JSON bag
+  LET note_msg = "list ok"
+END
+
+# --- loadlines ||| ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| separated lines"
+  END
+  SYS SPLIT "|||" NAME
+  LET lines = LAST
+  EACH LINE AS ln IN lines
+    SYS BLANK ln
+    IF LAST_N == 0 THEN
+      SYS PUSH bag ln
+      LET bag = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "loaded"
+END
+
+# --- ingest ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs line"
+  END
+  SYS PUSH bag NAME
+  LET bag = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- first ---
+SYS EQS ACTION "first"
+IF LAST_N == 1 THEN
+  NOTE "action first"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "first needs needle"
+  END
+  SYS FIRSTMATCH bag NAME
+  LET first_hit = LAST
+  SYS BLANK first_hit
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "first miss"
+    FAIL "first miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "first miss"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "first hit"
+  END
+  PRINT_JSON first_hit
+END
+
+# --- last ---
+SYS EQS ACTION "last"
+IF LAST_N == 1 THEN
+  NOTE "action last"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "last needs needle"
+  END
+  SYS LASTMATCH bag NAME
+  LET last_hit = LAST
+  SYS BLANK last_hit
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "last miss"
+    FAIL "last miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "last miss"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "last hit"
+  END
+  PRINT_JSON last_hit
+END
+
+# --- span: first + last ---
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  NOTE "action span"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "span needs needle"
+  END
+  SYS FIRSTMATCH bag NAME
+  LET first_hit = LAST
+  SYS LASTMATCH bag NAME
+  LET last_hit = LAST
+  SYS BLANK first_hit
+  LET miss = LAST_N
+  SYS BLANK last_hit
+  LET miss = miss + LAST_N
+  IF miss > 0 THEN
+    LET note_msg = "span partial/miss"
+    FAIL "span miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "span miss"
+    END
+    LET hit = 0
+  ELSE
+    LET hit = 1
+    LET note_msg = "span ok"
+  END
+  PRINT_JSON first_hit
+  PRINT_JSON last_hit
+END
+
+# --- fat: MAXLEN >= THRESH ---
+SYS EQS ACTION "fat"
+IF LAST_N == 1 THEN
+  NOTE "action fat"
+  SYS MAX THRESH 1
+  LET THRESH = LAST_N
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "fat empty"
+    FAIL "fat empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "fat empty"
+    END
+  ELSE
+    SYS MAXLEN bag
+    LET max_w = LAST_N
+    SYS MINLEN bag
+    LET min_w = LAST_N
+    SYS CMP max_w THRESH
+    IF LAST_N >= 0 THEN
+      LET hit = 1
+      LET miss = 1
+      LET note_msg = "fat oversize"
+      FAIL "fat oversize"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "fat oversize"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "fat ok"
+    END
+    PRINT "fat" max_w min_w THRESH
+  END
+END
+
+# --- pinlast ---
+SYS EQS ACTION "pinlast"
+IF LAST_N == 1 THEN
+  NOTE "action pinlast"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pinlast needs needle"
+  END
+  SYS LASTMATCH bag NAME
+  LET last_hit = LAST
+  SYS BLANK last_hit
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pinlast miss"
+    FAIL "pinlast miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pinlast miss"
+    END
+  ELSE
+    SYS FINDLINE bag last_hit
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pinlast moveline miss"
+      FAIL "pinlast moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinlast ok"
+    END
+  END
+END
+
+# --- cmatch ---
+SYS EQS ACTION "cmatch"
+IF LAST_N == 1 THEN
+  NOTE "action cmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "cmatch needs needle"
+  END
+  SYS COUNTMATCH bag NAME
+  LET hit = LAST_N
+  IF hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "cmatch zero"
+    FAIL "cmatch zero"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "cmatch zero"
+    END
+  ELSE
+    LET note_msg = "cmatch ok"
+  END
+END
+
+# --- drop / has / count ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact line"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs line"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "first"
+LET k = k + LAST_N
+SYS EQS ACTION "last"
+LET k = k + LAST_N
+SYS EQS ACTION "span"
+LET k = k + LAST_N
+SYS EQS ACTION "fat"
+LET k = k + LAST_N
+SYS EQS ACTION "pinlast"
+LET k = k + LAST_N
+SYS EQS ACTION "cmatch"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "audit write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.auditspan.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_w"
+LET report = LAST
+SYS STR max_w
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min_w"
+LET report = LAST
+SYS STR min_w
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "auditspan" ACTION hit miss max_w min_w depth1
+PRINT_JSON ACTION hit miss max_w min_w depth1 elapsed STATUS_OK
+PASS "auditspan tick"
+NOTE "audit_span_board: done"
+CLEAR_ERR
+EXIT 0 "auditspan ok"
