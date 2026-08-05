@@ -262,6 +262,58 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS BASENAME|LEAF path — final path component → LAST/BASENAME
+     * SYS DIRNAME|PARENT path — parent directory → LAST/DIRNAME
+     * Usability: split JOIN/TMP/WHICH paths without shell basename(1). */
+    if (kw(&L->cur,"BASENAME") || kw(&L->cur,"LEAF") || kw(&L->cur,"FILENAME") ||
+        kw(&L->cur,"DIRNAME") || kw(&L->cur,"PARENT") || kw(&L->cur,"DIR")){
+      int want_base = (kw(&L->cur,"BASENAME") || kw(&L->cur,"LEAF") ||
+                      kw(&L->cur,"FILENAME"));
+      char path[512], out[512];
+      const char *slash;
+      size_t n;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm, want_base ? "SYS BASENAME \"path\"|LAST"
+                           : "SYS DIRNAME \"path\"|LAST");
+        return -1;
+      }
+      /* strip trailing separators (keep single root) */
+      n = strlen(path);
+      while (n > 1 && (path[n - 1] == '/' || path[n - 1] == '\\')) {
+        path[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(path);
+      if (want_base) {
+        if (slash && slash[1])
+          snprintf(out, sizeof out, "%s", slash + 1);
+        else if (slash && (slash[0] == '/' || slash[0] == '\\') && !slash[1])
+          snprintf(out, sizeof out, "%s", path); /* "/" → "/" */
+        else
+          snprintf(out, sizeof out, "%s", path[0] ? path : ".");
+        var_set_str(vm, "BASENAME", out);
+      } else {
+        if (slash && slash != path) {
+          size_t dn = (size_t)(slash - path);
+          if (dn >= sizeof out) dn = sizeof out - 1;
+          memcpy(out, path, dn);
+          out[dn] = 0;
+        } else if (slash && slash == path) {
+          /* absolute at root */
+          snprintf(out, sizeof out, "%c", path[0] == '\\' ? '\\' : '/');
+        } else {
+          snprintf(out, sizeof out, ".");
+        }
+        var_set_str(vm, "DIRNAME", out);
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -1267,7 +1319,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|BASENAME|DIRNAME|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1474,6 +1526,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
       {"SYS MKDIR", "SYS MKDIR path — mkdir -p · OK if dir exists"},
+      {"SYS BASENAME", "SYS BASENAME|LEAF path — final component → LAST"},
+      {"SYS DIRNAME", "SYS DIRNAME|PARENT path — parent directory → LAST"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

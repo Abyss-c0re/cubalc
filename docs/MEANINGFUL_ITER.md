@@ -91,6 +91,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 61. ~~**`SYS DATE` / `ISO`**~~ **done** (UTC `YYYY-MM-DDTHH:MM:SSZ` plate stamp).
 62. ~~**`SYS TMP` / `TEMP` / `TMPDIR`**~~ **done** (portable temp dir for plate writes).
 63. ~~**`SYS MKDIR`**~~ **done** (mkdir -p for plate dirs · soft OK if exists).
+64. ~~**`SYS BASENAME` / `DIRNAME`**~~ **done** (path leaf / parent without shell).
 
 ## Tick protocol
 

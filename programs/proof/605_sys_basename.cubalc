@@ -1,0 +1,29 @@
+# SYS BASENAME / DIRNAME — path split without shell basename/dirname
+# Usability: agents peel JOIN/WHICH paths for INCLUDE and plate names
+
+HOLD_FLASH 1
+
+SYS BASENAME "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+# leaf hold_seed.cubalc length 16
+ASSERT LAST_N == 16 "basename length"
+
+SYS DIRNAME "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N == 12 "programs/lib"
+
+# LAST default after path in var
+LET P = "a/b/c"
+SYS BASENAME P
+ASSERT LAST_N == 1 "c"
+SYS DIRNAME P
+ASSERT LAST_N == 3 "a/b"
+
+# aliases
+SYS LEAF "x/y.z"
+ASSERT LAST_N == 3
+SYS PARENT "x/y.z"
+ASSERT LAST_N == 1
+
+PRINT "sys_basename ok"
