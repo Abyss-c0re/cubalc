@@ -1,58 +1,58 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 41,
-  "program": "programs/realworld/oncall_handoff_rotate.cubalc",
-  "theme": "oncall handoff ROTATE FLATTEN COUNTMATCH CHUNK soft primary",
-  "version": "1.15.141-usability",
+  "iter": 42,
+  "program": "programs/realworld/payload_size_gate.cubalc",
+  "theme": "payload size gate LENALL MINMAX bag ZIP soft oversize",
+  "version": "1.15.143-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_peek_handoff",
-      "cmd": "seed alice..dave; peek alice; handoff \u2192 bob primary; handback \u2192 alice",
+      "name": "ingest_measure",
+      "cmd": "ingest 4 payloads; measure → sizes 2,5,1,10 + ZIP labeled",
       "ok": true,
-      "note": "ROTATE left/RIGHT round-trip"
+      "note": "LENALL+ZIP plates"
     },
     {
-      "name": "open_tally",
-      "cmd": "open 5 incidents; list/tally ERROR WARN page",
+      "name": "gate_oversize",
+      "cmd": "gate thresh5 max10 soft rc0; REQUIRE EXIT 2; gate 20 under",
       "ok": true,
-      "note": "COUNTMATCH does not clobber bag"
+      "note": "MAX bag vs thresh CMP"
     },
     {
-      "name": "batch_reclaim",
-      "cmd": "CHUNK 2 \u2192 FLATTEN stack restore",
+      "name": "fat_scan",
+      "cmd": "fat >=5 hits; fat 50 none REQUIRE",
       "ok": true,
-      "note": "round-trip batch plates"
+      "note": "EACH+NTH index walk no LENWHERE"
     },
     {
       "name": "pin_drop",
-      "cmd": "pin carol primary; drop dave; drop ghost REQUIRE",
+      "cmd": "pin fat payload; drop x; drop ghost REQUIRE",
       "ok": true,
-      "note": "MOVELINE + REMOVELINE"
+      "note": "MOVELINE exact"
     },
     {
-      "name": "empty_require",
-      "cmd": "clear; handoff/peek REQUIRE EXIT 2",
+      "name": "measure_empty",
+      "cmd": "measure empty REQUIRE EXIT 2",
       "ok": true,
-      "note": "soft empty + hard gate"
+      "note": "soft empty path"
     },
     {
-      "name": "countmatch_substring",
-      "cmd": "COUNTMATCH error hits terror (error inside terror)",
+      "name": "zip_pad_minmax_empty",
+      "cmd": "ZIP pad empty partner; MIN/MAX empty bag → 0",
       "ok": true,
-      "note": "high false-friend severity tally"
+      "note": "empty max 0 not fail"
     },
     {
-      "name": "flatten_space_names",
-      "cmd": "CHUNK+FLATTEN splits 'ann lee' into ann/lee",
+      "name": "zip_sep_var",
+      "cmd": "SYS ZIP a b sep → unknown form sep",
       "ok": true,
-      "note": "space join irreversible"
+      "note": "same bare-ident form steal as CHUNK"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "116/116 pass incl rotate flatten countmatch"
+      "note": "118/118 pass incl lenall minmax_bag"
     }
   ],
   "weaknesses": [
@@ -60,87 +60,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "COUNTMATCH substring: needle error matches terror",
-      "detail": "COUNTMATCH 'error' on 'terror alert' counts 1 because terror contains error. Severity tallies overcount false friends. No word-boundary / token COUNTMATCH.",
-      "repro": "COUNTMATCH 'terror alert\\nerror soft' error \u2192 2"
+      "title": "MIN/MAX empty bag returns 0 without FAIL",
+      "detail": "SYS MAX \"\" → LAST_N=0 looks like a real max of zero. Agents gating on empty sizes plate may pass falsely if they forget BLANK/LINES check.",
+      "repro": "MAX \"\" → 0; COUNT==0 metadata only if checked"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "CHUNK+FLATTEN space-join destroys multi-word names",
-      "detail": "Engineer 'ann lee' after CHUNK 2 + FLATTEN becomes ann and lee. Same class as deploy wave host spaces. No structured nested bags.",
-      "repro": "CHUNK 2 'ann lee\\nbob\\ncy'; FLATTEN \u2192 4 fields"
+      "title": "No LENWHERE / filter fields by length threshold",
+      "detail": "fat action rebuilds via EACH sizes + NTH bag index. O(n) glue and index desync if bags diverge. Common ops need keep-if-len>=N.",
+      "repro": "manual fat scan in payload_size_gate"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "lang|parse",
-      "title": "ROTATE RIGHT/LEFT keywords steal identifier space",
-      "detail": "Same class as STRIDE OFF. Vars named RIGHT/LEFT risky near ROTATE forms. SYS ROTATE RIGHT K stack works when K is numeric var.",
-      "repro": "DEFAULT RIGHT=1 near SYS ROTATE RIGHT \u2026"
+      "title": "ZIP join sep bare var → unknown form",
+      "detail": "SYS ZIP a b sep with LET sep=\"=\" fails form-steal. Same class as CHUNK/WINDOW join seps.",
+      "repro": "LET sep=\"=\"; SYS ZIP x y sep"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "COUNTMATCH returns count only \u2014 easy to confuse with GREP filter",
-      "detail": "LAST_N is count; bag not filtered. Agents expecting filtered lines must still GREP. Useful but surprising vs GREPCOUNT name.",
-      "repro": "COUNTMATCH logs ERROR; LAST is not the ERROR lines"
+      "title": "ZIP unequal length pads empty — silent mispair",
+      "detail": "ZIP three payloads with two sizes yields trailing ':'. Agents measure after drop without re-measure get wrong labels.",
+      "repro": "ZIP a\\nb\\nc with 1\\n2 → c:"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "ROTATE/CHUNK/FLATTEN non-mutate",
-      "detail": "Must LET stack = LAST after handoff/reclaim or WRITE stale order.",
-      "repro": "ROTATE 1 stack; WRITE path stack still old without LET"
+      "title": "LENALL is char/code-unit length not display width",
+      "detail": "No UTF-8/byte/display modes documented for multi-byte payloads. Ops size gates may under/over count.",
+      "repro": "LENALL multi-byte strings"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "No exact-token severity tally form",
-      "detail": "COUNTLINE is exact whole field; COUNTMATCH is substring. Missing middle: count fields whose first token is ERROR.",
-      "repro": "need CUTALL 0 then COUNTLINE or FREQ for true severity tokens"
+      "title": "LENALL/MIN/MAX/ZIP non-mutate",
+      "detail": "Must LET sizes/labeled = LAST or WRITE stale.",
+      "repro": "LENALL bag; WRITE sizes bag still payloads"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last stack line without $.",
-      "repro": "seed; cat -A STACK.txt"
+      "detail": "cat -A last payload/size line without $.",
+      "repro": "measure; cat -A SIZES.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|bag",
-      "title": "COUNTMATCHI still substring-unsafe",
-      "detail": "Case-insensitive error still matches terror and ERROR. I flag only helps case, not boundaries.",
-      "repro": "COUNTMATCHI terror+ERROR+error error \u2192 3"
+      "title": "Payload fields with colon break ZIP labeled plate",
+      "detail": "ZIP default ':' sep; body containing ':' makes AFTER peel ambiguous for reverse parse.",
+      "repro": "ZIP 'a:b' '3' → a:b:3"
     }
   ],
   "workarounds": [
-    "Tally with CUTALL first-token then FREQ/COUNTLINE not raw COUNTMATCH on free text",
-    "Ban spaces in oncall names before CHUNK/FLATTEN",
-    "Never name vars RIGHT/LEFT/OFF/END",
-    "Always LET after ROTATE/CHUNK/FLATTEN",
-    "Use HASLINE for engineer identity not FIRSTMATCH"
+    "Always BLANK/LINES sizes before MIN/MAX; never treat max==0 as authoritative alone",
+    "Re-measure after any drop/pin that changes bag order or membership",
+    "ZIP with default colon only on colon-free ids; use ids not raw bodies for keys",
+    "Hardcode SYS ZIP a b \"=\" if custom sep; no var sep",
+    "Always LET after LENALL/ZIP"
   ],
   "language_gaps": [
-    "Word-boundary / token COUNTMATCH",
-    "Nested bag CHUNK without join flatten",
-    "Reserved-word diagnostic on DEFAULT RIGHT/LEFT/OFF",
-    "COUNTMATCH mode that returns matching fields (or clearer docs vs GREP)",
+    "LENWHERE / keep fields by length predicate",
+    "MIN/MAX empty → soft fail or NaN-like sticky",
+    "ZIP sep as variable / LAST",
+    "UTF-8 byte length mode for LENALL",
+    "ZIP safe encoding when key contains sep",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Confirmed terror contains error \u2014 COUNTMATCH false friend high for ops tallies",
-    "FLATTEN space-name corruption expected but severe for real person names",
-    "ROTATE handoff/handback round-trip works cleanly with LET rebind",
-    "No language fix this fire \u2014 token COUNTMATCH for MEANINGFUL_ITER"
+    "Empty MAX=0 is a silent gate footgun — documented W1",
+    "fat requires index walk; no host form for length filter",
+    "ZIP sep var confirmed unknown form",
+    "Positive path clean: measure→gate→fat→pin/drop"
   ],
-  "commit": "fc49ba771979a136fbde5d028e2bfacc314f35f6",
-  "ts": "2026-08-05T21:08:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T21:33:00Z"
 }

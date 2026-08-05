@@ -1,0 +1,636 @@
+# payload_size_gate.cubalc — durable message/payload size budget under STATE
+#
+# Real use: agents track queue/API payload bodies, measure per-field lengths
+# (SYS LENALL), gate on MAX width (bag MIN/MAX), and ZIP id→size plates
+# without shell awk.
+#
+# Plates:
+#   PAYLOADS.txt — payload id or raw body fields (exact)
+#   SIZES.txt    — last LENALL decimal bag
+#   LABELED.txt  — ZIP payload:size (default :)
+#
+# Actions (CUBALC_ARG0 / CUBALC_PS_ACTION):
+#   list     — depth + sum/min/max sizes if sizes plate present (default)
+#   seed     — WORDS tokens as payload ids (unique)
+#   ingest   — PUSH raw payload field (ARG1; may be long body)
+#   measure  — LENALL payloads → SIZES; optional ZIP → LABELED
+#   gate     — MAX sizes vs THRESH; soft miss under / REQUIRE over
+#   fat      — FIRSTMATCH / find first field with LEN >= THRESH (scan)
+#   pin      — MOVELINE exact payload to front
+#   drop     — REMOVELINE exact
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   clear    — empty payloads (+ sizes/labeled via clearall)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=ingest CUBALC_ARG1="short" \
+#     ./out/cubalc run -q -s programs/realworld/payload_size_gate.cubalc
+#   CUBALC_ARG0=measure ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=10 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_PS_FILE=PAYLOADS.txt
+#   CUBALC_PS_REQUIRE=1
+#   CUBALC_PS_THRESH=64
+#
+# Edges deliberately stressed:
+#   LENALL counts chars not UTF-8 codepoints / bytes (C strlen-ish)
+#   MIN/MAX bag skips non-numeric; empty bag → 0 (not fail)
+#   ZIP pads unequal lengths with empty partner
+#   ZIP sep bare var → unknown form (CHUNK class)
+#   fat scan uses EACH+NUM on LENALL; no native LENWHERE
+#   GREP/COUNTMATCH not used for size — numeric only
+#   PRINT_JSON collapse; WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "payload_size_gate: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "PAYLOADS.txt"
+DEFAULT SFILE = "SIZES.txt"
+DEFAULT LFILE = "LABELED.txt"
+DEFAULT REPORT = "PAYLOAD_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 64
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PS_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_PS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PS_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir SFILE
+LET sizes_path = LAST
+SYS JOIN state_dir LFILE
+LET labeled_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft payloads load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR sizes_path OR ""
+LET sizes = LAST
+CLEAR_ERR
+SYS READ OR labeled_path OR ""
+LET labeled = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET sizes_changed = 0
+LET labeled_changed = 0
+LET note_msg = "ok"
+LET sum_n = 0
+LET min_n = 0
+LET max_n = 0
+LET fat_n = 0
+LET filtered = ""
+LET idx = -1
+LET c = 0
+LET row = ""
+
+# thresh override for gate/fat
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET THRESH = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "fat"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET THRESH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK sizes
+  IF LAST_N == 0 THEN
+    SYS SUM sizes
+    LET sum_n = LAST_N
+    SYS MIN sizes
+    LET min_n = LAST_N
+    SYS MAX sizes
+    LET max_n = LAST_N
+  END
+  SYS LINES bag
+  LET depth0 = LAST_N
+  STATUS
+  PRINT "paygate" depth0 sum_n min_n max_n THRESH ACTION
+  PRINT_JSON depth0 sum_n min_n max_n THRESH ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON sizes
+  PRINT_JSON labeled
+  LET note_msg = "list ok"
+END
+
+# --- seed unique ids ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE bag n
+      IF LAST_N == 0 THEN
+        SYS PUSH bag n
+        LET bag = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest payload body/id ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs payload"
+  END
+  SYS PUSH bag NAME
+  LET bag = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- measure LENALL + ZIP ---
+SYS EQS ACTION "measure"
+IF LAST_N == 1 THEN
+  NOTE "action measure"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "measure empty"
+    FAIL "measure empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "measure empty"
+    END
+  ELSE
+    SYS LENALL bag
+    LET sizes = LAST
+    LET sizes_changed = 1
+    SYS SUM sizes
+    LET sum_n = LAST_N
+    SYS MIN sizes
+    LET min_n = LAST_N
+    SYS MAX sizes
+    LET max_n = LAST_N
+    # ZIP default ":" — bare sep var not allowed
+    SYS ZIP bag sizes
+    LET labeled = LAST
+    LET labeled_changed = 1
+    SYS LINES sizes
+    LET hit = LAST_N
+    LET note_msg = "measured"
+    PRINT_JSON sizes
+    PRINT_JSON labeled
+  END
+END
+
+# --- gate: MAX vs THRESH ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS MAX THRESH 1
+  LET THRESH = LAST_N
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    # auto-measure
+    SYS BLANK bag
+    IF LAST_N == 0 THEN
+      SYS LENALL bag
+      LET sizes = LAST
+      LET sizes_changed = 1
+      SYS ZIP bag sizes
+      LET labeled = LAST
+      LET labeled_changed = 1
+    END
+  END
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no sizes"
+    FAIL "gate no sizes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no sizes"
+    END
+  ELSE
+    SYS MAX sizes
+    LET max_n = LAST_N
+    SYS MIN sizes
+    LET min_n = LAST_N
+    SYS SUM sizes
+    LET sum_n = LAST_N
+    SYS CMP max_n THRESH
+    # max > thresh → hot (gt); max == thresh → still hot (>=)
+    IF LAST_N > 0 THEN
+      LET hit = 1
+      LET miss = 1
+      LET note_msg = "gate oversize"
+      FAIL "gate oversize"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate oversize"
+      END
+    ELSE
+      SYS CMP max_n THRESH
+      IF LAST_N == 0 THEN
+        # equal: treat as over if policy strict — here equal is ok under
+        LET hit = 1
+        LET note_msg = "gate at limit ok"
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate ok under"
+      END
+    END
+    PRINT "gate" max_n min_n sum_n THRESH
+  END
+END
+
+# --- fat: count fields with size >= THRESH ---
+SYS EQS ACTION "fat"
+IF LAST_N == 1 THEN
+  NOTE "action fat"
+  SYS MAX THRESH 1
+  LET THRESH = LAST_N
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    SYS BLANK bag
+    IF LAST_N == 0 THEN
+      SYS LENALL bag
+      LET sizes = LAST
+      LET sizes_changed = 1
+    END
+  END
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "fat no sizes"
+    FAIL "fat no sizes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "fat no sizes"
+    END
+  ELSE
+    LET fat_n = 0
+    LET filtered = ""
+    LET idx = 0
+    EACH LINE AS sz IN sizes
+      SYS PREPEND "" sz
+      SYS HEAD LAST
+      SYS NUM
+      IF OK == 1 THEN
+        LET c = LAST_N
+        SYS CMP c THRESH
+        IF LAST_N >= 0 THEN
+          LET fat_n = fat_n + 1
+          SYS NTH idx bag
+          LET row = LAST
+          SYS PUSH filtered row
+          LET filtered = LAST
+        END
+      END
+      LET idx = idx + 1
+    END
+    LET hit = fat_n
+    IF fat_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "fat none"
+      FAIL "fat none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "fat none"
+      END
+    ELSE
+      LET note_msg = "fat hits"
+    END
+    PRINT_JSON filtered
+  END
+END
+
+# --- pin / drop / has / count ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs exact payload"
+  END
+  SYS FINDLINE bag NAME
+  LET idx = LAST_N
+  SYS CMP idx 0
+  IF LAST_N < 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact payload"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs payload"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs payload"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared payloads"
+END
+
+SYS EQS ACTION "clearall"
+IF LAST_N == 1 THEN
+  NOTE "action clearall"
+  LET bag = ""
+  LET sizes = ""
+  LET labeled = ""
+  LET changed = 1
+  LET sizes_changed = 1
+  LET labeled_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared all"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "measure"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "fat"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearall"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "payload write failed"
+  END
+  CLEAR_ERR
+END
+IF sizes_changed > 0 THEN
+  SYS WRITE sizes_path sizes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "sizes write failed"
+  END
+  CLEAR_ERR
+END
+IF labeled_changed > 0 THEN
+  SYS WRITE labeled_path labeled
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "labeled write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS LINES sizes
+LET size_n = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.paygate.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sum_n"
+LET report = LAST
+SYS STR sum_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min_n"
+LET report = LAST
+SYS STR min_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_n"
+LET report = LAST
+SYS STR max_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "thresh"
+LET report = LAST
+SYS STR THRESH
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "fat_n"
+LET report = LAST
+SYS STR fat_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "paygate" ACTION hit miss max_n min_n sum_n THRESH depth1
+PRINT_JSON ACTION hit miss max_n min_n sum_n fat_n THRESH depth1 size_n elapsed STATUS_OK
+PASS "paygate tick"
+NOTE "payload_size_gate: done"
+CLEAR_ERR
+EXIT 0 "paygate ok"
