@@ -5327,12 +5327,15 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     if (ms > 0){ struct timespec ts; ts.tv_sec = ms/1000; ts.tv_nsec = (ms%1000)*1000000L; nanosleep(&ts, NULL); }
     bump(vm); return 1;
   }
-  /* INCLUDE "path.cubalc" — practical modules (same VM / world)
-   * Resolve order: absolute · include_base/rel · rel · programs/rel ·
-   * programs/basename · CUBALC_ROOT variants · cwd programs/lib style. */
+  /* INCLUDE "path"|name — practical modules (same VM / world)
+   * Resolve: absolute · include_base/rel · rel · programs/rel ·
+   * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
+   * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/… */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
     lex_next(L);
-    if (L->cur.kind!=TK_STR){ fail(vm,"INCLUDE \"path.cubalc\""); return -1; }
+    if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
+      fail(vm,"INCLUDE \"path.cubalc\"|libname"); return -1;
+    }
     char path[768];
     char orig[512];
     snprintf(orig, sizeof orig, "%s", L->cur.text);
@@ -5358,6 +5361,37 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       f = fopen(p3, "rb");
       if (f) snprintf(path, sizeof path, "%s", p3);
     }
+    /* short name → programs/lib (after cubalc libs catalog) */
+    if (!f && orig[0] != '/'){
+      char base[256];
+      const char *slash = strrchr(orig, '/');
+      const char *leaf = slash ? slash + 1 : orig;
+      size_t blen;
+      snprintf(base, sizeof base, "%s", leaf);
+      blen = strlen(base);
+      /* strip trailing .cubalc for bare stem */
+      if (blen > 7 && strcmp(base + blen - 7, ".cubalc") == 0)
+        base[blen - 7] = 0;
+      {
+        char p3[768];
+        /* programs/lib/<stem>.cubalc */
+        snprintf(p3, sizeof p3, "programs/lib/%s.cubalc", base);
+        f = fopen(p3, "rb");
+        if (f) snprintf(path, sizeof path, "%s", p3);
+        /* programs/lib/<orig> as given */
+        if (!f) {
+          snprintf(p3, sizeof p3, "programs/lib/%s", orig);
+          f = fopen(p3, "rb");
+          if (f) snprintf(path, sizeof path, "%s", p3);
+        }
+        /* lib/<stem>.cubalc relative (when cwd is programs/) */
+        if (!f) {
+          snprintf(p3, sizeof p3, "lib/%s.cubalc", base);
+          f = fopen(p3, "rb");
+          if (f) snprintf(path, sizeof path, "%s", p3);
+        }
+      }
+    }
     if (!f){
       const char *root=getenv("CUBALC_ROOT");
       if (root && root[0]) {
@@ -5365,11 +5399,19 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
         snprintf(p2, sizeof p2, "%s/%s", root, orig[0]?orig:path);
         f = fopen(p2, "rb");
         if (!f){ snprintf(p2, sizeof p2, "%s/programs/%s", root, orig); f = fopen(p2, "rb"); }
+        if (!f){ snprintf(p2, sizeof p2, "%s/programs/lib/%s.cubalc", root, orig); f = fopen(p2, "rb"); }
         if (!f){ snprintf(p2, sizeof p2, "%s/%s", root, path); f = fopen(p2, "rb"); }
         if (f) snprintf(path, sizeof path, "%s", p2);
       }
     }
-    if (!f){ snprintf(vm->err,sizeof vm->err,"INCLUDE cannot open %s (tried programs/%s)", path, orig); fail(vm,vm->err); return -1; }
+    if (!f){
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "INCLUDE cannot open '%s' — tried programs/lib/%s.cubalc · cubalc libs",
+               orig, orig);
+      fail(vm, ebuf);
+      return -1;
+    }
     fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
     if (sz<0 || sz>CUBALC_MAX_SRC){ fclose(f); fail(vm,"INCLUDE too large"); return -1; }
     char *buf=malloc((size_t)sz+1); if(!buf){ fclose(f); fail(vm,"oom"); return -1; }
@@ -5381,6 +5423,13 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       if (sl){ size_t n=(size_t)(sl-path); if(n>=sizeof vm->include_base) n=sizeof vm->include_base-1;
         memcpy(vm->include_base, path, n); vm->include_base[n]=0; }
     }
+    /* agent-visible resolved path */
+    var_set_str(vm, "INCLUDE_PATH", path);
+    var_set_str(vm, "LAST", path);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+    vm->last_n = (long)strlen(path);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
     Lex Li; lex_init(&Li, buf, nr);
     int rc = exec_stmts_until(vm, &Li, NULL, NULL);
     snprintf(vm->include_base,sizeof vm->include_base,"%s", save_base);

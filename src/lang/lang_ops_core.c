@@ -1133,7 +1133,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
-      {"INCLUDE", "INCLUDE \"path.cubalc\" — load module same VM"},
+      {"INCLUDE", "INCLUDE path|libname — load module; short name → programs/lib/"},
       {"LET", "LET name = expr|string"},
       {"SYS", "SYS ENV|ARG|READ|WRITE … · ENV/ARG support OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},

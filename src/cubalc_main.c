@@ -1564,7 +1564,7 @@ int main(int argc, char **argv) {
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
-      {"INCLUDE", "flow", "INCLUDE \"path.cubalc\" load module into same VM"},
+      {"INCLUDE", "flow", "INCLUDE path|libname — short name → programs/lib/"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
@@ -1735,7 +1735,7 @@ int main(int argc, char **argv) {
     }
     printf("# CubalC programs/lib INCLUDE catalog n=%d version=%s\n",
            n, CUBALC_LANG_VERSION);
-    printf("# use: INCLUDE \"lib/<name>.cubalc\" from programs/*\n");
+    printf("# use: INCLUDE \"lib/<name>.cubalc\" or short INCLUDE hold_seed\n");
     for (i = 0; i < n; i++)
       printf("%s\t%s\n", paths[i], hints[i]);
     printf("{\"schema\":\"cubalc.libs.v1\",\"ok\":%s,\"cmd\":\"libs\","

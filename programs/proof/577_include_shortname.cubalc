@@ -1,0 +1,21 @@
+# INCLUDE short lib name → programs/lib/<name>.cubalc
+# Usability: no path prefix required after cubalc libs catalog
+
+INCLUDE hold_seed
+ASSERT OK == 1 "short INCLUDE resolves"
+ASSERT LAST_N > 0 "INCLUDE_PATH / LAST set to resolved file"
+PRINT "include_path" LAST INCLUDE_PATH
+
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+PLUG peer0 peer1
+SETBIT peer0 0 1
+SETBIT peer1 1 1
+
+# Quoted bare stem also resolves
+INCLUDE "mesh_exchange"
+ASSERT SMX_OK == 1 "mesh via short INCLUDE"
+ASSERT SMX_TALKS >= 4 "two EXCHANGE rounds"
+
+PRINT "include_shortname ok" SMX_TALKS
+PRINT_JSON INCLUDE_PATH SMX_OK SMX_TALKS

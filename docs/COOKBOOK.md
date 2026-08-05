@@ -105,22 +105,24 @@ export CUBALC_PROTECT=1
 
 ## 6. INCLUDE a lib snippet
 
-From a program under `programs/…` (INCLUDE resolves relative to file dir and `programs/`):
+From a program under `programs/…` (INCLUDE resolves relative to file dir, `programs/`, and **short names → `programs/lib/`**):
 
 ```cubalc
-INCLUDE "lib/hold_seed.cubalc"
+INCLUDE hold_seed                    # short form → programs/lib/hold_seed.cubalc
+# or: INCLUDE "lib/hold_seed.cubalc"
 CUBE peer0 ROLE host PROTON 1
 CUBE peer1 ROLE body PROTON 1
 PLUG peer0 peer1
 SETBIT peer0 0 1
 SETBIT peer1 1 1
-INCLUDE "lib/mesh_exchange.cubalc"   # SMX KEY + EXCHANGE rounds
+INCLUDE mesh_exchange                # SMX KEY + EXCHANGE rounds
 ASSERT SMX_OK == 1 "mesh talk"
 ASSERT SMX_TALKS >= 4
+PRINT_JSON INCLUDE_PATH SMX_OK       # resolved path after INCLUDE
 ```
 
-Libs: `hold_seed` · `peer_decide` · `mesh_exchange` under `programs/lib/`.  
-Proof: `programs/proof/include_mesh_exchange.cubalc`.
+Libs: `hold_seed` · `peer_decide` · `mesh_exchange` under `programs/lib/` (`cubalc libs`).  
+Proof: `programs/proof/577_include_shortname.cubalc` · `include_mesh_exchange.cubalc`.
 
 ## 7. SYS ENV / ARG with default
 
