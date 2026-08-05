@@ -14,7 +14,7 @@
     },
     {
       "name": "rank_sortfreq",
-      "cmd": "rank top5 → /api/users:5 /api/orders:3 … DESC",
+      "cmd": "rank top5 \u2192 /api/users:5 /api/orders:3 \u2026 DESC",
       "ok": true,
       "note": "FREQ+SORTFREQ+TAKE pipeline"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "pin_grep_moveline",
-      "cmd": "pin /api/orders → first raw line; ghost REQUIRE",
+      "cmd": "pin /api/orders \u2192 first raw line; ghost REQUIRE",
       "ok": true,
       "note": "GREP needle substring + MOVELINE"
     },
@@ -44,13 +44,13 @@
     },
     {
       "name": "cutall_ghost_empty",
-      "cmd": "CUTALL col OOR → empty fields → FREQ :N ghost",
+      "cmd": "CUTALL col OOR \u2192 empty fields \u2192 FREQ :N ghost",
       "ok": true,
       "note": "missing column pollutes heatmap"
     },
     {
       "name": "url_colon_freq",
-      "cmd": "FREQ http://heavy → http://heavy:3; SORTFREQ still DESC",
+      "cmd": "FREQ http://heavy \u2192 http://heavy:3; SORTFREQ still DESC",
       "ok": true,
       "note": "SORTFREQ appears last-colon peel; storm AFTER first still breaks"
     },
@@ -74,13 +74,13 @@
       "area": "host|bag",
       "title": "CUTALL missing column yields empty fields that FREQ as ghost :N",
       "detail": "CUTALL col past end keeps line count with empty strings; FREQ produces ':2' style rows that look like real rank entries. Agents ranking wrong column pollute top-N silently.",
-      "repro": "CUTALL log ' ' 5; FREQ → ':N'"
+      "repro": "CUTALL log ' ' 5; FREQ \u2192 ':N'"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|cli",
-      "title": "No multi-line ARG — loadlines needs ||| glue hack",
+      "title": "No multi-line ARG \u2014 loadlines needs ||| glue hack",
       "detail": "Cannot pass real access log lines with spaces via WORDS; agents invent separators. Soft READ file is alternative but loadlines is ARG-bound.",
       "repro": "WORDS 'GET /api 200' splits to three tokens"
     },
@@ -89,8 +89,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "FREQ encoding path:count still ambiguous for URLs with ://",
-      "detail": "FREQ of http://heavy → http://heavy:3. SORTFREQ sorted correctly (likely last-colon peel) but storm/agent AFTER first ':' peels '//heavy:3' and NUM fails — dual peel semantics across forms.",
-      "repro": "AFTER 'http://heavy:3' ':' → '//heavy:3'"
+      "detail": "FREQ of http://heavy \u2192 http://heavy:3. SORTFREQ sorted correctly (likely last-colon peel) but storm/agent AFTER first ':' peels '//heavy:3' and NUM fails \u2014 dual peel semantics across forms.",
+      "repro": "AFTER 'http://heavy:3' ':' \u2192 '//heavy:3'"
     },
     {
       "id": "W4",
@@ -104,7 +104,7 @@
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "Pin uses GREP substring — false friends",
+      "title": "Pin uses GREP substring \u2014 false friends",
       "detail": "pin /api matches /api/users and /api/orders and /apiv2. No whole-field or word-boundary GREP.",
       "repro": "GREP /api on raw access bag"
     },
@@ -149,11 +149,11 @@
     "WRITE force trailing NL; PRINT_JSON newlines"
   ],
   "issues_faced": [
-    "WORDS cannot ingest 'METHOD path status' — invented ||| loadlines",
-    "CUTALL OOR silent empty fields → ghost FREQ rows (high agent footgun)",
-    "URL paths work with SORTFREQ but break AFTER-based storm peel — dual semantics",
-    "SORTFREQ closed prior top-N gap from iter37 W2 — still encoding/colon gaps remain"
+    "WORDS cannot ingest 'METHOD path status' \u2014 invented ||| loadlines",
+    "CUTALL OOR silent empty fields \u2192 ghost FREQ rows (high agent footgun)",
+    "URL paths work with SORTFREQ but break AFTER-based storm peel \u2014 dual semantics",
+    "SORTFREQ closed prior top-N gap from iter37 W2 \u2014 still encoding/colon gaps remain"
   ],
-  "commit": "pending",
+  "commit": "93beba56abe9bb0fed4a8cb343ffc6071afb5167",
   "ts": "2026-08-05T19:54:00Z"
 }
