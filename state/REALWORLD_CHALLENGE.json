@@ -155,6 +155,6 @@
     "fail ladder needs two SETMATCH hops; no atomic multi-step form",
     "WRITE last-field missing NL visible in cat -A after seed"
   ],
-  "commit": "c624222fbfc26267c2d7da9f16980ee09786248d",
+  "commit": "1e0b1e467fb5187c331bbb8ff5fef3e9ecf1889f",
   "ts": "2026-08-05T14:54:45Z"
 }
