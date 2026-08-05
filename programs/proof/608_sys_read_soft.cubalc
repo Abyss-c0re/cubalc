@@ -1,0 +1,61 @@
+# SYS READ OR|SOFT — optional plate read without fatal
+# Usability: agents probe missing plates; hard READ stays fail-closed
+
+HOLD_FLASH 1
+
+# Soft miss continues
+SYS READ OR "state/meaningful_iter/__no_such_read_soft__.json"
+ASSERT OK == 0 "soft miss OK=0"
+ASSERT READ_OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N > 0 "LAST_ERR sticky"
+
+# Soft aliases
+SYS READ SOFT "state/meaningful_iter/__no_such_read_soft__.json"
+ASSERT OK == 0
+SYS READ TRY "state/meaningful_iter/__no_such_read_soft__.json"
+ASSERT READ_OK == 0
+
+# Content fallback on miss (like ENV OR) — OK=1, READ_OK=0
+SYS READ "state/meaningful_iter/__no_such_read_fb__.json" OR "{}"
+ASSERT OK == 1 "fallback content OK"
+ASSERT READ_OK == 0 "not from file"
+ASSERT LAST_N == 2 "{}"
+SYS EQS LAST "{}"
+ASSERT LAST_N == 1
+
+# Soft + fallback
+SYS READ OR "state/meaningful_iter/__no_such_read_fb2__.json" OR "x"
+ASSERT OK == 1
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# Soft hit loads like hard READ
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_read_soft"
+LET DIR = LAST
+SYS MKDIR DIR
+SYS JOIN DIR "plate.txt"
+LET F = LAST
+SYS WRITE F "agent-plate"
+SYS READ OR F
+ASSERT OK == 1
+ASSERT READ_OK == 1
+ASSERT LAST_N == 11
+SYS EQS LAST "agent-plate"
+ASSERT LAST_N == 1
+
+# Hard hit still works; trailing OR ignored when file present
+SYS READ F OR "ignored"
+ASSERT OK == 1
+ASSERT READ_OK == 1
+SYS EQS LAST "agent-plate"
+ASSERT LAST_N == 1
+
+# Hard READ success baseline
+SYS READ F
+ASSERT LAST_N == 11
+
+PRINT "sys_read_soft ok"

@@ -153,17 +153,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     lex_next(L);
     skip_nl(L);
     if (kw(&L->cur,"READ")){
-      lex_next(L);
+      /* SYS READ [OR|SOFT|TRY] path [OR "fallback"]
+       * Soft: optional plate — miss → OK=0 sticky LAST_ERR, no fatal.
+       * Fallback: miss → LAST = fallback string, OK=1 (like ENV OR).
+       * Hard (default): miss is fatal. */
+      int soft = 0;
       char path[512];
-      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
-        fail(vm,"SYS READ \"path\"|LAST"); return -1;
-      }
       cubalc_host_result hr;
-      if (cubalc_host_read(path, &hr)!=0){ fail(vm, hr.err[0]?hr.err:"SYS READ fail"); return -1; }
+      lex_next(L);
+      if (kw(&L->cur,"OR") || kw(&L->cur,"SOFT") || kw(&L->cur,"TRY") ||
+          kw(&L->cur,"OPTIONAL") || kw(&L->cur,"MAYBE")){
+        soft = 1;
+        lex_next(L);
+      }
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm, soft ? "SYS READ OR \"path\"|LAST" : "SYS READ \"path\"|LAST");
+        return -1;
+      }
+      if (cubalc_host_read(path, &hr)!=0){
+        char fb[CUBALC_HOST_STR_MAX];
+        int have_fb = 0;
+        if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+            kw(&L->cur,"FALLBACK")){
+          lex_next(L);
+          if (resolve_str_arg(vm, L, fb, sizeof fb) == 0)
+            have_fb = 1;
+          else {
+            fail(vm, "SYS READ path OR \"fallback\"");
+            return -1;
+          }
+        }
+        if (have_fb) {
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+          vm->last_n = (long)strlen(fb);
+          vm->last_code = 0;
+          var_set_str(vm, "LAST", fb);
+          var_set_num(vm, "LAST_N", vm->last_n);
+          var_set_num(vm, "OK", 1);
+          var_set_num(vm, "READ_OK", 0); /* content from fallback, not file */
+          bump(vm); return 1;
+        }
+        if (soft) {
+          const char *em = hr.err[0] ? hr.err : "SYS READ soft miss";
+          var_set_str(vm, "LAST_ERR", em);
+          var_set_str(vm, "ERR", em);
+          var_set_str(vm, "LAST", "");
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+          vm->last_n = 0;
+          vm->last_code = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "READ_OK", 0);
+          bump(vm); return 1;
+        }
+        fail(vm, hr.err[0]?hr.err:"SYS READ fail");
+        return -1;
+      }
+      /* success: optional trailing OR ignored (file won) */
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK")){
+        lex_next(L);
+        char skip[CUBALC_HOST_STR_MAX];
+        (void)resolve_str_arg(vm, L, skip, sizeof skip);
+      }
       snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
       vm->last_n = hr.n; vm->last_code = 0;
       var_set_str(vm, "LAST", hr.str);
       var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "READ_OK", 1);
       bump(vm); return 1;
     }
     if (kw(&L->cur,"WRITE")){
@@ -1670,6 +1728,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
+      {"SYS READ", "SYS READ [OR|SOFT] path [OR fallback] — soft/optional plate"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

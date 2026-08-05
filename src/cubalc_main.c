@@ -1667,6 +1667,7 @@ int main(int argc, char **argv) {
       {"sys_basename", "programs/proof/605_sys_basename.cubalc", "SYS BASENAME/DIRNAME path split"},
       {"sys_extname", "programs/proof/606_sys_extname.cubalc", "SYS EXTNAME/STEM path peel"},
       {"sys_size", "programs/proof/607_sys_size.cubalc", "SYS SIZE/ISDIR/ISFILE path meta"},
+      {"sys_read_soft", "programs/proof/608_sys_read_soft.cubalc", "SYS READ OR soft optional plate"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1818,6 +1819,7 @@ int main(int argc, char **argv) {
       {"SYS SIZE", "host", "SYS SIZE|FSIZE path — file bytes → LAST_N · soft miss"},
       {"SYS ISDIR", "host", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "host", "SYS ISFILE path — LAST_N 1 if regular file"},
+      {"SYS READ", "host", "SYS READ [OR|SOFT] path [OR fallback] optional plate"},
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -1827,7 +1829,6 @@ int main(int argc, char **argv) {
       {"SYS UID", "host", "SYS UID|USER_ID — numeric user id → LAST_N/UID"},
       {"SYS HOME", "host", "SYS HOME|HOMEDIR — home directory → LAST/HOME"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
-      {"SYS READ", "host", "SYS READ path|LAST"},
       {"SYS WRITE", "host", "SYS WRITE path data"},
       {"SYS EXIST", "host", "SYS EXIST path → LAST_N 0|1"},
       {"SYS WHICH", "host", "SYS WHICH name → LAST path"},
@@ -2320,6 +2321,8 @@ int main(int argc, char **argv) {
        "SYS EXTNAME/STEM extension and stem peel"},
       {"programs/proof/607_sys_size.cubalc", "sys_size",
        "SYS SIZE/ISDIR/ISFILE path metadata probes"},
+      {"programs/proof/608_sys_read_soft.cubalc", "sys_read_soft",
+       "SYS READ OR soft optional plate + fallback"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2679,6 +2682,7 @@ int main(int argc, char **argv) {
       {"SYS SIZE", "host", "SYS SIZE file bytes"},
       {"SYS ISDIR", "host", "SYS ISDIR dir probe"},
       {"SYS ISFILE", "host", "SYS ISFILE file probe"},
+      {"SYS READ", "host", "SYS READ OR soft optional plate"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2874,6 +2878,7 @@ int main(int argc, char **argv) {
       {"SYS SIZE", "host", "SYS SIZE|FSIZE path — file bytes soft miss"},
       {"SYS ISDIR", "host", "SYS ISDIR path — directory probe"},
       {"SYS ISFILE", "host", "SYS ISFILE path — regular file probe"},
+      {"SYS READ", "host", "SYS READ [OR|SOFT] path [OR fallback]"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2914,6 +2919,7 @@ int main(int argc, char **argv) {
       {"programs/proof/605_sys_basename.cubalc", "sys_basename", "SYS BASENAME/DIRNAME split"},
       {"programs/proof/606_sys_extname.cubalc", "sys_extname", "SYS EXTNAME/STEM peel"},
       {"programs/proof/607_sys_size.cubalc", "sys_size", "SYS SIZE/ISDIR/ISFILE meta"},
+      {"programs/proof/608_sys_read_soft.cubalc", "sys_read_soft", "SYS READ OR soft plate"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
