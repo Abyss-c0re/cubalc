@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "seed_stride",
-      "cmd": "seed h0..h5; stride 2 → canary h0,h2,h4 control h1,h3,h5",
+      "cmd": "seed h0..h5; stride 2 \u2192 canary h0,h2,h4 control h1,h3,h5",
       "ok": true,
       "note": "STRIDE OFF offs + DIFF complement"
     },
     {
       "name": "pairs_window",
-      "cmd": "pairs WINDOW 2 → overlapping neighbor pairs",
+      "cmd": "pairs WINDOW 2 \u2192 overlapping neighbor pairs",
       "ok": true,
       "note": "blast-radius adjacent pairs"
     },
     {
       "name": "stride_offset",
-      "cmd": "stride step3 off1 → canary h1,h4",
+      "cmd": "stride step3 off1 \u2192 canary h1,h4",
       "ok": true,
       "note": "OFF keyword + var offs"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "off_keyword_footgun",
-      "cmd": "var named OFF / bare off2 mid-arg → parse error",
+      "cmd": "var named OFF / bare off2 mid-arg \u2192 parse error",
       "ok": true,
       "note": "fixed via OFFS + OFF keyword form"
     },
@@ -75,7 +75,7 @@
       "severity": "high",
       "area": "lang|parse",
       "title": "Bare mid-arg numeric vars form-stolen (STRIDE offset)",
-      "detail": "SYS STRIDE STEP off2 fleet → unknown form 'off2'. Same class as CHUNK join sep: only keywords+literals or carefully ordered vars work for mid-args.",
+      "detail": "SYS STRIDE STEP off2 fleet \u2192 unknown form 'off2'. Same class as CHUNK join sep: only keywords+literals or carefully ordered vars work for mid-args.",
       "repro": "LET off2=1; SYS STRIDE 2 off2 fleet"
     },
     {
@@ -83,7 +83,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "WINDOW/STRIDE non-mutate + join flatten",
-      "detail": "Must LET rebind. WINDOW pairs space-join hosts — hostnames with spaces irreversible. No nested pair bag.",
+      "detail": "Must LET rebind. WINDOW pairs space-join hosts \u2014 hostnames with spaces irreversible. No nested pair bag.",
       "repro": "WINDOW 2 fleet without LET loses result"
     },
     {
@@ -100,7 +100,7 @@
       "area": "host|bag",
       "title": "DIFF/INTERSECT exact-field only",
       "detail": "No normalized/case-fold set ops; host vs HOST are distinct. Agents must UPPERALL first.",
-      "repro": "DIFF 'Host' 'host' → residual"
+      "repro": "DIFF 'Host' 'host' \u2192 residual"
     },
     {
       "id": "W6",
@@ -108,7 +108,7 @@
       "area": "host|bag",
       "title": "WINDOW n>total and STRIDE step<=0 soft empty",
       "detail": "Good for soft miss but no FAIL sticky; agents need LINES check + REQUIRE. Documented pattern.",
-      "repro": "WINDOW 9 on 5 hosts → empty"
+      "repro": "WINDOW 9 on 5 hosts \u2192 empty"
     },
     {
       "id": "W7",
@@ -147,6 +147,6 @@
     "Fixed with SYS STRIDE STEP OFF OFFS fleet + DIFF complement for control",
     "WINDOW 2 solo host soft empty works with REQUIRE path"
   ],
-  "commit": "pending",
+  "commit": "9391d26c9c2bf58958c68f42ac65be094067f60a",
   "ts": "2026-08-05T20:43:00Z"
 }
