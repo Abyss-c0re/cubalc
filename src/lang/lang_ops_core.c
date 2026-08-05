@@ -2012,6 +2012,100 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS DRAWN|SAMPLEK|NPICK|TAKERAND k [bag] — sample k unique bag fields without
+     * replacement → LAST bag. Partial Fisher–Yates; k<=0 → empty; k>=n → all shuffled.
+     * LAST_N/DRAWN_N = count returned. Distinct from PICK/SAMPLE (single field).
+     * Shares RAND/CUBALC_SEED. Usability: multi-peer/work sample without SHUFFLE+TAKE. */
+    if (kw(&L->cur,"DRAWN") || kw(&L->cur,"SAMPLEK") || kw(&L->cur,"NPICK") ||
+        kw(&L->cur,"TAKERAND") || kw(&L->cur,"RSAMPLE") || kw(&L->cur,"DRAWK") ||
+        kw(&L->cur,"SAMPLE_N") || kw(&L->cur,"PICKN") || kw(&L->cur,"CHOICEN") ||
+        kw(&L->cur,"RANDTAKE")){
+      static int drawn_seeded = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { DRAW_MAX = 256, DRAW_FLEN = 192 };
+      char fields[DRAW_MAX][DRAW_FLEN];
+      int n = 0, i, j, k = 0, take;
+      const char *p, *start, *se;
+      size_t olen = 0;
+      long kwant = 0;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        kwant = parse_expr(vm, L);
+      if (kwant < 0) kwant = 0;
+      if (kwant > DRAW_MAX) kwant = DRAW_MAX;
+      k = (int)kwant;
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p && n < DRAW_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= DRAW_FLEN) flen = DRAW_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!drawn_seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        drawn_seeded = 1;
+      }
+      take = k;
+      if (take > n) take = n;
+      /* partial Fisher–Yates: randomize first `take` positions */
+      for (i = 0; i < take; i++) {
+        int r = i + (int)(rand() % (n - i));
+        if (r != i) {
+          char tmp[DRAW_FLEN];
+          memcpy(tmp, fields[i], DRAW_FLEN);
+          memcpy(fields[i], fields[r], DRAW_FLEN);
+          memcpy(fields[r], tmp, DRAW_FLEN);
+        }
+      }
+      for (i = 0; i < take; i++) {
+        size_t flen = strlen(fields[i]);
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, fields[i], flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, fields[i], t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)take;
+      var_set_num(vm, "LAST_N", (long)take);
+      var_set_num(vm, "DRAWN_N", (long)take);
+      var_set_num(vm, "SAMPLEK_N", (long)take);
+      var_set_num(vm, "NPICK_N", (long)take);
+      var_set_num(vm, "DRAWN_TOTAL", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIN|MAX a b [c…]|bag — host-plane min/max of integer args → LAST_N.
      * Bag mode (like SUM): one string/LAST with newline numeric fields.
      * SYS CLAMP x lo hi — bound x into [lo,hi] (lo/hi swapped if inverted).
@@ -7926,7 +8020,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -8331,6 +8425,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},
       {"SYS SHUFFLE", "SYS SHUFFLE|SHUF [str] — Fisher–Yates shuffle newline fields → LAST"},
       {"SYS SHUF", "SYS SHUF [str] — alias of SYS SHUFFLE · randomize work bags"},
+      {"SYS DRAWN", "SYS DRAWN|SAMPLEK k [bag] — sample k unique fields without replacement → bag"},
+      {"SYS SAMPLEK", "SYS SAMPLEK k [bag] — alias of SYS DRAWN · multi-peer sample"},
+      {"SYS NPICK", "SYS NPICK k [bag] — alias of SYS DRAWN"},
+      {"SYS TAKERAND", "SYS TAKERAND k [bag] — alias of SYS DRAWN · random TAKE"},
       {"SYS MIN", "SYS MIN a b [c…]|bag — host-plane minimum → LAST_N · bag like SUM"},
       {"SYS MAX", "SYS MAX a b [c…]|bag — host-plane maximum → LAST_N · after LENALL width"},
       {"SYS MINBAG", "SYS MINBAG [bag] — min of newline numeric fields · alias of bag MIN"},

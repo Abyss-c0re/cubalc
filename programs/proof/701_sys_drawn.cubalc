@@ -1,0 +1,61 @@
+# SYS DRAWN / SAMPLEK / NPICK — sample k unique bag fields without replacement
+# Usability: multi-peer/work sample without SHUFFLE+TAKE glue
+
+HOLD_FLASH 1
+
+# deterministic seed for smoke
+SYS ENV SET "CUBALC_SEED" "42"
+
+LET bag = "a\nb\nc\nd\ne"
+
+# sample 3 unique — count and subset of bag
+SYS DRAWN 3 bag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT DRAWN_N == 3
+ASSERT DRAWN_TOTAL == 5
+LET s = LAST
+SYS INTERSECT s bag
+SYS LINES LAST
+ASSERT LAST_N == 3
+
+# k >= n → all fields (shuffled), count n; SORT recovers original multiset
+SYS DRAWN 99 bag
+ASSERT LAST_N == 5
+ASSERT DRAWN_TOTAL == 5
+SYS SORT LAST
+SYS EQS LAST "a\nb\nc\nd\ne"
+ASSERT LAST_N == 1
+
+# k <= 0 → empty
+SYS DRAWN 0 bag
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# aliases
+SYS SAMPLEK 2 bag
+ASSERT LAST_N == 2
+SYS NPICK 2 bag
+ASSERT LAST_N == 2
+SYS TAKERAND 1 bag
+ASSERT LAST_N == 1
+LET one = LAST
+SYS HASLINE bag one
+ASSERT LAST_N == 1
+
+# empty bag
+SYS DRAWN 3 ""
+ASSERT LAST_N == 0
+ASSERT DRAWN_TOTAL == 0
+
+# agent: pick 2 peers to contact
+LET peers = "alice\nbob\ncarol\ndave"
+SYS DRAWN 2 peers
+ASSERT LAST_N == 2
+LET hit = LAST
+SYS INTERSECT hit peers
+SYS LINES LAST
+ASSERT LAST_N == 2
+
+PRINT "sys_drawn ok"
