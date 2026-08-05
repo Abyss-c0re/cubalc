@@ -1266,26 +1266,51 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
+    /* SYS APPEND|LOG path data — append line to file (creates if missing).
+     * Soft fail OK=0 + sticky LAST_ERR. LAST_N = bytes written (data+newline).
+     * Usability: agent history/audit logs without shell >> . */
+    if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG") || kw(&L->cur,"APPENDLN") ||
+        kw(&L->cur,"LOGAPPEND")){
       lex_next(L);
-      char path[512]="", data[4096]; data[0]=0;
-      if (L->cur.kind==TK_STR){ snprintf(path,sizeof path,"%s",L->cur.text); lex_next(L); }
-      else if (L->cur.kind==TK_IDENT){
-        if (strcmp(L->cur.text,"LAST")==0) snprintf(path,sizeof path,"%s",vm->last_str);
-        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(path,sizeof path,"%s",v->sval); }
-        lex_next(L);
+      char path[512]="", data[CUBALC_HOST_STR_MAX];
+      long nbytes = 0;
+      data[0]=0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0){
+        fail(vm,"SYS APPEND path data"); return -1;
       }
-      if (L->cur.kind==TK_STR){ snprintf(data,sizeof data,"%s",L->cur.text); lex_next(L); }
-      else if (L->cur.kind==TK_IDENT){
-        if (strcmp(L->cur.text,"LAST")==0) snprintf(data,sizeof data,"%s",vm->last_str);
-        else { Var *v=var_get(vm,L->cur.text,0); if(v&&v->is_str) snprintf(data,sizeof data,"%s",v->sval);
-               else if(v) snprintf(data,sizeof data,"%ld",v->val); }
-        lex_next(L);
+      if (resolve_str_arg(vm, L, data, sizeof data) != 0){
+        /* allow bare number as data */
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_MINUS || L->cur.kind==TK_LPAREN){
+          long n = parse_expr(vm, L);
+          snprintf(data, sizeof data, "%ld", n);
+        } else if (L->cur.kind==TK_IDENT){
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && !v->is_str){ snprintf(data, sizeof data, "%ld", v->val); lex_next(L); }
+          else { fail(vm,"SYS APPEND path data"); return -1; }
+        } else {
+          fail(vm,"SYS APPEND path data"); return -1;
+        }
       }
-      FILE *af = fopen(path, "a");
-      if (!af){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-      fputs(data, af); fputc('\n', af); fclose(af);
-      var_set_num(vm,"OK",1); bump(vm); return 1;
+      {
+        FILE *af = fopen(path, "a");
+        if (!af){
+          var_set_num(vm,"OK",0);
+          var_set_num(vm,"LAST_N",0);
+          var_set_str(vm,"LAST_ERR","APPEND: open fail");
+          var_set_str(vm,"ERR","APPEND: open fail");
+          bump(vm); return 1;
+        }
+        fputs(data, af);
+        fputc('\n', af);
+        fclose(af);
+        nbytes = (long)strlen(data) + 1;
+      }
+      var_set_str(vm,"LAST",path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = nbytes;
+      var_set_num(vm,"LAST_N",nbytes);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
     }
     /* SYS HEX|FROMHEX — parse hex string (LAST default) → LAST_N  (I/O codec) */
     if (kw(&L->cur,"HEX") || kw(&L->cur,"FROMHEX") || kw(&L->cur,"XTOI")){
@@ -2373,6 +2398,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"SYS JOINLINES", "SYS JOINLINES|PASTE sep [str] — join newline fields with sep (anti-SPLIT)"},
+      {"SYS APPEND", "SYS APPEND|LOG path data — append line to file · history/audit log"},
+      {"SYS LOG", "SYS LOG path data — alias of SYS APPEND"},
       {"SYS REPLACE", "SYS REPLACE hay old new — first occurrence · LAST_N=1 if replaced"},
       {"SYS REPLACEALL", "SYS REPLACEALL|GSUB hay old new — all occurrences · LAST_N=count"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},

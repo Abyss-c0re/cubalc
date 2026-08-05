@@ -1,0 +1,73 @@
+# SYS APPEND / LOG — append line to plate files + catalog discoverability
+# Usability: agent history/audit logs without shell >>
+
+HOLD_FLASH 1
+
+SYS STATE
+LET base = LAST
+SYS JOIN base "_mi_append"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "hist.log"
+LET log = LAST
+
+# fresh append creates file
+SYS RM log
+CLEAR_ERR
+SYS APPEND log "first event"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS ISFILE log
+ASSERT LAST_N == 1
+
+# second line
+SYS APPEND log "second event"
+ASSERT OK == 1
+SYS READ log
+SYS HAS LAST "first event"
+ASSERT LAST_N == 1
+SYS HAS LAST "second event"
+ASSERT LAST_N == 1
+SYS HAS LAST "\n"
+ASSERT LAST_N == 1
+
+# LOG alias
+SYS LOG log "third"
+ASSERT OK == 1
+SYS READ log
+SYS GREP "third"
+ASSERT GREP_N == 1
+
+# numeric data
+SYS APPEND log 42
+ASSERT OK == 1
+SYS READ log
+SYS HAS LAST "42"
+ASSERT LAST_N == 1
+
+# vars
+LET msg = "from-var"
+SYS APPEND log msg
+ASSERT OK == 1
+SYS READ log
+SYS HAS LAST "from-var"
+ASSERT LAST_N == 1
+
+# soft fail bad path
+SYS APPEND "/no/such/dir/ever/x.log" "nope"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+CLEAR_ERR
+
+# HELP/forms discoverability
+HELP "APPEND"
+ASSERT HELP_N >= 1
+SYS HAS LAST "APPEND"
+ASSERT LAST_N == 1
+HELP "LOG"
+ASSERT HELP_N >= 1
+
+# cleanup
+SYS RM log
+
+PRINT "sys_append ok"
