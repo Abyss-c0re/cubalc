@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 95,
-  "version": "1.15.120-usability",
-  "item": "SYS FILL / REPEATL bag of n copies",
-  "item_id": 128,
-  "title": "SYS FILL|REPEATL n value bag of n copies",
-  "commit": "4f151331a8533371b1f68623c6f6e69436bfc227",
-  "summary": "SYS FILL/REPEATL n value → bag of n fields. Default ZIP columns without EACH. selftest 95.",
+  "iter": 96,
+  "version": "1.15.121-usability",
+  "item": "SYS ENUMERATE / NUMBER index-prefix bag fields",
+  "item_id": 129,
+  "title": "SYS ENUMERATE|NUMBER bag [start] [sep] index-prefix fields",
+  "commit": "c4b98966e74d8d0eaba07273172ae50b82acced1",
+  "summary": "SYS ENUMERATE/NUMBER index-prefix each bag field (default 0:). Ranked plates without EACH+STR+CAT. selftest 96.",
   "proofs": [
-    "668_sys_fill",
-    "selftest n_pass=95"
+    "669_sys_enumerate",
+    "selftest n_pass=96"
   ],
-  "when": "2026-08-05T17:34:52Z",
+  "when": "2026-08-05T17:44:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4f151331a8533371b1f68623c6f6e69436bfc227"
+  "sha": "c4b98966e74d8d0eaba07273172ae50b82acced1"
 }
