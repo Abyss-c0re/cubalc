@@ -1,3 +1,12 @@
+## Meaningful — cubalc run --strict soft last_err fails — 2026-08-05
+
+### Usability
+- `cubalc run -s|--strict` or `CUBALC_STRICT=1` — sticky soft `last_err` (FAIL/EXPECT) fails process exit and plate `ok`
+- Default remains soft-continue (plate may be ok:true with last_err for probes)
+- Plate field `strict`: true|false; combines with `-q`
+- Env catalog + search hint for `CUBALC_STRICT`
+- Version: `1.15.40-usability`
+
 ## Meaningful — cubalc init scaffold starter — 2026-08-05
 
 ### Usability

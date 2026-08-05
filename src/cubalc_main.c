@@ -1436,8 +1436,10 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "run") == 0 || strcmp(cmd, "eval") == 0) {
     /* Real language entry: parse + evaluate a .cubalc source program.
      * Usability: cubalc run - | eval - reads program from stdin (agents pipe).
-     * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok). */
-    int quiet = 0, i, rc;
+     * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok).
+     * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok. */
+    int quiet = 0, strict = 0, i, rc;
+    int plate_ok;
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -1448,19 +1450,29 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
       quiet = 1;
+    eq = getenv("CUBALC_STRICT");
+    if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
+        strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
+      strict = 1;
     for (i = 2; i < argc; i++) {
       if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet") ||
           !strcmp(argv[i], "--plate") || !strcmp(argv[i], "--json-only")) {
         quiet = 1;
         continue;
       }
+      if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--strict") ||
+          !strcmp(argv[i], "--fail-soft") || !strcmp(argv[i], "--strict-err")) {
+        strict = 1;
+        continue;
+      }
       if (!src_path)
         src_path = argv[i];
     }
     if (!src_path) {
-      fprintf(stderr, "usage: cubalc run [-q|--quiet] <file.cubalc>|-\n"
-                      "       cubalc eval [-q] <file.cubalc>|-   # - = stdin\n"
-                      "       CUBALC_QUIET=1 cubalc run file.cubalc  # plate only\n");
+      fprintf(stderr,
+              "usage: cubalc run [-q] [-s|--strict] <file.cubalc>|-\n"
+              "       cubalc eval [-q] [-s] <file.cubalc>|-   # - = stdin\n"
+              "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
       return 2;
     }
     if (quiet) {
@@ -1503,6 +1515,13 @@ int main(int argc, char **argv) {
       rc = cubalc_run_file(src_path, &rr, trace);
     }
     if (devnull) fclose(devnull);
+    /* Usability: strict mode treats sticky soft last_err as process failure
+     * (FAIL/EXPECT/INCLUDE SOFT leave ok=true by design; agents/CI use -s). */
+    plate_ok = rr.ok ? 1 : 0;
+    if (strict && rr.last_err[0]) {
+      plate_ok = 0;
+      if (rc == 0) rc = 1;
+    }
     /* Usability: err_line/err_src — source snippet when error cites line N. */
     {
       char esrc[220];
@@ -1518,11 +1537,11 @@ int main(int argc, char **argv) {
              "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
              "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
              "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
-             "\"quiet\":%s}\n",
-             rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
+             "\"quiet\":%s,\"strict\":%s}\n",
+             plate_ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
              rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
              CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
-             quiet ? "true" : "false");
+             quiet ? "true" : "false", strict ? "true" : "false");
     }
     return rc;
   }
@@ -2064,6 +2083,7 @@ int main(int argc, char **argv) {
       {"CUBALC_ROOT", "", 0, "install root for INCLUDE resolution"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
       {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
+      {"CUBALC_STRICT", "", 0, "1 → run: soft last_err fails exit + plate ok"},
       {"CUBALC_ARG0", "", 0, "SYS ARG 0 — script arg without shell glue"},
       {"CUBALC_ARG1", "", 0, "SYS ARG 1"},
       {"CUBALC_ARG2", "", 0, "SYS ARG 2"},
@@ -2769,6 +2789,8 @@ int main(int argc, char **argv) {
       {"CUBALC_STATE", "state plate directory"},
       {"CUBALC_ROOT", "install root for INCLUDE"},
       {"CUBALC_SEED", "RNG seed for reproducible runs"},
+      {"CUBALC_QUIET", "1 → run plate-only"},
+      {"CUBALC_STRICT", "1 → soft last_err fails exit"},
     };
     if (!q || !q[0]) {
       fprintf(stderr, "usage: cubalc search <keyword>\n"
@@ -2976,7 +2998,7 @@ int main(int argc, char **argv) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval [-q] <file|-> execute program ( -q plate-only / CUBALC_QUIET)\n"
+      "    run|eval [-q] [-s] <file|->  -q plate-only · -s soft last_err fails\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"
