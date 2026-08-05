@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 104,
-  "version": "1.15.129-usability",
-  "item": "SYS UPPERALL / LOWERALL case-map bag fields",
-  "item_id": 137,
-  "title": "SYS UPPERALL|LOWERALL [bag] \u2014 ASCII case-map every field",
-  "commit": "8e08d8f1defd3d377edbc7b15114a7ffac61b880",
-  "summary": "SYS UPPERALL/LOWERALL map case on every bag field (MAPUPPER/MAPLOWER). Normalize before HASLINE. selftest 104.",
+  "iter": 105,
+  "version": "1.15.130-usability",
+  "item": "SYS MAPREPLACE / GSUBALL bag-wide GSUB",
+  "item_id": 138,
+  "title": "SYS MAPREPLACE|GSUBALL bag old new \u2014 REPLACEALL every field",
+  "commit": "f714f8382fbda1764ce0f3d999e409c6dc22ea33",
+  "summary": "SYS MAPREPLACE/GSUBALL apply REPLACEALL to every bag field. Path/tag rewrite without EACH. selftest 105.",
   "proofs": [
-    "677_sys_upperall",
-    "selftest n_pass=104"
+    "678_sys_mapreplace",
+    "selftest n_pass=105"
   ],
-  "when": "2026-08-05T19:04:02Z",
+  "when": "2026-08-05T19:14:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8e08d8f1defd3d377edbc7b15114a7ffac61b880"
+  "sha": "f714f8382fbda1764ce0f3d999e409c6dc22ea33"
 }
