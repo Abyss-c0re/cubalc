@@ -5,13 +5,13 @@
   "item": "SYS CMP / SCMP / IABS three-way compare + abs",
   "item_id": 114,
   "title": "SYS CMP|SCMP|IABS numeric/string compare and abs",
-  "commit": "1df71b5504be830dfb0186163771559481441780",
+  "commit": "0fc7106c60c61189880829d5f358f4c3118d80ae",
   "summary": "SYS CMP a b \u2192 -1|0|1; SCMP/SCMPI strings; IABS|NABS integer abs. Sort keys / branch without dual LT+GT. Pairs with MIN/MAX. selftest 81.",
   "proofs": [
     "654_sys_cmp",
     "selftest n_pass=81"
   ],
-  "when": "2026-08-05T15:13:46Z",
+  "when": "2026-08-05T15:13:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1df71b5504be830dfb0186163771559481441780"
+  "sha": "0fc7106c60c61189880829d5f358f4c3118d80ae"
 }
