@@ -1,151 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 35,
-  "program": "programs/realworld/log_page_window.cubalc",
-  "theme": "log page window TRIMALL MIDLINES GREPANY cursor soft OOR",
-  "version": "1.15.126-usability",
+  "iter": 36,
+  "program": "programs/realworld/evidence_packet_gate.cubalc",
+  "theme": "evidence packet multi-tag GREPALL AND GREPANY SETMATCH MOVELINE soft gate",
+  "version": "1.15.129-usability",
   "pass": true,
   "tests": [
     {
-      "name": "ingest_trim",
-      "cmd": "ingest 6 dirty lines; trim whitespace",
+      "name": "seed_admit",
+      "cmd": "seed 3 hosts; admit db01 error:disk; admit app02 warn:mem",
       "ok": true,
-      "note": "ERROR/WARN padded \u2192 trimmed exact fields"
+      "note": "host:status:sev:tag plate rows"
     },
     {
-      "name": "page_next",
-      "cmd": "page 0 size2; next \u2192 page1",
+      "name": "filter_grepall",
+      "cmd": "filter error+disk; filter error+disk+open N3",
       "ok": true,
-      "note": "MIDLINES window + cursor plate"
+      "note": "GREPALL multi-needle AND hit"
     },
     {
-      "name": "page_oor_require",
-      "cmd": "REQUIRE page 50 EXIT 2; soft miss rc0",
+      "name": "filter_miss_require",
+      "cmd": "filter error+timeout soft rc0; REQUIRE EXIT 2",
       "ok": true,
-      "note": "MIDLINES past end empty soft"
+      "note": "soft empty + REQUIRE hard"
     },
     {
-      "name": "triage_grepany",
-      "cmd": "triage ERROR WARN FATAL error warn fatal",
+      "name": "triage_escalate_pin",
+      "cmd": "triage; escalate web03 x2; pin open:error to front",
       "ok": true,
-      "note": "multi-needle separate args; hit>=4"
+      "note": "sev ladder + MOVELINE attention"
     },
     {
-      "name": "grepany_bag_needles",
-      "cmd": "GREPANY bag needles_bag \u2192 0; separate strings \u2192 2",
+      "name": "review_close",
+      "cmd": "review db01; close db01; ghost soft/REQUIRE",
       "ok": true,
-      "note": "needles as bag field fails"
+      "note": "SPLIT rebuild SETMATCH status"
     },
     {
-      "name": "let_end_reserved",
-      "cmd": "LET end = ... \u2192 unknown form (END keyword)",
+      "name": "gate_packet",
+      "cmd": "gate empty soft/REQUIRE; CUBALC_EP_PACKET=ready",
       "ok": true,
-      "note": "renamed page_end; high agent footgun"
+      "note": "soft ENV dual path (not hard REQUIRE ENV)"
     },
     {
-      "name": "trim_keeps_blank_fields",
-      "cmd": "TRIMALL space-only field becomes empty; need SQUEEZE BLANK",
+      "name": "drop_has_count",
+      "cmd": "drop exact; has/count exact",
       "ok": true,
-      "note": "from proof + edge probe"
+      "note": "exact-field ops"
     },
     {
-      "name": "drop_miss_require",
-      "cmd": "drop ERROR disk full; REQUIRE ghost EXIT 2",
+      "name": "grepall_bag_needles",
+      "cmd": "GREPALL bag needles_bag → 0; separate strings → 1",
       "ok": true,
-      "note": "soft+REQUIRE"
+      "note": "same silent empty class as GREPANY bag needles"
+    },
+    {
+      "name": "substring_false_friend",
+      "cmd": "GREPANY error matches error_soft host; GREPALL error+disk ok",
+      "ok": true,
+      "note": "substring-unsafe multi-needle family"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "101/101 pass incl trimall midlines grepany"
+      "note": "104/104 pass incl grepall require_env upperall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "lang|parse",
-      "title": "LET end is illegal \u2014 END is reserved block terminator",
-      "detail": "LET end = start + PSIZE parses as unknown form ''. Any var named end/END breaks agents writing page windows. Must use page_end/end_i. No clear error naming reserved words.",
-      "repro": "LET end = 1 \u2192 unknown form ''"
+      "area": "host|bag",
+      "title": "GREPALL multi-needle bag argument does not expand fields",
+      "detail": "SYS GREPALL bag needles with needles='error\\ndisk' yields LAST_N=0. Need separate string args GREPALL bag \"error\" \"disk\". Same silent-empty class as GREPANY bag needles — agents piping ENV/WORDS into one bag arg fail closed.",
+      "repro": "GREPALL log needles_bag → 0; GREPALL log \"error\" \"disk\" → hits"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "GREPANY multi-needle bag argument does not expand fields",
-      "detail": "SYS GREPANY bag needles with needles='ERROR\\nWARN' yields 0 hits. Need separate string args GREPANY bag \"ERROR\" \"WARN\". Agents building needle bags from ENV fail silently.",
-      "repro": "GREPANY log needles_bag \u2192 empty; GREPANY log \"ERROR\" \"WARN\" \u2192 hits"
+      "title": "GREPALL/GREPANY remain substring-unsafe",
+      "detail": "Needle error matches host token error_soft. Multi-tag AND only partially mitigates (second needle may filter). No word-boundary / field-column GREP.",
+      "repro": "GREPANY 'error_soft:…\\ndb01:open:error:disk' error → 2 rows"
     },
     {
       "id": "W3",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "TRIMALL leaves empty fields for former whitespace lines",
-      "detail": "All-space field becomes empty field; SQUEEZE BLANK required to drop. Depth can still include empties after trim-only.",
-      "repro": "TRIMALL 'a\\n   \\nb' \u2192 a\\n\\nb"
+      "title": "No in-field column update — SETMATCH needs full-row rebuild",
+      "detail": "Status/sev ladder requires SPLIT + REPLACEALL template + SETMATCH whole row. No SETFIELD host status=review. Agents writing structured plates pay O(n) EACH + fragile rebuild.",
+      "repro": "review/escalate actions: SPLIT old_entry; rebuild HOST:ST:SEV:TAG"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "MIDLINES OOR returns empty soft without FAIL sticky",
-      "detail": "start past end \u2192 empty bag OK. Good for paging but agents must check LINES; program uses REQUIRE for hard miss.",
-      "repro": "MIDLINES bag 50 \u2192 LAST empty"
+      "area": "host|str",
+      "title": "REPLACEALL template tokens collide with data",
+      "detail": "Rebuild uses REPLACEALL entry \"SEV\" sev etc. Host/tag containing SEV/HOST/ST/TAG substrings corrupt the template. No positional format/sprintf.",
+      "repro": "host name containing SEV → garbled entry after REPLACEALL"
     },
     {
       "id": "W5",
-      "severity": "high",
-      "area": "host|bag",
-      "title": "TRIMALL/MIDLINES/GREPANY non-mutate named bags",
-      "detail": "Must LET bag = LAST after trim or WRITE keeps dirty whitespace.",
-      "repro": "TRIMALL bag; LINES bag still dirty without LET"
+      "severity": "med",
+      "area": "lang|args",
+      "title": "Optional second ARG hard with DEFAULT/ENV defaults",
+      "detail": "DEFAULT A2=disk + ENV OR disk means filter cannot distinguish unset ARG2 from default. Single-needle GREPALL path only if A2 blank — agents always get 2-needle filter unless they blank env. No true optional CLI arity.",
+      "repro": "filter ARG1 only still AND-matches default tag disk"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses multi-line log bags/windows",
-      "detail": "Window and full bag unparseable in one JSON string field.",
-      "repro": "PRINT_JSON bag after ingest"
+      "title": "PRINT_JSON collapses multi-line evidence bags",
+      "detail": "Filtered windows and full plates unparseable as one JSON string field.",
+      "repro": "PRINT_JSON bag after seed"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last log line without $.",
-      "repro": "ingest; cat -A LOG.txt"
+      "detail": "cat -A last evidence line without $; intermediate lines have $.",
+      "repro": "seed; cat -A EVIDENCE.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "host|bag",
-      "title": "GREPANY still substring-unsafe",
-      "detail": "Needle error matches error soft miss. Same GREP class.",
-      "repro": "GREPANY 'error soft' with needle error"
+      "area": "host|identity",
+      "title": "Host identity is BEFORE first colon only",
+      "detail": "Rows host:status:sev:tag break if host contains ':'. No multi-segment key extract helper for last field as host.",
+      "repro": "host ipv6-like tokens cannot use colon plate format"
     }
   ],
   "workarounds": [
-    "Never name vars end/END/IF/THEN \u2014 use page_end",
-    "GREPANY with quoted separate needles not bag of needles",
-    "TRIMALL then SQUEEZE BLANK for clean log plates",
-    "Check LINES after MIDLINES; REQUIRE for hard page OOR",
-    "Always LET bag = LAST after TRIMALL/MIDLINES/GREPANY"
+    "GREPALL/GREPANY with quoted separate needles not bag-of-needles",
+    "SPLIT full row then REPLACEALL template for status/sev updates",
+    "Avoid SEV/HOST/ST/TAG substrings in host/tag tokens",
+    "Blank CUBALC_EP_A2 when single-needle filter intended",
+    "Put host first for BEFORE identity; avoid colon in host"
   ],
   "language_gaps": [
-    "Clear reserved-word diagnostic on LET end",
-    "GREPANY needles from bag (expand fields as needles)",
-    "In-place TRIMALL/MIDLINES",
-    "PRINT_JSON newlines; WRITE force NL",
-    "Word-boundary GREP / severity token match"
+    "GREPALL/GREPANY expand bag fields as needle list",
+    "Word-boundary or column-aware GREP (split field match)",
+    "SETFIELD / column update without full-row rebuild",
+    "Positional format (sprintf) instead of REPLACEALL templates",
+    "True optional ARG/ENV (unset vs default)",
+    "PRINT_JSON newlines; WRITE force trailing NL"
   ],
   "issues_faced": [
-    "LET end reserved keyword broke entire program until renamed page_end",
-    "Also found LET end = start + PSIZE - 1 chained minus awkward; split to two LETs",
-    "GREPANY bag-of-needles silent empty \u2014 documented W2"
+    "GREPALL bag-of-needles silent empty — same agent footgun as GREPANY W2 from iter35",
+    "DEFAULT A2=disk poisoned optional filter second needle — documented W5",
+    "Status transitions verbose: EACH find + SPLIT + 4x REPLACEALL + SETMATCH",
+    "Pin proved MOVELINE: c open:error moved from last to front"
   ],
-  "commit": "53fa7c0d1ccc9612fa7b62383258d63252974d5d",
-  "ts": "2026-08-05T18:40:50Z"
+  "commit": "pending",
+  "ts": "2026-08-05T19:04:27Z"
 }
