@@ -1,0 +1,30 @@
+# DEFAULT — set variable only if unset (INCLUDE-safe knobs)
+# Usability: libs set defaults without clobbering caller LET
+
+HOLD_FLASH 1
+
+DEFAULT PORT = 9000
+ASSERT OK == 1
+ASSERT PORT == 9000 "first default applies"
+ASSERT LAST_N == 1 "applied flag"
+ASSERT DEFAULT_SET == 1
+
+# second DEFAULT must not clobber
+DEFAULT PORT = 1111
+ASSERT PORT == 9000 "no clobber"
+ASSERT LAST_N == 0 "skipped"
+ASSERT DEFAULT_SET == 0
+
+# works after explicit LET too
+LET X = 5
+DEFAULT X = 99
+ASSERT X == 5 "LET wins over DEFAULT"
+ASSERT DEFAULT_SET == 0
+
+# string default
+DEFAULT PEER = "local"
+ASSERT DEFAULT_SET == 1
+DEFAULT PEER = "other"
+ASSERT DEFAULT_SET == 0
+
+PRINT "default ok" PORT X

@@ -1356,6 +1356,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name = expr|string"},
+      {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2007,6 +2008,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
+  }
+  /* DEFAULT name = expr|str — assign only if name is not yet defined.
+   * Usability: INCLUDE libs set knobs without clobbering caller LET.
+   * LAST_N/DEFAULT_SET = 1 if applied, 0 if skipped; OK always 1. */
+  if (kw(&L->cur,"DEFAULT")||kw(&L->cur,"SETDEFAULT")||kw(&L->cur,"DEFAULT_LET")||
+      kw(&L->cur,"LET_DEFAULT")||kw(&L->cur,"ORLET")){
+    int applied = 0;
+    int exists;
+    char name[48];
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"DEFAULT name = value"); return -1; }
+    snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_EQ){ fail(vm,"DEFAULT name = value"); return -1; }
+    lex_next(L);
+    exists = (var_get(vm, name, 0) != NULL);
+    if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
+          strcmp(L->cur.text,"LAST")==0 ||
+          (var_get(vm,L->cur.text,0) && var_get(vm,L->cur.text,0)->is_str)))){
+      char buf[CUBALC_HOST_STR_MAX]; buf[0]=0;
+      for(;;){
+        if (L->cur.kind==TK_STR){
+          size_t bl=strlen(buf), al=strlen(L->cur.text);
+          if (bl+al+1 < sizeof buf) memcpy(buf+bl, L->cur.text, al+1);
+          lex_next(L);
+        } else if (L->cur.kind==TK_IDENT){
+          if (strcmp(L->cur.text,"LAST")==0){
+            size_t bl=strlen(buf), al=strlen(vm->last_str);
+            if (bl+al+1 < sizeof buf) memcpy(buf+bl, vm->last_str, al+1);
+            lex_next(L);
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str){
+              size_t bl=strlen(buf), al=strlen(v->sval);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, v->sval, al+1);
+            } else if (v){
+              char nb[32]; snprintf(nb,sizeof nb,"%ld", v->val);
+              size_t bl=strlen(buf), al=strlen(nb);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, nb, al+1);
+            } else break;
+            lex_next(L);
+          }
+        } else break;
+        if (L->cur.kind==TK_PLUS){ lex_next(L); continue; }
+        break;
+      }
+      if (!exists){
+        var_set_str(vm, name, buf);
+        applied = 1;
+      }
+    } else {
+      long v=parse_expr(vm,L);
+      if (!exists){
+        var_set_num(vm, name, v);
+        applied = 1;
+      }
+    }
+    var_set_num(vm, "DEFAULT_SET", (long)applied);
+    var_set_num(vm, "LAST_N", (long)applied);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = (long)applied;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", applied);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# default %s %s\n", name, applied ? "set" : "skip");
+    bump(vm); return 1;
   }
   if (kw(&L->cur,"LET")){
     lex_next(L);
