@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 112,
-  "version": "1.15.137-usability",
-  "item": "SYS WINDOW / SLIDE overlapping bag field windows",
-  "item_id": 145,
-  "title": "SYS WINDOW|SLIDE n [bag] [join] — overlapping windows of n fields",
-  "commit": "b8eab81f3cdb5ff3925b8ab1d5c467bcfbe5e2bb",
-  "summary": "SYS WINDOW/SLIDE overlapping bag field windows of n. Consecutive pairs/ngrams. selftest 112.",
+  "iter": 113,
+  "version": "1.15.138-usability",
+  "item": "SYS STRIDE / EVERY partition bag by step/offset",
+  "item_id": 146,
+  "title": "SYS STRIDE|EVERY step [offset] [bag] — keep index%step==offset fields",
+  "commit": "a1cfe18ac773b362eb21f0ffc10e6e5d11d24287",
+  "summary": "SYS STRIDE/EVERY partition bag fields by step/offset for multi-worker split. selftest 113.",
   "proofs": [
-    "685_sys_window",
-    "selftest n_pass=112"
+    "686_sys_stride",
+    "selftest n_pass=113"
   ],
-  "when": "2026-08-05T20:25:00Z",
+  "when": "2026-08-05T20:33:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b8eab81f3cdb5ff3925b8ab1d5c467bcfbe5e2bb"
+  "sha": "a1cfe18ac773b362eb21f0ffc10e6e5d11d24287"
 }
