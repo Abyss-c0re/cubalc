@@ -12,9 +12,16 @@ ASSERT LAST_N > 0 "CWD var set"
 SYS STATE
 ASSERT OK == 1 "state ok"
 ASSERT LAST_N > 0 "state non-empty"
-# default or CUBALC_STATE override
+# default "state" or CUBALC_STATE override (may be absolute /tmp/… without substring "state")
 SYS HAS LAST "state"
-ASSERT LAST_N == 1 "state dir name present"
+IF LAST_N == 0 THEN
+  SYS STARTS LAST "/"
+  ASSERT LAST_N == 1 "absolute CUBALC_STATE override when not named state"
+ELSE
+  ASSERT LAST_N == 1 "relative state path contains name state"
+END
+SYS LEN STATE_DIR
+ASSERT LAST_N > 0 "STATE_DIR var set"
 
 SYS ROOT
 ASSERT OK == 1 "root ok"
