@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 65,
-  "version": "1.15.90-usability",
-  "item": "SYS REVL / REVLINES / TAC reverse bag lines",
-  "item_id": 98,
-  "title": "SYS REVL|REVLINES|TAC reverse newline field order",
-  "commit": "a00baff418a213494ad21ff9f7824c8b52044716",
-  "summary": "SYS REVL|REVLINES|TAC|FLIPLINES reverse newline bag order for newest-first HEAD after logs without shell tac. Complements SORT/POP. selftest 65.",
+  "iter": 66,
+  "version": "1.15.91-usability",
+  "item": "SYS WORDS / TOKENIZE whitespace tokenize",
+  "item_id": 99,
+  "title": "SYS WORDS|TOKENIZE whitespace → newline fields",
+  "commit": "dcc8c00cca2dd4650ade57a88d2b5bb55704f731",
+  "summary": "SYS WORDS|TOKENIZE|TOKENS|WSSPLIT collapse whitespace to newline bag fields for EACH LINE/GREP/SORT without SPLIT glue. selftest 66.",
   "proofs": [
-    "639_sys_revl",
-    "selftest n_pass=65"
+    "640_sys_words",
+    "selftest n_pass=66"
   ],
-  "when": "2026-08-05T12:33:49Z",
+  "when": "2026-08-05T12:43:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a00baff418a213494ad21ff9f7824c8b52044716"
+  "sha": "dcc8c00cca2dd4650ade57a88d2b5bb55704f731"
 }
