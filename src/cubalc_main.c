@@ -1593,6 +1593,7 @@ int main(int argc, char **argv) {
       {"require", "programs/proof/583_require_version.cubalc", "REQUIRE VERSION gate"},
       {"cwd", "programs/proof/584_sys_cwd_state_root.cubalc", "SYS CWD/STATE/ROOT paths"},
       {"include_soft", "programs/proof/585_include_soft.cubalc", "INCLUDE OR soft miss"},
+      {"vars", "programs/proof/586_vars.cubalc", "VARS full var table JSON"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1718,6 +1719,7 @@ int main(int argc, char **argv) {
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
+      {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2582,6 +2584,7 @@ int main(int argc, char **argv) {
       {"VERSION", "flow", "VERSION — LAST/VERSION language version string"},
       {"REQUIRE", "flow", "REQUIRE VERSION x.y[.z] — fail if runtime older"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
+      {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},

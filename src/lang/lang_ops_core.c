@@ -1195,6 +1195,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
+      {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"INCLUDE", "INCLUDE [OR|SOFT] path|libname — short name → programs/lib/"},
       {"LET", "LET name = expr|string"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT … · ENV/ARG OR fallback"},
@@ -1346,6 +1347,83 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     else line[sizeof line - 2] = '}';
     if (vm->trace) fprintf(vm->trace,"%s\n",line);
     if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
+    bump(vm); return 1;
+  }
+  /* VARS / LOCALS — dump all program variables as one JSON line for agents.
+   * Complements PRINT_JSON (named/snapshot): full LET/SYS table without guessing names. */
+  if (kw(&L->cur,"VARS")||kw(&L->cur,"LOCALS")||kw(&L->cur,"SHOW_VARS")||
+      kw(&L->cur,"VARS_JSON")||kw(&L->cur,"DUMP_VARS")){
+    lex_next(L);
+    char line[CUBALC_HOST_STR_MAX];
+    size_t o = 0;
+    int i, first = 1, n = 0;
+    o += (size_t)snprintf(line + o, sizeof line - o,
+      "{\"schema\":\"cubalc.vars.v1\",\"n\":0,\"vars\":{");
+    /* rewrite n after count — fill vars first into temp then wrap is heavy;
+     * emit and patch is awkward; emit n at end via second pass count. */
+    o = 0;
+    o += (size_t)snprintf(line + o, sizeof line - o,
+      "{\"schema\":\"cubalc.vars.v1\",\"ok\":true,\"vars\":{");
+    for (i = 0; i < vm->n_vars; i++) {
+      Var *v = &vm->vars[i];
+      char esc[280];
+      size_t eo = 0;
+      int add;
+      if (!v->name[0]) continue;
+      if (o + 80 >= sizeof line) break;
+      if (!first) o += (size_t)snprintf(line + o, sizeof line - o, ",");
+      first = 0;
+      n++;
+      if (v->is_str) {
+        const char *p;
+        for (p = v->sval; *p && eo + 2 < sizeof esc; p++) {
+          if (*p == '"' || *p == '\\') { esc[eo++] = '\\'; esc[eo++] = *p; }
+          else if ((unsigned char)*p < 0x20) continue;
+          else esc[eo++] = *p;
+        }
+        esc[eo] = 0;
+        add = snprintf(line + o, sizeof line - o, "\"%s\":\"%s\"", v->name, esc);
+      } else {
+        add = snprintf(line + o, sizeof line - o, "\"%s\":%ld", v->name, v->val);
+      }
+      if (add > 0) o += (size_t)add;
+    }
+    /* also surface LAST if not already a var */
+    if (o + 64 < sizeof line) {
+      int has_last = 0;
+      for (i = 0; i < vm->n_vars; i++)
+        if (strcmp(vm->vars[i].name, "LAST") == 0) { has_last = 1; break; }
+      if (!has_last && vm->last_str[0]) {
+        char esc[280];
+        size_t eo = 0;
+        const char *p;
+        for (p = vm->last_str; *p && eo + 2 < sizeof esc; p++) {
+          if (*p == '"' || *p == '\\') { esc[eo++] = '\\'; esc[eo++] = *p; }
+          else if ((unsigned char)*p < 0x20) continue;
+          else esc[eo++] = *p;
+        }
+        esc[eo] = 0;
+        o += (size_t)snprintf(line + o, sizeof line - o, "%s\"LAST\":\"%s\"",
+                              first ? "" : ",", esc);
+        first = 0;
+        n++;
+      }
+    }
+    o += (size_t)snprintf(line + o, sizeof line - o,
+                          "},\"n\":%d,\"version\":\"%s\"}", n, CUBALC_LANG_VERSION);
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
+    var_set_num(vm, "VARS_N", (long)n);
+    var_set_num(vm, "LAST_N", (long)n);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = (long)n;
+    /* keep LAST as count note for agents that only read LAST string */
+    {
+      char note[48];
+      snprintf(note, sizeof note, "vars:%d", n);
+      var_set_str(vm, "LAST", note);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", note);
+    }
     bump(vm); return 1;
   }
   /* ASSERT expr ["why"] — optional message for agent/human-readable failures */

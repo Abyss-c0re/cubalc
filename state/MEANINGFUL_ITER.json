@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 8,
-  "version": "1.15.33-usability",
-  "item": "INCLUDE OR SOFT optional modules",
-  "item_id": 41,
-  "title": "INCLUDE OR|SOFT optional module no fatal",
-  "commit": "2b4ec101a682ab5ce746a1b928b268ff37b7b327",
-  "summary": "INCLUDE OR|SOFT|TRY|OPTIONAL miss sets OK=0 INCLUDE_OK=0 sticky LAST_ERR and continues; hard INCLUDE remains fail-closed.",
+  "iter": 9,
+  "version": "1.15.34-usability",
+  "item": "VARS dump all program variables JSON",
+  "item_id": 42,
+  "title": "VARS dumps full LET/SYS table as cubalc.vars.v1",
+  "commit": "890bf9e93a3786e195d738fcd5178f66466308b9",
+  "summary": "VARS|LOCALS dumps all program variables as one JSON line so agents inspect state without guessing PRINT_JSON idents.",
   "proofs": [
-    "585_include_soft",
-    "selftest n_pass=11"
+    "586_vars",
+    "selftest n_pass=12"
   ],
-  "when": "2026-08-05T03:03:39Z",
+  "when": "2026-08-05T03:13:18Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2b4ec101a682ab5ce746a1b928b268ff37b7b327"
+  "sha": "890bf9e93a3786e195d738fcd5178f66466308b9"
 }

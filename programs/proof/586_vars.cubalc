@@ -1,0 +1,18 @@
+# VARS — dump all program variables as agent JSON plate
+# Usability: no need to guess names for PRINT_JSON; full LET/SYS table
+
+LET answer = 42
+LET label = "cube"
+SYS ENV "CUBALC_PROOF_VARS_XYZ" OR "fallback-v"
+ASSERT OK == 1
+
+VARS
+ASSERT VARS_N >= 3 "at least answer label + env/sys vars"
+ASSERT OK == 1 "VARS ok"
+ASSERT LAST_N >= 3 "LAST_N = var count"
+
+# VARS does not fail the run; continue
+ASSERT answer == 42 "lets survive VARS"
+
+PRINT "vars ok" VARS_N
+# agents parse the VARS JSON line from stdout (trace); plate last_print too
