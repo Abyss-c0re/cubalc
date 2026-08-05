@@ -1,104 +1,104 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 19,
-  "program": "programs/realworld/stale_plate_gc.cubalc",
-  "theme": "stale plate GC AGE MTIME STARTSI POP work bag",
-  "version": "1.15.86-usability",
+  "iter": 20,
+  "program": "programs/realworld/log_field_extract.cubalc",
+  "theme": "log field extract BETWEEN FINDI structured peel",
+  "version": "1.15.88-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_gc_trash",
-      "cmd": "aged tmp_*.plate + keep.live; MAX_AGE=3600 PREFIX=tmp_ SUFFIX=.plate",
+      "name": "positive_extract",
+      "cmd": "app.log with [Error]/[WARN]/quoted msg; run -s",
       "ok": true,
-      "note": "stale=2 fresh=1 skip=1 moved=2; STARTSI matches TMP_OLD2; trash holds both"
+      "note": "hit=4 miss=2; rows Error|box|disk full etc."
     },
     {
-      "name": "work_pop_lifo",
-      "cmd": "CUBALC_ARG0=work after gc",
+      "name": "findi_needle_error",
+      "cmd": "CUBALC_XTR_NEEDLE=error",
       "ok": true,
-      "note": "n_moved=2; WORK.bag emptied; out markers touched"
+      "note": "hit=2 skip=4 only Error/error lines"
     },
     {
-      "name": "require_no_stale",
-      "cmd": "fresh only + REQUIRE=1 MAX_AGE huge",
+      "name": "require_empty",
+      "cmd": "info only + REQUIRE=1",
       "ok": true,
-      "note": "EXIT 2 gc empty"
+      "note": "EXIT 2 extract empty"
     },
     {
-      "name": "age_miss_strict",
-      "cmd": "SYS AGE missing under -q -s",
+      "name": "nested_brackets",
+      "cmd": "[outer [inner]] msg=\"x\"",
       "ok": true,
-      "note": "ok=false last_err=mtime: missing err_line=0"
+      "note": "sev becomes 'outer [inner' \u2014 first-close BETWEEN trap"
     },
     {
-      "name": "quiet_gc",
-      "cmd": "run -q -s with 1 stale",
+      "name": "quiet_strict",
+      "cmd": "run -q -s",
       "ok": true,
-      "note": "exit 0"
+      "note": "exit 0 with CLEAR_ERR after FINDI misses"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "61/61 pass incl pop mtime startsi"
+      "note": "63/63 pass incl between findi"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "error|host",
-      "title": "AGE/MTIME miss: AGE=0 and err_line=0 sticky under -s",
-      "detail": "Missing path soft-fails OK=0 AGE=0 MTIME=0 \u2014 same AGE as a just-created file if OK ignored. last_err='mtime: missing' but err_line=0. Under -s without CLEAR_ERR, plate fails. Agents must always branch on OK after AGE.",
-      "repro": "SYS AGE /no/such under -q -s \u2192 ok=false last_err=mtime: missing err_line=0"
+      "area": "host",
+      "title": "BETWEEN peels first open\u2192first close only \u2014 nested delimiters corrupt fields",
+      "detail": "SYS BETWEEN \"[\" \"]\" on '[outer [inner]] msg=\"x\"' yields severity 'outer [inner'. No balanced/nested extract. Real log formats with nested brackets need shell/regex.",
+      "repro": "BETWEEN [ ] '[outer [inner]]' \u2192 'outer [inner'"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "host|flow",
-      "title": "POP does not mutate bag \u2014 need LET bag = POP_REST",
-      "detail": "Same class as PUSH: SYS POP bag leaves bag var stale; remaining fields only in POP_REST. Work loop must rebind every iteration.",
-      "repro": "SYS POP bag without LET bag=POP_REST \u2192 infinite same last field if reusing bag"
+      "severity": "high",
+      "area": "error|cli",
+      "title": "OK=0 without last_err does not fail run -s",
+      "detail": "FINDI/FIND miss sets OK=0 LAST_N=-1 but empty last_err. STATUS shows ok=false momentarily, yet final plate under -s can still be ok=true if no sticky ERR. Agents cannot rely on OK alone for strict gates \u2014 inconsistent with AGE miss which sets last_err=mtime: missing.",
+      "repro": "SYS FINDI hello xyz under -q -s \u2192 exit 0 ok=true; STATUS mid-run ok=false last_err empty"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host",
-      "title": "Cannot set historical mtime in-language (TOUCH only now)",
-      "detail": "Tests and lease backdating need host touch -d. TOUCH only refreshes to wall clock. No SYS UTIME/CHTIME.",
-      "repro": "Cannot create stale fixture without shell touch -d"
+      "title": "BETWEEN miss is soft OK=1 LAST_N=0 \u2014 easy to confuse with EMPTY success",
+      "detail": "Unlike FINDI, BETWEEN miss keeps OK=1. Must check LAST_N/found. Dual soft-miss conventions across host forms (READ_OK vs LAST_N vs OK).",
+      "repro": "BETWEEN [ ] 'nope' \u2192 OK=1 LAST_N=0 EMPTY LAST"
     },
     {
       "id": "W4",
-      "severity": "low",
+      "severity": "med",
       "area": "host",
-      "title": "LIST non-recursive \u2014 nested cache dirs invisible",
-      "detail": "GC only sees top-level basenames under cache/. Nested plates need host find or multi-level LIST.",
-      "repro": "cache/sub/tmp_x.plate never listed"
+      "title": "No multi-match / global extract \u2014 one BETWEEN per call",
+      "detail": "Cannot pull all bracket tags or all quoted strings from a line without manual loop+replace glue. No BETWEEN ALL form.",
+      "repro": "Line with two quoted strings only peels first"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "docs|cli",
-      "title": "SYS STARTS (case-sensitive) weaker discoverability vs STARTSI",
-      "detail": "search STARTS returns STARTSI example; case-sensitive STARTS/ENDS still work but catalog emphasis is I variants. TRIM still missing.",
-      "repro": "search STARTS \u2192 STARTSI; search TRIM \u2192 empty"
+      "title": "TRIM still missing from forms/search",
+      "detail": "Carry-over; field peels often need strip.",
+      "repro": "search TRIM \u2192 n=0"
     }
   ],
   "workarounds": [
-    "After SYS AGE always IF OK==0 CLEAR_ERR CONTINUE before comparing age",
-    "LET bag = POP_REST after every POP",
-    "Use host touch -d for stale fixtures in tests",
-    "Flat cache layout or repeated LIST per subdir",
-    "STARTSI/ENDSI for extension/prefix filters without UPPER"
+    "Use simple [sev] at line start; avoid nested brackets in severity tags",
+    "After FINDI miss always CLEAR_ERR if continuing under -s; do not assume OK trips strict",
+    "Branch on BETWEEN LAST_N not OK",
+    "Chain REPLACE to remove first match then BETWEEN again for multi-field",
+    "LET bag = LAST after every PUSH"
   ],
   "language_gaps": [
-    "err_line on host soft fails (MTIME/AGE/LIST)",
-    "In-place POP/PUSH bag mutation",
-    "SYS UTIME / set mtime",
-    "Recursive LIST or ** glob",
-    "Catalog TRIM; clarify STARTS vs STARTSI in search"
+    "Balanced/nested delimiter extract",
+    "Unify soft-miss: either sticky last_err for all OK=0 or document OK-only probes",
+    "BETWEEN ALL / nth occurrence",
+    "Strict mode option: fail on OK=0",
+    "Catalog TRIM"
   ],
-  "commit": "efb78966b288f28b33ce1ac076cb8519d0befa02",
-  "ts": "2026-08-05T11:57:48Z"
+  "commit": "7b26512a35f08b4cca98c26190b18d5ce666e7f5",
+  "ts": "2026-08-05T12:22:33Z"
 }

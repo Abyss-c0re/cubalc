@@ -1,0 +1,270 @@
+# log_field_extract.cubalc — structured log peel via BETWEEN + FINDI
+#
+# Real use: agents drop multi-line logs under CUBALC_STATE/logs/. Extract:
+#   severity from [tag] via SYS BETWEEN "[" "]"
+#   quoted msg via BETWEEN "\"" "\""
+#   key=value tails via AFTER / BETWEEN
+#   locate case-insensitive markers with FINDI before peel
+# PUSH extracted rows; write EXTRACT_REPORT + ROWS bag.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/logs"
+#   printf '[Error] host=box msg="disk full"\ninfo skip\n[WARN] host=edge msg="space low"\n' \
+#     > "$CUBALC_STATE/logs/app.log"
+#   ./out/cubalc run -q -s programs/realworld/log_field_extract.cubalc
+#
+# Optional:
+#   CUBALC_ARG0=extract|status
+#   CUBALC_XTR_REQUIRE=1     # EXIT 2 if zero extracted
+#   CUBALC_XTR_FILTER=.log
+#   CUBALC_XTR_NEEDLE=error  # FINDI gate (case-insensitive); empty = all non-blank
+#
+# Edges:
+#   BETWEEN first pair only (nested brackets/quotes wrong)
+#   BETWEEN miss LAST_N=0 OK=1 (soft) — distinct from READ_OK pattern
+#   FINDI miss LAST_N=-1 OK=0 sticky under -s
+#   FIND (case-sensitive) OK=0 on miss vs FINDI same
+#   no multi-match BETWEEN / global extract loop form
+#   TRIM still undiscoverable
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "log_field_extract: start"
+DEFAULT ACTION = "extract"
+DEFAULT FILTER = ".log"
+DEFAULT NEEDLE = ""
+DEFAULT REQUIRE_ONE = 0
+LET bag = ""
+LET n_files = 0
+LET n_lines = 0
+LET n_hit = 0
+LET n_skip = 0
+LET n_miss = 0
+IDENTITY
+SYS DATE
+LET xtr_date = DATE
+SYS HOSTNAME
+LET xtr_host = LAST
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_XTR_ACTION" OR "extract"
+  LET ACTION = LAST
+END
+SYS ENV "CUBALC_XTR_FILTER" OR ""
+IF LAST_N > 0 THEN
+  LET FILTER = LAST
+END
+SYS ENV "CUBALC_XTR_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET NEEDLE = LAST
+END
+SYS ENV "CUBALC_XTR_REQUIRE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "logs"
+LET logs_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR logs_dir
+SYS MKDIR out_dir
+
+SYS EQSI ACTION "status"
+IF LAST_N == 1 THEN
+  SYS JOIN out_dir "EXTRACT_REPORT.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+SYS EQSI ACTION "extract"
+IF LAST_N == 0 THEN
+  FAIL "unknown action"
+  EXIT 2 "bad action"
+END
+
+SYS LIST logs_dir
+IF OK == 0 THEN
+  FAIL "LIST logs failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET listing = LAST
+SYS EMPTY FILTER
+IF LAST_N == 0 THEN
+  SYS GREP FILTER listing
+  LET listing = LAST
+END
+SYS SORT listing
+LET listing = LAST
+CLEAR_ERR
+
+EACH LINE AS fname IN listing
+  SYS JOIN logs_dir fname
+  LET path = LAST
+  SYS ISFILE path
+  IF LAST_N == 0 THEN
+    CONTINUE
+  END
+  SYS READ OR path OR ""
+  IF READ_OK == 0 THEN
+    CLEAR_ERR
+    CONTINUE
+  END
+  LET body = LAST
+  LET n_files = n_files + 1
+
+  EACH LINE AS row IN body
+    LET n_lines = n_lines + 1
+    SYS BLANK row
+    IF LAST_N == 1 THEN
+      LET n_skip = n_skip + 1
+      CONTINUE
+    END
+
+    # optional FINDI gate (severity locate without UPPER)
+    SYS EMPTY NEEDLE
+    IF LAST_N == 0 THEN
+      SYS FINDI row NEEDLE
+      IF OK == 0 THEN
+        CLEAR_ERR
+        LET n_skip = n_skip + 1
+        CONTINUE
+      END
+    END
+
+    # severity from [tag]
+    SYS BETWEEN "[" "]" row
+    IF LAST_N == 0 THEN
+      LET n_miss = n_miss + 1
+      CONTINUE
+    END
+    LET sev = LAST
+
+    # host=… peel
+    SYS FINDI row "host="
+    IF OK == 0 THEN
+      CLEAR_ERR
+      LET hostv = ""
+    ELSE
+      SYS AFTER row "host="
+      SYS BEFORE LAST " "
+      LET hostv = LAST
+      # if no space, AFTER host= may be rest including msg=
+      SYS FINDI hostv "msg="
+      IF OK == 1 THEN
+        SYS BEFORE hostv " "
+        # still may contain msg — cut at msg=
+        SYS BEFORE hostv "msg="
+        LET hostv = LAST
+      END
+      CLEAR_ERR
+    END
+
+    # quoted msg
+    SYS BETWEEN "\"" "\"" row
+    IF LAST_N == 0 THEN
+      LET msg = ""
+    ELSE
+      LET msg = LAST
+    END
+
+    SYS EMPTY sev
+    IF LAST_N == 1 THEN
+      LET n_miss = n_miss + 1
+      CONTINUE
+    END
+
+    SYS CAT sev "|"
+    LET line = LAST
+    SYS CAT line hostv
+    LET line = LAST
+    SYS CAT line "|"
+    LET line = LAST
+    SYS CAT line msg
+    LET line = LAST
+    SYS PUSH bag line
+    LET bag = LAST
+    LET n_hit = n_hit + 1
+  END
+END
+CLEAR_ERR "extract clean"
+
+IF REQUIRE_ONE == 1 THEN
+  IF n_hit == 0 THEN
+    FAIL "nothing extracted"
+    EXIT 2 "extract empty"
+  END
+END
+
+SYS JOIN out_dir "EXTRACT_ROWS.txt"
+LET rows_path = LAST
+SYS WRITE rows_path bag
+SYS EXIST rows_path
+ASSERT EXIST == 1
+
+SYS STR n_hit
+LET s_hit = LAST
+SYS STR n_files
+LET s_files = LAST
+SYS STR n_lines
+LET s_lines = LAST
+SYS STR n_skip
+LET s_skip = LAST
+SYS STR n_miss
+LET s_miss = LAST
+SYS LINES bag
+SYS STR LAST_N
+LET s_bag = LAST
+
+LET tpl = "schema=cubalc.log_field_extract.v1 date={{DATE}} host={{HOST}} files={{FILES}} lines={{LINES}} hit={{HIT}} skip={{SKIP}} miss={{MISS}} bag={{BAG}}"
+SYS REPLACEALL tpl "{{DATE}}" xtr_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" xtr_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{FILES}}" s_files
+LET tpl = LAST
+SYS REPLACEALL tpl "{{LINES}}" s_lines
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HIT}}" s_hit
+LET tpl = LAST
+SYS REPLACEALL tpl "{{SKIP}}" s_skip
+LET tpl = LAST
+SYS REPLACEALL tpl "{{MISS}}" s_miss
+LET tpl = LAST
+SYS REPLACEALL tpl "{{BAG}}" s_bag
+LET tpl = LAST
+
+SYS JOIN out_dir "EXTRACT_REPORT.txt"
+LET plate = LAST
+SYS WRITE plate tpl
+SYS APPEND plate ""
+SYS JOINLINES " || " bag
+SYS APPEND plate LAST
+ASSERT OK == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "log_field_extract: done"
+PRINT "xtr" n_files n_lines n_hit n_skip n_miss
+PRINT_JSON n_files n_lines n_hit n_skip n_miss ACTION STATUS_OK
+STATUS
+CLEAR_ERR "xtr clean"
+EXIT 0 "extract ok"
