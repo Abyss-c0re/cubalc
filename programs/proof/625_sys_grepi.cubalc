@@ -1,0 +1,71 @@
+# SYS GREPI / IGREP / GREP I — case-insensitive newline field filter
+# Usability: log triage without shell grep -i (case-sensitive GREP kept)
+
+HOLD_FLASH 1
+
+LET S = "Error: boom\ninfo ok\nERROR fatal\nWarn: x\nerror light"
+
+# case-sensitive GREP only exact case
+SYS GREP "Error" S
+ASSERT GREP_N == 1
+SYS HAS LAST "Error: boom"
+ASSERT LAST_N == 1
+SYS HAS LAST "ERROR"
+ASSERT LAST_N == 0
+
+# GREPI matches all case folds
+SYS GREPI "error" S
+ASSERT OK == 1
+ASSERT GREP_N == 3
+SYS HAS LAST "Error: boom"
+ASSERT LAST_N == 1
+SYS HAS LAST "ERROR fatal"
+ASSERT LAST_N == 1
+SYS HAS LAST "error light"
+ASSERT LAST_N == 1
+SYS HAS LAST "info"
+ASSERT LAST_N == 0
+
+# IGREP alias
+SYS IGREP "WARN" S
+ASSERT GREP_N == 1
+SYS HAS LAST "Warn: x"
+ASSERT LAST_N == 1
+
+# SYS GREP I form
+SYS GREP I "ErRoR" S
+ASSERT GREP_N == 3
+
+# GREP ICASE form
+SYS GREP ICASE "warn" S
+ASSERT GREP_N == 1
+
+# FILTERI alias
+SYS FILTERI "INFO" S
+ASSERT GREP_N == 1
+SYS EQS LAST "info ok"
+ASSERT LAST_N == 1
+
+# invert case-insensitive
+SYS GREPVI "error" S
+ASSERT GREP_N == 2
+SYS HAS LAST "info ok"
+ASSERT LAST_N == 1
+SYS HAS LAST "Warn: x"
+ASSERT LAST_N == 1
+SYS HAS LAST "Error"
+ASSERT LAST_N == 0
+
+# chain after LIST (lib names are lowercase-ish; icase still works)
+SYS LIST "programs/lib"
+SYS GREPI "HOLD"
+ASSERT GREP_N >= 1
+SYS HAS LAST "hold_seed.cubalc"
+ASSERT LAST_N == 1
+
+# default source LAST
+LET T = "Alpha\nbeta\nALPHA"
+SYS GREPI "alpha" T
+ASSERT GREP_N == 2
+
+PRINT "sys_grepi ok"

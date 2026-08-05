@@ -111,6 +111,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 81. ~~**`SYS JOINLINES` / `PASTE`**~~ **done** (join newline fields with sep · anti-SPLIT reports).
 82. ~~**`SYS REPLACEALL` / `GSUB`**~~ **done** (all-occurrence subst · plate templates).
 83. ~~**`SYS APPEND` / `LOG` catalog**~~ **done** (forms/search/HELP · history lines · resolve_str_arg).
+84. ~~**`SYS GREPI` / `IGREP`**~~ **done** (case-insensitive newline filter · log triage).
 
 ## Tick protocol
 

@@ -1505,21 +1505,34 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     /* SYS GREP|FILTER needle [str|LAST] — keep newline fields containing needle.
-     * SYS GREPV|VGREP needle [str] — invert (drop matches).
-     * LAST = kept lines (newline-joined); LAST_N/GREP_N = count kept.
-     * Empty needle keeps all (GREP) or drops all (GREPV). Soft empty → OK=1 LAST_N=0.
-     * Usability: filter SYS LIST basenames without shell awk/grep. */
+     * SYS GREPV|VGREP — invert. SYS GREPI|IGREP — case-insensitive.
+     * SYS GREP I|ICASE|-I needle — same as GREPI. GREPVI for invert+icase.
+     * LAST = kept lines; LAST_N/GREP_N = count. Empty needle: GREP keeps all.
+     * Usability: filter LIST/logs without shell grep -i. */
     if (kw(&L->cur,"GREP") || kw(&L->cur,"FILTER") || kw(&L->cur,"MATCHLINES") ||
         kw(&L->cur,"GREPV") || kw(&L->cur,"VGREP") || kw(&L->cur,"FILTERV") ||
-        kw(&L->cur,"NOMATCH")){
+        kw(&L->cur,"NOMATCH") ||
+        kw(&L->cur,"GREPI") || kw(&L->cur,"IGREP") || kw(&L->cur,"FILTERI") ||
+        kw(&L->cur,"GREPVI") || kw(&L->cur,"VGREPI") || kw(&L->cur,"IFILTERV")){
       int invert = (kw(&L->cur,"GREPV") || kw(&L->cur,"VGREP") ||
-                    kw(&L->cur,"FILTERV") || kw(&L->cur,"NOMATCH"));
+                    kw(&L->cur,"FILTERV") || kw(&L->cur,"NOMATCH") ||
+                    kw(&L->cur,"GREPVI") || kw(&L->cur,"VGREPI") ||
+                    kw(&L->cur,"IFILTERV"));
+      int icase = (kw(&L->cur,"GREPI") || kw(&L->cur,"IGREP") ||
+                   kw(&L->cur,"FILTERI") || kw(&L->cur,"GREPVI") ||
+                   kw(&L->cur,"VGREPI") || kw(&L->cur,"IFILTERV"));
       char needle[256]="", src[CUBALC_HOST_STR_MAX];
       char out[CUBALC_HOST_STR_MAX];
       const char *p, *start;
       size_t olen = 0;
       long kept = 0;
       lex_next(L);
+      /* optional I / ICASE / -I after plain GREP/FILTER */
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") || kw(&L->cur,"IGNORECASE") ||
+                     kw(&L->cur,"-I") || kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
       src[0] = 0;
       if (resolve_str_arg(vm, L, src, sizeof src) != 0)
@@ -1537,8 +1550,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
             if (flen >= sizeof field) flen = sizeof field - 1;
             memcpy(field, start, flen);
             field[flen] = 0;
-            if (needle[0] == 0) hit = 1;
-            else hit = (strstr(field, needle) != NULL) ? 1 : 0;
+            if (needle[0] == 0) {
+              hit = 1;
+            } else if (!icase) {
+              hit = (strstr(field, needle) != NULL) ? 1 : 0;
+            } else {
+              /* case-insensitive substring */
+              size_t nl = strlen(needle), fi;
+              hit = 0;
+              for (fi = 0; field[fi] && !hit; fi++) {
+                size_t j;
+                for (j = 0; j < nl; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nl) hit = 1;
+              }
+            }
             if (invert) hit = !hit;
             if (hit) {
               if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
@@ -2392,6 +2423,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TAIL", "SYS TAIL [str] — last newline field"},
       {"SYS GREP", "SYS GREP|FILTER needle [str] — keep newline fields containing needle"},
       {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
+      {"SYS GREPI", "SYS GREPI|IGREP|GREP I needle [str] — case-insensitive GREP"},
+      {"SYS GREPVI", "SYS GREPVI|VGREPI needle [str] — case-insensitive invert GREP"},
       {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
       {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
