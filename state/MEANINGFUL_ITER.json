@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 132,
-  "version": "1.15.157-usability",
-  "item": "SYS KVDEL / DELKV drop key:val bag field",
-  "item_id": 165,
-  "title": "SYS KVDEL|DELKV bag key [sep] — drop first key:val field",
-  "commit": "4be2ff0fc9f8622a43b105bdc6e07dc9fd65bc86",
-  "summary": "SYS KVDEL/DELKV remove FREQ/plate key without FINDLINE+DROPNTH. Soft miss OK. selftest 132.",
+  "iter": 133,
+  "version": "1.15.158-usability",
+  "item": "SYS LOOKUP bag key OR fallback",
+  "item_id": 166,
+  "title": "SYS LOOKUP|KVGET bag key [sep] OR|DEFAULT fallback",
+  "commit": "d8cfd36e3c986e35b273e6086d56b44de84e0932",
+  "summary": "LOOKUP OR fallback like ENV/ARG — FREQ defaults without IF EMPTY. selftest 133.",
   "proofs": [
-    "705_sys_kvdel",
-    "selftest n_pass=132"
+    "706_sys_lookup_or",
+    "selftest n_pass=133"
   ],
-  "when": "2026-08-05T23:44:16Z",
+  "when": "2026-08-05T23:54:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4be2ff0fc9f8622a43b105bdc6e07dc9fd65bc86"
+  "sha": "d8cfd36e3c986e35b273e6086d56b44de84e0932"
 }
