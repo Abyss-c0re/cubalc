@@ -1,0 +1,70 @@
+# SYS FILL / REPEATL — bag of n copies of a value
+# Usability: default status columns for ZIP without EACH rebuild
+
+HOLD_FLASH 1
+
+# basic fill
+SYS FILL 3 "idle"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT FILL_N == 3
+SYS EQS LAST "idle\nidle\nidle"
+ASSERT LAST_N == 1
+
+# n=1
+SYS FILL 1 "solo"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# n=0 → empty
+SYS FILL 0 "x"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# negative clamps to empty
+SYS FILL -2 "x"
+ASSERT LAST_N == 0
+
+# numeric value stringified
+SYS FILL 2 42
+ASSERT LAST_N == 2
+SYS EQS LAST "42\n42"
+ASSERT LAST_N == 1
+
+# aliases
+SYS REPEATL 2 "z"
+ASSERT LAST_N == 2
+SYS EQS LAST "z\nz"
+ASSERT LAST_N == 1
+
+SYS BAGFILL 2 "ok"
+ASSERT LAST_N == 2
+SYS EQS LAST "ok\nok"
+ASSERT LAST_N == 1
+
+# var value
+LET st = "pending"
+SYS FILL 3 st
+ASSERT LAST_N == 3
+SYS EQS LAST "pending\npending\npending"
+ASSERT LAST_N == 1
+
+# agent pattern: ZIP names with default statuses
+LET names = "alice\nbob\ncarol"
+SYS LINES names
+LET n = LAST_N
+SYS FILL n "idle"
+LET defs = LAST
+SYS ZIP names defs
+SYS EQS LAST "alice:idle\nbob:idle\ncarol:idle"
+ASSERT LAST_N == 1
+
+# pad with empty fields
+SYS FILL 2 ""
+ASSERT LAST_N == 2
+SYS EQS LAST "\n"
+ASSERT LAST_N == 1
+
+PRINT "sys_fill ok"
