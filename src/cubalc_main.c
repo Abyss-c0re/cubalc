@@ -1235,6 +1235,10 @@ static int cmd_showcase(void) {
 
 int main(int argc, char **argv) {
   const char *cmd = argc > 1 ? argv[1] : "genesis";
+  /* Usability: cubalc -e CODE ≡ cubalc run -e CODE (no subcommand required). */
+  if (strcmp(cmd, "-e") == 0 || strcmp(cmd, "--expr") == 0 ||
+      strcmp(cmd, "--code") == 0 || strcmp(cmd, "-c") == 0)
+    cmd = "run";
   if (strcmp(cmd, "genesis") == 0)
     return cmd_genesis(argc > 2 ? argv[2] :
       "NEXUS_COORD v1 | from=BlackCube | type=heartbeat | hold_flash=1 |");
@@ -1436,13 +1440,18 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "run") == 0 || strcmp(cmd, "eval") == 0) {
     /* Real language entry: parse + evaluate a .cubalc source program.
      * Usability: cubalc run - | eval - reads program from stdin (agents pipe).
+     * Usability: cubalc run -e CODE | --expr|--code|-c — inline source (no temp file).
+     *   multiple -e join with newline; \n \t \\ escapes expanded in each chunk.
      * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok).
      * Strict: -s|--strict or CUBALC_STRICT=1 → soft last_err fails exit+plate ok. */
     int quiet = 0, strict = 0, i, rc;
     int plate_ok;
+    int have_expr = 0;
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
+    char *expr_buf = NULL;
+    size_t expr_len = 0, expr_cap = 0;
     FILE *trace;
     FILE *devnull = NULL;
     cubalc_run_result rr;
@@ -1454,7 +1463,10 @@ int main(int argc, char **argv) {
     if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
         strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
       strict = 1;
-    for (i = 2; i < argc; i++) {
+    /* Scan from argv[1] so top-level cubalc -e CODE (cmd rewritten to run) works. */
+    for (i = 1; i < argc; i++) {
+      if (!strcmp(argv[i], "run") || !strcmp(argv[i], "eval"))
+        continue;
       if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet") ||
           !strcmp(argv[i], "--plate") || !strcmp(argv[i], "--json-only")) {
         quiet = 1;
@@ -1465,14 +1477,69 @@ int main(int argc, char **argv) {
         strict = 1;
         continue;
       }
-      if (!src_path)
+      if (!strcmp(argv[i], "-e") || !strcmp(argv[i], "--expr") ||
+          !strcmp(argv[i], "--code") || !strcmp(argv[i], "-c")) {
+        const char *chunk;
+        char unesc[CUBALC_MAX_SRC];
+        size_t ulen = 0, need;
+        size_t j;
+        if (i + 1 >= argc) {
+          fprintf(stderr, "cubalc run: %s needs a code argument\n", argv[i]);
+          free(expr_buf);
+          return 2;
+        }
+        chunk = argv[++i];
+        /* expand \n \t \r \\ in chunk for shell-friendly one-liners */
+        for (j = 0; chunk[j] && ulen + 1 < sizeof unesc; j++) {
+          if (chunk[j] == '\\' && chunk[j + 1]) {
+            char n = chunk[++j];
+            if (n == 'n') unesc[ulen++] = '\n';
+            else if (n == 't') unesc[ulen++] = '\t';
+            else if (n == 'r') unesc[ulen++] = '\r';
+            else if (n == '0') unesc[ulen++] = '\0';
+            else unesc[ulen++] = n;
+          } else {
+            unesc[ulen++] = chunk[j];
+          }
+        }
+        unesc[ulen] = 0;
+        need = expr_len + (expr_len ? 1 : 0) + ulen + 1;
+        if (need > expr_cap) {
+          size_t ncap = expr_cap ? expr_cap : 512;
+          char *nb;
+          while (ncap < need) ncap *= 2;
+          if (ncap > (size_t)CUBALC_MAX_SRC + 8)
+            ncap = (size_t)CUBALC_MAX_SRC + 8;
+          nb = realloc(expr_buf, ncap);
+          if (!nb) {
+            free(expr_buf);
+            printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<expr>\",\"err\":\"oom\"}\n");
+            return 2;
+          }
+          expr_buf = nb;
+          expr_cap = ncap;
+        }
+        if (expr_len && expr_len + 1 < expr_cap)
+          expr_buf[expr_len++] = '\n';
+        if (ulen > expr_cap - expr_len - 1)
+          ulen = expr_cap - expr_len - 1;
+        memcpy(expr_buf + expr_len, unesc, ulen);
+        expr_len += ulen;
+        expr_buf[expr_len] = 0;
+        have_expr = 1;
+        continue;
+      }
+      if (!src_path && argv[i][0] != '-')
         src_path = argv[i];
     }
-    if (!src_path) {
+    if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s|--strict] <file.cubalc>|-\n"
-              "       cubalc eval [-q] [-s] <file.cubalc>|-   # - = stdin\n"
+              "usage: cubalc run [-q] [-s] [-e CODE]... <file.cubalc>|-\n"
+              "       cubalc eval [-q] [-s] [-e CODE]... <file>|-\n"
+              "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
+              "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
               "       CUBALC_QUIET=1  → plate only · CUBALC_STRICT=1 → soft last_err fails\n");
+      free(expr_buf);
       return 2;
     }
     if (quiet) {
@@ -1481,38 +1548,52 @@ int main(int argc, char **argv) {
     } else {
       trace = stdout;
     }
-    src_label = src_path;
-    if (!strcmp(src_path, "-") || !strcmp(src_path, "--stdin") ||
-        !strcmp(src_path, "/dev/stdin")) {
-      char *buf = malloc((size_t)CUBALC_MAX_SRC + 1);
-      size_t n = 0;
-      if (!buf) {
+    if (have_expr) {
+      src_label = "<expr>";
+      if (expr_len == 0) {
+        free(expr_buf);
         if (devnull) fclose(devnull);
-        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\",\"err\":\"oom\"}\n");
+        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<expr>\","
+               "\"err\":\"empty -e expression\"}\n");
         return 2;
       }
-      n = fread(buf, 1, (size_t)CUBALC_MAX_SRC, stdin);
-      buf[n] = 0;
-      if (n == 0) {
-        free(buf);
-        if (devnull) fclose(devnull);
-        printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\","
-               "\"err\":\"empty stdin — pipe a .cubalc program\"}\n");
-        return 2;
-      }
-      src_label = "<stdin>";
-      rc = cubalc_run_source(buf, n, src_label, &rr, trace);
-      free(buf);
-    } else if (strstr(src_path, ".cblc")) {
-      cubalc_image img;
-      if (cubalc_isa_load(&img, src_path) != 0) {
-        if (devnull) fclose(devnull);
-        printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
-        return 2;
-      }
-      rc = cubalc_jit_exec(&img, &rr, trace);
+      rc = cubalc_run_source(expr_buf, expr_len, src_label, &rr, trace);
+      free(expr_buf);
+      expr_buf = NULL;
     } else {
-      rc = cubalc_run_file(src_path, &rr, trace);
+      src_label = src_path;
+      if (!strcmp(src_path, "-") || !strcmp(src_path, "--stdin") ||
+          !strcmp(src_path, "/dev/stdin")) {
+        char *buf = malloc((size_t)CUBALC_MAX_SRC + 1);
+        size_t n = 0;
+        if (!buf) {
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\",\"err\":\"oom\"}\n");
+          return 2;
+        }
+        n = fread(buf, 1, (size_t)CUBALC_MAX_SRC, stdin);
+        buf[n] = 0;
+        if (n == 0) {
+          free(buf);
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\","
+                 "\"err\":\"empty stdin — pipe a .cubalc program\"}\n");
+          return 2;
+        }
+        src_label = "<stdin>";
+        rc = cubalc_run_source(buf, n, src_label, &rr, trace);
+        free(buf);
+      } else if (strstr(src_path, ".cblc")) {
+        cubalc_image img;
+        if (cubalc_isa_load(&img, src_path) != 0) {
+          if (devnull) fclose(devnull);
+          printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
+          return 2;
+        }
+        rc = cubalc_jit_exec(&img, &rr, trace);
+      } else {
+        rc = cubalc_run_file(src_path, &rr, trace);
+      }
     }
     if (devnull) fclose(devnull);
     /* Usability: strict mode treats sticky soft last_err as process failure
@@ -1710,6 +1791,7 @@ int main(int argc, char **argv) {
       {"sys_moveline", "programs/proof/648_sys_moveline.cubalc", "SYS MOVELINE move bag field by index"},
       {"sys_countline", "programs/proof/649_sys_countline.cubalc", "SYS COUNTLINE count exact bag field matches"},
       {"sys_setmatch", "programs/proof/650_sys_setmatch.cubalc", "SYS SETMATCH replace first exact bag field"},
+      {"run_expr", "cli:run -e", "cubalc run -e inline one-liner (no temp file)"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1734,7 +1816,8 @@ int main(int argc, char **argv) {
     /* Cap at rows[] size so new usability proofs are not silently skipped. */
     for (i = 0; i < n && nrow < (int)(sizeof rows / sizeof rows[0]); i++) {
       cubalc_run_result rr;
-      int missing = (access(tests[i].path, R_OK) != 0);
+      int is_cli = (strncmp(tests[i].path, "cli:", 4) == 0);
+      int missing = is_cli ? 0 : (access(tests[i].path, R_OK) != 0);
       int ok = 0;
       memset(&rr, 0, sizeof rr);
       snprintf(rows[nrow].id, sizeof rows[0].id, "%s", tests[i].id);
@@ -1750,6 +1833,48 @@ int main(int argc, char **argv) {
         rows[nrow].asserts_fail = 0;
         if (!json_only)
           printf("%s\tFAIL\t-\t%s (missing)\n", tests[i].id, tests[i].hint);
+      } else if (is_cli && !strcmp(tests[i].id, "run_expr")) {
+        /* Live CLI smoke: cubalc run -e (no temp file). Uses argv[0] binary. */
+        char cmd[768], line[512];
+        FILE *fp;
+        int saw_ok = 0, saw_asserts = 0;
+        int prc;
+        snprintf(cmd, sizeof cmd,
+                 "'%s' run -q -e 'HOLD_FLASH 1\\nASSERT 1 == 1\\nASSERT 2 == 2' 2>/dev/null",
+                 argv[0]);
+        fp = popen(cmd, "r");
+        if (!fp) {
+          n_fail++;
+          rows[nrow].ok = 0;
+          snprintf(rows[nrow].err, sizeof rows[0].err, "popen failed");
+          if (!json_only)
+            printf("%s\tFAIL\tcli\t%s — popen\n", tests[i].id, tests[i].hint);
+        } else {
+          while (fgets(line, sizeof line, fp)) {
+            if (strstr(line, "\"ok\":true") && strstr(line, "<expr>"))
+              saw_ok = 1;
+            if (strstr(line, "asserts_ok\":2"))
+              saw_asserts = 1;
+          }
+          prc = pclose(fp);
+          ok = (prc == 0 && saw_ok && saw_asserts);
+          rows[nrow].ok = ok ? 1 : 0;
+          rows[nrow].asserts_ok = ok ? 2 : 0;
+          rows[nrow].asserts_fail = ok ? 0 : 1;
+          if (ok) {
+            n_pass++;
+            aok += 2;
+            if (!json_only)
+              printf("%s\tPASS\t2\t%s\n", tests[i].id, tests[i].hint);
+          } else {
+            n_fail++;
+            afail += 1;
+            snprintf(rows[nrow].err, sizeof rows[0].err, "run -e plate not ok");
+            if (!json_only)
+              printf("%s\tFAIL\tcli\t%s — %s\n", tests[i].id, tests[i].hint,
+                     rows[nrow].err);
+          }
+        }
       } else {
         int rc = cubalc_run_file(tests[i].path, &rr, NULL);
         ok = (rc == 0 && rr.ok);
