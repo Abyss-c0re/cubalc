@@ -1,70 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 37,
-  "program": "programs/realworld/alert_storm_heatmap.cubalc",
-  "theme": "alert storm heatmap FREQ HIST MAPREPLACE UPPERALL soft thresh",
-  "version": "1.15.131-usability",
+  "iter": 38,
+  "program": "programs/realworld/api_noise_rank.cubalc",
+  "theme": "api noise rank CUTALL FREQ SORTFREQ TAKE access path soft",
+  "version": "1.15.133-usability",
   "pass": true,
   "tests": [
     {
-      "name": "multingest_heat",
-      "cmd": "multingest 7 tokens; heat \u2192 disk_full:4 mem_high:2 cpu_hot:1",
+      "name": "loadlines_peel",
+      "cmd": "loadlines ||| access lines; peel col1 paths",
       "ok": true,
-      "note": "SYS FREQ first-seen order plate"
+      "note": "SPLIT ||| glue + CUTALL path column"
+    },
+    {
+      "name": "rank_sortfreq",
+      "cmd": "rank top5 → /api/users:5 /api/orders:3 … DESC",
+      "ok": true,
+      "note": "FREQ+SORTFREQ+TAKE pipeline"
     },
     {
       "name": "storm_thresh",
-      "cmd": "storm 3 hot rc0; storm 10 calm soft; REQUIRE EXIT 2",
+      "cmd": "storm 3 hot; storm 10 calm soft/REQUIRE EXIT 2",
       "ok": true,
-      "note": "EACH AFTER: NUM CMP thresh"
+      "note": "rank count peel + CMP"
     },
     {
-      "name": "count_vs_freq",
-      "cmd": "COUNTLINE disk_full == 4 matches FREQ count",
+      "name": "top_take",
+      "cmd": "top 2 from rank plate",
       "ok": true,
-      "note": "raw multiplicity vs heat unique rows"
+      "note": "TAKE soft short bag ok"
     },
     {
-      "name": "top_substring",
-      "cmd": "top GREP disk hits disk_full:4; zzzz soft/REQUIRE",
+      "name": "pin_grep_moveline",
+      "cmd": "pin /api/orders → first raw line; ghost REQUIRE",
       "ok": true,
-      "note": "substring false friend class"
+      "note": "GREP needle substring + MOVELINE"
     },
     {
-      "name": "pin_moveline",
-      "cmd": "pin mem_high to front; ghost REQUIRE EXIT 2",
-      "ok": true,
-      "note": "FINDLINE -1 miss + MOVELINE"
-    },
-    {
-      "name": "norm_mapreplace_upper",
-      "cmd": "ingest /alerts/Disk_Full\u2026; MAPREPLACE+UPPERALL \u2192 DISK_FULL:2",
-      "ok": true,
-      "note": "case fold merges disk_full variants"
-    },
-    {
-      "name": "seed_unique",
-      "cmd": "seed a b a c \u2192 3 unique fields",
-      "ok": true,
-      "note": "HASLINE skip dups"
-    },
-    {
-      "name": "heat_empty_require",
-      "cmd": "heat empty REQUIRE EXIT 2",
+      "name": "peel_empty_require",
+      "cmd": "peel empty raw REQUIRE EXIT 2",
       "ok": true,
       "note": "soft empty path"
     },
     {
-      "name": "freq_colon_probe",
-      "cmd": "FREQ a:b \u2192 a:b:2; AFTER first : \u2192 b:2 not count",
+      "name": "cutall_ghost_empty",
+      "cmd": "CUTALL col OOR → empty fields → FREQ :N ghost",
       "ok": true,
-      "note": "colon in token breaks peel"
+      "note": "missing column pollutes heatmap"
+    },
+    {
+      "name": "url_colon_freq",
+      "cmd": "FREQ http://heavy → http://heavy:3; SORTFREQ still DESC",
+      "ok": true,
+      "note": "SORTFREQ appears last-colon peel; storm AFTER first still breaks"
+    },
+    {
+      "name": "drop_has",
+      "cmd": "has/drop exact; drop miss REQUIRE",
+      "ok": true,
+      "note": "exact-field ops"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "106/106 pass incl freq mapreplace upperall"
+      "note": "108/108 pass incl cutall sortfreq"
     }
   ],
   "weaknesses": [
@@ -72,88 +72,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "FREQ name:count is ambiguous when token contains colon",
-      "detail": "SYS FREQ of field a:b yields a:b:2. Peeling count with AFTER first ':' returns b:2; NUM fails; storm scan silently skips. No last-colon split or FREQ with safe sep when name has sep.",
-      "repro": "FREQ 'a:b\\na:b' \u2192 a:b:2; AFTER \u2192 b:2"
+      "title": "CUTALL missing column yields empty fields that FREQ as ghost :N",
+      "detail": "CUTALL col past end keeps line count with empty strings; FREQ produces ':2' style rows that look like real rank entries. Agents ranking wrong column pollute top-N silently.",
+      "repro": "CUTALL log ' ' 5; FREQ → ':N'"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|bag",
-      "title": "FREQ is first-seen order not count-sorted",
-      "detail": "No native top-N by frequency. SORTN on heat plate sorts by string of whole name:count (disk_full:4 before cpu_hot:1 lexically wrong for rank). Agents cannot get hottest-first without custom EACH rebuild.",
-      "repro": "FREQ z y z x z y \u2192 z:3\\ny:2\\nx:1 first-seen not sorted by count"
+      "area": "host|cli",
+      "title": "No multi-line ARG — loadlines needs ||| glue hack",
+      "detail": "Cannot pass real access log lines with spaces via WORDS; agents invent separators. Soft READ file is alternative but loadlines is ARG-bound.",
+      "repro": "WORDS 'GET /api 200' splits to three tokens"
     },
     {
       "id": "W3",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "MAPREPLACE/UPPERALL/FREQ non-mutate named bags",
-      "detail": "Must LET bag = LAST after each; forgetting leaves dirty plate on WRITE.",
-      "repro": "UPPERALL bag; WRITE path bag still mixed case without LET"
+      "title": "FREQ encoding path:count still ambiguous for URLs with ://",
+      "detail": "FREQ of http://heavy → http://heavy:3. SORTFREQ sorted correctly (likely last-colon peel) but storm/agent AFTER first ':' peels '//heavy:3' and NUM fails — dual peel semantics across forms.",
+      "repro": "AFTER 'http://heavy:3' ':' → '//heavy:3'"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|str",
-      "title": "AFTER peels first delimiter only \u2014 no RAFTER/last-colon",
-      "detail": "Storm count peel and multi-field tokens need last-segment extract. Agents stack SPLIT+TAIL or fragile heuristics.",
-      "repro": "AFTER 'a:b:2' ':' \u2192 'b:2'"
+      "area": "host|bag",
+      "title": "CUTALL/FREQ/SORTFREQ/TAKE all non-mutate",
+      "detail": "Pipeline needs LET after every step; easy to WRITE stale raw instead of rank.",
+      "repro": "FREQ paths; SORTFREQ paths still unsorted without LET"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "GREP heat substring false friends",
-      "detail": "top disk matches disk_full:4 and would match diskette:1. No field-prefix or token-boundary GREP on heat rows.",
-      "repro": "GREP disk on heat plate"
+      "title": "Pin uses GREP substring — false friends",
+      "detail": "pin /api matches /api/users and /api/orders and /apiv2. No whole-field or word-boundary GREP.",
+      "repro": "GREP /api on raw access bag"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT multi-line LAST often prints length not content under some paths",
-      "detail": "PRINT_JSON/plate still needed for heat inspection; agent logging of FREQ bags is awkward.",
-      "repro": "PRINT freq LAST after FREQ multi-line"
+      "area": "host|bag",
+      "title": "No SQUEEZE empty after CUTALL in pipeline",
+      "detail": "Agents must remember SQUEEZE BLANK after bad peels; rank does not auto-drop empty path tokens.",
+      "repro": "CUTALL OOR then FREQ counts empties"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last alert/heat line without $.",
-      "repro": "heat; cat -A HEAT.txt"
+      "title": "WRITE omits final trailing newline",
+      "detail": "cat -A last rank/access line without $.",
+      "repro": "rank; cat -A RANK.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|bag",
-      "title": "No FREQ threshold filter / FREQWHERE",
-      "detail": "Storm gate requires EACH+AFTER+NUM+CMP over heat. Common ops pattern deserves host form keep rows count>=N.",
-      "repro": "storm action reimplements threshold scan"
+      "title": "Inconsistent colon peel: SORTFREQ vs AFTER",
+      "detail": "SORTFREQ ranks URL paths correctly; manual storm peel with AFTER first colon fails. Agents need documented last-colon form (RAFTER) or FREQ with safer sep default for paths.",
+      "repro": "SORTFREQ ok on http://x:N; AFTER first breaks"
     }
   ],
   "workarounds": [
-    "Ban ':' in alert tokens before FREQ; or use FREQ custom sep '=' if tokens lack '='",
-    "Always LET bag/heat = LAST after MAPREPLACE/UPPERALL/FREQ",
-    "Prefer COUNTLINE for single-token multiplicity; FREQ for multi-token heatmap",
-    "Normalize with MAPREPLACE+UPPERALL before heat to merge case/path variants",
-    "Use HASLINE/EQS not GREP for exact heat row checks"
+    "Validate CUTALL_HIT / reject empty path tokens with SQUEEZE BLANK before FREQ",
+    "Use loadlines ||| or READ file for multi-token access lines",
+    "Prefer SORTFREQ over manual AFTER peel for rank order",
+    "For storm on URL paths use SPLIT+TAIL count or FREQ custom sep '='",
+    "Always LET after CUTALL/FREQ/SORTFREQ/TAKE"
   ],
   "language_gaps": [
-    "FREQ safe encoding when name contains sep; or count as separate bag",
-    "FREQ SORT BY COUNT DESC / top-N form",
-    "RAFTER / split-last delimiter peel",
-    "FREQWHERE bag thresh keep hot rows",
-    "In-place MAPREPLACE/UPPERALL/FREQ",
-    "PRINT_JSON newlines; WRITE force trailing NL"
+    "CUTALL option to drop missing-column lines",
+    "Multi-line ARG or ARG-file ingest form",
+    "RAFTER last-delimiter + unified FREQ encoding",
+    "FREQ sep default that cannot appear in keys",
+    "Word-boundary GREP for pin needles",
+    "WRITE force trailing NL; PRINT_JSON newlines"
   ],
   "issues_faced": [
-    "Confirmed FREQ colon ambiguity breaks AFTER count peel \u2014 agents must sanitize tokens",
-    "Storm calm path needs REQUIRE flag; soft FAIL+CLEAR_ERR works",
-    "Norm merge Disk_Full+disk_full \u2192 DISK_FULL:2 proves UPPERALL necessity pre-FREQ",
-    "No language bug fix this fire \u2014 document for MEANINGFUL_ITER (RAFTER, FREQ top-N)"
+    "WORDS cannot ingest 'METHOD path status' — invented ||| loadlines",
+    "CUTALL OOR silent empty fields → ghost FREQ rows (high agent footgun)",
+    "URL paths work with SORTFREQ but break AFTER-based storm peel — dual semantics",
+    "SORTFREQ closed prior top-N gap from iter37 W2 — still encoding/colon gaps remain"
   ],
-  "commit": "4a040b87be455495c9b01e8fc8cda6892ee020db",
-  "ts": "2026-08-05T19:29:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T19:54:00Z"
 }

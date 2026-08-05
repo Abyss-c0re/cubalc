@@ -1,0 +1,727 @@
+# api_noise_rank.cubalc — durable access-log path rank plate under STATE
+#
+# Real use: agents ingest access lines "METHOD path status", peel paths with
+# CUTALL, FREQ+SORTFREQ for top noisy endpoints (rate-limit / WAF candidates)
+# without shell awk/sort.
+#
+# Raw plate: full access lines
+# Path plate: peeled path tokens (multiplicity kept)
+# Rank plate: path:count sorted by count DESC (SORTFREQ)
+#
+# Actions (CUBALC_ARG0 / CUBALC_NR_ACTION):
+#   list     — depths of raw/paths/rank (default)
+#   ingest   — PUSH one raw line (ARG1)
+#   multingest — WORDS not good for lines with spaces; use loadlines instead
+#   loadlines — PUSH each line from ARG1 where lines are ||| separated
+#   peel     — CUTALL raw " " 1 → paths plate (path column); soft empty
+#   norm     — MAPREPLACE paths PREFIX→REPL (id collapse)
+#   rank     — FREQ paths → SORTFREQ DESC → optional TAKE N → RANK plate
+#   top      — TAKE N from rank (ARG1=N); soft empty
+#   storm    — any rank count >= THRESH; soft/REQUIRE calm
+#   pin      — MOVELINE first raw line containing needle to front
+#   drop     — REMOVELINE exact raw line
+#   has      — HASLINE exact raw
+#   count    — COUNTLINE exact raw
+#   clear    — empty raw (+ paths/rank via clearall)
+#   clearall — wipe raw, paths, rank
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=loadlines CUBALC_ARG1='GET /api/users 200|||GET /api/users 200|||POST /api/orders 500' \
+#     ./out/cubalc run -q -s programs/realworld/api_noise_rank.cubalc
+#   CUBALC_ARG0=peel ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=rank CUBALC_ARG1=5 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_NR_FILE=ACCESS.txt
+#   CUBALC_NR_PATHS=PATHS.txt
+#   CUBALC_NR_RANK=RANK.txt
+#   CUBALC_NR_REQUIRE=1
+#   CUBALC_NR_THRESH=3
+#   CUBALC_NR_TOPN=10
+#   CUBALC_NR_PREFIX=   # MAPREPLACE on paths
+#   CUBALC_NR_COL=1    # CUTALL column (0=method 1=path 2=status)
+#
+# Edges deliberately stressed:
+#   CUTALL missing col → empty fields → FREQ "":N ghost noise
+#   SORTFREQ peels count after last? uses first ":" — path with ":" breaks
+#   FREQ+SORTFREQ non-mutate; TAKE OOR soft short bag
+#   loadlines ||| glue — no true multi-line ARG (language gap)
+#   GREP pin needle substring false friends
+#   WRITE trailing NL; PRINT_JSON collapse; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "api_noise_rank: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ACCESS.txt"
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT KFILE = "RANK.txt"
+DEFAULT REPORT = "NOISE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 3
+DEFAULT TOPN = 10
+DEFAULT PREFIX = ""
+DEFAULT REPL = ""
+DEFAULT COL = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_NR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_NR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_NR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_NR_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_NR_PATHS" OR ""
+IF LAST_N > 0 THEN
+  LET PFILE = LAST
+END
+SYS ENV "CUBALC_NR_RANK" OR ""
+IF LAST_N > 0 THEN
+  LET KFILE = LAST
+END
+SYS ENV "CUBALC_NR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_NR_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+SYS ENV "CUBALC_NR_TOPN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET TOPN = LAST_N
+  END
+END
+SYS ENV "CUBALC_NR_PREFIX" OR ""
+IF LAST_N > 0 THEN
+  LET PREFIX = LAST
+END
+SYS ENV "CUBALC_NR_REPL" OR ""
+IF LAST_N > 0 THEN
+  LET REPL = LAST
+END
+SYS ENV "CUBALC_NR_COL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET COL = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET raw_path = LAST
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir KFILE
+LET rank_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR raw_path OR ""
+LET raw = LAST
+CLEAR_ERR "soft access load"
+SYS LINES raw
+LET depth0 = LAST_N
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS LINES paths
+LET path_n0 = LAST_N
+
+SYS READ OR rank_path OR ""
+LET rank = LAST
+CLEAR_ERR
+SYS LINES rank
+LET rank_n0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET paths_changed = 0
+LET rank_changed = 0
+LET note_msg = "ok"
+LET storm_n = 0
+LET max_c = 0
+LET unique_n = 0
+LET filtered = ""
+LET c = 0
+LET tok = ""
+LET idx = -1
+
+# ARG1 numeric overrides for rank/top/storm
+SYS EQS ACTION "rank"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET TOPN = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET TOPN = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "storm"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET THRESH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES raw
+  LET depth0 = LAST_N
+  SYS LINES paths
+  LET path_n0 = LAST_N
+  SYS LINES rank
+  LET rank_n0 = LAST_N
+  STATUS
+  PRINT "noiserank" depth0 path_n0 rank_n0 ACTION
+  PRINT_JSON depth0 path_n0 rank_n0 ACTION STATUS_OK
+  PRINT_JSON raw
+  PRINT_JSON paths
+  PRINT_JSON rank
+  LET note_msg = "list ok"
+END
+
+# --- ingest one raw line ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs line"
+  END
+  SYS PUSH raw NAME
+  LET raw = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- loadlines: ||| separated (no multi-line ARG) ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| separated lines in ARG1"
+  END
+  SYS SPLIT "|||" NAME
+  LET lines = LAST
+  EACH LINE AS ln IN lines
+    SYS BLANK ln
+    IF LAST_N == 0 THEN
+      SYS PUSH raw ln
+      LET raw = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "loaded lines"
+END
+
+# --- peel: CUTALL column from raw ---
+SYS EQS ACTION "peel"
+IF LAST_N == 1 THEN
+  NOTE "action peel"
+  SYS BLANK raw
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "peel empty raw"
+    FAIL "peel empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "peel empty"
+    END
+  ELSE
+    SYS MAX COL 0
+    LET COL = LAST_N
+    SYS CUTALL raw " " COL
+    LET paths = LAST
+    LET paths_changed = 1
+    SYS LINES paths
+    LET hit = LAST_N
+    LET note_msg = "peeled"
+    PRINT_JSON paths
+  END
+END
+
+# --- norm paths MAPREPLACE ---
+SYS EQS ACTION "norm"
+IF LAST_N == 1 THEN
+  NOTE "action norm"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "norm empty paths"
+    FAIL "norm empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "norm empty"
+    END
+  ELSE
+    SYS BLANK PREFIX
+    IF LAST_N == 0 THEN
+      SYS MAPREPLACE paths PREFIX REPL
+      LET paths = LAST
+      LET paths_changed = 1
+    END
+    SYS LINES paths
+    LET hit = LAST_N
+    LET note_msg = "normalized"
+  END
+END
+
+# --- rank: FREQ → SORTFREQ → TAKE ---
+SYS EQS ACTION "rank"
+IF LAST_N == 1 THEN
+  NOTE "action rank"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    # auto-peel if paths empty
+    SYS BLANK raw
+    IF LAST_N == 0 THEN
+      SYS MAX COL 0
+      LET COL = LAST_N
+      SYS CUTALL raw " " COL
+      LET paths = LAST
+      LET paths_changed = 1
+    END
+  END
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "rank empty paths"
+    FAIL "rank empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rank empty"
+    END
+  ELSE
+    SYS FREQ paths
+    LET rank = LAST
+    SYS SORTFREQ rank
+    LET rank = LAST
+    SYS MAX TOPN 1
+    LET TOPN = LAST_N
+    SYS TAKE TOPN rank
+    LET rank = LAST
+    LET rank_changed = 1
+    SYS LINES rank
+    LET unique_n = LAST_N
+    LET hit = unique_n
+    LET note_msg = "ranked"
+    PRINT_JSON rank
+  END
+END
+
+# --- top: TAKE from existing rank ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS BLANK rank
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "top no rank"
+    FAIL "top no rank"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top no rank"
+    END
+  ELSE
+    SYS MAX TOPN 1
+    LET TOPN = LAST_N
+    SYS TAKE TOPN rank
+    LET filtered = LAST
+    SYS LINES filtered
+    LET hit = LAST_N
+    IF hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "top empty take"
+      FAIL "top empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "top empty"
+      END
+    ELSE
+      LET note_msg = "top ok"
+    END
+    PRINT_JSON filtered
+  END
+END
+
+# --- storm: count >= THRESH on rank ---
+SYS EQS ACTION "storm"
+IF LAST_N == 1 THEN
+  NOTE "action storm"
+  SYS MAX THRESH 1
+  LET THRESH = LAST_N
+  SYS BLANK rank
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "storm no rank"
+    FAIL "storm no rank"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "storm no rank"
+    END
+  ELSE
+    LET storm_n = 0
+    LET max_c = 0
+    LET filtered = ""
+    EACH LINE AS row IN rank
+      SYS AFTER row ":"
+      LET tok = LAST
+      SYS PREPEND "" tok
+      SYS HEAD LAST
+      SYS NUM
+      IF OK == 1 THEN
+        LET c = LAST_N
+        SYS MAX max_c c
+        LET max_c = LAST_N
+        SYS CMP c THRESH
+        IF LAST_N >= 0 THEN
+          LET storm_n = storm_n + 1
+          SYS PUSH filtered row
+          LET filtered = LAST
+        END
+      END
+    END
+    LET hit = storm_n
+    IF storm_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "storm calm"
+      FAIL "storm calm"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "storm calm"
+      END
+    ELSE
+      LET note_msg = "storm hot"
+    END
+    PRINT_JSON filtered
+    PRINT "storm" storm_n max_c THRESH
+  END
+END
+
+# --- pin: first raw line GREP needle to front ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs needle"
+  END
+  SYS GREP NAME raw
+  LET filtered = LAST
+  SYS LINES filtered
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS HEAD filtered
+    LET tok = LAST
+    SYS FINDLINE raw tok
+    LET idx = LAST_N
+    SYS MOVELINE raw idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+    ELSE
+      LET raw = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- drop / has / count ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact line"
+  END
+  SYS HASLINE raw NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE raw NAME
+    LET raw = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+  SYS HASLINE raw NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs line"
+  END
+  SYS COUNTLINE raw NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+# --- clear / clearall ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET raw = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared raw"
+END
+
+SYS EQS ACTION "clearall"
+IF LAST_N == 1 THEN
+  NOTE "action clearall"
+  LET raw = ""
+  LET paths = ""
+  LET rank = ""
+  LET changed = 1
+  LET paths_changed = 1
+  LET rank_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared all"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "peel"
+LET k = k + LAST_N
+SYS EQS ACTION "norm"
+LET k = k + LAST_N
+SYS EQS ACTION "rank"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "storm"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearall"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE raw_path raw
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "raw write failed"
+  END
+  CLEAR_ERR
+END
+IF paths_changed > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF rank_changed > 0 THEN
+  SYS WRITE rank_path rank
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rank write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES raw
+LET depth1 = LAST_N
+SYS LINES paths
+LET path_n1 = LAST_N
+SYS LINES rank
+LET rank_n1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.noiserank.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "storm_n"
+LET report = LAST
+SYS STR storm_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_c"
+LET report = LAST
+SYS STR max_c
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "thresh"
+LET report = LAST
+SYS STR THRESH
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "topn"
+LET report = LAST
+SYS STR TOPN
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "path_n1"
+LET report = LAST
+SYS STR path_n1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rank_n1"
+LET report = LAST
+SYS STR rank_n1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "noiserank" ACTION hit miss storm_n max_c THRESH TOPN depth1 path_n1 rank_n1
+PRINT_JSON ACTION hit miss storm_n max_c THRESH TOPN depth1 path_n1 rank_n1 elapsed STATUS_OK
+PASS "noiserank tick"
+NOTE "api_noise_rank: done"
+CLEAR_ERR
+EXIT 0 "noiserank ok"
