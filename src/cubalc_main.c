@@ -1696,6 +1696,7 @@ int main(int argc, char **argv) {
       {"sys_mtime", "programs/proof/634_sys_mtime.cubalc", "SYS MTIME/AGE plate freshness"},
       {"sys_startsi", "programs/proof/635_sys_startsi.cubalc", "SYS STARTSI/ENDSI case-insensitive affix"},
       {"sys_between", "programs/proof/636_sys_between.cubalc", "SYS BETWEEN peel between delimiters"},
+      {"sys_findi", "programs/proof/637_sys_findi.cubalc", "SYS FINDI case-insensitive index"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1891,6 +1892,8 @@ int main(int argc, char **argv) {
       {"SYS BETWEEN", "host", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters"},
       {"SYS MIDOF", "host", "SYS MIDOF open close [hay] — alias of SYS BETWEEN"},
       {"SYS EXTRACT", "host", "SYS EXTRACT open close [hay] — alias of SYS BETWEEN"},
+      {"SYS FINDI", "host", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N"},
+      {"SYS INDEXI", "host", "SYS INDEXI hay needle — alias of SYS FINDI"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2460,6 +2463,8 @@ int main(int argc, char **argv) {
        "SYS STARTSI/ENDSI case-insensitive prefix/suffix"},
       {"programs/proof/636_sys_between.cubalc", "sys_between",
        "SYS BETWEEN/MIDOF/EXTRACT peel between delimiters"},
+      {"programs/proof/637_sys_findi.cubalc", "sys_findi",
+       "SYS FINDI/INDEXI case-insensitive string index"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2864,6 +2869,8 @@ int main(int argc, char **argv) {
       {"SYS BETWEEN", "host", "SYS BETWEEN peel between delimiters"},
       {"SYS MIDOF", "host", "SYS MIDOF alias of SYS BETWEEN"},
       {"SYS EXTRACT", "host", "SYS EXTRACT alias of SYS BETWEEN"},
+      {"SYS FINDI", "host", "SYS FINDI case-insensitive index"},
+      {"SYS INDEXI", "host", "SYS INDEXI alias of SYS FINDI"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3106,6 +3113,8 @@ int main(int argc, char **argv) {
       {"SYS BETWEEN", "host", "SYS BETWEEN|MIDOF|EXTRACT peel between delimiters"},
       {"SYS MIDOF", "host", "SYS MIDOF alias of SYS BETWEEN"},
       {"SYS EXTRACT", "host", "SYS EXTRACT alias of SYS BETWEEN"},
+      {"SYS FINDI", "host", "SYS FINDI|INDEXI|FIND I case-insensitive index"},
+      {"SYS INDEXI", "host", "SYS INDEXI alias of SYS FINDI"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3176,6 +3185,7 @@ int main(int argc, char **argv) {
       {"programs/proof/634_sys_mtime.cubalc", "sys_mtime", "SYS MTIME/AGE plate age"},
       {"programs/proof/635_sys_startsi.cubalc", "sys_startsi", "SYS STARTSI/ENDSI affix"},
       {"programs/proof/636_sys_between.cubalc", "sys_between", "SYS BETWEEN peel delimiters"},
+      {"programs/proof/637_sys_findi.cubalc", "sys_findi", "SYS FINDI case-insensitive index"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

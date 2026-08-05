@@ -123,6 +123,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 93. ~~**`SYS MTIME` / `AGE`**~~ **done** (file mtime epoch / age seconds · plate freshness).
 94. ~~**`SYS STARTSI` / `ENDSI`**~~ **done** (case-insensitive prefix/suffix · path/ext/severity).
 95. ~~**`SYS BETWEEN` / `MIDOF` / `EXTRACT`**~~ **done** (peel between delimiters · plate/kv/log without FIND+MID).
+96. ~~**`SYS FINDI` / `INDEXI`**~~ **done** (case-insensitive string index · locate without UPPER+FIND).
 
 ## Tick protocol
 

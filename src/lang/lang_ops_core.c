@@ -1535,18 +1535,49 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS FIND|INDEX hay needle — first index of needle in hay → LAST_N (-1 miss) */
-    if (kw(&L->cur,"FIND") || kw(&L->cur,"INDEX") || kw(&L->cur,"STRFIND")){
+    /* SYS FIND|INDEX hay needle — first index of needle in hay → LAST_N (-1 miss).
+     * SYS FINDI|INDEXI|FIND I — case-insensitive (log/severity locate without UPPER).
+     * Completes EQSI/HASI/GREPI/STARTSI family for position → MID peel. */
+    if (kw(&L->cur,"FIND") || kw(&L->cur,"INDEX") || kw(&L->cur,"STRFIND") ||
+        kw(&L->cur,"FINDI") || kw(&L->cur,"IFIND") || kw(&L->cur,"INDEXI") ||
+        kw(&L->cur,"IINDEX") || kw(&L->cur,"STRFINDI") || kw(&L->cur,"FINDCI")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      int icase = (strcmp(op, "FINDI") == 0 || strcmp(op, "IFIND") == 0 ||
+                   strcmp(op, "INDEXI") == 0 || strcmp(op, "IINDEX") == 0 ||
+                   strcmp(op, "STRFINDI") == 0 || strcmp(op, "FINDCI") == 0);
       lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
       char hay[512]="", needle[256]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
       long idx = -1;
-      if (needle[0]){
+      if (needle[0] == 0) {
+        if (hay[0]) idx = 0;
+      } else if (!icase) {
         const char *p = strstr(hay, needle);
         if (p) idx = (long)(p - hay);
-      } else if (hay[0]) idx = 0;
+      } else {
+        /* ASCII case-fold scan */
+        size_t hn = strlen(hay), nn = strlen(needle), i, j;
+        for (i = 0; i + nn <= hn; i++) {
+          int hit = 1;
+          for (j = 0; j < nn; j++) {
+            char a = hay[i + j], b = needle[j];
+            if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+            if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+            if (a != b) { hit = 0; break; }
+          }
+          if (hit) { idx = (long)i; break; }
+        }
+      }
       vm->last_n = idx;
       var_set_num(vm, "LAST_N", idx);
       var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
@@ -2743,7 +2774,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3008,6 +3039,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
+      {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
+      {"SYS INDEXI", "SYS INDEXI hay needle — alias of SYS FINDI"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

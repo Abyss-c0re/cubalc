@@ -1,0 +1,64 @@
+# SYS FINDI / INDEXI — case-insensitive first index of needle
+# Usability: locate severity/path in logs without UPPER+FIND glue (with HASI/STARTSI)
+
+HOLD_FLASH 1
+
+# case-sensitive FIND unchanged
+SYS FIND "ErrorBoom" "error"
+ASSERT LAST_N == -1
+ASSERT OK == 0
+SYS FIND "ErrorBoom" "Error"
+ASSERT LAST_N == 0
+ASSERT OK == 1
+SYS FIND "xxErrorBoom" "Error"
+ASSERT LAST_N == 2
+
+# FINDI folds
+SYS FINDI "ErrorBoom" "error"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS FINDI "xxERROR" "err"
+ASSERT LAST_N == 2
+SYS FINDI "warn: space" "WARN"
+ASSERT LAST_N == 0
+SYS FINDI "ok" "fail"
+ASSERT LAST_N == -1
+ASSERT OK == 0
+
+# aliases
+SYS INDEXI "Host=Box" "host"
+ASSERT LAST_N == 0
+SYS IFIND "File.JSON" ".json"
+ASSERT LAST_N == 4
+SYS FINDCI "abcXYZ" "xyz"
+ASSERT LAST_N == 3
+
+# FIND I / FIND ICASE forms
+SYS FIND I "DiskFull" "disk"
+ASSERT LAST_N == 0
+SYS FIND ICASE "n.Log" ".log"
+ASSERT LAST_N == 1
+
+# empty needle → 0 if hay non-empty
+SYS FINDI "abc" ""
+ASSERT LAST_N == 0
+SYS FIND "" "x"
+ASSERT LAST_N == -1
+
+# default hay LAST
+LET L = "STATE/Alert.TXT"
+SYS FINDI L "alert"
+ASSERT LAST_N == 6
+SYS FINDI L ".txt"
+ASSERT LAST_N == 11
+
+# agent pattern: case-insensitive locate then MID peel
+LET msg = "WARN: DiskFull on /Var"
+SYS FINDI msg "disk"
+LET pos = LAST_N
+ASSERT pos == 6
+SYS MID msg pos 8
+SYS EQS LAST "DiskFull"
+ASSERT LAST_N == 1
+
+PRINT "sys_findi ok"
