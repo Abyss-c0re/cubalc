@@ -1,0 +1,214 @@
+# plate_promote.cubalc — soft-fail plate lifecycle: stage → backup → promote → prune
+#
+# Real use: agent writes a candidate plate to STATE/staging/, then runs this to:
+#   1) soft-read candidate (READ OR)
+#   2) COPY live → archive/backup if live exists
+#   3) COPY staging → live (or RENAME promote)
+#   4) optional RM staging after success
+#   5) write PROMOTE_LOG under STATE
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   # program MKDIRs layout
+#   # drop candidate:  printf 'v2' > $CUBALC_STATE/staging/LIVE.plate
+#   ./out/cubalc run -q -s programs/realworld/plate_promote.cubalc
+#
+# Config:
+#   CUBALC_ARG0 / CUBALC_PROMOTE_NAME  plate basename (default LIVE.plate)
+#   CUBALC_PROMOTE_KEEP_STAGING=1      keep staging file after promote
+#   CUBALC_PROMOTE_MODE=copy|rename    default copy (safer)
+#
+# Edges:
+#   SYS READ OR optional prior live + candidate miss
+#   COPY/RENAME/RM soft fails + sticky last_err under -s
+#   RM refuses directories (soft)
+#   no LISTDIR — plate name must be configured
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_promote: start"
+DEFAULT PLATE_NAME = "LIVE.plate"
+DEFAULT KEEP_STAGING = 0
+DEFAULT MODE = "copy"
+IDENTITY
+SYS DATE
+LET prom_date = DATE
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET PLATE_NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PROMOTE_NAME" OR ""
+  IF LAST_N > 0 THEN
+    LET PLATE_NAME = LAST
+  END
+END
+
+SYS ENV "CUBALC_PROMOTE_KEEP_STAGING" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET KEEP_STAGING = 1
+END
+
+SYS ENV "CUBALC_PROMOTE_MODE" OR "copy"
+LET MODE = LAST
+
+# Layout: STATE/{staging,live,archive,log}
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir "staging"
+LET staging_dir = LAST
+SYS JOIN state_dir "live"
+LET live_dir = LAST
+SYS JOIN state_dir "archive"
+LET archive_dir = LAST
+SYS JOIN state_dir "log"
+LET log_dir = LAST
+SYS MKDIR staging_dir
+SYS MKDIR live_dir
+SYS MKDIR archive_dir
+SYS MKDIR log_dir
+ASSERT OK == 1
+
+SYS JOIN staging_dir PLATE_NAME
+LET src = LAST
+SYS JOIN live_dir PLATE_NAME
+LET dst = LAST
+
+# Soft-read candidate
+SYS READ OR src
+IF READ_OK == 0 THEN
+  FAIL "staging plate missing"
+  STATUS
+  # still write log of miss
+  SYS JOIN log_dir "PROMOTE_LOG.txt"
+  LET logp = LAST
+  SYS CAT "cubalc.plate_promote.v1 ok=0 miss=staging date=" prom_date
+  LET line = LAST
+  SYS WRITE logp line
+  EXIT 2 "staging missing"
+END
+LET body = LAST
+SYS SIZE src
+LET src_bytes = SIZE
+NOTE "candidate loaded"
+CLEAR_ERR "after optional probes"
+
+# If live exists, archive snapshot
+LET archived = 0
+SYS ISFILE dst
+IF LAST_N == 1 THEN
+  SYS DATE
+  # archive name: STEM + date stamp is hard without multi-join; use fixed backup name
+  SYS STEM PLATE_NAME
+  LET stem = LAST
+  SYS EXTNAME PLATE_NAME
+  LET ext = LAST
+  SYS JOIN archive_dir stem
+  LET arch_base = LAST
+  SYS CAT arch_base ".bak"
+  LET arch_path = LAST
+  # if bak exists, RM then COPY (no versioned rotate without LISTDIR)
+  SYS ISFILE arch_path
+  IF LAST_N == 1 THEN
+    SYS RM arch_path
+    EXPECT OK == 1 "rm old bak"
+    IF OK == 0 THEN
+      PASS "rm bak soft"
+      CLEAR_ERR
+    END
+  END
+  SYS COPY dst arch_path
+  EXPECT OK == 1 "archive copy"
+  IF OK == 0 THEN
+    FAIL "archive failed"
+    PASS "continue without archive"
+    CLEAR_ERR "archive soft"
+  ELSE
+    LET archived = 1
+    NOTE "live archived"
+  END
+END
+
+# Promote
+SYS EQS MODE "rename"
+IF LAST_N == 1 THEN
+  # rename across dirs — may be same FS; if fails, fall back to copy
+  SYS RENAME src dst
+  IF OK == 0 THEN
+    NOTE "rename failed — fallback copy"
+    CLEAR_ERR
+    SYS COPY src dst
+    ASSERT OK == 1 "copy fallback"
+    IF KEEP_STAGING == 0 THEN
+      SYS RM src
+      CLEAR_ERR
+    END
+  ELSE
+    NOTE "promoted via rename"
+    # rename already removed staging
+    LET KEEP_STAGING = 1
+  END
+ELSE
+  SYS COPY src dst
+  ASSERT OK == 1 "promote copy"
+  NOTE "promoted via copy"
+  IF KEEP_STAGING == 0 THEN
+    SYS RM src
+    EXPECT OK == 1 "rm staging"
+    IF OK == 0 THEN
+      PASS "staging rm soft"
+      CLEAR_ERR
+    END
+  END
+END
+
+# Verify live
+SYS ISFILE dst
+ASSERT LAST_N == 1 "live present"
+SYS READ dst
+SYS EQS LAST body
+ASSERT LAST_N == 1 "live body matches candidate"
+SYS SIZE dst
+ASSERT SIZE == src_bytes
+
+# Refuse RM of live_dir (safety probe).
+# Weakness: EXPECT rewrites OK on pass — capture RM result first.
+SYS RM live_dir
+LET rm_dir_ok = OK
+IF rm_dir_ok == 1 THEN
+  FAIL "directory was removed — unsafe"
+  EXIT 3 "rm dir unsafe"
+END
+# sticky last_err from soft RM dir may remain
+PASS "dir rm refused"
+CLEAR_ERR "rm dir probe"
+SYS ISDIR live_dir
+ASSERT LAST_N == 1 "live dir still present"
+
+# Log (dynamic archived= bit still needs multi-CAT; DATE stamp only)
+SYS JOIN log_dir "PROMOTE_LOG.txt"
+LET logp = LAST
+SYS CAT "cubalc.plate_promote.v1 ok=1 date=" prom_date
+LET line = LAST
+SYS WRITE logp line
+SYS EXIST logp
+ASSERT EXIST == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "plate_promote: done"
+PRINT "promote" archived src_bytes STATUS_OK
+PRINT_JSON archived src_bytes KEEP_STAGING STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "promote clean"
+EXIT 0 "promoted"

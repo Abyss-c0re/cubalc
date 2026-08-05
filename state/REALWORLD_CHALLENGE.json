@@ -1,120 +1,114 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 8,
-  "program": "programs/realworld/artifact_intake.cubalc",
-  "theme": "config-driven artifact intake: ISFILE/SIZE/EXTNAME route .bits/.json under STATE",
-  "version": "1.15.58-usability",
+  "iter": 9,
+  "program": "programs/realworld/plate_promote.cubalc",
+  "theme": "soft-fail plate lifecycle: READ OR + COPY/RENAME/RM staging\u2192live\u2192archive",
+  "version": "1.15.61-usability",
   "pass": true,
   "tests": [
     {
-      "name": "absolute_args_bits_json",
-      "cmd": "CUBALC_ARG0=/\u2026/peer0.bits ARG1=/\u2026/meta.json run -q -s",
+      "name": "first_promote_copy",
+      "cmd": "staging/LIVE.plate present; run -q -s",
       "ok": true,
-      "note": "accepted=2 dig from FOLDBITS; INTAKE_REPORT.txt under STATE/out"
+      "note": "live/LIVE.plate written; staging removed; PROMOTE_LOG.txt"
     },
     {
-      "name": "relative_state_defaults",
-      "cmd": "STATE/in/peer0.bits + meta.json defaults run -q -s",
+      "name": "second_promote_archives",
+      "cmd": "new staging v2 over existing live; run -q -s",
       "ok": true,
-      "note": "JOIN state+rel paths; EXIT 0"
+      "note": "archive/LIVE.bak holds v1; live is v2"
     },
     {
-      "name": "require_empty_exit_2",
-      "cmd": "CUBALC_INTAKE_REQUIRE=1 empty in/ run -q",
+      "name": "staging_missing_exit_2",
+      "cmd": "empty STATE run -q",
       "ok": false,
-      "note": "expected EXIT 2 intake empty"
+      "note": "expected EXIT 2 staging missing; READ OR soft then EXIT"
     },
     {
-      "name": "max_bytes_soft_skip",
-      "cmd": "CUBALC_INTAKE_MAX_BYTES=4 oversized .bits run -q -s",
+      "name": "rename_mode",
+      "cmd": "CUBALC_PROMOTE_MODE=rename run -q -s",
       "ok": true,
-      "note": "size gate soft skip; still writes report"
+      "note": "promote via RENAME across staging\u2192live"
     },
     {
-      "name": "unknown_ext_skip",
-      "cmd": "ARG0=in/readme.txt run -q -s",
-      "ok": true,
-      "note": "unknown extension soft skip"
-    },
-    {
-      "name": "size_miss_strict_sticky",
-      "cmd": "SYS SIZE missing; PASS; no CLEAR_ERR; run -q -s",
+      "name": "copy_miss_strict_sticky",
+      "cmd": "SYS COPY missing src; PASS; no CLEAR_ERR; run -q -s",
       "ok": false,
-      "note": "last_err path: missing; err_line=0; rc=1"
+      "note": "last_err copy: missing source; err_line=0; rc=1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "33/33 green"
+      "note": "36/36 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "io|lang",
-      "title": "No SYS LISTDIR / GLOB \u2014 intake cannot discover dropped files",
-      "detail": "Real artifact drops land under STATE/in/* but CubalC has no directory listing. Agents must pass ARG0/ARG1 or fixed default names (in/peer0.bits). Without shell ls, a generic intake worker cannot process an open-ended drop folder. Highest remaining shell-glue force for this use case.",
-      "repro": "drop three unknown-named .bits under STATE/in; language cannot enumerate them"
+      "area": "flow|error",
+      "title": "EXPECT rewrites OK \u2014 cannot test prior soft result after EXPECT",
+      "detail": "SYS RM live_dir soft-fails (OK=0). EXPECT OK == 0 then sets OK=1 on pass. A following IF OK == 1 was misread as 'RM succeeded and deleted the directory', causing EXIT 3 on a healthy promote. Agents must LET snap = OK before any EXPECT/ASSERT that consumes OK. Overloading OK for soft host ops + soft checks is a real footgun.",
+      "repro": "SYS RM dir; EXPECT OK == 0; IF OK == 1 THEN \u2026 \u2014 OK is expect-pass, not RM success"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "error|io",
-      "title": "SYS SIZE miss sticky last_err with err_line=0",
-      "detail": "Optional missing artifacts use SIZE/ISFILE probes that set last_err='path: missing' with err_line=0 empty err_src. PASS without CLEAR_ERR fails run -s. Every optional path needs explicit CLEAR_ERR ceremony.",
-      "repro": "SYS SIZE \"/no/such\"; PASS; cubalc run -q -s \u2192 rc=1"
+      "title": "COPY/RM soft failures still err_line=0 empty err_src",
+      "detail": "copy: missing source and mkdir/rm dir soft errs leave last_err text but no line attribution. run -s fails after PASS without CLEAR_ERR with no jump-to-source. Same class as SIZE/WRITE/SERVE plates.",
+      "repro": "SYS COPY \"/no\" \"/tmp/x\"; PASS; run -q -s \u2192 err_line:0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "docs|discovery",
-      "title": "SYS JOIN still absent from forms/search",
-      "detail": "artifact_intake depends on SYS JOIN for STATE-relative paths; forms JOIN and search join still n=0 (iter7 W1 unfixed). Agents re-learn path join only from proofs or source.",
-      "repro": "./out/cubalc forms JOIN \u2192 n=0"
+      "area": "io|lang",
+      "title": "No versioned archive rotation without LISTDIR",
+      "detail": "Promote overwrites a single LIVE.bak. Cannot enumerate archive/* or generate unique archive names with time+seq without shell. DATE is available but multi-CAT into filenames is awkward; no LISTDIR to prune old baks.",
+      "repro": "third promote still only one .bak file"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "flow",
-      "title": "No reusable subroutine for per-file intake \u2014 duplicated ARG0/ARG1 blocks",
-      "detail": "FN/CALL exist in deep ISA/docs but not in human forms catalog for agents. Config-driven multi-file intake becomes copy-paste IF trees. Pain grows with ARG2..N.",
-      "repro": "cubalc forms FN \u2192 typically empty; see duplicated path0/path1 logic"
+      "area": "docs|discovery",
+      "title": "SYS JOIN still not in forms/search",
+      "detail": "Lifecycle worker depends on JOIN for every path; forms JOIN remains n=0 (iters 7\u20138). READ OR/COPY/RM are catalogued; JOIN still invisible.",
+      "repro": "./out/cubalc forms JOIN \u2192 n=0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "json|io",
-      "title": "SYS JSON still one-key + re-READ; report plate cannot stamp accepted/skipped live",
-      "detail": "Intake report is a flat DATE line; accepted/skipped/dig only in PRINT_JSON/VARS. Dynamic JSON plate still hard. Multi-key JSON from meta needs re-READ per key.",
-      "repro": "INTAKE_REPORT.txt lacks accepted count despite LET accepted"
+      "area": "string",
+      "title": "Cannot easily build archive names from STEM+DATE+EXT",
+      "detail": "Want LIVE-2026\u2026.bak from STEM + DATE + EXT requires nested CAT and careful dots; no path format helper. Program uses fixed LIVE.bak via CAT stem \".bak\" only.",
+      "repro": "see archive naming block in plate_promote.cubalc"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "matrix",
-      "title": "No validation that .bits content is 01 alphabet before FOLDBITS",
-      "detail": "ISFILE/SIZE/EXT pass for any .bits bytes; FOLDBITS still soft-accepts garbage (iter5). Intake type-route is extension-only trust.",
-      "repro": "write hello to x.bits; intake accepts extension and FOLDBITS"
+      "area": "cli",
+      "title": "RENAME across dirs may fail silently into COPY fallback \u2014 good, but mode opacity",
+      "detail": "When MODE=rename fails, program CLEARs and copies; agents reading only MODE env may think rename was used. No RENAME_OK distinct sticky beyond OK/LAST_ERR timing.",
+      "repro": "cross-device rename miss path (if any) falls back without plate field"
     }
   ],
   "workarounds": [
-    "Host names files to in/peer0.bits + in/meta.json or passes absolute ARG paths",
-    "CLEAR_ERR after every optional SIZE/ISFILE miss when using run -s",
-    "Hardcode SYS JOIN knowledge until forms catalogs it",
-    "Duplicate intake blocks per ARG index until LISTDIR/FN ergonomics land",
-    "Emit metrics via PRINT_JSON/VARS; keep file report as coarse stamp",
-    "Host pre-validate 01 alphabet for .bits drops"
+    "LET snap = OK immediately after soft host ops before EXPECT/ASSERT/PASS",
+    "CLEAR_ERR after intentional soft COPY/RM/READ OR when using run -s",
+    "Fixed .bak name or host-side versioned archive dir until LISTDIR",
+    "Hardcode SYS JOIN; watch MEANINGFUL_ITER for catalog fix",
+    "Prefer MODE=copy for promote (default) when rename semantics are unclear",
+    "SYS ISDIR after RM-dir probe to prove directory survival"
   ],
   "language_gaps": [
-    "SYS LISTDIR / GLOB under a path",
-    "err_line/err_src on SIZE/path missing soft errs",
-    "SYS JOIN in forms/search catalog",
-    "Human-plane FN/CALL or FOR-EACH-file form for intake loops",
-    "WRITE_JSON from vars for INTAKE_REPORT",
-    "FOLDBITS alphabet hard-fail option"
+    "Separate soft-result vars that EXPECT does not clobber (or EXPECT leaves OK alone)",
+    "err_line/err_src on COPY/RM/RENAME/READ OR soft fails",
+    "SYS LISTDIR + versioned archive helpers",
+    "SYS JOIN in forms/search",
+    "Path format / multi-part CAT for STEM-DATE-EXT names",
+    "Plate field rename_ok / copy_n already partially there \u2014 expose on run plate"
   ],
-  "commit": "98b0016",
-  "ts": "2026-08-05T07:23:06Z"
+  "commit": "fd85009",
+  "ts": "2026-08-05T07:48:37Z"
 }
