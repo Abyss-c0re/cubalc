@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 53,
-  "version": "1.15.78-usability",
-  "item": "SYS BEFORE / AFTER peel at needle",
-  "item_id": 86,
-  "title": "SYS BEFORE|AFTER peels log/kv at first needle",
-  "commit": "f31f98de4c4a1a4ca81bcc8768ac97f9bc92abea",
-  "summary": "SYS BEFORE|LEFT_OF / AFTER|RIGHT_OF hay needle \u2192 left/right peel; LAST_N=found; log triage without FIND+MID.",
+  "iter": 54,
+  "version": "1.15.79-usability",
+  "item": "SYS PUSH / ADDLINE field accumulate",
+  "item_id": 87,
+  "title": "SYS PUSH|ADDLINE appends newline fields for multi-file collect",
+  "commit": "pending",
+  "summary": "SYS PUSH|ADDLINE bag [line] appends newline field; LAST_N/PUSH_N=count; closes CAT+\\\\n multi-file hit accumulate gap.",
   "proofs": [
-    "627_sys_before",
-    "selftest n_pass=53"
+    "628_sys_push",
+    "selftest n_pass=54"
   ],
-  "when": "2026-08-05T10:36:21Z",
+  "when": "2026-08-05T10:47:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f31f98de4c4a1a4ca81bcc8768ac97f9bc92abea"
+  "sha": "pending"
 }

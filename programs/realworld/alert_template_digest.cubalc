@@ -27,7 +27,7 @@
 #   SYS STR/ITOA fills {{COUNT}} from hit totals (prior itoa gap closed)
 #   APPEND now cataloged (prior gap closed)
 #   REPLACEALL does not support regex capture groups
-#   multi-file hit accumulate via CAT + JOINLINES (no list-push form)
+#   multi-file hit accumulate: SYS PUSH bag line (prior CAT+\n gap closed)
 #   sticky FAIL if template missing under -s without CLEAR_ERR
 
 INCLUDE agent_boot
@@ -163,16 +163,8 @@ EACH LINE AS fname IN listing
   LET files_with_hits = files_with_hits + 1
   LET hit_total = hit_total + hn
   LET chunk = LAST
-  SYS EQS hit_blob ""
-  IF LAST_N == 1 THEN
-    LET hit_blob = chunk
-  ELSE
-    # glue multi-file hit fields with newline between chunks
-    SYS CAT hit_blob "\n"
-    LET hit_blob = LAST
-    SYS CAT hit_blob chunk
-    LET hit_blob = LAST
-  END
+  SYS PUSH hit_blob chunk
+  LET hit_blob = LAST
 END
 
 # window + paste digest

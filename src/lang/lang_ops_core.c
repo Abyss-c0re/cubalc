@@ -1872,6 +1872,80 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PUSH|ADDLINE|PUSHLINE bag [line|LAST] — append a newline field to bag.
+     * Empty bag → line only; empty line still adds a blank field after bag.
+     * LAST = bag; LAST_N/PUSH_N = field count after push.
+     * Usability: multi-file hit accumulate without CAT + "\\n" glue. */
+    if (kw(&L->cur,"PUSH") || kw(&L->cur,"ADDLINE") || kw(&L->cur,"PUSHLINE") ||
+        kw(&L->cur,"LINEPUSH") || kw(&L->cur,"BAGPUSH") || kw(&L->cur,"ACCUM")){
+      char bag[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      size_t blen, llen, o;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) bag[0] = 0;
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0)
+        snprintf(line, sizeof line, "%s", vm->last_str);
+      blen = strlen(bag);
+      llen = strlen(line);
+      out[0] = 0;
+      o = 0;
+      if (blen == 0) {
+        if (llen < sizeof out) {
+          memcpy(out, line, llen);
+          o = llen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, line, o);
+        }
+        out[o] = 0;
+        /* first fill: count fields inside line (may itself be multi-line) */
+        if (out[0]) {
+          p = out;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            nfields++;
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        long bag_n = 0;
+        p = bag;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          bag_n++;
+          if (*p == '\n') p++;
+        }
+        if (blen < sizeof out) {
+          memcpy(out, bag, blen);
+          o = blen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, bag, o);
+        }
+        if (o + 1 < sizeof out) out[o++] = '\n';
+        if (o + llen < sizeof out) {
+          memcpy(out + o, line, llen);
+          o += llen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, line, take);
+          o += take;
+        }
+        out[o] = 0;
+        /* always +1 field even if line is empty (trailing blank field) */
+        nfields = bag_n + 1;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "PUSH", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "PUSH_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -2267,7 +2341,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2512,6 +2586,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ITOA", "SYS ITOA [n] — alias of SYS STR · dual of SYS NUM/ATOI"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
+      {"SYS PUSH", "SYS PUSH|ADDLINE bag [line] — append newline field · multi-file accumulate"},
+      {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

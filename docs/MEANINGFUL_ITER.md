@@ -114,6 +114,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 84. ~~**`SYS GREPI` / `IGREP`**~~ **done** (case-insensitive newline filter · log triage).
 85. ~~**`SYS STR` / `ITOA`**~~ **done** (integer → decimal string · REPLACEALL {{COUNT}}).
 86. ~~**`SYS BEFORE` / `AFTER`**~~ **done** (peel at first needle · log/kv without FIND+MID).
+87. ~~**`SYS PUSH` / `ADDLINE`**~~ **done** (append newline field · multi-file hit accumulate).
 
 ## Tick protocol
 

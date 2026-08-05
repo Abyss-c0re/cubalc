@@ -1,0 +1,116 @@
+# SYS PUSH / ADDLINE — append newline field to bag (multi-file accumulate)
+# Usability: closes CAT + "\n" glue gap for hit_blob / list collect
+
+HOLD_FLASH 1
+
+# empty bag → first line only
+LET bag = ""
+SYS PUSH bag "alpha"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT PUSH_N == 1
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+LET bag = LAST
+
+# second push joins with newline
+SYS PUSH bag "beta"
+ASSERT LAST_N == 2
+ASSERT PUSH_N == 2
+LET bag = LAST
+SYS HEAD bag
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS TAIL bag
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+SYS PUSH bag "gamma"
+ASSERT LAST_N == 3
+LET bag = LAST
+SYS HEAD bag
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS TAIL bag
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+SYS NTH 1 bag
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# ADDLINE alias
+LET b2 = ""
+SYS ADDLINE b2 "one"
+LET b2 = LAST
+SYS ADDLINE b2 "two"
+ASSERT LAST_N == 2
+LET b2 = LAST
+SYS HEAD b2
+SYS EQS LAST "one"
+ASSERT LAST_N == 1
+SYS TAIL b2
+SYS EQS LAST "two"
+ASSERT LAST_N == 1
+
+# PUSHLINE / BAGPUSH
+LET b3 = ""
+SYS PUSHLINE b3 "x"
+LET b3 = LAST
+SYS BAGPUSH b3 "y"
+ASSERT LAST_N == 2
+
+# second arg can be a var
+LET bag = "keep"
+LET more = "more"
+SYS PUSH bag more
+ASSERT LAST_N == 2
+LET bag = LAST
+SYS HEAD bag
+SYS EQS LAST "keep"
+ASSERT LAST_N == 1
+SYS TAIL bag
+SYS EQS LAST "more"
+ASSERT LAST_N == 1
+
+# empty line still increments PUSH_N (trailing blank field)
+LET bag = "a"
+SYS PUSH bag ""
+ASSERT LAST_N == 2
+ASSERT PUSH_N == 2
+SYS HEAD LAST
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# multi-chunk accumulate (alert digest pattern) — always PUSH
+LET hit_blob = ""
+LET chunk1 = "Error: a"
+LET chunk2 = "error c"
+SYS PUSH hit_blob chunk1
+LET hit_blob = LAST
+SYS PUSH hit_blob chunk2
+LET hit_blob = LAST
+ASSERT PUSH_N == 2
+SYS HAS hit_blob "error c"
+ASSERT LAST_N == 1
+SYS HAS hit_blob "Error: a"
+ASSERT LAST_N == 1
+
+# chain with GREPI collect of single lines
+LET bag = ""
+LET S = "Error boom\ninfo ok\nERROR fatal"
+EACH LINE AS ln IN S
+  SYS GREPI "error" ln
+  IF GREP_N > 0 THEN
+    SYS PUSH bag ln
+    LET bag = LAST
+  END
+END
+ASSERT PUSH_N == 2
+SYS HAS bag "Error boom"
+ASSERT LAST_N == 1
+SYS HAS bag "ERROR fatal"
+ASSERT LAST_N == 1
+SYS HAS bag "info"
+ASSERT LAST_N == 0
+
+PRINT "sys_push ok"
