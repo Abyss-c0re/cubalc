@@ -1668,6 +1668,7 @@ int main(int argc, char **argv) {
       {"sys_extname", "programs/proof/606_sys_extname.cubalc", "SYS EXTNAME/STEM path peel"},
       {"sys_size", "programs/proof/607_sys_size.cubalc", "SYS SIZE/ISDIR/ISFILE path meta"},
       {"sys_read_soft", "programs/proof/608_sys_read_soft.cubalc", "SYS READ OR soft optional plate"},
+      {"sys_rm_rename", "programs/proof/609_sys_rm_rename.cubalc", "SYS RM/RENAME plate lifecycle"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1820,6 +1821,8 @@ int main(int argc, char **argv) {
       {"SYS ISDIR", "host", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "host", "SYS ISFILE path — LAST_N 1 if regular file"},
       {"SYS READ", "host", "SYS READ [OR|SOFT] path [OR fallback] optional plate"},
+      {"SYS RM", "host", "SYS RM|UNLINK|DELETE path — remove file · miss soft"},
+      {"SYS RENAME", "host", "SYS RENAME|MV|MOVE from to — move plate"},
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2323,6 +2326,8 @@ int main(int argc, char **argv) {
        "SYS SIZE/ISDIR/ISFILE path metadata probes"},
       {"programs/proof/608_sys_read_soft.cubalc", "sys_read_soft",
        "SYS READ OR soft optional plate + fallback"},
+      {"programs/proof/609_sys_rm_rename.cubalc", "sys_rm_rename",
+       "SYS RM/RENAME plate file lifecycle"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2683,6 +2688,8 @@ int main(int argc, char **argv) {
       {"SYS ISDIR", "host", "SYS ISDIR dir probe"},
       {"SYS ISFILE", "host", "SYS ISFILE file probe"},
       {"SYS READ", "host", "SYS READ OR soft optional plate"},
+      {"SYS RM", "host", "SYS RM remove plate file"},
+      {"SYS RENAME", "host", "SYS RENAME move plate path"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2879,6 +2886,8 @@ int main(int argc, char **argv) {
       {"SYS ISDIR", "host", "SYS ISDIR path — directory probe"},
       {"SYS ISFILE", "host", "SYS ISFILE path — regular file probe"},
       {"SYS READ", "host", "SYS READ [OR|SOFT] path [OR fallback]"},
+      {"SYS RM", "host", "SYS RM|UNLINK path — remove file soft miss"},
+      {"SYS RENAME", "host", "SYS RENAME|MV from to — move plate"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2920,6 +2929,7 @@ int main(int argc, char **argv) {
       {"programs/proof/606_sys_extname.cubalc", "sys_extname", "SYS EXTNAME/STEM peel"},
       {"programs/proof/607_sys_size.cubalc", "sys_size", "SYS SIZE/ISDIR/ISFILE meta"},
       {"programs/proof/608_sys_read_soft.cubalc", "sys_read_soft", "SYS READ OR soft plate"},
+      {"programs/proof/609_sys_rm_rename.cubalc", "sys_rm_rename", "SYS RM/RENAME lifecycle"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

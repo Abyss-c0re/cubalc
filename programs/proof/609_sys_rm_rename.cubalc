@@ -1,0 +1,75 @@
+# SYS RM / RENAME — plate file lifecycle without shell
+# Usability: agents clean/move STATE plates after probes
+
+HOLD_FLASH 1
+
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_rm_probe"
+LET DIR = LAST
+SYS MKDIR DIR
+
+# write plate, rename, verify, remove
+SYS JOIN DIR "a.txt"
+LET A = LAST
+SYS JOIN DIR "b.txt"
+LET B = LAST
+SYS WRITE A "payload"
+SYS SIZE A
+ASSERT OK == 1
+ASSERT LAST_N == 7
+
+SYS RENAME A B
+ASSERT OK == 1
+SYS EQS LAST B
+ASSERT LAST_N == 1
+SYS EXIST A
+ASSERT LAST_N == 0 "old gone"
+SYS EXIST B
+ASSERT LAST_N == 1 "new present"
+SYS READ B
+SYS EQS LAST "payload"
+ASSERT LAST_N == 1
+
+SYS RM B
+ASSERT OK == 1
+ASSERT LAST_N == 1 "removed flag"
+ASSERT RM_N == 1
+SYS EXIST B
+ASSERT LAST_N == 0
+
+# idempotent miss
+SYS RM B
+ASSERT OK == 1
+ASSERT LAST_N == 0 "already gone"
+ASSERT RM_N == 0
+
+# aliases
+SYS WRITE A "x"
+SYS MV A B
+ASSERT OK == 1
+SYS UNLINK B
+ASSERT OK == 1
+ASSERT RM_N == 1
+SYS WRITE A "y"
+SYS MOVE A B
+ASSERT OK == 1
+SYS DELETE B
+ASSERT OK == 1
+SYS WRITE A "z"
+SYS REMOVE A
+ASSERT OK == 1
+
+# refuse directory remove (soft fail)
+SYS RM DIR
+ASSERT OK == 0 "dir not unlinked"
+SYS LEN LAST_ERR
+ASSERT LAST_N > 0
+SYS ISDIR DIR
+ASSERT LAST_N == 1 "dir still there"
+
+# rename miss soft
+SYS RENAME "state/meaningful_iter/__no_rm_src__" "state/meaningful_iter/__no_rm_dst__"
+ASSERT OK == 0
+
+PRINT "sys_rm_rename ok"

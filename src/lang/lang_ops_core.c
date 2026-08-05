@@ -253,6 +253,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS RM|UNLINK|DELETE path — remove regular file; missing soft OK (LAST_N=0)
+     * Usability: agents clean STATE/TMP plates without shell rm. */
+    if (kw(&L->cur,"RM") || kw(&L->cur,"UNLINK") || kw(&L->cur,"DELETE") ||
+        kw(&L->cur,"REMOVE") || kw(&L->cur,"DEL")){
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS RM \"path\"|LAST"); return -1;
+      }
+      if (cubalc_host_rm(path, &hr)!=0){
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RM_N", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "RM_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS RENAME|MV|MOVE from to — move plate path without shell. */
+    if (kw(&L->cur,"RENAME") || kw(&L->cur,"MV") || kw(&L->cur,"MOVE")){
+      char from[512], to[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, from, sizeof from)!=0){
+        fail(vm,"SYS RENAME \"from\" \"to\""); return -1;
+      }
+      if (resolve_str_arg(vm, L, to, sizeof to)!=0){
+        fail(vm,"SYS RENAME \"from\" \"to\""); return -1;
+      }
+      if (cubalc_host_rename(from, to, &hr)!=0){
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", to);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", to);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV")){
       /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
       lex_next(L);
@@ -1514,7 +1573,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1729,6 +1788,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
       {"SYS READ", "SYS READ [OR|SOFT] path [OR fallback] — soft/optional plate"},
+      {"SYS RM", "SYS RM|UNLINK|DELETE path — remove file · missing soft OK"},
+      {"SYS RENAME", "SYS RENAME|MV|MOVE from to — move plate path"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

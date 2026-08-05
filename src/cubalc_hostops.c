@@ -153,6 +153,56 @@ int cubalc_host_write(const char *path, const char *data, cubalc_host_result *r)
   return 0;
 }
 
+/* Usability: SYS RM path — delete regular file plate; missing is soft OK. */
+int cubalc_host_rm(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "rm: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    /* idempotent: already gone */
+    snprintf(r->str, sizeof r->str, "%s", path);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "rm: is a directory");
+    return -1;
+  }
+  if (unlink(path) != 0) {
+    snprintf(r->err, sizeof r->err, "rm: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = 1; /* removed */
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS RENAME|MV from to — move plate without shell. */
+int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
+  r_clear(r);
+  if (!from || !from[0] || !to || !to[0]) {
+    snprintf(r->err, sizeof r->err, "rename: empty path");
+    return -1;
+  }
+  if (access(from, F_OK) != 0) {
+    snprintf(r->err, sizeof r->err, "rename: missing source");
+    return -1;
+  }
+  if (rename(from, to) != 0) {
+    snprintf(r->err, sizeof r->err, "rename: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", to);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS MKDIR path — mkdir -p for agent plate dirs under STATE/TMP. */
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r) {
   char buf[512];

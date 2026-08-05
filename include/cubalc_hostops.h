@@ -28,6 +28,10 @@ int cubalc_host_exists(const char *path); /* 1/0 */
 int cubalc_host_path_kind(const char *path, cubalc_host_result *r);
 /* mkdir -p style: create path and parents; OK if already a directory */
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r);
+/* unlink regular file only; missing → ok with n=0; dir → error */
+int cubalc_host_rm(const char *path, cubalc_host_result *r);
+/* rename/move path; soft miss if from missing */
+int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);

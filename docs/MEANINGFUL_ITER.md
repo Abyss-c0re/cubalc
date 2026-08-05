@@ -95,6 +95,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 65. ~~**`SYS EXTNAME` / `STEM`**~~ **done** (extension with dot / basename without ext).
 66. ~~**`SYS SIZE` / `ISDIR` / `ISFILE`**~~ **done** (path metadata probes · soft miss on SIZE).
 67. ~~**`SYS READ OR|SOFT`**~~ **done** (optional plate read · soft miss + content fallback).
+68. ~~**`SYS RM` / `RENAME`**~~ **done** (delete/move plate files · idempotent RM miss).
 
 ## Tick protocol
 
