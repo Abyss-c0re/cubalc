@@ -4375,6 +4375,96 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS BEFOREALL|MAPBEFORE bag needle — BEFORE on every bag field → LAST bag.
+     * SYS AFTERALL|MAPAFTER bag needle — AFTER on every field.
+     * Same miss semantics as BEFORE/AFTER (before→whole field, after→empty).
+     * LAST_N = field count; BEFOREALL_HIT = how many fields contained needle.
+     * Usability: FREQ key/count peel or kv bags without EACH+BEFORE/AFTER. */
+    if (kw(&L->cur,"BEFOREALL") || kw(&L->cur,"MAPBEFORE") || kw(&L->cur,"LEFTALL") ||
+        kw(&L->cur,"PREALL") || kw(&L->cur,"BAGBEFORE") ||
+        kw(&L->cur,"AFTERALL") || kw(&L->cur,"MAPAFTER") || kw(&L->cur,"RIGHTALL") ||
+        kw(&L->cur,"POSTALL") || kw(&L->cur,"BAGAFTER")){
+      char op[20];
+      int want_after = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], needle[256];
+      const char *p, *start;
+      size_t olen = 0, flen, nn, take;
+      long lines = 0, hits = 0;
+      char field[512], cell[512];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "AFTERALL") == 0 || strcmp(op, "MAPAFTER") == 0 ||
+          strcmp(op, "RIGHTALL") == 0 || strcmp(op, "POSTALL") == 0 ||
+          strcmp(op, "BAGAFTER") == 0)
+        want_after = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          const char *hit;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          cell[0] = 0;
+          if (nn == 0) {
+            hits++;
+            if (want_after) snprintf(cell, sizeof cell, "%s", field);
+            else cell[0] = 0;
+          } else {
+            hit = strstr(field, needle);
+            if (!hit) {
+              if (want_after) cell[0] = 0;
+              else snprintf(cell, sizeof cell, "%s", field);
+            } else {
+              hits++;
+              if (want_after) {
+                snprintf(cell, sizeof cell, "%s", hit + nn);
+              } else {
+                size_t pre = (size_t)(hit - field);
+                if (pre >= sizeof cell) pre = sizeof cell - 1;
+                memcpy(cell, field, pre);
+                cell[pre] = 0;
+              }
+            }
+          }
+          if (lines > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = strlen(cell);
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, cell, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, cell, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          lines++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = lines;
+      var_set_num(vm, "LAST_N", lines);
+      var_set_num(vm, "BEFOREALL_N", lines);
+      var_set_num(vm, "AFTERALL_N", lines);
+      var_set_num(vm, "BEFOREALL_HIT", hits);
+      var_set_num(vm, "AFTERALL_HIT", hits);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
      * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
      * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
@@ -6290,7 +6380,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6569,6 +6659,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SORTFREQ", "SYS SORTFREQ|SORTBYCOUNT [bag] [sep] [DESC|ASC] — sort FREQ by count"},
       {"SYS SORTBYCOUNT", "SYS SORTBYCOUNT [bag] [sep] [DESC|ASC] — alias of SYS SORTFREQ"},
       {"SYS FSORT", "SYS FSORT [bag] — alias of SYS SORTFREQ · top severities after FREQ"},
+      {"SYS BEFOREALL", "SYS BEFOREALL|MAPBEFORE bag needle — BEFORE on every field → bag"},
+      {"SYS AFTERALL", "SYS AFTERALL|MAPAFTER bag needle — AFTER on every field → bag"},
+      {"SYS MAPBEFORE", "SYS MAPBEFORE bag needle — alias of SYS BEFOREALL · FREQ keys peel"},
+      {"SYS MAPAFTER", "SYS MAPAFTER bag needle — alias of SYS AFTERALL · FREQ counts peel"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},

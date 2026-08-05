@@ -1,0 +1,69 @@
+# SYS BEFOREALL / AFTERALL — peel left/right of needle on every bag field
+# Usability: FREQ keys/counts or kv bags without EACH+BEFORE/AFTER
+
+HOLD_FLASH 1
+
+LET freq = "ERROR:5\nWARN:2\nINFO:1\nFATAL:3"
+
+# keys
+SYS BEFOREALL freq ":"
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT BEFOREALL_HIT == 4
+SYS EQS LAST "ERROR\nWARN\nINFO\nFATAL"
+ASSERT LAST_N == 1
+
+# counts
+SYS AFTERALL freq ":"
+ASSERT LAST_N == 4
+ASSERT AFTERALL_HIT == 4
+SYS EQS LAST "5\n2\n1\n3"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPBEFORE freq ":"
+SYS EQS LAST "ERROR\nWARN\nINFO\nFATAL"
+ASSERT LAST_N == 1
+SYS MAPAFTER freq ":"
+SYS EQS LAST "5\n2\n1\n3"
+ASSERT LAST_N == 1
+
+# miss: BEFORE keeps whole field; AFTER empty
+LET mixed = "a=1\nplain\nb=2"
+SYS BEFOREALL mixed "="
+ASSERT LAST_N == 3
+ASSERT BEFOREALL_HIT == 2
+SYS EQS LAST "a\nplain\nb"
+ASSERT LAST_N == 1
+SYS AFTERALL mixed "="
+ASSERT LAST_N == 3
+ASSERT AFTERALL_HIT == 2
+SYS EQS LAST "1\n\n2"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS BEFOREALL "" ":"
+ASSERT LAST_N == 0
+ASSERT BEFOREALL_HIT == 0
+
+# empty needle: BEFORE → empty fields; AFTER → whole (found at 0)
+SYS BEFOREALL "x\ny" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "\n"
+ASSERT LAST_N == 1
+SYS AFTERALL "x\ny" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+
+# agent pattern: FREQ → AFTERALL counts → SUM total
+SYS AFTERALL freq ":"
+SYS SUM LAST
+ASSERT LAST_N == 11
+
+# keys HASLINE probe
+SYS BEFOREALL freq ":"
+SYS HASLINE LAST "FATAL"
+ASSERT LAST_N == 1
+
+PRINT "sys_beforeall ok"
