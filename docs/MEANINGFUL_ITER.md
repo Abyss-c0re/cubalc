@@ -149,6 +149,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 119. ~~**`SYS PICK` / `CHOICE` / `SAMPLE`**~~ **done** (random bag field · sample LIST/RANGE without shell).
 120. ~~**`SYS GCD` / `LCM`**~~ **done** (multi-arg gcd/lcm · reduce ratios / cycles without ISA soup).
 121. ~~**`SYS IN` / `WITHIN`**~~ **done** (inclusive numeric range membership · IF/guards without dual CMP).
+122. ~~**`SYS POW` / `ISQRT`**~~ **done** (integer power + floor sqrt · backoff/geometry without ISA soup).
 
 ## Tick protocol
 

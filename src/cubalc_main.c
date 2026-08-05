@@ -1803,6 +1803,7 @@ int main(int argc, char **argv) {
       {"sys_pick", "programs/proof/659_sys_pick.cubalc", "SYS PICK/CHOICE random bag field"},
       {"sys_gcd", "programs/proof/660_sys_gcd.cubalc", "SYS GCD/LCM multi-arg host math"},
       {"sys_in", "programs/proof/661_sys_in.cubalc", "SYS IN/WITHIN numeric range membership"},
+      {"sys_pow", "programs/proof/662_sys_pow.cubalc", "SYS POW/ISQRT host power and sqrt"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2029,6 +2030,8 @@ int main(int argc, char **argv) {
       {"SYS MOD", "host", "SYS MOD|REM a b — remainder"},
       {"SYS GCD", "host", "SYS GCD|HCF a b [c…] — greatest common divisor"},
       {"SYS LCM", "host", "SYS LCM a b [c…] — least common multiple"},
+      {"SYS POW", "host", "SYS POW|POWER a e — integer power"},
+      {"SYS ISQRT", "host", "SYS ISQRT|SQRT n — floor integer square root"},
       {"SYS SUM", "host", "SYS SUM|TOTAL args|bag — sum ints or newline bag"},
       {"SYS PROD", "host", "SYS PROD|PRODUCT args|bag — product of ints"},
       {"SYS AVG", "host", "SYS AVG|MEAN args|bag — integer mean"},
@@ -3082,6 +3085,8 @@ int main(int argc, char **argv) {
       {"SYS MOD", "host", "SYS MOD remainder"},
       {"SYS GCD", "host", "SYS GCD multi-arg gcd"},
       {"SYS LCM", "host", "SYS LCM multi-arg lcm"},
+      {"SYS POW", "host", "SYS POW integer power"},
+      {"SYS ISQRT", "host", "SYS ISQRT floor integer sqrt"},
       {"SYS SUM", "host", "SYS SUM args|bag integer sum"},
       {"SYS PROD", "host", "SYS PROD args|bag integer product"},
       {"SYS AVG", "host", "SYS AVG args|bag integer mean"},
@@ -3382,6 +3387,8 @@ int main(int argc, char **argv) {
       {"SYS MOD", "host", "SYS MOD remainder"},
       {"SYS GCD", "host", "SYS GCD multi-arg gcd"},
       {"SYS LCM", "host", "SYS LCM multi-arg lcm"},
+      {"SYS POW", "host", "SYS POW integer power"},
+      {"SYS ISQRT", "host", "SYS ISQRT floor integer sqrt"},
       {"SYS SUM", "host", "SYS SUM args|bag integer sum"},
       {"SYS PROD", "host", "SYS PROD args|bag integer product"},
       {"SYS AVG", "host", "SYS AVG args|bag integer mean"},
@@ -3546,6 +3553,7 @@ int main(int argc, char **argv) {
       {"programs/proof/659_sys_pick.cubalc", "sys_pick", "SYS PICK/CHOICE random bag field"},
       {"programs/proof/660_sys_gcd.cubalc", "sys_gcd", "SYS GCD/LCM multi-arg host math"},
       {"programs/proof/661_sys_in.cubalc", "sys_in", "SYS IN/WITHIN numeric range membership"},
+      {"programs/proof/662_sys_pow.cubalc", "sys_pow", "SYS POW/ISQRT host power and sqrt"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

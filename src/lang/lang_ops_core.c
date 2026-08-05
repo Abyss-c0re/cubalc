@@ -1761,6 +1761,77 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS POW|POWER|IPOW a e — integer a^e (e>=0; e=0 → 1). Overflow soft-wraps in long.
+     * SYS ISQRT|SQRT|IROOT2 n — floor integer square root (n<0 → 0).
+     * Usability: backoff bases / geometry without cube ISA POW/SQRT soup. */
+    if (kw(&L->cur,"POW") || kw(&L->cur,"POWER") || kw(&L->cur,"IPOW") ||
+        kw(&L->cur,"EXPT") || kw(&L->cur,"EXPON") ||
+        kw(&L->cur,"ISQRT") || kw(&L->cur,"SQRT") || kw(&L->cur,"IROOT2") ||
+        kw(&L->cur,"SQRTR") || kw(&L->cur,"FLOORSQRT")){
+      char op[16];
+      long out = 0, a = 0, e = 0;
+      char buf[40];
+      int is_sqrt;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sqrt = (strcmp(op, "ISQRT") == 0 || strcmp(op, "SQRT") == 0 ||
+                 strcmp(op, "IROOT2") == 0 || strcmp(op, "SQRTR") == 0 ||
+                 strcmp(op, "FLOORSQRT") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        a = parse_prim(vm, L);
+      else
+        a = vm->last_n;
+      if (is_sqrt) {
+        if (a < 0) out = 0;
+        else {
+          /* binary search floor sqrt */
+          long lo = 0, hi = a;
+          if (hi > 3037000499L) hi = 3037000499L; /* max for hi*hi in signed 64 */
+          while (lo <= hi) {
+            long mid = lo + (hi - lo) / 2;
+            long sq = mid * mid;
+            if (sq == a) { out = mid; break; }
+            if (sq < a) { out = mid; lo = mid + 1; }
+            else hi = mid - 1;
+          }
+        }
+        var_set_num(vm, "SQRT", out);
+        var_set_num(vm, "ISQRT", out);
+      } else {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+          e = parse_prim(vm, L);
+        else
+          e = 0;
+        if (e < 0) {
+          out = 0; /* negative exp not supported on ints */
+        } else if (e == 0) {
+          out = 1;
+        } else {
+          long r = 1;
+          long base = a;
+          long ee = e;
+          /* binary exponentiation; soft wrap on overflow */
+          while (ee > 0) {
+            if (ee & 1) r = r * base;
+            ee >>= 1;
+            if (ee) base = base * base;
+          }
+          out = r;
+        }
+        var_set_num(vm, "POW", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
      * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
      * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
@@ -4570,7 +4641,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4896,6 +4967,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MOD", "SYS MOD|REM a b — remainder · %0→0 soft"},
       {"SYS GCD", "SYS GCD|HCF a b [c…] — greatest common divisor → LAST_N"},
       {"SYS LCM", "SYS LCM a b [c…] — least common multiple → LAST_N"},
+      {"SYS POW", "SYS POW|POWER a e — integer a^e (e>=0) → LAST_N"},
+      {"SYS ISQRT", "SYS ISQRT|SQRT n — floor integer square root → LAST_N"},
       {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
       {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
       {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},

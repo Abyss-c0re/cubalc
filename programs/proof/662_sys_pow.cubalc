@@ -1,0 +1,66 @@
+# SYS POW / ISQRT — integer power and floor square root
+# Usability: backoff bases / geometry without cube ISA POW/SQRT soup
+
+HOLD_FLASH 1
+
+# power
+SYS POW 2 10
+ASSERT OK == 1
+ASSERT LAST_N == 1024
+SYS POW 3 4
+ASSERT LAST_N == 81
+SYS POW 5 0
+ASSERT LAST_N == 1
+SYS POW 7 1
+ASSERT LAST_N == 7
+SYS POWER 10 3
+ASSERT LAST_N == 1000
+SYS IPOW 2 8
+ASSERT LAST_N == 256
+
+# negative base
+SYS POW -2 3
+ASSERT LAST_N == -8
+SYS POW -2 4
+ASSERT LAST_N == 16
+
+# negative exp → 0 soft
+SYS POW 2 -1
+ASSERT LAST_N == 0
+
+# integer square root floor
+SYS ISQRT 0
+ASSERT LAST_N == 0
+SYS ISQRT 1
+ASSERT LAST_N == 1
+SYS ISQRT 15
+ASSERT LAST_N == 3
+SYS ISQRT 16
+ASSERT LAST_N == 4
+SYS ISQRT 100
+ASSERT LAST_N == 10
+SYS SQRT 99
+ASSERT LAST_N == 9
+SYS IROOT2 144
+ASSERT LAST_N == 12
+
+# negative sqrt → 0
+SYS ISQRT -5
+ASSERT LAST_N == 0
+
+# agent pattern: exponential backoff base^attempt capped
+LET base = 2
+LET attempt = 5
+SYS POW base attempt
+LET delay = LAST_N
+SYS CLAMP delay 1 60
+ASSERT delay == 32
+ASSERT LAST_N == 32
+
+# agent pattern: side length from area
+LET area = 50
+SYS ISQRT area
+LET side = LAST_N
+ASSERT side == 7
+
+PRINT "sys_pow ok"
