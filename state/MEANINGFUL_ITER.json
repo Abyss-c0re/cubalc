@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 115,
-  "version": "1.15.140-usability",
-  "item": "SYS FLATTEN / UNCHUNK expand joined bag fields",
-  "item_id": 148,
-  "title": "SYS FLATTEN|UNCHUNK [bag] [sep] — split every field by sep to flat bag",
-  "commit": "49765c00378030933a7bce11e52d5cd335b35bb1",
-  "summary": "SYS FLATTEN/UNCHUNK expand joined bag fields (reverse CHUNK). selftest 115.",
+  "iter": 116,
+  "version": "1.15.141-usability",
+  "item": "SYS COUNTMATCH / GREPCOUNT substring field count",
+  "item_id": 149,
+  "title": "SYS COUNTMATCH|GREPCOUNT bag needle — count fields containing needle",
+  "commit": "a901742a32fbfdd901279baa1f41b8e04d15bcf9",
+  "summary": "SYS COUNTMATCH/GREPCOUNT count bag fields containing needle without GREP clobber. selftest 116.",
   "proofs": [
-    "688_sys_flatten",
-    "selftest n_pass=115"
+    "689_sys_countmatch",
+    "selftest n_pass=116"
   ],
-  "when": "2026-08-05T20:54:56Z",
+  "when": "2026-08-05T21:05:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "49765c00378030933a7bce11e52d5cd335b35bb1"
+  "sha": "a901742a32fbfdd901279baa1f41b8e04d15bcf9"
 }
