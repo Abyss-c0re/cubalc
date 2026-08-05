@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 61,
-  "version": "1.15.86-usability",
-  "item": "SYS STARTSI / ENDSI case-insensitive affix",
-  "item_id": 94,
-  "title": "SYS STARTSI|ENDSI case-insensitive prefix/suffix probes",
-  "commit": "60fbfd90e087d1500156ab34aded3c209175f010",
-  "summary": "SYS STARTSI|ISTARTS|STARTS I and ENDSI|IENDS|ENDS I for case-insensitive prefix/suffix; path/ext/severity without UPPER glue. selftest rows[] 64\u219296.",
+  "iter": 62,
+  "version": "1.15.87-usability",
+  "item": "SYS BETWEEN / MIDOF / EXTRACT peel delimiters",
+  "item_id": 95,
+  "title": "SYS BETWEEN|MIDOF|EXTRACT open close [hay] peel between delimiters",
+  "commit": "e9817f35d3b1c3621713c531c08a32a7dbd5af18",
+  "summary": "SYS BETWEEN|MIDOF|EXTRACT|INSIDE|STRBETWEEN peel text between open/close markers; soft miss LAST_N=0. Completes BEFORE/AFTER for plate/kv/log without FIND+MID. selftest 62.",
   "proofs": [
-    "635_sys_startsi",
-    "selftest n_pass=61"
+    "636_sys_between",
+    "selftest n_pass=62"
   ],
-  "when": "2026-08-05T11:53:54Z",
+  "when": "2026-08-05T12:08:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "60fbfd90e087d1500156ab34aded3c209175f010"
+  "sha": "e9817f35d3b1c3621713c531c08a32a7dbd5af18"
 }
