@@ -1,0 +1,308 @@
+# queue_batch_worker.cubalc — sorted/paginated job queue batch under STATE
+#
+# Real use: agents drop job tokens (files) into CUBALC_STATE/queue/.
+# This program builds a stable batch without shell sort/head/tail:
+#   LIST queue/ → GREPV noise → SORT → UNIQ → DROP offset → TAKE batch
+#   EACH LINE: route by EXTNAME allowlist (SPLIT from ENV)
+#   .bits → FOLDBITS+DECIDE · .json → SYS JSON · .job → soft READ plate
+#   accepted jobs RENAME/COPY to done/; write BATCH_REPORT.txt
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/queue"
+#   printf '10101011' > "$CUBALC_STATE/queue/z.bits"
+#   printf '{"ok":1}' > "$CUBALC_STATE/queue/a.json"
+#   ./out/cubalc run -q -s programs/realworld/queue_batch_worker.cubalc
+#
+# Optional env:
+#   CUBALC_QUEUE_BATCH=2          # TAKE window (default 8)
+#   CUBALC_QUEUE_OFFSET=0         # DROP first N after sort (page)
+#   CUBALC_QUEUE_ALLOW=.bits,.json,.job   # SPLIT comma allowlist
+#   CUBALC_QUEUE_NOISE=.tmp       # GREPV basename noise
+#   CUBALC_QUEUE_REQUIRE=1        # EXIT 2 if zero accepted
+#   CUBALC_QUEUE_MAX_BYTES=65536
+#
+# Edges deliberately hit:
+#   LIST order unstable → SORT required for deterministic batches
+#   UNIQ is adjacent-only — must SORT first for full dedupe
+#   TAKE/DROP window from ENV string → SYS NUM
+#   SPLIT allowlist vs EXTNAME (dot discipline)
+#   var_slot 64-cap — pre-bind DECIDE early (carry-over W1)
+#   SYS JOIN still undiscoverable via forms/search
+#   empty queue + REQUIRE soft-exit path
+#   VARS newline collapse still hurts multi-line listings
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "queue_batch_worker: start"
+DEFAULT BATCH = 8
+DEFAULT OFFSET = 0
+DEFAULT ALLOW = ".bits,.json,.job"
+DEFAULT NOISE = ".tmp"
+DEFAULT MAX_BYTES = 65536
+DEFAULT REQUIRE_ONE = 0
+# Pre-bind DECIDE/DIGIT while n_vars low (var_slot create-cap 64)
+LET DECIDE = -1
+LET DIGIT = -1
+IDENTITY
+SYS DATE
+LET batch_date = DATE
+SYS MS
+LET t0 = MS
+
+# --- config ---
+# Note: after SYS NUM, LAST_N==0 is a valid batch size (TAKE nothing).
+# Do not gate on LAST_N > 0 post-NUM — that makes env BATCH=0 a silent no-op.
+SYS ENV "CUBALC_QUEUE_BATCH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BATCH = LAST_N
+  END
+END
+SYS ENV "CUBALC_QUEUE_OFFSET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET OFFSET = LAST_N
+  END
+END
+SYS ENV "CUBALC_QUEUE_ALLOW" OR ""
+IF LAST_N > 0 THEN
+  LET ALLOW = LAST
+END
+SYS ENV "CUBALC_QUEUE_NOISE" OR ""
+IF LAST_N > 0 THEN
+  LET NOISE = LAST
+END
+SYS ENV "CUBALC_QUEUE_MAX_BYTES" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_BYTES = LAST_N
+  END
+END
+SYS ENV "CUBALC_QUEUE_REQUIRE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+
+# SPLIT allowlist once → newline fields for GREP match against EXTNAME
+SYS SPLIT "," ALLOW
+LET allow_fields = LAST
+LET allow_n = SPLIT_N
+NOTE "allowlist split"
+
+# --- workspace ---
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "queue"
+LET queue_dir = LAST
+SYS JOIN state_dir "done"
+LET done_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR queue_dir
+SYS MKDIR done_dir
+SYS MKDIR out_dir
+
+SYS ISDIR queue_dir
+ASSERT LAST_N == 1 "queue is dir"
+
+# --- LIST → noise drop → SORT → UNIQ → DROP offset → TAKE batch ---
+SYS LIST queue_dir
+IF OK == 0 THEN
+  FAIL "LIST queue failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET raw_n = LIST_N
+LET listing = LAST
+NOTE "listed queue"
+
+SYS EQS NOISE ""
+IF LAST_N == 0 THEN
+  SYS GREPV NOISE listing
+  LET listing = LAST
+END
+
+SYS SORT listing
+LET listing = LAST
+LET sorted_n = SORT_N
+SYS UNIQ listing
+LET listing = LAST
+LET uniq_n = SORT_N
+
+# pagination: DROP offset then TAKE batch
+IF OFFSET > 0 THEN
+  SYS DROP OFFSET listing
+  LET listing = LAST
+END
+SYS TAKE BATCH listing
+LET batch_list = LAST
+LET batch_n = TAKE_N
+CLEAR_ERR "window clean"
+
+LET accepted = 0
+LET skipped = 0
+LET dig = -1
+LET json_ok = -1
+LET jobs_ok = 0
+LET first_name = ""
+
+EACH LINE AS fname IN batch_list
+  SYS EQS first_name ""
+  IF LAST_N == 1 THEN
+    LET first_name = fname
+  END
+
+  SYS JOIN queue_dir fname
+  LET path = LAST
+
+  SYS ISFILE path
+  IF LAST_N == 0 THEN
+    LET skipped = skipped + 1
+    CONTINUE
+  END
+
+  SYS SIZE path
+  IF OK == 0 THEN
+    CLEAR_ERR
+    LET skipped = skipped + 1
+    CONTINUE
+  END
+  IF SIZE == 0 THEN
+    LET skipped = skipped + 1
+    CONTINUE
+  END
+  IF SIZE > MAX_BYTES THEN
+    LET skipped = skipped + 1
+    CONTINUE
+  END
+
+  SYS EXTNAME path
+  LET ext = LAST
+  # allowlist: GREP ext against SPLIT fields (substring match on field list)
+  SYS GREP ext allow_fields
+  IF GREP_N == 0 THEN
+    LET skipped = skipped + 1
+    NOTE "skip not allowlisted"
+    CONTINUE
+  END
+
+  SYS EQS ext ".bits"
+  IF LAST_N == 1 THEN
+    SYS READ path
+    LET bits = LAST
+    CUBE peer0 ROLE host PROTON 1
+    CUBE brain ROLE braincube PROTON 1
+    PLUG peer0 brain
+    FOLDBITS peer0 bits
+    IMPULSE peer0 1
+    IMPULSE brain 1
+    FLOW 2
+    DECIDE brain
+    LET dig = DECIDE
+    LET accepted = accepted + 1
+    SYS JOIN done_dir fname
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      CLEAR_ERR
+      SYS RM path
+      CLEAR_ERR
+    END
+    NOTE "accepted bits"
+    CONTINUE
+  END
+
+  SYS EQS ext ".json"
+  IF LAST_N == 1 THEN
+    SYS READ path
+    SYS JSON "ok"
+    SYS CAT LAST ""
+    SYS NUM
+    LET json_ok = LAST_N
+    LET accepted = accepted + 1
+    SYS JOIN done_dir fname
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      CLEAR_ERR
+      SYS RM path
+      CLEAR_ERR
+    END
+    NOTE "accepted json"
+    CONTINUE
+  END
+
+  SYS EQS ext ".job"
+  IF LAST_N == 1 THEN
+    SYS READ OR path OR ""
+    IF OK == 0 THEN
+      CLEAR_ERR
+      LET skipped = skipped + 1
+      CONTINUE
+    END
+    LET jobs_ok = jobs_ok + 1
+    LET accepted = accepted + 1
+    SYS JOIN done_dir fname
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      CLEAR_ERR
+      SYS RM path
+      CLEAR_ERR
+    END
+    NOTE "accepted job"
+    CONTINUE
+  END
+
+  # allowlisted but unhandled ext
+  LET skipped = skipped + 1
+END
+
+IF REQUIRE_ONE == 1 THEN
+  IF accepted == 0 THEN
+    FAIL "nothing accepted"
+    EXIT 2 "batch empty"
+  END
+END
+
+# --- report ---
+SYS JOIN out_dir "BATCH_REPORT.txt"
+LET report = LAST
+SYS CAT "schema=cubalc.queue_batch_worker.v1 date=" batch_date
+LET summary = LAST
+SYS CAT summary " first="
+LET summary = LAST
+SYS CAT summary first_name
+LET summary = LAST
+SYS CAT summary " allow="
+LET summary = LAST
+SYS CAT summary ALLOW
+LET summary = LAST
+SYS WRITE report summary
+SYS EXIST report
+ASSERT EXIST == 1
+
+SYS MS
+LET elapsed_ms = MS - t0
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "queue_batch_worker: done"
+PRINT "batch" accepted skipped batch_n raw_n sorted_n uniq_n dig json_ok jobs_ok
+PRINT_JSON accepted skipped batch_n raw_n sorted_n uniq_n dig json_ok jobs_ok first_name OFFSET BATCH elapsed_ms STATUS_OK
+STATUS
+CLEAR_ERR "batch clean"
+EXIT 0 "batch ok"

@@ -1,114 +1,106 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 12,
-  "program": "programs/realworld/log_event_triage.cubalc",
-  "theme": "log event triage LIST+GREP+EACH LINE",
-  "version": "1.15.69-usability",
+  "iter": 13,
+  "program": "programs/realworld/queue_batch_worker.cubalc",
+  "theme": "sorted paginated job queue batch SORT/TAKE/SPLIT",
+  "version": "1.15.71-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_triage_hits",
-      "cmd": "CUBALC_STATE=/tmp/... logs with ERROR lines; ./out/cubalc run -q -s programs/realworld/log_event_triage.cubalc",
+      "name": "positive_mixed_queue",
+      "cmd": "queue with .bits/.json/.job/.tmp/.txt; run -s",
       "ok": true,
-      "note": "hit_total>0, first_hit captured, TRIAGE_REPORT.txt written, dig=3 after DECIDE pre-bind"
+      "note": "accepted=5 skipped=1 batch_n=6 raw_n=7; SORT first_name=a.json; dig bound after pre-bind"
     },
     {
-      "name": "filter_drop_tmp",
-      "cmd": "x.tmp + app.log + b.log; default FILTER=.log DROP=.tmp",
+      "name": "page_offset_take",
+      "cmd": "a.job b.job c.job; BATCH=1 OFFSET=1",
       "ok": true,
-      "note": "file_n=2 raw_n=3; .tmp dropped via GREPV"
+      "note": "processes only b.job (sorted page); a+c remain in queue"
     },
     {
-      "name": "require_files_empty",
-      "cmd": "CUBALC_TRIAGE_REQUIRE_FILES=1 empty logs/",
+      "name": "empty_require",
+      "cmd": "CUBALC_QUEUE_REQUIRE=1 empty queue",
       "ok": true,
-      "note": "EXIT 2 no files; err_line on EXIT plate accurate"
+      "note": "EXIT 2 batch empty; err_line on EXIT plate"
     },
     {
-      "name": "require_hits_case_miss",
-      "cmd": "CUBALC_TRIAGE_REQUIRE_HITS=1 with lowercase 'error' only",
+      "name": "allowlist_miss_require",
+      "cmd": "ALLOW=.bits only + a.txt + REQUIRE=1",
       "ok": true,
-      "note": "EXIT 2 no hits \u2014 GREP case-sensitive substring"
+      "note": "EXIT 2 nothing accepted"
     },
     {
-      "name": "list_not_dir_sticky",
-      "cmd": "SYS LIST on file path under -q -s",
+      "name": "batch_zero_require",
+      "cmd": "CUBALC_QUEUE_BATCH=0 REQUIRE=1 with jobs present",
       "ok": true,
-      "note": "last_err=list: not a directory; err_line=0; strict ok=false"
+      "note": "after fix: TAKE 0 \u2192 accepted 0 \u2192 EXIT 2; jobs untouched"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "44/44 pass (incl each_line + sys_grep + sys_take)"
+      "note": "46/46 pass incl sys_take/split/sort"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "error|matrix",
-      "title": "var_slot create-cap 64 vs LET 128 \u2014 DECIDE silent bind miss",
-      "detail": "cubalc_lang_var_slot() refuses create when n_vars>=64; var_get/LET allow 128. After LIST/EACH/GREP realworld walks, n_vars often exceeds 64. DECIDE brain still computes and prints 'decide N' but fails to create DECIDE/DIGIT plate vars (returns NULL silently). LET dig = DECIDE then yields 0. Agents trust board noise / dig plate and get wrong severity.",
-      "repro": "Run programs/realworld/log_event_triage.cubalc without early LET DECIDE=-1; observe decide 3 then dig=0 / DECIDE missing from VARS. With pre-bind LET DECIDE=-1 at start, dig=3."
+      "area": "env|flow",
+      "title": "SYS NUM zero is falsey \u2014 env BATCH=0 silent no-op if gated wrong",
+      "detail": "After SYS ENV then SYS NUM, LAST_N==0 is a valid TAKE window (process nothing) but common agent patterns IF LAST_N > 0 THEN LET BATCH = LAST_N never apply zero. Env CUBALC_QUEUE_BATCH=0 was ignored and default BATCH=8 ran. Zero-valid numeric configs need IF OK == 1 only, not LAST_N > 0 post-NUM.",
+      "repro": "Without fix: BATCH=0 REQUIRE=1 still accepted jobs (default 8). With LET BATCH = LAST_N on OK==1 only: TAKE 0 \u2192 EXIT 2."
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "cli|docs",
-      "title": "VARS JSON collapses newlines in multi-line strings",
-      "detail": "VARS plate serializes LIST/GREP/body strings without preserving \\n \u2014 e.g. LIST basenames become concatenated 'a.logb.log', GREP hits 'ERROR aERROR b'. Agents re-parsing VARS cannot recover field structure; PRINT_JSON of scalar counts still works.",
-      "repro": "SYS LIST programs/lib; VARS \u2014 inspect vars.LIST for missing newlines between basenames."
+      "severity": "med",
+      "area": "host",
+      "title": "UNIQ is adjacent-only; SORT is pure lexicographic",
+      "detail": "SYS UNIQ without prior SORT leaves non-adjacent duplicates (b\\na\\nb \u2192 3 fields). SORT is byte lexicographic \u2014 job10 sorts before job2 (job1, job10, job2). Real job queues often need natural/version sort or full unique set ops.",
+      "repro": "SYS UNIQ b\\na\\nb \u2192 LAST_N=3; SORT then UNIQ \u2192 2. SORT job10\\njob2\\njob1 \u2192 job1,job10,job2."
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "flow",
-      "title": "nested EACH LINE clobbers shared LINE/IT/IDX",
-      "detail": "Outer EACH LINE AS fname preserves fname, but after inner EACH LINE the shared LINE/IT/IDX/LINE_N remain from the inner loop (last hit). Easy to mis-read outer progress if code uses LINE after nested walk.",
-      "repro": "EACH LINE AS fname IN a\\nb; EACH LINE AS hit IN x\\ny; END; PRINT_JSON fname LINE IT \u2014 fname ok, LINE=y IT=1."
+      "area": "host",
+      "title": "SPLIT keeps empty fields; allowlist GREP is substring not exact",
+      "detail": "SYS SPLIT ',' '.bits,,.json' \u2192 3 fields with empty middle. Allowlist check via SYS GREP ext allow_fields is substring over newline fields \u2014 works for .bits but can false-positive if one ext is prefix of another (e.g. .j vs .json). No exact-line match form.",
+      "repro": "SPLIT consecutive commas; GREP '.j' against '.json\\n.job' matches both."
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "env|host",
-      "title": "GREP single case-sensitive substring \u2014 no OR/regex/i",
-      "detail": "SYS GREP uses strstr only. Cannot match ERROR|FAIL|CRIT in one pass; lowercase 'error' misses NEEDLE=ERROR. Real log triage needs multi-needle or case-fold.",
-      "repro": "body with 'error lower' + GREP ERROR \u2192 GREP_N=0; FAIL lines ignored when needle is ERROR."
+      "area": "docs|cli",
+      "title": "SYS JOIN still missing from forms/search",
+      "detail": "Queue paths require SYS JOIN STATE queue but search JOIN / forms JOIN still n=0. SORT/TAKE/SPLIT are cataloged; JOIN is not.",
+      "repro": "./out/cubalc search JOIN \u2192 n=0"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "docs|cli",
-      "title": "SYS JOIN still undiscoverable via forms/search",
-      "detail": "SYS JOIN|PATH is implemented and required for STATE/logs joins but forms JOIN and search JOIN return n=0. Agents must know the op from folklore/programs.",
-      "repro": "./out/cubalc forms JOIN; ./out/cubalc search JOIN \u2192 empty."
-    },
-    {
-      "id": "W6",
       "severity": "low",
-      "area": "error|host",
-      "title": "LIST soft-fail sticky err_line=0; GREP/EACH 512-char field trunc",
-      "detail": "LIST on non-dir sets last_err but err_line=0 (plate less useful under -s). GREP and EACH LINE copy each field into 512-byte stack buffers \u2014 long log lines truncate for match/walk.",
-      "repro": "SYS LIST file-path under -s; 600+ char ERROR line \u2192 first_hit truncated."
+      "area": "error|matrix",
+      "title": "var_slot 64-cap DECIDE still requires early pre-bind",
+      "detail": "Carry-over: batch walks still inflate n_vars; LET DECIDE=-1 at boot still required for dig capture after FOLDBITS path.",
+      "repro": "Remove pre-bind LET DECIDE=-1 from queue_batch_worker; dig may stick at -1/0 despite decide N print."
     }
   ],
   "workarounds": [
-    "LET DECIDE = -1 (and DIGIT) early while n_vars is low so var_slot can update existing slots after walk",
-    "UNSET large temps before DECIDE as secondary pressure relief (not always enough alone)",
-    "Use PRINT_JSON of scalar counters rather than re-parsing multi-line strings from VARS",
-    "Bind outer loop with EACH LINE AS name; do not trust LINE after nested EACH",
-    "Run multiple GREP passes for multi-severity (ERROR then FAIL) and sum GREP_N",
-    "SYS UPPER before GREP if case-fold needed (ASCII only)"
+    "After SYS NUM for env knobs, assign on OK==1 even when LAST_N==0",
+    "Always SORT before UNIQ for full dedupe of queue listings",
+    "Pad job names for lexical order (job01) or accept lex sort",
+    "Use exact EXT EQS branches after GREP allow prefilter; avoid short prefix allow tokens",
+    "LET DECIDE=-1 / DIGIT=-1 early before heavy walks",
+    "Know SYS JOIN from programs, not forms catalog"
   ],
   "language_gaps": [
-    "Unify var_slot and var_get create caps (64 vs 128) or error loudly when DECIDE plate bind fails",
-    "VARS JSON must escape/preserve newlines in string values",
-    "GREP multi-needle OR / case-insensitive flag",
+    "Natural/version sort or sort-key for job queues",
+    "UNIQ -u global (non-adjacent) without mandatory SORT",
+    "Exact line equality filter (not substring GREP) for allowlists",
     "Catalog SYS JOIN|PATH in forms/search",
-    "Accurate err_line for host soft fails (LIST/SIZE/READ)",
-    "Optional recursive LIST or ** glob for nested log trees"
+    "Unify var_slot/var_get create caps; loud error on DECIDE bind fail",
+    "Document zero-valid SYS NUM env pattern in cookbook"
   ],
-  "commit": "0ca367f47f143e2466db74e1918d872f0bd88eb4",
-  "ts": "2026-08-05T09:07:46Z"
+  "commit": "71ae707a099d2800ad81db4201c874cfd14dddc7",
+  "ts": "2026-08-05T09:28:01Z"
 }
