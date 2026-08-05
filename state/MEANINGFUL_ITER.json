@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 62,
-  "version": "1.15.87-usability",
-  "item": "SYS BETWEEN / MIDOF / EXTRACT peel delimiters",
-  "item_id": 95,
-  "title": "SYS BETWEEN|MIDOF|EXTRACT open close [hay] peel between delimiters",
-  "commit": "e9817f35d3b1c3621713c531c08a32a7dbd5af18",
-  "summary": "SYS BETWEEN|MIDOF|EXTRACT|INSIDE|STRBETWEEN peel text between open/close markers; soft miss LAST_N=0. Completes BEFORE/AFTER for plate/kv/log without FIND+MID. selftest 62.",
+  "iter": 63,
+  "version": "1.15.88-usability",
+  "item": "SYS FINDI / INDEXI case-insensitive index",
+  "item_id": 96,
+  "title": "SYS FINDI|INDEXI|FIND I hay needle case-insensitive index",
+  "commit": "00f31be9ab73326210608c5c5051d490a582060e",
+  "summary": "SYS FINDI|INDEXI|IFIND|FIND I case-insensitive first index → LAST_N (-1 miss). Completes GREPI/EQSI/HASI/STARTSI for locate+MID without UPPER. selftest 63.",
   "proofs": [
-    "636_sys_between",
-    "selftest n_pass=62"
+    "637_sys_findi",
+    "selftest n_pass=63"
   ],
-  "when": "2026-08-05T12:08:00Z",
+  "when": "2026-08-05T12:13:41Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e9817f35d3b1c3621713c531c08a32a7dbd5af18"
+  "sha": "00f31be9ab73326210608c5c5051d490a582060e"
 }
