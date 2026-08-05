@@ -1,0 +1,24 @@
+# SYS TMP — portable temp directory for agent plate writes
+# Usability: SYS JOIN TMP "plate.json" without shell $TMPDIR
+
+HOLD_FLASH 1
+
+SYS TMP
+ASSERT OK == 1
+ASSERT LAST_N > 0 "tmp non-empty"
+DEFINED TMP
+ASSERT DEFINED == 1
+DEFINED TMPDIR
+ASSERT DEFINED == 1
+
+# aliases
+SYS TEMP
+ASSERT LAST_N > 0
+SYS TMPDIR
+ASSERT LAST_N > 0
+
+# join under tmp (path string only — no write required)
+SYS JOIN TMP "cubalc_tmp_probe.json"
+ASSERT LAST_N > 0 "joined path"
+
+PRINT "sys_tmp ok" TMP

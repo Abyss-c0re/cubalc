@@ -307,6 +307,46 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TMP|TEMP|TMPDIR — portable temp directory for agent plate writes.
+     * Prefer TMPDIR / TMP / TEMP env, else /tmp (POSIX) or "." (fallback).
+     * Usability: SYS JOIN TMP "plate.json" without shell $TMPDIR glue. */
+    if (kw(&L->cur,"TMP") || kw(&L->cur,"TEMP") || kw(&L->cur,"TMPDIR") ||
+        kw(&L->cur,"TEMPDIR") || kw(&L->cur,"TEMP_DIR") || kw(&L->cur,"TMP_DIR")){
+      char tdir[512];
+      const char *e;
+      lex_next(L);
+      tdir[0] = 0;
+      e = getenv("TMPDIR");
+      if (!e || !e[0]) e = getenv("TMP");
+      if (!e || !e[0]) e = getenv("TEMP");
+      if (!e || !e[0]) e = getenv("CUBALC_TMP");
+      if (e && e[0]) snprintf(tdir, sizeof tdir, "%s", e);
+#if defined(CUBALC_OS_WINDOWS)
+      if (!tdir[0]) {
+        e = getenv("LOCALAPPDATA");
+        if (e && e[0]) snprintf(tdir, sizeof tdir, "%s\\Temp", e);
+        else snprintf(tdir, sizeof tdir, ".");
+      }
+#else
+      if (!tdir[0]) snprintf(tdir, sizeof tdir, "/tmp");
+#endif
+      /* strip trailing slash (keep root /) */
+      {
+        size_t n = strlen(tdir);
+        while (n > 1 && (tdir[n - 1] == '/' || tdir[n - 1] == '\\')) {
+          tdir[n - 1] = 0;
+          n--;
+        }
+      }
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", tdir);
+      vm->last_n = (long)strlen(tdir);
+      var_set_str(vm, "LAST", tdir);
+      var_set_str(vm, "TMP", tdir);
+      var_set_str(vm, "TMPDIR", tdir);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"HTTP") || kw(&L->cur,"GET") || kw(&L->cur,"POST")){
       char method[8] = "GET";
       if (kw(&L->cur,"POST")) snprintf(method,sizeof method,"POST");
@@ -1198,7 +1238,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1403,6 +1443,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
+      {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
