@@ -5,13 +5,13 @@
   "item": "SYS SETMATCH / REPLACEMATCH replace first exact bag field",
   "item_id": 109,
   "title": "SYS SETMATCH|REPLACEMATCH bag old new replace first exact field",
-  "commit": "2aae62cf22e804f65eb93ab0ad9bb62763ae7400",
+  "commit": "f74b00cba0a646a9c09412914f50c27f8cf0ad2b",
   "summary": "SYS SETMATCH|REPLACEMATCH|UPDATEFIELD bag old new replace first exact field. Soft miss LAST_N=0. SETMATCHI icase on old. Status-by-name without FINDLINE+SETLINE. selftest 76.",
   "proofs": [
     "650_sys_setmatch",
     "selftest n_pass=76"
   ],
-  "when": "2026-08-05T14:23:19Z",
+  "when": "2026-08-05T14:23:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2aae62cf22e804f65eb93ab0ad9bb62763ae7400"
+  "sha": "f74b00cba0a646a9c09412914f50c27f8cf0ad2b"
 }
