@@ -14,6 +14,13 @@
 ### Prior
 ASSERT message strings (1c2693e); 1.15.15-universal ISA.
 
+## Meaningful — cubalc libs catalog — 2026-08-05
+
+### Usability
+- `cubalc libs` (aliases: `lib`, `stdlib`) — list `programs/lib/*.cubalc` with hints
+- JSON plate `cubalc.libs.v1` for agents; TSV human lines
+- Complements cookbook / forms / doctor
+
 ## Meaningful — sticky ERR / LAST_ERR — 2026-08-05
 
 ### Usability

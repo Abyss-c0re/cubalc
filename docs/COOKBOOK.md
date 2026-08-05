@@ -9,6 +9,8 @@
 make all
 ./out/cubalc doctor      # JSON readiness
 ./out/cubalc cookbook    # paths
+./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
+./out/cubalc forms SMX   # play-form catalog
 ./out/cubalc help
 ```
 

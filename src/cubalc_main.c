@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -1684,6 +1685,73 @@ int main(int argc, char **argv) {
            "Commands: cubalc doctor · cubalc run <file> · cubalc protect · cubalc smx-bus prove-tcp\n");
     return 0;
   }
+  if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
+      strcmp(cmd, "stdlib") == 0) {
+    /* Usability: list programs/lib INCLUDE snippets for agents/humans */
+    static const struct { const char *file; const char *hint; } known[] = {
+      {"hold_seed.cubalc", "HOLD_FLASH + BUDGET + SHARE seed"},
+      {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
+      {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
+    };
+    const char *libdir = "programs/lib";
+    char paths[32][96];
+    char hints[32][120];
+    int n = 0, i, j;
+    DIR *d = opendir(libdir);
+    if (d) {
+      struct dirent *de;
+      while ((de = readdir(d)) != NULL && n < 32) {
+        size_t len = strlen(de->d_name);
+        if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0)
+          continue;
+        if (de->d_name[0] == '.') continue;
+        snprintf(paths[n], sizeof paths[n], "%s/%s", libdir, de->d_name);
+        hints[n][0] = 0;
+        for (j = 0; j < (int)(sizeof known / sizeof known[0]); j++) {
+          if (strcmp(de->d_name, known[j].file) == 0) {
+            snprintf(hints[n], sizeof hints[n], "%s", known[j].hint);
+            break;
+          }
+        }
+        if (!hints[n][0])
+          snprintf(hints[n], sizeof hints[n], "INCLUDE lib snippet");
+        n++;
+      }
+      closedir(d);
+    }
+    /* stable sort by path */
+    for (i = 0; i < n; i++) {
+      for (j = i + 1; j < n; j++) {
+        if (strcmp(paths[j], paths[i]) < 0) {
+          char tp[96], th[120];
+          snprintf(tp, sizeof tp, "%s", paths[i]);
+          snprintf(th, sizeof th, "%s", hints[i]);
+          snprintf(paths[i], sizeof paths[i], "%s", paths[j]);
+          snprintf(hints[i], sizeof hints[i], "%s", hints[j]);
+          snprintf(paths[j], sizeof paths[j], "%s", tp);
+          snprintf(hints[j], sizeof hints[j], "%s", th);
+        }
+      }
+    }
+    printf("# CubalC programs/lib INCLUDE catalog n=%d version=%s\n",
+           n, CUBALC_LANG_VERSION);
+    printf("# use: INCLUDE \"lib/<name>.cubalc\" from programs/*\n");
+    for (i = 0; i < n; i++)
+      printf("%s\t%s\n", paths[i], hints[i]);
+    printf("{\"schema\":\"cubalc.libs.v1\",\"ok\":%s,\"cmd\":\"libs\","
+           "\"dir\":\"%s\",\"n\":%d,\"version\":\"%s\","
+           "\"include_from\":\"programs/*\",\"libs\":[",
+           n > 0 ? "true" : "false", libdir, n, CUBALC_LANG_VERSION);
+    for (i = 0; i < n; i++) {
+      /* basename */
+      const char *base = strrchr(paths[i], '/');
+      base = base ? base + 1 : paths[i];
+      printf("%s{\"path\":\"%s\",\"name\":\"%s\",\"hint\":\"%s\"}",
+             i ? "," : "", paths[i], base, hints[i]);
+    }
+    printf("]}\n");
+    return n > 0 ? 0 : 1;
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
@@ -1692,6 +1760,7 @@ int main(int argc, char **argv) {
       "    doctor|health          install readiness JSON (agents/humans)\n"
       "    cookbook|start         paths to starters\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
+      "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    run|eval <file.cubalc> execute a program\n"
       "    help|-h                this text\n"
       "\n"
