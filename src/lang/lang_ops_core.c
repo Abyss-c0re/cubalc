@@ -1736,6 +1736,79 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS CUT|COLUMN|FIELDN hay sep n — peel Nth field by separator → LAST.
+     * CUT/FIELDN: 0-based index. COLUMN/COL/COLN: 1-based (like SYS LINE).
+     * LAST_N = 1 if field exists, 0 if miss/out-of-range. Empty sep → whole as field 0.
+     * Usability: CSV/path/kv columns without SPLIT + NTH glue. */
+    if (kw(&L->cur,"CUT") || kw(&L->cur,"COLUMN") || kw(&L->cur,"COL") ||
+        kw(&L->cur,"COLN") || kw(&L->cur,"FIELDN") || kw(&L->cur,"NTHFIELD") ||
+        kw(&L->cur,"GETFIELD") || kw(&L->cur,"CSVFIELD")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int one_based = (strcmp(op, "COLUMN") == 0 || strcmp(op, "COL") == 0 ||
+                       strcmp(op, "COLN") == 0);
+      char hay[CUBALC_HOST_STR_MAX], sep[64], out[512];
+      long want = 0, idx = 0, found = 0;
+      const char *p, *hit, *start;
+      size_t sepn, flen;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (one_based) {
+        if (want < 1) want = 1;
+        want = want - 1; /* convert to 0-based walk */
+      } else {
+        if (want < 0) want = 0;
+      }
+      out[0] = 0;
+      sepn = strlen(sep);
+      p = hay;
+      if (!hay[0]) {
+        found = 0;
+      } else if (sepn == 0) {
+        /* empty sep: only field 0 is the whole string */
+        if (want == 0) {
+          snprintf(out, sizeof out, "%s", hay);
+          found = 1;
+        }
+      } else {
+        while (*p) {
+          start = p;
+          hit = strstr(p, sep);
+          if (hit) {
+            flen = (size_t)(hit - p);
+            p = hit + sepn;
+          } else {
+            flen = strlen(p);
+            p = p + flen;
+          }
+          if (idx == want) {
+            if (flen >= sizeof out) flen = sizeof out - 1;
+            memcpy(out, start, flen);
+            out[flen] = 0;
+            found = 1;
+            break;
+          }
+          idx++;
+          if (!hit) break;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "CUT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "CUT_N", found);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORT [str|LAST] — lexicographic sort of newline fields → LAST.
      * SYS UNIQ [str|LAST] — drop adjacent duplicate fields (sort first for full unique).
      * LAST_N/SORT_N = kept count. Cap 512 fields.
@@ -2427,7 +2500,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2678,6 +2751,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
       {"SYS LINES", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N/LINES_N"},
       {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
+      {"SYS CUT", "SYS CUT|FIELDN hay sep n — 0-based field by sep · LAST_N=found"},
+      {"SYS COLUMN", "SYS COLUMN|COL hay sep n — 1-based field by sep (CSV/path)"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

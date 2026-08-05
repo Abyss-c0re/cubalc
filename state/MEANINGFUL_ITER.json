@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 56,
-  "version": "1.15.81-usability",
-  "item": "SYS LINES / WC newline field count",
-  "item_id": 89,
-  "title": "SYS LINES|WC counts newline fields after LAST_N clobber",
-  "commit": "45a4b138ac3ca2b019938299ca85a6cd010c8182",
-  "summary": "SYS LINES|NLINES|WC|COUNTLINES [str] \u2192 LAST_N/LINES_N/WC_N field count; bag/LIST size without shell wc -l.",
+  "iter": 57,
+  "version": "1.15.82-usability",
+  "item": "SYS CUT / COLUMN field by separator",
+  "item_id": 90,
+  "title": "SYS CUT|COLUMN peels Nth field by separator",
+  "commit": "pending",
+  "summary": "SYS CUT|FIELDN hay sep n (0-based) and COLUMN|COL (1-based); LAST_N=found; CSV/path without SPLIT+NTH.",
   "proofs": [
-    "630_sys_lines",
-    "selftest n_pass=56"
+    "631_sys_cut",
+    "selftest n_pass=57"
   ],
-  "when": "2026-08-05T11:03:33Z",
+  "when": "2026-08-05T11:13:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "45a4b138ac3ca2b019938299ca85a6cd010c8182",
-  "note": "prior tick restored thrash mass-delete via git restore HEAD"
+  "sha": "pending"
 }

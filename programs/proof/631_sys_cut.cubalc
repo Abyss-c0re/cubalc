@@ -1,0 +1,91 @@
+# SYS CUT / COLUMN — peel Nth field by separator (CSV/path without SPLIT+NTH)
+# Usability: one form for column extract; CUT 0-based, COLUMN 1-based
+
+HOLD_FLASH 1
+
+# 0-based CUT
+SYS CUT "a,b,c" "," 0
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+SYS CUT "a,b,c" "," 1
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+SYS CUT "a,b,c" "," 2
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# out of range → empty, LAST_N=0
+SYS CUT "a,b" "," 5
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# multi-char sep
+SYS CUT "host=box.local" "=" 0
+SYS EQS LAST "host"
+ASSERT LAST_N == 1
+SYS CUT "host=box.local" "=" 1
+SYS EQS LAST "box.local"
+ASSERT LAST_N == 1
+
+# path components
+SYS CUT "/var/log/app.log" "/" 0
+# leading sep → empty first field
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS CUT "/var/log/app.log" "/" 1
+SYS EQS LAST "var"
+ASSERT LAST_N == 1
+SYS CUT "/var/log/app.log" "/" 3
+SYS EQS LAST "app.log"
+ASSERT LAST_N == 1
+
+# COLUMN is 1-based
+SYS COLUMN "x:y:z" ":" 1
+ASSERT LAST_N == 1
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+SYS COLUMN "x:y:z" ":" 2
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+SYS COL "x:y:z" ":" 3
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# FIELDN alias (0-based)
+SYS FIELDN "p,q" "," 1
+SYS EQS LAST "q"
+ASSERT LAST_N == 1
+
+# empty sep → only index 0 is whole string
+SYS CUT "abc" "" 0
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+SYS CUT "abc" "" 1
+ASSERT LAST_N == 0
+
+# empty hay
+SYS CUT "" "," 0
+ASSERT LAST_N == 0
+
+# default hay LAST
+LET row = "err,disk,fatal"
+SYS CUT row "," 1
+SYS EQS LAST "disk"
+ASSERT LAST_N == 1
+
+# chain: GREPI line then CUT severity/message style CSV
+LET L = "2026-01-01,ERROR,boom"
+SYS CUT L "," 1
+SYS EQSI LAST "error"
+ASSERT LAST_N == 1
+SYS CUT L "," 2
+SYS EQS LAST "boom"
+ASSERT LAST_N == 1
+
+PRINT "sys_cut ok"
