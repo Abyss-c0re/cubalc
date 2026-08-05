@@ -1,156 +1,144 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 32,
-  "program": "programs/realworld/fleet_allowlist_merge.cubalc",
-  "theme": "fleet allowlist merge UNION INTERSECT DIFF DISTINCT ZIP KEYS VALS",
-  "version": "1.15.119-usability",
+  "iter": 33,
+  "program": "programs/realworld/deploy_step_board.cubalc",
+  "theme": "deploy step board ENUMERATE PREFIXALL SUFFIXALL FILL SETMATCH pin",
+  "version": "1.15.121-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_ab",
-      "cmd": "seed_a api db mesh api api_v2; seed_b db cache api",
+      "name": "seed_arm",
+      "cmd": "seed build test deploy smoke; arm prod",
       "ok": true,
-      "note": "A=4 B=3 HASLINE dedup"
+      "note": "prod/1.build:pending ... 4 steps"
     },
     {
-      "name": "union_intersect_diff",
-      "cmd": "union\u21925; intersect\u2192api,db; diff\u2192mesh,api_v2",
+      "name": "pass_fail_pin",
+      "cmd": "pass build→done; fail test→failed; pin first pending=deploy",
       "ok": true,
-      "note": "set ops overwrite A with LET rebind"
+      "note": "SETMATCH + MOVELINE"
     },
     {
-      "name": "distinct_vs_uniq",
-      "cmd": "UNIQ non-adj dups n=5; DISTINCT n=3",
-      "ok": true,
-      "note": "UNIQ adjacent-only; DISTINCT full unique"
-    },
-    {
-      "name": "zip_unequal_pad",
-      "cmd": "zip 4x3 \u2192 api_v2: empty partner",
-      "ok": true,
-      "note": "api:db db:cache mesh:api api_v2:"
-    },
-    {
-      "name": "keys_vals",
-      "cmd": "keys/vals peel roles plate",
-      "ok": true,
-      "note": "after zip"
-    },
-    {
-      "name": "zip_sep_var_fail",
-      "cmd": "SYS ZIP a b SEP \u2192 unknown form SEP",
-      "ok": true,
-      "note": "sep must be string literal; fixed to \":\""
-    },
-    {
-      "name": "intersect_empty_require",
-      "cmd": "REQUIRE intersect disjoint EXIT 2; soft rc0",
+      "name": "pass_miss_require",
+      "cmd": "REQUIRE pass ghost EXIT 2; soft miss rc0",
       "ok": true,
       "note": "soft+REQUIRE"
     },
     {
-      "name": "drop_miss_require",
-      "cmd": "REQUIRE drop_a ghost EXIT 2",
+      "name": "fill_slots",
+      "cmd": "fill 4 idle",
       "ok": true,
-      "note": "soft+REQUIRE"
+      "note": "SYS FILL capacity bag"
     },
     {
-      "name": "setops_no_mutate",
-      "cmd": "UNION a b without LET leaves a unchanged",
+      "name": "grep_build_cousin",
+      "cmd": "GREP build matches build+buildx; COUNTLINE :pending→0",
       "ok": true,
-      "note": "a_no_rebind=2 last_n=3 after union"
+      "note": "substring + exact COUNTLINE limits"
+    },
+    {
+      "name": "enum_no_rebind",
+      "cmd": "ENUMERATE without LET leaves bag plain names",
+      "ok": true,
+      "note": "must LET bag=LAST after ENUMERATE/PREFIXALL/SUFFIXALL"
     },
     {
       "name": "print_json_collapse",
-      "cmd": "list bag_a apidbmeshapi_v2",
+      "cmd": "list bag collapse multi-line steps",
       "ok": true,
-      "note": "PRINT_JSON collapse"
+      "note": "PRINT_JSON footgun"
+    },
+    {
+      "name": "write_nl",
+      "cmd": "cat -A last step often no $",
+      "ok": true,
+      "note": "WRITE trailing NL"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "94/94 pass incl union zip prefixall"
+      "note": "96/96 pass incl enumerate fill prefixall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parse",
-      "title": "ZIP/KEYS/VALS sep arg rejects bare string vars (unknown form)",
-      "detail": "SYS ZIP bag_a bag_b SEP fails parse: unknown form 'SEP'. Same class as REPLACEALL with bare numeric vars. Sep must be quoted literal \":\". Agents cannot pass CUBALC_AL_SEP through a var into ZIP third arg.",
-      "repro": "LET SEP=\":\"; SYS ZIP a b SEP \u2192 unknown form SEP"
+      "area": "host|bag",
+      "title": "ENUMERATE/PREFIXALL/SUFFIXALL/FILL do not mutate named bags",
+      "detail": "Must LET bag = LAST after every transform or WRITE persists pre-arm plain names. Same non-mutate class as UNION/SHUFFLE.",
+      "repro": "ENUMERATE bag; LINES bag still unnumbered without LET"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "UNION/INTERSECT/DIFF/DISTINCT/ZIP do not mutate named bags",
-      "detail": "Must LET bag_a = LAST after every set op or WRITE persists pre-op bag. Silent footgun.",
-      "repro": "UNION a b; LINES a unchanged without LET"
+      "title": "No structured step identity — armed tokens need peel walk",
+      "detail": "prod/1.build:pending requires AFTER / + BEFORE : + AFTER . + EQS. GREP build matches buildx. Pass/fail are multi-form identity, not one lookup.",
+      "repro": "GREP build on build+buildx → n=2"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "UNIQ only adjacent \u2014 DISTINCT needed for full unique",
-      "detail": "UNIQ on api\\ndb\\napi\\nmesh\\ndb keeps 5 fields; DISTINCT yields 3. Agents still reach for UNIQ+SORT habit.",
-      "repro": "UNIQ non-adj \u2192 n=5; DISTINCT \u2192 n=3"
+      "title": "COUNTLINE cannot tally status suffixes",
+      "detail": "COUNTLINE bag ':pending' → 0; need GREP+LINES (substring-risky for short statuses).",
+      "repro": "COUNTLINE ':pending' → 0; GREP ':pending' + LINES → n"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "ZIP unequal lengths pad empty partner silently",
-      "detail": "4 hosts \u00d7 3 roles \u2192 last host: with empty role; extra roles become :role. No OK soft miss when lengths differ.",
-      "repro": "ZIP 3 vs 2 \u2192 pad empty"
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line step bags",
+      "detail": "Armed steps collapse into one string field.",
+      "repro": "PRINT_JSON bag after arm"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses multi-line allowlist bags",
-      "detail": "apidbmeshapi_v2 unparseable. Prefer depth scalars.",
-      "repro": "PRINT_JSON bag_a after seed"
-    },
-    {
-      "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last field without $.",
-      "repro": "seed_a; cat -A ALLOW_A.txt"
+      "detail": "cat -A last step without $.",
+      "repro": "seed/arm; cat -A STEPS.txt"
+    },
+    {
+      "id": "W6",
+      "severity": "med",
+      "area": "host|docs",
+      "title": "PREFIXALL accepts string vars for affix but ZIP sep does not",
+      "detail": "PREFIXALL bag p with LET p=stg/ works; ZIP a b SEP fails unknown form. Inconsistent string-arg coercion across host forms confuses agents.",
+      "repro": "PREFIXALL bag p OK; ZIP a b SEP fail"
     },
     {
       "id": "W7",
-      "severity": "med",
-      "area": "host|bag",
-      "title": "GREP still substring-unsafe on pure service names",
-      "detail": "GREP api matches api_v2. Use HASLINE/COUNTLINE exact.",
-      "repro": "GREP api on api+api_v2 \u2192 n=2"
+      "severity": "low",
+      "area": "host",
+      "title": "No string concat — env/ built via REPLACEALL ENV/ template",
+      "detail": "Same template class as other boards; ENV token in name corrupts.",
+      "repro": "template ENV/ with REPLACEALL"
     }
   ],
   "workarounds": [
-    "ZIP/KEYS/VALS use literal \":\" not SEP var",
-    "Always LET bag_a = LAST after UNION/INTERSECT/DIFF/DISTINCT/ZIP",
-    "Prefer DISTINCT over UNIQ for allowlist dedup",
-    "Assert LINES A == LINES B before ZIP if pad is dangerous",
-    "HASLINE not GREP for membership",
-    "PRINT_JSON only depth_a/depth_b/n_out scalars"
+    "Always LET bag = LAST after ENUMERATE/PREFIXALL/SUFFIXALL/FILL/SETMATCH",
+    "Pass/fail: peel env/index/status then EQS step name — not GREP name",
+    "Status tallies: GREP ':pending'|':done'|':failed' + LINES",
+    "PREFIXALL string vars OK for env prefix; still use literals for ZIP sep",
+    "PRINT_JSON only n_pending/n_done/n_failed scalars"
   ],
   "language_gaps": [
-    "String-var coercion for ZIP/KEYS/VALS/REPLACEALL separator/args",
-    "In-place set ops or auto-bind into named bags",
-    "ZIP soft miss when lengths differ (strict mode)",
-    "PRINT_JSON newline escape; WRITE force NL",
-    "Doc UNIQ vs DISTINCT prominently"
+    "In-place bag transforms or auto-bind",
+    "Structured field path (env/index/name/status) parse form",
+    "COUNTLINE suffix/pattern tally",
+    "Consistent string-var coercion for all host multi-arg forms",
+    "PRINT_JSON newlines; WRITE force NL",
+    "String concat for env/step tokens"
   ],
   "issues_faced": [
-    "ZIP with SEP var failed unknown form \u2014 forced literal colon",
-    "UNION without rebind would leave A unchanged on disk",
-    "UNIQ vs DISTINCT difference is easy agent trap for allowlist merge"
+    "Armed token identity for pass is fragile peel chain — documents language gap",
+    "pass on already-done build correctly misses (pending-only) — soft miss path",
+    "GREP build false friend with buildx confirmed"
   ],
-  "commit": "6be14b5ec6c0c478150c9d94a00ccdc7b0b35a42",
-  "ts": "2026-08-05T17:24:20Z"
+  "commit": "",
+  "ts": "2026-08-05T17:48:40Z"
 }
