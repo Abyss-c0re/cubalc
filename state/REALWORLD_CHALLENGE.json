@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "seed_bump_get",
-      "cmd": "seed api:3 db:1 mesh:0; bump api 2 → 5; get api",
+      "cmd": "seed api:3 db:1 mesh:0; bump api 2 \u2192 5; get api",
       "ok": true,
       "note": "KVINC + LOOKUP"
     },
     {
       "name": "geti_case",
-      "cmd": "geti API → 5",
+      "cmd": "geti API \u2192 5",
       "ok": true,
       "note": "LOOKUPI"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "loadlines_freq",
-      "cmd": "loadlines api|||api|||warn|||api → api+3 warn:1",
+      "cmd": "loadlines api|||api|||warn|||api \u2192 api+3 warn:1",
       "ok": true,
       "note": "FREQ merge KVINC"
     },
@@ -50,19 +50,19 @@
     },
     {
       "name": "sep_eq_plate",
-      "cmd": "CUBALC_SE_SEP== seed/bump api=3→5",
+      "cmd": "CUBALC_SE_SEP== seed/bump api=3\u21925",
       "ok": true,
       "note": "literal sep branch"
     },
     {
       "name": "nonnum_coerce",
-      "cmd": "set api abc; bump → api:1",
+      "cmd": "set api abc; bump \u2192 api:1",
       "ok": true,
       "note": "strtol silent 0"
     },
     {
       "name": "dup_first_wins",
-      "cmd": "error:3\\nerror:9 bump → error:4 residual 9",
+      "cmd": "error:3\\nerror:9 bump \u2192 error:4 residual 9",
       "ok": true,
       "note": "first key only"
     },
@@ -85,23 +85,23 @@
       "severity": "high",
       "area": "lang|parse",
       "title": "LOOKUP/KVSET/KVINC sep cannot be a variable",
-      "detail": "SYS LOOKUP bag key SEP fails unknown form 'SEP'. KVINC/KVSET only accept TK_STR for sep; LOOKUP bare IDENT only if strlen<=2. Configurable CUBALC_SE_SEP forces EQS branch + duplicated ops with \":\"/\"=\" literals. BEFORE/AFTER accept vars — inconsistent.",
-      "repro": "LET SEP=\":\"; SYS LOOKUP bag k SEP → unknown form"
+      "detail": "SYS LOOKUP bag key SEP fails unknown form 'SEP'. KVINC/KVSET only accept TK_STR for sep; LOOKUP bare IDENT only if strlen<=2. Configurable CUBALC_SE_SEP forces EQS branch + duplicated ops with \":\"/\"=\" literals. BEFORE/AFTER accept vars \u2014 inconsistent.",
+      "repro": "LET SEP=\":\"; SYS LOOKUP bag k SEP \u2192 unknown form"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
       "title": "KVINC silently coerces non-numeric values to 0",
-      "detail": "error:abc +1 → error:1 with KVINC_HIT=1. No OK=0 / refuse mode for non-numeric. Corrupts string metadata plates if reused as counters.",
-      "repro": "KVINC 'error:abc' error → error:1"
+      "detail": "error:abc +1 \u2192 error:1 with KVINC_HIT=1. No OK=0 / refuse mode for non-numeric. Corrupts string metadata plates if reused as counters.",
+      "repro": "KVINC 'error:abc' error \u2192 error:1"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
       "title": "Duplicate keys: first-wins only; residual siblings stay",
-      "detail": "LOOKUP/KVINC touch only first matching key. error:3\\nerror:9 bump → error:4\\nerror:9. No de-dupe or multi-key bump. Agents must UNIQ/normalize first.",
+      "detail": "LOOKUP/KVINC touch only first matching key. error:3\\nerror:9 bump \u2192 error:4\\nerror:9. No de-dupe or multi-key bump. Agents must UNIQ/normalize first.",
       "repro": "KVINC dup-key bag"
     },
     {
@@ -109,7 +109,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "No floor/clamp on negative KVINC delta",
-      "detail": "bump -2 from 5 → 3 ok; can go negative freely. Budget-like agents need MIN 0 after every bump.",
+      "detail": "bump -2 from 5 \u2192 3 ok; can go negative freely. Budget-like agents need MIN 0 after every bump.",
       "repro": "KVINC bag k -99"
     },
     {
@@ -141,7 +141,7 @@
       "severity": "low",
       "area": "host|bag",
       "title": "No KVDEL / drop-by-key primitive",
-      "detail": "Must LOOKUP → LOOKUP_LINE → REMOVELINE. Works but multi-step; residual dups need loop.",
+      "detail": "Must LOOKUP \u2192 LOOKUP_LINE \u2192 REMOVELINE. Works but multi-step; residual dups need loop.",
       "repro": "drop key needs LOOKUP_LINE"
     }
   ],
@@ -162,11 +162,11 @@
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "First seed failed: unknown form SEP — forced literal-sep rewrite and documented as W1",
+    "First seed failed: unknown form SEP \u2014 forced literal-sep rewrite and documented as W1",
     "Positive seed/bump/get/geti/loadlines/pin/drop clean after fix",
     "Non-numeric coerce and dup first-wins confirmed as language behavior not bug",
-    "No language fix this iter — sep resolve_str_arg for MEANINGFUL_ITER"
+    "No language fix this iter \u2014 sep resolve_str_arg for MEANINGFUL_ITER"
   ],
-  "commit": "",
+  "commit": "738992f15ebd71fb6e3f7e4663caca579ee93a95",
   "ts": "2026-08-05T23:40:00Z"
 }
