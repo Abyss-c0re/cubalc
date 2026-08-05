@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 87,
-  "version": "1.15.112-usability",
-  "item": "SYS GCD / LCM multi-arg host math",
-  "item_id": 120,
-  "title": "SYS GCD|LCM multi-arg gcd/lcm",
-  "commit": "46414dd862e58d0a703760cc17c1094d4e97dda9",
-  "summary": "SYS GCD/HCF and LCM multi-arg \u2192 LAST_N. Reduce ratios/cycles without ISA soup. selftest 87.",
+  "iter": 88,
+  "version": "1.15.113-usability",
+  "item": "SYS IN / WITHIN numeric range membership",
+  "item_id": 121,
+  "title": "SYS IN|WITHIN x lo hi \u2192 LAST_N 0|1",
+  "commit": "68a51707e5479d2761b5b3a9cad5e7c10506c7c2",
+  "summary": "SYS IN/WITHIN inclusive range membership 0|1. Score/retry guards without dual CMP. selftest 88.",
   "proofs": [
-    "660_sys_gcd",
-    "selftest n_pass=87"
+    "661_sys_in",
+    "selftest n_pass=88"
   ],
-  "when": "2026-08-05T16:13:24Z",
+  "when": "2026-08-05T16:24:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "46414dd862e58d0a703760cc17c1094d4e97dda9"
+  "sha": "68a51707e5479d2761b5b3a9cad5e7c10506c7c2"
 }
