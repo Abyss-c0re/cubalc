@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 11,
-  "version": "1.15.36-usability",
-  "item": "programs/lib/agent_boot stdlib preamble",
-  "item_id": 44,
-  "title": "INCLUDE agent_boot REQUIRE+hold_seed+VERSION",
-  "commit": "9f0f5414646a17d16429a176a1084305e9da1da3",
-  "summary": "stdlib agent_boot.cubalc: one INCLUDE for REQUIRE 1.15 floor, HOLD_FLASH seed, and VERSION plate so agents skip boilerplate.",
+  "iter": 52,
+  "version": "1.15.77-usability",
+  "item": "SYS STR / ITOA integer to decimal string",
+  "item_id": 85,
+  "title": "SYS STR|ITOA converts numbers for REPLACEALL templates",
+  "commit": "9f3b77f647badc91ffe722c1d71664f067dbfad2",
+  "summary": "SYS STR|ITOA|NUMSTR|TOSTR|DECIMAL n \u2192 decimal string LAST/STR; dual of SYS NUM; fills {{COUNT}} without shell.",
   "proofs": [
-    "587_agent_boot",
-    "selftest n_pass=13"
+    "626_sys_str",
+    "selftest n_pass=52"
   ],
-  "when": "2026-08-05T03:34:05Z",
+  "when": "2026-08-05T10:26:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9f0f5414646a17d16429a176a1084305e9da1da3"
+  "sha": "9f3b77f647badc91ffe722c1d71664f067dbfad2"
 }

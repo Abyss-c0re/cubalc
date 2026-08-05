@@ -1,0 +1,85 @@
+# SYS STR / ITOA / NUMSTR — integer → decimal string (dual of SYS NUM)
+# Usability: REPLACEALL templates {{COUNT}} without shell printf/itoa
+
+HOLD_FLASH 1
+
+# literal
+SYS STR 42
+ASSERT OK == 1
+ASSERT LAST_N == 42
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+SYS STR 42
+SYS EQS STR "42"
+ASSERT LAST_N == 1
+
+# zero and negative
+SYS ITOA 0
+ASSERT LAST_N == 0
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+SYS STR -7
+ASSERT LAST_N == -7
+SYS EQS LAST "-7"
+ASSERT LAST_N == 1
+
+# from numeric var via parse_expr
+LET hit_n = 3
+SYS STR hit_n
+ASSERT LAST_N == 3
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# NUMSTR / TOSTR / DECIMAL aliases
+SYS NUMSTR 100
+ASSERT LAST_N == 100
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+SYS TOSTR 9
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+SYS DECIMAL 11
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+
+# round-trip dual of SYS NUM
+SYS STR 12345
+SYS NUM
+ASSERT LAST_N == 12345
+SYS STR
+ASSERT LAST_N == 12345
+SYS EQS LAST "12345"
+ASSERT LAST_N == 1
+
+# default source is LAST_N
+LET n = 77
+LET n = n
+SYS STR n
+LET cnt = LAST
+SYS EQS cnt "77"
+ASSERT LAST_N == 1
+
+# template fill: {{COUNT}} via REPLACEALL (closes realworld itoa gap)
+LET tpl = "hits={{COUNT}} host={{HOST}}"
+SYS STR 5
+LET cnt = LAST
+SYS REPLACEALL tpl "{{COUNT}}" cnt
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" "box"
+SYS HAS LAST "hits=5"
+ASSERT LAST_N == 1
+SYS HAS LAST "host=box"
+ASSERT LAST_N == 1
+SYS HAS LAST "{{COUNT}}"
+ASSERT LAST_N == 0
+
+# GREP_N → string count label for agents
+LET S = "Error\ninfo\nERROR"
+SYS GREPI "error" S
+ASSERT GREP_N == 2
+SYS STR GREP_N
+ASSERT LAST_N == 2
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+PRINT "sys_str ok"

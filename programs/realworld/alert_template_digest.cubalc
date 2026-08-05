@@ -24,7 +24,7 @@
 # Edges:
 #   GREPI closes prior case-sensitive GREP gap for log triage
 #   REPLACEALL template fill; empty old is no-op; LAST_N = replace count
-#   no itoa — {{COUNT}} cannot be filled from hit_n without shell (gap)
+#   SYS STR/ITOA fills {{COUNT}} from hit totals (prior itoa gap closed)
 #   APPEND now cataloged (prior gap closed)
 #   REPLACEALL does not support regex capture groups
 #   multi-file hit accumulate via CAT + JOINLINES (no list-push form)
@@ -203,14 +203,14 @@ SYS READ OR tpl_path OR ""
 IF OK == 0 THEN
   CLEAR_ERR
   # built-in default template
-  LET tpl = "ALERT {{DATE}} host={{HOST}} user={{USER}} needle={{NEEDLE}} hits={{HITS}}"
+  LET tpl = "ALERT {{DATE}} host={{HOST}} user={{USER}} needle={{NEEDLE}} count={{COUNT}} hits={{HITS}}"
   NOTE "default template"
 ELSE
   LET tpl = LAST
   NOTE "template from file"
 END
 
-# REPLACEALL fill (COUNT omitted — no itoa; see weaknesses)
+# REPLACEALL fill — SYS STR closes itoa gap for {{COUNT}}
 SYS REPLACEALL tpl "{{DATE}}" alert_date
 LET tpl = LAST
 SYS REPLACEALL tpl "{{HOST}}" alert_host
@@ -219,9 +219,12 @@ SYS REPLACEALL tpl "{{USER}}" alert_user
 LET tpl = LAST
 SYS REPLACEALL tpl "{{NEEDLE}}" NEEDLE
 LET tpl = LAST
+SYS STR hit_total
+LET count_s = LAST
+SYS REPLACEALL tpl "{{COUNT}}" count_s
+LET tpl = LAST
 SYS REPLACEALL tpl "{{HITS}}" hits_line
 LET tpl = LAST
-# leftover {{COUNT}} stays if present — agents must use PRINT_JSON for counts
 SYS HAS tpl "{{"
 LET unfilled = LAST_N
 LET rendered = tpl
