@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 10,
-  "version": "1.15.35-usability",
-  "item": "cubalc run -q plate-only quiet mode",
-  "item_id": 43,
-  "title": "run -q / CUBALC_QUIET plate-only for agents",
-  "commit": "d442a7d2c22ebf40001ca4eb44d4f5e517d11347",
-  "summary": "cubalc run -q|--quiet|--plate and CUBALC_QUIET=1 suppress board/# ok noise so agents parse a single JSON plate line.",
+  "iter": 11,
+  "version": "1.15.36-usability",
+  "item": "programs/lib/agent_boot stdlib preamble",
+  "item_id": 44,
+  "title": "INCLUDE agent_boot REQUIRE+hold_seed+VERSION",
+  "commit": "9f0f5414646a17d16429a176a1084305e9da1da3",
+  "summary": "stdlib agent_boot.cubalc: one INCLUDE for REQUIRE 1.15 floor, HOLD_FLASH seed, and VERSION plate so agents skip boilerplate.",
   "proofs": [
-    "CLI run -q hello 1-line",
-    "selftest still green"
+    "587_agent_boot",
+    "selftest n_pass=13"
   ],
-  "when": "2026-08-05T03:23:34Z",
+  "when": "2026-08-05T03:34:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d442a7d2c22ebf40001ca4eb44d4f5e517d11347"
+  "sha": "9f0f5414646a17d16429a176a1084305e9da1da3"
 }

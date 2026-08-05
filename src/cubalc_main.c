@@ -1626,6 +1626,7 @@ int main(int argc, char **argv) {
       {"cwd", "programs/proof/584_sys_cwd_state_root.cubalc", "SYS CWD/STATE/ROOT paths"},
       {"include_soft", "programs/proof/585_include_soft.cubalc", "INCLUDE OR soft miss"},
       {"vars", "programs/proof/586_vars.cubalc", "VARS full var table JSON"},
+      {"agent_boot", "programs/proof/587_agent_boot.cubalc", "INCLUDE agent_boot preamble"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1638,7 +1639,7 @@ int main(int argc, char **argv) {
       int asserts_ok;
       int asserts_fail;
       char err[120];
-    } rows[16];
+    } rows[20];
     int nrow = 0;
     if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
       json_only = 1;
@@ -1868,7 +1869,7 @@ int main(int argc, char **argv) {
            "  docs/HOLD_FLASH.md        # user permission before plug-in\n"
            "  docs/P2P_SMX.md           # SERVE/DIAL mesh\n"
            "  docs/CORE_PROTECT.md      # Core protection\n"
-           "  programs/lib/             # INCLUDE snippets\n"
+           "  programs/lib/             # INCLUDE snippets (agent_boot · hold_seed)\n"
            "  programs/hello_cube.cubalc\n"
            "  programs/proof/12_hold_flash_plug.cubalc\n"
            "  programs/p2p/mesh_local.cubalc\n"
@@ -1881,6 +1882,7 @@ int main(int argc, char **argv) {
     /* Usability: list programs/lib INCLUDE snippets for agents/humans */
     static const struct { const char *file; const char *hint; } known[] = {
       {"hold_seed.cubalc", "HOLD_FLASH + BUDGET + SHARE seed"},
+      {"agent_boot.cubalc", "REQUIRE 1.15 + hold_seed + VERSION agent preamble"},
       {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
       {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
     };
@@ -2114,6 +2116,10 @@ int main(int argc, char **argv) {
        "SYS ARG n OR fallback script defaults"},
       {"programs/lib/hold_seed.cubalc", "lib",
        "INCLUDE hold_seed seed snippet (not a full program)"},
+      {"programs/lib/agent_boot.cubalc", "boot",
+       "INCLUDE agent_boot REQUIRE+hold_seed+VERSION"},
+      {"programs/proof/587_agent_boot.cubalc", "agent",
+       "agent_boot stdlib preamble proof"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2694,6 +2700,7 @@ int main(int argc, char **argv) {
       DIR *d = opendir("programs/lib");
       static const struct { const char *file; const char *hint; } known[] = {
         {"hold_seed.cubalc", "HOLD_FLASH + BUDGET + SHARE seed"},
+        {"agent_boot.cubalc", "REQUIRE 1.15 + hold_seed + VERSION agent preamble"},
         {"peer_decide.cubalc", "FOLDBITS/SETDIGIT peer0 then DECIDE brain"},
         {"mesh_exchange.cubalc", "SMX KEY + dual EXCHANGE peer0/peer1"},
       };

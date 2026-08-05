@@ -1,0 +1,8 @@
+# INCLUDE agent_boot — one-shot agent program preamble
+# Usability: REQUIRE version floor + HOLD_FLASH seed + VERSION plate
+#   INCLUDE agent_boot
+#   # then place cubes / run logic
+
+REQUIRE VERSION "1.15"
+INCLUDE hold_seed
+VERSION
