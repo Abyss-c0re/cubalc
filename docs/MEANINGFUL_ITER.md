@@ -181,6 +181,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 151. ~~**`SYS MIN` / `MAX` bag mode**~~ **done** (min/max over newline numeric bags like SUM · after LENALL width).
 152. ~~**`SYS ARGMAX` / `ARGMIN`**~~ **done** (0-based index of first extreme · LENALL→ARGMAX→NTH longest field).
 153. ~~**`SYS PADALL` / `LPADALL` / `RPADALL`**~~ **done** (pad every bag field to width · column-align after LENALL+MAX).
+154. ~~**`SYS SORTLEN` / `LENSORT`**~~ **done** (sort bag fields by string length · longest-first without LENALL rebuild).
 
 ## Tick protocol
 

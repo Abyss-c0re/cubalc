@@ -1835,6 +1835,7 @@ int main(int argc, char **argv) {
       {"sys_minmax_bag", "programs/proof/691_sys_minmax_bag.cubalc", "SYS MIN/MAX bag mode like SUM"},
       {"sys_argmax", "programs/proof/692_sys_argmax.cubalc", "SYS ARGMAX/ARGMIN index of extreme"},
       {"sys_padall", "programs/proof/693_sys_padall.cubalc", "SYS PADALL/LPADALL pad every bag field"},
+      {"sys_sortlen", "programs/proof/694_sys_sortlen.cubalc", "SYS SORTLEN sort bag fields by length"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2222,6 +2223,8 @@ int main(int argc, char **argv) {
       {"SYS SORT", "host", "SYS SORT [str] — lexicographic newline field sort"},
       {"SYS SORTN", "host", "SYS SORTN|NSORT [DESC] [str] — numeric newline field sort"},
       {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
+      {"SYS SORTLEN", "host", "SYS SORTLEN|LENSORT [DESC] [bag] — sort by field length"},
+      {"SYS LENSORT", "host", "SYS LENSORT alias of SYS SORTLEN"},
       {"SYS UNIQ", "host", "SYS UNIQ [str] — drop adjacent duplicate fields"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b — portable path join a/b → LAST"},
       {"SYS PATH", "host", "SYS PATH a b — alias of SYS JOIN"},
@@ -2731,6 +2734,8 @@ int main(int argc, char **argv) {
        "SYS ARGMAX/ARGMIN index of extreme"},
       {"programs/proof/693_sys_padall.cubalc", "sys_padall",
        "SYS PADALL/LPADALL pad every bag field"},
+      {"programs/proof/694_sys_sortlen.cubalc", "sys_sortlen",
+       "SYS SORTLEN sort bag fields by length"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -3269,6 +3274,8 @@ int main(int argc, char **argv) {
       {"SYS SORT", "host", "SYS SORT line order"},
       {"SYS SORTN", "host", "SYS SORTN numeric bag sort"},
       {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
+      {"SYS SORTLEN", "host", "SYS SORTLEN sort by field length"},
+      {"SYS LENSORT", "host", "SYS LENSORT alias of SYS SORTLEN"},
       {"SYS UNIQ", "host", "SYS UNIQ adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN path join a/b"},
       {"SYS PATH", "host", "SYS PATH alias of JOIN"},
@@ -3654,6 +3661,8 @@ int main(int argc, char **argv) {
       {"SYS SORT", "host", "SYS SORT lexicographic line sort"},
       {"SYS SORTN", "host", "SYS SORTN|NSORT numeric line sort"},
       {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
+      {"SYS SORTLEN", "host", "SYS SORTLEN sort by field length"},
+      {"SYS LENSORT", "host", "SYS LENSORT alias of SYS SORTLEN"},
       {"SYS UNIQ", "host", "SYS UNIQ drop adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b portable path join"},
       {"SYS PATH", "host", "SYS PATH alias of SYS JOIN"},

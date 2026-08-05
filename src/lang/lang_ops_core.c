@@ -5405,6 +5405,103 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SORTLEN|LENSORT|SORTBYLEN [DESC|ASC] [bag] — sort fields by string length.
+     * Default ASC (shortest first); DESC/R → longest first. Stable on ties.
+     * LAST_N/SORTLEN_N = field count. Cap 256×192 like SORT.
+     * Usability: longest-first logs / shortest labels without LENALL+SORTN+rebuild. */
+    if (kw(&L->cur,"SORTLEN") || kw(&L->cur,"LENSORT") || kw(&L->cur,"SORTBYLEN") ||
+        kw(&L->cur,"LSORT") || kw(&L->cur,"BYLEN") || kw(&L->cur,"SORTBYLENGTH") ||
+        kw(&L->cur,"RSORTLEN") || kw(&L->cur,"SORTLEND") || kw(&L->cur,"LENSORTR")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { SL_MAX = 256, SL_FLEN = 192 };
+      char fields[SL_MAX][SL_FLEN];
+      long lens[SL_MAX];
+      int order[SL_MAX];
+      int n = 0, i, desc = 0;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      char op0[20];
+      snprintf(op0, sizeof op0, "%s", L->cur.text);
+      for (char *q = op0; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op0, "RSORTLEN") == 0 || strcmp(op0, "SORTLEND") == 0 ||
+          strcmp(op0, "LENSORTR") == 0)
+        desc = 1;
+      lex_next(L);
+      if (kw(&L->cur,"DESC") || kw(&L->cur,"DESCENDING") || kw(&L->cur,"REVERSE") ||
+          kw(&L->cur,"REV") || kw(&L->cur,"R") || kw(&L->cur,"-R") ||
+          kw(&L->cur,"DOWN") || kw(&L->cur,"LONG") || kw(&L->cur,"LONGEST")) {
+        desc = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"ASC") || kw(&L->cur,"ASCENDING") || kw(&L->cur,"UP") ||
+                 kw(&L->cur,"SHORT") || kw(&L->cur,"SHORTEST")) {
+        desc = 0;
+        lex_next(L);
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SL_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= SL_FLEN) flen = SL_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            lens[n] = (long)flen;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (n > 1) {
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0) {
+            long a = lens[order[j]], b = lens[key];
+            int gt = desc ? (a < b) : (a > b);
+            if (!gt) break;
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = order[i];
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "SORTLEN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REVL|REVLINES|FLIPLINES [str|LAST] — reverse newline field order → LAST.
      * LAST_N/REVL_N = field count. Cap 256 fields (same as SORT).
      * Usability: newest-first logs / LIFO work bags with POP without shell tac. */
@@ -7296,7 +7393,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
     return -1;
   }
 
@@ -7544,6 +7641,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TOKENIZE", "SYS TOKENIZE [str] — alias of SYS WORDS"},
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS SORTN", "SYS SORTN|NSORT [DESC] [str] — numeric sort of newline fields (vs lex SORT)"},
+      {"SYS SORTLEN", "SYS SORTLEN|LENSORT [DESC] [bag] — sort fields by string length"},
+      {"SYS LENSORT", "SYS LENSORT [DESC] [bag] — alias of SYS SORTLEN"},
       {"SYS NSORT", "SYS NSORT [DESC] [str] — alias of SYS SORTN · score bags / sizes"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"SYS UNION", "SYS UNION|ORLINES a [b…] — merge bags · first-seen unique fields → LAST"},

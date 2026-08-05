@@ -1,0 +1,64 @@
+# SYS SORTLEN / LENSORT — sort bag fields by string length
+# Usability: longest-first / shortest-first without LENALL+SORTN+rebuild
+
+HOLD_FLASH 1
+
+LET bag = "ccc\na\nbb\ndddd"
+
+# default ASC (shortest first)
+SYS SORTLEN bag
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT SORTLEN_N == 4
+SYS EQS LAST "a\nbb\nccc\ndddd"
+ASSERT LAST_N == 1
+
+# DESC longest first
+SYS SORTLEN DESC bag
+SYS EQS LAST "dddd\nccc\nbb\na"
+ASSERT LAST_N == 1
+
+# aliases
+SYS LENSORT bag
+SYS EQS LAST "a\nbb\nccc\ndddd"
+ASSERT LAST_N == 1
+SYS RSORTLEN bag
+SYS EQS LAST "dddd\nccc\nbb\na"
+ASSERT LAST_N == 1
+SYS SORTBYLEN ASC bag
+SYS EQS LAST "a\nbb\nccc\ndddd"
+ASSERT LAST_N == 1
+
+# stable on equal lengths (preserve original order of ties)
+LET ties = "aa\nbb\ncc\nd"
+SYS SORTLEN ties
+SYS EQS LAST "d\naa\nbb\ncc"
+ASSERT LAST_N == 1
+# aa, bb, cc all len 2 — original order preserved
+SYS SORTLEN DESC ties
+SYS EQS LAST "aa\nbb\ncc\nd"
+ASSERT LAST_N == 1
+
+# empty
+SYS SORTLEN ""
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single
+SYS SORTLEN "only"
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# agent pattern: longest payloads first for review
+LET msgs = "ok\nERROR disk full\nwarn\nFATAL panic boom"
+SYS SORTLEN DESC msgs
+SYS HEAD LAST
+SYS EQS LAST "FATAL panic boom"
+ASSERT LAST_N == 1
+SYS SORTLEN DESC msgs
+SYS NTH 1 LAST
+SYS EQS LAST "ERROR disk full"
+ASSERT LAST_N == 1
+
+PRINT "sys_sortlen ok"
