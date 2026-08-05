@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 129,
-  "version": "1.15.154-usability",
-  "item": "SYS LOOKUP / KVGET peel key:val bag value",
-  "item_id": 162,
-  "title": "SYS LOOKUP|KVGET bag key [sep] — peel FREQ/kv values",
-  "commit": "9da3a41c33fcb9fef87f2aaf8ad82a9c7dfe5d15",
-  "summary": "SYS LOOKUP/KVGET peel key:val bag values; selftest rows 256. selftest 129.",
+  "iter": 130,
+  "version": "1.15.155-usability",
+  "item": "SYS KVSET / SETKV set/update key:val bag field",
+  "item_id": 163,
+  "title": "SYS KVSET|SETKV bag key value [sep] — set or append key:val",
+  "commit": "c069289058d453e6c4ddfbbe0450721ad9270fc8",
+  "summary": "SYS KVSET/SETKV set/update key:val bag fields dual of LOOKUP. selftest 130.",
   "proofs": [
-    "702_sys_lookup",
-    "selftest n_pass=129"
+    "703_sys_kvset",
+    "selftest n_pass=130"
   ],
-  "when": "2026-08-05T23:17:07Z",
+  "when": "2026-08-05T23:24:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9da3a41c33fcb9fef87f2aaf8ad82a9c7dfe5d15"
+  "sha": "c069289058d453e6c4ddfbbe0450721ad9270fc8"
 }
