@@ -5237,12 +5237,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS LOOKUP|KVGET|GETKV [I] bag key [sep]
+    /* SYS LOOKUP|KVGET|GETKV [I] bag key [sep] [OR|DEFAULT fallback]
      * — find first bag field whose left side (before sep, default ":") equals key;
-     * LAST = right side (value); LOOKUP_LINE = full field; LAST_N 0|1;
+     * LAST = right side (value); LOOKUP_LINE = full field; LAST_N 0|1 hit;
      * LOOKUP_I = index (-1 miss). Empty sep → exact field equality → LAST=field.
      * LOOKUPI / KVGETI — case-insensitive key match.
-     * Usability: FREQ key:count and plate kv bags without FIRSTMATCH+AFTER glue. */
+     * OR|DEFAULT|ELSE|FALLBACK: on miss LAST=fallback, OK=1, LOOKUP_N=0, LOOKUP_OR=1
+     * (hit ignores trailing OR — same as SYS ENV/READ). Soft miss without empty-value
+     * ambiguity for FREQ counts: SYS LOOKUP hist "FATAL" OR "0".
+     * Usability: FREQ/plate kv defaults without LOOKUP+IF EMPTY glue. */
     if (kw(&L->cur,"LOOKUP") || kw(&L->cur,"KVGET") || kw(&L->cur,"GETKV") ||
         kw(&L->cur,"DICTGET") || kw(&L->cur,"MAPGET") || kw(&L->cur,"BAGGET") ||
         kw(&L->cur,"LOOKUPI") || kw(&L->cur,"KVGETI") || kw(&L->cur,"GETKVI") ||
@@ -5250,6 +5253,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       char op[20];
       int icase = 0;
       char bag[CUBALC_HOST_STR_MAX], key[256], sep[32], out[512], line[512];
+      char fb[512];
+      int have_fb = 0, used_or = 0;
       const char *p, *start;
       size_t flen, kn, sn, i;
       long idx = 0, found = 0, found_i = -1;
@@ -5267,24 +5272,37 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         icase = 1;
         lex_next(L);
       }
-      bag[0] = 0; key[0] = 0; out[0] = 0; line[0] = 0;
+      bag[0] = 0; key[0] = 0; out[0] = 0; line[0] = 0; fb[0] = 0;
       snprintf(sep, sizeof sep, "%s", ":");
       if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
         snprintf(bag, sizeof bag, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, key, sizeof key) != 0) key[0] = 0;
-      /* optional sep (string or bare token) */
+      /* optional sep (string or bare token) — never OR/DEFAULT/… */
       if (L->cur.kind == TK_STR) {
+        /* string is sep only when not following OR keyword (handled below) */
         snprintf(sep, sizeof sep, "%s", L->cur.text);
         lex_next(L);
       } else if (L->cur.kind == TK_IDENT &&
                  (strcmp(L->cur.text, "OR") != 0 &&
-                  strcmp(L->cur.text, "SOFT") != 0)) {
-        /* allow bare = or : only if single-char-ish; skip form keywords by not
-         * consuming unknown idents that are more likely next stmt — only short seps */
+                  strcmp(L->cur.text, "SOFT") != 0 &&
+                  strcmp(L->cur.text, "DEFAULT") != 0 &&
+                  strcmp(L->cur.text, "ELSE") != 0 &&
+                  strcmp(L->cur.text, "FALLBACK") != 0)) {
+        /* allow bare = or : only if single-char-ish */
         if (strlen(L->cur.text) <= 2) {
           snprintf(sep, sizeof sep, "%s", L->cur.text);
           lex_next(L);
         }
+      }
+      /* optional OR|DEFAULT fallback (like SYS ENV / ARG / READ) */
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"SOFT")){
+        lex_next(L);
+        if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+          fail(vm, "SYS LOOKUP bag key [sep] OR \"fallback\"");
+          return -1;
+        }
+        have_fb = 1;
       }
       kn = strlen(key);
       sn = strlen(sep);
@@ -5371,6 +5389,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         }
       }
       (void)i;
+      if (!found && have_fb) {
+        snprintf(out, sizeof out, "%s", fb);
+        used_or = 1;
+      }
       var_set_str(vm, "LAST", out);
       var_set_str(vm, "LOOKUP", out);
       var_set_str(vm, "LOOKUP_LINE", line);
@@ -5379,8 +5401,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", found);
       var_set_num(vm, "LOOKUP_N", found);
       var_set_num(vm, "LOOKUP_I", found_i);
+      var_set_num(vm, "LOOKUP_OR", used_or);
       var_set_num(vm, "KVGET_N", found);
-      var_set_num(vm, "OK", found ? 1 : 0);
+      var_set_num(vm, "KVGET_OR", used_or);
+      /* hit → OK=1; miss+OR → OK=1 (soft default); bare miss → OK=0 */
+      var_set_num(vm, "OK", (found || used_or) ? 1 : 0);
       bump(vm); return 1;
     }
     /* SYS KVSET|SETKV|DICTSET bag key value [sep]
@@ -8811,10 +8836,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FIRSTMATCH", "SYS FIRSTMATCH|GREP1 bag needle — first field containing needle · LAST_N 0|1"},
       {"SYS GREP1", "SYS GREP1 bag needle — alias of SYS FIRSTMATCH · one-line pick without TAKE"},
       {"SYS FIRSTMATCHI", "SYS FIRSTMATCHI|GREP1I bag needle — case-insensitive FIRSTMATCH"},
-      {"SYS LOOKUP", "SYS LOOKUP|KVGET bag key [sep] — peel value from key:val bag field · default sep :"},
-      {"SYS KVGET", "SYS KVGET bag key [sep] — alias of SYS LOOKUP · FREQ count peel"},
-      {"SYS LOOKUPI", "SYS LOOKUPI|KVGETI bag key [sep] — case-insensitive LOOKUP"},
-      {"SYS GETKV", "SYS GETKV bag key [sep] — alias of SYS LOOKUP"},
+      {"SYS LOOKUP", "SYS LOOKUP|KVGET bag key [sep] [OR fallback] — peel key:val · miss→fallback OK"},
+      {"SYS KVGET", "SYS KVGET bag key [sep] [OR fallback] — alias of SYS LOOKUP · FREQ count peel"},
+      {"SYS LOOKUPI", "SYS LOOKUPI|KVGETI bag key [sep] [OR fallback] — case-insensitive LOOKUP"},
+      {"SYS GETKV", "SYS GETKV bag key [sep] [OR fallback] — alias of SYS LOOKUP"},
       {"SYS KVSET", "SYS KVSET|SETKV bag key value [sep] — set/update key:val field · dual of LOOKUP"},
       {"SYS SETKV", "SYS SETKV bag key value [sep] — alias of SYS KVSET · plate kv write"},
       {"SYS DICTSET", "SYS DICTSET bag key value [sep] — alias of SYS KVSET"},

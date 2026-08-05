@@ -1,0 +1,80 @@
+# SYS LOOKUP … OR fallback — FREQ/plate defaults without IF EMPTY glue
+# Usability: match SYS ENV/ARG/READ OR pattern for key:val bags
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10"
+
+# hit: OR ignored, real value wins
+SYS LOOKUP hist "error" OR "0"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LOOKUP_N == 1
+ASSERT LOOKUP_OR == 0
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# miss + OR → soft default
+SYS LOOKUP hist "fatal" OR "0"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LOOKUP_N == 0
+ASSERT LOOKUP_OR == 1
+ASSERT LOOKUP_I == -1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# DEFAULT alias
+SYS LOOKUP hist "crit" DEFAULT "missing"
+ASSERT LOOKUP_OR == 1
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+
+# FALLBACK alias
+SYS KVGET hist "none" FALLBACK "n/a"
+ASSERT LOOKUP_OR == 1
+SYS EQS LAST "n/a"
+ASSERT LAST_N == 1
+
+# bare miss still soft-fail OK=0 (no OR)
+SYS LOOKUP hist "ghost"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT LOOKUP_OR == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# custom sep + OR
+LET cfg = "host=peer1\nport=7700"
+SYS LOOKUP cfg "mode" "=" OR "soft"
+ASSERT LOOKUP_OR == 1
+SYS EQS LAST "soft"
+ASSERT LAST_N == 1
+SYS LOOKUP cfg "port" "=" OR "0"
+ASSERT LOOKUP_OR == 0
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+
+# empty bag + OR
+SYS LOOKUP "" "x" OR "empty"
+ASSERT LOOKUP_OR == 1
+SYS EQS LAST "empty"
+ASSERT LAST_N == 1
+
+# agent: FREQ then safe severity count (no IF EMPTY)
+LET sev = "ERROR\nWARN\nERROR\nINFO"
+SYS FREQ sev
+LET h = LAST
+SYS LOOKUP h "ERROR" OR "0"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+SYS LOOKUP h "FATAL" OR "0"
+ASSERT LOOKUP_OR == 1
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+# string "0" usable without dual IF
+SYS LOOKUP h "WARN" OR "0"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PRINT "sys_lookup_or ok"
