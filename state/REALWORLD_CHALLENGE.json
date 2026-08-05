@@ -1,114 +1,120 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 7,
-  "program": "programs/realworld/plate_workspace.cubalc",
-  "theme": "local file/state workspace bootstrap: SYS MKDIR + JOIN + BASENAME under STATE/TMP",
-  "version": "1.15.56-usability",
+  "iter": 8,
+  "program": "programs/realworld/artifact_intake.cubalc",
+  "theme": "config-driven artifact intake: ISFILE/SIZE/EXTNAME route .bits/.json under STATE",
+  "version": "1.15.58-usability",
   "pass": true,
   "tests": [
     {
-      "name": "state_auto_mkdir",
-      "cmd": "CUBALC_STATE=/tmp/new_$$ (no pre-mkdir) run -q -s",
+      "name": "absolute_args_bits_json",
+      "cmd": "CUBALC_ARG0=/\u2026/peer0.bits ARG1=/\u2026/meta.json run -q -s",
       "ok": true,
-      "note": "SYS MKDIR creates STATE + runs/<id>/{in,out,log}; RUN_MANIFEST.txt"
+      "note": "accepted=2 dig from FOLDBITS; INTAKE_REPORT.txt under STATE/out"
     },
     {
-      "name": "arg_run_id",
-      "cmd": "CUBALC_ARG0=job99 run -q -s",
+      "name": "relative_state_defaults",
+      "cmd": "STATE/in/peer0.bits + meta.json defaults run -q -s",
       "ok": true,
-      "note": "nested runs/job99/out/RUN_MANIFEST.txt"
+      "note": "JOIN state+rel paths; EXIT 0"
     },
     {
-      "name": "tmp_root",
-      "cmd": "CUBALC_WS_ROOT=tmp CUBALC_ARG0=t1 run -q -s",
-      "ok": true,
-      "note": "workspace under SYS TMP"
-    },
-    {
-      "name": "custom_root_unwritable",
-      "cmd": "CUBALC_WS_ROOT=/proc/cubalc_ws_nope_$$ run -q",
+      "name": "require_empty_exit_2",
+      "cmd": "CUBALC_INTAKE_REQUIRE=1 empty in/ run -q",
       "ok": false,
-      "note": "expected EXIT 2 mkdir root failed"
+      "note": "expected EXIT 2 intake empty"
     },
     {
-      "name": "mkdir_on_file_strict_sticky",
-      "cmd": "WRITE file; MKDIR same path; PASS; no CLEAR_ERR; run -q -s",
+      "name": "max_bytes_soft_skip",
+      "cmd": "CUBALC_INTAKE_MAX_BYTES=4 oversized .bits run -q -s",
+      "ok": true,
+      "note": "size gate soft skip; still writes report"
+    },
+    {
+      "name": "unknown_ext_skip",
+      "cmd": "ARG0=in/readme.txt run -q -s",
+      "ok": true,
+      "note": "unknown extension soft skip"
+    },
+    {
+      "name": "size_miss_strict_sticky",
+      "cmd": "SYS SIZE missing; PASS; no CLEAR_ERR; run -q -s",
       "ok": false,
-      "note": "last_err mkdir: not a directory; err_line=0; rc=1"
+      "note": "last_err path: missing; err_line=0; rc=1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "31/31 green"
+      "note": "33/33 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "docs|discovery",
-      "title": "SYS JOIN missing from forms and search",
-      "detail": "Proofs and plate_workspace use SYS JOIN for path build, but cubalc forms JOIN and search join return n=0. Agents discover MKDIR/TMP/BASENAME in forms but invent SYS CAT glue or fail to find JOIN \u2014 same class of invisible string plane as earlier SYS CAT gap.",
-      "repro": "./out/cubalc forms JOIN \u2192 n=0; ./out/cubalc search join \u2192 n=0"
+      "area": "io|lang",
+      "title": "No SYS LISTDIR / GLOB \u2014 intake cannot discover dropped files",
+      "detail": "Real artifact drops land under STATE/in/* but CubalC has no directory listing. Agents must pass ARG0/ARG1 or fixed default names (in/peer0.bits). Without shell ls, a generic intake worker cannot process an open-ended drop folder. Highest remaining shell-glue force for this use case.",
+      "repro": "drop three unknown-named .bits under STATE/in; language cannot enumerate them"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "error|io",
-      "title": "SYS MKDIR failure soft with err_line=0 empty err_src",
-      "detail": "MKDIR on an existing file sets OK=0 sticky last_err='mkdir: not a directory' but does not hard-stop; run plate ok can still be true without -s. err_line=0 err_src empty. Under -s, PASS without CLEAR_ERR fails process with no source line. Agents cannot distinguish mkdir soft from other soft errs by line.",
-      "repro": "SYS WRITE path \"x\"; SYS MKDIR path; run -q -s without CLEAR_ERR"
+      "title": "SYS SIZE miss sticky last_err with err_line=0",
+      "detail": "Optional missing artifacts use SIZE/ISFILE probes that set last_err='path: missing' with err_line=0 empty err_src. PASS without CLEAR_ERR fails run -s. Every optional path needs explicit CLEAR_ERR ceremony.",
+      "repro": "SYS SIZE \"/no/such\"; PASS; cubalc run -q -s \u2192 rc=1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "path",
-      "title": "SYS JOIN is 2-arg only; multi-segment needs nested JOIN",
-      "detail": "SYS JOIN a b c parse-errors on leftover 'c'. Building root/runs/id/out requires four JOINs. Ugly for agents vs shell path join of N parts.",
-      "repro": "SYS JOIN \"/tmp\" \"a\" \"b\" \u2192 unknown form 'b'"
+      "area": "docs|discovery",
+      "title": "SYS JOIN still absent from forms/search",
+      "detail": "artifact_intake depends on SYS JOIN for STATE-relative paths; forms JOIN and search join still n=0 (iter7 W1 unfixed). Agents re-learn path join only from proofs or source.",
+      "repro": "./out/cubalc forms JOIN \u2192 n=0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "path",
-      "title": "DIRNAME/BASENAME trailing-slash quirks",
-      "detail": "SYS DIRNAME \"/a/b/\" yields \"/a\" (length 2) not \"/a/b\"; BASENAME \"/a/b/\" yields \"b\". Trailing slashes from JOIN mistakes silently peel wrong component \u2014 agents need path normalize form.",
-      "repro": "SYS DIRNAME \"/a/b/\"; SYS BASENAME \"/a/b/\""
+      "area": "flow",
+      "title": "No reusable subroutine for per-file intake \u2014 duplicated ARG0/ARG1 blocks",
+      "detail": "FN/CALL exist in deep ISA/docs but not in human forms catalog for agents. Config-driven multi-file intake becomes copy-paste IF trees. Pain grows with ARG2..N.",
+      "repro": "cubalc forms FN \u2192 typically empty; see duplicated path0/path1 logic"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "cli",
-      "title": "MKDIR soft fail does not set plate exit_code",
-      "detail": "Like other soft host errs: process may be 0 without -s while last_err set; exit_code stays 0. Workspace bootstrap CI should use -s or ASSERT OK after MKDIR.",
-      "repro": "mkdir-on-file run without -s \u2192 shell 0, last_err set"
+      "severity": "med",
+      "area": "json|io",
+      "title": "SYS JSON still one-key + re-READ; report plate cannot stamp accepted/skipped live",
+      "detail": "Intake report is a flat DATE line; accepted/skipped/dig only in PRINT_JSON/VARS. Dynamic JSON plate still hard. Multi-key JSON from meta needs re-READ per key.",
+      "repro": "INTAKE_REPORT.txt lacks accepted count despite LET accepted"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "print",
-      "title": "PRINT still length-only for path strings",
-      "detail": "Debugging JOIN/BASENAME still needs PRINT_JSON/VARS; PRINT run_dir shows length. Ongoing agent UX gap.",
-      "repro": "LET p=\"/tmp/x\"; PRINT p \u2192 number"
+      "area": "matrix",
+      "title": "No validation that .bits content is 01 alphabet before FOLDBITS",
+      "detail": "ISFILE/SIZE/EXT pass for any .bits bytes; FOLDBITS still soft-accepts garbage (iter5). Intake type-route is extension-only trust.",
+      "repro": "write hello to x.bits; intake accepts extension and FOLDBITS"
     }
   ],
   "workarounds": [
-    "SYS MKDIR STATE (or root) before any WRITE under CUBALC_STATE \u2014 no shell mkdir required when MKDIR works",
-    "Nested SYS JOIN for multi-segment paths; avoid 3+ args",
-    "ASSERT OK == 1 or CLEAR_ERR after every MKDIR when using run -s",
-    "Strip trailing slashes before DIRNAME/BASENAME if host paths are messy",
-    "Rely on forms for MKDIR/TMP/BASENAME; hardcode SYS JOIN knowledge until cataloged",
-    "PRINT_JSON path vars instead of PRINT"
+    "Host names files to in/peer0.bits + in/meta.json or passes absolute ARG paths",
+    "CLEAR_ERR after every optional SIZE/ISFILE miss when using run -s",
+    "Hardcode SYS JOIN knowledge until forms catalogs it",
+    "Duplicate intake blocks per ARG index until LISTDIR/FN ergonomics land",
+    "Emit metrics via PRINT_JSON/VARS; keep file report as coarse stamp",
+    "Host pre-validate 01 alphabet for .bits drops"
   ],
   "language_gaps": [
-    "Catalog SYS JOIN (and CAT) in forms/search",
-    "err_line/err_src on SYS MKDIR failures",
-    "SYS JOIN multi-arg or path builder for N segments",
-    "Path normalize (trailing slash) form",
-    "Hard-fail option for MKDIR (ASSERT-style) vs soft default",
-    "Optional SYS STATE FILE name one-shot under STATE after MKDIR"
+    "SYS LISTDIR / GLOB under a path",
+    "err_line/err_src on SIZE/path missing soft errs",
+    "SYS JOIN in forms/search catalog",
+    "Human-plane FN/CALL or FOR-EACH-file form for intake loops",
+    "WRITE_JSON from vars for INTAKE_REPORT",
+    "FOLDBITS alphabet hard-fail option"
   ],
-  "commit": "88d95c5",
-  "ts": "2026-08-05T06:57:36Z"
+  "commit": "98b0016",
+  "ts": "2026-08-05T07:23:06Z"
 }

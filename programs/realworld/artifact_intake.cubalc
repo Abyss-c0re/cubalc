@@ -1,0 +1,274 @@
+# artifact_intake.cubalc — config-driven file intake: probe · type · fold/json · plate
+#
+# Real use: agent drops artifacts under CUBALC_STATE/in/ (or paths via ARG/ENV)
+# and runs this to validate (ISFILE/SIZE/EXT) then route:
+#   .bits  → FOLDBITS peer0 + DECIDE
+#   .json  → SYS JSON schema/ok extract
+#   other  → soft skip (unknown type)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   # program MKDIRs STATE/in,out — pre-mkdir optional
+#   printf '10101011' > …/in/peer0.bits   # or pass path as ARG0
+#   CUBALC_ARG0=in/peer0.bits CUBALC_ARG1=in/meta.json \
+#     ./out/cubalc run -q -s programs/realworld/artifact_intake.cubalc
+#
+# Optional:
+#   CUBALC_INTAKE_MAX_BYTES=4096   soft max size (default 65536)
+#   CUBALC_INTAKE_REQUIRE=1        EXIT 2 if zero artifacts accepted
+#
+# Edges:
+#   SYS SIZE miss soft + sticky last_err (err_line=0) needs CLEAR_ERR for -s
+#   No SYS LISTDIR — cannot discover in/* without host naming paths (gap)
+#   EXTNAME/STEM routing · ISFILE/ISDIR gates
+#   JOIN still undiscoverable via forms/search
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "artifact_intake: start"
+DEFAULT MAX_BYTES = 65536
+DEFAULT REQUIRE_ONE = 0
+IDENTITY
+SYS DATE
+LET intake_date = DATE
+
+SYS ENV "CUBALC_INTAKE_MAX_BYTES" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_BYTES = LAST_N
+  END
+END
+SYS ENV "CUBALC_INTAKE_REQUIRE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+
+# Workspace
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1 "state mkdir"
+IF OK == 0 THEN
+  EXIT 2 "cannot mkdir STATE"
+END
+CLEAR_ERR
+SYS JOIN state_dir "in"
+LET in_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR in_dir
+SYS MKDIR out_dir
+ASSERT OK == 1
+
+LET accepted = 0
+LET skipped = 0
+LET dig = -1
+LET json_ok = -1
+
+# --- helper pattern: process one path in LAST (as full path or relative to STATE) ---
+# Artifact 0
+SYS ARG 0 OR ""
+IF LAST_N == 0 THEN
+  SYS ENV "CUBALC_INTAKE_0" OR "in/peer0.bits"
+END
+LET rel0 = LAST
+SYS HAS rel0 "/"
+# if not absolute, join under STATE
+SYS STARTS rel0 "/"
+IF LAST_N == 0 THEN
+  SYS JOIN state_dir rel0
+  LET path0 = LAST
+ELSE
+  LET path0 = rel0
+END
+
+# Probe artifact 0
+SYS ISDIR path0
+IF LAST_N == 1 THEN
+  FAIL "path0 is directory"
+  PASS "skip dir"
+  CLEAR_ERR
+  LET skipped = skipped + 1
+  NOTE "skip dir path0"
+ELSE
+  SYS ISFILE path0
+  IF LAST_N == 0 THEN
+    SYS SIZE path0
+    # SIZE miss leaves sticky last_err even when we expected optional file
+    FAIL "path0 missing or not file"
+    PASS "optional miss"
+    CLEAR_ERR "size/isfile miss"
+    LET skipped = skipped + 1
+    NOTE "path0 absent"
+  ELSE
+    SYS SIZE path0
+    EXPECT OK == 1 "size ok"
+    LET sz0 = SIZE
+    EXPECT sz0 > 0 "non-empty"
+    EXPECT sz0 <= MAX_BYTES "under max"
+    IF OK == 0 THEN
+      LET skipped = skipped + 1
+      PASS "size gate fail"
+      CLEAR_ERR "size gate"
+      NOTE "path0 size reject"
+    ELSE
+      SYS EXTNAME path0
+      LET ext0 = LAST
+      SYS STEM path0
+      LET stem0 = LAST
+      SYS EQS ext0 ".bits"
+      IF LAST_N == 1 THEN
+        SYS READ path0
+        LET bits0 = LAST
+        CUBE peer0 ROLE host PROTON 1
+        CUBE brain ROLE braincube PROTON 1
+        PLUG peer0 brain
+        FOLDBITS peer0 bits0
+        # decide without FLOW first if we only need digit from fold? use DECIDE after light pulse
+        IMPULSE peer0 1
+        IMPULSE brain 1
+        FLOW 2
+        DECIDE brain
+        LET dig = DECIDE
+        LET accepted = accepted + 1
+        NOTE "accepted .bits"
+      ELSE
+        SYS EQS ext0 ".json"
+        IF LAST_N == 1 THEN
+          SYS READ path0
+          SYS JSON "ok"
+          SYS CAT LAST ""
+          SYS NUM
+          LET json_ok = LAST_N
+          # re-read for schema
+          SYS READ path0
+          SYS JSON "schema"
+          LET json_schema = LAST
+          LET accepted = accepted + 1
+          NOTE "accepted .json"
+        ELSE
+          LET skipped = skipped + 1
+          FAIL "unknown extension"
+          PASS "skip type"
+          CLEAR_ERR
+          NOTE "skip unknown ext"
+        END
+      END
+    END
+  END
+END
+
+# Artifact 1 (optional second)
+SYS ARG 1 OR ""
+IF LAST_N == 0 THEN
+  SYS ENV "CUBALC_INTAKE_1" OR "in/meta.json"
+END
+LET rel1 = LAST
+SYS STARTS rel1 "/"
+IF LAST_N == 0 THEN
+  SYS JOIN state_dir rel1
+  LET path1 = LAST
+ELSE
+  LET path1 = rel1
+END
+
+SYS ISFILE path1
+IF LAST_N == 1 THEN
+  SYS SIZE path1
+  IF OK == 0 THEN
+    CLEAR_ERR
+    LET skipped = skipped + 1
+  ELSE
+    IF SIZE > MAX_BYTES THEN
+      LET skipped = skipped + 1
+      FAIL "path1 too large"
+      PASS "skip large"
+      CLEAR_ERR
+    ELSE
+      IF SIZE == 0 THEN
+        LET skipped = skipped + 1
+        FAIL "path1 empty"
+        PASS "skip empty"
+        CLEAR_ERR
+      ELSE
+        SYS EXTNAME path1
+        LET ext1 = LAST
+        SYS EQS ext1 ".json"
+        IF LAST_N == 1 THEN
+          SYS READ path1
+          SYS JSON "ok"
+          SYS CAT LAST ""
+          SYS NUM
+          LET json_ok = LAST_N
+          LET accepted = accepted + 1
+          NOTE "accepted path1 json"
+        ELSE
+          SYS EQS ext1 ".bits"
+          IF LAST_N == 1 THEN
+            # second bits file: fold into peer1 if board exists else skip soft
+            SYS READ path1
+            DEFINED peer0
+            IF DEFINED == 0 THEN
+              CUBE peer0 ROLE host PROTON 1
+              CUBE brain ROLE braincube PROTON 1
+              PLUG peer0 brain
+            END
+            CUBE peer1 ROLE body PROTON 1
+            PLUG peer0 peer1
+            FOLDBITS peer1 LAST
+            LET accepted = accepted + 1
+            NOTE "accepted path1 bits"
+          ELSE
+            LET skipped = skipped + 1
+            PASS "skip path1 type"
+            CLEAR_ERR
+          END
+        END
+      END
+    END
+  END
+ELSE
+  # missing optional second
+  SYS SIZE path1
+  CLEAR_ERR "optional path1 miss"
+  LET skipped = skipped + 1
+  NOTE "path1 absent"
+END
+
+# Require at least one accepted?
+IF REQUIRE_ONE == 1 THEN
+  IF accepted == 0 THEN
+    FAIL "no artifacts accepted"
+    STATUS
+    EXIT 2 "intake empty"
+  END
+END
+
+# Report plate
+SYS JOIN out_dir "INTAKE_REPORT.txt"
+LET report = LAST
+SYS CAT "cubalc.artifact_intake.v1 ok=1 date=" intake_date
+LET line = LAST
+SYS WRITE report line
+SYS EXIST report
+ASSERT EXIST == 1
+SYS ISFILE report
+ASSERT LAST_N == 1
+SYS SIZE report
+ASSERT SIZE > 0
+SYS EXTNAME report
+SYS EQS LAST ".txt"
+ASSERT LAST_N == 1 "report ext"
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "artifact_intake: done"
+PRINT "intake" accepted skipped dig json_ok
+PRINT_JSON accepted skipped dig json_ok STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "intake clean"
+EXIT 0 "intake ok"
