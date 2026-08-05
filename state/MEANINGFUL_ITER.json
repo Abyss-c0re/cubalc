@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 54,
-  "version": "1.15.79-usability",
-  "item": "SYS PUSH / ADDLINE field accumulate",
-  "item_id": 87,
-  "title": "SYS PUSH|ADDLINE appends newline fields for multi-file collect",
-  "commit": "2379a14e76f90b0388ea61feafad1baca9577e0a",
-  "summary": "SYS PUSH|ADDLINE bag [line] appends newline field; LAST_N/PUSH_N=count; closes CAT+\\\\n multi-file hit accumulate gap.",
+  "iter": 55,
+  "version": "1.15.80-usability",
+  "item": "SYS EQSI / HASI case-insensitive probes",
+  "item_id": 88,
+  "title": "SYS EQSI|HASI case-insensitive equality and contains",
+  "commit": "pending",
+  "summary": "SYS EQSI|IEQS|EQS I and HASI|ICONTAINS|HAS I for case-insensitive string probes; IF companion to GREPI without UPPER/LOWER glue.",
   "proofs": [
-    "628_sys_push",
-    "selftest n_pass=54"
+    "629_sys_eqsi",
+    "selftest n_pass=55"
   ],
-  "when": "2026-08-05T10:47:28Z",
+  "when": "2026-08-05T10:53:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2379a14e76f90b0388ea61feafad1baca9577e0a"
+  "sha": "pending"
 }

@@ -1946,28 +1946,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
-    if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
+    /* SYS EQS|STREQ a b — string equality → LAST_N 1/0
+     * SYS EQSI|IEQS|STREQI — case-insensitive equality (IF after GREPI).
+     * SYS EQS I|ICASE a b — same as EQSI. */
+    if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ") ||
+        kw(&L->cur,"EQSI") || kw(&L->cur,"IEQS") || kw(&L->cur,"STREQI") ||
+        kw(&L->cur,"SEQI") || kw(&L->cur,"CIEQ")){
+      int icase = (kw(&L->cur,"EQSI") || kw(&L->cur,"IEQS") ||
+                   kw(&L->cur,"STREQI") || kw(&L->cur,"SEQI") ||
+                   kw(&L->cur,"CIEQ"));
       lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
       char a[512]="", b[512]="";
       if (resolve_str_arg(vm, L, a, sizeof a) != 0)
         snprintf(a, sizeof a, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0]=0;
-      long eq = (strcmp(a, b) == 0) ? 1 : 0;
+      long eq;
+      if (!icase) {
+        eq = (strcmp(a, b) == 0) ? 1 : 0;
+      } else {
+        size_t i;
+        eq = 1;
+        for (i = 0; ; i++) {
+          char ca = a[i], cb = b[i];
+          if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+          if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+          if (ca != cb) { eq = 0; break; }
+          if (!a[i]) break;
+        }
+      }
       vm->last_n = eq;
       var_set_num(vm, "LAST_N", eq);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS HAS|CONTAINS hay needle — 1 if needle in hay */
-    if (kw(&L->cur,"HAS") || kw(&L->cur,"CONTAINS") || kw(&L->cur,"INSTR")){
+    /* SYS HAS|CONTAINS hay needle — 1 if needle in hay
+     * SYS HASI|ICONTAINS|CONTAINSI — case-insensitive substring.
+     * SYS HAS I|ICASE hay needle — same as HASI. */
+    if (kw(&L->cur,"HAS") || kw(&L->cur,"CONTAINS") || kw(&L->cur,"INSTR") ||
+        kw(&L->cur,"HASI") || kw(&L->cur,"ICONTAINS") || kw(&L->cur,"CONTAINSI") ||
+        kw(&L->cur,"IHAS") || kw(&L->cur,"INSTRI")){
+      int icase = (kw(&L->cur,"HASI") || kw(&L->cur,"ICONTAINS") ||
+                   kw(&L->cur,"CONTAINSI") || kw(&L->cur,"IHAS") ||
+                   kw(&L->cur,"INSTRI"));
       lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
       char hay[512]="", needle[256]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
-      long hit = (needle[0] && strstr(hay, needle)) ? 1 : 0;
-      if (!needle[0]) hit = 1;
+      long hit = 0;
+      if (!needle[0]) {
+        hit = 1;
+      } else if (!icase) {
+        hit = (strstr(hay, needle) != NULL) ? 1 : 0;
+      } else {
+        size_t nl = strlen(needle), fi;
+        for (fi = 0; hay[fi] && !hit; fi++) {
+          size_t j;
+          for (j = 0; j < nl; j++) {
+            char ca = hay[fi + j], cb = needle[j];
+            if (!ca) break;
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) break;
+          }
+          if (j == nl) hit = 1;
+        }
+      }
       vm->last_n = hit;
       var_set_num(vm, "LAST_N", hit);
       var_set_num(vm, "OK", 1);
@@ -2341,7 +2397,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2588,6 +2644,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS PUSH", "SYS PUSH|ADDLINE bag [line] — append newline field · multi-file accumulate"},
       {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
+      {"SYS EQSI", "SYS EQSI|IEQS|EQS I a b — case-insensitive string equality · LAST_N 0|1"},
+      {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

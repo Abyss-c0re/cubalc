@@ -1,0 +1,75 @@
+# SYS EQSI / HASI — case-insensitive string probes (IF companion to GREPI)
+# Usability: status/severity checks without UPPER/LOWER glue
+
+HOLD_FLASH 1
+
+# case-sensitive EQS unchanged
+SYS EQS "Error" "error"
+ASSERT LAST_N == 0
+SYS EQS "Error" "Error"
+ASSERT LAST_N == 1
+
+# EQSI matches all folds
+SYS EQSI "Error" "error"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQSI "ERROR" "error"
+ASSERT LAST_N == 1
+SYS EQSI "warn" "WARN"
+ASSERT LAST_N == 1
+SYS EQSI "ok" "fail"
+ASSERT LAST_N == 0
+
+# IEQS / STREQI aliases
+SYS IEQS "Host" "HOST"
+ASSERT LAST_N == 1
+SYS STREQI "aBc" "AbC"
+ASSERT LAST_N == 1
+
+# SYS EQS I form
+SYS EQS I "Disk" "disk"
+ASSERT LAST_N == 1
+SYS EQS ICASE "x" "X"
+ASSERT LAST_N == 1
+
+# HAS case-sensitive unchanged
+SYS HAS "Error: boom" "error"
+ASSERT LAST_N == 0
+SYS HAS "Error: boom" "Error"
+ASSERT LAST_N == 1
+
+# HASI substring ignore case
+SYS HASI "Error: boom" "error"
+ASSERT LAST_N == 1
+SYS HASI "WARN disk full" "Disk"
+ASSERT LAST_N == 1
+SYS HASI "info only" "error"
+ASSERT LAST_N == 0
+
+# ICONTAINS / HAS I forms
+SYS ICONTAINS "Level=ERROR" "level="
+ASSERT LAST_N == 1
+SYS HAS I "msg=Boom" "BOOM"
+ASSERT LAST_N == 1
+SYS HAS ICASE "abc" "B"
+ASSERT LAST_N == 1
+
+# empty needle → hit (same as HAS)
+SYS HASI "anything" ""
+ASSERT LAST_N == 1
+
+# default hay LAST for HASI
+LET line = "Status: Failed"
+SYS HASI line "FAILED"
+ASSERT LAST_N == 1
+
+# agent pattern: GREPI then EQSI on peeled severity
+LET L = "WARN: space low"
+SYS BEFORE L ": "
+LET sev = LAST
+SYS EQSI sev "warn"
+ASSERT LAST_N == 1
+SYS EQS sev "warn"
+ASSERT LAST_N == 0
+
+PRINT "sys_eqsi ok"
