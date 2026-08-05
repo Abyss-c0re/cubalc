@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 111,
-  "version": "1.15.136-usability",
-  "item": "SYS CHUNK / BATCH group bag fields by n",
-  "item_id": 144,
-  "title": "SYS CHUNK|BATCH n [bag] [join] \u2014 group fields into batches of n",
-  "commit": "4543a426260e8cc70c3453085b5e114d2adeb4e4",
-  "summary": "SYS CHUNK/BATCH group bag fields into batches of n joined by sep. Work-list paging. selftest 111.",
+  "iter": 112,
+  "version": "1.15.137-usability",
+  "item": "SYS WINDOW / SLIDE overlapping bag field windows",
+  "item_id": 145,
+  "title": "SYS WINDOW|SLIDE n [bag] [join] — overlapping windows of n fields",
+  "commit": "b8eab81f3cdb5ff3925b8ab1d5c467bcfbe5e2bb",
+  "summary": "SYS WINDOW/SLIDE overlapping bag field windows of n. Consecutive pairs/ngrams. selftest 112.",
   "proofs": [
-    "684_sys_chunk",
-    "selftest n_pass=111"
+    "685_sys_window",
+    "selftest n_pass=112"
   ],
-  "when": "2026-08-05T20:13:43Z",
+  "when": "2026-08-05T20:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4543a426260e8cc70c3453085b5e114d2adeb4e4"
+  "sha": "b8eab81f3cdb5ff3925b8ab1d5c467bcfbe5e2bb"
 }
