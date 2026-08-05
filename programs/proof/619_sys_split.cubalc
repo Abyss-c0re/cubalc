@@ -1,0 +1,86 @@
+# SYS SPLIT / FIELDS — delimiter → newline fields (feeds EACH LINE/GREP/TAKE)
+# Usability: PATH/CSV/env lists without shell cut/awk
+
+HOLD_FLASH 1
+
+# basic colon split
+SYS SPLIT ":" "a:b:c"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT SPLIT_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS SPLIT ":" "a:b:c"
+SYS TAIL
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# multi-char separator
+SYS SPLIT "||" "x||y||z"
+ASSERT SPLIT_N == 3
+SYS NTH 1
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# consecutive seps → empty field
+SYS SPLIT "," "p,,q"
+ASSERT SPLIT_N == 3
+SYS NTH 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# FIELDS alias
+SYS FIELDS "/" "/usr/local/bin"
+ASSERT SPLIT_N == 4
+SYS NTH 1
+SYS EQS LAST "usr"
+ASSERT LAST_N == 1
+
+# empty sep → whole string one field
+SYS SPLIT "" "hello"
+ASSERT SPLIT_N == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# empty source
+SYS SPLIT ":" ""
+ASSERT OK == 1
+ASSERT SPLIT_N == 0
+ASSERT LAST_N == 0
+
+# default source LAST
+LET PATHISH = "/bin:/usr/bin:/tmp"
+SYS SPLIT ":" PATHISH
+ASSERT SPLIT_N == 3
+SYS TAKE 2
+ASSERT TAKE_N == 2
+LET n = 0
+EACH LINE AS d
+  LET n = n + 1
+  ASSERT LAST_N > 0
+END
+ASSERT n == 2
+
+# chain: SPLIT → GREP → EACH
+SYS SPLIT "," "hold_seed.cubalc,mesh_exchange.cubalc,README.md"
+SYS GREP ".cubalc"
+ASSERT GREP_N == 2
+LET saw = 0
+EACH LINE AS f
+  LET saw = saw + 1
+  SYS ENDS f ".cubalc"
+  ASSERT LAST_N == 1
+END
+ASSERT saw == 2
+
+# STRSPLIT alias
+SYS STRSPLIT " " "one two three"
+ASSERT SPLIT_N == 3
+SYS HEAD
+SYS EQS LAST "one"
+ASSERT LAST_N == 1
+
+PRINT "sys_split ok"

@@ -1607,6 +1607,60 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SPLIT|SPLITBY|FIELDS sep [str|LAST] — split on sep → newline fields.
+     * LAST_N/SPLIT_N = field count. Empty sep → whole string one field.
+     * Usability: PATH/CSV/env lists → EACH LINE/GREP/TAKE without shell. */
+    if (kw(&L->cur,"SPLIT") || kw(&L->cur,"SPLITBY") || kw(&L->cur,"FIELDS") ||
+        kw(&L->cur,"STRSPLIT") || kw(&L->cur,"SEPARATE") || kw(&L->cur,"CUTSEP")){
+      char sep[64]="", src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *hit;
+      size_t sepn, olen = 0, flen;
+      long nfields = 0;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0]=0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      sepn = strlen(sep);
+      if (!src[0]) {
+        /* empty source → zero fields */
+      } else if (sepn == 0) {
+        /* no separator → single field */
+        snprintf(out, sizeof out, "%s", src);
+        nfields = 1;
+        olen = strlen(out);
+      } else {
+        p = src;
+        for (;;) {
+          hit = strstr(p, sep);
+          if (hit) flen = (size_t)(hit - p);
+          else flen = strlen(p);
+          if (nfields > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, p, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, p, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          nfields++;
+          if (!hit) break;
+          p = hit + sepn;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "SPLIT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "SPLIT_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -1924,7 +1978,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2153,6 +2207,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
       {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
       {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
+      {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

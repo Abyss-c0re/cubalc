@@ -105,6 +105,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 75. ~~**`SYS GREP` / `FILTER` / `GREPV`**~~ **done** (keep/drop newline fields · LIST filter).
 76. ~~**`EACH LINE`**~~ **done** (walk newline fields after LIST/GREP · no NTH index glue).
 77. ~~**`SYS TAKE` / `DROP`**~~ **done** (first-n / drop-n newline windows · LIST page).
+78. ~~**`SYS SPLIT` / `FIELDS`**~~ **done** (sep → newline fields · PATH/CSV → EACH LINE).
 
 ## Tick protocol
 
