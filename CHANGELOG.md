@@ -1,3 +1,12 @@
+## Meaningful — cubalc init scaffold starter — 2026-08-05
+
+### Usability
+- `cubalc init|new|scaffold [path] [--force]` — write runnable `.cubalc` starter
+- Template: `INCLUDE agent_boot` + CUBE/PLUG/FLOW/DECIDE/STATUS
+- JSON plate `cubalc.init.v1` (path, wrote, next run hint); refuse overwrite unless `--force`
+- Bare names get `.cubalc` suffix; parent dirs created
+- Version: `1.15.39-usability`
+
 ## Meaningful — CLEAR_ERR wipe sticky soft errors — 2026-08-05
 
 ### Usability
