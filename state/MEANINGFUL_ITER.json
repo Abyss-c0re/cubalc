@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 70,
-  "version": "1.15.95-usability",
-  "item": "SYS FINDLINE / LINEINDEX exact bag field index",
-  "item_id": 103,
-  "title": "SYS FINDLINE|LINEINDEX bag needle 0-based exact field index",
-  "commit": "0be94723527627c8d69efb7d589f7165523ecb98",
-  "summary": "SYS FINDLINE|LINEINDEX 0-based exact bag field index (FINDLINEI case-insensitive). Miss LAST_N=-1 OK=0. Completes HASLINE/REMOVELINE for locate+NTH. selftest 70.",
+  "iter": 71,
+  "version": "1.15.96-usability",
+  "item": "SYS SETLINE / REPLACELINE set bag field by index",
+  "item_id": 104,
+  "title": "SYS SETLINE|REPLACELINE bag n value set 0-based field",
+  "commit": "756a8dba6ca0d91f8b5179e6fec660237a89c8ae",
+  "summary": "SYS SETLINE|REPLACELINE|PUTLINE bag n value set 0-based field in place. Soft miss LAST_N=0. Pairs with FINDLINE for status updates without EACH. selftest 71.",
   "proofs": [
-    "644_sys_findline",
-    "selftest n_pass=70"
+    "645_sys_setline",
+    "selftest n_pass=71"
   ],
-  "when": "2026-08-05T13:23:39Z",
+  "when": "2026-08-05T13:33:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0be94723527627c8d69efb7d589f7165523ecb98"
+  "sha": "756a8dba6ca0d91f8b5179e6fec660237a89c8ae"
 }
