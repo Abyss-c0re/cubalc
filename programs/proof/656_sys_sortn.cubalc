@@ -1,0 +1,115 @@
+# SYS SORTN / NSORT — numeric sort of newline fields
+# Usability: lex SORT puts "10" before "2"; SORTN orders by integer value
+
+HOLD_FLASH 1
+
+# classic lex footgun: "10" < "2" as strings
+LET scores = "10
+2
+100
+3"
+SYS SORT scores
+SYS EQS LAST "10
+100
+2
+3"
+ASSERT LAST_N == 1
+
+# numeric ascending
+SYS SORTN scores
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT SORT_N == 4
+SYS EQS LAST "2
+3
+10
+100"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+SYS SORTN scores
+SYS TAIL
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+
+# descending
+SYS SORTN DESC scores
+SYS EQS LAST "100
+10
+3
+2"
+ASSERT LAST_N == 1
+SYS NSORT R scores
+SYS HEAD
+SYS EQS LAST "100"
+ASSERT LAST_N == 1
+
+# aliases
+SYS NUMSORT "5
+-1
+0
+12"
+SYS EQS LAST "-1
+0
+5
+12"
+ASSERT LAST_N == 1
+SYS RSORTN "1
+3
+2"
+SYS EQS LAST "3
+2
+1"
+ASSERT LAST_N == 1
+
+# negatives + zeros
+SYS SORTN "-5
+10
+-20
+0"
+SYS EQS LAST "-20
+-5
+0
+10"
+ASSERT LAST_N == 1
+
+# bag var / bare LAST
+LET bag = "9
+1
+4"
+SYS SORTN bag
+SYS EQS LAST "1
+4
+9"
+ASSERT LAST_N == 1
+# bare uses LAST after explicit set
+SYS SORTN "8
+3
+5"
+SYS SORTN
+SYS EQS LAST "3
+5
+8"
+ASSERT LAST_N == 1
+
+# empty / single
+SYS SORTN ""
+ASSERT OK == 1
+ASSERT SORT_N == 0
+SYS SORTN "42"
+ASSERT SORT_N == 1
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# agent pattern: rank peer scores, then sum top after TAKE
+LET peer = "40
+75
+12
+90"
+SYS SORTN DESC peer
+SYS TAKE 2
+SYS SUM
+ASSERT LAST_N == 165
+
+PRINT "sys_sortn ok"

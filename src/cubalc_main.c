@@ -1797,6 +1797,7 @@ int main(int argc, char **argv) {
       {"sys_minmax", "programs/proof/653_sys_minmax.cubalc", "SYS MIN/MAX/CLAMP host bounds"},
       {"sys_cmp", "programs/proof/654_sys_cmp.cubalc", "SYS CMP/SCMP/IABS three-way compare"},
       {"sys_sum", "programs/proof/655_sys_sum.cubalc", "SYS SUM/PROD/AVG host aggregates"},
+      {"sys_sortn", "programs/proof/656_sys_sortn.cubalc", "SYS SORTN numeric bag sort"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2086,6 +2087,8 @@ int main(int argc, char **argv) {
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
       {"SYS SORT", "host", "SYS SORT [str] — lexicographic newline field sort"},
+      {"SYS SORTN", "host", "SYS SORTN|NSORT [DESC] [str] — numeric newline field sort"},
+      {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
       {"SYS UNIQ", "host", "SYS UNIQ [str] — drop adjacent duplicate fields"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b — portable path join a/b → LAST"},
       {"SYS PATH", "host", "SYS PATH a b — alias of SYS JOIN"},
@@ -3063,6 +3066,8 @@ int main(int argc, char **argv) {
       {"SYS DROP", "host", "SYS DROP first n lines"},
       {"SYS SPLIT", "host", "SYS SPLIT sep to lines"},
       {"SYS SORT", "host", "SYS SORT line order"},
+      {"SYS SORTN", "host", "SYS SORTN numeric bag sort"},
+      {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
       {"SYS UNIQ", "host", "SYS UNIQ adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN path join a/b"},
       {"SYS PATH", "host", "SYS PATH alias of JOIN"},
@@ -3350,6 +3355,8 @@ int main(int argc, char **argv) {
       {"SYS DROP", "host", "SYS DROP|SKIP n drop first n lines"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep → newline fields"},
       {"SYS SORT", "host", "SYS SORT lexicographic line sort"},
+      {"SYS SORTN", "host", "SYS SORTN|NSORT numeric line sort"},
+      {"SYS NSORT", "host", "SYS NSORT alias of SYS SORTN"},
       {"SYS UNIQ", "host", "SYS UNIQ drop adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b portable path join"},
       {"SYS PATH", "host", "SYS PATH alias of SYS JOIN"},
@@ -3492,6 +3499,7 @@ int main(int argc, char **argv) {
       {"programs/proof/653_sys_minmax.cubalc", "sys_minmax", "SYS MIN/MAX/CLAMP host bounds"},
       {"programs/proof/654_sys_cmp.cubalc", "sys_cmp", "SYS CMP/SCMP/IABS compare + abs"},
       {"programs/proof/655_sys_sum.cubalc", "sys_sum", "SYS SUM/PROD/AVG host aggregates"},
+      {"programs/proof/656_sys_sortn.cubalc", "sys_sortn", "SYS SORTN numeric bag sort"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

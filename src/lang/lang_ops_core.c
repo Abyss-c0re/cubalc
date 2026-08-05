@@ -2506,6 +2506,118 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
+     * Lex SORT orders "10" before "2"; SORTN orders by integer value.
+     * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
+     * Usability: score bags / sizes after LIST without shell sort -n. */
+    if (kw(&L->cur,"SORTN") || kw(&L->cur,"NSORT") || kw(&L->cur,"NUMSORT") ||
+        kw(&L->cur,"SORTNUM") || kw(&L->cur,"ISORT") || kw(&L->cur,"SORTINT") ||
+        kw(&L->cur,"RSORTN") || kw(&L->cur,"SORTND") || kw(&L->cur,"NSORTR")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { SORTN_MAX = 256, SORTN_FLEN = 192 };
+      char fields[SORTN_MAX][SORTN_FLEN];
+      long nvals[SORTN_MAX];
+      int order[SORTN_MAX];
+      int n = 0, i, desc = 0;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      char op0[16];
+      snprintf(op0, sizeof op0, "%s", L->cur.text);
+      for (char *q = op0; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op0, "RSORTN") == 0 || strcmp(op0, "SORTND") == 0 ||
+          strcmp(op0, "NSORTR") == 0)
+        desc = 1;
+      lex_next(L);
+      /* optional DESC|ASC|R|REV flag */
+      if (kw(&L->cur,"DESC") || kw(&L->cur,"DESCENDING") || kw(&L->cur,"REVERSE") ||
+          kw(&L->cur,"REV") || kw(&L->cur,"R") || kw(&L->cur,"-R") ||
+          kw(&L->cur,"-N") || kw(&L->cur,"DOWN")) {
+        desc = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"ASC") || kw(&L->cur,"ASCENDING") || kw(&L->cur,"UP")) {
+        desc = 0;
+        lex_next(L);
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SORTN_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            char *end = NULL;
+            long v = 0;
+            if (flen >= SORTN_FLEN) flen = SORTN_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            if (fields[n][0]) {
+              v = strtol(fields[n], &end, 10);
+              if (end == fields[n]) v = 0; /* non-numeric → 0 */
+              else {
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end != 0) v = 0; /* trailing junk → 0 */
+              }
+            }
+            nvals[n] = v;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (n > 1) {
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0) {
+            long a = nvals[order[j]], b = nvals[key];
+            int gt = desc ? (a < b) : (a > b);
+            if (!gt && a == b) {
+              /* stable: keep original order on tie */
+              gt = 0;
+            }
+            if (!gt) break;
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = order[i];
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "SORTN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REVL|REVLINES|FLIPLINES [str|LAST] — reverse newline field order → LAST.
      * LAST_N/REVL_N = field count. Cap 256 fields (same as SORT).
      * Usability: newest-first logs / LIFO work bags with POP without shell tac. */
@@ -4136,7 +4248,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4377,6 +4489,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS WORDS", "SYS WORDS|TOKENIZE [str] — whitespace → newline fields · collapse runs"},
       {"SYS TOKENIZE", "SYS TOKENIZE [str] — alias of SYS WORDS"},
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
+      {"SYS SORTN", "SYS SORTN|NSORT [DESC] [str] — numeric sort of newline fields (vs lex SORT)"},
+      {"SYS NSORT", "SYS NSORT [DESC] [str] — alias of SYS SORTN · score bags / sizes"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
