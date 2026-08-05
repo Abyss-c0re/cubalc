@@ -20,7 +20,7 @@
     },
     {
       "name": "substring_malicex",
-      "cmd": "FIRSTMATCH alice → malicex LOGIN (alice inside malicex)",
+      "cmd": "FIRSTMATCH alice \u2192 malicex LOGIN (alice inside malicex)",
       "ok": true,
       "note": "critical actor false friend"
     },
@@ -61,8 +61,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "FIRSTMATCH/LASTMATCH substring: alice matches malicex",
-      "detail": "Needle alice is a substring of malicex. FIRSTMATCH bag alice returns malicex LOGIN when it appears first. Audit actor span is wrong — security-relevant false friend. No word-boundary or field-token match mode.",
-      "repro": "FIRSTMATCH 'malicex LOGIN\\nalice LOGIN' alice → malicex LOGIN"
+      "detail": "Needle alice is a substring of malicex. FIRSTMATCH bag alice returns malicex LOGIN when it appears first. Audit actor span is wrong \u2014 security-relevant false friend. No word-boundary or field-token match mode.",
+      "repro": "FIRSTMATCH 'malicex LOGIN\\nalice LOGIN' alice \u2192 malicex LOGIN"
     },
     {
       "id": "W2",
@@ -76,25 +76,25 @@
       "id": "W3",
       "severity": "med",
       "area": "host|cli",
-      "title": "No multi-line ARG — loadlines ||| glue required",
+      "title": "No multi-line ARG \u2014 loadlines ||| glue required",
       "detail": "Audit lines have spaces; WORDS splits them. Same multi-line ARG gap as api_noise_rank.",
-      "repro": "WORDS 'alice LOGIN ok' → 3 tokens"
+      "repro": "WORDS 'alice LOGIN ok' \u2192 3 tokens"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
       "title": "LASTMATCH/FIRSTMATCH empty needle returns edge field",
-      "detail": "Empty needle → last/first field. Agents with blank ARG can silently pick wrong event.",
-      "repro": "LASTMATCH bag \"\" → last field"
+      "detail": "Empty needle \u2192 last/first field. Agents with blank ARG can silently pick wrong event.",
+      "repro": "LASTMATCH bag \"\" \u2192 last field"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
       "title": "MAXLEN empty returns 0 (same class as MAX empty)",
-      "detail": "MAXLEN \"\" → 0; MAXLEN_I -1 only if checked. Fat gate may false-pass if empty not BLANKed.",
-      "repro": "MAXLEN \"\" → 0"
+      "detail": "MAXLEN \"\" \u2192 0; MAXLEN_I -1 only if checked. Fat gate may false-pass if empty not BLANKed.",
+      "repro": "MAXLEN \"\" \u2192 0"
     },
     {
       "id": "W6",
@@ -122,7 +122,7 @@
     }
   ],
   "workarounds": [
-    "Match 'alice ' with trailing space or 'alice LOGIN' full token — still fragile",
+    "Match 'alice ' with trailing space or 'alice LOGIN' full token \u2014 still fragile",
     "CUTALL first token then HASLINE/EQS for actor identity",
     "Never trust FIRST/LASTMATCH for security actor spans without field split",
     "BLANK bag before MAXLEN fat gate",
@@ -139,8 +139,8 @@
     "Hard security footgun: malicex matched as alice via substring",
     "pinlast with alice when malicex last promoted attacker line",
     "FIRST vs LAST pair still valuable when needles are unique tags",
-    "No language fix — word-boundary match for MEANINGFUL_ITER"
+    "No language fix \u2014 word-boundary match for MEANINGFUL_ITER"
   ],
-  "commit": "pending",
+  "commit": "273a24b1927815a29a8468cf84a7e00bcbcaf9ca",
   "ts": "2026-08-05T22:23:00Z"
 }
