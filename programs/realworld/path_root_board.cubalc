@@ -1,0 +1,593 @@
+# path_root_board.cubalc — durable path inventory + shared root under STATE
+#
+# Real use: agents fold path bags to a common root (COMMONPREFIX/LCP), pick
+# longest path (LONGEST), and TRUNCALL for safe display digests without shell.
+#
+# Plate: exact path fields under STATE
+#
+# Actions (CUBALC_ARG0 / CUBALC_PR_ACTION):
+#   list     — depth + common prefix/suffix lens + longest (default)
+#   seed     — WORDS paths (simple tokens; prefer loadlines for /paths)
+#   loadlines— PUSH ||| separated paths
+#   ingest   — PUSH one path
+#   root     — COMMONPREFIX → report; soft empty prefix
+#   suffix   — COMMONSUFFIX → report
+#   longest  — LONGEST path field
+#   shortest — SHORTEST path field
+#   clip     — TRUNCALL width (ARG1) → CLIP plate; soft empty
+#   pinlong  — MOVELINE longest to front
+#   drop     — REMOVELINE exact path
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   clear    — empty plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=loadlines CUBALC_ARG1='/var/log/a.log|||/var/log/b.log|||/var/log/c.err' \
+#     ./out/cubalc run -q -s programs/realworld/path_root_board.cubalc
+#   CUBALC_ARG0=root ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_PR_FILE=PATHS.txt
+#   CUBALC_PR_CLIP=CLIP.txt
+#   CUBALC_PR_REQUIRE=1
+#   CUBALC_PR_WIDTH=24
+#
+# Edges deliberately stressed:
+#   COMMONPREFIX empty when no shared root (soft empty string)
+#   COMMONSUFFIX empty across .log vs .err
+#   single field LCP is whole field (surprising for "root")
+#   TRUNCALL silent data loss (like PADALL truncate)
+#   TRUNCALL RIGHT keyword steals RIGHT ident
+#   LONGEST ties: first extreme wins
+#   WORDS splits /var/log/a — need loadlines
+#   PRINT_JSON collapse; WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "path_root_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "PATHS.txt"
+DEFAULT CFILE = "CLIP.txt"
+DEFAULT REPORT = "PATH_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT WIDTH = 24
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PR_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_PR_CLIP" OR ""
+IF LAST_N > 0 THEN
+  LET CFILE = LAST
+END
+SYS ENV "CUBALC_PR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PR_WIDTH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET WIDTH = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir CFILE
+LET clip_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft paths load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR clip_path OR ""
+LET clipped = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET clip_changed = 0
+LET note_msg = "ok"
+LET root_s = ""
+LET suf_s = ""
+LET long_s = ""
+LET short_s = ""
+LET idx = -1
+
+SYS EQS ACTION "clip"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET WIDTH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS COMMONPREFIX bag
+    LET root_s = LAST
+    SYS COMMONSUFFIX bag
+    LET suf_s = LAST
+    SYS LONGEST bag
+    LET long_s = LAST
+    SYS SHORTEST bag
+    LET short_s = LAST
+  END
+  SYS LINES bag
+  LET depth0 = LAST_N
+  STATUS
+  PRINT "pathroot" depth0 ACTION
+  PRINT_JSON depth0 ACTION STATUS_OK
+  PRINT_JSON root_s
+  PRINT_JSON suf_s
+  PRINT_JSON long_s
+  PRINT_JSON bag
+  LET note_msg = "list ok"
+END
+
+# --- loadlines ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| paths"
+  END
+  SYS SPLIT "|||" NAME
+  LET lines = LAST
+  EACH LINE AS ln IN lines
+    SYS BLANK ln
+    IF LAST_N == 0 THEN
+      SYS PUSH bag ln
+      LET bag = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "loaded"
+END
+
+# --- seed WORDS (fragile for paths) ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE bag n
+      IF LAST_N == 0 THEN
+        SYS PUSH bag n
+        LET bag = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- ingest ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs path"
+  END
+  SYS PUSH bag NAME
+  LET bag = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- root COMMONPREFIX ---
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  NOTE "action root"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "root empty bag"
+    FAIL "root empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "root empty"
+    END
+  ELSE
+    SYS COMMONPREFIX bag
+    LET root_s = LAST
+    SYS BLANK root_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET hit = 0
+      LET note_msg = "root none shared"
+      FAIL "root none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "root none"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "root ok"
+    END
+    PRINT_JSON root_s
+  END
+END
+
+# --- suffix ---
+SYS EQS ACTION "suffix"
+IF LAST_N == 1 THEN
+  NOTE "action suffix"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "suffix empty bag"
+    FAIL "suffix empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "suffix empty"
+    END
+  ELSE
+    SYS COMMONSUFFIX bag
+    LET suf_s = LAST
+    SYS BLANK suf_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET hit = 0
+      LET note_msg = "suffix none"
+      FAIL "suffix none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "suffix none"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "suffix ok"
+    END
+    PRINT_JSON suf_s
+  END
+END
+
+# --- longest / shortest ---
+SYS EQS ACTION "longest"
+IF LAST_N == 1 THEN
+  NOTE "action longest"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "longest empty"
+    FAIL "longest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "longest empty"
+    END
+  ELSE
+    SYS LONGEST bag
+    LET long_s = LAST
+    LET hit = 1
+    LET note_msg = "longest ok"
+    PRINT_JSON long_s
+  END
+END
+
+SYS EQS ACTION "shortest"
+IF LAST_N == 1 THEN
+  NOTE "action shortest"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "shortest empty"
+    FAIL "shortest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shortest empty"
+    END
+  ELSE
+    SYS SHORTEST bag
+    LET short_s = LAST
+    LET hit = 1
+    LET note_msg = "shortest ok"
+    PRINT_JSON short_s
+  END
+END
+
+# --- clip TRUNCALL ---
+SYS EQS ACTION "clip"
+IF LAST_N == 1 THEN
+  NOTE "action clip"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "clip empty"
+    FAIL "clip empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "clip empty"
+    END
+  ELSE
+    SYS MAX WIDTH 1
+    LET WIDTH = LAST_N
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS EQSI A2 "right"
+      IF LAST_N == 1 THEN
+        SYS TRUNCALL RIGHT bag WIDTH
+        LET clipped = LAST
+      ELSE
+        SYS TRUNCALL bag WIDTH
+        LET clipped = LAST
+      END
+    ELSE
+      SYS TRUNCALL bag WIDTH
+      LET clipped = LAST
+    END
+    LET clip_changed = 1
+    SYS LINES clipped
+    LET hit = LAST_N
+    LET note_msg = "clipped"
+    PRINT_JSON clipped
+  END
+END
+
+# --- pinlong ---
+SYS EQS ACTION "pinlong"
+IF LAST_N == 1 THEN
+  NOTE "action pinlong"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pinlong empty"
+    FAIL "pinlong empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pinlong empty"
+    END
+  ELSE
+    SYS LONGEST bag
+    LET long_s = LAST
+    SYS FINDLINE bag long_s
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pinlong moveline miss"
+      FAIL "pinlong moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinlong ok"
+    END
+  END
+END
+
+# --- drop / has / count ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact path"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs path"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "root"
+LET k = k + LAST_N
+SYS EQS ACTION "suffix"
+LET k = k + LAST_N
+SYS EQS ACTION "longest"
+LET k = k + LAST_N
+SYS EQS ACTION "shortest"
+LET k = k + LAST_N
+SYS EQS ACTION "clip"
+LET k = k + LAST_N
+SYS EQS ACTION "pinlong"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF clip_changed > 0 THEN
+  SYS WRITE clip_path clipped
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "clip write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.pathroot.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "root"
+LET report = LAST
+SYS PUSH report root_s
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "pathroot" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 elapsed STATUS_OK
+PASS "pathroot tick"
+NOTE "path_root_board: done"
+CLEAR_ERR
+EXIT 0 "pathroot ok"

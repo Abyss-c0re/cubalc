@@ -1,58 +1,58 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 44,
-  "program": "programs/realworld/audit_span_board.cubalc",
-  "theme": "audit span FIRSTMATCH LASTMATCH MAXLEN soft actor window",
-  "version": "1.15.148-usability",
+  "iter": 45,
+  "program": "programs/realworld/path_root_board.cubalc",
+  "theme": "path root COMMONPREFIX LONGEST TRUNCALL soft shared root",
+  "version": "1.15.151-usability",
   "pass": true,
   "tests": [
     {
-      "name": "loadlines_span",
-      "cmd": "loadlines audit events; span alice first+last",
+      "name": "loadlines_root",
+      "cmd": "loadlines /var/log/*; root → /var/log/",
       "ok": true,
-      "note": "FIRSTMATCH/LASTMATCH pair"
+      "note": "COMMONPREFIX shared dir"
     },
     {
-      "name": "span_miss",
-      "cmd": "span zzz soft rc0; REQUIRE EXIT 2",
+      "name": "suffix_mixed",
+      "cmd": ".log vs .err → suffix none soft/REQUIRE",
       "ok": true,
-      "note": "soft+REQUIRE"
+      "note": "COMMONSUFFIX empty soft"
     },
     {
-      "name": "substring_malicex",
-      "cmd": "FIRSTMATCH alice \u2192 malicex LOGIN (alice inside malicex)",
+      "name": "longest_pin",
+      "cmd": "longest nested path; pinlong front",
       "ok": true,
-      "note": "critical actor false friend"
+      "note": "LONGEST + MOVELINE"
     },
     {
-      "name": "lastmatch_malicex",
-      "cmd": "LASTMATCH alice prefers last field containing alice incl malicex if last",
+      "name": "clip_left_right",
+      "cmd": "TRUNCALL 12 left; RIGHT 8 tail clip",
       "ok": true,
-      "note": "pinlast promoted malicex when last"
+      "note": "silent path mutilation"
     },
     {
-      "name": "fat_maxlen",
-      "cmd": "fat thresh10 oversize soft/REQUIRE; thresh100 ok",
+      "name": "slash_only_prefix",
+      "cmd": "/etc/a vs /var/b → COMMONPREFIX / not empty",
       "ok": true,
-      "note": "MAXLEN gate without LENALL"
+      "note": "false useful root for path agents"
     },
     {
-      "name": "pinlast_cmatch_drop",
-      "cmd": "pinlast; cmatch ERROR; drop exact; miss REQUIRE",
+      "name": "single_lcp",
+      "cmd": "single field LCP is whole path",
       "ok": true,
-      "note": "MOVELINE + COUNTMATCH"
+      "note": "surprising root=full path"
     },
     {
-      "name": "empty_fat",
-      "cmd": "fat empty REQUIRE EXIT 2",
+      "name": "drop_miss",
+      "cmd": "drop exact; ghost REQUIRE",
       "ok": true,
-      "note": "soft empty"
+      "note": "exact field ops"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "123/123 pass incl lastmatch maxlen"
+      "note": "126/126 pass incl commonprefix longest truncall"
     }
   ],
   "weaknesses": [
@@ -60,87 +60,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "FIRSTMATCH/LASTMATCH substring: alice matches malicex",
-      "detail": "Needle alice is a substring of malicex. FIRSTMATCH bag alice returns malicex LOGIN when it appears first. Audit actor span is wrong \u2014 security-relevant false friend. No word-boundary or field-token match mode.",
-      "repro": "FIRSTMATCH 'malicex LOGIN\\nalice LOGIN' alice \u2192 malicex LOGIN"
+      "title": "COMMONPREFIX of /etc vs /var is slash-only /",
+      "detail": "Agents treating non-empty LCP as a useful path root get '/' for unrelated trees. No path-segment-aware COMMONPREFIX (dirname-safe). BLANK check cannot reject '/' alone without extra EQS.",
+      "repro": "COMMONPREFIX '/etc/a\\n/var/b' → '/'"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "LASTMATCH same substring class corrupts pinlast attention",
-      "detail": "If malicex is last field, LASTMATCH alice pins attacker line as 'last alice event'. Ops handoff boards mis-route attention.",
-      "repro": "LASTMATCH with malicex last containing alice"
+      "title": "TRUNCALL silently destroys paths",
+      "detail": "clip width 12 turns /var/log/deep/... into /var/log/dee. Same silent truncate class as PADALL. No STRICT/refuse mode; TRUNCALL_HIT counts clips but easy to ignore.",
+      "repro": "TRUNCALL paths 12"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|cli",
-      "title": "No multi-line ARG \u2014 loadlines ||| glue required",
-      "detail": "Audit lines have spaces; WORDS splits them. Same multi-line ARG gap as api_noise_rank.",
-      "repro": "WORDS 'alice LOGIN ok' \u2192 3 tokens"
+      "area": "host|bag",
+      "title": "Single-field COMMONPREFIX returns whole field",
+      "detail": "One path bag → LCP is the full path, so root action reports success with root=full file path. Agents should special-case LINES==1.",
+      "repro": "COMMONPREFIX '/only/one' → '/only/one'"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "LASTMATCH/FIRSTMATCH empty needle returns edge field",
-      "detail": "Empty needle \u2192 last/first field. Agents with blank ARG can silently pick wrong event.",
-      "repro": "LASTMATCH bag \"\" \u2192 last field"
+      "area": "host|cli",
+      "title": "Paths need loadlines ||| — WORDS splits on /",
+      "detail": "WORDS '/var/log/a' may not preserve path depending on tokenizer; multi-token paths need ||| or file READ.",
+      "repro": "seed WORDS fragile for absolute paths"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "MAXLEN empty returns 0 (same class as MAX empty)",
-      "detail": "MAXLEN \"\" \u2192 0; MAXLEN_I -1 only if checked. Fat gate may false-pass if empty not BLANKed.",
-      "repro": "MAXLEN \"\" \u2192 0"
+      "area": "lang|parse",
+      "title": "TRUNCALL RIGHT keyword steals RIGHT",
+      "detail": "Same OFF/DESC/RIGHT class as prior iters.",
+      "repro": "DEFAULT RIGHT near TRUNCALL RIGHT"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|bag",
-      "title": "No token/field-prefix actor match",
-      "detail": "Need CUTALL 0 + exact EQS walk for safe actor identity. FIRST/LASTMATCH insufficient for audit.",
-      "repro": "prefer BEFORE line space + EQS actor"
+      "title": "LONGEST ties pick first only",
+      "detail": "Equal-length paths: first wins; no all-longest bag form.",
+      "repro": "LONGEST aa\\nbb\\ncc → aa"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last audit line without $.",
-      "repro": "loadlines; cat -A AUDIT.txt"
+      "detail": "cat -A last path line without $.",
+      "repro": "loadlines; cat -A PATHS.txt"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|bag",
-      "title": "COUNTMATCH still substring-unsafe for cmatch tallies",
-      "detail": "Same terror/error class on free-text audit lines.",
-      "repro": "COUNTMATCH error vs terror"
+      "title": "No COMMONPREFIX min-length / dirname boundary option",
+      "detail": "Want shared root at path segment boundary (last slash). Character LCP can stop mid-segment for similar basenames.",
+      "repro": "COMMONPREFIX is pure string LCP"
     }
   ],
   "workarounds": [
-    "Match 'alice ' with trailing space or 'alice LOGIN' full token \u2014 still fragile",
-    "CUTALL first token then HASLINE/EQS for actor identity",
-    "Never trust FIRST/LASTMATCH for security actor spans without field split",
-    "BLANK bag before MAXLEN fat gate",
-    "loadlines ||| or READ file for multi-word events"
+    "EQS root '/' or root len < 2 → treat as no useful root",
+    "Inspect TRUNCALL_HIT; prefer clip only for display plates not SoT",
+    "If LINES==1 skip root or treat as whole path intentionally",
+    "loadlines ||| or READ path list file",
+    "Never name vars RIGHT/LEFT/OFF/DESC"
   ],
   "language_gaps": [
-    "Word-boundary / whole-field / token FIRSTMATCH+LASTMATCH",
-    "STARTS-with field match form",
-    "Multi-line ARG ingest",
-    "MAXLEN empty sticky fail option",
+    "Path-segment COMMONPREFIX (dirname-safe)",
+    "TRUNCALL STRICT / no silent clip",
+    "COMMONPREFIX min-len threshold",
+    "All-ties LONGEST bag",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Hard security footgun: malicex matched as alice via substring",
-    "pinlast with alice when malicex last promoted attacker line",
-    "FIRST vs LAST pair still valuable when needles are unique tags",
-    "No language fix \u2014 word-boundary match for MEANINGFUL_ITER"
+    "REQUIRE root none failed to fire for /etc vs /var — LCP is '/' non-blank",
+    "TRUNCALL display clip mangles paths as expected — document hard",
+    "Positive path /var/log/ root works cleanly",
+    "No language fix — path-aware LCP for MEANINGFUL_ITER"
   ],
-  "commit": "273a24b1927815a29a8468cf84a7e00bcbcaf9ca",
-  "ts": "2026-08-05T22:23:00Z"
+  "commit": "pending",
+  "ts": "2026-08-05T22:48:00Z"
 }
