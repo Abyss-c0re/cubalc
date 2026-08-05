@@ -24,6 +24,8 @@ typedef struct cubalc_host_result {
 int cubalc_host_read(const char *path, cubalc_host_result *r);
 int cubalc_host_write(const char *path, const char *data, cubalc_host_result *r);
 int cubalc_host_exists(const char *path); /* 1/0 */
+/* mkdir -p style: create path and parents; OK if already a directory */
+int cubalc_host_mkdir(const char *path, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);

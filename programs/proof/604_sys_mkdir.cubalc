@@ -1,0 +1,30 @@
+# SYS MKDIR — mkdir -p for agent plate directories without shell
+# Usability: create nested dirs under STATE/TMP, idempotent if exists
+
+HOLD_FLASH 1
+
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_mkdir_probe/nested"
+LET DIR = LAST
+
+SYS MKDIR DIR
+ASSERT OK == 1 "mkdir ok"
+SYS EXIST DIR
+ASSERT LAST_N == 1 "dir exists after mkdir"
+
+# idempotent second call — already a directory
+SYS MKDIR DIR
+ASSERT OK == 1 "mkdir idempotent"
+ASSERT LAST_N == 0 "already existed flag"
+
+# under TMP too
+SYS TMP
+SYS JOIN TMP "cubalc_mi_mkdir"
+LET TDIR = LAST
+SYS MKDIR TDIR
+ASSERT OK == 1
+SYS EXIST TDIR
+ASSERT LAST_N == 1
+
+PRINT "sys_mkdir ok" DIR

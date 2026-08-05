@@ -233,6 +233,35 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "EXIST", e);
       bump(vm); return 1;
     }
+    /* SYS MKDIR|MAKEDIR path — mkdir -p; OK if dir already exists.
+     * Usability: agents create STATE/TMP plate trees without shell. */
+    if (kw(&L->cur,"MKDIR") || kw(&L->cur,"MAKEDIR") || kw(&L->cur,"MAKE_DIR") ||
+        kw(&L->cur,"MD") || kw(&L->cur,"ENSURE_DIR")){
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm,"SYS MKDIR \"path\"|LAST"); return -1;
+      }
+      if (cubalc_host_mkdir(path, &hr)!=0){
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str[0] ? hr.str : path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str[0] ? hr.str : path);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "MKDIR_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -1238,7 +1267,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1444,6 +1473,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
+      {"SYS MKDIR", "SYS MKDIR path — mkdir -p · OK if dir exists"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

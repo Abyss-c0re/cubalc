@@ -115,6 +115,60 @@ int cubalc_host_write(const char *path, const char *data, cubalc_host_result *r)
   return 0;
 }
 
+/* Usability: SYS MKDIR path — mkdir -p for agent plate dirs under STATE/TMP. */
+int cubalc_host_mkdir(const char *path, cubalc_host_result *r) {
+  char buf[512];
+  size_t i, n;
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "mkdir: empty path");
+    return -1;
+  }
+  if (stat(path, &st) == 0) {
+    if (S_ISDIR(st.st_mode)) {
+      snprintf(r->str, sizeof r->str, "%s", path);
+      r->n = 0; /* already existed */
+      r->ok = 1;
+      return 0;
+    }
+    snprintf(r->err, sizeof r->err, "mkdir: not a directory");
+    return -1;
+  }
+  n = strlen(path);
+  if (n >= sizeof buf) {
+    snprintf(r->err, sizeof r->err, "mkdir: path too long");
+    return -1;
+  }
+  memcpy(buf, path, n + 1);
+  /* walk components; skip drive letters on windows-ish "C:..." */
+  for (i = 1; i < n; i++) {
+    if (buf[i] == '/' || buf[i] == '\\') {
+      char save = buf[i];
+      buf[i] = 0;
+      if (buf[0] && !(buf[0] == '/' && buf[1] == 0)) {
+        if (mkdir(buf, 0755) != 0 && errno != EEXIST) {
+          snprintf(r->err, sizeof r->err, "mkdir: %s (%s)", buf, strerror(errno));
+          return -1;
+        }
+      }
+      buf[i] = save;
+    }
+  }
+  if (mkdir(buf, 0755) != 0 && errno != EEXIST) {
+    snprintf(r->err, sizeof r->err, "mkdir: %s", strerror(errno));
+    return -1;
+  }
+  if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "mkdir: failed to create dir");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = 1; /* newly ensured */
+  r->ok = 1;
+  return 0;
+}
+
 int cubalc_host_env(const char *name, cubalc_host_result *r) {
   r_clear(r);
   if (!name) { snprintf(r->err, sizeof r->err, "env: empty"); return -1; }
