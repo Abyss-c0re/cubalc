@@ -1521,6 +1521,36 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS IN|WITHIN|INRANGE x lo hi — inclusive numeric range membership → LAST_N 0|1.
+     * lo/hi swapped if inverted. Distinct from SYS BETWEEN (string peel).
+     * Usability: IF/guard retries and score bands without dual CMP tests. */
+    if (kw(&L->cur,"IN") || kw(&L->cur,"WITHIN") || kw(&L->cur,"INRANGE") ||
+        kw(&L->cur,"BETWEENN") || kw(&L->cur,"NUMIN") || kw(&L->cur,"ISIN") ||
+        kw(&L->cur,"INCL") || kw(&L->cur,"BOUNDS")){
+      long vals[8];
+      int n = 0;
+      long x, lo, hi, out;
+      char buf[16];
+      lex_next(L);
+      while (n < 8 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                        L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+        vals[n++] = parse_prim(vm, L);
+      }
+      if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
+      else if (n == 1) { x = vals[0]; lo = 0; hi = 0; }
+      else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
+      else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
+      if (lo > hi) { long t = lo; lo = hi; hi = t; }
+      out = (x >= lo && x <= hi) ? 1L : 0L;
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "IN", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS CMP|NCMP a b — three-way numeric compare → LAST_N -1|0|1.
      * SYS SCMP|CMPS|STRCMP a b — lexicographic string compare → LAST_N -1|0|1.
      * SYS SCMPI|CMPSI — case-insensitive string compare.
@@ -4540,7 +4570,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|PICK|CHOICE|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4855,6 +4885,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MIN", "SYS MIN a b [c…] — host-plane minimum → LAST_N"},
       {"SYS MAX", "SYS MAX a b [c…] — host-plane maximum → LAST_N"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
+      {"SYS IN", "SYS IN|WITHIN x lo hi — inclusive range membership → LAST_N 0|1"},
+      {"SYS WITHIN", "SYS WITHIN x lo hi — alias of SYS IN · score/retry bands"},
       {"SYS CMP", "SYS CMP|NCMP a b — three-way numeric compare → LAST_N -1|0|1"},
       {"SYS SCMP", "SYS SCMP|CMPS a b — string compare → LAST_N -1|0|1"},
       {"SYS SCMPI", "SYS SCMPI a b — case-insensitive string compare"},

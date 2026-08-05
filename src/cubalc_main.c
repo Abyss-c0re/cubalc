@@ -1802,6 +1802,7 @@ int main(int argc, char **argv) {
       {"sys_div", "programs/proof/658_sys_div.cubalc", "SYS SIGN/DIV/MOD host arithmetic"},
       {"sys_pick", "programs/proof/659_sys_pick.cubalc", "SYS PICK/CHOICE random bag field"},
       {"sys_gcd", "programs/proof/660_sys_gcd.cubalc", "SYS GCD/LCM multi-arg host math"},
+      {"sys_in", "programs/proof/661_sys_in.cubalc", "SYS IN/WITHIN numeric range membership"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2018,6 +2019,8 @@ int main(int argc, char **argv) {
       {"SYS MIN", "host", "SYS MIN a b [c…] — host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX a b [c…] — host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi — bound x into [lo,hi]"},
+      {"SYS IN", "host", "SYS IN|WITHIN x lo hi — inclusive range membership 0|1"},
+      {"SYS WITHIN", "host", "SYS WITHIN alias of SYS IN"},
       {"SYS CMP", "host", "SYS CMP a b — three-way numeric compare -1|0|1"},
       {"SYS SCMP", "host", "SYS SCMP a b — string compare -1|0|1"},
       {"SYS IABS", "host", "SYS IABS|NABS x — integer absolute value"},
@@ -3069,6 +3072,8 @@ int main(int argc, char **argv) {
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP bound into range"},
+      {"SYS IN", "host", "SYS IN numeric range membership"},
+      {"SYS WITHIN", "host", "SYS WITHIN alias of SYS IN"},
       {"SYS CMP", "host", "SYS CMP three-way numeric compare"},
       {"SYS SCMP", "host", "SYS SCMP string compare"},
       {"SYS IABS", "host", "SYS IABS integer absolute value"},
@@ -3367,6 +3372,8 @@ int main(int argc, char **argv) {
       {"SYS MIN", "host", "SYS MIN host-plane minimum"},
       {"SYS MAX", "host", "SYS MAX host-plane maximum"},
       {"SYS CLAMP", "host", "SYS CLAMP x lo hi bound"},
+      {"SYS IN", "host", "SYS IN|WITHIN x lo hi membership"},
+      {"SYS WITHIN", "host", "SYS WITHIN alias of SYS IN"},
       {"SYS CMP", "host", "SYS CMP three-way numeric compare"},
       {"SYS SCMP", "host", "SYS SCMP string compare"},
       {"SYS IABS", "host", "SYS IABS integer absolute value"},
@@ -3538,6 +3545,7 @@ int main(int argc, char **argv) {
       {"programs/proof/658_sys_div.cubalc", "sys_div", "SYS SIGN/DIV/MOD host arithmetic"},
       {"programs/proof/659_sys_pick.cubalc", "sys_pick", "SYS PICK/CHOICE random bag field"},
       {"programs/proof/660_sys_gcd.cubalc", "sys_gcd", "SYS GCD/LCM multi-arg host math"},
+      {"programs/proof/661_sys_in.cubalc", "sys_in", "SYS IN/WITHIN numeric range membership"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

@@ -1,0 +1,73 @@
+# SYS IN / WITHIN — inclusive numeric range membership → LAST_N 0|1
+# Usability: IF/guard score bands and retry windows without dual CMP
+
+HOLD_FLASH 1
+
+# inside / outside
+SYS IN 5 1 10
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS IN 0 1 10
+ASSERT LAST_N == 0
+SYS IN 11 1 10
+ASSERT LAST_N == 0
+
+# inclusive endpoints
+SYS IN 1 1 10
+ASSERT LAST_N == 1
+SYS IN 10 1 10
+ASSERT LAST_N == 1
+
+# inverted bounds auto-swap
+SYS IN 5 10 1
+ASSERT LAST_N == 1
+SYS IN 0 10 1
+ASSERT LAST_N == 0
+
+# negatives
+SYS IN -3 -5 0
+ASSERT LAST_N == 1
+SYS IN -6 -5 0
+ASSERT LAST_N == 0
+
+# aliases
+SYS WITHIN 50 0 100
+ASSERT LAST_N == 1
+SYS INRANGE 101 0 100
+ASSERT LAST_N == 0
+SYS BETWEENN 7 0 10
+ASSERT LAST_N == 1
+SYS NUMIN 3 3 3
+ASSERT LAST_N == 1
+SYS ISIN 9 0 8
+ASSERT LAST_N == 0
+
+# vars
+LET x = 42
+LET lo = 0
+LET hi = 100
+SYS IN x lo hi
+ASSERT LAST_N == 1
+LET x = 200
+SYS IN x lo hi
+ASSERT LAST_N == 0
+
+# agent pattern: accept only healthy scores, else CLAMP
+LET score = 73
+SYS IN score 0 100
+ASSERT LAST_N == 1
+LET score = 150
+SYS IN score 0 100
+ASSERT LAST_N == 0
+SYS CLAMP score 0 100
+ASSERT LAST_N == 100
+
+# agent pattern: retry window
+LET wait_ms = 80
+SYS WITHIN wait_ms 50 200
+ASSERT LAST_N == 1
+LET wait_ms = 10
+SYS WITHIN wait_ms 50 200
+ASSERT LAST_N == 0
+
+PRINT "sys_in ok"
