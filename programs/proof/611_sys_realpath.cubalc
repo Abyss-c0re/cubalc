@@ -1,0 +1,66 @@
+# SYS REALPATH / ABSPATH — absolute paths without shell realpath/pwd
+# Usability: agents stamp portable plate paths under any CWD
+
+HOLD_FLASH 1
+
+# empty / . → cwd
+SYS REALPATH
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS HAS LAST "/"
+ASSERT LAST_N == 1 "absolute cwd"
+LET CWD_ABS = LAST
+
+SYS ABSPATH "."
+ASSERT OK == 1
+SYS EQS LAST CWD_ABS
+ASSERT LAST_N == 1
+
+# existing relative path resolves
+SYS REALPATH "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N > 20
+SYS HAS LAST "hold_seed.cubalc"
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1 "leading slash"
+DEFINED REALPATH
+ASSERT DEFINED == 1
+DEFINED ABSPATH
+ASSERT DEFINED == 1
+
+# missing relative → cwd/path (no fatal)
+SYS REALPATH "state/meaningful_iter/__no_such_abs__/plate.json"
+ASSERT OK == 1
+SYS HAS LAST "__no_such_abs__"
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+
+# absolute missing stays absolute
+SYS ABSPATH "/tmp/cubalc_mi_abs_probe_zz/nope.json"
+ASSERT OK == 1
+SYS EQS LAST "/tmp/cubalc_mi_abs_probe_zz/nope.json"
+ASSERT LAST_N == 1
+
+# aliases
+SYS ABS "programs/lib"
+ASSERT OK == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS CANON "programs/lib"
+ASSERT OK == 1
+
+# chain: JOIN then REALPATH for nested plate
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_abs_probe/out.json"
+LET REL = LAST
+SYS REALPATH REL
+ASSERT OK == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS HAS LAST "_mi_abs_probe"
+ASSERT LAST_N == 1
+
+PRINT "sys_realpath ok"

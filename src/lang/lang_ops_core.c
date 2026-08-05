@@ -345,6 +345,41 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS REALPATH|ABSPATH|ABS [path|LAST] — absolute path for portable plates.
+     * Existing → realpath; missing relative → cwd/path; empty → cwd. */
+    if (kw(&L->cur,"REALPATH") || kw(&L->cur,"ABSPATH") || kw(&L->cur,"ABS") ||
+        kw(&L->cur,"ABSOLUTE") || kw(&L->cur,"CANON") || kw(&L->cur,"CANONICAL")){
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      path[0] = 0;
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+          path[0] = 0;
+      }
+      /* no arg → LAST if set, else cwd via empty path */
+      if (!path[0] && vm->last_str[0])
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (cubalc_host_abspath(path, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      var_set_str(vm, "REALPATH", hr.str);
+      var_set_str(vm, "ABSPATH", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV")){
       /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
       lex_next(L);
@@ -1606,7 +1641,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1824,6 +1859,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS RM", "SYS RM|UNLINK|DELETE path — remove file · missing soft OK"},
       {"SYS RENAME", "SYS RENAME|MV|MOVE from to — move plate path"},
       {"SYS COPY", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},
+      {"SYS REALPATH", "SYS REALPATH|ABSPATH path — absolute path → LAST"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

@@ -1,4 +1,10 @@
+/* glibc: realpath + POSIX APIs without macro fights */
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+#endif
 #include "cubalc_hostops.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +15,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
+#include <limits.h>
 
 static void r_clear(cubalc_host_result *r) {
   if (!r) return;
@@ -264,6 +271,69 @@ int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r) {
   }
   snprintf(r->str, sizeof r->str, "%s", dst);
   r->n = total;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS REALPATH|ABSPATH path — absolute path without shell.
+ * Existing paths: realpath(3) (resolves . .. symlinks).
+ * Missing/relative: cwd + "/" + path (no fatal). Empty path → cwd. */
+int cubalc_host_abspath(const char *path, cubalc_host_result *r) {
+  char cwd[512], joined[1024], resolved[4096];
+  const char *p = path ? path : "";
+  size_t n;
+  r_clear(r);
+  /* empty → cwd */
+  if (!p[0] || strcmp(p, ".") == 0) {
+    if (!getcwd(r->str, sizeof r->str)) {
+      snprintf(r->err, sizeof r->err, "abspath: getcwd fail");
+      return -1;
+    }
+    r->n = (long)strlen(r->str);
+    r->ok = 1;
+    return 0;
+  }
+  /* try realpath when node exists (or intermediate for symlink) */
+  if (realpath(p, resolved) != NULL) {
+    snprintf(r->str, sizeof r->str, "%s", resolved);
+    r->n = (long)strlen(r->str);
+    r->ok = 1;
+    return 0;
+  }
+  /* absolute path that does not exist yet — return as-is (strip trailing /) */
+  if (p[0] == '/') {
+    snprintf(r->str, sizeof r->str, "%s", p);
+    n = strlen(r->str);
+    while (n > 1 && r->str[n - 1] == '/') {
+      r->str[n - 1] = 0;
+      n--;
+    }
+    r->n = (long)n;
+    r->ok = 1;
+    return 0;
+  }
+  /* relative missing — join with cwd */
+  if (!getcwd(cwd, sizeof cwd)) {
+    snprintf(r->err, sizeof r->err, "abspath: getcwd fail");
+    return -1;
+  }
+  n = strlen(cwd);
+  while (n > 1 && cwd[n - 1] == '/') {
+    cwd[n - 1] = 0;
+    n--;
+  }
+  /* strip leading ./ from relative */
+  if (p[0] == '.' && p[1] == '/')
+    p += 2;
+  snprintf(joined, sizeof joined, "%s/%s", cwd, p);
+  /* light normalize: remove trailing slash */
+  n = strlen(joined);
+  while (n > 1 && joined[n - 1] == '/') {
+    joined[n - 1] = 0;
+    n--;
+  }
+  snprintf(r->str, sizeof r->str, "%s", joined);
+  r->n = (long)strlen(r->str);
   r->ok = 1;
   return 0;
 }

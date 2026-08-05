@@ -34,6 +34,8 @@ int cubalc_host_rm(const char *path, cubalc_host_result *r);
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r);
+/* absolute path: realpath if exists, else cwd-join relative; always fills r->str */
+int cubalc_host_abspath(const char *path, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);
