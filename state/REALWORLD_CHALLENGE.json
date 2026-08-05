@@ -1,46 +1,46 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 18,
-  "program": "programs/realworld/csv_plate_import.cubalc",
-  "theme": "CSV row import CUT EMPTY PUSH plate",
-  "version": "1.15.83-usability",
+  "iter": 19,
+  "program": "programs/realworld/stale_plate_gc.cubalc",
+  "theme": "stale plate GC AGE MTIME STARTSI POP work bag",
+  "version": "1.15.86-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_import",
-      "cmd": "rows with header/blank/empty name/blank name; run -s",
+      "name": "positive_gc_trash",
+      "cmd": "aged tmp_*.plate + keep.live; MAX_AGE=3600 PREFIX=tmp_ SUFFIX=.plate",
       "ok": true,
-      "note": "n_ok=3 n_bad=2 n_skip=1; ROWS_ACCEPTED 1:alpha 3:gamma 4:delta"
+      "note": "stale=2 fresh=1 skip=1 moved=2; STARTSI matches TMP_OLD2; trash holds both"
     },
     {
-      "name": "missing_require_read_ok",
-      "cmd": "CUBALC_CSV_REQUIRE=1 no file",
+      "name": "work_pop_lifo",
+      "cmd": "CUBALC_ARG0=work after gc",
       "ok": true,
-      "note": "EXIT 2 no csv via READ_OK==0 (not OK)"
+      "note": "n_moved=2; WORK.bag emptied; out markers touched"
     },
     {
-      "name": "header_only_require",
-      "cmd": "header only + REQUIRE",
+      "name": "require_no_stale",
+      "cmd": "fresh only + REQUIRE=1 MAX_AGE huge",
       "ok": true,
-      "note": "EXIT 2 import thin"
+      "note": "EXIT 2 gc empty"
     },
     {
-      "name": "quoted_comma_gap",
-      "cmd": "1,\"a,b\",ok naive CUT",
+      "name": "age_miss_strict",
+      "cmd": "SYS AGE missing under -q -s",
       "ok": true,
-      "note": "accepted wrongly as 1:\"a:b\" \u2014 no quoted CSV"
+      "note": "ok=false last_err=mtime: missing err_line=0"
     },
     {
-      "name": "tsv_sep",
-      "cmd": "CUBALC_CSV_SEP=tab",
+      "name": "quiet_gc",
+      "cmd": "run -q -s with 1 stale",
       "ok": true,
-      "note": "1:alpha:ok"
+      "note": "exit 0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "58/58 pass incl cut empty"
+      "note": "61/61 pass incl pop mtime startsi"
     }
   ],
   "weaknesses": [
@@ -48,57 +48,57 @@
       "id": "W1",
       "severity": "high",
       "area": "error|host",
-      "title": "SYS READ OR miss sets OK=1; only READ_OK=0 signals absence",
-      "detail": "Soft optional plate load with OR fallback leaves OK=1 so IF OK==0 never sees a miss. Agents must check READ_OK. Without that, missing CSV looks like empty success and REQUIRE falls through to 'import thin' instead of 'no csv'.",
-      "repro": "SYS READ OR missing OR \"\"; PRINT_JSON OK READ_OK \u2192 OK=1 READ_OK=0"
+      "title": "AGE/MTIME miss: AGE=0 and err_line=0 sticky under -s",
+      "detail": "Missing path soft-fails OK=0 AGE=0 MTIME=0 \u2014 same AGE as a just-created file if OK ignored. last_err='mtime: missing' but err_line=0. Under -s without CLEAR_ERR, plate fails. Agents must always branch on OK after AGE.",
+      "repro": "SYS AGE /no/such under -q -s \u2192 ok=false last_err=mtime: missing err_line=0"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "host",
-      "title": "No quoted-CSV awareness \u2014 CUT splits inside quotes",
-      "detail": "Real CSV fields like \"a,b\" break into multiple columns. Import accepted row 1:\"a:b\" for input 1,\"a,b\",ok. Forces shell/csvkit for any non-trivial export.",
-      "repro": "printf '1,\"a,b\",ok\\n' | CUT by comma \u2192 wrong name/status fields"
+      "severity": "med",
+      "area": "host|flow",
+      "title": "POP does not mutate bag \u2014 need LET bag = POP_REST",
+      "detail": "Same class as PUSH: SYS POP bag leaves bag var stale; remaining fields only in POP_REST. Work loop must rebind every iteration.",
+      "repro": "SYS POP bag without LET bag=POP_REST \u2192 infinite same last field if reusing bag"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host",
-      "title": "CUT 0-based vs COLUMN 1-based easy off-by-one",
-      "detail": "CUT n=1 is second field; COLUMN n=1 is first. Agents mixing forms mis-map columns silently.",
-      "repro": "CUT a,b,c , 1 \u2192 b; COLUMN a,b,c , 1 \u2192 a"
+      "title": "Cannot set historical mtime in-language (TOUCH only now)",
+      "detail": "Tests and lease backdating need host touch -d. TOUCH only refreshes to wall clock. No SYS UTIME/CHTIME.",
+      "repro": "Cannot create stale fixture without shell touch -d"
     },
     {
       "id": "W4",
-      "severity": "med",
+      "severity": "low",
       "area": "host",
-      "title": "EMPTY vs BLANK not obvious for validation",
-      "detail": "EMPTY is zero-length only; \" \" fails EMPTY but passes until BLANK checked. Two probes required for whitespace-only cells.",
-      "repro": "name=' ' \u2192 EMPTY=0 BLANK=1"
+      "title": "LIST non-recursive \u2014 nested cache dirs invisible",
+      "detail": "GC only sees top-level basenames under cache/. Nested plates need host find or multi-level LIST.",
+      "repro": "cache/sub/tmp_x.plate never listed"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "docs|cli",
-      "title": "TRIM still not in forms/search",
-      "detail": "Carry-over discovery gap; whitespace cells handled via BLANK instead.",
-      "repro": "search TRIM \u2192 n=0"
+      "title": "SYS STARTS (case-sensitive) weaker discoverability vs STARTSI",
+      "detail": "search STARTS returns STARTSI example; case-sensitive STARTS/ENDS still work but catalog emphasis is I variants. TRIM still missing.",
+      "repro": "search STARTS \u2192 STARTSI; search TRIM \u2192 empty"
     }
   ],
   "workarounds": [
-    "After SYS READ OR always branch on READ_OK (or EXIST first)",
-    "Reject quoted CSV or pre-normalize with shell; document simple CSV only",
-    "Prefer one index convention (CUT 0-based) consistently",
-    "Validate with both EMPTY and BLANK for required text fields",
-    "LET bag = LAST after every PUSH"
+    "After SYS AGE always IF OK==0 CLEAR_ERR CONTINUE before comparing age",
+    "LET bag = POP_REST after every POP",
+    "Use host touch -d for stale fixtures in tests",
+    "Flat cache layout or repeated LIST per subdir",
+    "STARTSI/ENDSI for extension/prefix filters without UPPER"
   ],
   "language_gaps": [
-    "Quoted CSV / RFC4180 field split form",
-    "READ OR documentation that OK stays 1 on soft miss",
-    "Unified field(n) with explicit base flag",
-    "Catalog TRIM",
-    "In-place bag push"
+    "err_line on host soft fails (MTIME/AGE/LIST)",
+    "In-place POP/PUSH bag mutation",
+    "SYS UTIME / set mtime",
+    "Recursive LIST or ** glob",
+    "Catalog TRIM; clarify STARTS vs STARTSI in search"
   ],
-  "commit": "ef515424e6d7263f5ffc3f8f3a2bda3a2ae745ba",
-  "ts": "2026-08-05T11:32:31Z"
+  "commit": "efb78966b288f28b33ce1ac076cb8519d0befa02",
+  "ts": "2026-08-05T11:57:48Z"
 }

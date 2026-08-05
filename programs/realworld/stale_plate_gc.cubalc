@@ -1,0 +1,318 @@
+# stale_plate_gc.cubalc — AGE/MTIME plate GC with STARTSI filter + POP work bag
+#
+# Real use: agents accumulate plates under CUBALC_STATE/cache/ (or work/).
+# This program:
+#   LIST cache/ → EACH basename
+#   STARTSI/ENDSI filter (e.g. tmp_ prefix, .plate suffix)
+#   SYS AGE path — if age >= max_age_sec → RENAME/COPY to trash/ or RM
+#   optional work bag: POP lines from WORK.bag and process LIFO
+#   write GC_REPORT.txt with counts (SYS STR)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/cache"
+#   touch "$CUBALC_STATE/cache/tmp_old.plate" "$CUBALC_STATE/cache/keep.live"
+#   # optionally age files with touch -d
+#   ./out/cubalc run -q -s programs/realworld/stale_plate_gc.cubalc
+#
+# Optional:
+#   CUBALC_ARG0=gc|status|work
+#   CUBALC_GC_MAX_AGE=60        # seconds (default 86400)
+#   CUBALC_GC_PREFIX=tmp_      # STARTSI filter (empty = all)
+#   CUBALC_GC_SUFFIX=.plate    # ENDSI filter (empty = all)
+#   CUBALC_GC_MODE=trash|rm    # trash=RENAME to trash/ (default) or RM
+#   CUBALC_GC_REQUIRE=1        # EXIT 2 if zero candidates when work empty
+#
+# Edges:
+#   AGE/MTIME soft miss OK=0 AGE=0 (same as brand-new?) — check OK
+#   sticky last_err after soft MTIME miss needs CLEAR_ERR for -s
+#   POP like PUSH: bag not mutated; LET bag = POP_REST
+#   STARTSI/ENDSI for case-insensitive path filters
+#   no recursive LIST; no bulk chmod/utime set (gap)
+#   TOUCH cannot set historical mtime — host touch -d for tests
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "stale_plate_gc: start"
+DEFAULT ACTION = "gc"
+DEFAULT MAX_AGE = 86400
+DEFAULT PREFIX = ""
+DEFAULT SUFFIX = ""
+DEFAULT MODE = "trash"
+DEFAULT REQUIRE_ONE = 0
+LET bag = ""
+LET n_list = 0
+LET n_skip = 0
+LET n_fresh = 0
+LET n_stale = 0
+LET n_moved = 0
+LET n_err = 0
+LET n_work = 0
+IDENTITY
+SYS DATE
+LET gc_date = DATE
+SYS HOSTNAME
+LET gc_host = LAST
+SYS TIME
+LET now = TIME
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_GC_ACTION" OR "gc"
+  LET ACTION = LAST
+END
+SYS ENV "CUBALC_GC_MAX_AGE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_AGE = LAST_N
+  END
+END
+SYS ENV "CUBALC_GC_PREFIX" OR ""
+IF LAST_N > 0 THEN
+  LET PREFIX = LAST
+END
+SYS ENV "CUBALC_GC_SUFFIX" OR ""
+IF LAST_N > 0 THEN
+  LET SUFFIX = LAST
+END
+SYS ENV "CUBALC_GC_MODE" OR ""
+IF LAST_N > 0 THEN
+  LET MODE = LAST
+END
+SYS ENV "CUBALC_GC_REQUIRE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "cache"
+LET cache_dir = LAST
+SYS JOIN state_dir "trash"
+LET trash_dir = LAST
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR cache_dir
+SYS MKDIR trash_dir
+SYS MKDIR out_dir
+
+# --- status ---
+SYS EQSI ACTION "status"
+IF LAST_N == 1 THEN
+  SYS JOIN out_dir "GC_REPORT.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+# --- work: POP process LIFO bag file ---
+SYS EQSI ACTION "work"
+IF LAST_N == 1 THEN
+  SYS JOIN state_dir "WORK.bag"
+  LET wpath = LAST
+  SYS READ OR wpath OR ""
+  IF READ_OK == 0 THEN
+    CLEAR_ERR
+    LET bag = ""
+  ELSE
+    LET bag = LAST
+  END
+  SYS LINES bag
+  LET n_work = LAST_N
+  WHILE n_work > 0
+    SYS POP bag
+    IF LAST_N == 0 THEN
+      BREAK
+    END
+    LET item = LAST
+    LET bag = POP_REST
+    SYS LINES bag
+    LET n_work = LAST_N
+    # process: touch marker for each popped item under out/
+    SYS JOIN out_dir item
+    LET dest = LAST
+    SYS TOUCH dest
+    LET n_moved = n_moved + 1
+    CLEAR_ERR
+  END
+  SYS WRITE wpath bag
+  SYS STR n_moved
+  LET ms = LAST
+  SYS JOIN out_dir "GC_REPORT.txt"
+  LET plate = LAST
+  SYS CAT "schema=cubalc.stale_plate_gc.v1 action=work popped=" ms
+  SYS WRITE plate LAST
+  STATUS
+  PRINT_JSON n_moved ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "work ok"
+END
+
+SYS EQSI ACTION "gc"
+IF LAST_N == 0 THEN
+  FAIL "unknown action"
+  EXIT 2 "bad action"
+END
+
+# --- GC scan ---
+SYS LIST cache_dir
+IF OK == 0 THEN
+  FAIL "LIST cache failed"
+  CLEAR_ERR
+  EXIT 2 "list failed"
+END
+LET listing = LAST
+LET n_list = LIST_N
+CLEAR_ERR "list clean"
+
+EACH LINE AS fname IN listing
+  SYS EMPTY PREFIX
+  IF LAST_N == 0 THEN
+    SYS STARTSI fname PREFIX
+    IF LAST_N == 0 THEN
+      LET n_skip = n_skip + 1
+      CONTINUE
+    END
+  END
+  SYS EMPTY SUFFIX
+  IF LAST_N == 0 THEN
+    SYS ENDSI fname SUFFIX
+    IF LAST_N == 0 THEN
+      LET n_skip = n_skip + 1
+      CONTINUE
+    END
+  END
+
+  SYS JOIN cache_dir fname
+  LET path = LAST
+  SYS ISFILE path
+  IF LAST_N == 0 THEN
+    LET n_skip = n_skip + 1
+    CONTINUE
+  END
+
+  SYS AGE path
+  IF OK == 0 THEN
+    # soft miss sticky
+    CLEAR_ERR
+    LET n_err = n_err + 1
+    CONTINUE
+  END
+  LET age = AGE
+
+  IF age < MAX_AGE THEN
+    LET n_fresh = n_fresh + 1
+    CONTINUE
+  END
+
+  LET n_stale = n_stale + 1
+  SYS EQSI MODE "rm"
+  IF LAST_N == 1 THEN
+    SYS RM path
+    IF OK == 0 THEN
+      CLEAR_ERR
+      LET n_err = n_err + 1
+    ELSE
+      LET n_moved = n_moved + 1
+    END
+  ELSE
+    SYS JOIN trash_dir fname
+    LET dest = LAST
+    SYS RENAME path dest
+    IF OK == 0 THEN
+      CLEAR_ERR
+      SYS COPY path dest
+      IF OK == 0 THEN
+        CLEAR_ERR
+        LET n_err = n_err + 1
+      ELSE
+        SYS RM path
+        CLEAR_ERR
+        LET n_moved = n_moved + 1
+      END
+    ELSE
+      LET n_moved = n_moved + 1
+    END
+  END
+  # record stale name in bag for optional work follow-up
+  SYS PUSH bag fname
+  LET bag = LAST
+END
+CLEAR_ERR "gc walk clean"
+
+IF REQUIRE_ONE == 1 THEN
+  IF n_stale == 0 THEN
+    FAIL "no stale plates"
+    EXIT 2 "gc empty"
+  END
+END
+
+# persist stale bag for work action
+SYS JOIN state_dir "WORK.bag"
+LET wpath = LAST
+SYS WRITE wpath bag
+
+SYS STR n_list
+LET s_list = LAST
+SYS STR n_stale
+LET s_stale = LAST
+SYS STR n_fresh
+LET s_fresh = LAST
+SYS STR n_moved
+LET s_moved = LAST
+SYS STR n_skip
+LET s_skip = LAST
+SYS STR n_err
+LET s_err = LAST
+SYS STR MAX_AGE
+LET s_age = LAST
+
+LET tpl = "schema=cubalc.stale_plate_gc.v1 date={{DATE}} host={{HOST}} list={{LIST}} stale={{STALE}} fresh={{FRESH}} moved={{MOVED}} skip={{SKIP}} err={{ERR}} max_age={{MAX}}"
+SYS REPLACEALL tpl "{{DATE}}" gc_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" gc_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{LIST}}" s_list
+LET tpl = LAST
+SYS REPLACEALL tpl "{{STALE}}" s_stale
+LET tpl = LAST
+SYS REPLACEALL tpl "{{FRESH}}" s_fresh
+LET tpl = LAST
+SYS REPLACEALL tpl "{{MOVED}}" s_moved
+LET tpl = LAST
+SYS REPLACEALL tpl "{{SKIP}}" s_skip
+LET tpl = LAST
+SYS REPLACEALL tpl "{{ERR}}" s_err
+LET tpl = LAST
+SYS REPLACEALL tpl "{{MAX}}" s_age
+LET tpl = LAST
+
+SYS JOIN out_dir "GC_REPORT.txt"
+LET plate = LAST
+SYS WRITE plate tpl
+SYS APPEND plate ""
+SYS JOINLINES "," bag
+SYS APPEND plate LAST
+ASSERT OK == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "stale_plate_gc: done"
+PRINT "gc" n_list n_stale n_fresh n_moved n_skip n_err
+PRINT_JSON n_list n_stale n_fresh n_moved n_skip n_err MAX_AGE ACTION STATUS_OK
+STATUS
+CLEAR_ERR "gc clean"
+EXIT 0 "gc ok"
