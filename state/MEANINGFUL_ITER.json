@@ -5,7 +5,7 @@
   "item": "SYS BEFORE / AFTER peel at needle",
   "item_id": 86,
   "title": "SYS BEFORE|AFTER peels log/kv at first needle",
-  "commit": "pending",
+  "commit": "f31f98de4c4a1a4ca81bcc8768ac97f9bc92abea",
   "summary": "SYS BEFORE|LEFT_OF / AFTER|RIGHT_OF hay needle \u2192 left/right peel; LAST_N=found; log triage without FIND+MID.",
   "proofs": [
     "627_sys_before",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T10:36:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "f31f98de4c4a1a4ca81bcc8768ac97f9bc92abea"
 }
