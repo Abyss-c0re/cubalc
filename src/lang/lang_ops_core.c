@@ -1213,6 +1213,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
+      {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
       {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast gates"},
@@ -1622,6 +1623,43 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     var_set_num(vm, "EXPECT_OK", 1);
     if (vm->trace) fprintf(vm->trace, "# pass: %s\n", msg);
+    bump(vm); return 1;
+  }
+  /* NOTE ["text"] — agent breadcrumb / step log. Sets LAST + NOTE, does not
+   * change OK, EXPECT_OK, or sticky LAST_ERR (unlike PASS/FAIL). Trace: # note: */
+  if (kw(&L->cur,"NOTE")||kw(&L->cur,"REMARK")||kw(&L->cur,"LOG_NOTE")||
+      kw(&L->cur,"BREADCRUMB")||kw(&L->cur,"STEP_NOTE")){
+    int aln = L->cur.line;
+    char msg[160];
+    lex_next(L);
+    msg[0] = 0;
+    if (L->cur.kind == TK_STR){
+      snprintf(msg, sizeof msg, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") &&
+               !kw(&L->cur,"LET") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") &&
+               !kw(&L->cur,"IF") && !kw(&L->cur,"END") && !kw(&L->cur,"STATUS")){
+      /* NOTE LAST or NOTE varname */
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(msg, sizeof msg, "%s", vm->last_str);
+      else {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) snprintf(msg, sizeof msg, "%s", v->sval);
+        else if (v) snprintf(msg, sizeof msg, "%ld", v->val);
+        else snprintf(msg, sizeof msg, "%s", L->cur.text);
+      }
+      lex_next(L);
+    }
+    if (!msg[0])
+      snprintf(msg, sizeof msg, "note line %d", aln);
+    var_set_str(vm, "NOTE", msg);
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    /* preserve OK — do not rewrite soft status */
+    if (vm->trace) fprintf(vm->trace, "# note: %s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
     bump(vm); return 1;
   }
   /* CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery.

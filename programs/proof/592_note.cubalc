@@ -1,0 +1,19 @@
+# NOTE — agent breadcrumb without changing OK or sticky LAST_ERR
+# Usability: multi-step probes log steps; PASS/FAIL still own soft status
+
+HOLD_FLASH 1
+
+NOTE "start probe"
+PRINT "note1" LAST
+
+FAIL "soft path"
+ASSERT OK == 0 "FAIL sets OK 0"
+NOTE "after soft fail — still handling"
+ASSERT OK == 0 "NOTE must not rewrite OK after FAIL"
+
+PASS "recovered"
+ASSERT OK == 1
+NOTE "done"
+ASSERT OK == 1 "NOTE must not rewrite OK after PASS"
+
+PRINT "note ok" LAST

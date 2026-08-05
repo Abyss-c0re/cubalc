@@ -1,3 +1,12 @@
+## Meaningful — NOTE agent breadcrumb — 2026-08-05
+
+### Usability
+- `NOTE ["text"]` (aliases `REMARK` `LOG_NOTE` `BREADCRUMB`) — step log for agents
+- Sets `NOTE` + `LAST`; does **not** rewrite OK / EXPECT_OK / sticky LAST_ERR
+- Trace line `# note: …`; complements PASS/FAIL soft status and PRINT
+- Proof: `programs/proof/592_note.cubalc` · selftest id `note`
+- Version: `1.15.43-usability`
+
 ## Meaningful — SYS MS wall milliseconds — 2026-08-05
 
 ### Usability
