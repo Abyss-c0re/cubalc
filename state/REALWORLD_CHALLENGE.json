@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "multingest_heat",
-      "cmd": "multingest 7 tokens; heat → disk_full:4 mem_high:2 cpu_hot:1",
+      "cmd": "multingest 7 tokens; heat \u2192 disk_full:4 mem_high:2 cpu_hot:1",
       "ok": true,
       "note": "SYS FREQ first-seen order plate"
     },
@@ -38,13 +38,13 @@
     },
     {
       "name": "norm_mapreplace_upper",
-      "cmd": "ingest /alerts/Disk_Full…; MAPREPLACE+UPPERALL → DISK_FULL:2",
+      "cmd": "ingest /alerts/Disk_Full\u2026; MAPREPLACE+UPPERALL \u2192 DISK_FULL:2",
       "ok": true,
       "note": "case fold merges disk_full variants"
     },
     {
       "name": "seed_unique",
-      "cmd": "seed a b a c → 3 unique fields",
+      "cmd": "seed a b a c \u2192 3 unique fields",
       "ok": true,
       "note": "HASLINE skip dups"
     },
@@ -56,7 +56,7 @@
     },
     {
       "name": "freq_colon_probe",
-      "cmd": "FREQ a:b → a:b:2; AFTER first : → b:2 not count",
+      "cmd": "FREQ a:b \u2192 a:b:2; AFTER first : \u2192 b:2 not count",
       "ok": true,
       "note": "colon in token breaks peel"
     },
@@ -74,7 +74,7 @@
       "area": "host|bag",
       "title": "FREQ name:count is ambiguous when token contains colon",
       "detail": "SYS FREQ of field a:b yields a:b:2. Peeling count with AFTER first ':' returns b:2; NUM fails; storm scan silently skips. No last-colon split or FREQ with safe sep when name has sep.",
-      "repro": "FREQ 'a:b\\na:b' → a:b:2; AFTER → b:2"
+      "repro": "FREQ 'a:b\\na:b' \u2192 a:b:2; AFTER \u2192 b:2"
     },
     {
       "id": "W2",
@@ -82,7 +82,7 @@
       "area": "host|bag",
       "title": "FREQ is first-seen order not count-sorted",
       "detail": "No native top-N by frequency. SORTN on heat plate sorts by string of whole name:count (disk_full:4 before cpu_hot:1 lexically wrong for rank). Agents cannot get hottest-first without custom EACH rebuild.",
-      "repro": "FREQ z y z x z y → z:3\\ny:2\\nx:1 first-seen not sorted by count"
+      "repro": "FREQ z y z x z y \u2192 z:3\\ny:2\\nx:1 first-seen not sorted by count"
     },
     {
       "id": "W3",
@@ -96,9 +96,9 @@
       "id": "W4",
       "severity": "med",
       "area": "host|str",
-      "title": "AFTER peels first delimiter only — no RAFTER/last-colon",
+      "title": "AFTER peels first delimiter only \u2014 no RAFTER/last-colon",
       "detail": "Storm count peel and multi-field tokens need last-segment extract. Agents stack SPLIT+TAIL or fragile heuristics.",
-      "repro": "AFTER 'a:b:2' ':' → 'b:2'"
+      "repro": "AFTER 'a:b:2' ':' \u2192 'b:2'"
     },
     {
       "id": "W5",
@@ -149,11 +149,11 @@
     "PRINT_JSON newlines; WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Confirmed FREQ colon ambiguity breaks AFTER count peel — agents must sanitize tokens",
+    "Confirmed FREQ colon ambiguity breaks AFTER count peel \u2014 agents must sanitize tokens",
     "Storm calm path needs REQUIRE flag; soft FAIL+CLEAR_ERR works",
-    "Norm merge Disk_Full+disk_full → DISK_FULL:2 proves UPPERALL necessity pre-FREQ",
-    "No language bug fix this fire — document for MEANINGFUL_ITER (RAFTER, FREQ top-N)"
+    "Norm merge Disk_Full+disk_full \u2192 DISK_FULL:2 proves UPPERALL necessity pre-FREQ",
+    "No language bug fix this fire \u2014 document for MEANINGFUL_ITER (RAFTER, FREQ top-N)"
   ],
-  "commit": "pending",
+  "commit": "4a040b87be455495c9b01e8fc8cda6892ee020db",
   "ts": "2026-08-05T19:29:00Z"
 }
