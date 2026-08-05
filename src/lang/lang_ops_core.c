@@ -1544,6 +1544,69 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TAKE|FIRSTN n [str|LAST] — first n newline fields → LAST.
+     * SYS DROP|SKIP|REST n [str] — drop first n fields (keep the rest).
+     * LAST_N/TAKE_N = kept count. n<=0: TAKE empty / DROP all.
+     * Usability: window LIST/GREP text without index math before EACH LINE. */
+    if (kw(&L->cur,"TAKE") || kw(&L->cur,"FIRSTN") || kw(&L->cur,"HEADN") ||
+        kw(&L->cur,"DROP") || kw(&L->cur,"SKIP") || kw(&L->cur,"REST") ||
+        kw(&L->cur,"TAILN") || kw(&L->cur,"DROPN")){
+      int is_drop = (kw(&L->cur,"DROP") || kw(&L->cur,"SKIP") || kw(&L->cur,"REST") ||
+                     kw(&L->cur,"TAILN") || kw(&L->cur,"DROPN"));
+      long nwant = 0, idx = 0, kept = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0] && (is_drop || nwant > 0)) {
+        p = src;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            int keep = 0;
+            if (is_drop) keep = (idx >= nwant);
+            else keep = (idx < nwant);
+            if (keep) {
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + flen < sizeof out) {
+                memcpy(out + olen, start, flen);
+                olen += flen;
+              } else if (olen < sizeof out - 1) {
+                size_t take = sizeof out - 1 - olen;
+                memcpy(out + olen, start, take);
+                olen += take;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+            idx++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      out[olen] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "TAKE_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -1861,7 +1924,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2088,6 +2151,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TAIL", "SYS TAIL [str] — last newline field"},
       {"SYS GREP", "SYS GREP|FILTER needle [str] — keep newline fields containing needle"},
       {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
+      {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
+      {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

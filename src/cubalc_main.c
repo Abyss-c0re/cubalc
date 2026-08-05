@@ -1677,6 +1677,7 @@ int main(int argc, char **argv) {
       {"sys_nth", "programs/proof/615_sys_nth.cubalc", "SYS NTH/LINE/HEAD/TAIL field peel"},
       {"sys_grep", "programs/proof/616_sys_grep.cubalc", "SYS GREP/FILTER/GREPV line filter"},
       {"each_line", "programs/proof/617_each_line.cubalc", "EACH LINE walk LIST/GREP fields"},
+      {"sys_take", "programs/proof/618_sys_take.cubalc", "SYS TAKE/DROP line windows"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1846,6 +1847,8 @@ int main(int argc, char **argv) {
       {"SYS TAIL", "host", "SYS TAIL [str] — last newline field"},
       {"SYS GREP", "host", "SYS GREP|FILTER needle [str] — keep matching lines (LIST)"},
       {"SYS GREPV", "host", "SYS GREPV|VGREP needle [str] — drop matching lines"},
+      {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
+      {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
@@ -2365,6 +2368,8 @@ int main(int argc, char **argv) {
        "SYS GREP/FILTER/GREPV newline field filter"},
       {"programs/proof/617_each_line.cubalc", "each_line",
        "EACH LINE walk newline fields after LIST/GREP"},
+      {"programs/proof/618_sys_take.cubalc", "sys_take",
+       "SYS TAKE/DROP newline field windows"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2734,6 +2739,8 @@ int main(int argc, char **argv) {
       {"SYS LIST", "host", "SYS LIST directory basenames"},
       {"SYS NTH", "host", "SYS NTH newline field peel"},
       {"SYS GREP", "host", "SYS GREP filter newline fields"},
+      {"SYS TAKE", "host", "SYS TAKE first n lines"},
+      {"SYS DROP", "host", "SYS DROP first n lines"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -2941,6 +2948,8 @@ int main(int argc, char **argv) {
       {"SYS NTH", "host", "SYS NTH/LINE/HEAD/TAIL newline fields"},
       {"SYS GREP", "host", "SYS GREP|FILTER keep matching lines"},
       {"SYS GREPV", "host", "SYS GREPV drop matching lines"},
+      {"SYS TAKE", "host", "SYS TAKE|FIRSTN n first n lines"},
+      {"SYS DROP", "host", "SYS DROP|SKIP n drop first n lines"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -2992,6 +3001,7 @@ int main(int argc, char **argv) {
       {"programs/proof/615_sys_nth.cubalc", "sys_nth", "SYS NTH field peel"},
       {"programs/proof/616_sys_grep.cubalc", "sys_grep", "SYS GREP line filter"},
       {"programs/proof/617_each_line.cubalc", "each_line", "EACH LINE LIST walk"},
+      {"programs/proof/618_sys_take.cubalc", "sys_take", "SYS TAKE/DROP line windows"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

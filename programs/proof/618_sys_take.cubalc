@@ -1,0 +1,89 @@
+# SYS TAKE / DROP — window newline fields (pairs with LIST/GREP/EACH LINE)
+# Usability: agents page or sample listings without index math
+
+HOLD_FLASH 1
+
+LET S = "a\nb\nc\nd\ne"
+
+# TAKE first 3
+SYS TAKE 3 S
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT TAKE_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# TAKE more than available
+SYS TAKE 99 S
+ASSERT LAST_N == 5
+SYS HAS LAST "e"
+ASSERT LAST_N == 1
+
+# TAKE 0 / negative → empty
+SYS TAKE 0 S
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS TAKE -1 S
+ASSERT LAST_N == 0
+
+# DROP first 2
+SYS DROP 2 S
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS EQS LAST "c\nd\ne"
+ASSERT LAST_N == 1
+
+# DROP all
+SYS DROP 5 S
+ASSERT LAST_N == 0
+SYS DROP 99 S
+ASSERT LAST_N == 0
+
+# SKIP alias
+SYS SKIP 4 S
+ASSERT LAST_N == 1
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# FIRSTN alias
+SYS FIRSTN 1 S
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# chain: LIST → GREP → TAKE → EACH LINE
+SYS LIST "programs/lib"
+ASSERT OK == 1
+SYS GREP ".cubalc"
+ASSERT GREP_N > 0
+LET all = GREP_N
+SYS TAKE 2
+ASSERT LAST_N <= 2
+ASSERT TAKE_N <= 2
+LET saw = 0
+EACH LINE AS lib
+  LET saw = saw + 1
+  SYS ENDS lib ".cubalc"
+  ASSERT LAST_N == 1
+END
+ASSERT saw == TAKE_N
+ASSERT saw <= 2
+ASSERT saw > 0
+
+# DROP then HEAD
+SYS LIST "programs/lib"
+SYS GREP ".cubalc"
+SYS DROP 1
+IF LAST_N > 0 THEN
+  SYS HEAD
+  ASSERT OK == 1
+  ASSERT LAST_N > 0
+END
+
+# default source LAST
+LET T = "x\ny\nz"
+SYS TAKE 2 T
+SYS DROP 1
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+PRINT "sys_take ok"
