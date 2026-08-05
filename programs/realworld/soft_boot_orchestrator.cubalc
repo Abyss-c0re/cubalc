@@ -1,0 +1,225 @@
+# soft_boot_orchestrator.cubalc — soft-fail boot chain → STATE plate RMW
+#
+# Real use: agent host runs this on process start to:
+#   1) load hard + optional modules without aborting the chain
+#   2) stamp host identity (USER/UID/HOME/PID/HOST)
+#   3) read prior boot plate if present, else create
+#   4) soft-probe peer dial when configured
+#   5) write updated plate under CUBALC_STATE for the next tick
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   optional: CUBALC_P2P_SOFT=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_PEER=host:port
+#   optional: CUBALC_BOOT_MODE=full|local|plate_only  (DEFAULT full)
+#   ./out/cubalc run -q -s programs/realworld/soft_boot_orchestrator.cubalc
+#
+# Edges:
+#   DEFAULT knobs (INCLUDE-safe) vs caller ENV override
+#   nested INCLUDE OR chain + CLEAR_ERR before -s
+#   SYS EXIST before READ (READ miss is fatal, err_line=0)
+#   SYS JSON multi-key needs re-READ each key (LAST overwrite)
+#   soft dial recovery · plate RMW under absolute STATE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+REQUIRE LIB peer_decide
+
+NOTE "soft_boot: start"
+
+# --- INCLUDE-safe knobs (caller may LET/ENV before INCLUDE of this pattern) ---
+DEFAULT BOOT_MODE = "full"
+DEFAULT BOOT_MAX_SOFT = 4
+DEFAULT PLATE_NAME = "/BOOT_ORCH.txt"
+DEFAULT PLATE_JSON = "/BOOT_ORCH.json"
+
+# ENV can still override mode after DEFAULT
+SYS ENV "CUBALC_BOOT_MODE" OR ""
+IF LAST_N > 0 THEN
+  LET BOOT_MODE = LAST
+END
+
+# --- host identity ---
+SYS USER
+LET boot_user = LAST
+SYS UID
+LET boot_uid = UID
+SYS HOME
+LET boot_home = LAST
+SYS PID
+LET boot_pid = PID
+SYS HOSTNAME
+LET boot_host = LAST
+SYS MS
+LET t0 = MS
+
+NOTE "identity stamped"
+
+# --- nested soft optional chain ---
+LET soft_miss = 0
+
+INCLUDE OR boot_hook_pre_zz
+IF OK == 0 THEN
+  LET soft_miss = soft_miss + 1
+  NOTE "pre-hook optional miss"
+  PASS "continue without pre-hook"
+  CLEAR_ERR
+END
+
+INCLUDE OR boot_hook_mesh_zz
+IF OK == 0 THEN
+  LET soft_miss = soft_miss + 1
+  NOTE "mesh-hook optional miss"
+  PASS "continue without mesh-hook"
+  CLEAR_ERR
+END
+
+INCLUDE OR boot_hook_post_zz
+IF OK == 0 THEN
+  LET soft_miss = soft_miss + 1
+  NOTE "post-hook optional miss"
+  PASS "continue without post-hook"
+  CLEAR_ERR
+END
+
+# Soft-hit a real lib without side-effect body: WHICH not INCLUDE SOFT
+SYS WHICH mesh_exchange
+IF LAST_N == 0 THEN
+  LET soft_miss = soft_miss + 1
+  FAIL "mesh_exchange catalog miss"
+  PASS "catalog optional"
+  CLEAR_ERR
+ELSE
+  NOTE "mesh_exchange present"
+END
+
+EXPECT soft_miss <= BOOT_MAX_SOFT "too many soft misses"
+IF OK == 0 THEN
+  # hard policy: still allow local boot but mark degraded
+  PASS "degraded boot — soft miss budget exceeded"
+  CLEAR_ERR "degraded"
+  LET degraded = 1
+ELSE
+  LET degraded = 0
+END
+
+# --- STATE plate path ---
+SYS STATE
+ASSERT LAST_N > 0 "STATE"
+LET state_dir = LAST
+SYS CAT state_dir PLATE_NAME
+LET plate_txt = LAST
+SYS CAT state_dir PLATE_JSON
+LET plate_json = LAST
+
+# --- RMW prior plate (EXIST first — bare READ fatals with err_line=0) ---
+LET prior_ok = 0
+LET prior_schema = ""
+SYS EXIST plate_json
+IF EXIST == 1 THEN
+  SYS READ plate_json
+  # SYS JSON overwrites LAST — must re-READ for each key (language footgun)
+  SYS JSON "schema"
+  LET prior_schema = LAST
+  SYS READ plate_json
+  SYS JSON "ok"
+  SYS CAT LAST ""
+  SYS NUM
+  LET prior_ok = LAST_N
+  NOTE "prior plate loaded"
+ELSE
+  FAIL "no prior BOOT_ORCH.json"
+  PASS "first boot — will create plate"
+  CLEAR_ERR "first boot"
+  NOTE "first boot"
+END
+
+# --- board smoke unless plate_only ---
+SYS EQS BOOT_MODE "plate_only"
+IF LAST_N == 0 THEN
+  CUBE peer0 ROLE host PROTON 1
+  CUBE brain ROLE braincube PROTON 1
+  PLUG peer0 brain
+  SETBIT peer0 0 1
+  SETBIT peer0 2 1
+  SETBIT peer0 4 1
+  IMPULSE peer0 1
+  IMPULSE brain 1
+  FLOW 2
+  DECIDE brain
+  ASSERT DECIDE >= 0
+  ASSERT DECIDE <= 9
+  LET dig = DECIDE
+ELSE
+  LET dig = -1
+  NOTE "plate_only — skip board"
+END
+
+# --- soft P2P probe when peer env set ---
+LET peer_probed = 0
+LET peer_ok = 0
+SYS EQS BOOT_MODE "local"
+IF LAST_N == 1 THEN
+  NOTE "local mode — skip dial"
+ELSE
+  SYS ENV "CUBALC_P2P_PEER" OR ""
+  IF LAST_N > 0 THEN
+    LET peer = LAST
+    LET peer_probed = 1
+    SYS ENV "CUBALC_P2P_SOFT" OR "0"
+    SYS EQS LAST "1"
+    IF LAST_N == 1 THEN
+      CUBE self ROLE host PROTON 1
+      CUBE remote ROLE body PROTON 1
+      PLUG self remote
+      SETBIT self 0 1
+      SMX KEY
+      SMX DIAL self remote peer
+      LET peer_ok = SMX_OK
+      IF SMX_OK == 0 THEN
+        FAIL "soft dial miss"
+        PASS "boot continues offline"
+        CLEAR_ERR "dial soft"
+      END
+    ELSE
+      FAIL "peer set without CUBALC_P2P_SOFT=1 — skip"
+      PASS "policy skip hard dial"
+      CLEAR_ERR "dial skipped"
+    END
+  END
+END
+
+# --- write plates ---
+SYS WRITE plate_txt "cubalc.soft_boot.v1 ok=1"
+SYS EXIST plate_txt
+ASSERT EXIST == 1 "txt plate"
+
+# JSON plate: static schema (dynamic multi-field still painful)
+SYS WRITE plate_json "{\"schema\":\"cubalc.soft_boot.v1\",\"ok\":1,\"degraded\":0}"
+SYS EXIST plate_json
+ASSERT EXIST == 1 "json plate"
+
+# re-read and extract schema (prove RMW path for next agent tick)
+SYS READ plate_json
+SYS JSON "schema"
+SYS HAS LAST "soft_boot"
+ASSERT LAST_N == 1 "schema token"
+# second key requires re-READ
+SYS READ plate_json
+SYS JSON "ok"
+SYS CAT LAST ""
+SYS NUM
+ASSERT LAST_N == 1 "json ok field"
+
+STATUS
+ASSERT STATUS_OK == 1 "clean after soft chain"
+ASSERT OK == 1
+
+SYS MS
+LET t1 = MS
+NOTE "soft_boot: done"
+PRINT "soft_boot" dig soft_miss degraded peer_probed peer_ok boot_uid
+PRINT_JSON dig soft_miss degraded peer_probed peer_ok boot_uid boot_pid STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "orchestrator clean"
+EXIT 0 "soft boot ok"

@@ -1,132 +1,132 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 3,
-  "program": "programs/realworld/config_worker.cubalc",
-  "theme": "scaffold-and-extend: cubalc init \u2192 config-driven worker (job modes, EXIT, PID/HOST, INCLUDE ONCE)",
-  "version": "1.15.46-usability",
+  "iter": 4,
+  "program": "programs/realworld/soft_boot_orchestrator.cubalc",
+  "theme": "soft-fail orchestration: nested INCLUDE OR + DEFAULT knobs + STATE plate RMW + USER identity",
+  "version": "1.15.48-usability",
   "pass": true,
   "tests": [
     {
-      "name": "decide_default_strict",
-      "cmd": "CUBALC_STATE=/tmp/\u2026 mkdir -p; ./out/cubalc run -q -s programs/realworld/config_worker.cubalc",
+      "name": "first_boot_strict",
+      "cmd": "CUBALC_STATE=/tmp/\u2026 mkdir -p; run -q -s soft_boot_orchestrator.cubalc",
       "ok": true,
-      "note": "default job=decide; EXIT 0; plate CONFIG_WORKER.txt under STATE"
+      "note": "3 soft hook misses recovered; creates BOOT_ORCH.json/.txt; EXIT 0"
     },
     {
-      "name": "decide_arg1_digit",
-      "cmd": "CUBALC_ARG1=7 run -q -s",
+      "name": "second_boot_prior_plate",
+      "cmd": "re-run same STATE",
       "ok": true,
-      "note": "SETDIGIT 7 used as job result (avoid re-DECIDE clobber)"
+      "note": "prior plate loaded; prior_schema=cubalc.soft_boot.v1 prior_ok=1"
     },
     {
-      "name": "job_identity_dry_report",
-      "cmd": "CUBALC_ARG0=identity|dry|report run -q -s",
+      "name": "mode_plate_only",
+      "cmd": "CUBALC_BOOT_MODE=plate_only run -q -s",
       "ok": true,
-      "note": "early EXIT 0 branches; SYS PID/HOSTNAME + VARS on identity"
+      "note": "skips board decide; still writes plates"
     },
     {
-      "name": "job_fail_exit_7",
-      "cmd": "CUBALC_ARG0=fail run -q",
-      "ok": false,
-      "note": "expected: process rc=7, plate exit_code=7, last_err EXIT 7\u2026"
-    },
-    {
-      "name": "job_unknown_exit_2",
-      "cmd": "CUBALC_ARG0=nope run -q",
-      "ok": false,
-      "note": "expected: process rc=2 bad config"
-    },
-    {
-      "name": "env_job_override",
-      "cmd": "CUBALC_JOB=identity (no ARG0) run -q -s",
+      "name": "mode_local",
+      "cmd": "CUBALC_BOOT_MODE=local run -q -s",
       "ok": true,
-      "note": "SYS ENV CUBALC_JOB OR decide"
+      "note": "skips dial path"
     },
     {
-      "name": "exit0_sticky_strict_footgun",
-      "cmd": "FAIL; EXIT 0; run -q -s",
-      "ok": false,
-      "note": "expected: exit_code=0 in plate but process rc=1 and ok=false under -s; last_err still FAIL"
+      "name": "soft_p2p_miss",
+      "cmd": "CUBALC_P2P_SOFT=1 TIMEOUT=400 PEER=127.0.0.1:1 run -q -s",
+      "ok": true,
+      "note": "soft dial recover + CLEAR_ERR; exit 0"
     },
     {
-      "name": "state_missing_parent",
-      "cmd": "CUBALC_STATE=/tmp/no_parent_$$ (no mkdir) run -q -s",
+      "name": "missing_state_parent",
+      "cmd": "CUBALC_STATE=/tmp/no_orch_$$ (no mkdir) run -q",
       "ok": false,
-      "note": "write fatal; err_line=0 err_src empty; exit_code plate may stay 0"
+      "note": "write fatal; err_line=0 err_src empty; exit_code plate 0"
+    },
+    {
+      "name": "bare_read_missing",
+      "cmd": "SYS READ /tmp/missing without EXIST",
+      "ok": false,
+      "note": "read fatal; err_line=0 \u2014 must EXIST-gate"
+    },
+    {
+      "name": "json_no_reread",
+      "cmd": "SYS JSON schema then SYS JSON ok without re-READ",
+      "ok": true,
+      "note": "run ok but second extract OK=0 LAST empty \u2014 silent field miss"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "21/21 green"
+      "note": "23/23 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "cli|error",
-      "title": "EXIT 0 does not clear sticky last_err; -s still fails the process",
-      "detail": "FAIL then EXIT 0 yields plate exit_code=0 halted=true but last_err remains the FAIL text. With run -s, process rc=1 and ok=false despite intentional clean EXIT. Agents cannot treat EXIT 0 as unconditional success under strict mode without CLEAR_ERR first.",
-      "repro": "printf 'HOLD_FLASH 1\\nFAIL \"soft\"\\nEXIT 0 \"claim\"\\n' | ./out/cubalc run - -q -s \u2192 rc=1 ok=false exit_code=0 last_err=FAIL\u2026"
+      "area": "io|json",
+      "title": "SYS JSON multi-key requires re-READ of full body each time",
+      "detail": "SYS JSON overwrites LAST with the extracted field. A second SYS JSON \"ok\" without SYS READ again yields OK=0 and empty LAST \u2014 no sticky last_err, so run -s still passes. Plate RMW agents silently drop fields unless they re-READ between every key.",
+      "repro": "SYS READ plate; SYS JSON \"schema\"; SYS JSON \"ok\" \u2192 second extract empty OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "matrix|semantics",
-      "title": "SETDIGIT then IMPULSE/FLOW/DECIDE can yield a different digit",
-      "detail": "Observed SETDIGIT peer0 \u2192 7 then IMPULSE+FLOW+DECIDE brain \u2192 8. Config workers that inject a host digit cannot naively DECIDE afterward and expect the same value. No in-lang doc form warns; must treat SETDIGIT as the result or avoid post-seed FLOW.",
-      "repro": "SETDIGIT peer0 7; IMPULSE peer0; FLOW 2; DECIDE brain \u2014 dig may not be 7"
+      "area": "error|io",
+      "title": "SYS READ/WRITE fatals have err_line=0 and empty err_src",
+      "detail": "Missing plate file (READ) or missing STATE parent (WRITE) set last_err to OS text but never attribute source line. Boot orchestrators that fail mid-chain are hard to debug from agent plates alone.",
+      "repro": "SYS READ \"/tmp/nope\" \u2192 err_line:0 err_src:\"\""
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "string|sys",
-      "title": "No SYS NUM <var>; must CAT into LAST before parse",
-      "detail": "SYS NUM always parses LAST. After SYS EQS job_arg \"\", LAST is the compare result (0/1), so SYS NUM silently digests the boolean. Workaround: SYS CAT job_arg \"\" then SYS NUM. Easy footgun in config-driven ARG paths.",
-      "repro": "LET a=\"7\"; SYS EQS a \"\"; SYS NUM \u2192 parses EQS residue not \"7\""
+      "area": "io|soft",
+      "title": "No soft SYS READ OR / SYS TRY READ \u2014 must shell EXIST-gate",
+      "detail": "Missing optional prior plate cannot be probed with soft READ. Pattern is SYS EXIST then branch; bare READ is hard-fatal. Agents want optional plate load without FAIL/PASS/CLEAR_ERR ceremony.",
+      "repro": "first boot without EXIST \u2192 would abort; program must EXIST-gate"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "flow|docs",
-      "title": "No human-plane job dispatch (CASE/switch missing from forms)",
-      "detail": "Config workers need multi-mode branches. LANGUAGE.md mentions CASE/WHEN but cubalc forms CASE and search case return n=0. Real programs become long SYS EQS ladders with nested IF \u2014 ugly for agents to emit and maintain.",
-      "repro": "./out/cubalc forms CASE \u2192 n=0; ./out/cubalc search case \u2192 n=0"
+      "area": "include|cli",
+      "title": "Soft INCLUDE chain requires CLEAR_ERR per miss for run -s",
+      "detail": "Three nested INCLUDE OR misses each leave sticky last_err. Without PASS+CLEAR_ERR after every miss, -s fails the whole boot despite intentional soft path. Verbose and easy to under-clear in long orchestrators.",
+      "repro": "INCLUDE OR a; INCLUDE OR b; STATUS; run -s without CLEAR_ERR \u2192 ok=false"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "error|io",
-      "title": "WRITE fatal still err_line=0; plate exit_code stays 0",
-      "detail": "Missing CUBALC_STATE parent: err=write: No such file\u2026, process rc=1, but exit_code field remains 0 and err_src empty. CI parsers that only read exit_code miss the failure mode vs EXIT n.",
-      "repro": "CUBALC_STATE=/tmp/missing_$$ ./out/cubalc run -q programs/realworld/config_worker.cubalc"
+      "area": "json|string",
+      "title": "Dynamic plate fields (degraded, soft_miss, uid) still not writable as live JSON",
+      "detail": "Program writes static {\"degraded\":0} even when LET degraded may be 1. Building JSON from vars still needs multi-CAT and quote hell; orchestrator plate lies about runtime degraded bit unless agents use VARS/PRINT_JSON instead of the file.",
+      "repro": "force soft_miss > BOOT_MAX_SOFT and inspect BOOT_ORCH.json degraded field stays 0"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "init|docs",
-      "title": "cubalc init scaffold DECIDE kernel (host) not braincube",
-      "detail": "Generated starter places host+body and DECIDE kernel. Works (ok plate) but is not the peer_decide recipe; agents extending init without reading matrix law get weak/odd digits. Scaffold could INCLUDE peer_decide pattern or place braincube.",
-      "repro": "cubalc init /tmp/t.cubalc && cubalc run -q /tmp/t.cubalc"
+      "area": "env|default",
+      "title": "DEFAULT then ENV override needs manual IF; no DEFAULT FROM ENV form",
+      "detail": "DEFAULT BOOT_MODE = \"full\" then SYS ENV OR \"\" + IF to override is correct but verbose. Real boot scripts want DEFAULT FROM ENV \"CUBALC_BOOT_MODE\" OR \"full\" in one form.",
+      "repro": "see soft_boot_orchestrator mode resolution block"
     }
   ],
   "workarounds": [
-    "CLEAR_ERR immediately before EXIT 0 when any soft FAIL/EXPECT/INCLUDE OR ran",
-    "For host-injected digits: SETDIGIT then use LAST_N/dig directly; do not re-DECIDE after FLOW",
-    "SYS CAT var \"\" before SYS NUM to parse a string variable",
-    "mkdir -p \"$CUBALC_STATE\" before plate workers",
-    "Dispatch jobs with SYS EQS ladders until CASE is catalogued",
-    "Prefer plate ok + process rc over exit_code alone when WRITE may fatal"
+    "SYS EXIST path before every optional SYS READ",
+    "Re-SYS READ full plate body before every SYS JSON key extract",
+    "PASS + CLEAR_ERR after each INCLUDE OR miss when using run -s",
+    "Emit truth via PRINT_JSON/VARS; treat file JSON as coarse schema stamp until WRITE_JSON exists",
+    "mkdir -p \"$CUBALC_STATE\" before boot orchestrator",
+    "Probe libs with SYS WHICH when INCLUDE body has side effects"
   ],
   "language_gaps": [
-    "EXIT 0 should optionally clear sticky last_err or document -s interaction",
-    "SYS NUM name | SYS INT name for variable parse",
-    "Human-plane CASE/WHEN or JOB dispatch form in forms catalog",
-    "err_line/err_src on SYS WRITE fatals; non-zero exit_code on I/O fatal",
-    "SETDIGIT stickiness vs DECIDE semantics documented in cookbook",
-    "init template closer to agent real paths (braincube / STATUS / optional EXIT)"
+    "SYS READ OR / soft-read optional files",
+    "SYS JSON multi-extract without re-READ (or JSON object cursor)",
+    "err_line/err_src on host I/O fatals",
+    "SYS WRITE_JSON / template plate builder from vars",
+    "DEFAULT FROM ENV name OR fallback one-liner",
+    "Batch CLEAR_ERR policy or soft-scope for orchestrator chains"
   ],
-  "commit": "e5deec1",
-  "ts": "2026-08-05T05:18:46Z"
+  "commit": "9dba32b",
+  "ts": "2026-08-05T05:42:42Z"
 }
