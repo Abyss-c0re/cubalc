@@ -1,118 +1,112 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 23,
-  "program": "programs/realworld/roster_status_board.cubalc",
-  "theme": "roster status board FINDLINE SETLINE REMOVELINE name:status",
-  "version": "1.15.96-usability",
+  "iter": 24,
+  "program": "programs/realworld/ordered_runbook.cubalc",
+  "theme": "ordered runbook INSERTLINE DROPNTH pin move stage plate",
+  "version": "1.15.98-usability",
   "pass": true,
   "tests": [
     {
-      "name": "add_set_list",
-      "cmd": "ARG0=add/set/list name status under private STATE",
+      "name": "append_insert_chain",
+      "cmd": "append fetch/validate/publish; insert hold@0; insert notify@2",
       "ok": true,
-      "note": "add api/worker/peer; SETLINE api idle\u2192busy via FINDLINE; list depth=3"
+      "note": "order hold,fetch,notify,validate,publish — INSERTLINE middle+front"
     },
     {
-      "name": "exact_name_not_substring",
-      "cmd": "add myapi + api; set api=down",
+      "name": "drop_pin_move",
+      "cmd": "drop 1; pin publish; move 2→0",
       "ok": true,
-      "note": "EACH+BEFORE+EQS keeps myapi:idle; only api\u2192api:down (GREP api: would corrupt myapi)"
+      "note": "DROPNTH peel; pin via FINDLINE+DROPNTH+INSERTLINE 0; move reorder"
     },
     {
-      "name": "remove_ack_sweep",
-      "cmd": "remove myapi; ack; sweep :busy",
+      "name": "drop_oor_require",
+      "cmd": "CUBALC_RB_REQUIRE=1 drop 99",
       "ok": true,
-      "note": "REMOVELINE by exact old_entry; sweep drops all :busy tokens"
+      "note": "EXIT 2 drop miss; soft OOR without REQUIRE stays green"
     },
     {
-      "name": "set_miss_require",
-      "cmd": "CUBALC_ROSTER_REQUIRE=1 set ghost",
+      "name": "insert_past_end_append",
+      "cmd": "insert 99 tailz",
       "ok": true,
-      "note": "EXIT 2 set miss; err_line points at EXIT"
+      "note": "INSERTLINE n>=count silently appends — no FAIL sticky"
     },
     {
-      "name": "grep_false_friend_repro",
-      "cmd": "SYS GREP api: on myapi:idle",
+      "name": "list_peek_json_collapse",
+      "cmd": "list ARG1=1; PRINT_JSON book",
       "ok": true,
-      "note": "documented: GREP matches substring \u2014 program avoids for identity"
-    },
-    {
-      "name": "print_json_roster_collapse",
-      "cmd": "PRINT_JSON roster on list",
-      "ok": true,
-      "note": "roster string collapses newlines between entries"
+      "note": "idx=1 peel works; book JSON collapses to aXbc"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "71/71 pass incl removeline findline setline"
+      "note": "73/73 pass incl insertline dropnth"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "host|bag",
-      "title": "GREP is substring \u2014 unsafe for name:status identity keys",
-      "detail": "SYS GREP 'api:' on bag containing 'myapi:idle' matches and HEAD returns myapi:idle. Agents that locate-then-SETLINE via GREP silently mutate the wrong row. No field-prefix or ^anchor GREP. Must EACH LINE + BEFORE ':' + EQS for exact name.",
-      "repro": "roster=myapi:idle; GREP 'api:' \u2192 myapi:idle; SETLINE rewrites to api:down"
+      "severity": "med",
+      "area": "host|flow",
+      "title": "SYS NUM only parses LAST — string indices need shuttle glue",
+      "detail": "ARG/ENV indices arrive as strings. SYS NUM does not take a named var; agents must PREPEND \"\" A; HEAD LAST; NUM (or similar LAST-clobber dance) before INSERTLINE/DROPNTH. Easy to forget and pass 0/garbage.",
+      "repro": "LET A=\"2\"; cannot SYS NUM A — must load A into LAST first"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "host",
-      "title": "No string concat \u2014 name:status needs REPLACEALL template",
-      "detail": "Cannot LET entry = NAME + ':' + STATUS. Program uses REPLACEALL on 'NAME:STATUS' placeholders. If NAME equals 'STATUS' or status embeds placeholder tokens, template corrupts. SYS JOIN is path-only (inserts /).",
-      "repro": "NAME=STATUS STATUS=idle via template \u2192 idle:idle class corruption"
+      "area": "host|docs",
+      "title": "SYS DROP vs SYS DROPNTH name collision risk",
+      "detail": "SYS DROP n is skip-first-n window (TAKE dual). SYS DROPNTH bag n drops one field by index. Agents writing runbook 'drop step 1' often call DROP and strip the head window instead of index 1. Catalog hints help but aliases still invite mixups.",
+      "repro": "DROP 1 'a\\nb\\nc' → 'b\\nc'; DROPNTH 'a\\nb\\nc' 1 → 'a\\nc'"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "FINDLINE/HASLINE/REMOVELINE are exact-field only \u2014 no prefix find",
-      "detail": "Cannot FINDLINE bag 'api' to hit 'api:busy'. Update-by-name always needs a secondary walk (EACH+BEFORE) then FINDLINE full line then SETLINE. Verbose for the primary roster use case the ops were meant to unlock.",
-      "repro": "FINDLINE 'api:idle\\nworker:busy' 'api' \u2192 LAST_N=-1"
+      "title": "INSERTLINE past end silently appends",
+      "detail": "INSERTLINE bag 99 x with len=4 succeeds and appends — no soft miss. Off-by-one dest indices hide bugs; only negative index soft-misses (LAST_N=0). Agents cannot distinguish intended append from bad index without pre-check LINES.",
+      "repro": "INSERTLINE 'a\\nb' 99 'z' → a\\nb\\nz LAST_N=3 OK"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses multi-line roster bags",
-      "detail": "PRINT_JSON roster shows api:busyworker:busypeer:ready without separators. Agents must read STATE plate file for structure.",
-      "repro": "list action PRINT_JSON roster"
+      "title": "PRINT_JSON collapses runbook bag newlines",
+      "detail": "PRINT_JSON book yields 'aXbc' — agents cannot recover stage order from JSON dump; must READ plate file.",
+      "repro": "list action PRINT_JSON book"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "host|plate",
-      "title": "WRITE roster often omits final trailing newline",
-      "detail": "Last field on ROSTER.txt has no trailing NL (cat -A shows no $ on last line). CubalC READ/LINES ok; shell line tools undercount.",
-      "repro": "cat -A ROSTER.txt after multi-add"
+      "title": "WRITE omits final trailing newline on last stage",
+      "detail": "cat -A shows last step without $. Harmless for CubalC LINES; shell wc -l undercounts.",
+      "repro": "cat -A RUNBOOK.txt after append chain"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|bag",
-      "title": "REMOVELINE removes only first exact match",
-      "detail": "Duplicate name:status tokens leave residuals after one ack. Agents need loop or UNIQ discipline.",
-      "repro": "REMOVELINE 'x\\ny\\nx' 'x' \u2192 'y\\nx'"
+      "area": "flow",
+      "title": "move/pin are index-identity only — duplicate steps ambiguous",
+      "detail": "Two identical step tokens: FINDLINE pin hits first only; move by index is correct but agents thinking value-identity can reorder the wrong occurrence.",
+      "repro": "book with two 'validate' lines; pin validate moves first only"
     }
   ],
   "workarounds": [
-    "EACH LINE + BEFORE ':' + EQS for exact roster name identity (never GREP name:)",
-    "REPLACEALL template for name:status; avoid names equal to placeholder tokens",
-    "FINDLINE full old_entry then SETLINE idx new_entry",
-    "PRINT_JSON scalars only; dump roster via plate path",
-    "Bag WRITE for whole roster bag (avoid WRITE+APPEND glue)"
+    "PREPEND empty + HEAD + NUM to parse ARG index strings into LAST_N",
+    "Prefer DROPNTH/DROPAT for index delete; never DROP for single-field drop",
+    "Before INSERTLINE, SYS LINES and clamp dest if strict placement required",
+    "PRINT_JSON scalars (depth/idx); keep bag order on STATE plate only",
+    "Deduplicate step tokens or always operate by index after list"
   ],
   "language_gaps": [
-    "Field-prefix match / GREP ^anchor or HASPREFIX line filter",
-    "String concatenation (or SYS CAT a b \u2192 LAST without path slash)",
-    "FINDLINE by key prefix or key=value peel helper",
-    "PRINT_JSON escape of newlines in string values",
-    "WRITE ensure trailing newline option"
+    "SYS NUM name — parse a named string var without LAST shuttle",
+    "INSERTLINE strict mode (OOR = miss, no silent append)",
+    "PRINT_JSON escape newlines in string values",
+    "Rename/docs emphasis DROP window vs DROPNTH index",
+    "Atomic move form (drop+insert with index adjust built-in)"
   ],
-  "commit": "f599661cf8d3594f8d36f9fe9dcfb99945f067df",
-  "ts": "2026-08-05T13:38:55Z"
+  "commit": null,
+  "ts": "2026-08-05T14:03:06Z"
 }

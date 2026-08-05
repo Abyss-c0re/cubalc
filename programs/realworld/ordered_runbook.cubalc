@@ -1,0 +1,465 @@
+# ordered_runbook.cubalc — ordered pipeline/runbook stage plate under STATE
+#
+# Real use: agents keep an ordered list of runbook steps (or pipeline
+# stages) as a durable bag plate. Index surgery without shell sed:
+#   list     — depth + optional NTH peek
+#   append   — PUSH step at end
+#   insert   — INSERTLINE at 0-based index (0=front, n>=count appends)
+#   drop     — DROPNTH by index (soft OOR)
+#   move     — DROPNTH from + INSERTLINE to (reorder)
+#   pin      — INSERTLINE at 0 (promote existing via FINDLINE+DROPNTH+pin)
+#   clear    — WRITE empty bag
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=append CUBALC_ARG1=fetch \
+#     ./out/cubalc run -q -s programs/realworld/ordered_runbook.cubalc
+#   CUBALC_ARG0=insert CUBALC_ARG1=0 CUBALC_ARG2=hold \
+#     ./out/cubalc run -q -s programs/realworld/ordered_runbook.cubalc
+#   CUBALC_ARG0=move CUBALC_ARG1=2 CUBALC_ARG2=0 ./out/cubalc run -q -s ...
+#
+# Env / args:
+#   CUBALC_ARG0 / CUBALC_RB_ACTION   — action
+#   CUBALC_ARG1 / CUBALC_RB_A        — index or step token (by action)
+#   CUBALC_ARG2 / CUBALC_RB_B        — step token or dest index
+#   CUBALC_RB_FILE=RUNBOOK.txt
+#   CUBALC_RB_REQUIRE=1              — EXIT 2 on drop/move miss
+#
+# Edges:
+#   INSERTLINE n>=count appends (no FAIL) · n<0 soft miss LAST_N=0
+#   DROPNTH OOR soft · distinct from SYS DROP (window) and REMOVELINE (value)
+#   move loses identity if duplicate steps (index-only)
+#   no string concat · PRINT_JSON bag collapse · WRITE trailing NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "ordered_runbook: start"
+DEFAULT ACTION = "list"
+DEFAULT A = ""
+DEFAULT B = ""
+DEFAULT RFILE = "RUNBOOK.txt"
+DEFAULT REPORT = "RUNBOOK_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET A = LAST
+ELSE
+  SYS ENV "CUBALC_RB_A" OR ""
+  LET A = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET B = LAST
+ELSE
+  SYS ENV "CUBALC_RB_B" OR ""
+  LET B = LAST
+END
+SYS ENV "CUBALC_RB_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_RB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET rb_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR rb_path OR ""
+LET book = LAST
+CLEAR_ERR "soft runbook load"
+SYS LINES book
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET idx = -1
+LET dest = -1
+LET step = ""
+LET peeled = ""
+LET note_msg = "ok"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  # optional peek: A = head|tail|decimal index
+  # Weakness: SYS NUM only parses LAST — must shuttle string A into LAST first
+  SYS BLANK A
+  IF LAST_N == 0 THEN
+    SYS EQS A "head"
+    IF LAST_N == 1 THEN
+      SYS HEAD book
+      LET peeled = LAST
+    ELSE
+      SYS EQS A "tail"
+      IF LAST_N == 1 THEN
+        SYS TAIL book
+        LET peeled = LAST
+      ELSE
+        SYS PREPEND "" A
+        SYS HEAD LAST
+        SYS NUM
+        IF OK == 1 THEN
+          LET idx = LAST_N
+          SYS NTH idx book
+          LET peeled = LAST
+        END
+      END
+    END
+  END
+  STATUS
+  PRINT "list" depth0 ACTION
+  PRINT_JSON depth0 hit ACTION STATUS_OK
+  # bag newlines collapse in JSON — intentional edge
+  PRINT_JSON book
+  LET note_msg = "list ok"
+END
+
+# --- append ---
+SYS EQS ACTION "append"
+IF LAST_N == 1 THEN
+  NOTE "action append"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "append needs step (ARG1)"
+  END
+  LET step = A
+  SYS PUSH book step
+  LET book = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "appended"
+END
+
+# --- insert at index ---
+SYS EQS ACTION "insert"
+IF LAST_N == 1 THEN
+  NOTE "action insert"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "insert needs index (ARG1)"
+  END
+  SYS BLANK B
+  IF LAST_N == 1 THEN
+    EXIT 2 "insert needs step (ARG2)"
+  END
+  LET step = B
+  # parse index A → LAST_N
+  SYS PREPEND "" A
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 0 THEN
+    EXIT 2 "insert index not numeric"
+  END
+  LET idx = LAST_N
+  SYS INSERTLINE book idx step
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "insert soft miss (neg index?)"
+    FAIL "insertline miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "insert miss"
+    END
+  ELSE
+    LET book = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "inserted"
+    SYS FINDLINE book step
+    LET idx = LAST_N
+  END
+END
+
+# --- drop by index ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs index (ARG1)"
+  END
+  SYS PREPEND "" A
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 0 THEN
+    EXIT 2 "drop index not numeric"
+  END
+  LET idx = LAST_N
+  SYS NTH idx book
+  LET peeled = LAST
+  SYS DROPNTH book idx
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop OOR"
+    FAIL "dropnth OOR"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    LET book = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+# --- move from→to indices ---
+SYS EQS ACTION "move"
+IF LAST_N == 1 THEN
+  NOTE "action move"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "move needs from index"
+  END
+  SYS BLANK B
+  IF LAST_N == 1 THEN
+    EXIT 2 "move needs to index"
+  END
+  SYS PREPEND "" A
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 0 THEN
+    EXIT 2 "move from not numeric"
+  END
+  LET idx = LAST_N
+  SYS PREPEND "" B
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 0 THEN
+    EXIT 2 "move to not numeric"
+  END
+  LET dest = LAST_N
+  SYS NTH idx book
+  LET step = LAST
+  SYS BLANK step
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "move from empty/OOR"
+    FAIL "move from miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "move miss"
+    END
+  ELSE
+    SYS DROPNTH book idx
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "move drop OOR"
+      FAIL "move drop fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "move miss"
+      END
+    ELSE
+      LET book = LAST
+      # after drop, dest may need adjust if dest > idx
+      IF dest > idx THEN
+        LET dest = dest - 1
+      END
+      SYS INSERTLINE book dest step
+      IF LAST_N == 0 THEN
+        # re-append on fail to avoid data loss
+        SYS PUSH book step
+        LET book = LAST
+        LET miss = 1
+        LET note_msg = "move insert fail recovered push"
+        FAIL "move insert miss"
+        CLEAR_ERR
+      ELSE
+        LET book = LAST
+        LET changed = 1
+        LET hit = 1
+        LET note_msg = "moved"
+      END
+    END
+  END
+END
+
+# --- pin: promote step token to front (FINDLINE + DROPNTH + INSERTLINE 0) ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs step token"
+  END
+  LET step = A
+  SYS FINDLINE book step
+  LET idx = LAST_N
+  IF idx < 0 THEN
+    # not present — insert front as new
+    SYS INSERTLINE book 0 step
+    LET book = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "pin new front"
+  ELSE
+    SYS DROPNTH book idx
+    LET book = LAST
+    SYS INSERTLINE book 0 step
+    LET book = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "pinned"
+    LET idx = 0
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET book = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "append"
+LET k = k + LAST_N
+SYS EQS ACTION "insert"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "move"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE rb_path book
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "runbook write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES book
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# report bag (single WRITE)
+LET report = "schema=cubalc.runbook.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "a"
+LET report = LAST
+SYS PUSH report A
+LET report = LAST
+SYS PUSH report "b"
+LET report = LAST
+SYS PUSH report B
+LET report = LAST
+SYS PUSH report "step"
+LET report = LAST
+SYS PUSH report step
+LET report = LAST
+SYS PUSH report "peeled"
+LET report = LAST
+SYS PUSH report peeled
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dest"
+LET report = LAST
+SYS STR dest
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "runbook" ACTION hit miss changed depth0 depth1 idx dest
+PRINT_JSON ACTION hit miss changed depth0 depth1 idx dest elapsed STATUS_OK
+PASS "runbook tick"
+NOTE "ordered_runbook: done"
+CLEAR_ERR
+EXIT 0 "runbook ok"
