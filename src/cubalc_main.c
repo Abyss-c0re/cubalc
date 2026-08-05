@@ -1659,6 +1659,7 @@ int main(int argc, char **argv) {
       {"default", "programs/proof/597_default.cubalc", "DEFAULT set-if-unset for INCLUDE libs"},
       {"defined", "programs/proof/598_defined.cubalc", "DEFINED var existence probe"},
       {"typeof", "programs/proof/599_typeof.cubalc", "TYPEOF num|str|undef kind probe"},
+      {"unset", "programs/proof/600_unset.cubalc", "UNSET remove var for DEFAULT re-apply"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1775,6 +1776,7 @@ int main(int argc, char **argv) {
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
+      {"UNSET", "flow", "UNSET name — remove var · LAST_N 1 if removed"},
       {"LOOP", "flow", "LOOP n … END"},
       {"WHILE", "flow", "WHILE expr … END"},
       {"FOR", "flow", "FOR … END"},
@@ -2284,6 +2286,8 @@ int main(int argc, char **argv) {
        "DEFINED name var existence probe"},
       {"programs/proof/599_typeof.cubalc", "typeof",
        "TYPEOF name num|str|undef kind probe"},
+      {"programs/proof/600_unset.cubalc", "unset",
+       "UNSET name remove var for DEFAULT re-apply"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2615,6 +2619,7 @@ int main(int argc, char **argv) {
       {"DEFAULT", "flow", "DEFAULT name = value if unset"},
       {"DEFINED", "flow", "DEFINED name → LAST_N 0|1"},
       {"TYPEOF", "flow", "TYPEOF name → undef|num|str"},
+      {"UNSET", "flow", "UNSET name remove var"},
       {"ASSERT", "flow", "ASSERT expr optional why-string"},
       {"EXPECT", "flow", "EXPECT soft check · no fatal"},
       {"FAIL", "flow", "FAIL soft status OK=0"},
@@ -2796,6 +2801,7 @@ int main(int argc, char **argv) {
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "flow", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
+      {"UNSET", "flow", "UNSET name — remove var · LAST_N 1 if removed"},
       {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
@@ -2846,6 +2852,7 @@ int main(int argc, char **argv) {
       {"programs/proof/597_default.cubalc", "default", "DEFAULT set-if-unset INCLUDE-safe"},
       {"programs/proof/598_defined.cubalc", "defined", "DEFINED var existence probe"},
       {"programs/proof/599_typeof.cubalc", "typeof", "TYPEOF num|str|undef kind"},
+      {"programs/proof/600_unset.cubalc", "unset", "UNSET remove var DEFAULT re-apply"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
@@ -3098,7 +3105,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED|TYPEOF · STATUS · PRINT_JSON · INCLUDE\n"
+      "    ASSERT|EXPECT|FAIL|PASS|NOTE|EXIT|CLEAR_ERR · DEFAULT|DEFINED|TYPEOF|UNSET · STATUS · PRINT_JSON · INCLUDE\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

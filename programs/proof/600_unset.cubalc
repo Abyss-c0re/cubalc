@@ -1,0 +1,34 @@
+# UNSET — remove a program var so DEFAULT can re-apply
+# Usability: agents clear knobs after use / reset INCLUDE defaults
+
+HOLD_FLASH 1
+
+LET PORT = 9000
+DEFINED PORT
+ASSERT DEFINED == 1
+
+UNSET PORT
+ASSERT OK == 1
+ASSERT LAST_N == 1 "removed"
+ASSERT UNSET_N == 1
+DEFINED PORT
+ASSERT DEFINED == 0 "gone after unset"
+
+# DEFAULT can re-apply after UNSET
+DEFAULT PORT = 1111
+ASSERT PORT == 1111
+ASSERT DEFAULT_SET == 1
+
+# unset missing is soft zero
+UNSET NO_SUCH
+ASSERT LAST_N == 0
+ASSERT UNSET_N == 0
+ASSERT OK == 1
+
+# string var too
+LET NAME = "peer"
+UNSET NAME
+DEFINED NAME
+ASSERT DEFINED == 0
+
+PRINT "unset ok" PORT

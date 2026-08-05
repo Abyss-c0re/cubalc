@@ -1359,6 +1359,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
+      {"UNSET", "UNSET name — remove var · LAST_N 1 if removed (DEFAULT re-apply)"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2035,6 +2036,44 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
     if (vm->trace)
       fprintf(vm->trace, "# defined %s → %ld\n", name, n);
+    bump(vm); return 1;
+  }
+  /* UNSET name — remove a program var so DEFAULT can re-apply.
+   * Usability: agents clear knobs after use / reset INCLUDE defaults.
+   * LAST_N/UNSET_N = 1 if removed, 0 if was missing; OK=1. */
+  if (kw(&L->cur,"UNSET")||kw(&L->cur,"UNLET")||kw(&L->cur,"CLEAR_VAR")||
+      kw(&L->cur,"DELETE_VAR")||kw(&L->cur,"DROP_VAR")||kw(&L->cur,"VAR_CLEAR")){
+    char name[48];
+    long removed = 0;
+    char buf[8];
+    int i;
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT && L->cur.kind!=TK_STR){
+      fail(vm,"UNSET name"); return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    for (i = 0; i < vm->n_vars; i++) {
+      if (strcmp(vm->vars[i].name, name) == 0) {
+        int j;
+        for (j = i; j < vm->n_vars - 1; j++)
+          vm->vars[j] = vm->vars[j + 1];
+        vm->n_vars--;
+        if (vm->n_vars >= 0 && vm->n_vars < 128)
+          memset(&vm->vars[vm->n_vars], 0, sizeof(Var));
+        removed = 1;
+        break;
+      }
+    }
+    var_set_num(vm, "UNSET_N", removed);
+    var_set_num(vm, "LAST_N", removed);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = removed;
+    snprintf(buf, sizeof buf, "%ld", removed);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# unset %s → %ld\n", name, removed);
     bump(vm); return 1;
   }
   /* TYPEOF name — kind of program var for agents (pair with DEFINED).
