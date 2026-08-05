@@ -14,7 +14,7 @@
     },
     {
       "name": "pinhot_moveline",
-      "cmd": "pinhot → mesh:200 to front",
+      "cmd": "pinhot \u2192 mesh:200 to front",
       "ok": true,
       "note": "O(n) CMP max walk + FINDLINE+MOVELINE"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "breach_thresh",
-      "cmd": "CUBALC_LAT_THRESH=100 breach → n=1 (mesh:200)",
+      "cmd": "CUBALC_LAT_THRESH=100 breach \u2192 n=1 (mesh:200)",
       "ok": true,
       "note": "EACH+AFTER+NUM+CMP threshold"
     },
@@ -38,19 +38,19 @@
     },
     {
       "name": "sum_composite_zero",
-      "cmd": "SYS SUM name:ms bag → 0 COUNT 0",
+      "cmd": "SYS SUM name:ms bag \u2192 0 COUNT 0",
       "ok": true,
       "note": "must peel AFTER colon first; high severity gap"
     },
     {
       "name": "grep_api_cousin",
-      "cmd": "GREP api → api+api_v2 n=2; COUNTLINE ':200'→0",
+      "cmd": "GREP api \u2192 api+api_v2 n=2; COUNTLINE ':200'\u21920",
       "ok": true,
       "note": "substring + exact COUNTLINE limits"
     },
     {
       "name": "print_json_scores_collapse",
-      "cmd": "PRINT_JSON scores → 955020050 collapsed",
+      "cmd": "PRINT_JSON scores \u2192 955020050 collapsed",
       "ok": true,
       "note": "same bag newline collapse"
     },
@@ -73,8 +73,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "SUM/AVG/SORTN ignore composite name:ms fields",
-      "detail": "SYS SUM on 'api:120\\ndb:50' returns LAST_N=0 COUNT=0 — non-numeric whole fields skipped. Agents must EACH+AFTER+PUSH peel scores first. No field-after-sep aggregate form.",
-      "repro": "SYS SUM 'api:120\\ndb:50' → 0; peel THEN SUM → 170"
+      "detail": "SYS SUM on 'api:120\\ndb:50' returns LAST_N=0 COUNT=0 \u2014 non-numeric whole fields skipped. Agents must EACH+AFTER+PUSH peel scores first. No field-after-sep aggregate form.",
+      "repro": "SYS SUM 'api:120\\ndb:50' \u2192 0; peel THEN SUM \u2192 170"
     },
     {
       "id": "W2",
@@ -88,9 +88,9 @@
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "COUNTLINE exact — cannot COUNTLINE ':200' or breach by pattern",
-      "detail": "COUNTLINE bag ':200' → 0. Breach counts need EACH+CMP. Same exact-field class as prior iters.",
-      "repro": "COUNTLINE 'mesh:200' ':200' → 0"
+      "title": "COUNTLINE exact \u2014 cannot COUNTLINE ':200' or breach by pattern",
+      "detail": "COUNTLINE bag ':200' \u2192 0. Breach counts need EACH+CMP. Same exact-field class as prior iters.",
+      "repro": "COUNTLINE 'mesh:200' ':200' \u2192 0"
     },
     {
       "id": "W4",
@@ -98,13 +98,13 @@
       "area": "host|bag",
       "title": "GREP bare probe name matches cousins",
       "detail": "GREP 'api' keeps api:95 and api_v2:50. Identity needs BEFORE+EQS.",
-      "repro": "GREP api → n=2"
+      "repro": "GREP api \u2192 n=2"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host",
-      "title": "No string concat — observe tokens via REPLACEALL NAME:VAL",
+      "title": "No string concat \u2014 observe tokens via REPLACEALL NAME:VAL",
       "detail": "Latency token rebuild same REPLACEALL footgun as budget/flag boards.",
       "repro": "template NAME:VAL"
     },
@@ -130,13 +130,13 @@
       "area": "flow",
       "title": "PRINT_JSON idents are case-sensitive var names",
       "detail": "PRINT_JSON ... thresh ... with var THRESH emitted thresh:0 (missing). Must match exact case THRESH.",
-      "repro": "DEFAULT THRESH=100; PRINT_JSON thresh → 0 or absent"
+      "repro": "DEFAULT THRESH=100; PRINT_JSON thresh \u2192 0 or absent"
     },
     {
       "id": "W9",
       "severity": "med",
       "area": "host",
-      "title": "Plate reorder by metric needs peel+sort+rejoin — no keyed MOVELINE",
+      "title": "Plate reorder by metric needs peel+sort+rejoin \u2014 no keyed MOVELINE",
       "detail": "Cannot SORTN plate in place by after-colon key then rewrite rows. Agents either pinhot single max or rebuild whole plate.",
       "repro": "no form: SORTBY bag sep field_n"
     }
@@ -145,7 +145,7 @@
     "Aggregates: EACH AFTER ':' PUSH pure scores then SUM/AVG/SORTN/MIN/MAX",
     "pinhot: walk CMP max + FINDLINE + MOVELINE (not SORTN composite)",
     "breach: EACH + CMP remaining THRESH",
-    "Identity: BEFORE ':' + EQS — not GREP name",
+    "Identity: BEFORE ':' + EQS \u2014 not GREP name",
     "PRINT_JSON only scalar sum/avg/min/max; keep bag on plate file",
     "PRINT_JSON idents must match var case exactly (THRESH not thresh)",
     "Always LET bag = LAST after PUSH/SETMATCH/MOVELINE"
@@ -160,10 +160,10 @@
     "Case-insensitive PRINT_JSON ident resolution (or docs)"
   ],
   "issues_faced": [
-    "SUM on composite latency bag silently 0 — easy agent footgun without peel",
+    "SUM on composite latency bag silently 0 \u2014 easy agent footgun without peel",
     "PRINT_JSON thresh vs THRESH case mismatch reported thresh:0 until fixed",
     "scores bag also PRINT_JSON-collapses so sortpeek must expose hit scalar"
   ],
-  "commit": "",
-  "ts": "2026-08-05T15:43:30Z"
+  "commit": "58666535c78ffa213d3fabc53e2a78ba03e37318",
+  "ts": "2026-08-05T15:44:00Z"
 }
