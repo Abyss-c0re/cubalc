@@ -1,114 +1,120 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 9,
-  "program": "programs/realworld/plate_promote.cubalc",
-  "theme": "soft-fail plate lifecycle: READ OR + COPY/RENAME/RM staging\u2192live\u2192archive",
-  "version": "1.15.61-usability",
+  "iter": 10,
+  "program": "programs/realworld/lease_lock.cubalc",
+  "theme": "multi-probe agent lease/lock: TOUCH + REALPATH + READ OR acquire/status/renew/release",
+  "version": "1.15.63-usability",
   "pass": true,
   "tests": [
     {
-      "name": "first_promote_copy",
-      "cmd": "staging/LIVE.plate present; run -q -s",
+      "name": "status_free",
+      "cmd": "CUBALC_ARG0=status empty STATE run -q -s",
       "ok": true,
-      "note": "live/LIVE.plate written; staging removed; PROMOTE_LOG.txt"
+      "note": "held=0; EXIT 0"
     },
     {
-      "name": "second_promote_archives",
-      "cmd": "new staging v2 over existing live; run -q -s",
+      "name": "acquire",
+      "cmd": "CUBALC_ARG0=acquire run -q -s",
       "ok": true,
-      "note": "archive/LIVE.bak holds v1; live is v2"
+      "note": "agent.lock empty + agent.lease identity date; TOUCH_N=1"
     },
     {
-      "name": "staging_missing_exit_2",
-      "cmd": "empty STATE run -q",
+      "name": "acquire_busy_exit_4",
+      "cmd": "second acquire while held",
       "ok": false,
-      "note": "expected EXIT 2 staging missing; READ OR soft then EXIT"
+      "note": "expected EXIT 4 lock busy"
     },
     {
-      "name": "rename_mode",
-      "cmd": "CUBALC_PROMOTE_MODE=rename run -q -s",
+      "name": "renew_and_release",
+      "cmd": "renew then release run -q -s",
       "ok": true,
-      "note": "promote via RENAME across staging\u2192live"
+      "note": "TOUCH update TOUCH_N=0; RM both; second release idempotent"
     },
     {
-      "name": "copy_miss_strict_sticky",
-      "cmd": "SYS COPY missing src; PASS; no CLEAR_ERR; run -q -s",
+      "name": "unknown_action_exit_2",
+      "cmd": "CUBALC_ARG0=nope run -q",
       "ok": false,
-      "note": "last_err copy: missing source; err_line=0; rc=1"
+      "note": "expected EXIT 2"
+    },
+    {
+      "name": "realpath_missing_ok",
+      "cmd": "SYS REALPATH /tmp/missing; EXIST 0",
+      "ok": true,
+      "note": "REALPATH OK=1 even when path does not exist"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "36/36 green"
+      "note": "38/38 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "flow|error",
-      "title": "EXPECT rewrites OK \u2014 cannot test prior soft result after EXPECT",
-      "detail": "SYS RM live_dir soft-fails (OK=0). EXPECT OK == 0 then sets OK=1 on pass. A following IF OK == 1 was misread as 'RM succeeded and deleted the directory', causing EXIT 3 on a healthy promote. Agents must LET snap = OK before any EXPECT/ASSERT that consumes OK. Overloading OK for soft host ops + soft checks is a real footgun.",
-      "repro": "SYS RM dir; EXPECT OK == 0; IF OK == 1 THEN \u2026 \u2014 OK is expect-pass, not RM success"
+      "area": "io|concurrency",
+      "title": "No atomic exclusive create (O_EXCL) \u2014 TOUCH lock is TOCTOU",
+      "detail": "Acquire is ISFILE then TOUCH. Two agents can both see free and both TOUCH; second TOUCH_N=0 is only detected if we EXPECT create, but TOUCH never fails when file appears mid-race\u2014it becomes an update. Not a real mutex vs flock/lockf. Agents still need shell flock for critical sections.",
+      "repro": "two concurrent acquire processes on same CUBALC_STATE \u2014 both can 'succeed'"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "error|io",
-      "title": "COPY/RM soft failures still err_line=0 empty err_src",
-      "detail": "copy: missing source and mkdir/rm dir soft errs leave last_err text but no line attribution. run -s fails after PASS without CLEAR_ERR with no jump-to-source. Same class as SIZE/WRITE/SERVE plates.",
-      "repro": "SYS COPY \"/no\" \"/tmp/x\"; PASS; run -q -s \u2192 err_line:0"
+      "area": "path|semantics",
+      "title": "SYS REALPATH returns OK=1 for missing paths",
+      "detail": "REALPATH/ABSPATH on a non-existent path still OK=1 and returns an absolute string (cwd-join or as-is). Agents cannot use REALPATH as existence proof; must pair EXIST/ISFILE. Easy to stamp lock_abs that does not yet exist and assume it is live.",
+      "repro": "SYS REALPATH \"/tmp/no_such\"; ASSERT OK==1; SYS EXIST same \u2192 0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "io|lang",
-      "title": "No versioned archive rotation without LISTDIR",
-      "detail": "Promote overwrites a single LIVE.bak. Cannot enumerate archive/* or generate unique archive names with time+seq without shell. DATE is available but multi-CAT into filenames is awkward; no LISTDIR to prune old baks.",
-      "repro": "third promote still only one .bak file"
+      "area": "io",
+      "title": "No mtime/atime probe \u2014 cannot expire leases in-language",
+      "detail": "TOUCH refreshes mtime but nothing reads mtime back. Lease expiry requires host date math or external watcher. TOUCH without STAT_MTIME cannot implement TTL locks purely in CubalC.",
+      "repro": "want: if lock mtime older than N seconds then RM \u2014 no form"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "docs|discovery",
-      "title": "SYS JOIN still not in forms/search",
-      "detail": "Lifecycle worker depends on JOIN for every path; forms JOIN remains n=0 (iters 7\u20138). READ OR/COPY/RM are catalogued; JOIN still invisible.",
-      "repro": "./out/cubalc forms JOIN \u2192 n=0"
+      "area": "string",
+      "title": "Lease body multi-CAT still painful for IDENTITY+DATE",
+      "detail": "Three SYS CAT steps to build holder=\u2026 date=\u2026. No format/sprintf. WRITE_JSON still missing for structured leases.",
+      "repro": "see lease_body construction in lease_lock.cubalc"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "string",
-      "title": "Cannot easily build archive names from STEM+DATE+EXT",
-      "detail": "Want LIVE-2026\u2026.bak from STEM + DATE + EXT requires nested CAT and careful dots; no path format helper. Program uses fixed LIVE.bak via CAT stem \".bak\" only.",
-      "repro": "see archive naming block in plate_promote.cubalc"
+      "area": "docs|discovery",
+      "title": "SYS JOIN still absent from forms/search",
+      "detail": "Unfixed since iter7; every path worker hardcodes JOIN knowledge.",
+      "repro": "./out/cubalc forms JOIN \u2192 n=0"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "cli",
-      "title": "RENAME across dirs may fail silently into COPY fallback \u2014 good, but mode opacity",
-      "detail": "When MODE=rename fails, program CLEARs and copies; agents reading only MODE env may think rename was used. No RENAME_OK distinct sticky beyond OK/LAST_ERR timing.",
-      "repro": "cross-device rename miss path (if any) falls back without plate field"
+      "title": "Busy lock EXIT 4 after FAIL still needs CLEAR for pure -s paths that continue",
+      "detail": "EXIT non-zero is fine for CI, but if agents PASS after busy without EXIT, sticky FAIL remains. Documented pattern only.",
+      "repro": "FAIL lock held; PASS; run -s without EXIT/CLEAR \u2192 rc=1"
     }
   ],
   "workarounds": [
-    "LET snap = OK immediately after soft host ops before EXPECT/ASSERT/PASS",
-    "CLEAR_ERR after intentional soft COPY/RM/READ OR when using run -s",
-    "Fixed .bak name or host-side versioned archive dir until LISTDIR",
-    "Hardcode SYS JOIN; watch MEANINGFUL_ITER for catalog fix",
-    "Prefer MODE=copy for promote (default) when rename semantics are unclear",
-    "SYS ISDIR after RM-dir probe to prove directory survival"
+    "Treat TOUCH lock as advisory only; use EXIT 4 busy for single-agent serial CI",
+    "Always EXIST/ISFILE after REALPATH before trusting a path is live",
+    "Host cron for TTL expiry until STAT_MTIME exists",
+    "SYS CAT chain for lease lines; VARS for full identity",
+    "Hardcode SYS JOIN; watch catalog",
+    "EXIT non-zero on busy rather than soft continue under -s"
   ],
   "language_gaps": [
-    "Separate soft-result vars that EXPECT does not clobber (or EXPECT leaves OK alone)",
-    "err_line/err_src on COPY/RM/RENAME/READ OR soft fails",
-    "SYS LISTDIR + versioned archive helpers",
+    "SYS TOUCH EXCL / atomic create-only lock form",
+    "REALPATH that soft-fails or flags missing vs resolve-only",
+    "SYS MTIME / STAT plate fields",
+    "String format / WRITE_JSON for lease plates",
     "SYS JOIN in forms/search",
-    "Path format / multi-part CAT for STEM-DATE-EXT names",
-    "Plate field rename_ok / copy_n already partially there \u2014 expose on run plate"
+    "Optional flock-backed SYS LOCK for real mutex"
   ],
-  "commit": "fd85009",
-  "ts": "2026-08-05T07:48:37Z"
+  "commit": "90cd8b5",
+  "ts": "2026-08-05T08:12:20Z"
 }

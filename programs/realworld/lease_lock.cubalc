@@ -1,0 +1,204 @@
+# lease_lock.cubalc — multi-probe agent lease/lock with TOUCH + REALPATH
+#
+# Real use: coordinating agents need a cheap mutual-exclusion marker under
+# CUBALC_STATE without shell flock(1):
+#   acquire  — TOUCH lock if free; write LEASE.json identity+date
+#   status   — report lock presence + REALPATH + soft-read lease body
+#   release  — RM lock + lease (idempotent)
+#   renew    — TOUCH existing lock + refresh lease body
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   CUBALC_ARG0=acquire|status|release|renew \
+#     ./out/cubalc run -q -s programs/realworld/lease_lock.cubalc
+#
+# Optional:
+#   CUBALC_LOCK_NAME=job.lock   (default agent.lock)
+#   CUBALC_LEASE_NAME=agent.lease
+#
+# Edges:
+#   TOUCH create vs update (TOUCH_N)
+#   REALPATH does not prove existence (OK=1 on missing → cwd join)
+#   TOUCH on directory soft-fails sticky last_err
+#   EXPECT/OK snapshot discipline after soft ops
+#   no atomic create-exclusive (TOCTOU) — language gap vs flock
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "lease_lock: start"
+DEFAULT LOCK_NAME = "agent.lock"
+DEFAULT LEASE_NAME = "agent.lease"
+DEFAULT ACTION = "status"
+IDENTITY
+SYS DATE
+LET act_date = DATE
+LET act_pid = PID
+LET act_id = IDENTITY
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LOCK_ACTION" OR "status"
+  LET ACTION = LAST
+END
+
+SYS ENV "CUBALC_LOCK_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET LOCK_NAME = LAST
+END
+SYS ENV "CUBALC_LEASE_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET LEASE_NAME = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir LOCK_NAME
+LET lock_path = LAST
+SYS JOIN state_dir LEASE_NAME
+LET lease_path = LAST
+
+# Canonical paths for agent plates (note: REALPATH ok even if missing)
+SYS REALPATH lock_path
+LET lock_abs = LAST
+SYS REALPATH lease_path
+LET lease_abs = LAST
+# Prove REALPATH does not mean file exists
+SYS EXIST lock_path
+LET lock_existed = LAST_N
+
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  NOTE "action status"
+  SYS ISFILE lock_path
+  LET held = LAST_N
+  SYS READ OR lease_path OR ""
+  LET has_lease = READ_OK
+  CLEAR_ERR "status soft"
+  STATUS
+  PRINT "status" held has_lease act_pid
+  PRINT_JSON held has_lease act_pid STATUS_OK
+  VARS
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+SYS EQS ACTION "acquire"
+IF LAST_N == 1 THEN
+  NOTE "action acquire"
+  SYS ISFILE lock_path
+  IF LAST_N == 1 THEN
+    # already held — soft fail with sticky then EXIT non-zero for CI
+    FAIL "lock already held"
+    STATUS
+    SYS READ OR lease_path OR ""
+    CLEAR_ERR "read lease after held"
+    # re-set fail for exit plate? EXIT carries reason
+    EXIT 4 "lock busy"
+  END
+  SYS TOUCH lock_path
+  LET t_ok = OK
+  LET t_n = TOUCH_N
+  IF t_ok == 0 THEN
+    FAIL "touch lock failed"
+    EXIT 2 "touch failed"
+  END
+  EXPECT t_n == 1 "first touch creates"
+  IF OK == 0 THEN
+    # race: someone created between ISFILE and TOUCH → still held
+    PASS "touch was update not create"
+    CLEAR_ERR
+    FAIL "lock race lost"
+    EXIT 4 "lock busy race"
+  END
+  # write lease body (flat line)
+  SYS CAT "cubalc.lease.v1 holder=" act_id
+  LET lease_body = LAST
+  SYS CAT lease_body " date="
+  LET lease_body = LAST
+  SYS CAT lease_body act_date
+  LET lease_body = LAST
+  SYS WRITE lease_path lease_body
+  ASSERT OK == 1
+  SYS ISFILE lease_path
+  ASSERT LAST_N == 1
+  # TOUCH dir must soft-fail (safety)
+  SYS TOUCH state_dir
+  LET td = OK
+  IF td == 1 THEN
+    FAIL "touch dir should fail"
+    EXIT 3 "touch dir unsafe"
+  END
+  PASS "touch dir refused"
+  CLEAR_ERR "dir touch"
+  STATUS
+  ASSERT STATUS_OK == 1
+  PRINT "acquired" t_n act_pid
+  PRINT_JSON t_n act_pid STATUS_OK
+  VARS
+  CLEAR_ERR
+  EXIT 0 "acquired"
+END
+
+SYS EQS ACTION "renew"
+IF LAST_N == 1 THEN
+  NOTE "action renew"
+  SYS ISFILE lock_path
+  IF LAST_N == 0 THEN
+    FAIL "no lock to renew"
+    EXIT 2 "no lock"
+  END
+  SYS TOUCH lock_path
+  LET t_ok = OK
+  LET t_n = TOUCH_N
+  EXPECT t_ok == 1 "touch renew"
+  EXPECT t_n == 0 "renew is update not create"
+  IF OK == 0 THEN
+    PASS "renew touch soft"
+    CLEAR_ERR
+  END
+  SYS CAT "cubalc.lease.v1 holder=" act_id
+  LET lease_body = LAST
+  SYS CAT lease_body " date="
+  LET lease_body = LAST
+  SYS CAT lease_body act_date
+  LET lease_body = LAST
+  SYS WRITE lease_path lease_body
+  STATUS
+  PRINT "renewed" t_n act_pid
+  PRINT_JSON t_n act_pid STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "renewed"
+END
+
+SYS EQS ACTION "release"
+IF LAST_N == 1 THEN
+  NOTE "action release"
+  SYS RM lock_path
+  LET rm_lock = OK
+  LET rm_n = RM_N
+  SYS RM lease_path
+  LET rm_lease = OK
+  # both idempotent on miss
+  CLEAR_ERR "rm soft"
+  SYS ISFILE lock_path
+  ASSERT LAST_N == 0 "lock gone"
+  STATUS
+  PRINT "released" rm_n act_pid
+  PRINT_JSON rm_n act_pid STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "released"
+END
+
+# unknown action
+FAIL "unknown lock action"
+EXIT 2 "unknown action"
