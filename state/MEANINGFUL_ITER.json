@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 116,
-  "version": "1.15.141-usability",
-  "item": "SYS COUNTMATCH / GREPCOUNT substring field count",
-  "item_id": 149,
-  "title": "SYS COUNTMATCH|GREPCOUNT bag needle — count fields containing needle",
-  "commit": "a901742a32fbfdd901279baa1f41b8e04d15bcf9",
-  "summary": "SYS COUNTMATCH/GREPCOUNT count bag fields containing needle without GREP clobber. selftest 116.",
+  "iter": 117,
+  "version": "1.15.142-usability",
+  "item": "SYS LENALL / MAPLEN per-field lengths bag",
+  "item_id": 150,
+  "title": "SYS LENALL|MAPLEN [bag] — length of every field → decimal bag · LENALL_SUM",
+  "commit": "5089e665cd210c52dfcf002001f1b5553b70c7a7",
+  "summary": "SYS LENALL/MAPLEN per-field lengths bag for size rollups without EACH. selftest 117.",
   "proofs": [
-    "689_sys_countmatch",
-    "selftest n_pass=116"
+    "690_sys_lenall",
+    "selftest n_pass=117"
   ],
-  "when": "2026-08-05T21:05:13Z",
+  "when": "2026-08-05T21:14:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a901742a32fbfdd901279baa1f41b8e04d15bcf9"
+  "sha": "5089e665cd210c52dfcf002001f1b5553b70c7a7"
 }
