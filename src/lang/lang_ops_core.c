@@ -1455,6 +1455,95 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS CMP|NCMP a b — three-way numeric compare → LAST_N -1|0|1.
+     * SYS SCMP|CMPS|STRCMP a b — lexicographic string compare → LAST_N -1|0|1.
+     * SYS SCMPI|CMPSI — case-insensitive string compare.
+     * Usability: sort keys / IF without dual LT+GT tests; pairs with MIN/MAX. */
+    if (kw(&L->cur,"CMP") || kw(&L->cur,"NCMP") || kw(&L->cur,"ICMP") ||
+        kw(&L->cur,"CMP3") || kw(&L->cur,"COMPARE") ||
+        kw(&L->cur,"SCMP") || kw(&L->cur,"CMPS") || kw(&L->cur,"STRCMP") ||
+        kw(&L->cur,"SCMPI") || kw(&L->cur,"CMPSI") || kw(&L->cur,"STRCMPI") ||
+        kw(&L->cur,"IABS") || kw(&L->cur,"ABSVAL") || kw(&L->cur,"ABSNUM") ||
+        kw(&L->cur,"NABS")){
+      char op[16];
+      long out = 0;
+      char buf[40];
+      int is_str, is_icase, is_abs;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_abs = (strcmp(op, "IABS") == 0 || strcmp(op, "ABSVAL") == 0 ||
+                strcmp(op, "ABSNUM") == 0 || strcmp(op, "NABS") == 0);
+      is_str = (strcmp(op, "SCMP") == 0 || strcmp(op, "CMPS") == 0 ||
+                strcmp(op, "STRCMP") == 0 || strcmp(op, "SCMPI") == 0 ||
+                strcmp(op, "CMPSI") == 0 || strcmp(op, "STRCMPI") == 0);
+      is_icase = (strcmp(op, "SCMPI") == 0 || strcmp(op, "CMPSI") == 0 ||
+                  strcmp(op, "STRCMPI") == 0);
+      lex_next(L);
+      if (is_abs) {
+        long x = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          x = parse_prim(vm, L);
+        else
+          x = vm->last_n;
+        out = (x < 0) ? -x : x;
+        var_set_num(vm, "ABS", out);
+      } else if (is_str) {
+        char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+        int r;
+        a[0] = 0; b[0] = 0;
+        if (!is_icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                          kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                          kw(&L->cur,"CI"))) {
+          is_icase = 1;
+          lex_next(L);
+        }
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0] = 0;
+        if (!is_icase) {
+          r = strcmp(a, b);
+        } else {
+          const char *p = a, *q = b;
+          r = 0;
+          while (*p && *q) {
+            char ca = *p, cb = *q;
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { r = (ca < cb) ? -1 : 1; break; }
+            p++; q++;
+          }
+          if (r == 0) {
+            if (*p) r = 1;
+            else if (*q) r = -1;
+          }
+        }
+        out = (r < 0) ? -1L : (r > 0 ? 1L : 0L);
+        var_set_num(vm, "SCMP", out);
+      } else {
+        long a = 0, b = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          a = parse_prim(vm, L);
+        else
+          a = vm->last_n;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          b = parse_prim(vm, L);
+        else
+          b = 0;
+        out = (a < b) ? -1L : (a > b ? 1L : 0L);
+        var_set_num(vm, "CMP", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -3927,7 +4016,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4238,6 +4327,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MIN", "SYS MIN a b [c…] — host-plane minimum → LAST_N"},
       {"SYS MAX", "SYS MAX a b [c…] — host-plane maximum → LAST_N"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
+      {"SYS CMP", "SYS CMP|NCMP a b — three-way numeric compare → LAST_N -1|0|1"},
+      {"SYS SCMP", "SYS SCMP|CMPS a b — string compare → LAST_N -1|0|1"},
+      {"SYS SCMPI", "SYS SCMPI a b — case-insensitive string compare"},
+      {"SYS IABS", "SYS IABS|ABSVAL|NABS x — integer absolute value → LAST_N"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},

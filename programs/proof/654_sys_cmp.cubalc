@@ -1,0 +1,58 @@
+# SYS CMP / SCMP / IABS — three-way compare + integer abs
+# Usability: sort keys / branch without dual LT+GT; pairs with MIN/MAX
+
+HOLD_FLASH 1
+
+# numeric three-way
+SYS CMP 3 7
+ASSERT OK == 1
+ASSERT LAST_N == -1
+SYS CMP 7 3
+ASSERT LAST_N == 1
+SYS CMP 5 5
+ASSERT LAST_N == 0
+SYS CMP -2 -5
+ASSERT LAST_N == 1
+SYS NCMP 0 1
+ASSERT LAST_N == -1
+
+# string compare
+SYS SCMP "apple" "banana"
+ASSERT LAST_N == -1
+SYS SCMP "zebra" "apple"
+ASSERT LAST_N == 1
+SYS SCMP "same" "same"
+ASSERT LAST_N == 0
+SYS CMPS "a" "b"
+ASSERT LAST_N == -1
+
+# case-insensitive string
+SYS SCMPI "Apple" "apple"
+ASSERT LAST_N == 0
+SYS SCMPI "B" "a"
+ASSERT LAST_N == 1
+SYS SCMP I "x" "X"
+ASSERT LAST_N == 0
+
+# integer abs (not path ABS/REALPATH)
+SYS IABS -7
+ASSERT LAST_N == 7
+SYS IABS 4
+ASSERT LAST_N == 4
+SYS NABS 0
+ASSERT LAST_N == 0
+SYS ABSVAL -1
+ASSERT LAST_N == 1
+
+# agent pattern: order two peer scores
+LET a = 40
+LET b = 75
+SYS CMP a b
+IF LAST_N < 0 THEN
+  LET winner = b
+ELSE
+  LET winner = a
+ENDIF
+ASSERT winner == 75
+
+PRINT "sys_cmp ok"

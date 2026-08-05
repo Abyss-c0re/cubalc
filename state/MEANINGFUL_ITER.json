@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 80,
-  "version": "1.15.105-usability",
-  "item": "SYS MIN / MAX / CLAMP host-plane numeric bounds",
-  "item_id": 113,
-  "title": "SYS MIN|MAX a b [c\u2026] \u00b7 SYS CLAMP x lo hi",
-  "commit": "d4e5041732270542c69f86c7037fb69b0a155f86",
-  "summary": "SYS MIN/MAX multi-arg host bounds; SYS CLAMP x lo hi. parse_prim so spaced negatives work. Cap retries/jitter without cube ISA. selftest 80.",
+  "iter": 81,
+  "version": "1.15.106-usability",
+  "item": "SYS CMP / SCMP / IABS three-way compare + abs",
+  "item_id": 114,
+  "title": "SYS CMP|SCMP|IABS numeric/string compare and abs",
+  "commit": "1df71b5504be830dfb0186163771559481441780",
+  "summary": "SYS CMP a b \u2192 -1|0|1; SCMP/SCMPI strings; IABS|NABS integer abs. Sort keys / branch without dual LT+GT. Pairs with MIN/MAX. selftest 81.",
   "proofs": [
-    "653_sys_minmax",
-    "selftest n_pass=80"
+    "654_sys_cmp",
+    "selftest n_pass=81"
   ],
-  "when": "2026-08-05T15:05:55Z",
+  "when": "2026-08-05T15:13:46Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d4e5041732270542c69f86c7037fb69b0a155f86"
+  "sha": "1df71b5504be830dfb0186163771559481441780"
 }
