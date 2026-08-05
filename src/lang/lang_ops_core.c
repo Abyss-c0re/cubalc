@@ -7129,6 +7129,111 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PADALL|MAPAD|RPADALL bag width [padchar] — pad every field to width.
+     * SYS LPADALL|MAPLPAD — left-pad; PADALL/RPADALL — right-pad (default).
+     * Fields longer than width truncated to width (like LPAD/RPAD). Default
+     * pad char space. LAST_N/PADALL_N = field count; PADALL_W = width.
+     * Usability: column-align bags after LENALL+MAX without EACH+LPAD glue. */
+    if (kw(&L->cur,"PADALL") || kw(&L->cur,"MAPAD") || kw(&L->cur,"MAPPAD") ||
+        kw(&L->cur,"RPADALL") || kw(&L->cur,"MAPRPAD") || kw(&L->cur,"PADRIGHTALL") ||
+        kw(&L->cur,"LPADALL") || kw(&L->cur,"MAPLPAD") || kw(&L->cur,"PADLEFTALL") ||
+        kw(&L->cur,"PADBAG") || kw(&L->cur,"ALIGNALL")){
+      char op[20];
+      int is_left = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], pad[16];
+      char field[512], padded[512];
+      const char *p, *start;
+      size_t olen = 0, flen, sn;
+      long width = 0, kept = 0;
+      char padc = ' ';
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LPADALL") == 0 || strcmp(op, "MAPLPAD") == 0 ||
+          strcmp(op, "PADLEFTALL") == 0)
+        is_left = 1;
+      lex_next(L);
+      if (kw(&L->cur,"LEFT") || kw(&L->cur,"L") || kw(&L->cur,"LPAD")) {
+        is_left = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"RIGHT") || kw(&L->cur,"R") || kw(&L->cur,"RPAD")) {
+        is_left = 0;
+        lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0; pad[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        width = parse_expr(vm, L);
+      if (width < 0) width = 0;
+      if (width > 511) width = 511;
+      if (resolve_str_arg(vm, L, pad, sizeof pad) == 0 && pad[0])
+        padc = pad[0];
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          size_t o, need, take, i;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof field) flen = sizeof field - 1;
+          memcpy(field, start, flen);
+          field[flen] = 0;
+          sn = flen;
+          if ((long)sn >= width) {
+            take = (size_t)width;
+            if (take >= sizeof padded) take = sizeof padded - 1;
+            memcpy(padded, field, take);
+            padded[take] = 0;
+            sn = take;
+          } else {
+            need = (size_t)width - sn;
+            if (is_left) {
+              o = 0;
+              for (i = 0; i < need && o + 1 < sizeof padded; i++)
+                padded[o++] = padc;
+              take = sn;
+              if (o + take >= sizeof padded) take = sizeof padded - 1 - o;
+              memcpy(padded + o, field, take);
+              o += take;
+              padded[o] = 0;
+              sn = o;
+            } else {
+              o = 0;
+              take = sn;
+              if (take >= sizeof padded) take = sizeof padded - 1;
+              memcpy(padded, field, take);
+              o = take;
+              for (i = 0; i < need && o + 1 < sizeof padded; i++)
+                padded[o++] = padc;
+              padded[o] = 0;
+              sn = o;
+            }
+          }
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + sn < sizeof out) {
+            memcpy(out + olen, padded, sn);
+            olen += sn;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, padded, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "PADALL_N", kept);
+      var_set_num(vm, "PADALL_W", width);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* digit-3 string duals: LEFT/RIGHT slice + COUNT occurrences */
     if (kw(&L->cur,"LEFT") || kw(&L->cur,"STRLEFT") || kw(&L->cur,"TAKELEFT") ||
         kw(&L->cur,"PREFIXN") ||
@@ -7191,7 +7296,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|STREPEAT");
     return -1;
   }
 
@@ -7583,6 +7688,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ARGMIN", "SYS ARGMIN a b [c…]|bag — 0-based index of first min → LAST_N · LAST=value"},
       {"SYS MAXIDX", "SYS MAXIDX [bag] — alias of SYS ARGMAX"},
       {"SYS MINIDX", "SYS MINIDX [bag] — alias of SYS ARGMIN"},
+      {"SYS PADALL", "SYS PADALL|RPADALL bag width [pad] — right-pad every field to width"},
+      {"SYS LPADALL", "SYS LPADALL bag width [pad] — left-pad every field to width"},
+      {"SYS RPADALL", "SYS RPADALL bag width [pad] — alias of right-pad PADALL"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
       {"SYS IN", "SYS IN|WITHIN x lo hi — inclusive range membership → LAST_N 0|1"},
       {"SYS WITHIN", "SYS WITHIN x lo hi — alias of SYS IN · score/retry bands"},

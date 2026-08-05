@@ -1,0 +1,68 @@
+# SYS PADALL / LPADALL / RPADALL — pad every bag field to width
+# Usability: column-align bags after LENALL+MAX without EACH+LPAD glue
+
+HOLD_FLASH 1
+
+LET bag = "a\nbb\nccc"
+
+# right-pad (default) with space
+SYS PADALL bag 4
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT PADALL_N == 3
+ASSERT PADALL_W == 4
+SYS EQS LAST "a   \nbb  \nccc "
+ASSERT LAST_N == 1
+
+# left-pad
+SYS LPADALL bag 4
+SYS EQS LAST "   a\n  bb\n ccc"
+ASSERT LAST_N == 1
+
+# custom pad char
+SYS PADALL bag 5 "0"
+SYS EQS LAST "a0000\nbb000\nccc00"
+ASSERT LAST_N == 1
+SYS LPADALL bag 5 "*"
+SYS EQS LAST "****a\n***bb\n**ccc"
+ASSERT LAST_N == 1
+
+# aliases
+SYS RPADALL bag 3
+SYS EQS LAST "a  \nbb \nccc"
+ASSERT LAST_N == 1
+SYS MAPLPAD bag 3
+SYS EQS LAST "  a\n bb\nccc"
+ASSERT LAST_N == 1
+
+# LEFT/RIGHT keywords
+SYS PADALL LEFT bag 3
+SYS EQS LAST "  a\n bb\nccc"
+ASSERT LAST_N == 1
+SYS PADALL RIGHT bag 3
+SYS EQS LAST "a  \nbb \nccc"
+ASSERT LAST_N == 1
+
+# truncate if longer than width
+SYS PADALL "hello\nxy" 3
+SYS EQS LAST "hel\nxy "
+ASSERT LAST_N == 1
+
+# empty bag
+SYS PADALL "" 4
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent pattern: LENALL → MAX → PADALL column plate
+LET names = "id\npeer\nhost"
+SYS LENALL names
+SYS MAX LAST
+LET w = LAST_N
+ASSERT w == 4
+SYS PADALL names w
+SYS EQS LAST "id  \npeer\nhost"
+ASSERT LAST_N == 1
+ASSERT PADALL_W == 4
+
+PRINT "sys_padall ok"
