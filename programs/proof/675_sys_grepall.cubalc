@@ -1,0 +1,66 @@
+# SYS GREPALL / GREPAND — keep bag fields matching every needle
+# Usability: multi-tag AND triage without chained GREP
+
+HOLD_FLASH 1
+
+LET log = "INFO boot ok\nERROR disk full\nWARN mem high\nFATAL disk panic\nDEBUG ok\nerror disk soft"
+
+# multi-needle AND: ERROR and disk
+SYS GREPALL log "ERROR" "disk"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT GREPALL_N == 1
+SYS EQS LAST "ERROR disk full"
+ASSERT LAST_N == 1
+
+# single needle behaves like GREP
+SYS GREPALL log "DEBUG"
+ASSERT LAST_N == 1
+SYS EQS LAST "DEBUG ok"
+ASSERT LAST_N == 1
+
+# no match when one needle missing
+SYS GREPALL log "ERROR" "timeout"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# case-insensitive AND
+SYS GREPALLI log "error" "disk"
+ASSERT LAST_N == 2
+SYS EQS LAST "ERROR disk full\nerror disk soft"
+ASSERT LAST_N == 1
+
+SYS GREPAND I log "fatal" "disk"
+ASSERT LAST_N == 1
+SYS EQS LAST "FATAL disk panic"
+ASSERT LAST_N == 1
+
+# aliases
+SYS GREPAND log "WARN" "mem"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN mem high"
+ASSERT LAST_N == 1
+
+SYS MATCHALL log "INFO" "boot"
+ASSERT LAST_N == 1
+SYS EQS LAST "INFO boot ok"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS GREPALL "" "x"
+ASSERT LAST_N == 0
+
+# no needles → keep all
+SYS GREPALL log
+ASSERT LAST_N == 6
+
+# agent pattern: GREPANY severities then GREPALL tag
+SYS GREPANY log "ERROR" "FATAL" "error"
+LET hits = LAST
+SYS GREPALL hits "disk"
+ASSERT LAST_N == 3
+SYS EQS LAST "ERROR disk full\nFATAL disk panic\nerror disk soft"
+ASSERT LAST_N == 1
+
+PRINT "sys_grepall ok"

@@ -162,6 +162,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 132. ~~**`SYS TRIMALL` / `MAPTRIM`**~~ **done** (trim whitespace on every bag field · clean READ/SPLIT before SQUEEZE).
 133. ~~**`SYS MIDLINES` / `SLICEBAG`**~~ **done** (bag field window [start..end] · middle slice without DROP+TAKE).
 134. ~~**`SYS GREPANY` / `GREPOR`**~~ **done** (keep fields matching any of several needles · multi-severity log triage).
+135. ~~**`SYS GREPALL` / `GREPAND`**~~ **done** (keep fields matching every needle · multi-tag AND triage).
 
 ## Tick protocol
 
