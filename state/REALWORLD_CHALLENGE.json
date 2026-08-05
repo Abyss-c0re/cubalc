@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "seed_debit_credit",
-      "cmd": "seed api:10 db:3 mesh:0 api_v2:5; debit api 2→8; debit db 3→0; credit mesh 4 max3→3",
+      "cmd": "seed api:10 db:3 mesh:0 api_v2:5; debit api 2\u21928; debit db 3\u21920; credit mesh 4 max3\u21923",
       "ok": true,
       "note": "NUM+STR rebuild tokens; CLAMP/MIN cap credit"
     },
@@ -20,7 +20,7 @@
     },
     {
       "name": "pinzero_moveline",
-      "cmd": "pinzero → db:0 to front",
+      "cmd": "pinzero \u2192 db:0 to front",
       "ok": true,
       "note": "EACH+AFTER+NUM+CMP 0 then FINDLINE+MOVELINE"
     },
@@ -34,7 +34,7 @@
       "name": "countline_zero_suffix",
       "cmd": "COUNTLINE ':0' vs GREP ':0'+LINES",
       "ok": true,
-      "note": "COUNTLINE→0 GREP→1; zero budgets need EACH+NUM"
+      "note": "COUNTLINE\u21920 GREP\u21921; zero budgets need EACH+NUM"
     },
     {
       "name": "grep_api_false_friend",
@@ -44,7 +44,7 @@
     },
     {
       "name": "setmatch_residual",
-      "cmd": "two api:1 SETMATCH → residual api:1",
+      "cmd": "two api:1 SETMATCH \u2192 residual api:1",
       "ok": true,
       "note": "first only residual_api1=1"
     },
@@ -58,7 +58,7 @@
       "name": "report_let_after_push",
       "cmd": "miss value requires LET report=LAST after every PUSH",
       "ok": true,
-      "note": "forgot LET dropped miss field value — agent footgun"
+      "note": "forgot LET dropped miss field value \u2014 agent footgun"
     },
     {
       "name": "selftest",
@@ -72,23 +72,23 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "No in-place numeric field mutate — debit is STR+REPLACEALL+SETMATCH rebuild",
+      "title": "No in-place numeric field mutate \u2014 debit is STR+REPLACEALL+SETMATCH rebuild",
       "detail": "Budgets stored as name:N cannot N-- in place. Agents must AFTER, NUM, arithmetic, STR, template rebuild, SETMATCH. Race-prone multi-step; no atomic debit form.",
-      "repro": "debit api 2: find api:10 → build api:8 → SETMATCH"
+      "repro": "debit api 2: find api:10 \u2192 build api:8 \u2192 SETMATCH"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
       "title": "COUNTLINE cannot tally zero budgets by suffix",
-      "detail": "COUNTLINE bag ':0' → 0 even when mesh:0 exists. Zero-count requires EACH LINE + AFTER + NUM + CMP 0. GREP ':0' works for exact :0 but still substring-risky for :01 etc.",
-      "repro": "COUNTLINE 'mesh:0' ':0' → 0; GREP ':0' + LINES → 1"
+      "detail": "COUNTLINE bag ':0' \u2192 0 even when mesh:0 exists. Zero-count requires EACH LINE + AFTER + NUM + CMP 0. GREP ':0' works for exact :0 but still substring-risky for :01 etc.",
+      "repro": "COUNTLINE 'mesh:0' ':0' \u2192 0; GREP ':0' + LINES \u2192 1"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host",
-      "title": "SYS NUM only parses LAST — amount/remaining need PREPEND/HEAD or AFTER shuttle",
+      "title": "SYS NUM only parses LAST \u2014 amount/remaining need PREPEND/HEAD or AFTER shuttle",
       "detail": "Cannot SYS NUM amount_var directly from named string without landing value in LAST. Debit amount ARG must PREPEND \"\" AMT_S; HEAD; NUM.",
       "repro": "forms: SYS NUM uses LAST only"
     },
@@ -98,22 +98,22 @@
       "area": "host|bag",
       "title": "GREP bare name matches name_v2 cousins",
       "detail": "GREP 'api' keeps api:8 and api_v2:5. Identity requires BEFORE ':' + EQS name.",
-      "repro": "GREP api on api+api_v2 → n=2"
+      "repro": "GREP api on api+api_v2 \u2192 n=2"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
       "title": "SETMATCH first-only leaves duplicate budget residuals",
-      "detail": "Two api:1 fields → one SETMATCH leaves residual api:1. No SETMATCHALL; double-seed corrupts ledger.",
-      "repro": "SETMATCH 'api:1\\napi:1' api:1→api:0 → residual api:1"
+      "detail": "Two api:1 fields \u2192 one SETMATCH leaves residual api:1. No SETMATCHALL; double-seed corrupts ledger.",
+      "repro": "SETMATCH 'api:1\\napi:1' api:1\u2192api:0 \u2192 residual api:1"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "cli",
       "title": "PRINT_JSON collapses multi-line budget bags",
-      "detail": "list bag dumps as db:0api:8mesh:3api_v2:5 — unparseable. Prefer sum_rem/n_zero scalars + plate file.",
+      "detail": "list bag dumps as db:0api:8mesh:3api_v2:5 \u2014 unparseable. Prefer sum_rem/n_zero scalars + plate file.",
       "repro": "PRINT_JSON bag after seed"
     },
     {
@@ -130,7 +130,7 @@
       "area": "flow|bag",
       "title": "SYS PUSH bag line result must be re-bound with LET bag = LAST every time",
       "detail": "Missed LET report = LAST after PUSH of miss value silently dropped the field. Accumulate pattern is error-prone; no bag-append that mutates named var in place.",
-      "repro": "PUSH report val without LET report=LAST → next PUSH uses stale bag"
+      "repro": "PUSH report val without LET report=LAST \u2192 next PUSH uses stale bag"
     },
     {
       "id": "W9",
@@ -138,13 +138,13 @@
       "area": "cli",
       "title": "PRINT of LAST when LAST is string \"0\" can look like 1",
       "detail": "PRINT LAST after SYS STR 0 printed '1' while PRINT_JSON correctly shows LAST=0. Agents debugging zero budgets with PRINT alone get false friends; prefer PRINT_JSON.",
-      "repro": "SYS STR 0; PRINT LAST → 1; PRINT_JSON LAST → {\"LAST\":\"0\"}"
+      "repro": "SYS STR 0; PRINT LAST \u2192 1; PRINT_JSON LAST \u2192 {\"LAST\":\"0\"}"
     }
   ],
   "workarounds": [
     "Debit/credit: AFTER+NUM+math+STR+REPLACEALL NAME:VAL+SETMATCH",
-    "Zero tally: EACH+AFTER+NUM+CMP 0 — not COUNTLINE ':0'",
-    "Identity: BEFORE ':' + EQS — not GREP name",
+    "Zero tally: EACH+AFTER+NUM+CMP 0 \u2014 not COUNTLINE ':0'",
+    "Identity: BEFORE ':' + EQS \u2014 not GREP name",
     "Amount parse: PREPEND empty + HEAD + NUM shuttle",
     "Always LET bag = LAST after every PUSH/SETMATCH/MOVELINE/REMOVELINE",
     "PRINT_JSON for zero-ish scalars; avoid bare PRINT LAST for \"0\"",
@@ -160,10 +160,10 @@
     "PRINT of string \"0\" should not look truthy/confusing"
   ],
   "issues_faced": [
-    "Forgot LET report=LAST after PUSH miss value — report missing miss field until fixed",
-    "PRINT LAST after STR 0 printed 1 — misleading for zero remaining debug",
+    "Forgot LET report=LAST after PUSH miss value \u2014 report missing miss field until fixed",
+    "PRINT LAST after STR 0 printed 1 \u2014 misleading for zero remaining debug",
     "Post-tally EACH overwrites remaining with last row (report remaining not always action remaining)"
   ],
-  "commit": "",
-  "ts": "2026-08-05T15:19:30Z"
+  "commit": "c945cfe5725c239358595402063a223ffaf3c149",
+  "ts": "2026-08-05T15:20:00Z"
 }
