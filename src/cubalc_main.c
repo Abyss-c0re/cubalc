@@ -1703,6 +1703,7 @@ int main(int argc, char **argv) {
       {"sys_hasline", "programs/proof/641_sys_hasline.cubalc", "SYS HASLINE exact bag field membership"},
       {"sys_prepend", "programs/proof/642_sys_prepend.cubalc", "SYS PREPEND/POPHEAD FIFO bag front ops"},
       {"sys_removeline", "programs/proof/643_sys_removeline.cubalc", "SYS REMOVELINE drop exact bag field"},
+      {"sys_findline", "programs/proof/644_sys_findline.cubalc", "SYS FINDLINE exact bag field index"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1916,6 +1917,9 @@ int main(int argc, char **argv) {
       {"SYS REMOVELINE", "host", "SYS REMOVELINE|DROPLINE bag needle — drop first exact field"},
       {"SYS DROPLINE", "host", "SYS DROPLINE bag needle — alias of SYS REMOVELINE"},
       {"SYS REMOVELINEI", "host", "SYS REMOVELINEI bag needle — case-insensitive drop field"},
+      {"SYS FINDLINE", "host", "SYS FINDLINE|LINEINDEX bag needle — 0-based exact field index"},
+      {"SYS LINEINDEX", "host", "SYS LINEINDEX bag needle — alias of SYS FINDLINE"},
+      {"SYS FINDLINEI", "host", "SYS FINDLINEI bag needle — case-insensitive field index"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2499,6 +2503,8 @@ int main(int argc, char **argv) {
        "SYS PREPEND/POPHEAD FIFO bag front ops"},
       {"programs/proof/643_sys_removeline.cubalc", "sys_removeline",
        "SYS REMOVELINE drop first exact bag field"},
+      {"programs/proof/644_sys_findline.cubalc", "sys_findline",
+       "SYS FINDLINE exact bag field index"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2919,6 +2925,8 @@ int main(int argc, char **argv) {
       {"SYS DEQUEUE", "host", "SYS DEQUEUE alias of SYS POPHEAD"},
       {"SYS REMOVELINE", "host", "SYS REMOVELINE drop exact bag field"},
       {"SYS DROPLINE", "host", "SYS DROPLINE alias of SYS REMOVELINE"},
+      {"SYS FINDLINE", "host", "SYS FINDLINE exact bag field index"},
+      {"SYS LINEINDEX", "host", "SYS LINEINDEX alias of SYS FINDLINE"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3180,6 +3188,9 @@ int main(int argc, char **argv) {
       {"SYS REMOVELINE", "host", "SYS REMOVELINE|DROPLINE drop first exact bag field"},
       {"SYS DROPLINE", "host", "SYS DROPLINE alias of SYS REMOVELINE"},
       {"SYS REMOVELINEI", "host", "SYS REMOVELINEI case-insensitive drop field"},
+      {"SYS FINDLINE", "host", "SYS FINDLINE|LINEINDEX 0-based exact field index"},
+      {"SYS LINEINDEX", "host", "SYS LINEINDEX alias of SYS FINDLINE"},
+      {"SYS FINDLINEI", "host", "SYS FINDLINEI case-insensitive field index"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3257,6 +3268,7 @@ int main(int argc, char **argv) {
       {"programs/proof/641_sys_hasline.cubalc", "sys_hasline", "SYS HASLINE bag membership"},
       {"programs/proof/642_sys_prepend.cubalc", "sys_prepend", "SYS PREPEND/POPHEAD FIFO bags"},
       {"programs/proof/643_sys_removeline.cubalc", "sys_removeline", "SYS REMOVELINE drop bag field"},
+      {"programs/proof/644_sys_findline.cubalc", "sys_findline", "SYS FINDLINE bag field index"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

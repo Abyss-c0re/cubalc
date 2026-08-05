@@ -130,6 +130,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 100. ~~**`SYS HASLINE` / `HASLINEI`**~~ **done** (exact bag-field membership · work bags without EACH+EQS).
 101. ~~**`SYS PREPEND` / `POPHEAD`**~~ **done** (FIFO bag front · dual of PUSH/POP without REVL/NTH).
 102. ~~**`SYS REMOVELINE` / `DROPLINE`**~~ **done** (drop first exact bag field · ack work without EACH rebuild).
+103. ~~**`SYS FINDLINE` / `LINEINDEX`**~~ **done** (0-based exact field index · locate-then-NTH without EACH).
 
 ## Tick protocol
 

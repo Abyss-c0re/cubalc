@@ -1,0 +1,65 @@
+# SYS FINDLINE / LINEINDEX — 0-based index of first exact bag field
+# Usability: locate-then-NTH after HASLINE without EACH glue (completes REMOVELINE)
+
+HOLD_FLASH 1
+
+LET bag = "taskA\ntaskB\ntaskC"
+
+# hits
+SYS FINDLINE bag "taskA"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS FINDLINE bag "taskB"
+ASSERT LAST_N == 1
+SYS FINDLINE bag "taskC"
+ASSERT LAST_N == 2
+
+# miss
+SYS FINDLINE bag "taskX"
+ASSERT OK == 0
+ASSERT LAST_N == -1
+SYS FINDLINE bag "task"
+ASSERT LAST_N == -1
+
+# not substring
+SYS FINDLINE "ERROR boom\nWARN" "ERROR"
+ASSERT LAST_N == -1
+SYS FINDLINE "ERROR boom\nWARN" "ERROR boom"
+ASSERT LAST_N == 0
+
+# first match only
+SYS FINDLINE "x\ny\nx" "x"
+ASSERT LAST_N == 0
+
+# aliases
+SYS LINEINDEX bag "taskB"
+ASSERT LAST_N == 1
+SYS FIELDINDEX bag "taskC"
+ASSERT LAST_N == 2
+SYS WHICHLINE bag "taskA"
+ASSERT LAST_N == 0
+
+# case-insensitive
+SYS FINDLINEI bag "TASKB"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS FINDLINE I "Warn\nError" "ERROR"
+ASSERT LAST_N == 1
+SYS FINDLINE "Warn\nError" "ERROR"
+ASSERT LAST_N == -1
+
+# empty bag
+SYS FINDLINE "" "x"
+ASSERT LAST_N == -1
+ASSERT OK == 0
+
+# agent pattern: find index then NTH peel (0-based)
+LET q = "peer1\npeer2\npeer3"
+SYS FINDLINE q "peer2"
+LET i = LAST_N
+ASSERT i == 1
+SYS NTH i q
+SYS EQS LAST "peer2"
+ASSERT LAST_N == 1
+
+PRINT "sys_findline ok"
