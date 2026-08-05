@@ -5,7 +5,7 @@
   "item": "SYS MTIME / AGE plate freshness",
   "item_id": 93,
   "title": "SYS MTIME|AGE file mtime and age seconds",
-  "commit": "pending",
+  "commit": "9c1472f434408df325988d6953b58a4a087f5284",
   "summary": "SYS MTIME|MODTIME path \u2192 epoch LAST_N; SYS AGE|FILEAGE \u2192 seconds since mtime; soft miss OK=0; lease/plate freshness without shell stat.",
   "proofs": [
     "634_sys_mtime",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T11:44:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "9c1472f434408df325988d6953b58a4a087f5284"
 }
