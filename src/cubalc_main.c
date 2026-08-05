@@ -1697,6 +1697,7 @@ int main(int argc, char **argv) {
       {"sys_startsi", "programs/proof/635_sys_startsi.cubalc", "SYS STARTSI/ENDSI case-insensitive affix"},
       {"sys_between", "programs/proof/636_sys_between.cubalc", "SYS BETWEEN peel between delimiters"},
       {"sys_findi", "programs/proof/637_sys_findi.cubalc", "SYS FINDI case-insensitive index"},
+      {"sys_env_set", "programs/proof/638_sys_env_set.cubalc", "SYS ENV SET/UNSET process env"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1836,7 +1837,9 @@ int main(int argc, char **argv) {
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
-      {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
+      {"SYS ENV", "host", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
+      {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},
+      {"SYS UNSETENV", "host", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N was-set"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
       {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
@@ -2465,6 +2468,8 @@ int main(int argc, char **argv) {
        "SYS BETWEEN/MIDOF/EXTRACT peel between delimiters"},
       {"programs/proof/637_sys_findi.cubalc", "sys_findi",
        "SYS FINDI/INDEXI case-insensitive string index"},
+      {"programs/proof/638_sys_env_set.cubalc", "sys_env_set",
+       "SYS ENV SET/UNSET process env without shell"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2871,6 +2876,8 @@ int main(int argc, char **argv) {
       {"SYS EXTRACT", "host", "SYS EXTRACT alias of SYS BETWEEN"},
       {"SYS FINDI", "host", "SYS FINDI case-insensitive index"},
       {"SYS INDEXI", "host", "SYS INDEXI alias of SYS FINDI"},
+      {"SYS SETENV", "host", "SYS SETENV process setenv"},
+      {"SYS UNSETENV", "host", "SYS UNSETENV process unsetenv"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3052,7 +3059,9 @@ int main(int argc, char **argv) {
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
       {"IDENTITY", "flow", "IDENTITY — cubalc.identity.v1 user@host:pid plate"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
-      {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
+      {"SYS ENV", "host", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
+      {"SYS SETENV", "host", "SYS SETENV|ENV SET name value — process setenv"},
+      {"SYS UNSETENV", "host", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N was-set"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS WHICH", "host", "SYS WHICH name → LAST path (bin or lib)"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST"},
@@ -3115,6 +3124,8 @@ int main(int argc, char **argv) {
       {"SYS EXTRACT", "host", "SYS EXTRACT alias of SYS BETWEEN"},
       {"SYS FINDI", "host", "SYS FINDI|INDEXI|FIND I case-insensitive index"},
       {"SYS INDEXI", "host", "SYS INDEXI alias of SYS FINDI"},
+      {"SYS SETENV", "host", "SYS SETENV|ENV SET name value process setenv"},
+      {"SYS UNSETENV", "host", "SYS UNSETENV|ENV UNSET name process unsetenv"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3186,6 +3197,7 @@ int main(int argc, char **argv) {
       {"programs/proof/635_sys_startsi.cubalc", "sys_startsi", "SYS STARTSI/ENDSI affix"},
       {"programs/proof/636_sys_between.cubalc", "sys_between", "SYS BETWEEN peel delimiters"},
       {"programs/proof/637_sys_findi.cubalc", "sys_findi", "SYS FINDI case-insensitive index"},
+      {"programs/proof/638_sys_env_set.cubalc", "sys_env_set", "SYS ENV SET/UNSET process env"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

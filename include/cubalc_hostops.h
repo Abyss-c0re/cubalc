@@ -45,6 +45,10 @@ int cubalc_host_listdir(const char *path, cubalc_host_result *r);
 
 /* env */
 int cubalc_host_env(const char *name, cubalc_host_result *r);
+/* set process env (overwrite); val may be empty string */
+int cubalc_host_env_set(const char *name, const char *val, cubalc_host_result *r);
+/* unset process env; r->n = 1 if was set, 0 if already absent */
+int cubalc_host_env_unset(const char *name, cubalc_host_result *r);
 
 /* HTTP — loopback + allowlisted api hosts; auth via CUBALC_HTTP_AUTH / XAI_API_KEY */
 int cubalc_host_http(const char *method, const char *url, const char *body,

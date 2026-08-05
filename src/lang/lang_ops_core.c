@@ -441,9 +441,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    if (kw(&L->cur,"ENV")){
-      /* SYS ENV "NAME" [OR "fallback"|DEFAULT "fallback"] — unset/empty → fallback */
+    if (kw(&L->cur,"ENV") || kw(&L->cur,"SETENV") || kw(&L->cur,"EXPORT") ||
+        kw(&L->cur,"UNSETENV") || kw(&L->cur,"ENVUNSET")){
+      /* SYS ENV name [OR fallback] — get.
+       * SYS ENV SET|PUT name value | SYS SETENV|EXPORT — process setenv (agent CUBALC_*).
+       * SYS ENV UNSET|CLEAR name | SYS UNSETENV — unsetenv · LAST_N 1 if was set. */
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      int is_set = (strcmp(op, "SETENV") == 0 || strcmp(op, "EXPORT") == 0);
+      int is_unset = (strcmp(op, "UNSETENV") == 0 || strcmp(op, "ENVUNSET") == 0);
       lex_next(L);
+      if (!is_set && !is_unset && strcmp(op, "ENV") == 0) {
+        if (kw(&L->cur,"SET") || kw(&L->cur,"PUT") || kw(&L->cur,"EXPORT") ||
+            kw(&L->cur,"WRITE") || kw(&L->cur,"ASSIGN")){
+          is_set = 1;
+          lex_next(L);
+        } else if (kw(&L->cur,"UNSET") || kw(&L->cur,"CLEAR") || kw(&L->cur,"DELETE") ||
+                   kw(&L->cur,"RM") || kw(&L->cur,"DROP")){
+          is_unset = 1;
+          lex_next(L);
+        }
+      }
+      if (is_set) {
+        char name[256] = "", val[CUBALC_HOST_STR_MAX];
+        cubalc_host_result hr;
+        if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+          if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+            snprintf(name, sizeof name, "%s", L->cur.text);
+            lex_next(L);
+          } else {
+            fail(vm, "SYS ENV SET name value"); return -1;
+          }
+        }
+        val[0] = 0;
+        if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+          /* bare number → string; else empty */
+          if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+            long n = parse_expr(vm, L);
+            snprintf(val, sizeof val, "%ld", n);
+          } else if (L->cur.kind == TK_IDENT) {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && !v->is_str) {
+              snprintf(val, sizeof val, "%ld", v->val);
+              lex_next(L);
+            } else {
+              fail(vm, "SYS ENV SET name value"); return -1;
+            }
+          }
+          /* else empty value */
+        }
+        if (cubalc_host_env_set(name, val, &hr) != 0) {
+          fail(vm, hr.err[0] ? hr.err : "SYS ENV SET failed"); return -1;
+        }
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = hr.n;
+        var_set_str(vm, "LAST", hr.str);
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      if (is_unset) {
+        char name[256] = "";
+        cubalc_host_result hr;
+        if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+          if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+            snprintf(name, sizeof name, "%s", L->cur.text);
+            lex_next(L);
+          } else {
+            fail(vm, "SYS ENV UNSET name"); return -1;
+          }
+        }
+        if (cubalc_host_env_unset(name, &hr) != 0) {
+          fail(vm, hr.err[0] ? hr.err : "SYS ENV UNSET failed"); return -1;
+        }
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = hr.n;
+        var_set_str(vm, "LAST", "");
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* get: SYS ENV name [OR fallback] */
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS ENV name"); return -1; }
       cubalc_host_result hr;
       cubalc_host_env(L->cur.text, &hr);
@@ -2774,7 +2853,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2974,7 +3053,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"TYPEOF", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
       {"UNSET", "UNSET name — remove var · LAST_N 1 if removed (DEFAULT re-apply)"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
-      {"SYS ENV", "SYS ENV NAME [OR fallback]"},
+      {"SYS ENV", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
+      {"SYS SETENV", "SYS SETENV|ENV SET name value — process setenv (CUBALC_* without shell)"},
+      {"SYS UNSETENV", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N 1 if was set"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},

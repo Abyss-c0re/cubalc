@@ -1,0 +1,67 @@
+# SYS ENV SET / UNSET · SETENV / UNSETENV — process env without shell export
+# Usability: agents set CUBALC_* / soft-dial flags in-language before SPAWN/DIAL
+
+HOLD_FLASH 1
+
+# clean probe name
+SYS ENV UNSET "CUBALC_MI_ENV_PROBE"
+ASSERT OK == 1
+
+# SET then GET
+SYS ENV SET "CUBALC_MI_ENV_PROBE" "alpha"
+ASSERT OK == 1
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS ENV "CUBALC_MI_ENV_PROBE"
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+
+# overwrite
+SYS SETENV "CUBALC_MI_ENV_PROBE" "beta"
+ASSERT OK == 1
+SYS ENV "CUBALC_MI_ENV_PROBE"
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# EXPORT alias
+SYS EXPORT "CUBALC_MI_ENV_PROBE" "gamma"
+SYS ENV "CUBALC_MI_ENV_PROBE"
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+
+# empty value is valid set
+SYS ENV SET "CUBALC_MI_ENV_PROBE" ""
+ASSERT OK == 1
+SYS ENV "CUBALC_MI_ENV_PROBE"
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# numeric value
+SYS ENV SET "CUBALC_MI_ENV_NUM" 42
+SYS ENV "CUBALC_MI_ENV_NUM"
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# UNSET removes; LAST_N=1 was set
+SYS ENV UNSET "CUBALC_MI_ENV_PROBE"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS ENV "CUBALC_MI_ENV_PROBE" OR "gone"
+SYS EQS LAST "gone"
+ASSERT LAST_N == 1
+
+# second UNSET soft: LAST_N=0 already absent
+SYS UNSETENV "CUBALC_MI_ENV_PROBE"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# agent pattern: soft dial flag without shell
+SYS ENV SET "CUBALC_P2P_SOFT" "1"
+SYS ENV "CUBALC_P2P_SOFT"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+# restore soft default for other tests in same process — unset probe only
+SYS ENV UNSET "CUBALC_MI_ENV_NUM"
+SYS ENV UNSET "CUBALC_P2P_SOFT"
+
+PRINT "sys_env_set ok"

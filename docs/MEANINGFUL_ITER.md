@@ -124,6 +124,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 94. ~~**`SYS STARTSI` / `ENDSI`**~~ **done** (case-insensitive prefix/suffix · path/ext/severity).
 95. ~~**`SYS BETWEEN` / `MIDOF` / `EXTRACT`**~~ **done** (peel between delimiters · plate/kv/log without FIND+MID).
 96. ~~**`SYS FINDI` / `INDEXI`**~~ **done** (case-insensitive string index · locate without UPPER+FIND).
+97. ~~**`SYS ENV SET` / `UNSET` · `SETENV`**~~ **done** (process setenv/unsetenv · CUBALC_* without shell).
 
 ## Tick protocol
 
