@@ -6012,7 +6012,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name | REQUIRE ENV name — fail-fast gates"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -6825,7 +6825,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   }
   /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
    * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
-   * Usability: agents refuse missing stdlib / old runtime without shell glue. */
+   * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
+   * Usability: agents refuse missing stdlib / old runtime / host config without shell glue. */
   if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
     int aln = L->cur.line;
     lex_next(L);
@@ -6861,9 +6862,56 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE ENV|VAR|ENVVAR|HOSTENV name — getenv must be non-empty.
+     * On success: LAST = value, LAST_N = len, REQUIRE_ENV = name, OK=1.
+     * Usability: fail-fast host config (CUBALC_STATE/SMX key) without SYS ENV + IF glue. */
+    if (kw(&L->cur,"ENV")||kw(&L->cur,"VAR")||kw(&L->cur,"ENVVAR")||
+        kw(&L->cur,"HOSTENV")||kw(&L->cur,"ENVIRONMENT")){
+      char name[96];
+      const char *val;
+      lex_next(L);
+      if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT){
+        fail(vm, "REQUIRE ENV \"NAME\"");
+        return -1;
+      }
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+      if (!name[0]) {
+        fail(vm, "REQUIRE ENV empty name");
+        return -1;
+      }
+      val = getenv(name);
+      if (!val || !val[0]) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE ENV '%s' missing line %d — set host env or SYS ENV SET",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      {
+        size_t vl = strlen(val);
+        char out[CUBALC_HOST_STR_MAX];
+        if (vl >= sizeof out) vl = sizeof out - 1;
+        memcpy(out, val, vl);
+        out[vl] = 0;
+        var_set_str(vm, "LAST", out);
+        var_set_str(vm, "ENV", out);
+        var_set_str(vm, "REQUIRE_ENV", name);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)vl;
+        var_set_num(vm, "LAST_N", (long)vl);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# require env %s ok (len %zu)\n", name, vl);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB name");
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB name | REQUIRE ENV name");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

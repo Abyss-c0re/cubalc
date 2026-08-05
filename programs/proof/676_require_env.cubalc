@@ -1,0 +1,38 @@
+# REQUIRE ENV — fail-fast if host environment variable missing or empty
+# Usability: agents gate CUBALC_STATE / SMX keys without SYS ENV + IF glue
+
+HOLD_FLASH 1
+
+# seed a private env for this process
+SYS ENV SET "CUBALC_MI_REQUIRE_ENV" "plate-ready"
+ASSERT OK == 1
+
+REQUIRE ENV "CUBALC_MI_REQUIRE_ENV"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS EQS LAST "plate-ready"
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_ENV "CUBALC_MI_REQUIRE_ENV"
+ASSERT LAST_N == 1
+
+# aliases
+SYS ENV SET "CUBALC_MI_REQUIRE_VAR" "via-var"
+REQUIRE VAR "CUBALC_MI_REQUIRE_VAR"
+ASSERT OK == 1
+SYS EQS LAST "via-var"
+ASSERT LAST_N == 1
+
+# ENV alias leaves value in ENV too
+SYS ENV SET "CUBALC_MI_REQUIRE_ENV2" "env-alias"
+REQUIRE ENVVAR "CUBALC_MI_REQUIRE_ENV2"
+ASSERT OK == 1
+SYS EQS ENV "env-alias"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS ENV UNSET "CUBALC_MI_REQUIRE_ENV"
+SYS ENV UNSET "CUBALC_MI_REQUIRE_VAR"
+SYS ENV UNSET "CUBALC_MI_REQUIRE_ENV2"
+ASSERT OK == 1
+
+PRINT "require_env ok"
