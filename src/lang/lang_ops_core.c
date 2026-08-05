@@ -4088,6 +4088,103 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MAPREPLACE|GSUBALL|REPLACEBAG bag old new — REPLACEALL on every field.
+     * Empty old → no-op (bag unchanged). LAST = bag; LAST_N/MAPREPLACE_N = total
+     * replacements; MAPREPLACE_FIELDS = field count.
+     * Usability: rewrite path prefixes / tags on LIST bags without EACH+REPLACEALL. */
+    if (kw(&L->cur,"MAPREPLACE") || kw(&L->cur,"GSUBALL") || kw(&L->cur,"REPLACEBAG") ||
+        kw(&L->cur,"REPLACEALLBAG") || kw(&L->cur,"BAGREPLACE") || kw(&L->cur,"SUBALLBAG") ||
+        kw(&L->cur,"MAPGSUB") || kw(&L->cur,"MAPSUBST")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char olds[256], news[256];
+      const char *p, *start, *src;
+      size_t olen = 0, flen, oldn, newn, pre, rest, take;
+      long fields = 0, did = 0;
+      char field[512], fbuf[768];
+      size_t fo;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; olds[0] = 0; news[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0] = 0;
+      if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0] = 0;
+      oldn = strlen(olds);
+      newn = strlen(news);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          /* apply REPLACEALL on this field */
+          fo = 0;
+          fbuf[0] = 0;
+          if (oldn == 0) {
+            if (take < sizeof fbuf) {
+              memcpy(fbuf, field, take);
+              fo = take;
+              fbuf[fo] = 0;
+            }
+          } else {
+            src = field;
+            for (;;) {
+              const char *hit = strstr(src, olds);
+              if (!hit) {
+                rest = strlen(src);
+                if (fo + rest >= sizeof fbuf) rest = sizeof fbuf - 1 - fo;
+                memcpy(fbuf + fo, src, rest);
+                fo += rest;
+                fbuf[fo] = 0;
+                break;
+              }
+              pre = (size_t)(hit - src);
+              if (fo + pre >= sizeof fbuf) pre = sizeof fbuf - 1 - fo;
+              memcpy(fbuf + fo, src, pre);
+              fo += pre;
+              if (fo + newn < sizeof fbuf) {
+                memcpy(fbuf + fo, news, newn);
+                fo += newn;
+              } else if (fo < sizeof fbuf - 1) {
+                size_t nt = sizeof fbuf - 1 - fo;
+                memcpy(fbuf + fo, news, nt);
+                fo += nt;
+              }
+              fbuf[fo] = 0;
+              did++;
+              src = hit + oldn;
+              if (fo >= sizeof fbuf - 1) break;
+            }
+          }
+          if (fields > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = fo;
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, fbuf, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, fbuf, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          fields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = did;
+      var_set_num(vm, "LAST_N", did);
+      var_set_num(vm, "MAPREPLACE_N", did);
+      var_set_num(vm, "MAPREPLACE_FIELDS", fields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MIDLINES|SLICEBAG|FIELDSLICE|LINESLICE bag start [end]
      * — keep newline fields [start..end] inclusive, 0-based.
      * end omitted → through last field. start/end clamp; start>end → empty.
@@ -5894,7 +5991,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6164,6 +6261,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MAPUPPER", "SYS MAPUPPER [bag] — alias of SYS UPPERALL · normalize before HASLINE"},
       {"SYS LOWERALL", "SYS LOWERALL|MAPLOWER [bag] — ASCII lower every bag field → LAST"},
       {"SYS MAPLOWER", "SYS MAPLOWER [bag] — alias of SYS LOWERALL · case-fold bags"},
+      {"SYS MAPREPLACE", "SYS MAPREPLACE|GSUBALL bag old new — REPLACEALL on every field · LAST_N=subs"},
+      {"SYS GSUBALL", "SYS GSUBALL bag old new — alias of SYS MAPREPLACE · bag path/tag rewrite"},
+      {"SYS REPLACEBAG", "SYS REPLACEBAG bag old new — alias of SYS MAPREPLACE"},
       {"SYS MIDLINES", "SYS MIDLINES|SLICEBAG bag start [end] — keep fields [start..end] 0-based"},
       {"SYS SLICEBAG", "SYS SLICEBAG bag start [end] — alias of SYS MIDLINES · middle bag window"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},

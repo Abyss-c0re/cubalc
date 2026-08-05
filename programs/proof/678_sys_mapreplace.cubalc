@@ -1,0 +1,67 @@
+# SYS MAPREPLACE / GSUBALL — REPLACEALL on every bag field
+# Usability: rewrite path prefixes / tags on LIST bags without EACH+REPLACEALL
+
+HOLD_FLASH 1
+
+LET paths = "/tmp/a.log\n/tmp/b.log\n/var/c.log"
+
+# rewrite prefix on every field
+SYS MAPREPLACE paths "/tmp/" "/state/"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT MAPREPLACE_N == 2
+ASSERT MAPREPLACE_FIELDS == 3
+SYS EQS LAST "/state/a.log\n/state/b.log\n/var/c.log"
+ASSERT LAST_N == 1
+
+# multi-hit per field
+LET tags = "xx-ready\nxx-xx-go"
+SYS MAPREPLACE tags "xx" "ok"
+ASSERT LAST_N == 3
+SYS EQS LAST "ok-ready\nok-ok-go"
+ASSERT LAST_N == 1
+LET tags = LAST
+
+# aliases
+SYS GSUBALL paths "/tmp/" "P/"
+ASSERT LAST_N == 2
+SYS EQS LAST "P/a.log\nP/b.log\n/var/c.log"
+ASSERT LAST_N == 1
+
+SYS REPLACEBAG tags "ok" "Y"
+ASSERT LAST_N == 3
+SYS EQS LAST "Y-ready\nY-Y-go"
+ASSERT LAST_N == 1
+
+# empty old → no-op, zero replacements
+SYS MAPREPLACE paths "" "Z"
+ASSERT LAST_N == 0
+SYS EQS LAST paths
+ASSERT LAST_N == 1
+
+# empty bag
+SYS MAPREPLACE "" "a" "b"
+ASSERT LAST_N == 0
+ASSERT MAPREPLACE_FIELDS == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# no match
+SYS MAPREPLACE paths "MISSING" "x"
+ASSERT LAST_N == 0
+SYS EQS LAST paths
+ASSERT LAST_N == 1
+
+# agent pattern: LIST basenames → strip suffix → work names
+LET files = "job.plate\nkeep.live\ntmp.plate"
+SYS MAPREPLACE files ".plate" ""
+LET names = LAST
+ASSERT MAPREPLACE_N == 2
+SYS HASLINE names "job"
+ASSERT LAST_N == 1
+SYS HASLINE names "tmp"
+ASSERT LAST_N == 1
+SYS HASLINE names "keep.live"
+ASSERT LAST_N == 1
+
+PRINT "sys_mapreplace ok"
