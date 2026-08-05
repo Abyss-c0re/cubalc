@@ -1,144 +1,143 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 33,
-  "program": "programs/realworld/deploy_step_board.cubalc",
-  "theme": "deploy step board ENUMERATE PREFIXALL SUFFIXALL FILL SETMATCH pin",
-  "version": "1.15.121-usability",
+  "iter": 34,
+  "program": "programs/realworld/slo_sample_board.cubalc",
+  "theme": "SLO sample board pure-ms SQUEEZE MEDIAN SUM AVG SORTN breach",
+  "version": "1.15.123-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_arm",
-      "cmd": "seed build test deploy smoke; arm prod",
+      "name": "seed_list_stats",
+      "cmd": "seed 120 50 200 50 95; list thresh100",
       "ok": true,
-      "note": "prod/1.build:pending ... 4 steps"
+      "note": "sum=515 avg=103 med=95 min=50 max=200 breach=2"
     },
     {
-      "name": "pass_fail_pin",
-      "cmd": "pass build\u2192done; fail test\u2192failed; pin first pending=deploy",
+      "name": "observe_breach",
+      "cmd": "observe 180; breach hit=3",
       "ok": true,
-      "note": "SETMATCH + MOVELINE"
+      "note": "PUSH + EACH CMP"
     },
     {
-      "name": "pass_miss_require",
-      "cmd": "REQUIRE pass ghost EXIT 2; soft miss rc0",
+      "name": "squeeze_empty_vs_blank",
+      "cmd": "SQUEEZE keeps whitespace field; SQUEEZE BLANK drops it",
+      "ok": true,
+      "note": "default SQUEEZE left '  ' line; BLANK mode required"
+    },
+    {
+      "name": "empty_median_silent_zero",
+      "cmd": "MEDIAN empty → 0 OK=1; REQUIRE list EXIT 2",
+      "ok": true,
+      "note": "empty median not soft-miss by language"
+    },
+    {
+      "name": "trim_hot",
+      "cmd": "trim 3 → SORTN DESC TAKE 90 70 50",
+      "ok": true,
+      "note": "hottest samples kept"
+    },
+    {
+      "name": "drop_require",
+      "cmd": "drop 90; REQUIRE drop ghost EXIT 2",
       "ok": true,
       "note": "soft+REQUIRE"
     },
     {
-      "name": "fill_slots",
-      "cmd": "fill 4 idle",
+      "name": "even_median_lower_mid",
+      "cmd": "MEDIAN 10 20 30 40 → 20",
       "ok": true,
-      "note": "SYS FILL capacity bag"
+      "note": "even lower mid; mixed skips non-num"
     },
     {
-      "name": "grep_build_cousin",
-      "cmd": "GREP build matches build+buildx; COUNTLINE :pending\u21920",
+      "name": "squeeze_no_rebind",
+      "cmd": "SQUEEZE b without LET leaves empties in b",
       "ok": true,
-      "note": "substring + exact COUNTLINE limits"
-    },
-    {
-      "name": "enum_no_rebind",
-      "cmd": "ENUMERATE without LET leaves bag plain names",
-      "ok": true,
-      "note": "must LET bag=LAST after ENUMERATE/PREFIXALL/SUFFIXALL"
-    },
-    {
-      "name": "print_json_collapse",
-      "cmd": "list bag collapse multi-line steps",
-      "ok": true,
-      "note": "PRINT_JSON footgun"
-    },
-    {
-      "name": "write_nl",
-      "cmd": "cat -A last step often no $",
-      "ok": true,
-      "note": "WRITE trailing NL"
+      "note": "non-mutate bag transforms"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "96/96 pass incl enumerate fill prefixall"
+      "note": "98/98 pass incl squeeze median"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag",
-      "title": "ENUMERATE/PREFIXALL/SUFFIXALL/FILL do not mutate named bags",
-      "detail": "Must LET bag = LAST after every transform or WRITE persists pre-arm plain names. Same non-mutate class as UNION/SHUFFLE.",
-      "repro": "ENUMERATE bag; LINES bag still unnumbered without LET"
+      "area": "host|math",
+      "title": "MEDIAN empty bag returns 0 with OK=1 — silent zero",
+      "detail": "SYS MEDIAN \"\" → LAST_N=0 OK=1 COUNT=0. Agents cannot distinguish empty plate from all-zero samples without separate LINES/COUNT check. Program wraps REQUIRE on list empty.",
+      "repro": "SYS MEDIAN \"\" → OK=1 LAST_N=0"
     },
     {
       "id": "W2",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "No structured step identity \u2014 armed tokens need peel walk",
-      "detail": "prod/1.build:pending requires AFTER / + BEFORE : + AFTER . + EQS. GREP build matches buildx. Pass/fail are multi-form identity, not one lookup.",
-      "repro": "GREP build on build+buildx \u2192 n=2"
+      "title": "SQUEEZE default keeps whitespace-only fields",
+      "detail": "SQUEEZE without BLANK leaves \"  \" lines; SUM/AVG skip non-numeric but depth still inflated if agent uses LINES bag not clean. Need SQUEEZE BLANK for intake hygiene.",
+      "repro": "SQUEEZE 'a\\n  \\nb' → 3 fields"
     },
     {
       "id": "W3",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "COUNTLINE cannot tally status suffixes",
-      "detail": "COUNTLINE bag ':pending' \u2192 0; need GREP+LINES (substring-risky for short statuses).",
-      "repro": "COUNTLINE ':pending' \u2192 0; GREP ':pending' + LINES \u2192 n"
+      "title": "SQUEEZE/MEDIAN/SUM/SORTN do not mutate named bags",
+      "detail": "Must LET bag = LAST after SQUEEZE or WRITE reintroduces empties. Same non-mutate class.",
+      "repro": "SQUEEZE b; LINES b still includes empties without LET"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses multi-line step bags",
-      "detail": "Armed steps collapse into one string field.",
-      "repro": "PRINT_JSON bag after arm"
+      "area": "host|math",
+      "title": "Even-count MEDIAN is lower mid (not average of two middles)",
+      "detail": "MEDIAN 10 20 30 40 → 20. Agents expecting statistical mean-of-mids get wrong P50. Documented lower-mid integer policy.",
+      "repro": "SYS MEDIAN 1 2 3 4 → 2"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last step without $.",
-      "repro": "seed/arm; cat -A STEPS.txt"
+      "severity": "med",
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line sample bags",
+      "detail": "Sample plate dumps as concatenated numbers. Prefer sum/avg/med scalars.",
+      "repro": "PRINT_JSON bag after seed"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|docs",
-      "title": "PREFIXALL accepts string vars for affix but ZIP sep does not",
-      "detail": "PREFIXALL bag p with LET p=stg/ works; ZIP a b SEP fails unknown form. Inconsistent string-arg coercion across host forms confuses agents.",
-      "repro": "PREFIXALL bag p OK; ZIP a b SEP fail"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE often omits final trailing newline",
+      "detail": "cat -A last sample without $.",
+      "repro": "seed; cat -A SAMPLES.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host",
-      "title": "No string concat \u2014 env/ built via REPLACEALL ENV/ template",
-      "detail": "Same template class as other boards; ENV token in name corrupts.",
-      "repro": "template ENV/ with REPLACEALL"
+      "title": "NUM only on LAST — observe/seed need PREPEND+HEAD shuttle",
+      "detail": "Same NUM shuttle tax as budget boards.",
+      "repro": "SYS NUM only parses LAST"
     }
   ],
   "workarounds": [
-    "Always LET bag = LAST after ENUMERATE/PREFIXALL/SUFFIXALL/FILL/SETMATCH",
-    "Pass/fail: peel env/index/status then EQS step name \u2014 not GREP name",
-    "Status tallies: GREP ':pending'|':done'|':failed' + LINES",
-    "PREFIXALL string vars OK for env prefix; still use literals for ZIP sep",
-    "PRINT_JSON only n_pending/n_done/n_failed scalars"
+    "Check LINES/COUNT after SQUEEZE before trusting MEDIAN (empty→0)",
+    "SQUEEZE BLANK for messy intake; default SQUEEZE for pure empties only",
+    "Always LET bag = LAST after SQUEEZE/trim transforms",
+    "Document even median as lower mid for SLOs",
+    "PRINT_JSON only sum_ms/avg_ms/med_ms/n_breach scalars"
   ],
   "language_gaps": [
-    "In-place bag transforms or auto-bind",
-    "Structured field path (env/index/name/status) parse form",
-    "COUNTLINE suffix/pattern tally",
-    "Consistent string-var coercion for all host multi-arg forms",
+    "MEDIAN empty soft-miss or NaN distinct from zero",
+    "In-place SQUEEZE/stat bag ops",
+    "Optional mean-of-two-middles even median",
     "PRINT_JSON newlines; WRITE force NL",
-    "String concat for env/step tokens"
+    "SYS NUM from named string without LAST shuttle"
   ],
   "issues_faced": [
-    "Armed token identity for pass is fragile peel chain \u2014 documents language gap",
-    "pass on already-done build correctly misses (pending-only) \u2014 soft miss path",
-    "GREP build false friend with buildx confirmed"
+    "Empty MEDIAN silent zero is the main agent footgun for empty SLO plates",
+    "SQUEEZE without BLANK left space-only field on disk after T5",
+    "list uses SQUEEZE into clean for stats but does not rewrite bag unless squeeze action"
   ],
-  "commit": "9e4bbef8247671da0d89ad31e5508e741816f93e",
-  "ts": "2026-08-05T17:49:00Z"
+  "commit": "",
+  "ts": "2026-08-05T18:13:10Z"
 }
