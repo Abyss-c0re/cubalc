@@ -1,0 +1,12 @@
+# Run plate last_err — sticky soft reason survives green ok=true
+# Agents read final JSON last_err without fatal abort
+
+HOLD_FLASH 1
+
+FAIL "soft probe: peer not ready"
+PASS "continued after soft fail"
+ASSERT OK == 1 "hard gate after soft FAIL"
+ASSERT LAST_N > 0
+
+PRINT "last_err_plate ok"
+# CLI plate must include last_err with FAIL text even though run ok

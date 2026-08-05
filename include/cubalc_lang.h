@@ -15,6 +15,7 @@ typedef struct cubalc_run_result {
   int n_cubes;
   float unity;
   char err[160];
+  char last_err[160]; /* sticky LAST_ERR/ERR even when run ok (soft FAIL/EXPECT) */
   char last_print[256];
 } cubalc_run_result;
 

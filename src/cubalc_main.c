@@ -1474,10 +1474,11 @@ int main(int argc, char **argv) {
     }
     printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
            "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
-           "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\"}\n",
+           "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
+           "\"last_err\":\"%s\"}\n",
            rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
            rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-           CUBALC_LANG_VERSION, rr.err);
+           CUBALC_LANG_VERSION, rr.err, rr.last_err);
     return rc;
   }
   if (strcmp(cmd, "peers") == 0 || strcmp(cmd, "oversee") == 0) {

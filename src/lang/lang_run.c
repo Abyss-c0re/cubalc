@@ -57,6 +57,17 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     out->n_cubes = vm.ch.n_cubes;
     out->unity = vm.ch.unity;
     if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
+    /* Usability: surface sticky LAST_ERR/ERR on plate even when run ok
+     * (soft FAIL/EXPECT probes leave agent-readable reason). */
+    {
+      Var *le = var_get(&vm, "LAST_ERR", 0);
+      if (!le || !le->is_str || !le->sval[0])
+        le = var_get(&vm, "ERR", 0);
+      if (le && le->is_str && le->sval[0])
+        snprintf(out->last_err, sizeof out->last_err, "%s", le->sval);
+      else if (out->err[0] && !out->last_err[0])
+        snprintf(out->last_err, sizeof out->last_err, "%s", out->err);
+    }
   }
   if (vm.ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */

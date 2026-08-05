@@ -52,7 +52,9 @@ PASS "ready for hard gate"
 ASSERT 1 == 1 "hard gate still fail-closed"
 ```
 
-Proof: `programs/proof/578_expect_soft.cubalc` · `579_fail_pass.cubalc`.
+Proof: `programs/proof/578_expect_soft.cubalc` · `579_fail_pass.cubalc` · `581_last_err_plate.cubalc`.
+
+Run result JSON always includes `last_err` (sticky soft FAIL/EXPECT reason) even when `"ok":true`.
 
 ## 2. Decide from matrix
 

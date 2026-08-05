@@ -60,6 +60,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 30. ~~**`cubalc cat`**~~ **done** (dump lib/program source + cubalc.cat.v1 plate).
 31. ~~**`FAIL` / `PASS` soft status**~~ **done** (sticky OK/LAST_ERR without fake expr).
 32. ~~**`VERSION` + `cubalc version`**~~ **done** (in-lang LAST + CLI JSON plate).
+33. ~~**run plate `last_err`**~~ **done** (sticky LAST_ERR on JSON even when ok).
 
 ## Tick protocol
 
