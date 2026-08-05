@@ -1,0 +1,25 @@
+# SYS MS — wall clock milliseconds for agents (finer than SYS TIME seconds)
+# Usability: stamp plates / measure deltas without shell date
+
+HOLD_FLASH 1
+
+SYS TIME
+ASSERT OK == 1
+ASSERT TIME > 0 "epoch seconds"
+LET t_sec = TIME
+
+SYS MS
+ASSERT OK == 1
+ASSERT MS > 0 "epoch ms"
+ASSERT LAST_N > 0
+# ms should be ~1000x seconds (allow wide skew for scheduling)
+ASSERT MS > t_sec "ms scale above bare seconds count"
+ASSERT MS / 1000 >= t_sec - 2 "ms/1000 near TIME"
+ASSERT MS / 1000 <= t_sec + 2 "ms/1000 near TIME"
+
+# alias
+SYS MILLIS
+ASSERT OK == 1
+ASSERT TIME_MS > 0
+
+PRINT "sys_ms ok" MS TIME

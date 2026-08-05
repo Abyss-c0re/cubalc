@@ -540,6 +540,29 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "LAST", buf); snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS MS|MILLIS|TIME_MS|EPOCH_MS — wall clock milliseconds since epoch.
+     * Usability: agents need finer stamps than SYS TIME (seconds) for plates/timing. */
+    if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS") ||
+        kw(&L->cur,"TIME_MS") || kw(&L->cur,"EPOCH_MS") || kw(&L->cur,"NOW_MS")){
+      struct timespec ts;
+      long n;
+      char buf[40];
+      lex_next(L);
+      if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        n = (long)time(NULL) * 1000L;
+      } else {
+        n = (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+      }
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "MS", n);
+      var_set_num(vm, "TIME_MS", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG")){
       lex_next(L);
       char path[512]="", data[4096]; data[0]=0;
@@ -1008,7 +1031,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1200,12 +1223,14 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
       {"INCLUDE", "INCLUDE [OR|SOFT] path|libname — short name → programs/lib/"},
       {"LET", "LET name = expr|string"},
-      {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT … · ENV/ARG OR fallback"},
+      {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
+      {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
+      {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

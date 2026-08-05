@@ -1649,6 +1649,7 @@ int main(int argc, char **argv) {
       {"agent_boot", "programs/proof/587_agent_boot.cubalc", "INCLUDE agent_boot preamble"},
       {"status", "programs/proof/588_status.cubalc", "STATUS agent health plate"},
       {"clear_err", "programs/proof/589_clear_err.cubalc", "CLEAR_ERR wipe sticky LAST_ERR"},
+      {"sys_ms", "programs/proof/591_sys_ms.cubalc", "SYS MS wall milliseconds"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1661,7 +1662,7 @@ int main(int argc, char **argv) {
       int asserts_ok;
       int asserts_fail;
       char err[120];
-    } rows[20];
+    } rows[32];
     int nrow = 0;
     if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
       json_only = 1;
@@ -1670,7 +1671,8 @@ int main(int argc, char **argv) {
              n, CUBALC_LANG_VERSION);
       printf("# id\tok\tasserts\thint\n");
     }
-    for (i = 0; i < n && nrow < 16; i++) {
+    /* Cap at rows[] size so new usability proofs are not silently skipped. */
+    for (i = 0; i < n && nrow < (int)(sizeof rows / sizeof rows[0]); i++) {
       cubalc_run_result rr;
       int missing = (access(tests[i].path, R_OK) != 0);
       int ok = 0;
@@ -1783,6 +1785,8 @@ int main(int argc, char **argv) {
       {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
       {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
+      {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
+      {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS READ", "host", "SYS READ path|LAST"},
       {"SYS WRITE", "host", "SYS WRITE path data"},
@@ -2243,6 +2247,8 @@ int main(int argc, char **argv) {
        "CLEAR_ERR wipe sticky LAST_ERR after soft recovery"},
       {"programs/proof/590_require_lib.cubalc", "require_lib",
        "REQUIRE LIB fail-fast if module missing"},
+      {"programs/proof/591_sys_ms.cubalc", "sys_ms",
+       "SYS MS wall milliseconds for agent timing"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2759,6 +2765,8 @@ int main(int argc, char **argv) {
       {"SYS CWD", "host", "SYS CWD — working directory → LAST"},
       {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
+      {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
+      {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SMX SERVE", "smx", "listen · CUBALC_P2P_TIMEOUT ms"},
       {"SMX DIAL", "smx", "connect · CUBALC_P2P_SOFT soft-fail"},
       {"SMX EXCHANGE", "smx", "file-bus exchange"},
@@ -2774,6 +2782,7 @@ int main(int argc, char **argv) {
       {"programs/proof/588_status.cubalc", "status", "STATUS agent health plate"},
       {"programs/proof/589_clear_err.cubalc", "clear_err", "CLEAR_ERR wipe sticky LAST_ERR"},
       {"programs/proof/590_require_lib.cubalc", "require_lib", "REQUIRE LIB fail-fast gate"},
+      {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

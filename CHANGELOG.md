@@ -1,3 +1,12 @@
+## Meaningful — SYS MS wall milliseconds — 2026-08-05
+
+### Usability
+- `SYS MS` (aliases `MILLIS` `TIME_MS` `EPOCH_MS` `NOW_MS`) — wall epoch ms → LAST_N / MS / TIME_MS
+- Complements `SYS TIME` (seconds); agents stamp plates / measure without shell `date`
+- Forms/HELP catalog lists SYS TIME + SYS MS
+- Proof: `programs/proof/591_sys_ms.cubalc` · selftest id `sys_ms`
+- Version: `1.15.42-usability`
+
 ## Meaningful — REQUIRE LIB fail-fast module gate — 2026-08-05
 
 ### Usability
