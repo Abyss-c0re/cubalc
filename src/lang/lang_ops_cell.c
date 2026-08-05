@@ -5331,18 +5331,24 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
    * Resolve: absolute · include_base/rel · rel · programs/rel ·
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
    * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
-   * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal. */
+   * Soft: INCLUDE OR|SOFT|TRY name — missing file → OK=0 sticky LAST_ERR, no fatal.
+   * Once: INCLUDE ONCE name — skip if same resolved path already loaded this run. */
   if (kw(&L->cur,"INCLUDE")||kw(&L->cur,"IMPORT")||kw(&L->cur,"USE")){
-    int soft = 0;
+    int soft = 0, once = 0;
     int aln = L->cur.line;
     lex_next(L);
-    if (kw(&L->cur,"OR")||kw(&L->cur,"SOFT")||kw(&L->cur,"TRY")||
-        kw(&L->cur,"OPTIONAL")||kw(&L->cur,"MAYBE")){
-      soft = 1;
+    /* flags may appear in any order: INCLUDE ONCE SOFT hold_seed */
+    while (kw(&L->cur,"OR")||kw(&L->cur,"SOFT")||kw(&L->cur,"TRY")||
+           kw(&L->cur,"OPTIONAL")||kw(&L->cur,"MAYBE")||
+           kw(&L->cur,"ONCE")||kw(&L->cur,"UNIQUE")||kw(&L->cur,"SINGLE")){
+      if (kw(&L->cur,"ONCE")||kw(&L->cur,"UNIQUE")||kw(&L->cur,"SINGLE"))
+        once = 1;
+      else
+        soft = 1;
       lex_next(L);
     }
     if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-      fail(vm,"INCLUDE [OR|SOFT] \"path.cubalc\"|libname"); return -1;
+      fail(vm,"INCLUDE [ONCE] [OR|SOFT] \"path.cubalc\"|libname"); return -1;
     }
     char path[768];
     char orig[512];
@@ -5436,6 +5442,27 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       fail(vm, ebuf);
       return -1;
     }
+    /* INCLUDE ONCE: skip re-load if this resolved path already executed */
+    if (once) {
+      int i, hit = 0;
+      for (i = 0; i < vm->n_included; i++) {
+        if (strcmp(vm->included[i], path) == 0) { hit = 1; break; }
+      }
+      if (hit) {
+        fclose(f);
+        var_set_str(vm, "INCLUDE_PATH", path);
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = (long)strlen(path);
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "OK", 1);
+        var_set_num(vm, "INCLUDE_OK", 1);
+        var_set_num(vm, "INCLUDE_SKIPPED", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# include once skip: %s\n", path);
+        bump(vm); return 1;
+      }
+    }
     fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
     if (sz<0 || sz>CUBALC_MAX_SRC){ fclose(f); fail(vm,"INCLUDE too large"); return -1; }
     char *buf=malloc((size_t)sz+1); if(!buf){ fclose(f); fail(vm,"oom"); return -1; }
@@ -5447,6 +5474,11 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       if (sl){ size_t n=(size_t)(sl-path); if(n>=sizeof vm->include_base) n=sizeof vm->include_base-1;
         memcpy(vm->include_base, path, n); vm->include_base[n]=0; }
     }
+    /* record for ONCE (before exec so nested INCLUDE ONCE same file also skips) */
+    if (vm->n_included < 24) {
+      snprintf(vm->included[vm->n_included], sizeof vm->included[0], "%s", path);
+      vm->n_included++;
+    }
     /* agent-visible resolved path */
     var_set_str(vm, "INCLUDE_PATH", path);
     var_set_str(vm, "LAST", path);
@@ -5455,6 +5487,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", vm->last_n);
     var_set_num(vm, "OK", 1);
     var_set_num(vm, "INCLUDE_OK", 1);
+    var_set_num(vm, "INCLUDE_SKIPPED", 0);
     Lex Li; lex_init(&Li, buf, nr);
     int rc = exec_stmts_until(vm, &Li, NULL, NULL);
     snprintf(vm->include_base,sizeof vm->include_base,"%s", save_base);

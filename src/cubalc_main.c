@@ -1653,6 +1653,7 @@ int main(int argc, char **argv) {
       {"sys_ms", "programs/proof/591_sys_ms.cubalc", "SYS MS wall milliseconds"},
       {"note", "programs/proof/592_note.cubalc", "NOTE agent breadcrumb"},
       {"exit", "programs/proof/593_exit.cubalc", "EXIT early halt with code"},
+      {"include_once", "programs/proof/594_include_once.cubalc", "INCLUDE ONCE skip reload"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1784,7 +1785,7 @@ int main(int argc, char **argv) {
       {"DUMP", "flow", "alias of PRINT_JSON"},
       {"VARS", "flow", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "flow", "STATUS — cubalc.status.v1 health (ok/last_err/version/time)"},
-      {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
@@ -2258,6 +2259,8 @@ int main(int argc, char **argv) {
        "NOTE agent breadcrumb without OK/ERR change"},
       {"programs/proof/593_exit.cubalc", "exit",
        "EXIT [code] early program halt"},
+      {"programs/proof/594_include_once.cubalc", "include_once",
+       "INCLUDE ONCE skips already-loaded module"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2585,7 +2588,7 @@ int main(int argc, char **argv) {
       {"HOLD_FLASH", "law", "user permission BEFORE plug"},
       {"CUBE", "core", "place cube"},
       {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
-      {"INCLUDE", "flow", "INCLUDE path|libname → programs/lib/"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
       {"ASSERT", "flow", "ASSERT expr optional why-string"},
       {"EXPECT", "flow", "EXPECT soft check · no fatal"},
       {"FAIL", "flow", "FAIL soft status OK=0"},
@@ -2758,7 +2761,7 @@ int main(int argc, char **argv) {
       {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
       {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
-      {"INCLUDE", "flow", "INCLUDE [OR|SOFT] path|libname — soft miss no fatal"},
+      {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
       {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"FAIL", "flow", "FAIL [why] soft status OK=0 sticky LAST_ERR"},
@@ -2798,6 +2801,7 @@ int main(int argc, char **argv) {
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
       {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
+      {"programs/proof/594_include_once.cubalc", "include_once", "INCLUDE ONCE skip reload"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

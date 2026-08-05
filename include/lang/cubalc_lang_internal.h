@@ -62,6 +62,9 @@ typedef struct {
   int last_code;
   long last_n;
   char include_base[512];
+  /* INCLUDE ONCE — resolved paths already loaded this run (max 24). */
+  char included[24][160];
+  int n_included;
   /* digit-1 data plane: integer cells + stack */
   long cells[CUBALC_CELL_N];
   long stack[CUBALC_STACK_N];

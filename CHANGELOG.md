@@ -1,3 +1,12 @@
+## Meaningful — INCLUDE ONCE skip reload — 2026-08-05
+
+### Usability
+- `INCLUDE ONCE name` (aliases `UNIQUE` `SINGLE`) — resolve like INCLUDE; skip if path already loaded this run
+- Sets `INCLUDE_SKIPPED` 1 on skip, 0 on first load; still sets INCLUDE_PATH / OK / INCLUDE_OK
+- Combines with SOFT: `INCLUDE ONCE SOFT optional_lib`
+- Proof: `programs/proof/594_include_once.cubalc` · selftest id `include_once`
+- Version: `1.15.45-usability`
+
 ## Meaningful — EXIT early program halt — 2026-08-05
 
 ### Usability

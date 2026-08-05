@@ -1,0 +1,21 @@
+# INCLUDE ONCE — skip re-loading same resolved module path
+# Usability: agent_boot + other libs can share hold_seed without double seed
+
+HOLD_FLASH 1
+
+INCLUDE ONCE hold_seed
+ASSERT INCLUDE_OK == 1
+ASSERT INCLUDE_SKIPPED == 0 "first load not skipped"
+LET path1 = INCLUDE_PATH
+
+INCLUDE ONCE hold_seed
+ASSERT INCLUDE_OK == 1 "second ONCE still OK"
+ASSERT INCLUDE_SKIPPED == 1 "second ONCE skips"
+# same resolved path
+ASSERT LAST_N > 0
+
+# plain INCLUDE still reloads (not once); just verify path works
+INCLUDE hold_seed
+ASSERT INCLUDE_OK == 1
+
+PRINT "include_once ok" INCLUDE_SKIPPED

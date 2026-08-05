@@ -1223,7 +1223,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
-      {"INCLUDE", "INCLUDE [OR|SOFT] path|libname — short name → programs/lib/"},
+      {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name = expr|string"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},

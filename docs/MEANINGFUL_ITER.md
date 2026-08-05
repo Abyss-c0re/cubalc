@@ -80,6 +80,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 50. ~~**`SYS MS`**~~ **done** (wall milliseconds · catalog SYS TIME/MS).
 51. ~~**`NOTE`**~~ **done** (agent breadcrumb · LAST/NOTE · no OK/ERR change).
 52. ~~**`EXIT`**~~ **done** (halt program · code/reason · plate exit_code/halted).
+53. ~~**`INCLUDE ONCE`**~~ **done** (skip reload of already-loaded module path).
 
 ## Tick protocol
 
