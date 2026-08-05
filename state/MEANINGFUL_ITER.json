@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 126,
-  "version": "1.15.151-usability",
-  "item": "SYS COMMONPREFIX / LCP · COMMONSUFFIX shared bag ends",
-  "item_id": 159,
-  "title": "SYS COMMONPREFIX|LCP / COMMONSUFFIX|LCS [bag] — shared prefix/suffix",
-  "commit": "9249531bb99bb48234ca626dda961d32f65a3eac",
-  "summary": "SYS COMMONPREFIX/COMMONSUFFIX longest shared bag ends for path roots. selftest 126.",
+  "iter": 127,
+  "version": "1.15.152-usability",
+  "item": "SYS STRIPPREFIX / STRIPSUFFIX / STRIPCOMMON relative bag paths",
+  "item_id": 160,
+  "title": "SYS STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON — strip ends / LCP from bag",
+  "commit": "232ea8c649331c27e8d08e40da4c9e8ff27f6be2",
+  "summary": "SYS STRIPPREFIX/STRIPCOMMON strip bag field ends for relative paths without EACH. selftest 127.",
   "proofs": [
-    "699_sys_commonprefix",
-    "selftest n_pass=126"
+    "700_sys_stripprefix",
+    "selftest n_pass=127"
   ],
-  "when": "2026-08-05T22:44:10Z",
+  "when": "2026-08-05T22:54:49Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9249531bb99bb48234ca626dda961d32f65a3eac"
+  "sha": "232ea8c649331c27e8d08e40da4c9e8ff27f6be2"
 }
