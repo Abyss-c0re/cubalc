@@ -1,159 +1,149 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 29,
-  "program": "programs/realworld/oncall_page_wheel.cubalc",
-  "theme": "oncall page wheel PICK APPEND REVL MOVELINE SEQ empty soft miss",
-  "version": "1.15.111-usability",
+  "iter": 30,
+  "program": "programs/realworld/maint_window_board.cubalc",
+  "theme": "maint window freeze gate name:LO-HI SYS IN overnight DIV MOD UTC hour",
+  "version": "1.15.114-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_sort_uniq",
-      "cmd": "seed alice bob carol dave alice \u2192 4 unique sorted",
+      "name": "seed_windows",
+      "cmd": "seed db:22-06 api:9-17 mesh:0-0 api_v2:12-13",
       "ok": true,
-      "note": "HASLINE skip + SORT+UNIQ"
+      "note": "4 windows on plate"
     },
     {
-      "name": "page_append_pin",
-      "cmd": "page \u2192 PICK carol; APPEND log TS|WHO|IDX; MOVELINE front",
+      "name": "overnight_check",
+      "cmd": "CUBALC_MW_HOUR=23 check db → hit=1; hour=12 → hit=0",
       "ok": true,
-      "note": "log 2026-...|carol|2; roster carol first"
+      "note": "OR of IN lo-23 and 0-hi for LO>HI"
     },
     {
-      "name": "page_second",
-      "cmd": "page again \u2192 log 2 lines bob|2",
+      "name": "biz_hours",
+      "cmd": "hour 12 check api frozen; hour 20 open",
       "ok": true,
-      "note": "APPEND grows; SIZE log plate"
+      "note": "same-day SYS IN lo hi"
     },
     {
-      "name": "rotate_primary_pin",
-      "cmd": "rotate REVL; primary HEAD; pin carol",
+      "name": "checkall_list",
+      "cmd": "hour 23 checkall hit=1; hour 10 list n_frozen=1 n_open=3",
       "ok": true,
-      "note": "REVL + HEAD + MOVELINE"
+      "note": "api only frozen at 10 among four"
     },
     {
-      "name": "empty_page_require",
-      "cmd": "empty STATE REQUIRE page EXIT 2; soft page rc0 + PICK OK=0",
+      "name": "in_swap_footgun",
+      "cmd": "SYS IN 12 22 6 → 1; SYS IN 23 22 6 → 0",
       "ok": true,
-      "note": "PICK empty soft LAST_N=-1"
+      "note": "auto-swap makes overnight continuous day — wrong for freezes"
     },
     {
-      "name": "grep_ali_false_friend",
-      "cmd": "GREP ali matches alice; HASLINE ali \u2192 0",
+      "name": "set_pin_drop",
+      "cmd": "set cache 1-2; pin db; drop mesh",
       "ok": true,
-      "note": "substring vs exact"
+      "note": "SETMATCH insert + MOVELINE + REMOVELINE"
     },
     {
-      "name": "replaceall_num_arg",
-      "cmd": "REPLACEALL ... pick_n \u2192 unknown form pick_n",
+      "name": "require_miss",
+      "cmd": "REQUIRE check ghost EXIT 2; soft miss rc0",
       "ok": true,
-      "note": "must SYS STR first; high agent footgun"
+      "note": "soft+REQUIRE"
     },
     {
-      "name": "slots_seq_iota_collapse",
-      "cmd": "slots 4 PRINT_JSON entry \u2192 1234 collapsed",
+      "name": "grep_countline",
+      "cmd": "GREP api n=2; COUNTLINE api:9-17=1; COUNTLINE :9-17=0",
       "ok": true,
-      "note": "SEQ/IOTA bags also PRINT_JSON-collapse"
+      "note": "cousin + exact-only"
     },
     {
-      "name": "drop_miss_require",
-      "cmd": "REQUIRE drop ghost EXIT 2; drop bob ok",
+      "name": "print_json_write_nl",
+      "cmd": "list bag collapse; last field no $",
       "ok": true,
-      "note": "soft+REQUIRE paths"
+      "note": "db:22-06api:9-17... ; WRITE NL"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "86/86 pass incl pick range div"
+      "note": "89/89 pass incl in gcd pow"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parse",
-      "title": "REPLACEALL rejects bare numeric vars as third arg (unknown form)",
-      "detail": "SYS REPLACEALL hay old pick_n where pick_n is numeric fails parse: unknown form 'pick_n'. Must SYS STR pick_n \u2192 string first. Same class for any host form expecting string when given num-typed var without quote/STR.",
-      "repro": "LET n=3; SYS REPLACEALL 'X' 'X' n \u2192 unknown form 'n'"
+      "area": "host|math",
+      "title": "SYS IN auto-swaps inverted bounds — overnight windows wrong if used raw",
+      "detail": "SYS IN hour 22 6 treats bounds as 6..22 continuous. Hour 12 wrongly IN (1); hour 23 wrongly OUT (0). Real freeze 22-06 needs OR of IN(hour,22,23) and IN(hour,0,6). Catalog says inclusive membership but swap is a silent semantic trap for wraparound schedules.",
+      "repro": "SYS IN 12 22 6 → 1; SYS IN 23 22 6 → 0 (both wrong for overnight freeze)"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host",
-      "title": "SYS PICK empty is soft OK=0 LAST_N=-1 \u2014 easy to miss without REQUIRE",
-      "detail": "Empty roster page continues unless program checks LINES/OK. Good soft path but agents may log empty WHO if they skip OK check.",
-      "repro": "SYS PICK '' \u2192 OK=0 LAST_N=-1 LAST=\"\""
+      "title": "No local timezone — UTC hour only via TIME/DIV/MOD",
+      "detail": "Agents must DIV epoch 3600 MOD 24 for UTC hour. No TZ form; local maint windows need external offset.",
+      "repro": "SYS TIME; DIV 3600; MOD 24"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses roster and SEQ/IOTA bags",
-      "detail": "Roster carolalicedave; SEQ 4 \u2192 \"1234\". History log also collapses. Scalars + plate files required.",
-      "repro": "PRINT_JSON bag after seed; PRINT_JSON SEQ 4"
+      "area": "host|bag",
+      "title": "Window tokens need peel + dual NUM shuttle; no LO-HI parse form",
+      "detail": "AFTER ':' then BEFORE/AFTER '-' then NUM each. REPLACEALL rebuild for set needs STR lo/hi (numeric REPLACEALL footgun class).",
+      "repro": "peel db:22-06 → lo=22 hi=6"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host",
-      "title": "No string concat \u2014 page log lines via REPLACEALL template",
-      "detail": "TS|WHO|IDX built with REPLACEALL; names containing placeholders corrupt. Plus W1 STR shuttle for index.",
-      "repro": "template TS|WHO|IDX"
+      "area": "host|bag",
+      "title": "GREP name matches cousins; COUNTLINE suffix fails",
+      "detail": "GREP api → api+api_v2; COUNTLINE ':9-17' → 0.",
+      "repro": "GREP api n=2; COUNTLINE bag ':9-17' → 0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "GREP substring false friends on pure name roster",
-      "detail": "GREP 'ali' matches alice; HASLINE 'ali' correctly 0. Identity is HASLINE/COUNTLINE exact only.",
-      "repro": "GREP ali on alice \u2192 n=1; HASLINE ali \u2192 0"
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line window bags",
+      "detail": "db:22-06api:9-17mesh:0-0... unparseable. Prefer n_frozen/n_open scalars.",
+      "repro": "PRINT_JSON bag after seed"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE roster often omits final trailing newline",
-      "detail": "cat -A last name without $. APPEND log lines do get NL between entries.",
-      "repro": "seed; cat -A ROSTER.txt"
+      "title": "WRITE often omits final trailing newline",
+      "detail": "cat -A last window without $.",
+      "repro": "seed; cat -A WINDOWS.txt"
     },
     {
       "id": "W7",
-      "severity": "med",
-      "area": "host|rand",
-      "title": "PICK non-determinism and CUBALC_SEED only before first srand",
-      "detail": "Agents cannot reseed mid-process easily; page wheel not reproducible across separate runs without env seed before any RAND/PICK in process. Documented in proof.",
-      "repro": "CUBALC_SEED=42 only if srand not yet called"
-    },
-    {
-      "id": "W8",
       "severity": "low",
-      "area": "host",
-      "title": "UNIQ only adjacent \u2014 needs SORT first for seed dedup",
-      "detail": "Program SORT then UNIQ after seed. UNIQ alone leaves non-adjacent dups if seed path skipped HASLINE.",
-      "repro": "UNIQ 'a\\nb\\na' keeps both a"
+      "area": "host|docs",
+      "title": "SYS IN / SYS BETWEEN name collision across planes",
+      "detail": "IN is numeric range membership; BETWEEN peels text between delimiters. Agents may confuse BETWEENN alias of IN with text BETWEEN.",
+      "repro": "forms: SYS IN x lo hi vs SYS BETWEEN open close hay"
     }
   ],
   "workarounds": [
-    "Always SYS STR before REPLACEALL when substituting numbers",
-    "Check SYS LINES bag > 0 and PICK OK before APPEND log",
-    "HASLINE/COUNTLINE for identity \u2014 not GREP on names",
-    "SORT then UNIQ for bag dedup; or HASLINE on seed",
-    "PRINT_JSON only scalars (depth, log_n, pick); keep bags on plates",
-    "Set CUBALC_SEED before first RAND/PICK in process for repro"
+    "Overnight LO>HI: if CMP lo hi > 0 then OR of IN(h,lo,23) and IN(h,0,hi) — never raw IN(h,lo,hi)",
+    "UTC hour: TIME DIV 3600 MOD 24; override CUBALC_MW_HOUR for tests",
+    "Identity: BEFORE ':' + EQS — not GREP name",
+    "STR before REPLACEALL for numeric LO/HI in templates",
+    "PRINT_JSON only utc_hour/n_frozen/n_open; keep bag on plate"
   ],
   "language_gaps": [
-    "REPLACEALL (and string forms) should coerce numeric vars via STR automatically",
-    "String concatenation for log lines",
-    "PRINT_JSON newline escape for multi-line bags",
-    "WRITE force trailing NL",
-    "UNIQ global (not only adjacent) or DEDUP form",
-    "Reseed RAND/PICK without process restart"
+    "Wraparound / circular range membership (overnight hours, modular intervals)",
+    "Optional no-swap mode for SYS IN when order encodes wrap",
+    "Local timezone hour form",
+    "Structured field peel for name:LO-HI tokens",
+    "String concat; PRINT_JSON newlines; WRITE force NL",
+    "Doc cross-link IN vs BETWEEN vs BETWEENN clearly"
   ],
   "issues_faced": [
-    "First page path failed: REPLACEALL with pick_n numeric \u2192 unknown form \u2014 fixed with STR shuttle",
-    "Dead code first template block ran before rewrite \u2014 removed",
-    "PRINT_JSON SEQ/IOTA collapsed to 1234/0123 \u2014 still useful as weakness demo"
+    "SYS IN auto-swap is the main language trap for maint freezes — proven with 12 and 23 on 22-06",
+    "mesh:0-0 is always frozen (point window) — intentional edge for IN inclusive endpoints"
   ],
-  "commit": "4b1b7490c262bb3aa7050a7cdc6bdff16bab9128",
-  "ts": "2026-08-05T16:09:00Z"
+  "commit": "",
+  "ts": "2026-08-05T16:34:00Z"
 }

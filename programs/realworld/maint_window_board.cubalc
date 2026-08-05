@@ -1,0 +1,773 @@
+# maint_window_board.cubalc — durable maintenance/freeze windows under STATE
+#
+# Real use: agents keep name:LO-HI hour freezes (UTC 0-23) without shell date.
+# Overnight windows (LO>HI, e.g. 22-06) need OR of two ranges — SYS IN alone
+# auto-swaps bounds and would wrongly treat 22-06 as 06-22 continuous.
+#
+# Actions (CUBALC_ARG0 / CUBALC_MW_ACTION):
+#   list     — depth + current UTC hour + plate AGE (default)
+#   seed     — PUSH name:LO-HI tokens (ARG1 space list); skip existing names
+#   set      — ensure name:LO-HI (ARG1=name ARG2=LO-HI or LO ARG3=HI)
+#   check    — hit=1 if name frozen at now (or ARG2 override hour)
+#   checkall — count frozen names at now → hit=n_frozen
+#   get      — show window token for name
+#   drop     — REMOVELINE first name:*
+#   pin      — MOVELINE name row to front
+#   hour     — compute UTC hour only (DIV/MOD TIME)
+#   has      — identity present
+#   count    — COUNTLINE exact token
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="db:22-06 api:9-17 mesh:0-0" \
+#     ./out/cubalc run -q -s programs/realworld/maint_window_board.cubalc
+#   CUBALC_ARG0=check CUBALC_ARG1=db ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_MW_FILE=WINDOWS.txt
+#   CUBALC_MW_REQUIRE=1   # EXIT 2 on check/get/drop miss
+#   CUBALC_MW_HOUR=N     # override hour for tests (0-23)
+#
+# Edges deliberately stressed:
+#   SYS IN auto-swaps inverted bounds — overnight LO>HI wrong if used raw
+#   must peel LO/HI with AFTER+BEFORE; NUM shuttle for each
+#   hour from TIME: DIV 3600 then MOD 24 (no local TZ form)
+#   token rebuild REPLACEALL NAME:LO-HI needs STR of nums
+#   GREP "api" matches api_v2; identity BEFORE+EQS
+#   COUNTLINE exact — cannot COUNTLINE by hour class
+#   SETMATCH first-only; PRINT_JSON bag collapse; WRITE NL missing
+#   soft READ empty; REQUIRE miss EXIT path
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "maint_window_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT SPAN = ""
+DEFAULT RFILE = "WINDOWS.txt"
+DEFAULT REPORT = "WINDOWS_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT HOUR_OVR = -1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_MW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_MW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET SPAN = LAST
+ELSE
+  SYS ENV "CUBALC_MW_SPAN" OR ""
+  LET SPAN = LAST
+END
+SYS ENV "CUBALC_MW_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_MW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_MW_HOUR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HOUR_OVR = LAST_N
+  END
+END
+
+# UTC hour from epoch (or override)
+SYS TIME
+LET epoch = LAST_N
+SYS DIV epoch 3600
+LET hours_total = LAST_N
+SYS MOD hours_total 24
+LET utc_hour = LAST_N
+IF HOUR_OVR >= 0 THEN
+  SYS CLAMP HOUR_OVR 0 23
+  LET utc_hour = LAST_N
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft windows load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET n_frozen = 0
+LET n_open = 0
+LET lo = 0
+LET hi = 0
+LET idx = -1
+LET old_entry = ""
+LET entry = ""
+LET note_msg = "ok"
+LET name_hit = 0
+LET frozen = 0
+LET plate_age = -1
+LET cmp_v = 0
+
+SYS EXIST bag_path
+IF LAST_N == 1 THEN
+  SYS AGE bag_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# --- hour only ---
+SYS EQS ACTION "hour"
+IF LAST_N == 1 THEN
+  NOTE "action hour"
+  LET hit = utc_hour
+  LET note_msg = "hour"
+  STATUS
+  PRINT "maint" utc_hour epoch ACTION
+  PRINT_JSON utc_hour epoch ACTION STATUS_OK
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET n_frozen = 0
+  LET n_open = 0
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      # peel LO-HI after colon
+      SYS AFTER row ":"
+      LET span = LAST
+      SYS BEFORE span "-"
+      SYS NUM
+      LET lo = 0
+      IF OK == 1 THEN
+        LET lo = LAST_N
+      END
+      SYS AFTER span "-"
+      SYS NUM
+      LET hi = 0
+      IF OK == 1 THEN
+        LET hi = LAST_N
+      END
+      LET frozen = 0
+      SYS CMP lo hi
+      LET cmp_v = LAST_N
+      IF cmp_v > 0 THEN
+        # overnight: hour>=lo OR hour<=hi
+        SYS IN utc_hour lo 23
+        IF LAST_N == 1 THEN
+          LET frozen = 1
+        END
+        SYS IN utc_hour 0 hi
+        IF LAST_N == 1 THEN
+          LET frozen = 1
+        END
+      ELSE
+        # same-day inclusive (IN swaps if inverted but lo<=hi here)
+        SYS IN utc_hour lo hi
+        LET frozen = LAST_N
+      END
+      IF frozen == 1 THEN
+        LET n_frozen = n_frozen + 1
+      ELSE
+        LET n_open = n_open + 1
+      END
+    END
+  END
+  STATUS
+  PRINT "maint" depth0 utc_hour n_frozen n_open plate_age ACTION
+  PRINT_JSON depth0 utc_hour n_frozen n_open plate_age ACTION STATUS_OK
+  PRINT_JSON bag
+  LET note_msg = "list ok"
+END
+
+# --- seed name:LO-HI ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs name:LO-HI tokens"
+  END
+  SYS WORDS NAME
+  LET tokens = LAST
+  EACH LINE AS tok IN tokens
+    SYS BLANK tok
+    IF LAST_N == 0 THEN
+      SYS HASI tok ":"
+      IF LAST_N == 1 THEN
+        SYS BEFORE tok ":"
+        LET n = LAST
+        LET name_hit = 0
+        EACH LINE AS row IN bag
+          SYS BEFORE row ":"
+          SYS EQS LAST n
+          IF LAST_N == 1 THEN
+            LET name_hit = 1
+          END
+        END
+        IF name_hit == 0 THEN
+          SYS PUSH bag tok
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- set name window ---
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs name"
+  END
+  SYS BLANK SPAN
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs LO-HI span (ARG2)"
+  END
+  # SPAN may be "9-17" or full already handled
+  SYS HASI SPAN "-"
+  IF LAST_N == 0 THEN
+    EXIT 2 "span needs LO-HI with dash"
+  END
+  SYS BEFORE SPAN "-"
+  SYS NUM
+  LET lo = 0
+  IF OK == 1 THEN
+    LET lo = LAST_N
+  END
+  SYS AFTER SPAN "-"
+  SYS NUM
+  LET hi = 0
+  IF OK == 1 THEN
+    LET hi = LAST_N
+  END
+  SYS CLAMP lo 0 23
+  LET lo = LAST_N
+  SYS CLAMP hi 0 23
+  LET hi = LAST_N
+  SYS STR lo
+  LET los = LAST
+  SYS STR hi
+  LET his = LAST
+  LET entry = "NAME:LO-HI"
+  SYS REPLACEALL entry "NAME" NAME
+  LET entry = LAST
+  SYS REPLACEALL entry "LO" los
+  LET entry = LAST
+  SYS REPLACEALL entry "HI" his
+  LET entry = LAST
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    SYS PUSH bag entry
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "set inserted"
+  ELSE
+    SYS SETMATCH bag old_entry entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "set setmatch miss"
+      FAIL "setmatch"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "set miss"
+      END
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "set matched"
+    END
+  END
+END
+
+# --- check one name ---
+SYS EQS ACTION "check"
+IF LAST_N == 1 THEN
+  NOTE "action check"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "check needs name"
+  END
+  # optional ARG2/SPAN as hour override for this check
+  SYS BLANK SPAN
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" SPAN
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      SYS CLAMP LAST_N 0 23
+      LET utc_hour = LAST_N
+    END
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "check miss"
+    FAIL "check name not found"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "check miss"
+    END
+  ELSE
+    SYS AFTER old_entry ":"
+    LET span = LAST
+    SYS BEFORE span "-"
+    SYS NUM
+    LET lo = 0
+    IF OK == 1 THEN
+      LET lo = LAST_N
+    END
+    SYS AFTER span "-"
+    SYS NUM
+    LET hi = 0
+    IF OK == 1 THEN
+      LET hi = LAST_N
+    END
+    LET frozen = 0
+    SYS CMP lo hi
+    LET cmp_v = LAST_N
+    IF cmp_v > 0 THEN
+      SYS IN utc_hour lo 23
+      IF LAST_N == 1 THEN
+        LET frozen = 1
+      END
+      SYS IN utc_hour 0 hi
+      IF LAST_N == 1 THEN
+        LET frozen = 1
+      END
+      # document wrong path: raw IN lo hi would swap → continuous day
+      SYS IN utc_hour lo hi
+      LET n_open = LAST_N
+    ELSE
+      SYS IN utc_hour lo hi
+      LET frozen = LAST_N
+      LET n_open = frozen
+    END
+    LET hit = frozen
+    LET note_msg = "checked"
+  END
+END
+
+# --- checkall ---
+SYS EQS ACTION "checkall"
+IF LAST_N == 1 THEN
+  NOTE "action checkall"
+  LET n_frozen = 0
+  LET n_open = 0
+  EACH LINE AS row IN bag
+    SYS BLANK row
+    IF LAST_N == 0 THEN
+      SYS AFTER row ":"
+      LET span = LAST
+      SYS BEFORE span "-"
+      SYS NUM
+      LET lo = 0
+      IF OK == 1 THEN
+        LET lo = LAST_N
+      END
+      SYS AFTER span "-"
+      SYS NUM
+      LET hi = 0
+      IF OK == 1 THEN
+        LET hi = LAST_N
+      END
+      LET frozen = 0
+      SYS CMP lo hi
+      IF LAST_N > 0 THEN
+        SYS IN utc_hour lo 23
+        IF LAST_N == 1 THEN
+          LET frozen = 1
+        END
+        SYS IN utc_hour 0 hi
+        IF LAST_N == 1 THEN
+          LET frozen = 1
+        END
+      ELSE
+        SYS IN utc_hour lo hi
+        LET frozen = LAST_N
+      END
+      IF frozen == 1 THEN
+        LET n_frozen = n_frozen + 1
+      ELSE
+        LET n_open = n_open + 1
+      END
+    END
+  END
+  LET hit = n_frozen
+  LET note_msg = "checkall"
+END
+
+# --- get ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs name"
+  END
+  LET name_hit = 0
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET entry = row
+        LET name_hit = 1
+        LET hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "get miss"
+    FAIL "get miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get miss"
+    END
+  ELSE
+    LET note_msg = "got"
+  END
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS FINDLINE bag old_entry
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "moveline miss"
+      FAIL "moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET idx = 0
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- drop ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs name"
+  END
+  LET name_hit = 0
+  LET old_entry = ""
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag old_entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "dropped"
+    END
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs name"
+  END
+  LET name_hit = 0
+  EACH LINE AS row IN bag
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      LET name_hit = 1
+    END
+  END
+  LET hit = name_hit
+  LET note_msg = "has"
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs token or name"
+  END
+  SYS HASI NAME ":"
+  IF LAST_N == 1 THEN
+    SYS COUNTLINE bag NAME
+    LET hit = LAST_N
+  ELSE
+    LET hit = 0
+    EACH LINE AS row IN bag
+      SYS BEFORE row ":"
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET hit = hit + 1
+      END
+    END
+  END
+  LET note_msg = "counted"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "check"
+LET k = k + LAST_N
+SYS EQS ACTION "checkall"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "hour"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "windows write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.maint.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "utc_hour"
+LET report = LAST
+SYS STR utc_hour
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n_frozen"
+LET report = LAST
+SYS STR n_frozen
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n_open"
+LET report = LAST
+SYS STR n_open
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lo"
+LET report = LAST
+SYS STR lo
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hi"
+LET report = LAST
+SYS STR hi
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "entry"
+LET report = LAST
+SYS PUSH report entry
+LET report = LAST
+SYS PUSH report "old_entry"
+LET report = LAST
+SYS PUSH report old_entry
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "maint" ACTION hit miss changed utc_hour n_frozen n_open depth0 depth1
+PRINT_JSON ACTION hit miss changed utc_hour n_frozen n_open lo hi depth0 depth1 idx elapsed STATUS_OK
+PASS "maint tick"
+NOTE "maint_window_board: done"
+CLEAR_ERR
+EXIT 0 "maint ok"
