@@ -118,6 +118,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 88. ~~**`SYS EQSI` / `HASI`**~~ **done** (case-insensitive equality/contains · IF after GREPI).
 89. ~~**`SYS LINES` / `WC`**~~ **done** (count newline fields · bag size after LAST_N clobber).
 90. ~~**`SYS CUT` / `COLUMN`**~~ **done** (Nth field by sep · CSV/path without SPLIT+NTH).
+91. ~~**`SYS EMPTY` / `BLANK`**~~ **done** (zero-length / whitespace probes · soft plate IF).
 
 ## Tick protocol
 

@@ -1058,6 +1058,43 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
+     * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
+     * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
+     * Usability: soft plate / optional config IF without LEN + compare glue. */
+    if (kw(&L->cur,"EMPTY") || kw(&L->cur,"ISEMPTY") || kw(&L->cur,"ISEMPTYSTR") ||
+        kw(&L->cur,"BLANK") || kw(&L->cur,"ISBLANK") || kw(&L->cur,"WS") ||
+        kw(&L->cur,"ISWS") || kw(&L->cur,"WHITESPACE") ||
+        kw(&L->cur,"NONEMPTY") || kw(&L->cur,"NOTEMPTY") || kw(&L->cur,"HASCHARS")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int want_blank = (strcmp(op, "BLANK") == 0 || strcmp(op, "ISBLANK") == 0 ||
+                        strcmp(op, "WS") == 0 || strcmp(op, "ISWS") == 0 ||
+                        strcmp(op, "WHITESPACE") == 0);
+      int want_non = (strcmp(op, "NONEMPTY") == 0 || strcmp(op, "NOTEMPTY") == 0 ||
+                      strcmp(op, "HASCHARS") == 0);
+      char s[CUBALC_HOST_STR_MAX];
+      long hit = 0;
+      lex_next(L);
+      s[0] = 0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      if (want_blank) {
+        const char *p = s;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+        hit = (*p == 0) ? 1 : 0;
+      } else if (want_non) {
+        hit = (s[0] != 0) ? 1 : 0;
+      } else {
+        hit = (s[0] == 0) ? 1 : 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "EMPTY_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"TIME") || kw(&L->cur,"NOW") || kw(&L->cur,"EPOCH")){
       lex_next(L);
       long n = (long)time(NULL);
@@ -2500,7 +2537,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2753,6 +2790,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
       {"SYS CUT", "SYS CUT|FIELDN hay sep n — 0-based field by sep · LAST_N=found"},
       {"SYS COLUMN", "SYS COLUMN|COL hay sep n — 1-based field by sep (CSV/path)"},
+      {"SYS EMPTY", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length · soft plate IF"},
+      {"SYS BLANK", "SYS BLANK|ISBLANK [str] — LAST_N 1 if empty or whitespace only"},
+      {"SYS NONEMPTY", "SYS NONEMPTY|NOTEMPTY [str] — LAST_N 1 if any character"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

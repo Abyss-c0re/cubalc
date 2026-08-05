@@ -1,0 +1,81 @@
+# SYS EMPTY / BLANK / NONEMPTY — soft plate and config probes
+# Usability: IF without LEN + compare glue after READ OR / ENV OR
+
+HOLD_FLASH 1
+
+# EMPTY: zero-length only
+SYS EMPTY ""
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EMPTY_N == 1
+
+SYS EMPTY "x"
+ASSERT LAST_N == 0
+
+SYS EMPTY " "
+ASSERT LAST_N == 0
+
+# ISEMPTY alias
+SYS ISEMPTY ""
+ASSERT LAST_N == 1
+
+# BLANK: empty or whitespace
+SYS BLANK ""
+ASSERT LAST_N == 1
+SYS BLANK "   "
+ASSERT LAST_N == 1
+SYS BLANK " \t\n"
+ASSERT LAST_N == 1
+SYS BLANK " a "
+ASSERT LAST_N == 0
+SYS ISBLANK "\t"
+ASSERT LAST_N == 1
+
+# NONEMPTY invert of EMPTY
+SYS NONEMPTY ""
+ASSERT LAST_N == 0
+SYS NONEMPTY "ok"
+ASSERT LAST_N == 1
+SYS NOTEMPTY " "
+ASSERT LAST_N == 1
+SYS HASCHARS "z"
+ASSERT LAST_N == 1
+
+# default source LAST
+LET s = ""
+SYS EMPTY s
+ASSERT LAST_N == 1
+LET s = "cfg"
+SYS EMPTY s
+ASSERT LAST_N == 0
+
+# agent pattern: soft read miss → empty probe
+SYS STATE
+SYS JOIN LAST "_no_such_plate_mi_empty.txt"
+LET miss = LAST
+SYS READ OR miss OR ""
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# non-empty after write
+SYS TMP
+SYS JOIN LAST "mi_empty_probe.txt"
+LET p = LAST
+SYS WRITE p "hello"
+SYS READ p
+SYS NONEMPTY LAST
+ASSERT LAST_N == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 0
+SYS RM p
+
+# ENV-style blank default
+LET val = "   "
+SYS BLANK val
+IF LAST_N == 1 THEN
+  LET val = "default"
+END
+SYS EQS val "default"
+ASSERT LAST_N == 1
+
+PRINT "sys_empty ok"

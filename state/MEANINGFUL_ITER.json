@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 57,
-  "version": "1.15.82-usability",
-  "item": "SYS CUT / COLUMN field by separator",
-  "item_id": 90,
-  "title": "SYS CUT|COLUMN peels Nth field by separator",
-  "commit": "55f4c252ab9c81bee5b07455f0b103eccae59110",
-  "summary": "SYS CUT|FIELDN hay sep n (0-based) and COLUMN|COL (1-based); LAST_N=found; CSV/path without SPLIT+NTH.",
+  "iter": 58,
+  "version": "1.15.83-usability",
+  "item": "SYS EMPTY / BLANK soft plate probes",
+  "item_id": 91,
+  "title": "SYS EMPTY|BLANK|NONEMPTY string emptiness probes",
+  "commit": "pending",
+  "summary": "SYS EMPTY|ISEMPTY zero-length; BLANK|ISBLANK whitespace-only; NONEMPTY invert \u2014 soft plate/config IF without LEN compare glue.",
   "proofs": [
-    "631_sys_cut",
-    "selftest n_pass=57"
+    "632_sys_empty",
+    "selftest n_pass=58"
   ],
-  "when": "2026-08-05T11:13:42Z",
+  "when": "2026-08-05T11:23:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "55f4c252ab9c81bee5b07455f0b103eccae59110"
+  "sha": "pending"
 }
