@@ -1334,6 +1334,72 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS RAND|RANDOM [n] | [lo hi] — uniform integer for agent jitter/sampling.
+     * No args → 0..999999; one arg n>0 → 0..n-1; two args → inclusive [lo,hi].
+     * Seed: once per process via time^pid (CUBALC_SEED override if set numeric).
+     * Distinct from cube-plane RAND (stack/cell). Usability: backoff jitter without shell. */
+    if (kw(&L->cur,"RAND") || kw(&L->cur,"RANDOM") || kw(&L->cur,"RND") ||
+        kw(&L->cur,"IRAND") || kw(&L->cur,"RANDINT") || kw(&L->cur,"URAND")){
+      static int seeded = 0;
+      long a = -1, b = -1, out = 0, span;
+      int has_a = 0, has_b = 0;
+      char buf[40];
+      const char *se;
+      lex_next(L);
+      /* Track presence separately: single negative arg must not look like "no args"
+       * (old a<0&&b<0 sentinel treated SYS RAND -3 as default 0..999999). */
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS) {
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS) {
+        b = parse_expr(vm, L);
+        has_b = 1;
+      }
+      if (!seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        seeded = 1;
+      }
+      if (!has_a) {
+        /* default wide range */
+        out = (long)(rand() % 1000000);
+      } else if (!has_b) {
+        /* single arg: 0..a-1; non-positive → 0 */
+        if (a <= 0) out = 0;
+        else out = (long)(rand() % (int)(a > 0x7fffffffL ? 0x7fffffffL : a));
+      } else {
+        long lo = a, hi = b;
+        if (lo > hi) { long t = lo; lo = hi; hi = t; }
+        span = hi - lo + 1;
+        if (span <= 0) out = lo;
+        else if (span > 0x7fffffffL) {
+          out = lo + (long)(rand() % 0x7fffffff);
+        } else {
+          out = lo + (long)(rand() % (int)span);
+        }
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "RAND", out);
+      var_set_num(vm, "RANDOM", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -3806,7 +3872,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4112,6 +4178,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
+      {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
+      {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},

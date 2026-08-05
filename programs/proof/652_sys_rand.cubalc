@@ -1,0 +1,55 @@
+# SYS RAND / RANDOM — uniform integers for agent jitter/sampling
+# Usability: backoff jitter without shell $RANDOM; host plane (no cube stack)
+
+HOLD_FLASH 1
+
+# default range 0..999999
+SYS RAND
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+ASSERT LAST_N < 1000000
+
+# 0..n-1
+SYS RAND 10
+ASSERT LAST_N >= 0
+ASSERT LAST_N < 10
+SYS RANDOM 1
+ASSERT LAST_N == 0
+
+# inclusive range
+SYS RAND 5 5
+ASSERT LAST_N == 5
+SYS RAND 3 7
+ASSERT LAST_N >= 3
+ASSERT LAST_N <= 7
+# swapped args ok
+SYS RAND 7 3
+ASSERT LAST_N >= 3
+ASSERT LAST_N <= 7
+
+# non-positive single → 0
+SYS RAND 0
+ASSERT LAST_N == 0
+SYS RAND -3
+ASSERT LAST_N == 0
+
+# aliases leave RAND/RANDOM vars
+SYS RND 100
+ASSERT LAST_N >= 0
+ASSERT LAST_N < 100
+ASSERT RAND >= 0
+ASSERT RAND < 100
+
+# agent pattern: jittered backoff budget
+SYS RAND 50 150
+LET jitter = LAST_N
+ASSERT jitter >= 50
+ASSERT jitter <= 150
+# do not actually sleep long in proof — just model
+SYS MS
+LET t0 = LAST_N
+SYS SLEEP 1
+SYS MS
+ASSERT LAST_N >= t0
+
+PRINT "sys_rand ok"

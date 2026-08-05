@@ -1793,6 +1793,7 @@ int main(int argc, char **argv) {
       {"sys_setmatch", "programs/proof/650_sys_setmatch.cubalc", "SYS SETMATCH replace first exact bag field"},
       {"run_expr", "cli:run -e", "cubalc run -e inline one-liner (no temp file)"},
       {"sys_chdir", "programs/proof/651_sys_chdir.cubalc", "SYS CHDIR/CD change process cwd"},
+      {"sys_rand", "programs/proof/652_sys_rand.cubalc", "SYS RAND/RANDOM uniform int jitter"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2002,6 +2003,8 @@ int main(int argc, char **argv) {
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
+      {"SYS RAND", "host", "SYS RAND|RANDOM [n]|[lo hi] — uniform int for jitter"},
+      {"SYS RANDOM", "host", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS LIST", "host", "SYS LIST|LS path — dir basenames → LAST · count"},
       {"SYS NTH", "host", "SYS NTH n [str] — 0-based newline field (LIST walk)"},
       {"SYS LINE", "host", "SYS LINE n [str] — 1-based newline field"},
@@ -3030,6 +3033,8 @@ int main(int argc, char **argv) {
       {"SYS REALPATH", "host", "SYS REALPATH absolute path"},
       {"SYS TOUCH", "host", "SYS TOUCH plate marker"},
       {"SYS SLEEP", "host", "SYS SLEEP pause milliseconds"},
+      {"SYS RAND", "host", "SYS RAND uniform int jitter"},
+      {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
       {"SYS LIST", "host", "SYS LIST directory basenames"},
       {"SYS NTH", "host", "SYS NTH newline field peel"},
       {"SYS GREP", "host", "SYS GREP filter newline fields"},
@@ -3305,6 +3310,8 @@ int main(int argc, char **argv) {
       {"SYS REALPATH", "host", "SYS REALPATH|ABSPATH absolute path"},
       {"SYS TOUCH", "host", "SYS TOUCH create empty / refresh mtime"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP n pause ms cap 60s"},
+      {"SYS RAND", "host", "SYS RAND|RANDOM [n]|[lo hi] uniform int"},
+      {"SYS RANDOM", "host", "SYS RANDOM alias of SYS RAND"},
       {"SYS LIST", "host", "SYS LIST|LS path dir basenames count"},
       {"SYS NTH", "host", "SYS NTH/LINE/HEAD/TAIL newline fields"},
       {"SYS GREP", "host", "SYS GREP|FILTER keep matching lines"},
@@ -3451,6 +3458,7 @@ int main(int argc, char **argv) {
       {"programs/proof/649_sys_countline.cubalc", "sys_countline", "SYS COUNTLINE count bag field matches"},
       {"programs/proof/650_sys_setmatch.cubalc", "sys_setmatch", "SYS SETMATCH replace bag field by value"},
       {"programs/proof/651_sys_chdir.cubalc", "sys_chdir", "SYS CHDIR/CD change process cwd"},
+      {"programs/proof/652_sys_rand.cubalc", "sys_rand", "SYS RAND/RANDOM uniform int jitter"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
