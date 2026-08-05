@@ -5,7 +5,7 @@
   "item": "SYS STARTSI / ENDSI case-insensitive affix",
   "item_id": 94,
   "title": "SYS STARTSI|ENDSI case-insensitive prefix/suffix probes",
-  "commit": "pending",
+  "commit": "60fbfd90e087d1500156ab34aded3c209175f010",
   "summary": "SYS STARTSI|ISTARTS|STARTS I and ENDSI|IENDS|ENDS I for case-insensitive prefix/suffix; path/ext/severity without UPPER glue. selftest rows[] 64\u219296.",
   "proofs": [
     "635_sys_startsi",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T11:53:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "60fbfd90e087d1500156ab34aded3c209175f010"
 }
