@@ -1419,6 +1419,68 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS NTH n [str|LAST] — 0-based newline field → LAST (pairs with SYS LIST).
+     * SYS LINE n [str] — 1-based alias.
+     * SYS HEAD [str] — first field; SYS TAIL [str] — last field.
+     * Soft out-of-range: OK=0 LAST="" LAST_N=0. */
+    if (kw(&L->cur,"NTH") || kw(&L->cur,"LINE") || kw(&L->cur,"FIELD") ||
+        kw(&L->cur,"GETLINE") || kw(&L->cur,"HEAD") || kw(&L->cur,"FIRST") ||
+        kw(&L->cur,"TAIL") || kw(&L->cur,"LASTLINE")){
+      int is_head = (kw(&L->cur,"HEAD") || kw(&L->cur,"FIRST"));
+      int is_tail = (kw(&L->cur,"TAIL") || kw(&L->cur,"LASTLINE"));
+      int one_based = (kw(&L->cur,"LINE") || kw(&L->cur,"GETLINE"));
+      long want = 0, nlines = 0, i;
+      char src[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      char out[512];
+      size_t len;
+      lex_next(L);
+      if (!is_head && !is_tail) {
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          want = parse_expr(vm, L);
+        else
+          want = 0;
+        if (one_based) want -= 1;
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      /* count fields; trailing newline does not create an empty last field */
+      if (src[0]) {
+        nlines = 1;
+        for (p = src; *p; p++) {
+          if (*p == '\n' && p[1]) nlines++;
+        }
+      }
+      if (is_head) want = 0;
+      if (is_tail) want = nlines > 0 ? nlines - 1 : -1;
+      if (want < 0 || want >= nlines || !src[0]) {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      p = src;
+      for (i = 0; i < want; i++) {
+        while (*p && *p != '\n') p++;
+        if (*p == '\n') p++;
+      }
+      start = p;
+      while (*p && *p != '\n') p++;
+      len = (size_t)(p - start);
+      if (len >= sizeof out) len = sizeof out - 1;
+      memcpy(out, start, len);
+      out[len] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)len;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -1736,7 +1798,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1957,6 +2019,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS REALPATH", "SYS REALPATH|ABSPATH path — absolute path → LAST"},
       {"SYS TOUCH", "SYS TOUCH path — create empty / refresh mtime · LAST_N 0|1"},
       {"SYS LIST", "SYS LIST|LS path — dir basenames → LAST · LAST_N=count"},
+      {"SYS NTH", "SYS NTH n [str] — 0-based newline field · pairs with LIST"},
+      {"SYS LINE", "SYS LINE n [str] — 1-based newline field"},
+      {"SYS HEAD", "SYS HEAD [str] — first newline field"},
+      {"SYS TAIL", "SYS TAIL [str] — last newline field"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},

@@ -1,0 +1,70 @@
+# SYS NTH / LINE / HEAD / TAIL — pick newline fields (pairs with SYS LIST)
+# Usability: agents walk LIST plate dirs without shell awk/sed
+
+HOLD_FLASH 1
+
+# pure string fields
+LET S = "alpha\nbeta\ngamma"
+SYS NTH 0 S
+ASSERT OK == 1
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS NTH 1 S
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+SYS NTH 2 S
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+
+# out of range soft
+SYS NTH 9 S
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# 1-based LINE
+SYS LINE 1 S
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS LINE 3 S
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+SYS LINE 0 S
+ASSERT OK == 0
+
+# HEAD / TAIL
+SYS HEAD S
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS TAIL S
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+
+# default source is LAST
+SYS LIST "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS HEAD
+ASSERT OK == 1
+ASSERT LAST_N > 0
+LET H = LAST
+SYS JOIN "programs/lib" H
+SYS ISFILE LAST
+ASSERT LAST_N == 1 "head names a file under programs/lib"
+
+# LIST + NTH walk first two (stable enough: both non-empty)
+SYS LIST "programs/lib"
+LET LST = LAST
+SYS NTH 0 LST
+ASSERT OK == 1
+LET A0 = LAST
+SYS NTH 1 LST
+ASSERT OK == 1
+LET A1 = LAST
+SYS EQS A0 A1
+ASSERT LAST_N == 0 "two distinct names"
+
+# empty source
+SYS NTH 0 ""
+ASSERT OK == 0
+
+PRINT "sys_nth ok"

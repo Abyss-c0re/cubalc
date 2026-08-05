@@ -1674,6 +1674,7 @@ int main(int argc, char **argv) {
       {"sys_touch", "programs/proof/612_sys_touch.cubalc", "SYS TOUCH plate markers"},
       {"sys_sleep", "programs/proof/613_sys_sleep.cubalc", "SYS SLEEP agent backoff ms"},
       {"sys_list", "programs/proof/614_sys_list.cubalc", "SYS LIST/LS directory basenames"},
+      {"sys_nth", "programs/proof/615_sys_nth.cubalc", "SYS NTH/LINE/HEAD/TAIL field peel"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1835,6 +1836,10 @@ int main(int argc, char **argv) {
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS LIST", "host", "SYS LIST|LS path — dir basenames → LAST · count"},
+      {"SYS NTH", "host", "SYS NTH n [str] — 0-based newline field (LIST walk)"},
+      {"SYS LINE", "host", "SYS LINE n [str] — 1-based newline field"},
+      {"SYS HEAD", "host", "SYS HEAD [str] — first newline field"},
+      {"SYS TAIL", "host", "SYS TAIL [str] — last newline field"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
@@ -2348,6 +2353,8 @@ int main(int argc, char **argv) {
        "SYS SLEEP agent backoff milliseconds"},
       {"programs/proof/614_sys_list.cubalc", "sys_list",
        "SYS LIST/LS directory basenames"},
+      {"programs/proof/615_sys_nth.cubalc", "sys_nth",
+       "SYS NTH/LINE/HEAD/TAIL newline field peel"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2715,6 +2722,7 @@ int main(int argc, char **argv) {
       {"SYS TOUCH", "host", "SYS TOUCH plate marker"},
       {"SYS SLEEP", "host", "SYS SLEEP pause milliseconds"},
       {"SYS LIST", "host", "SYS LIST directory basenames"},
+      {"SYS NTH", "host", "SYS NTH newline field peel"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2918,6 +2926,7 @@ int main(int argc, char **argv) {
       {"SYS TOUCH", "host", "SYS TOUCH create empty / refresh mtime"},
       {"SYS SLEEP", "host", "SYS SLEEP|MSLEEP n pause ms cap 60s"},
       {"SYS LIST", "host", "SYS LIST|LS path dir basenames count"},
+      {"SYS NTH", "host", "SYS NTH/LINE/HEAD/TAIL newline fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2965,6 +2974,7 @@ int main(int argc, char **argv) {
       {"programs/proof/612_sys_touch.cubalc", "sys_touch", "SYS TOUCH plate markers"},
       {"programs/proof/613_sys_sleep.cubalc", "sys_sleep", "SYS SLEEP agent backoff"},
       {"programs/proof/614_sys_list.cubalc", "sys_list", "SYS LIST dir basenames"},
+      {"programs/proof/615_sys_nth.cubalc", "sys_nth", "SYS NTH field peel"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
