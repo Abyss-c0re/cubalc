@@ -1,0 +1,75 @@
+# SYS KVSET / SETKV — set or update key:value in a bag
+# Usability: plate kv write without FINDLINE+SETLINE; dual of LOOKUP
+
+HOLD_FLASH 1
+
+LET bag = "error:3\nwarn:1\ninfo:10"
+
+# update existing key
+SYS KVSET bag "error" "5"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT KVSET_HIT == 1
+ASSERT KVSET_I == 0
+SYS EQS LAST "error:5\nwarn:1\ninfo:10"
+ASSERT LAST_N == 1
+
+# insert new key
+SYS KVSET bag "crit" "2"
+ASSERT LAST_N == 4
+ASSERT KVSET_HIT == 0
+ASSERT KVSET_I == 3
+SYS EQS LAST "error:3\nwarn:1\ninfo:10\ncrit:2"
+ASSERT LAST_N == 1
+
+# chain: update after insert
+LET bag2 = LAST
+SYS KVSET bag2 "warn" "9"
+ASSERT KVSET_HIT == 1
+SYS LOOKUP LAST "warn"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "host=peer1\nport=7700"
+SYS KVSET cfg "port" "8800" "="
+ASSERT KVSET_HIT == 1
+SYS EQS LAST "host=peer1\nport=8800"
+ASSERT LAST_N == 1
+SYS KVSET cfg "mode" "soft" "="
+ASSERT KVSET_HIT == 0
+SYS EQS LAST "host=peer1\nport=7700\nmode=soft"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SETKV bag "info" "0"
+ASSERT KVSET_HIT == 1
+SYS EQS LAST "error:3\nwarn:1\ninfo:0"
+ASSERT LAST_N == 1
+SYS DICTSET bag "fatal" "1"
+ASSERT KVSET_HIT == 0
+SYS LINES LAST
+ASSERT LAST_N == 4
+
+# empty bag → single field
+SYS KVSET "" "a" "1"
+ASSERT LAST_N == 1
+ASSERT KVSET_HIT == 0
+SYS EQS LAST "a:1"
+ASSERT LAST_N == 1
+
+# agent: FREQ then bump a severity count
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR"
+SYS FREQ sev
+LET hist = LAST
+SYS LOOKUP hist "ERROR"
+LET n = LAST_N
+# LAST is "3" string — use NUM for arithmetic if available, else STR of known
+# re-set ERROR count to 4 (simulate +1 after new event)
+SYS KVSET hist "ERROR" "4"
+ASSERT KVSET_HIT == 1
+SYS LOOKUP LAST "ERROR"
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+PRINT "sys_kvset ok"
