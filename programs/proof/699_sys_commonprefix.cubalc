@@ -1,0 +1,72 @@
+# SYS COMMONPREFIX / LCP · COMMONSUFFIX / LCS
+# Usability: path/peer roots and shared ext without EACH+STARTS glue
+
+HOLD_FLASH 1
+
+LET paths = "/var/log/a.log\n/var/log/b.log\n/var/log/c.err"
+
+SYS COMMONPREFIX paths
+ASSERT OK == 1
+ASSERT LAST_N == 9
+ASSERT COMMONPREFIX_N == 3
+ASSERT COMMONPREFIX_LEN == 9
+SYS EQS LAST "/var/log/"
+ASSERT LAST_N == 1
+SYS EQS COMMONPREFIX "/var/log/"
+ASSERT LAST_N == 1
+
+# aliases
+SYS LCP paths
+SYS EQS LAST "/var/log/"
+ASSERT LAST_N == 1
+SYS SHAREDPREFIX paths
+SYS EQS LAST "/var/log/"
+ASSERT LAST_N == 1
+
+# common suffix (note: .log vs .err → empty for full set)
+SYS COMMONSUFFIX paths
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+LET logs = "a.log\nb.log\nc.log"
+SYS COMMONSUFFIX logs
+ASSERT LAST_N == 4
+ASSERT COMMONSUFFIX_N == 3
+ASSERT COMMONSUFFIX_LEN == 4
+SYS EQS LAST ".log"
+ASSERT LAST_N == 1
+SYS LCS logs
+SYS EQS LAST ".log"
+ASSERT LAST_N == 1
+
+# no common prefix
+SYS COMMONPREFIX "abc\nxyz"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single field → whole field
+SYS COMMONPREFIX "only/one"
+ASSERT LAST_N == 8
+SYS EQS LAST "only/one"
+ASSERT LAST_N == 1
+SYS COMMONSUFFIX "only/one"
+SYS EQS LAST "only/one"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS COMMONPREFIX ""
+ASSERT LAST_N == 0
+ASSERT COMMONPREFIX_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# agent: strip shared root from LIST paths
+LET peers = "state/peer_a/plate.json\nstate/peer_b/plate.json\nstate/peer_c/meta.json"
+SYS COMMONPREFIX peers
+ASSERT LAST_N == 11
+SYS EQS LAST "state/peer_"
+ASSERT LAST_N == 1
+
+PRINT "sys_commonprefix ok"

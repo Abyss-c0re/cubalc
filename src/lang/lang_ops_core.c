@@ -1420,6 +1420,102 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS COMMONPREFIX|LCP|SHAREDPREFIX [bag] — longest common prefix of all fields.
+     * SYS COMMONSUFFIX|LCS|SHAREDSUFFIX [bag] — longest common suffix.
+     * LAST = shared string; LAST_N = its length; COMMONPREFIX_N = field count.
+     * Empty bag / no share → LAST empty, LAST_N 0. Single field → whole field.
+     * Usability: path/peer dir roots or shared ext without EACH+STARTS glue. */
+    if (kw(&L->cur,"COMMONPREFIX") || kw(&L->cur,"LCP") || kw(&L->cur,"SHAREDPREFIX") ||
+        kw(&L->cur,"COMMONPRE") || kw(&L->cur,"BAGPREFIX") || kw(&L->cur,"SHAREPRE") ||
+        kw(&L->cur,"COMMONSUFFIX") || kw(&L->cur,"LCS") || kw(&L->cur,"SHAREDSUFFIX") ||
+        kw(&L->cur,"COMMONSUF") || kw(&L->cur,"BAGSUFFIX") || kw(&L->cur,"SHARESUF")){
+      char op[20];
+      int is_suf = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[512];
+      char fields[64][256];
+      size_t flens[64];
+      const char *p, *start;
+      size_t flen, i, j, n = 0, plen = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "COMMONSUFFIX") == 0 || strcmp(op, "LCS") == 0 ||
+          strcmp(op, "SHAREDSUFFIX") == 0 || strcmp(op, "COMMONSUF") == 0 ||
+          strcmp(op, "BAGSUFFIX") == 0 || strcmp(op, "SHARESUF") == 0)
+        is_suf = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof fields[0]) flen = sizeof fields[0] - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          flens[n] = flen;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (n == 0) {
+        plen = 0;
+      } else if (n == 1) {
+        plen = flens[0];
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        memcpy(out, fields[0], plen);
+        out[plen] = 0;
+      } else if (!is_suf) {
+        /* longest common prefix */
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m && fields[0][j] == fields[i][j]) j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        memcpy(out, fields[0], plen);
+        out[plen] = 0;
+      } else {
+        /* longest common suffix */
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m &&
+                 fields[0][flens[0] - 1 - j] == fields[i][flens[i] - 1 - j])
+            j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        if (plen > 0)
+          memcpy(out, fields[0] + (flens[0] - plen), plen);
+        out[plen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)plen;
+      var_set_num(vm, "LAST_N", (long)plen);
+      if (is_suf) {
+        var_set_num(vm, "COMMONSUFFIX_N", (long)n);
+        var_set_num(vm, "COMMONSUFFIX_LEN", (long)plen);
+        var_set_str(vm, "COMMONSUFFIX", out);
+        var_set_num(vm, "LCS_N", (long)n);
+      } else {
+        var_set_num(vm, "COMMONPREFIX_N", (long)n);
+        var_set_num(vm, "COMMONPREFIX_LEN", (long)plen);
+        var_set_str(vm, "COMMONPREFIX", out);
+        var_set_num(vm, "LCP_N", (long)n);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
      * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
      * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
@@ -7699,7 +7795,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -8031,6 +8127,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SHORTEST", "SYS SHORTEST|MINFIELD [bag] — first shortest bag field text → LAST"},
       {"SYS MAXFIELD", "SYS MAXFIELD [bag] — alias of SYS LONGEST"},
       {"SYS MINFIELD", "SYS MINFIELD [bag] — alias of SYS SHORTEST"},
+      {"SYS COMMONPREFIX", "SYS COMMONPREFIX|LCP [bag] — longest common prefix of fields → LAST"},
+      {"SYS LCP", "SYS LCP [bag] — alias of SYS COMMONPREFIX · path/peer roots"},
+      {"SYS COMMONSUFFIX", "SYS COMMONSUFFIX|LCS [bag] — longest common suffix of fields → LAST"},
+      {"SYS LCS", "SYS LCS [bag] — alias of SYS COMMONSUFFIX · shared ext peel"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},
