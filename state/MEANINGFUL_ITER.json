@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 122,
-  "version": "1.15.147-usability",
-  "item": "SYS LASTMATCH / GREP1L last bag field containing needle",
-  "item_id": 155,
-  "title": "SYS LASTMATCH|GREP1L [I] bag needle — last field hit",
-  "commit": "ee806c17c1f3a2f2d6d9f4160e9e75c86fb4e264",
-  "summary": "SYS LASTMATCH/GREP1L last bag field with needle (latest log hit without REVL). selftest 122.",
+  "iter": 123,
+  "version": "1.15.148-usability",
+  "item": "SYS MAXLEN / MINLEN max/min bag field string length",
+  "item_id": 156,
+  "title": "SYS MAXLEN|MINLEN [bag] — max/min field length → LAST_N",
+  "commit": "eb617ccb43f7d6bd955b34963871d62836963fd0",
+  "summary": "SYS MAXLEN/MINLEN max/min bag field length for PADALL width without LENALL+MAX. selftest 123.",
   "proofs": [
-    "695_sys_lastmatch",
-    "selftest n_pass=122"
+    "696_sys_maxlen",
+    "selftest n_pass=123"
   ],
-  "when": "2026-08-05T22:04:50Z",
+  "when": "2026-08-05T22:15:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ee806c17c1f3a2f2d6d9f4160e9e75c86fb4e264"
+  "sha": "eb617ccb43f7d6bd955b34963871d62836963fd0"
 }
