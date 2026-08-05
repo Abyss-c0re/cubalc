@@ -1,0 +1,617 @@
+# canary_cohort_board.cubalc — durable host cohort bag + canary TAKE under STATE
+#
+# Real use: agents shuffle a pure-name host roster and peel the first N as
+# canary set without shell shuf. Snapshot via COPY before reshuffle.
+#
+# Actions (CUBALC_ARG0 / CUBALC_CC_ACTION):
+#   list     — depth + canary_n + plate AGE (default)
+#   seed     — WORDS hosts into bag (HASLINE skip dups)
+#   add      — PUSH host if absent
+#   drop     — REMOVELINE host
+#   shuffle  — SYS SHUFFLE bag; persist order
+#   canary   — TAKE N (ARG1/COALESCE) as canary plate; rest optional control
+#   pick     — SYS PICK one host from bag
+#   snapshot — COPY hosts → snapshot plate
+#   restore  — READ snapshot → hosts (soft miss if no snap)
+#   pin      — MOVELINE host to front
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#   clear    — empty bag
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="h1 h2 h3 h4 h5" \
+#     ./out/cubalc run -q -s programs/realworld/canary_cohort_board.cubalc
+#   CUBALC_ARG0=shuffle ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=canary CUBALC_ARG1=2 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CC_FILE=HOSTS.txt
+#   CUBALC_CC_CANARY=CANARY.txt
+#   CUBALC_CC_SNAP=HOSTS.snap
+#   CUBALC_CC_N=2            # default canary count (COALESCE chain)
+#   CUBALC_CC_REQUIRE=1      # EXIT 2 on empty shuffle/canary/pick/drop miss
+#
+# Edges deliberately stressed:
+#   SHUFFLE non-deterministic without CUBALC_SEED early; empty OK
+#   TAKE N clamps? OOR N > depth returns all? probe
+#   COALESCE for N defaults: ARG / ENV / "2"
+#   COPY snapshot bytes; restore soft miss
+#   GREP substring false friends on pure names (h1 vs h10)
+#   COUNTLINE/HASLINE exact; PRINT_JSON bag collapse
+#   WRITE trailing NL; soft READ empty plates
+#   SHUFFLE does not mutate named var — need LET bag = LAST
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "canary_cohort_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT RFILE = "HOSTS.txt"
+DEFAULT CFILE = "CANARY.txt"
+DEFAULT SFILE = "HOSTS.snap"
+DEFAULT REPORT = "COHORT_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT N_DEF = "2"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ENV "CUBALC_CC_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_CC_CANARY" OR ""
+IF LAST_N > 0 THEN
+  LET CFILE = LAST
+END
+SYS ENV "CUBALC_CC_SNAP" OR ""
+IF LAST_N > 0 THEN
+  LET SFILE = LAST
+END
+SYS ENV "CUBALC_CC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+# COALESCE chain for default N: ENV CUBALC_CC_N then "2"
+SYS ENV "CUBALC_CC_N" OR ""
+LET env_n = LAST
+SYS COALESCE env_n N_DEF
+LET n_src = LAST
+# canary action: ARG1 may override N when numeric
+SYS PREPEND "" n_src
+SYS HEAD LAST
+SYS NUM
+LET canary_n = 2
+IF OK == 1 THEN
+  LET canary_n = LAST_N
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir CFILE
+LET canary_path = LAST
+SYS JOIN state_dir SFILE
+LET snap_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft hosts load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR canary_path OR ""
+LET cbag = LAST
+CLEAR_ERR "soft canary load"
+SYS LINES cbag
+LET c_depth = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET c_changed = 0
+LET pick = ""
+LET idx = -1
+LET plate_age = -1
+LET snap_bytes = -1
+LET note_msg = "ok"
+LET control = ""
+
+SYS EXIST bag_path
+IF LAST_N == 1 THEN
+  SYS AGE bag_path
+  IF OK == 1 THEN
+    LET plate_age = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "cohort" depth0 c_depth canary_n plate_age ACTION
+  PRINT_JSON depth0 c_depth canary_n plate_age ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON cbag
+  LET note_msg = "list ok"
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs host names"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE bag n
+      IF LAST_N == 0 THEN
+        SYS PUSH bag n
+        LET bag = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- add ---
+SYS EQS ACTION "add"
+IF LAST_N == 1 THEN
+  NOTE "action add"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "add needs host"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET hit = 1
+    LET note_msg = "add already"
+  ELSE
+    SYS PUSH bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "added"
+  END
+END
+
+# --- drop ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs host"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "dropped"
+    END
+  END
+END
+
+# --- shuffle ---
+SYS EQS ACTION "shuffle"
+IF LAST_N == 1 THEN
+  NOTE "action shuffle"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "shuffle empty"
+    FAIL "shuffle empty"
+    CLEAR_ERR
+    SYS SHUFFLE bag
+    LET bag = LAST
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shuffle empty"
+    END
+  ELSE
+    SYS SHUFFLE bag
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    SYS HEAD bag
+    LET pick = LAST
+    LET note_msg = "shuffled"
+  END
+END
+
+# --- canary: TAKE N, write CANARY plate; DROP N → control in-memory ---
+SYS EQS ACTION "canary"
+IF LAST_N == 1 THEN
+  NOTE "action canary"
+  # ARG1 may be N (override COALESCE)
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET canary_n = LAST_N
+    END
+  END
+  SYS MAX canary_n 0
+  LET canary_n = LAST_N
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "canary empty bag"
+    FAIL "canary empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "canary empty"
+    END
+  ELSE
+    SYS TAKE canary_n bag
+    LET cbag = LAST
+    SYS LINES cbag
+    LET c_depth = LAST_N
+    LET hit = c_depth
+    SYS DROP canary_n bag
+    LET control = LAST
+    SYS WRITE canary_path cbag
+    EXPECT OK == 1
+    CLEAR_ERR
+    LET c_changed = 1
+    LET note_msg = "canary split"
+    # do not reorder host bag unless env wants — only write canary plate
+    PRINT_JSON cbag
+    PRINT_JSON control
+  END
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "pick empty"
+    FAIL "pick empty"
+    CLEAR_ERR
+    SYS PICK bag
+    EXPECT OK == 0
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pick empty"
+    END
+  ELSE
+    SYS PICK bag
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pick soft fail"
+      FAIL "pick fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pick fail"
+      END
+    ELSE
+      LET pick = LAST
+      LET idx = LAST_N
+      LET hit = 1
+      LET note_msg = "picked"
+    END
+  END
+END
+
+# --- snapshot COPY ---
+SYS EQS ACTION "snapshot"
+IF LAST_N == 1 THEN
+  NOTE "action snapshot"
+  # ensure plate exists
+  IF changed > 0 THEN
+    SYS WRITE bag_path bag
+    CLEAR_ERR
+  ELSE
+    SYS EXIST bag_path
+    IF LAST_N == 0 THEN
+      SYS WRITE bag_path bag
+      CLEAR_ERR
+    END
+  END
+  SYS COPY bag_path snap_path
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "snapshot copy miss"
+    FAIL "copy miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "snapshot miss"
+    END
+  ELSE
+    LET snap_bytes = LAST_N
+    LET hit = 1
+    LET note_msg = "snapshotted"
+  END
+END
+
+# --- restore from snap ---
+SYS EQS ACTION "restore"
+IF LAST_N == 1 THEN
+  NOTE "action restore"
+  SYS READ OR snap_path OR ""
+  LET bag = LAST
+  CLEAR_ERR "soft snap load"
+  SYS LINES bag
+  IF LAST_N == 0 THEN
+    # empty snap or miss
+    SYS EXIST snap_path
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "restore miss no snap"
+      FAIL "restore miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "restore miss"
+      END
+    ELSE
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "restored empty"
+    END
+  ELSE
+    LET changed = 1
+    LET hit = LAST_N
+    LET note_msg = "restored"
+  END
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs host"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS FINDLINE bag NAME
+    LET idx = LAST_N
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "moveline miss"
+      FAIL "moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET idx = 0
+      LET pick = NAME
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs host"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs host"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "add"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "shuffle"
+LET k = k + LAST_N
+SYS EQS ACTION "canary"
+LET k = k + LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "snapshot"
+LET k = k + LAST_N
+SYS EQS ACTION "restore"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hosts write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS READ OR canary_path OR ""
+LET cbag = LAST
+CLEAR_ERR
+SYS LINES cbag
+LET c_depth = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.cohort.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "pick"
+LET report = LAST
+SYS PUSH report pick
+LET report = LAST
+SYS PUSH report "canary_n"
+LET report = LAST
+SYS STR canary_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "c_depth"
+LET report = LAST
+SYS STR c_depth
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "snap_bytes"
+LET report = LAST
+SYS STR snap_bytes
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "cohort" ACTION hit miss changed pick canary_n c_depth depth0 depth1
+PRINT_JSON ACTION hit miss changed pick canary_n c_depth snap_bytes depth0 depth1 idx elapsed STATUS_OK
+PASS "cohort tick"
+NOTE "canary_cohort_board: done"
+CLEAR_ERR
+EXIT 0 "cohort ok"
