@@ -1966,6 +1966,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
      * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
      * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
+     * SYS MEDIAN|P50 a b [c…]|bag — integer median (sort; even → lower mid).
      * Bag mode: one string (or bare LAST) with newline fields → aggregate numeric
      * lines; blank/non-numeric fields skipped. COUNT = n used.
      * Usability: score bags / LIST sizes without shell awk; pairs with MIN/MAX. */
@@ -1973,10 +1974,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"PROD") || kw(&L->cur,"PRODUCT") || kw(&L->cur,"MULALL") ||
         kw(&L->cur,"PRODUCTALL") ||
         kw(&L->cur,"AVG") || kw(&L->cur,"MEAN") || kw(&L->cur,"AVERAGE") ||
-        kw(&L->cur,"AVGALL")){
+        kw(&L->cur,"AVGALL") ||
+        kw(&L->cur,"MEDIAN") || kw(&L->cur,"P50") || kw(&L->cur,"MED") ||
+        kw(&L->cur,"MIDVAL") || kw(&L->cur,"MEDIANINT")){
       char op[16];
       long vals[64];
-      int n = 0, i, is_sum, is_prod, is_avg, bag = 0;
+      int n = 0, i, is_sum, is_prod, is_avg, is_med, bag = 0;
       long out = 0, count = 0;
       char buf[40];
       char src[CUBALC_HOST_STR_MAX];
@@ -1989,6 +1992,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                  strcmp(op, "MULALL") == 0 || strcmp(op, "PRODUCTALL") == 0);
       is_avg = (strcmp(op, "AVG") == 0 || strcmp(op, "MEAN") == 0 ||
                 strcmp(op, "AVERAGE") == 0 || strcmp(op, "AVGALL") == 0);
+      is_med = (strcmp(op, "MEDIAN") == 0 || strcmp(op, "P50") == 0 ||
+                strcmp(op, "MED") == 0 || strcmp(op, "MIDVAL") == 0 ||
+                strcmp(op, "MEDIANINT") == 0);
       lex_next(L);
       /* bag mode: string literal, string var, or no numeric-looking arg (→ LAST) */
       if (L->cur.kind == TK_STR) {
@@ -2046,7 +2052,22 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         }
       }
       count = n;
-      if (is_prod) {
+      if (is_med) {
+        /* insertion sort then middle (even n → lower mid, no float) */
+        out = 0;
+        if (n > 0) {
+          for (i = 1; i < n; i++) {
+            long key = vals[i];
+            int j = i - 1;
+            while (j >= 0 && vals[j] > key) {
+              vals[j + 1] = vals[j];
+              j--;
+            }
+            vals[j + 1] = key;
+          }
+          out = vals[(n - 1) / 2];
+        }
+      } else if (is_prod) {
         out = 1;
         for (i = 0; i < n; i++) out *= vals[i];
         if (n == 0) out = 1; /* empty product */
@@ -2077,6 +2098,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (is_avg) {
         var_set_num(vm, "AVG", out);
         var_set_num(vm, "AVG_N", out);
+      }
+      if (is_med) {
+        var_set_num(vm, "MEDIAN", out);
+        var_set_num(vm, "MEDIAN_N", out);
       }
       snprintf(buf, sizeof buf, "%ld", out);
       var_set_str(vm, "LAST", buf);
@@ -5458,7 +5483,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5807,6 +5832,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
       {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
       {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},
+      {"SYS MEDIAN", "SYS MEDIAN|P50 a b [c…]|bag — integer median (even → lower mid) → LAST_N"},
       {"SYS RANGE", "SYS RANGE lo hi [step] — inclusive int sequence → newline bag"},
       {"SYS SEQ", "SYS SEQ n | lo hi [step] — 1..n or inclusive range → bag"},
       {"SYS IOTA", "SYS IOTA n | lo hi [step] — 0..n-1 (half-open) → bag"},

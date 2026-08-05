@@ -1,0 +1,62 @@
+# SYS MEDIAN / P50 — integer median of args or newline bag
+# Usability: score/latency plates without shell sort|awk
+
+HOLD_FLASH 1
+
+# multi-arg odd count
+SYS MEDIAN 1 5 3
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT MEDIAN == 3
+ASSERT MEDIAN_N == 3
+ASSERT COUNT == 3
+
+# multi-arg even → lower mid after sort
+SYS MEDIAN 1 2 3 4
+ASSERT LAST_N == 2
+ASSERT MEDIAN == 2
+ASSERT COUNT == 4
+
+# single
+SYS MEDIAN 42
+ASSERT LAST_N == 42
+ASSERT COUNT == 1
+
+# empty bag → 0
+SYS MEDIAN ""
+ASSERT LAST_N == 0
+ASSERT COUNT == 0
+
+# bag mode
+SYS MEDIAN "9\n1\n5\n3\n7"
+ASSERT LAST_N == 5
+ASSERT MEDIAN_N == 5
+ASSERT COUNT == 5
+
+# bag even
+SYS MEDIAN "10\n20\n30\n40"
+ASSERT LAST_N == 20
+ASSERT COUNT == 4
+
+# aliases
+SYS P50 8 2 6 4 10
+ASSERT LAST_N == 6
+
+SYS MED "3\n1\n2"
+ASSERT LAST_N == 2
+
+# skip non-numeric / blank fields in bag
+SYS MEDIAN "a\n5\n\n1\n9\nx"
+ASSERT LAST_N == 5
+ASSERT COUNT == 3
+
+# agent pattern: peer score bag
+LET scores = "12\n40\n18\n25\n30"
+SYS MEDIAN scores
+ASSERT LAST_N == 25
+SYS AVG scores
+ASSERT LAST_N == 25
+# avg of 12+40+18+25+30 = 125/5 = 25
+ASSERT COUNT == 5
+
+PRINT "sys_median ok"

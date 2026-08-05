@@ -1812,6 +1812,7 @@ int main(int argc, char **argv) {
       {"sys_fill", "programs/proof/668_sys_fill.cubalc", "SYS FILL n value bag of repeated fields"},
       {"sys_enumerate", "programs/proof/669_sys_enumerate.cubalc", "SYS ENUMERATE index-prefix bag fields"},
       {"sys_squeeze", "programs/proof/670_sys_squeeze.cubalc", "SYS SQUEEZE drop empty bag fields"},
+      {"sys_median", "programs/proof/671_sys_median.cubalc", "SYS MEDIAN integer bag/args median"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2045,6 +2046,7 @@ int main(int argc, char **argv) {
       {"SYS SUM", "host", "SYS SUM|TOTAL args|bag — sum ints or newline bag"},
       {"SYS PROD", "host", "SYS PROD|PRODUCT args|bag — product of ints"},
       {"SYS AVG", "host", "SYS AVG|MEAN args|bag — integer mean"},
+      {"SYS MEDIAN", "host", "SYS MEDIAN|P50 args|bag — integer median (even lower mid)"},
       {"SYS RANGE", "host", "SYS RANGE lo hi [step] — inclusive int sequence bag"},
       {"SYS SEQ", "host", "SYS SEQ n — 1..n number bag"},
       {"SYS IOTA", "host", "SYS IOTA n — 0..n-1 number bag"},
@@ -3118,6 +3120,7 @@ int main(int argc, char **argv) {
       {"SYS SUM", "host", "SYS SUM args|bag integer sum"},
       {"SYS PROD", "host", "SYS PROD args|bag integer product"},
       {"SYS AVG", "host", "SYS AVG args|bag integer mean"},
+      {"SYS MEDIAN", "host", "SYS MEDIAN args|bag integer median"},
       {"SYS RANGE", "host", "SYS RANGE inclusive number bag"},
       {"SYS SEQ", "host", "SYS SEQ 1..n number bag"},
       {"SYS IOTA", "host", "SYS IOTA 0..n-1 number bag"},
@@ -3438,6 +3441,7 @@ int main(int argc, char **argv) {
       {"SYS SUM", "host", "SYS SUM args|bag integer sum"},
       {"SYS PROD", "host", "SYS PROD args|bag integer product"},
       {"SYS AVG", "host", "SYS AVG args|bag integer mean"},
+      {"SYS MEDIAN", "host", "SYS MEDIAN|P50 args|bag integer median"},
       {"SYS RANGE", "host", "SYS RANGE inclusive number bag"},
       {"SYS SEQ", "host", "SYS SEQ 1..n number bag"},
       {"SYS IOTA", "host", "SYS IOTA 0..n-1 number bag"},
@@ -3624,6 +3628,7 @@ int main(int argc, char **argv) {
       {"programs/proof/668_sys_fill.cubalc", "sys_fill", "SYS FILL n value bag of repeated fields"},
       {"programs/proof/669_sys_enumerate.cubalc", "sys_enumerate", "SYS ENUMERATE index-prefix bag fields"},
       {"programs/proof/670_sys_squeeze.cubalc", "sys_squeeze", "SYS SQUEEZE drop empty bag fields"},
+      {"programs/proof/671_sys_median.cubalc", "sys_median", "SYS MEDIAN integer bag/args median"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
