@@ -1,0 +1,533 @@
+# log_page_window.cubalc — durable log line plate with page windows under STATE
+#
+# Real use: agents ingest messy log lines, TRIMALL whitespace, page with
+# MIDLINES, and multi-severity filter with GREPANY without shell sed/awk.
+#
+# Actions (CUBALC_ARG0 / CUBALC_LP_ACTION):
+#   list     — depth + page window (default page0 size10)
+#   seed     — APPEND-style multi line via WORDS? better: ARG1 as single line push
+#   ingest   — PUSH raw line (ARG1); may be dirty
+#   load     — WORDS not good for logs; use multi PUSH from ARG1 newline? WORDS only.
+#            seed uses WORDS as crude tokens; ingest for full lines via ENV
+#   trim     — TRIMALL bag → persist
+#   squeeze  — SQUEEZE BLANK after trim
+#   page     — MIDLINES start end (ARG1=page 0-based, ARG2=size or ENV)
+#   next     — advance page cursor plate
+#   triage   — GREPANY severity (error warn fatal) on bag → report only
+#   drop     — REMOVELINE exact
+#   clear    — empty
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=ingest CUBALC_ARG1="  ERROR disk full  " \
+#     ./out/cubalc run -q -s programs/realworld/log_page_window.cubalc
+#   CUBALC_ARG0=page CUBALC_ARG1=0 CUBALC_ARG2=2 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_LP_FILE=LOG.txt
+#   CUBALC_LP_PAGE=0
+#   CUBALC_LP_SIZE=10
+#   CUBALC_LP_REQUIRE=1
+#
+# Edges deliberately stressed:
+#   TRIMALL keeps all-space fields (need SQUEEZE BLANK to drop)
+#   MIDLINES start past end → empty soft (not FAIL)
+#   MIDLINES start>end → empty; neg start clamps 0
+#   GREPANY needs separate string needles — bag of needles fails/empty
+#   GREPANY substring (error matches error soft)
+#   TRIMALL/MIDLINES/GREPANY non-mutate — LET rebind
+#   PRINT_JSON collapse; WRITE NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "log_page_window: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "LOG.txt"
+DEFAULT REPORT = "LOG_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAGE = 0
+DEFAULT PSIZE = 10
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LP_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LP_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LP_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LP_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_LP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LP_PAGE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET PAGE = LAST_N
+  END
+END
+SYS ENV "CUBALC_LP_SIZE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET PSIZE = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+SYS JOIN state_dir "PAGE_CURSOR.txt"
+LET cursor_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft log load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR cursor_path OR "0"
+LET cur_s = LAST
+CLEAR_ERR
+SYS PREPEND "" cur_s
+SYS HEAD LAST
+SYS NUM
+IF OK == 1 THEN
+  LET PAGE = LAST_N
+END
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET page_n = 0
+LET start = 0
+LET page_end = 0
+LET note_msg = "ok"
+LET window = ""
+LET filtered = ""
+
+# --- list: show page window ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS MAX PAGE 0
+  LET PAGE = LAST_N
+  SYS MAX PSIZE 1
+  LET PSIZE = LAST_N
+  LET start = PAGE * PSIZE
+  LET page_end = start + PSIZE
+  LET page_end = page_end - 1
+  SYS MIDLINES bag start page_end
+  LET window = LAST
+  SYS LINES window
+  LET page_n = LAST_N
+  IF page_n == 0 THEN
+    IF depth0 > 0 THEN
+      LET miss = 1
+      LET note_msg = "list page OOR empty"
+      FAIL "page empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "page OOR"
+      END
+    ELSE
+      LET note_msg = "list empty log"
+    END
+  ELSE
+    LET note_msg = "list ok"
+  END
+  STATUS
+  PRINT "logpage" depth0 PAGE PSIZE page_n start page_end ACTION
+  PRINT_JSON depth0 PAGE PSIZE page_n start page_end ACTION STATUS_OK
+  PRINT_JSON window
+  PRINT_JSON bag
+END
+
+# --- ingest one raw line ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs line"
+  END
+  SYS PUSH bag NAME
+  LET bag = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- seed WORDS as crude multi-token lines ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS PUSH bag n
+      LET bag = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- trim ---
+SYS EQS ACTION "trim"
+IF LAST_N == 1 THEN
+  NOTE "action trim"
+  SYS TRIMALL bag
+  LET bag = LAST
+  LET changed = 1
+  SYS LINES bag
+  LET hit = LAST_N
+  LET note_msg = "trimmed"
+END
+
+# --- squeeze blank after clean ---
+SYS EQS ACTION "squeeze"
+IF LAST_N == 1 THEN
+  NOTE "action squeeze"
+  SYS SQUEEZE BLANK bag
+  LET bag = LAST
+  LET changed = 1
+  SYS LINES bag
+  LET hit = LAST_N
+  LET note_msg = "squeezed"
+END
+
+# --- page ---
+SYS EQS ACTION "page"
+IF LAST_N == 1 THEN
+  NOTE "action page"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET PAGE = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET PSIZE = LAST_N
+    END
+  END
+  SYS MAX PAGE 0
+  LET PAGE = LAST_N
+  SYS MAX PSIZE 1
+  LET PSIZE = LAST_N
+  LET start = PAGE * PSIZE
+  LET page_end = start + PSIZE
+  LET page_end = page_end - 1
+  SYS MIDLINES bag start page_end
+  LET window = LAST
+  SYS LINES window
+  LET page_n = LAST_N
+  LET hit = page_n
+  # persist cursor
+  SYS STR PAGE
+  SYS WRITE cursor_path LAST
+  CLEAR_ERR
+  IF page_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "page empty window"
+    FAIL "page empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "page empty"
+    END
+  ELSE
+    LET note_msg = "paged"
+  END
+  PRINT_JSON window
+END
+
+# --- next page ---
+SYS EQS ACTION "next"
+IF LAST_N == 1 THEN
+  NOTE "action next"
+  LET PAGE = PAGE + 1
+  SYS MAX PSIZE 1
+  LET PSIZE = LAST_N
+  LET start = PAGE * PSIZE
+  LET page_end = start + PSIZE
+  LET page_end = page_end - 1
+  SYS MIDLINES bag start page_end
+  LET window = LAST
+  SYS LINES window
+  LET page_n = LAST_N
+  LET hit = page_n
+  SYS STR PAGE
+  SYS WRITE cursor_path LAST
+  CLEAR_ERR
+  IF page_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "next OOR"
+    FAIL "next empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "next OOR"
+    END
+  ELSE
+    LET note_msg = "next ok"
+  END
+  PRINT_JSON window
+END
+
+# --- triage GREPANY severities ---
+SYS EQS ACTION "triage"
+IF LAST_N == 1 THEN
+  NOTE "action triage"
+  # needles as separate string args — bag form fails (language gap)
+  SYS GREPANY bag "ERROR" "WARN" "FATAL" "error" "warn" "fatal"
+  LET filtered = LAST
+  SYS LINES filtered
+  LET hit = LAST_N
+  IF hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "triage none"
+    FAIL "triage empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "triage empty"
+    END
+  ELSE
+    LET note_msg = "triaged"
+  END
+  PRINT_JSON filtered
+END
+
+# --- drop exact ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact line"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+# --- has / count ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs line"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "trim"
+LET k = k + LAST_N
+SYS EQS ACTION "squeeze"
+LET k = k + LAST_N
+SYS EQS ACTION "page"
+LET k = k + LAST_N
+SYS EQS ACTION "next"
+LET k = k + LAST_N
+SYS EQS ACTION "triage"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "log write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.logpage.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "page"
+LET report = LAST
+SYS STR PAGE
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "psize"
+LET report = LAST
+SYS STR PSIZE
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "start"
+LET report = LAST
+SYS STR start
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "page_end"
+LET report = LAST
+SYS STR page_end
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "page_n"
+LET report = LAST
+SYS STR page_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "logpage" ACTION hit miss PAGE PSIZE page_n depth0 depth1
+PRINT_JSON ACTION hit miss PAGE PSIZE page_n start page_end depth0 depth1 elapsed STATUS_OK
+PASS "logpage tick"
+NOTE "log_page_window: done"
+CLEAR_ERR
+EXIT 0 "logpage ok"

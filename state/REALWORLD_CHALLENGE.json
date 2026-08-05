@@ -1,143 +1,151 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 34,
-  "program": "programs/realworld/slo_sample_board.cubalc",
-  "theme": "SLO sample board pure-ms SQUEEZE MEDIAN SUM AVG SORTN breach",
-  "version": "1.15.123-usability",
+  "iter": 35,
+  "program": "programs/realworld/log_page_window.cubalc",
+  "theme": "log page window TRIMALL MIDLINES GREPANY cursor soft OOR",
+  "version": "1.15.126-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_list_stats",
-      "cmd": "seed 120 50 200 50 95; list thresh100",
+      "name": "ingest_trim",
+      "cmd": "ingest 6 dirty lines; trim whitespace",
       "ok": true,
-      "note": "sum=515 avg=103 med=95 min=50 max=200 breach=2"
+      "note": "ERROR/WARN padded → trimmed exact fields"
     },
     {
-      "name": "observe_breach",
-      "cmd": "observe 180; breach hit=3",
+      "name": "page_next",
+      "cmd": "page 0 size2; next → page1",
       "ok": true,
-      "note": "PUSH + EACH CMP"
+      "note": "MIDLINES window + cursor plate"
     },
     {
-      "name": "squeeze_empty_vs_blank",
-      "cmd": "SQUEEZE keeps whitespace field; SQUEEZE BLANK drops it",
+      "name": "page_oor_require",
+      "cmd": "REQUIRE page 50 EXIT 2; soft miss rc0",
       "ok": true,
-      "note": "default SQUEEZE left '  ' line; BLANK mode required"
+      "note": "MIDLINES past end empty soft"
     },
     {
-      "name": "empty_median_silent_zero",
-      "cmd": "MEDIAN empty \u2192 0 OK=1; REQUIRE list EXIT 2",
+      "name": "triage_grepany",
+      "cmd": "triage ERROR WARN FATAL error warn fatal",
       "ok": true,
-      "note": "empty median not soft-miss by language"
+      "note": "multi-needle separate args; hit>=4"
     },
     {
-      "name": "trim_hot",
-      "cmd": "trim 3 \u2192 SORTN DESC TAKE 90 70 50",
+      "name": "grepany_bag_needles",
+      "cmd": "GREPANY bag needles_bag → 0; separate strings → 2",
       "ok": true,
-      "note": "hottest samples kept"
+      "note": "needles as bag field fails"
     },
     {
-      "name": "drop_require",
-      "cmd": "drop 90; REQUIRE drop ghost EXIT 2",
+      "name": "let_end_reserved",
+      "cmd": "LET end = ... → unknown form (END keyword)",
+      "ok": true,
+      "note": "renamed page_end; high agent footgun"
+    },
+    {
+      "name": "trim_keeps_blank_fields",
+      "cmd": "TRIMALL space-only field becomes empty; need SQUEEZE BLANK",
+      "ok": true,
+      "note": "from proof + edge probe"
+    },
+    {
+      "name": "drop_miss_require",
+      "cmd": "drop ERROR disk full; REQUIRE ghost EXIT 2",
       "ok": true,
       "note": "soft+REQUIRE"
-    },
-    {
-      "name": "even_median_lower_mid",
-      "cmd": "MEDIAN 10 20 30 40 \u2192 20",
-      "ok": true,
-      "note": "even lower mid; mixed skips non-num"
-    },
-    {
-      "name": "squeeze_no_rebind",
-      "cmd": "SQUEEZE b without LET leaves empties in b",
-      "ok": true,
-      "note": "non-mutate bag transforms"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "98/98 pass incl squeeze median"
+      "note": "101/101 pass incl trimall midlines grepany"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|math",
-      "title": "MEDIAN empty bag returns 0 with OK=1 \u2014 silent zero",
-      "detail": "SYS MEDIAN \"\" \u2192 LAST_N=0 OK=1 COUNT=0. Agents cannot distinguish empty plate from all-zero samples without separate LINES/COUNT check. Program wraps REQUIRE on list empty.",
-      "repro": "SYS MEDIAN \"\" \u2192 OK=1 LAST_N=0"
+      "area": "lang|parse",
+      "title": "LET end is illegal — END is reserved block terminator",
+      "detail": "LET end = start + PSIZE parses as unknown form ''. Any var named end/END breaks agents writing page windows. Must use page_end/end_i. No clear error naming reserved words.",
+      "repro": "LET end = 1 → unknown form ''"
     },
     {
       "id": "W2",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "SQUEEZE default keeps whitespace-only fields",
-      "detail": "SQUEEZE without BLANK leaves \"  \" lines; SUM/AVG skip non-numeric but depth still inflated if agent uses LINES bag not clean. Need SQUEEZE BLANK for intake hygiene.",
-      "repro": "SQUEEZE 'a\\n  \\nb' \u2192 3 fields"
+      "title": "GREPANY multi-needle bag argument does not expand fields",
+      "detail": "SYS GREPANY bag needles with needles='ERROR\\nWARN' yields 0 hits. Need separate string args GREPANY bag \"ERROR\" \"WARN\". Agents building needle bags from ENV fail silently.",
+      "repro": "GREPANY log needles_bag → empty; GREPANY log \"ERROR\" \"WARN\" → hits"
     },
     {
       "id": "W3",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "SQUEEZE/MEDIAN/SUM/SORTN do not mutate named bags",
-      "detail": "Must LET bag = LAST after SQUEEZE or WRITE reintroduces empties. Same non-mutate class.",
-      "repro": "SQUEEZE b; LINES b still includes empties without LET"
+      "title": "TRIMALL leaves empty fields for former whitespace lines",
+      "detail": "All-space field becomes empty field; SQUEEZE BLANK required to drop. Depth can still include empties after trim-only.",
+      "repro": "TRIMALL 'a\\n   \\nb' → a\\n\\nb"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|math",
-      "title": "Even-count MEDIAN is lower mid (not average of two middles)",
-      "detail": "MEDIAN 10 20 30 40 \u2192 20. Agents expecting statistical mean-of-mids get wrong P50. Documented lower-mid integer policy.",
-      "repro": "SYS MEDIAN 1 2 3 4 \u2192 2"
+      "area": "host|bag",
+      "title": "MIDLINES OOR returns empty soft without FAIL sticky",
+      "detail": "start past end → empty bag OK. Good for paging but agents must check LINES; program uses REQUIRE for hard miss.",
+      "repro": "MIDLINES bag 50 → LAST empty"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses multi-line sample bags",
-      "detail": "Sample plate dumps as concatenated numbers. Prefer sum/avg/med scalars.",
-      "repro": "PRINT_JSON bag after seed"
+      "severity": "high",
+      "area": "host|bag",
+      "title": "TRIMALL/MIDLINES/GREPANY non-mutate named bags",
+      "detail": "Must LET bag = LAST after trim or WRITE keeps dirty whitespace.",
+      "repro": "TRIMALL bag; LINES bag still dirty without LET"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last sample without $.",
-      "repro": "seed; cat -A SAMPLES.txt"
+      "severity": "med",
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line log bags/windows",
+      "detail": "Window and full bag unparseable in one JSON string field.",
+      "repro": "PRINT_JSON bag after ingest"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host",
-      "title": "NUM only on LAST \u2014 observe/seed need PREPEND+HEAD shuttle",
-      "detail": "Same NUM shuttle tax as budget boards.",
-      "repro": "SYS NUM only parses LAST"
+      "area": "host|write",
+      "title": "WRITE often omits final trailing newline",
+      "detail": "cat -A last log line without $.",
+      "repro": "ingest; cat -A LOG.txt"
+    },
+    {
+      "id": "W8",
+      "severity": "med",
+      "area": "host|bag",
+      "title": "GREPANY still substring-unsafe",
+      "detail": "Needle error matches error soft miss. Same GREP class.",
+      "repro": "GREPANY 'error soft' with needle error"
     }
   ],
   "workarounds": [
-    "Check LINES/COUNT after SQUEEZE before trusting MEDIAN (empty\u21920)",
-    "SQUEEZE BLANK for messy intake; default SQUEEZE for pure empties only",
-    "Always LET bag = LAST after SQUEEZE/trim transforms",
-    "Document even median as lower mid for SLOs",
-    "PRINT_JSON only sum_ms/avg_ms/med_ms/n_breach scalars"
+    "Never name vars end/END/IF/THEN — use page_end",
+    "GREPANY with quoted separate needles not bag of needles",
+    "TRIMALL then SQUEEZE BLANK for clean log plates",
+    "Check LINES after MIDLINES; REQUIRE for hard page OOR",
+    "Always LET bag = LAST after TRIMALL/MIDLINES/GREPANY"
   ],
   "language_gaps": [
-    "MEDIAN empty soft-miss or NaN distinct from zero",
-    "In-place SQUEEZE/stat bag ops",
-    "Optional mean-of-two-middles even median",
+    "Clear reserved-word diagnostic on LET end",
+    "GREPANY needles from bag (expand fields as needles)",
+    "In-place TRIMALL/MIDLINES",
     "PRINT_JSON newlines; WRITE force NL",
-    "SYS NUM from named string without LAST shuttle"
+    "Word-boundary GREP / severity token match"
   ],
   "issues_faced": [
-    "Empty MEDIAN silent zero is the main agent footgun for empty SLO plates",
-    "SQUEEZE without BLANK left space-only field on disk after T5",
-    "list uses SQUEEZE into clean for stats but does not rewrite bag unless squeeze action"
+    "LET end reserved keyword broke entire program until renamed page_end",
+    "Also found LET end = start + PSIZE - 1 chained minus awkward; split to two LETs",
+    "GREPANY bag-of-needles silent empty — documented W2"
   ],
-  "commit": "da1d1729a99bc86f792d8ab3041a0008958a3049",
-  "ts": "2026-08-05T18:13:30Z"
+  "commit": "",
+  "ts": "2026-08-05T18:40:30Z"
 }
