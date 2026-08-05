@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 103,
-  "version": "1.15.128-usability",
-  "item": "REQUIRE ENV / VAR fail-fast host config",
-  "item_id": 136,
-  "title": "REQUIRE ENV|VAR name \u2014 fail if host env missing/empty",
-  "commit": "8f9136f0e142f34cf9f6dffa056ff46478f38d28",
-  "summary": "REQUIRE ENV/VAR fail-fast if getenv missing/empty; LAST=value. Agent host config gate. selftest 103.",
+  "iter": 104,
+  "version": "1.15.129-usability",
+  "item": "SYS UPPERALL / LOWERALL case-map bag fields",
+  "item_id": 137,
+  "title": "SYS UPPERALL|LOWERALL [bag] \u2014 ASCII case-map every field",
+  "commit": "8e08d8f1defd3d377edbc7b15114a7ffac61b880",
+  "summary": "SYS UPPERALL/LOWERALL map case on every bag field (MAPUPPER/MAPLOWER). Normalize before HASLINE. selftest 104.",
   "proofs": [
-    "676_require_env",
-    "selftest n_pass=103"
+    "677_sys_upperall",
+    "selftest n_pass=104"
   ],
-  "when": "2026-08-05T18:54:56Z",
+  "when": "2026-08-05T19:04:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8f9136f0e142f34cf9f6dffa056ff46478f38d28"
+  "sha": "8e08d8f1defd3d377edbc7b15114a7ffac61b880"
 }
