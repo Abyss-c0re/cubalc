@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 131,
-  "version": "1.15.156-usability",
-  "item": "SYS KVINC / INCKV bump key:val numeric counter",
-  "item_id": 164,
-  "title": "SYS KVINC|INCKV bag key [delta] [sep] — bump or insert counter",
-  "commit": "81d42e7166032222411520d1e676e56dfaaa9f15",
-  "summary": "SYS KVINC/INCKV bump FREQ key counters without LOOKUP+arith+KVSET. selftest 131.",
+  "iter": 132,
+  "version": "1.15.157-usability",
+  "item": "SYS KVDEL / DELKV drop key:val bag field",
+  "item_id": 165,
+  "title": "SYS KVDEL|DELKV bag key [sep] — drop first key:val field",
+  "commit": "4be2ff0fc9f8622a43b105bdc6e07dc9fd65bc86",
+  "summary": "SYS KVDEL/DELKV remove FREQ/plate key without FINDLINE+DROPNTH. Soft miss OK. selftest 132.",
   "proofs": [
-    "704_sys_kvinc",
-    "selftest n_pass=131"
+    "705_sys_kvdel",
+    "selftest n_pass=132"
   ],
-  "when": "2026-08-05T23:34:26Z",
+  "when": "2026-08-05T23:44:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "81d42e7166032222411520d1e676e56dfaaa9f15"
+  "sha": "4be2ff0fc9f8622a43b105bdc6e07dc9fd65bc86"
 }
