@@ -2781,6 +2781,104 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SETMATCH|REPLACEMATCH bag old new — replace first exact field value → LAST bag.
+     * LAST_N = 1 if replaced, 0 soft miss (bag unchanged). SYS SETMATCHI — icase on old.
+     * Distinct from SETLINE (by index) and REPLACE (substring). Usability: status by name. */
+    if (kw(&L->cur,"SETMATCH") || kw(&L->cur,"REPLACEMATCH") || kw(&L->cur,"CHANGEFIELD") ||
+        kw(&L->cur,"UPDATEFIELD") || kw(&L->cur,"SUBFIELD") || kw(&L->cur,"MAPFIELD") ||
+        kw(&L->cur,"REWRITEFIELD") || kw(&L->cur,"SETMATCHI") || kw(&L->cur,"REPLACEMATCHI") ||
+        kw(&L->cur,"CHANGEFIELDI") || kw(&L->cur,"UPDATEFIELDI") || kw(&L->cur,"MAPFIELDI")){
+      char op[24]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "SETMATCHI") == 0 || strcmp(op, "REPLACEMATCHI") == 0 ||
+                   strcmp(op, "CHANGEFIELDI") == 0 || strcmp(op, "UPDATEFIELDI") == 0 ||
+                   strcmp(op, "MAPFIELDI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], oldv[512], newv[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen, vlen, o = 0;
+      int first = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; oldv[0] = 0; newv[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, oldv, sizeof oldv) != 0) oldv[0] = 0;
+      if (resolve_str_arg(vm, L, newv, sizeof newv) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(newv, sizeof newv, "%ld", n);
+        } else {
+          newv[0] = 0;
+        }
+      }
+      nn = strlen(oldv);
+      vlen = strlen(newv);
+      if (!bag[0]) {
+        hit = 0;
+      } else {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (!hit && flen == nn) {
+            if (!icase) {
+              match = (nn == 0 || memcmp(start, oldv, nn) == 0) ? 1 : 0;
+            } else {
+              size_t i; match = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = oldv[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { match = 0; break; }
+              }
+            }
+          }
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (match) {
+            hit = 1;
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, newv, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, newv, take);
+              o += take;
+            }
+          } else {
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+          }
+          out[o] = 0;
+          if (*p == '\n') p++;
+        }
+        if (!hit) {
+          snprintf(out, sizeof out, "%s", bag);
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "SETMATCH_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS INSERTLINE|INSLINE bag n value — insert field before 0-based index → LAST bag.
      * n < 0 soft miss (bag unchanged, LAST_N=0). n >= field count → append (like PUSH).
      * n == 0 → front (like PREPEND). LAST_N = field count after insert.
@@ -3665,7 +3763,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3941,6 +4039,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FINDLINEI", "SYS FINDLINEI bag needle — case-insensitive field index"},
       {"SYS SETLINE", "SYS SETLINE|REPLACELINE bag n value — set 0-based field · LAST=bag"},
       {"SYS REPLACELINE", "SYS REPLACELINE bag n value — alias of SYS SETLINE"},
+      {"SYS SETMATCH", "SYS SETMATCH|REPLACEMATCH bag old new — replace first exact field · LAST_N 0|1"},
+      {"SYS REPLACEMATCH", "SYS REPLACEMATCH bag old new — alias of SYS SETMATCH"},
+      {"SYS SETMATCHI", "SYS SETMATCHI bag old new — case-insensitive match on old field"},
       {"SYS INSERTLINE", "SYS INSERTLINE|INSLINE bag n value — insert field at 0-based index · append if past end"},
       {"SYS INSLINE", "SYS INSLINE bag n value — alias of SYS INSERTLINE"},
       {"SYS DROPNTH", "SYS DROPNTH|DROPAT bag n — drop 0-based field by index · LAST_N 0|1 soft OOR"},

@@ -1,0 +1,82 @@
+# SYS SETMATCH / REPLACEMATCH — replace first exact bag field by value
+# Usability: status-by-name without FINDLINE+SETLINE glue
+# Distinct from SETLINE (index) and REPLACE (substring)
+
+HOLD_FLASH 1
+
+# replace middle
+SYS SETMATCH "a\nb\nc" "b" "B"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nB\nc"
+ASSERT LAST_N == 1
+
+# first / last only first match
+SYS SETMATCH "x\ny\nx" "x" "X"
+SYS EQS LAST "X\ny\nx"
+ASSERT LAST_N == 1
+SYS SETMATCH "a\nb\nc" "c" "C"
+SYS EQS LAST "a\nb\nC"
+ASSERT LAST_N == 1
+
+# miss soft
+SYS SETMATCH "a\nb" "z" "Z"
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SYS SETMATCH "" "a" "b"
+ASSERT LAST_N == 0
+
+# not substring of field
+SYS SETMATCH "ERROR boom\nWARN" "ERROR" "E"
+ASSERT LAST_N == 0
+SYS EQS LAST "ERROR boom\nWARN"
+ASSERT LAST_N == 1
+SYS SETMATCH "ERROR boom\nWARN" "ERROR boom" "ERROR fixed"
+SYS EQS LAST "ERROR fixed\nWARN"
+ASSERT LAST_N == 1
+
+# empty new value ok
+SYS SETMATCH "a\nb\nc" "b" ""
+ASSERT LAST_N == 1
+SYS EQS LAST "a\n\nc"
+ASSERT LAST_N == 1
+
+# case-insensitive match on old
+SYS SETMATCHI "Idle\nBusy" "idle" "done"
+ASSERT LAST_N == 1
+SYS EQS LAST "done\nBusy"
+ASSERT LAST_N == 1
+SYS SETMATCH I "Warn\nError" "ERROR" "ok"
+SYS EQS LAST "Warn\nok"
+ASSERT LAST_N == 1
+
+# aliases
+SYS REPLACEMATCH "p\nq" "q" "Q"
+SYS EQS LAST "p\nQ"
+ASSERT LAST_N == 1
+SYS UPDATEFIELD "1\n2\n3" "2" "9"
+SYS EQS LAST "1\n9\n3"
+ASSERT LAST_N == 1
+SYS CHANGEFIELD "a\nb" "a" "A"
+SYS EQS LAST "A\nb"
+ASSERT LAST_N == 1
+
+# numeric new coerced
+SYS SETMATCH "a\nb" "b" 42
+ASSERT LAST_N == 1
+SYS EQS LAST "a\n42"
+ASSERT LAST_N == 1
+
+# agent pattern: roster status by exact entry
+LET bag = "peer1:idle\npeer2:idle\npeer3:busy"
+SYS SETMATCH bag "peer2:idle" "peer2:done"
+ASSERT LAST_N == 1
+SYS EQS LAST "peer1:idle\npeer2:done\npeer3:busy"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "peer2:done"
+ASSERT LAST_N == 1
+SYS COUNTLINE LAST "peer2:idle"
+ASSERT LAST_N == 0
+
+PRINT "sys_setmatch ok"

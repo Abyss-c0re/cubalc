@@ -136,6 +136,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 106. ~~**`SYS DROPNTH` / `DROPAT`**~~ **done** (drop bag field by 0-based index · FINDLINE then delete).
 107. ~~**`SYS MOVELINE` / `MOVEAT`**~~ **done** (move bag field to final index · promote/demote priority).
 108. ~~**`SYS COUNTLINE` / `COUNTFIELD`**~~ **done** (count exact bag field matches · HASLINE with count).
+109. ~~**`SYS SETMATCH` / `REPLACEMATCH`**~~ **done** (replace first exact bag field by value · status by name).
 
 ## Tick protocol
 

@@ -1709,6 +1709,7 @@ int main(int argc, char **argv) {
       {"sys_dropnth", "programs/proof/647_sys_dropnth.cubalc", "SYS DROPNTH drop bag field by index"},
       {"sys_moveline", "programs/proof/648_sys_moveline.cubalc", "SYS MOVELINE move bag field by index"},
       {"sys_countline", "programs/proof/649_sys_countline.cubalc", "SYS COUNTLINE count exact bag field matches"},
+      {"sys_setmatch", "programs/proof/650_sys_setmatch.cubalc", "SYS SETMATCH replace first exact bag field"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1935,6 +1936,9 @@ int main(int argc, char **argv) {
       {"SYS MOVEAT", "host", "SYS MOVEAT bag from to — alias of SYS MOVELINE"},
       {"SYS COUNTLINE", "host", "SYS COUNTLINE|COUNTFIELD bag needle — count exact field matches"},
       {"SYS COUNTLINEI", "host", "SYS COUNTLINEI bag needle — case-insensitive field match count"},
+      {"SYS SETMATCH", "host", "SYS SETMATCH|REPLACEMATCH bag old new — replace first exact field"},
+      {"SYS REPLACEMATCH", "host", "SYS REPLACEMATCH bag old new — alias of SYS SETMATCH"},
+      {"SYS SETMATCHI", "host", "SYS SETMATCHI bag old new — case-insensitive match on old"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2530,6 +2534,8 @@ int main(int argc, char **argv) {
        "SYS MOVELINE move bag field by index"},
       {"programs/proof/649_sys_countline.cubalc", "sys_countline",
        "SYS COUNTLINE count exact bag field matches"},
+      {"programs/proof/650_sys_setmatch.cubalc", "sys_setmatch",
+       "SYS SETMATCH replace first exact bag field"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2962,6 +2968,8 @@ int main(int argc, char **argv) {
       {"SYS MOVEAT", "host", "SYS MOVEAT alias of SYS MOVELINE"},
       {"SYS COUNTLINE", "host", "SYS COUNTLINE count exact bag field matches"},
       {"SYS COUNTLINEI", "host", "SYS COUNTLINEI case-insensitive field match count"},
+      {"SYS SETMATCH", "host", "SYS SETMATCH replace first exact bag field"},
+      {"SYS REPLACEMATCH", "host", "SYS REPLACEMATCH alias of SYS SETMATCH"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3311,6 +3319,7 @@ int main(int argc, char **argv) {
       {"programs/proof/647_sys_dropnth.cubalc", "sys_dropnth", "SYS DROPNTH drop bag field by index"},
       {"programs/proof/648_sys_moveline.cubalc", "sys_moveline", "SYS MOVELINE move bag field by index"},
       {"programs/proof/649_sys_countline.cubalc", "sys_countline", "SYS COUNTLINE count bag field matches"},
+      {"programs/proof/650_sys_setmatch.cubalc", "sys_setmatch", "SYS SETMATCH replace bag field by value"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
