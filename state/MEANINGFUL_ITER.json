@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 120,
-  "version": "1.15.145-usability",
-  "item": "SYS PADALL / LPADALL pad every bag field to width",
-  "item_id": 153,
-  "title": "SYS PADALL|LPADALL|RPADALL bag width [pad] — pad every field to width",
-  "commit": "7d32686988e07f509ba3f42e186b89a5fe332814",
-  "summary": "SYS PADALL/LPADALL pad every bag field for column-align plates after LENALL. selftest 120.",
+  "iter": 121,
+  "version": "1.15.146-usability",
+  "item": "SYS SORTLEN / LENSORT sort bag fields by length",
+  "item_id": 154,
+  "title": "SYS SORTLEN|LENSORT [DESC] [bag] — sort fields by string length",
+  "commit": "4567ce0d6e5592733c4c98b777cbe79c81e5abfb",
+  "summary": "SYS SORTLEN/LENSORT sort bag fields by length (longest-first without rebuild). selftest 121.",
   "proofs": [
-    "693_sys_padall",
-    "selftest n_pass=120"
+    "694_sys_sortlen",
+    "selftest n_pass=121"
   ],
-  "when": "2026-08-05T21:44:03Z",
+  "when": "2026-08-05T21:54:09Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7d32686988e07f509ba3f42e186b89a5fe332814"
+  "sha": "4567ce0d6e5592733c4c98b777cbe79c81e5abfb"
 }
