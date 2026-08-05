@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 98,
-  "version": "1.15.123-usability",
-  "item": "SYS MEDIAN / P50 integer bag median",
-  "item_id": 131,
-  "title": "SYS MEDIAN|P50 args|bag integer median",
-  "commit": "3aa4894538ea909397f5b71fc16080369d79a025",
-  "summary": "SYS MEDIAN/P50 integer median of args or bag (even→lower mid). Score plates without shell. selftest 98.",
+  "iter": 99,
+  "version": "1.15.124-usability",
+  "item": "SYS TRIMALL / MAPTRIM trim every bag field",
+  "item_id": 132,
+  "title": "SYS TRIMALL|MAPTRIM [L|R] bag trim every field",
+  "commit": "1a303bd1fce3d3281693795526b00c837b859a96",
+  "summary": "SYS TRIMALL/MAPTRIM trim whitespace on every bag field (L/R/BOTH). Clean READ/SPLIT before SQUEEZE. selftest 99.",
   "proofs": [
-    "671_sys_median",
-    "selftest n_pass=98"
+    "672_sys_trimall",
+    "selftest n_pass=99"
   ],
-  "when": "2026-08-05T18:05:54Z",
+  "when": "2026-08-05T18:13:57Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3aa4894538ea909397f5b71fc16080369d79a025"
+  "sha": "1a303bd1fce3d3281693795526b00c837b859a96"
 }
