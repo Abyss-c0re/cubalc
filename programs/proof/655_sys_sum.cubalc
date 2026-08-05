@@ -1,0 +1,95 @@
+# SYS SUM / PROD / AVG — host-plane aggregates (args or newline bag)
+# Usability: score bags / LIST sizes without shell awk; pairs with MIN/MAX
+
+HOLD_FLASH 1
+
+# multi-arg sum
+SYS SUM 1 2 3 4
+ASSERT OK == 1
+ASSERT LAST_N == 10
+ASSERT COUNT == 4
+SYS TOTAL 10 20
+ASSERT LAST_N == 30
+
+# product
+SYS PROD 2 3 4
+ASSERT LAST_N == 24
+ASSERT COUNT == 3
+SYS PRODUCT 5 5
+ASSERT LAST_N == 25
+# empty product is 1 (empty bag string)
+LET empty_bag = ""
+SYS PROD empty_bag
+ASSERT LAST_N == 1
+ASSERT COUNT == 0
+
+# average (integer trunc toward 0)
+SYS AVG 1 2 3 4
+ASSERT LAST_N == 2
+SYS MEAN 10 20 30
+ASSERT LAST_N == 20
+SYS AVERAGE -5 5
+ASSERT LAST_N == 0
+
+# negatives
+SYS SUM -3 -1 4
+ASSERT LAST_N == 0
+SYS PROD -2 3
+ASSERT LAST_N == -6
+SYS AVG -10 -4
+ASSERT LAST_N == -7
+
+# bag mode: newline fields (string lines)
+LET bag = ""
+SYS PUSH bag "10"
+LET bag = LAST
+SYS PUSH bag "20"
+LET bag = LAST
+SYS PUSH bag "30"
+LET scores = LAST
+SYS SUM scores
+ASSERT LAST_N == 60
+ASSERT COUNT == 3
+SYS AVG scores
+ASSERT LAST_N == 20
+SYS PROD scores
+ASSERT LAST_N == 6000
+
+# bare LAST bag
+LET bag = ""
+SYS PUSH bag "1"
+LET bag = LAST
+SYS PUSH bag "2"
+LET bag = LAST
+SYS PUSH bag "3"
+# LAST is the bag; bare SYS SUM aggregates it
+SYS SUM
+ASSERT LAST_N == 6
+
+# skip blank / non-numeric bag fields
+LET mixed = "5
+x
+7
+
+9"
+SYS SUM mixed
+ASSERT LAST_N == 21
+ASSERT COUNT == 3
+
+# aliases
+SYS SUMALL 1 1 1
+ASSERT LAST_N == 3
+SYS MULALL 2 2 2
+ASSERT LAST_N == 8
+SYS AVGALL 3 6 9
+ASSERT LAST_N == 6
+
+# agent pattern: total peer scores then clamp into budget
+SYS SUM 40 75 12
+LET total = LAST_N
+SYS CLAMP total 0 100
+LET report = LAST_N
+ASSERT total == 127
+ASSERT report == 100
+
+PRINT "sys_sum ok"

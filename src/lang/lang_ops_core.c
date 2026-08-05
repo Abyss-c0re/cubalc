@@ -1544,6 +1544,126 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
+     * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
+     * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
+     * Bag mode: one string (or bare LAST) with newline fields → aggregate numeric
+     * lines; blank/non-numeric fields skipped. COUNT = n used.
+     * Usability: score bags / LIST sizes without shell awk; pairs with MIN/MAX. */
+    if (kw(&L->cur,"SUM") || kw(&L->cur,"TOTAL") || kw(&L->cur,"SUMALL") ||
+        kw(&L->cur,"PROD") || kw(&L->cur,"PRODUCT") || kw(&L->cur,"MULALL") ||
+        kw(&L->cur,"PRODUCTALL") ||
+        kw(&L->cur,"AVG") || kw(&L->cur,"MEAN") || kw(&L->cur,"AVERAGE") ||
+        kw(&L->cur,"AVGALL")){
+      char op[16];
+      long vals[64];
+      int n = 0, i, is_sum, is_prod, is_avg, bag = 0;
+      long out = 0, count = 0;
+      char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sum = (strcmp(op, "SUM") == 0 || strcmp(op, "TOTAL") == 0 ||
+                strcmp(op, "SUMALL") == 0);
+      is_prod = (strcmp(op, "PROD") == 0 || strcmp(op, "PRODUCT") == 0 ||
+                 strcmp(op, "MULALL") == 0 || strcmp(op, "PRODUCTALL") == 0);
+      is_avg = (strcmp(op, "AVG") == 0 || strcmp(op, "MEAN") == 0 ||
+                strcmp(op, "AVERAGE") == 0 || strcmp(op, "AVGALL") == 0);
+      lex_next(L);
+      /* bag mode: string literal, string var, or no numeric-looking arg (→ LAST) */
+      if (L->cur.kind == TK_STR) {
+        bag = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) bag = 1;
+      } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                   L->cur.kind == TK_LPAREN)) {
+        bag = 1; /* bare: aggregate LAST bag/text */
+      }
+      if (bag) {
+        src[0] = 0;
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+            snprintf(src, sizeof src, "%s", vm->last_str);
+        } else {
+          snprintf(src, sizeof src, "%s", vm->last_str);
+        }
+        {
+          const char *p = src;
+          while (*p && n < 64) {
+            const char *start = p;
+            char *end = NULL;
+            long v;
+            while (*p && *p != '\n') p++;
+            /* empty field between newlines → skip */
+            if (start == p) {
+              if (*p == '\n') p++;
+              continue;
+            }
+            /* parse field [start,p) as integer */
+            {
+              char tmp[48];
+              size_t flen = (size_t)(p - start);
+              if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+              memcpy(tmp, start, flen);
+              tmp[flen] = 0;
+              v = strtol(tmp, &end, 10);
+              if (end != tmp) {
+                /* allow trailing whitespace only */
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end == 0)
+                  vals[n++] = v;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        while (n < 64 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
+        }
+      }
+      count = n;
+      if (is_prod) {
+        out = 1;
+        for (i = 0; i < n; i++) out *= vals[i];
+        if (n == 0) out = 1; /* empty product */
+      } else if (is_avg) {
+        out = 0;
+        if (n > 0) {
+          long s = 0;
+          for (i = 0; i < n; i++) s += vals[i];
+          out = s / n;
+        }
+      } else {
+        /* sum / total */
+        out = 0;
+        for (i = 0; i < n; i++) out += vals[i];
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "COUNT", count);
+      var_set_num(vm, "OK", 1);
+      if (is_sum) {
+        var_set_num(vm, "SUM", out);
+        var_set_num(vm, "SUM_N", out);
+      }
+      if (is_prod) {
+        var_set_num(vm, "PROD", out);
+        var_set_num(vm, "PROD_N", out);
+      }
+      if (is_avg) {
+        var_set_num(vm, "AVG", out);
+        var_set_num(vm, "AVG_N", out);
+      }
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -4016,7 +4136,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4331,6 +4451,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SCMP", "SYS SCMP|CMPS a b — string compare → LAST_N -1|0|1"},
       {"SYS SCMPI", "SYS SCMPI a b — case-insensitive string compare"},
       {"SYS IABS", "SYS IABS|ABSVAL|NABS x — integer absolute value → LAST_N"},
+      {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
+      {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
+      {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},

@@ -142,6 +142,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 112. ~~**`SYS RAND` / `RANDOM`**~~ **done** (uniform int · agent jitter/sample without shell).
 113. ~~**`SYS MIN` / `MAX` / `CLAMP`**~~ **done** (host-plane numeric bounds · cap retries/jitter).
 114. ~~**`SYS CMP` / `SCMP` / `IABS`**~~ **done** (three-way compare + abs · sort keys without dual IF).
+115. ~~**`SYS SUM` / `PROD` / `AVG`**~~ **done** (host aggregates · multi-arg or newline bag · no shell awk).
 
 ## Tick protocol
 
