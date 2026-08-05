@@ -1,0 +1,108 @@
+# SYS RANGE / SEQ / IOTA — integer sequence → newline bag
+# Usability: EACH LINE / SORTN / SUM fixtures without shell seq(1)
+
+HOLD_FLASH 1
+
+# RANGE lo hi inclusive
+SYS RANGE 1 5
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT RANGE_N == 5
+SYS EQS LAST "1
+2
+3
+4
+5"
+ASSERT LAST_N == 1
+
+# with step
+SYS RANGE 0 10 2
+SYS EQS LAST "0
+2
+4
+6
+8
+10"
+ASSERT LAST_N == 1
+ASSERT RANGE_N == 6
+
+# descending (auto step flip)
+SYS RANGE 5 1
+SYS EQS LAST "5
+4
+3
+2
+1"
+ASSERT LAST_N == 1
+SYS RANGE 10 0 3
+SYS EQS LAST "10
+7
+4
+1"
+ASSERT LAST_N == 1
+
+# SEQ n → 1..n
+SYS SEQ 4
+SYS EQS LAST "1
+2
+3
+4"
+ASSERT LAST_N == 1
+ASSERT SEQ_N == 4
+SYS SEQUENCE 2
+SYS EQS LAST "1
+2"
+ASSERT LAST_N == 1
+
+# SEQ lo hi
+SYS SEQ 3 6
+SYS EQS LAST "3
+4
+5
+6"
+ASSERT LAST_N == 1
+
+# IOTA n → 0..n-1 half-open
+SYS IOTA 4
+SYS EQS LAST "0
+1
+2
+3"
+ASSERT LAST_N == 1
+SYS IOTA 0
+ASSERT RANGE_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# IOTA lo hi half-open [lo,hi)
+SYS IOTA 2 5
+SYS EQS LAST "2
+3
+4"
+ASSERT LAST_N == 1
+
+# aliases
+SYS NUMS 1 3
+SYS EQS LAST "1
+2
+3"
+ASSERT LAST_N == 1
+SYS COUNTTO 3
+SYS EQS LAST "1
+2
+3"
+ASSERT LAST_N == 1
+
+# agent pattern: sum 1..n without shell
+SYS RANGE 1 10
+SYS SUM
+ASSERT LAST_N == 55
+
+# agent pattern: top-half of sequence after SORTN DESC
+SYS RANGE 1 6
+SYS SORTN DESC
+SYS TAKE 3
+SYS SUM
+ASSERT LAST_N == 15
+
+PRINT "sys_range ok"

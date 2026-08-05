@@ -1664,6 +1664,111 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS RANGE lo hi [step] — inclusive integer sequence → newline bag LAST.
+     * SYS SEQ n — 1..n; SYS IOTA n — 0..n-1. Cap 256 fields.
+     * Usability: EACH LINE / SORTN / SUM fixtures without shell seq(1). */
+    if (kw(&L->cur,"RANGE") || kw(&L->cur,"SEQ") || kw(&L->cur,"SEQUENCE") ||
+        kw(&L->cur,"IOTA") || kw(&L->cur,"ENUM") || kw(&L->cur,"NUMS") ||
+        kw(&L->cur,"COUNTTO") || kw(&L->cur,"FROMTO")){
+      char op[16];
+      long lo = 0, hi = 0, step = 1;
+      long n = 0, v, vals[256];
+      int i, is_seq, is_iota, empty = 0;
+      char out[CUBALC_HOST_STR_MAX];
+      size_t olen = 0;
+      char num[32];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_seq = (strcmp(op, "SEQ") == 0 || strcmp(op, "SEQUENCE") == 0 ||
+                strcmp(op, "COUNTTO") == 0);
+      is_iota = (strcmp(op, "IOTA") == 0 || strcmp(op, "ENUM") == 0);
+      lex_next(L);
+      /* parse up to 3 prims: a [b [c]] */
+      {
+        long args[3];
+        int na = 0;
+        while (na < 3 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          args[na++] = parse_prim(vm, L);
+        }
+        if (is_iota) {
+          /* IOTA n → 0..n-1; IOTA lo hi → lo..hi-1 half-open; IOTA lo hi step */
+          if (na <= 0 || (na == 1 && args[0] <= 0)) {
+            empty = 1;
+          } else if (na == 1) {
+            lo = 0; hi = args[0] - 1; step = 1;
+          } else if (na == 2) {
+            if (args[1] <= args[0]) empty = 1;
+            else { lo = args[0]; hi = args[1] - 1; step = 1; }
+          } else {
+            if (args[1] <= args[0] && (!args[2] || args[2] > 0)) empty = 1;
+            else {
+              lo = args[0]; hi = args[1] - 1; step = args[2] ? args[2] : 1;
+            }
+          }
+        } else if (is_seq) {
+          /* SEQ n → 1..n; SEQ lo hi [step] inclusive like RANGE */
+          if (na <= 0 || (na == 1 && args[0] <= 0)) {
+            empty = 1;
+          } else if (na == 1) {
+            lo = 1; hi = args[0]; step = 1;
+          } else if (na == 2) {
+            lo = args[0]; hi = args[1]; step = 1;
+          } else {
+            lo = args[0]; hi = args[1]; step = args[2] ? args[2] : 1;
+          }
+        } else {
+          /* RANGE lo hi [step] inclusive */
+          if (na <= 0) {
+            empty = 1;
+          } else if (na == 1) {
+            if (args[0] <= 0) empty = 1;
+            else { lo = 1; hi = args[0]; step = 1; } /* RANGE n ≡ SEQ n */
+          } else if (na == 2) {
+            lo = args[0]; hi = args[1]; step = 1;
+          } else {
+            lo = args[0]; hi = args[1]; step = args[2] ? args[2] : 1;
+          }
+        }
+      }
+      if (!empty) {
+        if (step == 0) step = 1;
+        /* auto-flip step when lo/hi inverted (RANGE 5 1 → descending) */
+        if (lo > hi && step > 0) step = -step;
+        if (lo < hi && step < 0) step = -step;
+        v = lo;
+        if (step > 0) {
+          while (v <= hi && n < 256) { vals[n++] = v; v += step; }
+        } else {
+          while (v >= hi && n < 256) { vals[n++] = v; v += step; }
+        }
+      }
+      out[0] = 0;
+      for (i = 0; i < (int)n; i++) {
+        int nn = snprintf(num, sizeof num, "%ld", vals[i]);
+        if (nn < 0) nn = 0;
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + (size_t)nn < sizeof out) {
+          memcpy(out + olen, num, (size_t)nn);
+          olen += (size_t)nn;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, num, take);
+          olen += take;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "RANGE_N", n);
+      var_set_num(vm, "SEQ_N", n);
+      var_set_num(vm, "COUNT", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
      * Usability: agents stamp plates without shell date(1).
      * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
@@ -4248,7 +4353,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4568,6 +4673,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
       {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
       {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},
+      {"SYS RANGE", "SYS RANGE lo hi [step] — inclusive int sequence → newline bag"},
+      {"SYS SEQ", "SYS SEQ n | lo hi [step] — 1..n or inclusive range → bag"},
+      {"SYS IOTA", "SYS IOTA n | lo hi [step] — 0..n-1 (half-open) → bag"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
