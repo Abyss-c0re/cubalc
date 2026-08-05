@@ -5,7 +5,7 @@
   "item": "SYS STR / ITOA integer to decimal string",
   "item_id": 85,
   "title": "SYS STR|ITOA converts numbers for REPLACEALL templates",
-  "commit": "9f3b77f647badc91ffe722c1d71664f067dbfad2",
+  "commit": "d7e0ced133803a364034048dacaf24258f5a590d",
   "summary": "SYS STR|ITOA|NUMSTR|TOSTR|DECIMAL n \u2192 decimal string LAST/STR; dual of SYS NUM; fills {{COUNT}} without shell.",
   "proofs": [
     "626_sys_str",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T10:26:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9f3b77f647badc91ffe722c1d71664f067dbfad2"
+  "sha": "d7e0ced133803a364034048dacaf24258f5a590d"
 }
