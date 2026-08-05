@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 119,
-  "version": "1.15.144-usability",
-  "item": "SYS ARGMAX / ARGMIN index of first extreme",
-  "item_id": 152,
-  "title": "SYS ARGMAX|ARGMIN a b [c…]|bag — 0-based index of first extreme → LAST_N",
-  "commit": "d4f1d693ce8810ed78af09692e42ed21eaaa50c2",
-  "summary": "SYS ARGMAX/ARGMIN index of extreme for LENALL→NTH longest-field pick. selftest 119.",
+  "iter": 120,
+  "version": "1.15.145-usability",
+  "item": "SYS PADALL / LPADALL pad every bag field to width",
+  "item_id": 153,
+  "title": "SYS PADALL|LPADALL|RPADALL bag width [pad] — pad every field to width",
+  "commit": "7d32686988e07f509ba3f42e186b89a5fe332814",
+  "summary": "SYS PADALL/LPADALL pad every bag field for column-align plates after LENALL. selftest 120.",
   "proofs": [
-    "692_sys_argmax",
-    "selftest n_pass=119"
+    "693_sys_padall",
+    "selftest n_pass=120"
   ],
-  "when": "2026-08-05T21:34:17Z",
+  "when": "2026-08-05T21:44:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d4f1d693ce8810ed78af09692e42ed21eaaa50c2"
+  "sha": "7d32686988e07f509ba3f42e186b89a5fe332814"
 }
