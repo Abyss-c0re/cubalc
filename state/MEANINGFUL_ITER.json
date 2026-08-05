@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 66,
-  "version": "1.15.91-usability",
-  "item": "SYS WORDS / TOKENIZE whitespace tokenize",
-  "item_id": 99,
-  "title": "SYS WORDS|TOKENIZE whitespace → newline fields",
-  "commit": "dcc8c00cca2dd4650ade57a88d2b5bb55704f731",
-  "summary": "SYS WORDS|TOKENIZE|TOKENS|WSSPLIT collapse whitespace to newline bag fields for EACH LINE/GREP/SORT without SPLIT glue. selftest 66.",
+  "iter": 67,
+  "version": "1.15.92-usability",
+  "item": "SYS HASLINE / HASLINEI exact bag membership",
+  "item_id": 100,
+  "title": "SYS HASLINE|HASFIELD bag needle exact field membership",
+  "commit": "b0f4ec9eac6a1e8783af155a9701d5c966d5cad7",
+  "summary": "SYS HASLINE|HASFIELD|LINEIN exact newline-field membership; HASLINEI case-insensitive. Work bags without EACH+EQS; not GREP substring. selftest 67.",
   "proofs": [
-    "640_sys_words",
-    "selftest n_pass=66"
+    "641_sys_hasline",
+    "selftest n_pass=67"
   ],
-  "when": "2026-08-05T12:43:15Z",
+  "when": "2026-08-05T12:53:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dcc8c00cca2dd4650ade57a88d2b5bb55704f731"
+  "sha": "b0f4ec9eac6a1e8783af155a9701d5c966d5cad7"
 }
