@@ -116,6 +116,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 86. ~~**`SYS BEFORE` / `AFTER`**~~ **done** (peel at first needle · log/kv without FIND+MID).
 87. ~~**`SYS PUSH` / `ADDLINE`**~~ **done** (append newline field · multi-file hit accumulate).
 88. ~~**`SYS EQSI` / `HASI`**~~ **done** (case-insensitive equality/contains · IF after GREPI).
+89. ~~**`SYS LINES` / `WC`**~~ **done** (count newline fields · bag size after LAST_N clobber).
 
 ## Tick protocol
 

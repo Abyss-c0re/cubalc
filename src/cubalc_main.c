@@ -1689,6 +1689,7 @@ int main(int argc, char **argv) {
       {"sys_before", "programs/proof/627_sys_before.cubalc", "SYS BEFORE/AFTER peel at needle"},
       {"sys_push", "programs/proof/628_sys_push.cubalc", "SYS PUSH/ADDLINE field accumulate"},
       {"sys_eqsi", "programs/proof/629_sys_eqsi.cubalc", "SYS EQSI/HASI case-insensitive probes"},
+      {"sys_lines", "programs/proof/630_sys_lines.cubalc", "SYS LINES/WC newline field count"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1868,6 +1869,8 @@ int main(int argc, char **argv) {
       {"SYS ADDLINE", "host", "SYS ADDLINE bag line — alias of SYS PUSH"},
       {"SYS EQSI", "host", "SYS EQSI|IEQS|EQS I a b — case-insensitive equality"},
       {"SYS HASI", "host", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive contains"},
+      {"SYS LINES", "host", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N"},
+      {"SYS WC", "host", "SYS WC [str] — alias of SYS LINES field count"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2423,6 +2426,8 @@ int main(int argc, char **argv) {
        "SYS PUSH/ADDLINE newline field accumulate"},
       {"programs/proof/629_sys_eqsi.cubalc", "sys_eqsi",
        "SYS EQSI/HASI case-insensitive string probes"},
+      {"programs/proof/630_sys_lines.cubalc", "sys_lines",
+       "SYS LINES/WC count newline fields"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2811,6 +2816,8 @@ int main(int argc, char **argv) {
       {"SYS ADDLINE", "host", "SYS ADDLINE alias of SYS PUSH"},
       {"SYS EQSI", "host", "SYS EQSI case-insensitive equality"},
       {"SYS HASI", "host", "SYS HASI case-insensitive contains"},
+      {"SYS LINES", "host", "SYS LINES count newline fields"},
+      {"SYS WC", "host", "SYS WC alias of SYS LINES"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3037,6 +3044,8 @@ int main(int argc, char **argv) {
       {"SYS ADDLINE", "host", "SYS ADDLINE alias of SYS PUSH"},
       {"SYS EQSI", "host", "SYS EQSI|IEQS|EQS I case-insensitive equality"},
       {"SYS HASI", "host", "SYS HASI|ICONTAINS|HAS I case-insensitive contains"},
+      {"SYS LINES", "host", "SYS LINES|NLINES|WC count newline fields"},
+      {"SYS WC", "host", "SYS WC alias of SYS LINES"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3100,6 +3109,7 @@ int main(int argc, char **argv) {
       {"programs/proof/627_sys_before.cubalc", "sys_before", "SYS BEFORE/AFTER log peel"},
       {"programs/proof/628_sys_push.cubalc", "sys_push", "SYS PUSH line accumulate"},
       {"programs/proof/629_sys_eqsi.cubalc", "sys_eqsi", "SYS EQSI/HASI case-insensitive"},
+      {"programs/proof/630_sys_lines.cubalc", "sys_lines", "SYS LINES/WC field count"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

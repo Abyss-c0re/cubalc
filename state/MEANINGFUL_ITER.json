@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 55,
-  "version": "1.15.80-usability",
-  "item": "SYS EQSI / HASI case-insensitive probes",
-  "item_id": 88,
-  "title": "SYS EQSI|HASI case-insensitive equality and contains",
-  "commit": "5f84251310ab675f495eaecddf43189d00021044",
-  "summary": "SYS EQSI|IEQS|EQS I and HASI|ICONTAINS|HAS I for case-insensitive string probes; IF companion to GREPI without UPPER/LOWER glue.",
+  "iter": 56,
+  "version": "1.15.81-usability",
+  "item": "SYS LINES / WC newline field count",
+  "item_id": 89,
+  "title": "SYS LINES|WC counts newline fields after LAST_N clobber",
+  "commit": "pending",
+  "summary": "SYS LINES|NLINES|WC|COUNTLINES [str] \u2192 LAST_N/LINES_N/WC_N field count; bag/LIST size without shell wc -l.",
   "proofs": [
-    "629_sys_eqsi",
-    "selftest n_pass=55"
+    "630_sys_lines",
+    "selftest n_pass=56"
   ],
-  "when": "2026-08-05T10:53:44Z",
+  "when": "2026-08-05T11:03:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5f84251310ab675f495eaecddf43189d00021044"
+  "sha": "pending",
+  "note": "prior tick restored thrash mass-delete via git restore HEAD"
 }

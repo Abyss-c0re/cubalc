@@ -1,0 +1,73 @@
+# SYS LINES / WC / NLINES — count newline fields (bag size without shell wc -l)
+# Usability: recover field count after LAST_N was overwritten by other ops
+
+HOLD_FLASH 1
+
+# empty → 0
+SYS LINES ""
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LINES_N == 0
+ASSERT WC_N == 0
+
+# single field
+SYS LINES "alpha"
+ASSERT LAST_N == 1
+
+# multi-line bag
+LET bag = "a"
+SYS PUSH bag "b"
+LET bag = LAST
+SYS PUSH bag "c"
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 3
+ASSERT LINES_N == 3
+ASSERT PUSH_N == 3
+
+# aliases
+SYS WC bag
+ASSERT LAST_N == 3
+SYS NLINES bag
+ASSERT LAST_N == 3
+SYS COUNTLINES bag
+ASSERT LAST_N == 3
+SYS NF bag
+ASSERT LAST_N == 3
+
+# default source LAST
+LET S = "one"
+SYS PUSH S "two"
+# LAST is two-field bag; overwrite LAST_N via unrelated op
+SYS LEN LAST
+ASSERT LAST_N > 0
+SYS LINES
+ASSERT LAST_N == 2
+
+# LIST then LINES after HEAD clobber
+SYS LIST "programs/lib"
+LET listing = LAST
+LET nlib = LAST_N
+SYS HEAD listing
+# LAST_N now is length of first name, not list count
+SYS LINES listing
+ASSERT LAST_N == nlib
+ASSERT LAST_N >= 1
+
+# GREP then count survivors after STR clobber
+LET T = "Error\ninfo\nERROR\nwarn"
+SYS GREPI "error" T
+LET hits = LAST
+ASSERT GREP_N == 2
+SYS STR GREP_N
+# LAST_N is 2 still (numeric) but prove LINES on hits text
+SYS LINES hits
+ASSERT LAST_N == 2
+ASSERT LINES_N == 2
+
+# TAKE window size
+SYS TAKE 1 hits
+SYS LINES
+ASSERT LAST_N == 1
+
+PRINT "sys_lines ok"

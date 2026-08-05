@@ -1946,6 +1946,36 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LINES|NLINES|WC|COUNTLINES [str|LAST] — count newline fields → LAST_N.
+     * LAST kept as source text; LINES_N/WC_N = count. Empty → 0.
+     * Usability: bag/LIST size after other ops overwrite LAST_N. */
+    if (kw(&L->cur,"LINES") || kw(&L->cur,"NLINES") || kw(&L->cur,"WC") ||
+        kw(&L->cur,"COUNTLINES") || kw(&L->cur,"LINECOUNT") ||
+        kw(&L->cur,"NF") || kw(&L->cur,"NFIELDS")){
+      char src[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", src);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", src);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "LINES_N", nfields);
+      var_set_num(vm, "WC_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0
      * SYS EQSI|IEQS|STREQI — case-insensitive equality (IF after GREPI).
      * SYS EQS I|ICASE a b — same as EQSI. */
@@ -2397,7 +2427,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2646,6 +2676,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
       {"SYS EQSI", "SYS EQSI|IEQS|EQS I a b — case-insensitive string equality · LAST_N 0|1"},
       {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
+      {"SYS LINES", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N/LINES_N"},
+      {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
