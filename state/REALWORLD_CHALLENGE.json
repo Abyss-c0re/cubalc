@@ -1,0 +1,101 @@
+{
+  "schema": "cubalc.realworld_challenge.v1",
+  "iter": 1,
+  "program": "programs/realworld/mesh_health_board.cubalc",
+  "theme": "mesh health board: soft dial → local EXCHANGE fallback → peer_decide → STATUS",
+  "version": "1.15.43-usability",
+  "pass": true,
+  "tests": [
+    {
+      "name": "soft_dial_local_fallback",
+      "cmd": "CUBALC_P2P_SOFT=1 cubalc run -q programs/realworld/mesh_health_board.cubalc",
+      "ok": true,
+      "note": "remote soft-fail then mesh_exchange + CLEAR_ERR; exit 0"
+    },
+    {
+      "name": "strict_after_recovery",
+      "cmd": "CUBALC_P2P_SOFT=1 cubalc run -q -s …",
+      "ok": true,
+      "note": "exit 0 only because CLEAR_ERR after intentional FAIL"
+    },
+    {
+      "name": "hard_dial_no_soft",
+      "cmd": "cubalc run -q (no CUBALC_P2P_SOFT)",
+      "ok": false,
+      "note": "expected hard fail at SMX DIAL — cannot recover in-program without host soft flag"
+    },
+    {
+      "name": "selftest",
+      "cmd": "cubalc selftest",
+      "ok": true,
+      "note": "18/18 green"
+    }
+  ],
+  "weaknesses": [
+    {
+      "id": "W1",
+      "severity": "high",
+      "area": "p2p|env",
+      "title": "Soft dial cannot be enabled from CubalC source",
+      "detail": "SYS ENV CUBALC_P2P_SOFT OR \"1\" only reads into LAST; DIAL soft-fail is gated solely by host getenv. Agents must shell-export CUBALC_P2P_SOFT=1. Reading soft into LET does not affect SMX DIAL.",
+      "repro": "unset CUBALC_P2P_SOFT; run mesh_health_board → fatal DIAL connect even if program sets LET soft"
+    },
+    {
+      "id": "W2",
+      "severity": "high",
+      "area": "string",
+      "title": "SYS CAT is 2-arg only; multi-arg and numeric vars fail opaquely",
+      "detail": "SYS CAT a b c parses leftover as unknown form. SYS CAT \"x=\" n with numeric LET n fails unknown form 'n'. No documented multi-arg join; forms/search omit SYS CAT/STRCAT entirely.",
+      "repro": "echo 'SYS CAT \"a\" \"b\" \"c\"' | cubalc run -q -"
+    },
+    {
+      "id": "W3",
+      "severity": "med",
+      "area": "io|state",
+      "title": "SYS WRITE paths ignore CUBALC_STATE",
+      "detail": "SYS STATE returns the state dir, but SYS WRITE \"MESH_HEALTH_BOARD.txt\" writes cwd-relative, not under CUBALC_STATE. Agents cannot safely place plates without absolute path glue (and no join of sdir+name that accepts numbers/paths cleanly).",
+      "repro": "CUBALC_STATE=/tmp/x cubalc run … → file appears in repo cwd not /tmp/x"
+    },
+    {
+      "id": "W4",
+      "severity": "med",
+      "area": "error|status",
+      "title": "STATUS ok vs sticky last_err after intentional FAIL then PASS",
+      "detail": "Without CLEAR_ERR, STATUS can report status ok=1 while last_err still holds FAIL text from a recovered soft path. -s mode exits 1 despite recovery. CLEAR_ERR is required but easy to forget.",
+      "repro": "FAIL then PASS then STATUS without CLEAR_ERR; run -s"
+    },
+    {
+      "id": "W5",
+      "severity": "med",
+      "area": "docs|discovery",
+      "title": "String plane invisible to forms/search",
+      "detail": "SYS CAT/STRCAT/FIND exist in lang_ops_core but cubalc forms CAT and search concat/string do not list them. Agents invent broken multi-arg CAT from cookbook silence.",
+      "repro": "cubalc forms CAT → n=0; cubalc search concat → n=0"
+    },
+    {
+      "id": "W6",
+      "severity": "low",
+      "area": "cli",
+      "title": "Quiet mode still dies on late parse/form errors after good work",
+      "detail": "Program ran full mesh+decide successfully then failed at end on bad SYS CAT — expensive success discarded. No partial plate commit for late errors.",
+      "repro": "original board with multi-arg SYS CAT after STATUS"
+    }
+  ],
+  "workarounds": [
+    "Always export CUBALC_P2P_SOFT=1 from host for probe boards",
+    "Pairwise SYS CAT strings only; stringify numbers via known string vars or avoid",
+    "CLEAR_ERR after intentional soft FAIL if using run -s",
+    "Use PRINT_JSON/STATUS for agent output; treat SYS WRITE as cwd-relative only",
+    "Discover string ops by grepping sources until forms catalog is complete"
+  ],
+  "language_gaps": [
+    "In-language set of soft-dial / soft-serve flags (or SMX DIAL SOFT form)",
+    "SYS CAT multi-arg or SYS FMT / interpolation for plate bodies",
+    "Numeric-to-string in CAT or PRINT formatting",
+    "SYS WRITE under STATE by default or SYS WRITE STATE \"name\" body",
+    "Catalog SYS string plane in forms/search/HELP"
+  ],
+  "commit": null,
+  "ts": "2026-08-05T07:52:00Z",
+  "scheduler": "019fd042fbd1 every 25m"
+}

@@ -1,0 +1,113 @@
+# Real-world: mesh health board for agents/operators
+# Use case: probe remote peer if configured; fall back to in-process mesh;
+#           decide digit from peer0/brain; emit STATUS for host agents.
+#
+# Host env (all optional):
+#   CUBALC_P2P_PEER     remote host:port (default 127.0.0.1:1 — expect soft fail)
+#   CUBALC_P2P_SOFT=1   REQUIRED for soft dial (language cannot set host env)
+#   CUBALC_PEER0_DIGIT  optional digit inject for peer_decide
+#   CUBALC_SMX_KEY      shared secret (demo key if unset — lab only)
+#
+# Run:
+#   CUBALC_P2P_SOFT=1 cubalc run -q programs/realworld/mesh_health_board.cubalc
+#   CUBALC_P2P_SOFT=1 cubalc run -q -s programs/realworld/mesh_health_board.cubalc
+# Weakness note: -s will exit 1 after recovered FAIL unless CLEAR_ERR is used.
+
+INCLUDE agent_boot
+REQUIRE LIB mesh_exchange
+REQUIRE LIB peer_decide
+
+NOTE "mesh_health: boot complete"
+SYS MS
+LET t0 = LAST_N
+
+# --- config with defaults (no shell glue for values — but soft dial still needs host env) ---
+SYS ENV "CUBALC_P2P_PEER" OR "127.0.0.1:1"
+LET peer = LAST
+SYS ENV "CUBALC_P2P_SOFT" OR "0"
+LET soft = LAST
+NOTE "mesh_health: config loaded"
+
+# --- place units ---
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+CUBE brain ROLE braincube PROTON 1
+
+PLUG self remote
+PLUG peer0 peer1
+PLUG peer0 brain
+
+SETBIT self 0 1
+SETBIT self 2 1
+SETBIT self 4 1
+SETBIT peer0 1 1
+SETBIT peer0 3 1
+SETBIT peer1 0 1
+SETBIT peer1 5 1
+IMPULSE self 1
+IMPULSE peer0 1
+FLOW 2
+
+# --- path A: soft DIAL remote (real mesh probe) ---
+NOTE "mesh_health: path A dial"
+SMX KEY
+# peer endpoint from LET peer — DIAL reads string arg
+SMX DIAL self remote peer
+
+EXPECT SMX_OK == 1 "remote peer answered SMX DIAL"
+IF SMX_OK == 1 THEN
+  NOTE "mesh_health: remote mesh live"
+  LET path = "remote"
+  PASS "remote dial ok"
+  CLEAR_ERR "remote path clean"
+ELSE
+  NOTE "mesh_health: remote absent — local mesh fallback"
+  FAIL "remote dial soft-fail — using in-process EXCHANGE"
+  LET path = "local"
+  # path B: local mesh (no network)
+  INCLUDE mesh_exchange
+  EXPECT SMX_OK == 1 "local mesh_exchange must work offline"
+  IF SMX_OK == 1 THEN
+    PASS "local mesh fallback ok"
+    # recover plate so agents using -s can exit 0 after intentional soft probe
+    CLEAR_ERR "recovered via local mesh"
+  ELSE
+    FAIL "local mesh also failed"
+  END
+END
+
+# --- decide from peer matrix ---
+NOTE "mesh_health: peer_decide"
+INCLUDE peer_decide
+EXPECT DECIDE >= 0 "decide range low"
+EXPECT DECIDE <= 9 "decide range high"
+
+SYS MS
+LET t1 = LAST_N
+LET elapsed_ms = t1 - t0
+
+# --- agent health plate ---
+STATUS
+PRINT_JSON SMX_OK SMX_TALKS DECIDE OK EXPECT_OK elapsed_ms peer soft path
+VARS
+
+# Build plate body with pairwise SYS CAT (only 2-arg — multi-arg not supported)
+SYS CAT "mesh_health path=" path
+SYS CAT LAST " decide="
+# Weakness: SYS CAT of string + number var may not stringify DECIDE — try LAST first
+SYS NUM DECIDE
+SYS CAT "mesh_health path=" path
+LET line1 = LAST
+SYS CAT line1 " smx_ok="
+LET line2 = LAST
+SYS CAT line2 " talks="
+# numbers: convert via SYS? use PRINT_JSON only for agents; write path marker
+SYS STATE
+LET sdir = LAST
+# Weakness: SYS WRITE relative path is cwd-relative, NOT under CUBALC_STATE
+SYS WRITE "MESH_HEALTH_BOARD.txt" "mesh_health_board wrote plate — see PRINT_JSON / STATUS"
+
+NOTE "mesh_health: done"
+PRINT "mesh_health_board" SMX_OK SMX_TALKS DECIDE OK elapsed_ms path
