@@ -9,6 +9,7 @@
 make all
 ./out/cubalc doctor      # JSON readiness
 ./out/cubalc version     # language version JSON (also: VERSION in-program)
+./out/cubalc paths       # cwd/state/lib/docs layout JSON
 ./out/cubalc cookbook    # paths
 ./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
