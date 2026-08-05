@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 101,
-  "version": "1.15.126-usability",
-  "item": "SYS GREPANY / GREPOR multi-needle bag filter",
-  "item_id": 134,
-  "title": "SYS GREPANY|GREPOR bag n1 [n2…] match any needle",
-  "commit": "229b2939aca0e241d52e810fe54760d6e35fd908",
-  "summary": "SYS GREPANY/GREPOR keep fields matching any needle (GREPANYI icase). Multi-severity log triage. selftest 101.",
+  "iter": 102,
+  "version": "1.15.127-usability",
+  "item": "SYS GREPALL / GREPAND multi-needle AND bag filter",
+  "item_id": 135,
+  "title": "SYS GREPALL|GREPAND bag n1 [n2\u2026] match every needle",
+  "commit": "1b48b466eb28b44ae6dca458aa63321091ef73d1",
+  "summary": "SYS GREPALL/GREPAND keep fields matching all needles (GREPALLI icase). Multi-tag AND triage. selftest 102.",
   "proofs": [
-    "674_sys_grepany",
-    "selftest n_pass=101"
+    "675_sys_grepall",
+    "selftest n_pass=102"
   ],
-  "when": "2026-08-05T18:34:17Z",
+  "when": "2026-08-05T18:44:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "229b2939aca0e241d52e810fe54760d6e35fd908"
+  "sha": "1b48b466eb28b44ae6dca458aa63321091ef73d1"
 }
