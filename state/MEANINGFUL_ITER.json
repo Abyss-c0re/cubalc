@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 71,
-  "version": "1.15.96-usability",
-  "item": "SYS SETLINE / REPLACELINE set bag field by index",
-  "item_id": 104,
-  "title": "SYS SETLINE|REPLACELINE bag n value set 0-based field",
-  "commit": "756a8dba6ca0d91f8b5179e6fec660237a89c8ae",
-  "summary": "SYS SETLINE|REPLACELINE|PUTLINE bag n value set 0-based field in place. Soft miss LAST_N=0. Pairs with FINDLINE for status updates without EACH. selftest 71.",
+  "iter": 72,
+  "version": "1.15.97-usability",
+  "item": "SYS INSERTLINE / INSLINE insert bag field by index",
+  "item_id": 105,
+  "title": "SYS INSERTLINE|INSLINE bag n value insert 0-based field",
+  "commit": "364b1d612a17433bd7e6897c8e09ffcfd5a6519b",
+  "summary": "SYS INSERTLINE|INSLINE|INSERTFIELD bag n value insert field at 0-based index. n>=count appends, n==0 front, n<0 soft miss. LAST_N=field count. Completes PUSH/PREPEND/SETLINE for ordered work bags. selftest 72.",
   "proofs": [
-    "645_sys_setline",
-    "selftest n_pass=71"
+    "646_sys_insertline",
+    "selftest n_pass=72"
   ],
-  "when": "2026-08-05T13:33:48Z",
+  "when": "2026-08-05T13:44:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "756a8dba6ca0d91f8b5179e6fec660237a89c8ae"
+  "sha": "364b1d612a17433bd7e6897c8e09ffcfd5a6519b"
 }

@@ -1,0 +1,80 @@
+# SYS INSERTLINE / INSLINE — insert bag field at 0-based index
+# Usability: ordered/priority work bags without PREPEND+TAKE+DROP glue
+# n==0 front (PREPEND), n>=count append (PUSH), middle insert shifts rest
+
+HOLD_FLASH 1
+
+# insert middle
+SYS INSERTLINE "a\nc" 1 "b"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# insert front (like PREPEND)
+SYS INSERTLINE "b\nc" 0 "a"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# insert past end → append (like PUSH)
+SYS INSERTLINE "a\nb" 2 "c"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+SYS INSERTLINE "a\nb" 99 "z"
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nz"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS INSERTLINE "" 0 "solo"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# negative index soft miss
+SYS INSERTLINE "a\nb" -1 "x"
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# empty value ok
+SYS INSERTLINE "a\nc" 1 ""
+ASSERT LAST_N == 3
+SYS EQS LAST "a\n\nc"
+ASSERT LAST_N == 1
+
+# aliases
+SYS INSLINE "x\nz" 1 "y"
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+SYS INSERTFIELD "1\n3" 1 "2"
+SYS EQS LAST "1\n2\n3"
+ASSERT LAST_N == 1
+SYS ADDAT "p\nr" 1 "q"
+SYS EQS LAST "p\nq\nr"
+ASSERT LAST_N == 1
+
+# numeric value coerced
+SYS INSERTLINE "a\nc" 1 42
+ASSERT LAST_N == 3
+SYS EQS LAST "a\n42\nc"
+ASSERT LAST_N == 1
+
+# agent pattern: insert priority job after idle head
+LET bag = "peer1:idle\npeer2:busy\npeer3:idle"
+SYS INSERTLINE bag 1 "urgent:fix"
+ASSERT LAST_N == 4
+SYS EQS LAST "peer1:idle\nurgent:fix\npeer2:busy\npeer3:idle"
+ASSERT LAST_N == 1
+LET bag2 = "peer1:idle\nurgent:fix\npeer2:busy\npeer3:idle"
+SYS NTH 1 bag2
+SYS EQS LAST "urgent:fix"
+ASSERT LAST_N == 1
+SYS HASLINE bag2 "urgent:fix"
+ASSERT LAST_N == 1
+SYS FINDLINE bag2 "urgent:fix"
+ASSERT LAST_N == 1
+
+PRINT "sys_insertline ok"

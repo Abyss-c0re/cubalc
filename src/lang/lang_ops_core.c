@@ -2722,6 +2722,123 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS INSERTLINE|INSLINE bag n value — insert field before 0-based index → LAST bag.
+     * n < 0 soft miss (bag unchanged, LAST_N=0). n >= field count → append (like PUSH).
+     * n == 0 → front (like PREPEND). LAST_N = field count after insert.
+     * Usability: priority/ordered work bags without PREPEND+TAKE+DROP glue. */
+    if (kw(&L->cur,"INSERTLINE") || kw(&L->cur,"INSLINE") || kw(&L->cur,"INSERTFIELD") ||
+        kw(&L->cur,"LINEINSERT") || kw(&L->cur,"ADDAT") || kw(&L->cur,"INSERTAT") ||
+        kw(&L->cur,"PUTAT") || kw(&L->cur,"SPLICEIN")){
+      char bag[CUBALC_HOST_STR_MAX], val[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long want = 0, cur = 0, nfields = 0, ok_ins = 0;
+      size_t flen, vlen, o = 0;
+      int first = 1, inserted = 0;
+      lex_next(L);
+      bag[0] = 0; val[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vlen = strlen(val);
+      if (want < 0) {
+        snprintf(out, sizeof out, "%s", bag);
+        ok_ins = 0;
+        if (bag[0]) {
+          p = bag;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            nfields++;
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        ok_ins = 1;
+        p = bag;
+        /* empty bag: just the value */
+        if (!bag[0]) {
+          if (vlen < sizeof out) {
+            memcpy(out, val, vlen);
+            o = vlen;
+          } else {
+            size_t take = sizeof out - 1;
+            memcpy(out, val, take);
+            o = take;
+          }
+          out[o] = 0;
+          inserted = 1;
+          nfields = 1;
+        } else {
+          while (*p) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            flen = (size_t)(p - start);
+            if (cur == want && !inserted) {
+              if (!first && o + 1 < sizeof out) out[o++] = '\n';
+              first = 0;
+              if (o + vlen < sizeof out) {
+                memcpy(out + o, val, vlen);
+                o += vlen;
+              } else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, val, take);
+                o += take;
+              }
+              out[o] = 0;
+              inserted = 1;
+              nfields++;
+            }
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            first = 0;
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+            out[o] = 0;
+            nfields++;
+            cur++;
+            if (*p == '\n') p++;
+          }
+          if (!inserted) {
+            /* n past end → append */
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, val, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take);
+              o += take;
+            }
+            out[o] = 0;
+            inserted = 1;
+            nfields++;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = ok_ins ? nfields : 0;
+      var_set_num(vm, "LAST_N", ok_ins ? nfields : 0);
+      var_set_num(vm, "INSERTLINE_N", ok_ins ? nfields : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REMOVELINE|DROPLINE bag needle — drop first exact field match → LAST bag.
      * LAST_N = 1 if removed, 0 if miss (bag unchanged). REST not used.
      * SYS REMOVELINEI — case-insensitive exact field.
@@ -3344,7 +3461,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|FINDLINE|SETLINE|INSERTLINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3618,6 +3735,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FINDLINEI", "SYS FINDLINEI bag needle — case-insensitive field index"},
       {"SYS SETLINE", "SYS SETLINE|REPLACELINE bag n value — set 0-based field · LAST=bag"},
       {"SYS REPLACELINE", "SYS REPLACELINE bag n value — alias of SYS SETLINE"},
+      {"SYS INSERTLINE", "SYS INSERTLINE|INSLINE bag n value — insert field at 0-based index · append if past end"},
+      {"SYS INSLINE", "SYS INSLINE bag n value — alias of SYS INSERTLINE"},
       {"SYS REMOVELINE", "SYS REMOVELINE|DROPLINE bag needle — drop first exact field · LAST=bag"},
       {"SYS DROPLINE", "SYS DROPLINE bag needle — alias of SYS REMOVELINE"},
       {"SYS REMOVELINEI", "SYS REMOVELINEI bag needle — case-insensitive drop first field"},
