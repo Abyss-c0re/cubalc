@@ -1,0 +1,66 @@
+# SYS LENALL / MAPLEN — length of every bag field as a decimal bag
+# Usability: size rollups without EACH+LEN+PUSH; pairs with SUM/MAX/SORTN
+
+HOLD_FLASH 1
+
+LET bag = "hi\nworld\nx\nabcde"
+
+SYS LENALL bag
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT LENALL_N == 4
+ASSERT LENALL_SUM == 13
+SYS EQS LAST "2\n5\n1\n5"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPLEN bag
+SYS EQS LAST "2\n5\n1\n5"
+ASSERT LAST_N == 1
+SYS FIELDLENS bag
+ASSERT LENALL_SUM == 13
+
+# empty bag
+SYS LENALL ""
+ASSERT LAST_N == 0
+ASSERT LENALL_SUM == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single field
+SYS LENALL "hello"
+ASSERT LAST_N == 1
+ASSERT LENALL_SUM == 5
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# empty field in bag
+SYS LENALL "a\n\nbc"
+ASSERT LAST_N == 3
+ASSERT LENALL_SUM == 3
+SYS EQS LAST "1\n0\n2"
+ASSERT LAST_N == 1
+
+# agent pattern: lengths → SUM bytes / SORTN widths (MAX is multi-arg only)
+SYS LENALL bag
+SYS SUM LAST
+ASSERT LAST_N == 13
+SYS LENALL bag
+LET lens = LAST
+ASSERT LENALL_SUM == 13
+SYS SORTN lens
+SYS EQS LAST "1\n2\n5\n5"
+ASSERT LAST_N == 1
+SYS TAIL LAST
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# default bag from LAST: push sample into LAST via FLATTEN identity
+LET sample = "aa\nbbb"
+SYS FLATTEN sample ""
+SYS LENALL
+SYS EQS LAST "2\n3"
+ASSERT LAST_N == 1
+ASSERT LENALL_SUM == 5
+
+PRINT "sys_lenall ok"

@@ -1232,6 +1232,55 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LENALL|MAPLEN|FIELDLENS [bag] — length of every newline field as a
+     * decimal string bag → LAST. LAST_N/LENALL_N = field count;
+     * LENALL_SUM = sum of lengths (total chars excl. newlines).
+     * Usability: size rollups / max field width without EACH+LEN+PUSH glue;
+     * pairs with SYS SUM/MAX/AVG/SORTN on the length bag. */
+    if (kw(&L->cur,"LENALL") || kw(&L->cur,"MAPLEN") || kw(&L->cur,"FIELDLENS") ||
+        kw(&L->cur,"STRLENS") || kw(&L->cur,"LENBAG") || kw(&L->cur,"LENGTHS") ||
+        kw(&L->cur,"SIZES") || kw(&L->cur,"BYTELENS") || kw(&L->cur,"WIDTHS")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], nbuf[32];
+      const char *p, *start;
+      size_t olen = 0, flen, nlen;
+      long kept = 0, sum = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          sum += (long)flen;
+          snprintf(nbuf, sizeof nbuf, "%ld", (long)flen);
+          nlen = strlen(nbuf);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + nlen < sizeof out) {
+            memcpy(out + olen, nbuf, nlen);
+            olen += nlen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, nbuf, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "LENALL_N", kept);
+      var_set_num(vm, "LENALL_SUM", sum);
+      var_set_num(vm, "MAPLEN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
      * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
      * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
@@ -6963,7 +7012,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -7279,6 +7328,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS REPLACEALL", "SYS REPLACEALL|GSUB hay old new — all occurrences · LAST_N=count"},
       {"SYS STR", "SYS STR|ITOA|NUMSTR [n|LAST_N] — integer → decimal string LAST · template {{COUNT}}"},
       {"SYS ITOA", "SYS ITOA [n] — alias of SYS STR · dual of SYS NUM/ATOI"},
+      {"SYS LENALL", "SYS LENALL|MAPLEN [bag] — length of every field → decimal bag · LENALL_SUM"},
+      {"SYS MAPLEN", "SYS MAPLEN [bag] — alias of SYS LENALL · size rollups without EACH+LEN"},
+      {"SYS FIELDLENS", "SYS FIELDLENS [bag] — alias of SYS LENALL"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},
