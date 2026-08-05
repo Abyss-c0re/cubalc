@@ -1435,20 +1435,47 @@ int main(int argc, char **argv) {
   }
   if (strcmp(cmd, "run") == 0 || strcmp(cmd, "eval") == 0) {
     /* Real language entry: parse + evaluate a .cubalc source program.
-     * Usability: cubalc run - | eval - reads program from stdin (agents pipe). */
-    if (argc < 3) {
-      fprintf(stderr, "usage: cubalc run <file.cubalc>|-\n"
-                      "       cubalc eval <file.cubalc>|-   # - = stdin\n");
+     * Usability: cubalc run - | eval - reads program from stdin (agents pipe).
+     * Quiet: -q|--quiet|--plate or CUBALC_QUIET=1 → plate-only (no board/# ok). */
+    int quiet = 0, i, rc;
+    const char *src_path = NULL;
+    const char *src_label;
+    const char *eq;
+    FILE *trace;
+    FILE *devnull = NULL;
+    cubalc_run_result rr;
+    eq = getenv("CUBALC_QUIET");
+    if (eq && eq[0] && strcmp(eq, "0") != 0 && strcmp(eq, "false") != 0 &&
+        strcmp(eq, "FALSE") != 0 && strcmp(eq, "no") != 0 && strcmp(eq, "NO") != 0)
+      quiet = 1;
+    for (i = 2; i < argc; i++) {
+      if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet") ||
+          !strcmp(argv[i], "--plate") || !strcmp(argv[i], "--json-only")) {
+        quiet = 1;
+        continue;
+      }
+      if (!src_path)
+        src_path = argv[i];
+    }
+    if (!src_path) {
+      fprintf(stderr, "usage: cubalc run [-q|--quiet] <file.cubalc>|-\n"
+                      "       cubalc eval [-q] <file.cubalc>|-   # - = stdin\n"
+                      "       CUBALC_QUIET=1 cubalc run file.cubalc  # plate only\n");
       return 2;
     }
-    cubalc_run_result rr;
-    int rc;
-    const char *src_label = argv[2];
-    if (!strcmp(argv[2], "-") || !strcmp(argv[2], "--stdin") ||
-        !strcmp(argv[2], "/dev/stdin")) {
+    if (quiet) {
+      devnull = fopen("/dev/null", "w");
+      trace = devnull ? devnull : NULL;
+    } else {
+      trace = stdout;
+    }
+    src_label = src_path;
+    if (!strcmp(src_path, "-") || !strcmp(src_path, "--stdin") ||
+        !strcmp(src_path, "/dev/stdin")) {
       char *buf = malloc((size_t)CUBALC_MAX_SRC + 1);
       size_t n = 0;
       if (!buf) {
+        if (devnull) fclose(devnull);
         printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\",\"err\":\"oom\"}\n");
         return 2;
       }
@@ -1456,23 +1483,26 @@ int main(int argc, char **argv) {
       buf[n] = 0;
       if (n == 0) {
         free(buf);
+        if (devnull) fclose(devnull);
         printf("{\"ok\":false,\"cmd\":\"run\",\"file\":\"<stdin>\","
                "\"err\":\"empty stdin — pipe a .cubalc program\"}\n");
         return 2;
       }
       src_label = "<stdin>";
-      rc = cubalc_run_source(buf, n, src_label, &rr, stdout);
+      rc = cubalc_run_source(buf, n, src_label, &rr, trace);
       free(buf);
-    } else if (strstr(argv[2], ".cblc")) {
+    } else if (strstr(src_path, ".cblc")) {
       cubalc_image img;
-      if (cubalc_isa_load(&img, argv[2]) != 0) {
+      if (cubalc_isa_load(&img, src_path) != 0) {
+        if (devnull) fclose(devnull);
         printf("{\"ok\":false,\"cmd\":\"run\",\"err\":\"bad cblc\"}\n");
         return 2;
       }
-      rc = cubalc_jit_exec(&img, &rr, stdout);
+      rc = cubalc_jit_exec(&img, &rr, trace);
     } else {
-      rc = cubalc_run_file(argv[2], &rr, stdout);
+      rc = cubalc_run_file(src_path, &rr, trace);
     }
+    if (devnull) fclose(devnull);
     /* Usability: err_line/err_src — source snippet when error cites line N. */
     {
       char esrc[220];
@@ -1487,10 +1517,12 @@ int main(int argc, char **argv) {
       printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
              "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
              "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
-             "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\"}\n",
+             "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\","
+             "\"quiet\":%s}\n",
              rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
              rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-             CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc);
+             CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc,
+             quiet ? "true" : "false");
     }
     return rc;
   }
@@ -1933,6 +1965,7 @@ int main(int argc, char **argv) {
       {"CUBALC_STATE", "state", 0, "state plate directory"},
       {"CUBALC_ROOT", "", 0, "install root for INCLUDE resolution"},
       {"CUBALC_SEED", "", 0, "RNG seed for reproducible runs"},
+      {"CUBALC_QUIET", "", 0, "1 → run plate-only no board noise"},
       {"CUBALC_ARG0", "", 0, "SYS ARG 0 — script arg without shell glue"},
       {"CUBALC_ARG1", "", 0, "SYS ARG 1"},
       {"CUBALC_ARG2", "", 0, "SYS ARG 2"},
@@ -2827,7 +2860,7 @@ int main(int argc, char **argv) {
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
-      "    run|eval <file|->      execute program (file or stdin pipe)\n"
+      "    run|eval [-q] <file|-> execute program ( -q plate-only / CUBALC_QUIET)\n"
       "    help|-h                this text\n"
       "\n"
       "  Law & Core safety\n"

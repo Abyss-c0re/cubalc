@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 9,
-  "version": "1.15.34-usability",
-  "item": "VARS dump all program variables JSON",
-  "item_id": 42,
-  "title": "VARS dumps full LET/SYS table as cubalc.vars.v1",
-  "commit": "890bf9e93a3786e195d738fcd5178f66466308b9",
-  "summary": "VARS|LOCALS dumps all program variables as one JSON line so agents inspect state without guessing PRINT_JSON idents.",
+  "iter": 10,
+  "version": "1.15.35-usability",
+  "item": "cubalc run -q plate-only quiet mode",
+  "item_id": 43,
+  "title": "run -q / CUBALC_QUIET plate-only for agents",
+  "commit": "d442a7d2c22ebf40001ca4eb44d4f5e517d11347",
+  "summary": "cubalc run -q|--quiet|--plate and CUBALC_QUIET=1 suppress board/# ok noise so agents parse a single JSON plate line.",
   "proofs": [
-    "586_vars",
-    "selftest n_pass=12"
+    "CLI run -q hello 1-line",
+    "selftest still green"
   ],
-  "when": "2026-08-05T03:13:18Z",
+  "when": "2026-08-05T03:23:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "890bf9e93a3786e195d738fcd5178f66466308b9"
+  "sha": "d442a7d2c22ebf40001ca4eb44d4f5e517d11347"
 }

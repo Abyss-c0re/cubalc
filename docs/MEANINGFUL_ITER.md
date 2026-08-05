@@ -70,6 +70,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 40. ~~**`SYS CWD` / `STATE` / `ROOT`**~~ **done** (layout paths in-language for portable scripts).
 41. ~~**`INCLUDE OR|SOFT`**~~ **done** (optional module · OK=0 sticky LAST_ERR, no fatal).
 42. ~~**`VARS`**~~ **done** (dump all program vars as cubalc.vars.v1 JSON for agents).
+43. ~~**`cubalc run -q` / `CUBALC_QUIET`**~~ **done** (plate-only run · no board noise).
 
 ## Tick protocol
 
