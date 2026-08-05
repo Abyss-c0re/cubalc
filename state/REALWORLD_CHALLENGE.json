@@ -50,7 +50,7 @@
     },
     {
       "name": "grepall_bag_needles",
-      "cmd": "GREPALL bag needles_bag → 0; separate strings → 1",
+      "cmd": "GREPALL bag needles_bag \u2192 0; separate strings \u2192 1",
       "ok": true,
       "note": "same silent empty class as GREPANY bag needles"
     },
@@ -73,8 +73,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "GREPALL multi-needle bag argument does not expand fields",
-      "detail": "SYS GREPALL bag needles with needles='error\\ndisk' yields LAST_N=0. Need separate string args GREPALL bag \"error\" \"disk\". Same silent-empty class as GREPANY bag needles — agents piping ENV/WORDS into one bag arg fail closed.",
-      "repro": "GREPALL log needles_bag → 0; GREPALL log \"error\" \"disk\" → hits"
+      "detail": "SYS GREPALL bag needles with needles='error\\ndisk' yields LAST_N=0. Need separate string args GREPALL bag \"error\" \"disk\". Same silent-empty class as GREPANY bag needles \u2014 agents piping ENV/WORDS into one bag arg fail closed.",
+      "repro": "GREPALL log needles_bag \u2192 0; GREPALL log \"error\" \"disk\" \u2192 hits"
     },
     {
       "id": "W2",
@@ -82,13 +82,13 @@
       "area": "host|bag",
       "title": "GREPALL/GREPANY remain substring-unsafe",
       "detail": "Needle error matches host token error_soft. Multi-tag AND only partially mitigates (second needle may filter). No word-boundary / field-column GREP.",
-      "repro": "GREPANY 'error_soft:…\\ndb01:open:error:disk' error → 2 rows"
+      "repro": "GREPANY 'error_soft:\u2026\\ndb01:open:error:disk' error \u2192 2 rows"
     },
     {
       "id": "W3",
       "severity": "high",
       "area": "host|bag",
-      "title": "No in-field column update — SETMATCH needs full-row rebuild",
+      "title": "No in-field column update \u2014 SETMATCH needs full-row rebuild",
       "detail": "Status/sev ladder requires SPLIT + REPLACEALL template + SETMATCH whole row. No SETFIELD host status=review. Agents writing structured plates pay O(n) EACH + fragile rebuild.",
       "repro": "review/escalate actions: SPLIT old_entry; rebuild HOST:ST:SEV:TAG"
     },
@@ -98,14 +98,14 @@
       "area": "host|str",
       "title": "REPLACEALL template tokens collide with data",
       "detail": "Rebuild uses REPLACEALL entry \"SEV\" sev etc. Host/tag containing SEV/HOST/ST/TAG substrings corrupt the template. No positional format/sprintf.",
-      "repro": "host name containing SEV → garbled entry after REPLACEALL"
+      "repro": "host name containing SEV \u2192 garbled entry after REPLACEALL"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "lang|args",
       "title": "Optional second ARG hard with DEFAULT/ENV defaults",
-      "detail": "DEFAULT A2=disk + ENV OR disk means filter cannot distinguish unset ARG2 from default. Single-needle GREPALL path only if A2 blank — agents always get 2-needle filter unless they blank env. No true optional CLI arity.",
+      "detail": "DEFAULT A2=disk + ENV OR disk means filter cannot distinguish unset ARG2 from default. Single-needle GREPALL path only if A2 blank \u2014 agents always get 2-needle filter unless they blank env. No true optional CLI arity.",
       "repro": "filter ARG1 only still AND-matches default tag disk"
     },
     {
@@ -149,11 +149,11 @@
     "PRINT_JSON newlines; WRITE force trailing NL"
   ],
   "issues_faced": [
-    "GREPALL bag-of-needles silent empty — same agent footgun as GREPANY W2 from iter35",
-    "DEFAULT A2=disk poisoned optional filter second needle — documented W5",
+    "GREPALL bag-of-needles silent empty \u2014 same agent footgun as GREPANY W2 from iter35",
+    "DEFAULT A2=disk poisoned optional filter second needle \u2014 documented W5",
     "Status transitions verbose: EACH find + SPLIT + 4x REPLACEALL + SETMATCH",
     "Pin proved MOVELINE: c open:error moved from last to front"
   ],
-  "commit": "pending",
+  "commit": "0190bf4214342dfb3d3f64e7d396dd64644141ec",
   "ts": "2026-08-05T19:04:27Z"
 }
