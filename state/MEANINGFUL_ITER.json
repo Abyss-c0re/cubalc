@@ -5,13 +5,13 @@
   "item": "SYS CHDIR / CD change process working directory",
   "item_id": 111,
   "title": "SYS CHDIR|CD path change process cwd soft miss",
-  "commit": "109ca1dd7c8c177230eae6f45d4a0d457d90e33d",
+  "commit": "f77618b878c2c493dc34446073ab6c55bc8fc16e",
   "summary": "SYS CHDIR|CD path change process cwd. LAST_N 0|1 soft miss + sticky LAST_ERR. CHDIR OR soft. Relative READ/WRITE/LIST without shell cd. selftest 78.",
   "proofs": [
     "651_sys_chdir",
     "selftest n_pass=78"
   ],
-  "when": "2026-08-05T14:44:00Z",
+  "when": "2026-08-05T14:44:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "109ca1dd7c8c177230eae6f45d4a0d457d90e33d"
+  "sha": "f77618b878c2c493dc34446073ab6c55bc8fc16e"
 }
