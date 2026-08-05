@@ -1,0 +1,75 @@
+# SYS GREP / FILTER / GREPV — keep or drop newline fields (pairs with SYS LIST)
+# Usability: agents filter LIST basenames without shell grep/awk
+
+HOLD_FLASH 1
+
+# pure string fields
+LET S = "alpha.txt\nbeta.json\ngamma.txt\ndelta.cubalc"
+
+SYS GREP ".txt" S
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT GREP_N == 2
+SYS HAS LAST "alpha.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "gamma.txt"
+ASSERT LAST_N == 1
+SYS HAS LAST "beta.json"
+ASSERT LAST_N == 0 "json dropped"
+SYS HAS LAST "delta.cubalc"
+ASSERT LAST_N == 0
+
+# FILTER alias
+SYS FILTER ".json" S
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "beta.json"
+ASSERT LAST_N == 1
+
+# GREPV invert
+SYS GREPV ".txt" S
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS HAS LAST "beta.json"
+ASSERT LAST_N == 1
+SYS HAS LAST "delta.cubalc"
+ASSERT LAST_N == 1
+SYS HAS LAST "alpha.txt"
+ASSERT LAST_N == 0
+
+# no match → empty but OK
+SYS GREP ".nope" S
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT GREP_N == 0
+
+# default source is LAST (chain after LIST)
+SYS LIST "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS GREP ".cubalc"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+ASSERT GREP_N > 0
+SYS HAS LAST "hold_seed.cubalc"
+ASSERT LAST_N == 1
+SYS HEAD
+ASSERT OK == 1
+SYS ENDS LAST ".cubalc"
+ASSERT LAST_N == 1 "filtered head ends with .cubalc"
+
+# VGREP alias + MATCHLINES
+LET T = "a\nb\nac"
+SYS VGREP "a" T
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SYS MATCHLINES "a" T
+ASSERT LAST_N == 2
+
+# empty needle keeps all
+SYS GREP "" S
+ASSERT OK == 1
+ASSERT LAST_N == 4
+
+PRINT "sys_grep ok"

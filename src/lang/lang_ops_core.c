@@ -1481,6 +1481,69 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS GREP|FILTER needle [str|LAST] — keep newline fields containing needle.
+     * SYS GREPV|VGREP needle [str] — invert (drop matches).
+     * LAST = kept lines (newline-joined); LAST_N/GREP_N = count kept.
+     * Empty needle keeps all (GREP) or drops all (GREPV). Soft empty → OK=1 LAST_N=0.
+     * Usability: filter SYS LIST basenames without shell awk/grep. */
+    if (kw(&L->cur,"GREP") || kw(&L->cur,"FILTER") || kw(&L->cur,"MATCHLINES") ||
+        kw(&L->cur,"GREPV") || kw(&L->cur,"VGREP") || kw(&L->cur,"FILTERV") ||
+        kw(&L->cur,"NOMATCH")){
+      int invert = (kw(&L->cur,"GREPV") || kw(&L->cur,"VGREP") ||
+                    kw(&L->cur,"FILTERV") || kw(&L->cur,"NOMATCH"));
+      char needle[256]="", src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          {
+            size_t flen = (size_t)(p - start);
+            char field[512];
+            int hit;
+            if (flen >= sizeof field) flen = sizeof field - 1;
+            memcpy(field, start, flen);
+            field[flen] = 0;
+            if (needle[0] == 0) hit = 1;
+            else hit = (strstr(field, needle) != NULL) ? 1 : 0;
+            if (invert) hit = !hit;
+            if (hit) {
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + flen < sizeof out) {
+                memcpy(out + olen, field, flen);
+                olen += flen;
+              } else if (olen < sizeof out - 1) {
+                size_t take = sizeof out - 1 - olen;
+                memcpy(out + olen, field, take);
+                olen += take;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      out[olen] = 0;
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GREP", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "GREP_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -1798,7 +1861,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2023,6 +2086,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LINE", "SYS LINE n [str] — 1-based newline field"},
       {"SYS HEAD", "SYS HEAD [str] — first newline field"},
       {"SYS TAIL", "SYS TAIL [str] — last newline field"},
+      {"SYS GREP", "SYS GREP|FILTER needle [str] — keep newline fields containing needle"},
+      {"SYS GREPV", "SYS GREPV|VGREP needle [str] — drop newline fields containing needle"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
