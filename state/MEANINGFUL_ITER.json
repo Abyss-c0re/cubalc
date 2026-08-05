@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 113,
-  "version": "1.15.138-usability",
-  "item": "SYS STRIDE / EVERY partition bag by step/offset",
-  "item_id": 146,
-  "title": "SYS STRIDE|EVERY step [offset] [bag] — keep index%step==offset fields",
-  "commit": "a1cfe18ac773b362eb21f0ffc10e6e5d11d24287",
-  "summary": "SYS STRIDE/EVERY partition bag fields by step/offset for multi-worker split. selftest 113.",
+  "iter": 114,
+  "version": "1.15.139-usability",
+  "item": "SYS ROTATE / ROTL / ROTR cyclic bag field rotation",
+  "item_id": 147,
+  "title": "SYS ROTATE|ROTL|ROTR k [bag] — cyclic bag field rotate for round-robin",
+  "commit": "3cae06c4880299633e5761acda354b88958eacbc",
+  "summary": "SYS ROTATE/ROTL/ROTR cyclic bag field rotation for round-robin peers. selftest 114.",
   "proofs": [
-    "686_sys_stride",
-    "selftest n_pass=113"
+    "687_sys_rotate",
+    "selftest n_pass=114"
   ],
-  "when": "2026-08-05T20:33:37Z",
+  "when": "2026-08-05T20:43:28Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a1cfe18ac773b362eb21f0ffc10e6e5d11d24287"
+  "sha": "3cae06c4880299633e5761acda354b88958eacbc"
 }
