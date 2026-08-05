@@ -17,7 +17,7 @@
       "name": "claim_first_only",
       "cmd": "claim; claim",
       "ok": true,
-      "note": "SETMATCH idle→busy first field only → busy,busy,idle,idle"
+      "note": "SETMATCH idle\u2192busy first field only \u2192 busy,busy,idle,idle"
     },
     {
       "name": "count_exact",
@@ -29,7 +29,7 @@
       "name": "finish_recycle",
       "cmd": "finish; recycle",
       "ok": true,
-      "note": "busy→done then done→idle via SETMATCH chain"
+      "note": "busy\u2192done then done\u2192idle via SETMATCH chain"
     },
     {
       "name": "claim_require_miss",
@@ -53,19 +53,19 @@
       "name": "setmatch_empty_new_hole",
       "cmd": "rewritex idle ''",
       "ok": true,
-      "note": "SETMATCH to empty leaves blank bag field — capacity hole"
+      "note": "SETMATCH to empty leaves blank bag field \u2014 capacity hole"
     },
     {
       "name": "countline_not_substring",
-      "cmd": "bag peer:idle\\nidle; count idle → 1; count peer:idle → 1",
+      "cmd": "bag peer:idle\\nidle; count idle \u2192 1; count peer:idle \u2192 1",
       "ok": true,
-      "note": "COUNTLINE exact field only — peer:idle does not count as idle"
+      "note": "COUNTLINE exact field only \u2014 peer:idle does not count as idle"
     },
     {
       "name": "print_json_collapse",
       "cmd": "PRINT_JSON pool",
       "ok": true,
-      "note": "pool becomes idleidleidlebusyidle — newlines gone"
+      "note": "pool becomes idleidleidlebusyidle \u2014 newlines gone"
     },
     {
       "name": "write_no_trailing_nl",
@@ -85,15 +85,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag|concurrency",
-      "title": "SETMATCH is first-match only — no multi-claim / no CAS",
+      "title": "SETMATCH is first-match only \u2014 no multi-claim / no CAS",
       "detail": "claim() replaces only the first exact free token. Claiming N slots needs N process runs. Concurrent agents race on the same first field with no atomic compare-and-swap or flock; last writer wins on WRITE. No O_EXCL lock plate.",
-      "repro": "seed 4; two parallel claim → both may rewrite same first idle if interleaved before WRITE"
+      "repro": "seed 4; two parallel claim \u2192 both may rewrite same first idle if interleaved before WRITE"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|loop",
-      "title": "No native repeat-N / FOR range — seed uses unrolled IF ladder",
+      "title": "No native repeat-N / FOR range \u2014 seed uses unrolled IF ladder",
       "detail": "Seeding N idle tokens required either EACH over a prebuilt marker bag or 32 unrolled IF n_match > k PUSH. No FOR i=1..N, no REPEAT n. Agents invent marker bags or cap capacity.",
       "repro": "action seed ARG1=4 builds markers via IF ladder then EACH LINE PUSH idle"
     },
@@ -103,22 +103,22 @@
       "area": "host|bag",
       "title": "SETMATCH empty new leaves blank field hole",
       "detail": "SETMATCH bag idle \"\" succeeds with LAST_N=1 and inserts an empty line. COUNTLINE idle drops but LINES still counts the hole. Easy to create silent capacity ghosts.",
-      "repro": "rewritex idle \"\" → bag starts with empty field (cat -A shows $ alone)"
+      "repro": "rewritex idle \"\" \u2192 bag starts with empty field (cat -A shows $ alone)"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "COUNTLINE/HASLINE/SETMATCH exact-field only — status suffixes need pure tokens",
-      "detail": "Bag peer:idle\\nidle; COUNTLINE idle → 1 (not 2). Real rosters with name:status cannot use COUNTLINE on status alone without GREP/EACH first. Forces pure-token pool design or GREP then count.",
-      "repro": "printf 'peer:idle\\nidle\\n' > POOL; count idle → n_match=1"
+      "title": "COUNTLINE/HASLINE/SETMATCH exact-field only \u2014 status suffixes need pure tokens",
+      "detail": "Bag peer:idle\\nidle; COUNTLINE idle \u2192 1 (not 2). Real rosters with name:status cannot use COUNTLINE on status alone without GREP/EACH first. Forces pure-token pool design or GREP then count.",
+      "repro": "printf 'peer:idle\\nidle\\n' > POOL; count idle \u2192 n_match=1"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "cli",
       "title": "PRINT_JSON collapses bag newlines",
-      "detail": "PRINT_JSON pool yields idleidleidlebusyidle — agents cannot recover slot order from JSON; must READ plate file.",
+      "detail": "PRINT_JSON pool yields idleidleidlebusyidle \u2014 agents cannot recover slot order from JSON; must READ plate file.",
       "repro": "list action PRINT_JSON pool"
     },
     {
@@ -126,14 +126,14 @@
       "severity": "med",
       "area": "host|io",
       "title": "WRITE omits final trailing newline",
-      "detail": "seed 2 → b'idle\\nidle' ends_with_nl False. Hosts that APPEND glue last field to next write.",
+      "detail": "seed 2 \u2192 b'idle\\nidle' ends_with_nl False. Hosts that APPEND glue last field to next write.",
       "repro": "seed 2; python open(POOL).read() ends without \\n"
     },
     {
       "id": "W7",
       "severity": "med",
       "area": "host|flow",
-      "title": "SYS NUM only parses LAST — seed count needs PREPEND/HEAD shuttle",
+      "title": "SYS NUM only parses LAST \u2014 seed count needs PREPEND/HEAD shuttle",
       "detail": "ARG1 count arrives as string. Cannot SYS NUM A; must PREPEND \"\" A; HEAD LAST; NUM. Same shuttle as prior runbook index ops.",
       "repro": "seed ARG1=4 path in program"
     },
@@ -141,9 +141,9 @@
       "id": "W8",
       "severity": "low",
       "area": "host|docs",
-      "title": "SYS STR is itoa not string-format — report glue is PUSH bag only",
+      "title": "SYS STR is itoa not string-format \u2014 report glue is PUSH bag only",
       "detail": "Attempted SYS STR \"action=\" ACTION failed with unknown form. STR coerces numbers to decimal strings; free-form report lines need REPLACEALL templates or PUSH key/value bags.",
-      "repro": "SYS STR \"action=\" ACTION → parse error unknown form"
+      "repro": "SYS STR \"action=\" ACTION \u2192 parse error unknown form"
     },
     {
       "id": "W9",
@@ -151,14 +151,14 @@
       "area": "host|soft",
       "title": "SETMATCH miss soft LAST_N=0 without FAIL sticky unless agent adds FAIL",
       "detail": "Program must FAIL+CLEAR_ERR+REQUIRE discipline. Soft miss alone leaves OK green in -s unless FAIL used. Consistent with other soft bag ops but easy to miss in agent code.",
-      "repro": "release on all-idle with REQUIRE=0 → miss=1 exit 0"
+      "repro": "release on all-idle with REQUIRE=0 \u2192 miss=1 exit 0"
     }
   ],
   "workarounds": [
     "Use pure status tokens (idle/busy/done) not name:status when COUNTLINE/SETMATCH by status",
     "Claim N times in host loop; do not expect multi-claim in one run",
     "REQUIRE=1 + FAIL for hard miss exits; CLEAR_ERR after soft FAIL",
-    "Build reports as PUSH key/value bags or REPLACEALL templates — never SYS STR as printf",
+    "Build reports as PUSH key/value bags or REPLACEALL templates \u2014 never SYS STR as printf",
     "READ plate file for order; never trust PRINT_JSON on multi-line bags",
     "Avoid SETMATCH to empty unless intentionally creating blank fields"
   ],
@@ -166,17 +166,17 @@
     "no multi-SETMATCH / SETMATCH_N / replace-all-fields-exact",
     "no FOR range or REPEAT n",
     "no atomic plate lock (O_EXCL / flock)",
-    "no SYS NUM var — LAST-only numeric parse",
-    "no string concat / printf — STR is itoa only",
+    "no SYS NUM var \u2014 LAST-only numeric parse",
+    "no string concat / printf \u2014 STR is itoa only",
     "PRINT_JSON newline collapse",
     "WRITE trailing NL missing"
   ],
-  "commit": "pending",
+  "commit": "6be9844",
   "issues_faced": [
-    "First draft used SYS EQS hit 0 — unknown form; numeric IF hit == 0 required",
-    "Report builder used SYS STR as printf — STR is itoa only; rewritten to PUSH bag",
-    "REQUIRE miss test false green when one idle remained — harness order bug, not language",
-    "Seed N without loop forced unrolled IF marker ladder — painful agent code",
-    "Empty ARG2 for rewritex initially EXIT 2 on BLANK B — relaxed to surface blank-field hole"
+    "First draft used SYS EQS hit 0 \u2014 unknown form; numeric IF hit == 0 required",
+    "Report builder used SYS STR as printf \u2014 STR is itoa only; rewritten to PUSH bag",
+    "REQUIRE miss test false green when one idle remained \u2014 harness order bug, not language",
+    "Seed N without loop forced unrolled IF marker ladder \u2014 painful agent code",
+    "Empty ARG2 for rewritex initially EXIT 2 on BLANK B \u2014 relaxed to surface blank-field hole"
   ]
 }
