@@ -1351,6 +1351,75 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS LONGEST|LONGESTLINE|MAXFIELD [bag] — first longest bag field text → LAST.
+     * SYS SHORTEST|SHORTESTLINE|MINFIELD [bag] — first shortest field.
+     * LAST_N 0|1 found; LONGEST_I/SHORTEST_I = index (-1 miss);
+     * LONGEST_LEN/SHORTEST_LEN = length of that field; LONGEST_N = field count.
+     * Distinct from MAXLEN/MINLEN (numeric length only) and LONGEST_LEN alias of MAXLEN.
+     * Usability: pick longest error/payload without MAXLEN_I+NTH glue. */
+    if (kw(&L->cur,"LONGEST") || kw(&L->cur,"LONGESTLINE") || kw(&L->cur,"MAXFIELD") ||
+        kw(&L->cur,"LONGESTSTR") || kw(&L->cur,"PICKLONGEST") || kw(&L->cur,"BAGLONGEST") ||
+        kw(&L->cur,"SHORTEST") || kw(&L->cur,"SHORTESTLINE") || kw(&L->cur,"MINFIELD") ||
+        kw(&L->cur,"SHORTESTSTR") || kw(&L->cur,"PICKSHORTEST") || kw(&L->cur,"BAGSHORTEST")){
+      char op[20];
+      int is_short = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[512];
+      const char *p, *start;
+      size_t flen, best_len = 0;
+      long kept = 0, best_i = -1, idx = 0, found = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "SHORTEST") == 0 || strcmp(op, "SHORTESTLINE") == 0 ||
+          strcmp(op, "MINFIELD") == 0 || strcmp(op, "SHORTESTSTR") == 0 ||
+          strcmp(op, "PICKSHORTEST") == 0 || strcmp(op, "BAGSHORTEST") == 0)
+        is_short = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept == 0 ||
+              (is_short && flen < best_len) ||
+              (!is_short && flen > best_len)) {
+            best_len = flen;
+            best_i = idx;
+            {
+              size_t take = flen;
+              if (take >= sizeof out) take = sizeof out - 1;
+              memcpy(out, start, take);
+              out[take] = 0;
+            }
+            found = 1;
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      if (is_short) {
+        var_set_num(vm, "SHORTEST_N", kept);
+        var_set_num(vm, "SHORTEST_I", best_i);
+        var_set_num(vm, "SHORTEST_LEN", found ? (long)best_len : 0);
+        var_set_str(vm, "SHORTEST", out);
+      } else {
+        var_set_num(vm, "LONGEST_N", kept);
+        var_set_num(vm, "LONGEST_I", best_i);
+        var_set_num(vm, "LONGEST_LEN", found ? (long)best_len : 0);
+        var_set_str(vm, "LONGEST", out);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
      * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
      * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
@@ -7630,7 +7699,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -7958,6 +8027,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MINLEN", "SYS MINLEN|MINWIDTH [bag] — min field string length → LAST_N"},
       {"SYS MAXWIDTH", "SYS MAXWIDTH [bag] — alias of SYS MAXLEN"},
       {"SYS MINWIDTH", "SYS MINWIDTH [bag] — alias of SYS MINLEN"},
+      {"SYS LONGEST", "SYS LONGEST|MAXFIELD [bag] — first longest bag field text → LAST"},
+      {"SYS SHORTEST", "SYS SHORTEST|MINFIELD [bag] — first shortest bag field text → LAST"},
+      {"SYS MAXFIELD", "SYS MAXFIELD [bag] — alias of SYS LONGEST"},
+      {"SYS MINFIELD", "SYS MINFIELD [bag] — alias of SYS SHORTEST"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},

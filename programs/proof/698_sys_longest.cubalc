@@ -1,0 +1,79 @@
+# SYS LONGEST / SHORTEST — pick first longest/shortest bag field text
+# Usability: longest error/payload without MAXLEN_I + NTH glue
+
+HOLD_FLASH 1
+
+LET bag = "a\nbb\nccc\nd"
+
+SYS LONGEST bag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LONGEST_N == 4
+ASSERT LONGEST_I == 2
+ASSERT LONGEST_LEN == 3
+SYS EQS LAST "ccc"
+ASSERT LAST_N == 1
+SYS EQS LONGEST "ccc"
+ASSERT LAST_N == 1
+
+SYS SHORTEST bag
+ASSERT LAST_N == 1
+ASSERT SHORTEST_N == 4
+ASSERT SHORTEST_I == 0
+ASSERT SHORTEST_LEN == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# ties: first extreme wins
+LET ties = "aa\nbb\ncc"
+SYS LONGEST ties
+ASSERT LONGEST_I == 0
+SYS EQS LAST "aa"
+ASSERT LAST_N == 1
+SYS SHORTEST ties
+ASSERT SHORTEST_I == 0
+SYS EQS LAST "aa"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAXFIELD bag
+SYS EQS LAST "ccc"
+ASSERT LAST_N == 1
+SYS MINFIELD bag
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS LONGESTLINE bag
+SYS EQS LAST "ccc"
+ASSERT LAST_N == 1
+SYS SHORTESTLINE bag
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS LONGEST ""
+ASSERT LAST_N == 0
+ASSERT LONGEST_I == -1
+ASSERT LONGEST_LEN == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS SHORTEST ""
+ASSERT LAST_N == 0
+ASSERT SHORTEST_I == -1
+
+# single field
+SYS LONGEST "only"
+ASSERT LAST_N == 1
+ASSERT LONGEST_I == 0
+ASSERT LONGEST_LEN == 4
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# agent: longest error payload for review
+LET msgs = "ok\nERROR disk full and path too long\nwarn\nFATAL boom"
+SYS LONGEST msgs
+ASSERT LONGEST_I == 1
+ASSERT LONGEST_LEN == 33
+SYS EQS LAST "ERROR disk full and path too long"
+ASSERT LAST_N == 1
+
+PRINT "sys_longest ok"

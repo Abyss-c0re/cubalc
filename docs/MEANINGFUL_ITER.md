@@ -185,6 +185,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 155. ~~**`SYS LASTMATCH` / `GREP1L`**~~ **done** (last bag field containing needle · latest hit without REVL+FIRSTMATCH).
 156. ~~**`SYS MAXLEN` / `MINLEN`**~~ **done** (max/min bag field string length → LAST_N · PADALL width without LENALL+MAX).
 157. ~~**`SYS TRUNCALL` / `CLIPALL`**~~ **done** (truncate every bag field to width · clip logs without EACH+LEFT · dual of PADALL).
+158. ~~**`SYS LONGEST` / `SHORTEST`**~~ **done** (first longest/shortest bag field text · no MAXLEN_I+NTH glue).
 
 ## Tick protocol
 
