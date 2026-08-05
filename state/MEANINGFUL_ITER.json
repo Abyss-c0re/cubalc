@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 109,
-  "version": "1.15.134-usability",
-  "item": "SYS BEFOREALL / AFTERALL peel every bag field",
-  "item_id": 142,
-  "title": "SYS BEFOREALL|AFTERALL bag needle \u2014 BEFORE/AFTER map on bag fields",
-  "commit": "9b7bb81375ac8995d1db527fcd1882067a9aefa4",
-  "summary": "SYS BEFOREALL/AFTERALL map peel left/right of needle on every bag field. FREQ keys/counts without EACH. selftest 109.",
+  "iter": 110,
+  "version": "1.15.135-usability",
+  "item": "SYS FIRSTMATCH / GREP1 first bag field hit",
+  "item_id": 143,
+  "title": "SYS FIRSTMATCH|GREP1 bag needle \u2014 first field containing needle",
+  "commit": "a58b5e73d85a0db828db2f7a67cce2888fb87bdf",
+  "summary": "SYS FIRSTMATCH/GREP1 return first bag field with needle (icase). No GREP+TAKE. selftest 110.",
   "proofs": [
-    "682_sys_beforeall",
-    "selftest n_pass=109"
+    "683_sys_firstmatch",
+    "selftest n_pass=110"
   ],
-  "when": "2026-08-05T19:54:02Z",
+  "when": "2026-08-05T20:03:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9b7bb81375ac8995d1db527fcd1882067a9aefa4"
+  "sha": "a58b5e73d85a0db828db2f7a67cce2888fb87bdf"
 }
