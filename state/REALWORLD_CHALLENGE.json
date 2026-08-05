@@ -1,126 +1,120 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 5,
-  "program": "programs/realworld/state_peer_fold.cubalc",
-  "theme": "local file/state peer fold: STATE bit files \u2192 FOLDBITS \u2192 COMPARE/HARMONY \u2192 DECIDE plate",
-  "version": "1.15.51-usability",
+  "iter": 6,
+  "program": "programs/realworld/identity_heartbeat.cubalc",
+  "theme": "multi-probe heartbeat: IDENTITY + SYS DATE + STATE write + optional SERVE/DIAL",
+  "version": "1.15.53-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_state_bits",
-      "cmd": "peer0.bits+peer1.bits under CUBALC_STATE; run -q -s",
+      "name": "positive_quiet_strict",
+      "cmd": "CUBALC_STATE=/tmp/\u2026 mkdir -p; run -q -s identity_heartbeat.cubalc",
       "ok": true,
-      "note": "COMPARE before FLOW; FOLD_RESULT.txt written; EXIT 0"
+      "note": "HEARTBEAT.txt with ISO date; EXIT 0; 17 asserts"
     },
     {
-      "name": "soft_unity_floor",
-      "cmd": "all1 vs all0 bits; CUBALC_FOLD_MIN_UNITY=99 run -q -s",
+      "name": "serve_timeout_opt_in",
+      "cmd": "CUBALC_HB_SERVE=1 CUBALC_P2P_TIMEOUT=400 BIND=127.0.0.1:18994 run -q -s",
       "ok": true,
-      "note": "EXPECT unity fail then PASS/CLEAR_ERR; unity_soft_fail=1; still exit 0"
+      "note": "SERVE times out, FAIL/PASS/CLEAR_ERR recovery, exit 0"
     },
     {
-      "name": "missing_both_exit_2",
-      "cmd": "empty STATE run -q",
+      "name": "soft_dial_opt_in",
+      "cmd": "CUBALC_HB_DIAL=1 CUBALC_P2P_SOFT=1 PEER=127.0.0.1:1 TIMEOUT=400 run -q -s",
+      "ok": true,
+      "note": "soft dial miss recovered"
+    },
+    {
+      "name": "dial_without_soft_skip",
+      "cmd": "CUBALC_HB_DIAL=1 without CUBALC_P2P_SOFT run -q -s",
+      "ok": true,
+      "note": "policy skip hard dial"
+    },
+    {
+      "name": "missing_state_parent",
+      "cmd": "CUBALC_STATE=/tmp/no_hb_$$ (no mkdir) run -q",
       "ok": false,
-      "note": "expected EXIT 2 peer0 bits missing"
+      "note": "WRITE probe fatal before soft EXIST; err_line=0"
     },
     {
-      "name": "one_peer_require_both",
-      "cmd": "only peer0.bits; REQUIRE_BOTH default 1",
+      "name": "serve_pass_without_clear_strict",
+      "cmd": "SMX SERVE timeout; PASS; no CLEAR_ERR; run -q -s",
       "ok": false,
-      "note": "expected EXIT 2 peer1 bits missing"
-    },
-    {
-      "name": "one_peer_optional",
-      "cmd": "CUBALC_FOLD_REQUIRE_BOTH=0 run -q -s",
-      "ok": true,
-      "note": "single peer fold + decide"
-    },
-    {
-      "name": "raw_env_bits",
-      "cmd": "CUBALC_PEER0_BITS=10101010 CUBALC_PEER1_BITS=01010101",
-      "ok": true,
-      "note": "raw 01 strings without files"
-    },
-    {
-      "name": "foldbits_garbage_silent",
-      "cmd": "FOLDBITS \"hello\" then \"1010\"",
-      "ok": true,
-      "note": "observed: non-01 input does not fatal; weak validation"
+      "note": "expected ok=false rc=1; last_err SERVE timeout; err_line=0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "26/26 green"
+      "note": "28/28 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "matrix|semantics",
-      "title": "IMPULSE/FLOW after FOLDBITS erases peer bit differences",
-      "detail": "COMPARE immediately after FOLDBITS of 111\u2026 vs 000\u2026 yields hamming=10 unity\u224884. After IMPULSE+FLOW 3 on the same cubes, COMPARE reports hamming=0 unity=100. Peer-fold agents that FLOW before COMPARE always see perfect unity. Cookbook peer_fold pulses before decide but does not warn that compare-after-flow is meaningless for loaded bits.",
-      "repro": "FOLDBITS a \"1111111111\"; FOLDBITS b \"0000000000\"; COMPARE; IMPULSE; FLOW 3; COMPARE \u2192 second hamming 0"
+      "area": "p2p|error",
+      "title": "SMX SERVE timeout sticky last_err has err_line=0 and empty err_src",
+      "detail": "SERVE accept timeout sets a useful last_err hint string but err_line stays 0 and err_src is empty. Combined with PASS without CLEAR_ERR, run -s fails with no source attribution. Heartbeat mesh probes need CLEAR_ERR every time and cannot jump to the SERVE line from the plate.",
+      "repro": "CUBALC_P2P_TIMEOUT=300 SMX SERVE \u2026; PASS; cubalc run -q -s \u2192 last_err SERVE timeout, err_line:0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "matrix|vars",
-      "title": "HARMONY overwrites UNITY from COMPARE",
-      "detail": "After COMPARE, UNITY holds pairwise unity (e.g. 92). HARMONY then replaces UNITY with hive mean (e.g. 65). Agents that PRINT_JSON UNITY after both steps lose the pairwise value unless they LET unity_pct = UNITY immediately after COMPARE.",
-      "repro": "COMPARE a b; LET u=UNITY; HARMONY; PRINT UNITY \u2014 not equal to u"
+      "area": "io|soft",
+      "title": "Cannot soft-probe STATE writability \u2014 SYS WRITE is hard-fatal",
+      "detail": "Heartbeat wants EXPECT STATE writable. SYS WRITE to a missing parent dir fatals the whole run (err_line=0) before SYS EXIST can report. No SYS WRITE OR / soft write. Agents must shell mkdir -p and cannot degrade-gracefully inside CubalC when STATE is wrong.",
+      "repro": "CUBALC_STATE=/tmp/missing_$$ (no mkdir) identity_heartbeat \u2192 write fatal stmts mid-boot"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "matrix|io",
-      "title": "FOLDBITS accepts non-01 garbage without hard fail",
-      "detail": "FOLDBITS a \"hello\" leaves OK soft-zero-ish / n=0 but program continues; subsequent FOLDBITS with real bits still ok. No sticky last_err forced for alphabet violation. State workers cannot trust file content is a bit stream without host pre-validation.",
-      "repro": "FOLDBITS a \"hello\"; FOLDBITS a \"1010\" \u2014 run ok:true"
+      "area": "p2p|env",
+      "title": "CUBALC_P2P_TIMEOUT cannot be set from program",
+      "detail": "Heartbeat can read timeout via SYS ENV OR \"400\" into LAST but SERVE still uses host getenv only. Agents must export CUBALC_P2P_TIMEOUT before run or risk 30s default hang. Same class as CUBALC_P2P_SOFT footgun.",
+      "repro": "unset CUBALC_P2P_TIMEOUT; CUBALC_HB_SERVE=1 run \u2014 may wait default 30s"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "sys|typeof",
-      "title": "TYPEOF LAST after SYS ENV destroys value for SYS NUM",
-      "detail": "SYS ENV sets LAST to the value; TYPEOF LAST probes kind but replaces LAST so SYS NUM no longer sees the env string. FOLD_MIN_UNITY override silently stayed 0 until TYPEOF LAST was removed. TYPEOF should not clobber LAST when probing LAST, or docs must say copy first.",
-      "repro": "SYS ENV \"CUBALC_FOLD_MIN_UNITY\" OR \"\"; TYPEOF LAST; SYS NUM \u2014 fails to parse 99"
+      "area": "cli|identity",
+      "title": "IDENTITY plate is stdout-only; run -q JSON omits identity fields",
+      "detail": "IDENTITY emits cubalc.identity.v1 on the human stream and sets vars, but the final run plate has no pid/user/hostname fields. Quiet agent pipelines that only parse the last JSON line must VARS or PRINT_JSON explicitly \u2014 easy to miss under -q.",
+      "repro": "cubalc run -q program with IDENTITY \u2192 final plate lacks user/host/pid"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "io|cli",
-      "title": "No STATE-relative path form; must CAT state_dir + \"/name\"",
-      "detail": "Every STATE plate still needs SYS STATE; SYS CAT state_dir \"/peer0.bits\". Agents reimplement path join; missing slash or double slash mistakes are easy. No SYS STATE FILE \"peer0.bits\".",
-      "repro": "see state_peer_fold resolve blocks"
+      "area": "string|io",
+      "title": "Stamping DATE into plate needs SYS CAT glue; no WRITE template",
+      "detail": "SYS CAT \"\u2026date=\" hb_date then SYS WRITE works but is awkward; cannot embed IDENTITY string + DATE + dig in one structured plate without multi-CAT. Heartbeat file is a single flat line.",
+      "repro": "see plate write block in identity_heartbeat.cubalc"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "docs",
-      "title": "UNITY printed as 0\u2013100 integer while board log shows 0.0\u20131.0 float",
-      "detail": "Board line unity=0.9219 vs var UNITY=92. Agents mixing cookbook float examples with PRINT_JSON integers mis-set FOLD_MIN_UNITY (99 vs 0.99).",
-      "repro": "COMPARE then PRINT UNITY vs board log"
+      "area": "cli",
+      "title": "I/O fatal leaves exit_code=0 on run plate while process rc=1",
+      "detail": "Missing STATE write failure: process exit 1, plate ok=false, but exit_code field remains 0 (not EXIT form). CI that only reads exit_code misclassifies.",
+      "repro": "missing CUBALC_STATE parent run -q \u2192 exit_code:0 ok:false shell rc=1"
     }
   ],
   "workarounds": [
-    "Always COMPARE/HARMONY immediately after FOLDBITS/SETDIGIT; FLOW only after snapshotting UNITY/HAMMING into LETs",
-    "LET unity_pct = UNITY right after COMPARE before HARMONY",
-    "Never TYPEOF LAST before SYS NUM on the same LAST value \u2014 TYPEOF the named var instead",
-    "Host-validate 01 alphabet before writing *.bits under STATE",
-    "SYS CAT state_dir \"/file\" for every plate path; mkdir -p CUBALC_STATE first",
-    "Treat UNITY as 0\u2013100 percent in-language"
+    "mkdir -p \"$CUBALC_STATE\" before every heartbeat",
+    "export CUBALC_P2P_TIMEOUT\u2264800 (and SOFT=1) before any SERVE/DIAL probe",
+    "PASS + CLEAR_ERR after every SERVE/DIAL soft outcome when using run -s",
+    "PRINT_JSON / VARS after IDENTITY for quiet agent consumers",
+    "SYS CAT prefix DATE for plate lines; keep file format minimal",
+    "Prefer plate ok + shell rc over exit_code for I/O fatals"
   ],
   "language_gaps": [
-    "Document or fix FLOW clobbering FOLDBITS matrices before COMPARE",
-    "Separate vars: COMPARE_UNITY vs HARMONY_UNITY (stop overwriting UNITY)",
-    "FOLDBITS hard-fail or sticky err on non-01 input",
-    "TYPEOF that does not destroy LAST when target is LAST",
-    "SYS STATE FILE name \u2192 absolute path under CUBALC_STATE",
-    "Soft READ for optional bit files"
+    "Soft SYS WRITE / TRY WRITE for writability probes",
+    "err_line/err_src on SMX SERVE/DIAL timeout and host I/O",
+    "In-language set of P2P timeout/soft (or SYS P2P CONFIG)",
+    "Run plate identity fields when IDENTITY ran (or -q identity merge)",
+    "Plate template / multi-field WRITE with DATE+IDENTITY+metrics",
+    "exit_code non-zero on hard I/O fatal"
   ],
-  "commit": "5cd4070",
-  "ts": "2026-08-05T06:08:20Z"
+  "commit": "1d9214a",
+  "ts": "2026-08-05T06:32:39Z"
 }

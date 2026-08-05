@@ -1,0 +1,191 @@
+# identity_heartbeat.cubalc — multi-probe agent heartbeat with IDENTITY + DATE
+#
+# Real use: cron / agent host ticks this every N minutes to answer:
+#   who am I (user@host:pid), what time (UTC ISO), is STATE writable,
+#   are core libs present, optional mesh serve/dial probe, STATUS clean?
+# Writes HEARTBEAT.txt under CUBALC_STATE for the next tick / monitor.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   ./out/cubalc run -q -s programs/realworld/identity_heartbeat.cubalc
+#
+# Optional mesh probes (never hang long):
+#   CUBALC_HB_SERVE=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_BIND=127.0.0.1:18993
+#   CUBALC_HB_DIAL=1  CUBALC_P2P_SOFT=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_PEER=127.0.0.1:1
+#
+# Edges:
+#   IDENTITY + SYS DATE plate stamps without shell id/date
+#   SERVE timeout sticky last_err + err_line=0 under -s without CLEAR_ERR
+#   multi-probe EXPECT chain · STATUS · EXIT
+#   DATE into WRITE via SYS CAT (no string interpolate)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+REQUIRE LIB peer_decide
+
+NOTE "heartbeat: start"
+DEFAULT HB_MAX_SOFT = 5
+LET soft_n = 0
+LET serve_probed = 0
+LET serve_ok = 0
+LET dial_probed = 0
+LET dial_ok = 0
+
+# --- probe 1: identity + clock ---
+IDENTITY
+ASSERT PID > 0 "identity pid"
+DEFINED IDENTITY
+ASSERT DEFINED == 1 "IDENTITY string"
+SYS DATE
+ASSERT LAST_N >= 20 "ISO date length"
+DEFINED DATE
+ASSERT DEFINED == 1
+LET hb_date = DATE
+LET hb_pid = PID
+NOTE "identity+date ok"
+
+# --- probe 2: layout / STATE writable ---
+SYS STATE
+ASSERT LAST_N > 0 "STATE"
+LET state_dir = LAST
+SYS STARTS state_dir "/"
+LET state_abs = LAST_N
+SYS CAT state_dir "/HEARTBEAT.txt"
+LET plate_path = LAST
+SYS CAT state_dir "/.hb_write_probe"
+LET probe_path = LAST
+SYS WRITE probe_path "w"
+SYS EXIST probe_path
+EXPECT EXIST == 1 "STATE writable"
+IF OK == 0 THEN
+  LET soft_n = soft_n + 1
+  FAIL "STATE not writable"
+  PASS "continue degraded"
+  CLEAR_ERR "state write soft"
+  LET state_writable = 0
+ELSE
+  LET state_writable = 1
+END
+
+# --- probe 3: core libs present (WHICH, not side-effect INCLUDE) ---
+SYS WHICH mesh_exchange
+EXPECT LAST_N > 0 "mesh_exchange catalog"
+IF OK == 0 THEN
+  LET soft_n = soft_n + 1
+  PASS "mesh lib optional for heartbeat"
+  CLEAR_ERR
+END
+SYS WHICH peer_decide
+ASSERT LAST_N > 0 "peer_decide required"
+
+# --- probe 4: optional SERVE timeout (explicit opt-in) ---
+SYS ENV "CUBALC_HB_SERVE" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET serve_probed = 1
+  SYS ENV "CUBALC_P2P_BIND" OR "127.0.0.1:18993"
+  LET bind = LAST
+  SYS ENV "CUBALC_P2P_TIMEOUT" OR "400"
+  # host timeout still needed — language cannot set it
+  CUBE self ROLE host PROTON 1
+  CUBE remote ROLE body PROTON 1
+  PLUG self remote
+  SETBIT self 0 1
+  SMX KEY
+  SMX SERVE self remote bind
+  LET serve_ok = SMX_OK
+  IF SMX_OK == 0 THEN
+    LET soft_n = soft_n + 1
+    # sticky last_err from SERVE — must CLEAR for -s
+    FAIL "SERVE timeout (expected without peer)"
+    PASS "serve probe soft"
+    CLEAR_ERR "serve recovered"
+    NOTE "serve timeout soft-ok"
+  ELSE
+    NOTE "serve accepted peer"
+  END
+END
+
+# --- probe 5: optional soft DIAL ---
+SYS ENV "CUBALC_HB_DIAL" OR "0"
+SYS EQS LAST "1"
+IF LAST_N == 1 THEN
+  LET dial_probed = 1
+  SYS ENV "CUBALC_P2P_PEER" OR "127.0.0.1:1"
+  LET peer = LAST
+  SYS ENV "CUBALC_P2P_SOFT" OR "0"
+  SYS EQS LAST "1"
+  IF LAST_N == 0 THEN
+    FAIL "HB_DIAL set but CUBALC_P2P_SOFT not 1 — skip"
+    PASS "skip hard dial"
+    CLEAR_ERR
+    NOTE "dial skipped policy"
+  ELSE
+    CUBE dself ROLE host PROTON 1
+    CUBE dremote ROLE body PROTON 1
+    PLUG dself dremote
+    SETBIT dself 1 1
+    SMX KEY
+    SMX DIAL dself dremote peer
+    LET dial_ok = SMX_OK
+    IF SMX_OK == 0 THEN
+      LET soft_n = soft_n + 1
+      FAIL "soft dial miss"
+      PASS "dial soft"
+      CLEAR_ERR "dial recovered"
+    END
+  END
+END
+
+# --- probe 6: tiny decide smoke (local matrix still alive) ---
+CUBE peer0 ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG peer0 brain
+SETBIT peer0 0 1
+SETBIT peer0 3 1
+IMPULSE peer0 1
+IMPULSE brain 1
+FLOW 2
+DECIDE brain
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+LET dig = DECIDE
+
+# soft budget
+EXPECT soft_n <= HB_MAX_SOFT "too many soft probes failed"
+IF OK == 0 THEN
+  PASS "over soft budget — still heartbeat"
+  CLEAR_ERR "budget"
+  LET degraded = 1
+ELSE
+  LET degraded = 0
+END
+
+# --- write heartbeat plate (DATE stamped line) ---
+IF state_writable == 1 THEN
+  SYS CAT "cubalc.identity_heartbeat.v1 ok=1 date=" hb_date
+  LET line = LAST
+  SYS WRITE plate_path line
+  SYS EXIST plate_path
+  ASSERT EXIST == 1 "heartbeat plate"
+  # re-read sanity
+  SYS READ plate_path
+  SYS HAS LAST "identity_heartbeat"
+  ASSERT LAST_N == 1 "plate schema token"
+ELSE
+  FAIL "skip plate write — STATE not writable"
+  PASS "no plate"
+  CLEAR_ERR
+END
+
+STATUS
+ASSERT STATUS_OK == 1 "STATUS clean after probes"
+IDENTITY
+SYS DATE
+NOTE "heartbeat: done"
+PRINT "hb" dig soft_n degraded serve_probed serve_ok dial_probed dial_ok hb_pid state_abs
+PRINT_JSON dig soft_n degraded serve_probed serve_ok dial_probed dial_ok hb_pid STATUS_OK
+VARS
+STATUS
+CLEAR_ERR "hb clean"
+EXIT 0 "heartbeat ok"
