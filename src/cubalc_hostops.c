@@ -338,6 +338,53 @@ int cubalc_host_abspath(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS TOUCH path — create empty plate marker or refresh mtime. */
+int cubalc_host_touch(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  int created = 0;
+  int fd;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "touch: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0644);
+    if (fd < 0) {
+      /* race: created by another process */
+      fd = open(path, O_WRONLY | O_CREAT, 0644);
+      if (fd < 0) {
+        snprintf(r->err, sizeof r->err, "touch: %s", strerror(errno));
+        return -1;
+      }
+      created = 0;
+    } else {
+      created = 1;
+    }
+    close(fd);
+  } else {
+    if (S_ISDIR(st.st_mode)) {
+      snprintf(r->err, sizeof r->err, "touch: is a directory");
+      return -1;
+    }
+    /* update mtime to now */
+    if (utimensat(AT_FDCWD, path, NULL, 0) != 0) {
+      /* fallback: open/close */
+      fd = open(path, O_WRONLY);
+      if (fd < 0) {
+        snprintf(r->err, sizeof r->err, "touch: %s", strerror(errno));
+        return -1;
+      }
+      close(fd);
+    }
+    created = 0;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = created ? 1 : 0;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS MKDIR path — mkdir -p for agent plate dirs under STATE/TMP. */
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r) {
   char buf[512];

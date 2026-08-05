@@ -1671,6 +1671,7 @@ int main(int argc, char **argv) {
       {"sys_rm_rename", "programs/proof/609_sys_rm_rename.cubalc", "SYS RM/RENAME plate lifecycle"},
       {"sys_copy", "programs/proof/610_sys_copy.cubalc", "SYS COPY duplicate plate files"},
       {"sys_realpath", "programs/proof/611_sys_realpath.cubalc", "SYS REALPATH/ABSPATH absolute paths"},
+      {"sys_touch", "programs/proof/612_sys_touch.cubalc", "SYS TOUCH plate markers"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1827,6 +1828,7 @@ int main(int argc, char **argv) {
       {"SYS RENAME", "host", "SYS RENAME|MV|MOVE from to — move plate"},
       {"SYS COPY", "host", "SYS COPY|CP src dst — duplicate file · LAST_N=bytes"},
       {"SYS REALPATH", "host", "SYS REALPATH|ABSPATH path — absolute path → LAST"},
+      {"SYS TOUCH", "host", "SYS TOUCH path — create empty / refresh mtime"},
       {"SYS TIME", "host", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "host", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2336,6 +2338,8 @@ int main(int argc, char **argv) {
        "SYS COPY duplicate plate files"},
       {"programs/proof/611_sys_realpath.cubalc", "sys_realpath",
        "SYS REALPATH/ABSPATH absolute paths"},
+      {"programs/proof/612_sys_touch.cubalc", "sys_touch",
+       "SYS TOUCH create plate markers"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2700,6 +2704,7 @@ int main(int argc, char **argv) {
       {"SYS RENAME", "host", "SYS RENAME move plate path"},
       {"SYS COPY", "host", "SYS COPY duplicate plate file"},
       {"SYS REALPATH", "host", "SYS REALPATH absolute path"},
+      {"SYS TOUCH", "host", "SYS TOUCH plate marker"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
       {"HELP", "flow", "HELP [form] in-program catalog"},
@@ -2900,6 +2905,7 @@ int main(int argc, char **argv) {
       {"SYS RENAME", "host", "SYS RENAME|MV from to — move plate"},
       {"SYS COPY", "host", "SYS COPY|CP src dst — duplicate file"},
       {"SYS REALPATH", "host", "SYS REALPATH|ABSPATH absolute path"},
+      {"SYS TOUCH", "host", "SYS TOUCH create empty / refresh mtime"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
@@ -2944,6 +2950,7 @@ int main(int argc, char **argv) {
       {"programs/proof/609_sys_rm_rename.cubalc", "sys_rm_rename", "SYS RM/RENAME lifecycle"},
       {"programs/proof/610_sys_copy.cubalc", "sys_copy", "SYS COPY plate files"},
       {"programs/proof/611_sys_realpath.cubalc", "sys_realpath", "SYS REALPATH absolute"},
+      {"programs/proof/612_sys_touch.cubalc", "sys_touch", "SYS TOUCH plate markers"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

@@ -98,6 +98,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 68. ~~**`SYS RM` / `RENAME`**~~ **done** (delete/move plate files · idempotent RM miss).
 69. ~~**`SYS COPY`**~~ **done** (duplicate plate files · LAST_N=bytes · soft miss src).
 70. ~~**`SYS REALPATH` / `ABSPATH`**~~ **done** (absolute paths · realpath or cwd-join).
+71. ~~**`SYS TOUCH`**~~ **done** (create empty plate marker / refresh mtime).
 
 ## Tick protocol
 

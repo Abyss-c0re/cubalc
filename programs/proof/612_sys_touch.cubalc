@@ -1,0 +1,64 @@
+# SYS TOUCH — create empty plate markers or refresh mtime without shell
+# Usability: agents drop ready/lock flags under STATE/TMP
+
+HOLD_FLASH 1
+
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_touch_probe"
+LET DIR = LAST
+SYS MKDIR DIR
+SYS JOIN DIR "marker.ready"
+LET M = LAST
+
+# first touch creates empty file
+SYS TOUCH M
+ASSERT OK == 1
+ASSERT LAST_N == 1 "created"
+ASSERT TOUCH_N == 1
+SYS EXIST M
+ASSERT LAST_N == 1
+SYS ISFILE M
+ASSERT LAST_N == 1
+SYS SIZE M
+ASSERT OK == 1
+ASSERT LAST_N == 0 "empty file"
+
+# second touch updates existing → LAST_N 0
+SYS TOUCH M
+ASSERT OK == 1
+ASSERT LAST_N == 0 "updated"
+ASSERT TOUCH_N == 0
+SYS EXIST M
+ASSERT LAST_N == 1
+
+# content preserved on touch of non-empty
+SYS WRITE M "payload"
+SYS TOUCH M
+ASSERT OK == 1
+ASSERT TOUCH_N == 0
+SYS READ M
+SYS EQS LAST "payload"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JOIN DIR "a.flag"
+LET A = LAST
+SYS ENSURE_FILE A
+ASSERT OK == 1
+ASSERT TOUCH_N == 1
+SYS CREATE A
+ASSERT OK == 1
+ASSERT TOUCH_N == 0
+
+# refuse directory
+SYS TOUCH DIR
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N > 0
+
+# cleanup
+SYS RM M
+SYS RM A
+
+PRINT "sys_touch ok"
