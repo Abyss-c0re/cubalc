@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 123,
-  "version": "1.15.148-usability",
-  "item": "SYS MAXLEN / MINLEN max/min bag field string length",
-  "item_id": 156,
-  "title": "SYS MAXLEN|MINLEN [bag] — max/min field length → LAST_N",
-  "commit": "eb617ccb43f7d6bd955b34963871d62836963fd0",
-  "summary": "SYS MAXLEN/MINLEN max/min bag field length for PADALL width without LENALL+MAX. selftest 123.",
+  "iter": 124,
+  "version": "1.15.149-usability",
+  "item": "SYS TRUNCALL / CLIPALL truncate bag fields to width",
+  "item_id": 157,
+  "title": "SYS TRUNCALL|CLIPALL [RIGHT] bag width — clip fields no pad",
+  "commit": "f552e3852914ab3de4fed47b19589b8b02d81091",
+  "summary": "SYS TRUNCALL/CLIPALL truncate every bag field to width (log clip without EACH). selftest 124.",
   "proofs": [
-    "696_sys_maxlen",
-    "selftest n_pass=123"
+    "697_sys_truncall",
+    "selftest n_pass=124"
   ],
-  "when": "2026-08-05T22:15:27Z",
+  "when": "2026-08-05T22:24:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eb617ccb43f7d6bd955b34963871d62836963fd0"
+  "sha": "f552e3852914ab3de4fed47b19589b8b02d81091"
 }
