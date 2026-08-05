@@ -1,0 +1,63 @@
+# SYS CHUNK / BATCH — group bag fields into batches of n
+# Usability: peer/work list paging without EACH+CAT index glue
+
+HOLD_FLASH 1
+
+LET peers = "p1\np2\np3\np4\np5\np6"
+
+# pairs (default join space)
+SYS CHUNK 2 peers
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT CHUNK_N == 3
+ASSERT CHUNK_TOTAL == 6
+SYS EQS LAST "p1 p2\np3 p4\np5 p6"
+ASSERT LAST_N == 1
+
+# triples with custom join
+SYS CHUNK 3 peers ","
+ASSERT LAST_N == 2
+SYS EQS LAST "p1,p2,p3\np4,p5,p6"
+ASSERT LAST_N == 1
+
+# partial last batch
+SYS CHUNK 4 peers
+ASSERT LAST_N == 2
+ASSERT CHUNK_TOTAL == 6
+SYS EQS LAST "p1 p2 p3 p4\np5 p6"
+ASSERT LAST_N == 1
+
+# aliases
+SYS BATCH 2 peers
+ASSERT LAST_N == 3
+SYS EQS LAST "p1 p2\np3 p4\np5 p6"
+ASSERT LAST_N == 1
+SYS GROUPN 3 peers "|"
+SYS EQS LAST "p1|p2|p3\np4|p5|p6"
+ASSERT LAST_N == 1
+
+# n=1 identity (join unused)
+SYS CHUNK 1 peers
+ASSERT LAST_N == 6
+SYS EQS LAST peers
+ASSERT LAST_N == 1
+
+# n<=0 → empty
+SYS CHUNK 0 peers
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty bag
+SYS CHUNK 2 ""
+ASSERT LAST_N == 0
+ASSERT CHUNK_TOTAL == 0
+
+# agent pattern: RANGE work ids → CHUNK batches → EACH line process
+SYS RANGE 1 5
+SYS CHUNK 2 LAST
+ASSERT LAST_N == 3
+SYS EQS LAST "1 2\n3 4\n5"
+ASSERT LAST_N == 1
+
+PRINT "sys_chunk ok"

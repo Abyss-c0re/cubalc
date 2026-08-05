@@ -171,6 +171,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 141. ~~**`SYS SORTFREQ` / `SORTBYCOUNT`**~~ **done** (sort FREQ key:count bag by count · top severities without shell).
 142. ~~**`SYS BEFOREALL` / `AFTERALL`**~~ **done** (BEFORE/AFTER on every bag field · FREQ keys/counts without EACH).
 143. ~~**`SYS FIRSTMATCH` / `GREP1`**~~ **done** (first bag field containing needle · one-line pick without GREP+TAKE).
+144. ~~**`SYS CHUNK` / `BATCH`**~~ **done** (group bag fields into batches of n · work-list paging without EACH).
 
 ## Tick protocol
 

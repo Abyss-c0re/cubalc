@@ -4549,6 +4549,99 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS CHUNK|BATCH|GROUPN n [bag] [join_sep]
+     * — group bag fields into batches of n; join each batch with join_sep
+     * (default space); batches become newline fields → LAST.
+     * n<=0 → empty. LAST_N/CHUNK_N = batch count; CHUNK_TOTAL = input fields.
+     * Usability: peer/work list paging without EACH+CAT index glue. */
+    if (kw(&L->cur,"CHUNK") || kw(&L->cur,"BATCH") || kw(&L->cur,"GROUPN") ||
+        kw(&L->cur,"BUNDLE") || kw(&L->cur,"PARTN") || kw(&L->cur,"SPLITN") ||
+        kw(&L->cur,"NCHUNK") || kw(&L->cur,"BATCHLINES")){
+      long nwant = 0, total = 0, batches = 0, in_batch = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], jsep[32];
+      char batch[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, blen = 0, flen, jsepn;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      bag[0] = 0; out[0] = 0; batch[0] = 0;
+      snprintf(jsep, sizeof jsep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(jsep, sizeof jsep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      jsepn = strlen(jsep);
+      if (nwant > 0 && bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (in_batch > 0) {
+            if (blen + jsepn < sizeof batch) {
+              memcpy(batch + blen, jsep, jsepn);
+              blen += jsepn;
+            }
+          }
+          if (blen + flen < sizeof batch) {
+            memcpy(batch + blen, start, flen);
+            blen += flen;
+          } else if (blen < sizeof batch - 1) {
+            size_t t = sizeof batch - 1 - blen;
+            memcpy(batch + blen, start, t);
+            blen += t;
+          }
+          batch[blen] = 0;
+          in_batch++;
+          total++;
+          if (in_batch >= nwant) {
+            if (batches > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + blen < sizeof out) {
+              memcpy(out + olen, batch, blen);
+              olen += blen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, batch, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            batches++;
+            in_batch = 0;
+            blen = 0;
+            batch[0] = 0;
+          }
+          if (*p == '\n') p++;
+        }
+        /* flush partial last batch */
+        if (in_batch > 0) {
+          if (batches > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + blen < sizeof out) {
+            memcpy(out + olen, batch, blen);
+            olen += blen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, batch, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          batches++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = batches;
+      var_set_num(vm, "LAST_N", batches);
+      var_set_num(vm, "CHUNK_N", batches);
+      var_set_num(vm, "CHUNK_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
      * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
      * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
@@ -6464,7 +6557,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|CHUNK|BATCH|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -6750,6 +6843,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FIRSTMATCH", "SYS FIRSTMATCH|GREP1 bag needle — first field containing needle · LAST_N 0|1"},
       {"SYS GREP1", "SYS GREP1 bag needle — alias of SYS FIRSTMATCH · one-line pick without TAKE"},
       {"SYS FIRSTMATCHI", "SYS FIRSTMATCHI|GREP1I bag needle — case-insensitive FIRSTMATCH"},
+      {"SYS CHUNK", "SYS CHUNK|BATCH n [bag] [join] — group fields into batches of n → LAST"},
+      {"SYS BATCH", "SYS BATCH n [bag] [join] — alias of SYS CHUNK · work-list paging"},
+      {"SYS GROUPN", "SYS GROUPN n [bag] [join] — alias of SYS CHUNK"},
       {"SYS CUTALL", "SYS CUTALL|MAPCUT bag sep n — peel Nth sep-field from every bag line (0-based)"},
       {"SYS MAPCUT", "SYS MAPCUT bag sep n — alias of SYS CUTALL · log columns → FREQ"},
       {"SYS COLALL", "SYS COLALL|COLUMNALL bag sep n — 1-based CUTALL (CSV/path columns)"},
