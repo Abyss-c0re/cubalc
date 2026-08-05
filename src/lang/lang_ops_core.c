@@ -2056,6 +2056,67 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS POP|POPLINE|SHIFT [bag|LAST] — remove last newline field from bag.
+     * LAST = popped field; POP_REST/REST = remaining bag; LAST_N = 1 if popped, 0 if empty.
+     * POP_N = remaining field count. Empty bag → LAST "", REST "", LAST_N=0.
+     * Usability: process PUSH bags one field at a time without NTH index glue.
+     * Note: not stack POP (that is bare POP outside SYS). */
+    if (kw(&L->cur,"POP") || kw(&L->cur,"POPLINE") || kw(&L->cur,"LINEPOP") ||
+        kw(&L->cur,"BAGPOP") || kw(&L->cur,"SHIFT") || kw(&L->cur,"UNPUSH")){
+      char bag[CUBALC_HOST_STR_MAX], lastf[512], rest[CUBALC_HOST_STR_MAX];
+      const char *p, *last_nl = NULL;
+      long rest_n = 0, found = 0;
+      size_t flen;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      lastf[0] = 0;
+      rest[0] = 0;
+      if (!bag[0]) {
+        found = 0;
+      } else {
+        /* find last newline; if none, whole bag is the only field */
+        for (p = bag; *p; p++)
+          if (*p == '\n') last_nl = p;
+        if (!last_nl) {
+          snprintf(lastf, sizeof lastf, "%s", bag);
+          rest[0] = 0;
+          found = 1;
+          rest_n = 0;
+        } else {
+          flen = strlen(last_nl + 1);
+          if (flen >= sizeof lastf) flen = sizeof lastf - 1;
+          memcpy(lastf, last_nl + 1, flen);
+          lastf[flen] = 0;
+          {
+            size_t rlen = (size_t)(last_nl - bag);
+            if (rlen >= sizeof rest) rlen = sizeof rest - 1;
+            memcpy(rest, bag, rlen);
+            rest[rlen] = 0;
+          }
+          found = 1;
+          if (rest[0]) {
+            p = rest;
+            while (*p) {
+              while (*p && *p != '\n') p++;
+              rest_n++;
+              if (*p == '\n') p++;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "LAST", lastf);
+      var_set_str(vm, "POP", lastf);
+      var_set_str(vm, "POP_REST", rest);
+      var_set_str(vm, "REST", rest);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", lastf);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POP_N", rest_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LINES|NLINES|WC|COUNTLINES [str|LAST] — count newline fields → LAST_N.
      * LAST kept as source text; LINES_N/WC_N = count. Empty → 0.
      * Usability: bag/LIST size after other ops overwrite LAST_N. */
@@ -2537,7 +2598,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2784,6 +2845,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
       {"SYS PUSH", "SYS PUSH|ADDLINE bag [line] — append newline field · multi-file accumulate"},
       {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
+      {"SYS POP", "SYS POP|POPLINE [bag] — last field → LAST; rest → POP_REST · process bags"},
+      {"SYS POPLINE", "SYS POPLINE bag — alias of SYS POP (not stack POP)"},
       {"SYS EQSI", "SYS EQSI|IEQS|EQS I a b — case-insensitive string equality · LAST_N 0|1"},
       {"SYS HASI", "SYS HASI|ICONTAINS|HAS I hay needle — case-insensitive substring · LAST_N 0|1"},
       {"SYS LINES", "SYS LINES|NLINES|WC [str] — count newline fields → LAST_N/LINES_N"},

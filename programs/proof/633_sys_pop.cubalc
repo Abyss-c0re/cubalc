@@ -1,0 +1,122 @@
+# SYS POP / POPLINE — peel last newline field from bag (dual of SYS PUSH)
+# Usability: process bags without NTH index glue; LAST=field REST=remaining
+
+HOLD_FLASH 1
+
+# build bag
+LET bag = ""
+SYS PUSH bag "alpha"
+LET bag = LAST
+SYS PUSH bag "beta"
+LET bag = LAST
+SYS PUSH bag "gamma"
+LET bag = LAST
+ASSERT PUSH_N == 3
+
+# pop last
+SYS POP bag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+ASSERT POP_N == 2
+# re-check rest via HEAD/TAIL (no \n escapes in string lits)
+SYS HEAD POP_REST
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS TAIL POP_REST
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+SYS LINES POP_REST
+ASSERT LAST_N == 2
+LET bag = POP_REST
+
+# pop again
+SYS POP bag
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+ASSERT POP_N == 1
+SYS EQS POP_REST "alpha"
+ASSERT LAST_N == 1
+LET bag = POP_REST
+
+# last field
+SYS POP bag
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+ASSERT POP_N == 0
+SYS EMPTY POP_REST
+ASSERT LAST_N == 1
+
+# empty bag
+SYS POP ""
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+ASSERT POP_N == 0
+
+# single-field bag (no newline)
+SYS POP "solo"
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+ASSERT POP_N == 0
+
+# POPLINE / BAGPOP aliases
+LET bag = ""
+SYS PUSH bag "x"
+LET bag = LAST
+SYS PUSH bag "y"
+LET bag = LAST
+SYS POPLINE bag
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+LET bag = POP_REST
+SYS BAGPOP bag
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# SHIFT / UNPUSH aliases
+LET bag = ""
+SYS PUSH bag "1"
+LET bag = LAST
+SYS PUSH bag "2"
+LET bag = LAST
+SYS SHIFT bag
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+LET bag = REST
+SYS UNPUSH bag
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# drain loop pattern
+LET bag = ""
+SYS PUSH bag "a"
+LET bag = LAST
+SYS PUSH bag "b"
+LET bag = LAST
+SYS PUSH bag "c"
+LET bag = LAST
+LET out = ""
+SYS POP bag
+LET line = LAST
+LET bag = POP_REST
+SYS PUSH out line
+LET out = LAST
+SYS POP bag
+LET line = LAST
+LET bag = POP_REST
+SYS PUSH out line
+LET out = LAST
+SYS POP bag
+LET line = LAST
+LET bag = POP_REST
+SYS PUSH out line
+LET out = LAST
+SYS LINES out
+ASSERT LAST_N == 3
+SYS EMPTY bag
+ASSERT LAST_N == 1
+
+PRINT "sys_pop ok"

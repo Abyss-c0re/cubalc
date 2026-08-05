@@ -1692,6 +1692,7 @@ int main(int argc, char **argv) {
       {"sys_lines", "programs/proof/630_sys_lines.cubalc", "SYS LINES/WC newline field count"},
       {"sys_cut", "programs/proof/631_sys_cut.cubalc", "SYS CUT/COLUMN field by separator"},
       {"sys_empty", "programs/proof/632_sys_empty.cubalc", "SYS EMPTY/BLANK soft plate probes"},
+      {"sys_pop", "programs/proof/633_sys_pop.cubalc", "SYS POP/POPLINE bag field peel"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1878,6 +1879,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length"},
       {"SYS BLANK", "host", "SYS BLANK|ISBLANK [str] — empty or whitespace only"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY [str] — LAST_N 1 if any character"},
+      {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
+      {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2439,6 +2442,8 @@ int main(int argc, char **argv) {
        "SYS CUT/COLUMN peel field by separator"},
       {"programs/proof/632_sys_empty.cubalc", "sys_empty",
        "SYS EMPTY/BLANK/NONEMPTY soft plate probes"},
+      {"programs/proof/633_sys_pop.cubalc", "sys_pop",
+       "SYS POP/POPLINE peel last bag field"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2834,6 +2839,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY zero-length probe"},
       {"SYS BLANK", "host", "SYS BLANK whitespace-only probe"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY any-char probe"},
+      {"SYS POP", "host", "SYS POP last bag field"},
+      {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3067,6 +3074,8 @@ int main(int argc, char **argv) {
       {"SYS EMPTY", "host", "SYS EMPTY|ISEMPTY zero-length probe"},
       {"SYS BLANK", "host", "SYS BLANK|ISBLANK whitespace-only probe"},
       {"SYS NONEMPTY", "host", "SYS NONEMPTY any-character probe"},
+      {"SYS POP", "host", "SYS POP|POPLINE bag last field → LAST rest→POP_REST"},
+      {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3133,6 +3142,7 @@ int main(int argc, char **argv) {
       {"programs/proof/630_sys_lines.cubalc", "sys_lines", "SYS LINES/WC field count"},
       {"programs/proof/631_sys_cut.cubalc", "sys_cut", "SYS CUT/COLUMN by separator"},
       {"programs/proof/632_sys_empty.cubalc", "sys_empty", "SYS EMPTY/BLANK soft probes"},
+      {"programs/proof/633_sys_pop.cubalc", "sys_pop", "SYS POP bag field peel"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},
