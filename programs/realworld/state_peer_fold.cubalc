@@ -1,0 +1,266 @@
+# state_peer_fold.cubalc — local file/state peer fold → compare/harmony → plate
+#
+# Real use: agent drops 01 bitstreams under CUBALC_STATE and runs this to:
+#   - load peer0/peer1 bits from STATE files (or ENV path / raw 01)
+#   - optional peer digits from ENV
+#   - COMPARE + HARMONY + DECIDE without a live network peer
+#   - write FOLD_RESULT.txt under STATE for the next agent step
+#
+# Host layout (private state):
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   printf '1010101111' > "$CUBALC_STATE/peer0.bits"
+#   printf '1100110011' > "$CUBALC_STATE/peer1.bits"
+#   ./out/cubalc run -q -s programs/realworld/state_peer_fold.cubalc
+#
+# Optional env (overrides STATE defaults):
+#   CUBALC_PEER0_BITS / CUBALC_PEER1_BITS  path or raw 01 string
+#   CUBALC_PEER0_DIGIT / CUBALC_PEER1_DIGIT  0..9
+#   CUBALC_FOLD_MIN_UNITY  soft floor (default 0) — EXPECT only
+#
+# Edges:
+#   DEFINED/TYPEOF/UNSET + DEFAULT knobs
+#   EXIST-gated READ of bit files (bare READ fatals)
+#   FOLDBITS path vs raw string
+#   missing peer file → soft degrade vs hard ASSERT gate
+#   UNITY/HARMONY scale for agents (percent-ish LAST_N)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "state_peer_fold: start"
+
+# --- knobs (INCLUDE-safe) ---
+DEFAULT PEER0_FILE = "/peer0.bits"
+DEFAULT PEER1_FILE = "/peer1.bits"
+DEFAULT FOLD_MIN_UNITY = 0
+DEFAULT REQUIRE_BOTH = 1
+
+# ENV may raise min unity soft floor (SYS NUM parses LAST; do not TYPEOF LAST first)
+SYS ENV "CUBALC_FOLD_MIN_UNITY" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FOLD_MIN_UNITY = LAST_N
+  END
+END
+
+SYS ENV "CUBALC_FOLD_REQUIRE_BOTH" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS LAST "0"
+  IF LAST_N == 1 THEN
+    LET REQUIRE_BOTH = 0
+  END
+END
+
+# Prove DEFINED/TYPEOF on knobs for agent introspection
+DEFINED PEER0_FILE
+ASSERT DEFINED == 1 "knob present"
+TYPEOF PEER0_FILE
+ASSERT TYPE_N == 2 "PEER0_FILE is str"
+TYPEOF FOLD_MIN_UNITY
+ASSERT TYPE_N == 1 "min unity is num"
+TYPEOF REQUIRE_BOTH
+ASSERT TYPE_N == 1
+
+SYS STATE
+ASSERT LAST_N > 0 "STATE"
+LET state_dir = LAST
+
+# --- resolve peer0 bits source ---
+LET has0 = 0
+LET src0 = ""
+SYS ENV "CUBALC_PEER0_BITS" OR ""
+IF LAST_N > 0 THEN
+  LET src0 = LAST
+ELSE
+  SYS CAT state_dir PEER0_FILE
+  LET src0 = LAST
+END
+
+TYPEOF src0
+EXPECT TYPE_N == 2 "src0 string"
+IF OK == 0 THEN
+  PASS "src0 type soft"
+  CLEAR_ERR
+END
+
+SYS EXIST src0
+IF EXIST == 1 THEN
+  SYS READ src0
+  LET bits0 = LAST
+  LET has0 = 1
+  NOTE "peer0 bits from file"
+ELSE
+  # treat src as raw 01 if it looks non-path (no slash) and non-empty
+  SYS HAS src0 "/"
+  IF LAST_N == 0 THEN
+    SYS LEN src0
+    IF LAST_N > 0 THEN
+      LET bits0 = src0
+      LET has0 = 1
+      NOTE "peer0 bits raw env"
+    END
+  ELSE
+    FAIL "peer0 bits file missing"
+    NOTE "peer0 absent"
+    # leave has0=0 — sticky cleared after policy
+    PASS "peer0 optional until gate"
+    CLEAR_ERR
+  END
+END
+
+# --- resolve peer1 bits ---
+LET has1 = 0
+LET src1 = ""
+SYS ENV "CUBALC_PEER1_BITS" OR ""
+IF LAST_N > 0 THEN
+  LET src1 = LAST
+ELSE
+  SYS CAT state_dir PEER1_FILE
+  LET src1 = LAST
+END
+
+SYS EXIST src1
+IF EXIST == 1 THEN
+  SYS READ src1
+  LET bits1 = LAST
+  LET has1 = 1
+  NOTE "peer1 bits from file"
+ELSE
+  SYS HAS src1 "/"
+  IF LAST_N == 0 THEN
+    SYS LEN src1
+    IF LAST_N > 0 THEN
+      LET bits1 = src1
+      LET has1 = 1
+      NOTE "peer1 bits raw env"
+    END
+  ELSE
+    FAIL "peer1 bits file missing"
+    PASS "peer1 optional until gate"
+    CLEAR_ERR
+  END
+END
+
+# policy gate (hard EXIT for CI when both peers required)
+IF REQUIRE_BOTH == 1 THEN
+  IF has0 == 0 THEN
+    FAIL "peer0 required missing"
+    STATUS
+    EXIT 2 "peer0 bits missing"
+  END
+  IF has1 == 0 THEN
+    FAIL "peer1 required missing"
+    STATUS
+    EXIT 2 "peer1 bits missing"
+  END
+END
+
+# At least one peer needed always
+IF has0 == 0 THEN
+  IF has1 == 0 THEN
+    FAIL "no peer bits at all"
+    EXIT 2 "no peer bits"
+  END
+END
+
+# --- place board ---
+CUBE peer0 ROLE host PROTON 1
+CUBE peer1 ROLE body PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG peer0 peer1
+PLUG peer0 brain
+
+IF has0 == 1 THEN
+  FOLDBITS peer0 bits0
+END
+IF has1 == 1 THEN
+  FOLDBITS peer1 bits1
+END
+
+# optional digits from env (host-decoded)
+SYS ENV "CUBALC_PEER0_DIGIT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N >= 0 THEN
+      IF LAST_N <= 9 THEN
+        SETDIGIT peer0 LAST_N
+      END
+    END
+  END
+END
+SYS ENV "CUBALC_PEER1_DIGIT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N >= 0 THEN
+      IF LAST_N <= 9 THEN
+        SETDIGIT peer1 LAST_N
+      END
+    END
+  END
+END
+
+# CRITICAL: COMPARE/HARMONY must run BEFORE IMPULSE/FLOW.
+# FLOW equalizes peer matrices (observed: hamming 10 → 0, unity 84 → 100).
+LET unity_pct = 0
+LET hamming = 0
+LET harm = 0
+IF has0 == 1 THEN
+  IF has1 == 1 THEN
+    COMPARE peer0 peer1
+    LET unity_pct = UNITY
+    LET hamming = HAMMING
+    HARMONY
+    LET harm = HARMONY
+  END
+END
+
+IMPULSE peer0 1
+IMPULSE peer1 1
+IMPULSE brain 1
+FLOW 3
+DECIDE brain
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+LET dig = DECIDE
+
+# soft unity floor (does not abort decide — reports)
+EXPECT unity_pct >= FOLD_MIN_UNITY "unity below soft floor"
+IF OK == 0 THEN
+  PASS "unity soft floor noted"
+  CLEAR_ERR "unity soft"
+  LET unity_soft_fail = 1
+ELSE
+  LET unity_soft_fail = 0
+END
+
+# --- write result plate under STATE ---
+SYS CAT state_dir "/FOLD_RESULT.txt"
+LET out_path = LAST
+SYS WRITE out_path "cubalc.state_peer_fold.v1 ok=1"
+SYS EXIST out_path
+ASSERT EXIST == 1 "result plate"
+
+# agent JSON snapshot (file stays simple — dynamic JSON still painful)
+STATUS
+ASSERT STATUS_OK == 1
+PRINT "fold" dig unity_pct hamming harm has0 has1 unity_soft_fail
+PRINT_JSON dig unity_pct hamming harm has0 has1 unity_soft_fail STATUS_OK
+
+# UNSET temp knobs so a later INCLUDE DEFAULT can re-seed (agent hygiene)
+UNSET bits0
+UNSET bits1
+DEFINED bits0
+EXPECT DEFINED == 0 "bits0 unset"
+IF OK == 0 THEN
+  PASS "unset soft"
+  CLEAR_ERR
+END
+
+NOTE "state_peer_fold: done"
+VARS
+STATUS
+CLEAR_ERR "fold clean"
+EXIT 0 "fold ok"
