@@ -17,6 +17,9 @@ typedef struct cubalc_run_result {
   char err[160];
   char last_err[160]; /* sticky LAST_ERR/ERR even when run ok (soft FAIL/EXPECT) */
   char last_print[256];
+  /* Usability: source line context for agent-readable failures (from "line N" in err). */
+  int err_line;       /* 0 if unknown */
+  char err_src[200];  /* trimmed source text at err_line */
 } cubalc_run_result;
 
 int cubalc_run_file(const char *path, cubalc_run_result *out, FILE *trace);

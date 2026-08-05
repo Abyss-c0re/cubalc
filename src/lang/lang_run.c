@@ -1,5 +1,56 @@
 /* CubalC lang — lang_run.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
+#include <ctype.h>
+
+/* Parse "line N" from err/last_err and copy that source line into out->err_src. */
+static void fill_err_src(cubalc_run_result *out, const char *src, size_t n) {
+  const char *msg;
+  const char *p;
+  int line = 0, cur;
+  size_t i, start, len, lead;
+  if (!out || !src) return;
+  msg = out->err[0] ? out->err : out->last_err;
+  if (!msg || !msg[0]) return;
+  p = strstr(msg, "line ");
+  if (!p) p = strstr(msg, "Line ");
+  if (!p) return;
+  p += 5;
+  while (*p == ' ') p++;
+  if (!isdigit((unsigned char)*p)) return;
+  line = 0;
+  while (isdigit((unsigned char)*p)) {
+    line = line * 10 + (*p - '0');
+    p++;
+  }
+  if (line < 1) return;
+  out->err_line = line;
+  cur = 1;
+  start = 0;
+  for (i = 0; i < n && cur < line; i++) {
+    if (src[i] == '\n') {
+      cur++;
+      start = i + 1;
+    }
+  }
+  if (cur != line) return;
+  len = 0;
+  while (start + len < n && src[start + len] != '\n' && src[start + len] != '\r' &&
+         len + 1 < sizeof out->err_src)
+    len++;
+  /* trim leading whitespace for plate readability */
+  lead = 0;
+  while (lead < len && (src[start + lead] == ' ' || src[start + lead] == '\t'))
+    lead++;
+  len -= lead;
+  start += lead;
+  if (len >= sizeof out->err_src) len = sizeof out->err_src - 1;
+  if (len > 0) memcpy(out->err_src, src + start, len);
+  out->err_src[len] = 0;
+  /* strip trailing spaces */
+  while (len > 0 && (out->err_src[len - 1] == ' ' || out->err_src[len - 1] == '\t')) {
+    out->err_src[--len] = 0;
+  }
+}
 
 int cubalc_lang_exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *stop2){
   while (!vm->fatal){
@@ -68,6 +119,9 @@ static int run_source_inner(const char *src, size_t n, const char *name,
       else if (out->err[0] && !out->last_err[0])
         snprintf(out->last_err, sizeof out->last_err, "%s", out->err);
     }
+    /* Usability: attach source line text when err mentions "line N". */
+    if (out->err[0] || out->last_err[0])
+      fill_err_src(out, src, n);
   }
   if (vm.ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */

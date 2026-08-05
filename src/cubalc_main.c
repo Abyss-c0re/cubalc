@@ -1473,13 +1473,25 @@ int main(int argc, char **argv) {
     } else {
       rc = cubalc_run_file(argv[2], &rr, stdout);
     }
-    printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
-           "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
-           "\"last_err\":\"%s\"}\n",
-           rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
-           rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-           CUBALC_LANG_VERSION, rr.err, rr.last_err);
+    /* Usability: err_line/err_src — source snippet when error cites line N. */
+    {
+      char esrc[220];
+      size_t k, o = 0;
+      for (k = 0; rr.err_src[k] && o + 2 < sizeof esrc; k++) {
+        char c = rr.err_src[k];
+        if (c == '"' || c == '\\') esrc[o++] = '_';
+        else if ((unsigned char)c < 32) esrc[o++] = ' ';
+        else esrc[o++] = c;
+      }
+      esrc[o] = 0;
+      printf("{\"ok\":%s,\"cmd\":\"run\",\"file\":\"%s\",\"stmts\":%d,"
+             "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
+             "\"language\":\"%s\",\"version\":\"%s\",\"err\":\"%s\","
+             "\"last_err\":\"%s\",\"err_line\":%d,\"err_src\":\"%s\"}\n",
+             rr.ok ? "true" : "false", src_label, rr.stmts, rr.asserts_ok,
+             rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
+             CUBALC_LANG_VERSION, rr.err, rr.last_err, rr.err_line, esrc);
+    }
     return rc;
   }
   if (strcmp(cmd, "peers") == 0 || strcmp(cmd, "oversee") == 0) {
