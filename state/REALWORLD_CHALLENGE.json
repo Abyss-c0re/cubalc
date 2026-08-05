@@ -113,6 +113,6 @@
     "WORDS sep=',' or TOKENIZE with custom delimiter (SPLIT already exists \u2014 doc recipe)",
     "Optional FIFO plate form (enqueue/dequeue durable queue without manual WRITE loop)"
   ],
-  "commit": "e5697f4588cc36204150981206e29a63bc3d39f0",
+  "commit": "a777218031715f257c5afd8d5dd4ed3d9bfddf46",
   "ts": "2026-08-05T13:14:31Z"
 }
