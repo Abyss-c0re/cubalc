@@ -62,6 +62,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 32. ~~**`VERSION` + `cubalc version`**~~ **done** (in-lang LAST + CLI JSON plate).
 33. ~~**run plate `last_err`**~~ **done** (sticky LAST_ERR on JSON even when ok).
 34. ~~**`cubalc paths`**~~ **done** (install/workspace layout JSON · present flags).
+35. ~~**`cubalc which` / SYS WHICH lib**~~ **done** (resolve name → path/kind · INCLUDE-style).
 
 ## Tick protocol
 

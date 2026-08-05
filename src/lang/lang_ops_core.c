@@ -234,15 +234,19 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
       cubalc_host_result hr;
+      /* Usability: PATH bins first, then CubalC lib/program (host_which). */
       if (cubalc_host_which(L->cur.text, &hr)!=0){
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
         var_set_str(vm, "LAST", "");
         var_set_num(vm, "LAST_N", 0);
-        vm->last_n = 0;
+        var_set_num(vm, "OK", 0);
       } else {
         snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
         vm->last_n = 1;
         var_set_str(vm, "LAST", hr.str);
         var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "OK", 1);
       }
       lex_next(L);
       bump(vm); return 1;

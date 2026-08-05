@@ -1,15 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 1,
-  "version": "1.15.16-usability",
-  "item": "doctor + ENV OR + SERVE timeout + soft DIAL + lib/INCLUDE + cookbook",
-  "summary": "Main-agent usability ship: cubalc doctor/cookbook/help; SYS ENV OR fallback; CUBALC_P2P_TIMEOUT soft SERVE; CUBALC_P2P_SOFT dial; programs/lib; INCLUDE path resolve; proofs 573-576.",
+  "iter": 2,
+  "version": "1.15.27-usability",
+  "item": "cubalc which + SYS WHICH lib resolve",
+  "item_id": 35,
+  "title": "cubalc which resolves name \u2192 path/kind; SYS WHICH finds libs",
+  "commit": "5d9e4cf6b7440e90fac67f88ef18935d70ea3784",
+  "summary": "CLI which|locate|resolve + host find_cubalc; SYS WHICH resolves programs/lib short names for agents/scripts.",
   "proofs": [
-    "573_env_or_assert_msg",
-    "574_include_lib",
-    "575_p2p_soft_dial",
-    "576_p2p_serve_timeout"
+    "582_sys_which_lib"
   ],
-  "when": "2026-08-05",
-  "agent": "main"
+  "when": "2026-08-05T02:08:56Z",
+  "agent": "meaningful_iter_10m",
+  "sha": "5d9e4cf6b7440e90fac67f88ef18935d70ea3784"
 }

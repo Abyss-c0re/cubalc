@@ -1,0 +1,26 @@
+# SYS WHICH resolves CubalC lib short names (not only PATH binaries)
+# Usability: scripts locate INCLUDE targets without shell glue
+
+SYS WHICH hold_seed
+ASSERT LAST_N == 1 "hold_seed resolves"
+SYS LEN LAST
+ASSERT LAST_N > 0 "path non-empty"
+# path should mention lib and hold_seed
+SYS HAS LAST "hold_seed"
+ASSERT LAST_N == 1 "path contains hold_seed"
+SYS HAS LAST "lib"
+ASSERT LAST_N == 1 "path under lib"
+
+SYS WHICH "mesh_exchange"
+ASSERT LAST_N == 1 "quoted mesh_exchange resolves"
+SYS HAS LAST "mesh_exchange"
+ASSERT LAST_N == 1 "mesh path name"
+
+# missing resource → soft empty (not fatal)
+SYS WHICH "no_such_cubalc_lib_zz"
+ASSERT LAST_N == 0 "missing LAST_N 0"
+SYS LEN LAST
+ASSERT LAST_N == 0 "missing empty LAST"
+
+PRINT "sys_which_lib ok"
+PRINT_JSON

@@ -35,8 +35,12 @@ int cubalc_host_http(const char *method, const char *url, const char *body,
 /* process — allowlist only */
 int cubalc_host_spawn(const char *bin, char *const argv[], cubalc_host_result *r);
 
-/* which — resolve binary on PATH */
+/* which — resolve binary on PATH, then CubalC lib/program (readable) */
 int cubalc_host_which(const char *name, cubalc_host_result *r);
+
+/* find CubalC resource only: lib short name · programs/ · proof/ · path.
+ * Prefer over PATH when callers want INCLUDE-style resolution (not bins). */
+int cubalc_host_find_cubalc(const char *name, cubalc_host_result *r);
 
 /* path join: a + "/" + b (no double slash) → r->str */
 int cubalc_host_join(const char *a, const char *b, cubalc_host_result *r);

@@ -126,6 +126,70 @@ int cubalc_host_env(const char *name, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: INCLUDE-style resolve — short lib name → programs/lib/<stem>.cubalc
+ * Also programs/, programs/proof|p2p|protect, CUBALC_ROOT, readable path as-is. */
+int cubalc_host_find_cubalc(const char *name, cubalc_host_result *r) {
+  char stem[256], try[768];
+  const char *root, *slash, *leaf;
+  size_t blen;
+  int i;
+  static const char *dirs[] = {
+    "programs/lib", "programs", "programs/proof", "programs/p2p",
+    "programs/protect", "docs", NULL
+  };
+  r_clear(r);
+  if (!name || !name[0]) {
+    snprintf(r->err, sizeof r->err, "find: empty name");
+    return -1;
+  }
+  /* path as given (readable) */
+  if (access(name, R_OK) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", name);
+    r->ok = 1; r->n = 1; return 0;
+  }
+  slash = strrchr(name, '/');
+  leaf = slash ? slash + 1 : name;
+  snprintf(stem, sizeof stem, "%s", leaf);
+  blen = strlen(stem);
+  if (blen > 7 && strcmp(stem + blen - 7, ".cubalc") == 0)
+    stem[blen - 7] = 0;
+  for (i = 0; dirs[i]; i++) {
+    snprintf(try, sizeof try, "%s/%s.cubalc", dirs[i], stem);
+    if (access(try, R_OK) == 0) {
+      snprintf(r->str, sizeof r->str, "%s", try);
+      r->ok = 1; r->n = 1; return 0;
+    }
+    snprintf(try, sizeof try, "%s/%s", dirs[i], stem);
+    if (access(try, R_OK) == 0) {
+      snprintf(r->str, sizeof r->str, "%s", try);
+      r->ok = 1; r->n = 1; return 0;
+    }
+    /* docs: COOKBOOK.md style */
+    snprintf(try, sizeof try, "%s/%s.md", dirs[i], stem);
+    if (access(try, R_OK) == 0) {
+      snprintf(r->str, sizeof r->str, "%s", try);
+      r->ok = 1; r->n = 1; return 0;
+    }
+  }
+  root = getenv("CUBALC_ROOT");
+  if (root && root[0]) {
+    for (i = 0; dirs[i]; i++) {
+      snprintf(try, sizeof try, "%s/%s/%s.cubalc", root, dirs[i], stem);
+      if (access(try, R_OK) == 0) {
+        snprintf(r->str, sizeof r->str, "%s", try);
+        r->ok = 1; r->n = 1; return 0;
+      }
+      snprintf(try, sizeof try, "%s/%s/%s", root, dirs[i], stem);
+      if (access(try, R_OK) == 0) {
+        snprintf(r->str, sizeof r->str, "%s", try);
+        r->ok = 1; r->n = 1; return 0;
+      }
+    }
+  }
+  snprintf(r->err, sizeof r->err, "find: not found %s", name);
+  return -1;
+}
+
 int cubalc_host_which(const char *name, cubalc_host_result *r) {
   r_clear(r);
   if (!name) return -1;
@@ -155,7 +219,12 @@ int cubalc_host_which(const char *name, cubalc_host_result *r) {
       }
     }
   }
+  /* Usability: fall back to CubalC lib/program resolve (SYS WHICH hold_seed). */
+  if (cubalc_host_find_cubalc(name, r) == 0)
+    return 0;
   snprintf(r->err, sizeof r->err, "which: not found %s", name);
+  r->ok = 0;
+  r->str[0] = 0;
   return -1;
 }
 
