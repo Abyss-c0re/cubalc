@@ -1808,6 +1808,7 @@ int main(int argc, char **argv) {
       {"sys_coalesce", "programs/proof/664_sys_coalesce.cubalc", "SYS COALESCE first non-empty string"},
       {"sys_union", "programs/proof/665_sys_union.cubalc", "SYS UNION/INTERSECT/DIFF bag set ops"},
       {"sys_zip", "programs/proof/666_sys_zip.cubalc", "SYS ZIP/KEYS/VALS bag pair and peel"},
+      {"sys_prefixall", "programs/proof/667_sys_prefixall.cubalc", "SYS PREFIXALL/SUFFIXALL tag bag fields"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -2077,6 +2078,8 @@ int main(int argc, char **argv) {
       {"SYS ZIP", "host", "SYS ZIP|PAIR a b [sep] — pair bag fields by index"},
       {"SYS KEYS", "host", "SYS KEYS|COL0 bag [sep] — peel left of sep each field"},
       {"SYS VALS", "host", "SYS VALS|COL1 bag [sep] — peel right of sep each field"},
+      {"SYS PREFIXALL", "host", "SYS PREFIXALL|MAPPRE bag prefix — prepend every field"},
+      {"SYS SUFFIXALL", "host", "SYS SUFFIXALL|MAPSUF bag suffix — append every field"},
       {"SYS POP", "host", "SYS POP|POPLINE bag — last field → LAST · rest → POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path — mtime epoch → LAST_N · soft miss"},
@@ -3150,6 +3153,8 @@ int main(int argc, char **argv) {
       {"SYS ZIP", "host", "SYS ZIP pair bag fields by index"},
       {"SYS KEYS", "host", "SYS KEYS peel left of sep each field"},
       {"SYS VALS", "host", "SYS VALS peel right of sep each field"},
+      {"SYS PREFIXALL", "host", "SYS PREFIXALL prepend every bag field"},
+      {"SYS SUFFIXALL", "host", "SYS SUFFIXALL append every bag field"},
       {"SYS POP", "host", "SYS POP last bag field"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME file mtime epoch"},
@@ -3464,6 +3469,8 @@ int main(int argc, char **argv) {
       {"SYS ZIP", "host", "SYS ZIP|PAIR a b [sep] pair bag fields by index"},
       {"SYS KEYS", "host", "SYS KEYS|COL0 bag [sep] peel left of sep each field"},
       {"SYS VALS", "host", "SYS VALS|COL1 bag [sep] peel right of sep each field"},
+      {"SYS PREFIXALL", "host", "SYS PREFIXALL|MAPPRE bag prefix prepend every field"},
+      {"SYS SUFFIXALL", "host", "SYS SUFFIXALL|MAPSUF bag suffix append every field"},
       {"SYS POP", "host", "SYS POP|POPLINE bag last field → LAST rest→POP_REST"},
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path mtime epoch soft miss"},
@@ -3595,6 +3602,7 @@ int main(int argc, char **argv) {
       {"programs/proof/664_sys_coalesce.cubalc", "sys_coalesce", "SYS COALESCE first non-empty string"},
       {"programs/proof/665_sys_union.cubalc", "sys_union", "SYS UNION/INTERSECT/DIFF bag set ops"},
       {"programs/proof/666_sys_zip.cubalc", "sys_zip", "SYS ZIP/KEYS/VALS bag pair and peel"},
+      {"programs/proof/667_sys_prefixall.cubalc", "sys_prefixall", "SYS PREFIXALL/SUFFIXALL tag bag fields"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

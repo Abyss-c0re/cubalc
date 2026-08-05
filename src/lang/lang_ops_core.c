@@ -3427,6 +3427,92 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PREFIXALL|PREPENDALL|MAPPRE bag prefix — prepend string to every field → LAST.
+     * SYS SUFFIXALL|APPENDALL|MAPSUF bag suffix — append string to every field → LAST.
+     * LAST_N = field count. Empty bag → "" OK=1.
+     * Usability: tag LIST/peer bags (path/, .json) without EACH+CAT rebuild. */
+    if (kw(&L->cur,"PREFIXALL") || kw(&L->cur,"PREPENDALL") || kw(&L->cur,"MAPPRE") ||
+        kw(&L->cur,"PREALL") || kw(&L->cur,"ADDFRONT") || kw(&L->cur,"TAGPRE") ||
+        kw(&L->cur,"SUFFIXALL") || kw(&L->cur,"APPENDALL") || kw(&L->cur,"MAPSUF") ||
+        kw(&L->cur,"SUFALL") || kw(&L->cur,"ADDEND") || kw(&L->cur,"TAGSUF") ||
+        kw(&L->cur,"POSTFIXALL")){
+      char op[20];
+      int is_suf;
+      char bag[CUBALC_HOST_STR_MAX], affix[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, alen, flen;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_suf = (strcmp(op, "SUFFIXALL") == 0 || strcmp(op, "APPENDALL") == 0 ||
+                strcmp(op, "MAPSUF") == 0 || strcmp(op, "SUFALL") == 0 ||
+                strcmp(op, "ADDEND") == 0 || strcmp(op, "TAGSUF") == 0 ||
+                strcmp(op, "POSTFIXALL") == 0);
+      lex_next(L);
+      bag[0] = 0; affix[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, affix, sizeof affix) != 0)
+        affix[0] = 0;
+      alen = strlen(affix);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (!is_suf) {
+            /* prefix + field */
+            if (olen + alen < sizeof out) {
+              memcpy(out + olen, affix, alen);
+              olen += alen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, affix, t);
+              olen += t;
+            }
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+          } else {
+            /* field + suffix */
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            if (olen + alen < sizeof out) {
+              memcpy(out + olen, affix, alen);
+              olen += alen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, affix, t);
+              olen += t;
+            }
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "PREFIXALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
      * Lex SORT orders "10" before "2"; SORTN orders by integer value.
      * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
@@ -5169,7 +5255,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|MIN|MAX|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -5420,6 +5506,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ZIP", "SYS ZIP|PAIR a b [sep] — pair bag fields by index with sep (default :)"},
       {"SYS KEYS", "SYS KEYS|COL0 bag [sep] — peel left of first sep each field → bag"},
       {"SYS VALS", "SYS VALS|COL1 bag [sep] — peel right of first sep each field → bag"},
+      {"SYS PREFIXALL", "SYS PREFIXALL|MAPPRE bag prefix — prepend string to every field → LAST"},
+      {"SYS SUFFIXALL", "SYS SUFFIXALL|MAPSUF bag suffix — append string to every field → LAST"},
       {"SYS REVL", "SYS REVL|REVLINES|TAC [str] — reverse newline field order · LIFO bags"},
       {"SYS REVLINES", "SYS REVLINES [str] — alias of SYS REVL"},
       {"SYS TAC", "SYS TAC [str] — alias of SYS REVL (shell tac)"},

@@ -1,0 +1,82 @@
+# SYS PREFIXALL / SUFFIXALL — tag every newline field
+# Usability: path/peer labels without EACH+CAT rebuild
+
+HOLD_FLASH 1
+
+# prefix each field
+SYS PREFIXALL "a\nb\nc" "peer/"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT PREFIXALL_N == 3
+SYS EQS LAST "peer/a\npeer/b\npeer/c"
+ASSERT LAST_N == 1
+
+# suffix each field
+SYS SUFFIXALL "a\nb\nc" ".json"
+ASSERT LAST_N == 3
+SYS EQS LAST "a.json\nb.json\nc.json"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAPPRE "x\ny" "id="
+ASSERT LAST_N == 2
+SYS EQS LAST "id=x\nid=y"
+ASSERT LAST_N == 1
+
+SYS MAPSUF "x\ny" "!"
+ASSERT LAST_N == 2
+SYS EQS LAST "x!\ny!"
+ASSERT LAST_N == 1
+
+SYS PREPENDALL "1" "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "n1"
+ASSERT LAST_N == 1
+
+SYS APPENDALL "1" "n"
+ASSERT LAST_N == 1
+SYS EQS LAST "1n"
+ASSERT LAST_N == 1
+
+# empty bag / empty affix
+SYS PREFIXALL "" "x"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+SYS PREFIXALL "a\nb" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+SYS SUFFIXALL "a\nb" ""
+ASSERT LAST_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# single field
+SYS PREFIXALL "solo" "pre-"
+ASSERT LAST_N == 1
+SYS EQS LAST "pre-solo"
+ASSERT LAST_N == 1
+
+# agent pattern: LIST basenames → full paths, then tag status board
+LET names = "alice\nbob"
+SYS PREFIXALL names "peer/"
+LET paths = LAST
+SYS EQS paths "peer/alice\npeer/bob"
+ASSERT LAST_N == 1
+SYS SUFFIXALL names ":idle"
+SYS EQS LAST "alice:idle\nbob:idle"
+ASSERT LAST_N == 1
+
+# chain with ZIP
+SYS PREFIXALL "a\nb" "n/"
+LET left = LAST
+SYS SUFFIXALL "1\n2" "s"
+LET right = LAST
+SYS ZIP left right
+SYS EQS LAST "n/a:1s\nn/b:2s"
+ASSERT LAST_N == 1
+
+PRINT "sys_prefixall ok"
