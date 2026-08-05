@@ -11,6 +11,7 @@ make all
 ./out/cubalc cookbook    # paths
 ./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
+./out/cubalc examples    # curated runnable starters (JSON · filterable)
 ./out/cubalc forms SMX   # play-form catalog
 ./out/cubalc help
 ```

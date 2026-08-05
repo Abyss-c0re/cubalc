@@ -1893,6 +1893,115 @@ int main(int argc, char **argv) {
     printf("]}\n");
     return 0;
   }
+  if (strcmp(cmd, "examples") == 0 || strcmp(cmd, "example") == 0 ||
+      strcmp(cmd, "starters") == 0 || strcmp(cmd, "recipes") == 0) {
+    /* Usability: curated runnable starters for agents/humans — what to run
+     * first without reading full COOKBOOK prose. Filter by path/tag prefix. */
+    static const struct {
+      const char *path;
+      const char *tag;
+      const char *hint;
+    } catalog[] = {
+      {"programs/hello_cube.cubalc", "hello",
+       "hold → place → plug short form"},
+      {"programs/proof/12_hold_flash_plug.cubalc", "hold",
+       "HOLD_FLASH user permission before PLUG"},
+      {"programs/proof/573_env_or_assert_msg.cubalc", "assert",
+       "SYS ENV OR fallback + ASSERT message strings"},
+      {"programs/proof/577_include_shortname.cubalc", "include",
+       "INCLUDE short lib name → programs/lib"},
+      {"programs/proof/help_form.cubalc", "help",
+       "in-language HELP [form] discovery"},
+      {"programs/p2p/mesh_local.cubalc", "smx",
+       "in-process SMX EXCHANGE mesh"},
+      {"programs/p2p/peer_dial.cubalc", "p2p",
+       "SMX DIAL · CUBALC_P2P_SOFT soft-fail"},
+      {"programs/protect/core_protect.cubalc", "protect",
+       "Core protect board proof"},
+      {"programs/proof/sys_arg_or.cubalc", "arg",
+       "SYS ARG n OR fallback script defaults"},
+      {"programs/lib/hold_seed.cubalc", "lib",
+       "INCLUDE hold_seed seed snippet (not a full program)"},
+    };
+    const char *prefix = (argc > 2) ? argv[2] : "";
+    int json_only = 0;
+    int i, nmatch = 0, nall = (int)(sizeof catalog / sizeof catalog[0]);
+    int present = 0;
+    char pref_up[64];
+    if (prefix && (!strcmp(prefix, "--json") || !strcmp(prefix, "-j"))) {
+      json_only = 1;
+      prefix = (argc > 3) ? argv[3] : "";
+    } else if (argc > 3 && (!strcmp(argv[3], "--json") || !strcmp(argv[3], "-j"))) {
+      json_only = 1;
+    }
+    pref_up[0] = 0;
+    if (prefix && prefix[0]) {
+      size_t k;
+      for (k = 0; prefix[k] && k + 1 < sizeof pref_up; k++)
+        pref_up[k] = (char)toupper((unsigned char)prefix[k]);
+      pref_up[k] = 0;
+    }
+    if (!json_only) {
+      printf("# CubalC starter examples prefix=%s version=%s\n",
+             pref_up[0] ? pref_up : "*", CUBALC_LANG_VERSION);
+      printf("# run: cubalc run <path>\n");
+      printf("# tag\tpath\thint\n");
+    }
+    for (i = 0; i < nall; i++) {
+      char path_up[160], tag_up[32];
+      size_t k;
+      int hit = 1, exists;
+      for (k = 0; catalog[i].path[k] && k + 1 < sizeof path_up; k++)
+        path_up[k] = (char)toupper((unsigned char)catalog[i].path[k]);
+      path_up[k] = 0;
+      for (k = 0; catalog[i].tag[k] && k + 1 < sizeof tag_up; k++)
+        tag_up[k] = (char)toupper((unsigned char)catalog[i].tag[k]);
+      tag_up[k] = 0;
+      if (pref_up[0] && !strstr(path_up, pref_up) && !strstr(tag_up, pref_up) &&
+          !strstr(catalog[i].hint, prefix))
+        hit = 0;
+      if (!hit) continue;
+      nmatch++;
+      exists = (access(catalog[i].path, R_OK) == 0);
+      if (exists) present++;
+      if (!json_only)
+        printf("%s\t%s\t%s%s\n", catalog[i].tag, catalog[i].path,
+               catalog[i].hint, exists ? "" : " (missing)");
+    }
+    printf("{\"schema\":\"cubalc.examples.v1\",\"ok\":%s,\"cmd\":\"examples\","
+           "\"prefix\":\"%s\",\"n\":%d,\"n_catalog\":%d,\"n_present\":%d,"
+           "\"version\":\"%s\","
+           "\"note\":\"curated starters — cubalc run <path>; see docs/COOKBOOK.md\","
+           "\"examples\":[",
+           (nmatch > 0 && present > 0) ? "true" : "false",
+           pref_up[0] ? pref_up : "", nmatch, nall, present,
+           CUBALC_LANG_VERSION);
+    {
+      int first = 1;
+      for (i = 0; i < nall; i++) {
+        char path_up[160], tag_up[32];
+        size_t k;
+        int hit = 1, exists;
+        for (k = 0; catalog[i].path[k] && k + 1 < sizeof path_up; k++)
+          path_up[k] = (char)toupper((unsigned char)catalog[i].path[k]);
+        path_up[k] = 0;
+        for (k = 0; catalog[i].tag[k] && k + 1 < sizeof tag_up; k++)
+          tag_up[k] = (char)toupper((unsigned char)catalog[i].tag[k]);
+        tag_up[k] = 0;
+        if (pref_up[0] && !strstr(path_up, pref_up) && !strstr(tag_up, pref_up) &&
+            !strstr(catalog[i].hint, prefix))
+          hit = 0;
+        if (!hit) continue;
+        exists = (access(catalog[i].path, R_OK) == 0);
+        printf("%s{\"path\":\"%s\",\"tag\":\"%s\",\"hint\":\"%s\",\"present\":%s}",
+               first ? "" : ",", catalog[i].path, catalog[i].tag,
+               catalog[i].hint, exists ? "true" : "false");
+        first = 0;
+      }
+    }
+    printf("]}\n");
+    return (nmatch > 0 && present > 0) ? 0 : 1;
+  }
   if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
     fprintf(stderr,
       "CubalC %s — pure-C COP/flow (matrix SoT · SMX2 · no HTTP required)\n"
@@ -1900,6 +2009,7 @@ int main(int argc, char **argv) {
       "  Run & learn\n"
       "    doctor|health          install readiness JSON (agents/humans)\n"
       "    cookbook|start         paths to starters\n"
+      "    examples|starters [p]  curated runnable programs (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib        list programs/lib INCLUDE snippets\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"

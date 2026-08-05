@@ -54,6 +54,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 24. ~~**`cubalc libs`**~~ **done** (programs/lib catalog JSON for INCLUDE).
 25. ~~**`cubalc env`**~~ **done** (host CUBALC_* contract JSON · set/default/hint).
 26. ~~**INCLUDE short lib name**~~ **done** (`INCLUDE hold_seed` → programs/lib/… + INCLUDE_PATH).
+27. ~~**`cubalc examples`**~~ **done** (curated runnable starters JSON · tags/filter).
 
 ## Tick protocol
 
