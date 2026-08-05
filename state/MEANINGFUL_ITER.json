@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 105,
-  "version": "1.15.130-usability",
-  "item": "SYS MAPREPLACE / GSUBALL bag-wide GSUB",
-  "item_id": 138,
-  "title": "SYS MAPREPLACE|GSUBALL bag old new \u2014 REPLACEALL every field",
-  "commit": "f714f8382fbda1764ce0f3d999e409c6dc22ea33",
-  "summary": "SYS MAPREPLACE/GSUBALL apply REPLACEALL to every bag field. Path/tag rewrite without EACH. selftest 105.",
+  "iter": 106,
+  "version": "1.15.131-usability",
+  "item": "SYS FREQ / HIST bag field frequency histogram",
+  "item_id": 139,
+  "title": "SYS FREQ|HIST [bag] [sep] \u2014 field frequency key:count",
+  "commit": "bd0d008b7c2c843c1228ae2f9d8c30d1f0806f3f",
+  "summary": "SYS FREQ/HIST exact-field frequency bag key:count. Status rollups without EACH. selftest 106.",
   "proofs": [
-    "678_sys_mapreplace",
-    "selftest n_pass=105"
+    "679_sys_freq",
+    "selftest n_pass=106"
   ],
-  "when": "2026-08-05T19:14:42Z",
+  "when": "2026-08-05T19:25:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f714f8382fbda1764ce0f3d999e409c6dc22ea33"
+  "sha": "bd0d008b7c2c843c1228ae2f9d8c30d1f0806f3f"
 }
