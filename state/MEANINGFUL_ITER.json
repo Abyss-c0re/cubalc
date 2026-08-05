@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 68,
-  "version": "1.15.93-usability",
-  "item": "SYS PREPEND / POPHEAD FIFO bag front",
-  "item_id": 101,
-  "title": "SYS PREPEND|UNSHIFT + POPHEAD|DEQUEUE FIFO bag front ops",
-  "commit": "b3d4e60ccac77e438649e596c9a1e129b0633ab5",
-  "summary": "SYS PREPEND|UNSHIFT insert field at bag front; POPHEAD|DEQUEUE peel first for FIFO queues. Dual of PUSH/POP without REVL/NTH. selftest 68.",
+  "iter": 69,
+  "version": "1.15.94-usability",
+  "item": "SYS REMOVELINE / DROPLINE drop exact bag field",
+  "item_id": 102,
+  "title": "SYS REMOVELINE|DROPLINE bag needle drop first exact field",
+  "commit": "76ff7c619a41e4db6410f38550b4c352a4c8bd78",
+  "summary": "SYS REMOVELINE|DROPLINE drop first exact bag field (REMOVELINEI case-insensitive). Work-queue ack after HASLINE without EACH rebuild. selftest 69.",
   "proofs": [
-    "642_sys_prepend",
-    "selftest n_pass=68"
+    "643_sys_removeline",
+    "selftest n_pass=69"
   ],
-  "when": "2026-08-05T13:04:26Z",
+  "when": "2026-08-05T13:14:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b3d4e60ccac77e438649e596c9a1e129b0633ab5"
+  "sha": "76ff7c619a41e4db6410f38550b4c352a4c8bd78"
 }
