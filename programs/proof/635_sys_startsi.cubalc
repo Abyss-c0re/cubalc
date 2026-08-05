@@ -1,0 +1,72 @@
+# SYS STARTSI / ENDSI — case-insensitive prefix/suffix probes
+# Usability: path/ext/severity without UPPER/LOWER glue (with EQSI/HASI/GREPI)
+
+HOLD_FLASH 1
+
+# case-sensitive STARTS/ENDS unchanged
+SYS STARTS "ErrorBoom" "error"
+ASSERT LAST_N == 0
+SYS STARTS "ErrorBoom" "Error"
+ASSERT LAST_N == 1
+SYS ENDS "report.LOG" ".log"
+ASSERT LAST_N == 0
+SYS ENDS "report.LOG" ".LOG"
+ASSERT LAST_N == 1
+
+# STARTSI matches folds
+SYS STARTSI "ErrorBoom" "error"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS STARTSI "ERROR" "err"
+ASSERT LAST_N == 1
+SYS STARTSI "warn" "WARN"
+ASSERT LAST_N == 1
+SYS STARTSI "ok" "fail"
+ASSERT LAST_N == 0
+
+# ENDSI
+SYS ENDSI "report.LOG" ".log"
+ASSERT LAST_N == 1
+SYS ENDSI "app.TXT" ".txt"
+ASSERT LAST_N == 1
+SYS ENDSI "app.TXT" ".json"
+ASSERT LAST_N == 0
+
+# aliases
+SYS ISTARTS "/Var/Log" "/var"
+ASSERT LAST_N == 1
+SYS IENDS "File.JSON" ".json"
+ASSERT LAST_N == 1
+SYS STARTSWITHI "Host=box" "host="
+ASSERT LAST_N == 1
+SYS ENDSWITHI "x.Y" ".y"
+ASSERT LAST_N == 1
+
+# STARTS I / ENDS ICASE forms
+SYS STARTS I "DiskFull" "disk"
+ASSERT LAST_N == 1
+SYS ENDS ICASE "n.Log" ".LOG"
+ASSERT LAST_N == 1
+
+# empty needle → hit
+SYS STARTSI "abc" ""
+ASSERT LAST_N == 1
+SYS ENDSI "abc" ""
+ASSERT LAST_N == 1
+
+# default hay LAST
+LET p = "STATE/Alert.TXT"
+SYS ENDSI p ".txt"
+ASSERT LAST_N == 1
+SYS STARTSI p "state/"
+ASSERT LAST_N == 1
+
+# agent pattern: severity peel + prefix probe
+LET L = "WARN: space low"
+SYS BEFORE L ": "
+SYS STARTSI LAST "war"
+ASSERT LAST_N == 1
+SYS STARTS LAST "war"
+ASSERT LAST_N == 0
+
+PRINT "sys_startsi ok"

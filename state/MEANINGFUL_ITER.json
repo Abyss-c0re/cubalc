@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 60,
-  "version": "1.15.85-usability",
-  "item": "SYS MTIME / AGE plate freshness",
-  "item_id": 93,
-  "title": "SYS MTIME|AGE file mtime and age seconds",
-  "commit": "9c1472f434408df325988d6953b58a4a087f5284",
-  "summary": "SYS MTIME|MODTIME path \u2192 epoch LAST_N; SYS AGE|FILEAGE \u2192 seconds since mtime; soft miss OK=0; lease/plate freshness without shell stat.",
+  "iter": 61,
+  "version": "1.15.86-usability",
+  "item": "SYS STARTSI / ENDSI case-insensitive affix",
+  "item_id": 94,
+  "title": "SYS STARTSI|ENDSI case-insensitive prefix/suffix probes",
+  "commit": "pending",
+  "summary": "SYS STARTSI|ISTARTS|STARTS I and ENDSI|IENDS|ENDS I for case-insensitive prefix/suffix; path/ext/severity without UPPER glue. selftest rows[] 64\u219296.",
   "proofs": [
-    "634_sys_mtime",
-    "selftest n_pass=60"
+    "635_sys_startsi",
+    "selftest n_pass=61"
   ],
-  "when": "2026-08-05T11:44:07Z",
+  "when": "2026-08-05T11:53:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9c1472f434408df325988d6953b58a4a087f5284"
+  "sha": "pending"
 }

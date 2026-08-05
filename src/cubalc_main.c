@@ -1694,6 +1694,7 @@ int main(int argc, char **argv) {
       {"sys_empty", "programs/proof/632_sys_empty.cubalc", "SYS EMPTY/BLANK soft plate probes"},
       {"sys_pop", "programs/proof/633_sys_pop.cubalc", "SYS POP/POPLINE bag field peel"},
       {"sys_mtime", "programs/proof/634_sys_mtime.cubalc", "SYS MTIME/AGE plate freshness"},
+      {"sys_startsi", "programs/proof/635_sys_startsi.cubalc", "SYS STARTSI/ENDSI case-insensitive affix"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1706,7 +1707,7 @@ int main(int argc, char **argv) {
       int asserts_ok;
       int asserts_fail;
       char err[120];
-    } rows[64];
+    } rows[96];
     int nrow = 0;
     if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
       json_only = 1;
@@ -1884,6 +1885,8 @@ int main(int argc, char **argv) {
       {"SYS POPLINE", "host", "SYS POPLINE bag — alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path — mtime epoch → LAST_N · soft miss"},
       {"SYS AGE", "host", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N"},
+      {"SYS STARTSI", "host", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix"},
+      {"SYS ENDSI", "host", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix"},
       {"SYS TAKE", "host", "SYS TAKE|FIRSTN n [str] — first n newline fields"},
       {"SYS DROP", "host", "SYS DROP|SKIP n [str] — drop first n newline fields"},
       {"SYS SPLIT", "host", "SYS SPLIT|FIELDS sep [str] — sep → newline fields"},
@@ -2449,6 +2452,8 @@ int main(int argc, char **argv) {
        "SYS POP/POPLINE peel last bag field"},
       {"programs/proof/634_sys_mtime.cubalc", "sys_mtime",
        "SYS MTIME/AGE plate freshness without shell"},
+      {"programs/proof/635_sys_startsi.cubalc", "sys_startsi",
+       "SYS STARTSI/ENDSI case-insensitive prefix/suffix"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2848,6 +2853,8 @@ int main(int argc, char **argv) {
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME file mtime epoch"},
       {"SYS AGE", "host", "SYS AGE seconds since mtime"},
+      {"SYS STARTSI", "host", "SYS STARTSI case-insensitive prefix"},
+      {"SYS ENDSI", "host", "SYS ENDSI case-insensitive suffix"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -3085,6 +3092,8 @@ int main(int argc, char **argv) {
       {"SYS POPLINE", "host", "SYS POPLINE alias of SYS POP"},
       {"SYS MTIME", "host", "SYS MTIME|MODTIME path mtime epoch soft miss"},
       {"SYS AGE", "host", "SYS AGE|FILEAGE path seconds since mtime"},
+      {"SYS STARTSI", "host", "SYS STARTSI|ISTARTS case-insensitive prefix"},
+      {"SYS ENDSI", "host", "SYS ENDSI|IENDS case-insensitive suffix"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3153,6 +3162,7 @@ int main(int argc, char **argv) {
       {"programs/proof/632_sys_empty.cubalc", "sys_empty", "SYS EMPTY/BLANK soft probes"},
       {"programs/proof/633_sys_pop.cubalc", "sys_pop", "SYS POP bag field peel"},
       {"programs/proof/634_sys_mtime.cubalc", "sys_mtime", "SYS MTIME/AGE plate age"},
+      {"programs/proof/635_sys_startsi.cubalc", "sys_startsi", "SYS STARTSI/ENDSI affix"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

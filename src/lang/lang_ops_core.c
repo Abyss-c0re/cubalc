@@ -2409,25 +2409,57 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS STARTS|ENDS hay needle — prefix/suffix probe → LAST_N 0|1
+     * SYS STARTSI|ENDSI — case-insensitive (path/ext/severity without UPPER glue).
+     * SYS STARTS I / ENDS ICASE forms. Note: SYS SUFFIX is EXTNAME (path plane). */
     if (kw(&L->cur,"STARTS") || kw(&L->cur,"STARTSWITH") || kw(&L->cur,"HASPREFIX") ||
         kw(&L->cur,"PREFIX") ||
+        kw(&L->cur,"STARTSI") || kw(&L->cur,"ISTARTS") || kw(&L->cur,"STARTSWITHI") ||
+        kw(&L->cur,"HASPREFIXI") || kw(&L->cur,"IPREFIX") ||
         kw(&L->cur,"ENDS") || kw(&L->cur,"ENDSWITH") || kw(&L->cur,"HASSUFFIX") ||
-        kw(&L->cur,"SUFFIX")){
+        kw(&L->cur,"ENDSI") || kw(&L->cur,"IENDS") || kw(&L->cur,"ENDSWITHI") ||
+        kw(&L->cur,"HASSUFFIXI") || kw(&L->cur,"ISUFFIX")){
       char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
       for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+      int is_end = (strcmp(op,"ENDS")==0 || strcmp(op,"ENDSWITH")==0 ||
+                    strcmp(op,"HASSUFFIX")==0 ||
+                    strcmp(op,"ENDSI")==0 || strcmp(op,"IENDS")==0 ||
+                    strcmp(op,"ENDSWITHI")==0 || strcmp(op,"HASSUFFIXI")==0 ||
+                    strcmp(op,"ISUFFIX")==0);
+      int icase = (strcmp(op,"STARTSI")==0 || strcmp(op,"ISTARTS")==0 ||
+                   strcmp(op,"STARTSWITHI")==0 || strcmp(op,"HASPREFIXI")==0 ||
+                   strcmp(op,"IPREFIX")==0 ||
+                   strcmp(op,"ENDSI")==0 || strcmp(op,"IENDS")==0 ||
+                   strcmp(op,"ENDSWITHI")==0 || strcmp(op,"HASSUFFIXI")==0 ||
+                   strcmp(op,"ISUFFIX")==0);
       lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
       char hay[512]="", pref[256]="";
       if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
         snprintf(hay, sizeof hay, "%s", vm->last_str);
       if (resolve_str_arg(vm, L, pref, sizeof pref) != 0) pref[0]=0;
-      int is_end = (strcmp(op,"ENDS")==0 || strcmp(op,"ENDSWITH")==0 ||
-                    strcmp(op,"HASSUFFIX")==0 || strcmp(op,"SUFFIX")==0);
       long hit = 0;
       size_t hn = strlen(hay), pn = strlen(pref);
       if (pn == 0) hit = 1;
       else if (pn <= hn){
-        if (!is_end) hit = (strncmp(hay, pref, pn) == 0) ? 1 : 0;
-        else hit = (strcmp(hay + (hn - pn), pref) == 0) ? 1 : 0;
+        if (!icase) {
+          if (!is_end) hit = (strncmp(hay, pref, pn) == 0) ? 1 : 0;
+          else hit = (strcmp(hay + (hn - pn), pref) == 0) ? 1 : 0;
+        } else {
+          size_t i, base = is_end ? (hn - pn) : 0;
+          hit = 1;
+          for (i = 0; i < pn; i++) {
+            char a = hay[base + i], b = pref[i];
+            if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+            if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+            if (a != b) { hit = 0; break; }
+          }
+        }
       }
       vm->last_n = hit;
       var_set_num(vm, "LAST_N", hit);
@@ -2650,7 +2682,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2910,6 +2942,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS NONEMPTY", "SYS NONEMPTY|NOTEMPTY [str] — LAST_N 1 if any character"},
       {"SYS MTIME", "SYS MTIME|MODTIME path — file mtime epoch → LAST_N · soft miss"},
       {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
+      {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
+      {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
