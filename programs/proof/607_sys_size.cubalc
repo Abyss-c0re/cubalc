@@ -1,0 +1,76 @@
+# SYS SIZE / ISDIR / ISFILE — path metadata without full READ
+# Usability: agents probe plates and dirs without shell stat(1)
+
+HOLD_FLASH 1
+
+# known source file — regular file, size > 0
+SYS ISFILE "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N == 1 "hold_seed is file"
+ASSERT ISFILE == 1
+
+SYS ISDIR "programs/lib/hold_seed.cubalc"
+ASSERT LAST_N == 0 "file is not dir"
+
+SYS SIZE "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N > 0 "file has bytes"
+ASSERT SIZE > 0
+
+# known directory
+SYS ISDIR "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ISDIR == 1
+
+SYS ISFILE "programs/lib"
+ASSERT LAST_N == 0 "dir is not file"
+
+SYS SIZE "programs/lib"
+ASSERT OK == 1 "dir exists"
+ASSERT LAST_N == 0 "dir size reports 0"
+
+# missing path — soft fail on SIZE, probes report 0
+SYS SIZE "state/meaningful_iter/__no_such_plate__.json"
+ASSERT OK == 0 "missing soft"
+ASSERT LAST_N == 0
+ASSERT SIZE == 0
+
+SYS ISFILE "state/meaningful_iter/__no_such_plate__.json"
+ASSERT LAST_N == 0
+SYS ISDIR "state/meaningful_iter/__no_such_plate__.json"
+ASSERT LAST_N == 0
+
+# write a tiny plate under private STATE and measure
+SYS STATE
+LET BASE = LAST
+SYS JOIN BASE "_mi_size_probe"
+LET DIR = LAST
+SYS MKDIR DIR
+SYS JOIN DIR "probe.txt"
+LET F = LAST
+SYS WRITE F "hello"
+SYS SIZE F
+ASSERT OK == 1
+ASSERT LAST_N == 5 "hello is 5 bytes"
+ASSERT SIZE == 5
+SYS ISFILE F
+ASSERT LAST_N == 1
+SYS ISDIR DIR
+ASSERT LAST_N == 1
+
+# aliases
+SYS FSIZE F
+ASSERT LAST_N == 5
+SYS FILESIZE F
+ASSERT LAST_N == 5
+SYS BYTES F
+ASSERT LAST_N == 5
+SYS IS_FILE F
+ASSERT LAST_N == 1
+SYS IS_DIR DIR
+ASSERT LAST_N == 1
+SYS ISREG F
+ASSERT LAST_N == 1
+
+PRINT "sys_size ok"

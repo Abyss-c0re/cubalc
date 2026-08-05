@@ -233,6 +233,83 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "EXIST", e);
       bump(vm); return 1;
     }
+    /* SYS SIZE|FSIZE path — regular-file bytes → LAST_N/SIZE; soft miss OK=0
+     * SYS ISDIR path — LAST_N 1 if directory
+     * SYS ISFILE path — LAST_N 1 if regular file
+     * Usability: plate probes without full READ / shell stat. */
+    if (kw(&L->cur,"SIZE") || kw(&L->cur,"FSIZE") || kw(&L->cur,"FILESIZE") ||
+        kw(&L->cur,"BYTES") || kw(&L->cur,"ISDIR") || kw(&L->cur,"IS_DIR") ||
+        kw(&L->cur,"ISFILE") || kw(&L->cur,"IS_FILE") || kw(&L->cur,"ISREG")){
+      int want_size = (kw(&L->cur,"SIZE") || kw(&L->cur,"FSIZE") ||
+                      kw(&L->cur,"FILESIZE") || kw(&L->cur,"BYTES"));
+      int want_dir = (kw(&L->cur,"ISDIR") || kw(&L->cur,"IS_DIR"));
+      int want_file = (kw(&L->cur,"ISFILE") || kw(&L->cur,"IS_FILE") ||
+                      kw(&L->cur,"ISREG"));
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm, want_size ? "SYS SIZE \"path\"|LAST"
+                           : (want_dir ? "SYS ISDIR \"path\"|LAST"
+                                       : "SYS ISFILE \"path\"|LAST"));
+        return -1;
+      }
+      cubalc_host_path_kind(path, &hr);
+      if (want_size) {
+        if (hr.code == 0) {
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "SIZE", 0);
+          if (hr.err[0]) {
+            var_set_str(vm, "LAST_ERR", hr.err);
+            var_set_str(vm, "ERR", hr.err);
+            var_set_str(vm, "LAST", hr.err);
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+          }
+        } else if (hr.code == 1) {
+          /* regular file — report bytes */
+          vm->last_n = hr.n;
+          var_set_num(vm, "LAST_N", hr.n);
+          var_set_num(vm, "SIZE", hr.n);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST", path);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        } else if (hr.code == 2) {
+          /* directory — size 0, still OK (exists as dir) */
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "SIZE", 0);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST", path);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        } else {
+          vm->last_n = hr.n;
+          var_set_num(vm, "LAST_N", hr.n);
+          var_set_num(vm, "SIZE", hr.n);
+          var_set_num(vm, "OK", 1);
+          var_set_str(vm, "LAST", path);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        }
+        bump(vm); return 1;
+      }
+      if (want_dir) {
+        long v = (hr.code == 2) ? 1 : 0;
+        var_set_num(vm, "LAST_N", v);
+        var_set_num(vm, "ISDIR", v);
+        var_set_num(vm, "OK", 1);
+        vm->last_n = v;
+        bump(vm); return 1;
+      }
+      if (want_file) {
+        long v = (hr.code == 1) ? 1 : 0;
+        var_set_num(vm, "LAST_N", v);
+        var_set_num(vm, "ISFILE", v);
+        var_set_num(vm, "OK", 1);
+        vm->last_n = v;
+        bump(vm); return 1;
+      }
+      bump(vm); return 1;
+    }
     /* SYS MKDIR|MAKEDIR path — mkdir -p; OK if dir already exists.
      * Usability: agents create STATE/TMP plate trees without shell. */
     if (kw(&L->cur,"MKDIR") || kw(&L->cur,"MAKEDIR") || kw(&L->cur,"MAKE_DIR") ||
@@ -1379,7 +1456,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1590,6 +1667,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DIRNAME", "SYS DIRNAME|PARENT path — parent directory → LAST"},
       {"SYS EXTNAME", "SYS EXTNAME|EXT|SUFFIX path — final .ext → LAST/EXT"},
       {"SYS STEM", "SYS STEM|ROOTNAME path — basename without extension → LAST"},
+      {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
+      {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
+      {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},

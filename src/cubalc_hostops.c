@@ -88,6 +88,44 @@ int cubalc_host_exists(const char *path) {
   return stat(path, &st) == 0 ? 1 : 0;
 }
 
+/* Usability: SYS SIZE / ISDIR / ISFILE — path metadata without full READ.
+ * r->code: 0 missing, 1 regular file, 2 directory, 3 other
+ * r->n: byte size for regular files (0 for dirs/other/missing) */
+int cubalc_host_path_kind(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "path: empty");
+    r->code = 0;
+    r->n = 0;
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "path: missing");
+    r->code = 0;
+    r->n = 0;
+    r->ok = 0;
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  if (S_ISREG(st.st_mode)) {
+    r->code = 1;
+    r->n = (long)st.st_size;
+    r->ok = 1;
+    return 0;
+  }
+  if (S_ISDIR(st.st_mode)) {
+    r->code = 2;
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  r->code = 3;
+  r->n = (long)st.st_size;
+  r->ok = 1;
+  return 0;
+}
+
 int cubalc_host_read(const char *path, cubalc_host_result *r) {
   r_clear(r);
   if (!path || !path[0]) { snprintf(r->err, sizeof r->err, "read: empty path"); return -1; }

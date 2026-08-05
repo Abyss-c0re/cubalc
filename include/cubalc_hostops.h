@@ -24,6 +24,8 @@ typedef struct cubalc_host_result {
 int cubalc_host_read(const char *path, cubalc_host_result *r);
 int cubalc_host_write(const char *path, const char *data, cubalc_host_result *r);
 int cubalc_host_exists(const char *path); /* 1/0 */
+/* path kind: returns 0 missing, 1 regular file, 2 directory, 3 other; sets r->n size for files */
+int cubalc_host_path_kind(const char *path, cubalc_host_result *r);
 /* mkdir -p style: create path and parents; OK if already a directory */
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r);
 
