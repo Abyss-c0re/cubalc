@@ -1,0 +1,661 @@
+# alert_storm_heatmap.cubalc — durable alert-name intake + FREQ storm plate under STATE
+#
+# Real use: agents ingest noisy alert tokens, normalize path/case, then roll a
+# frequency heatmap (SYS FREQ/HIST) to detect alert storms without shell awk.
+#
+# Plate rows (exact fields): free alert tokens after normalize
+# Heat plate: name:count (first-seen order from FREQ)
+#
+# Actions (CUBALC_ARG0 / CUBALC_AH_ACTION):
+#   list     — depth + last heat tallies if present (default)
+#   seed     — WORDS ARG1 → PUSH each token if not HASLINE
+#   ingest   — PUSH single raw token (ARG1); may be dirty path/case
+#   norm     — MAPREPLACE strip prefix + UPPERALL case-fold → persist bag
+#   heat     — SYS FREQ bag → write HEAT plate; report unique + total
+#   storm    — scan heat; hit if any count >= THRESH (ARG1/ENV); soft/REQUIRE
+#   top      — GREP heat for exact token:count or report full heat
+#   pin      — MOVELINE first bag field matching ARG1 name to front
+#   drop     — REMOVELINE exact token
+#   has      — HASLINE exact
+#   count    — COUNTLINE exact (raw multiplicity before FREQ)
+#   clear    — empty bag (+ optional heat clear via clearheat)
+#   clearheat— empty heat plate only
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1="disk_full disk_full mem_high disk_full" \
+#     ./out/cubalc run -q -s programs/realworld/alert_storm_heatmap.cubalc
+#   CUBALC_ARG0=heat ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=storm CUBALC_ARG1=3 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_AH_FILE=ALERTS.txt
+#   CUBALC_AH_HEAT=HEAT.txt
+#   CUBALC_AH_REQUIRE=1
+#   CUBALC_AH_THRESH=3
+#   CUBALC_AH_PREFIX=/alerts/     # MAPREPLACE strip on norm
+#   CUBALC_AH_REPL=               # replacement (default empty)
+#
+# Edges deliberately stressed:
+#   FREQ exact-field only — "ERROR" vs "error" separate until UPPERALL
+#   FREQ first-seen order not count-sorted — no native top-N by frequency
+#   FREQ name:count ambiguous if token itself contains ":"
+#   MAPREPLACE/UPPERALL/FREQ non-mutate — must LET bag/heat = LAST
+#   MAPREPLACE empty old → no-op (not error)
+#   storm parses AFTER last ":" via AFTER — first colon only if multi-colon names
+#   COUNTLINE exact multiplicity ≠ FREQ unique row count
+#   GREP heat "disk" substring-matches disk_full:3
+#   PRINT_JSON collapse; WRITE trailing NL; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "alert_storm_heatmap: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ALERTS.txt"
+DEFAULT HFILE = "HEAT.txt"
+DEFAULT REPORT = "ALERT_HEAT_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 3
+DEFAULT PREFIX = "/alerts/"
+DEFAULT REPL = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_AH_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_AH_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_AH_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_AH_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_AH_HEAT" OR ""
+IF LAST_N > 0 THEN
+  LET HFILE = LAST
+END
+SYS ENV "CUBALC_AH_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_AH_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+SYS ENV "CUBALC_AH_PREFIX" OR ""
+IF LAST_N > 0 THEN
+  LET PREFIX = LAST
+END
+SYS ENV "CUBALC_AH_REPL" OR ""
+IF LAST_N > 0 THEN
+  LET REPL = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir HFILE
+LET heat_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft alerts load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+SYS READ OR heat_path OR ""
+LET heat = LAST
+CLEAR_ERR "soft heat load"
+SYS LINES heat
+LET heat_n0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET heat_changed = 0
+LET note_msg = "ok"
+LET unique_n = 0
+LET total_n = 0
+LET storm_n = 0
+LET max_c = 0
+LET idx = -1
+LET filtered = ""
+LET c = 0
+LET tok = ""
+
+# optional thresh override from ARG1 when action is storm
+SYS EQS ACTION "storm"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET THRESH = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES heat
+  LET unique_n = LAST_N
+  SYS LINES bag
+  LET total_n = LAST_N
+  STATUS
+  PRINT "alertheat" depth0 total_n unique_n heat_n0 ACTION
+  PRINT_JSON depth0 total_n unique_n heat_n0 ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON heat
+  LET note_msg = "list ok"
+END
+
+# --- seed: WORDS → PUSH if absent (unique seed; use ingest for multis) ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs tokens (ARG1 space-separated)"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS HASLINE bag n
+      IF LAST_N == 0 THEN
+        SYS PUSH bag n
+        LET bag = LAST
+        LET changed = 1
+        LET hit = hit + 1
+      ELSE
+        LET miss = miss + 1
+      END
+    END
+  END
+  LET note_msg = "seeded unique"
+END
+
+# --- ingest: PUSH raw (allows duplicates for FREQ) ---
+SYS EQS ACTION "ingest"
+IF LAST_N == 1 THEN
+  NOTE "action ingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ingest needs token"
+  END
+  SYS PUSH bag NAME
+  LET bag = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "ingested"
+END
+
+# --- multingest: WORDS push all (duplicates kept) ---
+SYS EQS ACTION "multingest"
+IF LAST_N == 1 THEN
+  NOTE "action multingest"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "multingest needs tokens"
+  END
+  SYS WORDS NAME
+  LET names = LAST
+  EACH LINE AS n IN names
+    SYS BLANK n
+    IF LAST_N == 0 THEN
+      SYS PUSH bag n
+      LET bag = LAST
+      LET changed = 1
+      LET hit = hit + 1
+    END
+  END
+  LET note_msg = "multingested"
+END
+
+# --- norm: MAPREPLACE prefix + UPPERALL ---
+SYS EQS ACTION "norm"
+IF LAST_N == 1 THEN
+  NOTE "action norm"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "norm empty bag"
+    FAIL "norm empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "norm empty"
+    END
+  ELSE
+    SYS BLANK PREFIX
+    IF LAST_N == 0 THEN
+      SYS MAPREPLACE bag PREFIX REPL
+      LET bag = LAST
+      LET changed = 1
+    END
+    SYS UPPERALL bag
+    LET bag = LAST
+    LET changed = 1
+    SYS LINES bag
+    LET hit = LAST_N
+    LET note_msg = "normalized"
+  END
+END
+
+# --- heat: FREQ bag → heat plate ---
+SYS EQS ACTION "heat"
+IF LAST_N == 1 THEN
+  NOTE "action heat"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "heat empty bag"
+    FAIL "heat empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "heat empty"
+    END
+  ELSE
+    SYS FREQ bag
+    LET heat = LAST
+    LET heat_changed = 1
+    SYS LINES heat
+    LET unique_n = LAST_N
+    SYS LINES bag
+    LET total_n = LAST_N
+    LET hit = unique_n
+    LET note_msg = "heated"
+    PRINT_JSON heat
+  END
+END
+
+# --- storm: any count >= THRESH ---
+SYS EQS ACTION "storm"
+IF LAST_N == 1 THEN
+  NOTE "action storm"
+  SYS MAX THRESH 1
+  LET THRESH = LAST_N
+  SYS BLANK heat
+  IF LAST_N == 1 THEN
+    # auto-heat if heat plate empty but bag has data
+    SYS BLANK bag
+    IF LAST_N == 0 THEN
+      SYS FREQ bag
+      LET heat = LAST
+      LET heat_changed = 1
+    END
+  END
+  SYS BLANK heat
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "storm no heat"
+    FAIL "storm no heat"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "storm no heat"
+    END
+  ELSE
+    LET storm_n = 0
+    LET max_c = 0
+    LET filtered = ""
+    EACH LINE AS row IN heat
+      SYS AFTER row ":"
+      LET tok = LAST
+      SYS PREPEND "" tok
+      SYS HEAD LAST
+      SYS NUM
+      IF OK == 1 THEN
+        LET c = LAST_N
+        SYS MAX max_c c
+        LET max_c = LAST_N
+        SYS CMP c THRESH
+        # CMP: -1 lt, 0 eq, 1 gt — storm if c >= THRESH → not lt
+        IF LAST_N >= 0 THEN
+          LET storm_n = storm_n + 1
+          SYS PUSH filtered row
+          LET filtered = LAST
+        END
+      END
+    END
+    LET hit = storm_n
+    IF storm_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "storm calm"
+      FAIL "storm calm"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "storm calm"
+      END
+    ELSE
+      LET note_msg = "storm hot"
+    END
+    PRINT_JSON filtered
+    PRINT "storm" storm_n max_c THRESH
+  END
+END
+
+# --- top: show heat (full) or GREP token ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS BLANK heat
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "top no heat"
+    FAIL "top no heat"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top no heat"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET filtered = heat
+      SYS LINES heat
+      LET hit = LAST_N
+      LET note_msg = "top full"
+    ELSE
+      # substring GREP — false friends possible
+      SYS GREP NAME heat
+      LET filtered = LAST
+      SYS LINES filtered
+      LET hit = LAST_N
+      IF hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "top miss"
+        FAIL "top miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "top miss"
+        END
+      ELSE
+        LET note_msg = "top hit"
+      END
+    END
+    PRINT_JSON filtered
+  END
+END
+
+# --- pin: MOVELINE first exact bag field to front ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs token"
+  END
+  SYS FINDLINE bag NAME
+  LET idx = LAST_N
+  SYS CMP idx 0
+  IF LAST_N < 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    SYS MOVELINE bag idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin moveline miss"
+      END
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET idx = 0
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- drop exact ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs exact token"
+  END
+  SYS HASLINE bag NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE bag NAME
+    LET bag = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped"
+  END
+END
+
+# --- has / count ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs token"
+  END
+  SYS HASLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "has"
+END
+
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs token"
+  END
+  SYS COUNTLINE bag NAME
+  LET hit = LAST_N
+  LET note_msg = "counted"
+END
+
+# --- clear / clearheat ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "clearheat"
+IF LAST_N == 1 THEN
+  NOTE "action clearheat"
+  LET heat = ""
+  LET heat_changed = 1
+  LET hit = 1
+  LET note_msg = "heat cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "ingest"
+LET k = k + LAST_N
+SYS EQS ACTION "multingest"
+LET k = k + LAST_N
+SYS EQS ACTION "norm"
+LET k = k + LAST_N
+SYS EQS ACTION "heat"
+LET k = k + LAST_N
+SYS EQS ACTION "storm"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+SYS EQS ACTION "clearheat"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "alerts write failed"
+  END
+  CLEAR_ERR
+END
+IF heat_changed > 0 THEN
+  SYS WRITE heat_path heat
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "heat write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS LINES heat
+LET heat_n1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.alertheat.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "storm_n"
+LET report = LAST
+SYS STR storm_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_c"
+LET report = LAST
+SYS STR max_c
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "thresh"
+LET report = LAST
+SYS STR THRESH
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "unique_n"
+LET report = LAST
+SYS STR unique_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "heat_n1"
+LET report = LAST
+SYS STR heat_n1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "alertheat" ACTION hit miss storm_n max_c THRESH depth0 depth1
+PRINT_JSON ACTION hit miss storm_n max_c THRESH unique_n depth0 depth1 heat_n1 elapsed STATUS_OK
+PASS "alertheat tick"
+NOTE "alert_storm_heatmap: done"
+CLEAR_ERR
+EXIT 0 "alertheat ok"

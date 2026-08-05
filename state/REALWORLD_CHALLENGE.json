@@ -1,70 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 36,
-  "program": "programs/realworld/evidence_packet_gate.cubalc",
-  "theme": "evidence packet multi-tag GREPALL AND GREPANY SETMATCH MOVELINE soft gate",
-  "version": "1.15.129-usability",
+  "iter": 37,
+  "program": "programs/realworld/alert_storm_heatmap.cubalc",
+  "theme": "alert storm heatmap FREQ HIST MAPREPLACE UPPERALL soft thresh",
+  "version": "1.15.131-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_admit",
-      "cmd": "seed 3 hosts; admit db01 error:disk; admit app02 warn:mem",
+      "name": "multingest_heat",
+      "cmd": "multingest 7 tokens; heat → disk_full:4 mem_high:2 cpu_hot:1",
       "ok": true,
-      "note": "host:status:sev:tag plate rows"
+      "note": "SYS FREQ first-seen order plate"
     },
     {
-      "name": "filter_grepall",
-      "cmd": "filter error+disk; filter error+disk+open N3",
+      "name": "storm_thresh",
+      "cmd": "storm 3 hot rc0; storm 10 calm soft; REQUIRE EXIT 2",
       "ok": true,
-      "note": "GREPALL multi-needle AND hit"
+      "note": "EACH AFTER: NUM CMP thresh"
     },
     {
-      "name": "filter_miss_require",
-      "cmd": "filter error+timeout soft rc0; REQUIRE EXIT 2",
+      "name": "count_vs_freq",
+      "cmd": "COUNTLINE disk_full == 4 matches FREQ count",
       "ok": true,
-      "note": "soft empty + REQUIRE hard"
+      "note": "raw multiplicity vs heat unique rows"
     },
     {
-      "name": "triage_escalate_pin",
-      "cmd": "triage; escalate web03 x2; pin open:error to front",
+      "name": "top_substring",
+      "cmd": "top GREP disk hits disk_full:4; zzzz soft/REQUIRE",
       "ok": true,
-      "note": "sev ladder + MOVELINE attention"
+      "note": "substring false friend class"
     },
     {
-      "name": "review_close",
-      "cmd": "review db01; close db01; ghost soft/REQUIRE",
+      "name": "pin_moveline",
+      "cmd": "pin mem_high to front; ghost REQUIRE EXIT 2",
       "ok": true,
-      "note": "SPLIT rebuild SETMATCH status"
+      "note": "FINDLINE -1 miss + MOVELINE"
     },
     {
-      "name": "gate_packet",
-      "cmd": "gate empty soft/REQUIRE; CUBALC_EP_PACKET=ready",
+      "name": "norm_mapreplace_upper",
+      "cmd": "ingest /alerts/Disk_Full…; MAPREPLACE+UPPERALL → DISK_FULL:2",
       "ok": true,
-      "note": "soft ENV dual path (not hard REQUIRE ENV)"
+      "note": "case fold merges disk_full variants"
     },
     {
-      "name": "drop_has_count",
-      "cmd": "drop exact; has/count exact",
+      "name": "seed_unique",
+      "cmd": "seed a b a c → 3 unique fields",
       "ok": true,
-      "note": "exact-field ops"
+      "note": "HASLINE skip dups"
     },
     {
-      "name": "grepall_bag_needles",
-      "cmd": "GREPALL bag needles_bag \u2192 0; separate strings \u2192 1",
+      "name": "heat_empty_require",
+      "cmd": "heat empty REQUIRE EXIT 2",
       "ok": true,
-      "note": "same silent empty class as GREPANY bag needles"
+      "note": "soft empty path"
     },
     {
-      "name": "substring_false_friend",
-      "cmd": "GREPANY error matches error_soft host; GREPALL error+disk ok",
+      "name": "freq_colon_probe",
+      "cmd": "FREQ a:b → a:b:2; AFTER first : → b:2 not count",
       "ok": true,
-      "note": "substring-unsafe multi-needle family"
+      "note": "colon in token breaks peel"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "104/104 pass incl grepall require_env upperall"
+      "note": "106/106 pass incl freq mapreplace upperall"
     }
   ],
   "weaknesses": [
@@ -72,88 +72,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "GREPALL multi-needle bag argument does not expand fields",
-      "detail": "SYS GREPALL bag needles with needles='error\\ndisk' yields LAST_N=0. Need separate string args GREPALL bag \"error\" \"disk\". Same silent-empty class as GREPANY bag needles \u2014 agents piping ENV/WORDS into one bag arg fail closed.",
-      "repro": "GREPALL log needles_bag \u2192 0; GREPALL log \"error\" \"disk\" \u2192 hits"
+      "title": "FREQ name:count is ambiguous when token contains colon",
+      "detail": "SYS FREQ of field a:b yields a:b:2. Peeling count with AFTER first ':' returns b:2; NUM fails; storm scan silently skips. No last-colon split or FREQ with safe sep when name has sep.",
+      "repro": "FREQ 'a:b\\na:b' → a:b:2; AFTER → b:2"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "GREPALL/GREPANY remain substring-unsafe",
-      "detail": "Needle error matches host token error_soft. Multi-tag AND only partially mitigates (second needle may filter). No word-boundary / field-column GREP.",
-      "repro": "GREPANY 'error_soft:\u2026\\ndb01:open:error:disk' error \u2192 2 rows"
+      "title": "FREQ is first-seen order not count-sorted",
+      "detail": "No native top-N by frequency. SORTN on heat plate sorts by string of whole name:count (disk_full:4 before cpu_hot:1 lexically wrong for rank). Agents cannot get hottest-first without custom EACH rebuild.",
+      "repro": "FREQ z y z x z y → z:3\\ny:2\\nx:1 first-seen not sorted by count"
     },
     {
       "id": "W3",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "No in-field column update \u2014 SETMATCH needs full-row rebuild",
-      "detail": "Status/sev ladder requires SPLIT + REPLACEALL template + SETMATCH whole row. No SETFIELD host status=review. Agents writing structured plates pay O(n) EACH + fragile rebuild.",
-      "repro": "review/escalate actions: SPLIT old_entry; rebuild HOST:ST:SEV:TAG"
+      "title": "MAPREPLACE/UPPERALL/FREQ non-mutate named bags",
+      "detail": "Must LET bag = LAST after each; forgetting leaves dirty plate on WRITE.",
+      "repro": "UPPERALL bag; WRITE path bag still mixed case without LET"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|str",
-      "title": "REPLACEALL template tokens collide with data",
-      "detail": "Rebuild uses REPLACEALL entry \"SEV\" sev etc. Host/tag containing SEV/HOST/ST/TAG substrings corrupt the template. No positional format/sprintf.",
-      "repro": "host name containing SEV \u2192 garbled entry after REPLACEALL"
+      "title": "AFTER peels first delimiter only — no RAFTER/last-colon",
+      "detail": "Storm count peel and multi-field tokens need last-segment extract. Agents stack SPLIT+TAIL or fragile heuristics.",
+      "repro": "AFTER 'a:b:2' ':' → 'b:2'"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "lang|args",
-      "title": "Optional second ARG hard with DEFAULT/ENV defaults",
-      "detail": "DEFAULT A2=disk + ENV OR disk means filter cannot distinguish unset ARG2 from default. Single-needle GREPALL path only if A2 blank \u2014 agents always get 2-needle filter unless they blank env. No true optional CLI arity.",
-      "repro": "filter ARG1 only still AND-matches default tag disk"
+      "area": "host|bag",
+      "title": "GREP heat substring false friends",
+      "detail": "top disk matches disk_full:4 and would match diskette:1. No field-prefix or token-boundary GREP on heat rows.",
+      "repro": "GREP disk on heat plate"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses multi-line evidence bags",
-      "detail": "Filtered windows and full plates unparseable as one JSON string field.",
-      "repro": "PRINT_JSON bag after seed"
+      "title": "PRINT multi-line LAST often prints length not content under some paths",
+      "detail": "PRINT_JSON/plate still needed for heat inspection; agent logging of FREQ bags is awkward.",
+      "repro": "PRINT freq LAST after FREQ multi-line"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE often omits final trailing newline",
-      "detail": "cat -A last evidence line without $; intermediate lines have $.",
-      "repro": "seed; cat -A EVIDENCE.txt"
+      "detail": "cat -A last alert/heat line without $.",
+      "repro": "heat; cat -A HEAT.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "host|identity",
-      "title": "Host identity is BEFORE first colon only",
-      "detail": "Rows host:status:sev:tag break if host contains ':'. No multi-segment key extract helper for last field as host.",
-      "repro": "host ipv6-like tokens cannot use colon plate format"
+      "area": "host|bag",
+      "title": "No FREQ threshold filter / FREQWHERE",
+      "detail": "Storm gate requires EACH+AFTER+NUM+CMP over heat. Common ops pattern deserves host form keep rows count>=N.",
+      "repro": "storm action reimplements threshold scan"
     }
   ],
   "workarounds": [
-    "GREPALL/GREPANY with quoted separate needles not bag-of-needles",
-    "SPLIT full row then REPLACEALL template for status/sev updates",
-    "Avoid SEV/HOST/ST/TAG substrings in host/tag tokens",
-    "Blank CUBALC_EP_A2 when single-needle filter intended",
-    "Put host first for BEFORE identity; avoid colon in host"
+    "Ban ':' in alert tokens before FREQ; or use FREQ custom sep '=' if tokens lack '='",
+    "Always LET bag/heat = LAST after MAPREPLACE/UPPERALL/FREQ",
+    "Prefer COUNTLINE for single-token multiplicity; FREQ for multi-token heatmap",
+    "Normalize with MAPREPLACE+UPPERALL before heat to merge case/path variants",
+    "Use HASLINE/EQS not GREP for exact heat row checks"
   ],
   "language_gaps": [
-    "GREPALL/GREPANY expand bag fields as needle list",
-    "Word-boundary or column-aware GREP (split field match)",
-    "SETFIELD / column update without full-row rebuild",
-    "Positional format (sprintf) instead of REPLACEALL templates",
-    "True optional ARG/ENV (unset vs default)",
+    "FREQ safe encoding when name contains sep; or count as separate bag",
+    "FREQ SORT BY COUNT DESC / top-N form",
+    "RAFTER / split-last delimiter peel",
+    "FREQWHERE bag thresh keep hot rows",
+    "In-place MAPREPLACE/UPPERALL/FREQ",
     "PRINT_JSON newlines; WRITE force trailing NL"
   ],
   "issues_faced": [
-    "GREPALL bag-of-needles silent empty \u2014 same agent footgun as GREPANY W2 from iter35",
-    "DEFAULT A2=disk poisoned optional filter second needle \u2014 documented W5",
-    "Status transitions verbose: EACH find + SPLIT + 4x REPLACEALL + SETMATCH",
-    "Pin proved MOVELINE: c open:error moved from last to front"
+    "Confirmed FREQ colon ambiguity breaks AFTER count peel — agents must sanitize tokens",
+    "Storm calm path needs REQUIRE flag; soft FAIL+CLEAR_ERR works",
+    "Norm merge Disk_Full+disk_full → DISK_FULL:2 proves UPPERALL necessity pre-FREQ",
+    "No language bug fix this fire — document for MEANINGFUL_ITER (RAFTER, FREQ top-N)"
   ],
-  "commit": "0190bf4214342dfb3d3f64e7d396dd64644141ec",
-  "ts": "2026-08-05T19:04:27Z"
+  "commit": "pending",
+  "ts": "2026-08-05T19:29:00Z"
 }
