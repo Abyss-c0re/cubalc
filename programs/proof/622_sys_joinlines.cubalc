@@ -1,0 +1,76 @@
+# SYS JOINLINES / PASTE — join newline fields with separator (anti-SPLIT)
+# Usability: LIST/GREP/SORT → CSV/report line without shell paste/tr
+
+HOLD_FLASH 1
+
+# basic
+SYS JOINLINES "," "a\nb\nc"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT JOIN_N == 3
+SYS EQS LAST "a,b,c"
+ASSERT LAST_N == 1
+
+# multi-char sep
+SYS JOINLINES " | " "x\ny\nz"
+SYS EQS LAST "x | y | z"
+ASSERT LAST_N == 1
+ASSERT JOIN_N == 3
+
+# empty sep concatenates
+SYS JOINLINES "" "hi\nthere"
+SYS EQS LAST "hithere"
+ASSERT LAST_N == 1
+ASSERT JOIN_N == 2
+
+# single field
+SYS JOINLINES "," "solo"
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+ASSERT JOIN_N == 1
+
+# empty source
+SYS JOINLINES "," ""
+ASSERT OK == 1
+ASSERT JOIN_N == 0
+ASSERT LAST_N == 0
+
+# PASTE alias
+SYS PASTE ";" "1\n2\n3"
+SYS EQS LAST "1;2;3"
+ASSERT LAST_N == 1
+
+# round-trip SPLIT → JOINLINES
+SYS SPLIT ":" "bin:usr:tmp"
+ASSERT SPLIT_N == 3
+SYS JOINLINES ":"
+SYS EQS LAST "bin:usr:tmp"
+ASSERT LAST_N == 1
+
+# chain LIST → GREP → SORT → TAKE → JOINLINES report
+SYS LIST "programs/lib"
+ASSERT OK == 1
+SYS GREP ".cubalc"
+ASSERT GREP_N > 0
+SYS SORT
+SYS TAKE 3
+ASSERT TAKE_N > 0
+LET n = TAKE_N
+SYS JOINLINES ","
+ASSERT JOIN_N == n
+SYS HAS LAST ".cubalc"
+ASSERT LAST_N == 1
+SYS HAS LAST ","
+IF n > 1 THEN
+  ASSERT LAST_N == 1 "comma present for multi"
+ELSE
+  ASSERT LAST_N == 0 "or not for single"
+END
+
+# default source LAST after GREP
+LET S = "p\nq\nr"
+SYS JOINLINES "-" S
+SYS EQS LAST "p-q-r"
+ASSERT LAST_N == 1
+
+PRINT "sys_joinlines ok"

@@ -1681,6 +1681,7 @@ int main(int argc, char **argv) {
       {"sys_split", "programs/proof/619_sys_split.cubalc", "SYS SPLIT sep→newline fields"},
       {"sys_sort", "programs/proof/620_sys_sort.cubalc", "SYS SORT/UNIQ line order"},
       {"sys_join", "programs/proof/621_sys_join.cubalc", "SYS JOIN/PATH plate path join"},
+      {"sys_joinlines", "programs/proof/622_sys_joinlines.cubalc", "SYS JOINLINES paste lines"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1857,6 +1858,7 @@ int main(int argc, char **argv) {
       {"SYS UNIQ", "host", "SYS UNIQ [str] — drop adjacent duplicate fields"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b — portable path join a/b → LAST"},
       {"SYS PATH", "host", "SYS PATH a b — alias of SYS JOIN"},
+      {"SYS JOINLINES", "host", "SYS JOINLINES|PASTE sep [str] — join lines with sep"},
       {"SYS DATE", "host", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ"},
       {"SYS PID", "host", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "host", "SYS HOSTNAME|HOST — machine name → LAST"},
@@ -2384,6 +2386,8 @@ int main(int argc, char **argv) {
        "SYS SORT/UNIQ stable line order for LIST walks"},
       {"programs/proof/621_sys_join.cubalc", "sys_join",
        "SYS JOIN/PATH portable plate path join"},
+      {"programs/proof/622_sys_joinlines.cubalc", "sys_joinlines",
+       "SYS JOINLINES/PASTE join newline fields with sep"},
     };
     const char *prefix = (argc > 2) ? argv[2] : "";
     int json_only = 0;
@@ -2760,6 +2764,7 @@ int main(int argc, char **argv) {
       {"SYS UNIQ", "host", "SYS UNIQ adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN path join a/b"},
       {"SYS PATH", "host", "SYS PATH alias of JOIN"},
+      {"SYS JOINLINES", "host", "SYS JOINLINES paste lines"},
       {"EACH LINE", "flow", "EACH LINE walk LIST fields"},
       {"SYS", "host", "SYS ENV|ARG|WHICH|READ|WRITE …"},
       {"SMX", "smx", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL"},
@@ -2974,6 +2979,7 @@ int main(int argc, char **argv) {
       {"SYS UNIQ", "host", "SYS UNIQ drop adjacent dups"},
       {"SYS JOIN", "host", "SYS JOIN|PATH a b portable path join"},
       {"SYS PATH", "host", "SYS PATH alias of SYS JOIN"},
+      {"SYS JOINLINES", "host", "SYS JOINLINES|PASTE join lines with sep"},
       {"EACH LINE", "flow", "EACH LINE [as name] [IN str] walk fields"},
       {"SYS TIME", "host", "SYS TIME wall seconds → LAST_N"},
       {"SYS MS", "host", "SYS MS wall milliseconds → LAST_N/MS"},
@@ -3029,6 +3035,7 @@ int main(int argc, char **argv) {
       {"programs/proof/619_sys_split.cubalc", "sys_split", "SYS SPLIT sep to lines"},
       {"programs/proof/620_sys_sort.cubalc", "sys_sort", "SYS SORT/UNIQ line order"},
       {"programs/proof/621_sys_join.cubalc", "sys_join", "SYS JOIN/PATH plate paths"},
+      {"programs/proof/622_sys_joinlines.cubalc", "sys_joinlines", "SYS JOINLINES paste lines"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

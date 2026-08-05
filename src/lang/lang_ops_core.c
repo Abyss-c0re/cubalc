@@ -1737,6 +1737,64 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS JOINLINES|PASTE|MERGE sep [str|LAST] — join newline fields with sep.
+     * Inverse of SYS SPLIT. LAST = joined string; LAST_N/JOIN_N = field count.
+     * Empty sep concatenates with no delimiter.
+     * Usability: LIST/GREP/SORT results → CSV/report line without shell paste. */
+    if (kw(&L->cur,"JOINLINES") || kw(&L->cur,"PASTE") || kw(&L->cur,"MERGE") ||
+        kw(&L->cur,"JOINSEP") || kw(&L->cur,"IMPLADE") || kw(&L->cur,"LINESJOIN")){
+      char sep[64]="", src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t sepn, olen = 0, flen;
+      long nfields = 0;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0]=0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      sepn = strlen(sep);
+      if (src[0]) {
+        p = src;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          flen = (size_t)(p - start);
+          if (nfields > 0 && sepn > 0) {
+            if (olen + sepn < sizeof out) {
+              memcpy(out + olen, sep, sepn);
+              olen += sepn;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, sep, take);
+              olen += take;
+            }
+          }
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, start, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "JOINED", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "JOIN_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -2054,7 +2112,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|JOINLINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2288,6 +2346,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
       {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
       {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
+      {"SYS JOINLINES", "SYS JOINLINES|PASTE sep [str] — join newline fields with sep (anti-SPLIT)"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
