@@ -1,0 +1,233 @@
+# soft_mesh_fanout.cubalc — ENV SET soft dial + WORDS peer list + REVL fanout
+#
+# Real use: agent has a free-text peer list and must soft-probe without shell
+# export CUBALC_P2P_SOFT=1. This program:
+#   SYS ENV SET CUBALC_P2P_SOFT / TIMEOUT in-process
+#   SYS WORDS tokenize "host:1 host:2" → bag
+#   optional REVL newest-first try order
+#   soft SMX DIAL each endpoint; FAIL+CLEAR_ERR recover under -s
+#   if all miss → local INCLUDE mesh_exchange + peer_decide fallback
+#   write MESH_FANOUT.txt plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0="127.0.0.1:1 127.0.0.1:2" \
+#     ./out/cubalc run -q -s programs/realworld/soft_mesh_fanout.cubalc
+#   # no host CUBALC_P2P_SOFT required — program ENV SETs it
+#
+# Optional:
+#   CUBALC_ARG0 / CUBALC_MESH_PEERS  whitespace peer list
+#   CUBALC_MESH_REVERSE=1           REVL try order
+#   CUBALC_MESH_TIMEOUT=400         ENV SET P2P_TIMEOUT
+#   CUBALC_MESH_REQUIRE_LIVE=1      EXIT 2 if zero live dials (local fallback still runs unless set)
+#   CUBALC_SMX_KEY                  shared secret
+#
+# Edges:
+#   ENV SET closes prior "cannot set P2P_SOFT in-language" gap — verify DIAL honors it
+#   ENV SET process-local only (not parent shell after exit)
+#   WORDS collapses whitespace; commas need SPLIT still
+#   REVL for LIFO peer preference
+#   sticky FAIL last_err after soft dial needs CLEAR_ERR for -s
+#   DECIDE pre-bind for var_slot 64-cap
+#   INCLUDE mesh libs after cubes placed
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "soft_mesh_fanout: start"
+DEFAULT PEERS = "127.0.0.1:1"
+DEFAULT REVERSE = 0
+DEFAULT TIMEOUT = 400
+DEFAULT REQUIRE_LIVE = 0
+LET DECIDE = -1
+LET DIGIT = -1
+LET bag = ""
+LET n_try = 0
+LET n_live = 0
+LET n_miss = 0
+LET path = "none"
+LET first_live = ""
+IDENTITY
+SYS DATE
+LET mesh_date = DATE
+SYS MS
+LET t0 = MS
+SYS HOSTNAME
+LET mesh_host = LAST
+
+# --- peers from ARG0 or ENV ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET PEERS = LAST
+ELSE
+  SYS ENV "CUBALC_MESH_PEERS" OR ""
+  IF LAST_N > 0 THEN
+    LET PEERS = LAST
+  END
+END
+SYS ENV "CUBALC_MESH_REVERSE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REVERSE = 1
+END
+SYS ENV "CUBALC_MESH_TIMEOUT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET TIMEOUT = LAST_N
+  END
+END
+SYS ENV "CUBALC_MESH_REQUIRE_LIVE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_LIVE = 1
+END
+
+# --- in-language soft dial policy (no shell export) ---
+SYS ENV SET "CUBALC_P2P_SOFT" "1"
+SYS STR TIMEOUT
+SYS ENV SET "CUBALC_P2P_TIMEOUT" LAST
+SYS ENV "CUBALC_P2P_SOFT"
+SYS EQS LAST "1"
+EXPECT LAST_N == 1 "soft set"
+SYS ENV "CUBALC_P2P_TIMEOUT"
+NOTE "env soft dial armed"
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS MKDIR out_dir
+
+# tokenize peer list
+SYS WORDS PEERS
+LET peer_bag = LAST
+SYS LINES peer_bag
+LET n_try = LAST_N
+IF REVERSE == 1 THEN
+  SYS REVL peer_bag
+  LET peer_bag = LAST
+  NOTE "peer order reversed"
+END
+
+# place dial cubes once
+CUBE self ROLE host PROTON 1
+CUBE remote ROLE body PROTON 1
+PLUG self remote
+SMX KEY
+CLEAR_ERR
+
+EACH LINE AS endpoint IN peer_bag
+  SYS BLANK endpoint
+  IF LAST_N == 1 THEN
+    CONTINUE
+  END
+  SMX DIAL self remote endpoint
+  IF SMX_OK == 1 THEN
+    LET n_live = n_live + 1
+    SYS EMPTY first_live
+    IF LAST_N == 1 THEN
+      LET first_live = endpoint
+    END
+    SYS PUSH bag endpoint
+    LET bag = LAST
+    PASS "dial live"
+    CLEAR_ERR "live clean"
+    NOTE "peer live"
+  ELSE
+    LET n_miss = n_miss + 1
+    FAIL "soft dial miss"
+    CLEAR_ERR "dial recovered"
+  END
+END
+
+# fallback local mesh if no live remote
+IF n_live == 0 THEN
+  LET path = "local"
+  CUBE peer0 ROLE host PROTON 1
+  CUBE peer1 ROLE body PROTON 1
+  CUBE brain ROLE braincube PROTON 1
+  PLUG peer0 peer1
+  PLUG peer0 brain
+  INCLUDE mesh_exchange
+  EXPECT SMX_OK == 1 "local exchange"
+  IF SMX_OK == 1 THEN
+    INCLUDE peer_decide
+    LET dig = DECIDE
+    PASS "local mesh ok"
+    CLEAR_ERR "local clean"
+  ELSE
+    FAIL "local mesh failed"
+    CLEAR_ERR
+  END
+ELSE
+  LET path = "remote"
+  # still run local decide seed for digit plate
+  CUBE peer0 ROLE host PROTON 1
+  CUBE brain ROLE braincube PROTON 1
+  PLUG peer0 brain
+  INCLUDE peer_decide
+  LET dig = DECIDE
+  CLEAR_ERR
+END
+
+IF REQUIRE_LIVE == 1 THEN
+  IF n_live == 0 THEN
+    FAIL "no live peers"
+    EXIT 2 "fanout empty"
+  END
+END
+
+# plate
+SYS STR n_try
+LET s_try = LAST
+SYS STR n_live
+LET s_live = LAST
+SYS STR n_miss
+LET s_miss = LAST
+SYS STR dig
+LET s_dig = LAST
+SYS JOINLINES "," bag
+LET live_csv = LAST
+
+LET tpl = "schema=cubalc.soft_mesh_fanout.v1 date={{DATE}} host={{HOST}} path={{PATH}} try={{TRY}} live={{LIVE}} miss={{MISS}} dig={{DIG}} first={{FIRST}} peers={{PEERS}}"
+SYS REPLACEALL tpl "{{DATE}}" mesh_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" mesh_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{PATH}}" path
+LET tpl = LAST
+SYS REPLACEALL tpl "{{TRY}}" s_try
+LET tpl = LAST
+SYS REPLACEALL tpl "{{LIVE}}" s_live
+LET tpl = LAST
+SYS REPLACEALL tpl "{{MISS}}" s_miss
+LET tpl = LAST
+SYS REPLACEALL tpl "{{DIG}}" s_dig
+LET tpl = LAST
+SYS REPLACEALL tpl "{{FIRST}}" first_live
+LET tpl = LAST
+SYS REPLACEALL tpl "{{PEERS}}" live_csv
+LET tpl = LAST
+
+SYS JOIN out_dir "MESH_FANOUT.txt"
+LET plate = LAST
+SYS WRITE plate tpl
+SYS EXIST plate
+ASSERT EXIST == 1
+SYS APPEND plate ""
+SYS APPEND plate live_csv
+
+# optional: leave soft flags set for child SPAWN; document parent shell unchanged
+SYS MS
+LET elapsed_ms = MS - t0
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "soft_mesh_fanout: done"
+PRINT "mesh" n_try n_live n_miss dig path
+PRINT_JSON n_try n_live n_miss dig path first_live REVERSE elapsed_ms STATUS_OK
+STATUS
+CLEAR_ERR "mesh clean"
+EXIT 0 "fanout ok"

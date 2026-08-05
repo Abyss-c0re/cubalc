@@ -1,104 +1,98 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 20,
-  "program": "programs/realworld/log_field_extract.cubalc",
-  "theme": "log field extract BETWEEN FINDI structured peel",
-  "version": "1.15.88-usability",
+  "iter": 21,
+  "program": "programs/realworld/soft_mesh_fanout.cubalc",
+  "theme": "soft mesh fanout ENV SET WORDS REVL dial recovery",
+  "version": "1.15.91-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_extract",
-      "cmd": "app.log with [Error]/[WARN]/quoted msg; run -s",
+      "name": "positive_no_host_soft",
+      "cmd": "host CUBALC_P2P_SOFT unset; ARG0 two dead peers; run -s",
       "ok": true,
-      "note": "hit=4 miss=2; rows Error|box|disk full etc."
-    },
-    {
-      "name": "findi_needle_error",
-      "cmd": "CUBALC_XTR_NEEDLE=error",
-      "ok": true,
-      "note": "hit=2 skip=4 only Error/error lines"
-    },
-    {
-      "name": "require_empty",
-      "cmd": "info only + REQUIRE=1",
-      "ok": true,
-      "note": "EXIT 2 extract empty"
-    },
-    {
-      "name": "nested_brackets",
-      "cmd": "[outer [inner]] msg=\"x\"",
-      "ok": true,
-      "note": "sev becomes 'outer [inner' \u2014 first-close BETWEEN trap"
+      "note": "ENV SET soft+timeout; soft dial miss x2; local mesh fallback dig=3; plate path=local; parent shell still unset"
     },
     {
       "name": "quiet_strict",
-      "cmd": "run -q -s",
+      "cmd": "run -q -s single dead peer",
       "ok": true,
-      "note": "exit 0 with CLEAR_ERR after FINDI misses"
+      "note": "CLEAR_ERR after FAIL keeps -s green"
+    },
+    {
+      "name": "require_live",
+      "cmd": "CUBALC_MESH_REQUIRE_LIVE=1 dead peer",
+      "ok": true,
+      "note": "EXIT 2 fanout empty after local path"
+    },
+    {
+      "name": "words_comma_one_token",
+      "cmd": "WORDS 'a:1,b:2'",
+      "ok": true,
+      "note": "LAST_N=1 \u2014 commas not split by WORDS"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "63/63 pass incl between findi"
+      "note": "66/66 pass incl env_set revl words"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "host",
-      "title": "BETWEEN peels first open\u2192first close only \u2014 nested delimiters corrupt fields",
-      "detail": "SYS BETWEEN \"[\" \"]\" on '[outer [inner]] msg=\"x\"' yields severity 'outer [inner'. No balanced/nested extract. Real log formats with nested brackets need shell/regex.",
-      "repro": "BETWEEN [ ] '[outer [inner]]' \u2192 'outer [inner'"
+      "severity": "med",
+      "area": "env|p2p",
+      "title": "ENV SET is process-local only \u2014 parent shell unchanged after exit",
+      "detail": "SYS ENV SET CUBALC_P2P_SOFT works for same-process DIAL (closes prior shell-export gap) but does not persist to the invoking shell. Follow-on shell cubalc runs still need host export unless each program re-SET. Documented parent soft=unset after run.",
+      "repro": "Program ENV SETs soft; after exit echo $CUBALC_P2P_SOFT still empty"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "error|cli",
-      "title": "OK=0 without last_err does not fail run -s",
-      "detail": "FINDI/FIND miss sets OK=0 LAST_N=-1 but empty last_err. STATUS shows ok=false momentarily, yet final plate under -s can still be ok=true if no sticky ERR. Agents cannot rely on OK alone for strict gates \u2014 inconsistent with AGE miss which sets last_err=mtime: missing.",
-      "repro": "SYS FINDI hello xyz under -q -s \u2192 exit 0 ok=true; STATUS mid-run ok=false last_err empty"
+      "severity": "med",
+      "area": "host",
+      "title": "WORDS is whitespace-only \u2014 comma peer lists stay one token",
+      "detail": "SYS WORDS '127.0.0.1:1,127.0.0.1:2' \u2192 1 field. Agents must SPLIT ',' first or use spaces. Easy misconfig for CSV-style peer env.",
+      "repro": "WORDS 'a:1,b:2' \u2192 LAST_N=1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host",
-      "title": "BETWEEN miss is soft OK=1 LAST_N=0 \u2014 easy to confuse with EMPTY success",
-      "detail": "Unlike FINDI, BETWEEN miss keeps OK=1. Must check LAST_N/found. Dual soft-miss conventions across host forms (READ_OK vs LAST_N vs OK).",
-      "repro": "BETWEEN [ ] 'nope' \u2192 OK=1 LAST_N=0 EMPTY LAST"
+      "area": "cli",
+      "title": "PRINT_JSON / plate strings still collapse newlines in multi-line bags",
+      "detail": "REVL of a\\nb\\nc shows as 'cba' in PRINT_JSON LAST (newlines lost). Same class as VARS collapse \u2014 agents re-parsing JSON strings cannot recover bag structure.",
+      "repro": "SYS REVL a\\nb\\nc; PRINT_JSON LAST \u2192 cba without \\n"
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "host",
-      "title": "No multi-match / global extract \u2014 one BETWEEN per call",
-      "detail": "Cannot pull all bracket tags or all quoted strings from a line without manual loop+replace glue. No BETWEEN ALL form.",
-      "repro": "Line with two quoted strings only peels first"
+      "severity": "low",
+      "area": "p2p|error",
+      "title": "Soft dial still emits FAIL sticky \u2014 must CLEAR_ERR per peer for -s",
+      "detail": "Intentional soft miss uses FAIL then CLEAR_ERR. Forgetting CLEAR_ERR fails entire fanout under -s after first dead peer.",
+      "repro": "SMX DIAL dead peer with SOFT; omit CLEAR_ERR; run -s \u2192 ok=false"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "docs|cli",
-      "title": "TRIM still missing from forms/search",
-      "detail": "Carry-over; field peels often need strip.",
-      "repro": "search TRIM \u2192 n=0"
+      "area": "flow",
+      "title": "Comments in .cubalc source are not free-form English sentences",
+      "detail": "Inline comment lines without # can parse as forms (unknown form 'not'). Agents writing prose comments mid-program break runs. Prefer // or # comment style only.",
+      "repro": "Line 'unset is not available' \u2192 unknown form 'not'"
     }
   ],
   "workarounds": [
-    "Use simple [sev] at line start; avoid nested brackets in severity tags",
-    "After FINDI miss always CLEAR_ERR if continuing under -s; do not assume OK trips strict",
-    "Branch on BETWEEN LAST_N not OK",
-    "Chain REPLACE to remove first match then BETWEEN again for multi-field",
-    "LET bag = LAST after every PUSH"
+    "ENV SET CUBALC_P2P_SOFT 1 and TIMEOUT at start of every dial program",
+    "Use space-separated peer lists or SPLIT ',' before WORDS",
+    "Use PRINT_JSON scalar counts not multi-line bag strings",
+    "CLEAR_ERR after every intentional soft FAIL/DIAL miss under -s",
+    "Only // or # comments in program bodies"
   ],
   "language_gaps": [
-    "Balanced/nested delimiter extract",
-    "Unify soft-miss: either sticky last_err for all OK=0 or document OK-only probes",
-    "BETWEEN ALL / nth occurrence",
-    "Strict mode option: fail on OK=0",
-    "Catalog TRIM"
+    "Optional persist-env / dotenv plate for multi-process agents",
+    "WORDS with custom sep or auto CSV split",
+    "JSON string escape of newlines in PRINT_JSON/VARS",
+    "Soft dial without FAIL sticky (SMX_OK-only probe form)",
+    "Doc: comment syntax only"
   ],
-  "commit": "7b26512a35f08b4cca98c26190b18d5ce666e7f5",
-  "ts": "2026-08-05T12:22:33Z"
+  "commit": "8177b3d37391a3dc445cd0138330b6531060ec8e",
+  "ts": "2026-08-05T12:47:54Z"
 }
