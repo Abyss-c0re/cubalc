@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 118,
-  "version": "1.15.143-usability",
-  "item": "SYS MIN / MAX bag mode over numeric fields",
-  "item_id": 151,
-  "title": "SYS MIN|MAX a b [c…]|bag — min/max over args or newline numeric bag",
-  "commit": "eb2463577c31ebf25f478b01acf03563b328cd79",
-  "summary": "SYS MIN/MAX bag mode like SUM for field-width rollups after LENALL. selftest 118.",
+  "iter": 119,
+  "version": "1.15.144-usability",
+  "item": "SYS ARGMAX / ARGMIN index of first extreme",
+  "item_id": 152,
+  "title": "SYS ARGMAX|ARGMIN a b [c…]|bag — 0-based index of first extreme → LAST_N",
+  "commit": "d4f1d693ce8810ed78af09692e42ed21eaaa50c2",
+  "summary": "SYS ARGMAX/ARGMIN index of extreme for LENALL→NTH longest-field pick. selftest 119.",
   "proofs": [
-    "691_sys_minmax_bag",
-    "653_sys_minmax",
-    "selftest n_pass=118"
+    "692_sys_argmax",
+    "selftest n_pass=119"
   ],
-  "when": "2026-08-05T21:23:52Z",
+  "when": "2026-08-05T21:34:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eb2463577c31ebf25f478b01acf03563b328cd79"
+  "sha": "d4f1d693ce8810ed78af09692e42ed21eaaa50c2"
 }
