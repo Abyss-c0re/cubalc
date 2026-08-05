@@ -5,7 +5,7 @@
   "item": "SYS CUT / COLUMN field by separator",
   "item_id": 90,
   "title": "SYS CUT|COLUMN peels Nth field by separator",
-  "commit": "pending",
+  "commit": "55f4c252ab9c81bee5b07455f0b103eccae59110",
   "summary": "SYS CUT|FIELDN hay sep n (0-based) and COLUMN|COL (1-based); LAST_N=found; CSV/path without SPLIT+NTH.",
   "proofs": [
     "631_sys_cut",
@@ -13,5 +13,5 @@
   ],
   "when": "2026-08-05T11:13:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "pending"
+  "sha": "55f4c252ab9c81bee5b07455f0b103eccae59110"
 }
