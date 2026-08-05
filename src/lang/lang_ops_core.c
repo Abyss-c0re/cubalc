@@ -2334,6 +2334,67 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel text between delimiters.
+     * Completes BEFORE/AFTER for plate/kv/log/JSON-ish extract without FIND+MID.
+     * LAST = interior; LAST_N = 1 if pair found, 0 soft miss (OK stays 1).
+     * Empty open → match at start; empty close → rest after open. */
+    if (kw(&L->cur,"BETWEEN") || kw(&L->cur,"MIDOF") || kw(&L->cur,"EXTRACT") ||
+        kw(&L->cur,"INSIDE") || kw(&L->cur,"STRBETWEEN") || kw(&L->cur,"BETWEENSTR") ||
+        kw(&L->cur,"INNER")){
+      lex_next(L);
+      char open[256] = "", close[256] = "", hay[512] = "";
+      if (resolve_str_arg(vm, L, open, sizeof open) != 0) open[0] = 0;
+      if (resolve_str_arg(vm, L, close, sizeof close) != 0) close[0] = 0;
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      char out[512];
+      long found = 0;
+      out[0] = 0;
+      {
+        const char *po, *start, *pc;
+        size_t n;
+        if (open[0] == 0) {
+          po = hay;
+          start = hay;
+        } else {
+          po = strstr(hay, open);
+          if (!po) {
+            var_set_str(vm, "LAST", "");
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 1);
+            bump(vm); return 1;
+          }
+          start = po + strlen(open);
+        }
+        if (close[0] == 0) {
+          pc = start + strlen(start);
+          found = 1;
+        } else {
+          pc = strstr(start, close);
+          if (!pc) {
+            var_set_str(vm, "LAST", "");
+            snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 1);
+            bump(vm); return 1;
+          }
+          found = 1;
+        }
+        n = (size_t)(pc - start);
+        if (n >= sizeof out) n = sizeof out - 1;
+        memcpy(out, start, n);
+        out[n] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS REVS|STRREV [str] — reverse string → LAST (not cube REVERSE) */
     if (kw(&L->cur,"REVS") || kw(&L->cur,"STRREV") || kw(&L->cur,"SREV")){
       lex_next(L);
@@ -2682,7 +2743,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|CUT|COLUMN|SORT|UNIQ|JOINLINES|PUSH|POP|LINES|ENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2927,6 +2988,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ITOA", "SYS ITOA [n] — alias of SYS STR · dual of SYS NUM/ATOI"},
       {"SYS BEFORE", "SYS BEFORE|LEFT_OF hay needle — text left of first needle · LAST_N=found"},
       {"SYS AFTER", "SYS AFTER|RIGHT_OF hay needle — text right of first needle · LAST_N=found"},
+      {"SYS BETWEEN", "SYS BETWEEN|MIDOF|EXTRACT open close [hay] — peel between delimiters · LAST_N=found"},
+      {"SYS MIDOF", "SYS MIDOF open close [hay] — alias of SYS BETWEEN"},
+      {"SYS EXTRACT", "SYS EXTRACT open close [hay] — alias of SYS BETWEEN"},
       {"SYS PUSH", "SYS PUSH|ADDLINE bag [line] — append newline field · multi-file accumulate"},
       {"SYS ADDLINE", "SYS ADDLINE bag line — alias of SYS PUSH · LAST_N/PUSH_N=count"},
       {"SYS POP", "SYS POP|POPLINE [bag] — last field → LAST; rest → POP_REST · process bags"},

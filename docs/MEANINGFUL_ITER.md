@@ -122,6 +122,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 92. ~~**`SYS POP` / `POPLINE`**~~ **done** (peel last bag field · dual of PUSH · POP_REST).
 93. ~~**`SYS MTIME` / `AGE`**~~ **done** (file mtime epoch / age seconds · plate freshness).
 94. ~~**`SYS STARTSI` / `ENDSI`**~~ **done** (case-insensitive prefix/suffix · path/ext/severity).
+95. ~~**`SYS BETWEEN` / `MIDOF` / `EXTRACT`**~~ **done** (peel between delimiters · plate/kv/log without FIND+MID).
 
 ## Tick protocol
 

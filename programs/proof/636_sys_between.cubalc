@@ -1,0 +1,89 @@
+# SYS BETWEEN / MIDOF / EXTRACT — peel text between delimiters
+# Usability: plate/kv/log/JSON-ish extract without FIND+MID glue (with BEFORE/AFTER)
+
+HOLD_FLASH 1
+
+# basic pair
+SYS BETWEEN "[" "]" "[error] disk full"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "error"
+ASSERT LAST_N == 1
+
+# quotes / kv
+SYS BETWEEN "\"" "\"" "name=\"bob\" role=admin"
+ASSERT LAST_N == 1
+SYS EQS LAST "bob"
+ASSERT LAST_N == 1
+
+# JSON-ish plate field
+LET plate = "{\"version\":\"1.15.87\",\"ok\":true}"
+SYS BETWEEN "\"version\":\"" "\"" plate
+ASSERT LAST_N == 1
+SYS EQS LAST "1.15.87"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MIDOF "(" ")" "host=(box.local) port=7"
+ASSERT LAST_N == 1
+SYS EQS LAST "box.local"
+ASSERT LAST_N == 1
+SYS EXTRACT "key=" "\n" "key=alpha\nnext=1"
+ASSERT LAST_N == 1
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS INSIDE "<id>" "</id>" "x <id>42</id> y"
+ASSERT LAST_N == 1
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+SYS STRBETWEEN ": " " more" "WARN: space low more"
+ASSERT LAST_N == 1
+SYS EQS LAST "space low"
+ASSERT LAST_N == 1
+
+# soft miss: open absent
+SYS BETWEEN "[" "]" "no brackets here"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# soft miss: close absent
+SYS BETWEEN "<" ">" "<unclosed"
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# empty open → from start until close
+SYS BETWEEN "" "]" "prefix]rest"
+ASSERT LAST_N == 1
+SYS EQS LAST "prefix"
+ASSERT LAST_N == 1
+
+# empty close → rest after open
+SYS BETWEEN "pre=" "" "pre=value-rest"
+ASSERT LAST_N == 1
+SYS EQS LAST "value-rest"
+ASSERT LAST_N == 1
+
+# default hay LAST
+LET conf = "host=edge.local;port=9000"
+SYS BEFORE conf ";"
+SYS BETWEEN "=" "" LAST
+ASSERT LAST_N == 1
+SYS EQS LAST "edge.local"
+ASSERT LAST_N == 1
+
+# agent pattern: severity peel then value between markers
+LET line = "ALERT [disk] path=/var full=1"
+SYS BETWEEN "[" "]" line
+ASSERT LAST_N == 1
+SYS EQS LAST "disk"
+ASSERT LAST_N == 1
+SYS AFTER line "path="
+SYS BETWEEN "" " " LAST
+ASSERT LAST_N == 1
+SYS EQS LAST "/var"
+ASSERT LAST_N == 1
+
+PRINT "sys_between ok"
