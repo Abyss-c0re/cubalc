@@ -26,13 +26,13 @@
     },
     {
       "name": "empty_median_silent_zero",
-      "cmd": "MEDIAN empty → 0 OK=1; REQUIRE list EXIT 2",
+      "cmd": "MEDIAN empty \u2192 0 OK=1; REQUIRE list EXIT 2",
       "ok": true,
       "note": "empty median not soft-miss by language"
     },
     {
       "name": "trim_hot",
-      "cmd": "trim 3 → SORTN DESC TAKE 90 70 50",
+      "cmd": "trim 3 \u2192 SORTN DESC TAKE 90 70 50",
       "ok": true,
       "note": "hottest samples kept"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "even_median_lower_mid",
-      "cmd": "MEDIAN 10 20 30 40 → 20",
+      "cmd": "MEDIAN 10 20 30 40 \u2192 20",
       "ok": true,
       "note": "even lower mid; mixed skips non-num"
     },
@@ -66,9 +66,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|math",
-      "title": "MEDIAN empty bag returns 0 with OK=1 — silent zero",
-      "detail": "SYS MEDIAN \"\" → LAST_N=0 OK=1 COUNT=0. Agents cannot distinguish empty plate from all-zero samples without separate LINES/COUNT check. Program wraps REQUIRE on list empty.",
-      "repro": "SYS MEDIAN \"\" → OK=1 LAST_N=0"
+      "title": "MEDIAN empty bag returns 0 with OK=1 \u2014 silent zero",
+      "detail": "SYS MEDIAN \"\" \u2192 LAST_N=0 OK=1 COUNT=0. Agents cannot distinguish empty plate from all-zero samples without separate LINES/COUNT check. Program wraps REQUIRE on list empty.",
+      "repro": "SYS MEDIAN \"\" \u2192 OK=1 LAST_N=0"
     },
     {
       "id": "W2",
@@ -76,7 +76,7 @@
       "area": "host|bag",
       "title": "SQUEEZE default keeps whitespace-only fields",
       "detail": "SQUEEZE without BLANK leaves \"  \" lines; SUM/AVG skip non-numeric but depth still inflated if agent uses LINES bag not clean. Need SQUEEZE BLANK for intake hygiene.",
-      "repro": "SQUEEZE 'a\\n  \\nb' → 3 fields"
+      "repro": "SQUEEZE 'a\\n  \\nb' \u2192 3 fields"
     },
     {
       "id": "W3",
@@ -91,8 +91,8 @@
       "severity": "med",
       "area": "host|math",
       "title": "Even-count MEDIAN is lower mid (not average of two middles)",
-      "detail": "MEDIAN 10 20 30 40 → 20. Agents expecting statistical mean-of-mids get wrong P50. Documented lower-mid integer policy.",
-      "repro": "SYS MEDIAN 1 2 3 4 → 2"
+      "detail": "MEDIAN 10 20 30 40 \u2192 20. Agents expecting statistical mean-of-mids get wrong P50. Documented lower-mid integer policy.",
+      "repro": "SYS MEDIAN 1 2 3 4 \u2192 2"
     },
     {
       "id": "W5",
@@ -114,13 +114,13 @@
       "id": "W7",
       "severity": "low",
       "area": "host",
-      "title": "NUM only on LAST — observe/seed need PREPEND+HEAD shuttle",
+      "title": "NUM only on LAST \u2014 observe/seed need PREPEND+HEAD shuttle",
       "detail": "Same NUM shuttle tax as budget boards.",
       "repro": "SYS NUM only parses LAST"
     }
   ],
   "workarounds": [
-    "Check LINES/COUNT after SQUEEZE before trusting MEDIAN (empty→0)",
+    "Check LINES/COUNT after SQUEEZE before trusting MEDIAN (empty\u21920)",
     "SQUEEZE BLANK for messy intake; default SQUEEZE for pure empties only",
     "Always LET bag = LAST after SQUEEZE/trim transforms",
     "Document even median as lower mid for SLOs",
@@ -138,6 +138,6 @@
     "SQUEEZE without BLANK left space-only field on disk after T5",
     "list uses SQUEEZE into clean for stats but does not rewrite bag unless squeeze action"
   ],
-  "commit": "",
-  "ts": "2026-08-05T18:13:10Z"
+  "commit": "da1d1729a99bc86f792d8ab3041a0008958a3049",
+  "ts": "2026-08-05T18:13:30Z"
 }
