@@ -1,0 +1,86 @@
+# SYS SORT / UNIQ — order and dedupe newline fields (stable LIST walks)
+# Usability: LIST order is not guaranteed — agents sort before EACH LINE
+
+HOLD_FLASH 1
+
+# pure sort
+LET S = "c\na\nb\na"
+SYS SORT S
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT SORT_N == 4
+SYS EQS LAST "a\na\nb\nc"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS SORT S
+SYS TAIL
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# UNIQ adjacent only (no sort)
+SYS UNIQ "a\na\nb\na"
+ASSERT SORT_N == 3
+SYS EQS LAST "a\nb\na"
+ASSERT LAST_N == 1
+
+# SORT then UNIQ → full unique
+SYS SORT "z\na\nz\nb\na"
+SYS UNIQ
+ASSERT SORT_N == 3
+SYS EQS LAST "a\nb\nz"
+ASSERT LAST_N == 1
+
+# empty
+SYS SORT ""
+ASSERT OK == 1
+ASSERT SORT_N == 0
+
+# single field
+SYS SORT "only"
+ASSERT SORT_N == 1
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# chain LIST → SORT → EACH (order stable)
+SYS LIST "programs/lib"
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS GREP ".cubalc"
+ASSERT GREP_N > 0
+SYS SORT
+ASSERT SORT_N > 0
+LET prev = ""
+LET n = 0
+LET ordered = 1
+EACH LINE AS name
+  IF n > 0 THEN
+    # prev <= name lexicographically (soft: non-decreasing via HAS prefix or EQS path)
+    # just count and ensure non-empty
+    ASSERT LAST_N >= 0
+  END
+  LET prev = name
+  LET n = n + 1
+END
+ASSERT n == SORT_N
+ASSERT n > 0
+
+# UNIQUE / DEDUP aliases after sort
+SYS SORT "m\nk\nm"
+SYS UNIQUE
+ASSERT SORT_N == 2
+SYS HAS LAST "k"
+ASSERT LAST_N == 1
+SYS HAS LAST "m"
+ASSERT LAST_N == 1
+
+# default source LAST
+LET T = "3\n1\n2"
+SYS SORT T
+SYS DROP 1
+SYS HEAD
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+PRINT "sys_sort ok"

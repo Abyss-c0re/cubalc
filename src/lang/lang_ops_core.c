@@ -1661,6 +1661,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SORT [str|LAST] — lexicographic sort of newline fields → LAST.
+     * SYS UNIQ [str|LAST] — drop adjacent duplicate fields (sort first for full unique).
+     * LAST_N/SORT_N = kept count. Cap 512 fields.
+     * Usability: stable LIST walks — order is not guaranteed by SYS LIST. */
+    if (kw(&L->cur,"SORT") || kw(&L->cur,"SORTLINES") || kw(&L->cur,"SORTL") ||
+        kw(&L->cur,"UNIQ") || kw(&L->cur,"UNIQUE") || kw(&L->cur,"DEDUP")){
+      int is_uniq = (kw(&L->cur,"UNIQ") || kw(&L->cur,"UNIQUE") || kw(&L->cur,"DEDUP"));
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      /* field copies for stable strcmp (cap 512 × 256) */
+      enum { SORT_MAX = 256, SORT_FLEN = 192 };
+      char fields[SORT_MAX][SORT_FLEN];
+      int order[SORT_MAX];
+      int n = 0, i;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SORT_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= SORT_FLEN) flen = SORT_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!is_uniq && n > 1) {
+        /* insertion sort on order[] by fields — small n, pure C, no nested fn needed */
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0 && strcmp(fields[order[j]], fields[key]) > 0) {
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = is_uniq ? i : order[i];
+        if (is_uniq && i > 0 && strcmp(fields[i], fields[i - 1]) == 0)
+          continue;
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0 */
     if (kw(&L->cur,"EQS") || kw(&L->cur,"STREQ") || kw(&L->cur,"SEQ")){
       lex_next(L);
@@ -1978,7 +2056,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|SORT|UNIQ|ENV|EXIST|SIZE|ISDIR|ISFILE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|NTH|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -2208,6 +2286,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TAKE", "SYS TAKE|FIRSTN n [str] — first n newline fields · LIST window"},
       {"SYS DROP", "SYS DROP|SKIP n [str] — drop first n newline fields · keep rest"},
       {"SYS SPLIT", "SYS SPLIT|FIELDS sep [str] — sep-split → newline fields · PATH/CSV"},
+      {"SYS SORT", "SYS SORT [str] — lexicographic sort of newline fields · stable LIST"},
+      {"SYS UNIQ", "SYS UNIQ [str] — drop adjacent duplicate fields (sort first)"},
       {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
