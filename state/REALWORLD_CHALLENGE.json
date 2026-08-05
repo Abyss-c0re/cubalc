@@ -14,7 +14,7 @@
     },
     {
       "name": "pass_fail_pin",
-      "cmd": "pass build→done; fail test→failed; pin first pending=deploy",
+      "cmd": "pass build\u2192done; fail test\u2192failed; pin first pending=deploy",
       "ok": true,
       "note": "SETMATCH + MOVELINE"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "grep_build_cousin",
-      "cmd": "GREP build matches build+buildx; COUNTLINE :pending→0",
+      "cmd": "GREP build matches build+buildx; COUNTLINE :pending\u21920",
       "ok": true,
       "note": "substring + exact COUNTLINE limits"
     },
@@ -74,17 +74,17 @@
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "No structured step identity — armed tokens need peel walk",
+      "title": "No structured step identity \u2014 armed tokens need peel walk",
       "detail": "prod/1.build:pending requires AFTER / + BEFORE : + AFTER . + EQS. GREP build matches buildx. Pass/fail are multi-form identity, not one lookup.",
-      "repro": "GREP build on build+buildx → n=2"
+      "repro": "GREP build on build+buildx \u2192 n=2"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
       "title": "COUNTLINE cannot tally status suffixes",
-      "detail": "COUNTLINE bag ':pending' → 0; need GREP+LINES (substring-risky for short statuses).",
-      "repro": "COUNTLINE ':pending' → 0; GREP ':pending' + LINES → n"
+      "detail": "COUNTLINE bag ':pending' \u2192 0; need GREP+LINES (substring-risky for short statuses).",
+      "repro": "COUNTLINE ':pending' \u2192 0; GREP ':pending' + LINES \u2192 n"
     },
     {
       "id": "W4",
@@ -114,14 +114,14 @@
       "id": "W7",
       "severity": "low",
       "area": "host",
-      "title": "No string concat — env/ built via REPLACEALL ENV/ template",
+      "title": "No string concat \u2014 env/ built via REPLACEALL ENV/ template",
       "detail": "Same template class as other boards; ENV token in name corrupts.",
       "repro": "template ENV/ with REPLACEALL"
     }
   ],
   "workarounds": [
     "Always LET bag = LAST after ENUMERATE/PREFIXALL/SUFFIXALL/FILL/SETMATCH",
-    "Pass/fail: peel env/index/status then EQS step name — not GREP name",
+    "Pass/fail: peel env/index/status then EQS step name \u2014 not GREP name",
     "Status tallies: GREP ':pending'|':done'|':failed' + LINES",
     "PREFIXALL string vars OK for env prefix; still use literals for ZIP sep",
     "PRINT_JSON only n_pending/n_done/n_failed scalars"
@@ -135,10 +135,10 @@
     "String concat for env/step tokens"
   ],
   "issues_faced": [
-    "Armed token identity for pass is fragile peel chain — documents language gap",
-    "pass on already-done build correctly misses (pending-only) — soft miss path",
+    "Armed token identity for pass is fragile peel chain \u2014 documents language gap",
+    "pass on already-done build correctly misses (pending-only) \u2014 soft miss path",
     "GREP build false friend with buildx confirmed"
   ],
-  "commit": "",
-  "ts": "2026-08-05T17:48:40Z"
+  "commit": "9e4bbef8247671da0d89ad31e5508e741816f93e",
+  "ts": "2026-08-05T17:49:00Z"
 }
