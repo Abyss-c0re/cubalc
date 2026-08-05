@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 114,
-  "version": "1.15.139-usability",
-  "item": "SYS ROTATE / ROTL / ROTR cyclic bag field rotation",
-  "item_id": 147,
-  "title": "SYS ROTATE|ROTL|ROTR k [bag] — cyclic bag field rotate for round-robin",
-  "commit": "3cae06c4880299633e5761acda354b88958eacbc",
-  "summary": "SYS ROTATE/ROTL/ROTR cyclic bag field rotation for round-robin peers. selftest 114.",
+  "iter": 115,
+  "version": "1.15.140-usability",
+  "item": "SYS FLATTEN / UNCHUNK expand joined bag fields",
+  "item_id": 148,
+  "title": "SYS FLATTEN|UNCHUNK [bag] [sep] — split every field by sep to flat bag",
+  "commit": "49765c00378030933a7bce11e52d5cd335b35bb1",
+  "summary": "SYS FLATTEN/UNCHUNK expand joined bag fields (reverse CHUNK). selftest 115.",
   "proofs": [
-    "687_sys_rotate",
-    "selftest n_pass=114"
+    "688_sys_flatten",
+    "selftest n_pass=115"
   ],
-  "when": "2026-08-05T20:43:28Z",
+  "when": "2026-08-05T20:54:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3cae06c4880299633e5761acda354b88958eacbc"
+  "sha": "49765c00378030933a7bce11e52d5cd335b35bb1"
 }
