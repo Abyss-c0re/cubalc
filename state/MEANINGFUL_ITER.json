@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 117,
-  "version": "1.15.142-usability",
-  "item": "SYS LENALL / MAPLEN per-field lengths bag",
-  "item_id": 150,
-  "title": "SYS LENALL|MAPLEN [bag] — length of every field → decimal bag · LENALL_SUM",
-  "commit": "5089e665cd210c52dfcf002001f1b5553b70c7a7",
-  "summary": "SYS LENALL/MAPLEN per-field lengths bag for size rollups without EACH. selftest 117.",
+  "iter": 118,
+  "version": "1.15.143-usability",
+  "item": "SYS MIN / MAX bag mode over numeric fields",
+  "item_id": 151,
+  "title": "SYS MIN|MAX a b [c…]|bag — min/max over args or newline numeric bag",
+  "commit": "eb2463577c31ebf25f478b01acf03563b328cd79",
+  "summary": "SYS MIN/MAX bag mode like SUM for field-width rollups after LENALL. selftest 118.",
   "proofs": [
-    "690_sys_lenall",
-    "selftest n_pass=117"
+    "691_sys_minmax_bag",
+    "653_sys_minmax",
+    "selftest n_pass=118"
   ],
-  "when": "2026-08-05T21:14:22Z",
+  "when": "2026-08-05T21:23:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5089e665cd210c52dfcf002001f1b5553b70c7a7"
+  "sha": "eb2463577c31ebf25f478b01acf03563b328cd79"
 }
