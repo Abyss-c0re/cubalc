@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 94,
-  "version": "1.15.119-usability",
-  "item": "SYS PREFIXALL / SUFFIXALL tag bag fields",
-  "item_id": 127,
-  "title": "SYS PREFIXALL|SUFFIXALL tag every bag field",
-  "commit": "38dee362507162d23dd65117b9536098209dc049",
-  "summary": "SYS PREFIXALL/SUFFIXALL prepend/append affix to every field → LAST. Tag LIST/peer bags without EACH+CAT. selftest 94.",
+  "iter": 95,
+  "version": "1.15.120-usability",
+  "item": "SYS FILL / REPEATL bag of n copies",
+  "item_id": 128,
+  "title": "SYS FILL|REPEATL n value bag of n copies",
+  "commit": "4f151331a8533371b1f68623c6f6e69436bfc227",
+  "summary": "SYS FILL/REPEATL n value → bag of n fields. Default ZIP columns without EACH. selftest 95.",
   "proofs": [
-    "667_sys_prefixall",
-    "selftest n_pass=94"
+    "668_sys_fill",
+    "selftest n_pass=95"
   ],
-  "when": "2026-08-05T17:23:28Z",
+  "when": "2026-08-05T17:34:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "38dee362507162d23dd65117b9536098209dc049"
+  "sha": "4f151331a8533371b1f68623c6f6e69436bfc227"
 }
