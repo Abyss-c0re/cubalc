@@ -14,7 +14,7 @@
     },
     {
       "name": "overnight_check",
-      "cmd": "CUBALC_MW_HOUR=23 check db → hit=1; hour=12 → hit=0",
+      "cmd": "CUBALC_MW_HOUR=23 check db \u2192 hit=1; hour=12 \u2192 hit=0",
       "ok": true,
       "note": "OR of IN lo-23 and 0-hi for LO>HI"
     },
@@ -32,9 +32,9 @@
     },
     {
       "name": "in_swap_footgun",
-      "cmd": "SYS IN 12 22 6 → 1; SYS IN 23 22 6 → 0",
+      "cmd": "SYS IN 12 22 6 \u2192 1; SYS IN 23 22 6 \u2192 0",
       "ok": true,
-      "note": "auto-swap makes overnight continuous day — wrong for freezes"
+      "note": "auto-swap makes overnight continuous day \u2014 wrong for freezes"
     },
     {
       "name": "set_pin_drop",
@@ -72,15 +72,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|math",
-      "title": "SYS IN auto-swaps inverted bounds — overnight windows wrong if used raw",
+      "title": "SYS IN auto-swaps inverted bounds \u2014 overnight windows wrong if used raw",
       "detail": "SYS IN hour 22 6 treats bounds as 6..22 continuous. Hour 12 wrongly IN (1); hour 23 wrongly OUT (0). Real freeze 22-06 needs OR of IN(hour,22,23) and IN(hour,0,6). Catalog says inclusive membership but swap is a silent semantic trap for wraparound schedules.",
-      "repro": "SYS IN 12 22 6 → 1; SYS IN 23 22 6 → 0 (both wrong for overnight freeze)"
+      "repro": "SYS IN 12 22 6 \u2192 1; SYS IN 23 22 6 \u2192 0 (both wrong for overnight freeze)"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host",
-      "title": "No local timezone — UTC hour only via TIME/DIV/MOD",
+      "title": "No local timezone \u2014 UTC hour only via TIME/DIV/MOD",
       "detail": "Agents must DIV epoch 3600 MOD 24 for UTC hour. No TZ form; local maint windows need external offset.",
       "repro": "SYS TIME; DIV 3600; MOD 24"
     },
@@ -90,15 +90,15 @@
       "area": "host|bag",
       "title": "Window tokens need peel + dual NUM shuttle; no LO-HI parse form",
       "detail": "AFTER ':' then BEFORE/AFTER '-' then NUM each. REPLACEALL rebuild for set needs STR lo/hi (numeric REPLACEALL footgun class).",
-      "repro": "peel db:22-06 → lo=22 hi=6"
+      "repro": "peel db:22-06 \u2192 lo=22 hi=6"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
       "title": "GREP name matches cousins; COUNTLINE suffix fails",
-      "detail": "GREP api → api+api_v2; COUNTLINE ':9-17' → 0.",
-      "repro": "GREP api n=2; COUNTLINE bag ':9-17' → 0"
+      "detail": "GREP api \u2192 api+api_v2; COUNTLINE ':9-17' \u2192 0.",
+      "repro": "GREP api n=2; COUNTLINE bag ':9-17' \u2192 0"
     },
     {
       "id": "W5",
@@ -126,9 +126,9 @@
     }
   ],
   "workarounds": [
-    "Overnight LO>HI: if CMP lo hi > 0 then OR of IN(h,lo,23) and IN(h,0,hi) — never raw IN(h,lo,hi)",
+    "Overnight LO>HI: if CMP lo hi > 0 then OR of IN(h,lo,23) and IN(h,0,hi) \u2014 never raw IN(h,lo,hi)",
     "UTC hour: TIME DIV 3600 MOD 24; override CUBALC_MW_HOUR for tests",
-    "Identity: BEFORE ':' + EQS — not GREP name",
+    "Identity: BEFORE ':' + EQS \u2014 not GREP name",
     "STR before REPLACEALL for numeric LO/HI in templates",
     "PRINT_JSON only utc_hour/n_frozen/n_open; keep bag on plate"
   ],
@@ -141,9 +141,9 @@
     "Doc cross-link IN vs BETWEEN vs BETWEENN clearly"
   ],
   "issues_faced": [
-    "SYS IN auto-swap is the main language trap for maint freezes — proven with 12 and 23 on 22-06",
-    "mesh:0-0 is always frozen (point window) — intentional edge for IN inclusive endpoints"
+    "SYS IN auto-swap is the main language trap for maint freezes \u2014 proven with 12 and 23 on 22-06",
+    "mesh:0-0 is always frozen (point window) \u2014 intentional edge for IN inclusive endpoints"
   ],
-  "commit": "",
-  "ts": "2026-08-05T16:34:00Z"
+  "commit": "d748c41e82dd011dc761ccc4f6bfad79afe70e6a",
+  "ts": "2026-08-05T16:34:20Z"
 }
