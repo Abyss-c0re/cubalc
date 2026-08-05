@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "seed_sort_uniq",
-      "cmd": "seed alice bob carol dave alice → 4 unique sorted",
+      "cmd": "seed alice bob carol dave alice \u2192 4 unique sorted",
       "ok": true,
       "note": "HASLINE skip + SORT+UNIQ"
     },
     {
       "name": "page_append_pin",
-      "cmd": "page → PICK carol; APPEND log TS|WHO|IDX; MOVELINE front",
+      "cmd": "page \u2192 PICK carol; APPEND log TS|WHO|IDX; MOVELINE front",
       "ok": true,
       "note": "log 2026-...|carol|2; roster carol first"
     },
     {
       "name": "page_second",
-      "cmd": "page again → log 2 lines bob|2",
+      "cmd": "page again \u2192 log 2 lines bob|2",
       "ok": true,
       "note": "APPEND grows; SIZE log plate"
     },
@@ -38,19 +38,19 @@
     },
     {
       "name": "grep_ali_false_friend",
-      "cmd": "GREP ali matches alice; HASLINE ali → 0",
+      "cmd": "GREP ali matches alice; HASLINE ali \u2192 0",
       "ok": true,
       "note": "substring vs exact"
     },
     {
       "name": "replaceall_num_arg",
-      "cmd": "REPLACEALL ... pick_n → unknown form pick_n",
+      "cmd": "REPLACEALL ... pick_n \u2192 unknown form pick_n",
       "ok": true,
       "note": "must SYS STR first; high agent footgun"
     },
     {
       "name": "slots_seq_iota_collapse",
-      "cmd": "slots 4 PRINT_JSON entry → 1234 collapsed",
+      "cmd": "slots 4 PRINT_JSON entry \u2192 1234 collapsed",
       "ok": true,
       "note": "SEQ/IOTA bags also PRINT_JSON-collapse"
     },
@@ -73,30 +73,30 @@
       "severity": "high",
       "area": "host|parse",
       "title": "REPLACEALL rejects bare numeric vars as third arg (unknown form)",
-      "detail": "SYS REPLACEALL hay old pick_n where pick_n is numeric fails parse: unknown form 'pick_n'. Must SYS STR pick_n → string first. Same class for any host form expecting string when given num-typed var without quote/STR.",
-      "repro": "LET n=3; SYS REPLACEALL 'X' 'X' n → unknown form 'n'"
+      "detail": "SYS REPLACEALL hay old pick_n where pick_n is numeric fails parse: unknown form 'pick_n'. Must SYS STR pick_n \u2192 string first. Same class for any host form expecting string when given num-typed var without quote/STR.",
+      "repro": "LET n=3; SYS REPLACEALL 'X' 'X' n \u2192 unknown form 'n'"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host",
-      "title": "SYS PICK empty is soft OK=0 LAST_N=-1 — easy to miss without REQUIRE",
+      "title": "SYS PICK empty is soft OK=0 LAST_N=-1 \u2014 easy to miss without REQUIRE",
       "detail": "Empty roster page continues unless program checks LINES/OK. Good soft path but agents may log empty WHO if they skip OK check.",
-      "repro": "SYS PICK '' → OK=0 LAST_N=-1 LAST=\"\""
+      "repro": "SYS PICK '' \u2192 OK=0 LAST_N=-1 LAST=\"\""
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "cli",
       "title": "PRINT_JSON collapses roster and SEQ/IOTA bags",
-      "detail": "Roster carolalicedave; SEQ 4 → \"1234\". History log also collapses. Scalars + plate files required.",
+      "detail": "Roster carolalicedave; SEQ 4 \u2192 \"1234\". History log also collapses. Scalars + plate files required.",
       "repro": "PRINT_JSON bag after seed; PRINT_JSON SEQ 4"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host",
-      "title": "No string concat — page log lines via REPLACEALL template",
+      "title": "No string concat \u2014 page log lines via REPLACEALL template",
       "detail": "TS|WHO|IDX built with REPLACEALL; names containing placeholders corrupt. Plus W1 STR shuttle for index.",
       "repro": "template TS|WHO|IDX"
     },
@@ -106,7 +106,7 @@
       "area": "host|bag",
       "title": "GREP substring false friends on pure name roster",
       "detail": "GREP 'ali' matches alice; HASLINE 'ali' correctly 0. Identity is HASLINE/COUNTLINE exact only.",
-      "repro": "GREP ali on alice → n=1; HASLINE ali → 0"
+      "repro": "GREP ali on alice \u2192 n=1; HASLINE ali \u2192 0"
     },
     {
       "id": "W6",
@@ -128,7 +128,7 @@
       "id": "W8",
       "severity": "low",
       "area": "host",
-      "title": "UNIQ only adjacent — needs SORT first for seed dedup",
+      "title": "UNIQ only adjacent \u2014 needs SORT first for seed dedup",
       "detail": "Program SORT then UNIQ after seed. UNIQ alone leaves non-adjacent dups if seed path skipped HASLINE.",
       "repro": "UNIQ 'a\\nb\\na' keeps both a"
     }
@@ -136,7 +136,7 @@
   "workarounds": [
     "Always SYS STR before REPLACEALL when substituting numbers",
     "Check SYS LINES bag > 0 and PICK OK before APPEND log",
-    "HASLINE/COUNTLINE for identity — not GREP on names",
+    "HASLINE/COUNTLINE for identity \u2014 not GREP on names",
     "SORT then UNIQ for bag dedup; or HASLINE on seed",
     "PRINT_JSON only scalars (depth, log_n, pick); keep bags on plates",
     "Set CUBALC_SEED before first RAND/PICK in process for repro"
@@ -150,10 +150,10 @@
     "Reseed RAND/PICK without process restart"
   ],
   "issues_faced": [
-    "First page path failed: REPLACEALL with pick_n numeric → unknown form — fixed with STR shuttle",
-    "Dead code first template block ran before rewrite — removed",
-    "PRINT_JSON SEQ/IOTA collapsed to 1234/0123 — still useful as weakness demo"
+    "First page path failed: REPLACEALL with pick_n numeric \u2192 unknown form \u2014 fixed with STR shuttle",
+    "Dead code first template block ran before rewrite \u2014 removed",
+    "PRINT_JSON SEQ/IOTA collapsed to 1234/0123 \u2014 still useful as weakness demo"
   ],
-  "commit": "",
-  "ts": "2026-08-05T16:08:40Z"
+  "commit": "4b1b7490c262bb3aa7050a7cdc6bdff16bab9128",
+  "ts": "2026-08-05T16:09:00Z"
 }
