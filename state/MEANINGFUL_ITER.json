@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 97,
-  "version": "1.15.122-usability",
-  "item": "SYS SQUEEZE / COMPACT drop empty bag fields",
-  "item_id": 130,
-  "title": "SYS SQUEEZE|COMPACT [BLANK] bag drop empty/blank fields",
-  "commit": "e09fb730e808dab0443b823e5e24bf2ceb74b6e0",
-  "summary": "SYS SQUEEZE/COMPACT drop empty (or BLANK) bag fields → LAST. Clean VALS/SPLIT without EACH. selftest 97.",
+  "iter": 98,
+  "version": "1.15.123-usability",
+  "item": "SYS MEDIAN / P50 integer bag median",
+  "item_id": 131,
+  "title": "SYS MEDIAN|P50 args|bag integer median",
+  "commit": "3aa4894538ea909397f5b71fc16080369d79a025",
+  "summary": "SYS MEDIAN/P50 integer median of args or bag (even→lower mid). Score plates without shell. selftest 98.",
   "proofs": [
-    "670_sys_squeeze",
-    "selftest n_pass=97"
+    "671_sys_median",
+    "selftest n_pass=98"
   ],
-  "when": "2026-08-05T17:53:49Z",
+  "when": "2026-08-05T18:05:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e09fb730e808dab0443b823e5e24bf2ceb74b6e0"
+  "sha": "3aa4894538ea909397f5b71fc16080369d79a025"
 }
