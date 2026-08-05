@@ -1130,6 +1130,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FOLDBITS", "FOLDBITS cube bits — fold 01 stream into matrix"},
       {"DECIDE", "DECIDE [cube] — matrix → algocube digit 0..9"},
       {"ASSERT", "ASSERT expr [\"why\"] — fail with line + reason"},
+      {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -1305,6 +1306,43 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(msg, sizeof msg, "ASSERT failed line %d", aln);
       fail(vm, msg);
       return -1;
+    }
+    bump(vm); return 1;
+  }
+  /* EXPECT|CHECK|SOFTASSERT expr ["why"] — soft check: no fatal, program continues.
+   * Sets OK/EXPECT_OK 0|1 and sticky LAST_ERR on fail. Does not fail the run plate
+   * (use ASSERT for fail-closed). Bumps asserts_ok only on success. */
+  if (kw(&L->cur,"EXPECT")||kw(&L->cur,"CHECK")||kw(&L->cur,"SOFTASSERT")||
+      kw(&L->cur,"ASSERT_SOFT")||kw(&L->cur,"SOFT_ASSERT")){
+    int aln = L->cur.line;
+    lex_next(L);
+    long v = parse_expr(vm, L);
+    char why[120]; why[0] = 0;
+    if (L->cur.kind == TK_STR){
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (v){
+      if (vm->res) vm->res->asserts_ok++;
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "EXPECT_OK", 1);
+      if (vm->trace) fprintf(vm->trace, "# expect ok\n");
+    } else {
+      char msg[160];
+      if (why[0])
+        snprintf(msg, sizeof msg, "EXPECT failed line %d: %s", aln, why);
+      else
+        snprintf(msg, sizeof msg, "EXPECT failed line %d", aln);
+      /* sticky agent-readable — not fatal, not asserts_fail */
+      var_set_str(vm, "ERR", msg);
+      var_set_str(vm, "LAST_ERR", msg);
+      var_set_str(vm, "LAST", msg);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+      vm->last_n = (long)strlen(msg);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "EXPECT_OK", 0);
+      if (vm->trace) fprintf(vm->trace, "# expect fail: %s\n", msg);
     }
     bump(vm); return 1;
   }

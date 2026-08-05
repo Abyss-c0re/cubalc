@@ -1561,6 +1561,7 @@ int main(int argc, char **argv) {
       {"FOR", "flow", "FOR … END"},
       {"IF", "flow", "IF expr THEN … END"},
       {"ASSERT", "flow", "ASSERT expr optional why-string — fail with line+reason"},
+      {"EXPECT", "flow", "EXPECT expr [why] soft check — OK/LAST_ERR, no fatal"},
       {"PRINT", "flow", "PRINT str|expr…"},
       {"PRINT_JSON", "flow", "PRINT_JSON [idents] one JSON line for agents"},
       {"DUMP", "flow", "alias of PRINT_JSON"},
@@ -2037,7 +2038,7 @@ int main(int argc, char **argv) {
       "  Language surface (in .cubalc)\n"
       "    CUBE PLUG FLOW IMPULSE SETBIT SETDIGIT FOLDBITS DECIDE\n"
       "    SMX KEY|TALK|EXCHANGE|SERVE|DIAL · SYS ENV|READ|WRITE · INCLUDE\n"
-      "    ASSERT expr [\"message\"] · PRINT_JSON|DUMP [idents] · ASYNC/AWAIT/PARALLEL\n"
+      "    ASSERT|EXPECT expr [\"msg\"] · PRINT_JSON|DUMP · INCLUDE · ASYNC\n"
       "\n"
       "  hold=%d share=%s tok=%s paradigm=%s\n",
       CUBALC_LANG_VERSION, CUBALC_HOLD_FLASH, CUBALC_SHARE, CUBALC_CREED,

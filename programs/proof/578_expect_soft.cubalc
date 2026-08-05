@@ -1,0 +1,28 @@
+# EXPECT soft assert — multi-check probes without fatal abort
+# Form: EXPECT expr ["why"] · aliases CHECK SOFTASSERT
+# On fail: OK=0 EXPECT_OK=0 sticky LAST_ERR/ERR; run continues
+# On pass: OK=1 EXPECT_OK=1; counts asserts_ok
+
+HOLD_FLASH 1
+
+LET ready = 0
+EXPECT ready == 1 "peer not ready yet"
+ASSERT OK == 0 "soft fail sets OK 0"
+ASSERT EXPECT_OK == 0
+ASSERT LAST_N > 10 "LAST_ERR reason present"
+
+# program continues after soft fail
+LET ready = 1
+EXPECT ready == 1 "now ready"
+ASSERT OK == 1 "soft pass sets OK 1"
+ASSERT EXPECT_OK == 1
+
+# CHECK alias
+CHECK ready == 1 "check alias"
+ASSERT EXPECT_OK == 1
+
+# hard ASSERT still fail-closed gate for truth
+ASSERT ready == 1 "hard gate"
+
+PRINT "expect_soft ok" LAST_N OK
+PRINT_JSON OK EXPECT_OK LAST_N

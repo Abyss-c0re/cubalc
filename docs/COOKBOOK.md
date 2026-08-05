@@ -35,6 +35,19 @@ PRINT "hello" CUBES UNITY
 ./out/cubalc run programs/proof/12_hold_flash_plug.cubalc
 ```
 
+### Soft checks (multi-probe without abort)
+
+```cubalc
+# EXPECT = soft ASSERT — continues; OK/EXPECT_OK + sticky LAST_ERR
+EXPECT SMX_OK == 1 "peer may be offline"
+IF OK == 0 THEN
+  PRINT "probe soft-fail" LAST_ERR
+END
+ASSERT 1 == 1 "hard gate still fail-closed"
+```
+
+Proof: `programs/proof/578_expect_soft.cubalc`.
+
 ## 2. Decide from matrix
 
 ```cubalc
