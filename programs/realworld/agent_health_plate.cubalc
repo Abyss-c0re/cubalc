@@ -1,0 +1,175 @@
+# agent_health_plate.cubalc — multi-probe agent health → plate under CUBALC_STATE
+#
+# Real use: an agent (or host cron) runs this before heavier mesh work to answer:
+#   - Am I on a new enough runtime?
+#   - Where is STATE / ROOT / CWD?
+#   - Which optional libs are present?
+#   - Is a peer dial configured / soft-reachable?
+#   - Write a small health plate agents can re-read next tick.
+#
+# Host contract (all optional):
+#   CUBALC_STATE=/tmp/my_agent_state     # absolute preferred
+#   CUBALC_AGENT_ROLE=worker|probe|…     # or SYS ARG 0
+#   CUBALC_P2P_PEER=host:port            # optional soft dial probe
+#   CUBALC_P2P_SOFT=1                    # required for non-fatal dial
+#   CUBALC_P2P_TIMEOUT=400               # keep short for health probes
+#   CUBALC_SMX_KEY=<64-hex>              # if dialing
+#
+# Run:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   ./out/cubalc run -q programs/realworld/agent_health_plate.cubalc
+#   ./out/cubalc run -q -s programs/realworld/agent_health_plate.cubalc
+#
+# Edges this program deliberately hits:
+#   INCLUDE OR optional miss → sticky LAST_ERR → must CLEAR_ERR for -s
+#   PASS restores OK but not last_err (strict still fails without CLEAR_ERR)
+#   SYS STATE + SYS CAT to build plate path (no path-join form)
+#   SYS WRITE JSON under absolute CUBALC_STATE (not hardcoded "state/")
+#   STATUS / NOTE / SYS MS breadcrumbs without rewriting OK
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "agent_health: boot ok"
+SYS MS
+LET t0 = MS
+
+# --- probe 1: role from ARG0 or ENV (config-driven worker) ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET role = LAST
+ELSE
+  SYS ENV "CUBALC_AGENT_ROLE" OR "worker"
+  LET role = LAST
+END
+NOTE "role resolved"
+EXPECT LAST_N > 0 "role string present"
+# soft probe of empty-name env still needs a non-empty fallback
+SYS ENV "CUBALC_AGENT_ID" OR "local"
+LET agent_id = LAST
+
+# --- probe 2: layout paths (portable plate location) ---
+SYS CWD
+ASSERT OK == 1 "cwd"
+LET cwd = LAST
+SYS ROOT
+LET root = LAST
+SYS STATE
+ASSERT OK == 1 "state dir"
+ASSERT LAST_N > 0 "STATE non-empty"
+LET state_dir = LAST
+# Absolute CUBALC_STATE is preferred; relative "state" still works from repo root.
+SYS STARTS state_dir "/"
+LET state_abs = LAST_N
+
+# Path join is two-step CAT — no SYS PATH form (language gap for agents).
+SYS CAT state_dir "/AGENT_HEALTH.json"
+LET plate_path = LAST
+SYS LEN plate_path
+EXPECT LAST_N > 8 "plate path looks long enough"
+
+# --- probe 3: optional modules (soft) + hard require of known lib ---
+REQUIRE LIB peer_decide
+INCLUDE OR optional_mesh_hooks_zz
+# Soft miss leaves sticky LAST_ERR — intentional. Recover for clean health plate:
+IF OK == 0 THEN
+  FAIL "optional mesh hooks absent — continuing local health"
+  NOTE "optional miss handled"
+  PASS "local-only health path"
+  CLEAR_ERR "optional include recovered"
+END
+ASSERT OK == 1 "recovered after optional INCLUDE OR"
+
+# Probe presence of mesh_exchange WITHOUT executing its body.
+# INCLUDE SOFT would run SMX EXCHANGE and can auto-touch peer0/peer1
+# (side-effectful libs are a real agent footgun — prefer SYS WHICH / REQUIRE LIB).
+SYS WHICH mesh_exchange
+EXPECT LAST_N > 0 "mesh_exchange resolves via WHICH"
+IF OK == 0 THEN
+  PASS "mesh_exchange catalog miss — health continues"
+  CLEAR_ERR
+END
+SYS HAS LAST "mesh_exchange"
+EXPECT LAST_N == 1 "WHICH path names mesh_exchange"
+
+# --- probe 4: soft P2P dial only when peer configured ---
+LET peer_probed = 0
+LET peer_ok = 0
+SYS ENV "CUBALC_P2P_PEER" OR ""
+IF LAST_N > 0 THEN
+  LET peer = LAST
+  LET peer_probed = 1
+  # Prefer host soft mode; if unset, dial may fatal — document as footgun.
+  SYS ENV "CUBALC_P2P_SOFT" OR "0"
+  SYS EQS LAST "1"
+  IF LAST_N == 1 THEN
+    CUBE self ROLE host PROTON 1
+    CUBE remote ROLE body PROTON 1
+    PLUG self remote
+    SETBIT self 0 1
+    SMX KEY
+    SMX DIAL self remote peer
+    LET peer_ok = SMX_OK
+    IF SMX_OK == 0 THEN
+      FAIL "peer soft-dial failed"
+      PASS "health continues without peer"
+      CLEAR_ERR "peer probe soft-recovered"
+    END
+  ELSE
+    # Without CUBALC_P2P_SOFT=1 we refuse to dial inside a health script
+    # (hard dial on dead peer can hang/fatal). Sticky note only.
+    FAIL "peer set but CUBALC_P2P_SOFT not 1 — skip dial"
+    PASS "skipped hard dial in health probe"
+    CLEAR_ERR "dial skipped by policy"
+  END
+ELSE
+  NOTE "no CUBALC_P2P_PEER — skip dial probe"
+END
+
+# --- probe 5: local decide smoke (prove matrix path still works) ---
+CUBE peer0 ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+PLUG peer0 brain
+SETBIT peer0 0 1
+SETBIT peer0 2 1
+SETBIT peer0 4 1
+INCLUDE peer_decide
+ASSERT DECIDE >= 0 "decide digit"
+ASSERT DECIDE <= 9 "decide digit upper"
+LET dig = DECIDE
+
+# --- write health plate under CUBALC_STATE ---
+SYS MS
+LET t1 = MS
+# Simple kv payload (JSON with escaped quotes — agents must emit \\ carefully)
+SYS WRITE plate_path "{\"schema\":\"cubalc.agent_health.v1\",\"ok\":1,\"role\":\"set\",\"digit\":0}"
+# Re-read + soft-check presence (full dynamic JSON build is painful without multi-CAT)
+SYS EXIST plate_path
+ASSERT EXIST == 1 "AGENT_HEALTH.json exists under STATE"
+SYS READ plate_path
+SYS HAS LAST "agent_health"
+ASSERT LAST_N == 1 "plate body has schema token"
+SYS LEN LAST
+LET plate_len = LAST_N
+
+# Prefer rewriting plate with a readable plain line too (second file) for agents
+# who struggle with quote-escaping JSON in CubalC source.
+SYS CAT state_dir "/AGENT_HEALTH.txt"
+LET plate_txt = LAST
+SYS WRITE plate_txt "cubalc.agent_health.v1 ok=1"
+SYS EXIST plate_txt
+EXPECT EXIST == 1 "txt plate present"
+
+# --- final health report ---
+STATUS
+ASSERT STATUS_OK == 1 "STATUS clean after CLEAR_ERR recoveries"
+ASSERT OK == 1
+SYS MS
+LET elapsed = MS
+# elapsed is absolute ms stamp; delta would need subtraction of t0 (ok in-lang)
+NOTE "agent_health: done"
+
+PRINT "agent_health" role dig peer_probed peer_ok state_abs plate_len
+PRINT_JSON role dig peer_probed peer_ok state_abs plate_len STATUS_OK
+VARS
+STATUS

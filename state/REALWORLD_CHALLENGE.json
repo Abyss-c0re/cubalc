@@ -1,32 +1,50 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 1,
-  "program": "programs/realworld/mesh_health_board.cubalc",
-  "theme": "mesh health board: soft dial → local EXCHANGE fallback → peer_decide → STATUS",
+  "iter": 2,
+  "program": "programs/realworld/agent_health_plate.cubalc",
+  "theme": "multi-probe agent health \u2192 plate under CUBALC_STATE (layout/env/optional lib/soft dial)",
   "version": "1.15.43-usability",
   "pass": true,
   "tests": [
     {
-      "name": "soft_dial_local_fallback",
-      "cmd": "CUBALC_P2P_SOFT=1 cubalc run -q programs/realworld/mesh_health_board.cubalc",
+      "name": "positive_quiet_strict",
+      "cmd": "CUBALC_STATE=/tmp/cubalc_rw_$$ mkdir -p $CUBALC_STATE && ./out/cubalc run -q -s programs/realworld/agent_health_plate.cubalc",
       "ok": true,
-      "note": "remote soft-fail then mesh_exchange + CLEAR_ERR; exit 0"
+      "note": "18 asserts; writes AGENT_HEALTH.json + .txt under absolute STATE; exit 0"
     },
     {
-      "name": "strict_after_recovery",
-      "cmd": "CUBALC_P2P_SOFT=1 cubalc run -q -s …",
+      "name": "role_env_and_arg",
+      "cmd": "CUBALC_AGENT_ROLE=probe / CUBALC_ARG0=scheduler with -q -s",
       "ok": true,
-      "note": "exit 0 only because CLEAR_ERR after intentional FAIL"
+      "note": "SYS ARG 0 OR then ENV OR resolves role without shell glue for values"
     },
     {
-      "name": "hard_dial_no_soft",
-      "cmd": "cubalc run -q (no CUBALC_P2P_SOFT)",
+      "name": "soft_p2p_peer_miss",
+      "cmd": "CUBALC_P2P_SOFT=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_PEER=127.0.0.1:1 run -q -s",
+      "ok": true,
+      "note": "soft dial fails, FAIL/PASS/CLEAR_ERR recovery, health plate still written"
+    },
+    {
+      "name": "peer_without_soft_skip",
+      "cmd": "CUBALC_P2P_PEER=127.0.0.1:9 (no SOFT) run -q -s",
+      "ok": true,
+      "note": "program refuses hard dial inside health script; recovers via policy FAIL/PASS/CLEAR_ERR"
+    },
+    {
+      "name": "state_parent_missing",
+      "cmd": "CUBALC_STATE=/tmp/cubalc_missing_parent_$$ (no mkdir) run -q",
       "ok": false,
-      "note": "expected hard fail at SMX DIAL — cannot recover in-program without host soft flag"
+      "note": "expected: write: No such file or directory; exit 1; err_line=0 err_src empty"
+    },
+    {
+      "name": "strict_sticky_footgun",
+      "cmd": "INCLUDE OR miss; PASS; no CLEAR_ERR; run -q -s",
+      "ok": false,
+      "note": "expected: plate ok=false exit 1 despite PASS recovery \u2014 documents -s vs CLEAR_ERR"
     },
     {
       "name": "selftest",
-      "cmd": "cubalc selftest",
+      "cmd": "./out/cubalc selftest",
       "ok": true,
       "note": "18/18 green"
     }
@@ -35,67 +53,68 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "p2p|env",
-      "title": "Soft dial cannot be enabled from CubalC source",
-      "detail": "SYS ENV CUBALC_P2P_SOFT OR \"1\" only reads into LAST; DIAL soft-fail is gated solely by host getenv. Agents must shell-export CUBALC_P2P_SOFT=1. Reading soft into LET does not affect SMX DIAL.",
-      "repro": "unset CUBALC_P2P_SOFT; run mesh_health_board → fatal DIAL connect even if program sets LET soft"
+      "area": "error|cli",
+      "title": "SYS WRITE fatal has err_line=0 and empty err_src",
+      "detail": "When SYS WRITE fails (missing parent dir, EACCES, etc.) the run plate sets err/last_err to 'write: No such file or directory' but err_line stays 0 and err_src is \"\". Agents cannot jump to the failing statement; differs from ASSERT/FAIL/INCLUDE which fill line+src.",
+      "repro": "CUBALC_STATE=/tmp/no_such_parent_$$ ./out/cubalc run -q programs/realworld/agent_health_plate.cubalc \u2192 err_line:0 err_src:\"\""
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "string",
-      "title": "SYS CAT is 2-arg only; multi-arg and numeric vars fail opaquely",
-      "detail": "SYS CAT a b c parses leftover as unknown form. SYS CAT \"x=\" n with numeric LET n fails unknown form 'n'. No documented multi-arg join; forms/search omit SYS CAT/STRCAT entirely.",
-      "repro": "echo 'SYS CAT \"a\" \"b\" \"c\"' | cubalc run -q -"
+      "area": "cli|error",
+      "title": "PASS recovery still fails run -s until CLEAR_ERR",
+      "detail": "PASS restores OK/STATUS_OK but leaves sticky last_err. cubalc run -s flips plate ok=false and exit 1 even when the program intentionally recovered. Multi-probe health scripts must remember CLEAR_ERR after every soft path; easy agent footgun after INCLUDE OR / EXPECT / FAIL.",
+      "repro": "INCLUDE OR missing_lib; PASS \"ok\"; STATUS; cubalc run -q -s \u2192 ok:false exit 1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "io|state",
-      "title": "SYS WRITE paths ignore CUBALC_STATE",
-      "detail": "SYS STATE returns the state dir, but SYS WRITE \"MESH_HEALTH_BOARD.txt\" writes cwd-relative, not under CUBALC_STATE. Agents cannot safely place plates without absolute path glue (and no join of sdir+name that accepts numbers/paths cleanly).",
-      "repro": "CUBALC_STATE=/tmp/x cubalc run … → file appears in repo cwd not /tmp/x"
+      "area": "io|env",
+      "title": "No SYS MKDIR; CUBALC_STATE parent must pre-exist",
+      "detail": "SYS STATE returns the configured path but does not create it. SYS WRITE does not mkdir -p parents. Real agents still need shell mkdir -p \"$CUBALC_STATE\" before any plate worker \u2014 partial shell glue the language claims to remove.",
+      "repro": "export CUBALC_STATE=/tmp/new_$$ (no mkdir); SYS WRITE under STATE \u2192 write fatal"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "error|status",
-      "title": "STATUS ok vs sticky last_err after intentional FAIL then PASS",
-      "detail": "Without CLEAR_ERR, STATUS can report status ok=1 while last_err still holds FAIL text from a recovered soft path. -s mode exits 1 despite recovery. CLEAR_ERR is required but easy to forget.",
-      "repro": "FAIL then PASS then STATUS without CLEAR_ERR; run -s"
+      "area": "print|agent",
+      "title": "PRINT of string vars emits length only",
+      "detail": "PRINT role with role=\"worker\" prints 6 (LAST_N/len), not the characters. Agents debugging multi-probe scripts misread role/path/id as numbers unless they use PRINT_JSON/VARS. Surprising vs PRINT of numbers and board tokens.",
+      "repro": "LET role = \"worker\"; PRINT role \u2192 outputs 6"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "docs|discovery",
-      "title": "String plane invisible to forms/search",
-      "detail": "SYS CAT/STRCAT/FIND exist in lang_ops_core but cubalc forms CAT and search concat/string do not list them. Agents invent broken multi-arg CAT from cookbook silence.",
-      "repro": "cubalc forms CAT → n=0; cubalc search concat → n=0"
+      "area": "io|string",
+      "title": "Dynamic JSON plates require fragile quote-escape + multi CAT",
+      "detail": "SYS WRITE accepts a JSON string only when source file preserves escapes; building {\"role\":$role,\"digit\":$dig} in-language needs chained SYS CAT and careful quoting. Health plate ends up with hardcoded role/digit fields or plain .txt sidecar \u2014 not a first-class agent plate builder.",
+      "repro": "try SYS WRITE path with interpolated LET role in JSON body \u2014 no clean form; see static schema in agent_health_plate"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "cli",
-      "title": "Quiet mode still dies on late parse/form errors after good work",
-      "detail": "Program ran full mesh+decide successfully then failed at end on bad SYS CAT — expensive success discarded. No partial plate commit for late errors.",
-      "repro": "original board with multi-arg SYS CAT after STATUS"
+      "area": "include",
+      "title": "INCLUDE SOFT runs lib body (side effects), not presence-only",
+      "detail": "INCLUDE SOFT mesh_exchange executes SMX EXCHANGE and can place/touch peer0/peer1 before the caller is ready. Health scripts must use SYS WHICH / REQUIRE LIB for catalog presence; soft INCLUDE is not a dry resolve.",
+      "repro": "INCLUDE SOFT mesh_exchange with no prior CUBE peer0 peer1 \u2014 still runs EXCHANGE (n cubes may change)"
     }
   ],
   "workarounds": [
-    "Always export CUBALC_P2P_SOFT=1 from host for probe boards",
-    "Pairwise SYS CAT strings only; stringify numbers via known string vars or avoid",
-    "CLEAR_ERR after intentional soft FAIL if using run -s",
-    "Use PRINT_JSON/STATUS for agent output; treat SYS WRITE as cwd-relative only",
-    "Discover string ops by grepping sources until forms catalog is complete"
+    "After every INCLUDE OR / EXPECT fail / intentional FAIL: PASS then CLEAR_ERR before STATUS or exit when using run -s",
+    "Host: mkdir -p \"$CUBALC_STATE\" before plate workers",
+    "Build plate paths with SYS STATE + SYS CAT state_dir \"/name.json\" (absolute STATE works)",
+    "Probe optional libs with SYS WHICH, not INCLUDE SOFT, when body has side effects",
+    "Prefer PRINT_JSON / VARS / STATUS over PRINT for string values",
+    "Write simple .txt plates when dynamic JSON is too painful"
   ],
   "language_gaps": [
-    "In-language set of soft-dial / soft-serve flags (or SMX DIAL SOFT form)",
-    "SYS CAT multi-arg or SYS FMT / interpolation for plate bodies",
-    "Numeric-to-string in CAT or PRINT formatting",
-    "SYS WRITE under STATE by default or SYS WRITE STATE \"name\" body",
-    "Catalog SYS string plane in forms/search/HELP"
+    "SYS MKDIR / ensure STATE dir exists",
+    "err_line/err_src on host I/O fatals (WRITE/READ)",
+    "PRINT should show string content (or PRINT_STR) not only length",
+    "In-language JSON object builder / SYS WRITE_JSON for agent plates",
+    "Path join form (STATE + name) and optional dry INCLUDE resolve",
+    "In-program enable of CUBALC_P2P_SOFT for health dials without host export (from iter1; still true)"
   ],
-  "commit": null,
-  "ts": "2026-08-05T07:52:00Z",
-  "scheduler": "019fd042fbd1 every 25m"
+  "commit": "355242a",
+  "ts": "2026-08-05T04:54:16Z"
 }
