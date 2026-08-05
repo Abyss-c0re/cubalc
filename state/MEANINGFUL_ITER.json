@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 91,
-  "version": "1.15.116-usability",
-  "item": "SYS COALESCE / NVL first non-empty string",
-  "item_id": 124,
-  "title": "SYS COALESCE|NVL a b [c\u2026] first non-empty string",
-  "commit": "38690768667391852c07e52ad06d1df38dfc8ebb",
-  "summary": "SYS COALESCE/NVL first non-empty (or BLANK) string \u2192 LAST. Default chains without nested IF EMPTY. selftest 91.",
+  "iter": 92,
+  "version": "1.15.117-usability",
+  "item": "SYS UNION / INTERSECT / DIFF bag set ops",
+  "item_id": 125,
+  "title": "SYS UNION|INTERSECT|DIFF bag set ops · DISTINCT full unique",
+  "commit": "3cdad0a53a4f05f43bd1f9586a2f6df12ff3af1b",
+  "summary": "SYS UNION/INTERSECT/DIFF/DISTINCT bag set ops → LAST. Work-list merge/dedup/subtract without EACH+HASLINE. selftest 92.",
   "proofs": [
-    "664_sys_coalesce",
-    "selftest n_pass=91"
+    "665_sys_union",
+    "selftest n_pass=92"
   ],
-  "when": "2026-08-05T16:53:35Z",
+  "when": "2026-08-05T17:05:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "38690768667391852c07e52ad06d1df38dfc8ebb"
+  "sha": "3cdad0a53a4f05f43bd1f9586a2f6df12ff3af1b"
 }
