@@ -1358,6 +1358,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"LET", "LET name = expr|string"},
       {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
+      {"TYPEOF", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
@@ -2034,6 +2035,36 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
     if (vm->trace)
       fprintf(vm->trace, "# defined %s → %ld\n", name, n);
+    bump(vm); return 1;
+  }
+  /* TYPEOF name — kind of program var for agents (pair with DEFINED).
+   * LAST/TYPE = "undef"|"num"|"str"; LAST_N/TYPE_N = 0|1|2; OK=1. */
+  if (kw(&L->cur,"TYPEOF")||kw(&L->cur,"TYPE")||kw(&L->cur,"VARTYPE")||
+      kw(&L->cur,"KIND")||kw(&L->cur,"VAR_KIND")||kw(&L->cur,"TYPE_OF")){
+    char name[48];
+    const char *kind = "undef";
+    long code = 0;
+    Var *v;
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT && L->cur.kind!=TK_STR){
+      fail(vm,"TYPEOF name"); return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    v = var_get(vm, name, 0);
+    if (v) {
+      if (v->is_str) { kind = "str"; code = 2; }
+      else { kind = "num"; code = 1; }
+    }
+    var_set_str(vm, "TYPE", kind);
+    var_set_str(vm, "LAST", kind);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", kind);
+    var_set_num(vm, "TYPE_N", code);
+    var_set_num(vm, "LAST_N", code);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = code;
+    if (vm->trace)
+      fprintf(vm->trace, "# typeof %s → %s (%ld)\n", name, kind, code);
     bump(vm); return 1;
   }
   /* DEFAULT name = expr|str — assign only if name is not yet defined.

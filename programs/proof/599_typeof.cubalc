@@ -1,0 +1,30 @@
+# TYPEOF — kind of a program var (undef|num|str) for agents
+# Usability: pair with DEFINED; avoid treating strings as numbers
+
+HOLD_FLASH 1
+
+TYPEOF MISSING_X
+ASSERT OK == 1
+ASSERT LAST_N == 0 "undef code"
+ASSERT TYPE_N == 0
+
+LET N = 7
+TYPEOF N
+ASSERT LAST_N == 1 "num code"
+ASSERT TYPE_N == 1
+
+LET S = "hello"
+TYPEOF S
+ASSERT LAST_N == 2 "str code"
+ASSERT TYPE_N == 2
+
+# alias TYPE
+TYPE N
+ASSERT TYPE_N == 1
+
+# after DEFAULT string
+DEFAULT PEER = "local"
+TYPEOF PEER
+ASSERT TYPE_N == 2
+
+PRINT "typeof ok" N TYPE_N
