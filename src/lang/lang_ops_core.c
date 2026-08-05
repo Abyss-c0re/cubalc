@@ -1544,6 +1544,68 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS SIGN|SGN x — signum → LAST_N -1|0|1 (pairs with IABS/CMP).
+     * SYS DIV|IDIV|QUOT a b — trunc-toward-zero integer divide; /0 → 0 soft.
+     * SYS MOD|REM|REMAINDER a b — a % b; %0 → 0 soft. Not path ABS/REALPATH.
+     * Usability: page index, bucket, parity without cube ISA DIV/MOD soup. */
+    if (kw(&L->cur,"SIGN") || kw(&L->cur,"SGN") || kw(&L->cur,"SIGNUM") ||
+        kw(&L->cur,"DIV") || kw(&L->cur,"IDIV") || kw(&L->cur,"QUOT") ||
+        kw(&L->cur,"QUOTIENT") || kw(&L->cur,"INTDIV") ||
+        kw(&L->cur,"MOD") || kw(&L->cur,"REM") || kw(&L->cur,"REMAINDER") ||
+        kw(&L->cur,"MODULO") || kw(&L->cur,"IMOD")){
+      char op[16];
+      long out = 0, a = 0, b = 0;
+      char buf[40];
+      int is_sign, is_div, is_mod;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sign = (strcmp(op, "SIGN") == 0 || strcmp(op, "SGN") == 0 ||
+                 strcmp(op, "SIGNUM") == 0);
+      is_div = (strcmp(op, "DIV") == 0 || strcmp(op, "IDIV") == 0 ||
+                strcmp(op, "QUOT") == 0 || strcmp(op, "QUOTIENT") == 0 ||
+                strcmp(op, "INTDIV") == 0);
+      is_mod = (strcmp(op, "MOD") == 0 || strcmp(op, "REM") == 0 ||
+                strcmp(op, "REMAINDER") == 0 || strcmp(op, "MODULO") == 0 ||
+                strcmp(op, "IMOD") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        a = parse_prim(vm, L);
+      else
+        a = vm->last_n;
+      if (!is_sign) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+          b = parse_prim(vm, L);
+        else
+          b = 0;
+      }
+      if (is_sign) {
+        out = (a > 0) ? 1L : (a < 0 ? -1L : 0L);
+        var_set_num(vm, "SIGN", out);
+      } else if (is_div) {
+        if (b == 0) out = 0;
+        else if (a == LONG_MIN && b == -1) out = LONG_MAX; /* overflow guard */
+        else out = a / b;
+        var_set_num(vm, "DIV", out);
+        var_set_num(vm, "QUOT", out);
+      } else {
+        /* mod */
+        if (b == 0) out = 0;
+        else if (a == LONG_MIN && b == -1) out = 0;
+        else out = a % b;
+        var_set_num(vm, "MOD", out);
+        var_set_num(vm, "REM", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
      * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
      * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
@@ -4353,7 +4415,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|SORTN|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|RAND|MIN|MAX|CLAMP|CMP|SCMP|IABS|SIGN|DIV|MOD|SUM|PROD|AVG|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -4670,6 +4732,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SCMP", "SYS SCMP|CMPS a b — string compare → LAST_N -1|0|1"},
       {"SYS SCMPI", "SYS SCMPI a b — case-insensitive string compare"},
       {"SYS IABS", "SYS IABS|ABSVAL|NABS x — integer absolute value → LAST_N"},
+      {"SYS SIGN", "SYS SIGN|SGN x — signum → LAST_N -1|0|1"},
+      {"SYS DIV", "SYS DIV|IDIV|QUOT a b — integer divide (trunc) · /0→0"},
+      {"SYS MOD", "SYS MOD|REM a b — remainder · %0→0 soft"},
       {"SYS SUM", "SYS SUM|TOTAL a b [c…]|bag — sum ints or newline bag → LAST_N"},
       {"SYS PROD", "SYS PROD|PRODUCT a b [c…]|bag — product of ints → LAST_N"},
       {"SYS AVG", "SYS AVG|MEAN a b [c…]|bag — integer mean (trunc) → LAST_N"},

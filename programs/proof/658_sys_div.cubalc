@@ -1,0 +1,80 @@
+# SYS SIGN / DIV / MOD — host-plane signum and integer div/mod
+# Usability: page index, bucket, parity without cube ISA DIV/MOD soup
+
+HOLD_FLASH 1
+
+# signum
+SYS SIGN -7
+ASSERT OK == 1
+ASSERT LAST_N == -1
+SYS SIGN 0
+ASSERT LAST_N == 0
+SYS SIGN 42
+ASSERT LAST_N == 1
+SYS SGN -1
+ASSERT LAST_N == -1
+SYS SIGNUM 9
+ASSERT LAST_N == 1
+
+# pairs with IABS: reconstruct sign*abs
+LET x = -12
+SYS IABS x
+LET ax = LAST_N
+SYS SIGN x
+LET sx = LAST_N
+LET recon = sx * ax
+ASSERT recon == -12
+
+# integer divide trunc toward zero
+SYS DIV 17 5
+ASSERT LAST_N == 3
+SYS DIV -17 5
+ASSERT LAST_N == -3
+SYS IDIV 20 4
+ASSERT LAST_N == 5
+SYS QUOT 7 2
+ASSERT LAST_N == 3
+# /0 soft → 0
+SYS DIV 5 0
+ASSERT LAST_N == 0
+ASSERT OK == 1
+
+# remainder
+SYS MOD 17 5
+ASSERT LAST_N == 2
+SYS REM 17 5
+ASSERT LAST_N == 2
+SYS MOD -17 5
+ASSERT LAST_N == -2
+SYS MODULO 10 3
+ASSERT LAST_N == 1
+# %0 soft → 0
+SYS MOD 5 0
+ASSERT LAST_N == 0
+
+# agent pattern: page of N items (ceil via div + rem)
+LET total = 47
+LET page_size = 10
+SYS DIV total page_size
+LET pages = LAST_N
+SYS MOD total page_size
+LET rem = LAST_N
+ASSERT rem == 7
+# ceil pages: full pages + 1 if remainder
+LET pages_ceil = pages + 1
+ASSERT pages == 4
+ASSERT pages_ceil == 5
+
+# agent pattern: bucket score 0..99 into 0..9
+LET score = 73
+SYS DIV score 10
+LET bucket = LAST_N
+ASSERT bucket == 7
+
+# agent pattern: even/odd via MOD
+SYS MOD 14 2
+ASSERT LAST_N == 0
+SYS MOD 15 2
+ASSERT LAST_N == 1
+
+PRINT "sys_div ok"

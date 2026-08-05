@@ -145,6 +145,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 115. ~~**`SYS SUM` / `PROD` / `AVG`**~~ **done** (host aggregates · multi-arg or newline bag · no shell awk).
 116. ~~**`SYS SORTN` / `NSORT`**~~ **done** (numeric bag sort · lex SORT footgun fix for scores/sizes).
 117. ~~**`SYS RANGE` / `SEQ` / `IOTA`**~~ **done** (int sequence bags · EACH/SUM fixtures without shell seq).
+118. ~~**`SYS SIGN` / `DIV` / `MOD`**~~ **done** (signum + integer div/mod · page/bucket without ISA soup).
 
 ## Tick protocol
 
