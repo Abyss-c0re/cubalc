@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 107,
-  "version": "1.15.132-usability",
-  "item": "SYS CUTALL / MAPCUT peel column every bag line",
-  "item_id": 140,
-  "title": "SYS CUTALL|MAPCUT bag sep n \u2014 peel Nth field from every line",
-  "commit": "4fd5adbc891b5164c0f5b3f6d71c831010d86f74",
-  "summary": "SYS CUTALL/MAPCUT/COLALL peel sep-column from every bag line. Log\u2192FREQ without EACH. selftest 107.",
+  "iter": 108,
+  "version": "1.15.133-usability",
+  "item": "SYS SORTFREQ / SORTBYCOUNT sort FREQ by count",
+  "item_id": 141,
+  "title": "SYS SORTFREQ|SORTBYCOUNT [bag] [sep] [DESC|ASC] \u2014 sort FREQ by count",
+  "commit": "ab31381832fcb3040d23e6b304d7e82123b94eaf",
+  "summary": "SYS SORTFREQ/SORTBYCOUNT sort key:count bags by count. Top severities after FREQ. selftest 108.",
   "proofs": [
-    "680_sys_cutall",
-    "selftest n_pass=107"
+    "681_sys_sortfreq",
+    "selftest n_pass=108"
   ],
-  "when": "2026-08-05T19:33:45Z",
+  "when": "2026-08-05T19:43:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4fd5adbc891b5164c0f5b3f6d71c831010d86f74"
+  "sha": "ab31381832fcb3040d23e6b304d7e82123b94eaf"
 }
