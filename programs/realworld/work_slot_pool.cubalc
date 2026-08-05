@@ -1,0 +1,666 @@
+# work_slot_pool.cubalc — durable free/busy work-slot token pool under STATE
+#
+# Real use: agents keep a bag of pure status tokens (idle / busy / done / hold)
+# as capacity slots. Claim the first free slot without shell sed:
+#   list      — depth + counts for idle/busy/done/hold (default)
+#   seed      — WRITE N idle tokens (ARG1=count, default 3)
+#   inject    — PUSH one token (ARG1=status, default idle)
+#   claim     — SETMATCH free→busy (default free=idle). first match only
+#   release   — SETMATCH busy→idle (first busy)
+#   finish    — SETMATCH busy→done (first busy)
+#   recycle   — SETMATCH done→idle (first done)
+#   rewritex  — SETMATCH old→new exact (ARG1=old ARG2=new)
+#   count     — COUNTLINE exact token (ARG1)
+#   has       — HASLINE exact token (ARG1)
+#   dropone   — REMOVELINE first exact (ARG1)
+#   pinfree   — MOVELINE first idle to front (FINDLINE+MOVELINE)
+#   clear     — empty pool plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1=4 \
+#     ./out/cubalc run -q -s programs/realworld/work_slot_pool.cubalc
+#   CUBALC_ARG0=claim ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=count CUBALC_ARG1=idle ./out/cubalc run -q -s ...
+#
+# Env / args:
+#   CUBALC_ARG0 / CUBALC_POOL_ACTION
+#   CUBALC_ARG1 / CUBALC_POOL_A   — count | status | old | free-token
+#   CUBALC_ARG2 / CUBALC_POOL_B   — new token (rewrite) or busy target (claim)
+#   CUBALC_POOL_FILE=POOL.txt
+#   CUBALC_POOL_REQUIRE=1         — EXIT 2 on claim/release/finish/recycle miss
+#
+# Language edges this program deliberately challenges:
+#   SETMATCH only first exact field — cannot claim N slots without N runs
+#   COUNTLINE exact only — cannot COUNTLINE ":idle" substring; need pure tokens
+#   SETMATCH miss soft LAST_N=0 bag unchanged — not FAIL sticky by default
+#   SETMATCH empty new → blank field left in bag (capacity hole)
+#   no atomic multi-claim / no CAS — concurrent agents race on first match
+#   FINDLINE first only for pinfree — duplicate idles ambiguous
+#   MOVELINE needs numeric shuttle via NUM LAST dance
+#   PRINT_JSON collapses bag newlines · WRITE trailing NL plate glue
+#   SYS NUM only parses LAST — seed count string needs PREPEND/HEAD glue
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "work_slot_pool: start"
+DEFAULT ACTION = "list"
+DEFAULT A = ""
+DEFAULT B = ""
+DEFAULT PFILE = "POOL.txt"
+DEFAULT REPORT = "POOL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_POOL_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET A = LAST
+ELSE
+  SYS ENV "CUBALC_POOL_A" OR ""
+  LET A = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET B = LAST
+ELSE
+  SYS ENV "CUBALC_POOL_B" OR ""
+  LET B = LAST
+END
+SYS ENV "CUBALC_POOL_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET PFILE = LAST
+END
+SYS ENV "CUBALC_POOL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir PFILE
+LET pool_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR pool_path OR ""
+LET pool = LAST
+CLEAR_ERR "soft pool load"
+SYS LINES pool
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET n_idle = 0
+LET n_busy = 0
+LET n_done = 0
+LET n_hold = 0
+LET n_match = 0
+LET idx = -1
+LET note_msg = "ok"
+LET free_tok = "idle"
+LET busy_tok = "busy"
+LET done_tok = "done"
+LET hold_tok = "hold"
+
+# --- list: capacity snapshot ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS COUNTLINE pool free_tok
+  LET n_idle = LAST_N
+  SYS COUNTLINE pool busy_tok
+  LET n_busy = LAST_N
+  SYS COUNTLINE pool done_tok
+  LET n_done = LAST_N
+  SYS COUNTLINE pool hold_tok
+  LET n_hold = LAST_N
+  LET note_msg = "listed"
+END
+
+# --- seed: write N idle tokens (overwrite plate) ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  LET pool = ""
+  LET n_match = 3
+  SYS BLANK A
+  IF LAST_N == 0 THEN
+    # Weakness: SYS NUM only on LAST — shuttle string A
+    SYS PREPEND "" A
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET n_match = LAST_N
+    END
+  END
+  IF n_match < 0 THEN
+    LET n_match = 0
+  END
+  # no native repeat-N — unroll small capacity via PUSH loop counter
+  LET idx = 0
+  # cap seed at 32 to avoid runaway
+  IF n_match > 32 THEN
+    LET n_match = 32
+  END
+  # manual unrolled seed using EACH over synthetic bag of N markers
+  # Build marker bag with PUSH in a fixed ladder (0..31) gated by count
+  LET markers = ""
+  IF n_match > 0 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 1 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 2 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 3 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 4 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 5 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 6 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 7 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 8 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 9 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 10 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 11 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 12 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 13 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 14 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 15 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 16 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 17 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 18 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 19 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 20 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 21 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 22 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 23 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 24 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 25 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 26 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 27 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 28 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 29 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 30 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  IF n_match > 31 THEN
+    SYS PUSH markers "1"
+    LET markers = LAST
+  END
+  LET pool = ""
+  EACH LINE m IN markers
+    SYS PUSH pool free_tok
+    LET pool = LAST
+  END
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "seeded"
+  SYS LINES pool
+  LET n_match = LAST_N
+  SYS COUNTLINE pool free_tok
+  LET n_idle = LAST_N
+END
+
+# --- inject: push one token ---
+SYS EQS ACTION "inject"
+IF LAST_N == 1 THEN
+  NOTE "action inject"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    LET A = free_tok
+  END
+  SYS PUSH pool A
+  LET pool = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "injected"
+END
+
+# --- claim: first free → busy via SETMATCH ---
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  NOTE "action claim"
+  SYS BLANK A
+  IF LAST_N == 0 THEN
+    LET free_tok = A
+  END
+  SYS BLANK B
+  IF LAST_N == 0 THEN
+    LET busy_tok = B
+  END
+  SYS SETMATCH pool free_tok busy_tok
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "claim miss no free"
+    FAIL "claim miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "claim miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "claimed first free"
+  END
+END
+
+# --- release: first busy → idle ---
+SYS EQS ACTION "release"
+IF LAST_N == 1 THEN
+  NOTE "action release"
+  SYS BLANK A
+  IF LAST_N == 0 THEN
+    LET busy_tok = A
+  END
+  SYS BLANK B
+  IF LAST_N == 0 THEN
+    LET free_tok = B
+  END
+  SYS SETMATCH pool busy_tok free_tok
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "release miss no busy"
+    FAIL "release miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "release miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "released first busy"
+  END
+END
+
+# --- finish: first busy → done ---
+SYS EQS ACTION "finish"
+IF LAST_N == 1 THEN
+  NOTE "action finish"
+  SYS SETMATCH pool busy_tok done_tok
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "finish miss no busy"
+    FAIL "finish miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "finish miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "finished first busy"
+  END
+END
+
+# --- recycle: first done → idle ---
+SYS EQS ACTION "recycle"
+IF LAST_N == 1 THEN
+  NOTE "action recycle"
+  SYS SETMATCH pool done_tok free_tok
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "recycle miss no done"
+    FAIL "recycle miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "recycle miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "recycled first done"
+  END
+END
+
+# --- rewritex: SETMATCH old new (generic; empty B allowed → blank field) ---
+SYS EQS ACTION "rewritex"
+IF LAST_N == 1 THEN
+  NOTE "action rewritex"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "rewritex needs old token (ARG1)"
+  END
+  # B may be empty: SETMATCH leaves a blank bag field (capacity hole) — deliberate edge
+  SYS SETMATCH pool A B
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "rewritex miss"
+    FAIL "rewritex miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rewritex miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "rewrote first match"
+  END
+END
+
+# --- count: COUNTLINE exact ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs token (ARG1)"
+  END
+  SYS COUNTLINE pool A
+  LET n_match = LAST_N
+  LET hit = 1
+  LET note_msg = "counted"
+END
+
+# --- has: HASLINE exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs token (ARG1)"
+  END
+  SYS HASLINE pool A
+  LET n_match = LAST_N
+  LET hit = 1
+  IF n_match > 0 THEN
+    LET note_msg = "present"
+  ELSE
+    LET note_msg = "absent"
+    LET miss = 1
+  END
+END
+
+# --- dropone: REMOVELINE first exact ---
+SYS EQS ACTION "dropone"
+IF LAST_N == 1 THEN
+  NOTE "action dropone"
+  SYS BLANK A
+  IF LAST_N == 1 THEN
+    EXIT 2 "dropone needs token (ARG1)"
+  END
+  SYS REMOVELINE pool A
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "dropone miss"
+    FAIL "dropone miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dropone miss"
+    END
+  ELSE
+    LET pool = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "dropped first exact"
+  END
+END
+
+# --- pinfree: move first idle to front via FINDLINE + MOVELINE ---
+SYS EQS ACTION "pinfree"
+IF LAST_N == 1 THEN
+  NOTE "action pinfree"
+  SYS BLANK A
+  IF LAST_N == 0 THEN
+    LET free_tok = A
+  END
+  SYS FINDLINE pool free_tok
+  LET idx = LAST_N
+  IF idx < 0 THEN
+    LET miss = 1
+    LET note_msg = "pinfree miss no free"
+    FAIL "pinfree miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pinfree miss"
+    END
+  ELSE
+    SYS MOVELINE pool idx 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pinfree moveline fail"
+      FAIL "pinfree move"
+      CLEAR_ERR
+    ELSE
+      LET pool = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned first free front"
+      LET idx = 0
+    END
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET pool = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown action?
+IF hit == 0 THEN
+  IF miss == 0 THEN
+    EXIT 2 "unknown action"
+  END
+END
+
+# refresh counts for report
+SYS COUNTLINE pool free_tok
+LET n_idle = LAST_N
+SYS COUNTLINE pool busy_tok
+LET n_busy = LAST_N
+SYS COUNTLINE pool done_tok
+LET n_done = LAST_N
+SYS COUNTLINE pool hold_tok
+LET n_hold = LAST_N
+SYS LINES pool
+LET depth0 = LAST_N
+
+IF changed > 0 THEN
+  SYS WRITE pool_path pool
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "WRITE pool failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# report as bag of key/value fields (no free-form string concat)
+LET report = "pool_report"
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "idle"
+LET report = LAST
+SYS STR n_idle
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "busy"
+LET report = LAST
+SYS STR n_busy
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "done"
+LET report = LAST
+SYS STR n_done
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hold"
+LET report = LAST
+SYS STR n_hold
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n_match"
+LET report = LAST
+SYS STR n_match
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+CLEAR_ERR
+
+NOTE "work_slot_pool: done"
+PRINT "pool" ACTION hit miss changed depth0 n_idle n_busy n_done n_hold n_match idx
+PRINT_JSON ACTION hit miss changed depth0 n_idle n_busy n_done n_hold n_match
+# bag JSON collapses newlines — known weakness; host must READ plate for order
+PRINT_JSON pool
+PASS "pool tick"
+CLEAR_ERR
+EXIT 0 "pool ok"
