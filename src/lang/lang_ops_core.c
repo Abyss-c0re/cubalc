@@ -1646,49 +1646,123 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS MIN|MAX a b [c…] — host-plane min/max of integer args → LAST_N.
+    /* SYS MIN|MAX a b [c…]|bag — host-plane min/max of integer args → LAST_N.
+     * Bag mode (like SUM): one string/LAST with newline numeric fields.
      * SYS CLAMP x lo hi — bound x into [lo,hi] (lo/hi swapped if inverted).
-     * Distinct from cube ISA MIN/MAX/CLAMP stack ops. Usability: cap retries/jitter. */
+     * COUNT = n used in bag mode. Distinct from cube ISA stack MIN/MAX/CLAMP.
+     * Usability: cap retries/jitter; after LENALL find max field width without
+     * SORTN+TAIL glue. */
     if (kw(&L->cur,"MIN") || kw(&L->cur,"MINIMUM") || kw(&L->cur,"MAX") ||
         kw(&L->cur,"MAXIMUM") || kw(&L->cur,"CLAMP") || kw(&L->cur,"BOUND") ||
-        kw(&L->cur,"CLIP") || kw(&L->cur,"SATURATE")){
+        kw(&L->cur,"CLIP") || kw(&L->cur,"SATURATE") ||
+        kw(&L->cur,"MINBAG") || kw(&L->cur,"MAXBAG") || kw(&L->cur,"BAGMIN") ||
+        kw(&L->cur,"BAGMAX") || kw(&L->cur,"MINALL") || kw(&L->cur,"MAXALL")){
       char op[16];
-      long vals[16];
-      int n = 0, i, is_min, is_max, is_clamp;
+      long vals[64];
+      int n = 0, i, is_min, is_max, is_clamp, bag = 0;
       long out = 0;
       char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
       snprintf(op, sizeof op, "%s", L->cur.text);
       for (char *q = op; *q; q++)
         if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
-      is_min = (strcmp(op, "MIN") == 0 || strcmp(op, "MINIMUM") == 0);
-      is_max = (strcmp(op, "MAX") == 0 || strcmp(op, "MAXIMUM") == 0);
+      is_min = (strcmp(op, "MIN") == 0 || strcmp(op, "MINIMUM") == 0 ||
+                strcmp(op, "MINBAG") == 0 || strcmp(op, "BAGMIN") == 0 ||
+                strcmp(op, "MINALL") == 0);
+      is_max = (strcmp(op, "MAX") == 0 || strcmp(op, "MAXIMUM") == 0 ||
+                strcmp(op, "MAXBAG") == 0 || strcmp(op, "BAGMAX") == 0 ||
+                strcmp(op, "MAXALL") == 0);
       is_clamp = (strcmp(op, "CLAMP") == 0 || strcmp(op, "BOUND") == 0 ||
                   strcmp(op, "CLIP") == 0 || strcmp(op, "SATURATE") == 0);
+      /* force bag mode for *BAG / *ALL aliases */
+      if (strcmp(op, "MINBAG") == 0 || strcmp(op, "MAXBAG") == 0 ||
+          strcmp(op, "BAGMIN") == 0 || strcmp(op, "BAGMAX") == 0 ||
+          strcmp(op, "MINALL") == 0 || strcmp(op, "MAXALL") == 0)
+        bag = 1;
       lex_next(L);
-      /* parse_prim (not parse_expr): spaces between args must not become binary minus.
-       * SYS MIN -3 -1 → [-3,-1] not one expr (-3 - 1). */
-      while (n < 16 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
-                        L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
-        vals[n++] = parse_prim(vm, L);
-      }
       if (is_clamp) {
-        long x, lo, hi;
-        if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
-        else if (n == 1) { x = vals[0]; lo = 0; hi = vals[0]; }
-        else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
-        else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
-        if (lo > hi) { long t = lo; lo = hi; hi = t; }
-        out = x;
-        if (out < lo) out = lo;
-        if (out > hi) out = hi;
-      } else if (n <= 0) {
-        out = vm->last_n;
-      } else {
-        out = vals[0];
-        for (i = 1; i < n; i++) {
-          if (is_min && vals[i] < out) out = vals[i];
-          if (is_max && vals[i] > out) out = vals[i];
+        /* parse_prim: spaces between args must not become binary minus. */
+        while (n < 16 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                          L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
         }
+        {
+          long x, lo, hi;
+          if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
+          else if (n == 1) { x = vals[0]; lo = 0; hi = vals[0]; }
+          else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
+          else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
+          if (lo > hi) { long t = lo; lo = hi; hi = t; }
+          out = x;
+          if (out < lo) out = lo;
+          if (out > hi) out = hi;
+        }
+      } else {
+        /* bag mode: string literal, string var, or no numeric-looking arg (→ LAST) */
+        if (!bag) {
+          if (L->cur.kind == TK_STR) {
+            bag = 1;
+          } else if (L->cur.kind == TK_IDENT) {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str) bag = 1;
+          } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                       L->cur.kind == TK_LPAREN)) {
+            bag = 1; /* bare: aggregate LAST bag/text */
+          }
+        }
+        if (bag) {
+          src[0] = 0;
+          if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+            if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+              snprintf(src, sizeof src, "%s", vm->last_str);
+          } else {
+            snprintf(src, sizeof src, "%s", vm->last_str);
+          }
+          {
+            const char *p = src;
+            while (*p && n < 64) {
+              const char *start = p;
+              char *end = NULL;
+              long v;
+              while (*p && *p != '\n') p++;
+              if (start == p) {
+                if (*p == '\n') p++;
+                continue;
+              }
+              {
+                char tmp[48];
+                size_t flen = (size_t)(p - start);
+                if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+                memcpy(tmp, start, flen);
+                tmp[flen] = 0;
+                v = strtol(tmp, &end, 10);
+                if (end != tmp) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0)
+                    vals[n++] = v;
+                }
+              }
+              if (*p == '\n') p++;
+            }
+          }
+        } else {
+          /* parse_prim (not parse_expr): SYS MIN -3 -1 → [-3,-1] not (-3 - 1). */
+          while (n < 64 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                            L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
+            vals[n++] = parse_prim(vm, L);
+          }
+        }
+        if (n <= 0) {
+          out = bag ? 0 : vm->last_n;
+        } else {
+          out = vals[0];
+          for (i = 1; i < n; i++) {
+            if (is_min && vals[i] < out) out = vals[i];
+            if (is_max && vals[i] > out) out = vals[i];
+          }
+        }
+        var_set_num(vm, "COUNT", (long)n);
       }
       vm->last_n = out;
       var_set_num(vm, "LAST_N", out);
@@ -7396,8 +7470,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},
       {"SYS SHUFFLE", "SYS SHUFFLE|SHUF [str] — Fisher–Yates shuffle newline fields → LAST"},
       {"SYS SHUF", "SYS SHUF [str] — alias of SYS SHUFFLE · randomize work bags"},
-      {"SYS MIN", "SYS MIN a b [c…] — host-plane minimum → LAST_N"},
-      {"SYS MAX", "SYS MAX a b [c…] — host-plane maximum → LAST_N"},
+      {"SYS MIN", "SYS MIN a b [c…]|bag — host-plane minimum → LAST_N · bag like SUM"},
+      {"SYS MAX", "SYS MAX a b [c…]|bag — host-plane maximum → LAST_N · after LENALL width"},
+      {"SYS MINBAG", "SYS MINBAG [bag] — min of newline numeric fields · alias of bag MIN"},
+      {"SYS MAXBAG", "SYS MAXBAG [bag] — max of newline numeric fields · alias of bag MAX"},
       {"SYS CLAMP", "SYS CLAMP x lo hi — bound x into [lo,hi] → LAST_N"},
       {"SYS IN", "SYS IN|WITHIN x lo hi — inclusive range membership → LAST_N 0|1"},
       {"SYS WITHIN", "SYS WITHIN x lo hi — alias of SYS IN · score/retry bands"},

@@ -1,0 +1,62 @@
+# SYS MIN / MAX bag mode — min/max over newline numeric fields (like SUM)
+# Usability: after LENALL find max field width without SORTN+TAIL glue
+
+HOLD_FLASH 1
+
+# multi-arg still works (regression)
+SYS MIN 9 2 5 1 8
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS MAX 9 2 5 1 8
+ASSERT LAST_N == 9
+
+# bag mode: string bag of numbers
+LET scores = "3\n10\n-2\n7"
+SYS MIN scores
+ASSERT LAST_N == -2
+ASSERT COUNT == 4
+SYS MAX scores
+ASSERT LAST_N == 10
+ASSERT COUNT == 4
+
+# aliases force bag mode
+SYS MINBAG scores
+ASSERT LAST_N == -2
+SYS MAXBAG scores
+ASSERT LAST_N == 10
+SYS MINALL scores
+ASSERT LAST_N == -2
+SYS MAXALL scores
+ASSERT LAST_N == 10
+
+# empty bag → 0
+SYS MIN ""
+ASSERT LAST_N == 0
+ASSERT COUNT == 0
+SYS MAX ""
+ASSERT LAST_N == 0
+
+# skip non-numeric fields
+LET mixed = "1\nx\n5\n"
+SYS MAX mixed
+ASSERT LAST_N == 5
+ASSERT COUNT == 2
+SYS MIN mixed
+ASSERT LAST_N == 1
+
+# agent pattern: LENALL → MAX width
+LET bag = "hi\nworld\nx\nabcde"
+SYS LENALL bag
+SYS MAX LAST
+ASSERT LAST_N == 5
+ASSERT COUNT == 4
+SYS LENALL bag
+SYS MIN LAST
+ASSERT LAST_N == 1
+
+# bare MAX uses LAST bag after LENALL
+SYS LENALL bag
+SYS MAX
+ASSERT LAST_N == 5
+
+PRINT "sys_minmax_bag ok"
