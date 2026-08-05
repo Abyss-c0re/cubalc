@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 130,
-  "version": "1.15.155-usability",
-  "item": "SYS KVSET / SETKV set/update key:val bag field",
-  "item_id": 163,
-  "title": "SYS KVSET|SETKV bag key value [sep] — set or append key:val",
-  "commit": "c069289058d453e6c4ddfbbe0450721ad9270fc8",
-  "summary": "SYS KVSET/SETKV set/update key:val bag fields dual of LOOKUP. selftest 130.",
+  "iter": 131,
+  "version": "1.15.156-usability",
+  "item": "SYS KVINC / INCKV bump key:val numeric counter",
+  "item_id": 164,
+  "title": "SYS KVINC|INCKV bag key [delta] [sep] — bump or insert counter",
+  "commit": "81d42e7166032222411520d1e676e56dfaaa9f15",
+  "summary": "SYS KVINC/INCKV bump FREQ key counters without LOOKUP+arith+KVSET. selftest 131.",
   "proofs": [
-    "703_sys_kvset",
-    "selftest n_pass=130"
+    "704_sys_kvinc",
+    "selftest n_pass=131"
   ],
-  "when": "2026-08-05T23:24:11Z",
+  "when": "2026-08-05T23:34:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c069289058d453e6c4ddfbbe0450721ad9270fc8"
+  "sha": "81d42e7166032222411520d1e676e56dfaaa9f15"
 }
