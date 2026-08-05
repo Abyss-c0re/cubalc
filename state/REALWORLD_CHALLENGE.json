@@ -1,70 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 26,
-  "program": "programs/realworld/dlq_retry_board.cubalc",
-  "theme": "dead-letter retry board jobid:status SETMATCH ladder MOVELINE pin GREP suffix false friends",
-  "version": "1.15.104-usability",
+  "iter": 27,
+  "program": "programs/realworld/rate_budget_ledger.cubalc",
+  "theme": "rate budget ledger name:N debit/credit NUM CMP MIN CLAMP SETMATCH pinzero",
+  "version": "1.15.106-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_fail_ladder",
-      "cmd": "seed job_a..extra; fail a\u2192retry; fail a\u2192dead; fail b; succeed c",
+      "name": "seed_debit_credit",
+      "cmd": "seed api:10 db:3 mesh:0 api_v2:5; debit api 2→8; debit db 3→0; credit mesh 4 max3→3",
       "ok": true,
-      "note": "plate job_a:dead job_b:retry job_c:ok job_a_extra:pending"
+      "note": "NUM+STR rebuild tokens; CLAMP/MIN cap credit"
     },
     {
-      "name": "pin_retry_requeue",
-      "cmd": "pin job_a; retry dead\u2192retry; kill; requeue\u2192pending",
+      "name": "insufficient_require",
+      "cmd": "CUBALC_BUDGET_REQUIRE=1 debit db 1 on zero",
       "ok": true,
-      "note": "MOVELINE+SETMATCH transitions round-trip"
+      "note": "EXIT 2 debit insufficient; soft miss rc0 without REQUIRE"
     },
     {
-      "name": "require_miss",
-      "cmd": "CUBALC_DLQ_REQUIRE=1 fail ghost; pin empty attention",
+      "name": "pinzero_moveline",
+      "cmd": "pinzero → db:0 to front",
       "ok": true,
-      "note": "EXIT 2 soft+REQUIRE paths"
+      "note": "EACH+AFTER+NUM+CMP 0 then FINDLINE+MOVELINE"
     },
     {
-      "name": "countline_vs_grep_suffix",
-      "cmd": "COUNTLINE bag ':ok' vs GREP ':ok'+LINES; GREP ':ok' keeps job:okay",
+      "name": "get_and_ghost",
+      "cmd": "get api hit=8; REQUIRE get ghost EXIT 2",
       "ok": true,
-      "note": "COUNTLINE ':ok'\u21920; GREP ':ok'\u21922 (ok+okay false friend)"
+      "note": "identity walk not GREP"
     },
     {
-      "name": "setmatch_first_only",
-      "cmd": "SETMATCH two x:dead \u2192 one residual x:dead",
+      "name": "countline_zero_suffix",
+      "cmd": "COUNTLINE ':0' vs GREP ':0'+LINES",
       "ok": true,
-      "note": "first match only; residual_dead=1"
+      "note": "COUNTLINE→0 GREP→1; zero budgets need EACH+NUM"
     },
     {
-      "name": "grep_prefix_false_friend",
-      "cmd": "GREP job_a matches job_a_extra+job_ab; GREP job_a: exact-ish",
+      "name": "grep_api_false_friend",
+      "cmd": "GREP api keeps api+api_v2; GREP api: only api:8",
       "ok": true,
-      "note": "need BEFORE+EQS or STARTS job_a: for identity"
+      "note": "bare GREP name matches name_v2 cousin"
     },
     {
-      "name": "print_json_collapse",
-      "cmd": "list PRINT_JSON bag",
+      "name": "setmatch_residual",
+      "cmd": "two api:1 SETMATCH → residual api:1",
       "ok": true,
-      "note": "job_a:pendingjob_b:retry... collapsed"
+      "note": "first only residual_api1=1"
     },
     {
-      "name": "write_no_final_nl",
-      "cmd": "cat -A DLQ.txt after seed",
+      "name": "print_json_collapse_write_nl",
+      "cmd": "list PRINT_JSON bag; cat -A plate",
       "ok": true,
-      "note": "last field often lacks trailing $ (WRITE bag glue)"
+      "note": "db:0api:8... collapsed; last field often no trailing $"
     },
     {
-      "name": "rand_neg_fix_selftest",
-      "cmd": "SYS RAND -3 had_a flag; selftest 79/79",
+      "name": "report_let_after_push",
+      "cmd": "miss value requires LET report=LAST after every PUSH",
       "ok": true,
-      "note": "fixed a<0&&b<0 sentinel; non-positive single \u2192 0"
+      "note": "forgot LET dropped miss field value — agent footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "79/79 pass incl sys_rand after fix"
+      "note": "81/81 pass incl minmax cmp rand"
     }
   ],
   "weaknesses": [
@@ -72,89 +72,98 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "GREP status suffix tallies are substring-unsafe for short statuses",
-      "detail": "GREP ':ok' keeps both job_c:ok and job_d:okay. COUNTLINE cannot suffix-tally so agents must GREP then LINES \u2014 but short suffixes collide with longer status names. DLQ boards need exact AFTER ':' + EQS status walks or pure single-token fields.",
-      "repro": "GREP ':ok' on 'job:ok\\njob:okay' \u2192 2 lines; COUNTLINE bag ':ok' \u2192 0"
+      "title": "No in-place numeric field mutate — debit is STR+REPLACEALL+SETMATCH rebuild",
+      "detail": "Budgets stored as name:N cannot N-- in place. Agents must AFTER, NUM, arithmetic, STR, template rebuild, SETMATCH. Race-prone multi-step; no atomic debit form.",
+      "repro": "debit api 2: find api:10 → build api:8 → SETMATCH"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "COUNTLINE exact-only \u2014 no status-role tally form",
-      "detail": "COUNTLINE bag ':dead' always 0. Agents expect 'count lines matching status' but get field equality. Same class as feature_flag_board W1; DLQ escalates because four statuses need four GREP+LINES and still false-friend.",
-      "repro": "COUNTLINE 'a:dead\\nb:dead' ':dead' \u2192 LAST_N=0"
+      "title": "COUNTLINE cannot tally zero budgets by suffix",
+      "detail": "COUNTLINE bag ':0' → 0 even when mesh:0 exists. Zero-count requires EACH LINE + AFTER + NUM + CMP 0. GREP ':0' works for exact :0 but still substring-risky for :01 etc.",
+      "repro": "COUNTLINE 'mesh:0' ':0' → 0; GREP ':0' + LINES → 1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|bag",
-      "title": "SETMATCH first exact only \u2014 no multi-status or multi-job batch",
-      "detail": "Duplicate job:dead leaves residual after one SETMATCH. Fail ladder is two sequential transitions not one form. No SETMATCHALL / SETMATCHWHERE status.",
-      "repro": "SETMATCH 'x:dead\\nx:dead' x:dead\u2192x:retry \u2192 residual x:dead"
+      "area": "host",
+      "title": "SYS NUM only parses LAST — amount/remaining need PREPEND/HEAD or AFTER shuttle",
+      "detail": "Cannot SYS NUM amount_var directly from named string without landing value in LAST. Debit amount ARG must PREPEND \"\" AMT_S; HEAD; NUM.",
+      "repro": "forms: SYS NUM uses LAST only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|docs",
-      "title": "GREP jobid prefix without colon matches jobid_extra / jobidab",
-      "detail": "GREP 'job_a' keeps job_a, job_a_extra, job_ab. GREP 'job_a:' is safer but still substring inside longer fields. Identity requires EACH+BEFORE+EQS or STARTS 'job_a:'.",
-      "repro": "GREP 'job_a' on three cousins \u2192 n=3; STARTS/EQS identity \u2192 1"
+      "area": "host|bag",
+      "title": "GREP bare name matches name_v2 cousins",
+      "detail": "GREP 'api' keeps api:8 and api_v2:5. Identity requires BEFORE ':' + EQS name.",
+      "repro": "GREP api on api+api_v2 → n=2"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host",
-      "title": "No string concat \u2014 job:status tokens via REPLACEALL template",
-      "detail": "NAME:VAL REPLACEALL corrupts if job id contains NAME or VAL substrings. Same class as flag/roster boards.",
-      "repro": "template NAME:VAL with NAME containing VAL"
+      "area": "host|bag",
+      "title": "SETMATCH first-only leaves duplicate budget residuals",
+      "detail": "Two api:1 fields → one SETMATCH leaves residual api:1. No SETMATCHALL; double-seed corrupts ledger.",
+      "repro": "SETMATCH 'api:1\\napi:1' api:1→api:0 → residual api:1"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "cli",
-      "title": "PRINT_JSON collapses multi-line DLQ bags",
-      "detail": "list dumps bag as job_a:pendingjob_b:retryjob_c:ok \u2014 unparseable for agents. Scalars n_pending/n_retry ok; plate remains truth.",
-      "repro": "PRINT_JSON bag after seed+fail"
+      "title": "PRINT_JSON collapses multi-line budget bags",
+      "detail": "list bag dumps as db:0api:8mesh:3api_v2:5 — unparseable. Prefer sum_rem/n_zero scalars + plate file.",
+      "repro": "PRINT_JSON bag after seed"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE bag often omits final trailing newline",
-      "detail": "cat -A shows last job:status without $. Some tools treat as incomplete last line; READ still reloads fields via LINES but plate is ugly for shell pipelines.",
-      "repro": "seed three jobs; cat -A DLQ.txt \u2192 last field no $"
+      "detail": "cat -A shows last name:N without $. Shell tools see incomplete last line.",
+      "repro": "seed; cat -A BUDGETS.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "host|rand",
-      "title": "SYS RAND single negative used a<0&&b<0 sentinel (FIXED this iter)",
-      "detail": "SYS RAND -3 was treated as no-args (0..999999) because negative a plus unset b both looked 'absent'. Fixed with has_a/has_b flags; non-positive single now correctly \u2192 0. Selftest 79/79.",
-      "repro": "pre-fix: SYS RAND -3 LAST_N random; post-fix: LAST_N==0"
+      "area": "flow|bag",
+      "title": "SYS PUSH bag line result must be re-bound with LET bag = LAST every time",
+      "detail": "Missed LET report = LAST after PUSH of miss value silently dropped the field. Accumulate pattern is error-prone; no bag-append that mutates named var in place.",
+      "repro": "PUSH report val without LET report=LAST → next PUSH uses stale bag"
+    },
+    {
+      "id": "W9",
+      "severity": "low",
+      "area": "cli",
+      "title": "PRINT of LAST when LAST is string \"0\" can look like 1",
+      "detail": "PRINT LAST after SYS STR 0 printed '1' while PRINT_JSON correctly shows LAST=0. Agents debugging zero budgets with PRINT alone get false friends; prefer PRINT_JSON.",
+      "repro": "SYS STR 0; PRINT LAST → 1; PRINT_JSON LAST → {\"LAST\":\"0\"}"
     }
   ],
   "workarounds": [
-    "Status tallies: GREP ':pending'|':retry'|':dead' then LINES \u2014 not COUNTLINE; prefer long unique status tokens",
-    "Exact status: EACH LINE + AFTER ':' + EQS status (or COUNTLINE full job:status token)",
-    "Job identity: EACH+BEFORE+EQS or STARTS 'jobid:' \u2014 never bare GREP jobid",
-    "Dedup dead before retry/requeue; or loop SETMATCH until COUNTLINE old==0",
-    "PRINT_JSON only n_* scalars; keep bag on DLQ.txt plate",
-    "After WRITE, optional APPEND empty or ensure final NL in host if shell tools need it"
+    "Debit/credit: AFTER+NUM+math+STR+REPLACEALL NAME:VAL+SETMATCH",
+    "Zero tally: EACH+AFTER+NUM+CMP 0 — not COUNTLINE ':0'",
+    "Identity: BEFORE ':' + EQS — not GREP name",
+    "Amount parse: PREPEND empty + HEAD + NUM shuttle",
+    "Always LET bag = LAST after every PUSH/SETMATCH/MOVELINE/REMOVELINE",
+    "PRINT_JSON for zero-ish scalars; avoid bare PRINT LAST for \"0\"",
+    "Credit ceiling: SYS MIN / SYS CLAMP with CUBALC_BUDGET_MAX"
   ],
   "language_gaps": [
-    "COUNTLINE suffix / field-pattern tally (or GREP count without materialize)",
-    "SETMATCHALL and status-where replace (set all job:* \u2192 job:ok)",
-    "String concatenation for job:status tokens",
-    "PRINT_JSON newline escape in multi-line strings",
-    "WRITE option to force trailing newline on bag plates",
-    "Ends-with field match (ENDS bag ':ok' exact field suffix) distinct from GREP substring"
+    "Atomic bag field numeric debit/credit (or SETMATCH with expr)",
+    "COUNTLINE suffix / field-pattern tally for :N classes",
+    "In-place bag PUSH into named var (auto-bind)",
+    "SYS NUM from named string without LAST shuttle",
+    "String concatenation for name:N tokens",
+    "PRINT_JSON newline escape; WRITE force trailing NL",
+    "PRINT of string \"0\" should not look truthy/confusing"
   ],
   "issues_faced": [
-    "Selftest red on sys_rand (SYS RAND -3) \u2014 sentinel bug, fixed in lang_ops_core.c has_a/has_b",
-    "GREP ':ok' false friend with ':okay' makes short status vocab dangerous for suffix tallies",
-    "fail ladder needs two SETMATCH hops; no atomic multi-step form",
-    "WRITE last-field missing NL visible in cat -A after seed"
+    "Forgot LET report=LAST after PUSH miss value — report missing miss field until fixed",
+    "PRINT LAST after STR 0 printed 1 — misleading for zero remaining debug",
+    "Post-tally EACH overwrites remaining with last row (report remaining not always action remaining)"
   ],
-  "commit": "1e0b1e467fb5187c331bbb8ff5fef3e9ecf1889f",
-  "ts": "2026-08-05T14:54:45Z"
+  "commit": "",
+  "ts": "2026-08-05T15:19:30Z"
 }
