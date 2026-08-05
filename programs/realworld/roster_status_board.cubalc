@@ -1,0 +1,469 @@
+# roster_status_board.cubalc — durable name:status roster under STATE
+#
+# Real use: agents keep a living service/peer/job roster plate without
+# shell sed. Lines are exact fields "name:status" (colon sep).
+#
+# Actions (CUBALC_ARG0 or CUBALC_ROSTER_ACTION):
+#   list     — print depth + bag summary (default)
+#   add      — PUSH name:status if name not already present
+#   set      — FINDLINE current name:* then SETLINE to name:status
+#   remove   — REMOVELINE first exact name:status OR drop any name:* via GREP
+#   ack      — REMOVELINE exact name:status (ack one work token)
+#   sweep    — REMOVELINEI/drop all lines matching needle (status filter)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=add CUBALC_ARG1=api CUBALC_ARG2=idle \
+#     ./out/cubalc run -q -s programs/realworld/roster_status_board.cubalc
+#   CUBALC_ARG0=set CUBALC_ARG1=api CUBALC_ARG2=busy ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Optional env:
+#   CUBALC_ROSTER_FILE=ROSTER.txt
+#   CUBALC_ROSTER_REQUIRE=1   # EXIT 2 if set/remove/ack misses
+#   CUBALC_ROSTER_NEEDLE=...  # for sweep (substring GREP)
+#
+# Edges deliberately hit:
+#   FINDLINE/SETLINE exact-field only — update-by-name = EACH+BEFORE+EQS → FINDLINE → SETLINE
+#   GREP "name:" is substring-unsafe (myapi matches api) — do not use for identity
+#   REMOVELINE drops first match only (duplicate tokens leave residual)
+#   SETLINE OOR soft LAST_N=0 — no FAIL sticky
+#   no string concat form — name:status via REPLACEALL template
+#   WRITE trailing NL / PRINT_JSON bag collapse (known plate edges)
+#   soft READ OR empty roster · HASLINE after set
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "roster_status_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT STATUS = "idle"
+DEFAULT NEEDLE = ""
+DEFAULT RFILE = "ROSTER.txt"
+DEFAULT REPORT = "ROSTER_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT SEP = ":"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+LET act_pid = PID
+
+# --- config ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_ROSTER_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_ROSTER_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET STATUS = LAST
+ELSE
+  SYS ENV "CUBALC_ROSTER_STATUS" OR "idle"
+  LET STATUS = LAST
+END
+SYS ENV "CUBALC_ROSTER_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_ROSTER_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET NEEDLE = LAST
+END
+SYS ENV "CUBALC_ROSTER_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+# --- paths ---
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET roster_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR roster_path OR ""
+LET roster = LAST
+CLEAR_ERR "soft roster load"
+SYS LINES roster
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET idx = -1
+LET entry = ""
+LET old_entry = ""
+LET note_msg = "ok"
+
+# build name:status token when name set
+SYS BLANK NAME
+IF LAST_N == 0 THEN
+  SYS PUSH "" NAME
+  # build via JOINLINES-like: name + sep + status without shell
+  # SYS JOIN is path join (adds /) — cannot use for name:status
+  # Use string concat via LET if supported... CubalC LET = expr or str only
+  # Workaround: REPLACEALL template
+  LET entry = "NAME:STATUS"
+  SYS REPLACEALL entry "NAME" NAME
+  LET entry = LAST
+  SYS REPLACEALL entry "STATUS" STATUS
+  LET entry = LAST
+  # also fix if SEP is not colon — default is colon; template uses :
+END
+
+# --- actions ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES roster
+  LET depth0 = LAST_N
+  # optional filter
+  SYS BLANK NEEDLE
+  IF LAST_N == 0 THEN
+    SYS GREP NEEDLE roster
+    LET filtered = LAST
+    SYS LINES filtered
+    LET hit = LAST_N
+  ELSE
+    LET filtered = roster
+  END
+  STATUS
+  PRINT "list" depth0 hit ACTION
+  PRINT_JSON depth0 hit ACTION STATUS_OK
+  # bag collapse edge — intentional
+  PRINT_JSON roster
+  LET note_msg = "list ok"
+END
+
+# Helper pattern (inlined per action): exact name match on name:status rows.
+# GREP "name:" is UNSAFE — substring matches myapi when looking for api.
+# Walk EACH LINE → BEFORE ":" → EQS NAME (exact identity).
+
+SYS EQS ACTION "add"
+IF LAST_N == 1 THEN
+  NOTE "action add"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    FAIL "add needs name"
+    CLEAR_ERR
+    EXIT 2 "add needs name"
+  END
+  LET name_hit = 0
+  EACH LINE AS row IN roster
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      LET name_hit = 1
+    END
+  END
+  IF name_hit > 0 THEN
+    LET miss = 1
+    LET note_msg = "add already present"
+    NOTE "add skip duplicate name"
+    FAIL "name already on roster"
+    CLEAR_ERR "soft duplicate"
+  ELSE
+    SYS PUSH roster entry
+    LET roster = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "added"
+  END
+END
+
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs name"
+  END
+  # exact name walk — not GREP substring
+  LET old_entry = ""
+  LET name_hit = 0
+  EACH LINE AS row IN roster
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "set miss name"
+    FAIL "set name not found"
+    CLEAR_ERR "soft miss"
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "set miss"
+    END
+  ELSE
+    SYS FINDLINE roster old_entry
+    LET idx = LAST_N
+    IF idx < 0 THEN
+      LET miss = 1
+      LET note_msg = "findline miss after name walk"
+      FAIL "findline inconsistency"
+      CLEAR_ERR
+    ELSE
+      SYS SETLINE roster idx entry
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setline OOR"
+        FAIL "setline failed"
+        CLEAR_ERR
+      ELSE
+        LET roster = LAST
+        LET changed = 1
+        LET hit = 1
+        LET note_msg = "set ok"
+        SYS HASLINE roster entry
+        EXPECT LAST_N == 1
+        CLEAR_ERR
+      END
+    END
+  END
+END
+
+SYS EQS ACTION "remove"
+IF LAST_N == 1 THEN
+  NOTE "action remove"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "remove needs name"
+  END
+  LET old_entry = ""
+  LET name_hit = 0
+  EACH LINE AS row IN roster
+    SYS BEFORE row ":"
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF name_hit == 0 THEN
+        LET old_entry = row
+        LET name_hit = 1
+      END
+    END
+  END
+  IF name_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "remove miss"
+    FAIL "remove name not found"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "remove miss"
+    END
+  ELSE
+    SYS REMOVELINE roster old_entry
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "removeline miss"
+      FAIL "removeline miss"
+      CLEAR_ERR
+    ELSE
+      LET roster = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "removed"
+    END
+  END
+END
+
+SYS EQS ACTION "ack"
+IF LAST_N == 1 THEN
+  NOTE "action ack exact"
+  SYS BLANK entry
+  IF LAST_N == 1 THEN
+    EXIT 2 "ack needs name+status"
+  END
+  SYS REMOVELINE roster entry
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "ack miss"
+    FAIL "ack token miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ack miss"
+    END
+  ELSE
+    LET roster = LAST
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "acked"
+  END
+END
+
+SYS EQS ACTION "sweep"
+IF LAST_N == 1 THEN
+  NOTE "action sweep by needle"
+  SYS BLANK NEEDLE
+  IF LAST_N == 1 THEN
+    # allow ARG1 as needle
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      LET NEEDLE = NAME
+    ELSE
+      EXIT 2 "sweep needs needle"
+    END
+  END
+  SYS GREP NEEDLE roster
+  LET victims = LAST
+  SYS LINES victims
+  LET n_victims = LAST_N
+  IF n_victims == 0 THEN
+    LET miss = 1
+    LET note_msg = "sweep none"
+    FAIL "sweep no matches"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sweep none"
+    END
+  ELSE
+    # remove each victim (first-match REMOVELINE per line)
+    EACH LINE AS v IN victims
+      SYS REMOVELINE roster v
+      IF LAST_N == 1 THEN
+        LET roster = LAST
+        LET hit = hit + 1
+        LET changed = 1
+      END
+    END
+    LET note_msg = "swept"
+  END
+END
+
+# unknown action soft
+SYS EQS ACTION "list"
+LET is_list = LAST_N
+SYS EQS ACTION "add"
+LET is_add = LAST_N
+SYS EQS ACTION "set"
+LET is_set = LAST_N
+SYS EQS ACTION "remove"
+LET is_remove = LAST_N
+SYS EQS ACTION "ack"
+LET is_ack = LAST_N
+SYS EQS ACTION "sweep"
+LET is_sweep = LAST_N
+LET known = is_list + is_add + is_set + is_remove + is_ack + is_sweep
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+# persist if mutated — bag WRITE (single shot; avoid WRITE+APPEND glue)
+IF changed > 0 THEN
+  SYS WRITE roster_path roster
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "roster write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES roster
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# report bag
+LET report = "schema=cubalc.roster.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "status"
+LET report = LAST
+SYS PUSH report STATUS
+LET report = LAST
+SYS PUSH report "entry"
+LET report = LAST
+SYS PUSH report entry
+LET report = LAST
+SYS PUSH report "old_entry"
+LET report = LAST
+SYS PUSH report old_entry
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth0"
+LET report = LAST
+SYS STR depth0
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "roster" ACTION hit miss changed depth0 depth1 idx
+PRINT_JSON ACTION hit miss changed depth0 depth1 idx elapsed STATUS_OK
+
+PASS "roster tick"
+NOTE "roster_status_board: done"
+CLEAR_ERR
+EXIT 0 "roster ok"

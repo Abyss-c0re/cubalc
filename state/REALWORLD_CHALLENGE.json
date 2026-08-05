@@ -1,118 +1,118 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 22,
-  "program": "programs/realworld/priority_fifo_inbox.cubalc",
-  "theme": "priority FIFO inbox PREPEND POPHEAD HASLINE bag queue",
-  "version": "1.15.94-usability",
+  "iter": 23,
+  "program": "programs/realworld/roster_status_board.cubalc",
+  "theme": "roster status board FINDLINE SETLINE REMOVELINE name:status",
+  "version": "1.15.96-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_priority_fifo",
-      "cmd": "CUBALC_QUEUE_PUSH='jobA jobB jobC' CUBALC_QUEUE_PRIORITY=urgent1 CUBALC_QUEUE_MAX=3 run -q -s",
+      "name": "add_set_list",
+      "cmd": "ARG0=add/set/list name status under private STATE",
       "ok": true,
-      "note": "prio PREPEND first; processed urgent1,jobA,jobB; remain jobC; enq=3 prio=1 proc=3"
+      "note": "add api/worker/peer; SETLINE api idle\u2192busy via FINDLINE; list depth=3"
     },
     {
-      "name": "second_tick_dedupe_done",
-      "cmd": "re-run with PUSH jobA jobC after first tick",
+      "name": "exact_name_not_substring",
+      "cmd": "add myapi + api; set api=down",
       "ok": true,
-      "note": "HASLINE skip done jobA + already-queued jobC; process remain jobC; queue empty"
+      "note": "EACH+BEFORE+EQS keeps myapi:idle; only api\u2192api:down (GREP api: would corrupt myapi)"
     },
     {
-      "name": "empty_require_exit2",
-      "cmd": "CUBALC_QUEUE_REQUIRE=1 empty STATE run -q -s",
+      "name": "remove_ack_sweep",
+      "cmd": "remove myapi; ack; sweep :busy",
       "ok": true,
-      "note": "EXIT 2 inbox empty; plate ok=false exit_code=2"
+      "note": "REMOVELINE by exact old_entry; sweep drops all :busy tokens"
     },
     {
-      "name": "words_comma_one_token",
-      "cmd": "CUBALC_QUEUE_PUSH=a,b,c",
+      "name": "set_miss_require",
+      "cmd": "CUBALC_ROSTER_REQUIRE=1 set ghost",
       "ok": true,
-      "note": "WORDS keeps a,b,c as single job id \u2014 same class as prior W2"
+      "note": "EXIT 2 set miss; err_line points at EXIT"
     },
     {
-      "name": "print_json_bag_collapse",
-      "cmd": "PRINT_JSON processed after multi POPHEAD",
+      "name": "grep_false_friend_repro",
+      "cmd": "SYS GREP api: on myapi:idle",
       "ok": true,
-      "note": "processed shows as p2p1 \u2014 newlines collapsed in JSON string"
+      "note": "documented: GREP matches substring \u2014 program avoids for identity"
     },
     {
-      "name": "write_append_glue",
-      "cmd": "SYS WRITE path line1; SYS APPEND path line2",
+      "name": "print_json_roster_collapse",
+      "cmd": "PRINT_JSON roster on list",
       "ok": true,
-      "note": "file becomes line1line2 \u2014 no auto NL between WRITE body and APPEND"
+      "note": "roster string collapses newlines between entries"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "68/68 pass incl hasline prepend"
+      "note": "71/71 pass incl removeline findline setline"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|plate",
-      "title": "WRITE body has no trailing NL \u2014 APPEND glues next line",
-      "detail": "SYS WRITE path 'line1' then SYS APPEND path 'line2' yields file bytes 'line1line2\\n'. Line-oriented report plates built with WRITE header + APPEND fields silently corrupt the first boundary. Agents must PUSH into a bag then single WRITE, or ensure header ends with \\n (no easy in-lang ensure-NL form).",
-      "repro": "WRITE /tmp/t 'line1'; APPEND /tmp/t 'line2' \u2192 cat -A shows line1line2$"
+      "area": "host|bag",
+      "title": "GREP is substring \u2014 unsafe for name:status identity keys",
+      "detail": "SYS GREP 'api:' on bag containing 'myapi:idle' matches and HEAD returns myapi:idle. Agents that locate-then-SETLINE via GREP silently mutate the wrong row. No field-prefix or ^anchor GREP. Must EACH LINE + BEFORE ':' + EQS for exact name.",
+      "repro": "roster=myapi:idle; GREP 'api:' \u2192 myapi:idle; SETLINE rewrites to api:down"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "cli",
-      "title": "PRINT_JSON collapses newlines inside bag strings",
-      "detail": "PRINT_JSON processed after multi-job FIFO shows 'p2p1' not 'p2\\np1'. Agents cannot re-parse multi-line bag fields from JSON dumps; must use scalar counts or plate files.",
-      "repro": "LET bag='a\\nb'; PRINT_JSON bag \u2192 \"bag\":\"ab\" class collapse"
+      "area": "host",
+      "title": "No string concat \u2014 name:status needs REPLACEALL template",
+      "detail": "Cannot LET entry = NAME + ':' + STATUS. Program uses REPLACEALL on 'NAME:STATUS' placeholders. If NAME equals 'STATUS' or status embeds placeholder tokens, template corrupts. SYS JOIN is path-only (inserts /).",
+      "repro": "NAME=STATUS STATUS=idle via template \u2192 idle:idle class corruption"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host",
-      "title": "WORDS is whitespace-only \u2014 comma job lists stay one token",
-      "detail": "CUBALC_QUEUE_PUSH=a,b,c enqueues one job id 'a,b,c'. Same WORDS edge as mesh fanout; agents need SPLIT ',' first for CSV-style env.",
-      "repro": "WORDS 'a,b,c' \u2192 single field; DONE plate has a,b,c"
+      "area": "host|bag",
+      "title": "FINDLINE/HASLINE/REMOVELINE are exact-field only \u2014 no prefix find",
+      "detail": "Cannot FINDLINE bag 'api' to hit 'api:busy'. Update-by-name always needs a secondary walk (EACH+BEFORE) then FINDLINE full line then SETLINE. Verbose for the primary roster use case the ops were meant to unlock.",
+      "repro": "FINDLINE 'api:idle\\nworker:busy' 'api' \u2192 LAST_N=-1"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "SYS PUSH of a multi-line string expands into multiple fields",
-      "detail": "SYS PUSH bag 'a\\nb' increases field count by 2 (hdr\u21923 fields). Cannot push a multi-line blob as one opaque field; report 'processed' section becomes flat fields after the key. Agents needing opaque blobs need REPLACEALL of \\n or a dedicated escape.",
-      "repro": "PUSH 'hdr' + 'a\\nb' \u2192 LINES=3"
+      "area": "cli",
+      "title": "PRINT_JSON collapses multi-line roster bags",
+      "detail": "PRINT_JSON roster shows api:busyworker:busypeer:ready without separators. Agents must read STATE plate file for structure.",
+      "repro": "list action PRINT_JSON roster"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "host|plate",
-      "title": "WRITE of bag often omits final trailing newline",
-      "detail": "QUEUE.txt after single remain field is 'jobC' without trailing $. Multi-line bags write internal \\n but last field has no final NL. Harmless for CubalC READ/LINES; shell wc -l and some editors undercount.",
-      "repro": "WRITE q_path 'jobC'; cat -A \u2192 jobC (no $)"
+      "title": "WRITE roster often omits final trailing newline",
+      "detail": "Last field on ROSTER.txt has no trailing NL (cat -A shows no $ on last line). CubalC READ/LINES ok; shell line tools undercount.",
+      "repro": "cat -A ROSTER.txt after multi-add"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "flow",
-      "title": "Multi-PREPEND reverses listed priority order",
-      "detail": "EACH PREPEND p1 then p2 leaves p2 at front (POPHEAD first). Documented intentional for stack-front insert; agents who want list-order priority must REVL the prio list first or PREPEND in reverse.",
-      "repro": "PRIORITY='p1 p2' \u2192 processed p2 then p1"
+      "area": "host|bag",
+      "title": "REMOVELINE removes only first exact match",
+      "detail": "Duplicate name:status tokens leave residuals after one ack. Agents need loop or UNIQ discipline.",
+      "repro": "REMOVELINE 'x\\ny\\nx' 'x' \u2192 'y\\nx'"
     }
   ],
   "workarounds": [
-    "Build report bags with SYS PUSH then one SYS WRITE (avoid WRITE+APPEND for multi-field plates)",
-    "PRINT_JSON only scalar counters; put multi-line lists on STATE plates",
-    "SPLIT ',' before WORDS for CSV job env lists",
-    "REVL prio list before EACH PREPEND if list order should match POPHEAD order",
-    "APPEND alone for line logs (DONE.txt) \u2014 it terminates lines; do not mix bare WRITE without NL"
+    "EACH LINE + BEFORE ':' + EQS for exact roster name identity (never GREP name:)",
+    "REPLACEALL template for name:status; avoid names equal to placeholder tokens",
+    "FINDLINE full old_entry then SETLINE idx new_entry",
+    "PRINT_JSON scalars only; dump roster via plate path",
+    "Bag WRITE for whole roster bag (avoid WRITE+APPEND glue)"
   ],
   "language_gaps": [
-    "WRITE that always ends plates with trailing newline (or APPEND that separates if missing NL)",
-    "PRINT_JSON escape of \\n \\t in string values",
-    "PUSH_FIELD / push with escape so multi-line blobs stay one field",
-    "WORDS sep=',' or TOKENIZE with custom delimiter (SPLIT already exists \u2014 doc recipe)",
-    "Optional FIFO plate form (enqueue/dequeue durable queue without manual WRITE loop)"
+    "Field-prefix match / GREP ^anchor or HASPREFIX line filter",
+    "String concatenation (or SYS CAT a b \u2192 LAST without path slash)",
+    "FINDLINE by key prefix or key=value peel helper",
+    "PRINT_JSON escape of newlines in string values",
+    "WRITE ensure trailing newline option"
   ],
-  "commit": "a777218031715f257c5afd8d5dd4ed3d9bfddf46",
-  "ts": "2026-08-05T13:14:31Z"
+  "commit": null,
+  "ts": "2026-08-05T13:38:55Z"
 }
