@@ -1,120 +1,132 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 2,
-  "program": "programs/realworld/agent_health_plate.cubalc",
-  "theme": "multi-probe agent health \u2192 plate under CUBALC_STATE (layout/env/optional lib/soft dial)",
-  "version": "1.15.43-usability",
+  "iter": 3,
+  "program": "programs/realworld/config_worker.cubalc",
+  "theme": "scaffold-and-extend: cubalc init \u2192 config-driven worker (job modes, EXIT, PID/HOST, INCLUDE ONCE)",
+  "version": "1.15.46-usability",
   "pass": true,
   "tests": [
     {
-      "name": "positive_quiet_strict",
-      "cmd": "CUBALC_STATE=/tmp/cubalc_rw_$$ mkdir -p $CUBALC_STATE && ./out/cubalc run -q -s programs/realworld/agent_health_plate.cubalc",
+      "name": "decide_default_strict",
+      "cmd": "CUBALC_STATE=/tmp/\u2026 mkdir -p; ./out/cubalc run -q -s programs/realworld/config_worker.cubalc",
       "ok": true,
-      "note": "18 asserts; writes AGENT_HEALTH.json + .txt under absolute STATE; exit 0"
+      "note": "default job=decide; EXIT 0; plate CONFIG_WORKER.txt under STATE"
     },
     {
-      "name": "role_env_and_arg",
-      "cmd": "CUBALC_AGENT_ROLE=probe / CUBALC_ARG0=scheduler with -q -s",
+      "name": "decide_arg1_digit",
+      "cmd": "CUBALC_ARG1=7 run -q -s",
       "ok": true,
-      "note": "SYS ARG 0 OR then ENV OR resolves role without shell glue for values"
+      "note": "SETDIGIT 7 used as job result (avoid re-DECIDE clobber)"
     },
     {
-      "name": "soft_p2p_peer_miss",
-      "cmd": "CUBALC_P2P_SOFT=1 CUBALC_P2P_TIMEOUT=400 CUBALC_P2P_PEER=127.0.0.1:1 run -q -s",
+      "name": "job_identity_dry_report",
+      "cmd": "CUBALC_ARG0=identity|dry|report run -q -s",
       "ok": true,
-      "note": "soft dial fails, FAIL/PASS/CLEAR_ERR recovery, health plate still written"
+      "note": "early EXIT 0 branches; SYS PID/HOSTNAME + VARS on identity"
     },
     {
-      "name": "peer_without_soft_skip",
-      "cmd": "CUBALC_P2P_PEER=127.0.0.1:9 (no SOFT) run -q -s",
-      "ok": true,
-      "note": "program refuses hard dial inside health script; recovers via policy FAIL/PASS/CLEAR_ERR"
-    },
-    {
-      "name": "state_parent_missing",
-      "cmd": "CUBALC_STATE=/tmp/cubalc_missing_parent_$$ (no mkdir) run -q",
+      "name": "job_fail_exit_7",
+      "cmd": "CUBALC_ARG0=fail run -q",
       "ok": false,
-      "note": "expected: write: No such file or directory; exit 1; err_line=0 err_src empty"
+      "note": "expected: process rc=7, plate exit_code=7, last_err EXIT 7\u2026"
     },
     {
-      "name": "strict_sticky_footgun",
-      "cmd": "INCLUDE OR miss; PASS; no CLEAR_ERR; run -q -s",
+      "name": "job_unknown_exit_2",
+      "cmd": "CUBALC_ARG0=nope run -q",
       "ok": false,
-      "note": "expected: plate ok=false exit 1 despite PASS recovery \u2014 documents -s vs CLEAR_ERR"
+      "note": "expected: process rc=2 bad config"
+    },
+    {
+      "name": "env_job_override",
+      "cmd": "CUBALC_JOB=identity (no ARG0) run -q -s",
+      "ok": true,
+      "note": "SYS ENV CUBALC_JOB OR decide"
+    },
+    {
+      "name": "exit0_sticky_strict_footgun",
+      "cmd": "FAIL; EXIT 0; run -q -s",
+      "ok": false,
+      "note": "expected: exit_code=0 in plate but process rc=1 and ok=false under -s; last_err still FAIL"
+    },
+    {
+      "name": "state_missing_parent",
+      "cmd": "CUBALC_STATE=/tmp/no_parent_$$ (no mkdir) run -q -s",
+      "ok": false,
+      "note": "write fatal; err_line=0 err_src empty; exit_code plate may stay 0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "18/18 green"
+      "note": "21/21 green"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "error|cli",
-      "title": "SYS WRITE fatal has err_line=0 and empty err_src",
-      "detail": "When SYS WRITE fails (missing parent dir, EACCES, etc.) the run plate sets err/last_err to 'write: No such file or directory' but err_line stays 0 and err_src is \"\". Agents cannot jump to the failing statement; differs from ASSERT/FAIL/INCLUDE which fill line+src.",
-      "repro": "CUBALC_STATE=/tmp/no_such_parent_$$ ./out/cubalc run -q programs/realworld/agent_health_plate.cubalc \u2192 err_line:0 err_src:\"\""
+      "area": "cli|error",
+      "title": "EXIT 0 does not clear sticky last_err; -s still fails the process",
+      "detail": "FAIL then EXIT 0 yields plate exit_code=0 halted=true but last_err remains the FAIL text. With run -s, process rc=1 and ok=false despite intentional clean EXIT. Agents cannot treat EXIT 0 as unconditional success under strict mode without CLEAR_ERR first.",
+      "repro": "printf 'HOLD_FLASH 1\\nFAIL \"soft\"\\nEXIT 0 \"claim\"\\n' | ./out/cubalc run - -q -s \u2192 rc=1 ok=false exit_code=0 last_err=FAIL\u2026"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "cli|error",
-      "title": "PASS recovery still fails run -s until CLEAR_ERR",
-      "detail": "PASS restores OK/STATUS_OK but leaves sticky last_err. cubalc run -s flips plate ok=false and exit 1 even when the program intentionally recovered. Multi-probe health scripts must remember CLEAR_ERR after every soft path; easy agent footgun after INCLUDE OR / EXPECT / FAIL.",
-      "repro": "INCLUDE OR missing_lib; PASS \"ok\"; STATUS; cubalc run -q -s \u2192 ok:false exit 1"
+      "area": "matrix|semantics",
+      "title": "SETDIGIT then IMPULSE/FLOW/DECIDE can yield a different digit",
+      "detail": "Observed SETDIGIT peer0 \u2192 7 then IMPULSE+FLOW+DECIDE brain \u2192 8. Config workers that inject a host digit cannot naively DECIDE afterward and expect the same value. No in-lang doc form warns; must treat SETDIGIT as the result or avoid post-seed FLOW.",
+      "repro": "SETDIGIT peer0 7; IMPULSE peer0; FLOW 2; DECIDE brain \u2014 dig may not be 7"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "io|env",
-      "title": "No SYS MKDIR; CUBALC_STATE parent must pre-exist",
-      "detail": "SYS STATE returns the configured path but does not create it. SYS WRITE does not mkdir -p parents. Real agents still need shell mkdir -p \"$CUBALC_STATE\" before any plate worker \u2014 partial shell glue the language claims to remove.",
-      "repro": "export CUBALC_STATE=/tmp/new_$$ (no mkdir); SYS WRITE under STATE \u2192 write fatal"
+      "area": "string|sys",
+      "title": "No SYS NUM <var>; must CAT into LAST before parse",
+      "detail": "SYS NUM always parses LAST. After SYS EQS job_arg \"\", LAST is the compare result (0/1), so SYS NUM silently digests the boolean. Workaround: SYS CAT job_arg \"\" then SYS NUM. Easy footgun in config-driven ARG paths.",
+      "repro": "LET a=\"7\"; SYS EQS a \"\"; SYS NUM \u2192 parses EQS residue not \"7\""
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "print|agent",
-      "title": "PRINT of string vars emits length only",
-      "detail": "PRINT role with role=\"worker\" prints 6 (LAST_N/len), not the characters. Agents debugging multi-probe scripts misread role/path/id as numbers unless they use PRINT_JSON/VARS. Surprising vs PRINT of numbers and board tokens.",
-      "repro": "LET role = \"worker\"; PRINT role \u2192 outputs 6"
+      "area": "flow|docs",
+      "title": "No human-plane job dispatch (CASE/switch missing from forms)",
+      "detail": "Config workers need multi-mode branches. LANGUAGE.md mentions CASE/WHEN but cubalc forms CASE and search case return n=0. Real programs become long SYS EQS ladders with nested IF \u2014 ugly for agents to emit and maintain.",
+      "repro": "./out/cubalc forms CASE \u2192 n=0; ./out/cubalc search case \u2192 n=0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "io|string",
-      "title": "Dynamic JSON plates require fragile quote-escape + multi CAT",
-      "detail": "SYS WRITE accepts a JSON string only when source file preserves escapes; building {\"role\":$role,\"digit\":$dig} in-language needs chained SYS CAT and careful quoting. Health plate ends up with hardcoded role/digit fields or plain .txt sidecar \u2014 not a first-class agent plate builder.",
-      "repro": "try SYS WRITE path with interpolated LET role in JSON body \u2014 no clean form; see static schema in agent_health_plate"
+      "area": "error|io",
+      "title": "WRITE fatal still err_line=0; plate exit_code stays 0",
+      "detail": "Missing CUBALC_STATE parent: err=write: No such file\u2026, process rc=1, but exit_code field remains 0 and err_src empty. CI parsers that only read exit_code miss the failure mode vs EXIT n.",
+      "repro": "CUBALC_STATE=/tmp/missing_$$ ./out/cubalc run -q programs/realworld/config_worker.cubalc"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "include",
-      "title": "INCLUDE SOFT runs lib body (side effects), not presence-only",
-      "detail": "INCLUDE SOFT mesh_exchange executes SMX EXCHANGE and can place/touch peer0/peer1 before the caller is ready. Health scripts must use SYS WHICH / REQUIRE LIB for catalog presence; soft INCLUDE is not a dry resolve.",
-      "repro": "INCLUDE SOFT mesh_exchange with no prior CUBE peer0 peer1 \u2014 still runs EXCHANGE (n cubes may change)"
+      "area": "init|docs",
+      "title": "cubalc init scaffold DECIDE kernel (host) not braincube",
+      "detail": "Generated starter places host+body and DECIDE kernel. Works (ok plate) but is not the peer_decide recipe; agents extending init without reading matrix law get weak/odd digits. Scaffold could INCLUDE peer_decide pattern or place braincube.",
+      "repro": "cubalc init /tmp/t.cubalc && cubalc run -q /tmp/t.cubalc"
     }
   ],
   "workarounds": [
-    "After every INCLUDE OR / EXPECT fail / intentional FAIL: PASS then CLEAR_ERR before STATUS or exit when using run -s",
-    "Host: mkdir -p \"$CUBALC_STATE\" before plate workers",
-    "Build plate paths with SYS STATE + SYS CAT state_dir \"/name.json\" (absolute STATE works)",
-    "Probe optional libs with SYS WHICH, not INCLUDE SOFT, when body has side effects",
-    "Prefer PRINT_JSON / VARS / STATUS over PRINT for string values",
-    "Write simple .txt plates when dynamic JSON is too painful"
+    "CLEAR_ERR immediately before EXIT 0 when any soft FAIL/EXPECT/INCLUDE OR ran",
+    "For host-injected digits: SETDIGIT then use LAST_N/dig directly; do not re-DECIDE after FLOW",
+    "SYS CAT var \"\" before SYS NUM to parse a string variable",
+    "mkdir -p \"$CUBALC_STATE\" before plate workers",
+    "Dispatch jobs with SYS EQS ladders until CASE is catalogued",
+    "Prefer plate ok + process rc over exit_code alone when WRITE may fatal"
   ],
   "language_gaps": [
-    "SYS MKDIR / ensure STATE dir exists",
-    "err_line/err_src on host I/O fatals (WRITE/READ)",
-    "PRINT should show string content (or PRINT_STR) not only length",
-    "In-language JSON object builder / SYS WRITE_JSON for agent plates",
-    "Path join form (STATE + name) and optional dry INCLUDE resolve",
-    "In-program enable of CUBALC_P2P_SOFT for health dials without host export (from iter1; still true)"
+    "EXIT 0 should optionally clear sticky last_err or document -s interaction",
+    "SYS NUM name | SYS INT name for variable parse",
+    "Human-plane CASE/WHEN or JOB dispatch form in forms catalog",
+    "err_line/err_src on SYS WRITE fatals; non-zero exit_code on I/O fatal",
+    "SETDIGIT stickiness vs DECIDE semantics documented in cookbook",
+    "init template closer to agent real paths (braincube / STATUS / optional EXIT)"
   ],
-  "commit": "355242a",
-  "ts": "2026-08-05T04:54:16Z"
+  "commit": "e5deec1",
+  "ts": "2026-08-05T05:18:46Z"
 }

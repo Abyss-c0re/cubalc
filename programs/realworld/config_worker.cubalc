@@ -1,0 +1,234 @@
+# config_worker.cubalc — scaffold-and-extend of `cubalc init`
+#
+# Real use: CI / agent host launches one binary program with job mode:
+#   CUBALC_ARG0=decide|report|identity|dry|fail   (or CUBALC_JOB)
+#   CUBALC_ARG1 = optional note / digit string
+#   CUBALC_STATE = private plate dir (mkdir -p first)
+#
+# Started as: cubalc init programs/realworld/config_worker.cubalc
+# Evolved into: config-driven worker with identity plate, soft optional
+# hooks, INCLUDE ONCE, and EXIT codes for process-oriented CI.
+#
+# Exit contract (process rc):
+#   0  success / dry-run / identity report
+#   2  unknown job mode (bad config)
+#   3  hard gate failed (ASSERT path — not used with EXIT)
+#   7  intentional job=fail (smoke for non-zero EXIT)
+#
+# Run:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=decide  ./out/cubalc run -q -s programs/realworld/config_worker.cubalc
+#   CUBALC_ARG0=identity ./out/cubalc run -q -s programs/realworld/config_worker.cubalc
+#   CUBALC_ARG0=fail    ./out/cubalc run -q programs/realworld/config_worker.cubalc; echo rc:$?
+#
+# Edges pushed:
+#   empty ARG OR "" · job from ENV · INCLUDE ONCE double agent_boot path
+#   EXIT 0 vs sticky last_err under run -s · EXIT non-zero rc
+#   SYS PID/HOSTNAME plate stamp · STATE path CAT · optional INCLUDE OR
+
+# --- init seed (kept) + version/lib floor ---
+INCLUDE agent_boot
+# agent_boot already INCLUDEs hold_seed; ONCE should skip reload
+INCLUDE ONCE hold_seed
+EXPECT INCLUDE_SKIPPED == 1 "ONCE hold_seed after agent_boot should skip"
+IF OK == 0 THEN
+  PASS "ONCE skip not sticky-fatal for worker"
+  CLEAR_ERR "once probe soft"
+END
+
+NOTE "config_worker: boot"
+
+# --- host identity (no shell uname/$$) ---
+SYS PID
+ASSERT PID > 0 "pid"
+LET worker_pid = PID
+SYS HOSTNAME
+ASSERT LAST_N > 0 "hostname"
+LET worker_host = LAST
+SYS MS
+LET t0 = MS
+
+# --- job mode: ARG0 then ENV CUBALC_JOB then default decide ---
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET job = LAST
+ELSE
+  SYS ENV "CUBALC_JOB" OR "decide"
+  LET job = LAST
+END
+SYS ARG 1 OR ""
+LET job_arg = LAST
+
+NOTE "job resolved"
+
+# --- optional extension hook (soft) ---
+INCLUDE OR worker_hooks_local_zz
+IF OK == 0 THEN
+  NOTE "no local worker_hooks — stock path"
+  PASS "optional hooks absent"
+  CLEAR_ERR "hooks soft recovered"
+END
+
+# --- layout for plate ---
+SYS STATE
+ASSERT LAST_N > 0 "STATE"
+LET state_dir = LAST
+SYS CAT state_dir "/CONFIG_WORKER.txt"
+LET plate_path = LAST
+
+# ============================================================================
+# job modes
+# ============================================================================
+
+SYS EQS job "dry"
+IF LAST_N == 1 THEN
+  NOTE "dry-run: no board, write plate only"
+  SYS WRITE plate_path "cubalc.config_worker.v1 job=dry ok=1"
+  STATUS
+  ASSERT STATUS_OK == 1
+  PRINT_JSON job worker_pid STATUS_OK
+  EXIT 0 "dry done"
+END
+
+SYS EQS job "identity"
+IF LAST_N == 1 THEN
+  NOTE "identity plate for multi-process agents"
+  SYS WRITE plate_path "cubalc.config_worker.v1 job=identity ok=1"
+  STATUS
+  PRINT_JSON job worker_pid STATUS_OK
+  # VARS carries HOSTNAME/PID for agents (PRINT mangles strings to lengths)
+  VARS
+  EXIT 0 "identity done"
+END
+
+SYS EQS job "fail"
+IF LAST_N == 1 THEN
+  NOTE "intentional CI fail smoke"
+  SYS WRITE plate_path "cubalc.config_worker.v1 job=fail ok=0"
+  EXIT 7 "config_worker job=fail"
+END
+
+SYS EQS job "report"
+IF LAST_N == 1 THEN
+  # report-only: STATUS + libs present, no decide
+  REQUIRE LIB peer_decide
+  SYS WHICH mesh_exchange
+  EXPECT LAST_N > 0 "mesh_exchange in catalog"
+  IF OK == 0 THEN
+    PASS "mesh optional for report"
+    CLEAR_ERR
+  END
+  STATUS
+  SYS WRITE plate_path "cubalc.config_worker.v1 job=report ok=1"
+  PRINT_JSON job worker_pid STATUS_OK
+  EXIT 0 "report done"
+END
+
+SYS EQS job "decide"
+IF LAST_N == 0 THEN
+  # unknown job — process-oriented bad config
+  FAIL "unknown job mode"
+  # sticky last_err + EXIT non-zero: document interaction
+  SYS WRITE plate_path "cubalc.config_worker.v1 job=unknown ok=0"
+  EXIT 2 "unknown job mode"
+END
+
+# --- job=decide (default): evolved init place/plug/flow ---
+# init template used DECIDE kernel (host). Real decide wants braincube.
+REQUIRE LIB peer_decide
+
+CUBE kernel ROLE host PROTON 1
+CUBE hive ROLE body PROTON 1
+CUBE peer0 ROLE host PROTON 1
+CUBE brain ROLE braincube PROTON 1
+
+PLUG kernel hive
+PLUG peer0 brain
+IMPULSE kernel
+FLOW 2
+
+# optional digit from ARG1 / env
+# Gap: no SYS NUM <var> — must put string into LAST first (SYS CAT x "" works).
+SYS EQS job_arg ""
+IF LAST_N == 1 THEN
+  # empty ARG1 — env digit or default bits then DECIDE from matrix
+  SYS ENV "CUBALC_PEER0_DIGIT" OR ""
+  IF LAST_N > 0 THEN
+    SYS NUM
+    SETDIGIT peer0 LAST_N
+    LET dig = LAST_N
+    LET dig_locked = 1
+  ELSE
+    SETBIT peer0 0 1
+    SETBIT peer0 2 1
+    SETBIT peer0 4 1
+    LET dig_locked = 0
+  END
+ELSE
+  SYS CAT job_arg ""
+  SYS NUM
+  IF OK == 1 THEN
+    IF LAST_N >= 0 THEN
+      IF LAST_N <= 9 THEN
+        SETDIGIT peer0 LAST_N
+        LET dig = LAST_N
+        LET dig_locked = 1
+      ELSE
+        LET dig_locked = 0
+      END
+    ELSE
+      LET dig_locked = 0
+    END
+  ELSE
+    FAIL "ARG1 not a digit 0..9"
+    PASS "fall back to default bits"
+    CLEAR_ERR
+    SETBIT peer0 0 1
+    SETBIT peer0 2 1
+    SETBIT peer0 4 1
+    LET dig_locked = 0
+  END
+END
+
+SYS WHICH peer_decide
+ASSERT LAST_N > 0 "peer_decide lib present (REQUIRE already)"
+
+# If SETDIGIT locked a digit, trust it — further IMPULSE/FLOW/DECIDE can
+# recompute a different algocube digit (observed: SETDIGIT 7 then DECIDE → 8).
+IF dig_locked == 1 THEN
+  NOTE "using SETDIGIT lock as job result"
+ELSE
+  IMPULSE peer0 1
+  IMPULSE brain 1
+  FLOW 2
+  DECIDE brain
+  LET dig = DECIDE
+END
+ASSERT dig >= 0 "digit"
+ASSERT dig <= 9
+
+# ONCE smoke on hold_seed already done at boot; re-assert skip path
+INCLUDE ONCE hold_seed
+EXPECT INCLUDE_SKIPPED == 1 "hold_seed remains once-skipped"
+IF OK == 0 THEN
+  PASS "ONCE skip soft"
+  CLEAR_ERR
+END
+
+STATUS
+ASSERT STATUS_OK == 1 "clean before plate write"
+
+SYS WRITE plate_path "cubalc.config_worker.v1 job=decide ok=1"
+SYS EXIST plate_path
+ASSERT EXIST == 1 "worker plate written"
+
+SYS MS
+LET elapsed = MS
+NOTE "config_worker: decide done"
+PRINT "decide" dig worker_pid
+PRINT_JSON job dig worker_pid STATUS_OK
+STATUS
+
+# Clean EXIT — must CLEAR_ERR first if any soft path left residue
+CLEAR_ERR "ready to exit clean"
+EXIT 0 "decide ok"
