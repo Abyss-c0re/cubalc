@@ -1,0 +1,67 @@
+# SYS EXTNAME / STEM — extension and stem without shell
+# Usability: agents peel JOIN/WHICH paths for plate type and bare names
+
+HOLD_FLASH 1
+
+SYS EXTNAME "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N == 7 ".cubalc"
+SYS EQS LAST ".cubalc"
+ASSERT LAST_N == 1
+SYS EQS EXT ".cubalc"
+ASSERT LAST_N == 1
+
+SYS STEM "programs/lib/hold_seed.cubalc"
+ASSERT OK == 1
+ASSERT LAST_N == 9 "hold_seed"
+SYS EQS LAST "hold_seed"
+ASSERT LAST_N == 1
+SYS EQS STEM "hold_seed"
+ASSERT LAST_N == 1
+
+# full path → stem is leaf without final ext
+SYS STEM "a/b/c.tar.gz"
+ASSERT LAST_N == 5 "c.tar"
+SYS EQS LAST "c.tar"
+ASSERT LAST_N == 1
+SYS EXTNAME "a/b/c.tar.gz"
+ASSERT LAST_N == 3 ".gz"
+SYS EQS LAST ".gz"
+ASSERT LAST_N == 1
+
+# no extension
+SYS EXTNAME "readme"
+ASSERT LAST_N == 0
+SYS STEM "readme"
+ASSERT LAST_N == 6
+SYS EQS LAST "readme"
+ASSERT LAST_N == 1
+
+# dotfile has no extension
+SYS EXTNAME ".gitignore"
+ASSERT LAST_N == 0
+SYS STEM ".gitignore"
+ASSERT LAST_N == 10
+
+# aliases
+SYS EXT "x/y.z"
+ASSERT LAST_N == 2 ".z"
+SYS SUFFIX "x/y.z"
+ASSERT LAST_N == 2
+SYS ROOTNAME "x/y.z"
+ASSERT LAST_N == 1 "y"
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# var path
+LET P = "state/plate.json"
+SYS STEM P
+ASSERT LAST_N == 5 "plate"
+SYS EQS LAST "plate"
+ASSERT LAST_N == 1
+SYS EXTNAME P
+ASSERT LAST_N == 5 ".json"
+SYS EQS LAST ".json"
+ASSERT LAST_N == 1
+
+PRINT "sys_extname ok"

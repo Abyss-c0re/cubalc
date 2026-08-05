@@ -314,6 +314,66 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS EXTNAME|EXT|SUFFIX path — final extension with leading '.' → LAST/EXT
+     * SYS STEM path — basename without extension → LAST/STEM
+     * Usability: peel JOIN/WHICH paths for plate stems and type tags. */
+    if (kw(&L->cur,"EXTNAME") || kw(&L->cur,"EXT") || kw(&L->cur,"SUFFIX") ||
+        kw(&L->cur,"EXTENSION") || kw(&L->cur,"STEM") || kw(&L->cur,"ROOTNAME")){
+      int want_ext = (kw(&L->cur,"EXTNAME") || kw(&L->cur,"EXT") ||
+                     kw(&L->cur,"SUFFIX") || kw(&L->cur,"EXTENSION"));
+      char path[512], leaf[512], out[512];
+      const char *slash, *dot, *base;
+      size_t n;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path)!=0){
+        fail(vm, want_ext ? "SYS EXTNAME \"path\"|LAST"
+                          : "SYS STEM \"path\"|LAST");
+        return -1;
+      }
+      /* strip trailing separators */
+      n = strlen(path);
+      while (n > 1 && (path[n - 1] == '/' || path[n - 1] == '\\')) {
+        path[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(path);
+      if (slash && slash[1])
+        snprintf(leaf, sizeof leaf, "%s", slash + 1);
+      else if (slash && (slash[0] == '/' || slash[0] == '\\') && !slash[1])
+        snprintf(leaf, sizeof leaf, "%s", path);
+      else
+        snprintf(leaf, sizeof leaf, "%s", path[0] ? path : ".");
+      base = leaf;
+      /* last '.' that is not the first char (dotfiles have no extension) */
+      dot = strrchr(leaf, '.');
+      if (dot && dot != leaf) {
+        if (want_ext)
+          snprintf(out, sizeof out, "%s", dot);
+        else {
+          size_t sn = (size_t)(dot - leaf);
+          if (sn >= sizeof out) sn = sizeof out - 1;
+          memcpy(out, leaf, sn);
+          out[sn] = 0;
+        }
+      } else {
+        if (want_ext)
+          out[0] = 0;
+        else
+          snprintf(out, sizeof out, "%s", base);
+      }
+      if (want_ext) {
+        var_set_str(vm, "EXTNAME", out);
+        var_set_str(vm, "EXT", out);
+      } else {
+        var_set_str(vm, "STEM", out);
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)strlen(out);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -1319,7 +1379,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|BASENAME|DIRNAME|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|MS|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1528,6 +1588,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MKDIR", "SYS MKDIR path — mkdir -p · OK if dir exists"},
       {"SYS BASENAME", "SYS BASENAME|LEAF path — final component → LAST"},
       {"SYS DIRNAME", "SYS DIRNAME|PARENT path — parent directory → LAST"},
+      {"SYS EXTNAME", "SYS EXTNAME|EXT|SUFFIX path — final .ext → LAST/EXT"},
+      {"SYS STEM", "SYS STEM|ROOTNAME path — basename without extension → LAST"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
