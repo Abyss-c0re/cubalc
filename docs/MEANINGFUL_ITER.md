@@ -138,6 +138,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 108. ~~**`SYS COUNTLINE` / `COUNTFIELD`**~~ **done** (count exact bag field matches · HASLINE with count).
 109. ~~**`SYS SETMATCH` / `REPLACEMATCH`**~~ **done** (replace first exact bag field by value · status by name).
 110. ~~**`cubalc run -e` / `--expr`**~~ **done** (inline program · multi -e · no temp file).
+111. ~~**`SYS CHDIR` / `CD`**~~ **done** (change process cwd · relative plate I/O without shell).
 
 ## Tick protocol
 

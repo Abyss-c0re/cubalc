@@ -1792,6 +1792,7 @@ int main(int argc, char **argv) {
       {"sys_countline", "programs/proof/649_sys_countline.cubalc", "SYS COUNTLINE count exact bag field matches"},
       {"sys_setmatch", "programs/proof/650_sys_setmatch.cubalc", "SYS SETMATCH replace first exact bag field"},
       {"run_expr", "cli:run -e", "cubalc run -e inline one-liner (no temp file)"},
+      {"sys_chdir", "programs/proof/651_sys_chdir.cubalc", "SYS CHDIR/CD change process cwd"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1979,6 +1980,8 @@ int main(int argc, char **argv) {
       {"SYS UNSETENV", "host", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N was-set"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
+      {"SYS CHDIR", "host", "SYS CHDIR|CD path — change process cwd soft miss"},
+      {"SYS CD", "host", "SYS CD path — alias of SYS CHDIR"},
       {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "host", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},
@@ -3282,6 +3285,8 @@ int main(int argc, char **argv) {
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS WHICH", "host", "SYS WHICH name → LAST path (bin or lib)"},
       {"SYS CWD", "host", "SYS CWD — working directory → LAST"},
+      {"SYS CHDIR", "host", "SYS CHDIR change process cwd"},
+      {"SYS CD", "host", "SYS CD alias of SYS CHDIR"},
       {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "host", "SYS TMP|TEMP|TMPDIR — portable temp dir"},
@@ -3445,6 +3450,7 @@ int main(int argc, char **argv) {
       {"programs/proof/648_sys_moveline.cubalc", "sys_moveline", "SYS MOVELINE move bag field by index"},
       {"programs/proof/649_sys_countline.cubalc", "sys_countline", "SYS COUNTLINE count bag field matches"},
       {"programs/proof/650_sys_setmatch.cubalc", "sys_setmatch", "SYS SETMATCH replace bag field by value"},
+      {"programs/proof/651_sys_chdir.cubalc", "sys_chdir", "SYS CHDIR/CD change process cwd"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

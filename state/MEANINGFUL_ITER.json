@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 77,
-  "version": "1.15.102-usability",
-  "item": "cubalc run -e / --expr inline program",
-  "item_id": 110,
-  "title": "cubalc run -e|--expr|--code|-c inline source no temp file",
-  "commit": "9ce1a33c075692ff734d8aa6bbaf3ed87f1b28b7",
-  "summary": "cubalc run -e CODE (multi -e join; \\n escapes). Top-level cubalc -e alias. plate file=<expr>. selftest run_expr CLI smoke. selftest 77.",
+  "iter": 78,
+  "version": "1.15.103-usability",
+  "item": "SYS CHDIR / CD change process working directory",
+  "item_id": 111,
+  "title": "SYS CHDIR|CD path change process cwd soft miss",
+  "commit": "109ca1dd7c8c177230eae6f45d4a0d457d90e33d",
+  "summary": "SYS CHDIR|CD path change process cwd. LAST_N 0|1 soft miss + sticky LAST_ERR. CHDIR OR soft. Relative READ/WRITE/LIST without shell cd. selftest 78.",
   "proofs": [
-    "cli:run -e",
-    "selftest run_expr n_pass=77"
+    "651_sys_chdir",
+    "selftest n_pass=78"
   ],
-  "when": "2026-08-05T14:39:00Z",
+  "when": "2026-08-05T14:44:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9ce1a33c075692ff734d8aa6bbaf3ed87f1b28b7"
+  "sha": "109ca1dd7c8c177230eae6f45d4a0d457d90e33d"
 }

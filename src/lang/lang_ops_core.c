@@ -869,6 +869,49 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", vm->last_n);
       bump(vm); return 1;
     }
+    /* SYS CHDIR|CD path — change process working directory → LAST = new cwd.
+     * LAST_N = 1 success, 0 soft miss (cwd unchanged). Updates CWD var.
+     * Usability: relative READ/WRITE/LIST under STATE/TMP without shell cd. */
+    if (kw(&L->cur,"CHDIR") || kw(&L->cur,"CD") || kw(&L->cur,"CHDIRTO") ||
+        kw(&L->cur,"SETCWD") || kw(&L->cur,"CHANGE_DIR") || kw(&L->cur,"CHANGEDIR")){
+      char path[512], cwd[512];
+      int soft = 0, ok = 0;
+      lex_next(L);
+      if (kw(&L->cur,"OR") || kw(&L->cur,"SOFT") || kw(&L->cur,"OPTIONAL") ||
+          kw(&L->cur,"TRY") || kw(&L->cur,"MAYBE")){
+        soft = 1;
+        lex_next(L);
+      }
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0]) {
+        ok = 0;
+      } else {
+#if defined(CUBALC_OS_WINDOWS)
+        ok = (_chdir(path) == 0) ? 1 : 0;
+#else
+        ok = (chdir(path) == 0) ? 1 : 0;
+#endif
+      }
+      if (!getcwd(cwd, sizeof cwd))
+        snprintf(cwd, sizeof cwd, ok ? path : ".");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cwd);
+      var_set_str(vm, "LAST", cwd);
+      var_set_str(vm, "CWD", cwd);
+      vm->last_n = ok ? 1 : 0;
+      var_set_num(vm, "LAST_N", ok ? 1 : 0);
+      var_set_num(vm, "CHDIR_N", ok ? 1 : 0);
+      var_set_num(vm, "OK", ok ? 1 : 0);
+      if (!ok && !soft) {
+        /* sticky soft err for agents; not fatal (plate continues) */
+        char em[180];
+        snprintf(em, sizeof em, "CHDIR miss: %s", path[0] ? path : "(empty)");
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"STATE") || kw(&L->cur,"STATEDIR") || kw(&L->cur,"STATE_DIR")){
       char sdir[512];
       const char *e;
@@ -3763,7 +3806,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3968,6 +4011,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS UNSETENV", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N 1 if was set"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
+      {"SYS CHDIR", "SYS CHDIR|CD path — change process cwd · LAST_N 0|1 soft miss"},
+      {"SYS CD", "SYS CD path — alias of SYS CHDIR"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},
       {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SYS TMP", "SYS TMP|TEMP|TMPDIR — portable temp dir → LAST/TMP"},

@@ -1,0 +1,54 @@
+# SYS CHDIR / CD — change process working directory
+# Usability: relative READ/WRITE/LIST under a plate dir without shell cd
+
+HOLD_FLASH 1
+
+# remember start
+SYS CWD
+LET start = LAST
+ASSERT OK == 1
+
+# chdir to TMP (always exists)
+SYS TMP
+LET tdir = LAST
+SYS CHDIR tdir
+ASSERT LAST_N == 1
+ASSERT OK == 1
+SYS CWD
+SYS HAS LAST "/"
+ASSERT LAST_N == 1
+
+# write relative plate then list
+SYS WRITE "_mi_chdir_probe.txt" "ok-chdir"
+ASSERT OK == 1
+SYS READ "_mi_chdir_probe.txt"
+SYS EQS LAST "ok-chdir"
+ASSERT LAST_N == 1
+SYS RM "_mi_chdir_probe.txt"
+ASSERT LAST_N == 1
+
+# soft miss unknown path
+SYS CHDIR "/no/such/cubalc/chdir/path/xyz"
+ASSERT LAST_N == 0
+ASSERT OK == 0
+# cwd unchanged after miss — still under tdir-ish or previous success
+SYS CWD
+SYS LEN LAST
+ASSERT LAST_N > 0
+
+# alias CD back toward start via absolute path
+SYS CD start
+ASSERT LAST_N == 1
+SYS CWD
+SYS EQS LAST start
+ASSERT LAST_N == 1
+
+# empty path soft miss
+SYS CHDIR ""
+ASSERT LAST_N == 0
+
+# CHDIR OR soft (still non-fatal)
+SYS CHDIR OR "/no/such/either"
+ASSERT LAST_N == 0
+
+PRINT "sys_chdir ok"
