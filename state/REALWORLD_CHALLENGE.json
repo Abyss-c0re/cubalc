@@ -14,13 +14,13 @@
     },
     {
       "name": "align_auto",
-      "cmd": "align WIDTH=0 → LENALL+MAX auto width 7 (gateway)",
+      "cmd": "align WIDTH=0 \u2192 LENALL+MAX auto width 7 (gateway)",
       "ok": true,
       "note": "auto width path"
     },
     {
       "name": "lpad_rank",
-      "cmd": "lpad 8; rank DESC → gateway first",
+      "cmd": "lpad 8; rank DESC \u2192 gateway first",
       "ok": true,
       "note": "LPADALL + SORTLEN DESC"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "truncate",
-      "cmd": "align width 3 → gateway→gat edge→edg data loss",
+      "cmd": "align width 3 \u2192 gateway\u2192gat edge\u2192edg data loss",
       "ok": true,
       "note": "PADALL truncates silent"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "argmax_empty",
-      "cmd": "ARGMAX \"\" → -1 OK=0",
+      "cmd": "ARGMAX \"\" \u2192 -1 OK=0",
       "ok": true,
       "note": "soft index miss"
     },
@@ -67,8 +67,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "PADALL silently truncates fields longer than width",
-      "detail": "PADALL 'hello' 3 → 'hel' with no FAIL/sticky. Align export can destroy gateway→gat. No PADALL STRICT or refuse-truncate mode.",
-      "repro": "PADALL 'gateway\\nedge' 3 → gat\\nedg"
+      "detail": "PADALL 'hello' 3 \u2192 'hel' with no FAIL/sticky. Align export can destroy gateway\u2192gat. No PADALL STRICT or refuse-truncate mode.",
+      "repro": "PADALL 'gateway\\nedge' 3 \u2192 gat\\nedg"
     },
     {
       "id": "W2",
@@ -91,8 +91,8 @@
       "severity": "med",
       "area": "host|bag",
       "title": "ARGMAX empty returns -1 with OK=0 but easy to NTH wrong",
-      "detail": "Must CMP idx 0 before NTH; NTH -1 behavior may soft-miss. Inconsistent with MAX empty→0.",
-      "repro": "ARGMAX \"\" → -1; MAX \"\" → 0"
+      "detail": "Must CMP idx 0 before NTH; NTH -1 behavior may soft-miss. Inconsistent with MAX empty\u21920.",
+      "repro": "ARGMAX \"\" \u2192 -1; MAX \"\" \u2192 0"
     },
     {
       "id": "W5",
@@ -107,7 +107,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "Auto width via MAX empty still 0 footgun",
-      "detail": "If LENALL empty, MAX→0 then MAX WIDTH 1 forces width 1 — pads nothing useful without clear error.",
+      "detail": "If LENALL empty, MAX\u21920 then MAX WIDTH 1 forces width 1 \u2014 pads nothing useful without clear error.",
       "repro": "align empty handled by BLANK path; mid-empty sizes plate risk"
     },
     {
@@ -142,11 +142,11 @@
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Confirmed silent truncate gateway→gat — highest agent footgun this fire",
-    "PADCH var worked for zero pad (unlike ZIP sep) — inconsistent form binding",
+    "Confirmed silent truncate gateway\u2192gat \u2014 highest agent footgun this fire",
+    "PADCH var worked for zero pad (unlike ZIP sep) \u2014 inconsistent form binding",
     "ARGMAX+MOVELINE pinlong clean for attention",
-    "No language fix — PADALL truncate mode for MEANINGFUL_ITER"
+    "No language fix \u2014 PADALL truncate mode for MEANINGFUL_ITER"
   ],
-  "commit": "pending",
+  "commit": "6adfc3f27250cb7d2228546a7edf0b234264b076",
   "ts": "2026-08-05T21:58:00Z"
 }
