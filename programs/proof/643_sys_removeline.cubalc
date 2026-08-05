@@ -1,0 +1,80 @@
+# SYS REMOVELINE / DROPLINE — drop first exact bag field
+# Usability: ack/dequeue work items after HASLINE without EACH rebuild
+
+HOLD_FLASH 1
+
+# remove middle
+SYS REMOVELINE "a\nb\nc" "b"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# remove first / last
+SYS REMOVELINE "a\nb\nc" "a"
+SYS EQS LAST "b\nc"
+ASSERT LAST_N == 1
+SYS REMOVELINE "a\nb\nc" "c"
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# miss: bag unchanged, LAST_N=0
+SYS REMOVELINE "a\nb" "z"
+ASSERT LAST_N == 0
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# not substring
+SYS REMOVELINE "ERROR boom\nWARN" "ERROR"
+ASSERT LAST_N == 0
+SYS EQS LAST "ERROR boom\nWARN"
+ASSERT LAST_N == 1
+SYS REMOVELINE "ERROR boom\nWARN" "ERROR boom"
+ASSERT LAST_N == 1
+SYS EQS LAST "WARN"
+ASSERT LAST_N == 1
+
+# only first match
+SYS REMOVELINE "x\ny\nx" "x"
+ASSERT LAST_N == 1
+SYS EQS LAST "y\nx"
+ASSERT LAST_N == 1
+
+# aliases
+SYS DROPLINE "1\n2\n3" "2"
+SYS EQS LAST "1\n3"
+ASSERT LAST_N == 1
+SYS DROPFIELD "p\nq" "p"
+SYS EQS LAST "q"
+ASSERT LAST_N == 1
+
+# case-insensitive
+SYS REMOVELINEI "Warn\nError\nInfo" "ERROR"
+ASSERT LAST_N == 1
+SYS EQS LAST "Warn\nInfo"
+ASSERT LAST_N == 1
+SYS REMOVELINE I "A\nB" "b"
+ASSERT LAST_N == 1
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+
+# empty bag / single field
+SYS REMOVELINE "" "x"
+ASSERT LAST_N == 0
+SYS REMOVELINE "solo" "solo"
+ASSERT LAST_N == 1
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# agent pattern: HASLINE then ack remove
+LET q = "peer1\npeer2\npeer3"
+SYS HASLINE q "peer2"
+ASSERT LAST_N == 1
+SYS REMOVELINE q "peer2"
+ASSERT LAST_N == 1
+SYS EQS LAST "peer1\npeer3"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "peer2"
+ASSERT LAST_N == 0
+
+PRINT "sys_removeline ok"

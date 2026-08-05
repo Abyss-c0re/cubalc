@@ -2585,6 +2585,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS REMOVELINE|DROPLINE bag needle — drop first exact field match → LAST bag.
+     * LAST_N = 1 if removed, 0 if miss (bag unchanged). REST not used.
+     * SYS REMOVELINEI — case-insensitive exact field.
+     * Usability: dequeue/ack work items after HASLINE without EACH rebuild. */
+    if (kw(&L->cur,"REMOVELINE") || kw(&L->cur,"DROPLINE") || kw(&L->cur,"DELETELINE") ||
+        kw(&L->cur,"REMOVEFIELD") || kw(&L->cur,"DROPFIELD") || kw(&L->cur,"UNLINE") ||
+        kw(&L->cur,"REMOVELINEI") || kw(&L->cur,"DROPLINEI") || kw(&L->cur,"DELETELINEI") ||
+        kw(&L->cur,"DROPFIELDI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "REMOVELINEI") == 0 || strcmp(op, "DROPLINEI") == 0 ||
+                   strcmp(op, "DELETELINEI") == 0 || strcmp(op, "DROPFIELDI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long removed = 0;
+      size_t nn, flen, o = 0;
+      int first_kept = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      p = bag;
+      while (*p) {
+        int match = 0;
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (!removed && flen == nn) {
+          if (!icase) {
+            match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+          } else {
+            size_t i; match = 1;
+            for (i = 0; i < nn; i++) {
+              char a = start[i], b = needle[i];
+              if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+              if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+              if (a != b) { match = 0; break; }
+            }
+          }
+        }
+        if (match) {
+          removed = 1;
+        } else {
+          if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+          first_kept = 0;
+          if (o + flen < sizeof out) {
+            memcpy(out + o, start, flen);
+            o += flen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, start, take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+        if (*p == '\n') p++;
+      }
+      if (!removed) {
+        /* keep original bag */
+        snprintf(out, sizeof out, "%s", bag);
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = removed;
+      var_set_num(vm, "LAST_N", removed);
+      var_set_num(vm, "REMOVE_N", removed);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS EQS|STREQ a b — string equality → LAST_N 1/0
      * SYS EQSI|IEQS|STREQI — case-insensitive equality (IF after GREPI).
      * SYS EQS I|ICASE a b — same as EQSI. */
@@ -3129,7 +3207,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|TAKE|DROP|SPLIT|WORDS|CUT|COLUMN|SORT|UNIQ|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|EMPTY|BLANK|TIME|MS|SLEEP|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -3398,6 +3476,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS WC", "SYS WC [str] — alias of SYS LINES · field count without shell"},
       {"SYS HASLINE", "SYS HASLINE|HASFIELD bag needle — exact field membership · LAST_N 0|1"},
       {"SYS HASLINEI", "SYS HASLINEI|ILINEIN bag needle — case-insensitive exact field"},
+      {"SYS REMOVELINE", "SYS REMOVELINE|DROPLINE bag needle — drop first exact field · LAST=bag"},
+      {"SYS DROPLINE", "SYS DROPLINE bag needle — alias of SYS REMOVELINE"},
+      {"SYS REMOVELINEI", "SYS REMOVELINEI bag needle — case-insensitive drop first field"},
       {"SYS CUT", "SYS CUT|FIELDN hay sep n — 0-based field by sep · LAST_N=found"},
       {"SYS COLUMN", "SYS COLUMN|COL hay sep n — 1-based field by sep (CSV/path)"},
       {"SYS EMPTY", "SYS EMPTY|ISEMPTY [str] — LAST_N 1 if zero-length · soft plate IF"},
