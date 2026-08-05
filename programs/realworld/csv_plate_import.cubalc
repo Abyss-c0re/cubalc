@@ -1,0 +1,279 @@
+# csv_plate_import.cubalc — CSV/TSV row import via CUT + EMPTY + PUSH
+#
+# Real use: agents drop tabular plates under CUBALC_STATE/in/rows.csv
+# (or path via ARG1). This program:
+#   READ body · EACH LINE · BLANK skip · optional header drop
+#   SYS CUT id,name,status columns by sep
+#   EMPTY required fields → skip/fail count
+#   PUSH accepted summary lines · write ROWS_ACCEPTED.txt + IMPORT_REPORT
+#   optional REQUIRE min accepted
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$
+#   mkdir -p "$CUBALC_STATE/in"
+#   printf 'id,name,status\n1,alpha,ok\n2,,bad\n3,gamma,ok\n' > "$CUBALC_STATE/in/rows.csv"
+#   ./out/cubalc run -q -s programs/realworld/csv_plate_import.cubalc
+#
+# Optional:
+#   CUBALC_ARG0=import|status
+#   CUBALC_ARG1=rel path under STATE (default in/rows.csv)
+#   CUBALC_CSV_SEP=,          (or $'\t' via env hard — use "," default)
+#   CUBALC_CSV_HAS_HEADER=1  (DROP first line)
+#   CUBALC_CSV_REQUIRE=1     (EXIT 2 if zero accepted)
+#   CUBALC_CSV_MIN=1         (min accepted when REQUIRE)
+#
+# Edges:
+#   CUT 0-based vs COLUMN 1-based (easy off-by-one)
+#   CUT out-of-range → empty + LAST_N=0 (same as EMPTY field)
+#   EMPTY vs BLANK (spaces-only name is not EMPTY but is BLANK)
+#   quoted CSV with commas not supported (no CSV parser — gap)
+#   READ OR miss: OK=1 READ_OK=0 — must not test OK alone (high)
+#   PUSH needs LET bag=LAST each time
+#   TRIM still undiscoverable
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "csv_plate_import: start"
+DEFAULT ACTION = "import"
+DEFAULT REL = "in/rows.csv"
+DEFAULT SEP = ","
+DEFAULT HAS_HEADER = 1
+DEFAULT REQUIRE_ONE = 0
+DEFAULT MIN_OK = 1
+LET bag = ""
+LET n_in = 0
+LET n_skip = 0
+LET n_bad = 0
+LET n_ok = 0
+IDENTITY
+SYS DATE
+LET imp_date = DATE
+SYS HOSTNAME
+LET imp_host = LAST
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CSV_ACTION" OR "import"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET REL = LAST
+ELSE
+  SYS ENV "CUBALC_CSV_PATH" OR "in/rows.csv"
+  IF LAST_N > 0 THEN
+    LET REL = LAST
+  END
+END
+SYS ENV "CUBALC_CSV_SEP" OR ""
+IF LAST_N > 0 THEN
+  LET SEP = LAST
+END
+SYS ENV "CUBALC_CSV_HAS_HEADER" OR "1"
+SYS EQSI LAST "0"
+IF LAST_N == 1 THEN
+  LET HAS_HEADER = 0
+END
+SYS ENV "CUBALC_CSV_REQUIRE" OR "0"
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET REQUIRE_ONE = 1
+END
+SYS ENV "CUBALC_CSV_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN_OK = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+CLEAR_ERR
+SYS JOIN state_dir "out"
+LET out_dir = LAST
+SYS JOIN state_dir "in"
+LET in_dir = LAST
+SYS MKDIR out_dir
+SYS MKDIR in_dir
+
+SYS STARTS REL "/"
+IF LAST_N == 1 THEN
+  LET csv_path = REL
+ELSE
+  SYS JOIN state_dir REL
+  LET csv_path = LAST
+END
+
+# status: soft prior report
+SYS EQSI ACTION "status"
+IF LAST_N == 1 THEN
+  SYS JOIN out_dir "IMPORT_REPORT.txt"
+  LET plate = LAST
+  SYS EXIST plate
+  LET has = LAST_N
+  SYS READ OR plate OR ""
+  CLEAR_ERR
+  STATUS
+  PRINT_JSON has ACTION STATUS_OK
+  CLEAR_ERR
+  EXIT 0 "status ok"
+END
+
+SYS EQSI ACTION "import"
+IF LAST_N == 0 THEN
+  FAIL "unknown action"
+  EXIT 2 "bad action"
+END
+
+# --- load ---
+# Soft READ OR keeps OK=1 on miss; use READ_OK (not OK) to detect missing file.
+SYS READ OR csv_path OR ""
+IF READ_OK == 0 THEN
+  FAIL "csv missing"
+  CLEAR_ERR "soft read miss"
+  IF REQUIRE_ONE == 1 THEN
+    EXIT 2 "no csv"
+  END
+  LET body = ""
+  LET loaded = 0
+ELSE
+  LET body = LAST
+  LET loaded = 1
+END
+
+SYS EMPTY body
+IF LAST_N == 1 THEN
+  LET body = ""
+END
+
+# optional header drop
+IF HAS_HEADER == 1 THEN
+  SYS LINES body
+  IF LAST_N > 0 THEN
+    SYS DROP 1 body
+    LET body = LAST
+  END
+END
+
+EACH LINE AS row IN body
+  LET n_in = n_in + 1
+  SYS BLANK row
+  IF LAST_N == 1 THEN
+    LET n_skip = n_skip + 1
+    CONTINUE
+  END
+
+  # columns: 0=id 1=name 2=status (CUT 0-based)
+  SYS CUT row SEP 0
+  LET id = LAST
+  SYS CUT row SEP 1
+  LET name = LAST
+  SYS CUT row SEP 2
+  LET st = LAST
+
+  # required: id and name non-empty; status may be blank → bad
+  SYS EMPTY id
+  IF LAST_N == 1 THEN
+    LET n_bad = n_bad + 1
+    CONTINUE
+  END
+  SYS EMPTY name
+  IF LAST_N == 1 THEN
+    LET n_bad = n_bad + 1
+    CONTINUE
+  END
+  # BLANK name also reject (whitespace-only)
+  SYS BLANK name
+  IF LAST_N == 1 THEN
+    LET n_bad = n_bad + 1
+    CONTINUE
+  END
+  SYS EMPTY st
+  IF LAST_N == 1 THEN
+    LET n_bad = n_bad + 1
+    CONTINUE
+  END
+
+  # accept: push id:name:status summary
+  SYS CAT id ":"
+  LET line = LAST
+  SYS CAT line name
+  LET line = LAST
+  SYS CAT line ":"
+  LET line = LAST
+  SYS CAT line st
+  LET line = LAST
+  SYS PUSH bag line
+  LET bag = LAST
+  LET n_ok = n_ok + 1
+END
+CLEAR_ERR "import walk clean"
+
+IF REQUIRE_ONE == 1 THEN
+  IF n_ok < MIN_OK THEN
+    FAIL "below min accepted"
+    EXIT 2 "import thin"
+  END
+END
+
+# write accepted bag
+SYS JOIN out_dir "ROWS_ACCEPTED.txt"
+LET acc_path = LAST
+SYS WRITE acc_path bag
+SYS EXIST acc_path
+ASSERT EXIST == 1
+
+SYS LINES bag
+LET bag_n = LAST_N
+SYS STR n_ok
+LET ok_s = LAST
+SYS STR n_bad
+LET bad_s = LAST
+SYS STR n_skip
+LET skip_s = LAST
+SYS STR n_in
+LET in_s = LAST
+SYS STR bag_n
+LET bn_s = LAST
+
+LET tpl = "schema=cubalc.csv_plate_import.v1 date={{DATE}} host={{HOST}} in={{IN}} ok={{OK}} bad={{BAD}} skip={{SKIP}} bag={{BAG}} sep={{SEP}}"
+SYS REPLACEALL tpl "{{DATE}}" imp_date
+LET tpl = LAST
+SYS REPLACEALL tpl "{{HOST}}" imp_host
+LET tpl = LAST
+SYS REPLACEALL tpl "{{IN}}" in_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{OK}}" ok_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{BAD}}" bad_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{SKIP}}" skip_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{BAG}}" bn_s
+LET tpl = LAST
+SYS REPLACEALL tpl "{{SEP}}" SEP
+LET tpl = LAST
+
+SYS JOIN out_dir "IMPORT_REPORT.txt"
+LET report = LAST
+SYS WRITE report tpl
+SYS APPEND report ""
+# append detail as JOINLINES of bag
+SYS JOINLINES "," bag
+LET detail = LAST
+SYS APPEND report detail
+ASSERT OK == 1
+
+STATUS
+ASSERT STATUS_OK == 1
+NOTE "csv_plate_import: done"
+PRINT "csv" loaded n_in n_ok n_bad n_skip bag_n
+PRINT_JSON loaded n_in n_ok n_bad n_skip bag_n HAS_HEADER ACTION STATUS_OK
+STATUS
+CLEAR_ERR "csv clean"
+EXIT 0 "import ok"
