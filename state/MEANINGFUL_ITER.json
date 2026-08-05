@@ -5,13 +5,13 @@
   "item": "SYS RAND / RANDOM uniform int for agent jitter",
   "item_id": 112,
   "title": "SYS RAND|RANDOM [n]|[lo hi] uniform integer",
-  "commit": "99dde89b2f6e00721c270d16592df2dd3acb5fdc",
+  "commit": "316c55f97039942de6b5abbf67e6b52839b1f3cb",
   "summary": "SYS RAND|RANDOM [n]|[lo hi] host-plane uniform int. Default 0..999999; single 0..n-1; range inclusive. CUBALC_SEED. Distinct from cube RAND. selftest 79.",
   "proofs": [
     "652_sys_rand",
     "selftest n_pass=79"
   ],
-  "when": "2026-08-05T14:55:33Z",
+  "when": "2026-08-05T14:55:35Z",
   "agent": "meaningful_iter_10m",
-  "sha": "99dde89b2f6e00721c270d16592df2dd3acb5fdc"
+  "sha": "316c55f97039942de6b5abbf67e6b52839b1f3cb"
 }
