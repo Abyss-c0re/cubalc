@@ -1131,6 +1131,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DECIDE", "DECIDE [cube] — matrix → algocube digit 0..9"},
       {"ASSERT", "ASSERT expr [\"why\"] — fail with line + reason"},
       {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
+      {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
+      {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -1344,6 +1346,54 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "EXPECT_OK", 0);
       if (vm->trace) fprintf(vm->trace, "# expect fail: %s\n", msg);
     }
+    bump(vm); return 1;
+  }
+  /* FAIL ["why"] — intentional soft fail (no expr, no fatal). Sticky LAST_ERR/OK=0.
+   * PASS ["why"] — intentional soft pass; OK=1 and optional LAST note. */
+  if (kw(&L->cur,"FAIL")||kw(&L->cur,"SOFTFAIL")||kw(&L->cur,"MARK_FAIL")){
+    int aln = L->cur.line;
+    lex_next(L);
+    char why[120]; why[0] = 0;
+    if (L->cur.kind == TK_STR){
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    char msg[160];
+    if (why[0])
+      snprintf(msg, sizeof msg, "FAIL line %d: %s", aln, why);
+    else
+      snprintf(msg, sizeof msg, "FAIL line %d", aln);
+    var_set_str(vm, "ERR", msg);
+    var_set_str(vm, "LAST_ERR", msg);
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 0);
+    var_set_num(vm, "EXPECT_OK", 0);
+    if (vm->trace) fprintf(vm->trace, "# fail: %s\n", msg);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"PASS")||kw(&L->cur,"MARK_PASS")||kw(&L->cur,"OKAY")){
+    int aln = L->cur.line;
+    lex_next(L);
+    char why[120]; why[0] = 0;
+    if (L->cur.kind == TK_STR){
+      snprintf(why, sizeof why, "%s", L->cur.text);
+      lex_next(L);
+    }
+    char msg[160];
+    if (why[0])
+      snprintf(msg, sizeof msg, "%s", why);
+    else
+      snprintf(msg, sizeof msg, "PASS line %d", aln);
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "EXPECT_OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# pass: %s\n", msg);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"LET")){

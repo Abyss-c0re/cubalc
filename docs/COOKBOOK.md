@@ -44,12 +44,14 @@ PRINT "hello" CUBES UNITY
 # EXPECT = soft ASSERT — continues; OK/EXPECT_OK + sticky LAST_ERR
 EXPECT SMX_OK == 1 "peer may be offline"
 IF OK == 0 THEN
-  PRINT "probe soft-fail" LAST_ERR
+  FAIL "probe soft-fail"          # intentional soft status (no fake expr)
+  PRINT "probe" LAST_ERR
 END
+PASS "ready for hard gate"
 ASSERT 1 == 1 "hard gate still fail-closed"
 ```
 
-Proof: `programs/proof/578_expect_soft.cubalc`.
+Proof: `programs/proof/578_expect_soft.cubalc` · `579_fail_pass.cubalc`.
 
 ## 2. Decide from matrix
 

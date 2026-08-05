@@ -1,0 +1,21 @@
+# FAIL / PASS soft status — no expression, no fatal
+# FAIL ["why"] → OK=0 sticky LAST_ERR; PASS ["why"] → OK=1 LAST note
+
+HOLD_FLASH 1
+
+FAIL "peer not dialed"
+ASSERT OK == 0 "FAIL sets OK 0"
+ASSERT EXPECT_OK == 0
+ASSERT LAST_N > 5 "LAST_ERR filled"
+PRINT "after_fail" LAST_ERR
+
+PASS "mesh path chosen"
+ASSERT OK == 1 "PASS sets OK 1"
+ASSERT EXPECT_OK == 1
+ASSERT LAST_N > 0 "LAST note"
+
+# program stays green — soft status only
+ASSERT 1 == 1 "hard gate still works"
+
+PRINT "fail_pass ok" OK
+PRINT_JSON OK EXPECT_OK LAST_N
