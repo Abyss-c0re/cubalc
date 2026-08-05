@@ -251,6 +251,59 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       lex_next(L);
       bump(vm); return 1;
     }
+    /* SYS CWD|PWD — process working directory → LAST
+     * SYS STATE — CUBALC_STATE plate dir (default state) → LAST
+     * SYS ROOT — CUBALC_ROOT or cwd (INCLUDE root) → LAST
+     * Usability: portable scripts locate layout without shell glue. */
+    if (kw(&L->cur,"CWD") || kw(&L->cur,"PWD") || kw(&L->cur,"WORKDIR")){
+      char cwd[512];
+      lex_next(L);
+      if (!getcwd(cwd, sizeof cwd)) {
+        snprintf(cwd, sizeof cwd, ".");
+        var_set_num(vm, "OK", 0);
+      } else {
+        var_set_num(vm, "OK", 1);
+      }
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cwd);
+      vm->last_n = (long)strlen(cwd);
+      var_set_str(vm, "LAST", cwd);
+      var_set_str(vm, "CWD", cwd);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"STATE") || kw(&L->cur,"STATEDIR") || kw(&L->cur,"STATE_DIR")){
+      char sdir[512];
+      const char *e;
+      lex_next(L);
+      e = getenv("CUBALC_STATE");
+      if (e && e[0]) snprintf(sdir, sizeof sdir, "%s", e);
+      else snprintf(sdir, sizeof sdir, "state");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", sdir);
+      vm->last_n = (long)strlen(sdir);
+      var_set_str(vm, "LAST", sdir);
+      var_set_str(vm, "STATE_DIR", sdir);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"ROOT") || kw(&L->cur,"CUBALC_ROOT") || kw(&L->cur,"INSTALL_ROOT")){
+      char root[512];
+      const char *e;
+      lex_next(L);
+      e = getenv("CUBALC_ROOT");
+      if (e && e[0]) {
+        snprintf(root, sizeof root, "%s", e);
+      } else if (!getcwd(root, sizeof root)) {
+        snprintf(root, sizeof root, ".");
+      }
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", root);
+      vm->last_n = (long)strlen(root);
+      var_set_str(vm, "LAST", root);
+      var_set_str(vm, "ROOT", root);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"HTTP") || kw(&L->cur,"GET") || kw(&L->cur,"POST")){
       char method[8] = "GET";
       if (kw(&L->cur,"POST")) snprintf(method,sizeof method,"POST");
@@ -955,7 +1008,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|ENV|EXIST|WHICH|CWD|STATE|ROOT|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|LEN|TIME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|EQS|HAS|REVS|UPPER|LOWER|TRIM|STARTS|ENDS|REPLACE|LPAD|RPAD|STREPEAT");
     return -1;
   }
 
@@ -1144,9 +1197,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"INCLUDE", "INCLUDE path|libname — load module; short name → programs/lib/"},
       {"LET", "LET name = expr|string"},
-      {"SYS", "SYS ENV|ARG|READ|WRITE … · ENV/ARG support OR fallback"},
+      {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
+      {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
+      {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},
+      {"SYS ROOT", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

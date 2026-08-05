@@ -1,0 +1,30 @@
+# SYS CWD / STATE / ROOT — layout paths without shell glue
+# Usability: portable scripts locate cwd, state plates, INCLUDE root
+
+SYS CWD
+ASSERT OK == 1 "cwd ok"
+ASSERT LAST_N > 0 "cwd non-empty"
+SYS HAS LAST "/"
+ASSERT LAST_N == 1 "cwd looks like path"
+SYS LEN CWD
+ASSERT LAST_N > 0 "CWD var set"
+
+SYS STATE
+ASSERT OK == 1 "state ok"
+ASSERT LAST_N > 0 "state non-empty"
+# default or CUBALC_STATE override
+SYS HAS LAST "state"
+ASSERT LAST_N == 1 "state dir name present"
+
+SYS ROOT
+ASSERT OK == 1 "root ok"
+ASSERT LAST_N > 0 "root non-empty"
+
+# ROOT defaults to cwd when CUBALC_ROOT unset
+SYS CWD
+LET cwd_len = LAST_N
+SYS ROOT
+ASSERT LAST_N >= 1 "root length"
+
+PRINT "sys_cwd_state_root ok"
+PRINT_JSON CWD LAST_N OK

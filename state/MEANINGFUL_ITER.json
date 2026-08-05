@@ -1,16 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 6,
-  "version": "1.15.31-usability",
-  "item": "cubalc selftest live usability proofs",
-  "item_id": 39,
-  "title": "cubalc selftest runs curated usability proofs JSON",
-  "commit": "e12a6c1169537ce13a7b3753b068742a70acb687",
-  "summary": "CLI selftest|smoke executes 9 curated usability proofs (INCLUDE/ASSERT/EXPECT/VERSION/WHICH/REQUIRE) and emits cubalc.selftest.v1 plate; complements static doctor.",
+  "iter": 7,
+  "version": "1.15.32-usability",
+  "item": "SYS CWD STATE ROOT layout paths",
+  "item_id": 40,
+  "title": "SYS CWD/STATE/ROOT for portable path layout",
+  "commit": "a7f33be8ad7f3969480b15dce2f03d4df1d3e078",
+  "summary": "In-language SYS CWD, SYS STATE, SYS ROOT expose working dir, CUBALC_STATE, and CUBALC_ROOT/cwd so scripts locate layout without shell glue.",
   "proofs": [
-    "selftest n_pass=9"
+    "584_sys_cwd_state_root",
+    "selftest n_pass=10"
   ],
-  "when": "2026-08-05T02:44:29Z",
+  "when": "2026-08-05T02:53:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e12a6c1169537ce13a7b3753b068742a70acb687"
+  "sha": "a7f33be8ad7f3969480b15dce2f03d4df1d3e078"
 }

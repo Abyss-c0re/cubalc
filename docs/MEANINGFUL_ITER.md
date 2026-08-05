@@ -67,6 +67,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 37. ~~**`cubalc search`**~~ **done** (keyword discovery across forms/libs/examples/env/docs).
 38. ~~**`REQUIRE VERSION`**~~ **done** (fail-fast if runtime older than need).
 39. ~~**`cubalc selftest`**~~ **done** (live curated usability proofs JSON plate).
+40. ~~**`SYS CWD` / `STATE` / `ROOT`**~~ **done** (layout paths in-language for portable scripts).
 
 ## Tick protocol
 

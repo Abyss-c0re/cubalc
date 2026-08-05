@@ -1591,6 +1591,7 @@ int main(int argc, char **argv) {
       {"version", "programs/proof/580_version.cubalc", "VERSION form plate"},
       {"which_lib", "programs/proof/582_sys_which_lib.cubalc", "SYS WHICH lib resolve"},
       {"require", "programs/proof/583_require_version.cubalc", "REQUIRE VERSION gate"},
+      {"cwd", "programs/proof/584_sys_cwd_state_root.cubalc", "SYS CWD/STATE/ROOT paths"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1719,6 +1720,9 @@ int main(int argc, char **argv) {
       {"INCLUDE", "flow", "INCLUDE path|libname — short name → programs/lib/"},
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
+      {"SYS CWD", "host", "SYS CWD — working directory → LAST/CWD"},
+      {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
+      {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"HELP", "flow", "HELP [form] — in-program catalog tip → LAST/OK/HELP_N"},
       {"SYS READ", "host", "SYS READ path|LAST"},
       {"SYS WRITE", "host", "SYS WRITE path data"},
@@ -2581,6 +2585,9 @@ int main(int argc, char **argv) {
       {"SYS ENV", "host", "SYS ENV NAME [OR fallback]"},
       {"SYS ARG", "host", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS WHICH", "host", "SYS WHICH name → LAST path (bin or lib)"},
+      {"SYS CWD", "host", "SYS CWD — working directory → LAST"},
+      {"SYS STATE", "host", "SYS STATE — CUBALC_STATE plate dir → LAST"},
+      {"SYS ROOT", "host", "SYS ROOT — CUBALC_ROOT or cwd → LAST"},
       {"SMX SERVE", "smx", "listen · CUBALC_P2P_TIMEOUT ms"},
       {"SMX DIAL", "smx", "connect · CUBALC_P2P_SOFT soft-fail"},
       {"SMX EXCHANGE", "smx", "file-bus exchange"},
