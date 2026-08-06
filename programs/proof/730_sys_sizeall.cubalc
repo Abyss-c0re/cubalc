@@ -1,0 +1,101 @@
+# SYS SIZEALL / MAPSIZE — byte sizes over path bags
+# Usability: PATHGLOB inventory without EACH + SIZE glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "sizeall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.txt"
+LET f1 = LAST
+SYS WRITE f1 "hello" 
+# 5 bytes
+SYS JOIN fix "b.txt"
+LET f2 = LAST
+SYS WRITE f2 "hello world"
+# 11 bytes
+SYS JOIN fix "empty.dat"
+LET f3 = LAST
+SYS TOUCH f3
+# 0 bytes
+
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+SYS JOIN fix "ghost"
+LET ghost = LAST
+# not created
+
+# bag of files only
+SYS PUSH "" f1
+SYS PUSH LAST f2
+SYS PUSH LAST f3
+LET files = LAST
+SYS SIZEALL files
+ASSERT OK == 1
+ASSERT SIZEALL_N == 3
+ASSERT SIZEALL_FILES == 3
+ASSERT SIZEALL_MISS == 0
+ASSERT SIZEALL_SUM == 16
+SYS HASLINE LAST "5"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "11"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "0"
+ASSERT LAST_N == 1
+
+# mixed: file + dir + missing
+SYS PUSH "" f1
+SYS PUSH LAST sub
+SYS PUSH LAST ghost
+LET mixed = LAST
+SYS SIZEALL mixed
+ASSERT SIZEALL_N == 3
+ASSERT SIZEALL_FILES == 1
+ASSERT SIZEALL_MISS == 2
+ASSERT SIZEALL_SUM == 5
+# order preserved: 5, 0, 0 (save bag — NTH clobbers LAST)
+LET sizes = LAST
+SYS NTH 0 sizes
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS NTH 1 sizes
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# PATHGLOB → KEEPFILES → SIZEALL pipeline
+SYS PATHGLOB fix
+SYS KEEPFILES LAST
+SYS SIZEALL LAST
+ASSERT SIZEALL_FILES == 3
+ASSERT SIZEALL_SUM == 16
+
+# aliases + default LAST
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS MAPSIZE
+ASSERT MAPSIZE_N == 3
+ASSERT SIZEALL_SUM == 16
+
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS FILESIZES
+ASSERT SIZEALL_N == 3
+
+# SUM of size bag still works
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS SIZEALL LAST
+SYS SUM LAST
+ASSERT LAST_N == 16
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+
+PRINT "sys_sizeall ok"

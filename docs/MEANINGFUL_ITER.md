@@ -217,6 +217,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 187. ~~**`SYS FILTERGLOB` / `MATCHBAG`**~~ **done** (shell-pattern bag filter · full field or basename · PATHGLOB re-filter).
 188. ~~**`SYS BASENAMEALL` / `DIRNAMEALL` / `EXTALL` / `STEMALL`**~~ **done** (map path peels over bags · PATHGLOB without EACH).
 189. ~~**`SYS KEEPFILES` / `KEEPDIRS` / `KEEPEXIST`**~~ **done** (filter path bags by host kind · PATHGLOB before READ).
+190. ~~**`SYS SIZEALL` / `MAPSIZE`**~~ **done** (path bag → byte sizes · SIZEALL_SUM inventory without EACH+SIZE).
 
 ## Tick protocol
 
