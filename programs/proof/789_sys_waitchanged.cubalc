@@ -1,0 +1,118 @@
+# SYS WAITCHANGED / WAITMODIFIED / POLLCHANGE
+# — poll until path appears or size/mtime changes from baseline
+# Usability: wait for peer status plate update without known content.
+# SINCE size mtime | SINCE MISSING for agent snapshots (single-process hit).
+# Soft timeout OK=0. FROM: 0 appear · 1 modify · 2 gone
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitchanged_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "status.txt"
+LET f = LAST
+SYS RM f
+
+# missing + short timeout (no appear) → soft fail
+SYS WAITCHANGED f 100
+ASSERT OK == 0
+ASSERT WAITCHANGED_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITCHANGED_MS >= 80
+
+# present + short timeout with no change → soft fail
+SYS WRITE f "v1"
+SYS WAITCHANGED f 100
+ASSERT OK == 0
+ASSERT WAITCHANGED_HIT == 0
+ASSERT WAITCHANGED_MS >= 80
+
+# zero timeout: no future change → miss
+SYS WAITCHANGED f 0
+ASSERT OK == 0
+ASSERT WAITCHANGED_HIT == 0
+
+# zero timeout miss when missing
+SYS JOIN fix "never.txt"
+LET nf = LAST
+SYS RM nf
+SYS WAITCHANGED nf 0
+ASSERT OK == 0
+
+# empty path soft fail
+SYS WAITCHANGED "" 50
+ASSERT OK == 0
+ASSERT WAITCHANGED_HIT == 0
+
+# --- SINCE size mtime: modify hit (agent snapshot then mutate) ---
+SYS WRITE f "ab"
+SYS SIZE f
+LET s0 = LAST_N
+SYS MTIME f
+LET m0 = LAST_N
+SYS WRITE f "abcd-longer"
+SYS WAITCHANGED f SINCE s0 m0 500
+ASSERT OK == 1
+ASSERT WAITCHANGED_HIT == 1
+ASSERT LAST_N == 1
+ASSERT WAITCHANGED_FROM == 1
+ASSERT WAITCHANGED_SIZE > s0
+SYS EQS LAST f
+ASSERT LAST_N == 1
+
+# SINCE same snapshot → short timeout miss
+SYS SIZE f
+LET s1 = LAST_N
+SYS MTIME f
+LET m1 = LAST_N
+SYS WAITCHANGED f SINCE s1 m1 80
+ASSERT OK == 0
+ASSERT WAITCHANGED_HIT == 0
+
+# --- SINCE MISSING: appear hit when file already created after snapshot ---
+SYS RM f
+SYS WRITE f "now-here"
+SYS WAITCHANGED f SINCE MISSING 500
+ASSERT OK == 1
+ASSERT WAITCHANGED_HIT == 1
+ASSERT WAITCHANGED_FROM == 0
+ASSERT WAITCHANGED_SIZE > 0
+
+# --- SINCE size mtime: gone hit ---
+SYS WRITE f "x"
+SYS SIZE f
+LET s2 = LAST_N
+SYS MTIME f
+LET m2 = LAST_N
+SYS RM f
+SYS WAITCHANGED f SINCE s2 m2 500
+ASSERT OK == 1
+ASSERT WAITCHANGED_HIT == 1
+ASSERT WAITCHANGED_FROM == 2
+
+# aliases on stable present → short timeout miss
+SYS WRITE f "stable"
+SYS WAITMODIFIED f 60
+ASSERT WAITCHANGED_HIT == 0
+SYS POLLCHANGE f 50
+ASSERT WAITCHANGED_HIT == 0
+
+# FROM alias of SINCE
+SYS SIZE f
+LET s3 = LAST_N
+SYS MTIME f
+LET m3 = LAST_N
+SYS WRITE f "stable2"
+SYS WAITCHANGED f FROM s3 m3 500
+ASSERT OK == 1
+ASSERT WAITCHANGED_HIT == 1
+ASSERT WAITCHANGED_FROM == 1
+
+# cleanup
+SYS RM f
+SYS RM nf
+
+PRINT "sys_waitchanged ok"

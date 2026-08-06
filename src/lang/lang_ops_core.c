@@ -1972,6 +1972,181 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR", "WAITSTABLE: timeout");
       bump(vm); return 1;
     }
+    /* SYS WAITCHANGED|WAITMODIFIED|POLLCHANGE path [timeout_ms]
+     * SYS WAITCHANGED path SINCE|FROM|BASE size mtime [timeout_ms]
+     * SYS WAITCHANGED path SINCE MISSING [timeout_ms]
+     * — poll until path appears or size/mtime differs from baseline.
+     * Default: sample baseline now (peer concurrent update).
+     * SINCE size mtime: explicit baseline (agent snapshot then wait/check).
+     * SINCE MISSING: baseline = absent (hit when path appears).
+     * Default timeout 30000, cap 120s, poll 50 ms. Soft timeout / empty → OK=0.
+     * LAST = path; WAITCHANGED_HIT/N/MS/SIZE/MTIME; WAITCHANGED_FROM
+     *   0=missing→exist, 1=size/mtime change, 2=exist→gone.
+     * Usability: wait for peer status plate update without known content. */
+    if (kw(&L->cur,"WAITCHANGED") || kw(&L->cur,"WAITMODIFIED") ||
+        kw(&L->cur,"POLLCHANGE") || kw(&L->cur,"AWAITCHANGE") ||
+        kw(&L->cur,"WAITUPDATE") || kw(&L->cur,"UNTILCHANGED") ||
+        kw(&L->cur,"WAITMTIMECHG") || kw(&L->cur,"POLLMODIFIED") ||
+        kw(&L->cur,"WAITNEW") || kw(&L->cur,"WAITDIRTY")){
+      char path[512], a[CUBALC_HOST_STR_MAX];
+      long timeout_ms = 30000, elapsed = 0, hit = 0, from = 0;
+      long base_size = -1, base_mtime = -1, cur_size = 0, cur_mtime = 0;
+      int base_exists = 0, explicit_base = 0;
+      struct timespec t0, t1, sl;
+      cubalc_host_result kr, mr;
+      lex_next(L);
+      path[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS WAITCHANGED path [SINCE size mtime] [timeout_ms]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      /* optional SINCE|FROM|BASE size mtime | SINCE MISSING */
+      if (kw(&L->cur,"SINCE") || kw(&L->cur,"FROM") || kw(&L->cur,"BASE") ||
+          kw(&L->cur,"REF") || kw(&L->cur,"BASELINE")){
+        lex_next(L);
+        explicit_base = 1;
+        if (kw(&L->cur,"MISSING") || kw(&L->cur,"ABSENT") || kw(&L->cur,"GONE") ||
+            kw(&L->cur,"NONE") || kw(&L->cur,"NIL")){
+          lex_next(L);
+          base_exists = 0;
+          base_size = -1;
+          base_mtime = -1;
+        } else {
+          if (L->cur.kind != TK_NUM && L->cur.kind != TK_MINUS &&
+              L->cur.kind != TK_LPAREN && L->cur.kind != TK_IDENT) {
+            fail(vm, "SYS WAITCHANGED path SINCE size mtime [timeout_ms]");
+            return -1;
+          }
+          base_size = parse_expr(vm, L);
+          if (L->cur.kind != TK_NUM && L->cur.kind != TK_MINUS &&
+              L->cur.kind != TK_LPAREN && L->cur.kind != TK_IDENT) {
+            fail(vm, "SYS WAITCHANGED path SINCE size mtime [timeout_ms]");
+            return -1;
+          }
+          base_mtime = parse_expr(vm, L);
+          base_exists = 1;
+        }
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_IDENT) {
+        long t = parse_expr(vm, L);
+        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+          lex_next(L);
+        timeout_ms = t;
+      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT)
+          timeout_ms = parse_expr(vm, L);
+      }
+      if (timeout_ms < 0) timeout_ms = 0;
+      if (timeout_ms > 120000) timeout_ms = 120000;
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITCHANGED_HIT", 0);
+        var_set_num(vm, "WAITCHANGED_N", 0);
+        var_set_num(vm, "WAITCHANGED_MS", 0);
+        var_set_num(vm, "WAITCHANGED_SIZE", 0);
+        var_set_num(vm, "WAITCHANGED_MTIME", 0);
+        var_set_num(vm, "WAITCHANGED_FROM", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "WAITCHANGED: empty path");
+        var_set_str(vm, "ERR", "WAITCHANGED: empty path");
+        bump(vm); return 1;
+      }
+      /* baseline sample unless explicit SINCE */
+      if (!explicit_base) {
+        if (cubalc_host_path_kind(path, &kr) == 0 && kr.ok &&
+            cubalc_host_mtime(path, &mr) == 0 && mr.ok) {
+          base_exists = 1;
+          base_size = kr.n;
+          base_mtime = mr.n;
+        } else {
+          base_exists = 0;
+          base_size = -1;
+          base_mtime = -1;
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+      for (;;) {
+        if (cubalc_host_path_kind(path, &kr) == 0 && kr.ok &&
+            cubalc_host_mtime(path, &mr) == 0 && mr.ok) {
+          cur_size = kr.n;
+          cur_mtime = mr.n;
+          if (!base_exists) {
+            /* missing → now exists */
+            hit = 1;
+            from = 0;
+            break;
+          }
+          if (cur_size != base_size || cur_mtime != base_mtime) {
+            hit = 1;
+            from = 1;
+            break;
+          }
+        } else if (base_exists) {
+          /* existed → now gone counts as change (peer cleanup / replace) */
+          cur_size = 0;
+          cur_mtime = 0;
+          hit = 1;
+          from = 2;
+          break;
+        }
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                  (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+        if (elapsed >= timeout_ms)
+          break;
+        {
+          long left = timeout_ms - elapsed;
+          long step = left < 50 ? left : 50;
+          if (step < 1) step = 1;
+          sl.tv_sec = step / 1000;
+          sl.tv_nsec = (step % 1000) * 1000000L;
+          nanosleep(&sl, NULL);
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+      if (elapsed < 0) elapsed = 0;
+      if (hit) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "WAITCHANGED", path);
+        var_set_str(vm, "WAITMODIFIED", path);
+        var_set_str(vm, "POLLCHANGE", path);
+        var_set_num(vm, "WAITCHANGED_HIT", 1);
+        var_set_num(vm, "WAITCHANGED_N", 1);
+        var_set_num(vm, "WAITCHANGED_MS", elapsed);
+        var_set_num(vm, "WAITCHANGED_SIZE", cur_size);
+        var_set_num(vm, "WAITCHANGED_MTIME", cur_mtime);
+        var_set_num(vm, "WAITCHANGED_FROM", from);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "WAITCHANGED", "");
+      var_set_num(vm, "WAITCHANGED_HIT", 0);
+      var_set_num(vm, "WAITCHANGED_N", 0);
+      var_set_num(vm, "WAITCHANGED_MS", elapsed);
+      var_set_num(vm, "WAITCHANGED_SIZE", base_exists ? base_size : 0);
+      var_set_num(vm, "WAITCHANGED_MTIME", base_exists ? base_mtime : 0);
+      var_set_num(vm, "WAITCHANGED_FROM", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WAITCHANGED: timeout");
+      var_set_str(vm, "ERR", "WAITCHANGED: timeout");
+      bump(vm); return 1;
+    }
     /* SYS WAITMATCH|WAITCONTAINS|POLLMATCH path needle [timeout_ms]
      * — poll until file exists and content contains needle (substring).
      * WAITMATCHI icase. Default timeout 30000 ms; cap 120s; poll 50 ms.
