@@ -1,76 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 50,
-  "program": "programs/realworld/slo_burn_gate.cubalc",
-  "theme": "SLO burn gate LOOKUPN THRESHKV budget page denoise",
-  "version": "1.15.163-usability",
+  "iter": 51,
+  "program": "programs/realworld/traffic_share_board.cubalc",
+  "theme": "traffic share SCALEKV CAPKV PCTKV routing digest",
+  "version": "1.15.166-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_getn",
-      "cmd": "seed api:12 db:3 mesh:1 debug:0; getn api \u2192 12",
+      "name": "seed_scale_cap",
+      "cmd": "seed api:30…; scale 2 → api:60; cap 40 → api:40 cap_n=1",
       "ok": true,
-      "note": "LOOKUPN peel LAST_N"
+      "note": "SCALEKV+CAPKV pipeline"
     },
     {
-      "name": "thresh_page",
-      "cmd": "thresh 3 \u2192 api:12 db:3 drop=2; page top api",
+      "name": "pct_share",
+      "cmd": "pct on total 72 → shares 55/27/13/2 field_sum 97",
       "ok": true,
-      "note": "THRESHKV + TOPKEY"
+      "note": "integer trunc ≠100"
     },
     {
-      "name": "budget_burn",
-      "cmd": "budget api CEIL10 burned; db ok; REQUIRE exit 2",
+      "name": "getn_getshare",
+      "cmd": "getn api=40; getshare api=55",
       "ok": true,
-      "note": "LOOKUPN+CMP >= ceil"
+      "note": "LOOKUPN dual plates"
     },
     {
-      "name": "getn_or",
-      "cmd": "getn ghost OR 0 used_or=1",
+      "name": "top",
+      "cmd": "top api:40",
       "ok": true,
-      "note": "LOOKUPN OR silent OK=1"
+      "note": "TOPKEY after cap"
     },
     {
-      "name": "bump",
-      "cmd": "bump mesh +5 \u2192 6",
+      "name": "scale_empty_require",
+      "cmd": "scale empty REQUIRE exit 2",
       "ok": true,
-      "note": "KVINC"
+      "note": "soft empty"
     },
     {
-      "name": "thresh_none_require",
-      "cmd": "thresh 50 none kept REQUIRE 2",
+      "name": "pct_zero_total",
+      "cmd": "a:0 b:0 pct → zeros; REQUIRE exit 2",
       "ok": true,
-      "note": "empty HOT soft"
+      "note": "language OK=1 all zero"
     },
     {
-      "name": "page_empty",
-      "cmd": "page empty REQUIRE 2",
+      "name": "cap_none",
+      "cmd": "cap 100 all under → CAPKV_N=0 note cap none",
       "ok": true,
-      "note": "empty bag"
+      "note": "no-op signal"
     },
     {
-      "name": "substring_false",
-      "cmd": "getn ap \u2192 OR default not api",
+      "name": "scale_zero",
+      "cmd": "scale 0 → all zeros",
       "ok": true,
-      "note": "exact key"
+      "note": "factor 0 destructive"
     },
     {
-      "name": "lookupn_nonnum",
-      "cmd": "LOOKUPN api:abc \u2192 V=0 OK=1 hit as zero",
+      "name": "pct_trunc_5",
+      "cmd": "3+1+1 pct → 60/20/20 sum 100 clean",
       "ok": true,
-      "note": "strtol silent"
+      "note": "divisible case"
     },
     {
-      "name": "thresh_nonnum",
-      "cmd": "THRESHKV drops non-numeric as 0 below min",
+      "name": "nonnum_preserve",
+      "cmd": "note:hello survives SCALE/PCT; excluded from PCT sum",
       "ok": true,
-      "note": "silent drop"
+      "note": "mixed bag footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "138/138 pass incl lookupn threshkv"
+      "note": "141/141 pass incl pctkv capkv scalekv"
     }
   ],
   "weaknesses": [
@@ -78,87 +78,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "LOOKUPN treats non-numeric values as 0 with OK=1",
-      "detail": "api:abc LOOKUPN \u2192 LAST_N=0 LOOKUPN_V=0 OK=1 (hit not miss). Agents cannot distinguish missing, zero, and garbage without dual LOOKUP string check.",
-      "repro": "LOOKUPN 'api:abc' api \u2192 0 OK=1"
+      "title": "PCTKV integer truncation; sum of percents may ≠ 100",
+      "detail": "Total 72 → shares 55+27+13+2=97. Agents treating shares as a partition of 100 under-allocate. No remainder distribution / largest-remainder mode.",
+      "repro": "PCTKV bag total 72 → field sum 97"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "LOOKUPN OR still OK=1 on miss",
-      "detail": "Same silent-default class as LOOKUP OR. LOOKUPN_OR must be inspected; OK alone is insufficient for present-vs-default.",
-      "repro": "LOOKUPN bag ghost OR 0 \u2192 OK=1 OR=1"
+      "title": "Non-numeric fields survive SCALEKV/PCTKV unchanged",
+      "detail": "note:hello left as hello after SCALE*2 and PCT; excluded from PCTKV_SUM but still present in bag. Share digests can ship string junk. CAPKV also skips non-numeric (CAPKV_N unaffected).",
+      "repro": "SCALEKV 'api:3\\nnote:hello' 2 keeps note:hello"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "THRESHKV drops non-numeric via strtol 0 without signal",
-      "detail": "api:abc with min=1 is dropped as value 0; no THRESHKV_SKIP nonnum counter. Metadata keys vanish from HOT plate silently.",
-      "repro": "THRESHKV 'api:abc\\nwarn:3' 1 \u2192 warn:3 DROP=1"
+      "title": "PCTKV zero-total returns all-zero bag OK=1",
+      "detail": "a:0 b:0 → a:0 b:0 with PCTKV_SUM=0 not soft miss. Program must special-case.",
+      "repro": "PCTKV a:0\\nb:0"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "THRESHKV only >= min, no upper bound / range form",
-      "detail": "Want KEEPVAL between lo..hi for SLO bands; only min. Agents need second pass or EACH filter.",
-      "repro": "THRESHKV bag min only"
+      "title": "SCALEKV factor 0 silently zeros entire bag",
+      "detail": "Destructive with OK=1. No refuse-on-zero-factor. Easy ENV typo FACTOR=0 wipes traffic SoT.",
+      "repro": "SCALEKV bag 0"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last BURN/HOT line without $.",
-      "repro": "seed; cat -A BURN.txt"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "CAPKV only max clamp; no min floor form",
+      "detail": "Iter 50 wanted CAPKV max — now have max only. No FLOORKV / clamp range. Outlier floor still EACH.",
+      "repro": "CAPKV bag max only"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON bag newline collapse",
-      "detail": "Stable issue across KV boards.",
-      "repro": "PRINT_JSON bag"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omits final trailing newline",
+      "detail": "cat -A last TRAF/SHARE line without $.",
+      "repro": "seed; cat -A TRAF.txt"
     },
     {
       "id": "W7",
-      "severity": "low",
-      "area": "host|bag",
-      "title": "No THRESHKV max / DROPVAL above form",
-      "detail": "Cap outliers for burn ratio; only KEEPVAL >= min. MEANINGFUL_ITER candidate.",
-      "repro": "no CAPKV"
+      "severity": "med",
+      "area": "host|json",
+      "title": "PRINT_JSON bag newline collapse",
+      "detail": "Stable; SCALE result looks single-field in JSON.",
+      "repro": "PRINT_JSON bag"
     },
     {
       "id": "W8",
-      "severity": "med",
-      "area": "lang|parse",
-      "title": "sep still string-literal only on LOOKUPN/THRESHKV",
-      "detail": "Same family footgun as prior KV ops.",
-      "repro": "LOOKUPN bag k SEP"
+      "severity": "low",
+      "area": "host|bag",
+      "title": "PCTKV_SUM is pre-percent total not sum of shares",
+      "detail": "Naming confuses agents checking whether percents add to 100; must re-SUMKV the share bag.",
+      "repro": "PCTKV_SUM == original SUMKV"
     }
   ],
   "workarounds": [
-    "After LOOKUPN check LOOKUPN_OR; dual LOOKUP string if value must be numeric",
-    "Inspect THRESHKV_DROP vs expected; validate values before thresh",
-    "Budget: CMP val_n CEIL with LAST_N>=0 as burned (>=)",
-    "Always \":\" string literal for sep"
+    "After PCTKV SUMKV share bag and tolerate remainder or redistribute largest remainder in agent",
+    "Strip non-numeric keys before SCALE/CAP/PCT",
+    "Refuse FACTOR<=0 at agent layer before SCALEKV",
+    "Gate pct_sum==0 as miss",
+    "Use CAPKV_N==0 as no-op signal"
   ],
   "language_gaps": [
-    "LOOKUPN STRICT refuse non-numeric (OK=0)",
-    "LOOKUPN OR with OK=0 option on default",
-    "THRESHKV skipped-nonnum counter / STRICT",
-    "THRESHKV max / BETWEEN lo hi",
-    "resolve_str_arg sep",
+    "PCTKV remainder distribution / exact-100 mode",
+    "SCALE/CAP/PCT STRICT drop or refuse non-numeric",
+    "SCALEKV refuse factor 0",
+    "FLOORKV / CLAMPKV min..max range",
+    "PCTKV_SHARE_SUM auto or rename PCTKV_SUM clarity",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive seed/getn/thresh/page/budget clean",
-    "LOOKUPN non-numeric \u2192 0 hit is high-sev footgun for SLO math",
-    "CMP LAST_N -1|0|1 works well for budget gate",
-    "No language fix this iter"
+    "Positive scale→cap→pct pipeline works for LB share digests",
+    "Share field sum 97/100 is severe for routing weight math",
+    "Non-numeric preserve in PCT bag is high-sev contamination",
+    "No language fix — remainder mode for MEANINGFUL_ITER"
   ],
-  "commit": "194be64d898f77926250a0215f393bfb8a6a16ba",
-  "ts": "2026-08-06T00:45:00Z"
+  "commit": "",
+  "ts": "2026-08-06T01:10:00Z"
 }

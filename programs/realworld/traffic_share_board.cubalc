@@ -1,0 +1,670 @@
+# traffic_share_board.cubalc — traffic counts → scale/cap → share% plate
+#
+# Real use: mesh/LB agent keeps service:request bags under STATE. SCALEKV
+# weights a source region, CAPKV clamps outliers before share math, PCTKV
+# rewrites values as integer percent of total for routing digests.
+#
+# Distinct from slo_burn_gate (THRESHKV denoise + budget) and shard_err_rollup
+# (MERGEKV multi-shard): this board is scale → cap → percent share pipeline.
+#
+# Plate under STATE:
+#   TRAF.txt          — service:count bag (SoT)
+#   SHARE.txt         — last PCTKV result (percent bag)
+#   TRAF_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TS_ACTION):
+#   list      — depth + SUMKV + TOPKEY (default)
+#   seed      — WORDS svc:n (skip existing)
+#   loadlines — ||| events → FREQ → TRAF
+#   bump      — KVINC NAME [delta]
+#   scale     — SCALEKV factor (ARG1/ENV) in-place TRAF
+#   cap       — CAPKV max (ARG1/ENV) in-place TRAF
+#   pct       — PCTKV TRAF → SHARE plate
+#   getn      — LOOKUPN on TRAF OR 0
+#   getshare  — LOOKUPN on SHARE OR 0
+#   top       — TOPKEY TRAF
+#   del       — KVDEL
+#   clear     — empty plates
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ts_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1='api:30 edge:10 mesh:5 noise:1' \
+#     ./out/cubalc run -q -s programs/realworld/traffic_share_board.cubalc
+#   CUBALC_ARG0=scale CUBALC_ARG1=2 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=cap CUBALC_ARG1=40 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=pct ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_TS_FILE=TRAF.txt
+#   CUBALC_TS_SHARE=SHARE.txt
+#   CUBALC_TS_REQUIRE=1
+#   CUBALC_TS_FACTOR=2
+#   CUBALC_TS_MAX=50
+#   CUBALC_TS_DELTA=1
+#
+# Edges deliberately stressed:
+#   PCTKV integer truncation (3/7→42 not 42.8); sum of percents may ≠ 100
+#   PCTKV zero total → all zeros not miss
+#   CAPKV max=0 zeros all; CAPKV_N counts only clamped fields
+#   SCALEKV factor 0 zeros; default factor 1 if omitted
+#   non-numeric values under SCALE/CAP/PCT (strtol 0)
+#   LOOKUPN OR silent OK=1; empty soft+REQUIRE
+#   WRITE NL; PRINT_JSON collapse; sep literal only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "traffic_share_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "TRAF.txt"
+DEFAULT SFILE = "SHARE.txt"
+DEFAULT REPORT = "TRAF_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT FACTOR = 2
+DEFAULT MAXC = 50
+DEFAULT DELTA = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TS_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_TS_SHARE" OR ""
+IF LAST_N > 0 THEN
+  LET SFILE = LAST
+END
+SYS ENV "CUBALC_TS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TS_FACTOR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FACTOR = LAST_N
+  END
+END
+SYS ENV "CUBALC_TS_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAXC = LAST_N
+  END
+END
+SYS ENV "CUBALC_TS_DELTA" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir SFILE
+LET share_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft traf load"
+SYS READ OR share_path OR ""
+LET share = LAST
+CLEAR_ERR "soft share load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET share_changed = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET total_n = 0
+LET cap_n = 0
+LET scale_n = 0
+LET pct_sum = 0
+LET used_or = 0
+LET top_k = ""
+LET top_v = 0
+
+# numeric override for scale/cap from ARG1
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET FACTOR = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "cap"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET MAXC = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    SYS TOPKEY bag ":"
+    IF OK == 1 THEN
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+    END
+    CLEAR_ERR
+  END
+  STATUS
+  PRINT "traf" depth0 total_n ACTION
+  PRINT_JSON depth0 total_n top_k top_v FACTOR MAXC ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON share
+  LET note_msg = "list ok"
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs svc:n tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP bag k ":"
+        IF OK == 0 THEN
+          SYS KVSET bag k v ":"
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- loadlines ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  LET evs = LAST
+  SYS FREQ evs
+  LET bag = LAST
+  LET changed = 1
+  SYS LINES bag
+  LET hit = LAST_N
+  LET note_msg = "freq loaded"
+END
+
+# --- bump ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "bump needs svc"
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DELTA = LAST_N
+    END
+  END
+  SYS KVINC bag NAME DELTA ":"
+  LET bag = LAST
+  LET val_n = KVINC_V
+  SYS STR val_n
+  LET val_s = LAST
+  LET changed = 1
+  LET hit = val_n
+  LET note_msg = "bumped"
+END
+
+# --- scale SCALEKV ---
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  NOTE "action scale"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "scale empty"
+    FAIL "scale empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scale empty"
+    END
+  ELSE
+    SYS SCALEKV bag FACTOR ":"
+    LET bag = LAST
+    LET scale_n = SCALEKV_N
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "scaled"
+    PRINT_JSON FACTOR scale_n
+    PRINT_JSON bag
+  END
+END
+
+# --- cap CAPKV ---
+SYS EQS ACTION "cap"
+IF LAST_N == 1 THEN
+  NOTE "action cap"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "cap empty"
+    FAIL "cap empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "cap empty"
+    END
+  ELSE
+    SYS CAPKV bag MAXC ":"
+    LET bag = LAST
+    LET cap_n = CAPKV_N
+    LET changed = 1
+    LET hit = 1
+    IF cap_n == 0 THEN
+      LET note_msg = "cap none"
+    ELSE
+      LET note_msg = "capped"
+    END
+    PRINT_JSON MAXC cap_n
+    PRINT_JSON bag
+  END
+END
+
+# --- pct PCTKV → SHARE ---
+SYS EQS ACTION "pct"
+IF LAST_N == 1 THEN
+  NOTE "action pct"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pct empty"
+    FAIL "pct empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pct empty"
+    END
+  ELSE
+    SYS PCTKV bag ":"
+    LET share = LAST
+    LET pct_sum = PCTKV_SUM
+    LET share_changed = 1
+    SYS LINES share
+    LET hit = LAST_N
+    # zero total still "succeeds" with zeros — flag as miss soft
+    IF pct_sum == 0 THEN
+      LET miss = 1
+      LET note_msg = "pct zero total"
+      FAIL "pct zero total"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pct zero total"
+      END
+    ELSE
+      LET note_msg = "pct ok"
+    END
+    PRINT_JSON pct_sum hit
+    PRINT_JSON share
+  END
+END
+
+# --- getn TRAF ---
+SYS EQS ACTION "getn"
+IF LAST_N == 1 THEN
+  NOTE "action getn"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getn needs svc"
+  END
+  SYS LOOKUPN bag NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  LET hit = val_n
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "getn default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "getn default only"
+      CLEAR_ERR
+      EXIT 2 "getn default only"
+    END
+  ELSE
+    LET note_msg = "getn ok"
+  END
+END
+
+# --- getshare SHARE ---
+SYS EQS ACTION "getshare"
+IF LAST_N == 1 THEN
+  NOTE "action getshare"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getshare needs svc"
+  END
+  SYS BLANK share
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "getshare empty"
+    FAIL "getshare empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "getshare empty"
+    END
+  ELSE
+    SYS LOOKUPN share NAME ":" OR 0
+    LET val_n = LAST_N
+    LET used_or = LOOKUPN_OR
+    SYS STR val_n
+    LET val_s = LAST
+    LET hit = val_n
+    IF used_or == 1 THEN
+      LET miss = 1
+      LET note_msg = "getshare default"
+      IF REQUIRE_HIT > 0 THEN
+        FAIL "getshare default only"
+        CLEAR_ERR
+        EXIT 2 "getshare default only"
+      END
+    ELSE
+      LET note_msg = "getshare ok"
+    END
+  END
+END
+
+# --- top ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS TOPKEY bag ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "top empty"
+    FAIL "top empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top empty"
+    END
+  ELSE
+    LET top_k = LAST
+    LET top_v = TOPKEY_V
+    LET val_s = top_k
+    LET val_n = top_v
+    LET hit = top_v
+    LET note_msg = "top ok"
+  END
+END
+
+# --- del ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs svc"
+  END
+  SYS KVDEL bag NAME ":"
+  LET bag = LAST
+  IF KVDEL_HIT == 0 THEN
+    LET miss = 1
+    LET note_msg = "del miss"
+    FAIL "del miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del miss"
+    END
+  ELSE
+    LET val_s = KVDEL_V
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "deleted"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET share = ""
+  LET changed = 1
+  LET share_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "bump"
+LET k = k + LAST_N
+SYS EQS ACTION "scale"
+LET k = k + LAST_N
+SYS EQS ACTION "cap"
+LET k = k + LAST_N
+SYS EQS ACTION "pct"
+LET k = k + LAST_N
+SYS EQS ACTION "getn"
+LET k = k + LAST_N
+SYS EQS ACTION "getshare"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "traf write failed"
+  END
+  CLEAR_ERR
+END
+IF share_changed > 0 THEN
+  SYS WRITE share_path share
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "share write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.traf.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pct_sum"
+LET report = LAST
+SYS STR pct_sum
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "cap_n"
+LET report = LAST
+SYS STR cap_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "scale_n"
+LET report = LAST
+SYS STR scale_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "factor"
+LET report = LAST
+SYS STR FACTOR
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "maxc"
+LET report = LAST
+SYS STR MAXC
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "top_k"
+LET report = LAST
+SYS PUSH report top_k
+LET report = LAST
+SYS PUSH report "top_v"
+LET report = LAST
+SYS STR top_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "traf" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 val_n pct_sum cap_n scale_n elapsed STATUS_OK
+PASS "traf tick"
+NOTE "traffic_share_board: done"
+CLEAR_ERR
+EXIT 0 "traf ok"
