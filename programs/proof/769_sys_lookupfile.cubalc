@@ -1,0 +1,74 @@
+# SYS LOOKUPFILE / FILELOOKUP / KVFILEGET — peel key=val from plate file
+# Usability: plate status without READ+LOOKUP glue. Default sep "=".
+# LOOKUPFILEI icase. OR fallback. Soft key miss / path miss.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "lookupfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fs = LAST
+SYS WRITE fs "host=peer1\nport=7700\nSTATUS=live\nmode=soft"
+
+# default sep =
+SYS LOOKUPFILE fs "port"
+ASSERT OK == 1
+ASSERT LOOKUPFILE_N == 1
+ASSERT LOOKUPFILE_I == 1
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+SYS EQS LOOKUPFILE_LINE "port=7700"
+ASSERT LAST_N == 1
+
+SYS FILELOOKUP fs "host"
+SYS EQS LAST "peer1"
+ASSERT LAST_N == 1
+
+# custom sep :
+SYS WRITE fs "error:3\nwarn:1\ninfo:10"
+SYS LOOKUPFILE fs "warn" ":"
+ASSERT LOOKUPFILE_N == 1
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# icase
+SYS WRITE fs "Host=peer2\nPort=9"
+SYS LOOKUPFILEI fs "host"
+ASSERT LOOKUPFILE_N == 1
+SYS EQS LAST "peer2"
+ASSERT LAST_N == 1
+
+# bare key miss
+SYS LOOKUPFILE fs "missing"
+ASSERT OK == 0
+ASSERT LOOKUPFILE_N == 0
+ASSERT LOOKUPFILE_I == -1
+
+# OR fallback
+SYS LOOKUPFILE fs "missing" OR "default"
+ASSERT OK == 1
+ASSERT LOOKUPFILE_N == 0
+ASSERT LOOKUPFILE_OR == 1
+SYS EQS LAST "default"
+ASSERT LAST_N == 1
+
+# soft path miss without OR
+SYS LOOKUPFILE "no_such_lookupfile_mi.txt" "a"
+ASSERT OK == 0
+ASSERT LOOKUPFILE_N == 0
+
+# path miss with OR
+SYS LOOKUPFILE "no_such_lookupfile_mi.txt" "a" OR "fb"
+ASSERT OK == 1
+ASSERT LOOKUPFILE_OR == 1
+SYS EQS LAST "fb"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_lookupfile ok"

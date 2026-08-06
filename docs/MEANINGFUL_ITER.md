@@ -256,6 +256,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 226. ~~**`SYS SETALLMATCHFILE` / `FILESETALLMATCH`**~~ **done** (replace all file lines containing needle · bulk status rewrite without FIND+SET loop).
 227. ~~**`SYS INSERTMATCHFILE` / `FILEINSERTMATCH` / `AFTERMATCHFILE`**~~ **done** (insert line after first match · FIND+INSERT one-shot for config patches).
 228. ~~**`SYS BEFOREMATCHFILE` / `INSERTBEFOREMATCH`**~~ **done** (insert line before first match · dual of AFTERMATCHFILE for headers/imports).
+229. ~~**`SYS LOOKUPFILE` / `FILELOOKUP` / `KVFILEGET`**~~ **done** (peel key=val from plate file · OR fallback · no READ+LOOKUP glue).
 
 ## Tick protocol
 
