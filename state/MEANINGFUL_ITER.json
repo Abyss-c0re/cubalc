@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 134,
-  "version": "1.15.159-usability",
-  "item": "SYS MERGEKV / KVADDALL merge key:val bags by sum",
-  "item_id": 167,
-  "title": "SYS MERGEKV|KVADDALL bag_a bag_b [sep] — sum-merge FREQ/plate kv",
-  "commit": "df32bbbbde7233a257f57be7a5af3f76b17b5e43",
-  "summary": "MERGEKV combine FREQ histograms without EACH+KVINC. selftest 134.",
+  "iter": 135,
+  "version": "1.15.160-usability",
+  "item": "SYS SUMKV / TOTALKV sum key:val bag values",
+  "item_id": 168,
+  "title": "SYS SUMKV|TOTALKV bag [sep] — sum key:val numeric values",
+  "commit": "0d0efd53243ad9531cde6f62e1dc6108d0e558f8",
+  "summary": "SUMKV FREQ total without VALS+SUM. LAST_N=sum. selftest 135.",
   "proofs": [
-    "707_sys_mergekv",
-    "selftest n_pass=134"
+    "708_sys_sumkv",
+    "selftest n_pass=135"
   ],
-  "when": "2026-08-06T00:05:54Z",
+  "when": "2026-08-06T00:13:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "df32bbbbde7233a257f57be7a5af3f76b17b5e43"
+  "sha": "0d0efd53243ad9531cde6f62e1dc6108d0e558f8"
 }
