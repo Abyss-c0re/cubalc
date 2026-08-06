@@ -2,6 +2,7 @@
 #include "lang/cubalc_lang_internal.h"
 #if !defined(CUBALC_OS_WINDOWS)
 #  include <pwd.h>
+#  include <fnmatch.h>
 #endif
 
 int cubalc_lang_ops_core(VM *vm, Lex *L){
@@ -438,6 +439,122 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = hr.n;
       var_set_num(vm, "LAST_N", hr.n);
       var_set_num(vm, "LIST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS GLOB|MATCHFILES|WILDCARD path pattern
+     * — list basenames under path matching shell-style pattern (* ? []).
+     * Default pattern "*" when omitted. Soft miss / non-dir: OK=0 empty LAST.
+     * LAST = matching names newline-joined; LAST_N/GLOB_N = count.
+     * Usability: find plates/proofs without shell ls|grep glue. */
+    if (kw(&L->cur,"GLOB") || kw(&L->cur,"MATCHFILES") || kw(&L->cur,"WILDCARD") ||
+        kw(&L->cur,"FILEGLOB") || kw(&L->cur,"LSGLOB") || kw(&L->cur,"DIRGLOB") ||
+        kw(&L->cur,"MATCHDIR") || kw(&L->cur,"FNMATCH") || kw(&L->cur,"GLOBLS")){
+      char path[512], pat[256], out[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr;
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0;
+      lex_next(L);
+      path[0] = 0; pat[0] = 0; out[0] = 0;
+      snprintf(pat, sizeof pat, "%s", "*");
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS GLOB \"path\" [\"pattern\"]"); return -1;
+      }
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, pat, sizeof pat) != 0)
+          snprintf(pat, sizeof pat, "%s", "*");
+        if (!pat[0]) snprintf(pat, sizeof pat, "%s", "*");
+      }
+      if (cubalc_host_listdir(path, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "GLOB_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "GLOB", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        }
+        bump(vm); return 1;
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      /* no fnmatch: fall back to full list when pattern is "*", else substring * strip */
+      if (strcmp(pat, "*") == 0) {
+        snprintf(out, sizeof out, "%s", hr.str);
+        kept = hr.n;
+      } else {
+        p = hr.str;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            char name[512];
+            size_t take = flen;
+            int hit = 0;
+            if (take >= sizeof name) take = sizeof name - 1;
+            memcpy(name, start, take);
+            name[take] = 0;
+            /* minimal: *suffix, prefix*, or exact */
+            if (pat[0] == '*' && pat[1] && !strchr(pat + 1, '*'))
+              hit = (take >= strlen(pat + 1) &&
+                     strcmp(name + take - strlen(pat + 1), pat + 1) == 0);
+            else if (pat[0] && pat[strlen(pat) - 1] == '*' &&
+                     !strchr(pat, '*') /* only trailing */)
+              hit = 0; /* handled below */
+            else if (pat[0] && pat[strlen(pat) - 1] == '*') {
+              size_t pn = strlen(pat) - 1;
+              hit = (strncmp(name, pat, pn) == 0);
+            } else
+              hit = (strcmp(name, pat) == 0);
+            if (hit) {
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + take < sizeof out) {
+                memcpy(out + olen, name, take);
+                olen += take;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+#else
+      p = hr.str;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char name[512];
+          size_t take = flen;
+          if (take >= sizeof name) take = sizeof name - 1;
+          memcpy(name, start, take);
+          name[take] = 0;
+          if (fnmatch(pat, name, 0) == 0) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, name, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+#endif
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GLOB", out);
+      var_set_str(vm, "MATCHFILES", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "GLOB_N", kept);
+      var_set_num(vm, "MATCHFILES_N", kept);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -10469,7 +10586,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10696,6 +10813,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS REALPATH", "SYS REALPATH|ABSPATH path — absolute path → LAST"},
       {"SYS TOUCH", "SYS TOUCH path — create empty / refresh mtime · LAST_N 0|1"},
       {"SYS LIST", "SYS LIST|LS path — dir basenames → LAST · LAST_N=count"},
+      {"SYS GLOB", "SYS GLOB|MATCHFILES path [pattern] — basenames matching * ? [] · plate discovery"},
+      {"SYS MATCHFILES", "SYS MATCHFILES path pattern — alias of SYS GLOB"},
       {"SYS NTH", "SYS NTH n [str] — 0-based newline field · pairs with LIST"},
       {"SYS LINE", "SYS LINE n [str] — 1-based newline field"},
       {"SYS HEAD", "SYS HEAD [str] — first newline field"},

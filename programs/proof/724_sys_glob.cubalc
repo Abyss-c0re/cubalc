@@ -1,0 +1,81 @@
+# SYS GLOB / MATCHFILES — list basenames matching shell pattern
+# Usability: find plates/proofs without shell ls|grep glue
+
+HOLD_FLASH 1
+
+# small fixture dir (huge dirs may truncate LIST buffer)
+SYS TMP
+LET td = LAST
+SYS JOIN td "glob_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "alpha.plate"
+LET f1 = LAST
+SYS JOIN fix "beta.plate"
+LET f2 = LAST
+SYS JOIN fix "gamma.log"
+LET f3 = LAST
+SYS JOIN fix "readme.txt"
+LET f4 = LAST
+SYS TOUCH f1
+SYS TOUCH f2
+SYS TOUCH f3
+SYS TOUCH f4
+
+# exact
+SYS GLOB fix "alpha.plate"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT GLOB_N == 1
+SYS EQS LAST "alpha.plate"
+ASSERT LAST_N == 1
+
+# *.plate
+SYS GLOB fix "*.plate"
+ASSERT OK == 1
+ASSERT GLOB_N == 2
+LET plates = LAST
+SYS HASLINE plates "alpha.plate"
+ASSERT LAST_N == 1
+SYS HASLINE plates "beta.plate"
+ASSERT LAST_N == 1
+SYS HASLINE plates "gamma.log"
+ASSERT LAST_N == 0
+
+# prefix*
+SYS GLOB fix "g*"
+ASSERT GLOB_N == 1
+SYS EQS LAST "gamma.log"
+ASSERT LAST_N == 1
+
+# default pattern * = all basenames
+SYS GLOB fix
+ASSERT OK == 1
+ASSERT GLOB_N == 4
+
+# soft miss dir
+SYS GLOB "no_such_glob_dir_xyz_mi" "*.plate"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT GLOB_N == 0
+
+# aliases
+SYS MATCHFILES fix "*.log"
+ASSERT MATCHFILES_N == 1
+SYS WILDCARD fix "readme*"
+ASSERT GLOB_N == 1
+
+# agent: list plates then TAKE first
+SYS GLOB fix "*.plate"
+SYS SORT LAST
+SYS TAKE 1 LAST
+SYS EQS LAST "alpha.plate"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+SYS RM f4
+
+PRINT "sys_glob ok"
