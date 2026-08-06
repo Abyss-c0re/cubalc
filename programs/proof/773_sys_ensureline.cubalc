@@ -1,0 +1,75 @@
+# SYS ENSURELINE / ENSUREFILELINE / ADDIFMISSING
+# — append line if exact file line not already present (idempotent)
+# Usability: config flags/markers without HASLINE+APPEND glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "ensureline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "flags.txt"
+LET fs = LAST
+SYS WRITE fs "feature_a\nfeature_b\nmode=soft"
+
+# already present → no append
+SYS ENSURELINE fs "feature_a"
+ASSERT OK == 1
+ASSERT ENSURELINE_NEW == 0
+ASSERT ENSURELINE_N == 0
+ASSERT ENSURELINE_I == 0
+ASSERT ENSURELINE_TOTAL == 3
+SYS EQS LAST "feature_a"
+ASSERT LAST_N == 1
+
+# missing → append
+SYS ENSURELINE fs "feature_c"
+ASSERT ENSURELINE_NEW == 1
+ASSERT ENSURELINE_N == 1
+ASSERT ENSURELINE_I == 3
+ASSERT ENSURELINE_TOTAL == 4
+SYS EQS LAST "feature_c"
+ASSERT LAST_N == 1
+
+# second ensure is no-op
+SYS ENSUREFILELINE fs "feature_c"
+ASSERT ENSURELINE_NEW == 0
+ASSERT ENSURELINE_I == 3
+ASSERT ENSURELINE_TOTAL == 4
+
+# verify content order
+SYS LINEAT fs 0
+SYS EQS LAST "feature_a"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "feature_c"
+ASSERT LAST_N == 1
+
+# ADDIFMISSING alias
+SYS ADDIFMISSING fs "mode=soft"
+ASSERT ENSURELINE_NEW == 0
+ASSERT ENSURELINE_I == 2
+
+# create missing file
+SYS JOIN fix "new_flags.txt"
+LET nf = LAST
+SYS RM nf
+SYS FILEENSURE nf "boot=1"
+ASSERT OK == 1
+ASSERT ENSURELINE_NEW == 1
+ASSERT ENSURELINE_TOTAL == 1
+SYS LOOKUPFILE nf "boot"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS ENSURELINE "" "x"
+ASSERT OK == 0
+
+# cleanup
+SYS RM fs
+SYS RM nf
+
+PRINT "sys_ensureline ok"
