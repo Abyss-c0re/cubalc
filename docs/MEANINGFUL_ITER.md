@@ -254,6 +254,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 224. ~~**`SYS DROPMATCHFILE` / `FILEDROPMATCH`**~~ **done** (drop first file line containing needle · FIND+DROP one-shot).
 225. ~~**`SYS DROPALLMATCHFILE` / `FILEDROPALLMATCH`**~~ **done** (drop all file lines containing needle · bulk purge without FIND+DROP loop).
 226. ~~**`SYS SETALLMATCHFILE` / `FILESETALLMATCH`**~~ **done** (replace all file lines containing needle · bulk status rewrite without FIND+SET loop).
+227. ~~**`SYS INSERTMATCHFILE` / `FILEINSERTMATCH` / `AFTERMATCHFILE`**~~ **done** (insert line after first match · FIND+INSERT one-shot for config patches).
 
 ## Tick protocol
 

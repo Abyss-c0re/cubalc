@@ -1,0 +1,72 @@
+# SYS INSERTMATCHFILE / FILEINSERTMATCH / AFTERMATCHFILE
+# — insert line AFTER first file line containing needle
+# Usability: FINDFILELINE+INSERTFILELINE one-shot for section/config patches
+# INSERTMATCHFILEI icase. Soft no-match. Soft path miss.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "insertmatchfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "header\n[section]\nkeep=1\nfooter"
+
+# insert after [section]
+SYS INSERTMATCHFILE fs "[section]" "key=val"
+ASSERT OK == 1
+ASSERT INSERTMATCHFILE_N == 1
+ASSERT INSERTMATCHFILE_I == 2
+ASSERT INSERTMATCHFILE_TOTAL == 5
+SYS EQS LAST "key=val"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 0
+SYS EQS LAST "header"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "[section]"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "key=val"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "keep=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 4
+SYS EQS LAST "footer"
+ASSERT LAST_N == 1
+
+# icase match SECTION header
+SYS WRITE fs "a\n[SECTION]\nb"
+SYS INSERTMATCHFILEI fs "[section]" "x=1"
+ASSERT INSERTMATCHFILE_N == 1
+ASSERT INSERTMATCHFILE_I == 2
+SYS LINEAT fs 1
+SYS EQS LAST "[SECTION]"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "x=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# alias soft no-match
+SYS AFTERMATCHFILE fs "missing" "nope"
+ASSERT OK == 1
+ASSERT INSERTMATCHFILE_N == 0
+ASSERT INSERTMATCHFILE_I == -1
+
+# soft path miss
+SYS INSERTMATCHFILE "no_such_insertmatchfile_mi.txt" "a" "b"
+ASSERT OK == 0
+ASSERT INSERTMATCHFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_insertmatchfile ok"
