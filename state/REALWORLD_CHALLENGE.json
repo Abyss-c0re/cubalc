@@ -154,6 +154,6 @@
     "MODE_N=420 for 0644 documented as agent trap",
     "selftest 253/253; no language fix this iter"
   ],
-  "commit": "5836a05a79323fd5c3972078011955aff6d703e7",
-  "ts": "2026-08-06T20:04:19Z"
+  "commit": "4464a5d74f099c01a96551e5a607a0eb95a93fbb",
+  "ts": "2026-08-06T20:05:30Z"
 }
