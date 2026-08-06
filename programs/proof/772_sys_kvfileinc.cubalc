@@ -1,0 +1,82 @@
+# SYS KVFILEINC / INCKVFILE / FILEKVINC — bump numeric key=val in plate file
+# Usability: retry/severity plate counters without LOOKUPFILE+arith+KVFILESET
+# Default delta +1, sep "=". Missing key inserts. Missing file creates.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "kvfileinc_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fs = LAST
+SYS WRITE fs "retries=2\nport=7700\nerrors=0"
+
+# default +1
+SYS KVFILEINC fs "retries"
+ASSERT OK == 1
+ASSERT KVFILEINC_HIT == 1
+ASSERT KVFILEINC_I == 0
+ASSERT KVFILEINC_V == 3
+ASSERT KVFILEINC_TOTAL == 3
+SYS EQS LAST "retries=3"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "retries"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# custom delta
+SYS KVFILEINC fs "errors" 5
+ASSERT KVFILEINC_HIT == 1
+ASSERT KVFILEINC_V == 5
+ASSERT KVFILEINC_DELTA == 5
+SYS EQS LAST "errors=5"
+ASSERT LAST_N == 1
+
+# insert missing key with default 1
+SYS INCKVFILE fs "warns"
+ASSERT KVFILEINC_HIT == 0
+ASSERT KVFILEINC_V == 1
+ASSERT KVFILEINC_TOTAL == 4
+SYS LOOKUPFILE fs "warns"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# custom sep :
+SYS JOIN fix "hist.txt"
+LET hs = LAST
+SYS WRITE hs "error:3\nwarn:1"
+SYS KVFILEINC hs "error" 2 ":"
+ASSERT KVFILEINC_HIT == 1
+ASSERT KVFILEINC_V == 5
+SYS EQS LAST "error:5"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE hs "error" ":"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# create missing plate
+SYS JOIN fix "cnt.txt"
+LET cs = LAST
+SYS RM cs
+SYS PLATEINC cs "n"
+ASSERT OK == 1
+ASSERT KVFILEINC_HIT == 0
+ASSERT KVFILEINC_V == 1
+ASSERT KVFILEINC_TOTAL == 1
+SYS LOOKUPFILE cs "n"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS KVFILEINC "" "a"
+ASSERT OK == 0
+
+# cleanup
+SYS RM fs
+SYS RM hs
+SYS RM cs
+
+PRINT "sys_kvfileinc ok"

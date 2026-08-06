@@ -259,6 +259,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 229. ~~**`SYS LOOKUPFILE` / `FILELOOKUP` / `KVFILEGET`**~~ **done** (peel key=val from plate file · OR fallback · no READ+LOOKUP glue).
 230. ~~**`SYS KVFILESET` / `FILEKVSET` / `SETKVFILE`**~~ **done** (set/update key=val in plate file · create if missing · dual of LOOKUPFILE).
 231. ~~**`SYS KVFILEDEL` / `FILEKVDEL` / `DELKVFILE`**~~ **done** (drop key=val line from plate file · dual of KVFILESET · ack without READ+WRITE glue).
+232. ~~**`SYS KVFILEINC` / `INCKVFILE` / `FILEKVINC`**~~ **done** (bump numeric key=val in plate file · retry/severity counters without LOOKUP+arith+SET glue).
 
 ## Tick protocol
 
