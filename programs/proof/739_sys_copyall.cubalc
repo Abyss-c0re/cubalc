@@ -1,0 +1,89 @@
+# SYS COPYALL / CPALL — bulk copy path bag into dest dir
+# Usability: snapshot/backup without EACH + COPY glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "copyall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "src"
+LET srcd = LAST
+SYS MKDIR srcd
+SYS JOIN fix "dst"
+LET dstd = LAST
+SYS MKDIR dstd
+
+SYS JOIN srcd "a.plate"
+LET fa = LAST
+SYS WRITE fa "alpha"
+
+SYS JOIN srcd "b.plate"
+LET fb = LAST
+SYS WRITE fb "bravo-xx"
+
+SYS JOIN srcd "ghost.plate"
+LET ghost = LAST
+
+SYS JOIN srcd "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST ghost
+SYS PUSH LAST sub
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 4
+
+# COPYALL → dst: a+b ok, ghost miss, subdir fail
+SYS COPYALL bag dstd
+ASSERT COPYALL_N == 2
+ASSERT COPYALL_MISS == 1
+ASSERT COPYALL_FAIL == 1
+ASSERT COPYALL_SCAN == 4
+ASSERT COPYALL_BYTES == 13
+ASSERT OK == 0
+SYS EQS COPYALL_DEST dstd
+ASSERT LAST_N == 1
+
+SYS JOIN dstd "a.plate"
+LET da = LAST
+SYS JOIN dstd "b.plate"
+LET db = LAST
+SYS HASLINE COPYALL da
+ASSERT LAST_N == 1
+SYS HASLINE COPYALL db
+ASSERT LAST_N == 1
+SYS READ da
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS READ db
+SYS EQS LAST "bravo-xx"
+ASSERT LAST_N == 1
+
+# one-arg dest uses LAST bag (files only)
+SYS PATHGLOB srcd
+SYS KEEPFILES
+SYS CPALL dstd
+ASSERT OK == 1
+ASSERT CPALL_N == 2
+ASSERT COPYALL_FAIL == 0
+ASSERT COPYALL_MISS == 0
+
+# empty bag soft
+SYS COPYALL "" dstd
+ASSERT COPYALL_N == 0
+ASSERT COPYALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM da
+SYS RM db
+SYS RM fa
+SYS RM fb
+
+PRINT "sys_copyall ok"
