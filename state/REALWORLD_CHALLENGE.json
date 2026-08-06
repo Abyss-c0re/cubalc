@@ -147,6 +147,6 @@
     "NUM nope soft-zero blocks cut validation",
     "selftest 238/238; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "87eb98a8913ced74326ef79252196446f0259b83",
   "ts": "2026-08-06T17:33:48Z"
 }
