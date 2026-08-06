@@ -8,37 +8,37 @@
   "tests": [
     {
       "name": "pglob_bin",
-      "cmd": "PATHGLOB out *.bin → 1 full path app.bin (not nested)",
+      "cmd": "PATHGLOB out *.bin \u2192 1 full path app.bin (not nested)",
       "ok": true,
       "note": "PATHGLOB_N=1 full path; no recursion"
     },
     {
       "name": "shellpat_so",
-      "cmd": "one-arg PATHGLOB dir/*.so → lib.so full path",
+      "cmd": "one-arg PATHGLOB dir/*.so \u2192 lib.so full path",
       "ok": true,
       "note": "shell style"
     },
     {
       "name": "pglob_star_dirs",
-      "cmd": "PATHGLOB out * → 6 entries incl nested/ dir",
+      "cmd": "PATHGLOB out * \u2192 6 entries incl nested/ dir",
       "ok": true,
       "note": "dirs included; no file-only filter"
     },
     {
       "name": "measure_fullpath",
-      "cmd": "SIZE each full path → basename:bytes; nested dir SIZE 0",
+      "cmd": "SIZE each full path \u2192 basename:bytes; nested dir SIZE 0",
       "ok": true,
       "note": "no JOIN glue; dir pollutes bag"
     },
     {
       "name": "exts_freq",
-      "cmd": "EXTNAME+FREQ → .gz/.conf/.so/.bin/(none)",
+      "cmd": "EXTNAME+FREQ \u2192 .gz/.conf/.so/.bin/(none)",
       "ok": true,
-      "note": "data.tar.gz → .gz last suffix only"
+      "note": "data.tar.gz \u2192 .gz last suffix only"
     },
     {
       "name": "keep_bin_substr",
-      "cmd": "KEEPKEY sizes bin → app.bin only",
+      "cmd": "KEEPKEY sizes bin \u2192 app.bin only",
       "ok": true,
       "note": "substring key match"
     },
@@ -64,7 +64,7 @@
       "name": "pglob_empty_match",
       "cmd": "empty dir *.bin OK soft; REQUIRE exit 2",
       "ok": true,
-      "note": "empty≠dir miss"
+      "note": "empty\u2260dir miss"
     },
     {
       "name": "selftest",
@@ -80,7 +80,7 @@
       "area": "host|fs",
       "title": "PATHGLOB includes directories; no files-only mode",
       "detail": "PATHGLOB dir * returns subdirs (nested/) alongside files. SIZE on dir is OK=1 LAST_N=0, so measure invents nested:0 junk keys. Agents need ISDIR/ISFILE filter loop.",
-      "repro": "PATHGLOB out * → …/nested + files; SIZE nested → 0"
+      "repro": "PATHGLOB out * \u2192 \u2026/nested + files; SIZE nested \u2192 0"
     },
     {
       "id": "W2",
@@ -88,15 +88,15 @@
       "area": "host|fs",
       "title": "PATHGLOB non-recursive; nested artifacts invisible",
       "detail": "out/nested/deep.bin not matched by *.bin at out/. Pattern is basename-level in one directory only. Same class as GLOB. No ** support.",
-      "repro": "PATHGLOB out *.bin → app.bin only; deep.bin missed"
+      "repro": "PATHGLOB out *.bin \u2192 app.bin only; deep.bin missed"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|path",
-      "title": "EXTNAME last suffix only (.tar.gz → .gz)",
+      "title": "EXTNAME last suffix only (.tar.gz \u2192 .gz)",
       "detail": "STEM of data.tar.gz is data.tar not data. Double-extension archives mis-typed in FREQ rollups. No multi-suffix peel.",
-      "repro": "EXTNAME data.tar.gz → .gz; STEM → data.tar"
+      "repro": "EXTNAME data.tar.gz \u2192 .gz; STEM \u2192 data.tar"
     },
     {
       "id": "W4",
@@ -104,7 +104,7 @@
       "area": "host|fs",
       "title": "SIZE on directory succeeds with 0 bytes",
       "detail": "ISDIR true but SIZE returns OK=1 LAST_N=0 instead of soft miss. Silent pollution of size bags when PATHGLOB mixes dirs.",
-      "repro": "SIZE nested_dir → 0 OK=1"
+      "repro": "SIZE nested_dir \u2192 0 OK=1"
     },
     {
       "id": "W5",
@@ -120,7 +120,7 @@
       "area": "host|bag",
       "title": "KEEPKEY substring on basename keys",
       "detail": "Needle bin matches app.bin. Exact key needs LOOKUP/EQS after peel.",
-      "repro": "KEEPKEY sizes bin → app.bin:5"
+      "repro": "KEEPKEY sizes bin \u2192 app.bin:5"
     },
     {
       "id": "W7",
@@ -145,7 +145,7 @@
     "Treat PATHGLOB_N==0 as soft empty even when OK=1",
     "For archives, peel known multi-suffixes with STRIPSUFFIX before STEM",
     "Use full-path HASLINE for membership; never prefix-match",
-    "PATHGLOB then READ/SIZE/RM without JOIN — main win vs GLOB"
+    "PATHGLOB then READ/SIZE/RM without JOIN \u2014 main win vs GLOB"
   ],
   "language_gaps": [
     "PATHGLOB files-only / no-dirs mode",
@@ -161,8 +161,8 @@
     "Star pattern mixed nested/ dir into inventory",
     "SIZE dir=0 silent; measure wrote nested:0",
     "data.tar.gz typed as .gz not .tar.gz",
-    "No language fix this iter — document gaps for MEANINGFUL_ITER"
+    "No language fix this iter \u2014 document gaps for MEANINGFUL_ITER"
   ],
-  "commit": "",
+  "commit": "ed046b3da63a92acb7c187579a631b33bdb71593",
   "ts": "2026-08-06T03:24:30Z"
 }
