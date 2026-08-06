@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "nice_get",
-      "cmd": "GETNICE → 0",
+      "cmd": "GETNICE \u2192 0",
       "ok": true,
       "note": "baseline"
     },
     {
       "name": "yield",
-      "cmd": "NICE +1 same process → 1; BASE saved 0",
+      "cmd": "NICE +1 same process \u2192 1; BASE saved 0",
       "ok": true,
       "note": "from 0 to 1"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "gate",
-      "cmd": "nice>=0 pass; >=99 REQUIRE→2",
+      "cmd": "nice>=0 pass; >=99 REQUIRE\u21922",
       "ok": true,
       "note": "deny"
     },
@@ -66,15 +66,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|nice",
-      "title": "NICE is process-scoped — lost across cubalc re-execs",
+      "title": "NICE is process-scoped \u2014 lost across cubalc re-execs",
       "detail": "yield then gate in separate runs sees original nice. Agents assume durable host priority like CHMOD. Same class as UMASK.",
-      "repro": "yield 1; new process GETNICE → 0"
+      "repro": "yield 1; new process GETNICE \u2192 0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|shquote",
-      "title": "Double SHQUOTE nests — no idempotent quote mode",
+      "title": "Double SHQUOTE nests \u2014 no idempotent quote mode",
       "detail": "SHQUOTE of already-quoted string re-wraps (double_same=0). Agents that quote twice corrupt SPAWN lines. No SHQUOTE_IF needed.",
       "repro": "SHQUOTE 'x' then SHQUOTE LAST"
     },
@@ -82,9 +82,9 @@
       "id": "W3",
       "severity": "high",
       "area": "host|nice",
-      "title": "Cannot lower nice without privilege — restore soft-fail",
+      "title": "Cannot lower nice without privilege \u2014 restore soft-fail",
       "detail": "After yield, restore to lower value fails for unprivileged; only root can drop nice. No NICE_CAN_LOWER probe.",
-      "repro": "NICE 5; NICE 0 as non-root → fail"
+      "repro": "NICE 5; NICE 0 as non-root \u2192 fail"
     },
     {
       "id": "W4",
@@ -92,22 +92,22 @@
       "area": "host|arg",
       "title": "Empty string ARG collapsed to missing by BLANK",
       "detail": "CUBALC_ARG1='' makes quote exit needs-string; cannot quote empty to '' via empty ARG without sentinel. Language BLANK treats empty as absent.",
-      "repro": "quote ARG1 empty → EXIT needs string"
+      "repro": "quote ARG1 empty \u2192 EXIT needs string"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|shunquote",
       "title": "SHUNQUOTE pass-through of unquoted raw is silent",
-      "detail": "UNQUOTE raw → raw OK=1. Agents cannot tell was-quoted vs never-quoted without STARTS/ENDS ' checks.",
-      "repro": "SHUNQUOTE raw → raw"
+      "detail": "UNQUOTE raw \u2192 raw OK=1. Agents cannot tell was-quoted vs never-quoted without STARTS/ENDS ' checks.",
+      "repro": "SHUNQUOTE raw \u2192 raw"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|has",
       "title": "HAS on quoted strings always hits quote chars",
-      "detail": "HAS 'hello' ' → 1 always. False friends when searching for apostrophe content.",
+      "detail": "HAS 'hello' ' \u2192 1 always. False friends when searching for apostrophe content.",
       "repro": "HAS quoted '"
     },
     {
@@ -124,7 +124,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_JS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate 99 → rc 0"
+      "repro": "REQUIRE=abc gate 99 \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -148,6 +148,6 @@
     "empty ARG blank trap on quote",
     "selftest 270/270; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "6f090f46c4c09d53c3bebc54bf10c4c1bbc1ec9a",
   "ts": "2026-08-06T22:58:54Z"
 }
