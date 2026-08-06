@@ -1,0 +1,58 @@
+# SYS NICE / RENICE — process priority without shell nice
+# Usability: agent yield/backpressure via nice get/set
+
+HOLD_FLASH 1
+
+# get current nice
+SYS NICE
+ASSERT OK == 1
+LET base = LAST_N
+ASSERT NICE == base
+ASSERT NICE_N == base
+ASSERT PRIORITY == base
+
+# aliases get
+SYS GETNICE
+ASSERT OK == 1
+ASSERT LAST_N == base
+SYS GETPRIORITY
+ASSERT LAST_N == base
+
+# set lower priority (higher nice) — allowed for unprivileged
+# use base+1 if base < 19 else base
+LET target = base
+IF base < 19 THEN
+  LET target = base + 1
+END
+
+SYS NICE target
+ASSERT OK == 1
+ASSERT LAST_N == target
+ASSERT NICE == target
+
+# SETNICE / RENICE aliases
+SYS GETNICE
+LET now = LAST_N
+# set same value again (idempotent)
+SYS SETNICE now
+ASSERT OK == 1
+ASSERT LAST_N == now
+SYS RENICE now
+ASSERT OK == 1
+ASSERT LAST_N == now
+
+# restore toward base if we raised nice (optional soft)
+IF target != base THEN
+  SYS NICE base
+  # may fail if base < current and unprivileged; soft OK either way
+  SYS GETNICE
+  ASSERT OK == 1
+END
+
+# missing SETNICE arg soft fail
+SYS SETNICE
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+PRINT "sys_nice ok"

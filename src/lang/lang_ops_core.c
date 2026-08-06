@@ -14,6 +14,7 @@
 #  include <sys/utsname.h>
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
+#  include <sys/resource.h>
 /* getloadavg is BSD/POSIX extension; declare if libc omits under strict feature macros. */
 int getloadavg(double loadavg[], int nelem);
 #endif
@@ -13440,6 +13441,108 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS NICE|GETNICE — process nice → LAST_N/NICE.
+     * SYS NICE n | SETNICE n | RENICE n — set priority (higher n = lower prio).
+     * Soft fail OK=0 + LAST_ERR if setpriority denied; get always soft-safe.
+     * Usability: agent yield/backpressure without shell nice/renice. */
+    if (kw(&L->cur,"NICE") || kw(&L->cur,"GETNICE") || kw(&L->cur,"GETPRIORITY") ||
+        kw(&L->cur,"PRIORITY") || kw(&L->cur,"PRIO") ||
+        kw(&L->cur,"SETNICE") || kw(&L->cur,"RENICE") || kw(&L->cur,"SETPRIORITY") ||
+        kw(&L->cur,"SETPRIO")){
+      char op[24];
+      int force_set = 0, force_get = 0;
+      long want = 0;
+      int do_set = 0;
+      long n = 0;
+      char buf[32];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      force_set = (strcmp(op, "SETNICE") == 0 || strcmp(op, "RENICE") == 0 ||
+                   strcmp(op, "SETPRIORITY") == 0 || strcmp(op, "SETPRIO") == 0);
+      force_get = (strcmp(op, "GETNICE") == 0 || strcmp(op, "GETPRIORITY") == 0);
+      lex_next(L);
+      if (!force_get) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          want = parse_expr(vm, L);
+          do_set = 1;
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *gv = var_get(vm, L->cur.text, 0);
+          if (gv && !gv->is_str) {
+            want = gv->val;
+            lex_next(L);
+            do_set = 1;
+          } else if (force_set) {
+            /* SETNICE then statement keyword — missing value */
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", "NICE: need priority value");
+            var_set_str(vm, "ERR", "NICE: need priority value");
+            bump(vm); return 1;
+          }
+        } else if (force_set) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "NICE: need priority value");
+          var_set_str(vm, "ERR", "NICE: need priority value");
+          bump(vm); return 1;
+        }
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      n = 0;
+      if (do_set) {
+        /* no setpriority — report soft fail */
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "NICE: unsupported");
+        var_set_str(vm, "ERR", "NICE: unsupported");
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+        bump(vm); return 1;
+      }
+#else
+      if (do_set) {
+        /* clamp to typical range */
+        if (want < -20) want = -20;
+        if (want > 19) want = 19;
+        if (setpriority(PRIO_PROCESS, 0, (int)want) != 0) {
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "NICE: setpriority denied");
+          var_set_str(vm, "ERR", "NICE: setpriority denied");
+          /* still report current nice if readable */
+          errno = 0;
+          n = (long)getpriority(PRIO_PROCESS, 0);
+          if (n == -1 && errno != 0) n = 0;
+          vm->last_n = n;
+          var_set_num(vm, "LAST_N", n);
+          var_set_num(vm, "NICE", n);
+          snprintf(buf, sizeof buf, "%ld", n);
+          var_set_str(vm, "LAST", buf);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+          bump(vm); return 1;
+        }
+      }
+      errno = 0;
+      n = (long)getpriority(PRIO_PROCESS, 0);
+      if (n == -1 && errno != 0) n = 0;
+#endif
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "NICE", n);
+      var_set_num(vm, "NICE_N", n);
+      var_set_num(vm, "PRIORITY", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS LOADAVG|LOAD|GETLOADAVG — host load averages (1/5/15 min).
      * LAST = "a.bb c.dd e.ff" (space bag); LOAD1/5/15 str; LOAD1_N/5_N/15_N = centiload
      * (load*100 as int for IF/CMP without float). LAST_N = LOAD1_N (1-min primary).
@@ -23668,6 +23771,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS NPROC", "SYS NPROC|CPUS|CORES — online processor count → LAST_N/NPROC"},
       {"SYS ISATTY", "SYS ISATTY|TTY [IN|OUT|ERR] — terminal probe → LAST_N 0|1"},
       {"SYS TTYNAME", "SYS TTYNAME|CTTY|TTYDEV [IN|OUT|ERR] — terminal device path → LAST"},
+      {"SYS NICE", "SYS NICE|GETNICE [n] — process nice get/set → LAST_N"},
       {"SYS LOADAVG", "SYS LOADAVG|LOAD — 1/5/15 load · LOAD1_N centiload for IF"},
       {"SYS LOAD", "SYS LOAD alias of SYS LOADAVG"},
       {"SYS UPTIME", "SYS UPTIME|BOOTAGE — seconds since boot → LAST_N/UPTIME"},
