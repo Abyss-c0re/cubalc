@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 142,
-  "version": "1.15.167-usability",
-  "item": "SYS DIFFKV / SUBKV subtract key:val bags by key",
-  "item_id": 175,
-  "title": "SYS DIFFKV|SUBKV bag_a bag_b [sep] — FREQ delta without EACH",
-  "commit": "f1e592e14ecbd6f0b659e8627f78b5a3a527d109",
-  "summary": "DIFFKV FREQ now−baseline without EACH+LOOKUPN. selftest 142.",
+  "iter": 143,
+  "version": "1.15.168-usability",
+  "item": "SYS ADDKV / OFFSETKV add delta to key:val values",
+  "item_id": 176,
+  "title": "SYS ADDKV|OFFSETKV bag delta [sep] — Laplace/score offset without EACH",
+  "commit": "e821554a2b3de482a7c7221fc2933d43565e8c60",
+  "summary": "ADDKV Laplace +1 / offset FREQ values. selftest 143.",
   "proofs": [
-    "715_sys_diffkv",
-    "selftest n_pass=142"
+    "716_sys_addkv",
+    "selftest n_pass=143"
   ],
-  "when": "2026-08-06T01:26:25Z",
+  "when": "2026-08-06T01:35:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f1e592e14ecbd6f0b659e8627f78b5a3a527d109"
+  "sha": "e821554a2b3de482a7c7221fc2933d43565e8c60"
 }
