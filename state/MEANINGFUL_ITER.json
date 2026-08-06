@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 187,
-  "version": "1.15.212-usability",
-  "item": "SYS LASTFINDFILELINE / FILELASTFIND last file line by needle",
-  "item_id": 220,
-  "title": "SYS LASTFINDFILELINE|FILELASTFIND path needle \u2014 0-based last line containing needle",
-  "commit": "2988dce2a8c5ebc6a5ea87fab21b060da4590152",
-  "summary": "Last file line by needle; dual of FINDFILELINE. thrash restore first. selftest 187.",
+  "iter": 188,
+  "version": "1.15.213-usability",
+  "item": "SYS COUNTFILELINE / FILECOUNTLINE count matching file lines",
+  "item_id": 221,
+  "title": "SYS COUNTFILELINE|FILECOUNTLINE path needle \u2014 count lines containing needle \u2192 LAST_N",
+  "commit": "b3291ec99884e701537ae52365d8ae907269f16a",
+  "summary": "Count matching file lines; COUNTFILELINEI. Complements FINDFILELINE. selftest 188.",
   "proofs": [
-    "760_sys_lastfindfileline",
-    "selftest n_pass=187"
+    "761_sys_countfileline",
+    "selftest n_pass=188"
   ],
-  "when": "2026-08-06T09:04:33Z",
+  "when": "2026-08-06T09:14:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2988dce2a8c5ebc6a5ea87fab21b060da4590152"
+  "sha": "b3291ec99884e701537ae52365d8ae907269f16a"
 }
