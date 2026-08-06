@@ -1,152 +1,146 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 64,
-  "program": "programs/realworld/incident_log_board.cubalc",
-  "theme": "incident log content search GREPFILES + LOGALL multi-file stamp",
-  "version": "1.15.197-usability",
+  "iter": 65,
+  "program": "programs/realworld/fleet_config_scrub.cubalc",
+  "theme": "fleet config scrub REPLACEFILES READALL WRITEALL bulk rewrite",
+  "version": "1.15.200-usability",
   "pass": true,
   "tests": [
     {
-      "name": "scan_files",
-      "cmd": "PATHGLOB *.log \u2192 a b c (no nested)",
+      "name": "scan_cfg",
+      "cmd": "PATHGLOB *.cfg → a b c",
       "ok": true,
-      "note": "shallow inventory"
+      "note": "inventory"
     },
     {
-      "name": "grephit_ERROR",
-      "cmd": "GREPFILES ERROR \u2192 a.log only (not Error)",
+      "name": "cat_glue",
+      "cmd": "READALL default → no sep; bytes=46 glued fields",
       "ok": true,
-      "note": "case-sensitive content"
+      "note": "default concat no NL"
     },
     {
-      "name": "grepi_error",
-      "cmd": "GREPFILESI error \u2192 a.log + c.log",
+      "name": "cat_sep",
+      "cmd": "READALL sep ||| → delimited digest",
       "ok": true,
-      "note": "icase hits Error"
+      "note": "explicit sep"
     },
     {
-      "name": "grepv_warn",
-      "cmd": "GREPVFILES warn \u2192 a+c (drop b)",
+      "name": "scrub_old_new",
+      "cmd": "REPLACEFILES host=old→new → N=2 SKIP=1 (c keep)",
       "ok": true,
-      "note": "invert content"
+      "note": "only changed files"
     },
     {
-      "name": "stamp_hits",
-      "cmd": "LOGALL hits incident=INC-42 \u2192 a.log only",
+      "name": "scrub_none_require",
+      "cmd": "second scrub host=old REQUIRE exit 2",
       "ok": true,
-      "note": "fanout stamp"
+      "note": "no remaining matches"
     },
     {
-      "name": "grephit_none_require",
-      "cmd": "GREPFILES ZZZ REQUIRE exit 2",
+      "name": "reset_writeall",
+      "cmd": "WRITEALL plate-v1 overwrites all three",
       "ok": true,
-      "note": "empty gate"
+      "note": "uniform reset"
     },
     {
-      "name": "walk_deep",
-      "cmd": "WALK *.log finds nested/d.log too",
+      "name": "cat_soft_miss",
+      "cmd": "READALL with ghost → read_n=2 miss=1 partial",
       "ok": true,
-      "note": "recursive logs"
-    },
-    {
-      "name": "stamp_create",
-      "cmd": "LOGALL missing path creates new_incident.log",
-      "ok": true,
-      "note": "create-on-append"
+      "note": "OK=0 class cleared"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "172/172 pass incl logall grepfiles"
+      "note": "175/175 pass incl readall writeall replacefiles"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|naming",
-      "title": "GREP filters bag field text; GREPFILES filters file content \u2014 easy mix-up",
-      "detail": "SYS GREP bag ERROR matches path strings containing ERROR (usually none). SYS GREPFILES reads files. Agents using GREP for log content search silently get empty bags.",
-      "repro": "GREP path_bag ERROR \u2192 empty; GREPFILES path_bag ERROR \u2192 hits"
+      "area": "host|fs",
+      "title": "READALL default joins files with empty sep — fields glue without NL",
+      "detail": "READALL bag produces host=keep port=3host=old port=2… unless sep given. Agents expecting newline join must pass \"\\n\" or \"|||\". Easy silent parse errors on digest.",
+      "repro": "READALL three cfgs → glued string no boundaries"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|fs",
-      "title": "GREPFILES case-sensitive by default; Error \u2260 ERROR",
-      "detail": "Severity tokens often mixed case. Must remember GREPFILESI. Same class as GREP vs GREPI string ops.",
-      "repro": "GREPFILES bag ERROR misses gamma Error three"
+      "area": "host|naming",
+      "title": "REPLACEALL is string in-memory; REPLACEFILES is path bag rewrite",
+      "detail": "Same trap class as GREP/GREPFILES and APPENDALL/LOGALL. Wrong op rewrites bag field text, never touches disk.",
+      "repro": "REPLACEALL path_bag old new leaves file content unchanged"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|naming",
-      "title": "APPENDALL is string SUFFIXALL \u2014 not multi-file append",
-      "detail": "LOGALL/APPENDFILES is the path-bag stamp. APPENDALL appends a suffix string to every bag *field text*. Wrong op = silent no file IO.",
-      "repro": "APPENDALL bag -suf \u2192 field text change only"
+      "severity": "med",
+      "area": "host|fs",
+      "title": "REPLACEFILES empty old is silent no-op (SKIP all)",
+      "detail": "Documented in proof; empty needle from ARG miss can look like success-zero-change if agent does not REQUIRE.",
+      "repro": "REPLACEFILES bag \"\" x → N=0 SKIP=scan"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "LOGALL creates missing paths (no create-off mode)",
-      "detail": "Useful for markers but dangerous if path bag has typos \u2014 invents junk files. No LOGALL existing-only / fail-on-miss.",
-      "repro": "LOGALL ghost_path line \u2192 creates file"
+      "title": "WRITEALL creates missing paths and overwrites without backup",
+      "detail": "No dry-run or existing-only mode. Fleet reset is destructive one-shot.",
+      "repro": "WRITEALL bag data creates ghosts"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|fs",
-      "title": "No multi-needle GREPFILES OR (ERROR|FATAL|PANIC)",
-      "detail": "Need sequential GREPFILES + UNION. GREPANY is bag-field only.",
-      "repro": "want content any of N needles \u2192 multiple greps"
+      "title": "No REPLACEFILESI case-insensitive bulk rewrite",
+      "detail": "Host=Old vs host=old needs dual scrub or GREPFILESI+custom. String REPLACEALL has no I-path dual either for files.",
+      "repro": "content Host=old missed by host=old"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "HITS path bags collapse in JSON.",
-      "repro": "PRINT_JSON hits"
+      "detail": "TOUCHED/PATHS collapse in JSON line.",
+      "repro": "PRINT_JSON touched"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE omits final trailing newline on plates",
-      "detail": "HITS/PATHS last line; LOGALL itself does append NL to logs.",
-      "repro": "grephit; cat -A HITS.txt"
+      "title": "WRITE/WRITEALL omit trailing NL on content unless in data",
+      "detail": "plate-v1 files have no final $ on cat -A; DIGEST plate same.",
+      "repro": "reset; cat -A a.cfg"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "host|fs",
-      "title": "GREPFILES is substring not regex",
-      "detail": "Needle ERROR matches ERRORCODE. No word-boundary mode. Same false-friend class as GREP bag fields.",
-      "repro": "content ERRORCODE hit by needle ERROR"
+      "title": "READALL partial miss sets OK=0 while still returning concat",
+      "detail": "Strict -s agents need CLEAR_ERR after partial success. Same class as RMALL/COPYALL partial OK.",
+      "repro": "READALL bag_with_ghost → OK=0 READALL_N>0"
     }
   ],
   "workarounds": [
-    "Always GREPFILES for log content; GREP only for path-string bags",
-    "Prefer GREPFILESI for severity tokens",
-    "Use LOGALL/APPENDFILES never APPENDALL for multi-log stamp",
-    "Validate paths exist before LOGALL if create-on-miss unwanted",
-    "UNION of GREPFILES results for multi-needle"
+    "Always pass explicit sep to READALL (newline or |||)",
+    "Use REPLACEFILES not REPLACEALL for disk rewrites",
+    "REQUIRE scrub_n>0 or treat SKIP-only as miss at agent layer",
+    "CLEAR_ERR after partial READALL if digest usable",
+    "Include trailing NL in WRITEALL data if needed"
   ],
   "language_gaps": [
-    "GREPFILES multi-needle OR",
-    "LOGALL existing-only / no-create mode",
-    "GREPFILES whole-word / regex mode",
-    "Rename APPENDALL or document path-vs-string more loudly",
+    "READALL default sep=\\n option",
+    "REPLACEFILESI case-insensitive",
+    "WRITEALL existing-only / dry-run",
+    "REPLACEALL vs REPLACEFILES naming clarity",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "GREPFILES+LOGALL positive path clean",
-    "Case-sensitive ERROR vs Error confirmed",
-    "LOGALL create-on-miss confirmed",
+    "REPLACEFILES+READALL+WRITEALL positive path clean",
+    "Default READALL glue surprised — need explicit sep",
+    "Empty ARG1 blocked by agent EXIT before language empty-old no-op",
     "No language fix this iter"
   ],
-  "commit": "bb380a38ade395aab5c7d4e6885fde7ecfe16b9a",
-  "ts": "2026-08-06T06:43:40Z"
+  "commit": "",
+  "ts": "2026-08-06T07:08:30Z"
 }
