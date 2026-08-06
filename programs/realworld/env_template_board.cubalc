@@ -1,0 +1,814 @@
+# env_template_board.cubalc — durable config/runbook template expand (SUBSTENV)
+#
+# Real use: ops agent renders deploy/runbook/config templates with $NAME and
+# ${NAME} without shell envsubst. Process ENV is per-run, so vars are durable
+# on a plate and rehydrated via ENV SET before expand:
+#   KVFILESET / KVFILEDEL — durable KEY=VAL vars plate
+#   ENV SET / ENV UNSET   — process env for this run
+#   SUBSTENV / ENVSUBST   — expand $NAME/${NAME}; $$ → literal $
+#   SUBSTENV_N / _MISS    — replace count + unset key count
+# Distinct from kv_config_loader (lookup only) and fleet_config_scrub
+# (bulk REPLACEFILES): this board is *vars plate + env rehydrate + expand*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — template file path
+#   OUT.txt        — rendered output path
+#   VARS.txt       — durable KEY=VAL bag for rehydrate
+#   VAL.txt        — last expanded text
+#   META.txt       — n/miss bag
+#   TMPL_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_ET_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   pickout   — OUT = ARG1
+#   setvar    — KVFILESET VARS key=ARG1 val=ARG2 + ENV SET
+#   delvar    — KVFILEDEL + ENV UNSET
+#   showvars  — READ VARS → VAL
+#   expand    — rehydrate; SUBSTENV ARG1 inline template
+#   render    — rehydrate; READ ACTIVE; SUBSTENV; WRITE OUT if set
+#   dollar    — $$ + optional ${CUBALC_ET_TAG} expand proof
+#   gate      — FAIL if last META miss > max (ARG1 default 0)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_et_$$
+#   printf 'host=${CUBALC_ET_HOST}\nport=$CUBALC_ET_PORT\ncost=$$5\n' \
+#     > $CUBALC_STATE/tmpl.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/tmpl.txt ...
+#   CUBALC_ARG0=setvar CUBALC_ARG1=CUBALC_ET_HOST CUBALC_ARG2=api01 ...
+#   CUBALC_ARG0=render ...
+#
+# Env: CUBALC_ET_PATH=… CUBALC_ET_OUT=… CUBALC_ET_REQUIRE=1
+#
+# Edges:
+#   ENV SET dies with process — multi-tick needs VARS plate rehydrate
+#   unset → empty + MISS; $$ → literal $; bare $NAME stops at non-id
+#   empty template soft; missing ACTIVE soft; WRITE NL; NUM REQUIRE
+#   gate parses META miss field; program vars also visible to SUBSTENV
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "env_template_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT OFILE = "OUT.txt"
+DEFAULT VARSFILE = "VARS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TMPL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_ET_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_ET_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_ET_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_ET_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_ET_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_ET_OUT" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_OUT = LAST
+ELSE
+  LET ENV_OUT = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir OFILE
+LET out_meta = LAST
+SYS JOIN state_dir VARSFILE
+LET vars_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR out_meta OR ""
+LET outp = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_OUT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pickout"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_OUT
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET out_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET se_n = 0
+LET se_miss = 0
+LET max_miss = 0
+LET over = 0
+LET re_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "pickout"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pickout needs path"
+  END
+END
+SYS EQS ACTION "setvar"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "setvar needs key value"
+  END
+END
+SYS EQS ACTION "delvar"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "delvar needs key"
+  END
+END
+SYS EQS ACTION "expand"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "expand needs template"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "etmpl" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON outp
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- pickout ---
+SYS EQS ACTION "pickout"
+IF LAST_N == 1 THEN
+  NOTE "action pickout"
+  LET outp = NAME
+  LET out_ch = 1
+  LET hit = 1
+  LET note_msg = "pickout ok"
+  PRINT_JSON outp
+END
+
+# --- setvar: durable KVFILESET + live ENV SET ---
+SYS EQS ACTION "setvar"
+IF LAST_N == 1 THEN
+  NOTE "action setvar"
+  SYS KVFILESET vars_path NAME A2
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "setvar plate fail"
+    FAIL "setvar plate fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setvar plate fail"
+    END
+  ELSE
+    SYS ENV SET NAME A2
+    LET hit = 1
+    LET val = NAME
+    SYS PUSH val A2
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "key"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "val"
+    LET meta = LAST
+    SYS PUSH meta A2
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "setvar ok"
+  END
+  PRINT_JSON NAME
+  PRINT_JSON A2
+  CLEAR_ERR
+END
+
+# --- delvar ---
+SYS EQS ACTION "delvar"
+IF LAST_N == 1 THEN
+  NOTE "action delvar"
+  SYS KVFILEDEL vars_path NAME
+  LET se_n = KVFILEDEL_HIT
+  SYS ENV UNSET NAME
+  LET hit = se_n
+  LET val = NAME
+  LET val_ch = 1
+  LET meta = "key"
+  SYS PUSH meta NAME
+  LET meta = LAST
+  SYS PUSH meta "hit"
+  LET meta = LAST
+  SYS STR se_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF se_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "delvar none"
+    FAIL "delvar none"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delvar none"
+    END
+  ELSE
+    LET note_msg = "delvar ok"
+  END
+  PRINT_JSON NAME se_n
+  CLEAR_ERR
+END
+
+# --- showvars ---
+SYS EQS ACTION "showvars"
+IF LAST_N == 1 THEN
+  NOTE "action showvars"
+  SYS READ OR vars_path OR ""
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "showvars ok"
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- expand: rehydrate VARS → ENV then SUBSTENV ---
+SYS EQS ACTION "expand"
+IF LAST_N == 1 THEN
+  NOTE "action expand"
+  SYS READ OR vars_path OR ""
+  LET vbag = LAST
+  CLEAR_ERR
+  LET re_n = 0
+  EACH LINE as row IN vbag
+    SYS SPLIT "=" row
+    LET parts = LAST
+    SYS NTH 0 parts
+    LET k = LAST
+    # DROP key field then JOINLINES "=" so values may contain =
+    SYS DROP 1 parts
+    SYS JOINLINES "=" LAST
+    LET v = LAST
+    SYS BLANK k
+    IF LAST_N == 0 THEN
+      SYS ENV SET k v
+      LET re_n = re_n + 1
+    END
+  END
+  SYS SUBSTENV NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "expand fail"
+    FAIL "expand fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "expand fail"
+    END
+  ELSE
+    LET val = LAST
+    LET se_n = SUBSTENV_N
+    LET se_miss = SUBSTENV_MISS
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR se_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "miss"
+    LET meta = LAST
+    SYS STR se_miss
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "re"
+    LET meta = LAST
+    SYS STR re_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF se_miss > 0 THEN
+      LET miss = 1
+      LET note_msg = "expand softmiss"
+      FAIL "expand softmiss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "expand softmiss"
+      END
+    ELSE
+      LET note_msg = "expand ok"
+    END
+  END
+  PRINT_JSON se_n se_miss re_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- render ---
+SYS EQS ACTION "render"
+IF LAST_N == 1 THEN
+  NOTE "action render"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "render no active"
+    FAIL "render no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "render no active"
+    END
+  ELSE
+    SYS READ OR vars_path OR ""
+    LET vbag = LAST
+    CLEAR_ERR
+    LET re_n = 0
+    EACH LINE as row IN vbag
+      SYS SPLIT "=" row
+      LET parts = LAST
+      SYS NTH 0 parts
+      LET k = LAST
+      SYS DROP 1 parts
+      SYS JOINLINES "=" LAST
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS ENV SET k v
+        LET re_n = re_n + 1
+      END
+    END
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "render read miss"
+      FAIL "render read miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "render read miss"
+      END
+    ELSE
+      LET tmpl = LAST
+      SYS BLANK tmpl
+      IF LAST_N == 1 THEN
+        LET miss = 1
+        LET val = ""
+        LET val_ch = 1
+        LET note_msg = "render empty tmpl"
+        FAIL "render empty tmpl"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "render empty tmpl"
+        END
+      ELSE
+        SYS SUBSTENV tmpl
+        IF OK == 0 THEN
+          LET miss = 1
+          LET val = ""
+          LET val_ch = 1
+          LET note_msg = "render expand fail"
+          FAIL "render expand fail"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "render expand fail"
+          END
+        ELSE
+          LET val = LAST
+          LET se_n = SUBSTENV_N
+          LET se_miss = SUBSTENV_MISS
+          LET val_ch = 1
+          LET hit = 1
+          LET meta = "n"
+          SYS STR se_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "miss"
+          LET meta = LAST
+          SYS STR se_miss
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "re"
+          LET meta = LAST
+          SYS STR re_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+          SYS BLANK outp
+          IF LAST_N == 0 THEN
+            SYS WRITE outp val
+            EXPECT OK == 1
+            IF OK == 0 THEN
+              LET miss = 1
+              LET note_msg = "render write fail"
+              FAIL "render write fail"
+              CLEAR_ERR
+              IF REQUIRE_HIT > 0 THEN
+                EXIT 2 "render write fail"
+              END
+            ELSE
+              IF se_miss > 0 THEN
+                LET miss = 1
+                LET note_msg = "render softmiss"
+                FAIL "render softmiss"
+                CLEAR_ERR
+                IF REQUIRE_HIT > 0 THEN
+                  EXIT 2 "render softmiss"
+                END
+              ELSE
+                LET note_msg = "render ok"
+              END
+            END
+          ELSE
+            IF se_miss > 0 THEN
+              LET miss = 1
+              LET note_msg = "render softmiss noout"
+              FAIL "render softmiss"
+              CLEAR_ERR
+              IF REQUIRE_HIT > 0 THEN
+                EXIT 2 "render softmiss"
+              END
+            ELSE
+              LET note_msg = "render ok noout"
+            END
+          END
+        END
+      END
+    END
+    PRINT_JSON se_n se_miss re_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- dollar ---
+SYS EQS ACTION "dollar"
+IF LAST_N == 1 THEN
+  NOTE "action dollar"
+  SYS READ OR vars_path OR ""
+  LET vbag = LAST
+  CLEAR_ERR
+  EACH LINE as row IN vbag
+    SYS SPLIT "=" row
+    LET parts = LAST
+    SYS NTH 0 parts
+    LET k = LAST
+    SYS DROP 1 parts
+    SYS JOINLINES "=" LAST
+    LET v = LAST
+    SYS BLANK k
+    IF LAST_N == 0 THEN
+      SYS ENV SET k v
+    END
+  END
+  LET tmpl = "cost=$$5 tag=${CUBALC_ET_TAG}"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET tmpl = NAME
+  END
+  SYS SUBSTENV tmpl
+  LET val = LAST
+  LET se_n = SUBSTENV_N
+  LET se_miss = SUBSTENV_MISS
+  LET val_ch = 1
+  LET hit = 1
+  LET meta = "n"
+  SYS STR se_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "miss"
+  LET meta = LAST
+  SYS STR se_miss
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET note_msg = "dollar ok"
+  PRINT_JSON se_n se_miss
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  LET max_miss = 0
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET max_miss = LAST_N
+    END
+    CLEAR_ERR
+  END
+  SYS READ OR meta_path OR ""
+  LET mbag = LAST
+  CLEAR_ERR
+  SYS FINDLINE mbag "miss"
+  LET mi = LAST_N
+  IF mi >= 0 THEN
+    LET mi = mi + 1
+    SYS NTH mi mbag
+    SYS NUM
+    IF OK == 1 THEN
+      LET se_miss = LAST_N
+    END
+    CLEAR_ERR
+  END
+  SYS FINDLINE mbag "n"
+  LET mi = LAST_N
+  IF mi >= 0 THEN
+    LET mi = mi + 1
+    SYS NTH mi mbag
+    SYS NUM
+    IF OK == 1 THEN
+      LET se_n = LAST_N
+    END
+    CLEAR_ERR
+  END
+  LET over = 0
+  IF se_miss > max_miss THEN
+    LET over = 1
+  END
+  LET hit = 1
+  LET meta = "miss"
+  SYS STR se_miss
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "max"
+  LET meta = LAST
+  SYS STR max_miss
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "over"
+  LET meta = LAST
+  SYS STR over
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF over > 0 THEN
+    LET miss = 1
+    LET note_msg = "gate over"
+    FAIL "gate over"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate over"
+    END
+  ELSE
+    LET note_msg = "gate ok"
+  END
+  PRINT_JSON se_miss max_miss over
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET outp = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET out_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  SYS WRITE vars_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "pickout"
+LET k = k + LAST_N
+SYS EQS ACTION "setvar"
+LET k = k + LAST_N
+SYS EQS ACTION "delvar"
+LET k = k + LAST_N
+SYS EQS ACTION "showvars"
+LET k = k + LAST_N
+SYS EQS ACTION "expand"
+LET k = k + LAST_N
+SYS EQS ACTION "render"
+LET k = k + LAST_N
+SYS EQS ACTION "dollar"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF out_ch > 0 THEN
+  SYS WRITE out_meta outp
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "out write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.env_template_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "se_n"
+LET report = LAST
+SYS STR se_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "se_miss"
+LET report = LAST
+SYS STR se_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "re_n"
+LET report = LAST
+SYS STR re_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "over"
+LET report = LAST
+SYS STR over
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "out"
+LET report = LAST
+SYS PUSH report outp
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "env_template_board" ACTION hit miss se_n se_miss re_n over note_msg elapsed

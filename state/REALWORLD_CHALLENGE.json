@@ -1,160 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 76,
-  "program": "programs/realworld/exact_roster_board.cubalc",
-  "theme": "exact roster HASFILELINE DROPEXACTFILE ENSURELINE substring contrast",
-  "version": "1.15.227-usability",
+  "iter": 77,
+  "program": "programs/realworld/env_template_board.cubalc",
+  "theme": "env template SUBSTENV KVFILESET rehydrate miss gate",
+  "version": "1.15.230-usability",
   "pass": true,
   "tests": [
     {
-      "name": "pick_has",
-      "cmd": "has web hit; has web-prod hit; has webx soft miss",
+      "name": "setvar_show",
+      "cmd": "setvar HOST/PORT/ROLE; showvars KEY=VAL plate",
       "ok": true,
-      "note": "exact membership"
+      "note": "durable vars"
     },
     {
-      "name": "contrast_web",
-      "cmd": "contrast web \u2192 exact=1 sub=2 (web+web-prod)",
+      "name": "expand_rehydrate",
+      "cmd": "expand x=${HOST}/$PORT \u2192 api01/8080 re=3 miss=0",
       "ok": true,
-      "note": "substring overmatch"
+      "note": "cross-run rehydrate"
     },
     {
-      "name": "ensure_idempotent",
-      "cmd": "ensure db NEW=1; ensure db NEW=0",
+      "name": "render_file",
+      "cmd": "render tmpl \u2192 host=api01 port=8080 role=canary cost=$5",
       "ok": true,
-      "note": "exact add"
+      "note": "$$ literal + multi-line"
     },
     {
-      "name": "drop_exact",
-      "cmd": "drop web leaves web-prod; drop none soft",
+      "name": "softmiss_gate",
+      "cmd": "expand unset MISS; gate 0 soft; REQUIRE gate exit 2",
       "ok": true,
-      "note": "no substring false friend"
+      "note": "SUBSTENV_MISS"
     },
     {
-      "name": "dropi_hasi",
-      "cmd": "dropi status=live; hasi miss after",
+      "name": "dollar_tag",
+      "cmd": "dollar cost=$5 tag=gold after setvar TAG",
       "ok": true,
-      "note": "icase exact"
+      "note": "$$ and ${}"
     },
     {
-      "name": "require_miss",
-      "cmd": "REQUIRE has gone / drop none \u2192 exit 2",
+      "name": "delvar_miss",
+      "cmd": "delvar HOST; expand HOST softmiss; REQUIRE expand exit 2",
       "ok": true,
-      "note": "hard fail"
+      "note": "delete + miss"
     },
     {
-      "name": "path_asymmetry",
-      "cmd": "has ghost OK=1 N=0; drop ghost OK=0 REQUIRE exit 2",
+      "name": "bare_adjacent",
+      "cmd": "$HOST-y \u2192 z1-y (bare name stops at non-id)",
       "ok": true,
-      "note": "probe vs mutate soft"
+      "note": "lexer edge"
     },
     {
-      "name": "ensure_creates",
-      "cmd": "ensure on missing path creates file seed",
+      "name": "value_equals",
+      "cmd": "DSN=user=u;pass=p rehydrate via SPLIT+DROP+JOINLINES",
       "ok": true,
-      "note": "create-on-miss"
+      "note": "embedded ="
     },
     {
-      "name": "contrast_a",
-      "cmd": "needle a exact=0 sub=2 (beta,Alpha)",
+      "name": "empty_tmpl",
+      "cmd": "render missing path empty tmpl REQUIRE exit 2",
       "ok": true,
-      "note": "char false friend"
+      "note": "READ soft"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "202/202 pass"
+      "note": "206/206 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs|consistency",
-      "title": "HASFILELINE path-miss soft OK=1; DROPEXACTFILE path-miss OK=0",
-      "detail": "Probe treats missing file as empty membership (N=0 OK=1). Mutating drop hard-fails path (OK=0). Agents sharing REQUIRE logic for has vs drop get different miss codes; ghost path looks like 'not a member' not 'no plate'.",
-      "repro": "HASFILELINE no_such x \u2192 OK=1 N=0; DROPEXACTFILE no_such x \u2192 OK=0"
+      "area": "host|env",
+      "title": "ENV SET is process-local \u2014 multi-tick agents cannot seed expand without plate rehydrate",
+      "detail": "Each cubalc run is a new process. ENV SET in setvar is gone on next render unless agent rehydrates from durable KEY=VAL plate via EACH LINE ENV SET. No ENV export plate or session env.",
+      "repro": "run setenv; separate run expand sees empty + MISS"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|match",
-      "title": "COUNTFILELINE substring vs HASFILELINE exact \u2014 dual semantics trap",
-      "detail": "contrast web: exact=1 sub=2 (web-prod counted). Needle a hits beta and Alpha with zero exact. Agents mixing GREP-family counts with exact roster membership corrupt allow/deny gates.",
-      "repro": "roster web+web-prod; COUNTFILELINE web=2 HASFILELINE web=1"
+      "area": "host|split",
+      "title": "Naive SPLIT first field loses KEY=VAL values that contain =",
+      "detail": "DSN=user=u;pass=p with NTH 1 yields only user. Must DROP 1 + JOINLINES = or LOOKUP bag key. No first-sep peel helper.",
+      "repro": "SPLIT = on DSN=user=u;pass=p \u2192 NTH1 user"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|fs",
-      "title": "ENSURELINE creates missing path; DROPEXACTFILE does not",
-      "detail": "ensure typo path invents ghost roster; drop on same typo soft-fails. No shared existing-only mode. Mirror of KVFILEINC create footgun.",
-      "repro": "ENSURELINE ghost seed \u2192 creates; DROPEXACTFILE ghost \u2192 OK=0"
+      "area": "host|subst",
+      "title": "Unset keys expand to empty without hard fail; only SUBSTENV_MISS counter",
+      "detail": "gone=${NOPE}end \u2192 gone=end with MISS=1 OK=1. Agents must gate on MISS or corrupt configs ship empty values.",
+      "repro": "SUBSTENV gone=${NOPE}end \u2192 gone=end MISS=1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|write",
-      "title": "DROPEXACTFILE / plate WRITE omit trailing NL on last line",
-      "detail": "After drop last remaining line often lacks $ NL; cat -A shows Alpha glued; META total$4exact$ glue across writes. Agents catting plates see false merges.",
-      "repro": "cat -A after drop; META after WRITE val"
+      "title": "WRITE omits trailing NL; VAL/META glue on cat -A",
+      "detail": "gone=end glued to meta n; VARS last line ROLE=canary without $. Recurring plate hygiene footgun.",
+      "repro": "cat -A VAL META after expand softmiss"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|naming",
-      "title": "HASLINE bag vs HASFILELINE disk; REMOVELINE vs DROPEXACTFILE dual family",
-      "detail": "In-memory exact bag ops do not touch roster files. Easy to probe bag after READ and mutate disk with different names.",
-      "repro": "HASLINE bag vs HASFILELINE path"
+      "area": "host|subst",
+      "title": "No SUBSTENV on path / file-in expand primitive",
+      "detail": "Agents must READ then SUBSTENV then WRITE. No SUBSTENVFILE path. Race and NL handling on agent.",
+      "repro": "render = READ+SUBSTENV+WRITE glue"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|arg",
-      "title": "Empty CUBALC_ARG1 conflated with missing arg for has/drop",
-      "detail": "ARG1 empty fails early 'has needs line' via BLANK rather than attempting exact empty-line membership. Cannot probe empty roster lines without env path.",
-      "repro": "CUBALC_ARG1= has \u2192 EXIT has needs line"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens gates",
+      "detail": "CUBALC_ET_REQUIRE=abc leaves REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc expand miss \u2192 rc 0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens hard gates",
-      "detail": "CUBALC_ER_REQUIRE=abc leaves REQUIRE_HIT=0; has miss returns exit 0.",
-      "repro": "REQUIRE=abc has gone \u2192 rc 0"
+      "area": "host|subst",
+      "title": "Env vs program var precedence only lightly documented",
+      "detail": "Proof says env first then vars; agents may shadow host ENV with LET unintentionally.",
+      "repro": "LET FOO + ENV FOO both set"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|drop",
-      "title": "DROPEXACTFILE drops first match only \u2014 no DROPALLEXACTFILE",
-      "detail": "Duplicate exact lines need loop; DROPALLMATCH is substring-only. Roster dedup of exact duplicates awkward.",
-      "repro": "two identical lines; one drop leaves one"
+      "area": "host|kv",
+      "title": "KVFILESET create-on-miss invents VARS plate path typos",
+      "detail": "Same class as KVFILEINC create footgun for durable vars.",
+      "repro": "setvar always creates VARS.txt"
     }
   ],
   "workarounds": [
-    "Use HASFILELINE not COUNTFILELINE for roster membership",
-    "SYS EXIST active before ensure if create-on-miss unwanted",
-    "REQUIRE=1 only after digit-check NUM on env",
-    "Prefer DROPEXACTFILE over DROPMATCHFILE for hostnames",
-    "Reject empty line args at agent layer"
+    "Always durable KEY=VAL plate + rehydrate before SUBSTENV across ticks",
+    "Peel values with DROP 1 + JOINLINES = or LOOKUP key (not NTH 1 alone)",
+    "Gate on SUBSTENV_MISS > 0 before writing configs",
+    "Digit-check REQUIRE env after NUM",
+    "Prefer ${NAME} braced form for adjacent punctuation"
   ],
   "language_gaps": [
-    "Unify path-miss OK policy for HASFILELINE vs DROPEXACTFILE (or document triad)",
-    "DROPALLEXACTFILE for exact multi-drop dual of DROPALLMATCHFILE",
-    "existing-only flag for ENSURELINE",
-    "WRITE/DROPEXACT trailing NL preserve",
-    "Help dual HASLINE vs HASFILELINE / REMOVELINE vs DROPEXACTFILE",
-    "COUNTFILELINE exact-mode or COUNTFILEEXACT alias"
+    "Session or plate-backed ENV export/import primitive",
+    "SUBSTENVFILE path [out] one-shot file expand",
+    "SUBSTENV hard-fail mode on MISS (or REQUIRE MISS)",
+    "First-sep peel helper (KEY rest-of-line after first =)",
+    "WRITE trailing NL preserve",
+    "Document env-over-var SUBSTENV precedence in help"
   ],
   "issues_faced": [
-    "has/ensure/drop/contrast positive paths clean",
-    "contrast web and contrast a prove substring false friends clearly",
-    "path-miss OK asymmetry between probe and drop is sharp footgun",
-    "WRITE NL glue after drop and plate meta still present",
-    "selftest 202/202; no language fix this iter"
+    "First draft setenv-only failed multi-tick render (empty expand) \u2014 fixed with VARS rehydrate",
+    "DSN embedded = broke NTH1 rehydrate \u2014 fixed DROP+JOINLINES",
+    "render/$$/gate/REQUIRE paths green after fix",
+    "selftest 206/206; no language fix this iter"
   ],
-  "commit": "7f0b7c35bf8a181b7165965503a67a1cf5fb69c3",
-  "ts": "2026-08-06T11:44:00Z"
+  "commit": "",
+  "ts": "2026-08-06T12:10:30Z"
 }
