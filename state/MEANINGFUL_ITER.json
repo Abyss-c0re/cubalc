@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 147,
-  "version": "1.15.172-usability",
-  "item": "SYS DIVKV / IDIVKV integer-divide key:val values",
-  "item_id": 180,
-  "title": "SYS DIVKV|IDIVKV bag divisor [sep] — mean after N-way MERGEKV",
-  "commit": "46f063b0f3e9b3fef5ba5165a89d805943a2875a",
-  "summary": "DIVKV integer-divide FREQ values for mean. selftest 147.",
+  "iter": 148,
+  "version": "1.15.173-usability",
+  "item": "SYS AVGKV / MEANKV integer mean of key:val values",
+  "item_id": 181,
+  "title": "SYS AVGKV|MEANKV bag [sep] — typical FREQ count without SUM+DIV",
+  "commit": "3b0af9c552d6667d197e2bfe8fd4ac1b45c41541",
+  "summary": "AVGKV mean of key:val values. selftest 148.",
   "proofs": [
-    "720_sys_divkv",
-    "selftest n_pass=147"
+    "721_sys_avgkv",
+    "selftest n_pass=148"
   ],
-  "when": "2026-08-06T02:14:17Z",
+  "when": "2026-08-06T02:24:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "46f063b0f3e9b3fef5ba5165a89d805943a2875a"
+  "sha": "3b0af9c552d6667d197e2bfe8fd4ac1b45c41541"
 }
