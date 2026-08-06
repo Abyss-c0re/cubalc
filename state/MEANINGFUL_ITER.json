@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 232,
-  "version": "1.15.258-usability",
-  "item": "SYS MONOTONIC / MONO / STEADY_MS steady clock ms",
-  "item_id": 266,
-  "title": "SYS MONOTONIC|MONO — CLOCK_MONOTONIC ms for elapsed timing immune to wall jumps",
-  "commit": "bd653461d2161ccb0d1f18938f82ad4f7dd1530d",
-  "summary": "Steady monotonic ms for agent duration measurement. selftest 232.",
+  "iter": 233,
+  "version": "1.15.259-usability",
+  "item": "SYS NPROC / CPUS / CORES online processor count",
+  "item_id": 267,
+  "title": "SYS NPROC|CPUS|CORES — online CPU count for STRIDE/CHUNK worker partition",
+  "commit": "67fd32e194ab53d129abd330e507c35f2c9f0f4e",
+  "summary": "Online processor count for agent work partitioning without shell nproc. selftest 233.",
   "proofs": [
-    "806_sys_monotonic",
-    "selftest n_pass=232"
+    "807_sys_nproc",
+    "selftest n_pass=233"
   ],
-  "when": "2026-08-06T16:26:00Z",
+  "when": "2026-08-06T16:36:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "bd653461d2161ccb0d1f18938f82ad4f7dd1530d",
-  "note": "complements SYS MS wall clock; CHMOD fix already on main from realworld"
+  "sha": "67fd32e194ab53d129abd330e507c35f2c9f0f4e",
+  "note": "complements SYS MONOTONIC; STRIDE workers from NPROC"
 }
