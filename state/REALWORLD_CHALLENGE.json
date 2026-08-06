@@ -14,7 +14,7 @@
     },
     {
       "name": "contrast_web",
-      "cmd": "contrast web → exact=1 sub=2 (web+web-prod)",
+      "cmd": "contrast web \u2192 exact=1 sub=2 (web+web-prod)",
       "ok": true,
       "note": "substring overmatch"
     },
@@ -38,7 +38,7 @@
     },
     {
       "name": "require_miss",
-      "cmd": "REQUIRE has gone / drop none → exit 2",
+      "cmd": "REQUIRE has gone / drop none \u2192 exit 2",
       "ok": true,
       "note": "hard fail"
     },
@@ -74,13 +74,13 @@
       "area": "host|fs|consistency",
       "title": "HASFILELINE path-miss soft OK=1; DROPEXACTFILE path-miss OK=0",
       "detail": "Probe treats missing file as empty membership (N=0 OK=1). Mutating drop hard-fails path (OK=0). Agents sharing REQUIRE logic for has vs drop get different miss codes; ghost path looks like 'not a member' not 'no plate'.",
-      "repro": "HASFILELINE no_such x → OK=1 N=0; DROPEXACTFILE no_such x → OK=0"
+      "repro": "HASFILELINE no_such x \u2192 OK=1 N=0; DROPEXACTFILE no_such x \u2192 OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|match",
-      "title": "COUNTFILELINE substring vs HASFILELINE exact — dual semantics trap",
+      "title": "COUNTFILELINE substring vs HASFILELINE exact \u2014 dual semantics trap",
       "detail": "contrast web: exact=1 sub=2 (web-prod counted). Needle a hits beta and Alpha with zero exact. Agents mixing GREP-family counts with exact roster membership corrupt allow/deny gates.",
       "repro": "roster web+web-prod; COUNTFILELINE web=2 HASFILELINE web=1"
     },
@@ -90,7 +90,7 @@
       "area": "host|fs",
       "title": "ENSURELINE creates missing path; DROPEXACTFILE does not",
       "detail": "ensure typo path invents ghost roster; drop on same typo soft-fails. No shared existing-only mode. Mirror of KVFILEINC create footgun.",
-      "repro": "ENSURELINE ghost seed → creates; DROPEXACTFILE ghost → OK=0"
+      "repro": "ENSURELINE ghost seed \u2192 creates; DROPEXACTFILE ghost \u2192 OK=0"
     },
     {
       "id": "W4",
@@ -114,7 +114,7 @@
       "area": "host|arg",
       "title": "Empty CUBALC_ARG1 conflated with missing arg for has/drop",
       "detail": "ARG1 empty fails early 'has needs line' via BLANK rather than attempting exact empty-line membership. Cannot probe empty roster lines without env path.",
-      "repro": "CUBALC_ARG1= has → EXIT has needs line"
+      "repro": "CUBALC_ARG1= has \u2192 EXIT has needs line"
     },
     {
       "id": "W7",
@@ -122,13 +122,13 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens hard gates",
       "detail": "CUBALC_ER_REQUIRE=abc leaves REQUIRE_HIT=0; has miss returns exit 0.",
-      "repro": "REQUIRE=abc has gone → rc 0"
+      "repro": "REQUIRE=abc has gone \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|drop",
-      "title": "DROPEXACTFILE drops first match only — no DROPALLEXACTFILE",
+      "title": "DROPEXACTFILE drops first match only \u2014 no DROPALLEXACTFILE",
       "detail": "Duplicate exact lines need loop; DROPALLMATCH is substring-only. Roster dedup of exact duplicates awkward.",
       "repro": "two identical lines; one drop leaves one"
     }
@@ -155,6 +155,6 @@
     "WRITE NL glue after drop and plate meta still present",
     "selftest 202/202; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "7f0b7c35bf8a181b7165965503a67a1cf5fb69c3",
   "ts": "2026-08-06T11:44:00Z"
 }
