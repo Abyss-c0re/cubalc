@@ -1,0 +1,70 @@
+# SYS KINDSTR — human path kind labels (file|dir|link|missing|…)
+# Usability: PATHGLOB triage without ISDIR+ISFILE+ISLINK glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "kindstr_mi_file.txt"
+LET fp = LAST
+SYS WRITE fp "kind-payload"
+ASSERT OK == 1
+
+SYS JOIN td "kindstr_mi_dir"
+LET dp = LAST
+SYS MKDIR dp
+ASSERT OK == 1
+
+SYS JOIN td "kindstr_mi_link"
+LET lp = LAST
+SYS SYMLINK fp lp
+ASSERT OK == 1
+
+# regular file
+SYS KINDSTR fp
+ASSERT OK == 1
+SYS EQS LAST "file"
+ASSERT LAST_N == 1
+ASSERT KIND_N == 1
+
+# directory
+SYS KINDSTR dp
+ASSERT OK == 1
+SYS EQS LAST "dir"
+ASSERT LAST_N == 1
+ASSERT KIND_N == 2
+
+# symlink (lstat, not target)
+SYS KINDSTR lp
+ASSERT OK == 1
+SYS EQS LAST "link"
+ASSERT LAST_N == 1
+ASSERT KIND_N == 3
+
+# aliases
+SYS FILEKIND fp
+SYS EQS LAST "file"
+ASSERT LAST_N == 1
+SYS PATHKIND dp
+SYS EQS LAST "dir"
+ASSERT LAST_N == 1
+
+# missing soft probe OK=1
+SYS KINDSTR "/no/such/kindstr_mi_xyz"
+ASSERT OK == 1
+SYS EQS LAST "missing"
+ASSERT LAST_N == 1
+ASSERT KIND_N == 0
+
+# empty path soft fail
+SYS KINDSTR ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM lp
+SYS RM fp
+SYS RMDIR dp
+
+PRINT "sys_kindstr ok"

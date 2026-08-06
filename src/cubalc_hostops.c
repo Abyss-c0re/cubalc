@@ -571,6 +571,51 @@ int cubalc_host_dirstack(cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS KINDSTR path — human path kind without multi ISDIR/ISFILE/ISLINK glue. */
+int cubalc_host_kindstr(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "kindstr: empty path");
+    return -1;
+  }
+  if (lstat(path, &st) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", "missing");
+    r->n = 0;
+    r->code = 0;
+    r->ok = 1; /* soft probe — not a hard fail */
+    return 0;
+  }
+  if (S_ISLNK(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "link");
+    r->n = 3;
+  } else if (S_ISREG(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "file");
+    r->n = 1;
+  } else if (S_ISDIR(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "dir");
+    r->n = 2;
+  } else if (S_ISFIFO(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "fifo");
+    r->n = 4;
+  } else if (S_ISSOCK(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "sock");
+    r->n = 5;
+  } else if (S_ISCHR(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "chr");
+    r->n = 6;
+  } else if (S_ISBLK(st.st_mode)) {
+    snprintf(r->str, sizeof r->str, "%s", "blk");
+    r->n = 7;
+  } else {
+    snprintf(r->str, sizeof r->str, "%s", "other");
+    r->n = 8;
+  }
+  r->code = (int)r->n;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS OWNERNAME path — login name for st_uid without shell stat -c %U. */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r) {
   struct stat st;

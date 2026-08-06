@@ -4538,6 +4538,44 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS KINDSTR|FILEKIND|PATHKIND path — human kind label via lstat.
+     * LAST = missing|file|dir|link|fifo|sock|chr|blk|other
+     * LAST_N = 0..8 (0 miss, 1 file, 2 dir, 3 link, 4 fifo, 5 sock, 6 chr, 7 blk, 8 other)
+     * Missing is soft probe OK=1; empty path → OK=0.
+     * Usability: PATHGLOB/WALK triage without ISDIR+ISFILE+ISLINK glue. */
+    if (kw(&L->cur,"KINDSTR") || kw(&L->cur,"FILEKIND") || kw(&L->cur,"PATHKIND") ||
+        kw(&L->cur,"KINDNAME") || kw(&L->cur,"TYPESTR") || kw(&L->cur,"PATHTYPE") ||
+        kw(&L->cur,"FTYPE") || kw(&L->cur,"FILETYPE") || kw(&L->cur,"NODEKIND")){
+      char path[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] || cubalc_host_kindstr(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "KINDSTR", "");
+        var_set_num(vm, "KIND_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "KINDSTR: empty path");
+        var_set_str(vm, "ERR", "KINDSTR: empty path");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "KINDSTR", hr.str);
+      var_set_str(vm, "FILEKIND", hr.str);
+      var_set_num(vm, "KIND_N", hr.n);
+      var_set_str(vm, "KINDSTR_PATH", path);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MODE|PERM|PERMS|GETMODE path — permission bits via stat.
      * LAST = 4-digit octal "0644"; LAST_N / MODE_N = mode & 07777.
      * Soft miss / empty → OK=0. Usability: plate perms without shell stat. */
@@ -22498,6 +22536,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PUSHD", "SYS PUSHD|PUSHDIR path — save cwd then chdir · LAST_N=depth"},
       {"SYS POPD", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "SYS DIRSTACK|DIRS — newline bag of saved directories"},
+      {"SYS KINDSTR", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
       {"SYS CHDIR", "SYS CHDIR|CD path — change process cwd · LAST_N 0|1 soft miss"},
       {"SYS CD", "SYS CD path — alias of SYS CHDIR"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},

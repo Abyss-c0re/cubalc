@@ -1971,6 +1971,7 @@ int main(int argc, char **argv) {
       {"sys_cancreate", "programs/proof/828_sys_cancreate.cubalc", "SYS CANCREATE pre-flight create/overwrite probe"},
       {"sys_umask", "programs/proof/829_sys_umask.cubalc", "SYS UMASK get/set process file-creation mask"},
       {"sys_pushd", "programs/proof/830_sys_pushd.cubalc", "SYS PUSHD/POPD/DIRSTACK cwd stack for temp chdir"},
+      {"sys_kindstr", "programs/proof/831_sys_kindstr.cubalc", "SYS KINDSTR human path kind labels"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -1983,7 +1984,7 @@ int main(int argc, char **argv) {
       int asserts_ok;
       int asserts_fail;
       char err[120];
-    } rows[256];
+    } rows[512];
     int nrow = 0;
     if (argc > 2 && (!strcmp(argv[2], "--json") || !strcmp(argv[2], "-j")))
       json_only = 1;
@@ -1992,7 +1993,7 @@ int main(int argc, char **argv) {
              n, CUBALC_LANG_VERSION);
       printf("# id\tok\tasserts\thint\n");
     }
-    /* Cap at rows[] size (256) so new usability proofs are not silently skipped. */
+    /* Cap at rows[] size (512) so new usability proofs are not silently skipped. */
     for (i = 0; i < n && nrow < (int)(sizeof rows / sizeof rows[0]); i++) {
       cubalc_run_result rr;
       int is_cli = (strncmp(tests[i].path, "cli:", 4) == 0);
@@ -2255,6 +2256,7 @@ int main(int argc, char **argv) {
       {"SYS PUSHD", "host", "SYS PUSHD|PUSHDIR path — save cwd then chdir; LAST_N=depth"},
       {"SYS POPD", "host", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "host", "SYS DIRSTACK|DIRS — newline bag of saved dirs"},
+      {"SYS KINDSTR", "host", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
       {"SYS DOTENV", "host", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "host", "SYS LOADENV alias of SYS DOTENV"},
       {"SYS ENVFILE", "host", "SYS ENVFILE alias of SYS DOTENV"},
@@ -2871,6 +2873,7 @@ int main(int argc, char **argv) {
       {"SYS PUSHD", "host", "SYS PUSHD|PUSHDIR path — save cwd then chdir; LAST_N=depth"},
       {"SYS POPD", "host", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "host", "SYS DIRSTACK|DIRS — newline bag of saved dirs"},
+      {"SYS KINDSTR", "host", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
       {"SYS DOTENV", "host", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "host", "SYS LOADENV alias of SYS DOTENV"},
       {"SYS ENVFILE", "host", "SYS ENVFILE alias of SYS DOTENV"},
@@ -2992,6 +2995,7 @@ int main(int argc, char **argv) {
       {"SYS PUSHD", "host", "SYS PUSHD|PUSHDIR path — save cwd then chdir; LAST_N=depth"},
       {"SYS POPD", "host", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "host", "SYS DIRSTACK|DIRS — newline bag of saved dirs"},
+      {"SYS KINDSTR", "host", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
       {"SYS DOTENV", "host", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "host", "SYS LOADENV alias of SYS DOTENV"},
       {"SYS ENVFILE", "host", "SYS ENVFILE alias of SYS DOTENV"},
@@ -3789,6 +3793,8 @@ int main(int argc, char **argv) {
        "SYS UMASK get/set process file-creation mask"},
       {"programs/proof/830_sys_pushd.cubalc", "sys_pushd",
        "SYS PUSHD/POPD/DIRSTACK cwd stack for temp chdir"},
+      {"programs/proof/831_sys_kindstr.cubalc", "sys_kindstr",
+       "SYS KINDSTR human path kind labels"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -5375,6 +5381,7 @@ int main(int argc, char **argv) {
       {"SYS PUSHD", "host", "SYS PUSHD|PUSHDIR path — save cwd then chdir; LAST_N=depth"},
       {"SYS POPD", "host", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "host", "SYS DIRSTACK|DIRS — newline bag of saved dirs"},
+      {"SYS KINDSTR", "host", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
       {"SYS DOTENV", "host", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "host", "SYS LOADENV alias of SYS DOTENV"},
       {"SYS ENVFILE", "host", "SYS ENVFILE alias of SYS DOTENV"},
@@ -5549,6 +5556,7 @@ int main(int argc, char **argv) {
       {"programs/proof/828_sys_cancreate.cubalc", "sys_cancreate", "SYS CANCREATE pre-flight create/overwrite probe"},
       {"programs/proof/829_sys_umask.cubalc", "sys_umask", "SYS UMASK get/set process file-creation mask"},
       {"programs/proof/830_sys_pushd.cubalc", "sys_pushd", "SYS PUSHD/POPD/DIRSTACK cwd stack for temp chdir"},
+      {"programs/proof/831_sys_kindstr.cubalc", "sys_kindstr", "SYS KINDSTR human path kind labels"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
       {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
@@ -5777,6 +5785,7 @@ int main(int argc, char **argv) {
       {"programs/proof/828_sys_cancreate.cubalc", "sys_cancreate", "SYS CANCREATE pre-flight create/overwrite probe"},
       {"programs/proof/829_sys_umask.cubalc", "sys_umask", "SYS UMASK get/set process file-creation mask"},
       {"programs/proof/830_sys_pushd.cubalc", "sys_pushd", "SYS PUSHD/POPD/DIRSTACK cwd stack for temp chdir"},
+      {"programs/proof/831_sys_kindstr.cubalc", "sys_kindstr", "SYS KINDSTR human path kind labels"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

@@ -319,6 +319,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 289. ~~**`SYS CANCREATE` / `CREATABLE`**~~ **done** (create/overwrite pre-flight · parent W_OK|X_OK or path W_OK).
 290. ~~**`SYS UMASK` / `GETUMASK` / `SETUMASK`**~~ **done** (process file-creation mask get/set · private plate defaults without shell).
 291. ~~**`SYS PUSHD` / `POPD` / `DIRSTACK`**~~ **done** (cwd stack · temp relative plate I/O without losing base).
+292. ~~**`SYS KINDSTR` / `FILEKIND`**~~ **done** (path → file|dir|link|missing|… · triage without multi-probe glue).
 
 ## Tick protocol
 
