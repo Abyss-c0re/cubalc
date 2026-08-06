@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 246,
-  "version": "1.15.273-usability",
-  "item": "SYS TRUNCATE / FTRUNCATE / FILETRUNC resize plates",
-  "item_id": 281,
-  "title": "SYS TRUNCATE|FTRUNCATE path [nbytes] — resize plate file keep inode (default 0)",
-  "commit": "5b506c8d7440178ac2b34908a940c080c9c05c54",
-  "summary": "ftruncate plate files; empty without RM+TOUCH. selftest 246.",
+  "iter": 247,
+  "version": "1.15.274-usability",
+  "item": "SYS DIRSYNC / FSYNCDIR / SYNCDIR durable directory flush",
+  "item_id": 282,
+  "title": "SYS DIRSYNC|FSYNCDIR path — fsync dir or parent for durable WRITEATOMIC renames",
+  "commit": "01087ebaf55b364f195ba170e312ba038f18e66b",
+  "summary": "dir fsync after file FSYNC for durable plates. selftest 247.",
   "proofs": [
-    "820_sys_truncate",
-    "selftest n_pass=246"
+    "821_sys_dirsync",
+    "selftest n_pass=247"
   ],
-  "when": "2026-08-06T18:44:16Z",
+  "when": "2026-08-06T18:54:35Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5b506c8d7440178ac2b34908a940c080c9c05c54",
-  "note": "not TRUNCALL bag clip; complements WRITE/FSYNC"
+  "sha": "01087ebaf55b364f195ba170e312ba038f18e66b",
+  "note": "completes WRITEATOMIC+FSYNC durability story"
 }
