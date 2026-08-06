@@ -12,6 +12,90 @@
 #  include <sys/socket.h>
 #endif
 
+/* SYS BASE64 / BASE64D — standard base64 encode/decode for agent plate payloads.
+ * Returns 0 on success; fills out with NUL-terminated result; *n_out = byte length. */
+static const char cubalc_b64_tab[] =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static int cubalc_b64_enc(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  size_t i = 0, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  if (((in_len + 2) / 3) * 4 + 1 > out_cap) return -1;
+  while (i + 2 < in_len) {
+    unsigned v = ((unsigned char)in[i] << 16) | ((unsigned char)in[i + 1] << 8) |
+                 (unsigned char)in[i + 2];
+    out[o++] = cubalc_b64_tab[(v >> 18) & 63];
+    out[o++] = cubalc_b64_tab[(v >> 12) & 63];
+    out[o++] = cubalc_b64_tab[(v >> 6) & 63];
+    out[o++] = cubalc_b64_tab[v & 63];
+    i += 3;
+  }
+  if (i < in_len) {
+    unsigned v = (unsigned char)in[i] << 16;
+    out[o++] = cubalc_b64_tab[(v >> 18) & 63];
+    if (i + 1 < in_len) {
+      v |= (unsigned char)in[i + 1] << 8;
+      out[o++] = cubalc_b64_tab[(v >> 12) & 63];
+      out[o++] = cubalc_b64_tab[(v >> 6) & 63];
+      out[o++] = '=';
+    } else {
+      out[o++] = cubalc_b64_tab[(v >> 12) & 63];
+      out[o++] = '=';
+      out[o++] = '=';
+    }
+  }
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+static int cubalc_b64_val(int c) {
+  if (c >= 'A' && c <= 'Z') return c - 'A';
+  if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+  if (c >= '0' && c <= '9') return c - '0' + 52;
+  if (c == '+') return 62;
+  if (c == '/') return 63;
+  return -1;
+}
+static int cubalc_b64_dec(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  size_t i = 0, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  /* strip trailing whitespace from logical length */
+  while (in_len > 0 && (in[in_len - 1] == '\n' || in[in_len - 1] == '\r' ||
+                        in[in_len - 1] == ' ' || in[in_len - 1] == '\t'))
+    in_len--;
+  if (in_len % 4 != 0) return -1;
+  if ((in_len / 4) * 3 + 1 > out_cap) return -1;
+  while (i < in_len) {
+    int a = cubalc_b64_val((unsigned char)in[i]);
+    int b = cubalc_b64_val((unsigned char)in[i + 1]);
+    int c = (in[i + 2] == '=') ? -2 : cubalc_b64_val((unsigned char)in[i + 2]);
+    int d = (in[i + 3] == '=') ? -2 : cubalc_b64_val((unsigned char)in[i + 3]);
+    unsigned v;
+    if (a < 0 || b < 0 || c == -1 || d == -1) return -1;
+    if (c == -2 && d != -2) return -1;
+    v = ((unsigned)a << 18) | ((unsigned)b << 12);
+    if (c >= 0) v |= (unsigned)c << 6;
+    if (d >= 0) v |= (unsigned)d;
+    if (o + 1 >= out_cap) return -1;
+    out[o++] = (char)((v >> 16) & 0xff);
+    if (c >= 0) {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)((v >> 8) & 0xff);
+    }
+    if (d >= 0) {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)(v & 0xff);
+    }
+    i += 4;
+  }
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+
 #if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
@@ -1755,6 +1839,59 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "FNV", hex);
       var_set_num(vm, "HASH_N", n_as_long);
       var_set_num(vm, "HASH_BYTES", (long)strlen(src));
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS BASE64|B64ENC|ENCODE64 [str]
+     * SYS BASE64D|B64DEC|DECODE64 [str]
+     * — standard base64 encode/decode (default prior LAST).
+     * LAST = result; LAST_N / BASE64_N = output byte length; soft fail OK=0.
+     * Usability: plate/payload transport stamps without shell base64. */
+    if (kw(&L->cur,"BASE64") || kw(&L->cur,"B64ENC") || kw(&L->cur,"ENCODE64") ||
+        kw(&L->cur,"B64ENCODE") || kw(&L->cur,"TOBASE64") || kw(&L->cur,"B64") ||
+        kw(&L->cur,"BASE64ENC") || kw(&L->cur,"ENC64") ||
+        kw(&L->cur,"BASE64D") || kw(&L->cur,"B64DEC") || kw(&L->cur,"DECODE64") ||
+        kw(&L->cur,"B64DECODE") || kw(&L->cur,"FROMBASE64") || kw(&L->cur,"BASE64DEC") ||
+        kw(&L->cur,"DEC64") || kw(&L->cur,"UNBASE64")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t n_out = 0;
+      int is_dec = (kw(&L->cur,"BASE64D") || kw(&L->cur,"B64DEC") ||
+                   kw(&L->cur,"DECODE64") || kw(&L->cur,"B64DECODE") ||
+                   kw(&L->cur,"FROMBASE64") || kw(&L->cur,"BASE64DEC") ||
+                   kw(&L->cur,"DEC64") || kw(&L->cur,"UNBASE64"));
+      int rc;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (is_dec)
+        rc = cubalc_b64_dec(src, strlen(src), out, sizeof out, &n_out);
+      else
+        rc = cubalc_b64_enc(src, strlen(src), out, sizeof out, &n_out);
+      if (rc != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "BASE64_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_dec ? "BASE64D: decode fail" : "BASE64: encode fail");
+        var_set_str(vm, "ERR", is_dec ? "BASE64D: decode fail" : "BASE64: encode fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n_out;
+      var_set_num(vm, "LAST_N", (long)n_out);
+      var_set_str(vm, "BASE64", out);
+      if (is_dec) {
+        var_set_str(vm, "BASE64D", out);
+        var_set_str(vm, "B64DEC", out);
+      } else {
+        var_set_str(vm, "B64ENC", out);
+        var_set_str(vm, "ENCODE64", out);
+      }
+      var_set_num(vm, "BASE64_N", (long)n_out);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }

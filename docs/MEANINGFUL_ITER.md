@@ -281,6 +281,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 251. ~~**`SYS STAT` / `FSTAT` / `FILESTAT`**~~ **done** (one-shot path metadata · exist/kind/size/mtime/isfile · no EXIST+SIZE+MTIME glue).
 252. ~~**`SYS MKTEMPDIR` / `MKDTEMP` / `MAKETEMPDIR`**~~ **done** (unique empty dir under TMP · collision-free agent workspaces without shell mktemp -d).
 253. ~~**`SYS RMDIR` / `REMOVEDIR` / `RD`**~~ **done** (remove empty directory · missing soft OK · clean MKTEMPDIR without shell rmdir).
+254. ~~**`SYS BASE64` / `B64ENC` · `BASE64D` / `B64DEC`**~~ **done** (standard base64 encode/decode · plate payload transport without shell base64).
 
 ## Tick protocol
 

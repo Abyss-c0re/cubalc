@@ -1,0 +1,92 @@
+# SYS BASE64 / B64ENC / ENCODE64 · BASE64D / B64DEC / DECODE64
+# — standard base64 encode/decode for agent plate payloads
+# Usability: no shell base64 · round-trip plate/text stamps
+
+HOLD_FLASH 1
+
+# encode known vector: "hello" → aGVsbG8=
+SYS BASE64 "hello"
+ASSERT OK == 1
+ASSERT BASE64_N == 8
+SYS EQS LAST "aGVsbG8="
+ASSERT LAST_N == 1
+
+# decode back
+SYS BASE64D "aGVsbG8="
+ASSERT OK == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT BASE64_N == 5
+
+# empty → empty
+SYS BASE64 ""
+ASSERT OK == 1
+ASSERT BASE64_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+SYS BASE64D ""
+ASSERT OK == 1
+ASSERT BASE64_N == 0
+
+# padding cases: "f" → Zg== · "fo" → Zm8=
+SYS BASE64 "f"
+SYS EQS LAST "Zg=="
+ASSERT LAST_N == 1
+SYS BASE64D LAST
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+
+SYS BASE64 "fo"
+SYS EQS LAST "Zm8="
+ASSERT LAST_N == 1
+SYS BASE64D "Zm8="
+SYS EQS LAST "fo"
+ASSERT LAST_N == 1
+
+# aliases
+SYS B64ENC "hi"
+SYS EQS LAST "aGk="
+ASSERT LAST_N == 1
+SYS B64DEC "aGk="
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+
+SYS ENCODE64 "x"
+LET enc = LAST
+SYS DECODE64 enc
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# default LAST as input
+SYS PREPEND "" "agent-payload"
+# put into LAST via LET dance — use explicit then chain
+SYS BASE64 "agent-payload"
+LET b = LAST
+SYS BASE64D b
+SYS EQS LAST "agent-payload"
+ASSERT LAST_N == 1
+
+# bad decode soft fail
+SYS BASE64D "!!!!"
+ASSERT OK == 0
+ASSERT BASE64_N == 0
+
+# agent: write b64 plate, read, decode
+SYS TMP
+LET td = LAST
+SYS JOIN td "b64_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "msg.b64"
+LET fp = LAST
+SYS BASE64 "status=ready"
+SYS WRITEATOMIC fp LAST
+ASSERT OK == 1
+SYS READ fp
+SYS BASE64D LAST
+SYS EQS LAST "status=ready"
+ASSERT LAST_N == 1
+SYS RM fp
+
+PRINT "sys_base64 ok"
