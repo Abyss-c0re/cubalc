@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 146,
-  "version": "1.15.171-usability",
-  "item": "SYS SIGNKV / DIRKV map key:val to -1|0|1",
-  "item_id": 179,
-  "title": "SYS SIGNKV|DIRKV bag [sep] — DIFFKV direction without EACH",
-  "commit": "012f305a8c8aa82972fcbe3e7db929e1acd843fa",
-  "summary": "SIGNKV direction map + POS/NEG/ZERO counts. selftest 146. thrash restore.",
+  "iter": 147,
+  "version": "1.15.172-usability",
+  "item": "SYS DIVKV / IDIVKV integer-divide key:val values",
+  "item_id": 180,
+  "title": "SYS DIVKV|IDIVKV bag divisor [sep] — mean after N-way MERGEKV",
+  "commit": "46f063b0f3e9b3fef5ba5165a89d805943a2875a",
+  "summary": "DIVKV integer-divide FREQ values for mean. selftest 147.",
   "proofs": [
-    "719_sys_signkv",
-    "selftest n_pass=146"
+    "720_sys_divkv",
+    "selftest n_pass=147"
   ],
-  "when": "2026-08-06T02:03:51Z",
+  "when": "2026-08-06T02:14:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "012f305a8c8aa82972fcbe3e7db929e1acd843fa"
+  "sha": "46f063b0f3e9b3fef5ba5165a89d805943a2875a"
 }
