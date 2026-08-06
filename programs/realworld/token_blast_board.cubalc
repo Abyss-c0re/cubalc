@@ -1,0 +1,954 @@
+# token_blast_board.cubalc — credential/deprecation token blast radius
+#
+# Real use: security/ops agent inventories a log/config drop, then measures
+# blast radius of a leaked token / deprecated API marker / incident needle:
+#   COUNTINFILES  — total substring hits + files infected
+#   FIRSTFILE     — earliest path in bag order with a hit (entry point)
+#   LASTFILE      — latest path with a hit (tail of spread)
+# Distinct from fleet_config_scrub (bulk rewrite) and incident_log_board
+# (line search+append): this board is multi-file severity rollup + bookends.
+#
+# Plate under STATE:
+#   PATHS.txt      — working path bag
+#   FIRST.txt      — last FIRSTFILE path
+#   LAST.txt       — last LASTFILE path
+#   TALLY.txt      — last tally summary (needle + counts)
+#   BLAST_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TB_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   tally     — COUNTINFILES PATHS needle(ARG1)  [case-sensitive]
+#   tallyi    — COUNTINFILESI PATHS needle
+#   first     — FIRSTFILE PATHS needle → FIRST
+#   last      — LASTFILE PATHS needle → LAST
+#   firsti    — FIRSTFILEI
+#   lasti     — LASTFILEI
+#   span      — first+last+tally in one shot
+#   hits      — GREPFILES PATHS needle → list of infected paths (compare)
+#   has       — HASLINE exact on PATHS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tb_$$; mkdir -p "$CUBALC_STATE/logs"
+#   # write fixtures with sk_live_ / Sk_Live_ markers
+#   CUBALC_TB_DIR=$CUBALC_STATE/logs CUBALC_ARG0=scan CUBALC_ARG1='*.log' \
+#     ./out/cubalc run -q -s programs/realworld/token_blast_board.cubalc
+#   CUBALC_ARG0=tally CUBALC_ARG1='sk_live_' ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=span  CUBALC_ARG1='sk_live_' ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_TB_DIR=…  CUBALC_TB_PAT=*  CUBALC_TB_REQUIRE=1
+#
+# Edges deliberately stressed:
+#   COUNTINFILES empty needle → 0 (not every byte)
+#   FIRSTFILE empty needle → first readable path (surprising!)
+#   COUNTIN vs COUNTINFILESI case spread
+#   soft miss ghost path in bag (COUNTINFILES_MISS / FIRSTFILE_MISS)
+#   FIRSTFILE stops early (SCAN < bag size); LASTFILE scans all
+#   GREPFILES path list vs COUNTINFILES_FILES count only
+#   substring false friends (sk_live vs sk_live_)
+#   REQUIRE miss exit 2; soft READ plate; PRINT_JSON; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "token_blast_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT FFILE = "FIRST.txt"
+DEFAULT LFILE = "LAST.txt"
+DEFAULT TFILE = "TALLY.txt"
+DEFAULT REPORT = "BLAST_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TB_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_TB_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir FFILE
+LET first_path = LAST
+SYS JOIN state_dir LFILE
+LET last_path = LAST
+SYS JOIN state_dir TFILE
+LET tally_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR first_path OR ""
+LET first_hit = LAST
+CLEAR_ERR
+SYS READ OR last_path OR ""
+LET last_hit = LAST
+CLEAR_ERR
+SYS READ OR tally_path OR ""
+LET tally = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET first_ch = 0
+LET last_ch = 0
+LET tally_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET tally_n = 0
+LET tally_files = 0
+LET tally_scan = 0
+LET tally_miss = 0
+LET first_n = 0
+LET first_scan = 0
+LET first_miss = 0
+LET last_n = 0
+LET last_scan = 0
+LET last_miss = 0
+LET hits_n = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "tally"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "tally needs needle"
+  END
+END
+SYS EQS ACTION "tallyi"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "tallyi needs needle"
+  END
+END
+SYS EQS ACTION "first"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "first needs needle"
+  END
+END
+SYS EQS ACTION "last"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "last needs needle"
+  END
+END
+SYS EQS ACTION "firsti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "firsti needs needle"
+  END
+END
+SYS EQS ACTION "lasti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "lasti needs needle"
+  END
+END
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "span needs needle"
+  END
+END
+SYS EQS ACTION "hits"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "hits needs needle"
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "tblast" np ACTION
+  PRINT_JSON np ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON first_hit
+  PRINT_JSON last_hit
+  PRINT_JSON tally
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- tally COUNTINFILES ---
+SYS EQS ACTION "tally"
+IF LAST_N == 1 THEN
+  NOTE "action tally"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "tally empty bag"
+    FAIL "tally empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tally empty bag"
+    END
+  ELSE
+    SYS COUNTINFILES paths NAME
+    LET tally_n = COUNTINFILES_N
+    LET tally_files = COUNTINFILES_FILES
+    LET tally_scan = COUNTINFILES_SCAN
+    LET tally_miss = COUNTINFILES_MISS
+    LET hit = tally_n
+    LET val_n = tally_n
+    LET tally = "needle"
+    SYS PUSH tally NAME
+    LET tally = LAST
+    SYS PUSH tally "hits"
+    LET tally = LAST
+    SYS STR tally_n
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "files"
+    LET tally = LAST
+    SYS STR tally_files
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "scan"
+    LET tally = LAST
+    SYS STR tally_scan
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "miss"
+    LET tally = LAST
+    SYS STR tally_miss
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "mode"
+    LET tally = LAST
+    SYS PUSH tally "cs"
+    LET tally = LAST
+    LET tally_ch = 1
+    IF tally_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "tally none"
+      FAIL "tally none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tally none"
+      END
+    ELSE
+      LET note_msg = "tally ok"
+    END
+    PRINT_JSON NAME tally_n tally_files tally_scan tally_miss
+    PRINT_JSON tally
+    CLEAR_ERR
+  END
+END
+
+# --- tallyi COUNTINFILESI ---
+SYS EQS ACTION "tallyi"
+IF LAST_N == 1 THEN
+  NOTE "action tallyi"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "tallyi empty bag"
+    FAIL "tallyi empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tallyi empty bag"
+    END
+  ELSE
+    SYS COUNTINFILESI paths NAME
+    LET tally_n = COUNTINFILES_N
+    LET tally_files = COUNTINFILES_FILES
+    LET tally_scan = COUNTINFILES_SCAN
+    LET tally_miss = COUNTINFILES_MISS
+    LET hit = tally_n
+    LET val_n = tally_n
+    LET tally = "needle"
+    SYS PUSH tally NAME
+    LET tally = LAST
+    SYS PUSH tally "hits"
+    LET tally = LAST
+    SYS STR tally_n
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "files"
+    LET tally = LAST
+    SYS STR tally_files
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "scan"
+    LET tally = LAST
+    SYS STR tally_scan
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "miss"
+    LET tally = LAST
+    SYS STR tally_miss
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "mode"
+    LET tally = LAST
+    SYS PUSH tally "ci"
+    LET tally = LAST
+    LET tally_ch = 1
+    IF tally_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "tallyi none"
+      FAIL "tallyi none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tallyi none"
+      END
+    ELSE
+      LET note_msg = "tallyi ok"
+    END
+    PRINT_JSON NAME tally_n tally_files tally_scan tally_miss
+    PRINT_JSON tally
+    CLEAR_ERR
+  END
+END
+
+# --- first FIRSTFILE ---
+SYS EQS ACTION "first"
+IF LAST_N == 1 THEN
+  NOTE "action first"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "first empty bag"
+    FAIL "first empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "first empty bag"
+    END
+  ELSE
+    SYS FIRSTFILE paths NAME
+    LET first_hit = LAST
+    LET first_n = FIRSTFILE_N
+    LET first_scan = FIRSTFILE_SCAN
+    LET first_miss = FIRSTFILE_MISS
+    LET hit = first_n
+    LET first_ch = 1
+    IF first_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "first none"
+      FAIL "first none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "first none"
+      END
+    ELSE
+      LET note_msg = "first ok"
+    END
+    PRINT_JSON NAME first_n first_scan first_miss
+    PRINT_JSON first_hit
+    CLEAR_ERR
+  END
+END
+
+# --- last LASTFILE ---
+SYS EQS ACTION "last"
+IF LAST_N == 1 THEN
+  NOTE "action last"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "last empty bag"
+    FAIL "last empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "last empty bag"
+    END
+  ELSE
+    SYS LASTFILE paths NAME
+    LET last_hit = LAST
+    LET last_n = LASTFILE_N
+    LET last_scan = LASTFILE_SCAN
+    LET last_miss = LASTFILE_MISS
+    LET hit = last_n
+    LET last_ch = 1
+    IF last_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "last none"
+      FAIL "last none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "last none"
+      END
+    ELSE
+      LET note_msg = "last ok"
+    END
+    PRINT_JSON NAME last_n last_scan last_miss
+    PRINT_JSON last_hit
+    CLEAR_ERR
+  END
+END
+
+# --- firsti FIRSTFILEI ---
+SYS EQS ACTION "firsti"
+IF LAST_N == 1 THEN
+  NOTE "action firsti"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "firsti empty bag"
+    FAIL "firsti empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "firsti empty bag"
+    END
+  ELSE
+    SYS FIRSTFILEI paths NAME
+    LET first_hit = LAST
+    LET first_n = FIRSTFILE_N
+    LET first_scan = FIRSTFILE_SCAN
+    LET first_miss = FIRSTFILE_MISS
+    LET hit = first_n
+    LET first_ch = 1
+    IF first_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "firsti none"
+      FAIL "firsti none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "firsti none"
+      END
+    ELSE
+      LET note_msg = "firsti ok"
+    END
+    PRINT_JSON NAME first_n first_scan first_miss
+    PRINT_JSON first_hit
+    CLEAR_ERR
+  END
+END
+
+# --- lasti LASTFILEI ---
+SYS EQS ACTION "lasti"
+IF LAST_N == 1 THEN
+  NOTE "action lasti"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "lasti empty bag"
+    FAIL "lasti empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lasti empty bag"
+    END
+  ELSE
+    SYS LASTFILEI paths NAME
+    LET last_hit = LAST
+    LET last_n = LASTFILE_N
+    LET last_scan = LASTFILE_SCAN
+    LET last_miss = LASTFILE_MISS
+    LET hit = last_n
+    LET last_ch = 1
+    IF last_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "lasti none"
+      FAIL "lasti none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "lasti none"
+      END
+    ELSE
+      LET note_msg = "lasti ok"
+    END
+    PRINT_JSON NAME last_n last_scan last_miss
+    PRINT_JSON last_hit
+    CLEAR_ERR
+  END
+END
+
+# --- span: tally + first + last ---
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  NOTE "action span"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "span empty bag"
+    FAIL "span empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "span empty bag"
+    END
+  ELSE
+    SYS COUNTINFILES paths NAME
+    LET tally_n = COUNTINFILES_N
+    LET tally_files = COUNTINFILES_FILES
+    LET tally_scan = COUNTINFILES_SCAN
+    LET tally_miss = COUNTINFILES_MISS
+    CLEAR_ERR
+    SYS FIRSTFILE paths NAME
+    LET first_hit = LAST
+    LET first_n = FIRSTFILE_N
+    LET first_scan = FIRSTFILE_SCAN
+    LET first_miss = FIRSTFILE_MISS
+    CLEAR_ERR
+    SYS LASTFILE paths NAME
+    LET last_hit = LAST
+    LET last_n = LASTFILE_N
+    LET last_scan = LASTFILE_SCAN
+    LET last_miss = LASTFILE_MISS
+    CLEAR_ERR
+    LET hit = tally_n
+    LET first_ch = 1
+    LET last_ch = 1
+    LET tally = "needle"
+    SYS PUSH tally NAME
+    LET tally = LAST
+    SYS PUSH tally "hits"
+    LET tally = LAST
+    SYS STR tally_n
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "files"
+    LET tally = LAST
+    SYS STR tally_files
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "scan"
+    LET tally = LAST
+    SYS STR tally_scan
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "miss"
+    LET tally = LAST
+    SYS STR tally_miss
+    SYS PUSH tally LAST
+    LET tally = LAST
+    SYS PUSH tally "first"
+    LET tally = LAST
+    SYS PUSH tally first_hit
+    LET tally = LAST
+    SYS PUSH tally "last"
+    LET tally = LAST
+    SYS PUSH tally last_hit
+    LET tally = LAST
+    SYS PUSH tally "mode"
+    LET tally = LAST
+    SYS PUSH tally "span"
+    LET tally = LAST
+    LET tally_ch = 1
+    IF tally_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "span none"
+      FAIL "span none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "span none"
+      END
+    ELSE
+      LET note_msg = "span ok"
+    END
+    PRINT_JSON NAME tally_n tally_files first_n last_n first_scan last_scan
+    PRINT_JSON first_hit
+    PRINT_JSON last_hit
+    PRINT_JSON tally
+    CLEAR_ERR
+  END
+END
+
+# --- hits GREPFILES (path list contrast) ---
+SYS EQS ACTION "hits"
+IF LAST_N == 1 THEN
+  NOTE "action hits"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hits empty bag"
+    FAIL "hits empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hits empty bag"
+    END
+  ELSE
+    SYS GREPFILES paths NAME
+    LET val_s = LAST
+    LET hits_n = GREPFILES_N
+    LET hit = hits_n
+    # store infected paths into tally plate as list
+    LET tally = val_s
+    LET tally_ch = 1
+    IF hits_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "hits none"
+      FAIL "hits none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hits none"
+      END
+    ELSE
+      LET note_msg = "hits ok"
+    END
+    PRINT_JSON NAME hits_n
+    PRINT_JSON val_s
+    CLEAR_ERR
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET first_hit = ""
+  LET last_hit = ""
+  LET tally = ""
+  LET paths_ch = 1
+  LET first_ch = 1
+  LET last_ch = 1
+  LET tally_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "tally"
+LET k = k + LAST_N
+SYS EQS ACTION "tallyi"
+LET k = k + LAST_N
+SYS EQS ACTION "first"
+LET k = k + LAST_N
+SYS EQS ACTION "last"
+LET k = k + LAST_N
+SYS EQS ACTION "firsti"
+LET k = k + LAST_N
+SYS EQS ACTION "lasti"
+LET k = k + LAST_N
+SYS EQS ACTION "span"
+LET k = k + LAST_N
+SYS EQS ACTION "hits"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF first_ch > 0 THEN
+  SYS WRITE first_path first_hit
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "first write failed"
+  END
+  CLEAR_ERR
+END
+IF last_ch > 0 THEN
+  SYS WRITE last_path last_hit
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "last write failed"
+  END
+  CLEAR_ERR
+END
+IF tally_ch > 0 THEN
+  SYS WRITE tally_path tally
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "tally write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.token_blast_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "tally_n"
+LET report = LAST
+SYS STR tally_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "tally_files"
+LET report = LAST
+SYS STR tally_files
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "tally_scan"
+LET report = LAST
+SYS STR tally_scan
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "tally_miss"
+LET report = LAST
+SYS STR tally_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "first_n"
+LET report = LAST
+SYS STR first_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "first_scan"
+LET report = LAST
+SYS STR first_scan
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "last_n"
+LET report = LAST
+SYS STR last_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "last_scan"
+LET report = LAST
+SYS STR last_scan
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hits_n"
+LET report = LAST
+SYS STR hits_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "token_blast_board" ACTION hit miss tally_n tally_files first_n last_n note_msg elapsed

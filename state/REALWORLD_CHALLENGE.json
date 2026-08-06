@@ -1,58 +1,88 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 65,
-  "program": "programs/realworld/fleet_config_scrub.cubalc",
-  "theme": "fleet config scrub REPLACEFILES READALL WRITEALL bulk rewrite",
-  "version": "1.15.200-usability",
+  "iter": 66,
+  "program": "programs/realworld/token_blast_board.cubalc",
+  "theme": "token blast radius COUNTINFILES FIRSTFILE LASTFILE severity bookends",
+  "version": "1.15.203-usability",
   "pass": true,
   "tests": [
     {
-      "name": "scan_cfg",
-      "cmd": "PATHGLOB *.cfg \u2192 a b c",
+      "name": "scan_logs",
+      "cmd": "PATHGLOB *.log \u2192 5 paths",
       "ok": true,
       "note": "inventory"
     },
     {
-      "name": "cat_glue",
-      "cmd": "READALL default \u2192 no sep; bytes=46 glued fields",
+      "name": "tally_cs",
+      "cmd": "COUNTINFILES sk_live_ \u2192 hits=2 files=1 scan=5",
       "ok": true,
-      "note": "default concat no NL"
+      "note": "a.log two tokens"
     },
     {
-      "name": "cat_sep",
-      "cmd": "READALL sep ||| \u2192 delimited digest",
+      "name": "tally_ci",
+      "cmd": "COUNTINFILESI sk_live_ \u2192 hits=3 files=2",
       "ok": true,
-      "note": "explicit sep"
+      "note": "includes Sk_Live_ in c.log"
     },
     {
-      "name": "scrub_old_new",
-      "cmd": "REPLACEFILES host=old\u2192new \u2192 N=2 SKIP=1 (c keep)",
+      "name": "first_last_cs",
+      "cmd": "FIRSTFILE/LASTFILE sk_live_ both a.log",
       "ok": true,
-      "note": "only changed files"
+      "note": "single infected file"
     },
     {
-      "name": "scrub_none_require",
-      "cmd": "second scrub host=old REQUIRE exit 2",
+      "name": "firsti_lasti",
+      "cmd": "FIRSTFILEI\u2192c LASTFILEI\u2192a bag order",
       "ok": true,
-      "note": "no remaining matches"
+      "note": "case bookends differ"
     },
     {
-      "name": "reset_writeall",
-      "cmd": "WRITEALL plate-v1 overwrites all three",
+      "name": "span",
+      "cmd": "span sk_live_ tally+first+last one shot",
       "ok": true,
-      "note": "uniform reset"
+      "note": "combined"
     },
     {
-      "name": "cat_soft_miss",
-      "cmd": "READALL with ghost \u2192 read_n=2 miss=1 partial",
+      "name": "hits_grepfiles",
+      "cmd": "GREPFILES path list vs COUNTINFILES_FILES",
       "ok": true,
-      "note": "OK=0 class cleared"
+      "note": "paths vs count"
+    },
+    {
+      "name": "false_friend",
+      "cmd": "tally sk_live (no _) \u2192 3 hits substring",
+      "ok": true,
+      "note": "sk_live_ and sk_liveX"
+    },
+    {
+      "name": "soft_miss_require",
+      "cmd": "tally FATAL soft exit 0; REQUIRE exit 2",
+      "ok": true,
+      "note": "agent REQUIRE gate"
+    },
+    {
+      "name": "ghost_miss",
+      "cmd": "bag with ghost \u2192 tally_miss=1 scan=4 still hits",
+      "ok": true,
+      "note": "soft unreadable"
+    },
+    {
+      "name": "empty_needle_asym",
+      "cmd": "COUNTINFILES ''\u21920; FIRSTFILE ''\u2192first readable",
+      "ok": true,
+      "note": "language asymmetry"
+    },
+    {
+      "name": "first_scan_early",
+      "cmd": "FIRSTFILE stops SCAN=2 when hit mid bag",
+      "ok": true,
+      "note": "early stop"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "175/175 pass incl readall writeall replacefiles"
+      "note": "178/178 pass incl countinfiles firstfile greplines"
     }
   ],
   "weaknesses": [
@@ -60,87 +90,90 @@
       "id": "W1",
       "severity": "high",
       "area": "host|fs",
-      "title": "READALL default joins files with empty sep \u2014 fields glue without NL",
-      "detail": "READALL bag produces host=keep port=3host=old port=2\u2026 unless sep given. Agents expecting newline join must pass \"\\n\" or \"|||\". Easy silent parse errors on digest.",
-      "repro": "READALL three cfgs \u2192 glued string no boundaries"
+      "title": "Empty needle: COUNTINFILES\u21920 but FIRSTFILE/LASTFILE\u2192first/last readable",
+      "detail": "Documented in op comments; still a live footgun. Agent that forgets ARG1 gets a confident path pick from FIRSTFILE while tally correctly reports zero. Opposite of REPLACEFILES empty-old silent skip \u2014 here pick is affirmative OK=1 N=1.",
+      "repro": "FIRSTFILE bag \"\" \u2192 LAST=first path OK=1; COUNTINFILES bag \"\" \u2192 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|naming",
-      "title": "REPLACEALL is string in-memory; REPLACEFILES is path bag rewrite",
-      "detail": "Same trap class as GREP/GREPFILES and APPENDALL/LOGALL. Wrong op rewrites bag field text, never touches disk.",
-      "repro": "REPLACEALL path_bag old new leaves file content unchanged"
+      "area": "host|json",
+      "title": "PRINT_JSON multiline bag collapses to single glued string",
+      "detail": "TALLY plate is newline KV but PRINT_JSON tally prints needlesk_live_hits2files1\u2026 Same class as prior REALWORLD. Agents cannot round-trip plate bags via JSON line.",
+      "repro": "PRINT_JSON tally after span"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|fs",
-      "title": "REPLACEFILES empty old is silent no-op (SKIP all)",
-      "detail": "Documented in proof; empty needle from ARG miss can look like success-zero-change if agent does not REQUIRE.",
-      "repro": "REPLACEFILES bag \"\" x \u2192 N=0 SKIP=scan"
+      "title": "FIRST/LASTFILE bookends are bag order not mtime/path sort",
+      "detail": "PATHGLOB order is filesystem/readdir dependent. 'Blast entry/exit' semantics agents want usually need SORTMTIME or SORT paths first. FIRSTFILE early-stop SCAN makes order doubly load-bearing.",
+      "repro": "same files different PATHS line order \u2192 different FIRST"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fs",
-      "title": "WRITEALL creates missing paths and overwrites without backup",
-      "detail": "No dry-run or existing-only mode. Fleet reset is destructive one-shot.",
-      "repro": "WRITEALL bag data creates ghosts"
+      "area": "host|naming",
+      "title": "GREPFILES returns paths; COUNTINFILES returns totals only",
+      "detail": "No COUNTINFILES path bag of infected files. Agents need dual call GREPFILES + COUNTINFILES for list+severity. COUNTINFILES_FILES is a count not a bag.",
+      "repro": "tally files=2 vs hits action path list"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|fs",
-      "title": "No REPLACEFILESI case-insensitive bulk rewrite",
-      "detail": "Host=Old vs host=old needs dual scrub or GREPFILESI+custom. String REPLACEALL has no I-path dual either for files.",
-      "repro": "content Host=old missed by host=old"
+      "area": "host|match",
+      "title": "Substring match has no word-boundary / token mode",
+      "detail": "sk_live matches sk_live_AAA and sk_liveX. Security token boards need exact/prefix/regex which language lacks on file ops. Prefixing underscore is agent discipline only.",
+      "repro": "tally sk_live vs sk_live_"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON bag newline collapse",
-      "detail": "TOUCHED/PATHS collapse in JSON line.",
-      "repro": "PRINT_JSON touched"
+      "area": "host|fs",
+      "title": "Content-only: path basenames never searched",
+      "detail": "File sk_live_name_only.log with content 'nothing' scores 0 for needle sk_live_name. Filename leaks invisible to COUNTINFILES/FIRSTFILE.",
+      "repro": "tally sk_live_name \u2192 0 despite path"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE/WRITEALL omit trailing NL on content unless in data",
-      "detail": "plate-v1 files have no final $ on cat -A; DIGEST plate same.",
-      "repro": "reset; cat -A a.cfg"
+      "title": "WRITE omits trailing NL on single-path plates",
+      "detail": "FIRST.txt / last line of PATHS often no final $ on cat -A. Recurring WRITE NL gap.",
+      "repro": "cat -A FIRST.txt"
     },
     {
       "id": "W8",
-      "severity": "med",
-      "area": "host|fs",
-      "title": "READALL partial miss sets OK=0 while still returning concat",
-      "detail": "Strict -s agents need CLEAR_ERR after partial success. Same class as RMALL/COPYALL partial OK.",
-      "repro": "READALL bag_with_ghost \u2192 OK=0 READALL_N>0"
+      "severity": "low",
+      "area": "host|num",
+      "title": "SYS NUM on non-numeric REQUIRE env leaves REQUIRE_HIT=0 silently",
+      "detail": "CUBALC_TB_REQUIRE=abc \u2192 OK=0 on NUM, flag stays default 0 so miss soft-succeeds. Easy to think REQUIRE was on.",
+      "repro": "REQUIRE=abc tally FATAL exit 0"
     }
   ],
   "workarounds": [
-    "Always pass explicit sep to READALL (newline or |||)",
-    "Use REPLACEFILES not REPLACEALL for disk rewrites",
-    "REQUIRE scrub_n>0 or treat SKIP-only as miss at agent layer",
-    "CLEAR_ERR after partial READALL if digest usable",
-    "Include trailing NL in WRITEALL data if needed"
+    "Reject blank needle at agent layer before FIRSTFILE (this board EXIT 2)",
+    "SORTMTIME or SORT paths before span for temporal bookends",
+    "Pair GREPFILES (paths) with COUNTINFILES (severity)",
+    "Use longest unique token prefix (sk_live_) not short false friends",
+    "SYS NUM + require OK or explicit digit check for REQUIRE env",
+    "Do not trust PRINT_JSON for multiline plates \u2014 READ plate files"
   ],
   "language_gaps": [
-    "READALL default sep=\\n option",
-    "REPLACEFILESI case-insensitive",
-    "WRITEALL existing-only / dry-run",
-    "REPLACEALL vs REPLACEFILES naming clarity",
-    "PRINT_JSON bag-as-array; WRITE trailing NL"
+    "FIRSTFILE empty needle should miss like COUNTINFILES (or both refuse)",
+    "COUNTINFILES return infected path bag (or HITFILES)",
+    "Word-boundary / whole-token file match mode",
+    "Optional basename/path match for needle boards",
+    "PRINT_JSON bag-as-array; WRITE trailing NL option",
+    "FIRSTFILE by mtime not only bag order"
   ],
   "issues_faced": [
-    "REPLACEFILES+READALL+WRITEALL positive path clean",
-    "Default READALL glue surprised \u2014 need explicit sep",
-    "Empty ARG1 blocked by agent EXIT before language empty-old no-op",
-    "No language fix this iter"
+    "COUNTINFILES+FIRSTFILE+LASTFILE positive path clean",
+    "Empty needle asymmetry confirmed outside agent guard",
+    "PRINT_JSON tally glue surprises still present",
+    "PATHGLOB order non-deterministic for bookend semantics",
+    "No language fix this iter \u2014 document for MEANINGFUL_ITER"
   ],
-  "commit": "3dd8cb980c72138fb88622e1ad0635e76a099d63",
-  "ts": "2026-08-06T07:08:30Z"
+  "commit": "647aff770274e50c883e9a7aff31147c3a9ad8d7",
+  "ts": "2026-08-06T07:34:20Z"
 }
