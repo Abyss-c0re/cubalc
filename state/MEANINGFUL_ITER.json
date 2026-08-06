@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 247,
-  "version": "1.15.274-usability",
-  "item": "SYS DIRSYNC / FSYNCDIR / SYNCDIR durable directory flush",
-  "item_id": 282,
-  "title": "SYS DIRSYNC|FSYNCDIR path — fsync dir or parent for durable WRITEATOMIC renames",
-  "commit": "01087ebaf55b364f195ba170e312ba038f18e66b",
-  "summary": "dir fsync after file FSYNC for durable plates. selftest 247.",
+  "iter": 248,
+  "version": "1.15.275-usability",
+  "item": "SYS HARDLINK / HLINK · NLINK / LINKS shared plate inodes",
+  "item_id": 283,
+  "title": "SYS HARDLINK existing newpath + SYS NLINK path — shared inode plates",
+  "commit": "e63e71b4995980d5c7b0cc229e35ce79497357d1",
+  "summary": "hard link + nlink count for multi-agent shared plates. selftest 248.",
   "proofs": [
-    "821_sys_dirsync",
-    "selftest n_pass=247"
+    "822_sys_hardlink",
+    "selftest n_pass=248"
   ],
-  "when": "2026-08-06T18:54:35Z",
+  "when": "2026-08-06T19:04:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "01087ebaf55b364f195ba170e312ba038f18e66b",
-  "note": "completes WRITEATOMIC+FSYNC durability story"
+  "sha": "e63e71b4995980d5c7b0cc229e35ce79497357d1",
+  "note": "restored thrash first; dual of SYMLINK without copy"
 }
