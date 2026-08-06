@@ -459,6 +459,36 @@ int cubalc_host_can_create(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS UMASK — get process file-creation mask without shell umask. */
+int cubalc_host_umask_get(cubalc_host_result *r) {
+  mode_t cur;
+  r_clear(r);
+  /* umask returns previous; set 0 then restore to sample without lasting change */
+  cur = umask((mode_t)0);
+  (void)umask(cur);
+  r->n = (long)(cur & (mode_t)0777);
+  snprintf(r->str, sizeof r->str, "%04lo", (unsigned long)r->n);
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS UMASK mode — set creation mask; report previous like shell umask. */
+int cubalc_host_umask_set(long mode, cubalc_host_result *r) {
+  mode_t prev;
+  mode_t m;
+  r_clear(r);
+  if (mode < 0) {
+    snprintf(r->err, sizeof r->err, "umask: bad mode");
+    return -1;
+  }
+  m = (mode_t)(mode & 0777);
+  prev = umask(m);
+  r->n = (long)(prev & (mode_t)0777);
+  snprintf(r->str, sizeof r->str, "%04lo", (unsigned long)r->n);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS OWNERNAME path — login name for st_uid without shell stat -c %U. */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r) {
   struct stat st;

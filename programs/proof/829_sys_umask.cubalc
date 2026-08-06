@@ -1,0 +1,66 @@
+# SYS UMASK — get/set process file-creation mask
+# Usability: private plate defaults without shell umask
+
+HOLD_FLASH 1
+
+# sample current mask
+SYS UMASK
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N == 4
+LET orig_s = UMASK
+LET orig_n = UMASK_N
+ASSERT orig_n >= 0
+ASSERT orig_n <= 511
+
+# GETUMASK alias
+SYS GETUMASK
+ASSERT OK == 1
+ASSERT LAST_N == orig_n
+SYS EQS LAST orig_s
+ASSERT LAST_N == 1
+
+# set private umask 0077 via octal string; returns previous
+SYS UMASK "0077"
+ASSERT OK == 1
+ASSERT LAST_N == orig_n
+SYS EQS LAST orig_s
+ASSERT LAST_N == 1
+
+# now current should be 0077 (decimal 63)
+SYS UMASK
+ASSERT OK == 1
+ASSERT LAST_N == 63
+ASSERT UMASK_N == 63
+SYS EQS LAST "0077"
+ASSERT LAST_N == 1
+
+# set via decimal (63 == 0077) — returns previous 63
+SYS SETUMASK 63
+ASSERT OK == 1
+ASSERT LAST_N == 63
+
+# restore original via string var
+LET m = orig_s
+SYS UMASK m
+ASSERT OK == 1
+SYS UMASK
+ASSERT LAST_N == orig_n
+SYS EQS LAST orig_s
+ASSERT LAST_N == 1
+
+# string-var set again through SETUMASK
+SYS SETUMASK "0022"
+ASSERT OK == 1
+SYS UMASK
+ASSERT LAST_N == 18
+SYS EQS LAST "0022"
+ASSERT LAST_N == 1
+
+# restore original before exit
+SYS UMASK orig_s
+ASSERT OK == 1
+SYS UMASK
+ASSERT LAST_N == orig_n
+
+PRINT "sys_umask ok"

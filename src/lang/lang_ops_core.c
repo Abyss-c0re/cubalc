@@ -4577,6 +4577,111 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS UMASK [mode] — get or set process file-creation mask.
+     * No arg / GETUMASK: current mask → LAST "0ooo" LAST_N decimal.
+     * With mode (num or "0077" string): set; LAST/LAST_N = previous mask.
+     * Usability: private plate defaults without shell umask. */
+    if (kw(&L->cur,"UMASK") || kw(&L->cur,"GETUMASK") || kw(&L->cur,"SETUMASK") ||
+        kw(&L->cur,"FILEUMASK") || kw(&L->cur,"MASK") || kw(&L->cur,"CREATIONMASK")){
+      char op[24], mstr[64];
+      long mode = -1;
+      int do_set = 0;
+      cubalc_host_result hr;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      mstr[0] = 0;
+      /* SETUMASK always wants a mode; UMASK optional; GETUMASK never sets */
+      if (strcmp(op, "GETUMASK") == 0) {
+        do_set = 0;
+      } else if (strcmp(op, "SETUMASK") == 0) {
+        do_set = 1;
+      }
+      if (strcmp(op, "GETUMASK") != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+          mode = parse_expr(vm, L);
+          do_set = 1;
+        } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                   !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE") &&
+                   !kw(&L->cur,"IF") && !kw(&L->cur,"FOR") && !kw(&L->cur,"WHILE") &&
+                   !kw(&L->cur,"HOLD_FLASH") && !kw(&L->cur,"INCLUDE") && !kw(&L->cur,"NOTE")) {
+          Var *mv = var_get(vm, L->cur.text, 0);
+          if (mv && mv->is_str && mv->sval[0]) {
+            char *end = NULL;
+            unsigned long v = strtoul(mv->sval, &end, 8);
+            if (end && end != mv->sval && *end == 0)
+              mode = (long)v;
+            else {
+              end = NULL;
+              v = strtoul(mv->sval, &end, 10);
+              if (end && end != mv->sval && *end == 0)
+                mode = (long)v;
+            }
+            lex_next(L);
+            do_set = 1;
+          } else if (mv && !mv->is_str) {
+            mode = parse_expr(vm, L);
+            do_set = 1;
+          }
+          /* else: bare unknown ident → treat as next form (get umask) */
+        } else if (L->cur.kind == TK_STR) {
+          snprintf(mstr, sizeof mstr, "%s", L->cur.text);
+          lex_next(L);
+          if (mstr[0]) {
+            char *end = NULL;
+            unsigned long v = strtoul(mstr, &end, 8);
+            if (end && end != mstr && *end == 0)
+              mode = (long)v;
+            else {
+              end = NULL;
+              v = strtoul(mstr, &end, 10);
+              if (end && end != mstr && *end == 0)
+                mode = (long)v;
+            }
+            do_set = 1;
+          }
+        }
+      }
+      if (do_set) {
+        if (mode < 0 || cubalc_host_umask_set(mode, &hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "UMASK_N", 0);
+          var_set_num(vm, "OK", 0);
+          if (hr.err[0]) {
+            var_set_str(vm, "LAST_ERR", hr.err);
+            var_set_str(vm, "ERR", hr.err);
+          } else {
+            var_set_str(vm, "LAST_ERR", "UMASK: bad mode");
+            var_set_str(vm, "ERR", "UMASK: bad mode");
+          }
+          bump(vm); return 1;
+        }
+      } else {
+        if (cubalc_host_umask_get(&hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "UMASK: fail");
+          var_set_str(vm, "ERR", "UMASK: fail");
+          bump(vm); return 1;
+        }
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "UMASK_N", hr.n);
+      var_set_str(vm, "UMASK", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CHMOD|SETMODE|SETPERM path mode — set permission bits.
      * mode: integer (octal literal 0o644 or decimal 420) or "0644"/"644" string.
      * LAST = path; LAST_N / CHMOD_N = applied mode; soft miss OK=0.
@@ -22833,6 +22938,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CANWRITE", "SYS CANWRITE|WRITABLE path — access W_OK → LAST_N 0|1"},
       {"SYS CANEXEC", "SYS CANEXEC|EXECUTABLE path — access X_OK → LAST_N 0|1"},
       {"SYS CANCREATE", "SYS CANCREATE|CREATABLE path — create/overwrite probe LAST_N 0|1"},
+      {"SYS UMASK", "SYS UMASK [mode] — get/set process file-creation mask"},
       {"SYS OWNERNAME", "SYS OWNERNAME|OWNERUSER path — owner login name → LAST"},
       {"SYS GROUPNAME", "SYS GROUPNAME|OWNERGROUP path — group name → LAST"},
       {"SYS DOTENV", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
