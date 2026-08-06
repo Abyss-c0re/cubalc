@@ -1,164 +1,160 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 87,
-  "program": "programs/realworld/plate_lockdown_board.cubalc",
-  "theme": "plate lockdown PARSESIZE budget CHMOD MODE HUMANSIZE secret gate",
-  "version": "1.15.257-usability",
+  "iter": 88,
+  "program": "programs/realworld/cpu_work_shard_board.cubalc",
+  "theme": "cpu work shard NPROC STRIDE MONOTONIC elapsed budget partition",
+  "version": "1.15.260-usability",
   "pass": true,
   "tests": [
     {
-      "name": "budget_2k",
-      "cmd": "PARSESIZE 2K \u2192 2048 BUDGET",
+      "name": "nproc",
+      "cmd": "SYS NPROC \u2192 workers default + META key:val",
       "ok": true,
-      "note": "human config"
+      "note": "4 cpus here"
     },
     {
-      "name": "put_ok",
-      "cmd": "WRITEATOMIC body under budget",
+      "name": "workers_shard",
+      "cmd": "workers=4 shard=1",
       "ok": true,
-      "note": "token body"
+      "note": "force partition"
     },
     {
-      "name": "put_oversize",
-      "cmd": "16B budget rejects long body; REQUIRE\u21922",
+      "name": "seed_range",
+      "cmd": "RANGE 0..(N-1) for N=16 \u2192 0..15",
+      "ok": true,
+      "note": "inclusive ends"
+    },
+    {
+      "name": "plan_stride",
+      "cmd": "STRIDE workers OFF shard \u2192 1,5,9,13",
+      "ok": true,
+      "note": "OFF keyword"
+    },
+    {
+      "name": "tick_tock",
+      "cmd": "MONOTONIC delta under budget 5000",
+      "ok": true,
+      "note": "steady elapsed"
+    },
+    {
+      "name": "over_budget",
+      "cmd": "budget=1; sleep; tock soft; REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "lock_0600",
-      "cmd": "CHMOD string var DEF_MODE \u2192 -rw-------",
+      "name": "shard_oor",
+      "cmd": "shard 9 with workers 4 REQUIRE\u21922",
       "ok": true,
-      "note": "after fix"
+      "note": "OOR"
     },
     {
-      "name": "mode_probe",
-      "cmd": "MODE \u2192 0600 / 0644 / 0640",
+      "name": "plan_empty",
+      "cmd": "clear then plan soft; REQUIRE\u21922",
       "ok": true,
-      "note": "octal stamp"
+      "note": "no work"
     },
     {
-      "name": "unlock",
-      "cmd": "CHMOD 0644 open again",
+      "name": "workers_zero",
+      "cmd": "workers 0 REQUIRE\u21922",
       "ok": true,
-      "note": "public"
-    },
-    {
-      "name": "label",
-      "cmd": "SIZE + HUMANSIZE \u2192 18B",
-      "ok": true,
-      "note": "inventory"
-    },
-    {
-      "name": "parsesize_bad",
-      "cmd": "1X/nope soft; REQUIRE exit 2",
-      "ok": true,
-      "note": "parse fail"
-    },
-    {
-      "name": "mode_miss",
-      "cmd": "MODE missing path soft; REQUIRE 2",
-      "ok": true,
-      "note": "probe"
-    },
-    {
-      "name": "chmod_strvar_fix",
-      "cmd": "SYS CHMOD fp m with m=0600 \u2192 384 not strlen 4",
-      "ok": true,
-      "note": "lang fix"
+      "note": "STRIDE step"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "231/231 pass"
+      "note": "234/234 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|chmod",
-      "title": "CHMOD string-var used parse_expr strlen (FIXED this iter)",
-      "detail": "SYS CHMOD fp m with m=\"0600\" applied mode 4 (strlen) not octal 384. Literals worked; DEFAULT/LET modes silently mis-locked plates to -------r--. Fixed: string idents parse as octal.",
-      "repro": "pre-fix: LET m=\"0600\"; CHMOD fp m \u2192 MODE 0004"
+      "area": "lang|keyword",
+      "title": "Identifier end is END keyword — LET end corrupts control flow",
+      "detail": "LET end = count - 1 parsed as LET then END closing the IF, leaving '= count - 1' as unknown form and breaking later writes. Agents naming loop bounds end silently wreck programs.",
+      "repro": "LET end = 5 \u2192 ok:false; unknown form ''"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|humansize",
-      "title": "HUMANSIZE\u2194PARSESIZE asymmetric after floor",
-      "detail": "HUMANSIZE 1536 \u2192 1K; PARSESIZE 1K \u2192 1024. Budget round-trips lose bytes. Agents that label then re-parse shrink ceilings.",
-      "repro": "HUMANSIZE 1536; PARSESIZE LAST \u2192 1024"
+      "area": "host|stride",
+      "title": "Bare mid-arg STRIDE offset var is unknown form",
+      "detail": "SYS STRIDE workers shard_id work fails; must use SYS STRIDE workers OFF shard_id work. Same class as canary board OFF footgun.",
+      "repro": "SYS STRIDE 4 shard_id bag \u2192 unknown form shard_id"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "lang|literal",
-      "title": "Bare DEFAULT NQ = 0600 is decimal 600 not octal",
-      "detail": "Unquoted 0600 becomes 600 decimal; CHMOD then sets 1130 octal. Only quoted \"0600\" is safe octal mode text.",
-      "repro": "DEFAULT NQ = 0600 \u2192 NQ=600"
+      "area": "host|range",
+      "title": "RANGE inclusive both ends — off-by-one vs half-open intuition",
+      "detail": "RANGE 0 16 yields 17 ids. Seed N needs RANGE 0 (N-1). Easy to over-seed worker bags.",
+      "repro": "RANGE 0 3 \u2192 4 lines"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE plate metas omit trailing NL",
-      "detail": "ACTIVE/BUDGET/VAL glue in cat -A.",
-      "repro": "cat -A ACTIVE.txt after pick"
+      "area": "host|join",
+      "title": "SYS JOIN is path join not string concat",
+      "detail": "JOIN \"workers:\" \"4\" \u2192 workers:/4. No simple strcat; REPLACEALL templates required for key:val stamps.",
+      "repro": "SYS JOIN \"workers:\" \"4\""
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|chmod",
-      "title": "CHMOD success does not re-stat for umask/ACL surprises",
-      "detail": "CHMOD_N reports requested mode bits; host may still differ under restricted FS. Board re-MODE after lock as workaround.",
-      "repro": "CHMOD then MODE for verify"
+      "area": "host|print",
+      "title": "PRINT_JSON collapses bag newlines",
+      "detail": "Multi-line SHARD/WORK look glued in JSON plates; agents mis-count fields without LINES.",
+      "repro": "PRINT_JSON shard_bag"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|parsesize",
-      "title": "PARSESIZE rejects fractional labels (1.5K)",
-      "detail": "Only integer+unit; agents with SI 1.5K configs soft-fail.",
-      "repro": "PARSESIZE 1.5K \u2192 OK=0"
+      "severity": "med",
+      "area": "host|write",
+      "title": "WRITE omit trailing NL — wc -l undercounts WORK",
+      "detail": "16 ids 0..15 show wc -l 15 without final NL.",
+      "repro": "cat -A WORK.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_PL_REQUIRE=abc leaves REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc budget nope \u2192 rc 0"
+      "area": "host|lookup",
+      "title": "LOOKUP default sep is colon not equals",
+      "detail": "workers=4 needs LOOKUP sep \"=\"; key:val works with default. Mixed plate conventions confuse agents.",
+      "repro": "LOOKUP bag workers with = lines fails bare"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|put",
-      "title": "put gates on LEN(body) not SIZE after write",
-      "detail": "Correct for pure text; binary/WRITE NL mismatch could diverge. No atomic size-check-after-write retry.",
-      "repro": "LEN vs SIZE post WRITEATOMIC"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_CW_REQUIRE=abc leaves REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc plan empty \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Always quote mode strings \"0600\"; never bare 0600 DEFAULT",
-    "Compare budgets with PARSESIZE_N/SIZE not HUMANSIZE labels",
-    "MODE after CHMOD to confirm",
-    "Digit-check REQUIRE",
-    "Prefer string vars post-fix for lock mode ARG"
+    "Never name vars end/if/then; use rend/last_i",
+    "Always STRIDE step OFF off bag form for var offsets",
+    "RANGE 0 (N-1) for N items; document inclusive",
+    "REPLACEALL templates for key:val; not JOIN",
+    "LINES after PRINT_JSON for bag counts",
+    "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "Octal number literals 0o600 / leading-zero octal policy",
-    "HUMANSIZE fractional / ceil mode for round-trip",
-    "PARSESIZE fractions",
+    "Reserved-word diagnostic on LET end (not silent END)",
+    "STRIDE mid-arg numeric/var without OFF keyword",
+    "RANGE half-open mode or exclusive end flag",
+    "SYS STRCAT / CAT for non-path concat",
     "WRITE trailing NL option",
-    "CHMOD verify=1 re-stat"
+    "PRINT_JSON bag as array mode"
   ],
   "issues_faced": [
-    "CHMOD string-var strlen footgun found+fixed+proof",
-    "PARSESIZE/HUMANSIZE floor asymmetry remains",
-    "board pick/budget/put/lock/mode/unlock/label green",
-    "selftest 231/231"
+    "LET end keyword collision nearly broke whole board",
+    "STRIDE bare mid-arg fixed via OFF",
+    "nproc/plan 1,5,9,13 + mono tick/tock green",
+    "selftest 234/234; no language fix this iter"
   ],
-  "commit": "2b1639ae6bca3e58ce427106df4f844ed3bec361",
-  "ts": "2026-08-06T16:22:00Z"
+  "commit": "",
+  "ts": "2026-08-06T16:46:46Z"
 }

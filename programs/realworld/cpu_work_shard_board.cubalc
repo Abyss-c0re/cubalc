@@ -1,0 +1,891 @@
+# cpu_work_shard_board.cubalc — NPROC work shards + MONOTONIC elapsed budget
+#
+# Real use: agents partition a work index bag across online CPUs and gate
+# run windows with a steady clock (immune to NTP/wall jumps):
+#   NPROC / CPUS / CORES     — online processor count
+#   RANGE                    — synthetic work ids 0..N-1
+#   STRIDE / EVERY           — shard = every workers-th field, offset=shard
+#   MONOTONIC / STEADY_MS    — steady ms start/stop
+#   MS                       — wall clock (compare drift)
+# Distinct from canary_stride_sampler (fleet hosts) and work_slot_pool
+# (idle/busy tokens): this board is *CPU-count shards + steady elapsed gate*.
+#
+# Plate under STATE:
+#   WORK.txt       — full work bag (newline ids)
+#   SHARD.txt      — this worker's STRIDE slice
+#   META.txt       — workers/shard/n/elapsed bag
+#   VAL.txt        — last stamp / plan summary
+#   T0.txt         — monotonic start (decimal ms)
+#   BUDGET.txt     — max elapsed ms (0 = unlimited)
+#   SHARD_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CW_ACTION):
+#   list      — plate (default)
+#   nproc     — SYS NPROC → VAL/META
+#   workers   — set worker count ARG1 (default NPROC)
+#   shard     — set this shard id ARG1 [0..workers-1]
+#   seed      — RANGE 0 ARG1 → WORK (default 16)
+#   plan      — STRIDE workers shard WORK → SHARD
+#   tick      — MONOTONIC → T0
+#   tock      — MONOTONIC − T0 → elapsed; gate vs BUDGET
+#   budget    — set max elapsed ms ARG1
+#   wall      — SYS MS snapshot → VAL (wall compare)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cw_$$
+#   CUBALC_ARG0=nproc ...
+#   CUBALC_ARG0=workers CUBALC_ARG1=4 ...
+#   CUBALC_ARG0=shard CUBALC_ARG1=1 ...
+#   CUBALC_ARG0=seed CUBALC_ARG1=16 ...
+#   CUBALC_ARG0=plan ...
+#   CUBALC_ARG0=budget CUBALC_ARG1=5000 ...
+#   CUBALC_ARG0=tick ...
+#   # ... do work ...
+#   CUBALC_ARG0=tock ...
+#
+# Env: CUBALC_CW_REQUIRE=1
+#
+# Edges:
+#   NPROC vs forced workers; STRIDE step<=0 empty; shard >= workers soft
+#   MONOTONIC vs MS drift; budget over soft; empty WORK plan; WRITE NL; REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cpu_work_shard_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT WFILE = "WORK.txt"
+DEFAULT SFILE = "SHARD.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT TFILE = "T0.txt"
+DEFAULT BFILE = "BUDGET.txt"
+DEFAULT REPORT = "SHARD_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t_wall0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir WFILE
+LET work_path = LAST
+SYS JOIN state_dir SFILE
+LET shard_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir TFILE
+LET t0_path = LAST
+SYS JOIN state_dir BFILE
+LET budget_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR work_path OR ""
+LET work = LAST
+CLEAR_ERR
+SYS READ OR shard_path OR ""
+LET shard_bag = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR t0_path OR ""
+LET t0_s = LAST
+CLEAR_ERR
+SYS READ OR budget_path OR ""
+LET budget_s = LAST
+CLEAR_ERR
+
+# restore numeric plate state from META bag when present
+LET workers = 0
+LET shard_id = 0
+LET t0_n = 0
+LET budget_n = 0
+LET nproc_n = 0
+SYS BLANK budget_s
+IF LAST_N == 0 THEN
+  SYS NUM budget_s
+  IF OK == 1 THEN
+    LET budget_n = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS BLANK t0_s
+IF LAST_N == 0 THEN
+  SYS NUM t0_s
+  IF OK == 1 THEN
+    LET t0_n = LAST_N
+  END
+  CLEAR_ERR
+END
+# meta key:val bag (LOOKUP default sep ":")
+SYS BLANK meta
+IF LAST_N == 0 THEN
+  SYS LOOKUPN meta "workers" OR 0
+  LET workers = LAST_N
+  CLEAR_ERR
+  SYS LOOKUPN meta "shard" OR 0
+  LET shard_id = LAST_N
+  CLEAR_ERR
+  SYS LOOKUPN meta "nproc" OR 0
+  LET nproc_n = LAST_N
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET work_ch = 0
+LET shard_ch = 0
+LET meta_ch = 0
+LET val_ch = 0
+LET t0_ch = 0
+LET budget_ch = 0
+LET note_msg = "ok"
+LET elapsed_n = 0
+LET work_n = 0
+LET shard_n = 0
+LET over_n = 0
+LET wall_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "cwshard" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON workers shard_id nproc_n budget_n t0_n
+  PRINT_JSON work
+  PRINT_JSON shard_bag
+  PRINT_JSON val
+  LET note_msg = "list ok"
+END
+
+# --- nproc ---
+SYS EQS ACTION "nproc"
+IF LAST_N == 1 THEN
+  NOTE "action nproc"
+  SYS NPROC
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "nproc fail"
+    FAIL "nproc fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "nproc fail"
+    END
+  ELSE
+    LET nproc_n = LAST_N
+    IF workers == 0 THEN
+      LET workers = nproc_n
+    END
+    SYS STR nproc_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    SYS STR nproc_n
+    LET _kv = "nproc:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    LET meta = LAST
+    SYS STR workers
+    LET _kv = "workers:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR shard_id
+    LET _kv = "shard:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "nproc ok"
+  END
+  PRINT_JSON nproc_n workers
+  CLEAR_ERR
+END
+
+# --- workers ---
+SYS EQS ACTION "workers"
+IF LAST_N == 1 THEN
+  NOTE "action workers"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS NPROC
+    LET workers = LAST_N
+    LET nproc_n = LAST_N
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "workers not num"
+      FAIL "workers not num"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "workers not num"
+      END
+      LET workers = 0
+    ELSE
+      LET workers = LAST_N
+    END
+  END
+  IF workers < 1 THEN
+    IF miss == 0 THEN
+      LET miss = 1
+      LET note_msg = "workers zero"
+      FAIL "workers zero"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "workers zero"
+      END
+    END
+  ELSE
+    LET hit = 1
+    SYS STR workers
+    LET val = LAST
+    LET val_ch = 1
+    SYS STR workers
+    LET _kv = "workers:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    LET meta = LAST
+    SYS STR shard_id
+    LET _kv = "shard:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nproc_n
+    LET _kv = "nproc:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "workers ok"
+  END
+  PRINT_JSON workers
+  CLEAR_ERR
+END
+
+# --- shard id ---
+SYS EQS ACTION "shard"
+IF LAST_N == 1 THEN
+  NOTE "action shard"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "shard needs id"
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "shard not num"
+    FAIL "shard not num"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shard not num"
+    END
+  ELSE
+    LET shard_id = LAST_N
+    IF workers > 0 THEN
+      IF shard_id >= workers THEN
+        LET miss = 1
+        LET note_msg = "shard oor"
+        FAIL "shard oor"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "shard oor"
+        END
+      ELSE
+        IF shard_id < 0 THEN
+          LET miss = 1
+          LET note_msg = "shard neg"
+          FAIL "shard neg"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "shard neg"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "shard ok"
+        END
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "shard ok"
+    END
+    SYS STR shard_id
+    LET val = LAST
+    LET val_ch = 1
+    SYS STR workers
+    LET _kv = "workers:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    LET meta = LAST
+    SYS STR shard_id
+    LET _kv = "shard:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nproc_n
+    LET _kv = "nproc:{{N}}"
+    SYS REPLACEALL _kv "{{N}}" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON shard_id workers
+  CLEAR_ERR
+END
+
+# --- seed RANGE ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  LET count = 16
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET count = LAST_N
+    ELSE
+      LET miss = 1
+      LET note_msg = "seed not num"
+      FAIL "seed not num"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "seed not num"
+      END
+    END
+  END
+  IF miss == 0 THEN
+    IF count < 1 THEN
+      LET miss = 1
+      LET note_msg = "seed empty"
+      FAIL "seed empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "seed empty"
+      END
+    ELSE
+      # RANGE inclusive both ends → N ids via 0..(N-1)
+      LET rend = count - 1
+      SYS RANGE 0 rend
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "seed range fail"
+        FAIL "seed range fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "seed range fail"
+        END
+      ELSE
+        LET work = LAST
+        LET work_ch = 1
+        SYS LINES work
+        LET work_n = LAST_N
+        LET hit = 1
+        SYS STR work_n
+        LET val = LAST
+        LET val_ch = 1
+        LET note_msg = "seed ok"
+      END
+    END
+  END
+  PRINT_JSON work_n
+  CLEAR_ERR
+END
+
+# --- plan STRIDE ---
+SYS EQS ACTION "plan"
+IF LAST_N == 1 THEN
+  NOTE "action plan"
+  IF workers < 1 THEN
+    SYS NPROC
+    LET workers = LAST_N
+    LET nproc_n = LAST_N
+  END
+  SYS BLANK work
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "plan no work"
+    FAIL "plan no work"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "plan no work"
+    END
+  ELSE
+    IF workers < 1 THEN
+      LET miss = 1
+      LET note_msg = "plan no workers"
+      FAIL "plan no workers"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "plan no workers"
+      END
+    ELSE
+      IF shard_id >= workers THEN
+        LET miss = 1
+        LET note_msg = "plan shard oor"
+        FAIL "plan shard oor"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "plan shard oor"
+        END
+      ELSE
+        # bare mid-arg shard_id is unknown form — use OFF keyword
+        SYS STRIDE workers OFF shard_id work
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "plan stride fail"
+          FAIL "plan stride fail"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "plan stride fail"
+          END
+        ELSE
+          LET shard_bag = LAST
+          LET shard_n = STRIDE_N
+          LET work_n = STRIDE_TOTAL
+          LET shard_ch = 1
+          LET hit = 1
+          SYS STR workers
+          LET _kv = "workers:{{N}}"
+          SYS REPLACEALL _kv "{{N}}" LAST
+          LET meta = LAST
+          SYS STR shard_id
+          LET _kv = "shard:{{N}}"
+          SYS REPLACEALL _kv "{{N}}" LAST
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS STR shard_n
+          LET _kv = "n:{{N}}"
+          SYS REPLACEALL _kv "{{N}}" LAST
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS STR work_n
+          LET _kv = "total:{{N}}"
+          SYS REPLACEALL _kv "{{N}}" LAST
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS STR nproc_n
+          LET _kv = "nproc:{{N}}"
+          SYS REPLACEALL _kv "{{N}}" LAST
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+          SYS STR shard_n
+          LET val = LAST
+          LET val_ch = 1
+          LET note_msg = "plan ok"
+        END
+      END
+    END
+  END
+  PRINT_JSON workers shard_id shard_n work_n
+  PRINT_JSON shard_bag
+  CLEAR_ERR
+END
+
+# --- tick MONOTONIC ---
+SYS EQS ACTION "tick"
+IF LAST_N == 1 THEN
+  NOTE "action tick"
+  SYS MONOTONIC
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "tick fail"
+    FAIL "tick fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tick fail"
+    END
+  ELSE
+    LET t0_n = LAST_N
+    SYS STR t0_n
+    LET t0_s = LAST
+    LET t0_ch = 1
+    LET val = t0_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "tick ok"
+  END
+  PRINT_JSON t0_n
+  CLEAR_ERR
+END
+
+# --- tock elapsed vs budget ---
+SYS EQS ACTION "tock"
+IF LAST_N == 1 THEN
+  NOTE "action tock"
+  SYS BLANK t0_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "tock no tick"
+    FAIL "tock no tick"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tock no tick"
+    END
+  ELSE
+    SYS MONOTONIC
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "tock mono fail"
+      FAIL "tock mono fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tock mono fail"
+      END
+    ELSE
+      LET t1 = LAST_N
+      LET elapsed_n = t1 - t0_n
+      IF elapsed_n < 0 THEN
+        LET elapsed_n = 0
+      END
+      LET over_n = 0
+      IF budget_n > 0 THEN
+        IF elapsed_n > budget_n THEN
+          LET over_n = 1
+        END
+      END
+      SYS STR elapsed_n
+      LET val = LAST
+      LET val_ch = 1
+      # keep workers/shard/nproc so later plan/shard OOR still restore
+      SYS STR workers
+      LET _kv = "workers:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      LET meta = LAST
+      SYS STR shard_id
+      LET _kv = "shard:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR nproc_n
+      LET _kv = "nproc:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR elapsed_n
+      LET _kv = "elapsed:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR budget_n
+      LET _kv = "budget:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR over_n
+      LET _kv = "over:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR t0_n
+      LET _kv = "t0:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR t1
+      LET _kv = "t1:{{N}}"
+      SYS REPLACEALL _kv "{{N}}" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF over_n == 1 THEN
+        LET miss = 1
+        LET note_msg = "tock over budget"
+        FAIL "tock over budget"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "tock over budget"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "tock ok"
+      END
+    END
+  END
+  PRINT_JSON elapsed_n over_n budget_n
+  CLEAR_ERR
+END
+
+# --- budget ---
+SYS EQS ACTION "budget"
+IF LAST_N == 1 THEN
+  NOTE "action budget"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "budget needs ms"
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "budget not num"
+    FAIL "budget not num"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "budget not num"
+    END
+  ELSE
+    LET budget_n = LAST_N
+    SYS STR budget_n
+    LET budget_s = LAST
+    LET budget_ch = 1
+    LET val = budget_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "budget ok"
+  END
+  PRINT_JSON budget_n
+  CLEAR_ERR
+END
+
+# --- wall MS snapshot ---
+SYS EQS ACTION "wall"
+IF LAST_N == 1 THEN
+  NOTE "action wall"
+  SYS MS
+  LET wall_n = LAST_N
+  SYS MONOTONIC
+  LET t_mono = LAST_N
+  SYS STR wall_n
+  LET val = LAST
+  LET val_ch = 1
+  SYS STR wall_n
+  LET _kv = "wall:{{N}}"
+  SYS REPLACEALL _kv "{{N}}" LAST
+  LET meta = LAST
+  SYS STR t_mono
+  LET _kv = "mono:{{N}}"
+  SYS REPLACEALL _kv "{{N}}" LAST
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "wall ok"
+  PRINT_JSON wall_n t_mono
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET work = ""
+  LET shard_bag = ""
+  LET meta = ""
+  LET val = ""
+  LET t0_s = ""
+  LET t0_n = 0
+  LET budget_s = ""
+  LET budget_n = 0
+  LET workers = 0
+  LET shard_id = 0
+  LET nproc_n = 0
+  LET work_ch = 1
+  LET shard_ch = 1
+  LET meta_ch = 1
+  LET val_ch = 1
+  LET t0_ch = 1
+  LET budget_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "nproc"
+LET k = k + LAST_N
+SYS EQS ACTION "workers"
+LET k = k + LAST_N
+SYS EQS ACTION "shard"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "plan"
+LET k = k + LAST_N
+SYS EQS ACTION "tick"
+LET k = k + LAST_N
+SYS EQS ACTION "tock"
+LET k = k + LAST_N
+SYS EQS ACTION "budget"
+LET k = k + LAST_N
+SYS EQS ACTION "wall"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF work_ch > 0 THEN
+  SYS WRITE work_path work
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "work write failed"
+  END
+  CLEAR_ERR
+END
+IF shard_ch > 0 THEN
+  SYS WRITE shard_path shard_bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "shard write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF t0_ch > 0 THEN
+  SYS WRITE t0_path t0_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "t0 write failed"
+  END
+  CLEAR_ERR
+END
+IF budget_ch > 0 THEN
+  SYS WRITE budget_path budget_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "budget write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t_wall1 = MS
+LET elapsed_wall = t_wall1 - t_wall0
+
+LET report = "schema=cubalc.cpu_work_shard_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "workers"
+LET report = LAST
+SYS STR workers
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "shard"
+LET report = LAST
+SYS STR shard_id
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "nproc"
+LET report = LAST
+SYS STR nproc_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "elapsed"
+LET report = LAST
+SYS STR elapsed_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "budget"
+LET report = LAST
+SYS STR budget_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "over"
+LET report = LAST
+SYS STR over_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "wall_ms"
+LET report = LAST
+SYS STR elapsed_wall
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "cpu_work_shard_board" ACTION hit miss workers shard_id note_msg elapsed_wall
