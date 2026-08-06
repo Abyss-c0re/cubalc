@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "find_TODO",
-      "cmd": "FINDFILELINE TODO → I=1 hit text",
+      "cmd": "FINDFILELINE TODO \u2192 I=1 hit text",
       "ok": true,
       "note": "first marker"
     },
@@ -20,7 +20,7 @@
     },
     {
       "name": "lasti_error",
-      "cmd": "LASTFINDFILELINEI error → ERROR late I=5",
+      "cmd": "LASTFINDFILELINEI error \u2192 ERROR late I=5",
       "ok": true,
       "note": "icase last"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "comment_retarget",
-      "cmd": "comment TODO; retarget flag=on→canary",
+      "cmd": "comment TODO; retarget flag=on\u2192canary",
       "ok": true,
       "note": "mutate via stored IDX"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "false_ERR",
-      "cmd": "find ERR → ERROR: late (substring)",
+      "cmd": "find ERR \u2192 ERROR: late (substring)",
       "ok": true,
       "note": "false friend"
     },
@@ -62,7 +62,7 @@
     },
     {
       "name": "empty_needle",
-      "cmd": "FINDFILELINE '' → I=0 first line N=1",
+      "cmd": "FINDFILELINE '' \u2192 I=0 first line N=1",
       "ok": true,
       "note": "empty matches all"
     },
@@ -79,8 +79,8 @@
       "severity": "high",
       "area": "host|match",
       "title": "FINDFILELINE empty needle hits first line (N=1 I=0)",
-      "detail": "Empty substring matches every line; first-hit returns line 0 with success. Same polarity class as GREPLINES empty match-all; opposite COUNTINFILES empty→0. Blank ARG without agent guard patches wrong row.",
-      "repro": "FINDFILELINE p \"\" → I=0 N=1 LAST=first line"
+      "detail": "Empty substring matches every line; first-hit returns line 0 with success. Same polarity class as GREPLINES empty match-all; opposite COUNTINFILES empty\u21920. Blank ARG without agent guard patches wrong row.",
+      "repro": "FINDFILELINE p \"\" \u2192 I=0 N=1 LAST=first line"
     },
     {
       "id": "W2",
@@ -94,9 +94,9 @@
       "id": "W3",
       "severity": "med",
       "area": "host|match",
-      "title": "Substring only — ERR matches ERROR: late",
+      "title": "Substring only \u2014 ERR matches ERROR: late",
       "detail": "No whole-word/token mode. Short severity markers over-select.",
-      "repro": "FINDFILELINE p ERR → ERROR line before ERR short"
+      "repro": "FINDFILELINE p ERR \u2192 ERROR line before ERR short"
     },
     {
       "id": "W4",
@@ -110,7 +110,7 @@
       "id": "W5",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITE plate omits trailing NL — HIT+IDX glue on cat -A",
+      "title": "WRITE plate omits trailing NL \u2014 HIT+IDX glue on cat -A",
       "detail": "HIT.txt no final $ so sequential cat looks like certs1 for TODO+idx.",
       "repro": "cat -A HIT.txt IDX.txt"
     },
@@ -120,7 +120,7 @@
       "area": "host|bag",
       "title": "SYS PUSH rejects bare numeric vars (need STR first)",
       "detail": "span initially failed unknown form first_i. Agents building reports must STR indices before PUSH.",
-      "repro": "SYS PUSH bag first_i → parse fail"
+      "repro": "SYS PUSH bag first_i \u2192 parse fail"
     },
     {
       "id": "W7",
@@ -156,11 +156,11 @@
     "Unify content-miss vs path-miss OK"
   ],
   "issues_faced": [
-    "span PUSH bare first_i parse fail — fixed with STR",
+    "span PUSH bare first_i parse fail \u2014 fixed with STR",
     "Empty needle first-line hit confirmed",
     "find/last/comment/retarget/dropmark path clean",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "dc7d383ebbf5af25bdc5b3a1da9dbc75e4f6fd8f",
   "ts": "2026-08-06T09:14:28Z"
 }
