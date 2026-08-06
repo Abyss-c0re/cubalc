@@ -6393,6 +6393,83 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS AVGKV|MEANKV|MEANVAL bag [sep]
+     * — integer mean of key:val numeric values (sum/used, trunc toward 0).
+     * Empty/no numeric fields → 0. Default sep ":".
+     * LAST = decimal mean; LAST_N = mean; AVGKV_N = fields used;
+     * AVGKV_SUM = sum; AVGKV_KEYS = fields seen.
+     * Usability: typical FREQ count without SUMKV+count+DIV glue (≠ DIVKV per-key). */
+    if (kw(&L->cur,"AVGKV") || kw(&L->cur,"MEANKV") || kw(&L->cur,"MEANVAL") ||
+        kw(&L->cur,"KVAVG") || kw(&L->cur,"AVGVALS") || kw(&L->cur,"MEANCOUNTS") ||
+        kw(&L->cur,"FREQAVG") || kw(&L->cur,"AVGHIST") || kw(&L->cur,"KVMEAN")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], field[512], out[40];
+      const char *p, *start;
+      size_t flen, sn;
+      long sum = 0, used = 0, keys = 0, avg = 0;
+      lex_next(L);
+      bag[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            keys++;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            {
+              const char *rhs = field;
+              char *end = 0;
+              long v;
+              if (sn > 0) {
+                const char *sp = strstr(field, sep);
+                if (sp) rhs = sp + sn;
+                else rhs = NULL;
+              }
+              if (rhs) {
+                v = strtol(rhs, &end, 10);
+                if (end != rhs) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0) {
+                    sum += v;
+                    used++;
+                  }
+                }
+              }
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (used > 0) avg = sum / used;
+      snprintf(out, sizeof out, "%ld", avg);
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "AVGKV", out);
+      var_set_str(vm, "MEANKV", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = avg;
+      var_set_num(vm, "LAST_N", avg);
+      var_set_num(vm, "AVGKV_N", used);
+      var_set_num(vm, "AVGKV_SUM", sum);
+      var_set_num(vm, "AVGKV_KEYS", keys);
+      var_set_num(vm, "MEANKV_N", used);
+      var_set_num(vm, "MEANKV_SUM", sum);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TOPKEY|ARGMAXKV|MAXKEY bag [sep]
      * SYS BOTKEY|ARGMINKV|MINKEY bag [sep]
      * — pick first key with max (or min) numeric value in a key:val bag.
@@ -10185,7 +10262,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10498,6 +10575,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SUMKV", "SYS SUMKV|TOTALKV bag [sep] — sum key:val numeric values · FREQ total events"},
       {"SYS TOTALKV", "SYS TOTALKV bag [sep] — alias of SYS SUMKV · histogram grand total"},
       {"SYS SUMVALS", "SYS SUMVALS bag [sep] — alias of SYS SUMKV"},
+      {"SYS AVGKV", "SYS AVGKV|MEANKV bag [sep] — integer mean of key:val values · typical FREQ count"},
+      {"SYS MEANKV", "SYS MEANKV bag [sep] — alias of SYS AVGKV · mean count across keys"},
+      {"SYS MEANVAL", "SYS MEANVAL bag [sep] — alias of SYS AVGKV"},
       {"SYS TOPKEY", "SYS TOPKEY|ARGMAXKV bag [sep] — key with max numeric value · dominant FREQ"},
       {"SYS ARGMAXKV", "SYS ARGMAXKV bag [sep] — alias of SYS TOPKEY · LAST=key LAST_N=value"},
       {"SYS BOTKEY", "SYS BOTKEY|ARGMINKV bag [sep] — key with min numeric value · rarest FREQ"},

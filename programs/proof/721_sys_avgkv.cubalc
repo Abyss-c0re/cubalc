@@ -1,0 +1,66 @@
+# SYS AVGKV / MEANKV — integer mean of key:val numeric values
+# Usability: typical FREQ count without SUMKV+count+DIV (≠ per-key DIVKV)
+
+HOLD_FLASH 1
+
+LET hist = "error:9\nwarn:3\ninfo:6"
+SYS AVGKV hist
+ASSERT OK == 1
+# (9+3+6)/3 = 6
+ASSERT LAST_N == 6
+ASSERT AVGKV_N == 3
+ASSERT AVGKV_SUM == 18
+ASSERT AVGKV_KEYS == 3
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+
+# single field
+SYS AVGKV "only:7"
+ASSERT LAST_N == 7
+ASSERT AVGKV_N == 1
+
+# empty
+SYS AVGKV ""
+ASSERT LAST_N == 0
+ASSERT AVGKV_N == 0
+ASSERT AVGKV_SUM == 0
+
+# trunc toward 0
+SYS AVGKV "a:1\nb:2"
+# 3/2 = 1
+ASSERT LAST_N == 1
+ASSERT AVGKV_SUM == 3
+
+# negatives
+SYS AVGKV "x:10\ny:-4\nz:0"
+# 6/3 = 2
+ASSERT LAST_N == 2
+ASSERT AVGKV_SUM == 6
+
+# custom sep
+LET cfg = "retries=4\nport=8\ntimeout=0"
+SYS AVGKV cfg "="
+# 12/3 = 4
+ASSERT LAST_N == 4
+ASSERT AVGKV_N == 3
+
+# aliases
+SYS MEANKV hist
+ASSERT MEANKV_N == 3
+ASSERT MEANKV_SUM == 18
+ASSERT LAST_N == 6
+SYS MEANVAL hist
+ASSERT LAST_N == 6
+SYS KVAVG hist
+ASSERT AVGKV_N == 3
+
+# agent: FREQ then typical severity load
+LET log = "ERROR\nERROR\nERROR\nWARN\nWARN\nINFO"
+SYS FREQ log
+# ERROR:3 WARN:2 INFO:1 → mean (3+2+1)/3 = 2
+SYS AVGKV LAST
+ASSERT LAST_N == 2
+ASSERT AVGKV_SUM == 6
+ASSERT AVGKV_N == 3
+
+PRINT "sys_avgkv ok"
