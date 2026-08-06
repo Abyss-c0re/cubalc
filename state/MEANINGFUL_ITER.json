@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 210,
-  "version": "1.15.235-usability",
-  "item": "SYS WAITMATCH / WAITCONTAINS / POLLMATCH poll until content match",
-  "item_id": 243,
-  "title": "SYS WAITMATCH|WAITCONTAINS path needle [ms] — poll until file contains needle",
-  "commit": "e20fa85eed2b7dcc533d5a45b9a5e55ac04713b2",
-  "summary": "Content-ready handoff wait without READ+HAS+SLEEP. selftest 210.",
+  "iter": 211,
+  "version": "1.15.236-usability",
+  "item": "SYS WRITEATOMIC / ATOMICWRITE / SAFEWRITE temp+rename plate write",
+  "item_id": 244,
+  "title": "SYS WRITEATOMIC|SAFEWRITE path data — temp+rename crash-safer plate write",
+  "commit": "c41705b169321a1e7ed3f92d8114ccda489b4616",
+  "summary": "Multi-agent plate status without torn mid-read. selftest 211.",
   "proofs": [
-    "784_sys_waitmatch",
-    "selftest n_pass=210"
+    "785_sys_writeatomic",
+    "selftest n_pass=211"
   ],
-  "when": "2026-08-06T12:44:44Z",
+  "when": "2026-08-06T12:55:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e20fa85eed2b7dcc533d5a45b9a5e55ac04713b2"
+  "sha": "c41705b169321a1e7ed3f92d8114ccda489b4616"
 }
