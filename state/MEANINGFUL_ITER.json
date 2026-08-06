@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 154,
-  "version": "1.15.179-usability",
-  "item": "SYS FILTERGLOB / MATCHBAG shell-pattern bag filter",
-  "item_id": 187,
-  "title": "SYS FILTERGLOB|MATCHBAG bag pattern — shell bag filter (basename-aware)",
-  "commit": "e9b4ab5f40104ccbb0ffa7ada9c1ebe5aab7e4b3",
-  "summary": "Filter bags by fnmatch; basename match for PATHGLOB. selftest 154.",
+  "iter": 155,
+  "version": "1.15.180-usability",
+  "item": "SYS BASENAMEALL / DIRNAMEALL / EXTALL / STEMALL path bag maps",
+  "item_id": 188,
+  "title": "SYS BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL [bag] — path peels over bags",
+  "commit": "c0705bf3deac5a69a13bdef5c6d3557232222c80",
+  "summary": "Map basename/dirname/ext/stem over PATHGLOB bags. selftest 155.",
   "proofs": [
-    "727_sys_filterglob",
-    "selftest n_pass=154"
+    "728_sys_basenameall",
+    "selftest n_pass=155"
   ],
-  "when": "2026-08-06T03:34:22Z",
+  "when": "2026-08-06T03:43:57Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e9b4ab5f40104ccbb0ffa7ada9c1ebe5aab7e4b3"
+  "sha": "c0705bf3deac5a69a13bdef5c6d3557232222c80"
 }
