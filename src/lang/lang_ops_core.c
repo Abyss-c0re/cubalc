@@ -96,6 +96,50 @@ static int cubalc_b64_dec(const char *in, size_t in_len, char *out, size_t out_c
   return 0;
 }
 
+/* SYS HEX / HEXD — lowercase hex encode/decode for agent plate bytes. */
+static int cubalc_hex_enc(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  static const char *hx = "0123456789abcdef";
+  size_t i, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  if (in_len * 2 + 1 > out_cap) return -1;
+  for (i = 0; i < in_len; i++) {
+    unsigned char c = (unsigned char)in[i];
+    out[o++] = hx[c >> 4];
+    out[o++] = hx[c & 0xf];
+  }
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+static int cubalc_hex_nibble(int c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+static int cubalc_hex_dec(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  size_t i = 0, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  while (in_len > 0 && (in[in_len - 1] == '\n' || in[in_len - 1] == '\r' ||
+                        in[in_len - 1] == ' ' || in[in_len - 1] == '\t'))
+    in_len--;
+  if (in_len % 2 != 0) return -1;
+  if (in_len / 2 + 1 > out_cap) return -1;
+  for (i = 0; i + 1 < in_len; i += 2) {
+    int hi = cubalc_hex_nibble((unsigned char)in[i]);
+    int lo = cubalc_hex_nibble((unsigned char)in[i + 1]);
+    if (hi < 0 || lo < 0) return -1;
+    out[o++] = (char)((hi << 4) | lo);
+  }
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+
 #if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
@@ -1892,6 +1936,59 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ENCODE64", out);
       }
       var_set_num(vm, "BASE64_N", (long)n_out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HEX|HEXENC|TOHEX|ENCODEHEX [str]
+     * SYS HEXD|HEXDEC|FROMHEX|DECODEHEX [str]
+     * — lowercase hex encode/decode (default prior LAST).
+     * LAST = result; LAST_N / HEX_N = output length; soft fail OK=0.
+     * Usability: binary-safe plate fields / fingerprints without shell xxd. */
+    if (kw(&L->cur,"HEX") || kw(&L->cur,"HEXENC") || kw(&L->cur,"TOHEX") ||
+        kw(&L->cur,"ENCODEHEX") || kw(&L->cur,"HEXENCODE") || kw(&L->cur,"BINTOHEX") ||
+        kw(&L->cur,"ASHEX") || kw(&L->cur,"HEXIFY") ||
+        kw(&L->cur,"HEXD") || kw(&L->cur,"HEXDEC") || kw(&L->cur,"FROMHEX") ||
+        kw(&L->cur,"DECODEHEX") || kw(&L->cur,"HEXDECODE") || kw(&L->cur,"UNHEX") ||
+        kw(&L->cur,"HEXTOBIN") || kw(&L->cur,"FROM_HEX")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t n_out = 0;
+      int is_dec = (kw(&L->cur,"HEXD") || kw(&L->cur,"HEXDEC") ||
+                   kw(&L->cur,"FROMHEX") || kw(&L->cur,"DECODEHEX") ||
+                   kw(&L->cur,"HEXDECODE") || kw(&L->cur,"UNHEX") ||
+                   kw(&L->cur,"HEXTOBIN") || kw(&L->cur,"FROM_HEX"));
+      int rc;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (is_dec)
+        rc = cubalc_hex_dec(src, strlen(src), out, sizeof out, &n_out);
+      else
+        rc = cubalc_hex_enc(src, strlen(src), out, sizeof out, &n_out);
+      if (rc != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HEX_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_dec ? "HEXD: decode fail" : "HEX: encode fail");
+        var_set_str(vm, "ERR", is_dec ? "HEXD: decode fail" : "HEX: encode fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n_out;
+      var_set_num(vm, "LAST_N", (long)n_out);
+      var_set_str(vm, "HEX", out);
+      if (is_dec) {
+        var_set_str(vm, "HEXD", out);
+        var_set_str(vm, "HEXDEC", out);
+      } else {
+        var_set_str(vm, "HEXENC", out);
+        var_set_str(vm, "TOHEX", out);
+      }
+      var_set_num(vm, "HEX_N", (long)n_out);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }

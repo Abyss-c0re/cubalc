@@ -282,6 +282,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 252. ~~**`SYS MKTEMPDIR` / `MKDTEMP` / `MAKETEMPDIR`**~~ **done** (unique empty dir under TMP · collision-free agent workspaces without shell mktemp -d).
 253. ~~**`SYS RMDIR` / `REMOVEDIR` / `RD`**~~ **done** (remove empty directory · missing soft OK · clean MKTEMPDIR without shell rmdir).
 254. ~~**`SYS BASE64` / `B64ENC` · `BASE64D` / `B64DEC`**~~ **done** (standard base64 encode/decode · plate payload transport without shell base64).
+255. ~~**`SYS HEX` / `HEXENC` · `HEXD` / `HEXDEC`**~~ **done** (lowercase hex encode/decode · binary-safe plate fields without shell xxd).
 
 ## Tick protocol
 

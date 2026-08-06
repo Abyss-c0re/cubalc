@@ -1,0 +1,84 @@
+# SYS HEX / HEXENC / TOHEX · HEXD / HEXDEC / FROMHEX
+# — lowercase hex encode/decode for agent plate bytes
+# Usability: binary-safe fields / fingerprints without shell xxd
+
+HOLD_FLASH 1
+
+# "hello" → 68656c6c6f
+SYS HEX "hello"
+ASSERT OK == 1
+ASSERT HEX_N == 10
+SYS EQS LAST "68656c6c6f"
+ASSERT LAST_N == 1
+
+# decode back
+SYS HEXD "68656c6c6f"
+ASSERT OK == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT HEX_N == 5
+
+# empty
+SYS HEX ""
+ASSERT OK == 1
+ASSERT HEX_N == 0
+SYS HEXD ""
+ASSERT OK == 1
+ASSERT HEX_N == 0
+
+# single byte
+SYS HEX "A"
+SYS EQS LAST "41"
+ASSERT LAST_N == 1
+SYS HEXD "41"
+SYS EQS LAST "A"
+ASSERT LAST_N == 1
+
+# uppercase input decode
+SYS HEXD "4869"
+SYS EQS LAST "Hi"
+ASSERT LAST_N == 1
+
+# aliases
+SYS HEXENC "xy"
+SYS EQS LAST "7879"
+ASSERT LAST_N == 1
+SYS HEXDEC "7879"
+SYS EQS LAST "xy"
+ASSERT LAST_N == 1
+
+SYS TOHEX "z"
+LET h = LAST
+SYS FROMHEX h
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# bad length soft fail
+SYS HEXD "abc"
+ASSERT OK == 0
+ASSERT HEX_N == 0
+
+# bad nibble soft fail
+SYS HEXD "zz"
+ASSERT OK == 0
+
+# agent: HASH then HEX of raw text for plate stamp
+SYS HEX "status=ok"
+LET stamp = LAST
+SYS LEN stamp
+ASSERT LAST_N == 18
+SYS HEXD stamp
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+
+# round-trip with BASE64 companion
+SYS HEX "payload"
+LET hx = LAST
+SYS HEXD hx
+SYS BASE64 LAST
+LET b64 = LAST
+SYS BASE64D b64
+SYS EQS LAST "payload"
+ASSERT LAST_N == 1
+
+PRINT "sys_hex ok"
