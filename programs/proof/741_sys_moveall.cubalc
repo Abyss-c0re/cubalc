@@ -1,0 +1,96 @@
+# SYS MOVEALL / MVALL — bulk move path bag into dest dir
+# Usability: archive/reclaim relocate without EACH + RENAME glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "moveall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "src"
+LET srcd = LAST
+SYS MKDIR srcd
+SYS JOIN fix "dst"
+LET dstd = LAST
+SYS MKDIR dstd
+
+SYS JOIN srcd "a.plate"
+LET fa = LAST
+SYS WRITE fa "alpha"
+
+SYS JOIN srcd "b.plate"
+LET fb = LAST
+SYS WRITE fb "bravo"
+
+SYS JOIN srcd "ghost.plate"
+LET ghost = LAST
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST ghost
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 3
+
+# MOVEALL: a+b moved, ghost miss
+SYS MOVEALL bag dstd
+ASSERT MOVEALL_N == 2
+ASSERT MOVEALL_MISS == 1
+ASSERT MOVEALL_FAIL == 0
+ASSERT MOVEALL_SCAN == 3
+ASSERT OK == 1
+SYS EQS MOVEALL_DEST dstd
+ASSERT LAST_N == 1
+
+SYS JOIN dstd "a.plate"
+LET da = LAST
+SYS JOIN dstd "b.plate"
+LET db = LAST
+SYS HASLINE MOVEALL da
+ASSERT LAST_N == 1
+SYS HASLINE MOVEALL db
+ASSERT LAST_N == 1
+SYS EXIST fa
+ASSERT LAST_N == 0
+SYS EXIST fb
+ASSERT LAST_N == 0
+SYS EXIST da
+ASSERT LAST_N == 1
+SYS READ da
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+
+# recreate + one-arg MVALL
+SYS WRITE fa "a2"
+SYS WRITE fb "b2"
+SYS PATHGLOB srcd
+SYS KEEPFILES
+SYS MVALL dstd
+ASSERT OK == 1
+ASSERT MVALL_N == 2
+SYS EXIST fa
+ASSERT LAST_N == 0
+SYS READ da
+SYS EQS LAST "a2"
+ASSERT LAST_N == 1
+
+# empty bag soft
+SYS MOVEALL "" dstd
+ASSERT MOVEALL_N == 0
+ASSERT MOVEALL_SCAN == 0
+ASSERT OK == 1
+
+# RENAMEALL alias
+SYS WRITE fa "again"
+SYS RENAMEALL fa dstd
+ASSERT RENAMEALL_N == 1
+SYS EXIST fa
+ASSERT LAST_N == 0
+
+# cleanup
+SYS RM da
+SYS RM db
+
+PRINT "sys_moveall ok"
