@@ -1,0 +1,62 @@
+# SYS MIDFILE / LINESLICE — extract file lines [start .. start+count)
+# Usability: page plate/log slices without READ+DROP+TAKE
+# Completes HEADFILE/TAILFILE. Soft miss empty. Cap 256 lines.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "midfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "L0\nL1\nL2\nL3\nL4"
+
+SYS MIDFILE fs 1 2
+ASSERT OK == 1
+ASSERT MIDFILE_N == 2
+ASSERT MIDFILE_TOTAL == 5
+ASSERT MIDFILE_START == 1
+ASSERT MIDFILE_WANT == 2
+SYS HEAD LAST
+SYS EQS LAST "L1"
+ASSERT LAST_N == 1
+SYS MIDFILE fs 1 2
+SYS TAIL LAST
+SYS EQS LAST "L2"
+ASSERT LAST_N == 1
+
+# rest of file from start (count omitted → up to 256)
+SYS MIDFILE fs 3
+ASSERT MIDFILE_N == 2
+SYS HEAD LAST
+SYS EQS LAST "L3"
+ASSERT LAST_N == 1
+SYS MIDFILE fs 3
+SYS TAIL LAST
+SYS EQS LAST "L4"
+ASSERT LAST_N == 1
+
+# alias
+SYS LINESLICE fs 0 1
+ASSERT MIDFILE_N == 1
+SYS EQS LAST "L0"
+ASSERT LAST_N == 1
+
+# past end → empty ok
+SYS MIDFILE fs 10 3
+ASSERT MIDFILE_N == 0
+ASSERT OK == 1
+ASSERT MIDFILE_TOTAL == 5
+
+# soft miss
+SYS MIDFILE "no_such_midfile_mi.txt" 0 2
+ASSERT OK == 0
+ASSERT MIDFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_midfile ok"
