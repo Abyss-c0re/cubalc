@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 139,
-  "version": "1.15.164-usability",
-  "item": "SYS PCTKV / SHAREKV key:val integer percent of total",
-  "item_id": 172,
-  "title": "SYS PCTKV|SHAREKV bag [sep] — rewrite values as integer %% of total",
-  "commit": "29c83b355a423c4271d9639d646e6c04c1725649",
-  "summary": "PCTKV FREQ share-of-total without EACH+arith. PCTKV_SUM. selftest 139.",
+  "iter": 140,
+  "version": "1.15.165-usability",
+  "item": "SYS CAPKV / CLAMPKV clamp key:val values to max",
+  "item_id": 173,
+  "title": "SYS CAPKV|CLAMPKV bag max [sep] — clamp key:val values to max",
+  "commit": "47508f305f7af6e92c36cc6b0d6782255252b023",
+  "summary": "CAPKV clamp FREQ outliers before PCTKV without EACH. selftest 140.",
   "proofs": [
-    "712_sys_pctkv",
-    "selftest n_pass=139"
+    "713_sys_capkv",
+    "selftest n_pass=140"
   ],
-  "when": "2026-08-06T00:53:47Z",
+  "when": "2026-08-06T01:04:01Z",
   "agent": "meaningful_iter_10m",
-  "sha": "29c83b355a423c4271d9639d646e6c04c1725649"
+  "sha": "47508f305f7af6e92c36cc6b0d6782255252b023"
 }
