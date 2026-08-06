@@ -1,0 +1,92 @@
+# SYS DIFFKV / SUBKV — subtract key:val bags by key (a − b)
+# Usability: FREQ delta (now − baseline) without EACH+LOOKUPN+arith+KVSET
+
+HOLD_FLASH 1
+
+LET a = "error:5\nwarn:3\ninfo:10"
+LET b = "error:2\nwarn:4\ncrit:1"
+
+SYS DIFFKV a b
+ASSERT OK == 1
+ASSERT DIFFKV_HIT == 2
+ASSERT DIFFKV_ADDED == 1
+ASSERT DIFFKV_N == 4
+LET d = LAST
+SYS LOOKUPN d "error" OR 0
+# 5-2=3
+ASSERT LAST_N == 3
+SYS LOOKUPN d "warn" OR 0
+# 3-4=-1
+ASSERT LAST_N == -1
+SYS LOOKUPN d "info" OR 0
+# only in a
+ASSERT LAST_N == 10
+SYS LOOKUPN d "crit" OR 0
+# only in b → -1
+ASSERT LAST_N == -1
+
+# empty b → copy of a
+SYS DIFFKV a ""
+ASSERT DIFFKV_HIT == 0
+ASSERT DIFFKV_ADDED == 0
+SYS EQS LAST "error:5\nwarn:3\ninfo:10"
+ASSERT LAST_N == 1
+
+# empty a → negated b
+LET empty = ""
+SYS DIFFKV empty b
+ASSERT DIFFKV_ADDED == 3
+ASSERT DIFFKV_HIT == 0
+LET nb = LAST
+SYS LOOKUPN nb "error" OR 0
+ASSERT LAST_N == -2
+SYS LOOKUPN nb "crit" OR 0
+ASSERT LAST_N == -1
+SYS LOOKUPN nb "warn" OR 0
+ASSERT LAST_N == -4
+
+# custom sep
+LET ca = "retries=5\nport=7700"
+LET cb = "retries=2\ntimeout=5"
+SYS DIFFKV ca cb "="
+ASSERT DIFFKV_HIT == 1
+ASSERT DIFFKV_ADDED == 1
+LET cm = LAST
+SYS LOOKUPN cm "retries" "=" OR 0
+ASSERT LAST_N == 3
+SYS LOOKUPN cm "port" "=" OR 0
+ASSERT LAST_N == 7700
+SYS LOOKUPN cm "timeout" "=" OR 0
+ASSERT LAST_N == -5
+
+# aliases
+SYS SUBKV a b
+ASSERT SUBKV_N == 4
+SYS DELTAKV a b
+ASSERT DELTAKV_HIT == 2
+SYS KVDIFF a b
+ASSERT DIFFKV_N == 4
+SYS SUBFREQ a "error:1"
+ASSERT DIFFKV_HIT == 1
+SYS LOOKUPN LAST "error" OR 0
+ASSERT LAST_N == 4
+
+# agent: FREQ now vs baseline → rising errors
+LET now_log = "ERROR\nERROR\nERROR\nWARN\nINFO"
+LET base_log = "ERROR\nWARN\nWARN\nINFO"
+SYS FREQ now_log
+LET hn = LAST
+SYS FREQ base_log
+LET hb = LAST
+SYS DIFFKV hn hb
+LET delta = LAST
+SYS LOOKUPN delta "ERROR" OR 0
+# now 3 - base 1 = 2
+ASSERT LAST_N == 2
+SYS LOOKUPN delta "WARN" OR 0
+# now 1 - base 2 = -1
+ASSERT LAST_N == -1
+SYS LOOKUPN delta "INFO" OR 0
+ASSERT LAST_N == 0
+
+PRINT "sys_diffkv ok"
