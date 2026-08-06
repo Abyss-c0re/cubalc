@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 211,
-  "version": "1.15.236-usability",
-  "item": "SYS WRITEATOMIC / ATOMICWRITE / SAFEWRITE temp+rename plate write",
-  "item_id": 244,
-  "title": "SYS WRITEATOMIC|SAFEWRITE path data — temp+rename crash-safer plate write",
-  "commit": "c41705b169321a1e7ed3f92d8114ccda489b4616",
-  "summary": "Multi-agent plate status without torn mid-read. selftest 211.",
+  "iter": 212,
+  "version": "1.15.237-usability",
+  "item": "SYS LOCKFILE / UNLOCKFILE / FLOCK exclusive agent path.lock mutex",
+  "item_id": 245,
+  "title": "SYS LOCKFILE|FLOCK path [ms] · UNLOCKFILE — exclusive path.lock agent mutex",
+  "commit": "235e81f88e073f3304064ce63087881019eb0043",
+  "summary": "Multi-agent exclusive critical sections without shell flock. selftest 212.",
   "proofs": [
-    "785_sys_writeatomic",
-    "selftest n_pass=211"
+    "786_sys_lockfile",
+    "selftest n_pass=212"
   ],
-  "when": "2026-08-06T12:55:11Z",
+  "when": "2026-08-06T13:05:30Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c41705b169321a1e7ed3f92d8114ccda489b4616"
+  "sha": "235e81f88e073f3304064ce63087881019eb0043",
+  "note": "restored mass thrash delete from HEAD before implement"
 }
