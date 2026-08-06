@@ -1,16 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 206,
-  "version": "1.15.230-usability",
-  "item": "SYS SWAPFILES/DUPLEX/TCPXFER bidirectional any-data flow",
-  "item_id": 239,
-  "title": "SYS SWAPFILES \u00b7 DUPLEX \u00b7 TCPXFER/TCPLISTEN \u2014 bidirectional any-payload host flow",
-  "commit": "c151a7f",
-  "summary": "Host-plane bidirectional flow for arbitrary string/bag data: plate content swap (SWAPFILES), mailbox RTT write-out/read-in (DUPLEX/BIDXFER), and CBXF-framed TCP peer send+recv (TCPXFER/TCPLISTEN). Complements SMX EXCHANGE which is matrix-bit only.",
+  "iter": 207,
+  "version": "1.15.231-usability",
+  "item": "SYS WAITFILE / WAITPATH / POLLFILE poll until path exists",
+  "item_id": 240,
+  "title": "SYS WAITFILE|WAITPATH path [ms] — poll until path exists · HIT/MS soft timeout",
+  "commit": "019c11e6394bb0e5be76bb6c184ff2f678f2f4d2",
+  "summary": "Agent plate/peer handoff wait without EXIST+SLEEP loop. selftest 207.",
   "proofs": [
-    "programs/proof/779_sys_bidir_flow.cubalc"
+    "781_sys_waitfile",
+    "selftest n_pass=207"
   ],
-  "when": "2026-08-06T12:09:36Z",
+  "when": "2026-08-06T12:16:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c151a7f56905c390d17e37e4ade97085493f5817"
+  "sha": "019c11e6394bb0e5be76bb6c184ff2f678f2f4d2"
 }
