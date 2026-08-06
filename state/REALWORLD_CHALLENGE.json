@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "before_section",
-      "cmd": "BEFOREMATCHFILE [section] → preamble before header",
+      "cmd": "BEFOREMATCHFILE [section] \u2192 preamble before header",
       "ok": true,
       "note": "insert before"
     },
     {
       "name": "after_section",
-      "cmd": "INSERTMATCHFILE [section] → key=val under section",
+      "cmd": "INSERTMATCHFILE [section] \u2192 key=val under section",
       "ok": true,
       "note": "insert after"
     },
     {
       "name": "setall_status",
-      "cmd": "SETALLMATCHFILE status= → both rows status=new; STATUS=keep",
+      "cmd": "SETALLMATCHFILE status= \u2192 both rows status=new; STATUS=keep",
       "ok": true,
       "note": "bulk cs"
     },
@@ -62,7 +62,7 @@
     },
     {
       "name": "empty_needle",
-      "cmd": "SETALL/INSERT/BEFORE empty → N=0 no-op",
+      "cmd": "SETALL/INSERT/BEFORE empty \u2192 N=0 no-op",
       "ok": true,
       "note": "safe empty"
     },
@@ -86,9 +86,9 @@
       "id": "W2",
       "severity": "high",
       "area": "host|match",
-      "title": "INSERTMATCH after first match only — multi-section files only patch first",
+      "title": "INSERTMATCH after first match only \u2014 multi-section files only patch first",
       "detail": "No AFTERALLMATCH. Repeated after stacks under same first [section] (newest nearest). Second [sections] never auto-annotated.",
-      "repro": "double after → x=2 then x=1 under one section"
+      "repro": "double after \u2192 x=2 then x=1 under one section"
     },
     {
       "id": "W3",
@@ -126,7 +126,7 @@
       "id": "W7",
       "severity": "low",
       "area": "host|naming",
-      "title": "SYS BEFORE vs BEFOREMATCHFILE — string vs file op",
+      "title": "SYS BEFORE vs BEFOREMATCHFILE \u2014 string vs file op",
       "detail": "BEFORE is substring peel of a string; BEFOREMATCHFILE inserts on disk. Classic dual trap.",
       "repro": "BEFORE string vs BEFOREMATCHFILE path"
     },
@@ -160,6 +160,6 @@
     "SETALL LAST single-string not multi-audit",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "d49ad71221fba54e8eea3c050c19ef45fc3ef115",
   "ts": "2026-08-06T10:28:27Z"
 }
