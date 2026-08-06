@@ -1,153 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 63,
-  "program": "programs/realworld/archive_walk_board.cubalc",
-  "theme": "recursive archive WALK MOVEALL EQFILE deep tree relocate+verify",
-  "version": "1.15.195-usability",
+  "iter": 64,
+  "program": "programs/realworld/incident_log_board.cubalc",
+  "theme": "incident log content search GREPFILES + LOGALL multi-file stamp",
+  "version": "1.15.197-usability",
   "pass": true,
   "tests": [
     {
-      "name": "walk_all",
-      "cmd": "WALK drop * \u2192 7 paths files=5 dirs=2",
+      "name": "scan_files",
+      "cmd": "PATHGLOB *.log → a b c (no nested)",
       "ok": true,
-      "note": "recursive inventory"
+      "note": "shallow inventory"
     },
     {
-      "name": "walk_plate",
-      "cmd": "WALK *.plate \u2192 a + sub/b + sub/deep/d (3)",
+      "name": "grephit_ERROR",
+      "cmd": "GREPFILES ERROR → a.log only (not Error)",
       "ok": true,
-      "note": "basename pattern any depth"
+      "note": "case-sensitive content"
     },
     {
-      "name": "files",
-      "cmd": "KEEPFILES already files only",
+      "name": "grepi_error",
+      "cmd": "GREPFILESI error → a.log + c.log",
       "ok": true,
-      "note": "kind filter"
+      "note": "icase hits Error"
     },
     {
-      "name": "stage_eq",
-      "cmd": "COPYALL stage + EQFILE src/dst equal bytes=3",
+      "name": "grepv_warn",
+      "cmd": "GREPVFILES warn → a+c (drop b)",
       "ok": true,
-      "note": "content verify"
+      "note": "invert content"
     },
     {
-      "name": "eq_differ",
-      "cmd": "EQFILE a.plate other.txt \u2192 differ soft exit 0",
+      "name": "stamp_hits",
+      "cmd": "LOGALL hits incident=INC-42 → a.log only",
       "ok": true,
-      "note": "OK=1 EQFILE=0"
+      "note": "fanout stamp"
     },
     {
-      "name": "eq_miss_require",
-      "cmd": "EQFILE ghost REQUIRE exit 2",
+      "name": "grephit_none_require",
+      "cmd": "GREPFILES ZZZ REQUIRE exit 2",
       "ok": true,
-      "note": "soft miss"
+      "note": "empty gate"
     },
     {
-      "name": "archive_moveall",
-      "cmd": "MOVEALL plates \u2192 archive flat; drop keeps other+c.log",
+      "name": "walk_deep",
+      "cmd": "WALK *.log finds nested/d.log too",
       "ok": true,
-      "note": "relocate 3"
+      "note": "recursive logs"
     },
     {
-      "name": "walk_file_root",
-      "cmd": "WALK file path REQUIRE exit 2",
+      "name": "stamp_create",
+      "cmd": "LOGALL missing path creates new_incident.log",
       "ok": true,
-      "note": "non-dir miss"
+      "note": "create-on-append"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "170/170 pass incl walk eqfile moveall"
+      "note": "172/172 pass incl logall grepfiles"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs",
-      "title": "WALK * includes directories; no files-only walk mode",
-      "detail": "WALK_DIRS mixed into path bag. Agents must KEEPFILES after every unrestricted walk. No WALK --files-only / WALKFILES.",
-      "repro": "WALK root * \u2192 sub + sub/deep dirs in bag"
+      "area": "host|naming",
+      "title": "GREP filters bag field text; GREPFILES filters file content — easy mix-up",
+      "detail": "SYS GREP bag ERROR matches path strings containing ERROR (usually none). SYS GREPFILES reads files. Agents using GREP for log content search silently get empty bags.",
+      "repro": "GREP path_bag ERROR → empty; GREPFILES path_bag ERROR → hits"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "MOVEALL flattens basenames \u2014 deep tree structure lost on archive",
-      "detail": "sub/b.plate and sub/deep/d.plate become archive/b.plate archive/d.plate. Same class as COPYALL. Collision if two same basenames at different depths.",
-      "repro": "MOVEALL deep plates \u2192 dest basenames only"
+      "title": "GREPFILES case-sensitive by default; Error ≠ ERROR",
+      "detail": "Severity tokens often mixed case. Must remember GREPFILESI. Same class as GREP vs GREPI string ops.",
+      "repro": "GREPFILES bag ERROR misses gamma Error three"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|fs",
-      "title": "WALK leaves empty directory shells after MOVEALL of all files",
-      "detail": "Archive relocates files but orphaned empty dirs remain under drop/. No RMDIRALL empty-tree prune.",
-      "repro": "MOVEALL all plates; sub/deep still exists empty"
+      "severity": "high",
+      "area": "host|naming",
+      "title": "APPENDALL is string SUFFIXALL — not multi-file append",
+      "detail": "LOGALL/APPENDFILES is the path-bag stamp. APPENDALL appends a suffix string to every bag *field text*. Wrong op = silent no file IO.",
+      "repro": "APPENDALL bag -suf → field text change only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|naming",
-      "title": "FIND is string index; FINDALL is recursive walk \u2014 naming trap",
-      "detail": "Agents expecting find(1) semantics from FIND get character index. FINDALL/WALK is the tree walk. Documented but high agent footgun.",
-      "repro": "SYS FIND hay needle \u2192 index; SYS FINDALL root pat \u2192 paths"
+      "area": "host|fs",
+      "title": "LOGALL creates missing paths (no create-off mode)",
+      "detail": "Useful for markers but dangerous if path bag has typos — invents junk files. No LOGALL existing-only / fail-on-miss.",
+      "repro": "LOGALL ghost_path line → creates file"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|fs",
-      "title": "No bulk EQFILEALL path-bag pairwise compare",
-      "detail": "Verify COPYALL needs EACH LINE + JOIN dest + EQFILE loop. No bag-to-bag content audit op.",
-      "repro": "stage then verify all pairs manually"
+      "title": "No multi-needle GREPFILES OR (ERROR|FATAL|PANIC)",
+      "detail": "Need sequential GREPFILES + UNION. GREPANY is bag-field only.",
+      "repro": "want content any of N needles → multiple greps"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Long WALK path bags truncate/collapse in JSON line.",
-      "repro": "PRINT_JSON paths"
+      "detail": "HITS path bags collapse in JSON.",
+      "repro": "PRINT_JSON hits"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last PATHS/MOVED line without $.",
-      "repro": "walk; cat -A PATHS.txt"
+      "title": "WRITE omits final trailing newline on plates",
+      "detail": "HITS/PATHS last line; LOGALL itself does append NL to logs.",
+      "repro": "grephit; cat -A HITS.txt"
     },
     {
       "id": "W8",
-      "severity": "low",
+      "severity": "med",
       "area": "host|fs",
-      "title": "WALK pattern is basename fnmatch only \u2014 no path-glob ** semantics",
-      "detail": "Cannot match sub/**/*.plate vs top-level differently beyond full walk+FILTERGLOB.",
-      "repro": "WALK root 'sub/*' may not do what shell does"
+      "title": "GREPFILES is substring not regex",
+      "detail": "Needle ERROR matches ERRORCODE. No word-boundary mode. Same false-friend class as GREP bag fields.",
+      "repro": "content ERRORCODE hit by needle ERROR"
     }
   ],
   "workarounds": [
-    "KEEPFILES after WALK * before MOVEALL/COPYALL",
-    "Use distinctive basenames or pre-check BASENAMEALL+FREQ for collisions",
-    "EQFILE after stage before archive (sources still present)",
-    "Prefer FINDALL name for walk; never use FIND for paths",
-    "Manual RMDIR empty parents after archive if needed"
+    "Always GREPFILES for log content; GREP only for path-string bags",
+    "Prefer GREPFILESI for severity tokens",
+    "Use LOGALL/APPENDFILES never APPENDALL for multi-log stamp",
+    "Validate paths exist before LOGALL if create-on-miss unwanted",
+    "UNION of GREPFILES results for multi-needle"
   ],
   "language_gaps": [
-    "WALK files-only mode",
-    "MOVEALL/COPYALL preserve relative tree",
-    "RMDIRALL empty directory prune",
-    "EQFILEALL bag pairwise verify",
-    "FIND rename or FINDSTR alias to reduce trap",
+    "GREPFILES multi-needle OR",
+    "LOGALL existing-only / no-create mode",
+    "GREPFILES whole-word / regex mode",
+    "Rename APPENDALL or document path-vs-string more loudly",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "WALK deep plates + MOVEALL + EQFILE positive path clean",
-    "Recursive vs PATHGLOB value prop confirmed",
-    "Empty dir shells left after archive",
+    "GREPFILES+LOGALL positive path clean",
+    "Case-sensitive ERROR vs Error confirmed",
+    "LOGALL create-on-miss confirmed",
     "No language fix this iter"
   ],
-  "commit": "ffc5c0839927c10042f76e051db36294c7acf02a",
-  "ts": "2026-08-06T06:18:40Z"
+  "commit": "",
+  "ts": "2026-08-06T06:43:40Z"
 }
