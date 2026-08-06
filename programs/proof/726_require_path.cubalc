@@ -1,0 +1,75 @@
+# REQUIRE PATH / DIR / REG — fail-fast host path/kind gates
+# Usability: gate plate layout before READ without SYS EXIST + IF + FAIL glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "reqpath_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+ASSERT OK == 1
+
+SYS JOIN fix "plate.json"
+LET plate = LAST
+SYS WRITE plate "{\"ok\":1}"
+ASSERT OK == 1
+
+# PATH — any existing path
+REQUIRE PATH fix
+ASSERT OK == 1
+SYS EQS LAST fix
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_PATH fix
+ASSERT LAST_N == 1
+
+REQUIRE PATH plate
+ASSERT OK == 1
+
+# DIR — must be directory
+REQUIRE DIR fix
+ASSERT OK == 1
+ASSERT ISDIR == 1
+SYS EQS REQUIRE_DIR fix
+ASSERT LAST_N == 1
+
+# REG / ISFILE — must be regular file
+REQUIRE REG plate
+ASSERT OK == 1
+ASSERT ISFILE == 1
+SYS EQS REQUIRE_REG plate
+ASSERT LAST_N == 1
+
+REQUIRE ISFILE plate
+ASSERT OK == 1
+
+# aliases
+REQUIRE EXIST plate
+ASSERT OK == 1
+REQUIRE DIRECTORY fix
+ASSERT OK == 1
+REQUIRE FOLDER fix
+ASSERT OK == 1
+REQUIRE REGFILE plate
+ASSERT OK == 1
+REQUIRE PLATE plate
+ASSERT OK == 1
+
+# var / LAST path arg
+SYS JOIN fix "plate.json"
+REQUIRE PATH LAST
+ASSERT OK == 1
+
+# known workspace paths
+REQUIRE DIR "programs/lib"
+ASSERT OK == 1
+REQUIRE REG "programs/hello_cube.cubalc"
+ASSERT OK == 1
+REQUIRE PATH "programs/proof/726_require_path.cubalc"
+ASSERT OK == 1
+
+# cleanup
+SYS RM plate
+ASSERT OK == 1
+
+PRINT "require_path ok"

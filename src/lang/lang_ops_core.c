@@ -10908,7 +10908,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION x.y | REQUIRE LIB name | REQUIRE ENV name — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG — fail-fast gates (host path/kind too)"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
@@ -11877,11 +11877,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
    * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
    * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
-   * Usability: agents refuse missing stdlib / old runtime / host config without shell glue. */
+   * REQUIRE PATH|DIR|REG path — fail-fast if host path missing / wrong kind.
+   * Usability: agents refuse missing stdlib / old runtime / host config / plates without shell glue. */
   if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
     int aln = L->cur.line;
     lex_next(L);
-    /* REQUIRE LIB|MODULE|INCLUDE|FILE name — resolve like INCLUDE / cubalc which */
+    /* REQUIRE LIB|MODULE|INCLUDE|FILE name — resolve like INCLUDE / cubalc which.
+     * Note: FILE here means cubalc module (legacy), not host path — use REQUIRE PATH|REG. */
     if (kw(&L->cur,"LIB")||kw(&L->cur,"MODULE")||kw(&L->cur,"INCLUDE")||
         kw(&L->cur,"FILE")||kw(&L->cur,"STDLIB")||kw(&L->cur,"SRC")){
       char name[160];
@@ -11960,9 +11962,85 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
+    /* REQUIRE PATH|EXIST path — fail if host path missing.
+     * REQUIRE DIR|DIRECTORY path — fail if not a directory.
+     * REQUIRE REG|REGFILE|ISFILE path — fail if not a regular file.
+     * On success: LAST = path, LAST_N=1, REQUIRE_PATH = path, OK=1.
+     * Usability: gate plate/config/dir before READ without SYS EXIST + IF + FAIL. */
+    if (kw(&L->cur,"PATH")||kw(&L->cur,"EXIST")||kw(&L->cur,"EXISTS")||
+        kw(&L->cur,"PRESENT")||kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTORY")||
+        kw(&L->cur,"FOLDER")||kw(&L->cur,"ISDIR")||kw(&L->cur,"REG")||
+        kw(&L->cur,"REGFILE")||kw(&L->cur,"REGULAR")||kw(&L->cur,"ISFILE")||
+        kw(&L->cur,"PLATE")||kw(&L->cur,"HOSTPATH")){
+      char path[512];
+      cubalc_host_result hr;
+      int want_dir = 0, want_file = 0;
+      const char *kind = "PATH";
+      if (kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTORY")||kw(&L->cur,"FOLDER")||
+          kw(&L->cur,"ISDIR")){
+        want_dir = 1;
+        kind = "DIR";
+      } else if (kw(&L->cur,"REG")||kw(&L->cur,"REGFILE")||kw(&L->cur,"REGULAR")||
+                 kw(&L->cur,"ISFILE")||kw(&L->cur,"PLATE")){
+        want_file = 1;
+        kind = "REG";
+      }
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "REQUIRE PATH|DIR|REG \"path\"|var|LAST");
+        return -1;
+      }
+      if (!path[0]) {
+        fail(vm, "REQUIRE PATH empty path");
+        return -1;
+      }
+      if (want_dir || want_file) {
+        if (cubalc_host_path_kind(path, &hr) != 0 ||
+            (want_dir && hr.code != 2) ||
+            (want_file && hr.code != 1)) {
+          char msg[200];
+          const char *why = (!hr.ok && hr.err[0]) ? hr.err
+              : (want_dir ? "not a directory" : "not a regular file");
+          snprintf(msg, sizeof msg,
+                   "REQUIRE %s '%s' failed line %d — %s",
+                   kind, path, aln, why);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      } else {
+        if (!cubalc_host_exists(path)) {
+          char msg[200];
+          snprintf(msg, sizeof msg,
+                   "REQUIRE PATH '%s' missing line %d — create path or fix layout",
+                   path, aln);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      }
+      var_set_str(vm, "LAST", path);
+      var_set_str(vm, "REQUIRE_PATH", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (want_dir) {
+        var_set_num(vm, "ISDIR", 1);
+        var_set_str(vm, "REQUIRE_DIR", path);
+      }
+      if (want_file) {
+        var_set_num(vm, "ISFILE", 1);
+        var_set_str(vm, "REQUIRE_REG", path);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# require %s %s ok\n", kind, path);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB name | REQUIRE ENV name");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
