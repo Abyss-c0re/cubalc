@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 168,
-  "version": "1.15.193-usability",
-  "item": "SYS MOVEALL / MVALL bulk move path bag into dest dir",
-  "item_id": 201,
-  "title": "SYS MOVEALL|MVALL|RENAMEALL [bag] dest_dir — archive without EACH+RENAME",
-  "commit": "fe6e202308c33049e91f9575bb8963acd9dfa3b1",
-  "summary": "Bulk move path bags into dest by basename. selftest 168.",
+  "iter": 169,
+  "version": "1.15.194-usability",
+  "item": "SYS WALK / FINDALL / TREEGLOB recursive full-path discovery",
+  "item_id": 202,
+  "title": "SYS WALK|FINDALL|TREEGLOB root [pattern] — deep trees beyond PATHGLOB",
+  "commit": "9f9310ddc168f23092362057387cfaa1fa640942",
+  "summary": "Recursive path walk with basename pattern. thrash restore + selftest 169.",
   "proofs": [
-    "741_sys_moveall",
-    "selftest n_pass=168"
+    "742_sys_walk",
+    "selftest n_pass=169"
   ],
-  "when": "2026-08-06T05:54:12Z",
+  "when": "2026-08-06T06:06:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "fe6e202308c33049e91f9575bb8963acd9dfa3b1"
+  "sha": "9f9310ddc168f23092362057387cfaa1fa640942",
+  "note": "mass thrash mid-tick; git restore then re-apply WALK"
 }
