@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 224,
-  "version": "1.15.249-usability",
-  "item": "SYS UUID / GUID · UUID0 / UUIDNODASH RFC4122 v4 ids",
-  "item_id": 257,
-  "title": "SYS UUID|GUID · UUID0|UUIDNODASH — unique agent work/claim ids without shell uuidgen",
-  "commit": "950cbea1a5a4656178efa9f627f8384e4b3a405e",
-  "summary": "RFC 4122 v4 dashed/compact UUIDs for agent claims without shell. selftest 224.",
+  "iter": 225,
+  "version": "1.15.250-usability",
+  "item": "SYS JSONESC / JESC · JSONUNESC / JUNESC plate string escape",
+  "item_id": 258,
+  "title": "SYS JSONESC|JESC [str] · JSONUNESC|JUNESC [str] — embed agent text in plates without hand-escaping",
+  "commit": "e854751bd7e936e2735d334d123292176e45c8a0",
+  "summary": "JSON string-body escape/unescape for cubalc.*.v1 plate fields. selftest 225.",
   "proofs": [
-    "798_sys_uuid",
-    "selftest n_pass=224"
+    "799_sys_jsonesc",
+    "selftest n_pass=225"
   ],
-  "when": "2026-08-06T15:06:00Z",
+  "when": "2026-08-06T15:16:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "950cbea1a5a4656178efa9f627f8384e4b3a405e",
-  "note": "thrash restore then ship; /dev/urandom + time/pid fallback"
+  "sha": "e854751bd7e936e2735d334d123292176e45c8a0",
+  "note": "complements BASE64/HEX/URLENC transport family for structured plates"
 }
