@@ -1,0 +1,59 @@
+# SYS LINEAT / FILELINE — extract single 0-based file line
+# Usability: fetch config/log line by index without MIDFILE+HEAD
+# Completes HEADFILE/TAILFILE/MIDFILE. Soft miss / OOB empty.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "lineat_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "L0\nL1\nL2\nL3\nL4"
+
+SYS LINEAT fs 0
+ASSERT OK == 1
+ASSERT LINEAT_N == 1
+ASSERT LINEAT_TOTAL == 5
+ASSERT LINEAT_I == 0
+SYS EQS LAST "L0"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 2
+ASSERT LINEAT_N == 1
+ASSERT LINEAT_I == 2
+SYS EQS LAST "L2"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 4
+ASSERT LINEAT_N == 1
+SYS EQS LAST "L4"
+ASSERT LAST_N == 1
+
+# alias
+SYS FILELINE fs 1
+ASSERT LINEAT_N == 1
+SYS EQS LAST "L1"
+ASSERT LAST_N == 1
+
+# OOB soft empty (ok=1, found=0)
+SYS LINEAT fs 10
+ASSERT OK == 1
+ASSERT LINEAT_N == 0
+ASSERT LINEAT_TOTAL == 5
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# soft miss
+SYS LINEAT "no_such_lineat_mi.txt" 0
+ASSERT OK == 0
+ASSERT LINEAT_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_lineat ok"

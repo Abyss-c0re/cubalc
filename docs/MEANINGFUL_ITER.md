@@ -242,6 +242,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 212. ~~**`SYS HEADFILE` / `TAILFILE`**~~ **done** (first/last n lines of a file → bag · peek without full READ/shell head).
 213. ~~**`SYS LINECOUNTALL` / `WCALL`**~~ **done** (path bag → line counts + sum · inventory without EACH+READ+LINES).
 214. ~~**`SYS MIDFILE` / `LINESLICE`**~~ **done** (file line window [start..start+count) · page without READ+DROP+TAKE).
+215. ~~**`SYS LINEAT` / `FILELINE`**~~ **done** (single 0-based file line → LAST · no MIDFILE+HEAD glue).
 
 ## Tick protocol
 
