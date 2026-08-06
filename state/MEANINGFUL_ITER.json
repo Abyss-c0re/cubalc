@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 137,
-  "version": "1.15.162-usability",
-  "item": "SYS LOOKUPN / KVGETN peel key:val as int LAST_N",
-  "item_id": 170,
-  "title": "SYS LOOKUPN|KVGETN bag key [sep] [OR n] — value as integer LAST_N",
-  "commit": "0312bd9a9e8781df2ed57fe80ed5ce611564e95f",
-  "summary": "LOOKUPN FREQ counts as LAST_N for arithmetic; OR default. selftest 137.",
+  "iter": 138,
+  "version": "1.15.163-usability",
+  "item": "SYS THRESHKV / KEEPVAL keep key:val value>=min",
+  "item_id": 171,
+  "title": "SYS THRESHKV|KEEPVAL bag min [sep] — keep key:val with value>=min",
+  "commit": "00ee07f2c78280d78640d0eda4715fffd8070c31",
+  "summary": "THRESHKV denoise FREQ by min count without EACH rebuild. selftest 138.",
   "proofs": [
-    "710_sys_lookupn",
-    "selftest n_pass=137"
+    "711_sys_threshkv",
+    "selftest n_pass=138"
   ],
-  "when": "2026-08-06T00:33:46Z",
+  "when": "2026-08-06T00:44:04Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0312bd9a9e8781df2ed57fe80ed5ce611564e95f"
+  "sha": "00ee07f2c78280d78640d0eda4715fffd8070c31"
 }
