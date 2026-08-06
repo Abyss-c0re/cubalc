@@ -217,6 +217,35 @@ int cubalc_host_rm(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS RMDIR path — remove empty directory; missing soft OK.
+ * Non-directory or non-empty → error (no recursive delete). */
+int cubalc_host_rmdir(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "rmdir: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->str, sizeof r->str, "%s", path);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (!S_ISDIR(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "rmdir: not a directory");
+    return -1;
+  }
+  if (rmdir(path) != 0) {
+    snprintf(r->err, sizeof r->err, "rmdir: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS RENAME|MV from to — move plate without shell. */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) {
   r_clear(r);

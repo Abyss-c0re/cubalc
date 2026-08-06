@@ -1,0 +1,91 @@
+# SYS RMDIR / REMOVEDIR / RD
+# — remove empty directory; missing soft OK; non-empty soft fail
+# Usability: clean MKTEMPDIR workspaces without shell rmdir
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "rmdir_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+# empty dir → remove
+SYS JOIN fix "empty_d"
+LET ed = LAST
+SYS MKDIR ed
+SYS STAT ed
+ASSERT STAT_ISDIR == 1
+SYS RMDIR ed
+ASSERT OK == 1
+ASSERT RMDIR_N == 1
+ASSERT LAST_N == 1
+SYS STAT ed
+ASSERT STAT_EXIST == 0
+
+# missing soft OK (idempotent)
+SYS RMDIR ed
+ASSERT OK == 1
+ASSERT RMDIR_N == 0
+ASSERT LAST_N == 0
+
+# alias REMOVEDIR
+SYS MKDIR ed
+SYS REMOVEDIR ed
+ASSERT OK == 1
+ASSERT RMDIR_N == 1
+
+# alias RD
+SYS MKDIR ed
+SYS RD ed
+ASSERT OK == 1
+
+# file is not a directory → soft fail
+SYS JOIN fix "notdir.txt"
+LET nf = LAST
+SYS WRITE nf "x"
+SYS RMDIR nf
+ASSERT OK == 0
+ASSERT RMDIR_N == 0
+SYS EXIST nf
+ASSERT LAST_N == 1
+
+# non-empty dir → soft fail
+SYS JOIN fix "full_d"
+LET fd = LAST
+SYS MKDIR fd
+SYS JOIN fd "inside.txt"
+LET inn = LAST
+SYS WRITE inn "stay"
+SYS RMDIR fd
+ASSERT OK == 0
+SYS STAT fd
+ASSERT STAT_ISDIR == 1
+# clean file then rmdir
+SYS RM inn
+SYS RMDIR fd
+ASSERT OK == 1
+ASSERT RMDIR_N == 1
+
+# empty path soft fail
+SYS RMDIR ""
+ASSERT OK == 0
+
+# agent: MKTEMPDIR → work → cleanup
+SYS MKTEMPDIR "job"
+LET wd = LAST
+SYS STAT wd
+ASSERT STAT_ISDIR == 1
+SYS JOIN wd "plate.txt"
+LET pl = LAST
+SYS WRITEATOMIC pl "done"
+SYS RM pl
+SYS RMDIR wd
+ASSERT OK == 1
+SYS STAT wd
+ASSERT STAT_EXIST == 0
+
+# cleanup fixture file
+SYS RM nf
+
+PRINT "sys_rmdir ok"

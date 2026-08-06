@@ -32,6 +32,8 @@ int cubalc_host_mtime(const char *path, cubalc_host_result *r);
 int cubalc_host_mkdir(const char *path, cubalc_host_result *r);
 /* unlink regular file only; missing → ok with n=0; dir → error */
 int cubalc_host_rm(const char *path, cubalc_host_result *r);
+/* rmdir empty directory only; missing → ok with n=0; file/nonempty → error */
+int cubalc_host_rmdir(const char *path, cubalc_host_result *r);
 /* rename/move path; soft miss if from missing */
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */

@@ -889,6 +889,52 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS RMDIR|REMOVEDIR|RD path — remove empty directory; missing soft OK.
+     * LAST_N/RMDIR_N = 1 removed, 0 already missing. Non-empty/file → OK=0.
+     * Usability: clean MKTEMPDIR workspaces without shell rmdir. */
+    if (kw(&L->cur,"RMDIR") || kw(&L->cur,"REMOVEDIR") || kw(&L->cur,"RD") ||
+        kw(&L->cur,"RM_DIR") || kw(&L->cur,"DELETEDIR") || kw(&L->cur,"UNLINKDIR") ||
+        kw(&L->cur,"DRODIR") || kw(&L->cur,"RMEMPTY")){
+      char path[512];
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS RMDIR path");
+        return -1;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RMDIR_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "RMDIR: empty path");
+        var_set_str(vm, "ERR", "RMDIR: empty path");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_rmdir(path, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RMDIR_N", 0);
+        vm->last_n = 0;
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+          var_set_str(vm, "LAST", hr.err);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "RMDIR_N", hr.n);
+      var_set_str(vm, "RMDIR", path);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS RENAME|MV|MOVE from to — move plate path without shell. */
     if (kw(&L->cur,"RENAME") || kw(&L->cur,"MV") || kw(&L->cur,"MOVE")){
       char from[512], to[512];
