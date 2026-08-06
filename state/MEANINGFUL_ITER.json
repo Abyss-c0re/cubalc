@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 136,
-  "version": "1.15.161-usability",
-  "item": "SYS TOPKEY / BOTKEY max/min key of key:val bag",
-  "item_id": 169,
-  "title": "SYS TOPKEY|ARGMAXKV / BOTKEY|ARGMINKV bag [sep] — dominant/rarest key",
-  "commit": "88af8770462ec8321391770d3aba2e8f63cfd760",
-  "summary": "TOPKEY/BOTKEY dominant FREQ key without SORTFREQ+TAKE+BEFORE. selftest 136.",
+  "iter": 137,
+  "version": "1.15.162-usability",
+  "item": "SYS LOOKUPN / KVGETN peel key:val as int LAST_N",
+  "item_id": 170,
+  "title": "SYS LOOKUPN|KVGETN bag key [sep] [OR n] — value as integer LAST_N",
+  "commit": "0312bd9a9e8781df2ed57fe80ed5ce611564e95f",
+  "summary": "LOOKUPN FREQ counts as LAST_N for arithmetic; OR default. selftest 137.",
   "proofs": [
-    "709_sys_topkey",
-    "selftest n_pass=136"
+    "710_sys_lookupn",
+    "selftest n_pass=137"
   ],
-  "when": "2026-08-06T00:24:06Z",
+  "when": "2026-08-06T00:33:46Z",
   "agent": "meaningful_iter_10m",
-  "sha": "88af8770462ec8321391770d3aba2e8f63cfd760"
+  "sha": "0312bd9a9e8781df2ed57fe80ed5ce611564e95f"
 }
