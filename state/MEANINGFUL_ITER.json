@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 191,
-  "version": "1.15.216-usability",
-  "item": "SYS DROPMATCHFILE / FILEDROPMATCH drop first matching file line",
-  "item_id": 224,
-  "title": "SYS DROPMATCHFILE|FILEDROPMATCH path needle \u2014 drop first matching file line",
-  "commit": "d30775b93d5d797bbe299da9e0564fb05230e5ca",
-  "summary": "Find-then-drop file line one-shot; dual of SETMATCHFILE. selftest 191.",
+  "iter": 192,
+  "version": "1.15.217-usability",
+  "item": "SYS DROPALLMATCHFILE / FILEDROPALLMATCH drop all matching file lines",
+  "item_id": 225,
+  "title": "SYS DROPALLMATCHFILE|FILEDROPALLMATCH path needle — drop all matching file lines",
+  "commit": "756ac597907c18f30198b89c1ec8115b35508277",
+  "summary": "Bulk purge matching file lines one-shot; dual of DROPMATCHFILE. selftest 192.",
   "proofs": [
-    "764_sys_dropmatchfile",
-    "selftest n_pass=191"
+    "765_sys_dropallmatchfile",
+    "selftest n_pass=192"
   ],
-  "when": "2026-08-06T09:44:41Z",
+  "when": "2026-08-06T10:00:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d30775b93d5d797bbe299da9e0564fb05230e5ca"
+  "sha": "756ac597907c18f30198b89c1ec8115b35508277"
 }
