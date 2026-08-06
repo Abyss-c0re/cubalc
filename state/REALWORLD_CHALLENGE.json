@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "shard_merge",
-      "cmd": "shard api:3 db:1 warn:2 + api:2 mesh:4 db:1 → api:5 db:2 mesh:4",
+      "cmd": "shard api:3 db:1 warn:2 + api:2 mesh:4 db:1 \u2192 api:5 db:2 mesh:4",
       "ok": true,
       "note": "MERGEKV sum overlap"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "loadlines_freq",
-      "cmd": "loadlines api|||api|||crit → api:7 crit:1",
+      "cmd": "loadlines api|||api|||crit \u2192 api:7 crit:1",
       "ok": true,
       "note": "FREQ+MERGEKV"
     },
@@ -46,17 +46,17 @@
       "name": "sum_empty_soft",
       "cmd": "sum empty soft miss (program gate)",
       "ok": true,
-      "note": "language SUMKV empty → 0"
+      "note": "language SUMKV empty \u2192 0"
     },
     {
       "name": "ties_first",
-      "cmd": "a:5 b:5 c:2 → TOPKEY a BOTKEY c",
+      "cmd": "a:5 b:5 c:2 \u2192 TOPKEY a BOTKEY c",
       "ok": true,
       "note": "first extreme wins"
     },
     {
       "name": "nonnum_sum_merge",
-      "cmd": "note:hello+world → note:0; SUMKV skips/zeros",
+      "cmd": "note:hello+world \u2192 note:0; SUMKV skips/zeros",
       "ok": true,
       "note": "strtol silent"
     },
@@ -79,15 +79,15 @@
       "severity": "high",
       "area": "host|bag",
       "title": "MERGEKV strtol non-numeric values to 0 and sum",
-      "detail": "note:hello + note:world → note:0 silently. String metadata keys corrupt into zero counters. No STRICT/refuse on non-numeric merge.",
-      "repro": "MERGEKV 'note:hello' 'note:world' → note:0"
+      "detail": "note:hello + note:world \u2192 note:0 silently. String metadata keys corrupt into zero counters. No STRICT/refuse on non-numeric merge.",
+      "repro": "MERGEKV 'note:hello' 'note:world' \u2192 note:0"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "host|bag",
       "title": "SUMKV silently skips non-numeric; N < KEYS",
-      "detail": "mixed a:2 b:x c:5 → sum 7 SUMKV_N=2 KEYS=4. Agents may think all keys counted. No list of skipped keys.",
+      "detail": "mixed a:2 b:x c:5 \u2192 sum 7 SUMKV_N=2 KEYS=4. Agents may think all keys counted. No list of skipped keys.",
       "repro": "SUMKV mixed bag"
     },
     {
@@ -95,16 +95,16 @@
       "severity": "med",
       "area": "host|bag",
       "title": "TOPKEY/BOTKEY ties pick first only",
-      "detail": "a:5 b:5 → TOPKEY a only. No all-ties bag or TOPKEYS k form. Same first-wins class as LONGEST.",
-      "repro": "TOPKEY a:5\\nb:5 → a"
+      "detail": "a:5 b:5 \u2192 TOPKEY a only. No all-ties bag or TOPKEYS k form. Same first-wins class as LONGEST.",
+      "repro": "TOPKEY a:5\\nb:5 \u2192 a"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
       "title": "SUMKV empty bag returns 0 with OK=1 not soft miss",
-      "detail": "Unlike TOPKEY empty OK=0, SUMKV \"\" → LAST_N=0 LAST=0 OK=1. Inconsistent empty semantics across aggregate ops. Program must BLANK-gate.",
-      "repro": "SUMKV \"\" → 0 OK=1"
+      "detail": "Unlike TOPKEY empty OK=0, SUMKV \"\" \u2192 LAST_N=0 LAST=0 OK=1. Inconsistent empty semantics across aggregate ops. Program must BLANK-gate.",
+      "repro": "SUMKV \"\" \u2192 0 OK=1"
     },
     {
       "id": "W5",
@@ -156,10 +156,10 @@
   ],
   "issues_faced": [
     "Positive two-shard merge + list lens clean (total 13 top api)",
-    "MERGEKV non-numeric → note:0 is severe agent footgun",
+    "MERGEKV non-numeric \u2192 note:0 is severe agent footgun",
     "BOTKEY among ties (db:2 warn:2) first min only",
-    "No language fix — STRICT merge for MEANINGFUL_ITER"
+    "No language fix \u2014 STRICT merge for MEANINGFUL_ITER"
   ],
-  "commit": "",
+  "commit": "44c75167c43c3911c8c578e42126e7909be106c1",
   "ts": "2026-08-06T00:20:00Z"
 }
