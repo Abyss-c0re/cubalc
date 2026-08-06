@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 143,
-  "version": "1.15.168-usability",
-  "item": "SYS ADDKV / OFFSETKV add delta to key:val values",
-  "item_id": 176,
-  "title": "SYS ADDKV|OFFSETKV bag delta [sep] — Laplace/score offset without EACH",
-  "commit": "e821554a2b3de482a7c7221fc2933d43565e8c60",
-  "summary": "ADDKV Laplace +1 / offset FREQ values. selftest 143.",
+  "iter": 144,
+  "version": "1.15.169-usability",
+  "item": "SYS DROPZERO / KEEPNZ drop key:val value==0",
+  "item_id": 177,
+  "title": "SYS DROPZERO|KEEPNZ bag [sep] — drop zeros keep +/− after DIFFKV",
+  "commit": "c48777cf0204ca7610bef7a4cd93cb604f6dc095",
+  "summary": "DROPZERO clean DIFFKV zeros keep negatives. selftest 144.",
   "proofs": [
-    "716_sys_addkv",
-    "selftest n_pass=143"
+    "717_sys_dropzero",
+    "selftest n_pass=144"
   ],
-  "when": "2026-08-06T01:35:34Z",
+  "when": "2026-08-06T01:44:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e821554a2b3de482a7c7221fc2933d43565e8c60"
+  "sha": "c48777cf0204ca7610bef7a4cd93cb604f6dc095"
 }
