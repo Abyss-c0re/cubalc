@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 194,
-  "version": "1.15.219-usability",
-  "item": "SYS INSERTMATCHFILE / FILEINSERTMATCH / AFTERMATCHFILE insert after first match",
-  "item_id": 227,
-  "title": "SYS INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE path needle value — insert line after first match",
-  "commit": "4478a7208249207ff8c370e69152ae8f3ed55a9b",
-  "summary": "Find-then-insert file line one-shot for config patches. selftest 194.",
+  "iter": 195,
+  "version": "1.15.220-usability",
+  "item": "SYS BEFOREMATCHFILE / INSERTBEFOREMATCH insert line before first match",
+  "item_id": 228,
+  "title": "SYS BEFOREMATCHFILE|INSERTBEFOREMATCH path needle value — insert line before first match",
+  "commit": "91066fd956d9834ca0c8a9667e55220e0108e0e0",
+  "summary": "Find-then-insert-before file line one-shot for headers/imports. selftest 195.",
   "proofs": [
-    "767_sys_insertmatchfile",
-    "selftest n_pass=194"
+    "768_sys_beforematchfile",
+    "selftest n_pass=195"
   ],
-  "when": "2026-08-06T10:14:50Z",
+  "when": "2026-08-06T10:24:23Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4478a7208249207ff8c370e69152ae8f3ed55a9b"
+  "sha": "91066fd956d9834ca0c8a9667e55220e0108e0e0"
 }
