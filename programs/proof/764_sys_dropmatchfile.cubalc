@@ -1,0 +1,57 @@
+# SYS DROPMATCHFILE / FILEDROPMATCH — drop first file line containing needle
+# Usability: FINDFILELINE+DROPFILELINE in one for plate/config ack-delete
+# Dual of SETMATCHFILE. DROPMATCHFILEI icase. Soft no-match.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "dropmatchfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "a=1\nstatus=old\nb=2\nSTATUS=keep\nc=3"
+
+SYS DROPMATCHFILE fs "status="
+ASSERT OK == 1
+ASSERT DROPMATCHFILE_N == 1
+ASSERT DROPMATCHFILE_I == 1
+ASSERT DROPMATCHFILE_TOTAL == 4
+SYS EQS LAST "status=old"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 0
+SYS EQS LAST "a=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "STATUS=keep"
+ASSERT LAST_N == 1
+
+# icase drops STATUS=keep
+SYS DROPMATCHFILEI fs "status="
+ASSERT DROPMATCHFILE_N == 1
+ASSERT DROPMATCHFILE_I == 2
+SYS EQS LAST "STATUS=keep"
+ASSERT LAST_N == 1
+ASSERT DROPMATCHFILE_TOTAL == 3
+
+# alias soft no-match
+SYS FILEDROPMATCH fs "missing="
+ASSERT OK == 1
+ASSERT DROPMATCHFILE_N == 0
+ASSERT DROPMATCHFILE_I == -1
+
+# soft path miss
+SYS DROPMATCHFILE "no_such_dropmatchfile_mi.txt" "x"
+ASSERT OK == 0
+ASSERT DROPMATCHFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_dropmatchfile ok"
