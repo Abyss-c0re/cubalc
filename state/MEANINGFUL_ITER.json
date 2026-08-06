@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 208,
-  "version": "1.15.233-usability",
-  "item": "SYS SUBSTFILE / EXPANDFILE / ENVSUBSTFILE materialize template file",
-  "item_id": 241,
-  "title": "SYS SUBSTFILE|EXPANDFILE path [out] — expand $VAR file templates · N/MISS/BYTES",
-  "commit": "617e49d872f4eca564d22cfa9ad75cb7989e0cf1",
-  "summary": "Plate/config template materialize without READ+SUBSTENV+WRITE. selftest 208.",
+  "iter": 209,
+  "version": "1.15.234-usability",
+  "item": "SYS HASH / HASHFILE / FINGERPRINT FNV-1a content stamps",
+  "item_id": 242,
+  "title": "SYS HASH|HASHFILE [str|path] — FNV-1a 32-bit hex · N/BYTES plate stamps",
+  "commit": "5f4395f94bd748669662f13b37ab9a305694da73",
+  "summary": "Plate/cache fingerprints without shell md5. selftest 209.",
   "proofs": [
-    "782_sys_substfile",
-    "selftest n_pass=208"
+    "783_sys_hash",
+    "selftest n_pass=209"
   ],
-  "when": "2026-08-06T12:25:49Z",
+  "when": "2026-08-06T12:35:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "617e49d872f4eca564d22cfa9ad75cb7989e0cf1"
+  "sha": "5f4395f94bd748669662f13b37ab9a305694da73"
 }
