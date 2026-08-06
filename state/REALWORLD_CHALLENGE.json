@@ -1,159 +1,154 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 79,
-  "program": "programs/realworld/status_handoff_board.cubalc",
-  "theme": "status handoff WRITEATOMIC HASHFILE WAITMATCH SUBSTFILE",
-  "version": "1.15.236-usability",
+  "iter": 80,
+  "program": "programs/realworld/critical_section_board.cubalc",
+  "theme": "critical section LOCKFILE WAITGONE WRITEATOMIC mutex",
+  "version": "1.15.238-usability",
   "pass": true,
   "tests": [
     {
-      "name": "write_stamp",
-      "cmd": "WRITEATOMIC boot plate; HASHFILE stamp hex",
+      "name": "lock_held",
+      "cmd": "lock creates path.lock; held yes; META pid",
       "ok": true,
-      "note": "atomic create"
+      "note": "acquire"
     },
     {
-      "name": "wait_content",
-      "cmd": "wait status=ready timeout on boot; write ready; wait hit",
+      "name": "unlock_free",
+      "cmd": "unlock removes .lock; unlock free soft N=0",
       "ok": true,
-      "note": "WAITMATCH"
+      "note": "release"
     },
     {
-      "name": "wait_substr",
-      "cmd": "needle ready hits status=ready; hits notready (false friend)",
+      "name": "waitfree",
+      "cmd": "waitfree hit when free; soft timeout when held",
       "ok": true,
-      "note": "substring trap"
+      "note": "WAITGONE"
     },
     {
-      "name": "waiti",
-      "cmd": "waiti STATUS=READY on status=ready",
+      "name": "critical",
+      "cmd": "lock+WRITEATOMIC+unlock status=live plate",
       "ok": true,
-      "note": "icase"
+      "note": "one-shot CS"
     },
     {
-      "name": "changed",
-      "cmd": "stamp; rewrite peer2; changed=1; rewrite same changed=0",
+      "name": "concurrent_busy",
+      "cmd": "background holder; lock soft timeout; REQUIRE lock exit 2",
       "ok": true,
-      "note": "hash delta"
+      "note": "mutex contention"
     },
     {
-      "name": "render_hostenv",
-      "cmd": "CUBALC_SH_HOST=api01 render \u2192 host=api01 role=canary cost=$9",
+      "name": "orphan_blocks",
+      "cmd": "lock exit without unlock leaves .lock; next lock times out",
       "ok": true,
-      "note": "SUBSTFILE"
+      "note": "crash wedge"
     },
     {
-      "name": "render_softmiss",
-      "cmd": "unset key softmiss; REQUIRE exit 2",
+      "name": "direct_lock_path",
+      "cmd": "pick path ending .lock used as-is",
       "ok": true,
-      "note": "SUBSTFILE_MISS"
+      "note": "naming"
     },
     {
-      "name": "require_paths",
-      "cmd": "REQUIRE wait timeout / stamp miss \u2192 exit 2",
+      "name": "require_held",
+      "cmd": "REQUIRE held free \u2192 exit 2",
       "ok": true,
       "note": "hard fail"
-    },
-    {
-      "name": "empty_ready",
-      "cmd": "TOUCH empty; WAITMATCH status=ready soft miss",
-      "ok": true,
-      "note": "vs WAITFILE existence"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "211/211 pass"
+      "note": "213/213 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|match",
-      "title": "WAITMATCH is substring \u2014 ready matches notready",
-      "detail": "Needle ready hits status=notready. Agents using short ready tokens get false handoff complete. No exact-line or HASFILELINE-style wait mode.",
-      "repro": "WRITE status=notready; WAITMATCH path ready 0 \u2192 HIT=1"
+      "area": "host|lock",
+      "title": "Orphan path.lock after process crash wedges all agents \u2014 no dead-owner reclaim",
+      "detail": "LOCKFILE creates .lock then process exit without UNLOCK leaves file. Next LOCKFILE waits/timeouts forever until manual RM. No PID liveness check or break-stale.",
+      "repro": "LOCKFILE p; kill -9; LOCKFILE p 100 \u2192 timeout"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|env",
-      "title": "setenv then separate-run render loses ENV (process-local)",
-      "detail": "Multi-tick setenv+render empties ${HOST}. Must pass host env on same process as SUBSTFILE. No plate-backed rehydrate in this board; same class as env_template W1.",
-      "repro": "run setenv; run render \u2192 host="
+      "area": "host|lock",
+      "title": "lease_lock TOUCH vs LOCKFILE dual exclusion models",
+      "detail": "TOUCH-based lease_lock is TOCTOU; LOCKFILE is exclusive. Agents mixing both on same path get false safety.",
+      "repro": "TOUCH agent.lock vs LOCKFILE plate.txt"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|hash",
-      "title": "HASHFILE is FNV-1a 32-bit not cryptographic",
-      "detail": "Fine for change stamps; unsafe as integrity or auth. Name HASH/FINGERPRINT may overpromise to agents.",
-      "repro": "HASHFILE plate \u2192 8 hex chars"
+      "area": "host|lock",
+      "title": "held is EXIST(.lock) not flock ownership probe",
+      "detail": "Orphan .lock reports held=yes even though no live owner. Agents skip work incorrectly or spin waitfree forever.",
+      "repro": "crash after LOCKFILE; held \u2192 1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITEATOMIC still omits trailing NL on last line",
-      "detail": "status plate host=peer1 without $; STAMP+VAL cat glue double hash display. Crash-safer rename does not fix NL hygiene.",
-      "repro": "cat -A after WRITEATOMIC; STAMP VAL glue"
+      "title": "WRITEATOMIC under lock still omits trailing NL",
+      "detail": "host=peer1 without $ after critical write.",
+      "repro": "cat -A plate after critical"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|wait",
-      "title": "WAITMATCH vs WAITFILE dual \u2014 existence vs content easy to mix",
-      "detail": "WAITFILE empty TOUCH succeeds; WAITMATCH needs needle. Agents upgrading handoffs forget content predicate.",
-      "repro": "TOUCH ready; WAITFILE hit; WAITMATCH status=ready miss"
+      "area": "host|path",
+      "title": "No path join for .lock suffix \u2014 agents use SUBSTENV ${active}.lock glue",
+      "detail": "SYS JOIN treats .lock as path segment. Language lacks STRCAT/suffix helper for lock path derivation.",
+      "repro": "JOIN active .lock \u2192 active/.lock wrong"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|arg",
-      "title": "Empty CUBALC_ARG1 blocked as write needs body",
-      "detail": "Cannot atomic-clear plate via empty ARG; language WRITEATOMIC \"\" works in-program. ARG/BLANK conflates empty payload with missing arg.",
-      "repro": "CUBALC_ARG1= write \u2192 EXIT write needs body"
+      "severity": "low",
+      "area": "host|wait",
+      "title": "WAITGONE busy-poll; dual of WAITFILE naming easy to invert",
+      "detail": "waitfree vs wait-present confusion under stress.",
+      "repro": "WAITGONE vs WAITFILE"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|subst",
-      "title": "SUBSTFILE soft-miss still writes empty expansions",
-      "detail": "gone=end style; MISS counter only. Corrupt configs unless gate on SUBSTFILE_MISS.",
-      "repro": "render unset \u2192 OK=1 MISS>0"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens",
+      "detail": "CUBALC_CS_REQUIRE=abc leaves hard gates off.",
+      "repro": "REQUIRE=abc lock busy \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_SH_REQUIRE=abc \u2192 soft timeouts exit 0.",
-      "repro": "REQUIRE=abc wait miss \u2192 rc 0"
+      "area": "host|lock",
+      "title": "UNLOCK soft free is OK=1 N=0 \u2014 same soft shape as success",
+      "detail": "Agents must check UNLOCKFILE_N; easy to treat free unlock as success.",
+      "repro": "UNLOCK free \u2192 OK=1 N=0"
     }
   ],
   "workarounds": [
-    "WAITMATCH needles with unique delimiters (status=ready\\n or full line)",
-    "Pass CUBALC_* env on same process as SUBSTFILE/render",
-    "Treat HASH as change stamp only not crypto",
-    "Gate render on SUBSTFILE_MISS==0",
-    "Digit-check REQUIRE env"
+    "Always UNLOCK in finally path; RM orphan .lock on deploy recovery",
+    "Prefer LOCKFILE over TOUCH lease for true exclusion",
+    "Gate on LOCKFILE_HIT and UNLOCKFILE_N not only OK",
+    "Digit-check REQUIRE env",
+    "Derive lock path via SUBSTENV ${path}.lock not JOIN"
   ],
   "language_gaps": [
-    "WAITMATCH exact-line / HASFILELINE-wait mode",
-    "Plate-backed ENV rehydrate or SUBSTFILE vars file",
-    "WRITEATOMIC trailing NL option",
-    "Crypto hash optional (sha256) for integrity plates",
-    "ARG empty-string vs missing distinction for write body",
-    "SUBSTFILE hard-fail-on-MISS flag"
+    "Dead-owner / stale lock reclaim (PID liveness)",
+    "LOCKFILE break or force-unlock admin op",
+    "STRCAT / path suffix helper for .lock",
+    "held = live owner not mere EXIST",
+    "WRITEATOMIC trailing NL",
+    "Document flock vs create-exclusive semantics in help"
   ],
   "issues_faced": [
-    "write/stamp/wait/changed/render positive paths clean with host env",
-    "substring ready\u2192notready is sharp handoff footgun",
-    "multi-tick setenv+render empty without host env",
-    "selftest 211/211; no language fix this iter"
+    "lock/unlock/held/waitfree/critical paths clean",
+    "orphan .lock after exit-without-unlock blocks next acquire",
+    "concurrent live holder correctly soft-timeouts",
+    "path .lock suffix via SUBSTENV awkward",
+    "selftest 213/213; no language fix this iter"
   ],
-  "commit": "35227a68d5e6b5a52d531af7e7e55bc27c72a541",
-  "ts": "2026-08-06T13:00:00Z"
+  "commit": "",
+  "ts": "2026-08-06T13:25:00Z"
 }

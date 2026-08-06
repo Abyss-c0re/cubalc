@@ -1,0 +1,669 @@
+# critical_section_board.cubalc — exclusive path.lock + wait-gone + atomic write
+#
+# Real use: multi-agent critical sections without shell flock(1) or TOUCH TOCTOU:
+#   LOCKFILE / FLOCK     — exclusive path.lock mutex (wait ms)
+#   UNLOCKFILE / FUNLOCK — release; soft miss if free
+#   WAITGONE / WAITMISSING — poll until .lock gone (peer released)
+#   WRITEATOMIC          — crash-safer plate update under lock
+# Distinct from lease_lock (TOUCH create TOCTOU) and status_handoff (no mutex):
+# this board is *true exclusive lock + wait-free + critical write*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — resource path (lock target)
+#   VAL.txt        — last body / lock path
+#   META.txt       — hit/ms/pid bag
+#   CS_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CS_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   lock      — LOCKFILE ACTIVE [ms ARG1 or CUBALC_CS_MS]
+#   unlock    — UNLOCKFILE ACTIVE
+#   held      — EXIST ACTIVE.lock (or ACTIVE if ends .lock)
+#   waitfree  — WAITGONE lock-path [ms]
+#   critical  — lock; WRITEATOMIC ACTIVE body(ARG1); unlock
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cs_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/plate.txt ...
+#   CUBALC_ARG0=lock CUBALC_ARG1=500 ...
+#   CUBALC_ARG0=critical CUBALC_ARG1='status=live' ...
+#   CUBALC_ARG0=waitfree CUBALC_ARG1=200 ...
+#
+# Env: CUBALC_CS_PATH=… CUBALC_CS_MS=500 CUBALC_CS_REQUIRE=1
+#
+# Edges:
+#   second lock timeout; unlock soft free N=0; path.lock naming
+#   WAITGONE already missing hit; held probe; empty path
+#   critical unlock after write fail; REQUIRE lock miss; WRITE NL; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "critical_section_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CS_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT LOCK_MS = 500
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CS_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_CS_MS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LOCK_MS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET lock_hit = 0
+LET lock_ms = 0
+LET lock_pid = 0
+LET held_n = 0
+LET wa_n = 0
+LET lock_path = ""
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "critical"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "critical needs body"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "csect" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# resolve lock path helper vars after pick known
+SYS BLANK active
+IF LAST_N == 0 THEN
+  SYS ENDS active ".lock"
+  IF LAST_N == 1 THEN
+    LET lock_path = active
+  ELSE
+    SYS JOIN active ".lock"
+    # JOIN may treat as path join active/.lock — need string concat
+    # Use REPLACE or push: active + ".lock" via SUBSTENV
+    LET lock_path = active
+    SYS COALESCE "${lock_path}.lock"
+    SYS SUBSTENV
+    LET lock_path = LAST
+  END
+END
+
+# --- lock ---
+SYS EQS ACTION "lock"
+IF LAST_N == 1 THEN
+  NOTE "action lock"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "lock no active"
+    FAIL "lock no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lock no active"
+    END
+  ELSE
+    LET lock_ms = LOCK_MS
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET lock_ms = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS LOCKFILE active (lock_ms)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lock_hit = LOCKFILE_HIT
+      LET lock_ms = LOCKFILE_MS
+      LET lock_pid = LOCKFILE_PID
+      LET val = ""
+      LET val_ch = 1
+      LET meta = "hit"
+      SYS STR lock_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR lock_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "lock timeout"
+      FAIL "lock timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "lock timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET lock_hit = LOCKFILE_HIT
+      LET lock_ms = LOCKFILE_MS
+      LET lock_pid = LOCKFILE_PID
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hit"
+      SYS STR lock_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR lock_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "pid"
+      LET meta = LAST
+      SYS STR lock_pid
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "path"
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "lock ok"
+    END
+    PRINT_JSON lock_hit lock_ms lock_pid
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- unlock ---
+SYS EQS ACTION "unlock"
+IF LAST_N == 1 THEN
+  NOTE "action unlock"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "unlock no active"
+    FAIL "unlock no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "unlock no active"
+    END
+  ELSE
+    SYS UNLOCKFILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "unlock fail"
+      FAIL "unlock fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "unlock fail"
+      END
+    ELSE
+      LET lock_hit = UNLOCKFILE_N
+      LET hit = lock_hit
+      LET val = active
+      LET val_ch = 1
+      LET meta = "n"
+      SYS STR lock_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF lock_hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "unlock free"
+        FAIL "unlock free"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "unlock free"
+        END
+      ELSE
+        LET note_msg = "unlock ok"
+      END
+    END
+    PRINT_JSON lock_hit
+    CLEAR_ERR
+  END
+END
+
+# --- held EXIST lock path ---
+SYS EQS ACTION "held"
+IF LAST_N == 1 THEN
+  NOTE "action held"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "held no active"
+    FAIL "held no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "held no active"
+    END
+  ELSE
+    SYS ENDS active ".lock"
+    IF LAST_N == 1 THEN
+      LET lock_path = active
+    ELSE
+      SYS SUBSTENV "${active}.lock"
+      LET lock_path = LAST
+    END
+    SYS EXIST lock_path
+    LET held_n = LAST_N
+    LET hit = held_n
+    LET val = lock_path
+    LET val_ch = 1
+    LET meta = "held"
+    SYS STR held_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "path"
+    LET meta = LAST
+    SYS PUSH meta lock_path
+    LET meta = LAST
+    LET meta_ch = 1
+    IF held_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "held free"
+      FAIL "held free"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "held free"
+      END
+    ELSE
+      LET note_msg = "held yes"
+    END
+    PRINT_JSON held_n
+    PRINT_JSON lock_path
+    CLEAR_ERR
+  END
+END
+
+# --- waitfree WAITGONE ---
+SYS EQS ACTION "waitfree"
+IF LAST_N == 1 THEN
+  NOTE "action waitfree"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "waitfree no active"
+    FAIL "waitfree no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "waitfree no active"
+    END
+  ELSE
+    LET lock_ms = LOCK_MS
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET lock_ms = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS ENDS active ".lock"
+    IF LAST_N == 1 THEN
+      LET lock_path = active
+    ELSE
+      SYS SUBSTENV "${active}.lock"
+      LET lock_path = LAST
+    END
+    SYS WAITGONE lock_path (lock_ms)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lock_hit = WAITGONE_HIT
+      LET lock_ms = WAITGONE_MS
+      LET val = lock_path
+      LET val_ch = 1
+      LET meta = "hit"
+      SYS STR lock_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR lock_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "waitfree timeout"
+      FAIL "waitfree timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "waitfree timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET lock_hit = WAITGONE_HIT
+      LET lock_ms = WAITGONE_MS
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hit"
+      SYS STR lock_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR lock_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "waitfree ok"
+    END
+    PRINT_JSON lock_hit lock_ms
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- critical: lock + WRITEATOMIC + unlock ---
+SYS EQS ACTION "critical"
+IF LAST_N == 1 THEN
+  NOTE "action critical"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "critical no active"
+    FAIL "critical no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "critical no active"
+    END
+  ELSE
+    SYS LOCKFILE active (LOCK_MS)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lock_hit = LOCKFILE_HIT
+      LET lock_ms = LOCKFILE_MS
+      LET note_msg = "critical lock fail"
+      FAIL "critical lock fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "critical lock fail"
+      END
+    ELSE
+      LET lock_hit = 1
+      LET lock_pid = LOCKFILE_PID
+      SYS WRITEATOMIC active NAME
+      IF OK == 0 THEN
+        SYS UNLOCKFILE active
+        CLEAR_ERR
+        LET miss = 1
+        LET note_msg = "critical write fail"
+        FAIL "critical write fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "critical write fail"
+        END
+      ELSE
+        LET wa_n = WRITEATOMIC_N
+        LET val = NAME
+        LET val_ch = 1
+        SYS UNLOCKFILE active
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "critical unlock fail"
+          FAIL "critical unlock fail"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "critical unlock fail"
+          END
+        ELSE
+          LET hit = 1
+          LET meta = "bytes"
+          SYS STR wa_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "pid"
+          LET meta = LAST
+          SYS STR lock_pid
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+          LET note_msg = "critical ok"
+        END
+      END
+    END
+    PRINT_JSON wa_n lock_pid
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "lock"
+LET k = k + LAST_N
+SYS EQS ACTION "unlock"
+LET k = k + LAST_N
+SYS EQS ACTION "held"
+LET k = k + LAST_N
+SYS EQS ACTION "waitfree"
+LET k = k + LAST_N
+SYS EQS ACTION "critical"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.critical_section_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lock_hit"
+LET report = LAST
+SYS STR lock_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "held_n"
+LET report = LAST
+SYS STR held_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lock_pid"
+LET report = LAST
+SYS STR lock_pid
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "critical_section_board" ACTION hit miss lock_hit held_n lock_pid note_msg elapsed
