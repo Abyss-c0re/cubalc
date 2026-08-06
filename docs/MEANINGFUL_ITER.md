@@ -222,6 +222,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 192. ~~**`SYS NEWEST` / `OLDEST` / `LARGEST` / `SMALLEST`**~~ **done** (pick path by mtime/size · no ARGMAX+NTH glue).
 193. ~~**`SYS SORTMTIME` / `SORTSIZE`**~~ **done** (order path bags by mtime/size · ASC|DESC · no shell ls -t).
 194. ~~**`SYS FRESH` / `KEEPSTALE`**~~ **done** (filter path bags by age threshold · cache/lease without EACH+AGE).
+195. ~~**`SYS KEEPNEWER` / `KEEPOLDER`**~~ **done** (filter path bags vs ref mtime · make rebuild without EACH+MTIME).
 
 ## Tick protocol
 

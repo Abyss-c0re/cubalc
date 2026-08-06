@@ -1,0 +1,100 @@
+# SYS KEEPNEWER / KEEPOLDER — filter path bags vs reference mtime
+# Usability: make-style rebuild gates without EACH + MTIME CMP glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "keepnewer_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "old.src"
+LET fold = LAST
+SYS WRITE fold "old"
+
+# ensure old.src is older than ref
+SYS SLEEP 2100
+
+SYS JOIN fix "build.out"
+LET fref = LAST
+SYS WRITE fref "artifact"
+SYS TOUCH fref
+
+SYS SLEEP 1100
+
+SYS JOIN fix "new.src"
+LET fnew = LAST
+SYS WRITE fnew "new"
+SYS TOUCH fnew
+
+SYS JOIN fix "ghost.src"
+LET ghost = LAST
+
+SYS PUSH "" fold
+SYS PUSH LAST fnew
+SYS PUSH LAST ghost
+LET bag = LAST
+
+# KEEPNEWER vs build.out: only new.src (mtime > ref); old dropped; ghost dropped
+SYS KEEPNEWER bag fref
+ASSERT OK == 1
+ASSERT KEEPNEWER_N == 1
+ASSERT KEEPNEWER_DROP == 2
+ASSERT KEEPNEWER_REF_OK == 1
+SYS EQS LAST fnew
+ASSERT LAST_N == 1
+SYS EQS KEEPNEWER_REF fref
+ASSERT LAST_N == 1
+
+# NEWERTHAN alias
+SYS NEWERTHAN bag fref
+ASSERT NEWERTHAN_N == 1
+SYS HASLINE LAST fnew
+ASSERT LAST_N == 1
+
+# KEEPOLDER: only old.src (mtime < ref)
+SYS KEEPOLDER bag fref
+ASSERT KEEPOLDER_N == 1
+ASSERT KEEPOLDER_DROP == 2
+SYS EQS LAST fold
+ASSERT LAST_N == 1
+
+# missing ref ⇒ KEEPNEWER keeps all existing (make rebuild)
+SYS JOIN fix "missing.out"
+LET miss = LAST
+SYS KEEPNEWER bag miss
+ASSERT KEEPNEWER_REF_OK == 0
+ASSERT KEEPNEWER_N == 2
+SYS HASLINE LAST fold
+ASSERT LAST_N == 1
+SYS HASLINE LAST fnew
+ASSERT LAST_N == 1
+SYS HASLINE LAST ghost
+ASSERT LAST_N == 0
+
+# missing ref ⇒ KEEPOLDER keeps none
+SYS KEEPOLDER bag miss
+ASSERT KEEPOLDER_N == 0
+ASSERT KEEPOLDER_DROP == 3
+
+# one-arg form uses LAST bag
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS KEEPNEWER fref
+ASSERT KEEPNEWER_N == 1
+SYS HASLINE LAST fnew
+ASSERT LAST_N == 1
+
+# single-path dep: is new.src newer than build.out?
+SYS KEEPNEWER fnew fref
+ASSERT KEEPNEWER_N == 1
+SYS KEEPNEWER fold fref
+ASSERT KEEPNEWER_N == 0
+
+# cleanup
+SYS RM fold
+SYS RM fnew
+SYS RM fref
+
+PRINT "sys_keepnewer ok"

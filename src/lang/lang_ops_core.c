@@ -1883,6 +1883,109 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS KEEPNEWER|NEWERTHAN bag ref
+     * SYS KEEPOLDER|OLDERREF bag ref
+     * — keep bag paths with mtime > ref (KEEPNEWER) or mtime < ref (KEEPOLDER).
+     * Make-style: missing ref ⇒ KEEPNEWER keeps all existing paths (rebuild);
+     * KEEPOLDER keeps none when ref missing. Missing bag paths dropped.
+     * Strict compare (equal mtime not newer/older). One-arg form uses LAST bag.
+     * LAST = kept; LAST_N / KEEPNEWER_N / KEEPOLDER_N; *_DROP; *_REF.
+     * Usability: rebuild gates without EACH+MTIME dual CMP. */
+    if (kw(&L->cur,"KEEPNEWER") || kw(&L->cur,"NEWERTHAN") || kw(&L->cur,"AFTERFILE") ||
+        kw(&L->cur,"NEWERREF") || kw(&L->cur,"MTGT") || kw(&L->cur,"KEEPIFNEWER") ||
+        kw(&L->cur,"NEWERFILES") || kw(&L->cur,"KEEPOLDER") || kw(&L->cur,"OLDERREF") ||
+        kw(&L->cur,"BEFOREFILE") || kw(&L->cur,"MTLT") || kw(&L->cur,"KEEPIFOLDER") ||
+        kw(&L->cur,"OLDERFILES") || kw(&L->cur,"OLDERTHANREF")){
+      int want_older = 0;
+      char bag[CUBALC_HOST_STR_MAX], ref[512], out[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0, drop = 0;
+      long ref_mt = 0;
+      int ref_ok = 0;
+      cubalc_host_result hr;
+      if (kw(&L->cur,"KEEPOLDER") || kw(&L->cur,"OLDERREF") ||
+          kw(&L->cur,"BEFOREFILE") || kw(&L->cur,"MTLT") || kw(&L->cur,"KEEPIFOLDER") ||
+          kw(&L->cur,"OLDERFILES") || kw(&L->cur,"OLDERTHANREF"))
+        want_older = 1;
+      lex_next(L);
+      bag[0] = 0; ref[0] = 0; out[0] = 0; a[0] = 0; b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, want_older ? "SYS KEEPOLDER [bag] ref"
+                            : "SYS KEEPNEWER [bag] ref");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) == 0) {
+        snprintf(bag, sizeof bag, "%s", a);
+        snprintf(ref, sizeof ref, "%s", b);
+      } else {
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+        snprintf(ref, sizeof ref, "%s", a);
+      }
+      if (cubalc_host_mtime(ref, &hr) == 0 && hr.ok) {
+        ref_ok = 1;
+        ref_mt = hr.n;
+      }
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen;
+          int hit = 0;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (cubalc_host_mtime(path, &hr) == 0 && hr.ok) {
+            if (want_older) {
+              /* older than ref: need ref present and path_mt < ref_mt */
+              hit = ref_ok && (hr.n < ref_mt);
+            } else {
+              /* newer than ref: missing ref ⇒ rebuild (keep); else path_mt > ref_mt */
+              hit = (!ref_ok) || (hr.n > ref_mt);
+            }
+          }
+          if (hit) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, path, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+          } else {
+            drop++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, want_older ? "KEEPOLDER_REF" : "KEEPNEWER_REF", ref);
+      var_set_num(vm, want_older ? "KEEPOLDER_REF_OK" : "KEEPNEWER_REF_OK", ref_ok ? 1 : 0);
+      if (ref_ok)
+        var_set_num(vm, want_older ? "KEEPOLDER_REF_MT" : "KEEPNEWER_REF_MT", ref_mt);
+      if (want_older) {
+        var_set_str(vm, "KEEPOLDER", out);
+        var_set_str(vm, "OLDERREF", out);
+        var_set_num(vm, "KEEPOLDER_N", kept);
+        var_set_num(vm, "KEEPOLDER_DROP", drop);
+        var_set_num(vm, "OLDERREF_N", kept);
+      } else {
+        var_set_str(vm, "KEEPNEWER", out);
+        var_set_str(vm, "NEWERTHAN", out);
+        var_set_num(vm, "KEEPNEWER_N", kept);
+        var_set_num(vm, "KEEPNEWER_DROP", drop);
+        var_set_num(vm, "NEWERTHAN_N", kept);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -11524,7 +11627,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11760,6 +11863,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SORTSIZE", "SYS SORTSIZE|SIZESORT [bag] [ASC|DESC] — order paths by size (default largest first)"},
       {"SYS FRESH", "SYS FRESH|KEEPFRESH bag max_age_sec — keep paths with age <= max · cache gate"},
       {"SYS KEEPSTALE", "SYS KEEPSTALE|AGED bag min_age_sec — keep paths with age >= min · lease expire"},
+      {"SYS KEEPNEWER", "SYS KEEPNEWER|NEWERTHAN [bag] ref — keep paths mtime > ref · make rebuild"},
+      {"SYS NEWERTHAN", "SYS NEWERTHAN alias of SYS KEEPNEWER (ref path, not age)"},
+      {"SYS KEEPOLDER", "SYS KEEPOLDER|OLDERREF [bag] ref — keep paths mtime < ref · before artifact"},
+      {"SYS OLDERREF", "SYS OLDERREF alias of SYS KEEPOLDER"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
