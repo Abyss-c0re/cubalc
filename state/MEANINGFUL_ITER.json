@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 171,
-  "version": "1.15.196-usability",
-  "item": "SYS LOGALL / APPENDFILES append line to path bag",
-  "item_id": 204,
-  "title": "SYS LOGALL|APPENDFILES|BULKAPPEND [bag] data — multi-log without EACH+APPEND",
-  "commit": "a94581a28c828756a62a68568890c32f8e971573",
-  "summary": "Bulk append line to path bags. selftest 171.",
+  "iter": 172,
+  "version": "1.15.197-usability",
+  "item": "SYS GREPFILES / SEARCHFILES filter path bag by file content",
+  "item_id": 205,
+  "title": "SYS GREPFILES|SEARCHFILES|FILESGREP [bag] needle — content path filter without EACH+READ+HAS",
+  "commit": "4e350aa13182da65771d51a76321967209d03bde",
+  "summary": "Filter PATHGLOB/WALK bags by file content; GREPFILESI/GREPVFILES. selftest 172.",
   "proofs": [
-    "744_sys_logall",
-    "selftest n_pass=171"
+    "745_sys_grepfiles",
+    "selftest n_pass=172"
   ],
-  "when": "2026-08-06T06:24:05Z",
+  "when": "2026-08-06T06:35:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a94581a28c828756a62a68568890c32f8e971573"
+  "sha": "4e350aa13182da65771d51a76321967209d03bde"
 }
