@@ -1,0 +1,619 @@
+# plate_kv_board.cubalc — durable key=val plate file via LOOKUPFILE + KVFILESET
+#
+# Real use: ops agent treats a plate file (feature flags, peer roster, canary
+# status) as key=val lines without READ+LOOKUP+WRITE glue:
+#   LOOKUPFILE / KVFILEGET  — peel value
+#   KVFILESET / FILEKVSET   — set/update (append if new; create file if missing)
+# Distinct from in-memory KVSET/LOOKUP bags and section_match_board (line
+# match rewrite): this board is *named key* get/set on a durable plate path.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target plate path
+#   VAL.txt        — last got/set value or line
+#   META.txt       — last hit/new/index summary
+#   PLATEKV_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PK_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   get       — LOOKUPFILE ACTIVE key(ARG1) [sep ARG2 default =]
+#   geti      — LOOKUPFILEI
+#   getor     — LOOKUPFILE key OR default(ARG2)
+#   set       — KVFILESET ACTIVE key(ARG1) val(ARG2) [sep ENV SEP]
+#   setsep    — KVFILESET with sep ARG via ENV or third: ARG1 key ARG2 val, sep from ENV
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pk_$$
+#   printf 'host=peer1\nport=7700\nSTATUS=live\n' > $CUBALC_STATE/flags.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/flags.txt \
+#     ./out/cubalc run -q -s programs/realworld/plate_kv_board.cubalc
+#   CUBALC_ARG0=get CUBALC_ARG1=port ...
+#   CUBALC_ARG0=set CUBALC_ARG1=port CUBALC_ARG2=8800 ...
+#   CUBALC_ARG0=getor CUBALC_ARG1=missing CUBALC_ARG2=default ...
+#
+# Env: CUBALC_PK_PATH=… CUBALC_PK_REQUIRE=1 CUBALC_PK_SEP==
+#
+# Edges:
+#   key miss OK=0 vs OR OK=1 LOOKUPFILE_OR; path miss ± OR
+#   KVFILESET HIT=1 replace / HIT=0 NEW=1 append; creates missing file
+#   LOOKUP vs LOOKUPFILE; KVSET bag vs KVFILESET disk
+#   first key= only; case I; custom sep :; empty key; substring keys
+#   PRINT_JSON; WRITE NL; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_kv_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "PLATEKV_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT SEP = "="
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PK_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PK_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PK_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PK_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PK_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_PK_SEP" OR ""
+IF LAST_N > 0 THEN
+  LET SEP = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET look_n = 0
+LET look_i = -1
+LET look_or = 0
+LET set_hit = 0
+LET set_new = 0
+LET set_i = -1
+LET set_total = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs key"
+  END
+END
+SYS EQS ACTION "geti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "geti needs key"
+  END
+END
+SYS EQS ACTION "getor"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getor needs key default"
+  END
+END
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs key val"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "platekv" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- get LOOKUPFILE ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "get no active"
+    FAIL "get no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get no active"
+    END
+  ELSE
+    # sep: bare str var fails (only literal or default works) — support = and :
+    SYS EQS A2 ":"
+    IF LAST_N == 1 THEN
+      SYS LOOKUPFILE active NAME ":"
+    ELSE
+      SYS LOOKUPFILE active NAME
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET look_n = LOOKUPFILE_N
+      LET look_i = LOOKUPFILE_I
+      LET val_ch = 1
+      LET note_msg = "get miss"
+      FAIL "get miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "get miss"
+      END
+    ELSE
+      LET val = LAST
+      LET look_n = LOOKUPFILE_N
+      LET look_i = LOOKUPFILE_I
+      LET val_ch = 1
+      LET hit = look_n
+      IF look_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "get none"
+        FAIL "get none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "get none"
+        END
+      ELSE
+        LET note_msg = "get ok"
+      END
+    END
+    LET meta = "key"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "n"
+    LET meta = LAST
+    SYS STR look_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "i"
+    LET meta = LAST
+    SYS STR look_i
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    PRINT_JSON NAME look_n look_i
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- geti ---
+SYS EQS ACTION "geti"
+IF LAST_N == 1 THEN
+  NOTE "action geti"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "geti no active"
+    FAIL "geti no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "geti no active"
+    END
+  ELSE
+    SYS LOOKUPFILEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET look_n = LOOKUPFILE_N
+      LET look_i = LOOKUPFILE_I
+      LET val_ch = 1
+      LET note_msg = "geti miss"
+      FAIL "geti miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "geti miss"
+      END
+    ELSE
+      LET val = LAST
+      LET look_n = LOOKUPFILE_N
+      LET look_i = LOOKUPFILE_I
+      LET val_ch = 1
+      LET hit = look_n
+      IF look_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "geti none"
+        FAIL "geti none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "geti none"
+        END
+      ELSE
+        LET note_msg = "geti ok"
+      END
+    END
+    PRINT_JSON NAME look_n look_i
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- getor ---
+SYS EQS ACTION "getor"
+IF LAST_N == 1 THEN
+  NOTE "action getor"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "getor no active"
+    FAIL "getor no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "getor no active"
+    END
+  ELSE
+    SYS LOOKUPFILE active NAME OR A2
+    LET val = LAST
+    LET look_n = LOOKUPFILE_N
+    LET look_i = LOOKUPFILE_I
+    LET look_or = LOOKUPFILE_OR
+    LET val_ch = 1
+    LET hit = 1
+    IF look_or > 0 THEN
+      LET miss = 1
+      LET note_msg = "getor fallback"
+      FAIL "getor fallback"
+      CLEAR_ERR
+      # do not REQUIRE exit on intentional fallback unless REQUIRE and look_n==0 path
+      IF REQUIRE_HIT > 0 THEN
+        IF look_n == 0 THEN
+          # fallback used — soft for getor design; only hard if OK==0 without OR would
+          # keep soft: intentional
+        END
+      END
+    ELSE
+      LET note_msg = "getor hit"
+    END
+    LET meta = "key"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "or"
+    LET meta = LAST
+    SYS STR look_or
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "n"
+    LET meta = LAST
+    SYS STR look_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    PRINT_JSON NAME look_n look_or
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- set KVFILESET ---
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "set no active"
+    FAIL "set no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "set no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "set needs key val"
+    END
+    # sep must be string literal or str-arg — bare SEP form fails parse
+    # (same trap as HEADFILE bare n). Support default "=" and ":" via EQS.
+    SYS EQS SEP ":"
+    IF LAST_N == 1 THEN
+      SYS KVFILESET active NAME A2 ":"
+    ELSE
+      SYS KVFILESET active NAME A2
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "set fail"
+      FAIL "set fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "set fail"
+      END
+    ELSE
+      LET val = LAST
+      LET set_hit = KVFILESET_HIT
+      LET set_new = KVFILESET_NEW
+      LET set_i = KVFILESET_I
+      LET set_total = KVFILESET_TOTAL
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "key"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR set_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "new"
+      LET meta = LAST
+      SYS STR set_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR set_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR set_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF set_new > 0 THEN
+        LET note_msg = "set append"
+      ELSE
+        LET note_msg = "set replace"
+      END
+    END
+    PRINT_JSON NAME A2 set_hit set_new set_i set_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "geti"
+LET k = k + LAST_N
+SYS EQS ACTION "getor"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.plate_kv_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "a2"
+LET report = LAST
+SYS PUSH report A2
+LET report = LAST
+SYS PUSH report "look_n"
+LET report = LAST
+SYS STR look_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "look_i"
+LET report = LAST
+SYS STR look_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "look_or"
+LET report = LAST
+SYS STR look_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "set_hit"
+LET report = LAST
+SYS STR set_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "set_new"
+LET report = LAST
+SYS STR set_new
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "set_total"
+LET report = LAST
+SYS STR set_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "plate_kv_board" ACTION hit miss look_n set_hit set_new note_msg elapsed

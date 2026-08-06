@@ -1,165 +1,166 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 73,
-  "program": "programs/realworld/section_match_board.cubalc",
-  "theme": "ini section annotate SETALLMATCH INSERTMATCH BEFOREMATCH",
-  "version": "1.15.220-usability",
+  "iter": 74,
+  "program": "programs/realworld/plate_kv_board.cubalc",
+  "theme": "durable plate key=val LOOKUPFILE KVFILESET get set getor",
+  "version": "1.15.222-usability",
   "pass": true,
   "tests": [
     {
-      "name": "before_section",
-      "cmd": "BEFOREMATCHFILE [section] \u2192 preamble before header",
+      "name": "get_port",
+      "cmd": "LOOKUPFILE port → 7700",
       "ok": true,
-      "note": "insert before"
+      "note": "default ="
     },
     {
-      "name": "after_section",
-      "cmd": "INSERTMATCHFILE [section] \u2192 key=val under section",
+      "name": "geti_status",
+      "cmd": "LOOKUPFILEI status → live from STATUS",
       "ok": true,
-      "note": "insert after"
+      "note": "icase"
     },
     {
-      "name": "setall_status",
-      "cmd": "SETALLMATCHFILE status= \u2192 both rows status=new; STATUS=keep",
+      "name": "set_replace_append",
+      "cmd": "KVFILESET port 8800 HIT=1; ttl 30 NEW=1",
       "ok": true,
-      "note": "bulk cs"
+      "note": "update+append"
     },
     {
-      "name": "setalli",
-      "cmd": "SETALLMATCHFILEI status= rewrites STATUS too",
+      "name": "getor_fallback",
+      "cmd": "LOOKUPFILE missing OR default → default OR=1",
       "ok": true,
-      "note": "icase bulk"
+      "note": "soft fallback"
     },
     {
-      "name": "afteri_double",
-      "cmd": "afteri + second after stacks under section (newest first)",
+      "name": "get_miss_require",
+      "cmd": "get nope soft; REQUIRE exit 2",
       "ok": true,
-      "note": "grow"
+      "note": "key miss"
     },
     {
-      "name": "substring_sec",
-      "cmd": "after [sec injects under [section] not [sections]",
+      "name": "custom_sep",
+      "cmd": "get/set with : sep on hist plate",
       "ok": true,
-      "note": "first substring"
+      "note": "literal sep only"
     },
     {
-      "name": "setmatch_vs_setall",
-      "cmd": "SETMATCH first only; SETALL both rows",
+      "name": "create_plate",
+      "cmd": "KVFILESET missing path creates status=boot",
       "ok": true,
-      "note": "family"
+      "note": "create"
     },
     {
-      "name": "none_require",
-      "cmd": "soft none; REQUIRE exit 2",
+      "name": "ghost_getor",
+      "cmd": "ghost get miss; getor → fb OK=1",
       "ok": true,
-      "note": "N=0 I=-1"
+      "note": "path OR"
     },
     {
-      "name": "ghost",
-      "cmd": "path miss OK=0 REQUIRE exit 2",
+      "name": "first_key_only",
+      "cmd": "duplicate port= keys: get first; set rewrites first only",
       "ok": true,
-      "note": "soft path"
+      "note": "port=9 leaves port=2"
     },
     {
-      "name": "empty_needle",
-      "cmd": "SETALL/INSERT/BEFORE empty \u2192 N=0 no-op",
+      "name": "empty_key",
+      "cmd": "LOOKUP \"\" miss; KVFILESET \"\" x appends =x",
       "ok": true,
-      "note": "safe empty"
+      "note": "empty key footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "195/195 pass"
+      "note": "197/197 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|naming",
-      "title": "MATCHFILE family explosion: SET/SETALL/DROP/DROPALL/INSERT/BEFORE + I variants",
-      "detail": "Agents must pick first vs all, set vs drop vs insert-before vs insert-after. Wrong op partially mutates config silently in soft mode.",
-      "repro": "SETMATCHFILE vs SETALLMATCHFILE on two status rows"
+      "area": "host|parse",
+      "title": "LOOKUPFILE/KVFILESET sep must be string literal — bare str var fails",
+      "detail": "LET s=\":\"; LOOKUPFILE p key s → miss; same for KVFILESET third arg bare SEP. Agents cannot pass env sep without EQS branch to literals. Same class as HEADFILE bare n.",
+      "repro": "SYS LOOKUPFILE p \"warn\" s with s=\":\" → N=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|match",
-      "title": "INSERTMATCH after first match only \u2014 multi-section files only patch first",
-      "detail": "No AFTERALLMATCH. Repeated after stacks under same first [section] (newest nearest). Second [sections] never auto-annotated.",
-      "repro": "double after \u2192 x=2 then x=1 under one section"
+      "area": "host|naming",
+      "title": "LOOKUP/KVSET are bag; LOOKUPFILE/KVFILESET are disk plates",
+      "detail": "LOOKUP on multi-line string may not peel file path. Classic dual-family trap.",
+      "repro": "LOOKUP bag vs LOOKUPFILE path"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|match",
-      "title": "Substring [sec matches [section] before [sections]",
-      "detail": "Partial section needles inject under wrong header. No whole-token / line-start anchors.",
-      "repro": "after [sec on [section]+[sections] file"
+      "area": "host|kv",
+      "title": "First key= only — duplicate keys leave orphans",
+      "detail": "get returns first port=; set rewrites first only, second port=2 remains. No unique-key enforce or multi-get.",
+      "repro": "port=1\\nport=2 → set port 9 → port=9\\nport=2"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fs",
-      "title": "SETALLMATCHFILE LAST is single replacement text, not bag of touched lines",
-      "detail": "N counts rewrites; LAST is just the new line string once. Agents cannot audit old values from LAST.",
-      "repro": "setall N=2 LAST=status=new only"
+      "area": "host|kv",
+      "title": "Empty key KVFILESET appends \"=value\" line",
+      "detail": "LOOKUP empty misses; SET empty creates garbage plate row. Asymmetric empty-key policy.",
+      "repro": "KVFILESET p \"\" \"x\" → =x"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|fs",
-      "title": "SETALLMATCHFILE_I is first index only",
-      "detail": "Same class as DROPALLMATCHFILE_I. No index bag of all rewritten rows.",
-      "repro": "setall I=first only"
+      "title": "KVFILESET creates missing files with no confirm/mode flag",
+      "detail": "Typo path silently creates new plate. Useful but easy to scatter plates.",
+      "repro": "set on new_plate.txt creates file"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE trailing NL omit on LASTOP and last file line",
-      "detail": "footer often no final $ after mutations.",
-      "repro": "cat -A app.ini after setall"
+      "title": "WRITE trailing NL omit on VAL and last plate line",
+      "detail": "cat -A VAL often no final $; mode=soft glued to meta after write.",
+      "repro": "cat -A flags after set"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|naming",
-      "title": "SYS BEFORE vs BEFOREMATCHFILE \u2014 string vs file op",
-      "detail": "BEFORE is substring peel of a string; BEFOREMATCHFILE inserts on disk. Classic dual trap.",
-      "repro": "BEFORE string vs BEFOREMATCHFILE path"
+      "area": "host|kv",
+      "title": "No KVFILEDEL / multi-sep freeform beyond literal branches",
+      "detail": "Delete key requires DROPALLMATCHFILE key= glue. Arbitrary seps need language literal support.",
+      "repro": "no FILEKVDEL"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens misses",
-      "detail": "REQUIRE=abc leaves hard gates off.",
-      "repro": "CUBALC_SM_REQUIRE=abc setall missing"
+      "title": "Non-numeric REQUIRE env silently softens get miss",
+      "detail": "REQUIRE=abc → exit 0 on miss.",
+      "repro": "CUBALC_PK_REQUIRE=abc get nope"
     }
   ],
   "workarounds": [
-    "Use SETALLMATCHFILE for bulk status; SETMATCHFILE for single flip",
-    "Use full markers [section] not [sec",
-    "Count after setall to verify N vs expectation",
-    "Idempotent after: FINDFILELINE for insert line first or HASLINE check",
-    "Validate REQUIRE env digits after NUM"
+    "Branch EQS SEP \":\" to literal \":\" for LOOKUPFILE/KVFILESET",
+    "Use LOOKUPFILE not LOOKUP for disk plates",
+    "Uniq keys before set; purge duplicates with DROPALLMATCHFILE",
+    "Reject empty key at agent layer",
+    "Pick canonical plate path carefully — set creates missing"
   ],
   "language_gaps": [
-    "AFTERALLMATCH / BEFOREALLMATCH multi-section insert",
-    "SETALLMATCH return old-line bag or index bag",
-    "Whole-line / whole-token match mode",
-    "Help matrix for *MATCHFILE family",
-    "WRITE trailing NL; PRINT_JSON bag-as-array",
-    "Dry-run for bulk rewrites"
+    "Bare string var as LOOKUPFILE/KVFILESET sep",
+    "KVFILEDEL and unique-key / replace-all-keys modes",
+    "Reject empty key on KVFILESET",
+    "Optional create-only / existing-only for KVFILESET",
+    "WRITE trailing NL; help dual LOOKUP vs LOOKUPFILE",
+    "Arbitrary sep without literal branch explosion"
   ],
   "issues_faced": [
-    "before/after/setall positive path clean",
-    "Double after reverse-stacks under first section",
-    "SETALL LAST single-string not multi-audit",
+    "Bare SEP var parse fail blocked custom set — fixed with : literal branch",
+    "Bare A2 sep on get also failed — same fix",
+    "Empty key SET append =x is live footgun",
+    "Positive get/set/getor/create path clean",
     "No language fix this iter"
   ],
-  "commit": "d49ad71221fba54e8eea3c050c19ef45fc3ef115",
-  "ts": "2026-08-06T10:28:27Z"
+  "commit": "",
+  "ts": "2026-08-06T10:54:03Z"
 }
