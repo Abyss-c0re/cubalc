@@ -1,0 +1,93 @@
+# SYS TRUNCATE / FTRUNCATE / FILETRUNC — resize plate file (default empty)
+# Usability: clear/resize multi-agent plates without RM+TOUCH losing inode/mode
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "truncate_mi_plate.txt"
+LET p = LAST
+
+SYS WRITE p "hello-truncate-payload-0123456789"
+ASSERT OK == 1
+SYS SIZE p
+ASSERT LAST_N > 10
+LET sz0 = LAST_N
+
+# truncate to exact smaller size
+SYS TRUNCATE p 5
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT TRUNCATE_N == 5
+SYS EQS LAST p
+ASSERT LAST_N == 1
+SYS SIZE p
+ASSERT LAST_N == 5
+SYS READ p
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# grow with truncate (posix zero-extends)
+SYS TRUNCATE p 10
+ASSERT OK == 1
+ASSERT TRUNCATE_N == 10
+SYS SIZE p
+ASSERT LAST_N == 10
+
+# clear to empty (default nbytes=0)
+SYS WRITE p "more-data-again"
+ASSERT OK == 1
+SYS TRUNCATE p
+ASSERT OK == 1
+ASSERT TRUNCATE_N == 0
+ASSERT LAST_N == 0
+SYS SIZE p
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+# after SIZE LAST is empty string for size? SIZE sets LAST_N only typically
+SYS READ p
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# aliases
+SYS WRITE p "abc"
+SYS FTRUNCATE p 2
+ASSERT OK == 1
+ASSERT FTRUNCATE_N == 2
+SYS READ p
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+
+SYS WRITE p "xyz"
+SYS FILETRUNC p 1
+ASSERT OK == 1
+SYS SIZE p
+ASSERT LAST_N == 1
+
+SYS WRITE p "clear-me"
+SYS EMPTYFILE p
+ASSERT OK == 1
+SYS SIZE p
+ASSERT LAST_N == 0
+
+# size from num var
+SYS WRITE p "0123456789"
+LET n = 4
+SYS TRUNCATE p n
+ASSERT OK == 1
+ASSERT TRUNCATE_N == 4
+SYS SIZE p
+ASSERT LAST_N == 4
+
+# soft miss
+SYS TRUNCATE ""
+ASSERT OK == 0
+SYS TRUNCATE "/no/such/cubalc_trunc_xyz_mi"
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM p
+
+PRINT "sys_truncate ok"
