@@ -1,0 +1,71 @@
+# SYS DIRSYNC / FSYNCDIR / SYNCDIR — fsync directory (or parent of file)
+# Usability: durable WRITEATOMIC renames without shell (file FSYNC + dir fsync)
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "dirsync_mi_plate.txt"
+LET p = LAST
+
+# write + file fsync + parent dirsync (classic durable plate pattern)
+SYS WRITEATOMIC p "durable-dirsync-v1"
+ASSERT OK == 1
+SYS FSYNC p
+ASSERT OK == 1
+SYS DIRSYNC p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT DIRSYNC_N == 1
+SYS EQS DIRSYNC_SRC p
+ASSERT LAST_N == 1
+# parent should be tmp dir (or equal realpath of td)
+SYS DIRNAME p
+LET parent = LAST
+SYS DIRSYNC p
+SYS EQS LAST parent
+ASSERT LAST_N == 1
+
+SYS READ p
+SYS EQS LAST "durable-dirsync-v1"
+ASSERT LAST_N == 1
+
+# dirsync the directory itself
+SYS DIRSYNC td
+ASSERT OK == 1
+ASSERT DIRSYNC_N == 1
+SYS EQS LAST td
+ASSERT LAST_N == 1
+
+# PARENT force on directory still peels parent (optional)
+SYS DIRSYNC PARENT p
+ASSERT OK == 1
+ASSERT DIRSYNC_N == 1
+
+# aliases
+SYS FSYNCDIR p
+ASSERT OK == 1
+ASSERT FSYNCDIR_N == 1
+SYS SYNCDIR p
+ASSERT OK == 1
+SYS DURABLEDIR td
+ASSERT OK == 1
+
+# soft miss empty
+SYS DIRSYNC ""
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# missing path → dirname still syncable if parent exists
+SYS JOIN td "no_such_dirsync_leaf_mi.txt"
+LET miss = LAST
+SYS DIRSYNC miss
+ASSERT OK == 1
+ASSERT DIRSYNC_N == 1
+
+# cleanup
+SYS RM p
+
+PRINT "sys_dirsync ok"

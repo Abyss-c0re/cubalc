@@ -309,6 +309,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 279. ~~**`SYS DUMPENV` / `ENVALL` / `LISTENV`**~~ **done** (process env as KEY=VAL bag · optional prefix · dual of DOTENV).
 280. ~~**`SYS WRITEENV` / `SAVENV` / `DUMPENVFILE`**~~ **done** (persist process env KEY=VAL plate · dual of DOTENV · optional prefix).
 281. ~~**`SYS TRUNCATE` / `FTRUNCATE` / `FILETRUNC`**~~ **done** (resize/clear plate file keep inode · default 0 · not TRUNCALL bag clip).
+282. ~~**`SYS DIRSYNC` / `FSYNCDIR` / `SYNCDIR`**~~ **done** (fsync directory or parent of file · durable WRITEATOMIC renames).
 
 ## Tick protocol
 
