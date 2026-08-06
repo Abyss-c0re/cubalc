@@ -207,6 +207,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 177. ~~**`SYS DROPZERO` / `KEEPNZ`**~~ **done** (drop key:val value==0 · clean DIFFKV zeros keep +/−).
 178. ~~**`SYS ABSKV` / `MAGKV`**~~ **done** (absolute key:val values · rank DIFFKV deltas by magnitude).
 179. ~~**`SYS SIGNKV` / `DIRKV`**~~ **done** (map key:val to −1|0|1 · DIFFKV direction without EACH).
+180. ~~**`SYS DIVKV` / `IDIVKV`**~~ **done** (integer-divide key:val values · mean after N-way MERGEKV).
 
 ## Tick protocol
 

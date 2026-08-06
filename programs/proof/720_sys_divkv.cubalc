@@ -1,0 +1,77 @@
+# SYS DIVKV / IDIVKV — integer-divide every key:val value by divisor
+# Usability: mean of N MERGEKV FREQ sources without EACH+LOOKUPN+DIV+KVSET
+
+HOLD_FLASH 1
+
+LET hist = "error:9\nwarn:4\ninfo:2"
+SYS DIVKV hist 2
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT DIVKV_N == 3
+ASSERT DIVKV_D == 2
+SYS EQS LAST "error:4\nwarn:2\ninfo:1"
+ASSERT LAST_N == 1
+
+# divisor 1 identity
+SYS DIVKV hist 1
+ASSERT DIVKV_D == 1
+SYS EQS LAST "error:9\nwarn:4\ninfo:2"
+ASSERT LAST_N == 1
+
+# divisor 0 → soft zeros
+SYS DIVKV hist 0
+ASSERT DIVKV_D == 0
+SYS EQS LAST "error:0\nwarn:0\ninfo:0"
+ASSERT LAST_N == 1
+
+# empty
+SYS DIVKV "" 3
+ASSERT LAST_N == 0
+ASSERT DIVKV_N == 0
+
+# custom sep
+LET cfg = "retries=10\nport=100"
+SYS DIVKV cfg 5 "="
+ASSERT DIVKV_N == 2
+SYS EQS LAST "retries=2\nport=20"
+ASSERT LAST_N == 1
+
+# aliases
+SYS IDIVKV hist 3
+ASSERT IDIVKV_N == 3
+SYS EQS LAST "error:3\nwarn:1\ninfo:0"
+ASSERT LAST_N == 1
+SYS QUOTKV hist 2
+ASSERT QUOTKV_D == 2
+SYS KVDIV hist 2
+ASSERT DIVKV_N == 3
+
+# default divisor=1 when omitted
+SYS DIVKV hist
+ASSERT DIVKV_D == 1
+SYS EQS LAST "error:9\nwarn:4\ninfo:2"
+ASSERT LAST_N == 1
+
+# agent: merge three FREQ bags then mean
+LET log1 = "ERROR\nERROR\nWARN"
+LET log2 = "ERROR\nINFO\nWARN\nWARN"
+LET log3 = "ERROR\nERROR\nERROR\nINFO"
+SYS FREQ log1
+LET h1 = LAST
+SYS FREQ log2
+LET h2 = LAST
+SYS FREQ log3
+LET h3 = LAST
+SYS MERGEKV h1 h2
+SYS MERGEKV LAST h3
+# ERROR:2+1+3=6 WARN:1+2=3 INFO:1+1=2
+SYS DIVKV LAST 3
+LET mean = LAST
+SYS LOOKUPN mean "ERROR" OR 0
+ASSERT LAST_N == 2
+SYS LOOKUPN mean "WARN" OR 0
+ASSERT LAST_N == 1
+SYS LOOKUPN mean "INFO" OR 0
+ASSERT LAST_N == 0
+
+PRINT "sys_divkv ok"
