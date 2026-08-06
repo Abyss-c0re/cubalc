@@ -38,7 +38,7 @@
     },
     {
       "name": "gate_user_require",
-      "cmd": "gate user REQUIRE → exit 2",
+      "cmd": "gate user REQUIRE \u2192 exit 2",
       "ok": true,
       "note": "deny on root host"
     },
@@ -66,15 +66,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|isroot",
-      "title": "ISROOT is always OK=1 probe bit — no soft-fail semantic",
+      "title": "ISROOT is always OK=1 probe bit \u2014 no soft-fail semantic",
       "detail": "Unlike ATIME miss OK=0, ISROOT never fails; agents must branch LAST_N. Easy to ASSERT OK and think privileged.",
-      "repro": "ISROOT as non-root → OK=1 LAST_N=0"
+      "repro": "ISROOT as non-root \u2192 OK=1 LAST_N=0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|euid",
-      "title": "No SETEUID/SETUID — can probe but not drop privilege in-language",
+      "title": "No SETEUID/SETUID \u2014 can probe but not drop privilege in-language",
       "detail": "Agents that detect root cannot demote before untrusted plate work without SPAWN/external helper.",
       "repro": "ISROOT 1; no drop path"
     },
@@ -82,16 +82,16 @@
       "id": "W3",
       "severity": "med",
       "area": "host|lineage",
-      "title": "PPID/PGID/SID are numbers only — no parent cmdline/comm stamp",
+      "title": "PPID/PGID/SID are numbers only \u2014 no parent cmdline/comm stamp",
       "detail": "Cannot answer who spawned me without /proc read. No PARENT_COMM / EXE form.",
-      "repro": "PPID → 1234 only"
+      "repro": "PPID \u2192 1234 only"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|has",
       "title": "Gate mode parsing via HAS is false-friend prone (noroot contains root)",
-      "detail": "HAS noroot root → 1. Board hand-rolls no-prefix. EQS-only safer but agents invent aliases with HAS.",
+      "detail": "HAS noroot root \u2192 1. Board hand-rolls no-prefix. EQS-only safer but agents invent aliases with HAS.",
       "repro": "HAS noroot root"
     },
     {
@@ -124,7 +124,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_PV_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate user → rc 0"
+      "repro": "REQUIRE=abc gate user \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -146,6 +146,6 @@
     "gate user REQUIRE denies; noroot HAS false friend documented",
     "selftest 265/265; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "0ff2bc697474cf28206c0e80ad4affb9151aceed",
   "ts": "2026-08-06T22:08:40Z"
 }
