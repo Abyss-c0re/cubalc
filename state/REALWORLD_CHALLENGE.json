@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB+KEEPFILES → a.plate b.plate c.log",
+      "cmd": "PATHGLOB+KEEPFILES \u2192 a.plate b.plate c.log",
       "ok": true,
       "note": "drop nested dir"
     },
     {
       "name": "dest_mkdirs",
-      "cmd": "dest+MKDIRALL DEST → stage dir; DEST.txt plate",
+      "cmd": "dest+MKDIRALL DEST \u2192 stage dir; DEST.txt plate",
       "ok": true,
       "note": "durable dest"
     },
     {
       "name": "stage_copyall",
-      "cmd": "COPYALL → 3 files copy_bytes=17 staged dest paths",
+      "cmd": "COPYALL \u2192 3 files copy_bytes=17 staged dest paths",
       "ok": true,
       "note": "basename flatten"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "stage_with_dir",
-      "cmd": "COPYALL with nested dir → copy_fail=1 copy_n=3",
+      "cmd": "COPYALL with nested dir \u2192 copy_fail=1 copy_n=3",
       "ok": true,
       "note": "partial OK class"
     },
@@ -44,13 +44,13 @@
     },
     {
       "name": "mkdir_over_file",
-      "cmd": "MKDIRALL over file → mkdir_fail=1 none",
+      "cmd": "MKDIRALL over file \u2192 mkdir_fail=1 none",
       "ok": true,
       "note": "soft fail"
     },
     {
       "name": "basename_collision",
-      "cmd": "two same.name → one dest file last-wins fromB",
+      "cmd": "two same.name \u2192 one dest file last-wins fromB",
       "ok": true,
       "note": "silent overwrite"
     },
@@ -78,9 +78,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|fs",
-      "title": "COPYALL flattens to basenames — no relative-tree preserve",
+      "title": "COPYALL flattens to basenames \u2014 no relative-tree preserve",
       "detail": "src/a/x and src/b/x both become dest/x. Nested release trees collapse; deep.plate under nested/ not even scanned without recursion. No COPYALL --parents / relpath mode.",
-      "repro": "COPYALL full paths → dest/basename only"
+      "repro": "COPYALL full paths \u2192 dest/basename only"
     },
     {
       "id": "W2",
@@ -88,15 +88,15 @@
       "area": "host|fs",
       "title": "COPYALL silent basename collision last-wins",
       "detail": "Two sources same basename both COPYALL_N success; dest content is last writer. No COLLISION count or fail-on-exists mode.",
-      "repro": "srcA/same.name + srcB/same.name → dest/same.name=fromB copy_n=2"
+      "repro": "srcA/same.name + srcB/same.name \u2192 dest/same.name=fromB copy_n=2"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|fs",
       "title": "COPYALL dirs fail soft; cannot stage directory trees",
-      "detail": "Directory entries → COPYALL_FAIL. Need recursive walk glue or tar. Partial success OK=0 when mixed.",
-      "repro": "COPYALL bag_with_dir → fail>=1 files still copied"
+      "detail": "Directory entries \u2192 COPYALL_FAIL. Need recursive walk glue or tar. Partial success OK=0 when mixed.",
+      "repro": "COPYALL bag_with_dir \u2192 fail>=1 files still copied"
     },
     {
       "id": "W4",
@@ -104,15 +104,15 @@
       "area": "host|fs",
       "title": "MKDIRALL over existing file fails soft (cannot clobber)",
       "detail": "Useful safety but agents must pre-check ISFILE. No force mode.",
-      "repro": "MKDIRALL path_that_is_file → FAIL=1 N=0"
+      "repro": "MKDIRALL path_that_is_file \u2192 FAIL=1 N=0"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|agent",
-      "title": "DEST not language-global — agents need plate/ENV durability",
+      "title": "DEST not language-global \u2014 agents need plate/ENV durability",
       "detail": "Multi-tick dest requires DEST.txt or CUBALC_RS_DEST; pure LET DEST dies each run. No process-persistent agent state beyond plates/env.",
-      "repro": "dest action then new process without plate → default stage"
+      "repro": "dest action then new process without plate \u2192 default stage"
     },
     {
       "id": "W6",
@@ -160,6 +160,6 @@
     "Transient selftest moveall flake mid-land then 168/168 green",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "fea68b570a5bddaaf952d5b435fd9e2ae55b5c4e",
   "ts": "2026-08-06T05:54:00Z"
 }
