@@ -1,0 +1,918 @@
+# release_pointer_board.cubalc — stage releases + SYMLINK current + STAT/HUMANSIZE/BASE64
+#
+# Real use: ops agents stage versioned release manifests, promote a "current"
+# pointer via in-language symlink (no shell ln -s), resolve the live target,
+# probe size/mtime, label bytes for inventory plates, and stamp small notes
+# for transport as base64:
+#   SYMLINK / LN / READLINK / LINKTARGET — plate path aliases
+#   STAT / FSTAT                       — one-shot exist/kind/size/mtime
+#   HUMANSIZE / BYTESFMT               — integer B/K/M/G labels
+#   BASE64 / BASE64D                   — payload transport encode/decode
+# Distinct from release_stage_board (bag stages) and plate_promote (copy):
+# this board is *symlink current pointer + metadata label + b64 stamp*.
+#
+# Plate under STATE:
+#   ROOT.txt       — releases directory
+#   ACTIVE.txt     — staged version path (or last pick)
+#   CURRENT.txt    — path of "current" symlink
+#   VAL.txt        — last resolve/label/b64 body
+#   META.txt       — hit/exist/size/unit bag
+#   POINTER_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RP_ACTION):
+#   list      — plate (default)
+#   root      — ROOT = ARG1 (releases dir)
+#   stage     — JOIN ROOT ARG1; MKDIR; WRITE manifest ARG2; ACTIVE=manifest
+#   pick      — ACTIVE = ARG1
+#   promote   — SYMLINK ACTIVE → ROOT/current (RM old link first)
+#   resolve   — READLINK CURRENT (or ARG1 path)
+#   probe     — STAT ACTIVE
+#   islink    — ISLINK ACTIVE (or ARG1) — dual of STAT (STAT follows)
+#   label     — SIZE ACTIVE + HUMANSIZE → VAL
+#   body      — READ ACTIVE
+#   b64       — BASE64 ARG1 → VAL
+#   b64d      — BASE64D ARG1 → VAL
+#   demote    — RM CURRENT symlink only
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rp_$$
+#   mkdir -p $CUBALC_STATE/releases
+#   CUBALC_ARG0=root CUBALC_ARG1=$CUBALC_STATE/releases ...
+#   CUBALC_ARG0=stage CUBALC_ARG1=v1.2.0 CUBALC_ARG2='build=42' ...
+#   CUBALC_ARG0=promote ...
+#   CUBALC_ARG0=resolve ...
+#   CUBALC_ARG0=label ...
+#
+# Env: CUBALC_RP_REQUIRE=1  CUBALC_RP_ROOT=…
+#
+# Edges:
+#   re-promote needs RM first (no force); READLINK relative targets
+#   STAT follow vs link; HUMANSIZE floor (1536→1K); BASE64 bad pad soft
+#   demote drops link keeps target; empty path; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "release_pointer_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ROOT.txt"
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT CFILE = "CURRENT.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "POINTER_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RP_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RP_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RP_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RP_ROOT" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_ROOT = LAST
+ELSE
+  LET ENV_ROOT = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET root_meta = LAST
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir CFILE
+LET current_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR root_meta OR ""
+LET root = LAST
+CLEAR_ERR
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR current_meta OR ""
+LET current = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_ROOT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "root"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_ROOT
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET root_ch = 0
+LET active_ch = 0
+LET current_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET exist_n = 0
+LET size_n = 0
+LET kind_n = 0
+LET isfile_n = 0
+LET isdir_n = 0
+LET link_n = 0
+LET b64_n = 0
+LET age_n = 0
+
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "root needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "rpointer" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON root
+  PRINT_JSON active
+  PRINT_JSON current
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- root ---
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  NOTE "action root"
+  LET root = NAME
+  SYS MKDIR root
+  CLEAR_ERR
+  LET root_ch = 1
+  LET hit = 1
+  LET note_msg = "root ok"
+  PRINT_JSON root
+END
+
+# --- stage: JOIN ROOT ver; MKDIR; WRITE manifest body ---
+SYS EQS ACTION "stage"
+IF LAST_N == 1 THEN
+  NOTE "action stage"
+  SYS BLANK root
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stage no root"
+    FAIL "stage no root"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stage no root"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "stage needs version"
+    END
+    SYS JOIN root NAME
+    LET ver_dir = LAST
+    SYS MKDIR ver_dir
+    CLEAR_ERR
+    SYS JOIN ver_dir "manifest.txt"
+    LET active = LAST
+    LET active_ch = 1
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET A2 = "staged"
+    END
+    SYS WRITEATOMIC active A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "stage write fail"
+      FAIL "stage write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stage write fail"
+      END
+    ELSE
+      LET val = A2
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "ver"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "path"
+      LET meta = LAST
+      SYS PUSH meta active
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stage ok"
+    END
+    PRINT_JSON active
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- pick ACTIVE ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- promote: SYMLINK ACTIVE → ROOT/current ---
+SYS EQS ACTION "promote"
+IF LAST_N == 1 THEN
+  NOTE "action promote"
+  SYS BLANK root
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "promote no root"
+    FAIL "promote no root"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "promote no root"
+    END
+  ELSE
+    SYS BLANK active
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "promote no active"
+      FAIL "promote no active"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "promote no active"
+      END
+    ELSE
+      SYS JOIN root "current"
+      LET current = LAST
+      LET current_ch = 1
+      # drop prior alias (no force-SYMLINK)
+      SYS RM current
+      CLEAR_ERR
+      SYS SYMLINK active current
+      IF OK == 0 THEN
+        LET miss = 1
+        LET link_n = SYMLINK_N
+        LET note_msg = "promote link fail"
+        FAIL "promote link fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "promote link fail"
+        END
+      ELSE
+        LET link_n = SYMLINK_N
+        LET val = current
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "link"
+        SYS PUSH meta current
+        LET meta = LAST
+        SYS PUSH meta "target"
+        LET meta = LAST
+        SYS PUSH meta active
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "promote ok"
+      END
+      PRINT_JSON link_n
+      PRINT_JSON current
+      PRINT_JSON active
+      CLEAR_ERR
+    END
+  END
+END
+
+# --- resolve READLINK ---
+SYS EQS ACTION "resolve"
+IF LAST_N == 1 THEN
+  NOTE "action resolve"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rpath = NAME
+  ELSE
+    SYS BLANK current
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "resolve no current"
+      FAIL "resolve no current"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "resolve no current"
+      END
+      LET rpath = ""
+    ELSE
+      LET rpath = current
+    END
+  END
+  SYS BLANK rpath
+  IF LAST_N == 0 THEN
+    SYS READLINK rpath
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET link_n = READLINK_N
+      LET note_msg = "resolve miss"
+      FAIL "resolve miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "resolve miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET link_n = READLINK_N
+      LET hit = 1
+      LET meta = "target"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "link"
+      LET meta = LAST
+      SYS PUSH meta rpath
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "resolve ok"
+    END
+    PRINT_JSON link_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- probe STAT ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET ppath = NAME
+  ELSE
+    SYS BLANK active
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "probe no active"
+      FAIL "probe no active"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "probe no active"
+      END
+      LET ppath = ""
+    ELSE
+      LET ppath = active
+    END
+  END
+  SYS BLANK ppath
+  IF LAST_N == 0 THEN
+    SYS STAT ppath
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "probe fail"
+      FAIL "probe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "probe fail"
+      END
+    ELSE
+      LET exist_n = STAT_EXIST
+      LET size_n = STAT_SIZE
+      LET kind_n = STAT_KIND
+      LET isfile_n = STAT_ISFILE
+      LET isdir_n = STAT_ISDIR
+      LET age_n = STAT_AGE
+      IF exist_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "probe missing"
+        FAIL "probe missing"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "probe missing"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "probe ok"
+      END
+      LET val = ppath
+      LET val_ch = 1
+      LET meta = "exist"
+      SYS STR exist_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "size"
+      LET meta = LAST
+      SYS STR size_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "kind"
+      LET meta = LAST
+      SYS STR kind_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "isfile"
+      LET meta = LAST
+      SYS STR isfile_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+    PRINT_JSON exist_n size_n kind_n isfile_n isdir_n age_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- islink ISLINK (does not follow; dual of STAT) ---
+SYS EQS ACTION "islink"
+IF LAST_N == 1 THEN
+  NOTE "action islink"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET ipath = NAME
+  ELSE
+    SYS BLANK current
+    IF LAST_N == 0 THEN
+      LET ipath = current
+    ELSE
+      SYS BLANK active
+      IF LAST_N == 1 THEN
+        LET miss = 1
+        LET note_msg = "islink no path"
+        FAIL "islink no path"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "islink no path"
+        END
+        LET ipath = ""
+      ELSE
+        LET ipath = active
+      END
+    END
+  END
+  SYS BLANK ipath
+  IF LAST_N == 0 THEN
+    SYS ISLINK ipath
+    LET link_n = LAST_N
+    LET exist_n = ISLINK
+    LET val = ipath
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "islink"
+    SYS STR link_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "path"
+    LET meta = LAST
+    SYS PUSH meta ipath
+    LET meta = LAST
+    LET meta_ch = 1
+    IF link_n == 0 THEN
+      LET note_msg = "islink no"
+    ELSE
+      LET note_msg = "islink yes"
+    END
+    PRINT_JSON link_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- label SIZE + HUMANSIZE ---
+SYS EQS ACTION "label"
+IF LAST_N == 1 THEN
+  NOTE "action label"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET lpath = NAME
+  ELSE
+    SYS BLANK active
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "label no active"
+      FAIL "label no active"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "label no active"
+      END
+      LET lpath = ""
+    ELSE
+      LET lpath = active
+    END
+  END
+  SYS BLANK lpath
+  IF LAST_N == 0 THEN
+    SYS SIZE lpath
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "label size miss"
+      FAIL "label size miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "label size miss"
+      END
+    ELSE
+      LET size_n = LAST_N
+      SYS HUMANSIZE size_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "label hsize fail"
+        FAIL "label hsize fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "label hsize fail"
+        END
+      ELSE
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "bytes"
+        SYS STR size_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "label"
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        SYS PUSH meta "unit"
+        LET meta = LAST
+        SYS PUSH meta HUMANSIZE_UNIT
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "label ok"
+      END
+    END
+    PRINT_JSON size_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- body READ ---
+SYS EQS ACTION "body"
+IF LAST_N == 1 THEN
+  NOTE "action body"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "body no active"
+    FAIL "body no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "body no active"
+    END
+  ELSE
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "body miss"
+      FAIL "body miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "body miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "body ok"
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- b64 BASE64 ---
+SYS EQS ACTION "b64"
+IF LAST_N == 1 THEN
+  NOTE "action b64"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "b64 needs text"
+  END
+  SYS BASE64 NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "b64 fail"
+    FAIL "b64 fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "b64 fail"
+    END
+  ELSE
+    LET val = LAST
+    LET b64_n = BASE64_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR b64_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "b64 ok"
+  END
+  PRINT_JSON b64_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- b64d BASE64D ---
+SYS EQS ACTION "b64d"
+IF LAST_N == 1 THEN
+  NOTE "action b64d"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "b64d needs text"
+  END
+  SYS BASE64D NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET b64_n = BASE64_N
+    LET note_msg = "b64d fail"
+    FAIL "b64d fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "b64d fail"
+    END
+  ELSE
+    LET val = LAST
+    LET b64_n = BASE64_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "b64d ok"
+  END
+  PRINT_JSON b64_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- demote: RM CURRENT symlink only ---
+SYS EQS ACTION "demote"
+IF LAST_N == 1 THEN
+  NOTE "action demote"
+  SYS BLANK current
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "demote no current"
+    FAIL "demote no current"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "demote no current"
+    END
+  ELSE
+    SYS EXIST current
+    LET exist_n = LAST_N
+    SYS RM current
+    CLEAR_ERR
+    IF exist_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "demote free"
+      FAIL "demote free"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "demote free"
+      END
+    ELSE
+      LET hit = 1
+      LET current = ""
+      LET current_ch = 1
+      LET note_msg = "demote ok"
+    END
+    PRINT_JSON exist_n
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET root = ""
+  LET active = ""
+  LET current = ""
+  LET val = ""
+  LET meta = ""
+  LET root_ch = 1
+  LET active_ch = 1
+  LET current_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "root"
+LET k = k + LAST_N
+SYS EQS ACTION "stage"
+LET k = k + LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "promote"
+LET k = k + LAST_N
+SYS EQS ACTION "resolve"
+LET k = k + LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "islink"
+LET k = k + LAST_N
+SYS EQS ACTION "label"
+LET k = k + LAST_N
+SYS EQS ACTION "body"
+LET k = k + LAST_N
+SYS EQS ACTION "b64"
+LET k = k + LAST_N
+SYS EQS ACTION "b64d"
+LET k = k + LAST_N
+SYS EQS ACTION "demote"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF root_ch > 0 THEN
+  SYS WRITE root_meta root
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "root write failed"
+  END
+  CLEAR_ERR
+END
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF current_ch > 0 THEN
+  SYS WRITE current_meta current
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "current write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.release_pointer_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "exist"
+LET report = LAST
+SYS STR exist_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "size"
+LET report = LAST
+SYS STR size_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "link_n"
+LET report = LAST
+SYS STR link_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "current"
+LET report = LAST
+SYS PUSH report current
+LET report = LAST
+SYS PUSH report "root"
+LET report = LAST
+SYS PUSH report root
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "release_pointer_board" ACTION hit miss size_n note_msg elapsed

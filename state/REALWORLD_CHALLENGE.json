@@ -1,158 +1,166 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 85,
-  "program": "programs/realworld/job_ticket_board.cubalc",
-  "theme": "job ticket UUID URLENC JSONESC CRC32 CLAIM mint",
-  "version": "1.15.251-usability",
+  "iter": 86,
+  "program": "programs/realworld/release_pointer_board.cubalc",
+  "theme": "release pointer SYMLINK READLINK ISLINK STAT HUMANSIZE BASE64 promote",
+  "version": "1.15.254-usability",
   "pass": true,
   "tests": [
     {
-      "name": "mint_dash",
-      "cmd": "UUID dashed 36-char v4 form",
+      "name": "root_stage",
+      "cmd": "root + stage v1.0.0/v1.1.0 WRITEATOMIC manifest",
       "ok": true,
-      "note": "shape"
+      "note": "versioned layout"
     },
     {
-      "name": "mint_claim",
-      "cmd": "UUID0 + JOIN root + CLAIM body",
+      "name": "promote",
+      "cmd": "SYMLINK ACTIVE → ROOT/current",
       "ok": true,
-      "note": "ticket file"
+      "note": "alias"
     },
     {
-      "name": "crc_classic",
-      "cmd": "CRC32 123456789 \u2192 cbf43926",
+      "name": "resolve",
+      "cmd": "READLINK current → staged path",
       "ok": true,
-      "note": "IEEE vector"
+      "note": "peel"
     },
     {
-      "name": "crcfile",
-      "cmd": "CRC32FILE ticket body stamp",
+      "name": "probe_stat",
+      "cmd": "STAT active exist/size/kind/isfile",
       "ok": true,
-      "note": "file crc"
+      "note": "follows link"
     },
     {
-      "name": "urlenc",
-      "cmd": "peer/name=agent one \u2192 percent path",
+      "name": "islink",
+      "cmd": "ISLINK current → 1; dual of STAT",
       "ok": true,
-      "note": "RFC3986"
+      "note": "lstat"
     },
     {
-      "name": "urldec_plus",
-      "cmd": "a+b \u2192 a b form-space",
+      "name": "label_hsize",
+      "cmd": "SIZE + HUMANSIZE; 1536 → 1K floor",
       "ok": true,
-      "note": "plus trap"
+      "note": "inventory"
     },
     {
-      "name": "urldec_bad",
-      "cmd": "bad% / %zz soft; REQUIRE exit 2",
+      "name": "b64_round",
+      "cmd": "BASE64 hello / BASE64D aGVsbG8=",
       "ok": true,
-      "note": "decode fail"
+      "note": "transport"
     },
     {
-      "name": "jsonesc",
-      "cmd": "quotes/slash escape round-trip",
+      "name": "repromote",
+      "cmd": "RM then SYMLINK switch v1.1→v1.0",
       "ok": true,
-      "note": "JSON body"
+      "note": "no force"
     },
     {
-      "name": "unique_mint",
-      "cmd": "two mints \u2192 distinct paths",
+      "name": "demote",
+      "cmd": "RM current; target remains",
       "ok": true,
-      "note": "uuid0"
+      "note": "link only"
+    },
+    {
+      "name": "soft_require",
+      "cmd": "promote/resolve/probe/b64d soft rc0; REQUIRE=1 → 2",
+      "ok": true,
+      "note": "edges"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "226/226 pass"
+      "note": "229/229 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|hash",
-      "title": "CRC32 / HASH / HEX stamp trio confuses integrity semantics",
-      "detail": "CRC32 IEEE 8-hex, HASH FNV 8-hex, HEX full payload all look like digests. Agents pick wrong algo for audit vs change-detect vs transport.",
-      "repro": "CRC32 vs HASH of same string differ; both length 8"
+      "area": "host|symlink",
+      "title": "SYMLINK has no force/replace — promote needs RM first (TOCTOU)",
+      "detail": "Second SYMLINK soft-fails if link exists (OK=0 SYMLINK_N=0). Board RM then SYMLINK opens a race: concurrent reader can see missing current. No atomic rename-over-symlink helper.",
+      "repro": "SYMLINK tgt link twice → second OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|url",
-      "title": "URLDEC treats + as space (form-style) \u2014 path false friend",
-      "detail": "a+b decodes to a b. Path leaves with literal + break. Encode uses %20 for space not +. Asymmetric form vs RFC path expectations.",
-      "repro": "URLDEC a+b \u2192 a b"
+      "area": "host|stat",
+      "title": "STAT follows symlinks; no STAT_ISLINK — dual ISLINK required",
+      "detail": "STAT on current reports KIND=1 ISFILE=1 SIZE=target bytes. Agents cannot tell alias from real plate without separate SYS ISLINK. Easy to treat pointer as durable file.",
+      "repro": "STAT link → isfile; ISLINK link → 1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|encode",
-      "title": "Encode family sprawl: URLENC HEX BASE64 JSONESC without FILE variants",
-      "detail": "String plane only; no URLENCFILE/CRC-of-stream for binary. Continues encode sprawl.",
-      "repro": "four codecs + CRC/HASH"
+      "area": "host|humansize",
+      "title": "HUMANSIZE floors integer units — precision loss for inventory",
+      "detail": "1536 bytes → 1K (drops 512B). 1023→1023B vs 1024→1K cliff. Agents comparing labels mis-rank near thresholds.",
+      "repro": "HUMANSIZE 1536 → 1K; HUMANSIZE_BYTES still 1536"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|write",
-      "title": "CLAIM body and ACTIVE meta omit trailing NL",
-      "detail": "worker=alpha glued; ACTIVE path glued to total in cat -A.",
-      "repro": "cat -A ticket after mint"
+      "title": "WRITE plate fragments omit trailing NL",
+      "detail": "ROOT/ACTIVE/CURRENT/VAL/META glue in cat -A. Report bags use newlines via PUSH but path metas do not.",
+      "repro": "cat -A ROOT.txt after root"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|json",
-      "title": "JSONESC escapes solidus as \\/ \u2014 agents may over-escape paths",
-      "detail": "a/b \u2192 a\\/b. Valid JSON but surprises path round-trips if not unescaped.",
-      "repro": "JSONESC a/b"
+      "area": "host|base64",
+      "title": "BASE64 standard alphabet only — no URL-safe variant",
+      "detail": "Transport stamps with +/ may break path/query embedding. Agents invent ad-hoc tr maps.",
+      "repro": "BASE64 binary often yields +/"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|uuid",
-      "title": "UUID vs UUID0 dual length 36/32 without path-safe guarantee for all FS",
-      "detail": "Compact is hex-only good; dashed needs care as leaf. No UUID-as-filename helper.",
-      "repro": "UUID vs UUID0"
+      "area": "host|readlink",
+      "title": "READLINK returns stored target not realpath",
+      "detail": "Relative symlink targets resolve only relative to link dir; plate stores raw string. No READLINK -f / REALPATH-of-link combo.",
+      "repro": "SYMLINK leaf link; READLINK → leaf"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|claim",
-      "title": "Mint reuses CLAIM orphan/wedge semantics",
-      "detail": "Crash after mint leaves orphan ticket; no reclaim.",
-      "repro": "mint; kill; path remains"
+      "area": "host|rm",
+      "title": "RM on symlink unlinks alias only — good but easy to confuse with release delete",
+      "detail": "Demote drops current; version dir remains. Agents may assume RM CURRENT removes staged release tree.",
+      "repro": "demote; v1.1.0/manifest still present"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_JT_REQUIRE=abc.",
-      "repro": "REQUIRE=abc decpath bad \u2192 rc 0"
+      "detail": "CUBALC_RP_REQUIRE=abc leaves REQUIRE_HIT=0; soft miss stays rc 0.",
+      "repro": "REQUIRE=abc b64d !!!! → rc 0"
     }
   ],
   "workarounds": [
-    "Document CRC for interop, HASH for cheap local, EQFILE for equality",
-    "Prefer %20 only; avoid + in path leaves",
-    "JSONUNESC before using jesc output as path text",
-    "UUID0 for ticket filenames under root",
-    "Digit-check REQUIRE; RM orphan tickets on GC"
+    "RM current before SYMLINK; accept race or LOCKFILE promote critical section",
+    "Always ISLINK then STAT for pointer vs body distinction",
+    "Keep raw SIZE/HUMANSIZE_BYTES for compare; labels for display only",
+    "Prefer BASE64 for opaque body plates not path leaves",
+    "REALPATH after READLINK when absolute identity needed",
+    "Digit-check REQUIRE before soft→hard gate"
   ],
   "language_gaps": [
-    "Help stamp matrix CRC32/HASH/HEX/BASE64",
-    "URLDEC mode path-strict (no + as space)",
-    "FILE variants for encode/CRC",
-    "WRITE/CLAIM trailing NL",
-    "JSONESC optional solidus policy",
-    "CLAIM reclaim / ticket GC helpers"
+    "SYMLINK force / atomic promote (rename swap)",
+    "STAT_ISLINK or STAT_KIND=symlink without follow mode",
+    "HUMANSIZE fractional or ceil modes",
+    "WRITE trailing NL option",
+    "BASE64URL alphabet",
+    "READLINK -f realpath peel"
   ],
   "issues_faced": [
-    "mint/urlenc/jesc/crc classic vector green",
-    "+ as space and multi-stamp confusion are sharp footguns",
-    "selftest 226/226; no language fix this iter"
+    "stage/promote/resolve/label/b64/demote green",
+    "SYMLINK no-force + STAT-follow dual probe are sharp promote footguns",
+    "HUMANSIZE floor 1536→1K confirmed",
+    "selftest 229/229; no language fix this iter"
   ],
-  "commit": "6c827f466d62937f1a2e8728c95a95cfb75fb446",
-  "ts": "2026-08-06T15:30:00Z"
+  "commit": "",
+  "ts": "2026-08-06T15:55:22Z"
 }
