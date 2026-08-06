@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 223,
-  "version": "1.15.248-usability",
-  "item": "SYS URLENC / URLENCODE · URLDEC / URLDECODE percent-encode",
-  "item_id": 256,
-  "title": "SYS URLENC|URLENCODE [str] · URLDEC|URLDECODE [str] — path/query-safe plates without shell",
-  "commit": "66b82e50b83d9e14cb3bcf571eef47b90cf41431",
-  "summary": "RFC 3986 percent-encode/decode for agent plate paths without shell. selftest 223.",
+  "iter": 224,
+  "version": "1.15.249-usability",
+  "item": "SYS UUID / GUID · UUID0 / UUIDNODASH RFC4122 v4 ids",
+  "item_id": 257,
+  "title": "SYS UUID|GUID · UUID0|UUIDNODASH — unique agent work/claim ids without shell uuidgen",
+  "commit": "950cbea1a5a4656178efa9f627f8384e4b3a405e",
+  "summary": "RFC 4122 v4 dashed/compact UUIDs for agent claims without shell. selftest 224.",
   "proofs": [
-    "797_sys_urlenc",
-    "selftest n_pass=223"
+    "798_sys_uuid",
+    "selftest n_pass=224"
   ],
-  "when": "2026-08-06T14:55:25Z",
+  "when": "2026-08-06T15:06:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "66b82e50b83d9e14cb3bcf571eef47b90cf41431",
-  "note": "complements BASE64 and HEX for plate field transport"
+  "sha": "950cbea1a5a4656178efa9f627f8384e4b3a405e",
+  "note": "thrash restore then ship; /dev/urandom + time/pid fallback"
 }
