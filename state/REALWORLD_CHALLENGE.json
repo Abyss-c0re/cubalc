@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "get_inc",
-      "cmd": "get retries=2; inc → 3",
+      "cmd": "get retries=2; inc \u2192 3",
       "ok": true,
       "note": "default +1"
     },
     {
       "name": "inc_delta",
-      "cmd": "inc errors 5 → 5",
+      "cmd": "inc errors 5 \u2192 5",
       "ok": true,
       "note": "custom delta"
     },
     {
       "name": "inc_insert",
-      "cmd": "inc missing warns → insert 1 HIT=0",
+      "cmd": "inc missing warns \u2192 insert 1 HIT=0",
       "ok": true,
       "note": "create key"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "del",
-      "cmd": "del port → returns 7700; del none soft+REQUIRE",
+      "cmd": "del port \u2192 returns 7700; del none soft+REQUIRE",
       "ok": true,
       "note": "ack remove"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "non_num_inc",
-      "cmd": "retries=abc +inc → retries=1 silent coerce",
+      "cmd": "retries=abc +inc \u2192 retries=1 silent coerce",
       "ok": true,
       "note": "data loss"
     },
@@ -72,25 +72,25 @@
       "id": "W1",
       "severity": "high",
       "area": "host|kv",
-      "title": "KVFILEINC on non-numeric value silently coerces (abc→1 after +1)",
+      "title": "KVFILEINC on non-numeric value silently coerces (abc\u21921 after +1)",
       "detail": "retries=abc then INC yields retries=1 without OK=0. Corrupts plate counters; agents cannot detect bad seed values.",
-      "repro": "WRITE retries=abc; KVFILEINC p retries → 1"
+      "repro": "WRITE retries=abc; KVFILEINC p retries \u2192 1"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "KVFILEINC/ENSURELINE create missing files — path typo becomes new plate",
+      "title": "KVFILEINC/ENSURELINE create missing files \u2014 path typo becomes new plate",
       "detail": "Ghost path DEL soft-misses HIT=0; INC creates file. REQUIRE on inc never fires for missing path because create succeeds.",
-      "repro": "KVFILEINC no_such n → creates no_such"
+      "repro": "KVFILEINC no_such n \u2192 creates no_such"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|match",
-      "title": "ENSURELINE is exact line; MATCHFILE ops are substring — dual semantics",
+      "title": "ENSURELINE is exact line; MATCHFILE ops are substring \u2014 dual semantics",
       "detail": "Good for allowlists: feature != feature_a. Agents mixing ENSURE with FINDFILELINE substring get different membership rules.",
-      "repro": "ENSURE feature when feature_a present → NEW=1 append feature"
+      "repro": "ENSURE feature when feature_a present \u2192 NEW=1 append feature"
     },
     {
       "id": "W4",
@@ -155,6 +155,6 @@
     "ENSURE exactness is a strength vs MATCH substring",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "acf8937eb2aac85ac51a1287af3b19a4875044c5",
   "ts": "2026-08-06T11:19:03Z"
 }
