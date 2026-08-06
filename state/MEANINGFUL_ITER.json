@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 200,
-  "version": "1.15.225-usability",
-  "item": "SYS ENSURELINE / ENSUREFILELINE / ADDIFMISSING append exact line if missing",
-  "item_id": 233,
-  "title": "SYS ENSURELINE|ENSUREFILELINE path line — append line if exact line missing",
-  "commit": "7a7510362303f3ad4b26b62c23903a151702bdd1",
-  "summary": "Idempotent file line ensure for config flags/markers. selftest 200.",
+  "iter": 201,
+  "version": "1.15.226-usability",
+  "item": "SYS HASFILELINE / FILEHASLINE exact file line membership probe",
+  "item_id": 234,
+  "title": "SYS HASFILELINE|FILEHASLINE path line — exact file line membership → LAST_N 0|1",
+  "commit": "c4c95fcae4301a7d7d1e98f7a7d490aa8f34ab15",
+  "summary": "Exact file line membership probe for IF guards. selftest 201.",
   "proofs": [
-    "773_sys_ensureline",
-    "selftest n_pass=200"
+    "774_sys_hasfileline",
+    "selftest n_pass=201"
   ],
-  "when": "2026-08-06T11:16:07Z",
+  "when": "2026-08-06T11:24:48Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7a7510362303f3ad4b26b62c23903a151702bdd1"
+  "sha": "c4c95fcae4301a7d7d1e98f7a7d490aa8f34ab15"
 }
