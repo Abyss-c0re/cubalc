@@ -14,13 +14,13 @@
     },
     {
       "name": "promote",
-      "cmd": "SYMLINK ACTIVE → ROOT/current",
+      "cmd": "SYMLINK ACTIVE \u2192 ROOT/current",
       "ok": true,
       "note": "alias"
     },
     {
       "name": "resolve",
-      "cmd": "READLINK current → staged path",
+      "cmd": "READLINK current \u2192 staged path",
       "ok": true,
       "note": "peel"
     },
@@ -32,13 +32,13 @@
     },
     {
       "name": "islink",
-      "cmd": "ISLINK current → 1; dual of STAT",
+      "cmd": "ISLINK current \u2192 1; dual of STAT",
       "ok": true,
       "note": "lstat"
     },
     {
       "name": "label_hsize",
-      "cmd": "SIZE + HUMANSIZE; 1536 → 1K floor",
+      "cmd": "SIZE + HUMANSIZE; 1536 \u2192 1K floor",
       "ok": true,
       "note": "inventory"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "repromote",
-      "cmd": "RM then SYMLINK switch v1.1→v1.0",
+      "cmd": "RM then SYMLINK switch v1.1\u2192v1.0",
       "ok": true,
       "note": "no force"
     },
@@ -62,7 +62,7 @@
     },
     {
       "name": "soft_require",
-      "cmd": "promote/resolve/probe/b64d soft rc0; REQUIRE=1 → 2",
+      "cmd": "promote/resolve/probe/b64d soft rc0; REQUIRE=1 \u2192 2",
       "ok": true,
       "note": "edges"
     },
@@ -78,25 +78,25 @@
       "id": "W1",
       "severity": "high",
       "area": "host|symlink",
-      "title": "SYMLINK has no force/replace — promote needs RM first (TOCTOU)",
+      "title": "SYMLINK has no force/replace \u2014 promote needs RM first (TOCTOU)",
       "detail": "Second SYMLINK soft-fails if link exists (OK=0 SYMLINK_N=0). Board RM then SYMLINK opens a race: concurrent reader can see missing current. No atomic rename-over-symlink helper.",
-      "repro": "SYMLINK tgt link twice → second OK=0"
+      "repro": "SYMLINK tgt link twice \u2192 second OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|stat",
-      "title": "STAT follows symlinks; no STAT_ISLINK — dual ISLINK required",
+      "title": "STAT follows symlinks; no STAT_ISLINK \u2014 dual ISLINK required",
       "detail": "STAT on current reports KIND=1 ISFILE=1 SIZE=target bytes. Agents cannot tell alias from real plate without separate SYS ISLINK. Easy to treat pointer as durable file.",
-      "repro": "STAT link → isfile; ISLINK link → 1"
+      "repro": "STAT link \u2192 isfile; ISLINK link \u2192 1"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|humansize",
-      "title": "HUMANSIZE floors integer units — precision loss for inventory",
-      "detail": "1536 bytes → 1K (drops 512B). 1023→1023B vs 1024→1K cliff. Agents comparing labels mis-rank near thresholds.",
-      "repro": "HUMANSIZE 1536 → 1K; HUMANSIZE_BYTES still 1536"
+      "title": "HUMANSIZE floors integer units \u2014 precision loss for inventory",
+      "detail": "1536 bytes \u2192 1K (drops 512B). 1023\u21921023B vs 1024\u21921K cliff. Agents comparing labels mis-rank near thresholds.",
+      "repro": "HUMANSIZE 1536 \u2192 1K; HUMANSIZE_BYTES still 1536"
     },
     {
       "id": "W4",
@@ -110,7 +110,7 @@
       "id": "W5",
       "severity": "med",
       "area": "host|base64",
-      "title": "BASE64 standard alphabet only — no URL-safe variant",
+      "title": "BASE64 standard alphabet only \u2014 no URL-safe variant",
       "detail": "Transport stamps with +/ may break path/query embedding. Agents invent ad-hoc tr maps.",
       "repro": "BASE64 binary often yields +/"
     },
@@ -120,13 +120,13 @@
       "area": "host|readlink",
       "title": "READLINK returns stored target not realpath",
       "detail": "Relative symlink targets resolve only relative to link dir; plate stores raw string. No READLINK -f / REALPATH-of-link combo.",
-      "repro": "SYMLINK leaf link; READLINK → leaf"
+      "repro": "SYMLINK leaf link; READLINK \u2192 leaf"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|rm",
-      "title": "RM on symlink unlinks alias only — good but easy to confuse with release delete",
+      "title": "RM on symlink unlinks alias only \u2014 good but easy to confuse with release delete",
       "detail": "Demote drops current; version dir remains. Agents may assume RM CURRENT removes staged release tree.",
       "repro": "demote; v1.1.0/manifest still present"
     },
@@ -136,7 +136,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens",
       "detail": "CUBALC_RP_REQUIRE=abc leaves REQUIRE_HIT=0; soft miss stays rc 0.",
-      "repro": "REQUIRE=abc b64d !!!! → rc 0"
+      "repro": "REQUIRE=abc b64d !!!! \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -145,7 +145,7 @@
     "Keep raw SIZE/HUMANSIZE_BYTES for compare; labels for display only",
     "Prefer BASE64 for opaque body plates not path leaves",
     "REALPATH after READLINK when absolute identity needed",
-    "Digit-check REQUIRE before soft→hard gate"
+    "Digit-check REQUIRE before soft\u2192hard gate"
   ],
   "language_gaps": [
     "SYMLINK force / atomic promote (rename swap)",
@@ -158,9 +158,9 @@
   "issues_faced": [
     "stage/promote/resolve/label/b64/demote green",
     "SYMLINK no-force + STAT-follow dual probe are sharp promote footguns",
-    "HUMANSIZE floor 1536→1K confirmed",
+    "HUMANSIZE floor 1536\u21921K confirmed",
     "selftest 229/229; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "212c456ee3616685220f6431b1afe6b16b6abe1b",
   "ts": "2026-08-06T15:55:22Z"
 }
