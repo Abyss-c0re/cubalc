@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "pick_get",
-      "cmd": "pick hosts + LINEAT get 1 → 10.0.0.2 web",
+      "cmd": "pick hosts + LINEAT get 1 \u2192 10.0.0.2 web",
       "ok": true,
       "note": "read row"
     },
@@ -38,7 +38,7 @@
     },
     {
       "name": "insert_past_end",
-      "cmd": "INSERTFILELINE 999 → append I remapped",
+      "cmd": "INSERTFILELINE 999 \u2192 append I remapped",
       "ok": true,
       "note": "past-end append"
     },
@@ -85,8 +85,8 @@
       "severity": "high",
       "area": "host|index",
       "title": "SET/DROPFILELINE negative index silently clamps to 0 and mutates first line",
-      "detail": "SETFILELINE p -1 \"Z\" rewrites line 0 with OK=1 N=1. DROPFILELINE -1 drops first row. Worse than LINEAT read clamp — write ops destroy data on underflow.",
-      "repro": "SYS SETFILELINE p -1 \"Z\" → L0 becomes Z"
+      "detail": "SETFILELINE p -1 \"Z\" rewrites line 0 with OK=1 N=1. DROPFILELINE -1 drops first row. Worse than LINEAT read clamp \u2014 write ops destroy data on underflow.",
+      "repro": "SYS SETFILELINE p -1 \"Z\" \u2192 L0 becomes Z"
     },
     {
       "id": "W2",
@@ -102,14 +102,14 @@
       "area": "host|fs",
       "title": "SET/DROP OOB OK=1 N=0; INSERT past end succeeds as append",
       "detail": "Asymmetric: OOB set/drop soft-no-op; huge insert index remaps to TOTAL and writes. Agents treating any OK as \"row idx honored\" mis-place appends.",
-      "repro": "INSERTFILELINE fs 999 TAIL → I=TOTAL"
+      "repro": "INSERTFILELINE fs 999 TAIL \u2192 I=TOTAL"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON preview bag glues without NL",
-      "detail": "# managed hosts10.0.0.1 api… recurring bag JSON collapse.",
+      "detail": "# managed hosts10.0.0.1 api\u2026 recurring bag JSON collapse.",
       "repro": "PRINT_JSON preview after HEADFILE"
     },
     {
@@ -126,7 +126,7 @@
       "area": "host|parse",
       "title": "Index args need (expr) form for bare numeric vars",
       "detail": "Same HEADFILE/LINEAT trap: SYS SETFILELINE p idx text fails parse unless (idx).",
-      "repro": "SYS SETFILELINE p i \"x\" → unknown form"
+      "repro": "SYS SETFILELINE p i \"x\" \u2192 unknown form"
     },
     {
       "id": "W7",
@@ -142,7 +142,7 @@
       "area": "host|index",
       "title": "0-based only; no 1-based hosts-line addressing",
       "detail": "Human line 1 is index 0. Recurring with LINEAT family.",
-      "repro": "editor L1 → SETFILELINE 0"
+      "repro": "editor L1 \u2192 SETFILELINE 0"
     }
   ],
   "workarounds": [
@@ -167,6 +167,6 @@
     "INSERT 999 append asymmetry vs SET/DROP OOB",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "04f42956d49c5b987e0fc37c5e0092f8ce6a0f8f",
   "ts": "2026-08-06T08:48:25Z"
 }
