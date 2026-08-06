@@ -154,6 +154,6 @@
     "put/load/gate ROLE PORT NOTE green",
     "selftest 244/244"
   ],
-  "commit": "",
+  "commit": "2998c15d076c840a7611467776893c7b340f0b9e",
   "ts": "2026-08-06T18:26:10Z"
 }
