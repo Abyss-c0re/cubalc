@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 250,
-  "version": "1.15.277-usability",
-  "item": "SYS TEE / WRITETEE / SAVEKEEP write keep LAST",
-  "item_id": 285,
-  "title": "SYS TEE path [data] — write plate keep content in LAST for chaining",
-  "commit": "2a5268fd7dcd68eb5c933c0803ace48faaa70d7f",
-  "summary": "write+keep LAST content; chain without READ. selftest 250.",
+  "iter": 251,
+  "version": "1.15.278-usability",
+  "item": "SYS FILEUID / FILEGID / OWNEDBY ownership probes",
+  "item_id": 286,
+  "title": "SYS FILEUID|FILEGID|OWNEDBY path — plate owner/group and euid-owns probe",
+  "commit": "0013c1633a9a9fd02ff1477a06a1ae0950a443ad",
+  "summary": "file uid/gid + OWNEDBY for agent plate security. selftest 251.",
   "proofs": [
-    "824_sys_tee",
-    "selftest n_pass=250"
+    "825_sys_fileuid",
+    "selftest n_pass=251"
   ],
-  "when": "2026-08-06T19:24:17Z",
+  "when": "2026-08-06T19:35:14Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2a5268fd7dcd68eb5c933c0803ace48faaa70d7f",
-  "note": "dual of WRITE path-only LAST; agent log/plate pipelines"
+  "sha": "0013c1633a9a9fd02ff1477a06a1ae0950a443ad",
+  "note": "complements MODE/CHMOD for multi-agent plate ACLs"
 }
