@@ -15455,6 +15455,53 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS FROMTIME|EPOCHISO|TOISO|ISOFROM [n|LAST_N]
+     * — format Unix epoch seconds as UTC ISO "YYYY-MM-DDTHH:MM:SSZ".
+     * LAST = stamp; LAST_N / FROMTIME_N / TIME = epoch (input, clamped ≥0).
+     * Default n = LAST_N. Usability: MTIME/AGE plate epochs → human stamps
+     * without shell date -d @epoch (DATE only does "now"). */
+    if (kw(&L->cur,"FROMTIME") || kw(&L->cur,"EPOCHISO") || kw(&L->cur,"TOISO") ||
+        kw(&L->cur,"ISOFROM") || kw(&L->cur,"EPOCH2ISO") || kw(&L->cur,"TIMEISO") ||
+        kw(&L->cur,"UNIXISO") || kw(&L->cur,"FROMEPOCH") || kw(&L->cur,"EPOCH_TO_ISO") ||
+        kw(&L->cur,"TSISO") || kw(&L->cur,"STAMPEPOCH")){
+      long n = vm->last_n;
+      time_t t;
+      struct tm tm_utc;
+      char iso[40];
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      t = (time_t)n;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        struct tm *tp = gmtime(&t);
+        if (tp) tm_utc = *tp;
+        else memset(&tm_utc, 0, sizeof tm_utc);
+      }
+#else
+      if (!gmtime_r(&t, &tm_utc))
+        memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+      snprintf(iso, sizeof iso, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+               tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+               tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+      var_set_str(vm, "LAST", iso);
+      var_set_str(vm, "FROMTIME", iso);
+      var_set_str(vm, "EPOCHISO", iso);
+      var_set_str(vm, "TOISO", iso);
+      var_set_str(vm, "ISO", iso);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "FROMTIME_N", n);
+      var_set_num(vm, "TIME", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
      * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
      * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
@@ -24207,6 +24254,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SEQ", "SYS SEQ n | lo hi [step] — 1..n or inclusive range → bag"},
       {"SYS IOTA", "SYS IOTA n | lo hi [step] — 0..n-1 (half-open) → bag"},
       {"SYS DATE", "SYS DATE|ISO|UTC — UTC stamp YYYY-MM-DDTHH:MM:SSZ → LAST/DATE"},
+      {"SYS FROMTIME", "SYS FROMTIME|EPOCHISO|TOISO [n] — epoch seconds → UTC ISO stamp"},
+      {"SYS EPOCHISO", "SYS EPOCHISO [n] — alias of SYS FROMTIME"},
+      {"SYS TOISO", "SYS TOISO [n] — alias of SYS FROMTIME"},
       {"SYS LOCAL", "SYS LOCAL|LOCALTIME — local wall stamp YYYY-MM-DDTHH:MM:SS → LAST"},
       {"SYS LOCALTIME", "SYS LOCALTIME alias of SYS LOCAL"},
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},
