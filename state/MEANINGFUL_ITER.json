@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 170,
-  "version": "1.15.195-usability",
-  "item": "SYS EQFILE / SAMEFILE identical file content probe",
-  "item_id": 203,
-  "title": "SYS EQFILE|SAMEFILE|CMPFILE a b — verify COPY without shell cmp",
-  "commit": "75338ae8e7c51cfa292f5e77dbf2625fb41fbf3c",
-  "summary": "Streamed file content equality probe. selftest 170.",
+  "iter": 171,
+  "version": "1.15.196-usability",
+  "item": "SYS LOGALL / APPENDFILES append line to path bag",
+  "item_id": 204,
+  "title": "SYS LOGALL|APPENDFILES|BULKAPPEND [bag] data — multi-log without EACH+APPEND",
+  "commit": "a94581a28c828756a62a68568890c32f8e971573",
+  "summary": "Bulk append line to path bags. selftest 171.",
   "proofs": [
-    "743_sys_eqfile",
-    "selftest n_pass=170"
+    "744_sys_logall",
+    "selftest n_pass=171"
   ],
-  "when": "2026-08-06T06:14:17Z",
+  "when": "2026-08-06T06:24:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "75338ae8e7c51cfa292f5e77dbf2625fb41fbf3c"
+  "sha": "a94581a28c828756a62a68568890c32f8e971573"
 }
