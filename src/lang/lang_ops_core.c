@@ -3,7 +3,82 @@
 #if !defined(CUBALC_OS_WINDOWS)
 #  include <pwd.h>
 #  include <fnmatch.h>
+#  include <unistd.h>
+#  include <errno.h>
+#  include <poll.h>
+#  include <arpa/inet.h>
+#  include <netinet/in.h>
+#  include <sys/socket.h>
 #endif
+
+/* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
+ * wire: magic "CBXF" + uint32 BE length + payload bytes. */
+static int cubalc_cbxf_send(int fd, const char *payload, size_t plen) {
+  uint8_t hdr[8];
+  uint32_t be;
+  size_t off = 0;
+  ssize_t n;
+  if (fd < 0 || plen > (size_t)(CUBALC_HOST_STR_MAX - 1)) return -1;
+  hdr[0] = 'C'; hdr[1] = 'B'; hdr[2] = 'X'; hdr[3] = 'F';
+  be = htonl((uint32_t)plen);
+  memcpy(hdr + 4, &be, 4);
+  while (off < 8) {
+    n = send(fd, hdr + off, 8 - off, 0);
+    if (n <= 0) return -1;
+    off += (size_t)n;
+  }
+  off = 0;
+  while (off < plen) {
+    n = send(fd, payload + off, plen - off, 0);
+    if (n <= 0) return -1;
+    off += (size_t)n;
+  }
+  return 0;
+}
+static int cubalc_cbxf_recv(int fd, char *out, size_t cap, size_t *n_out, int timeout_ms) {
+  uint8_t hdr[8];
+  size_t off = 0;
+  uint32_t be, plen;
+  ssize_t n;
+  if (n_out) *n_out = 0;
+  if (fd < 0 || !out || cap < 2) return -1;
+  if (timeout_ms > 0) {
+    struct pollfd pfd;
+    pfd.fd = fd; pfd.events = POLLIN; pfd.revents = 0;
+    if (poll(&pfd, 1, timeout_ms) <= 0) return -1;
+  }
+  while (off < 8) {
+    n = recv(fd, hdr + off, 8 - off, 0);
+    if (n <= 0) return -1;
+    off += (size_t)n;
+  }
+  if (hdr[0] != 'C' || hdr[1] != 'B' || hdr[2] != 'X' || hdr[3] != 'F') return -1;
+  memcpy(&be, hdr + 4, 4);
+  plen = ntohl(be);
+  if (plen >= cap) return -1;
+  off = 0;
+  while (off < plen) {
+    n = recv(fd, out + off, plen - off, 0);
+    if (n <= 0) return -1;
+    off += (size_t)n;
+  }
+  out[plen] = 0;
+  if (n_out) *n_out = plen;
+  return 0;
+}
+static int cubalc_parse_host_port_simple(const char *ep, char *host, size_t hsz, int *port) {
+  const char *colon;
+  size_t hl;
+  if (!ep || !host || !port || hsz < 2) return -1;
+  colon = strrchr(ep, ':');
+  if (!colon || colon == ep || !colon[1]) return -1;
+  hl = (size_t)(colon - ep);
+  if (hl >= hsz) hl = hsz - 1;
+  memcpy(host, ep, hl); host[hl] = 0;
+  *port = atoi(colon + 1);
+  if (*port <= 0 || *port > 65535) return -1;
+  return 0;
+}
 
 /* Basename shell match for WALK (fnmatch when available). */
 static int cubalc_walk_match(const char *pat, const char *name) {
@@ -968,6 +1043,118 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       vm->last_n = hr.n;
       var_set_str(vm, "LAST", hr.str);
       var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SUBSTENV|ENVSUBST|EXPANDENV [template]
+     * — expand $NAME and ${NAME} from process env, then program vars.
+     * Unset → empty. Bare $ stops at non [A-Za-z0-9_]. $$ → literal $.
+     * LAST = expanded; LAST_N / SUBSTENV_N = replacements; MISS = unset count.
+     * Zero-arg: template = prior LAST.
+     * Usability: path/config templates without shell envsubst or chained REPLACEALL. */
+    if (kw(&L->cur,"SUBSTENV") || kw(&L->cur,"ENVSUBST") ||
+        kw(&L->cur,"EXPANDENV") || kw(&L->cur,"ENVEXPAND") ||
+        kw(&L->cur,"TEMPLATEENV") || kw(&L->cur,"ENVTEMPLATE") ||
+        kw(&L->cur,"INTERPENV") || kw(&L->cur,"DOLLARENV") ||
+        kw(&L->cur,"SHELLSUB") || kw(&L->cur,"SUBENV")){
+      char tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], name[128];
+      const char *src;
+      size_t o = 0;
+      long hits = 0, miss = 0;
+      lex_next(L);
+      tmpl[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0)
+        snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+      src = tmpl;
+      while (*src && o + 1 < sizeof out) {
+        if (*src == '$') {
+          if (src[1] == '$') {
+            out[o++] = '$';
+            src += 2;
+            continue;
+          }
+          name[0] = 0;
+          if (src[1] == '{') {
+            const char *p = src + 2;
+            size_t ni = 0;
+            while (*p && *p != '}' && ni + 1 < sizeof name) {
+              name[ni++] = *p++;
+            }
+            name[ni] = 0;
+            if (*p == '}') {
+              src = p + 1;
+            } else {
+              /* unclosed ${ — emit literal */
+              out[o++] = *src++;
+              continue;
+            }
+          } else if ((src[1] >= 'A' && src[1] <= 'Z') ||
+                     (src[1] >= 'a' && src[1] <= 'z') ||
+                     src[1] == '_') {
+            const char *p = src + 1;
+            size_t ni = 0;
+            while (*p && ni + 1 < sizeof name &&
+                   ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+                    (*p >= '0' && *p <= '9') || *p == '_')) {
+              name[ni++] = *p++;
+            }
+            name[ni] = 0;
+            src = p;
+          } else {
+            out[o++] = *src++;
+            continue;
+          }
+          {
+            const char *val = NULL;
+            char vbuf[CUBALC_HOST_STR_MAX];
+            cubalc_host_result er;
+            vbuf[0] = 0;
+            cubalc_host_env(name, &er);
+            if (er.str[0] && er.n > 0) {
+              val = er.str;
+            } else {
+              Var *vv = var_get(vm, name, 0);
+              if (vv) {
+                if (vv->is_str) {
+                  snprintf(vbuf, sizeof vbuf, "%s", vv->sval);
+                  val = vbuf;
+                } else {
+                  snprintf(vbuf, sizeof vbuf, "%ld", vv->val);
+                  val = vbuf;
+                }
+              }
+            }
+            if (val) {
+              size_t vn = strlen(val);
+              if (o + vn >= sizeof out) vn = sizeof out - 1 - o;
+              if (vn > 0) {
+                memcpy(out + o, val, vn);
+                o += vn;
+              }
+              out[o] = 0;
+              hits++;
+            } else {
+              miss++;
+              hits++;
+              /* leave empty for unset */
+            }
+          }
+          continue;
+        }
+        out[o++] = *src++;
+      }
+      out[o] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hits;
+      var_set_num(vm, "LAST_N", hits);
+      var_set_str(vm, "SUBSTENV", out);
+      var_set_str(vm, "ENVSUBST", out);
+      var_set_str(vm, "EXPANDENV", out);
+      var_set_num(vm, "SUBSTENV_N", hits);
+      var_set_num(vm, "ENVSUBST_N", hits);
+      var_set_num(vm, "SUBSTENV_MISS", miss);
+      var_set_num(vm, "ENVSUBST_MISS", miss);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -2697,6 +2884,340 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS SWAPFILES|FILESWAP|BIDIRSWAP path_a path_b
+     * — bidirectional content exchange of two files/plates (any text/bag data).
+     * Soft miss if either path missing/unreadable. Uses tmp under same dir as a.
+     * LAST_N = bytes swapped (size of a after = former b); SWAPFILES_A/B bytes.
+     * Usability: true duplex plate swap without READ+WRITE thrash. */
+    if (kw(&L->cur,"SWAPFILES") || kw(&L->cur,"FILESWAP") || kw(&L->cur,"BIDIRSWAP") ||
+        kw(&L->cur,"SWAPPLATE") || kw(&L->cur,"EXCHANGEFILES") || kw(&L->cur,"XFERSWAP")){
+      char a[512], b[512], tmp[576];
+      cubalc_host_result ra, rb, rt;
+      lex_next(L);
+      a[0] = 0; b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0 ||
+          resolve_str_arg(vm, L, b, sizeof b) != 0) {
+        fail(vm, "SYS SWAPFILES path_a path_b");
+        return -1;
+      }
+      if (cubalc_host_read(a, &ra) != 0 || cubalc_host_read(b, &rb) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SWAPFILES_N", 0);
+        var_set_num(vm, "SWAPFILES_A", 0);
+        var_set_num(vm, "SWAPFILES_B", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "SWAPFILES: read fail");
+        var_set_str(vm, "ERR", "SWAPFILES: read fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      snprintf(tmp, sizeof tmp, "%s.cubalc_swap_%ld", a, (long)getpid());
+      if (cubalc_host_write(tmp, ra.str, &rt) != 0 ||
+          cubalc_host_write(a, rb.str, &rt) != 0 ||
+          cubalc_host_write(b, ra.str, &rt) != 0) {
+        remove(tmp);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SWAPFILES_N", 0);
+        var_set_str(vm, "LAST_ERR", "SWAPFILES: write fail");
+        var_set_str(vm, "ERR", "SWAPFILES: write fail");
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      remove(tmp);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "LAST_N", (long)rb.n);
+      var_set_num(vm, "SWAPFILES_N", (long)rb.n);
+      var_set_num(vm, "SWAPFILES_A", (long)rb.n); /* a now holds former b */
+      var_set_num(vm, "SWAPFILES_B", (long)ra.n); /* b now holds former a */
+      var_set_str(vm, "LAST", rb.str); /* content now in a */
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rb.str);
+      vm->last_n = (long)rb.n;
+      bump(vm); return 1;
+    }
+    /* SYS DUPLEX|BIDXFER|PUTGET path_out path_in [payload]
+     * — bidirectional mailbox RTT: WRITE payload→out, READ in→LAST.
+     * Any string/bag data (≤ HOST_STR_MAX). Two-arg: payload = prior LAST.
+     * Soft if out write or in read fails. DUPLEX_TX / DUPLEX_RX byte counts.
+     * Usability: agent request/response via plates without shell pipes. */
+    if (kw(&L->cur,"DUPLEX") || kw(&L->cur,"BIDXFER") || kw(&L->cur,"PUTGET") ||
+        kw(&L->cur,"FLOWDATA") || kw(&L->cur,"MAILBOX") || kw(&L->cur,"XFER") ||
+        kw(&L->cur,"REQRESP") || kw(&L->cur,"BIDIR")){
+      char outp[512], inp[512], payload[CUBALC_HOST_STR_MAX];
+      cubalc_host_result wr, rr;
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX], c[CUBALC_HOST_STR_MAX];
+      lex_next(L);
+      outp[0] = 0; inp[0] = 0; payload[0] = 0; a[0] = 0; b[0] = 0; c[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS DUPLEX path_out path_in [payload]");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) {
+        fail(vm, "SYS DUPLEX path_out path_in [payload]");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, c, sizeof c) == 0) {
+        snprintf(outp, sizeof outp, "%s", a);
+        snprintf(inp, sizeof inp, "%s", b);
+        snprintf(payload, sizeof payload, "%s", c);
+      } else {
+        /* two-arg: payload = LAST */
+        snprintf(outp, sizeof outp, "%s", a);
+        snprintf(inp, sizeof inp, "%s", b);
+        snprintf(payload, sizeof payload, "%s", vm->last_str);
+      }
+      if (cubalc_host_write(outp, payload, &wr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DUPLEX_TX", 0);
+        var_set_num(vm, "DUPLEX_RX", 0);
+        var_set_num(vm, "BIDXFER_TX", 0);
+        var_set_num(vm, "BIDXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "DUPLEX: write out fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "DUPLEX: write out fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(inp, &rr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DUPLEX_TX", (long)wr.n);
+        var_set_num(vm, "DUPLEX_RX", 0);
+        var_set_num(vm, "BIDXFER_TX", (long)wr.n);
+        var_set_num(vm, "BIDXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", rr.err[0] ? rr.err : "DUPLEX: read in fail");
+        var_set_str(vm, "ERR", rr.err[0] ? rr.err : "DUPLEX: read in fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "LAST_N", (long)rr.n);
+      var_set_num(vm, "DUPLEX_TX", (long)wr.n);
+      var_set_num(vm, "DUPLEX_RX", (long)rr.n);
+      var_set_num(vm, "BIDXFER_TX", (long)wr.n);
+      var_set_num(vm, "BIDXFER_RX", (long)rr.n);
+      var_set_str(vm, "LAST", rr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", rr.str);
+      vm->last_n = (long)rr.n;
+      bump(vm); return 1;
+    }
+#if !defined(CUBALC_OS_WINDOWS)
+    /* SYS TCPXFER|TCPBIDIR|NETXFER host:port [payload]
+     * — connect, send CBXF-framed payload, recv peer reply → LAST.
+     * Soft fail on connect/protocol (OK=0). Timeout CUBALC_P2P_TIMEOUT ms (def 30s).
+     * Two-arg payload, or one-arg endpoint with payload=LAST.
+     * Usability: bidirectional any-string peer flow (not matrix-only SMX). */
+    if (kw(&L->cur,"TCPXFER") || kw(&L->cur,"TCPBIDIR") || kw(&L->cur,"NETXFER") ||
+        kw(&L->cur,"CBXF") || kw(&L->cur,"DATAXFER") || kw(&L->cur,"PEERXFER")){
+      char ep[256], payload[CUBALC_HOST_STR_MAX], host[128], reply[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      int port = 0, fd = -1, to_ms = 30000;
+      size_t nrx = 0;
+      const char *te;
+      lex_next(L);
+      ep[0] = 0; payload[0] = 0; a[0] = 0; b[0] = 0; reply[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS TCPXFER host:port [payload]");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) == 0) {
+        snprintf(ep, sizeof ep, "%s", a);
+        snprintf(payload, sizeof payload, "%s", b);
+      } else {
+        snprintf(ep, sizeof ep, "%s", a);
+        snprintf(payload, sizeof payload, "%s", vm->last_str);
+      }
+      te = getenv("CUBALC_P2P_TIMEOUT");
+      if (te && te[0]) {
+        to_ms = atoi(te);
+        if (to_ms < 0) to_ms = 0;
+        if (to_ms > 600000) to_ms = 600000;
+      }
+      if (cubalc_parse_host_port_simple(ep, host, sizeof host, &port) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TCPXFER_TX", 0);
+        var_set_num(vm, "TCPXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPXFER: bad host:port");
+        var_set_str(vm, "ERR", "TCPXFER: bad host:port");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      fd = cubalc_smx_tcp_connect(host, port);
+      if (fd < 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TCPXFER_TX", 0);
+        var_set_num(vm, "TCPXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPXFER: connect fail");
+        var_set_str(vm, "ERR", "TCPXFER: connect fail — start TCPLISTEN peer");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      if (cubalc_cbxf_send(fd, payload, strlen(payload)) != 0) {
+        close(fd);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TCPXFER_TX", 0);
+        var_set_num(vm, "TCPXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPXFER: send fail");
+        var_set_str(vm, "ERR", "TCPXFER: send fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      if (cubalc_cbxf_recv(fd, reply, sizeof reply, &nrx, to_ms > 0 ? to_ms : 30000) != 0) {
+        close(fd);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TCPXFER_TX", (long)strlen(payload));
+        var_set_num(vm, "TCPXFER_RX", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPXFER: recv fail");
+        var_set_str(vm, "ERR", "TCPXFER: recv fail — peer TCPLISTEN must reply");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      close(fd);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "LAST_N", (long)nrx);
+      var_set_num(vm, "TCPXFER_TX", (long)strlen(payload));
+      var_set_num(vm, "TCPXFER_RX", (long)nrx);
+      var_set_num(vm, "TCPBIDIR_TX", (long)strlen(payload));
+      var_set_num(vm, "TCPBIDIR_RX", (long)nrx);
+      var_set_str(vm, "LAST", reply);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", reply);
+      vm->last_n = (long)nrx;
+      bump(vm); return 1;
+    }
+    /* SYS TCPLISTEN|TCPSERVE|DATASERVE host:port [reply]
+     * — one-shot accept, CBXF recv → LAST, send reply (or echo if omit).
+     * Soft timeout (CUBALC_P2P_TIMEOUT). Bidirectional any-payload peer serve.
+     * Two-arg: fixed reply. One-arg: echo received payload. */
+    if (kw(&L->cur,"TCPLISTEN") || kw(&L->cur,"TCPSERVE") || kw(&L->cur,"DATASERVE") ||
+        kw(&L->cur,"CBXFLISTEN") || kw(&L->cur,"PEERLISTEN") || kw(&L->cur,"BIDIRLISTEN")){
+      char ep[256], reply[CUBALC_HOST_STR_MAX], host[128], got[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      int port = 0, lfd = -1, cfd = -1, to_ms = 30000, timed = 0, echo = 0;
+      size_t nrx = 0;
+      const char *te;
+      struct pollfd pfd;
+      lex_next(L);
+      ep[0] = 0; reply[0] = 0; a[0] = 0; b[0] = 0; got[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS TCPLISTEN host:port [reply]");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) == 0) {
+        snprintf(ep, sizeof ep, "%s", a);
+        snprintf(reply, sizeof reply, "%s", b);
+        echo = 0;
+      } else {
+        snprintf(ep, sizeof ep, "%s", a);
+        echo = 1;
+      }
+      te = getenv("CUBALC_P2P_TIMEOUT");
+      if (te && te[0]) {
+        to_ms = atoi(te);
+        if (to_ms < 0) to_ms = 0;
+        if (to_ms > 600000) to_ms = 600000;
+      }
+      if (cubalc_parse_host_port_simple(ep, host, sizeof host, &port) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPLISTEN: bad host:port");
+        var_set_str(vm, "ERR", "TCPLISTEN: bad host:port");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      lfd = cubalc_smx_tcp_listen(host, port, 2);
+      if (lfd < 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPLISTEN: bind/listen fail");
+        var_set_str(vm, "ERR", "TCPLISTEN: bind/listen fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      pfd.fd = lfd; pfd.events = POLLIN; pfd.revents = 0;
+      if (to_ms > 0) {
+        if (poll(&pfd, 1, to_ms) <= 0) {
+          close(lfd);
+          var_set_num(vm, "OK", 0);
+          var_set_num(vm, "LAST_N", 0);
+          var_set_str(vm, "LAST", "");
+          var_set_str(vm, "LAST_ERR", "TCPLISTEN: accept timeout");
+          var_set_str(vm, "ERR", "TCPLISTEN: accept timeout");
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+          vm->last_n = 0;
+          bump(vm); return 1;
+        }
+      }
+      cfd = accept(lfd, NULL, NULL);
+      close(lfd);
+      if (cfd < 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPLISTEN: accept fail");
+        var_set_str(vm, "ERR", "TCPLISTEN: accept fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      (void)timed;
+      if (cubalc_cbxf_recv(cfd, got, sizeof got, &nrx, to_ms > 0 ? to_ms : 30000) != 0) {
+        close(cfd);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "LAST_ERR", "TCPLISTEN: recv fail");
+        var_set_str(vm, "ERR", "TCPLISTEN: recv fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        bump(vm); return 1;
+      }
+      if (echo) snprintf(reply, sizeof reply, "%s", got);
+      if (cubalc_cbxf_send(cfd, reply, strlen(reply)) != 0) {
+        close(cfd);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", (long)nrx);
+        var_set_str(vm, "LAST", got);
+        var_set_str(vm, "LAST_ERR", "TCPLISTEN: send fail");
+        var_set_str(vm, "ERR", "TCPLISTEN: send fail");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", got);
+        vm->last_n = (long)nrx;
+        bump(vm); return 1;
+      }
+      close(cfd);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "LAST_N", (long)nrx);
+      var_set_num(vm, "TCPLISTEN_RX", (long)nrx);
+      var_set_num(vm, "TCPLISTEN_TX", (long)strlen(reply));
+      var_set_str(vm, "LAST", got);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", got);
+      vm->last_n = (long)nrx;
+      bump(vm); return 1;
+    }
+#endif /* !WINDOWS */
     /* SYS LOGALL|APPENDFILES|BULKAPPEND bag data
      * — append data+\n to every path in bag (fopen "a", create if missing).
      * Not APPENDALL (that is string SUFFIXALL). Soft continue on open fail.

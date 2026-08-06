@@ -1,0 +1,79 @@
+# SYS SUBSTENV / ENVSUBST / EXPANDENV
+# — expand $NAME and ${NAME} from process env, then program vars
+# Usability: path/config templates without shell envsubst or REPLACEALL chains
+# $$ → literal $. Unset → empty. LAST_N = replacements · SUBSTENV_MISS unset count.
+
+HOLD_FLASH 1
+
+# env-backed keys
+SYS ENV SET "CUBALC_MI_SE_A" "alpha"
+SYS ENV SET "CUBALC_MI_SE_B" "beta"
+
+SYS SUBSTENV "pair=${CUBALC_MI_SE_A}/${CUBALC_MI_SE_B}"
+ASSERT OK == 1
+ASSERT SUBSTENV_N == 2
+ASSERT SUBSTENV_MISS == 0
+ASSERT LAST_N == 2
+SYS EQS LAST "pair=alpha/beta"
+ASSERT LAST_N == 1
+
+# bare $NAME form
+SYS ENVSUBST "x=$CUBALC_MI_SE_A-y"
+SYS EQS LAST "x=alpha-y"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 1
+
+# program var fallback when env missing
+LET ROLE = "host"
+SYS SUBSTENV "role=${ROLE}/ok"
+SYS EQS LAST "role=host/ok"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 1
+ASSERT SUBSTENV_MISS == 0
+
+# numeric program var
+LET N = 42
+SYS SUBSTENV "n=$N"
+SYS EQS LAST "n=42"
+ASSERT LAST_N == 1
+
+# unset → empty + MISS
+SYS SUBSTENV "gone=${CUBALC_MI_SE_NOPE}end"
+SYS EQS LAST "gone=end"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 1
+ASSERT SUBSTENV_MISS == 1
+
+# $$ literal dollar
+SYS SUBSTENV "cost=$$5"
+SYS EQS LAST "cost=$5"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 0
+
+# zero-arg uses prior LAST as template (COALESCE seeds LAST/last_str)
+SYS ENV SET "CUBALC_MI_SE_T" "tmpl"
+SYS COALESCE "v=${CUBALC_MI_SE_T}"
+SYS EXPANDENV
+SYS EQS LAST "v=tmpl"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 1
+
+# alias ENVEXPAND
+SYS ENVEXPAND "a=$CUBALC_MI_SE_A b=$CUBALC_MI_SE_B"
+SYS EQS LAST "a=alpha b=beta"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 2
+
+# mixed env + var
+SYS SUBSTENV "${CUBALC_MI_SE_A}-$ROLE-$N"
+SYS EQS LAST "alpha-host-42"
+ASSERT LAST_N == 1
+ASSERT SUBSTENV_N == 3
+ASSERT SUBSTENV_MISS == 0
+
+# cleanup test env
+SYS ENV UNSET "CUBALC_MI_SE_A"
+SYS ENV UNSET "CUBALC_MI_SE_B"
+SYS ENV UNSET "CUBALC_MI_SE_T"
+
+PRINT "sys_substenv ok"

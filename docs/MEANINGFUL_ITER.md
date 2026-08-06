@@ -265,6 +265,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 235. ~~**`SYS DROPEXACTFILE` / `DROPFILEEXACT` / `REMOVELINEFILE`**~~ **done** (drop first exact file line · dual of bag REMOVELINE · no substring false positives).
 236. ~~**`SYS TOGGLELINE` / `TOGGLEFILELINE` / `FLIPLINE`**~~ **done** (flip exact file line presence · feature flags without HAS+ENSURE/DROP IF).
 237. ~~**`SYS KVFILEENSURE` / `ENSUREKVFILE` / `DEFAULTKVFILE`**~~ **done** (set plate key=val only if missing · file DEFAULT · no LOOKUP+IF+SET glue).
+238. ~~**`SYS SUBSTENV` / `ENVSUBST` / `EXPANDENV`**~~ **done** (expand `$NAME`/`${NAME}` from env+vars · path templates without shell envsubst).
 
 ## Tick protocol
 
