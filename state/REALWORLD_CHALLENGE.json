@@ -60,7 +60,7 @@
       "id": "W1",
       "severity": "high",
       "area": "host|units",
-      "title": "MEM/DF report kB; HUMANSIZE expects bytes — silent scale trap",
+      "title": "MEM/DF report kB; HUMANSIZE expects bytes \u2014 silent scale trap",
       "detail": "Agents stamp HUMANSIZE MEM_AVAIL_N without *1024 and under-report ~1024\u00d7. Board multiplies to bytes; easy to forget.",
       "repro": "HUMANSIZE MEM_AVAIL_N without *1024"
     },
@@ -141,6 +141,6 @@
     "stamp CAT LAST LAST doubled uptime (fixed in board)",
     "selftest 241/241; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "4855506815e31ad58007c1308715c592e63ef12f",
   "ts": "2026-08-06T17:58:41Z"
 }
