@@ -11,6 +11,7 @@
 #  include <sys/socket.h>
 #endif
 
+#if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
 static int cubalc_cbxf_send(int fd, const char *payload, size_t plen) {
@@ -79,6 +80,7 @@ static int cubalc_parse_host_port_simple(const char *ep, char *host, size_t hsz,
   if (*port <= 0 || *port > 65535) return -1;
   return 0;
 }
+#endif /* !WINDOWS */
 
 /* Basename shell match for WALK (fnmatch when available). */
 static int cubalc_walk_match(const char *pat, const char *name) {
@@ -17910,6 +17912,17 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EQFILE", "SYS EQFILE|SAMEFILE|CMPFILE a b — 1 if identical file content · verify COPY"},
       {"SYS SAMEFILE", "SYS SAMEFILE alias of SYS EQFILE"},
       {"SYS CMPFILE", "SYS CMPFILE alias of SYS EQFILE (not numeric CMP)"},
+      {"SYS SWAPFILES", "SYS SWAPFILES|FILESWAP|BIDIRSWAP a b — bidirectional content swap of two files"},
+      {"SYS FILESWAP", "SYS FILESWAP alias of SYS SWAPFILES"},
+      {"SYS BIDIRSWAP", "SYS BIDIRSWAP alias of SYS SWAPFILES"},
+      {"SYS DUPLEX", "SYS DUPLEX|BIDXFER|PUTGET out in [payload] — write out + read in (mailbox RTT)"},
+      {"SYS BIDXFER", "SYS BIDXFER alias of SYS DUPLEX · bidirectional any-data plate flow"},
+      {"SYS PUTGET", "SYS PUTGET alias of SYS DUPLEX"},
+      {"SYS FLOWDATA", "SYS FLOWDATA alias of SYS DUPLEX · agent data flow"},
+      {"SYS TCPXFER", "SYS TCPXFER|TCPBIDIR host:port [payload] — CBXF send+recv peer payload · soft miss"},
+      {"SYS TCPBIDIR", "SYS TCPBIDIR alias of SYS TCPXFER · any-string peer duplex"},
+      {"SYS TCPLISTEN", "SYS TCPLISTEN|TCPSERVE host:port [reply] — one-shot CBXF accept+reply (echo if omit)"},
+      {"SYS TCPSERVE", "SYS TCPSERVE alias of SYS TCPLISTEN"},
       {"SYS LOGALL", "SYS LOGALL|APPENDFILES bag data — append line to every path · multi-log"},
       {"SYS APPENDFILES", "SYS APPENDFILES alias of SYS LOGALL (not string APPENDALL)"},
       {"SYS BULKAPPEND", "SYS BULKAPPEND alias of SYS LOGALL"},

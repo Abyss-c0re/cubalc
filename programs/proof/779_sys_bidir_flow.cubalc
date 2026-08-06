@@ -1,0 +1,99 @@
+# SYS SWAPFILES / DUPLEX / BIDXFER — bidirectional any-data host flow
+# Usability: plate swap + mailbox RTT without shell pipes; TCP soft miss
+# Complements SMX EXCHANGE (matrix bits) with arbitrary string/bag payloads
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "bidir_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "alpha.txt"
+LET pa = LAST
+SYS JOIN fix "beta.txt"
+LET pb = LAST
+SYS JOIN fix "req.txt"
+LET preq = LAST
+SYS JOIN fix "rsp.txt"
+LET prsp = LAST
+
+# --- SWAPFILES: bidirectional content exchange ---
+SYS WRITE pa "from-a\nline2"
+SYS WRITE pb "from-b\nonly"
+SYS SWAPFILES pa pb
+ASSERT OK == 1
+ASSERT SWAPFILES_A > 0
+ASSERT SWAPFILES_B > 0
+SYS READ pa
+SYS EQS LAST "from-b\nonly"
+ASSERT LAST_N == 1
+SYS READ pb
+SYS EQS LAST "from-a\nline2"
+ASSERT LAST_N == 1
+
+# swap back
+SYS BIDIRSWAP pa pb
+ASSERT OK == 1
+SYS READ pa
+SYS HAS LAST "from-a"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS SWAPFILES pa "/no/such/path/zzz"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# --- DUPLEX: write out, read in (mailbox RTT for any payload) ---
+SYS WRITE prsp "ack:hello-world"
+SYS DUPLEX preq prsp "hello-world"
+ASSERT OK == 1
+ASSERT DUPLEX_TX > 0
+ASSERT DUPLEX_RX > 0
+SYS EQS LAST "ack:hello-world"
+ASSERT LAST_N == 1
+SYS READ preq
+SYS EQS LAST "hello-world"
+ASSERT LAST_N == 1
+
+# bag payload round-trip via LAST
+LET bag = "peer1:ok\npeer2:busy\npeer3:idle"
+SYS WRITE prsp bag
+SYS BIDXFER preq prsp bag
+ASSERT OK == 1
+SYS EQS LAST bag
+ASSERT LAST_N == 1
+ASSERT BIDXFER_TX > 0
+ASSERT BIDXFER_RX > 0
+
+# two-arg form: payload = LAST
+SYS WRITE prsp "reply-z"
+LET z = "ping-z"
+SYS PREPEND "" z
+SYS HEAD LAST
+# put z into LAST via LET dance — use PUTGET with explicit payload
+SYS PUTGET preq prsp "ping-z"
+ASSERT OK == 1
+SYS EQS LAST "reply-z"
+ASSERT LAST_N == 1
+
+# soft miss on missing in path
+SYS DUPLEX preq "/no/such/in" "x"
+ASSERT OK == 0
+
+# --- TCPXFER soft miss without peer (no hang forever) ---
+# Use a closed port; connect fail soft OK=0
+SYS TCPXFER "127.0.0.1:1" "probe"
+ASSERT OK == 0
+ASSERT TCPXFER_TX == 0
+CLEAR_ERR "tcp soft miss"
+
+# FLOWDATA alias of DUPLEX
+SYS WRITE prsp "flow-ok"
+SYS FLOWDATA preq prsp "payload"
+ASSERT OK == 1
+SYS EQS LAST "flow-ok"
+ASSERT LAST_N == 1
+
+PRINT "sys_bidir_flow ok"

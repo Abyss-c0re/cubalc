@@ -1920,6 +1920,7 @@ int main(int argc, char **argv) {
       {"sys_toggleline", "programs/proof/776_sys_toggleline.cubalc", "SYS TOGGLELINE/TOGGLEFILELINE flip exact file line presence"},
       {"sys_kvfileensure", "programs/proof/777_sys_kvfileensure.cubalc", "SYS KVFILEENSURE/ENSUREKVFILE set key=val only if missing"},
       {"sys_substenv", "programs/proof/778_sys_substenv.cubalc", "SYS SUBSTENV/ENVSUBST expand $VAR and ${VAR} templates"},
+      {"sys_bidir_flow", "programs/proof/779_sys_bidir_flow.cubalc", "SYS SWAPFILES/DUPLEX/TCPXFER bidirectional any-data host flow"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
