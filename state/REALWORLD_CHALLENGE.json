@@ -1,179 +1,171 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 66,
-  "program": "programs/realworld/token_blast_board.cubalc",
-  "theme": "token blast radius COUNTINFILES FIRSTFILE LASTFILE severity bookends",
-  "version": "1.15.203-usability",
+  "iter": 67,
+  "program": "programs/realworld/log_line_harvest.cubalc",
+  "theme": "incident log line harvest GREPLINES HEADFILE TAILFILE LINECOUNTALL",
+  "version": "1.15.205-usability",
   "pass": true,
   "tests": [
     {
       "name": "scan_logs",
-      "cmd": "PATHGLOB *.log \u2192 5 paths",
+      "cmd": "PATHGLOB *.log → 4 paths",
       "ok": true,
       "note": "inventory"
     },
     {
-      "name": "tally_cs",
-      "cmd": "COUNTINFILES sk_live_ \u2192 hits=2 files=1 scan=5",
+      "name": "volume",
+      "cmd": "LINECOUNTALL → bag 1/3/2/5 SUM=11",
       "ok": true,
-      "note": "a.log two tokens"
+      "note": "parallel counts"
     },
     {
-      "name": "tally_ci",
-      "cmd": "COUNTINFILESI sk_live_ \u2192 hits=3 files=2",
+      "name": "harvest_ERROR",
+      "cmd": "GREPLINES ERROR → 2 lines a.log only",
       "ok": true,
-      "note": "includes Sk_Live_ in c.log"
+      "note": "cs harvest"
     },
     {
-      "name": "first_last_cs",
-      "cmd": "FIRSTFILE/LASTFILE sk_live_ both a.log",
+      "name": "harvesti_error",
+      "cmd": "GREPLINESI error → +Error gamma = 3",
       "ok": true,
-      "note": "single infected file"
+      "note": "icase"
     },
     {
-      "name": "firsti_lasti",
-      "cmd": "FIRSTFILEI\u2192c LASTFILEI\u2192a bag order",
+      "name": "false_friend_ERR",
+      "cmd": "GREPLINES ERR hits ERR line + both ERROR lines",
       "ok": true,
-      "note": "case bookends differ"
+      "note": "substring"
     },
     {
-      "name": "span",
-      "cmd": "span sk_live_ tally+first+last one shot",
+      "name": "head_tail_peek",
+      "cmd": "HEADFILE/TAILFILE n=2; peek head+===TAIL===+tail",
+      "ok": true,
+      "note": "file peek"
+    },
+    {
+      "name": "head_ghost_require",
+      "cmd": "HEADFILE ghost soft exit0; REQUIRE exit2",
+      "ok": true,
+      "note": "soft miss"
+    },
+    {
+      "name": "packet",
+      "cmd": "volume+harvest one shot",
       "ok": true,
       "note": "combined"
     },
     {
-      "name": "hits_grepfiles",
-      "cmd": "GREPFILES path list vs COUNTINFILES_FILES",
+      "name": "ghost_volume",
+      "cmd": "LINECOUNTALL ghost → 0 slot MISS=1 SUM partial",
       "ok": true,
-      "note": "paths vs count"
+      "note": "aligned bag"
     },
     {
-      "name": "false_friend",
-      "cmd": "tally sk_live (no _) \u2192 3 hits substring",
+      "name": "empty_greplines",
+      "cmd": "GREPLINES bag '' → N=all lines (empty matches)",
       "ok": true,
-      "note": "sk_live_ and sk_liveX"
+      "note": "language empty needle"
     },
     {
-      "name": "soft_miss_require",
-      "cmd": "tally FATAL soft exit 0; REQUIRE exit 2",
+      "name": "print_json_glue",
+      "cmd": "PRINT_JSON lines collapses NL",
       "ok": true,
-      "note": "agent REQUIRE gate"
-    },
-    {
-      "name": "ghost_miss",
-      "cmd": "bag with ghost \u2192 tally_miss=1 scan=4 still hits",
-      "ok": true,
-      "note": "soft unreadable"
-    },
-    {
-      "name": "empty_needle_asym",
-      "cmd": "COUNTINFILES ''\u21920; FIRSTFILE ''\u2192first readable",
-      "ok": true,
-      "note": "language asymmetry"
-    },
-    {
-      "name": "first_scan_early",
-      "cmd": "FIRSTFILE stops SCAN=2 when hit mid bag",
-      "ok": true,
-      "note": "early stop"
+      "note": "ERROR alpha oneERROR alpha two"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "178/178 pass incl countinfiles firstfile greplines"
+      "note": "180/180 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs",
-      "title": "Empty needle: COUNTINFILES\u21920 but FIRSTFILE/LASTFILE\u2192first/last readable",
-      "detail": "Documented in op comments; still a live footgun. Agent that forgets ARG1 gets a confident path pick from FIRSTFILE while tally correctly reports zero. Opposite of REPLACEFILES empty-old silent skip \u2014 here pick is affirmative OK=1 N=1.",
-      "repro": "FIRSTFILE bag \"\" \u2192 LAST=first path OK=1; COUNTINFILES bag \"\" \u2192 0"
+      "area": "host|match",
+      "title": "GREPLINES empty needle matches every line (N=linecount)",
+      "detail": "Unlike COUNTINFILES empty→0, empty substring is true for all lines. Agent blank ARG harvest floods LINES plate. Opposite polarity of empty-needle family across ops.",
+      "repro": "GREPLINES bag \"\" → GREPLINES_N == total lines"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|json",
-      "title": "PRINT_JSON multiline bag collapses to single glued string",
-      "detail": "TALLY plate is newline KV but PRINT_JSON tally prints needlesk_live_hits2files1\u2026 Same class as prior REALWORLD. Agents cannot round-trip plate bags via JSON line.",
-      "repro": "PRINT_JSON tally after span"
+      "area": "host|parse",
+      "title": "HEADFILE/TAILFILE n bare numeric var is form error",
+      "detail": "SYS HEADFILE path n fails with unknown form 'n'; need (n) expr or string var. Literal 2 works. Easy agent trap when peeks are parameterized.",
+      "repro": "LET n=2; SYS HEADFILE p n → parse fail; SYS HEADFILE p (n) ok"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|fs",
-      "title": "FIRST/LASTFILE bookends are bag order not mtime/path sort",
-      "detail": "PATHGLOB order is filesystem/readdir dependent. 'Blast entry/exit' semantics agents want usually need SORTMTIME or SORT paths first. FIRSTFILE early-stop SCAN makes order doubly load-bearing.",
-      "repro": "same files different PATHS line order \u2192 different FIRST"
+      "severity": "high",
+      "area": "host|json",
+      "title": "PRINT_JSON harvest bag glues lines without separators",
+      "detail": "lines plate has NL between ERROR lines; PRINT_JSON → ERROR alpha oneERROR alpha two. Recurring bag JSON collapse.",
+      "repro": "PRINT_JSON lines after GREPLINES"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|naming",
-      "title": "GREPFILES returns paths; COUNTINFILES returns totals only",
-      "detail": "No COUNTINFILES path bag of infected files. Agents need dual call GREPFILES + COUNTINFILES for list+severity. COUNTINFILES_FILES is a count not a bag.",
-      "repro": "tally files=2 vs hits action path list"
+      "area": "host|fs",
+      "title": "GREPLINES returns bare lines — no path:line provenance",
+      "detail": "Harvest packet loses which file produced each line. Agents must dual GREPFILES or custom EACH. No GREPLINES --with-filename mode.",
+      "repro": "FATAL boom alone; multi-file harvest loses source"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|match",
-      "title": "Substring match has no word-boundary / token mode",
-      "detail": "sk_live matches sk_live_AAA and sk_liveX. Security token boards need exact/prefix/regex which language lacks on file ops. Prefixing underscore is agent discipline only.",
-      "repro": "tally sk_live vs sk_live_"
+      "area": "host|naming",
+      "title": "SYS HEAD is bag first field; SYS HEADFILE is file peek",
+      "detail": "Same trap class as GREP/GREPFILES. Wrong op peeks path bag string not file content.",
+      "repro": "HEAD path_bag vs HEADFILE path"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|fs",
-      "title": "Content-only: path basenames never searched",
-      "detail": "File sk_live_name_only.log with content 'nothing' scores 0 for needle sk_live_name. Filename leaks invisible to COUNTINFILES/FIRSTFILE.",
-      "repro": "tally sk_live_name \u2192 0 despite path"
+      "area": "host|match",
+      "title": "Substring false friends: ERR matches ERROR lines",
+      "detail": "No whole-word mode on GREPLINES. Short severity needles over-harvest.",
+      "repro": "GREPLINES ERR → ERR line + ERROR alpha*"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits trailing NL on single-path plates",
-      "detail": "FIRST.txt / last line of PATHS often no final $ on cat -A. Recurring WRITE NL gap.",
-      "repro": "cat -A FIRST.txt"
+      "area": "host|fs",
+      "title": "LINECOUNTALL miss keeps bag length with 0 slots",
+      "detail": "Useful for ZIP with PATHS but silent zero can look like empty files. MISS counter is the only signal.",
+      "repro": "bag with ghost → VOLUME 5\\n0\\n2 MISS=1"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "SYS NUM on non-numeric REQUIRE env leaves REQUIRE_HIT=0 silently",
-      "detail": "CUBALC_TB_REQUIRE=abc \u2192 OK=0 on NUM, flag stays default 0 so miss soft-succeeds. Easy to think REQUIRE was on.",
-      "repro": "REQUIRE=abc tally FATAL exit 0"
+      "area": "host|write",
+      "title": "WRITE trailing NL omitted on last plate field",
+      "detail": "VOLUME/LINES/PEEK last line often no final $ on cat -A.",
+      "repro": "cat -A VOLUME.txt"
     }
   ],
   "workarounds": [
-    "Reject blank needle at agent layer before FIRSTFILE (this board EXIT 2)",
-    "SORTMTIME or SORT paths before span for temporal bookends",
-    "Pair GREPFILES (paths) with COUNTINFILES (severity)",
-    "Use longest unique token prefix (sk_live_) not short false friends",
-    "SYS NUM + require OK or explicit digit check for REQUIRE env",
-    "Do not trust PRINT_JSON for multiline plates \u2014 READ plate files"
+    "Reject blank needle before GREPLINES (this board EXIT 2)",
+    "Always SYS HEADFILE path (n) not bare n",
+    "Read plate files not PRINT_JSON for multiline bags",
+    "Pair GREPFILES for provenance if path:line needed",
+    "Prefer long needles (ERROR not ERR) for severity harvest"
   ],
   "language_gaps": [
-    "FIRSTFILE empty needle should miss like COUNTINFILES (or both refuse)",
-    "COUNTINFILES return infected path bag (or HITFILES)",
-    "Word-boundary / whole-token file match mode",
-    "Optional basename/path match for needle boards",
-    "PRINT_JSON bag-as-array; WRITE trailing NL option",
-    "FIRSTFILE by mtime not only bag order"
+    "GREPLINES empty needle should miss/zero like COUNTINFILES",
+    "HEADFILE accept bare numeric vars without (expr)",
+    "GREPLINES with-filename / path:line prefix mode",
+    "Whole-word GREPLINES option",
+    "PRINT_JSON bag-as-array; WRITE trailing NL",
+    "HEAD vs HEADFILE naming clarity in help"
   ],
   "issues_faced": [
-    "COUNTINFILES+FIRSTFILE+LASTFILE positive path clean",
-    "Empty needle asymmetry confirmed outside agent guard",
-    "PRINT_JSON tally glue surprises still present",
-    "PATHGLOB order non-deterministic for bookend semantics",
-    "No language fix this iter \u2014 document for MEANINGFUL_ITER"
+    "Bare HEADFILE n parse fail blocked first head/tail tests — fixed with (peek_want)",
+    "Empty GREPLINES polarity opposite COUNTINFILES — documented",
+    "Positive harvest/volume/packet/soft miss clean",
+    "No language fix this iter"
   ],
-  "commit": "0c8b81c2c151ee5cb238dd681d6e57b4f43bedb6",
-  "ts": "2026-08-06T07:34:20Z"
+  "commit": "",
+  "ts": "2026-08-06T07:59:44Z"
 }

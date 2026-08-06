@@ -1,0 +1,883 @@
+# log_line_harvest.cubalc — multi-file incident line harvest + volume peek
+#
+# Real use: ops agent inventories a log drop, measures line volume
+# (LINECOUNTALL), harvests matching ERROR/FATAL/incident lines across the bag
+# (GREPLINES/EXTRACTLINES), and peeks plate/log bookends (HEADFILE/TAILFILE)
+# for an evidence packet without shell head/grep -R. Distinct from
+# token_blast_board (hit counts + first/last *path*) and incident_log_board
+# (single-file stamp): this board is line-content harvest + per-file WC.
+#
+# Plate under STATE:
+#   PATHS.txt     — working path bag
+#   LINES.txt     — last GREPLINES harvest bag
+#   VOLUME.txt    — last LINECOUNTALL count bag (parallel to PATHS)
+#   PEEK.txt      — last HEADFILE/TAILFILE sample
+#   HARVEST_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_LH_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   volume    — LINECOUNTALL PATHS → VOLUME + SUM
+#   harvest   — GREPLINES PATHS needle(ARG1) → LINES  [cs]
+#   harvesti  — GREPLINESI PATHS needle
+#   head      — HEADFILE path(ARG1|first PATH) n(ARG2|10) → PEEK
+#   tail      — TAILFILE path n → PEEK
+#   peek      — head+tail joined sample of path
+#   packet    — volume + harvest one shot
+#   has       — HASLINE exact on PATHS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lh_$$; mkdir -p "$CUBALC_STATE/logs"
+#   # write multi-line fixtures with ERROR / Error / FATAL
+#   CUBALC_LH_DIR=$CUBALC_STATE/logs CUBALC_ARG0=scan CUBALC_ARG1='*.log' \
+#     ./out/cubalc run -q -s programs/realworld/log_line_harvest.cubalc
+#   CUBALC_ARG0=harvest CUBALC_ARG1='ERROR' ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=volume ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_LH_DIR=…  CUBALC_LH_PAT=*  CUBALC_LH_REQUIRE=1  CUBALC_LH_N=10
+#
+# Edges deliberately stressed:
+#   GREPLINES empty bag / zero hits soft miss; GREPLINESI case
+#   GREPLINES returns lines not paths (vs GREPFILES); no file:line prefix
+#   HEADFILE vs HEAD bag op naming trap; default n=10
+#   HEADFILE soft miss ghost; LINECOUNTALL miss→0 in bag keeps length
+#   substring false friends (ERR vs ERROR); WRITE NL; PRINT_JSON glue
+#   REQUIRE miss exit 2; NUM shuttle on REQUIRE/N
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "log_line_harvest: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT LFILE = "LINES.txt"
+DEFAULT VFILE = "VOLUME.txt"
+DEFAULT KFILE = "PEEK.txt"
+DEFAULT REPORT = "HARVEST_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT NPEEK = 10
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LH_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LH_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LH_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LH_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LH_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_LH_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_LH_N" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NPEEK = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir LFILE
+LET lines_path = LAST
+SYS JOIN state_dir VFILE
+LET volume_path = LAST
+SYS JOIN state_dir KFILE
+LET peek_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR lines_path OR ""
+LET lines = LAST
+CLEAR_ERR
+SYS READ OR volume_path OR ""
+LET volume = LAST
+CLEAR_ERR
+SYS READ OR peek_path OR ""
+LET peek = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET lines_ch = 0
+LET volume_ch = 0
+LET peek_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET harvest_n = 0
+LET harvest_files = 0
+LET harvest_scan = 0
+LET harvest_miss = 0
+LET vol_n = 0
+LET vol_files = 0
+LET vol_miss = 0
+LET vol_sum = 0
+LET peek_n = 0
+LET peek_total = 0
+LET peek_want = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "harvest"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "harvest needs needle"
+  END
+END
+SYS EQS ACTION "harvesti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "harvesti needs needle"
+  END
+END
+SYS EQS ACTION "packet"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "packet needs needle"
+  END
+END
+SYS EQS ACTION "head"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    # allow empty → first path later
+    LET NAME = ""
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES lines
+  LET nl = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "lharvest" np nl ACTION
+  PRINT_JSON np nl ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON lines
+  PRINT_JSON volume
+  PRINT_JSON peek
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- volume LINECOUNTALL ---
+SYS EQS ACTION "volume"
+IF LAST_N == 1 THEN
+  NOTE "action volume"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "volume empty bag"
+    FAIL "volume empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "volume empty bag"
+    END
+  ELSE
+    SYS LINECOUNTALL paths
+    LET volume = LAST
+    LET vol_n = LINECOUNTALL_N
+    LET vol_files = LINECOUNTALL_FILES
+    LET vol_miss = LINECOUNTALL_MISS
+    LET vol_sum = LINECOUNTALL_SUM
+    LET hit = vol_sum
+    LET volume_ch = 1
+    IF vol_files == 0 THEN
+      LET miss = 1
+      LET note_msg = "volume none"
+      FAIL "volume none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "volume none"
+      END
+    ELSE
+      LET note_msg = "volume ok"
+    END
+    PRINT_JSON vol_n vol_files vol_miss vol_sum
+    PRINT_JSON volume
+    CLEAR_ERR
+  END
+END
+
+# --- harvest GREPLINES ---
+SYS EQS ACTION "harvest"
+IF LAST_N == 1 THEN
+  NOTE "action harvest"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "harvest empty bag"
+    FAIL "harvest empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "harvest empty bag"
+    END
+  ELSE
+    SYS GREPLINES paths NAME
+    LET lines = LAST
+    LET harvest_n = GREPLINES_N
+    LET harvest_files = GREPLINES_FILES
+    LET harvest_scan = GREPLINES_SCAN
+    LET harvest_miss = GREPLINES_MISS
+    LET hit = harvest_n
+    LET lines_ch = 1
+    IF harvest_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "harvest none"
+      FAIL "harvest none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "harvest none"
+      END
+    ELSE
+      LET note_msg = "harvest ok"
+    END
+    PRINT_JSON NAME harvest_n harvest_files harvest_scan harvest_miss
+    PRINT_JSON lines
+    CLEAR_ERR
+  END
+END
+
+# --- harvesti GREPLINESI ---
+SYS EQS ACTION "harvesti"
+IF LAST_N == 1 THEN
+  NOTE "action harvesti"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "harvesti empty bag"
+    FAIL "harvesti empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "harvesti empty bag"
+    END
+  ELSE
+    SYS GREPLINESI paths NAME
+    LET lines = LAST
+    LET harvest_n = GREPLINES_N
+    LET harvest_files = GREPLINES_FILES
+    LET harvest_scan = GREPLINES_SCAN
+    LET harvest_miss = GREPLINES_MISS
+    LET hit = harvest_n
+    LET lines_ch = 1
+    IF harvest_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "harvesti none"
+      FAIL "harvesti none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "harvesti none"
+      END
+    ELSE
+      LET note_msg = "harvesti ok"
+    END
+    PRINT_JSON NAME harvest_n harvest_files harvest_scan harvest_miss
+    PRINT_JSON lines
+    CLEAR_ERR
+  END
+END
+
+# helper: resolve path for head/tail/peek
+# NAME if set else HEAD of paths
+
+# --- head HEADFILE ---
+# Note: HEADFILE n must be literal or (expr) — bare numeric var is a form error
+SYS EQS ACTION "head"
+IF LAST_N == 1 THEN
+  NOTE "action head"
+  LET val_s = NAME
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "head no path"
+      FAIL "head no path"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "head no path"
+      END
+    ELSE
+      SYS HEAD paths
+      LET val_s = LAST
+    END
+  END
+  SYS BLANK val_s
+  IF LAST_N == 0 THEN
+    LET peek_want = NPEEK
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET peek_want = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS HEADFILE val_s (peek_want)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET peek = ""
+      LET peek_n = 0
+      LET peek_total = 0
+      LET peek_ch = 1
+      LET note_msg = "head miss"
+      FAIL "head miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "head miss"
+      END
+    ELSE
+      LET peek = LAST
+      LET peek_n = HEADFILE_N
+      LET peek_total = HEADFILE_TOTAL
+      LET peek_want = HEADFILE_WANT
+      LET hit = peek_n
+      LET peek_ch = 1
+      LET note_msg = "head ok"
+    END
+    PRINT_JSON val_s peek_n peek_total peek_want
+    PRINT_JSON peek
+    CLEAR_ERR
+  END
+END
+
+# --- tail TAILFILE ---
+SYS EQS ACTION "tail"
+IF LAST_N == 1 THEN
+  NOTE "action tail"
+  LET val_s = NAME
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "tail no path"
+      FAIL "tail no path"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tail no path"
+      END
+    ELSE
+      SYS HEAD paths
+      LET val_s = LAST
+    END
+  END
+  SYS BLANK val_s
+  IF LAST_N == 0 THEN
+    LET peek_want = NPEEK
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET peek_want = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS TAILFILE val_s (peek_want)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET peek = ""
+      LET peek_n = 0
+      LET peek_total = 0
+      LET peek_ch = 1
+      LET note_msg = "tail miss"
+      FAIL "tail miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tail miss"
+      END
+    ELSE
+      LET peek = LAST
+      LET peek_n = TAILFILE_N
+      LET peek_total = TAILFILE_TOTAL
+      LET peek_want = TAILFILE_WANT
+      LET hit = peek_n
+      LET peek_ch = 1
+      LET note_msg = "tail ok"
+    END
+    PRINT_JSON val_s peek_n peek_total peek_want
+    PRINT_JSON peek
+    CLEAR_ERR
+  END
+END
+
+# --- peek head+tail sample ---
+SYS EQS ACTION "peek"
+IF LAST_N == 1 THEN
+  NOTE "action peek"
+  LET val_s = NAME
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "peek no path"
+      FAIL "peek no path"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "peek no path"
+      END
+    ELSE
+      SYS HEAD paths
+      LET val_s = LAST
+    END
+  END
+  SYS BLANK val_s
+  IF LAST_N == 0 THEN
+    LET peek_want = NPEEK
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET peek_want = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS HEADFILE val_s (peek_want)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET peek = ""
+      LET peek_ch = 1
+      LET note_msg = "peek head miss"
+      FAIL "peek head miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "peek head miss"
+      END
+    ELSE
+      LET peek = LAST
+      LET peek_n = HEADFILE_N
+      LET peek_total = HEADFILE_TOTAL
+      CLEAR_ERR
+      SYS PUSH peek "===TAIL==="
+      LET peek = LAST
+      SYS TAILFILE val_s (peek_want)
+      IF OK == 1 THEN
+        SYS PUSH peek LAST
+        LET peek = LAST
+        LET peek_n = peek_n + TAILFILE_N
+      END
+      CLEAR_ERR
+      LET peek_ch = 1
+      LET hit = peek_n
+      LET note_msg = "peek ok"
+    END
+    PRINT_JSON val_s peek_n peek_total peek_want
+    PRINT_JSON peek
+    CLEAR_ERR
+  END
+END
+
+# --- packet volume + harvest ---
+SYS EQS ACTION "packet"
+IF LAST_N == 1 THEN
+  NOTE "action packet"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "packet empty bag"
+    FAIL "packet empty bag"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "packet empty bag"
+    END
+  ELSE
+    SYS LINECOUNTALL paths
+    LET volume = LAST
+    LET vol_n = LINECOUNTALL_N
+    LET vol_files = LINECOUNTALL_FILES
+    LET vol_miss = LINECOUNTALL_MISS
+    LET vol_sum = LINECOUNTALL_SUM
+    LET volume_ch = 1
+    CLEAR_ERR
+    SYS GREPLINES paths NAME
+    LET lines = LAST
+    LET harvest_n = GREPLINES_N
+    LET harvest_files = GREPLINES_FILES
+    LET harvest_scan = GREPLINES_SCAN
+    LET harvest_miss = GREPLINES_MISS
+    LET lines_ch = 1
+    LET hit = harvest_n
+    CLEAR_ERR
+    IF harvest_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "packet none"
+      FAIL "packet none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "packet none"
+      END
+    ELSE
+      LET note_msg = "packet ok"
+    END
+    PRINT_JSON NAME harvest_n harvest_files vol_sum vol_miss
+    PRINT_JSON lines
+    PRINT_JSON volume
+    CLEAR_ERR
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET lines = ""
+  LET volume = ""
+  LET peek = ""
+  LET paths_ch = 1
+  LET lines_ch = 1
+  LET volume_ch = 1
+  LET peek_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "volume"
+LET k = k + LAST_N
+SYS EQS ACTION "harvest"
+LET k = k + LAST_N
+SYS EQS ACTION "harvesti"
+LET k = k + LAST_N
+SYS EQS ACTION "head"
+LET k = k + LAST_N
+SYS EQS ACTION "tail"
+LET k = k + LAST_N
+SYS EQS ACTION "peek"
+LET k = k + LAST_N
+SYS EQS ACTION "packet"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF lines_ch > 0 THEN
+  SYS WRITE lines_path lines
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "lines write failed"
+  END
+  CLEAR_ERR
+END
+IF volume_ch > 0 THEN
+  SYS WRITE volume_path volume
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "volume write failed"
+  END
+  CLEAR_ERR
+END
+IF peek_ch > 0 THEN
+  SYS WRITE peek_path peek
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "peek write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES lines
+LET depth_l = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.log_line_harvest.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "harvest_n"
+LET report = LAST
+SYS STR harvest_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "harvest_files"
+LET report = LAST
+SYS STR harvest_files
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "harvest_scan"
+LET report = LAST
+SYS STR harvest_scan
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "harvest_miss"
+LET report = LAST
+SYS STR harvest_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "vol_sum"
+LET report = LAST
+SYS STR vol_sum
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "vol_files"
+LET report = LAST
+SYS STR vol_files
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "vol_miss"
+LET report = LAST
+SYS STR vol_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "peek_n"
+LET report = LAST
+SYS STR peek_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "peek_total"
+LET report = LAST
+SYS STR peek_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_l"
+LET report = LAST
+SYS STR depth_l
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "log_line_harvest" ACTION hit miss harvest_n harvest_files vol_sum peek_n note_msg elapsed
