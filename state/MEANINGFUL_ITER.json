@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 249,
-  "version": "1.15.276-usability",
-  "item": "SYS SAMEINODE / EQINODE · INODE hard-link identity",
-  "item_id": 284,
-  "title": "SYS SAMEINODE a b + SYS INODE path — verify hard-link plate identity",
-  "commit": "61131d254d40cb67d4973fb22a5e3954a0192454",
-  "summary": "same dev+ino probe + inode stamp; dual of HARDLINK ≠ EQFILE. selftest 249.",
+  "iter": 250,
+  "version": "1.15.277-usability",
+  "item": "SYS TEE / WRITETEE / SAVEKEEP write keep LAST",
+  "item_id": 285,
+  "title": "SYS TEE path [data] — write plate keep content in LAST for chaining",
+  "commit": "2a5268fd7dcd68eb5c933c0803ace48faaa70d7f",
+  "summary": "write+keep LAST content; chain without READ. selftest 250.",
   "proofs": [
-    "823_sys_sameinode",
-    "selftest n_pass=249"
+    "824_sys_tee",
+    "selftest n_pass=250"
   ],
-  "when": "2026-08-06T19:14:44Z",
+  "when": "2026-08-06T19:24:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "61131d254d40cb67d4973fb22a5e3954a0192454",
-  "note": "complements HARDLINK/NLINK for multi-agent shared plates"
+  "sha": "2a5268fd7dcd68eb5c933c0803ace48faaa70d7f",
+  "note": "dual of WRITE path-only LAST; agent log/plate pipelines"
 }
