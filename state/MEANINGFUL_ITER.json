@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 151,
-  "version": "1.15.176-usability",
-  "item": "SYS GLOB / MATCHFILES list basenames matching pattern",
-  "item_id": 184,
-  "title": "SYS GLOB|MATCHFILES path [pattern] — plate discovery without shell",
-  "commit": "2eca31368cc565e482ec534ac14486f5b528c28d",
-  "summary": "GLOB fnmatch basenames for agent file discovery. selftest 151.",
+  "iter": 152,
+  "version": "1.15.177-usability",
+  "item": "SYS PATHGLOB / PGLOB full paths matching shell pattern",
+  "item_id": 185,
+  "title": "SYS PATHGLOB|PGLOB path|pattern [pattern] — full paths for READ/RM",
+  "commit": "672dbd37ad74a73afb92049fb5e5c4cc350ccfa1",
+  "summary": "PATHGLOB returns full paths (shell-style dir/*.ext or two-arg). selftest 152.",
   "proofs": [
-    "724_sys_glob",
-    "selftest n_pass=151"
+    "725_sys_pathglob",
+    "selftest n_pass=152"
   ],
-  "when": "2026-08-06T02:55:38Z",
+  "when": "2026-08-06T03:11:09Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2eca31368cc565e482ec534ac14486f5b528c28d"
+  "sha": "672dbd37ad74a73afb92049fb5e5c4cc350ccfa1"
 }
