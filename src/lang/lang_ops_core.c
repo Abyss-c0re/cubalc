@@ -3339,6 +3339,107 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MODE|PERM|PERMS|GETMODE path — permission bits via stat.
+     * LAST = 4-digit octal "0644"; LAST_N / MODE_N = mode & 07777.
+     * Soft miss / empty → OK=0. Usability: plate perms without shell stat. */
+    if (kw(&L->cur,"MODE") || kw(&L->cur,"PERM") || kw(&L->cur,"PERMS") ||
+        kw(&L->cur,"GETMODE") || kw(&L->cur,"FILEMODE") || kw(&L->cur,"GETPERM") ||
+        kw(&L->cur,"STATMODE") || kw(&L->cur,"FMODE")){
+      char path[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] || cubalc_host_mode(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "MODE_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "MODE: fail");
+          var_set_str(vm, "ERR", "MODE: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "MODE_N", hr.n);
+      var_set_str(vm, "MODE", hr.str);
+      var_set_str(vm, "PERM", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CHMOD|SETMODE|SETPERM path mode — set permission bits.
+     * mode: integer (octal literal 0o644 or decimal 420) or "0644"/"644" string.
+     * LAST = path; LAST_N / CHMOD_N = applied mode; soft miss OK=0.
+     * Usability: agent plate lock-down without shell chmod. */
+    if (kw(&L->cur,"CHMOD") || kw(&L->cur,"SETMODE") || kw(&L->cur,"SETPERM") ||
+        kw(&L->cur,"SETPERMS") || kw(&L->cur,"FILECHMOD") || kw(&L->cur,"PERMSET") ||
+        kw(&L->cur,"MODESET")){
+      char path[512], mstr[64];
+      long mode = -1;
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0; mstr[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS CHMOD path mode");
+        return -1;
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        mode = parse_expr(vm, L);
+      } else if (resolve_str_arg(vm, L, mstr, sizeof mstr) == 0 && mstr[0]) {
+        /* octal string "0644" or "644" */
+        char *end = NULL;
+        unsigned long v = strtoul(mstr, &end, 8);
+        if (end && end != mstr && *end == 0)
+          mode = (long)v;
+        else {
+          end = NULL;
+          v = strtoul(mstr, &end, 10);
+          if (end && end != mstr && *end == 0)
+            mode = (long)v;
+        }
+      } else {
+        mode = vm->last_n;
+      }
+      if (!path[0] || mode < 0 || cubalc_host_chmod(path, mode, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "CHMOD_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "CHMOD: fail");
+          var_set_str(vm, "ERR", "CHMOD: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "CHMOD_N", hr.n);
+      var_set_str(vm, "CHMOD", hr.str);
+      var_set_str(vm, "MODE", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS STAT|FSTAT|FILESTAT path
      * — one-shot path metadata: exist + kind + size + mtime + isfile/isdir.
      * STAT_EXIST 0|1; STAT_KIND 0 miss|1 file|2 dir|3 other;

@@ -1,0 +1,81 @@
+# SYS MODE / PERM / GETMODE · CHMOD / SETMODE / SETPERM
+# — octal permission probe and set for agent plate files
+# Usability: lock-down plates without shell stat/chmod
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS UUID0
+SYS JOIN td LAST
+LET dir = LAST
+SYS MKDIR dir
+
+SYS JOIN dir "plate.txt"
+LET fp = LAST
+SYS WRITEATOMIC fp "secret"
+ASSERT OK == 1
+
+# probe current mode (exists)
+SYS MODE fp
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N == 4
+ASSERT MODE_N > 0
+
+# set via octal string
+SYS CHMOD fp "0600"
+ASSERT OK == 1
+ASSERT CHMOD_N == 384
+SYS MODE fp
+SYS EQS LAST "0600"
+ASSERT LAST_N == 1
+ASSERT MODE_N == 384
+
+# set via decimal integer (0644 = 420)
+SYS CHMOD fp 420
+ASSERT OK == 1
+SYS MODE fp
+SYS EQS LAST "0644"
+ASSERT LAST_N == 1
+ASSERT MODE_N == 420
+
+# aliases
+SYS PERM fp
+SYS EQS LAST "0644"
+ASSERT LAST_N == 1
+SYS SETMODE fp "0640"
+ASSERT OK == 1
+SYS MODE fp
+SYS EQS LAST "0640"
+ASSERT LAST_N == 1
+ASSERT MODE_N == 416
+
+# soft miss mode
+SYS MODE "/no/such/mode_mi_path"
+ASSERT OK == 0
+ASSERT MODE_N == 0
+
+# soft miss chmod
+SYS CHMOD "/no/such/mode_mi_path" "0644"
+ASSERT OK == 0
+ASSERT CHMOD_N == 0
+
+# empty path soft fail
+SYS MODE ""
+ASSERT OK == 0
+
+# agent: private plate then public read
+SYS CHMOD fp "0600"
+SYS MODE fp
+SYS EQS LAST "0600"
+ASSERT LAST_N == 1
+SYS CHMOD fp "0644"
+SYS MODE fp
+SYS EQS LAST "0644"
+ASSERT LAST_N == 1
+
+SYS RM fp
+SYS RMDIR dir
+
+PRINT "sys_mode ok"

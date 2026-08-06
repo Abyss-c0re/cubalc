@@ -338,6 +338,46 @@ int cubalc_host_islink(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS MODE path — octal permission stamp without shell stat -c %a. */
+int cubalc_host_mode(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  unsigned m;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "mode: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "mode: missing");
+    return -1;
+  }
+  m = (unsigned)(st.st_mode & 07777);
+  r->n = (long)m;
+  snprintf(r->str, sizeof r->str, "%04o", m);
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS CHMOD path mode — set plate perms without shell chmod. */
+int cubalc_host_chmod(const char *path, long mode, cubalc_host_result *r) {
+  mode_t m;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "chmod: empty path");
+    return -1;
+  }
+  if (mode < 0) mode = 0;
+  m = (mode_t)(mode & 07777);
+  if (chmod(path, m) != 0) {
+    snprintf(r->err, sizeof r->err, "chmod: %s", strerror(errno));
+    return -1;
+  }
+  r->n = (long)m;
+  snprintf(r->str, sizeof r->str, "%04o", (unsigned)m);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS COPY|CP src dst — duplicate plate without shell. */
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r) {
   FILE *in = NULL, *out = NULL;

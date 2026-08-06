@@ -44,6 +44,10 @@ int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_re
 int cubalc_host_readlink(const char *path, cubalc_host_result *r);
 /* probe: r->n = 1 if path is a symlink, 0 if missing or not a link; always ok */
 int cubalc_host_islink(const char *path, cubalc_host_result *r);
+/* permission bits: r->n = st_mode & 07777; r->str = 4-digit octal "0644"; soft miss */
+int cubalc_host_mode(const char *path, cubalc_host_result *r);
+/* set permission bits (mode & 07777); soft miss if path missing */
+int cubalc_host_chmod(const char *path, long mode, cubalc_host_result *r);
 /* absolute path: realpath if exists, else cwd-join relative; always fills r->str */
 int cubalc_host_abspath(const char *path, cubalc_host_result *r);
 /* create empty file or update mtime; r->n=1 created, 0 updated */
