@@ -1,160 +1,160 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 75,
-  "program": "programs/realworld/quota_counter_plate.cubalc",
-  "theme": "quota plate KVFILEINC KVFILEDEL ENSURELINE gate counters",
-  "version": "1.15.225-usability",
+  "iter": 76,
+  "program": "programs/realworld/exact_roster_board.cubalc",
+  "theme": "exact roster HASFILELINE DROPEXACTFILE ENSURELINE substring contrast",
+  "version": "1.15.227-usability",
   "pass": true,
   "tests": [
     {
-      "name": "get_inc",
-      "cmd": "get retries=2; inc \u2192 3",
+      "name": "pick_has",
+      "cmd": "has web hit; has web-prod hit; has webx soft miss",
       "ok": true,
-      "note": "default +1"
+      "note": "exact membership"
     },
     {
-      "name": "inc_delta",
-      "cmd": "inc errors 5 \u2192 5",
+      "name": "contrast_web",
+      "cmd": "contrast web → exact=1 sub=2 (web+web-prod)",
       "ok": true,
-      "note": "custom delta"
+      "note": "substring overmatch"
     },
     {
-      "name": "inc_insert",
-      "cmd": "inc missing warns \u2192 insert 1 HIT=0",
+      "name": "ensure_idempotent",
+      "cmd": "ensure db NEW=1; ensure db NEW=0",
       "ok": true,
-      "note": "create key"
+      "note": "exact add"
     },
     {
-      "name": "gate",
-      "cmd": "gate under max=10 ok; over max=3 REQUIRE exit 2",
+      "name": "drop_exact",
+      "cmd": "drop web leaves web-prod; drop none soft",
       "ok": true,
-      "note": "threshold"
+      "note": "no substring false friend"
     },
     {
-      "name": "del",
-      "cmd": "del port \u2192 returns 7700; del none soft+REQUIRE",
+      "name": "dropi_hasi",
+      "cmd": "dropi status=live; hasi miss after",
       "ok": true,
-      "note": "ack remove"
+      "note": "icase exact"
     },
     {
-      "name": "ensure",
-      "cmd": "ensure feature_a present NEW=0; feature_c added",
+      "name": "require_miss",
+      "cmd": "REQUIRE has gone / drop none → exit 2",
       "ok": true,
-      "note": "exact line"
+      "note": "hard fail"
     },
     {
-      "name": "ensure_exact",
-      "cmd": "ensure feature adds new line not substring match",
+      "name": "path_asymmetry",
+      "cmd": "has ghost OK=1 N=0; drop ghost OK=0 REQUIRE exit 2",
       "ok": true,
-      "note": "exact vs match ops"
+      "note": "probe vs mutate soft"
     },
     {
-      "name": "non_num_inc",
-      "cmd": "retries=abc +inc \u2192 retries=1 silent coerce",
+      "name": "ensure_creates",
+      "cmd": "ensure on missing path creates file seed",
       "ok": true,
-      "note": "data loss"
+      "note": "create-on-miss"
     },
     {
-      "name": "create_via_inc",
-      "cmd": "inc on missing path creates plate n=1",
+      "name": "contrast_a",
+      "cmd": "needle a exact=0 sub=2 (beta,Alpha)",
       "ok": true,
-      "note": "auto create"
+      "note": "char false friend"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "200/200 pass"
+      "note": "202/202 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|kv",
-      "title": "KVFILEINC on non-numeric value silently coerces (abc\u21921 after +1)",
-      "detail": "retries=abc then INC yields retries=1 without OK=0. Corrupts plate counters; agents cannot detect bad seed values.",
-      "repro": "WRITE retries=abc; KVFILEINC p retries \u2192 1"
+      "area": "host|fs|consistency",
+      "title": "HASFILELINE path-miss soft OK=1; DROPEXACTFILE path-miss OK=0",
+      "detail": "Probe treats missing file as empty membership (N=0 OK=1). Mutating drop hard-fails path (OK=0). Agents sharing REQUIRE logic for has vs drop get different miss codes; ghost path looks like 'not a member' not 'no plate'.",
+      "repro": "HASFILELINE no_such x → OK=1 N=0; DROPEXACTFILE no_such x → OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|fs",
-      "title": "KVFILEINC/ENSURELINE create missing files \u2014 path typo becomes new plate",
-      "detail": "Ghost path DEL soft-misses HIT=0; INC creates file. REQUIRE on inc never fires for missing path because create succeeds.",
-      "repro": "KVFILEINC no_such n \u2192 creates no_such"
+      "area": "host|match",
+      "title": "COUNTFILELINE substring vs HASFILELINE exact — dual semantics trap",
+      "detail": "contrast web: exact=1 sub=2 (web-prod counted). Needle a hits beta and Alpha with zero exact. Agents mixing GREP-family counts with exact roster membership corrupt allow/deny gates.",
+      "repro": "roster web+web-prod; COUNTFILELINE web=2 HASFILELINE web=1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|match",
-      "title": "ENSURELINE is exact line; MATCHFILE ops are substring \u2014 dual semantics",
-      "detail": "Good for allowlists: feature != feature_a. Agents mixing ENSURE with FINDFILELINE substring get different membership rules.",
-      "repro": "ENSURE feature when feature_a present \u2192 NEW=1 append feature"
+      "area": "host|fs",
+      "title": "ENSURELINE creates missing path; DROPEXACTFILE does not",
+      "detail": "ensure typo path invents ghost roster; drop on same typo soft-fails. No shared existing-only mode. Mirror of KVFILEINC create footgun.",
+      "repro": "ENSURELINE ghost seed → creates; DROPEXACTFILE ghost → OK=0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|naming",
-      "title": "KVINC bag vs KVFILEINC disk; ENSURELINE vs HASLINE+APPEND glue",
-      "detail": "In-memory KVINC does not touch plate files. Dual-family trap continues for INC/DEL.",
-      "repro": "KVINC bag vs KVFILEINC path"
+      "area": "host|write",
+      "title": "DROPEXACTFILE / plate WRITE omit trailing NL on last line",
+      "detail": "After drop last remaining line often lacks $ NL; cat -A shows Alpha glued; META total$4exact$ glue across writes. Agents catting plates see false merges.",
+      "repro": "cat -A after drop; META after WRITE val"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|kv",
-      "title": "Empty key INC/DEL/ENSURE produce garbage rows or odd hits",
-      "detail": "Empty key ops leave empty lines or =value-class artifacts. Plate hygiene not enforced.",
-      "repro": "KVFILEINC p \"\" / ENSURELINE p \"\""
+      "area": "host|naming",
+      "title": "HASLINE bag vs HASFILELINE disk; REMOVELINE vs DROPEXACTFILE dual family",
+      "detail": "In-memory exact bag ops do not touch roster files. Easy to probe bag after READ and mutate disk with different names.",
+      "repro": "HASLINE bag vs HASFILELINE path"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE trailing NL omit glues plate last line to next cat",
-      "detail": "port=7700 glued to meta after first writes.",
-      "repro": "cat -A after inc"
+      "area": "host|arg",
+      "title": "Empty CUBALC_ARG1 conflated with missing arg for has/drop",
+      "detail": "ARG1 empty fails early 'has needs line' via BLANK rather than attempting exact empty-line membership. Cannot probe empty roster lines without env path.",
+      "repro": "CUBALC_ARG1= has → EXIT has needs line"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|fs",
-      "title": "No dry-run or existing-only mode for INC create",
-      "detail": "Cannot require pre-existing plate without agent EXIST check.",
-      "repro": "inc always creates"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens hard gates",
+      "detail": "CUBALC_ER_REQUIRE=abc leaves REQUIRE_HIT=0; has miss returns exit 0.",
+      "repro": "REQUIRE=abc has gone → rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens del/gate",
-      "detail": "REQUIRE=abc leaves hard fail off.",
-      "repro": "CUBALC_QC_REQUIRE=abc del missing"
+      "area": "host|drop",
+      "title": "DROPEXACTFILE drops first match only — no DROPALLEXACTFILE",
+      "detail": "Duplicate exact lines need loop; DROPALLMATCH is substring-only. Roster dedup of exact duplicates awkward.",
+      "repro": "two identical lines; one drop leaves one"
     }
   ],
   "workarounds": [
-    "Validate counter values with NUM after LOOKUP before INC",
-    "SYS EXIST active before INC if create-on-miss unwanted",
-    "Use ENSURELINE for exact membership not FINDFILELINE substring",
-    "Reject empty key/line at agent layer",
-    "Digit-check REQUIRE env after NUM"
+    "Use HASFILELINE not COUNTFILELINE for roster membership",
+    "SYS EXIST active before ensure if create-on-miss unwanted",
+    "REQUIRE=1 only after digit-check NUM on env",
+    "Prefer DROPEXACTFILE over DROPMATCHFILE for hostnames",
+    "Reject empty line args at agent layer"
   ],
   "language_gaps": [
-    "KVFILEINC refuse non-numeric existing values (OK=0)",
-    "existing-only / no-create flag for KVFILEINC and ENSURELINE",
-    "KVFILE* empty key reject",
-    "Help dual KVINC vs KVFILEINC",
-    "WRITE trailing NL preserve",
-    "ENSURELINE optional substring mode explicitly named if ever needed"
+    "Unify path-miss OK policy for HASFILELINE vs DROPEXACTFILE (or document triad)",
+    "DROPALLEXACTFILE for exact multi-drop dual of DROPALLMATCHFILE",
+    "existing-only flag for ENSURELINE",
+    "WRITE/DROPEXACT trailing NL preserve",
+    "Help dual HASLINE vs HASFILELINE / REMOVELINE vs DROPEXACTFILE",
+    "COUNTFILELINE exact-mode or COUNTFILEEXACT alias"
   ],
   "issues_faced": [
-    "inc/del/ensure/gate positive path clean",
-    "Non-numeric INC coerce is critical plate footgun",
-    "Ghost INC creates file so REQUIRE cannot signal path miss",
-    "ENSURE exactness is a strength vs MATCH substring",
-    "No language fix this iter"
+    "has/ensure/drop/contrast positive paths clean",
+    "contrast web and contrast a prove substring false friends clearly",
+    "path-miss OK asymmetry between probe and drop is sharp footgun",
+    "WRITE NL glue after drop and plate meta still present",
+    "selftest 202/202; no language fix this iter"
   ],
-  "commit": "acf8937eb2aac85ac51a1287af3b19a4875044c5",
-  "ts": "2026-08-06T11:19:03Z"
+  "commit": "",
+  "ts": "2026-08-06T11:44:00Z"
 }

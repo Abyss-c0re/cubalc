@@ -1,0 +1,825 @@
+# exact_roster_board.cubalc — durable exact-line roster (allow/deny/oncall)
+#
+# Real use: ops agent manages host/service/deny roster lines where *substring*
+# is a footgun (web must not match web-prod; feature != feature_a):
+#   HASFILELINE      — exact membership probe (dual of bag HASLINE)
+#   HASFILELINEI     — case-insensitive exact probe
+#   ENSURELINE       — idempotent add if exact line missing
+#   DROPEXACTFILE    — drop first exact line (dual of bag REMOVELINE)
+#   DROPEXACTFILEI   — case-insensitive exact drop
+#   COUNTFILELINE    — contrast: substring hit count (false friends)
+# Distinct from match_purge_board (substring DROP*MATCH) and
+# quota_counter_plate (KV counters + ensure only): this board is *probe +
+# exact drop + ensure triad* with substring contrast.
+#
+# Plate under STATE:
+#   ACTIVE.txt       — roster file path
+#   VAL.txt          — last line / dropped text
+#   META.txt         — hit/i/total/sub summary bag
+#   ROSTER_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_ER_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   has       — HASFILELINE ACTIVE line(ARG1)
+#   hasi      — HASFILELINEI
+#   ensure    — ENSURELINE ACTIVE line
+#   drop      — DROPEXACTFILE ACTIVE line
+#   dropi     — DROPEXACTFILEI
+#   contrast  — HASFILELINE exact + COUNTFILELINE substring side-by-side
+#   members   — READ ACTIVE → VAL
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_er_$$
+#   printf 'web\nweb-prod\napi\nSTATUS=live\n' > $CUBALC_STATE/roster.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/roster.txt \
+#     ./out/cubalc run -q -s programs/realworld/exact_roster_board.cubalc
+#   CUBALC_ARG0=has CUBALC_ARG1=web ...
+#   CUBALC_ARG0=drop CUBALC_ARG1=web ...
+#   CUBALC_ARG0=ensure CUBALC_ARG1=db ...
+#   CUBALC_ARG0=contrast CUBALC_ARG1=web ...
+#
+# Env: CUBALC_ER_PATH=… CUBALC_ER_REQUIRE=1
+#
+# Edges:
+#   exact miss for substring needle (web vs web-prod)
+#   drop soft no-match N=0 I=-1 OK=1; path miss OK=0 on drop
+#   has path miss → N=0 OK=1 (probe soft); empty path OK=0
+#   ensure create-on-miss path; DROP does not create
+#   REQUIRE soft→hard on has-miss / drop-none
+#   empty line; WRITE NL; NUM; PRINT_JSON
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "exact_roster_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "ROSTER_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_ER_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_ER_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_ER_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_ER_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_ER_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET has_n = 0
+LET has_i = -1
+LET has_total = 0
+LET drop_n = 0
+LET drop_i = -1
+LET drop_total = 0
+LET ens_new = 0
+LET ens_i = -1
+LET ens_total = 0
+LET sub_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+END
+SYS EQS ACTION "hasi"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "hasi needs line"
+  END
+END
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ensure needs line"
+  END
+END
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs line"
+  END
+END
+SYS EQS ACTION "dropi"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "dropi needs line"
+  END
+END
+SYS EQS ACTION "contrast"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "contrast needs needle"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "eroster" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- has HASFILELINE ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has no active"
+    FAIL "has no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has no active"
+    END
+  ELSE
+    SYS HASFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "has fail"
+      FAIL "has fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has fail"
+      END
+    ELSE
+      LET val = LAST
+      LET has_n = HASFILELINE_N
+      LET has_i = HASFILELINE_I
+      LET has_total = HASFILELINE_TOTAL
+      LET val_ch = 1
+      LET hit = has_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR has_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR has_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF has_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "has miss"
+        FAIL "has miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "has miss"
+        END
+      ELSE
+        LET note_msg = "has ok"
+      END
+    END
+    PRINT_JSON NAME has_n has_i has_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- hasi HASFILELINEI ---
+SYS EQS ACTION "hasi"
+IF LAST_N == 1 THEN
+  NOTE "action hasi"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hasi no active"
+    FAIL "hasi no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasi no active"
+    END
+  ELSE
+    SYS HASFILELINEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "hasi fail"
+      FAIL "hasi fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hasi fail"
+      END
+    ELSE
+      LET val = LAST
+      LET has_n = HASFILELINE_N
+      LET has_i = HASFILELINE_I
+      LET has_total = HASFILELINE_TOTAL
+      LET val_ch = 1
+      LET hit = has_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR has_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "mode"
+      LET meta = LAST
+      SYS PUSH meta "icase"
+      LET meta = LAST
+      LET meta_ch = 1
+      IF has_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "hasi miss"
+        FAIL "hasi miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "hasi miss"
+        END
+      ELSE
+        LET note_msg = "hasi ok"
+      END
+    END
+    PRINT_JSON NAME has_n has_i has_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- ensure ENSURELINE ---
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  NOTE "action ensure"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "ensure no active"
+    FAIL "ensure no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ensure no active"
+    END
+  ELSE
+    SYS ENSURELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "ensure fail"
+      FAIL "ensure fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ensure fail"
+      END
+    ELSE
+      LET val = LAST
+      LET ens_new = ENSURELINE_NEW
+      LET ens_i = ENSURELINE_I
+      LET ens_total = ENSURELINE_TOTAL
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "new"
+      LET meta = LAST
+      SYS STR ens_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR ens_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR ens_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ens_new > 0 THEN
+        LET note_msg = "ensure added"
+      ELSE
+        LET note_msg = "ensure present"
+      END
+    END
+    PRINT_JSON NAME ens_new ens_i ens_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- drop DROPEXACTFILE ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop no active"
+    FAIL "drop no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop no active"
+    END
+  ELSE
+    SYS DROPEXACTFILE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "drop path miss"
+      FAIL "drop path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drop path miss"
+      END
+    ELSE
+      LET val = LAST
+      LET drop_n = DROPEXACTFILE_N
+      LET drop_i = DROPEXACTFILE_I
+      LET drop_total = DROPEXACTFILE_TOTAL
+      LET val_ch = 1
+      LET hit = drop_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR drop_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR drop_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR drop_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF drop_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "drop none"
+        FAIL "drop none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "drop none"
+        END
+      ELSE
+        LET note_msg = "drop ok"
+      END
+    END
+    PRINT_JSON NAME drop_n drop_i drop_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- dropi DROPEXACTFILEI ---
+SYS EQS ACTION "dropi"
+IF LAST_N == 1 THEN
+  NOTE "action dropi"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "dropi no active"
+    FAIL "dropi no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dropi no active"
+    END
+  ELSE
+    SYS DROPEXACTFILEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "dropi path miss"
+      FAIL "dropi path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "dropi path miss"
+      END
+    ELSE
+      LET val = LAST
+      LET drop_n = DROPEXACTFILE_N
+      LET drop_i = DROPEXACTFILE_I
+      LET drop_total = DROPEXACTFILE_TOTAL
+      LET val_ch = 1
+      LET hit = drop_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR drop_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR drop_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "mode"
+      LET meta = LAST
+      SYS PUSH meta "icase"
+      LET meta = LAST
+      LET meta_ch = 1
+      IF drop_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "dropi none"
+        FAIL "dropi none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "dropi none"
+        END
+      ELSE
+        LET note_msg = "dropi ok"
+      END
+    END
+    PRINT_JSON NAME drop_n drop_i drop_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- contrast: exact HAS vs substring COUNTFILELINE ---
+SYS EQS ACTION "contrast"
+IF LAST_N == 1 THEN
+  NOTE "action contrast"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "contrast no active"
+    FAIL "contrast no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "contrast no active"
+    END
+  ELSE
+    SYS HASFILELINE active NAME
+    IF OK == 0 THEN
+      LET has_n = 0
+      LET has_i = -1
+      LET has_total = 0
+      CLEAR_ERR
+    ELSE
+      LET has_n = HASFILELINE_N
+      LET has_i = HASFILELINE_I
+      LET has_total = HASFILELINE_TOTAL
+    END
+    SYS COUNTFILELINE active NAME
+    IF OK == 0 THEN
+      LET sub_n = 0
+      CLEAR_ERR
+    ELSE
+      LET sub_n = LAST_N
+    END
+    LET val = "exact"
+    SYS STR has_n
+    SYS PUSH val LAST
+    LET val = LAST
+    SYS PUSH val "sub"
+    LET val = LAST
+    SYS STR sub_n
+    SYS PUSH val LAST
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "needle"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "exact"
+    LET meta = LAST
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "sub"
+    LET meta = LAST
+    SYS STR sub_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "i"
+    LET meta = LAST
+    SYS STR has_i
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "total"
+    LET meta = LAST
+    SYS STR has_total
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "contrast ok"
+    # soft-flag when substring over-matches exact
+    IF sub_n > has_n THEN
+      LET note_msg = "contrast sub_over"
+    END
+    PRINT_JSON NAME has_n sub_n has_i has_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- members READ ---
+SYS EQS ACTION "members"
+IF LAST_N == 1 THEN
+  NOTE "action members"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "members no active"
+    FAIL "members no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "members no active"
+    END
+  ELSE
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "members miss"
+      FAIL "members miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "members miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "members ok"
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "hasi"
+LET k = k + LAST_N
+SYS EQS ACTION "ensure"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "dropi"
+LET k = k + LAST_N
+SYS EQS ACTION "contrast"
+LET k = k + LAST_N
+SYS EQS ACTION "members"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.exact_roster_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "has_n"
+LET report = LAST
+SYS STR has_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ens_new"
+LET report = LAST
+SYS STR ens_new
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sub_n"
+LET report = LAST
+SYS STR sub_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "exact_roster_board" ACTION hit miss has_n drop_n ens_new sub_n note_msg elapsed
