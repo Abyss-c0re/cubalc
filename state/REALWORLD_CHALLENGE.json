@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "count_cs",
-      "cmd": "COUNTFILELINE error → 2 of 7",
+      "cmd": "COUNTFILELINE error \u2192 2 of 7",
       "ok": true,
       "note": "cs tally"
     },
     {
       "name": "count_ci",
-      "cmd": "COUNTFILELINEI error → 3",
+      "cmd": "COUNTFILELINEI error \u2192 3",
       "ok": true,
       "note": "+ERROR"
     },
     {
       "name": "extract",
-      "cmd": "GREPFILE error → 2 lines; extracti → 3",
+      "cmd": "GREPFILE error \u2192 2 lines; extracti \u2192 3",
       "ok": true,
       "note": "harvest"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "patch_status",
-      "cmd": "SETMATCHFILE status= → status=blocked I first",
+      "cmd": "SETMATCHFILE status= \u2192 status=blocked I first",
       "ok": true,
       "note": "first-match set"
     },
@@ -44,13 +44,13 @@
     },
     {
       "name": "false_ERR",
-      "cmd": "count ERR → 2 (ERROR + ERR short)",
+      "cmd": "count ERR \u2192 2 (ERROR + ERR short)",
       "ok": true,
       "note": "substring"
     },
     {
       "name": "empty_polarity",
-      "cmd": "COUNT empty→0; GREPFILE empty→all lines; SETMATCH empty→none",
+      "cmd": "COUNT empty\u21920; GREPFILE empty\u2192all lines; SETMATCH empty\u2192none",
       "ok": true,
       "note": "three-way empty split"
     },
@@ -79,7 +79,7 @@
       "severity": "high",
       "area": "host|match",
       "title": "Empty needle polarity split across single-file ops",
-      "detail": "COUNTFILELINE \"\" → 0; GREPFILE \"\" → all lines (N=TOTAL); SETMATCHFILE \"\" → N=0 I=-1 no write; FINDFILELINE \"\" → first line. Same empty input, four behaviors. Agents cannot share one blank-needle policy.",
+      "detail": "COUNTFILELINE \"\" \u2192 0; GREPFILE \"\" \u2192 all lines (N=TOTAL); SETMATCHFILE \"\" \u2192 N=0 I=-1 no write; FINDFILELINE \"\" \u2192 first line. Same empty input, four behaviors. Agents cannot share one blank-needle policy.",
       "repro": "GREPFILE p \"\" vs COUNTFILELINE p \"\""
     },
     {
@@ -95,23 +95,23 @@
       "severity": "med",
       "area": "host|match",
       "title": "SETMATCHFILE only first match; replacement may still match needle",
-      "detail": "status=old→status=new then SETMATCHFILEI status= hits same line again (status=done) not STATUS=keep. Flip-all and skip-already-patched not supported.",
+      "detail": "status=old\u2192status=new then SETMATCHFILEI status= hits same line again (status=done) not STATUS=keep. Flip-all and skip-already-patched not supported.",
       "repro": "two status lines; patch twice stays on first"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|match",
-      "title": "Substring false friends ERR⊂ERROR inflate gate counts",
+      "title": "Substring false friends ERR\u2282ERROR inflate gate counts",
       "detail": "Canary gate on ERR counts ERROR lines too. No whole-word mode on COUNTFILELINE/GREPFILE.",
-      "repro": "COUNTFILELINE ERR → 2"
+      "repro": "COUNTFILELINE ERR \u2192 2"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON extract bag glues without NL",
-      "detail": "error: aerror: b — recurring bag collapse.",
+      "detail": "error: aerror: b \u2014 recurring bag collapse.",
       "repro": "PRINT_JSON hits"
     },
     {
@@ -160,6 +160,6 @@
     "SETMATCH first-only re-hits patched line if needle remains",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "02bc5dbd6fe02d7822557f1ae6a0b7534c9537e7",
   "ts": "2026-08-06T09:38:39Z"
 }
