@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 158,
-  "version": "1.15.183-usability",
-  "item": "SYS MTIMEALL / AGEALL path bag time maps + min/max",
-  "item_id": 191,
-  "title": "SYS MTIMEALL|AGEALL [bag] — mtime/age maps · MAX/MIN freshness",
-  "commit": "3adcbf8c034219b4fe4fedf54b8da814929798a8",
-  "summary": "Path bag mtime/age inventory with min/max after PATHGLOB. selftest 158.",
+  "iter": 159,
+  "version": "1.15.184-usability",
+  "item": "SYS NEWEST / OLDEST / LARGEST / SMALLEST path bag pick",
+  "item_id": 192,
+  "title": "SYS NEWEST|OLDEST|LARGEST|SMALLEST [bag] — pick path by mtime/size",
+  "commit": "e9a65e663e946eb17f05aef3eb033f94b90891a9",
+  "summary": "One-shot freshest/heaviest path from bag. selftest 159.",
   "proofs": [
-    "731_sys_mtimeall",
-    "selftest n_pass=158"
+    "732_sys_newest",
+    "selftest n_pass=159"
   ],
-  "when": "2026-08-06T04:14:17Z",
+  "when": "2026-08-06T04:24:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3adcbf8c034219b4fe4fedf54b8da814929798a8"
+  "sha": "e9a65e663e946eb17f05aef3eb033f94b90891a9"
 }
