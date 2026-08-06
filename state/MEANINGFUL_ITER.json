@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 213,
-  "version": "1.15.238-usability",
-  "item": "SYS WAITGONE / WAITMISSING / WAITDELETE poll until path does not exist",
-  "item_id": 246,
-  "title": "SYS WAITGONE|WAITMISSING path [ms] — dual of WAITFILE · unlock/cleanup handoff",
-  "commit": "004018227e41eab97bd00418682136dc3dcbe3b1",
-  "summary": "Poll until path gone for unlock/peer cleanup without EXIST+SLEEP. selftest 213.",
+  "iter": 214,
+  "version": "1.15.239-usability",
+  "item": "SYS WAITSTABLE / WAITQUIET / STABLEFILE poll until size+mtime quiet",
+  "item_id": 247,
+  "title": "SYS WAITSTABLE|WAITQUIET path [ms]|quiet timeout — settle peer write before READ",
+  "commit": "8fc5ea896e0923d45dbfbb5048325442ac5b2352",
+  "summary": "Wait for plate size+mtime quiet window before READ without torn content. selftest 214.",
   "proofs": [
-    "787_sys_waitgone",
-    "selftest n_pass=213"
+    "788_sys_waitstable",
+    "selftest n_pass=214"
   ],
-  "when": "2026-08-06T13:20:00Z",
+  "when": "2026-08-06T13:25:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "004018227e41eab97bd00418682136dc3dcbe3b1",
-  "note": "invented dual of WAITFILE after backlog 1-245 complete"
+  "sha": "8fc5ea896e0923d45dbfbb5048325442ac5b2352",
+  "note": "completes wait family: WAITFILE/WAITGONE/WAITMATCH/WAITSTABLE"
 }
