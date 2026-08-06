@@ -1,0 +1,81 @@
+# SYS DROPALLMATCHFILE / FILEDROPALLMATCH — drop all file lines containing needle
+# Usability: purge status/comment rows without FIND+DROP loop (file GREPV write-back)
+# Dual of DROPMATCHFILE for bulk. DROPALLMATCHFILEI icase. Soft no-match.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "dropallmatchfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "a=1\nstatus=old\nb=2\nstatus=done\nSTATUS=keep\nc=3"
+
+# case-sensitive: drops two status= rows, keeps STATUS=keep
+SYS DROPALLMATCHFILE fs "status="
+ASSERT OK == 1
+ASSERT DROPALLMATCHFILE_N == 2
+ASSERT DROPALLMATCHFILE_I == 1
+ASSERT DROPALLMATCHFILE_TOTAL == 4
+SYS EQS LAST "status=old\nstatus=done"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 0
+SYS EQS LAST "a=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "STATUS=keep"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "c=3"
+ASSERT LAST_N == 1
+
+# rewrite fixture for icase purge of both status= and STATUS=
+SYS WRITE fs "a=1\nstatus=x\nb=2\nSTATUS=y\nc=3"
+SYS DROPALLMATCHFILEI fs "status="
+ASSERT DROPALLMATCHFILE_N == 2
+ASSERT DROPALLMATCHFILE_I == 1
+ASSERT DROPALLMATCHFILE_TOTAL == 3
+SYS LINEAT fs 0
+SYS EQS LAST "a=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "c=3"
+ASSERT LAST_N == 1
+
+# alias soft no-match
+SYS FILEDROPALLMATCH fs "missing="
+ASSERT OK == 1
+ASSERT DROPALLMATCHFILE_N == 0
+ASSERT DROPALLMATCHFILE_I == -1
+ASSERT DROPALLMATCHFILE_TOTAL == 3
+
+# PURGEMATCHFILE alias
+SYS PURGEMATCHFILE fs "a="
+ASSERT DROPALLMATCHFILE_N == 1
+ASSERT DROPALLMATCHFILE_TOTAL == 2
+SYS LINEAT fs 0
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "c=3"
+ASSERT LAST_N == 1
+
+# soft path miss
+SYS DROPALLMATCHFILE "no_such_dropallmatchfile_mi.txt" "x"
+ASSERT OK == 0
+ASSERT DROPALLMATCHFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_dropallmatchfile ok"
