@@ -1,0 +1,79 @@
+# SYS DOTENV / LOADENV / ENVFILE — load KEY=VAL plate into process env
+# Usability: agent .env / config plates without shell source or EACH+SETENV
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "dotenv_mi.env"
+LET p = LAST
+
+# write dotenv plate (comments, blanks, export, quotes)
+SYS WRITE p "# cubalc dotenv proof
+CUBALC_DOTENV_MI_A=alpha
+export CUBALC_DOTENV_MI_B=\"beta gamma\"
+CUBALC_DOTENV_MI_C='single'
+CUBALC_DOTENV_MI_D=plain\\twith\\tesc
+
+# trailing comment line
+not a valid line without equals
+=emptyname
+9BAD=skip
+"
+ASSERT OK == 1
+
+# load into process env
+SYS DOTENV p
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT DOTENV_N == 4
+ASSERT DOTENV_SKIP >= 3
+SYS EQS LAST p
+ASSERT LAST_N == 1
+SYS EQS DOTENV_PATH p
+ASSERT LAST_N == 1
+
+# verify values via SYS ENV
+SYS ENV "CUBALC_DOTENV_MI_A"
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+
+SYS ENV "CUBALC_DOTENV_MI_B"
+SYS EQS LAST "beta gamma"
+ASSERT LAST_N == 1
+
+SYS ENV "CUBALC_DOTENV_MI_C"
+SYS EQS LAST "single"
+ASSERT LAST_N == 1
+
+SYS ENV "CUBALC_DOTENV_MI_D"
+# \\t → tab after unescape
+SYS HAS LAST "with"
+ASSERT LAST_N == 1
+
+# aliases
+SYS LOADENV p
+ASSERT OK == 1
+ASSERT LOADENV_N == 4
+SYS ENVFILE p
+ASSERT OK == 1
+ASSERT ENVFILE_N == 4
+
+# soft miss empty / missing
+SYS DOTENV ""
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS DOTENV "/no/such/cubalc_dotenv_xyz_mi.env"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup process env + plate
+SYS UNSETENV "CUBALC_DOTENV_MI_A"
+SYS UNSETENV "CUBALC_DOTENV_MI_B"
+SYS UNSETENV "CUBALC_DOTENV_MI_C"
+SYS UNSETENV "CUBALC_DOTENV_MI_D"
+SYS RM p
+
+PRINT "sys_dotenv ok"

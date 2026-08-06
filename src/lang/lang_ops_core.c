@@ -2090,6 +2090,178 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS DOTENV|LOADENV|ENVFILE|SOURCEENV path
+     * — load dotenv-style KEY=VAL lines from a plate into process env.
+     * Skips blank lines and # comments. Optional "export " prefix.
+     * Strips matching outer ' or " around values. Overwrites existing.
+     * LAST = path; LAST_N / DOTENV_N = keys set; DOTENV_SKIP = skipped lines.
+     * Soft miss empty/missing/unreadable → OK=0 sticky LAST_ERR.
+     * Usability: agent .env / plate config without shell source or EACH+SETENV. */
+    if (kw(&L->cur,"DOTENV") || kw(&L->cur,"LOADENV") || kw(&L->cur,"ENVFILE") ||
+        kw(&L->cur,"SOURCEENV") || kw(&L->cur,"ENVLOAD") || kw(&L->cur,"READENV") ||
+        kw(&L->cur,"FROMENVFILE") || kw(&L->cur,"IMPORTENV") ||
+        kw(&L->cur,"LOADENVFILE") || kw(&L->cur,"DOTENVLOAD")){
+      char path[512];
+      cubalc_host_result hr, er;
+      const char *p, *end;
+      long set_n = 0, skip_n = 0;
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        path[0] = 0;
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DOTENV_N", 0);
+        var_set_num(vm, "LOADENV_N", 0);
+        var_set_num(vm, "DOTENV_SKIP", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "DOTENV: empty path");
+        var_set_str(vm, "ERR", "DOTENV: empty path");
+        vm->last_n = 0;
+        vm->last_str[0] = 0;
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(path, &hr) != 0) {
+        char err[160];
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DOTENV_N", 0);
+        var_set_num(vm, "LOADENV_N", 0);
+        var_set_num(vm, "DOTENV_SKIP", 0);
+        var_set_num(vm, "OK", 0);
+        snprintf(err, sizeof err, "DOTENV: read fail '%s'", path);
+        var_set_str(vm, "LAST_ERR", err);
+        var_set_str(vm, "ERR", err);
+        bump(vm); return 1;
+      }
+      p = hr.str;
+      end = hr.str + (hr.n > 0 ? (size_t)hr.n : strlen(hr.str));
+      while (p < end) {
+        const char *line = p, *nl;
+        char name[256], val[CUBALC_HOST_STR_MAX];
+        size_t llen;
+        const char *eq, *np, *vp, *vend;
+        while (p < end && *p != '\n') p++;
+        nl = p;
+        if (p < end && *p == '\n') p++;
+        /* trim CR */
+        llen = (size_t)(nl - line);
+        while (llen > 0 && (line[llen - 1] == '\r' || line[llen - 1] == ' ' ||
+                            line[llen - 1] == '\t'))
+          llen--;
+        /* skip leading ws */
+        while (llen > 0 && (*line == ' ' || *line == '\t')) {
+          line++;
+          llen--;
+        }
+        if (llen == 0) { skip_n++; continue; }
+        if (line[0] == '#') { skip_n++; continue; }
+        /* optional export PREFIX */
+        if (llen >= 7 &&
+            (line[0] == 'e' || line[0] == 'E') &&
+            (line[1] == 'x' || line[1] == 'X') &&
+            (line[2] == 'p' || line[2] == 'P') &&
+            (line[3] == 'o' || line[3] == 'O') &&
+            (line[4] == 'r' || line[4] == 'R') &&
+            (line[5] == 't' || line[5] == 'T') &&
+            (line[6] == ' ' || line[6] == '\t')) {
+          line += 7;
+          llen -= 7;
+          while (llen > 0 && (*line == ' ' || *line == '\t')) {
+            line++;
+            llen--;
+          }
+        }
+        /* find = */
+        eq = NULL;
+        for (np = line; np < line + llen; np++) {
+          if (*np == '=') { eq = np; break; }
+        }
+        if (!eq) { skip_n++; continue; }
+        /* name */
+        {
+          size_t nlen = (size_t)(eq - line);
+          while (nlen > 0 && (line[nlen - 1] == ' ' || line[nlen - 1] == '\t'))
+            nlen--;
+          if (nlen == 0 || nlen >= sizeof name) { skip_n++; continue; }
+          /* valid env name: [A-Za-z_][A-Za-z0-9_]* */
+          if (!( (line[0] >= 'A' && line[0] <= 'Z') ||
+                 (line[0] >= 'a' && line[0] <= 'z') || line[0] == '_' )) {
+            skip_n++; continue;
+          }
+          {
+            size_t i;
+            int bad = 0;
+            for (i = 1; i < nlen; i++) {
+              char c = line[i];
+              if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                    (c >= '0' && c <= '9') || c == '_')) {
+                bad = 1; break;
+              }
+            }
+            if (bad) { skip_n++; continue; }
+          }
+          memcpy(name, line, nlen);
+          name[nlen] = 0;
+        }
+        /* value */
+        vp = eq + 1;
+        vend = line + llen;
+        while (vp < vend && (*vp == ' ' || *vp == '\t')) vp++;
+        {
+          size_t vlen = (size_t)(vend - vp);
+          if (vlen >= sizeof val) vlen = sizeof val - 1;
+          memcpy(val, vp, vlen);
+          val[vlen] = 0;
+          /* strip matching outer quotes */
+          if (vlen >= 2 &&
+              ((val[0] == '"' && val[vlen - 1] == '"') ||
+               (val[0] == '\'' && val[vlen - 1] == '\''))) {
+            memmove(val, val + 1, vlen - 2);
+            val[vlen - 2] = 0;
+          }
+          /* light unescape for common \\ \" \' \n \t in remaining body */
+          {
+            char *w = val, *r = val;
+            while (*r) {
+              if (*r == '\\' && r[1]) {
+                char nch = r[1];
+                if (nch == 'n') { *w++ = '\n'; r += 2; continue; }
+                if (nch == 't') { *w++ = '\t'; r += 2; continue; }
+                if (nch == 'r') { *w++ = '\r'; r += 2; continue; }
+                if (nch == '\\' || nch == '"' || nch == '\'') {
+                  *w++ = nch; r += 2; continue;
+                }
+              }
+              *w++ = *r++;
+            }
+            *w = 0;
+          }
+        }
+        if (cubalc_host_env_set(name, val, &er) != 0) {
+          skip_n++;
+          continue;
+        }
+        set_n++;
+      }
+      var_set_str(vm, "LAST", path);
+      var_set_str(vm, "DOTENV", path);
+      var_set_str(vm, "LOADENV", path);
+      var_set_str(vm, "ENVFILE", path);
+      var_set_str(vm, "DOTENV_PATH", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = set_n;
+      var_set_num(vm, "LAST_N", set_n);
+      var_set_num(vm, "DOTENV_N", set_n);
+      var_set_num(vm, "LOADENV_N", set_n);
+      var_set_num(vm, "ENVFILE_N", set_n);
+      var_set_num(vm, "DOTENV_SKIP", skip_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS SUBSTENV|ENVSUBST|EXPANDENV [template]
      * — expand $NAME and ${NAME} from process env, then program vars.
      * Unset → empty. Bare $ stops at non [A-Za-z0-9_]. $$ → literal $.
@@ -20942,7 +21114,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|KVFILESET|FILEKVSET|SETKVFILE|PLATESET|KVFILEDEL|FILEKVDEL|DELKVFILE|PLATEDEL|KVFILEINC|INCKVFILE|FILEKVINC|PLATEINC|ENSURELINE|ENSUREFILELINE|ADDIFMISSING|FILEENSURE|HASFILELINE|FILEHASLINE|HASLINEF|HASFILELINEI|WHICH|WHICHBIN|PATHWHICH|BIN|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|MONOTONIC|NPROC|CPUS|CORES|ISATTY|TTY|LOADAVG|LOAD|UPTIME|BOOTAGE|MEM|MEMINFO|DF|DISKFREE|FSYNC|SYNCFILE|UNAME|OS|ARCH|MACHINE|PLATFORM|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|LOCAL|LOCALTIME|LOCALDATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|DOTENV|LOADENV|ENVFILE|SOURCEENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|KVFILESET|FILEKVSET|SETKVFILE|PLATESET|KVFILEDEL|FILEKVDEL|DELKVFILE|PLATEDEL|KVFILEINC|INCKVFILE|FILEKVINC|PLATEINC|ENSURELINE|ENSUREFILELINE|ADDIFMISSING|FILEENSURE|HASFILELINE|FILEHASLINE|HASLINEF|HASFILELINEI|WHICH|WHICHBIN|PATHWHICH|BIN|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|MONOTONIC|NPROC|CPUS|CORES|ISATTY|TTY|LOADAVG|LOAD|UPTIME|BOOTAGE|MEM|MEMINFO|DF|DISKFREE|FSYNC|SYNCFILE|UNAME|OS|ARCH|MACHINE|PLATFORM|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|LOCAL|LOCALTIME|LOCALDATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -21147,6 +21319,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ENV", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
       {"SYS SETENV", "SYS SETENV|ENV SET name value — process setenv (CUBALC_* without shell)"},
       {"SYS UNSETENV", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N 1 if was set"},
+      {"SYS DOTENV", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
+      {"SYS LOADENV", "SYS LOADENV alias of SYS DOTENV"},
+      {"SYS ENVFILE", "SYS ENVFILE alias of SYS DOTENV"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
       {"SYS CHDIR", "SYS CHDIR|CD path — change process cwd · LAST_N 0|1 soft miss"},
@@ -21673,6 +21848,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DISKFREE", "SYS DISKFREE alias of SYS DF"},
       {"SYS FSYNC", "SYS FSYNC|SYNCFILE path — durable flush file to disk"},
       {"SYS SYNCFILE", "SYS SYNCFILE alias of SYS FSYNC"},
+      {"SYS DOTENV", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
+      {"SYS LOADENV", "SYS LOADENV alias of SYS DOTENV"},
+      {"SYS ENVFILE", "SYS ENVFILE alias of SYS DOTENV"},
       {"SYS TTY", "SYS TTY alias of SYS ISATTY"},
       {"SYS CPUS", "SYS CPUS alias of SYS NPROC"},
       {"SYS CORES", "SYS CORES alias of SYS NPROC"},
