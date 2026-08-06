@@ -1,153 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 97,
-  "program": "programs/realworld/intake_create_gate_board.cubalc",
-  "theme": "intake create gate CANCREATE + UMASK private plate mask",
-  "version": "1.15.283-usability",
+  "iter": 98,
+  "program": "programs/realworld/workdir_stack_board.cubalc",
+  "theme": "workdir stack PUSHD/POPD/DIRSTACK + KINDSTR triage",
+  "version": "1.15.284-usability",
   "pass": true,
   "tests": [
     {
-      "name": "canmk_ok",
-      "cmd": "CANCREATE under STATE/in = 1",
+      "name": "work_probe",
+      "cmd": "MKDIR+REALPATH site; KINDSTR=dir",
       "ok": true,
-      "note": "parent W+X"
+      "note": "probe ok"
     },
     {
-      "name": "umask_get",
-      "cmd": "GETUMASK string 0ooo + UMASK_N",
+      "name": "kind_missing",
+      "cmd": "KINDSTR missing soft; REQUIRE→2",
       "ok": true,
-      "note": "0022"
+      "note": "OK=1 label"
     },
     {
-      "name": "mask_set",
-      "cmd": "UMASK 0077 LAST=previous not new",
+      "name": "visit",
+      "cmd": "PUSHD+WRITE relative+POPD same process",
       "ok": true,
-      "note": "prev 0022 now 0077"
+      "note": "VAL file@0; STATUS body"
     },
     {
-      "name": "seed_private",
-      "cmd": "seed body ARG2=0077 \u2192 MODE 0600",
+      "name": "kind_file",
+      "cmd": "after visit KINDSTR=file",
       "ok": true,
-      "note": "VAL 0600@0077"
+      "note": "joined path"
     },
     {
-      "name": "check_0600",
-      "cmd": "EQS MODE 0600",
+      "name": "kind_link",
+      "cmd": "symlink → kind=link (lstat)",
       "ok": true,
-      "note": "pass"
+      "note": "not target"
     },
     {
-      "name": "check_mismatch_require",
-      "cmd": "check 0644 REQUIRE \u2192 exit 2",
+      "name": "stack_empty",
+      "cmd": "DIRSTACK depth 0 across re-exec",
       "ok": true,
-      "note": "deny"
+      "note": "process scope"
     },
     {
-      "name": "canmk_bad_parent",
-      "cmd": "missing parent OK=1 LAST_N=0; REQUIRE\u21922",
+      "name": "leave_empty",
+      "cmd": "POPD empty REQUIRE→2",
       "ok": true,
-      "note": "probe"
+      "note": "soft stack"
     },
     {
-      "name": "require_abc",
-      "cmd": "REQUIRE=abc softens",
+      "name": "enter_file",
+      "cmd": "PUSHD file path REQUIRE→2",
       "ok": true,
-      "note": "rc 0"
+      "note": "cwd unchanged"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "256/256 pass"
+      "note": "257/257 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|umask",
-      "title": "UMASK is process-scoped \u2014 lost across cubalc invocations",
-      "detail": "Action dispatch re-execs binary each time. mask then seed in separate runs does not apply private mask unless seed re-sets via ARG2/ENV. Agents assume durable umask like CHMOD.",
-      "repro": "mask 0077; new process seed \u2192 host default umask"
+      "area": "host|pushd",
+      "title": "PUSHD/POPD/DIRSTACK are process-scoped only",
+      "detail": "Action dispatch re-execs cubalc each time. enter then put in separate runs loses stack; leave sees empty. Agents must compound visit in one process.",
+      "repro": "enter; new process leave → empty stack"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|umask",
-      "title": "UMASK set returns previous mask not newly applied",
-      "detail": "SYS UMASK 0077 \u2192 LAST=0022 (old). Agents that print LAST as current mis-stamp plates. Must GETUMASK after set.",
-      "repro": "UMASK 0077; LAST is prev"
+      "area": "host|kindstr",
+      "title": "KINDSTR missing is OK=1 not soft-fail",
+      "detail": "Missing path → LAST=missing KIND_N=0 OK=1. Empty path OK=0. Agents treating OK as exist fail; dual-branch needed with CANACCESS/EXIST.",
+      "repro": "KINDSTR /no/such → OK=1 missing"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|write",
-      "title": "WRITE overwrite keeps prior mode \u2014 umask only on create",
-      "detail": "Re-seed existing path does not re-apply umask. Board must RM then WRITE for private mode proof. No WRITECREATE or FORCE_CREATE flag.",
-      "repro": "WRITE existing 0644 under umask 0077 \u2192 still 0644"
+      "severity": "med",
+      "area": "host|kindstr",
+      "title": "KINDSTR uses lstat — link not target kind",
+      "detail": "Symlink to file is kind=link not file. Agents that want target type need READLINK+KINDSTR chain. No KINDFOLLOW form.",
+      "repro": "symlink file → kind link"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|mode",
-      "title": "MODE_N decimal vs UMASK_N vs octal strings triple trap",
-      "detail": "0600 \u2192 MODE_N=384; 0077 \u2192 UMASK_N=63. Agents compare numeric 600/77 and fail.",
-      "repro": "MODE_N==600 false; UMASK_N==77 false"
+      "area": "host|pushd",
+      "title": "No WITHDIR / ENTER…LEAVE block form",
+      "detail": "Must hand-roll PUSHD … POPD and recover on mid-fail. visit write fail path needs explicit POPD. Easy to leak cwd on EXIT.",
+      "repro": "PUSHD; EXIT 2 leaves process in workdir"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|cancreate",
-      "title": "CANCREATE silent 0 on missing parent vs empty path OK=0",
-      "detail": "Bad parent: OK=1 LAST_N=0. Empty path: OK=0 sticky ERR. Same dual as CANREAD family \u2014 agents need two branches.",
-      "repro": "CANCREATE /no/such/x; CANCREATE \"\""
+      "area": "host|has",
+      "title": "HAS on CWD paths is basename false-friend prone",
+      "detail": "HAS cwd site matches any path containing site. Prefer ENDS/BASENAME EQS for site checks.",
+      "repro": "HAS /tmp/…/site site"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS on umask/mode strings is digit false-friend",
-      "detail": "HAS 0077 \"7\" \u2192 1; HAS 0600 \"600\" may glue poorly. No bit-mask expected-mode helper (0666 & ~umask).",
-      "repro": "HAS 0077 7"
+      "area": "host|mkdir",
+      "title": "work action MKDIR may create deep paths agents did not intend",
+      "detail": "work /no/such/site may succeed if MKDIR is -p style; enter then works. File-as-workdir is the reliable enter-fail case.",
+      "repro": "work /no/such/x; enter may ok"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "ACTIVE path and short VAL glue in cat -A.",
-      "repro": "cat -A ACTIVE.txt"
+      "detail": "WORK/TARGET glue in cat -A.",
+      "repro": "cat -A WORK.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_IC_REQUIRE=abc \u2192 REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc canmk deny \u2192 rc 0"
+      "detail": "CUBALC_WS_REQUIRE=abc → leave empty rc 0.",
+      "repro": "REQUIRE=abc leave"
     }
   ],
   "workarounds": [
-    "Co-locate UMASK set with WRITE in same process (ARG2/ENV on seed)",
-    "GETUMASK after SET to stamp current mask",
-    "RM existing before private seed so umask applies",
-    "Compare MODE string 0600 not MODE_N 600",
-    "Digit-check REQUIRE env"
+    "Compound enter+relative I/O+leave in one process (visit)",
+    "Treat KINDSTR missing as soft miss via EQS not OK",
+    "READLINK then KINDSTR for follow-kind",
+    "POPD in every fail path after PUSHD",
+    "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "Session/process-persistent umask plate or auto CUBALC_UMASK env apply",
-    "UMASK set LAST=new option or dual PREV/CUR vars",
-    "WRITECREATE / CREATEONLY that always applies umask",
-    "Expected mode helper: 0666 & ~umask \u2192 0600 string",
-    "Unified empty vs denied probe contract",
-    "WRITE trailing NL"
+    "Persistent or plate-backed DIRSTACK across runs",
+    "WITHDIR path … END auto-pop on fail/exit",
+    "KINDFOLLOW / KINDSTR -L",
+    "KINDSTR missing soft-fail option",
+    "WRITE trailing NL",
+    "Safe relative plate root bound to WORK"
   ],
   "issues_faced": [
-    "canmk/umask/mask/seed/check/gate green",
-    "cross-run umask loss forced same-process A2 mask on seed",
-    "overwrite mode sticky without RM \u2014 core lesson",
-    "selftest 256/256; no language fix this iter"
+    "work/probe/kind/visit/link/leave-empty green",
+    "stack empty across re-exec — core lesson; visit compounds",
+    "selftest 257/257; no language fix this iter"
   ],
-  "commit": "bfabeb1c2ed8a7bc4680bd599d93d14344082b59",
-  "ts": "2026-08-06T20:37:47Z"
+  "commit": "",
+  "ts": "2026-08-06T20:53:23Z"
 }

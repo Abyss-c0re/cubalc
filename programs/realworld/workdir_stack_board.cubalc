@@ -1,0 +1,776 @@
+# workdir_stack_board.cubalc — PUSHD workdir stack + KINDSTR triage
+#
+# Real use: runbook/release agents enter a job site with relative plate I/O
+# without shell pushd/popd, then triage path kinds before stamp writes:
+#   PUSHD / POPD / DIRSTACK  — cwd stack (depth in LAST_N)
+#   KINDSTR / FILEKIND       — file|dir|link|missing labels
+#   CWD / CHDIR / REALPATH   — where am I / resolve
+# Distinct from plate_workspace (MKDIR nest) and scratch_workspace (MKTEMPDIR):
+# this board is *stack enter/leave + kind triage + relative stamp*.
+#
+# Plate under STATE:
+#   WORK.txt       — preferred workdir path
+#   TARGET.txt     — relative or abs path under work
+#   VAL.txt        — last cwd / kind / stack bag
+#   META.txt
+#   STACK_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_WS_ACTION):
+#   list      — plate (default)
+#   work      — WORK = ARG1 abs path
+#   target    — TARGET = ARG1 (rel name or path)
+#   here      — CWD → VAL
+#   enter     — PUSHD WORK (same-process only; depth→VAL)
+#   leave     — POPD
+#   stack     — DIRSTACK bag → VAL
+#   kind      — KINDSTR TARGET (or ARG1) → VAL
+#   visit     — compound: PUSHD WORK; KINDSTR TARGET; WRITE stamp; POPD
+#   probe     — KINDSTR WORK (expect dir)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ws_$$
+#   CUBALC_ARG0=work CUBALC_ARG1=$CUBALC_STATE/site ...
+#   CUBALC_ARG0=target CUBALC_ARG1=STATUS.txt ...
+#   CUBALC_ARG0=visit CUBALC_ARG1='ready=1' ...
+#   CUBALC_ARG0=kind ...
+#
+# Env: CUBALC_WS_REQUIRE=1  CUBALC_WS_WORK=…  CUBALC_WS_TARGET=…
+#
+# Edges:
+#   PUSHD/POPD process-scoped — lost across cubalc re-execs
+#   empty POPD soft fail; bad PUSHD cwd unchanged
+#   KINDSTR missing → OK=1 "missing"; empty path OK=0
+#   KINDSTR link is lstat (not target)
+#   HAS substring on cwd paths; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "workdir_stack_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT WFILE = "WORK.txt"
+DEFAULT TFILE = "TARGET.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "STACK_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_TARGET = "STATUS.txt"
+DEFAULT STAMP_NAME = "STATUS.txt"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+SYS CWD
+LET home_cwd = LAST
+CLEAR_ERR
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_WS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_WS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_WS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_WS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_WS_WORK" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_WORK = LAST
+ELSE
+  LET ENV_WORK = ""
+END
+SYS ENV "CUBALC_WS_TARGET" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_TARGET = LAST
+ELSE
+  LET ENV_TARGET = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir WFILE
+LET work_meta = LAST
+SYS JOIN state_dir TFILE
+LET target_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR work_meta OR ""
+LET work = LAST
+CLEAR_ERR
+SYS READ OR target_meta OR ""
+LET target = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_WORK
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "work"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_WORK
+    END
+  END
+END
+SYS BLANK ENV_TARGET
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "target"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TARGET
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET work_ch = 0
+LET target_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET depth_n = 0
+LET kind_n = 0
+LET visit_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "wstack" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON work
+  PRINT_JSON target
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- work set WORK ---
+SYS EQS ACTION "work"
+IF LAST_N == 1 THEN
+  NOTE "action work"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "work needs path"
+  END
+  SYS MKDIR NAME
+  CLEAR_ERR
+  SYS REALPATH NAME
+  IF OK == 1 THEN
+    LET work = LAST
+  ELSE
+    LET work = NAME
+  END
+  CLEAR_ERR
+  LET work_ch = 1
+  LET hit = 1
+  LET note_msg = "work ok"
+  LET val = work
+  LET val_ch = 1
+  PRINT_JSON work
+END
+
+# --- target ---
+SYS EQS ACTION "target"
+IF LAST_N == 1 THEN
+  NOTE "action target"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "target needs name"
+  END
+  LET target = NAME
+  LET target_ch = 1
+  LET hit = 1
+  LET note_msg = "target ok"
+  LET val = target
+  LET val_ch = 1
+  PRINT_JSON target
+END
+
+# --- here CWD ---
+SYS EQS ACTION "here"
+IF LAST_N == 1 THEN
+  NOTE "action here"
+  SYS CWD
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "here fail"
+    FAIL "here fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "here fail"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "here ok"
+    LET meta = "cwd"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "home"
+    LET meta = LAST
+    SYS PUSH meta home_cwd
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- enter PUSHD WORK ---
+SYS EQS ACTION "enter"
+IF LAST_N == 1 THEN
+  NOTE "action enter"
+  SYS BLANK work
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "enter no work"
+    FAIL "enter no work"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "enter no work"
+    END
+  ELSE
+    SYS PUSHD work
+    IF OK == 0 THEN
+      LET miss = 1
+      LET depth_n = 0
+      LET note_msg = "enter fail"
+      FAIL "enter fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "enter fail"
+      END
+    ELSE
+      LET depth_n = LAST_N
+      SYS CWD
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "enter ok"
+      LET meta = "depth"
+      SYS STR depth_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "cwd"
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON depth_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- leave POPD ---
+SYS EQS ACTION "leave"
+IF LAST_N == 1 THEN
+  NOTE "action leave"
+  SYS POPD
+  IF OK == 0 THEN
+    LET miss = 1
+    LET depth_n = 0
+    LET note_msg = "leave empty"
+    FAIL "leave empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "leave empty"
+    END
+  ELSE
+    LET depth_n = LAST_N
+    SYS CWD
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "leave ok"
+    LET meta = "depth"
+    SYS STR depth_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON depth_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- stack DIRSTACK ---
+SYS EQS ACTION "stack"
+IF LAST_N == 1 THEN
+  NOTE "action stack"
+  SYS DIRSTACK
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "stack fail"
+    FAIL "stack fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stack fail"
+    END
+  ELSE
+    LET depth_n = LAST_N
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "stack ok"
+    LET meta = "depth"
+    SYS STR depth_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON depth_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- kind KINDSTR ---
+SYS EQS ACTION "kind"
+IF LAST_N == 1 THEN
+  NOTE "action kind"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET kpath = NAME
+  ELSE
+    SYS BLANK target
+    IF LAST_N == 1 THEN
+      LET kpath = DEF_TARGET
+    ELSE
+      LET kpath = target
+    END
+  END
+  # if relative and WORK set, join for absolute kind probe outside enter
+  SYS STARTS kpath "/"
+  LET abs_n = LAST_N
+  IF abs_n == 0 THEN
+    SYS BLANK work
+    IF LAST_N == 0 THEN
+      SYS JOIN work kpath
+      LET kpath = LAST
+    END
+  END
+  SYS KINDSTR kpath
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "kind empty/fail"
+    FAIL "kind empty/fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "kind empty/fail"
+    END
+  ELSE
+    LET val = LAST
+    LET kind_n = KIND_N
+    LET val_ch = 1
+    SYS EQS val "missing"
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "kind missing"
+      FAIL "kind missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "kind missing"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "kind ok"
+    END
+    LET meta = "kind"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "n"
+    LET meta = LAST
+    SYS STR kind_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "path"
+    LET meta = LAST
+    SYS PUSH meta kpath
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON kind_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe KINDSTR WORK expect dir ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  SYS BLANK work
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "probe no work"
+    FAIL "probe no work"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "probe no work"
+    END
+  ELSE
+    SYS KINDSTR work
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "probe fail"
+      FAIL "probe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "probe fail"
+      END
+    ELSE
+      LET val = LAST
+      LET kind_n = KIND_N
+      LET val_ch = 1
+      SYS EQS val "dir"
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "probe not dir"
+        FAIL "probe not dir"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "probe not dir"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "probe ok"
+      END
+      LET meta = "kind"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON kind_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- visit compound same-process: pushd, kind, write, popd ---
+SYS EQS ACTION "visit"
+IF LAST_N == 1 THEN
+  NOTE "action visit"
+  SYS BLANK work
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "visit no work"
+    FAIL "visit no work"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "visit no work"
+    END
+  ELSE
+    SYS BLANK target
+    IF LAST_N == 1 THEN
+      LET target = DEF_TARGET
+      LET target_ch = 1
+    END
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET body = "ready=1"
+    ELSE
+      LET body = NAME
+    END
+    SYS MKDIR work
+    CLEAR_ERR
+    SYS CWD
+    LET before = LAST
+    SYS PUSHD work
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "visit push fail"
+      FAIL "visit push fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "visit push fail"
+      END
+    ELSE
+      LET depth_n = LAST_N
+      SYS CWD
+      LET inside = LAST
+      # kind of target (relative name under work)
+      SYS KINDSTR target
+      LET kind_before = LAST
+      LET kind_n = KIND_N
+      CLEAR_ERR
+      SYS WRITE target body
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "visit write fail"
+        FAIL "visit write fail"
+        CLEAR_ERR
+        SYS POPD
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "visit write fail"
+        END
+      ELSE
+        SYS KINDSTR target
+        LET kind_after = LAST
+        LET kind_n = KIND_N
+        CLEAR_ERR
+        SYS POPD
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "visit pop fail"
+          FAIL "visit pop fail"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "visit pop fail"
+          END
+        ELSE
+          LET depth_n = LAST_N
+          SYS CWD
+          LET after = LAST
+          SYS EQS after before
+          LET back_n = LAST_N
+          # HAS false friend on path basenames
+          SYS HAS inside "site"
+          LET has_site = LAST_N
+          CLEAR_ERR
+          IF back_n == 0 THEN
+            LET miss = 1
+            LET note_msg = "visit cwd drift"
+            FAIL "visit cwd drift"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "visit cwd drift"
+            END
+          ELSE
+            LET hit = 1
+            LET visit_n = 1
+            LET note_msg = "visit ok"
+          END
+          # VAL = kind_after@depth
+          SYS CAT kind_after "@"
+          LET val = LAST
+          SYS STR depth_n
+          SYS CAT val LAST
+          LET val = LAST
+          LET val_ch = 1
+          LET meta = "before"
+          SYS PUSH meta kind_before
+          LET meta = LAST
+          SYS PUSH meta "after"
+          LET meta = LAST
+          SYS PUSH meta kind_after
+          LET meta = LAST
+          SYS PUSH meta "inside"
+          LET meta = LAST
+          SYS PUSH meta inside
+          LET meta = LAST
+          SYS PUSH meta "back"
+          LET meta = LAST
+          SYS STR back_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "has_site"
+          LET meta = LAST
+          SYS STR has_site
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "body"
+          LET meta = LAST
+          SYS PUSH meta body
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON visit_n depth_n kind_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET work = ""
+  LET target = ""
+  LET val = ""
+  LET meta = ""
+  LET work_ch = 1
+  LET target_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "work"
+LET k = k + LAST_N
+SYS EQS ACTION "target"
+LET k = k + LAST_N
+SYS EQS ACTION "here"
+LET k = k + LAST_N
+SYS EQS ACTION "enter"
+LET k = k + LAST_N
+SYS EQS ACTION "leave"
+LET k = k + LAST_N
+SYS EQS ACTION "stack"
+LET k = k + LAST_N
+SYS EQS ACTION "kind"
+LET k = k + LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "visit"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF work_ch > 0 THEN
+  SYS WRITE work_meta work
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "work write failed"
+  END
+  CLEAR_ERR
+END
+IF target_ch > 0 THEN
+  SYS WRITE target_meta target
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "target write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.workdir_stack_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth"
+LET report = LAST
+SYS STR depth_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "kind_n"
+LET report = LAST
+SYS STR kind_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "visit"
+LET report = LAST
+SYS STR visit_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "work"
+LET report = LAST
+SYS PUSH report work
+LET report = LAST
+SYS PUSH report "target"
+LET report = LAST
+SYS PUSH report target
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "workdir_stack_board" ACTION hit miss depth_n kind_n visit_n note_msg elapsed
