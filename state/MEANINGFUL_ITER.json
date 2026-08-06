@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 140,
-  "version": "1.15.165-usability",
-  "item": "SYS CAPKV / CLAMPKV clamp key:val values to max",
-  "item_id": 173,
-  "title": "SYS CAPKV|CLAMPKV bag max [sep] — clamp key:val values to max",
-  "commit": "47508f305f7af6e92c36cc6b0d6782255252b023",
-  "summary": "CAPKV clamp FREQ outliers before PCTKV without EACH. selftest 140.",
+  "iter": 141,
+  "version": "1.15.166-usability",
+  "item": "SYS SCALEKV / MULKV multiply key:val values by factor",
+  "item_id": 174,
+  "title": "SYS SCALEKV|MULKV bag factor [sep] — multiply key:val values",
+  "commit": "90f85a07d35cc018c835b64b2c72f1c5f044130d",
+  "summary": "SCALEKV weight FREQ before MERGEKV without EACH. selftest 141.",
   "proofs": [
-    "713_sys_capkv",
-    "selftest n_pass=140"
+    "714_sys_scalekv",
+    "selftest n_pass=141"
   ],
-  "when": "2026-08-06T01:04:01Z",
+  "when": "2026-08-06T01:13:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "47508f305f7af6e92c36cc6b0d6782255252b023"
+  "sha": "90f85a07d35cc018c835b64b2c72f1c5f044130d"
 }
