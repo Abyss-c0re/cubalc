@@ -8,25 +8,25 @@
   "tests": [
     {
       "name": "seed_get",
-      "cmd": "seed peer_a:10 peer_b:5 peer_c:1; get peer_a → 10 OR=0",
+      "cmd": "seed peer_a:10 peer_b:5 peer_c:1; get peer_a \u2192 10 OR=0",
       "ok": true,
       "note": "LOOKUP hit"
     },
     {
       "name": "get_or_default",
-      "cmd": "get peer_z → DEF 1 LOOKUP_OR=1",
+      "cmd": "get peer_z \u2192 DEF 1 LOOKUP_OR=1",
       "ok": true,
       "note": "soft default OK=1"
     },
     {
       "name": "get_or_zero",
-      "cmd": "CUBALC_RW_DEF=0 get peer_z → val 0 hit 0",
+      "cmd": "CUBALC_RW_DEF=0 get peer_z \u2192 val 0 hit 0",
       "ok": true,
       "note": "hit confuses with miss"
     },
     {
       "name": "get_or_require",
-      "cmd": "REQUIRE get missing → exit 2 default only",
+      "cmd": "REQUIRE get missing \u2192 exit 2 default only",
       "ok": true,
       "note": "agent policy on OR"
     },
@@ -38,7 +38,7 @@
     },
     {
       "name": "bump_del",
-      "cmd": "bump peer_b +3 → 8; del peer_c",
+      "cmd": "bump peer_b +3 \u2192 8; del peer_c",
       "ok": true,
       "note": "KVINC + KVDEL"
     },
@@ -62,7 +62,7 @@
     },
     {
       "name": "dup_del_first",
-      "cmd": "peer_a:1\\npeer_a:9 del → residual peer_a:9",
+      "cmd": "peer_a:1\\npeer_a:9 del \u2192 residual peer_a:9",
       "ok": true,
       "note": "first-only KVDEL"
     },
@@ -78,9 +78,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "LOOKUP OR sets OK=1 on miss — silent default",
+      "title": "LOOKUP OR sets OK=1 on miss \u2014 silent default",
       "detail": "Agents that only check OK treat missing peer as success. Must inspect LOOKUP_OR or LOOKUP_I==-1. Asymmetric with bare LOOKUP miss OK=0.",
-      "repro": "LOOKUP bag ghost OR 1 → OK=1 LOOKUP_OR=1"
+      "repro": "LOOKUP bag ghost OR 1 \u2192 OK=1 LOOKUP_OR=1"
     },
     {
       "id": "W2",
@@ -88,7 +88,7 @@
       "area": "host|bag",
       "title": "KVDEL miss keeps OK=1 with HIT=0",
       "detail": "Unlike LOOKUP miss, KVDEL never soft-fails OK. REQUIRE paths must gate on KVDEL_HIT not OK. Easy to think del always succeeded.",
-      "repro": "KVDEL bag ghost → OK=1 HIT=0"
+      "repro": "KVDEL bag ghost \u2192 OK=1 HIT=0"
     },
     {
       "id": "W3",
@@ -103,15 +103,15 @@
       "severity": "med",
       "area": "agent|api",
       "title": "Zero default weight makes hit=0 look like miss",
-      "detail": "Program maps hit=val_n; DEF=0 → hit=0 while get succeeded with default. Agents conflate success with non-zero weight.",
-      "repro": "get peer_z DEF=0 → hit 0 used_or 1"
+      "detail": "Program maps hit=val_n; DEF=0 \u2192 hit=0 while get succeeded with default. Agents conflate success with non-zero weight.",
+      "repro": "get peer_z DEF=0 \u2192 hit 0 used_or 1"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "lang|parse",
       "title": "LOOKUP sep+OR argument order is fragile",
-      "detail": "Correct: LOOKUP bag key \\\"=\\\" OR \\\"x\\\". Wrong: LOOKUP bag key OR \\\"x\\\" \\\"=\\\" → unknown form '='. Same sep-literal class as prior KV ops.",
+      "detail": "Correct: LOOKUP bag key \\\"=\\\" OR \\\"x\\\". Wrong: LOOKUP bag key OR \\\"x\\\" \\\"=\\\" \u2192 unknown form '='. Same sep-literal class as prior KV ops.",
       "repro": "LOOKUP cfg port OR 7700 ="
     },
     {
@@ -140,7 +140,7 @@
     }
   ],
   "workarounds": [
-    "Always check LOOKUP_OR after LOOKUP … OR; REQUIRE on used_or if real peer required",
+    "Always check LOOKUP_OR after LOOKUP \u2026 OR; REQUIRE on used_or if real peer required",
     "Gate del on KVDEL_HIT not OK",
     "Loop KVDEL while LOOKUP hits for full drain of dups",
     "Report used_or and val separately; never use hit==0 alone as miss when DEF can be 0",
@@ -155,11 +155,11 @@
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "Workspace had mass-deleted proofs/plate at fire start — restored from HEAD; selftest 133/133",
+    "Workspace had mass-deleted proofs/plate at fire start \u2014 restored from HEAD; selftest 133/133",
     "Positive seed/get/OR/del/pin clean",
     "DEF=0 hit=0 footgun documented W4",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "ce3814f2fe3efb01b984bf86d1d4c99871f29027",
   "ts": "2026-08-05T23:55:00Z"
 }
