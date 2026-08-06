@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 135,
-  "version": "1.15.160-usability",
-  "item": "SYS SUMKV / TOTALKV sum key:val bag values",
-  "item_id": 168,
-  "title": "SYS SUMKV|TOTALKV bag [sep] — sum key:val numeric values",
-  "commit": "0d0efd53243ad9531cde6f62e1dc6108d0e558f8",
-  "summary": "SUMKV FREQ total without VALS+SUM. LAST_N=sum. selftest 135.",
+  "iter": 136,
+  "version": "1.15.161-usability",
+  "item": "SYS TOPKEY / BOTKEY max/min key of key:val bag",
+  "item_id": 169,
+  "title": "SYS TOPKEY|ARGMAXKV / BOTKEY|ARGMINKV bag [sep] — dominant/rarest key",
+  "commit": "88af8770462ec8321391770d3aba2e8f63cfd760",
+  "summary": "TOPKEY/BOTKEY dominant FREQ key without SORTFREQ+TAKE+BEFORE. selftest 136.",
   "proofs": [
-    "708_sys_sumkv",
-    "selftest n_pass=135"
+    "709_sys_topkey",
+    "selftest n_pass=136"
   ],
-  "when": "2026-08-06T00:13:27Z",
+  "when": "2026-08-06T00:24:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0d0efd53243ad9531cde6f62e1dc6108d0e558f8"
+  "sha": "88af8770462ec8321391770d3aba2e8f63cfd760"
 }
