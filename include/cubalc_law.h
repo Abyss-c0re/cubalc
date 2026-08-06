@@ -10,8 +10,10 @@
 /* creed = opaque status token, not human language */
 #define CUBALC_CREED        "C3"
 #define CUBALC_SHARE        "smx"
-/* HOLD_FLASH: user-permission safeguard BEFORE any device/unit is "plugged in".
- * Sticky ack — not auto-flash firmware. Devices free: no host flash without hold. */
+/* HOLD_FLASH: safeguard before connecting a *device that requires firmware
+ * changes*. Runtime defaults to 1 — programs need NOT start with HOLD_FLASH 1.
+ * Sticky ack — not auto-flash. Devices free: no host firmware write without hold.
+ * Set HOLD_FLASH 0 only to deny PLUG (tests / lock-down). */
 #define CUBALC_HOLD_FLASH   1
 #define CUBALC_MAGIC_BIN    0x43424C43u  /* CBLC */
 #define CUBALC_PROTO_V1     1

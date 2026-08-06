@@ -17913,7 +17913,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare HELP → catalog tip pointing at cubalc forms CLI. */
   if (kw(&L->cur,"HELP")||kw(&L->cur,"MAN")||kw(&L->cur,"DOC")){
     static const struct { const char *name; const char *hint; } help[] = {
-      {"HOLD_FLASH", "HOLD_FLASH 0|1 — user permission before PLUG (not auto-flash)"},
+      {"HOLD_FLASH", "HOLD_FLASH 0|1 — device/firmware safeguard; default 1 (omit preamble)"},
       {"CUBE", "CUBE name ROLE host|body PROTON 0|1"},
       {"PLUG", "PLUG a b — wire cubes (requires HOLD_FLASH 1)"},
       {"IMPULSE", "IMPULSE cube [0|1] — pulse proton"},

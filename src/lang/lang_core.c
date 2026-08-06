@@ -594,10 +594,11 @@ void cubalc_lang_do_plug(VM *vm, const char *a, const char *b){
   if (ib<0){ place_cube(vm,b,b,1); ib=find_cube(vm,b); }
   if (ia<0||ib<0){ fail(vm,"plug missing unit"); return; }
   int rc = cubalc_cube_plug(&vm->ch, ia, ib);
-  /* Only HOLD_FLASH denial is hard fail — user permission before plug-in.
+  /* Only HOLD_FLASH denial is hard fail — device/firmware lock-down when set 0.
+   * Runtime defaults hold_flash=1 (no program preamble required).
    * Incompatible/missing ports stay soft (re-plug / dense meshes). */
   if (rc == -5){
-    fail(vm,"PLUG denied: HOLD_FLASH=0 (user permission required before plug-in)");
+    fail(vm,"PLUG denied: HOLD_FLASH=0 (device/firmware safeguard; default is 1)");
     var_set_num(vm,"OK",0);
     return;
   }

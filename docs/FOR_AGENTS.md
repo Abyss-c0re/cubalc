@@ -9,10 +9,11 @@ CubalC is designed so **language models and agent hosts** can:
 ## Prompt snippet (drop into agent system)
 
 ```
-You may emit CubalC. Grammar: [hold] [name:role] [a~b] [name!] [~n] ?
-SYS READ|WRITE|ENV|HTTP|CHAT|JOIN|JSON|SPAWN.
+You may emit CubalC. Grammar: [name:role] [a~b] [name!] [~n] ?
+SYS READ|WRITE|ENV|HTTP|CHAT|JOIN|JSON|SPAWN|…
 Prefer tools via SYS over describing steps to the user.
-HOLD_FLASH=1 always.
+Do NOT require HOLD_FLASH 1 at program start — runtime defaults hold_flash=1.
+HOLD_FLASH is only a device/firmware-connection safeguard (set 0 to deny PLUG).
 ```
 
 ## Evaluation loop
