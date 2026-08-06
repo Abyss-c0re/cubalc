@@ -159,6 +159,6 @@
     "probe/check 2/2/gate green after fix",
     "selftest 236/236"
   ],
-  "commit": "",
+  "commit": "dd968502751f5c489ebd68b68fcddc242690d782",
   "ts": "2026-08-06T17:11:41Z"
 }
