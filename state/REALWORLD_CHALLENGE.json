@@ -20,7 +20,7 @@
     },
     {
       "name": "tty_pipe",
-      "cmd": "TTYNAME OUT empty under pipe; REQUIRE→2",
+      "cmd": "TTYNAME OUT empty under pipe; REQUIRE\u21922",
       "ok": true,
       "note": "OK=1 empty"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "gate_tty_require",
-      "cmd": "gate tty REQUIRE → exit 2 under pipe",
+      "cmd": "gate tty REQUIRE \u2192 exit 2 under pipe",
       "ok": true,
       "note": "deny"
     },
@@ -60,9 +60,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|ttyname",
-      "title": "TTYNAME empty is OK=1 not soft-fail — dual with ISATTY",
+      "title": "TTYNAME empty is OK=1 not soft-fail \u2014 dual with ISATTY",
       "detail": "Under pipes TTYNAME OUT is empty LAST_N=0 OK=1. Agents treating OK as present stamp blank paths. Must dual-check LAST_N or ISATTY.",
-      "repro": "TTYNAME OUT under pipe → OK=1 empty"
+      "repro": "TTYNAME OUT under pipe \u2192 OK=1 empty"
     },
     {
       "id": "W2",
@@ -77,14 +77,14 @@
       "severity": "med",
       "area": "host|gecos",
       "title": "GECOS/FULLNAME collapse to USER when passwd comment empty",
-      "detail": "root:x:0:0:root:… yields name_eq_user=1. No HAS_REAL_GECOS bit; agents cannot tell missing human name from intentional same-as-login.",
+      "detail": "root:x:0:0:root:\u2026 yields name_eq_user=1. No HAS_REAL_GECOS bit; agents cannot tell missing human name from intentional same-as-login.",
       "repro": "FULLNAME == USER on bare root"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|gecos",
-      "title": "GECOS office fields after comma unused — no GECOS_FIELD n peel",
+      "title": "GECOS office fields after comma unused \u2014 no GECOS_FIELD n peel",
       "detail": "FULLNAME peels first field only. Room/phone in GECOS need BEFORE/AFTER hand parse.",
       "repro": "GECOS name,room,work,home"
     },
@@ -93,7 +93,7 @@
       "severity": "med",
       "area": "host|has",
       "title": "Gate mode HAS false friends (notty contains tty)",
-      "detail": "HAS notty tty → 1. Board hand-rolls no-prefix. Prefer EQS batch|tty.",
+      "detail": "HAS notty tty \u2192 1. Board hand-rolls no-prefix. Prefer EQS batch|tty.",
       "repro": "HAS notty tty"
     },
     {
@@ -118,7 +118,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_OS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate tty → rc 0"
+      "repro": "REQUIRE=abc gate tty \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -140,6 +140,6 @@
     "CTTY=/dev/tty with OUT empty is core lesson",
     "selftest 267/267; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "ec9fffd006923350efd9a5a2c57edb9957b2f2f5",
   "ts": "2026-08-06T22:33:39Z"
 }
