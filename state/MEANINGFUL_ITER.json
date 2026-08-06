@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 193,
-  "version": "1.15.218-usability",
-  "item": "SYS SETALLMATCHFILE / FILESETALLMATCH replace all matching file lines",
-  "item_id": 226,
-  "title": "SYS SETALLMATCHFILE|FILESETALLMATCH path needle value — replace all matching file lines",
-  "commit": "698fd7a501570d218ebe01cc6b2e91b494273680",
-  "summary": "Bulk rewrite matching file lines one-shot; dual of SETMATCHFILE. selftest 193.",
+  "iter": 194,
+  "version": "1.15.219-usability",
+  "item": "SYS INSERTMATCHFILE / FILEINSERTMATCH / AFTERMATCHFILE insert after first match",
+  "item_id": 227,
+  "title": "SYS INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE path needle value — insert line after first match",
+  "commit": "4478a7208249207ff8c370e69152ae8f3ed55a9b",
+  "summary": "Find-then-insert file line one-shot for config patches. selftest 194.",
   "proofs": [
-    "766_sys_setallmatchfile",
-    "selftest n_pass=193"
+    "767_sys_insertmatchfile",
+    "selftest n_pass=194"
   ],
-  "when": "2026-08-06T10:04:40Z",
+  "when": "2026-08-06T10:14:50Z",
   "agent": "meaningful_iter_10m",
-  "sha": "698fd7a501570d218ebe01cc6b2e91b494273680"
+  "sha": "4478a7208249207ff8c370e69152ae8f3ed55a9b"
 }
