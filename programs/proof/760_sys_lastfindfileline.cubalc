@@ -1,0 +1,57 @@
+# SYS LASTFINDFILELINE / FILELASTFIND — last file line containing needle
+# Usability: latest log/error without REVL+FINDFILELINE glue
+# Dual of FINDFILELINE. LASTFINDFILELINEI icase. Soft miss path.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "lastfindfileline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "alpha\nerror: early\nbeta\nERROR: late\ngamma"
+
+# last case-sensitive "error" is early line only (ERROR != error)
+SYS LASTFINDFILELINE fs "error"
+ASSERT OK == 1
+ASSERT LASTFINDFILELINE_N == 1
+ASSERT LASTFINDFILELINE_I == 1
+ASSERT LASTFINDFILELINE_TOTAL == 5
+SYS EQS LAST "error: early"
+ASSERT LAST_N == 1
+
+# first find still early
+SYS FINDFILELINE fs "error"
+ASSERT FINDFILELINE_I == 1
+
+# alias icase finds last ERROR
+SYS LASTFINDFILELINEI fs "error"
+ASSERT LASTFINDFILELINE_N == 1
+ASSERT LASTFINDFILELINE_I == 3
+SYS EQS LAST "ERROR: late"
+ASSERT LAST_N == 1
+
+# alias name
+SYS FILELASTFIND fs "beta"
+ASSERT LASTFINDFILELINE_I == 2
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# miss
+SYS LASTFINDFILELINE fs "nope"
+ASSERT OK == 1
+ASSERT LASTFINDFILELINE_N == 0
+ASSERT LASTFINDFILELINE_I == -1
+
+# soft path miss
+SYS LASTFINDFILELINE "no_such_lastfindfileline_mi.txt" "x"
+ASSERT OK == 0
+ASSERT LASTFINDFILELINE_I == -1
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_lastfindfileline ok"
