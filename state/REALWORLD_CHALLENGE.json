@@ -8,15 +8,15 @@
   "tests": [
     {
       "name": "seed_scale_cap",
-      "cmd": "seed api:30…; scale 2 → api:60; cap 40 → api:40 cap_n=1",
+      "cmd": "seed api:30\u2026; scale 2 \u2192 api:60; cap 40 \u2192 api:40 cap_n=1",
       "ok": true,
       "note": "SCALEKV+CAPKV pipeline"
     },
     {
       "name": "pct_share",
-      "cmd": "pct on total 72 → shares 55/27/13/2 field_sum 97",
+      "cmd": "pct on total 72 \u2192 shares 55/27/13/2 field_sum 97",
       "ok": true,
-      "note": "integer trunc ≠100"
+      "note": "integer trunc \u2260100"
     },
     {
       "name": "getn_getshare",
@@ -38,25 +38,25 @@
     },
     {
       "name": "pct_zero_total",
-      "cmd": "a:0 b:0 pct → zeros; REQUIRE exit 2",
+      "cmd": "a:0 b:0 pct \u2192 zeros; REQUIRE exit 2",
       "ok": true,
       "note": "language OK=1 all zero"
     },
     {
       "name": "cap_none",
-      "cmd": "cap 100 all under → CAPKV_N=0 note cap none",
+      "cmd": "cap 100 all under \u2192 CAPKV_N=0 note cap none",
       "ok": true,
       "note": "no-op signal"
     },
     {
       "name": "scale_zero",
-      "cmd": "scale 0 → all zeros",
+      "cmd": "scale 0 \u2192 all zeros",
       "ok": true,
       "note": "factor 0 destructive"
     },
     {
       "name": "pct_trunc_5",
-      "cmd": "3+1+1 pct → 60/20/20 sum 100 clean",
+      "cmd": "3+1+1 pct \u2192 60/20/20 sum 100 clean",
       "ok": true,
       "note": "divisible case"
     },
@@ -78,9 +78,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "PCTKV integer truncation; sum of percents may ≠ 100",
-      "detail": "Total 72 → shares 55+27+13+2=97. Agents treating shares as a partition of 100 under-allocate. No remainder distribution / largest-remainder mode.",
-      "repro": "PCTKV bag total 72 → field sum 97"
+      "title": "PCTKV integer truncation; sum of percents may \u2260 100",
+      "detail": "Total 72 \u2192 shares 55+27+13+2=97. Agents treating shares as a partition of 100 under-allocate. No remainder distribution / largest-remainder mode.",
+      "repro": "PCTKV bag total 72 \u2192 field sum 97"
     },
     {
       "id": "W2",
@@ -95,7 +95,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "PCTKV zero-total returns all-zero bag OK=1",
-      "detail": "a:0 b:0 → a:0 b:0 with PCTKV_SUM=0 not soft miss. Program must special-case.",
+      "detail": "a:0 b:0 \u2192 a:0 b:0 with PCTKV_SUM=0 not soft miss. Program must special-case.",
       "repro": "PCTKV a:0\\nb:0"
     },
     {
@@ -111,7 +111,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "CAPKV only max clamp; no min floor form",
-      "detail": "Iter 50 wanted CAPKV max — now have max only. No FLOORKV / clamp range. Outlier floor still EACH.",
+      "detail": "Iter 50 wanted CAPKV max \u2014 now have max only. No FLOORKV / clamp range. Outlier floor still EACH.",
       "repro": "CAPKV bag max only"
     },
     {
@@ -155,11 +155,11 @@
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive scale→cap→pct pipeline works for LB share digests",
+    "Positive scale\u2192cap\u2192pct pipeline works for LB share digests",
     "Share field sum 97/100 is severe for routing weight math",
     "Non-numeric preserve in PCT bag is high-sev contamination",
-    "No language fix — remainder mode for MEANINGFUL_ITER"
+    "No language fix \u2014 remainder mode for MEANINGFUL_ITER"
   ],
-  "commit": "",
+  "commit": "8aece8c9dd7d7dbea9ccce2beb5a7e7f8dd97cb0",
   "ts": "2026-08-06T01:10:00Z"
 }
