@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 183,
-  "version": "1.15.208-usability",
-  "item": "SYS SETFILELINE / FILESETLINE replace file line by index",
-  "item_id": 216,
-  "title": "SYS SETFILELINE|FILESETLINE path n value \u2014 replace 0-based file line in place",
-  "commit": "cd2c50f06e29b966b47cd851044025b51cb8d0c6",
-  "summary": "In-place file line replace; dual of LINEAT. Soft OOB. selftest 183.",
+  "iter": 184,
+  "version": "1.15.209-usability",
+  "item": "SYS INSERTFILELINE / FILEINSERTLINE insert file line by index",
+  "item_id": 217,
+  "title": "SYS INSERTFILELINE|FILEINSERTLINE path n value \u2014 insert line at 0-based index \u00b7 append if past end",
+  "commit": "7fb9c172919a03bf2194555826c14a1a98b56841",
+  "summary": "Insert file line by index; completes LINEAT/SETFILELINE. selftest 184.",
   "proofs": [
-    "756_sys_setfileline",
-    "selftest n_pass=183"
+    "757_sys_insertfileline",
+    "selftest n_pass=184"
   ],
-  "when": "2026-08-06T08:24:26Z",
+  "when": "2026-08-06T08:34:25Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cd2c50f06e29b966b47cd851044025b51cb8d0c6"
+  "sha": "7fb9c172919a03bf2194555826c14a1a98b56841"
 }
