@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 239,
-  "version": "1.15.266-usability",
-  "item": "SYS UPTIME / BOOTAGE seconds since boot",
-  "item_id": 274,
-  "title": "SYS UPTIME|BOOTAGE — seconds since boot for agent warmup/lease",
-  "commit": "8a1b480aadd99ef2a1caebc13dfc32e8ab3f9831",
-  "summary": "Seconds since boot without shell uptime; UPTIME_MIN/HOUR helpers. selftest 239.",
+  "iter": 240,
+  "version": "1.15.267-usability",
+  "item": "SYS MEM / MEMINFO host RAM total/avail kB",
+  "item_id": 275,
+  "title": "SYS MEM|MEMINFO — RAM total/avail/free kB for low-mem agent gates",
+  "commit": "9e0ef3a6e8557aba3d89a7dc85f41c02b77ec777",
+  "summary": "Host RAM probe (kB); LAST_N=avail for IF gates without shell free. selftest 240.",
   "proofs": [
-    "813_sys_uptime",
-    "selftest n_pass=239"
+    "814_sys_mem",
+    "selftest n_pass=240"
   ],
-  "when": "2026-08-06T17:36:00Z",
+  "when": "2026-08-06T17:46:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8a1b480aadd99ef2a1caebc13dfc32e8ab3f9831",
-  "note": "pairs with LOADAVG/NPROC for capacity-aware agents"
+  "sha": "9e0ef3a6e8557aba3d89a7dc85f41c02b77ec777",
+  "note": "pairs with LOADAVG/NPROC/UPTIME for capacity-aware agents"
 }
