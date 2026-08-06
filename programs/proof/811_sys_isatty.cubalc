@@ -1,0 +1,66 @@
+# SYS ISATTY / TTY [IN|OUT|ERR] — terminal stream probe
+# Usability: agents detect pipes vs interactive TTY without shell test -t
+
+HOLD_FLASH 1
+
+# default = OUT/stdout; under selftest/run plate usually non-TTY
+SYS ISATTY
+ASSERT OK == 1
+# LAST_N is 0 or 1
+ASSERT ISATTY == LAST_N
+ASSERT TTY == LAST_N
+SYS IN LAST_N 0 1
+ASSERT LAST_N == 1
+DEFINED ISATTY_STREAM
+ASSERT DEFINED == 1
+SYS EQS ISATTY_STREAM "OUT"
+ASSERT LAST_N == 1
+
+# explicit OUT
+SYS ISATTY OUT
+ASSERT OK == 1
+ASSERT ISATTY_OUT == ISATTY
+SYS IN ISATTY 0 1
+ASSERT LAST_N == 1
+
+# aliases
+SYS TTY
+ASSERT OK == 1
+SYS ISTTY STDOUT
+ASSERT OK == 1
+
+# stdin
+SYS ISATTY IN
+ASSERT OK == 1
+ASSERT ISATTY_IN == ISATTY
+SYS EQS ISATTY_STREAM "IN"
+ASSERT LAST_N == 1
+SYS IN ISATTY 0 1
+ASSERT LAST_N == 1
+
+# stderr
+SYS ISATTY ERR
+ASSERT OK == 1
+ASSERT ISATTY_ERR == ISATTY
+SYS EQS ISATTY_STREAM "ERR"
+ASSERT LAST_N == 1
+SYS IN ISATTY 0 1
+ASSERT LAST_N == 1
+
+# STDERR alias keyword
+SYS ISATTY STDERR
+ASSERT OK == 1
+SYS EQS ISATTY_STREAM "ERR"
+ASSERT LAST_N == 1
+
+# agent: branch on interactive
+SYS ISATTY OUT
+IF ISATTY == 1 THEN
+  NOTE "interactive tty"
+ELSE
+  NOTE "piped/batch"
+END
+SYS LEN NOTE
+ASSERT LAST_N >= 4
+
+PRINT "sys_isatty ok"
