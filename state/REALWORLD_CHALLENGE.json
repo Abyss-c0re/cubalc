@@ -1,171 +1,177 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 67,
-  "program": "programs/realworld/log_line_harvest.cubalc",
-  "theme": "incident log line harvest GREPLINES HEADFILE TAILFILE LINECOUNTALL",
-  "version": "1.15.205-usability",
+  "iter": 68,
+  "program": "programs/realworld/trace_window_board.cubalc",
+  "theme": "trace stack context window LINEAT MIDFILE file-index peel",
+  "version": "1.15.207-usability",
   "pass": true,
   "tests": [
     {
-      "name": "scan_logs",
-      "cmd": "PATHGLOB *.log \u2192 4 paths",
+      "name": "scan_pick",
+      "cmd": "PATHGLOB + pick ACTIVE dump path",
       "ok": true,
       "note": "inventory"
     },
     {
-      "name": "volume",
-      "cmd": "LINECOUNTALL \u2192 bag 1/3/2/5 SUM=11",
+      "name": "line_3",
+      "cmd": "LINEAT index 3 → frame3 ERROR boom TOTAL=7",
       "ok": true,
-      "note": "parallel counts"
+      "note": "single frame"
     },
     {
-      "name": "harvest_ERROR",
-      "cmd": "GREPLINES ERROR \u2192 2 lines a.log only",
+      "name": "window_2_3",
+      "cmd": "MIDFILE start=2 count=3 → frames 2..4",
       "ok": true,
-      "note": "cs harvest"
+      "note": "slice"
     },
     {
-      "name": "harvesti_error",
-      "cmd": "GREPLINESI error \u2192 +Error gamma = 3",
+      "name": "window_rest",
+      "cmd": "MIDFILE start=5 omit count → cleanup+exit",
       "ok": true,
-      "note": "icase"
+      "note": "rest of file"
     },
     {
-      "name": "false_friend_ERR",
-      "cmd": "GREPLINES ERR hits ERR line + both ERROR lines",
+      "name": "around_center",
+      "cmd": "around idx=3 r=1 → work/ERROR/handler + center LINE",
       "ok": true,
-      "note": "substring"
+      "note": "context packet"
     },
     {
-      "name": "head_tail_peek",
-      "cmd": "HEADFILE/TAILFILE n=2; peek head+===TAIL===+tail",
+      "name": "around_clamp",
+      "cmd": "around idx=0 r=2 clamps start≥0",
       "ok": true,
-      "note": "file peek"
+      "note": "edge start"
     },
     {
-      "name": "head_ghost_require",
-      "cmd": "HEADFILE ghost soft exit0; REQUIRE exit2",
+      "name": "total",
+      "cmd": "LINEAT 0 → LINEAT_TOTAL as file depth",
       "ok": true,
-      "note": "soft miss"
+      "note": "wc without LINECOUNTALL"
     },
     {
-      "name": "packet",
-      "cmd": "volume+harvest one shot",
+      "name": "oob_line_require",
+      "cmd": "LINEAT 99 soft N=0 OK=1; REQUIRE exit 2",
       "ok": true,
-      "note": "combined"
+      "note": "OOB soft"
     },
     {
-      "name": "ghost_volume",
-      "cmd": "LINECOUNTALL ghost \u2192 0 slot MISS=1 SUM partial",
+      "name": "window_past_end",
+      "cmd": "MIDFILE start=50 empty OK=1; REQUIRE exit 2",
       "ok": true,
-      "note": "aligned bag"
+      "note": "past end"
     },
     {
-      "name": "empty_greplines",
-      "cmd": "GREPLINES bag '' \u2192 N=all lines (empty matches)",
+      "name": "ghost_miss",
+      "cmd": "LINEAT missing file OK=0; REQUIRE exit 2",
       "ok": true,
-      "note": "language empty needle"
+      "note": "read fail vs OOB"
     },
     {
       "name": "print_json_glue",
-      "cmd": "PRINT_JSON lines collapses NL",
+      "cmd": "PRINT_JSON window collapses NL",
       "ok": true,
-      "note": "ERROR alpha oneERROR alpha two"
+      "note": "frame1 initframe2 work…"
+    },
+    {
+      "name": "neg_clamp",
+      "cmd": "LINEAT/MIDFILE -1 → silent clamp to 0",
+      "ok": true,
+      "note": "language edge"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "180/180 pass"
+      "note": "182/182 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|match",
-      "title": "GREPLINES empty needle matches every line (N=linecount)",
-      "detail": "Unlike COUNTINFILES empty\u21920, empty substring is true for all lines. Agent blank ARG harvest floods LINES plate. Opposite polarity of empty-needle family across ops.",
-      "repro": "GREPLINES bag \"\" \u2192 GREPLINES_N == total lines"
+      "area": "host|parse",
+      "title": "LINEAT/MIDFILE bare numeric var is form error (need expr parens)",
+      "detail": "Same trap as HEADFILE: SYS LINEAT p i fails unknown form 'i'; SYS LINEAT p (i) works. Parameterized incident peels must remember (expr).",
+      "repro": "LET i=1; SYS LINEAT p i → parse fail"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|parse",
-      "title": "HEADFILE/TAILFILE n bare numeric var is form error",
-      "detail": "SYS HEADFILE path n fails with unknown form 'n'; need (n) expr or string var. Literal 2 works. Easy agent trap when peeks are parameterized.",
-      "repro": "LET n=2; SYS HEADFILE p n \u2192 parse fail; SYS HEADFILE p (n) ok"
+      "area": "host|index",
+      "title": "Negative LINEAT/MIDFILE index silently clamps to 0",
+      "detail": "LINEAT p -1 returns line 0 with OK=1 N=1 I=0; MIDFILE -1 starts at 0. Agents cannot detect underflow — looks like a valid first line.",
+      "repro": "SYS LINEAT p -1 → LAST=L0 not miss"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|json",
-      "title": "PRINT_JSON harvest bag glues lines without separators",
-      "detail": "lines plate has NL between ERROR lines; PRINT_JSON \u2192 ERROR alpha oneERROR alpha two. Recurring bag JSON collapse.",
-      "repro": "PRINT_JSON lines after GREPLINES"
+      "severity": "med",
+      "area": "host|fs",
+      "title": "LINEAT OOB OK=1 N=0 but missing file OK=0",
+      "detail": "Out-of-range index is soft success-empty; unreadable path is hard soft-fail. Agents checking only OK miss OOB; checking only N conflate miss types.",
+      "repro": "LINEAT fs 99 OK=1 N=0; LINEAT gone 0 OK=0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fs",
-      "title": "GREPLINES returns bare lines \u2014 no path:line provenance",
-      "detail": "Harvest packet loses which file produced each line. Agents must dual GREPFILES or custom EACH. No GREPLINES --with-filename mode.",
-      "repro": "FATAL boom alone; multi-file harvest loses source"
+      "area": "host|json",
+      "title": "PRINT_JSON window bag glues lines",
+      "detail": "Recurring: frame1 initframe2 workframe3 ERROR boom without separators.",
+      "repro": "PRINT_JSON window after MIDFILE"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|naming",
-      "title": "SYS HEAD is bag first field; SYS HEADFILE is file peek",
-      "detail": "Same trap class as GREP/GREPFILES. Wrong op peeks path bag string not file content.",
-      "repro": "HEAD path_bag vs HEADFILE path"
+      "title": "MIDFILE vs MIDLINES vs WINDOW bag ops are easy to confuse",
+      "detail": "MIDFILE is file path; MIDLINES/WINDOW are in-memory bag slices. Wrong op peels STATE bag not dump on disk.",
+      "repro": "MIDLINES on path string vs MIDFILE path"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|match",
-      "title": "Substring false friends: ERR matches ERROR lines",
-      "detail": "No whole-word mode on GREPLINES. Short severity needles over-harvest.",
-      "repro": "GREPLINES ERR \u2192 ERR line + ERROR alpha*"
+      "severity": "low",
+      "area": "host|index",
+      "title": "0-based only — no 1-based LINEAT1 / human line numbers",
+      "detail": "Stack dumps and editor UIs are 1-based; agents must subtract one. No FILELINE1 alias.",
+      "repro": "editor line 4 → LINEAT 3"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|fs",
-      "title": "LINECOUNTALL miss keeps bag length with 0 slots",
-      "detail": "Useful for ZIP with PATHS but silent zero can look like empty files. MISS counter is the only signal.",
-      "repro": "bag with ghost \u2192 VOLUME 5\\n0\\n2 MISS=1"
+      "area": "host|write",
+      "title": "WRITE omits trailing NL on single-line LINE plate",
+      "detail": "cat -A LINE.txt shows frame3 ERROR boom without final $.",
+      "repro": "LINEAT write plate"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE trailing NL omitted on last plate field",
-      "detail": "VOLUME/LINES/PEEK last line often no final $ on cat -A.",
-      "repro": "cat -A VOLUME.txt"
+      "area": "host|fs",
+      "title": "No MIDFILE around-index primitive",
+      "detail": "Context window requires agent arithmetic (clamp start, want=2r+1) + dual LINEAT. Common incident pattern not first-class.",
+      "repro": "around action is pure agent glue"
     }
   ],
   "workarounds": [
-    "Reject blank needle before GREPLINES (this board EXIT 2)",
-    "Always SYS HEADFILE path (n) not bare n",
-    "Read plate files not PRINT_JSON for multiline bags",
-    "Pair GREPFILES for provenance if path:line needed",
-    "Prefer long needles (ERROR not ERR) for severity harvest"
+    "Always SYS LINEAT path (idx) and SYS MIDFILE path (start) (count)",
+    "Treat LINEAT_N==0 as miss even when OK==1",
+    "Reject idx < 0 at agent layer before call",
+    "Read WINDOW.txt plate not PRINT_JSON for multiline",
+    "Document 0-based in runbook contracts"
   ],
   "language_gaps": [
-    "GREPLINES empty needle should miss/zero like COUNTINFILES",
-    "HEADFILE accept bare numeric vars without (expr)",
-    "GREPLINES with-filename / path:line prefix mode",
-    "Whole-word GREPLINES option",
+    "Bare numeric vars for LINEAT/MIDFILE/HEADFILE n args",
+    "Negative index should miss or error not clamp to 0",
+    "Optional 1-based line addressing",
+    "AROUNDFILE path idx radius first-class op",
     "PRINT_JSON bag-as-array; WRITE trailing NL",
-    "HEAD vs HEADFILE naming clarity in help"
+    "Unify OOB vs missing-file OK semantics"
   ],
   "issues_faced": [
-    "Bare HEADFILE n parse fail blocked first head/tail tests \u2014 fixed with (peek_want)",
-    "Empty GREPLINES polarity opposite COUNTINFILES \u2014 documented",
-    "Positive harvest/volume/packet/soft miss clean",
+    "LINEAT+MIDFILE positive path clean with (expr) form",
+    "Silent negative clamp discovered — high footgun",
+    "OOB vs ghost OK polarity split needs dual checks",
     "No language fix this iter"
   ],
-  "commit": "4acc4e625b21510903622e12dd303fc9bdb7d482",
-  "ts": "2026-08-06T07:59:44Z"
+  "commit": "",
+  "ts": "2026-08-06T08:23:29Z"
 }

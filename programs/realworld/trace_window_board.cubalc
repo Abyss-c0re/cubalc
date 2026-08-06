@@ -1,0 +1,814 @@
+# trace_window_board.cubalc — stack/log context window via LINEAT + MIDFILE
+#
+# Real use: incident agent peels a single frame (LINEAT/FILELINE) and a
+# surrounding line window (MIDFILE/LINESLICE) from crash dumps or long logs
+# without shell sed -n 'a,bp'. Complements log_line_harvest (needle harvest
+# across bags) and log_page_window (in-memory MIDLINES on a bag plate): this
+# board is *file-index* addressing on disk paths.
+#
+# Plate under STATE:
+#   PATHS.txt      — optional path bag from scan
+#   ACTIVE.txt     — current dump/log path
+#   LINE.txt       — last LINEAT result
+#   WINDOW.txt     — last MIDFILE / around slice
+#   TRACE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TW_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS; first becomes ACTIVE if empty
+#   files     — KEEPFILES PATHS
+#   pick      — ACTIVE = ARG1 path (or first PATHS)
+#   line      — LINEAT ACTIVE index(ARG1) → LINE
+#   window    — MIDFILE ACTIVE start(ARG1) count(ARG2|rest) → WINDOW
+#   around    — window centered on index ARG1 with radius ARG2 (default 2)
+#   total     — LINEAT ACTIVE 0 → report LINEAT_TOTAL (file line count)
+#   has       — HASLINE on PATHS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tw_$$; mkdir -p "$CUBALC_STATE/dumps"
+#   # write multi-line stack fixtures
+#   CUBALC_TW_DIR=$CUBALC_STATE/dumps CUBALC_ARG0=scan CUBALC_ARG1='*.txt' \
+#     ./out/cubalc run -q -s programs/realworld/trace_window_board.cubalc
+#   CUBALC_ARG0=line CUBALC_ARG1=3 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=around CUBALC_ARG1=3 CUBALC_ARG2=1 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_TW_DIR=…  CUBALC_TW_PAT=*  CUBALC_TW_REQUIRE=1
+#   CUBALC_TW_PATH=…  CUBALC_TW_RADIUS=2
+#
+# Edges deliberately stressed:
+#   LINEAT OOB → OK=1 N=0 (not fail); soft miss missing file OK=0
+#   MIDFILE past end → empty OK=1 with TOTAL set
+#   MIDFILE/LINEAT n need (expr) not bare numeric var (HEADFILE class)
+#   0-based index; around clamps start≥0
+#   HEADFILE vs MIDFILE vs HEAD bag naming
+#   PRINT_JSON window glue; WRITE NL; NUM shuttle; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "trace_window_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT LFILE = "LINE.txt"
+DEFAULT WFILE = "WINDOW.txt"
+DEFAULT REPORT = "TRACE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT RADIUS = 2
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TW_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_TW_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_TW_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET NAME_PATH = LAST
+ELSE
+  LET NAME_PATH = ""
+END
+SYS ENV "CUBALC_TW_RADIUS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET RADIUS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir AFILE
+LET active_path_file = LAST
+SYS JOIN state_dir LFILE
+LET line_path = LAST
+SYS JOIN state_dir WFILE
+LET window_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR active_path_file OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR line_path OR ""
+LET line_txt = LAST
+CLEAR_ERR
+SYS READ OR window_path OR ""
+LET window = LAST
+CLEAR_ERR
+
+# optional path override from ENV when NAME empty on pick-like
+SYS BLANK NAME_PATH
+IF LAST_N == 0 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = NAME_PATH
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET active_ch = 0
+LET line_ch = 0
+LET window_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET line_n = 0
+LET line_total = 0
+LET line_i = 0
+LET mid_n = 0
+LET mid_total = 0
+LET mid_start = 0
+LET mid_want = 0
+LET idx = 0
+LET cnt = 0
+LET start_i = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "line"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "line needs index"
+  END
+END
+SYS EQS ACTION "window"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "window needs start"
+  END
+END
+SYS EQS ACTION "around"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "around needs index"
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# resolve active helper inline in actions
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "twindow" np ACTION
+  PRINT_JSON np ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON active
+  PRINT_JSON line_txt
+  PRINT_JSON window
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+      SYS BLANK active
+      IF LAST_N == 1 THEN
+        SYS HEAD paths
+        LET active = LAST
+        LET active_ch = 1
+      END
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+    PRINT_JSON active
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- pick ACTIVE ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET val_s = NAME
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "pick no path"
+      FAIL "pick no path"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pick no path"
+      END
+    ELSE
+      SYS HEAD paths
+      LET val_s = LAST
+    END
+  END
+  SYS BLANK val_s
+  IF LAST_N == 0 THEN
+    LET active = val_s
+    LET active_ch = 1
+    LET hit = 1
+    LET note_msg = "pick ok"
+    PRINT_JSON active
+  END
+END
+
+# --- line LINEAT ---
+SYS EQS ACTION "line"
+IF LAST_N == 1 THEN
+  NOTE "action line"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "line no active"
+    FAIL "line no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "line no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "line index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    # bare idx fails parse; use (idx)
+    SYS LINEAT active (idx)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET line_txt = ""
+      LET line_n = 0
+      LET line_total = 0
+      LET line_ch = 1
+      LET note_msg = "line miss"
+      FAIL "line miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "line miss"
+      END
+    ELSE
+      LET line_txt = LAST
+      LET line_n = LINEAT_N
+      LET line_total = LINEAT_TOTAL
+      LET line_i = LINEAT_I
+      LET line_ch = 1
+      LET hit = line_n
+      IF line_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "line oob"
+        FAIL "line oob"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "line oob"
+        END
+      ELSE
+        LET note_msg = "line ok"
+      END
+    END
+    PRINT_JSON idx line_n line_total line_i
+    PRINT_JSON line_txt
+    CLEAR_ERR
+  END
+END
+
+# --- window MIDFILE ---
+SYS EQS ACTION "window"
+IF LAST_N == 1 THEN
+  NOTE "action window"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "window no active"
+    FAIL "window no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "window no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "window start not num"
+    END
+    LET start_i = LAST_N
+    CLEAR_ERR
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      # rest of file from start (omit count)
+      SYS MIDFILE active (start_i)
+    ELSE
+      SYS NUM A2
+      IF OK == 0 THEN
+        EXIT 2 "window count not num"
+      END
+      LET cnt = LAST_N
+      CLEAR_ERR
+      SYS MIDFILE active (start_i) (cnt)
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET window = ""
+      LET mid_n = 0
+      LET mid_total = 0
+      LET window_ch = 1
+      LET note_msg = "window miss"
+      FAIL "window miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "window miss"
+      END
+    ELSE
+      LET window = LAST
+      LET mid_n = MIDFILE_N
+      LET mid_total = MIDFILE_TOTAL
+      LET mid_start = MIDFILE_START
+      LET mid_want = MIDFILE_WANT
+      LET window_ch = 1
+      LET hit = mid_n
+      IF mid_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "window empty"
+        FAIL "window empty"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "window empty"
+        END
+      ELSE
+        LET note_msg = "window ok"
+      END
+    END
+    PRINT_JSON start_i mid_n mid_total mid_start mid_want
+    PRINT_JSON window
+    CLEAR_ERR
+  END
+END
+
+# --- around: radius window centered on index ---
+SYS EQS ACTION "around"
+IF LAST_N == 1 THEN
+  NOTE "action around"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "around no active"
+    FAIL "around no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "around no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "around index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    LET cnt = RADIUS
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET cnt = LAST_N
+      END
+      CLEAR_ERR
+    END
+    # start = max(0, idx - radius); want = radius + 1 + radius
+    LET start_i = idx - cnt
+    IF start_i < 0 THEN
+      LET start_i = 0
+    END
+    LET mid_want = cnt + cnt + 1
+    SYS MIDFILE active (start_i) (mid_want)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET window = ""
+      LET mid_n = 0
+      LET window_ch = 1
+      LET note_msg = "around miss"
+      FAIL "around miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "around miss"
+      END
+    ELSE
+      LET window = LAST
+      LET mid_n = MIDFILE_N
+      LET mid_total = MIDFILE_TOTAL
+      LET mid_start = MIDFILE_START
+      LET mid_want = MIDFILE_WANT
+      LET window_ch = 1
+      # also capture center line
+      SYS LINEAT active (idx)
+      IF OK == 1 THEN
+        IF LINEAT_N == 1 THEN
+          LET line_txt = LAST
+          LET line_n = LINEAT_N
+          LET line_total = LINEAT_TOTAL
+          LET line_i = LINEAT_I
+          LET line_ch = 1
+        END
+      END
+      CLEAR_ERR
+      LET hit = mid_n
+      IF mid_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "around empty"
+        FAIL "around empty"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "around empty"
+        END
+      ELSE
+        LET note_msg = "around ok"
+      END
+    END
+    PRINT_JSON idx start_i mid_n mid_total mid_want
+    PRINT_JSON line_txt
+    PRINT_JSON window
+    CLEAR_ERR
+  END
+END
+
+# --- total via LINEAT 0 TOTAL ---
+SYS EQS ACTION "total"
+IF LAST_N == 1 THEN
+  NOTE "action total"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "total no active"
+    FAIL "total no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "total no active"
+    END
+  ELSE
+    SYS LINEAT active 0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET line_total = 0
+      LET note_msg = "total miss"
+      FAIL "total miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "total miss"
+      END
+    ELSE
+      LET line_total = LINEAT_TOTAL
+      LET line_n = LINEAT_N
+      LET line_txt = LAST
+      LET line_i = 0
+      LET line_ch = 1
+      LET hit = line_total
+      LET note_msg = "total ok"
+    END
+    PRINT_JSON line_total line_n
+    PRINT_JSON line_txt
+    CLEAR_ERR
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET active = ""
+  LET line_txt = ""
+  LET window = ""
+  LET paths_ch = 1
+  LET active_ch = 1
+  LET line_ch = 1
+  LET window_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "line"
+LET k = k + LAST_N
+SYS EQS ACTION "window"
+LET k = k + LAST_N
+SYS EQS ACTION "around"
+LET k = k + LAST_N
+SYS EQS ACTION "total"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF active_ch > 0 THEN
+  SYS WRITE active_path_file active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF line_ch > 0 THEN
+  SYS WRITE line_path line_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "line write failed"
+  END
+  CLEAR_ERR
+END
+IF window_ch > 0 THEN
+  SYS WRITE window_path window
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "window write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES window
+LET depth_w = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.trace_window_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line_n"
+LET report = LAST
+SYS STR line_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line_total"
+LET report = LAST
+SYS STR line_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line_i"
+LET report = LAST
+SYS STR line_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mid_n"
+LET report = LAST
+SYS STR mid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mid_total"
+LET report = LAST
+SYS STR mid_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mid_start"
+LET report = LAST
+SYS STR mid_start
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mid_want"
+LET report = LAST
+SYS STR mid_want
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_w"
+LET report = LAST
+SYS STR depth_w
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "trace_window_board" ACTION hit miss line_n mid_n line_total note_msg elapsed
