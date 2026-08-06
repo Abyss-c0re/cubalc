@@ -558,6 +558,142 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PATHGLOB|PGLOB|FULLGLOB|GLOBPATH path_or_pattern [pattern]
+     * — like GLOB but LAST holds full paths (dir/basename), ready for READ/RM.
+     * One-arg shell style: "dir/*.plate" splits on last /; "*.log" uses cwd;
+     * bare "dir" (no meta) → all entries under dir. Two-arg: path + pattern.
+     * Soft miss / non-dir: OK=0 empty LAST. Usability: one-shot plate discovery. */
+    if (kw(&L->cur,"PATHGLOB") || kw(&L->cur,"PGLOB") || kw(&L->cur,"FULLGLOB") ||
+        kw(&L->cur,"GLOBPATH") || kw(&L->cur,"PATHMATCH") || kw(&L->cur,"LSPATH") ||
+        kw(&L->cur,"MATCHPATHS") || kw(&L->cur,"FILEPATHS") || kw(&L->cur,"GLOBFULL")){
+      char arg1[512], path[512], pat[256], out[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, jr;
+      const char *p, *start, *slash;
+      size_t flen, olen = 0;
+      long kept = 0;
+      int has_meta = 0;
+      lex_next(L);
+      arg1[0] = 0; path[0] = 0; pat[0] = 0; out[0] = 0;
+      snprintf(pat, sizeof pat, "%s", "*");
+      if (resolve_str_arg(vm, L, arg1, sizeof arg1) != 0) {
+        fail(vm, "SYS PATHGLOB \"path|pattern\" [\"pattern\"]"); return -1;
+      }
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        /* two-arg: path pattern */
+        snprintf(path, sizeof path, "%s", arg1);
+        if (resolve_str_arg(vm, L, pat, sizeof pat) != 0)
+          snprintf(pat, sizeof pat, "%s", "*");
+        if (!pat[0]) snprintf(pat, sizeof pat, "%s", "*");
+      } else {
+        /* one-arg: shell-style. Split dir/pattern only when basename has meta
+         * (* ? []) — else whole arg is the directory (avoid /tmp/dir → pat=dir). */
+        slash = strrchr(arg1, '/');
+#ifdef CUBALC_OS_WINDOWS
+        {
+          const char *bs = strrchr(arg1, '\\');
+          if (bs && (!slash || bs > slash)) slash = bs;
+        }
+#endif
+        {
+          const char *base = slash ? slash + 1 : arg1;
+          for (p = base; *p; p++) {
+            if (*p == '*' || *p == '?' || *p == '[') { has_meta = 1; break; }
+          }
+          /* trailing slash → all under dir */
+          if (slash && !slash[1]) has_meta = 1;
+        }
+        if (slash && has_meta) {
+          size_t dlen = (size_t)(slash - arg1);
+          if (dlen == 0) {
+            snprintf(path, sizeof path, "%s", "/");
+          } else {
+            if (dlen >= sizeof path) dlen = sizeof path - 1;
+            memcpy(path, arg1, dlen);
+            path[dlen] = 0;
+          }
+          if (slash[1])
+            snprintf(pat, sizeof pat, "%s", slash + 1);
+          else
+            snprintf(pat, sizeof pat, "%s", "*");
+        } else if (!slash && has_meta) {
+          snprintf(path, sizeof path, "%s", ".");
+          snprintf(pat, sizeof pat, "%s", arg1);
+        } else {
+          /* bare directory path (may contain /) → all entries full paths */
+          snprintf(path, sizeof path, "%s", arg1);
+          snprintf(pat, sizeof pat, "%s", "*");
+        }
+      }
+      if (cubalc_host_listdir(path, &hr) != 0) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PATHGLOB_N", 0);
+        var_set_num(vm, "PGLOB_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "PATHGLOB", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        }
+        bump(vm); return 1;
+      }
+      p = hr.str;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char name[512];
+          size_t take = flen;
+          int hit = 0;
+          if (take >= sizeof name) take = sizeof name - 1;
+          memcpy(name, start, take);
+          name[take] = 0;
+#if defined(CUBALC_OS_WINDOWS)
+          if (strcmp(pat, "*") == 0)
+            hit = 1;
+          else if (pat[0] == '*' && pat[1] && !strchr(pat + 1, '*'))
+            hit = (take >= strlen(pat + 1) &&
+                   strcmp(name + take - strlen(pat + 1), pat + 1) == 0);
+          else if (pat[0] && pat[strlen(pat) - 1] == '*') {
+            size_t pn = strlen(pat) - 1;
+            hit = (strncmp(name, pat, pn) == 0);
+          } else
+            hit = (strcmp(name, pat) == 0);
+#else
+          hit = (fnmatch(pat, name, 0) == 0);
+#endif
+          if (hit) {
+            if (cubalc_host_join(path, name, &jr) != 0)
+              snprintf(jr.str, sizeof jr.str, "%s/%s", path, name);
+            {
+              size_t jlen = strlen(jr.str);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + jlen < sizeof out) {
+                memcpy(out + olen, jr.str, jlen);
+                olen += jlen;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "PATHGLOB", out);
+      var_set_str(vm, "PGLOB", out);
+      var_set_str(vm, "FULLGLOB", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "PATHGLOB_N", kept);
+      var_set_num(vm, "PGLOB_N", kept);
+      var_set_num(vm, "FULLGLOB_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV") || kw(&L->cur,"SETENV") || kw(&L->cur,"EXPORT") ||
         kw(&L->cur,"UNSETENV") || kw(&L->cur,"ENVUNSET")){
       /* SYS ENV name [OR fallback] — get.
@@ -10586,7 +10722,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10815,6 +10951,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LIST", "SYS LIST|LS path — dir basenames → LAST · LAST_N=count"},
       {"SYS GLOB", "SYS GLOB|MATCHFILES path [pattern] — basenames matching * ? [] · plate discovery"},
       {"SYS MATCHFILES", "SYS MATCHFILES path pattern — alias of SYS GLOB"},
+      {"SYS PATHGLOB", "SYS PATHGLOB|PGLOB path|pattern [pattern] — full paths matching * ? [] · ready for READ/RM"},
+      {"SYS PGLOB", "SYS PGLOB alias of SYS PATHGLOB"},
+      {"SYS FULLGLOB", "SYS FULLGLOB alias of SYS PATHGLOB"},
       {"SYS NTH", "SYS NTH n [str] — 0-based newline field · pairs with LIST"},
       {"SYS LINE", "SYS LINE n [str] — 1-based newline field"},
       {"SYS HEAD", "SYS HEAD [str] — first newline field"},

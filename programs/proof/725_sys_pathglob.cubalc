@@ -1,0 +1,80 @@
+# SYS PATHGLOB / PGLOB — full paths matching shell pattern
+# Usability: one-shot plate discovery ready for READ/RM (no PREFIXALL glue)
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "pglob_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "alpha.plate"
+LET f1 = LAST
+SYS JOIN fix "beta.plate"
+LET f2 = LAST
+SYS JOIN fix "gamma.log"
+LET f3 = LAST
+SYS TOUCH f1
+SYS TOUCH f2
+SYS TOUCH f3
+
+# two-arg: path + pattern → full paths
+SYS PATHGLOB fix "*.plate"
+ASSERT OK == 1
+ASSERT PATHGLOB_N == 2
+LET plates = LAST
+SYS HASLINE plates f1
+ASSERT LAST_N == 1
+SYS HASLINE plates f2
+ASSERT LAST_N == 1
+SYS HASLINE plates f3
+ASSERT LAST_N == 0
+
+# one-arg shell style "dir/*.plate"
+SYS JOIN fix "*.plate"
+LET shellpat = LAST
+SYS PATHGLOB shellpat
+ASSERT OK == 1
+ASSERT PGLOB_N == 2
+SYS HASLINE LAST f1
+ASSERT LAST_N == 1
+
+# bare directory → all full paths
+SYS PATHGLOB fix
+ASSERT OK == 1
+ASSERT FULLGLOB_N == 3
+
+# exact basename via two-arg
+SYS PATHGLOB fix "gamma.log"
+ASSERT PATHGLOB_N == 1
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+
+# soft miss dir
+SYS PATHGLOB "no_such_pglob_dir_xyz_mi" "*.plate"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT PATHGLOB_N == 0
+
+# aliases
+SYS PGLOB fix "*.log"
+ASSERT PGLOB_N == 1
+SYS FULLGLOB fix "alpha*"
+ASSERT FULLGLOB_N == 1
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+
+# agent: PATHGLOB then READ first plate without PREFIXALL
+SYS PATHGLOB fix "*.plate"
+SYS SORT LAST
+SYS TAKE 1 LAST
+LET hit = LAST
+SYS READ hit
+ASSERT OK == 1
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+
+PRINT "sys_pathglob ok"

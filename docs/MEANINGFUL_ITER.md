@@ -212,6 +212,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 182. ~~**`SYS MEDIANKV` / `P50KV`**~~ **done** (integer median of key:val values · robust FREQ mid vs AVGKV).
 183. ~~**`SYS KEEPKEY` / `GREPKEY`**~~ **done** (filter key:val by key needle · DROPKEY invert · KEEPKEYI).
 184. ~~**`SYS GLOB` / `MATCHFILES`**~~ **done** (list basenames matching * ? [] · plate discovery without shell).
+185. ~~**`SYS PATHGLOB` / `PGLOB`**~~ **done** (shell-style path glob → full paths · ready for READ/RM).
 
 ## Tick protocol
 
