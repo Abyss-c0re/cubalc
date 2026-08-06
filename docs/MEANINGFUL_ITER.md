@@ -274,6 +274,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 244. ~~**`SYS WRITEATOMIC` / `ATOMICWRITE` / `SAFEWRITE`**~~ **done** (temp+rename plate write · crash-safer multi-agent status without torn mid-read).
 245. ~~**`SYS LOCKFILE` / `UNLOCKFILE` / `FLOCK`**~~ **done** (exclusive path.lock agent mutex · multi-agent critical sections without shell flock).
 246. ~~**`SYS WAITGONE` / `WAITMISSING` / `WAITDELETE`**~~ **done** (poll until path does not exist · dual of WAITFILE · unlock/cleanup handoff).
+247. ~~**`SYS WAITSTABLE` / `WAITQUIET` / `STABLEFILE`**~~ **done** (poll until size+mtime quiet · settle peer write before READ without torn plate).
 
 ## Tick protocol
 

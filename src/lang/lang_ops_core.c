@@ -1817,6 +1817,161 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR", "WAITGONE: timeout");
       bump(vm); return 1;
     }
+    /* SYS WAITSTABLE|WAITQUIET|STABLEFILE path [timeout_ms]
+     *   or path quiet_ms timeout_ms
+     * — poll until path exists and size+mtime unchanged for quiet window.
+     * Default quiet 200 ms; timeout 30000 (cap 120s); poll 50 ms.
+     * One numeric arg = timeout (quiet=200). Two = quiet then timeout.
+     * Timeout 0 + exists → immediate hit (no quiet wait).
+     * LAST = path; WAITSTABLE_HIT/N/MS/SIZE/MTIME. Soft timeout OK=0.
+     * Usability: wait for peer write to settle before READ without torn plate. */
+    if (kw(&L->cur,"WAITSTABLE") || kw(&L->cur,"WAITQUIET") ||
+        kw(&L->cur,"STABLEFILE") || kw(&L->cur,"WAITSETTLE") ||
+        kw(&L->cur,"POLLSTABLE") || kw(&L->cur,"AWAITSTABLE") ||
+        kw(&L->cur,"UNTILSTABLE") || kw(&L->cur,"WAITREADYFILE") ||
+        kw(&L->cur,"SETTLEFILE") || kw(&L->cur,"WAITSIZESTABLE")){
+      char path[512], a[CUBALC_HOST_STR_MAX];
+      long timeout_ms = 30000, quiet_ms = 200, elapsed = 0, hit = 0;
+      long last_size = -1, last_mtime = -1, cur_size = 0, cur_mtime = 0;
+      long stable_since = -1, now_ms;
+      int have_sample = 0, n_args = 0;
+      long arg1 = 0, arg2 = 0;
+      struct timespec t0, t1, sl;
+      cubalc_host_result kr, mr;
+      lex_next(L);
+      path[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS WAITSTABLE path [timeout_ms]|quiet timeout");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_IDENT) {
+        arg1 = parse_expr(vm, L);
+        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS") ||
+            kw(&L->cur,"QUIET") || kw(&L->cur,"SETTLE"))
+          lex_next(L);
+        n_args = 1;
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT) {
+          arg2 = parse_expr(vm, L);
+          if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS") ||
+              kw(&L->cur,"TIMEOUT"))
+            lex_next(L);
+          n_args = 2;
+        }
+      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"TIMEOUT")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT) {
+          arg1 = parse_expr(vm, L);
+          n_args = 1;
+        }
+      }
+      if (n_args == 2) {
+        quiet_ms = arg1;
+        timeout_ms = arg2;
+      } else if (n_args == 1) {
+        timeout_ms = arg1;
+      }
+      if (quiet_ms < 0) quiet_ms = 0;
+      if (quiet_ms > 10000) quiet_ms = 10000;
+      if (timeout_ms < 0) timeout_ms = 0;
+      if (timeout_ms > 120000) timeout_ms = 120000;
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITSTABLE_HIT", 0);
+        var_set_num(vm, "WAITSTABLE_N", 0);
+        var_set_num(vm, "WAITSTABLE_MS", 0);
+        var_set_num(vm, "WAITSTABLE_SIZE", 0);
+        var_set_num(vm, "WAITSTABLE_MTIME", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "WAITSTABLE: empty path");
+        var_set_str(vm, "ERR", "WAITSTABLE: empty path");
+        bump(vm); return 1;
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+      for (;;) {
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        now_ms = (t1.tv_sec - t0.tv_sec) * 1000L +
+                 (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+        if (now_ms < 0) now_ms = 0;
+        if (cubalc_host_path_kind(path, &kr) == 0 && kr.ok &&
+            cubalc_host_mtime(path, &mr) == 0 && mr.ok) {
+          cur_size = kr.n;
+          cur_mtime = mr.n;
+          /* timeout 0: exists → immediate hit (no quiet window) */
+          if (timeout_ms == 0) {
+            hit = 1;
+            break;
+          }
+          if (!have_sample || cur_size != last_size || cur_mtime != last_mtime) {
+            last_size = cur_size;
+            last_mtime = cur_mtime;
+            have_sample = 1;
+            stable_since = now_ms;
+          } else if (now_ms - stable_since >= quiet_ms) {
+            hit = 1;
+            break;
+          }
+        } else {
+          have_sample = 0;
+          stable_since = -1;
+          last_size = -1;
+          last_mtime = -1;
+        }
+        elapsed = now_ms;
+        if (elapsed >= timeout_ms)
+          break;
+        {
+          long left = timeout_ms - elapsed;
+          long step = left < 50 ? left : 50;
+          if (step < 1) step = 1;
+          sl.tv_sec = step / 1000;
+          sl.tv_nsec = (step % 1000) * 1000000L;
+          nanosleep(&sl, NULL);
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+      if (elapsed < 0) elapsed = 0;
+      if (hit) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "WAITSTABLE", path);
+        var_set_str(vm, "WAITQUIET", path);
+        var_set_str(vm, "STABLEFILE", path);
+        var_set_num(vm, "WAITSTABLE_HIT", 1);
+        var_set_num(vm, "WAITSTABLE_N", 1);
+        var_set_num(vm, "WAITSTABLE_MS", elapsed);
+        var_set_num(vm, "WAITSTABLE_SIZE", cur_size);
+        var_set_num(vm, "WAITSTABLE_MTIME", cur_mtime);
+        var_set_num(vm, "WAITSTABLE_QUIET", quiet_ms);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "WAITSTABLE", "");
+      var_set_num(vm, "WAITSTABLE_HIT", 0);
+      var_set_num(vm, "WAITSTABLE_N", 0);
+      var_set_num(vm, "WAITSTABLE_MS", elapsed);
+      var_set_num(vm, "WAITSTABLE_SIZE", have_sample ? last_size : 0);
+      var_set_num(vm, "WAITSTABLE_MTIME", have_sample ? last_mtime : 0);
+      var_set_num(vm, "WAITSTABLE_QUIET", quiet_ms);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WAITSTABLE: timeout");
+      var_set_str(vm, "ERR", "WAITSTABLE: timeout");
+      bump(vm); return 1;
+    }
     /* SYS WAITMATCH|WAITCONTAINS|POLLMATCH path needle [timeout_ms]
      * — poll until file exists and content contains needle (substring).
      * WAITMATCHI icase. Default timeout 30000 ms; cap 120s; poll 50 ms.

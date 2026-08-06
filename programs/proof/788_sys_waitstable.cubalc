@@ -1,0 +1,82 @@
+# SYS WAITSTABLE / WAITQUIET / STABLEFILE
+# — poll until path exists and size+mtime quiet (dual companion of WAITFILE)
+# Usability: wait for peer write to settle before READ without torn plate.
+# Soft timeout OK=0. Default quiet 200ms, timeout 30s.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitstable_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET f = LAST
+SYS RM f
+
+# missing → short timeout soft fail
+SYS WAITSTABLE f 120
+ASSERT OK == 0
+ASSERT WAITSTABLE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITSTABLE_MS >= 100
+
+# create then wait — settles within quiet window
+SYS WRITE f "v1"
+SYS WAITSTABLE f 50 2000
+ASSERT OK == 1
+ASSERT WAITSTABLE_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST f
+ASSERT LAST_N == 1
+ASSERT WAITSTABLE_SIZE > 0
+ASSERT WAITSTABLE_MTIME > 0
+ASSERT WAITSTABLE_QUIET == 50
+
+# alias WAITQUIET
+SYS WAITQUIET f 50 1000
+ASSERT WAITSTABLE_HIT == 1
+ASSERT OK == 1
+
+# alias STABLEFILE
+SYS STABLEFILE f 50 1000
+ASSERT WAITSTABLE_HIT == 1
+
+# zero timeout: already present hits immediately
+SYS WAITSTABLE f 0
+ASSERT OK == 1
+ASSERT WAITSTABLE_HIT == 1
+
+# zero timeout miss when missing
+SYS JOIN fix "never.txt"
+LET nf = LAST
+SYS RM nf
+SYS WAITSTABLE nf 0
+ASSERT OK == 0
+ASSERT WAITSTABLE_HIT == 0
+
+# empty path soft fail
+SYS WAITSTABLE "" 50
+ASSERT OK == 0
+ASSERT WAITSTABLE_HIT == 0
+
+# single-arg form: timeout only (quiet default 200)
+SYS WAITSTABLE f 1000
+ASSERT OK == 1
+ASSERT WAITSTABLE_HIT == 1
+ASSERT WAITSTABLE_QUIET == 200
+
+# agent: WRITEATOMIC then WAITSTABLE then READ
+SYS WRITEATOMIC f "status=ready"
+ASSERT OK == 1
+SYS WAITSTABLE f 50 2000
+ASSERT WAITSTABLE_HIT == 1
+SYS READ f
+SYS EQS LAST "status=ready"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM f
+
+PRINT "sys_waitstable ok"
