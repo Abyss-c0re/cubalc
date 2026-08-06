@@ -1,0 +1,108 @@
+# SYS SORTMTIME / SORTSIZE — order path bags by mtime or size
+# Usability: process freshest/heaviest plates first without shell ls -t
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "sortmt_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "old_small.plate"
+LET f1 = LAST
+SYS WRITE f1 "x"
+# 1 byte
+
+SYS SLEEP 1100
+
+SYS JOIN fix "mid.plate"
+LET f2 = LAST
+SYS WRITE f2 "abcd"
+# 4 bytes
+
+SYS SLEEP 1100
+
+SYS JOIN fix "new_big.plate"
+LET f3 = LAST
+SYS WRITE f3 "hello world!!"
+# 13 bytes · newest + largest
+
+SYS PUSH "" f1
+SYS PUSH LAST f2
+SYS PUSH LAST f3
+LET bag = LAST
+
+# SORTMTIME default DESC = newest first
+SYS SORTMTIME bag
+ASSERT OK == 1
+ASSERT SORTMTIME_N == 3
+LET mtord = LAST
+SYS NTH 0 mtord
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+SYS NTH 2 mtord
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+
+# ASC = oldest first
+SYS SORTMTIME bag ASC
+LET mta = LAST
+SYS NTH 0 mta
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+SYS NTH 2 mta
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+
+# SORTSIZE default DESC = largest first
+SYS SORTSIZE bag
+LET so = LAST
+ASSERT SORTSIZE_N == 3
+SYS NTH 0 so
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+SYS NTH 2 so
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+
+# ASC = smallest first
+SYS SORTSIZE bag ASC
+LET sa = LAST
+SYS NTH 0 sa
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+SYS NTH 2 sa
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+
+# aliases + default LAST
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS MTIMESORT
+ASSERT MTIMESORT_N == 3
+SYS HEAD LAST
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS SIZESORT
+SYS HEAD LAST
+SYS EQS LAST f3
+ASSERT LAST_N == 1
+
+# missing paths sort last
+SYS PUSH bag "no_such_sortmt_xyz"
+SYS SORTMTIME LAST
+LET withmiss = LAST
+SYS TAIL withmiss
+SYS EQS LAST "no_such_sortmt_xyz"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+
+PRINT "sys_sortmtime ok"
