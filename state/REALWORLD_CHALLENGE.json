@@ -153,6 +153,6 @@
     "+ as space and multi-stamp confusion are sharp footguns",
     "selftest 226/226; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "6c827f466d62937f1a2e8728c95a95cfb75fb446",
   "ts": "2026-08-06T15:30:00Z"
 }
