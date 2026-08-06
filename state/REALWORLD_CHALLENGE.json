@@ -1,76 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 52,
-  "program": "programs/realworld/canary_delta_board.cubalc",
-  "theme": "canary vs baseline DIFFKV ADDKV delta hot plate",
-  "version": "1.15.168-usability",
+  "iter": 53,
+  "program": "programs/realworld/fleet_drift_board.cubalc",
+  "theme": "fleet drift DROPZERO ABSKV SIGNKV magnitude direction",
+  "version": "1.15.171-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_diff",
-      "cmd": "base api:10 db:5 mesh:2; canary api:14 db:4 mesh:2 crit:3 \u2192 delta api:4 db:-1 mesh:0 crit:3",
+      "name": "seed_dropz",
+      "cmd": "seed api:4 db:-1 mesh:0 crit:3 edge:-5; dropz drops mesh only keeps neg",
       "ok": true,
-      "note": "DIFFKV canary-base"
+      "note": "DROPZERO keeps negatives"
+    },
+    {
+      "name": "abs_mag",
+      "cmd": "abs → edge:5 db:1; DRIFT SoT unchanged",
+      "ok": true,
+      "note": "ABSKV side plate"
+    },
+    {
+      "name": "sign_pulse",
+      "cmd": "sign pos=2 neg=2 zero=1; pulse net 0",
+      "ok": true,
+      "note": "SIGNKV counters"
+    },
+    {
+      "name": "rank_mover",
+      "cmd": "rank biggest |delta| → edge:5 not algebraic top",
+      "ok": true,
+      "note": "DROPZERO+ABSKV+TOPKEY"
+    },
+    {
+      "name": "topkey_signed_trap",
+      "cmd": "list TOPKEY api:2 over edge:-9; rank → edge:9",
+      "ok": true,
+      "note": "must ABS first"
+    },
+    {
+      "name": "dropz_all_flat",
+      "cmd": "a:0 b:0 dropz REQUIRE 2",
+      "ok": true,
+      "note": "empty after clean"
+    },
+    {
+      "name": "rank_empty",
+      "cmd": "rank empty REQUIRE 2",
+      "ok": true,
+      "note": "soft empty"
     },
     {
       "name": "getn_signed",
-      "cmd": "getn api=4 db=-1 crit=3",
+      "cmd": "getn db → -1",
       "ok": true,
       "note": "LOOKUPN negatives"
     },
     {
-      "name": "hot_positive",
-      "cmd": "hot min1 \u2192 api:4 crit:3 drop=2 (db/mesh)",
+      "name": "nonnum_preserve",
+      "cmd": "note:hello survives DROPZERO/ABS/SIGN",
       "ok": true,
-      "note": "THRESHKV drops \u22640"
-    },
-    {
-      "name": "offset_addkv",
-      "cmd": "offset +1 \u2192 db:0 mesh:1 api:5 crit:4",
-      "ok": true,
-      "note": "ADDKV existing only"
-    },
-    {
-      "name": "both_empty_require",
-      "cmd": "diff both empty REQUIRE 2",
-      "ok": true,
-      "note": "program gate"
-    },
-    {
-      "name": "empty_base",
-      "cmd": "empty base + canary api:5 \u2192 delta api:5",
-      "ok": true,
-      "note": "DIFF empty b copy a"
-    },
-    {
-      "name": "empty_canary",
-      "cmd": "empty canary + base \u2192 negated base",
-      "ok": true,
-      "note": "DIFF empty a \u2192 -b"
-    },
-    {
-      "name": "hot_none_require",
-      "cmd": "all negative delta hot REQUIRE 2",
-      "ok": true,
-      "note": "THRESHKV empty"
-    },
-    {
-      "name": "loadlines_freq",
-      "cmd": "FREQ base/canary then diff ERROR+1 WARN-1 INFO+1",
-      "ok": true,
-      "note": "real log path"
-    },
-    {
-      "name": "nonnum_diff",
-      "cmd": "note:hello-world \u2192 note:0 strtol",
-      "ok": true,
-      "note": "silent zero"
+      "note": "bag contamination"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "143/143 pass incl diffkv addkv"
+      "note": "146/146 pass incl dropzero abskv signkv"
     }
   ],
   "weaknesses": [
@@ -78,49 +72,49 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "DIFFKV allows negative values with no floor mode",
-      "detail": "db:3-4=-1 stays negative. Agents treating counts as unsigned mis-page. No DIFFKV_FLOOR0 / max(0,a-b) option.",
-      "repro": "DIFFKV a:3 b:4 \u2192 a:-1"
+      "title": "TOPKEY is algebraic max not magnitude",
+      "detail": "On signed drift api:2 edge:-9 TOPKEY picks api. Biggest mover needs ABSKV first. Easy paging miss for large regressions.",
+      "repro": "TOPKEY api:2\\nedge:-9 → api"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "DIFFKV empty-a silently negates entire b",
-      "detail": "Empty canary plate vs base \u2192 all-negative delta. Easy footgun if canary load failed soft-empty; looks like massive improvement inverted.",
-      "repro": "DIFFKV \"\" base \u2192 -base"
+      "title": "Non-numeric fields survive DROPZERO/ABSKV/SIGNKV",
+      "detail": "note:hello kept through all three ops; SIGNKV may leave string while POS/NEG/ZERO ignore it. Direction plates contaminate.",
+      "repro": "SIGNKV bag with note:hello"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "ADDKV never inserts missing keys",
-      "detail": "Laplace smooth only bumps existing FREQ keys; rare tags absent stay absent. Proof documents this; agents expect full key universe.",
-      "repro": "ADDKV bag 1 does not create INFO:1"
+      "title": "DROPZERO only exact 0; THRESHKV min1 drops negatives too",
+      "detail": "Correct distinction but agents confuse DROPZERO with denoise-flat-and-neg. Document: DROPZERO keeps falls, THRESHKV drops them.",
+      "repro": "DROPZERO info:-2 keeps; THRESHKV 1 drops"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "SUMKV on signed deltas mixes rise and fall",
-      "detail": "4+(-1)+0+3=6 hides magnitude of regressions. No SUMABS / L1 bag form.",
-      "repro": "SUMKV signed delta bag"
+      "title": "ABSKV_N counts only fields that flipped sign",
+      "detail": "ABSKV_N=2 when two negatives became positive; zeros and positives not in N. Agents may think ABSKV_N==LINES means full bag.",
+      "repro": "ABSKV_N vs ABSKV_KEYS"
     },
     {
       "id": "W5",
-      "severity": "med",
+      "severity": "low",
       "area": "host|bag",
-      "title": "DIFFKV non-numeric \u2192 strtol 0 delta",
-      "detail": "note:hello \u2212 note:world \u2192 note:0. String metadata becomes zero delta, not skip/error.",
-      "repro": "DIFFKV note:hello note:world"
+      "title": "No SIGNKV-only-pos / filter by sign form",
+      "detail": "Want KEEP POS after SIGN without THRESHKV on original. Must THRESHKV source or GREP dir plate.",
+      "repro": "SIGNKV then filter"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last DELTA line without $.",
-      "repro": "diff; cat -A DELTA.txt"
+      "detail": "cat -A last DRIFT/MAG/DIR line without $.",
+      "repro": "seed; cat -A DRIFT.txt"
     },
     {
       "id": "W7",
@@ -128,39 +122,37 @@
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
       "detail": "Stable issue.",
-      "repro": "PRINT_JSON delta"
+      "repro": "PRINT_JSON bag"
     },
     {
       "id": "W8",
-      "severity": "low",
+      "severity": "med",
       "area": "host|bag",
-      "title": "No DIFFKV only-positive / abs form",
-      "detail": "Want rising-only without THRESHKV second pass; or abs delta for magnitude boards.",
-      "repro": "DIFFKV always signed"
+      "title": "No combined MAGRANK / TOPABS primitive",
+      "detail": "Biggest-mover needs DROPZERO+ABSKV+TOPKEY glue every agent. MEANINGFUL_ITER candidate TOPABSKV.",
+      "repro": "rank action three steps"
     }
   ],
   "workarounds": [
-    "Always REQUIRE non-empty canary before DIFFKV",
-    "THRESHKV min 1 after DIFF to page only regressions",
-    "Seed full key universe with zeros before ADDKV Laplace",
-    "Use SUMKV carefully; prefer TOPKEY + hot plate for paging",
-    "Strip non-numeric keys before DIFF"
+    "Always ABSKV before TOPKEY on signed deltas",
+    "DROPZERO for flat clean; THRESHKV min1 for rise-only",
+    "Strip non-numeric before SIGN/ABS",
+    "Use SIGNKV_POS/NEG for pulse; ignore ZERO for bias",
+    "Compare ABSKV_N to count of negatives not total lines"
   ],
   "language_gaps": [
-    "DIFFKV FLOOR0 / unsigned mode",
-    "DIFFKV refuse empty operands",
-    "ADDKV insert-missing / full-key universe mode",
-    "SUMABS / L1 on bag values",
-    "DIFFKV STRICT non-numeric",
-    "DIFFKV POS only bag form",
+    "TOPABSKV / magnitude TOPKEY mode",
+    "STRICT drop non-numeric on DROPZERO/ABS/SIGN",
+    "KEEPSIGN +1 / KEEPSIGN -1 filters",
+    "SUMABS bag L1",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive canary-base delta + hot filter clean",
-    "Empty canary \u2192 full negate is severe ops footgun",
-    "crit only-in-canary kept as +3 (not DIFFKV_ADDED; ADDED is only-in-b)",
+    "Positive dropz/abs/sign/rank/pulse clean",
+    "TOPKEY signed trap confirmed high-sev for fleet paging",
+    "Non-numeric preserve across all three new ops",
     "No language fix this iter"
   ],
-  "commit": "e42295f582a420861918eb4385dbfc77e48f3888",
-  "ts": "2026-08-06T01:35:00Z"
+  "commit": "",
+  "ts": "2026-08-06T02:00:00Z"
 }
