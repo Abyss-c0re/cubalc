@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 157,
-  "version": "1.15.182-usability",
-  "item": "SYS SIZEALL / MAPSIZE path bag byte sizes + sum",
-  "item_id": 190,
-  "title": "SYS SIZEALL|MAPSIZE [bag] — byte sizes over paths · SIZEALL_SUM",
-  "commit": "5e29c5645f771df739e29e459df6ae5f4e066c27",
-  "summary": "Path bag inventory sizes + sum after PATHGLOB/KEEPFILES. selftest 157.",
+  "iter": 158,
+  "version": "1.15.183-usability",
+  "item": "SYS MTIMEALL / AGEALL path bag time maps + min/max",
+  "item_id": 191,
+  "title": "SYS MTIMEALL|AGEALL [bag] — mtime/age maps · MAX/MIN freshness",
+  "commit": "3adcbf8c034219b4fe4fedf54b8da814929798a8",
+  "summary": "Path bag mtime/age inventory with min/max after PATHGLOB. selftest 158.",
   "proofs": [
-    "730_sys_sizeall",
-    "selftest n_pass=157"
+    "731_sys_mtimeall",
+    "selftest n_pass=158"
   ],
-  "when": "2026-08-06T04:04:04Z",
+  "when": "2026-08-06T04:14:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5e29c5645f771df739e29e459df6ae5f4e066c27"
+  "sha": "3adcbf8c034219b4fe4fedf54b8da814929798a8"
 }
