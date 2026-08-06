@@ -1,70 +1,64 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 60,
-  "program": "programs/realworld/build_delta_board.cubalc",
-  "theme": "make-style rebuild delta KEEPNEWER KEEPOLDER FRESH KEEPSTALE stamp",
-  "version": "1.15.187-usability",
+  "iter": 61,
+  "program": "programs/realworld/cache_reclaim_board.cubalc",
+  "theme": "cache/tmp reclaim KEEPBIGGER KEEPSMALLER RMALL TOUCHALL bulk GC",
+  "version": "1.15.190-usability",
   "pass": true,
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB+KEEPFILES \u2192 also/new/old.src",
+      "cmd": "PATHGLOB+KEEPFILES → big/mid/tiny drop nested",
       "ok": true,
-      "note": "drop nested"
+      "note": "kind filter"
     },
     {
-      "name": "stamp_newer",
-      "cmd": "KEEPNEWER vs build.out \u2192 also+new (drop old) ref_ok=1",
+      "name": "big_min10",
+      "cmd": "KEEPBIGGER 10 → big.dat+mid.dat",
       "ok": true,
-      "note": "rebuild candidates"
+      "note": "size >= 10"
     },
     {
-      "name": "older",
-      "cmd": "KEEPOLDER \u2192 old.src only",
+      "name": "small_max3",
+      "cmd": "KEEPSMALLER 3 → tiny.dat",
       "ok": true,
-      "note": "already built sources"
+      "note": "size <= 3"
     },
     {
-      "name": "missing_ref_newer",
-      "cmd": "KEEPNEWER missing.out \u2192 all 3 existing ref_ok=0",
-      "ok": true,
-      "note": "make rebuild-all"
-    },
-    {
-      "name": "missing_ref_older",
-      "cmd": "KEEPOLDER missing \u2192 empty soft",
-      "ok": true,
-      "note": "asymmetric miss ref"
-    },
-    {
-      "name": "fresh_large",
-      "cmd": "FRESH 1e6 keeps all 3",
-      "ok": true,
-      "note": "after STR AGE shuttle"
-    },
-    {
-      "name": "fresh_zero",
-      "cmd": "FRESH 0 keeps just-touched new+also",
-      "ok": true,
-      "note": "age==0 only"
-    },
-    {
-      "name": "stale_one",
-      "cmd": "KEEPSTALE 1 \u2192 old.src",
-      "ok": true,
-      "note": "min age gate"
-    },
-    {
-      "name": "touchref_newer_none",
-      "cmd": "TOUCH stamp then newer REQUIRE exit 2",
-      "ok": true,
-      "note": "up-to-date"
-    },
-    {
-      "name": "stale_none_require",
-      "cmd": "KEEPSTALE 999999 REQUIRE exit 2",
+      "name": "big_none_require",
+      "cmd": "KEEPBIGGER 9999 REQUIRE exit 2",
       "ok": true,
       "note": "empty gate"
+    },
+    {
+      "name": "reclaim_big",
+      "cmd": "RMALL cand → rm_n=2 mid+big gone tiny remains",
+      "ok": true,
+      "note": "bulk delete"
+    },
+    {
+      "name": "touch_upd",
+      "cmd": "TOUCHALL paths → touch_upd=1 tiny",
+      "ok": true,
+      "note": "lease refresh"
+    },
+    {
+      "name": "touch_create",
+      "cmd": "TOUCHALL new markers → touch_new=2",
+      "ok": true,
+      "note": "ensure leases"
+    },
+    {
+      "name": "rmall_dir_fail",
+      "cmd": "RMALL files+dir → rm_n=2 rm_fail=1 nested remains",
+      "ok": true,
+      "note": "no rmdir"
+    },
+    {
+      "name": "rmall_ghost_dir",
+      "cmd": "RMALL nested+ghost → rm_n=0 miss=1 fail=1",
+      "ok": true,
+      "note": "zero removed soft"
     },
     {
       "name": "scan_miss_require",
@@ -76,7 +70,7 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "162/162 pass incl fresh keepnewer"
+      "note": "165/165 pass incl keepbigger rmall touchall"
     }
   ],
   "weaknesses": [
@@ -84,87 +78,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|parse",
-      "title": "FRESH/KEEPSTALE reject numeric vars \u2014 need STR shuttle",
-      "detail": "Age limit accepts TK_NUM literal or string arg only. SYS FRESH bag AGE with num AGE fails parse (SYS FRESH bag max_age_sec). Agents must SYS STR AGE first. THRESHKV accepts nums; inconsistent.",
-      "repro": "LET AGE=60; SYS FRESH paths AGE \u2192 fail; STR then FRESH ok"
+      "title": "KEEPBIGGER/KEEPSMALLER reject numeric vars — STR shuttle required",
+      "detail": "Same class as FRESH: size limit is TK_NUM literal or string only. SYS KEEPBIGGER bag MIN with num MIN fails parse. Agents must SYS STR MIN first.",
+      "repro": "LET MIN=10; SYS KEEPBIGGER paths MIN → fail; STR then ok"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "KEEPNEWER missing ref keeps all; KEEPOLDER missing keeps none",
-      "detail": "Asymmetric make-style: missing stamp = rebuild everything for NEWER, but OLDER empties. Easy to mis-gate backup-older-than-checkpoint vs rebuild-all.",
-      "repro": "KEEPNEWER bag miss \u2192 all exist; KEEPOLDER bag miss \u2192 empty"
+      "title": "RMALL cannot remove directories — FAIL, nested trees leftover",
+      "detail": "Dirs count as RMALL_FAIL not recursive delete. GC of PATHGLOB * without KEEPFILES leaves empty dir trees. No RMDIR/RMALL_R.",
+      "repro": "RMALL bag_with_dir → rm_fail>=1; ISDIR nested still 1"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|time",
-      "title": "FRESH max_age=0 is only age==0 not inclusive window",
-      "detail": "Just-touched files only; any clock tick drops them. No ms-resolution; tests race on slow hosts.",
-      "repro": "FRESH bag 0 after TOUCH"
+      "area": "host|fs",
+      "title": "TOUCHALL creates files but not parent directories",
+      "detail": "ENSURE deep path without MKDIR parents fails soft (TOUCHALL_FAIL). Agents need MKDIR glue for nested leases.",
+      "repro": "TOUCHALL nested/sub/lease without parents"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "No mtime equality mode (newer-or-equal / older-or-equal)",
-      "detail": "KEEPNEWER is strict >; same mtime sources not rebuilt. Touch-equal race can skip rebuild.",
-      "repro": "source mtime == stamp \u2192 not in KEEPNEWER"
+      "title": "RMALL/TOUCHALL set OK=0 on any fail while still removing others",
+      "detail": "Partial success: rm_n>0 but OK=0 when dir fail present. -s strict agents may treat as hard fail if sticky ERR not CLEAR_ERR.",
+      "repro": "RMALL files+dir → OK=0 RMALL_N>0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON bag newline collapse",
-      "detail": "DELTA full paths collapse into one string.",
-      "repro": "PRINT_JSON delta"
+      "area": "host|bag",
+      "title": "No exclusive size range filter (min AND max in one op)",
+      "detail": "Mid-band reclaim needs KEEPBIGGER then KEEPSMALLER chain. No KEEPSIZEBETWEEN.",
+      "repro": "want 10<=size<=100 → two filters"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "STAMP.txt and DELTA last line without $ on cat -A.",
-      "repro": "stamp; cat -A STAMP.txt"
+      "severity": "med",
+      "area": "host|json",
+      "title": "PRINT_JSON bag newline collapse",
+      "detail": "Removed path bags collapse in JSON line.",
+      "repro": "PRINT_JSON removed"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|time",
-      "title": "TOUCH cannot set historical mtime for fixtures",
-      "detail": "Stamp/source age spread needs host sleep or touch -d.",
-      "repro": "TOUCH only now"
+      "area": "host|write",
+      "title": "WRITE omits final trailing newline",
+      "detail": "cat -A last CAND/PATHS line without $.",
+      "repro": "big; cat -A CAND.txt"
     },
     {
       "id": "W8",
       "severity": "med",
-      "area": "host|bag",
-      "title": "FRESH/KEEPSTALE drop missing paths silently (no MISS count in path form)",
-      "detail": "Ghost paths disappear into DROP; no parallel MISS bag. KEEPNEWER_DROP mixes older+missing+ghost.",
-      "repro": "FRESH bag_with_ghost \u2192 ghost in DROP not separate"
+      "area": "host|agent",
+      "title": "Stale CAND plate can reclaim wrong set if not cleared after scan",
+      "detail": "Agent glue: reclaim prefers CAND over PATHS when CAND non-empty. Rescan without clear cand deletes old filter set not new inventory. Language has no paired plate invalidation.",
+      "repro": "big; scan; reclaim without clear → deletes old cand"
     }
   ],
   "workarounds": [
-    "Always SYS STR age_var before FRESH/KEEPSTALE",
-    "Check KEEPNEWER_REF_OK before treating empty as up-to-date",
-    "Missing stamp: use newer for rebuild-all; do not use older",
-    "KEEPFILES before delta filters",
-    "Host sleep/touch -d for age fixtures"
+    "SYS STR before KEEPBIGGER/KEEPSMALLER thresholds",
+    "KEEPFILES before RMALL to avoid dir FAIL noise",
+    "CLEAR cand after scan or always write cand from latest filter",
+    "CLEAR_ERR after partial RMALL if rm_n>0 is success",
+    "MKDIR parents before TOUCHALL nested markers"
   ],
   "language_gaps": [
-    "FRESH/KEEPSTALE accept numeric expression/vars",
-    "KEEPNEWERGE / KEEPOLDERLE inclusive mtime modes",
-    "Per-path miss markers distinct from older-drop",
-    "In-language historical mtime set",
+    "KEEPBIGGER accept numeric expression/vars",
+    "RMALL recursive / RMDIR bag",
+    "KEEPSIZEBETWEEN min max",
+    "TOUCHALL mkdir -p parents option",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "KEEPNEWER/OLDER positive path clean",
-    "Hit W1 immediately: FRESH AGE num var parse fail \u2014 worked around with STR",
-    "Missing-ref asymmetry confirmed",
-    "No language fix this iter (STR shuttle workaround)"
+    "KEEPBIGGER+RMALL+TOUCHALL positive path clean with STR shuttle",
+    "Dir FAIL + ghost MISS confirmed",
+    "Stale CAND hazard observed mid-test",
+    "No language fix this iter"
   ],
-  "commit": "2c622ae15ba30f8150732a7529e6af021aab3746",
-  "ts": "2026-08-06T05:04:30Z"
+  "commit": "",
+  "ts": "2026-08-06T05:28:40Z"
 }

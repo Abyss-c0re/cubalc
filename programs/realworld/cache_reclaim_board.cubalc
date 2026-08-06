@@ -1,0 +1,663 @@
+# cache_reclaim_board.cubalc — cache/tmp reclaim via KEEPBIGGER + RMALL + TOUCHALL
+#
+# Real use: ops GC agent inventories a cache/tmp drop, keeps files over a byte
+# floor (KEEPBIGGER) or under a cap (KEEPSMALLER) without EACH+SIZE, bulk
+# deletes reclaim candidates with RMALL, and TOUCHALL refreshes survivor
+# leases/markers. Distinct from drop_bytes_board (SIZEALL maps, no delete)
+# and stale_plate_gc (EACH AGE + RENAME trash): this board is size-filter
+# bulk reclaim + touch renew.
+#
+# Plate under STATE:
+#   PATHS.txt           — working path bag
+#   CAND.txt            — last filter (reclaim or survivors)
+#   RECLAIM_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CR_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   big       — KEEPBIGGER PATHS min_bytes (ARG1) → CAND
+#   small     — KEEPSMALLER PATHS max_bytes (ARG1) → CAND
+#   reclaim   — RMALL CAND (or PATHS if CAND empty) → write survivors note
+#   touch     — TOUCHALL CAND (or PATHS) lease renew / ensure markers
+#   has       — HASLINE exact on PATHS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cr_$$; mkdir -p "$CUBALC_STATE/cache"
+#   # fixtures of known sizes
+#   CUBALC_CR_DIR=$CUBALC_STATE/cache CUBALC_ARG0=scan CUBALC_ARG1='*' \
+#     ./out/cubalc run -q -s programs/realworld/cache_reclaim_board.cubalc
+#   CUBALC_ARG0=files ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=big CUBALC_ARG1=10 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=reclaim ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CR_DIR=…  CUBALC_CR_PAT=*  CUBALC_CR_REQUIRE=1
+#   CUBALC_CR_MIN=0  CUBALC_CR_MAX=0
+#
+# Edges deliberately stressed:
+#   KEEPBIGGER num var needs STR shuttle (same class as FRESH)
+#   dirs/ghosts dropped by size filters (not MISS bag)
+#   RMALL dir → FAIL count, OK=0; ghost → MISS
+#   TOUCHALL creates missing markers; dir → FAIL
+#   WRITE NL; PRINT_JSON; soft READ; REQUIRE empty
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cache_reclaim_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT CFILE = "CAND.txt"
+DEFAULT REPORT = "RECLAIM_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT MIN = 0
+DEFAULT MAX = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CR_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_CR_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_CR_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_CR_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir CFILE
+LET cand_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR cand_path OR ""
+LET cand = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET cand_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET rm_n = 0
+LET rm_miss = 0
+LET rm_fail = 0
+LET touch_n = 0
+LET touch_new = 0
+LET touch_upd = 0
+LET touch_fail = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "big"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET MIN = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "small"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET MAX = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES cand
+  LET nc = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "creclaim" np nc MIN MAX ACTION
+  PRINT_JSON np nc MIN MAX ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON cand
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- big KEEPBIGGER ---
+SYS EQS ACTION "big"
+IF LAST_N == 1 THEN
+  NOTE "action big"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "big empty"
+    FAIL "big empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "big empty"
+    END
+  ELSE
+    SYS STR MIN
+    LET min_s = LAST
+    SYS KEEPBIGGER paths min_s
+    LET cand = LAST
+    LET keep_n = KEEPBIGGER_N
+    LET drop_n = KEEPBIGGER_DROP
+    LET val_n = KEEPBIGGER_BYTES
+    LET cand_ch = 1
+    LET hit = keep_n
+    SYS BLANK cand
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "big none"
+      FAIL "big none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "big none"
+      END
+    ELSE
+      LET note_msg = "big ok"
+    END
+    PRINT_JSON MIN keep_n drop_n
+    PRINT_JSON cand
+  END
+END
+
+# --- small KEEPSMALLER ---
+SYS EQS ACTION "small"
+IF LAST_N == 1 THEN
+  NOTE "action small"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "small empty"
+    FAIL "small empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "small empty"
+    END
+  ELSE
+    SYS STR MAX
+    LET max_s = LAST
+    SYS KEEPSMALLER paths max_s
+    LET cand = LAST
+    LET keep_n = KEEPSMALLER_N
+    LET drop_n = KEEPSMALLER_DROP
+    LET val_n = KEEPSMALLER_BYTES
+    LET cand_ch = 1
+    LET hit = keep_n
+    SYS BLANK cand
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "small none"
+      FAIL "small none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "small none"
+      END
+    ELSE
+      LET note_msg = "small ok"
+    END
+    PRINT_JSON MAX keep_n drop_n
+    PRINT_JSON cand
+  END
+END
+
+# --- reclaim RMALL ---
+SYS EQS ACTION "reclaim"
+IF LAST_N == 1 THEN
+  NOTE "action reclaim"
+  LET target = cand
+  SYS BLANK target
+  IF LAST_N == 1 THEN
+    LET target = paths
+  END
+  SYS BLANK target
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "reclaim empty"
+    FAIL "reclaim empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "reclaim empty"
+    END
+  ELSE
+    SYS RMALL target
+    LET removed = LAST
+    LET rm_n = RMALL_N
+    LET rm_miss = RMALL_MISS
+    LET rm_fail = RMALL_FAIL
+    LET hit = rm_n
+    IF rm_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "reclaim none"
+      FAIL "reclaim none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "reclaim none"
+      END
+    ELSE
+      LET note_msg = "reclaim ok"
+    END
+    # drop removed from paths
+    SYS DIFF paths removed
+    LET paths = LAST
+    LET paths_ch = 1
+    LET cand = ""
+    LET cand_ch = 1
+    LET val_s = removed
+    PRINT_JSON rm_n rm_miss rm_fail
+    PRINT_JSON removed
+    PRINT_JSON paths
+    CLEAR_ERR
+  END
+END
+
+# --- touch TOUCHALL ---
+SYS EQS ACTION "touch"
+IF LAST_N == 1 THEN
+  NOTE "action touch"
+  LET target = cand
+  SYS BLANK target
+  IF LAST_N == 1 THEN
+    LET target = paths
+  END
+  SYS BLANK target
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "touch empty"
+    FAIL "touch empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "touch empty"
+    END
+  ELSE
+    SYS TOUCHALL target
+    LET touched = LAST
+    LET touch_n = TOUCHALL_N
+    LET touch_new = TOUCHALL_NEW
+    LET touch_upd = TOUCHALL_UPD
+    LET touch_fail = TOUCHALL_FAIL
+    LET hit = touch_n
+    IF touch_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "touch none"
+      FAIL "touch none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "touch none"
+      END
+    ELSE
+      LET note_msg = "touch ok"
+    END
+    LET val_s = touched
+    PRINT_JSON touch_n touch_new touch_upd touch_fail
+    PRINT_JSON touched
+    CLEAR_ERR
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET cand = ""
+  LET paths_ch = 1
+  LET cand_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "big"
+LET k = k + LAST_N
+SYS EQS ACTION "small"
+LET k = k + LAST_N
+SYS EQS ACTION "reclaim"
+LET k = k + LAST_N
+SYS EQS ACTION "touch"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF cand_ch > 0 THEN
+  SYS WRITE cand_path cand
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "cand write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES cand
+LET depth_c = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.cache_reclaim.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "min"
+LET report = LAST
+SYS STR MIN
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max"
+LET report = LAST
+SYS STR MAX
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rm_n"
+LET report = LAST
+SYS STR rm_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rm_miss"
+LET report = LAST
+SYS STR rm_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rm_fail"
+LET report = LAST
+SYS STR rm_fail
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "touch_n"
+LET report = LAST
+SYS STR touch_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "touch_new"
+LET report = LAST
+SYS STR touch_new
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "touch_upd"
+LET report = LAST
+SYS STR touch_upd
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "touch_fail"
+LET report = LAST
+SYS STR touch_fail
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_c"
+LET report = LAST
+SYS STR depth_c
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "cache_reclaim_board" ACTION hit miss keep_n rm_n note_msg elapsed
+PRINT_JSON ACTION hit miss keep_n drop_n rm_n rm_miss rm_fail touch_n touch_new depth_p depth_c note_msg STATUS_OK
+NOTE "cache_reclaim_board: done"
