@@ -219,6 +219,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 189. ~~**`SYS KEEPFILES` / `KEEPDIRS` / `KEEPEXIST`**~~ **done** (filter path bags by host kind · PATHGLOB before READ).
 190. ~~**`SYS SIZEALL` / `MAPSIZE`**~~ **done** (path bag → byte sizes · SIZEALL_SUM inventory without EACH+SIZE).
 191. ~~**`SYS MTIMEALL` / `AGEALL`**~~ **done** (path bag mtime/age maps · MAX/MIN freshness without EACH).
+192. ~~**`SYS NEWEST` / `OLDEST` / `LARGEST` / `SMALLEST`**~~ **done** (pick path by mtime/size · no ARGMAX+NTH glue).
 
 ## Tick protocol
 

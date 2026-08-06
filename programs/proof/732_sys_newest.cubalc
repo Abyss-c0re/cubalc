@@ -1,0 +1,107 @@
+# SYS NEWEST / OLDEST / LARGEST / SMALLEST — pick path from bag by mtime/size
+# Usability: freshest/heaviest plate without MTIMEALL+ARGMAX+NTH glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "newest_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "small.plate"
+LET f1 = LAST
+SYS WRITE f1 "x"
+# 1 byte · will be oldest after sleep
+
+SYS SLEEP 1100
+
+SYS JOIN fix "big.plate"
+LET f2 = LAST
+SYS WRITE f2 "hello world!!"
+# 13 bytes
+
+SYS JOIN fix "mid.plate"
+LET f3 = LAST
+SYS WRITE f3 "abcd"
+# 4 bytes
+
+# refresh f2 so it is clearly newest by mtime
+SYS SLEEP 1100
+SYS TOUCH f2
+ASSERT OK == 1
+
+SYS JOIN fix "ghost.plate"
+LET ghost = LAST
+
+SYS PUSH "" f1
+SYS PUSH LAST f2
+SYS PUSH LAST f3
+SYS PUSH LAST ghost
+LET bag = LAST
+
+# NEWEST by mtime → f2 (touched last)
+SYS NEWEST bag
+ASSERT OK == 1
+SYS EQS LAST f2
+ASSERT LAST_N == 1
+ASSERT NEWEST_I == 1
+ASSERT NEWEST_N > 0
+
+# LATEST alias
+SYS LATEST bag
+SYS EQS LAST f2
+ASSERT LAST_N == 1
+
+# OLDEST → f1
+SYS OLDEST bag
+ASSERT OK == 1
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+ASSERT OLDEST_I == 0
+
+# LARGEST → f2 (13 bytes)
+SYS LARGEST bag
+ASSERT OK == 1
+SYS EQS LAST f2
+ASSERT LAST_N == 1
+ASSERT LARGEST_N == 13
+ASSERT LARGEST_I == 1
+
+# SMALLEST → f1 (1 byte)
+SYS SMALLEST bag
+ASSERT OK == 1
+SYS EQS LAST f1
+ASSERT LAST_N == 1
+ASSERT SMALLEST_N == 1
+ASSERT SMALLEST_I == 0
+
+# default LAST bag
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS NEWEST
+SYS EQS LAST f2
+ASSERT LAST_N == 1
+
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS LARGEST
+SYS EQS LAST f2
+ASSERT LAST_N == 1
+
+# soft empty / miss-only
+SYS NEWEST "no_such_path_xyz"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT NEWEST_I == -1
+
+SYS PUSH "" ghost
+SYS LARGEST LAST
+ASSERT OK == 0
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+
+PRINT "sys_newest ok"

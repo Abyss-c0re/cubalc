@@ -1569,6 +1569,115 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS NEWEST|LATEST [bag] — path with max mtime (first on ties).
+     * SYS OLDEST|EARLIEST [bag] — path with min mtime among existing.
+     * SYS LARGEST|BIGGEST [bag] — regular file with max size.
+     * SYS SMALLEST|TINIEST [bag] — regular file with min size (incl. empty).
+     * LAST = winning path; LAST_N = metric (mtime epoch or bytes); *_I = 0-based index;
+     * soft empty bag / no hit → OK=0 empty LAST LAST_N=0.
+     * Usability: freshest/heaviest plate without MTIMEALL+ARGMAX+NTH glue. */
+    if (kw(&L->cur,"NEWEST") || kw(&L->cur,"LATEST") || kw(&L->cur,"MOSTRECENT") ||
+        kw(&L->cur,"OLDEST") || kw(&L->cur,"EARLIEST") || kw(&L->cur,"LEASTRECENT") ||
+        kw(&L->cur,"LARGEST") || kw(&L->cur,"BIGGEST") || kw(&L->cur,"MAXSIZE") ||
+        kw(&L->cur,"SMALLEST") || kw(&L->cur,"TINIEST") || kw(&L->cur,"MINSIZE")){
+      int mode = 0; /* 0 newest · 1 oldest · 2 largest · 3 smallest */
+      char bag[CUBALC_HOST_STR_MAX], best[512];
+      const char *p, *start;
+      size_t flen;
+      long idx = 0, best_i = -1, best_v = 0, nscan = 0;
+      cubalc_host_result hr;
+      if (kw(&L->cur,"OLDEST") || kw(&L->cur,"EARLIEST") || kw(&L->cur,"LEASTRECENT"))
+        mode = 1;
+      else if (kw(&L->cur,"LARGEST") || kw(&L->cur,"BIGGEST") || kw(&L->cur,"MAXSIZE"))
+        mode = 2;
+      else if (kw(&L->cur,"SMALLEST") || kw(&L->cur,"TINIEST") || kw(&L->cur,"MINSIZE"))
+        mode = 3;
+      lex_next(L);
+      bag[0] = 0; best[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen;
+          long v = 0;
+          int okv = 0;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (mode == 0 || mode == 1) {
+            if (cubalc_host_mtime(path, &hr) == 0 && hr.ok) {
+              v = hr.n;
+              okv = 1;
+            }
+          } else {
+            if (cubalc_host_path_kind(path, &hr) == 0 && hr.code == 1) {
+              v = hr.n;
+              okv = 1;
+            }
+          }
+          if (okv) {
+            if (best_i < 0 ||
+                (mode == 0 && v > best_v) ||
+                (mode == 1 && v < best_v) ||
+                (mode == 2 && v > best_v) ||
+                (mode == 3 && v < best_v)) {
+              best_i = idx;
+              best_v = v;
+              snprintf(best, sizeof best, "%s", path);
+            }
+          }
+          idx++;
+          nscan++;
+        }
+        if (*p == '\n') p++;
+      }
+      if (best_i < 0) {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "NEWEST_I", -1);
+        var_set_num(vm, "OLDEST_I", -1);
+        var_set_num(vm, "LARGEST_I", -1);
+        var_set_num(vm, "SMALLEST_I", -1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", best);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", best);
+      vm->last_n = best_v;
+      var_set_num(vm, "LAST_N", best_v);
+      var_set_num(vm, "OK", 1);
+      if (mode == 0) {
+        var_set_str(vm, "NEWEST", best);
+        var_set_str(vm, "LATEST", best);
+        var_set_num(vm, "NEWEST_I", best_i);
+        var_set_num(vm, "NEWEST_N", best_v);
+        var_set_num(vm, "LATEST_N", best_v);
+      } else if (mode == 1) {
+        var_set_str(vm, "OLDEST", best);
+        var_set_str(vm, "EARLIEST", best);
+        var_set_num(vm, "OLDEST_I", best_i);
+        var_set_num(vm, "OLDEST_N", best_v);
+      } else if (mode == 2) {
+        var_set_str(vm, "LARGEST", best);
+        var_set_str(vm, "BIGGEST", best);
+        var_set_num(vm, "LARGEST_I", best_i);
+        var_set_num(vm, "LARGEST_N", best_v);
+      } else {
+        var_set_str(vm, "SMALLEST", best);
+        var_set_str(vm, "TINIEST", best);
+        var_set_num(vm, "SMALLEST_I", best_i);
+        var_set_num(vm, "SMALLEST_N", best_v);
+      }
+      (void)nscan;
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -11210,7 +11319,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11438,6 +11547,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MAPSIZE", "SYS MAPSIZE alias of SYS SIZEALL"},
       {"SYS MTIMEALL", "SYS MTIMEALL|MAPMTIME [bag] — epoch mtime bag · MTIMEALL_MAX/MIN"},
       {"SYS AGEALL", "SYS AGEALL|MAPAGE [bag] — age-seconds bag · AGEALL_MAX/MIN freshness"},
+      {"SYS NEWEST", "SYS NEWEST|LATEST [bag] — path with max mtime · freshest plate"},
+      {"SYS OLDEST", "SYS OLDEST|EARLIEST [bag] — path with min mtime"},
+      {"SYS LARGEST", "SYS LARGEST|BIGGEST [bag] — largest regular file path"},
+      {"SYS SMALLEST", "SYS SMALLEST|TINIEST [bag] — smallest regular file path"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
