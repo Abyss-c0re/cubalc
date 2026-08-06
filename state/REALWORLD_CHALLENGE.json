@@ -1,64 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 84,
-  "program": "programs/realworld/artifact_fingerprint_board.cubalc",
-  "theme": "artifact fingerprint HEX EQFILE HASHFILE KVFILEENSURE",
-  "version": "1.15.248-usability",
+  "iter": 85,
+  "program": "programs/realworld/job_ticket_board.cubalc",
+  "theme": "job ticket UUID URLENC JSONESC CRC32 CLAIM mint",
+  "version": "1.15.251-usability",
   "pass": true,
   "tests": [
     {
-      "name": "eq_same",
-      "cmd": "eq a.bin b.bin identical hit",
+      "name": "mint_dash",
+      "cmd": "UUID dashed 36-char v4 form",
       "ok": true,
-      "note": "EQFILE"
+      "note": "shape"
     },
     {
-      "name": "eq_differ",
-      "cmd": "eq a vs c soft differ; REQUIRE exit 2",
+      "name": "mint_claim",
+      "cmd": "UUID0 + JOIN root + CLAIM body",
       "ok": true,
-      "note": "mismatch"
+      "note": "ticket file"
     },
     {
-      "name": "stamp",
-      "cmd": "HASHFILE hex stamp",
+      "name": "crc_classic",
+      "cmd": "CRC32 123456789 \u2192 cbf43926",
       "ok": true,
-      "note": "FNV"
+      "note": "IEEE vector"
     },
     {
-      "name": "hex_roundtrip",
-      "cmd": "hex status=ok; unhex 7374617475733d6f6b",
+      "name": "crcfile",
+      "cmd": "CRC32FILE ticket body stamp",
       "ok": true,
-      "note": "HEX/HEXD"
+      "note": "file crc"
     },
     {
-      "name": "unhex_bad",
-      "cmd": "odd length abc; zz nibble; REQUIRE",
+      "name": "urlenc",
+      "cmd": "peer/name=agent one \u2192 percent path",
       "ok": true,
-      "note": "soft fail"
+      "note": "RFC3986"
     },
     {
-      "name": "ensure_keep",
-      "cmd": "ensure port 9999 keeps 7700 NEW=0",
+      "name": "urldec_plus",
+      "cmd": "a+b \u2192 a b form-space",
       "ok": true,
-      "note": "no clobber"
+      "note": "plus trap"
     },
     {
-      "name": "ensure_add",
-      "cmd": "ensure mode soft NEW=1; ensure mode hard stays soft",
+      "name": "urldec_bad",
+      "cmd": "bad% / %zz soft; REQUIRE exit 2",
       "ok": true,
-      "note": "default only"
+      "note": "decode fail"
     },
     {
-      "name": "eq_miss",
-      "cmd": "missing path soft eq path miss",
+      "name": "jsonesc",
+      "cmd": "quotes/slash escape round-trip",
       "ok": true,
-      "note": "path"
+      "note": "JSON body"
+    },
+    {
+      "name": "unique_mint",
+      "cmd": "two mints \u2192 distinct paths",
+      "ok": true,
+      "note": "uuid0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "223/223 pass"
+      "note": "226/226 pass"
     }
   ],
   "weaknesses": [
@@ -66,87 +72,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|hash",
-      "title": "HASHFILE FNV-1a 32-bit vs HEX full payload \u2014 dual fingerprint models",
-      "detail": "Agents confuse short HASH stamps with cryptographic integrity. HEX is full content; HASH is 8-hex FNV. Naming suggests stronger than collision resistance.",
-      "repro": "HASHFILE vs HEX of same body different widths"
+      "title": "CRC32 / HASH / HEX stamp trio confuses integrity semantics",
+      "detail": "CRC32 IEEE 8-hex, HASH FNV 8-hex, HEX full payload all look like digests. Agents pick wrong algo for audit vs change-detect vs transport.",
+      "repro": "CRC32 vs HASH of same string differ; both length 8"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|encode",
-      "title": "HEX/BASE64/URLENC encode family sprawl without FILE variants",
-      "detail": "String-only encode; no HEXFILE/BASE64FILE. Binary artifacts need READ (text plane) then HEX. Same binary gap as BASE64 W from scratch board.",
-      "repro": "no HEXFILE path form"
+      "area": "host|url",
+      "title": "URLDEC treats + as space (form-style) \u2014 path false friend",
+      "detail": "a+b decodes to a b. Path leaves with literal + break. Encode uses %20 for space not +. Asymmetric form vs RFC path expectations.",
+      "repro": "URLDEC a+b \u2192 a b"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|eq",
-      "title": "EQFILE equal=LAST_N 1 differ=0 both OK=1; path miss OK=0",
-      "detail": "Agents must branch on OK then LAST_N. Differ looks like soft success with hit=0. Easy REQUIRE glue mistakes.",
-      "repro": "EQFILE same OK=1 N=1; differ OK=1 N=0"
+      "area": "host|encode",
+      "title": "Encode family sprawl: URLENC HEX BASE64 JSONESC without FILE variants",
+      "detail": "String plane only; no URLENCFILE/CRC-of-stream for binary. Continues encode sprawl.",
+      "repro": "four codecs + CRC/HASH"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|kv",
-      "title": "KVFILEENSURE create-on-miss invents plates on path typo",
-      "detail": "Same create footgun as ENSURELINE/KVFILESET. Typo path becomes new config.",
-      "repro": "KVFILEENSURE no_such k v \u2192 creates"
+      "area": "host|write",
+      "title": "CLAIM body and ACTIVE meta omit trailing NL",
+      "detail": "worker=alpha glued; ACTIVE path glued to total in cat -A.",
+      "repro": "cat -A ticket after mint"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE/ensure plate trailing NL omit",
-      "detail": "mode=soft last line no $; cfg glue risk.",
-      "repro": "cat -A cfg after ensure mode"
+      "area": "host|json",
+      "title": "JSONESC escapes solidus as \\/ \u2014 agents may over-escape paths",
+      "detail": "a/b \u2192 a\\/b. Valid JSON but surprises path round-trips if not unescaped.",
+      "repro": "JSONESC a/b"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|eq",
-      "title": "EQFILE no size-only or mtime-only fast path",
-      "detail": "Always full content compare; large artifacts expensive. No EQSTAT prefilter.",
-      "repro": "large files always full read"
+      "area": "host|uuid",
+      "title": "UUID vs UUID0 dual length 36/32 without path-safe guarantee for all FS",
+      "detail": "Compact is hex-only good; dashed needs care as leaf. No UUID-as-filename helper.",
+      "repro": "UUID vs UUID0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|arg",
-      "title": "Empty ARG1 blocked for HEX empty string",
-      "detail": "In-lang HEX \"\" works; agent empty ARG \u2192 needs text.",
-      "repro": "CUBALC_ARG1= hex \u2192 EXIT"
+      "area": "host|claim",
+      "title": "Mint reuses CLAIM orphan/wedge semantics",
+      "detail": "Crash after mint leaves orphan ticket; no reclaim.",
+      "repro": "mint; kill; path remains"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_AF_REQUIRE=abc.",
-      "repro": "REQUIRE=abc eq differ \u2192 rc 0"
+      "detail": "CUBALC_JT_REQUIRE=abc.",
+      "repro": "REQUIRE=abc decpath bad \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Use EQFILE for equality; HASHFILE only for cheap change detect",
-    "HEX for full portable stamps; document FNV limits",
-    "EXIST plate before KVFILEENSURE if create unwanted",
-    "Digit-check REQUIRE; treat eq N==0 as miss",
-    "Prefer BASE64/HEX for text; avoid binary via string READ"
+    "Document CRC for interop, HASH for cheap local, EQFILE for equality",
+    "Prefer %20 only; avoid + in path leaves",
+    "JSONUNESC before using jesc output as path text",
+    "UUID0 for ticket filenames under root",
+    "Digit-check REQUIRE; RM orphan tickets on GC"
   ],
   "language_gaps": [
-    "Crypto hash option (sha256) for artifacts",
-    "HEXFILE/BASE64FILE path codecs",
-    "EQFILE OK policy document / EQ_DIFFER sticky",
-    "existing-only KVFILEENSURE flag",
-    "WRITE trailing NL",
-    "Help encode family matrix HEX/BASE64/URLENC/HASH"
+    "Help stamp matrix CRC32/HASH/HEX/BASE64",
+    "URLDEC mode path-strict (no + as space)",
+    "FILE variants for encode/CRC",
+    "WRITE/CLAIM trailing NL",
+    "JSONESC optional solidus policy",
+    "CLAIM reclaim / ticket GC helpers"
   ],
   "issues_faced": [
-    "eq same/differ/hex/ensure keep-add paths clean",
-    "HASH vs HEX dual fingerprints is agent footgun",
-    "selftest 223/223; no language fix this iter"
+    "mint/urlenc/jesc/crc classic vector green",
+    "+ as space and multi-stamp confusion are sharp footguns",
+    "selftest 226/226; no language fix this iter"
   ],
-  "commit": "75937f3d07aadee9a39210655608efb048e3337e",
-  "ts": "2026-08-06T15:05:00Z"
+  "commit": "",
+  "ts": "2026-08-06T15:30:00Z"
 }

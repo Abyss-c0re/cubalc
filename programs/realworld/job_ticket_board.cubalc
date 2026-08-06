@@ -1,0 +1,708 @@
+# job_ticket_board.cubalc — UUID tickets + URLENC paths + JSONESC + CRC32
+#
+# Real use: agents mint unique job tickets with path-safe names, embed
+# quoted reasons in plate fragments, and stamp CRC-32 integrity:
+#   UUID / UUID0       — RFC4122 v4 ids (dashed / compact)
+#   URLENC / URLDEC    — percent-encode path leaves / queries
+#   JSONESC / JSONUNESC — JSON string-body escape for reasons
+#   CRC32 / CRC32FILE  — IEEE CRC-32 hex stamps (interop)
+# Distinct from work_claim (CLAIM only) and artifact_fingerprint (HEX/HASH):
+# this board is *ticket mint + path encode + JSON reason + CRC verify*.
+#
+# Plate under STATE:
+#   ROOT.txt       — ticket directory
+#   ACTIVE.txt     — last ticket path
+#   VAL.txt        — last id/enc/crc/body
+#   META.txt       — hit/n bag
+#   TICKET_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_JT_ACTION):
+#   list      — plate (default)
+#   root      — ROOT = ARG1 (ticket dir)
+#   mint      — UUID0; JOIN ROOT id → ACTIVE; CLAIM body
+#   mint_dash — UUID dashed form into VAL only
+#   encpath   — URLENC ARG1 → VAL
+#   decpath   — URLDEC ARG1 → VAL
+#   jesc      — JSONESC ARG1 → VAL
+#   junesc    — JSONUNESC ARG1 → VAL
+#   crc       — CRC32 ARG1 → VAL
+#   crcfile   — CRC32FILE ACTIVE → VAL
+#   body      — READ ACTIVE
+#   release   — RM ACTIVE
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_jt_$$
+#   mkdir -p $CUBALC_STATE/tickets
+#   CUBALC_ARG0=root CUBALC_ARG1=$CUBALC_STATE/tickets ...
+#   CUBALC_ARG0=mint CUBALC_ARG1='reason=disk full' ...
+#   CUBALC_ARG0=crcfile ...
+#
+# Env: CUBALC_JT_REQUIRE=1
+#
+# Edges:
+#   UUID uniqueness; URLENC + as space; truncated % soft fail
+#   JSONESC quote/newline; CRC classic vector; CRC vs HASH dual
+#   CLAIM busy; empty ARG; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "job_ticket_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ROOT.txt"
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TICKET_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_JT_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_JT_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_JT_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_JT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_JT_ROOT" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_ROOT = LAST
+ELSE
+  LET ENV_ROOT = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET root_meta = LAST
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR root_meta OR ""
+LET root = LAST
+CLEAR_ERR
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_ROOT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "root"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_ROOT
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET root_ch = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET uuid_n = 0
+LET crc_bytes = 0
+LET claim_hit = 0
+
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "root needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "jticket" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON root
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- root ---
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  NOTE "action root"
+  LET root = NAME
+  SYS MKDIR root
+  CLEAR_ERR
+  LET root_ch = 1
+  LET hit = 1
+  LET note_msg = "root ok"
+  PRINT_JSON root
+END
+
+# --- mint_dash UUID ---
+SYS EQS ACTION "mint_dash"
+IF LAST_N == 1 THEN
+  NOTE "action mint_dash"
+  SYS UUID
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint_dash fail"
+    FAIL "mint_dash fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mint_dash fail"
+    END
+  ELSE
+    LET val = LAST
+    LET uuid_n = UUID_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR uuid_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "mint_dash ok"
+  END
+  PRINT_JSON uuid_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- mint: UUID0 + JOIN root + CLAIM ---
+SYS EQS ACTION "mint"
+IF LAST_N == 1 THEN
+  NOTE "action mint"
+  SYS BLANK root
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "mint no root"
+    FAIL "mint no root"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mint no root"
+    END
+  ELSE
+    SYS UUID0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "mint uuid fail"
+      FAIL "mint uuid fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mint uuid fail"
+      END
+    ELSE
+      LET id = LAST
+      LET uuid_n = UUID_N
+      SYS JOIN root id
+      LET active = LAST
+      LET active_ch = 1
+      SYS BLANK NAME
+      IF LAST_N == 1 THEN
+        SYS CLAIM active
+      ELSE
+        SYS CLAIM active NAME
+      END
+      IF OK == 0 THEN
+        LET miss = 1
+        LET claim_hit = CLAIM_HIT
+        LET note_msg = "mint claim busy"
+        FAIL "mint claim busy"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "mint claim busy"
+        END
+      ELSE
+        LET claim_hit = CLAIM_HIT
+        LET val = id
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "id"
+        SYS PUSH meta id
+        LET meta = LAST
+        SYS PUSH meta "path"
+        LET meta = LAST
+        SYS PUSH meta active
+        LET meta = LAST
+        SYS PUSH meta "n"
+        LET meta = LAST
+        SYS STR uuid_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "mint ok"
+      END
+    END
+    PRINT_JSON uuid_n claim_hit
+    PRINT_JSON active
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- encpath URLENC ---
+SYS EQS ACTION "encpath"
+IF LAST_N == 1 THEN
+  NOTE "action encpath"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "encpath needs text"
+  END
+  SYS URLENC NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "encpath fail"
+    FAIL "encpath fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "encpath fail"
+    END
+  ELSE
+    LET val = LAST
+    LET uuid_n = URLENC_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR uuid_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "encpath ok"
+  END
+  PRINT_JSON uuid_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- decpath URLDEC ---
+SYS EQS ACTION "decpath"
+IF LAST_N == 1 THEN
+  NOTE "action decpath"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "decpath needs text"
+  END
+  SYS URLDEC NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "decpath fail"
+    FAIL "decpath fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "decpath fail"
+    END
+  ELSE
+    LET val = LAST
+    LET uuid_n = URLENC_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "decpath ok"
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- jesc ---
+SYS EQS ACTION "jesc"
+IF LAST_N == 1 THEN
+  NOTE "action jesc"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "jesc needs text"
+  END
+  SYS JSONESC NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "jesc fail"
+    FAIL "jesc fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "jesc fail"
+    END
+  ELSE
+    LET val = LAST
+    LET uuid_n = JSONESC_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "jesc ok"
+  END
+  PRINT_JSON uuid_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- junesc ---
+SYS EQS ACTION "junesc"
+IF LAST_N == 1 THEN
+  NOTE "action junesc"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "junesc needs text"
+  END
+  SYS JSONUNESC NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "junesc fail"
+    FAIL "junesc fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "junesc fail"
+    END
+  ELSE
+    LET val = LAST
+    LET uuid_n = JSONESC_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "junesc ok"
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- crc CRC32 ---
+SYS EQS ACTION "crc"
+IF LAST_N == 1 THEN
+  NOTE "action crc"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "crc needs text"
+  END
+  SYS CRC32 NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "crc fail"
+    FAIL "crc fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "crc fail"
+    END
+  ELSE
+    LET val = LAST
+    LET crc_bytes = CRC32_BYTES
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "bytes"
+    SYS STR crc_bytes
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "crc ok"
+  END
+  PRINT_JSON crc_bytes
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- crcfile ---
+SYS EQS ACTION "crcfile"
+IF LAST_N == 1 THEN
+  NOTE "action crcfile"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "crcfile no active"
+    FAIL "crcfile no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "crcfile no active"
+    END
+  ELSE
+    SYS CRC32FILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "crcfile miss"
+      FAIL "crcfile miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "crcfile miss"
+      END
+    ELSE
+      LET val = LAST
+      LET crc_bytes = CRC32_BYTES
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "crc"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR crc_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "crcfile ok"
+    END
+    PRINT_JSON crc_bytes
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- body READ ---
+SYS EQS ACTION "body"
+IF LAST_N == 1 THEN
+  NOTE "action body"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "body no active"
+    FAIL "body no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "body no active"
+    END
+  ELSE
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "body miss"
+      FAIL "body miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "body miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "body ok"
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- release RM ---
+SYS EQS ACTION "release"
+IF LAST_N == 1 THEN
+  NOTE "action release"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "release no active"
+    FAIL "release no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "release no active"
+    END
+  ELSE
+    SYS EXIST active
+    LET claim_hit = LAST_N
+    SYS RM active
+    CLEAR_ERR
+    IF claim_hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "release free"
+      FAIL "release free"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "release free"
+      END
+    ELSE
+      LET hit = 1
+      LET active = ""
+      LET active_ch = 1
+      LET note_msg = "release ok"
+    END
+    PRINT_JSON claim_hit
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET root = ""
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET root_ch = 1
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "root"
+LET k = k + LAST_N
+SYS EQS ACTION "mint"
+LET k = k + LAST_N
+SYS EQS ACTION "mint_dash"
+LET k = k + LAST_N
+SYS EQS ACTION "encpath"
+LET k = k + LAST_N
+SYS EQS ACTION "decpath"
+LET k = k + LAST_N
+SYS EQS ACTION "jesc"
+LET k = k + LAST_N
+SYS EQS ACTION "junesc"
+LET k = k + LAST_N
+SYS EQS ACTION "crc"
+LET k = k + LAST_N
+SYS EQS ACTION "crcfile"
+LET k = k + LAST_N
+SYS EQS ACTION "body"
+LET k = k + LAST_N
+SYS EQS ACTION "release"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF root_ch > 0 THEN
+  SYS WRITE root_meta root
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "root write failed"
+  END
+  CLEAR_ERR
+END
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.job_ticket_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "uuid_n"
+LET report = LAST
+SYS STR uuid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "root"
+LET report = LAST
+SYS PUSH report root
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "job_ticket_board" ACTION hit miss uuid_n note_msg elapsed
