@@ -1,154 +1,153 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 80,
-  "program": "programs/realworld/critical_section_board.cubalc",
-  "theme": "critical section LOCKFILE WAITGONE WRITEATOMIC mutex",
-  "version": "1.15.238-usability",
+  "iter": 81,
+  "program": "programs/realworld/plate_settle_board.cubalc",
+  "theme": "plate settle WAITSTABLE WAITCHANGED MKTEMP size+mtime",
+  "version": "1.15.241-usability",
   "pass": true,
   "tests": [
     {
-      "name": "lock_held",
-      "cmd": "lock creates path.lock; held yes; META pid",
+      "name": "mktemp_write_stable",
+      "cmd": "mktemp job; write; stable quiet=50 hit size+mtime",
       "ok": true,
-      "note": "acquire"
+      "note": "settle"
     },
     {
-      "name": "unlock_free",
-      "cmd": "unlock removes .lock; unlock free soft N=0",
+      "name": "read_stamp",
+      "cmd": "read after stable; HASHFILE stamp",
       "ok": true,
-      "note": "release"
+      "note": "post-settle"
     },
     {
-      "name": "waitfree",
-      "cmd": "waitfree hit when free; soft timeout when held",
+      "name": "snapshot_since_mod",
+      "cmd": "snapshot; rewrite; since FROM=1 modify",
       "ok": true,
-      "note": "WAITGONE"
+      "note": "WAITCHANGED SINCE"
     },
     {
-      "name": "critical",
-      "cmd": "lock+WRITEATOMIC+unlock status=live plate",
+      "name": "since_gone",
+      "cmd": "snapshot; rm; since FROM=2 gone",
       "ok": true,
-      "note": "one-shot CS"
+      "note": "delete detect"
     },
     {
-      "name": "concurrent_busy",
-      "cmd": "background holder; lock soft timeout; REQUIRE lock exit 2",
+      "name": "since_missing",
+      "cmd": "appear hit FROM=0 after delayed create",
       "ok": true,
-      "note": "mutex contention"
+      "note": "SINCE MISSING"
     },
     {
-      "name": "orphan_blocks",
-      "cmd": "lock exit without unlock leaves .lock; next lock times out",
+      "name": "stable_miss",
+      "cmd": "missing path soft; REQUIRE exit 2",
       "ok": true,
-      "note": "crash wedge"
+      "note": "timeout"
     },
     {
-      "name": "direct_lock_path",
-      "cmd": "pick path ending .lock used as-is",
+      "name": "mktemp_sanitize",
+      "cmd": "../evil \u2192 /tmp/evil.* no traversal",
       "ok": true,
-      "note": "naming"
+      "note": "prefix"
     },
     {
-      "name": "require_held",
-      "cmd": "REQUIRE held free \u2192 exit 2",
+      "name": "mktemp_unique",
+      "cmd": "two mktemp a \u2192 different paths",
       "ok": true,
-      "note": "hard fail"
+      "note": "collision-free"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "213/213 pass"
+      "note": "216/216 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|lock",
-      "title": "Orphan path.lock after process crash wedges all agents \u2014 no dead-owner reclaim",
-      "detail": "LOCKFILE creates .lock then process exit without UNLOCK leaves file. Next LOCKFILE waits/timeouts forever until manual RM. No PID liveness check or break-stale.",
-      "repro": "LOCKFILE p; kill -9; LOCKFILE p 100 \u2192 timeout"
+      "area": "host|wait",
+      "title": "WAITSTABLE/WAITCHANGED are size+mtime only \u2014 same-size content rewrite may not fire",
+      "detail": "Peer can rewrite plate with identical byte length and same-second mtime; settle/changed miss content churn. No hash/content quiet mode. Complements WAITMATCH substring traps.",
+      "repro": "WRITE same-length payload; WAITCHANGED may timeout"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|lock",
-      "title": "lease_lock TOUCH vs LOCKFILE dual exclusion models",
-      "detail": "TOUCH-based lease_lock is TOCTOU; LOCKFILE is exclusive. Agents mixing both on same path get false safety.",
-      "repro": "TOUCH agent.lock vs LOCKFILE plate.txt"
+      "area": "host|tmp",
+      "title": "MKTEMP lands under system TMP not CUBALC_STATE",
+      "detail": "Agent isolation under STATE is broken; temps scatter in /tmp. Concurrent hosts share namespace. No MKTEMP DIR=STATE option.",
+      "repro": "MKTEMP job \u2192 /tmp/job.XXXX"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|lock",
-      "title": "held is EXIST(.lock) not flock ownership probe",
-      "detail": "Orphan .lock reports held=yes even though no live owner. Agents skip work incorrectly or spin waitfree forever.",
-      "repro": "crash after LOCKFILE; held \u2192 1"
+      "area": "host|wait",
+      "title": "WAITSTABLE vs WAITFILE vs WAITMATCH vs WAITCHANGED name swarm",
+      "detail": "Four wait families with different predicates (exist/content/quiet/change). Agents pick wrong waiter under stress.",
+      "repro": "WAITFILE empty TOUCH vs WAITSTABLE missing"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITEATOMIC under lock still omits trailing NL",
-      "detail": "host=peer1 without $ after critical write.",
-      "repro": "cat -A plate after critical"
+      "title": "WRITEATOMIC trailing NL omit after settle write",
+      "detail": "host=peer and line1 without $; cat -A glues.",
+      "repro": "cat -A after write"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|path",
-      "title": "No path join for .lock suffix \u2014 agents use SUBSTENV ${active}.lock glue",
-      "detail": "SYS JOIN treats .lock as path segment. Language lacks STRCAT/suffix helper for lock path derivation.",
-      "repro": "JOIN active .lock \u2192 active/.lock wrong"
+      "area": "host|snap",
+      "title": "SINCE needs durable size/mtime plates + NUM reparse across ticks",
+      "detail": "No atomic SNAPSHOT primitive returning both; agent WRITE two plates and NUM shuttle fragile under WRITE NL glue.",
+      "repro": "snapshot then since multi-run"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|wait",
-      "title": "WAITGONE busy-poll; dual of WAITFILE naming easy to invert",
-      "detail": "waitfree vs wait-present confusion under stress.",
-      "repro": "WAITGONE vs WAITFILE"
+      "title": "WAITCHANGED without SINCE only sees future changes after call starts",
+      "detail": "Cannot detect change that already happened; need SINCE snapshot first. Easy agent footgun.",
+      "repro": "rewrite then WAITCHANGED short \u2192 miss"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_CS_REQUIRE=abc leaves hard gates off.",
-      "repro": "REQUIRE=abc lock busy \u2192 rc 0"
+      "detail": "CUBALC_PS_REQUIRE=abc.",
+      "repro": "REQUIRE=abc stable miss \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|lock",
-      "title": "UNLOCK soft free is OK=1 N=0 \u2014 same soft shape as success",
-      "detail": "Agents must check UNLOCKFILE_N; easy to treat free unlock as success.",
-      "repro": "UNLOCK free \u2192 OK=1 N=0"
+      "area": "host|tmp",
+      "title": "MKTEMP no auto-cleanup / no STATE-scoped GC",
+      "detail": "Agents leak /tmp files; no MKTEMP CLEAN or linked lifecycle.",
+      "repro": "mktemp loop fills /tmp"
     }
   ],
   "workarounds": [
-    "Always UNLOCK in finally path; RM orphan .lock on deploy recovery",
-    "Prefer LOCKFILE over TOUCH lease for true exclusion",
-    "Gate on LOCKFILE_HIT and UNLOCKFILE_N not only OK",
-    "Digit-check REQUIRE env",
-    "Derive lock path via SUBSTENV ${path}.lock not JOIN"
+    "Prefer WAITMATCH for known content; WAITSTABLE only for torn-write settle",
+    "Pair snapshot+since for already-applied changes",
+    "HASHFILE after stable for content identity",
+    "Digit-check REQUIRE; clean MKTEMP paths on exit",
+    "Copy mktemp into STATE if isolation required"
   ],
   "language_gaps": [
-    "Dead-owner / stale lock reclaim (PID liveness)",
-    "LOCKFILE break or force-unlock admin op",
-    "STRCAT / path suffix helper for .lock",
-    "held = live owner not mere EXIST",
+    "WAITSTABLE content/hash quiet mode",
+    "MKTEMP under CUBALC_STATE or DIR arg",
+    "SNAPSHOT size+mtime one-shot plate op",
+    "MKTEMP cleanup / scoped temp dirs",
     "WRITEATOMIC trailing NL",
-    "Document flock vs create-exclusive semantics in help"
+    "Help matrix of WAIT* family predicates"
   ],
   "issues_faced": [
-    "lock/unlock/held/waitfree/critical paths clean",
-    "orphan .lock after exit-without-unlock blocks next acquire",
-    "concurrent live holder correctly soft-timeouts",
-    "path .lock suffix via SUBSTENV awkward",
-    "selftest 213/213; no language fix this iter"
+    "mktemp/write/stable/read/since modify/gone/appear green",
+    "MKTEMP outside STATE is sharp isolation gap",
+    "size+mtime settle cannot replace content wait",
+    "selftest 216/216; no language fix this iter"
   ],
-  "commit": "66d8fb061b2907816885c1404c77bc81c4ebf478",
-  "ts": "2026-08-06T13:25:00Z"
+  "commit": "",
+  "ts": "2026-08-06T13:50:00Z"
 }

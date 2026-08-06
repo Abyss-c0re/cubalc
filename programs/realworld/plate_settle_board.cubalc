@@ -1,0 +1,890 @@
+# plate_settle_board.cubalc — wait plate quiet / change + mktemp work paths
+#
+# Real use: multi-agent plates need settle-before-read and change detection
+# without known content needles (unlike WAITMATCH status=ready):
+#   WAITSTABLE / WAITQUIET  — size+mtime quiet window then hit
+#   WAITCHANGED / POLLCHANGE — appear / modify / gone vs baseline
+#   MKTEMP / TEMPFILE       — collision-free agent work paths
+#   WRITEATOMIC + HASHFILE  — safe write + stamp after settle
+# Distinct from status_handoff (WAITMATCH content) and critical_section
+# (LOCKFILE): this board is *mtime/size settle + change + temp paths*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — watch/write path
+#   SNAP_SIZE.txt  — baseline SIZE for SINCE
+#   SNAP_MTIME.txt — baseline MTIME for SINCE
+#   VAL.txt        — last body / path / hash
+#   META.txt       — hit/ms/from/size bag
+#   SETTLE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PS_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   mktemp    — MKTEMP [prefix ARG1] → ACTIVE
+#   write     — WRITEATOMIC ACTIVE body(ARG1)
+#   snapshot  — SIZE+MTIME ACTIVE → SNAP_*
+#   stable    — WAITSTABLE ACTIVE [quiet ARG1] [timeout env MS]
+#   changed   — WAITCHANGED ACTIVE [ms] (live future change)
+#   since     — WAITCHANGED ACTIVE SINCE snap_size snap_mtime [ms]
+#   since_missing — WAITCHANGED ACTIVE SINCE MISSING [ms]
+#   read      — WAITSTABLE then READ ACTIVE → VAL
+#   stamp     — HASHFILE ACTIVE
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ps_$$
+#   CUBALC_ARG0=mktemp CUBALC_ARG1=job ...
+#   CUBALC_ARG0=write CUBALC_ARG1='status=v1' ...
+#   CUBALC_ARG0=stable CUBALC_ARG1=50 ...
+#   CUBALC_ARG0=snapshot ...
+#   # peer rewrites plate
+#   CUBALC_ARG0=since CUBALC_ARG1=2000 ...
+#
+# Env: CUBALC_PS_PATH=… CUBALC_PS_MS=2000 CUBALC_PS_QUIET=50 CUBALC_PS_REQUIRE=1
+#
+# Edges:
+#   WAITSTABLE missing soft; quiet vs timeout arity
+#   WAITCHANGED no-change timeout; SINCE FROM modify/appear/gone
+#   MKTEMP unique; ../evil sanitized; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_settle_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT SSIZE = "SNAP_SIZE.txt"
+DEFAULT SMTIME = "SNAP_MTIME.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SETTLE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT WAIT_MS = 2000
+DEFAULT QUIET_MS = 50
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PS_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_PS_MS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET WAIT_MS = LAST_N
+  END
+END
+SYS ENV "CUBALC_PS_QUIET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET QUIET_MS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir SSIZE
+LET ssize_path = LAST
+SYS JOIN state_dir SMTIME
+LET smtime_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR ssize_path OR ""
+LET snap_size = LAST
+CLEAR_ERR
+SYS READ OR smtime_path OR ""
+LET snap_mtime = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET snap_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET wait_hit = 0
+LET wait_ms = 0
+LET wait_from = -1
+LET wait_size = 0
+LET wait_mtime = 0
+LET quiet_n = 0
+LET se_bytes = 0
+LET s_n = 0
+LET m_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "write needs body"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "psettle" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON snap_size
+  PRINT_JSON snap_mtime
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- mktemp ---
+SYS EQS ACTION "mktemp"
+IF LAST_N == 1 THEN
+  NOTE "action mktemp"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS MKTEMP
+  ELSE
+    SYS MKTEMP NAME
+  END
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mktemp fail"
+    FAIL "mktemp fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mktemp fail"
+    END
+  ELSE
+    LET active = LAST
+    LET active_ch = 1
+    LET val = active
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "path"
+    SYS PUSH meta active
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "mktemp ok"
+  END
+  PRINT_JSON active
+  CLEAR_ERR
+END
+
+# --- write ---
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  NOTE "action write"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "write no active"
+    FAIL "write no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "write no active"
+    END
+  ELSE
+    SYS WRITEATOMIC active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "write fail"
+      FAIL "write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "write fail"
+      END
+    ELSE
+      LET val = NAME
+      LET se_bytes = WRITEATOMIC_N
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "bytes"
+      SYS STR se_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "write ok"
+    END
+    PRINT_JSON se_bytes
+    CLEAR_ERR
+  END
+END
+
+# --- snapshot SIZE MTIME ---
+SYS EQS ACTION "snapshot"
+IF LAST_N == 1 THEN
+  NOTE "action snapshot"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "snapshot no active"
+    FAIL "snapshot no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "snapshot no active"
+    END
+  ELSE
+    SYS SIZE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "snapshot size miss"
+      FAIL "snapshot size miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "snapshot size miss"
+      END
+    ELSE
+      LET s_n = LAST_N
+      SYS MTIME active
+      LET m_n = LAST_N
+      SYS STR s_n
+      LET snap_size = LAST
+      SYS STR m_n
+      LET snap_mtime = LAST
+      LET snap_ch = 1
+      LET hit = 1
+      LET val = snap_size
+      SYS PUSH val snap_mtime
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "size"
+      SYS PUSH meta snap_size
+      LET meta = LAST
+      SYS PUSH meta "mtime"
+      LET meta = LAST
+      SYS PUSH meta snap_mtime
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "snapshot ok"
+    END
+    PRINT_JSON s_n m_n
+    CLEAR_ERR
+  END
+END
+
+# --- stable WAITSTABLE ---
+SYS EQS ACTION "stable"
+IF LAST_N == 1 THEN
+  NOTE "action stable"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stable no active"
+    FAIL "stable no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stable no active"
+    END
+  ELSE
+    LET quiet_n = QUIET_MS
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET quiet_n = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS WAITSTABLE active (quiet_n) (WAIT_MS)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET wait_hit = WAITSTABLE_HIT
+      LET wait_ms = WAITSTABLE_MS
+      LET val = active
+      LET val_ch = 1
+      LET meta = "hit"
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR wait_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stable timeout"
+      FAIL "stable timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stable timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET wait_hit = WAITSTABLE_HIT
+      LET wait_ms = WAITSTABLE_MS
+      LET wait_size = WAITSTABLE_SIZE
+      LET wait_mtime = WAITSTABLE_MTIME
+      LET quiet_n = WAITSTABLE_QUIET
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hit"
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "size"
+      LET meta = LAST
+      SYS STR wait_size
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "mtime"
+      LET meta = LAST
+      SYS STR wait_mtime
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "quiet"
+      LET meta = LAST
+      SYS STR quiet_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stable ok"
+    END
+    PRINT_JSON wait_hit wait_ms wait_size quiet_n
+    CLEAR_ERR
+  END
+END
+
+# --- changed live future (no SINCE) ---
+SYS EQS ACTION "changed"
+IF LAST_N == 1 THEN
+  NOTE "action changed"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "changed no active"
+    FAIL "changed no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "changed no active"
+    END
+  ELSE
+    LET wait_ms = WAIT_MS
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET wait_ms = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS WAITCHANGED active (wait_ms)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET wait_hit = WAITCHANGED_HIT
+      LET wait_ms = WAITCHANGED_MS
+      LET val = active
+      LET val_ch = 1
+      LET meta = "hit"
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR wait_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "changed timeout"
+      FAIL "changed timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "changed timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET wait_hit = WAITCHANGED_HIT
+      LET wait_ms = WAITCHANGED_MS
+      LET wait_from = WAITCHANGED_FROM
+      LET wait_size = WAITCHANGED_SIZE
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "from"
+      SYS STR wait_from
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "size"
+      LET meta = LAST
+      SYS STR wait_size
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "changed ok"
+    END
+    PRINT_JSON wait_hit wait_ms wait_from
+    CLEAR_ERR
+  END
+END
+
+# --- since: WAITCHANGED SINCE snap ---
+SYS EQS ACTION "since"
+IF LAST_N == 1 THEN
+  NOTE "action since"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "since no active"
+    FAIL "since no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "since no active"
+    END
+  ELSE
+    SYS BLANK snap_size
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "since no snap"
+      FAIL "since no snap"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "since no snap"
+      END
+    ELSE
+      SYS NUM snap_size
+      LET s_n = LAST_N
+      SYS NUM snap_mtime
+      LET m_n = LAST_N
+      LET wait_ms = WAIT_MS
+      SYS BLANK NAME
+      IF LAST_N == 0 THEN
+        SYS NUM NAME
+        IF OK == 1 THEN
+          LET wait_ms = LAST_N
+        END
+        CLEAR_ERR
+      END
+      SYS WAITCHANGED active SINCE (s_n) (m_n) (wait_ms)
+      IF OK == 0 THEN
+        LET miss = 1
+        LET wait_hit = WAITCHANGED_HIT
+        LET wait_ms = WAITCHANGED_MS
+        LET val = active
+        LET val_ch = 1
+        LET meta = "hit"
+        SYS STR wait_hit
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "ms"
+        LET meta = LAST
+        SYS STR wait_ms
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "since timeout"
+        FAIL "since timeout"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "since timeout"
+        END
+      ELSE
+        LET val = LAST
+        LET wait_hit = WAITCHANGED_HIT
+        LET wait_ms = WAITCHANGED_MS
+        LET wait_from = WAITCHANGED_FROM
+        LET wait_size = WAITCHANGED_SIZE
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "from"
+        SYS STR wait_from
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "size"
+        LET meta = LAST
+        SYS STR wait_size
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        IF wait_from == 0 THEN
+          LET note_msg = "since appear"
+        ELSE
+          IF wait_from == 2 THEN
+            LET note_msg = "since gone"
+          ELSE
+            LET note_msg = "since modify"
+          END
+        END
+      END
+      PRINT_JSON wait_hit wait_from wait_size
+      CLEAR_ERR
+    END
+  END
+END
+
+# --- since_missing ---
+SYS EQS ACTION "since_missing"
+IF LAST_N == 1 THEN
+  NOTE "action since_missing"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "since_missing no active"
+    FAIL "since_missing no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "since_missing no active"
+    END
+  ELSE
+    LET wait_ms = WAIT_MS
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET wait_ms = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS WAITCHANGED active SINCE MISSING (wait_ms)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET wait_hit = WAITCHANGED_HIT
+      LET wait_ms = WAITCHANGED_MS
+      LET note_msg = "since_missing timeout"
+      FAIL "since_missing timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "since_missing timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET wait_hit = WAITCHANGED_HIT
+      LET wait_from = WAITCHANGED_FROM
+      LET wait_size = WAITCHANGED_SIZE
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "from"
+      SYS STR wait_from
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "since_missing ok"
+    END
+    PRINT_JSON wait_hit wait_from wait_size
+    CLEAR_ERR
+  END
+END
+
+# --- read: stable then READ ---
+SYS EQS ACTION "read"
+IF LAST_N == 1 THEN
+  NOTE "action read"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "read no active"
+    FAIL "read no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "read no active"
+    END
+  ELSE
+    SYS WAITSTABLE active (QUIET_MS) (WAIT_MS)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "read not stable"
+      FAIL "read not stable"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "read not stable"
+      END
+    ELSE
+      SYS READ OR active OR ""
+      IF OK == 0 THEN
+        LET miss = 1
+        LET val = ""
+        LET val_ch = 1
+        LET note_msg = "read miss"
+        FAIL "read miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "read miss"
+        END
+      ELSE
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "read ok"
+      END
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- stamp HASHFILE ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stamp no active"
+    FAIL "stamp no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stamp no active"
+    END
+  ELSE
+    SYS HASHFILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "stamp miss"
+      FAIL "stamp miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stamp miss"
+      END
+    ELSE
+      LET val = LAST
+      LET se_bytes = HASH_BYTES
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hash"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR se_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stamp ok"
+    END
+    PRINT_JSON val se_bytes
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET snap_size = ""
+  LET snap_mtime = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET snap_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "mktemp"
+LET k = k + LAST_N
+SYS EQS ACTION "write"
+LET k = k + LAST_N
+SYS EQS ACTION "snapshot"
+LET k = k + LAST_N
+SYS EQS ACTION "stable"
+LET k = k + LAST_N
+SYS EQS ACTION "changed"
+LET k = k + LAST_N
+SYS EQS ACTION "since"
+LET k = k + LAST_N
+SYS EQS ACTION "since_missing"
+LET k = k + LAST_N
+SYS EQS ACTION "read"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF snap_ch > 0 THEN
+  SYS WRITE ssize_path snap_size
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "snap size write failed"
+  END
+  CLEAR_ERR
+  SYS WRITE smtime_path snap_mtime
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "snap mtime write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.plate_settle_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_hit"
+LET report = LAST
+SYS STR wait_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_from"
+LET report = LAST
+SYS STR wait_from
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "plate_settle_board" ACTION hit miss wait_hit wait_from note_msg elapsed
