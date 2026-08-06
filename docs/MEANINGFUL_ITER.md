@@ -292,6 +292,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 262. ~~**`SYS ISLINK` / `ISLNK` / `ISSYMLINK`**~~ **done** (symlink probe · IF before READLINK without soft-fail glue).
 263. ~~**`SYS MODE` / `PERM` · `CHMOD` / `SETMODE`**~~ **done** (octal permission probe/set · plate lock-down without shell).
 264. ~~**`SYS PARSESIZE` / `FROMHUMAN` / `TOBYTES`**~~ **done** (parse 1K/2M/1G → bytes · reverse of HUMANSIZE for configs).
+265. ~~**`SYS CHMOD` string-var octal**~~ **done** (CHMOD path m with m="0600" parses octal · not strlen coerce).
 
 ## Tick protocol
 
