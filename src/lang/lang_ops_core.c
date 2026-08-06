@@ -3395,10 +3395,29 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         fail(vm, "SYS CHMOD path mode");
         return -1;
       }
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS ||
-          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
-           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+      /* mode: number expr, or octal/decimal string (literal or string var).
+       * Usability: SYS CHMOD fp m with m="0600" must not use parse_expr
+       * (string vars coerce to strlen → mode 4 for "0600"). */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
         mode = parse_expr(vm, L);
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                 !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+        Var *mv = var_get(vm, L->cur.text, 0);
+        if (mv && mv->is_str && mv->sval[0]) {
+          char *end = NULL;
+          unsigned long v = strtoul(mv->sval, &end, 8);
+          if (end && end != mv->sval && *end == 0)
+            mode = (long)v;
+          else {
+            end = NULL;
+            v = strtoul(mv->sval, &end, 10);
+            if (end && end != mv->sval && *end == 0)
+              mode = (long)v;
+          }
+          lex_next(L);
+        } else {
+          mode = parse_expr(vm, L);
+        }
       } else if (resolve_str_arg(vm, L, mstr, sizeof mstr) == 0 && mstr[0]) {
         /* octal string "0644" or "644" */
         char *end = NULL;

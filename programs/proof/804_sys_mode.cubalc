@@ -75,6 +75,21 @@ SYS MODE fp
 SYS EQS LAST "0644"
 ASSERT LAST_N == 1
 
+# string var mode (not parse_expr strlen) — "0600" must be octal 384
+LET priv = "0600"
+SYS CHMOD fp priv
+ASSERT OK == 1
+ASSERT CHMOD_N == 384
+SYS MODE fp
+SYS EQS LAST "0600"
+ASSERT LAST_N == 1
+DEFAULT DEF_MODE = "0600"
+SYS CHMOD fp DEF_MODE
+ASSERT CHMOD_N == 384
+SYS MODE fp
+SYS EQS LAST "0600"
+ASSERT LAST_N == 1
+
 SYS RM fp
 SYS RMDIR dir
 

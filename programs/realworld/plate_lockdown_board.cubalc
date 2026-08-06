@@ -1,0 +1,798 @@
+# plate_lockdown_board.cubalc — secret plate size budget + CHMOD lockdown
+#
+# Real use: ops agents write sensitive status/secret plates under a human-size
+# budget, then lock them down with octal perms (no shell chmod/numfmt):
+#   PARSESIZE / FROMHUMAN  — "2K"/"1M" config → byte ceiling
+#   HUMANSIZE / BYTESFMT   — label actual size for inventory
+#   MODE / PERM            — probe octal mode string
+#   CHMOD / SETMODE        — lock 0600 / open 0644
+#   SIZE / WRITEATOMIC     — body gate + crash-safer write
+# Distinct from payload_size_gate (bag SIZE only) and feature_flag (TOGGLELINE):
+# this board is *budget parse + put gate + permission lockdown*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target plate path
+#   BUDGET.txt     — max bytes (decimal)
+#   VAL.txt        — last body / mode / label
+#   META.txt       — hit/size/mode bag
+#   LOCK_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PL_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   budget    — PARSESIZE ARG1 → BUDGET bytes
+#   put       — WRITEATOMIC ACTIVE ARG1 if under budget
+#   check     — SIZE ACTIVE vs BUDGET
+#   lock      — CHMOD ACTIVE 0600 (or ARG1 octal)
+#   unlock    — CHMOD ACTIVE 0644
+#   mode      — MODE ACTIVE → VAL
+#   label     — SIZE + HUMANSIZE → VAL
+#   body      — READ ACTIVE
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pl_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/secret.env ...
+#   CUBALC_ARG0=budget CUBALC_ARG1=2K ...
+#   CUBALC_ARG0=put CUBALC_ARG1='token=s3cr3t' ...
+#   CUBALC_ARG0=lock ...
+#   CUBALC_ARG0=mode ...
+#
+# Env: CUBALC_PL_REQUIRE=1  CUBALC_PL_PATH=…  CUBALC_PL_BUDGET=…
+#
+# Edges:
+#   PARSESIZE bad unit soft; oversize put soft; MODE miss soft
+#   CHMOD decimal vs octal string; HUMANSIZE floor; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_lockdown_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT BFILE = "BUDGET.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "LOCK_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_MODE = "0600"
+DEFAULT OPEN_MODE = "0644"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PL_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PL_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PL_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PL_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_PL_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_BUDGET = LAST
+ELSE
+  LET ENV_BUDGET = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir BFILE
+LET budget_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR budget_meta OR ""
+LET budget_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+# restore budget as number (empty → 0 = unlimited for check until set)
+LET budget_n = 0
+SYS BLANK budget_s
+IF LAST_N == 0 THEN
+  SYS NUM budget_s
+  IF OK == 1 THEN
+    LET budget_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_BUDGET
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "budget"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_BUDGET
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET budget_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET size_n = 0
+LET mode_n = 0
+LET parse_n = 0
+LET over_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "plock" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON budget_s
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ACTIVE ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- budget PARSESIZE ---
+SYS EQS ACTION "budget"
+IF LAST_N == 1 THEN
+  NOTE "action budget"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "budget needs size label"
+  END
+  SYS PARSESIZE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET parse_n = PARSESIZE_N
+    LET note_msg = "budget parse fail"
+    FAIL "budget parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "budget parse fail"
+    END
+  ELSE
+    LET budget_n = PARSESIZE_N
+    LET parse_n = PARSESIZE_N
+    SYS STR budget_n
+    LET budget_s = LAST
+    LET budget_ch = 1
+    LET val = NAME
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "budget"
+    SYS PUSH meta budget_s
+    LET meta = LAST
+    SYS PUSH meta "label"
+    LET meta = LAST
+    SYS PUSH meta NAME
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "budget ok"
+  END
+  PRINT_JSON parse_n
+  PRINT_JSON budget_s
+  CLEAR_ERR
+END
+
+# --- put WRITEATOMIC if under budget ---
+SYS EQS ACTION "put"
+IF LAST_N == 1 THEN
+  NOTE "action put"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "put no active"
+    FAIL "put no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "put no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "put needs body"
+    END
+    # measure body length via LEN (no temp write first)
+    SYS LEN NAME
+    LET size_n = LAST_N
+    LET over_n = 0
+    IF budget_n > 0 THEN
+      IF size_n > budget_n THEN
+        LET over_n = 1
+      END
+    END
+    IF over_n == 1 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "put oversize"
+      FAIL "put oversize"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "put oversize"
+      END
+    ELSE
+      SYS WRITEATOMIC active NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "put write fail"
+        FAIL "put write fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "put write fail"
+        END
+      ELSE
+        SYS SIZE active
+        LET size_n = LAST_N
+        LET val = NAME
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "size"
+        SYS STR size_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "budget"
+        LET meta = LAST
+        SYS STR budget_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "put ok"
+      END
+    END
+    PRINT_JSON size_n over_n budget_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- check SIZE vs BUDGET ---
+SYS EQS ACTION "check"
+IF LAST_N == 1 THEN
+  NOTE "action check"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "check no active"
+    FAIL "check no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "check no active"
+    END
+  ELSE
+    SYS SIZE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "check size miss"
+      FAIL "check size miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "check size miss"
+      END
+    ELSE
+      LET size_n = LAST_N
+      LET over_n = 0
+      IF budget_n > 0 THEN
+        IF size_n > budget_n THEN
+          LET over_n = 1
+        END
+      END
+      IF over_n == 1 THEN
+        LET miss = 1
+        LET note_msg = "check over"
+        FAIL "check over"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "check over"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "check ok"
+      END
+      LET meta = "size"
+      SYS STR size_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "budget"
+      LET meta = LAST
+      SYS STR budget_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "over"
+      LET meta = LAST
+      SYS STR over_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      SYS STR size_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+    PRINT_JSON size_n over_n budget_n
+    CLEAR_ERR
+  END
+END
+
+# --- lock CHMOD ---
+SYS EQS ACTION "lock"
+IF LAST_N == 1 THEN
+  NOTE "action lock"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "lock no active"
+    FAIL "lock no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lock no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = DEF_MODE
+    END
+    SYS CHMOD active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET mode_n = CHMOD_N
+      LET note_msg = "lock fail"
+      FAIL "lock fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "lock fail"
+      END
+    ELSE
+      LET mode_n = CHMOD_N
+      SYS MODE active
+      IF OK == 1 THEN
+        LET val = LAST
+      ELSE
+        LET val = NAME
+      END
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "mode"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR mode_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "lock ok"
+    END
+    PRINT_JSON mode_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- unlock CHMOD 0644 ---
+SYS EQS ACTION "unlock"
+IF LAST_N == 1 THEN
+  NOTE "action unlock"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "unlock no active"
+    FAIL "unlock no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "unlock no active"
+    END
+  ELSE
+    SYS CHMOD active OPEN_MODE
+    IF OK == 0 THEN
+      LET miss = 1
+      LET mode_n = CHMOD_N
+      LET note_msg = "unlock fail"
+      FAIL "unlock fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "unlock fail"
+      END
+    ELSE
+      LET mode_n = CHMOD_N
+      SYS MODE active
+      IF OK == 1 THEN
+        LET val = LAST
+      ELSE
+        LET val = OPEN_MODE
+      END
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "mode"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "unlock ok"
+    END
+    PRINT_JSON mode_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- mode MODE probe ---
+SYS EQS ACTION "mode"
+IF LAST_N == 1 THEN
+  NOTE "action mode"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET mpath = NAME
+  ELSE
+    SYS BLANK active
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "mode no active"
+      FAIL "mode no active"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mode no active"
+      END
+      LET mpath = ""
+    ELSE
+      LET mpath = active
+    END
+  END
+  SYS BLANK mpath
+  IF LAST_N == 0 THEN
+    SYS MODE mpath
+    IF OK == 0 THEN
+      LET miss = 1
+      LET mode_n = MODE_N
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "mode miss"
+      FAIL "mode miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mode miss"
+      END
+    ELSE
+      LET val = LAST
+      LET mode_n = MODE_N
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "mode"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR mode_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "mode ok"
+    END
+    PRINT_JSON mode_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- label SIZE + HUMANSIZE ---
+SYS EQS ACTION "label"
+IF LAST_N == 1 THEN
+  NOTE "action label"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "label no active"
+    FAIL "label no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "label no active"
+    END
+  ELSE
+    SYS SIZE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "label size miss"
+      FAIL "label size miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "label size miss"
+      END
+    ELSE
+      LET size_n = LAST_N
+      SYS HUMANSIZE size_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "label hsize fail"
+        FAIL "label hsize fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "label hsize fail"
+        END
+      ELSE
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "bytes"
+        SYS STR size_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "label"
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "label ok"
+      END
+    END
+    PRINT_JSON size_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- body READ ---
+SYS EQS ACTION "body"
+IF LAST_N == 1 THEN
+  NOTE "action body"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "body no active"
+    FAIL "body no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "body no active"
+    END
+  ELSE
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "body miss"
+      FAIL "body miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "body miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "body ok"
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET budget_s = ""
+  LET budget_n = 0
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET budget_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "budget"
+LET k = k + LAST_N
+SYS EQS ACTION "put"
+LET k = k + LAST_N
+SYS EQS ACTION "check"
+LET k = k + LAST_N
+SYS EQS ACTION "lock"
+LET k = k + LAST_N
+SYS EQS ACTION "unlock"
+LET k = k + LAST_N
+SYS EQS ACTION "mode"
+LET k = k + LAST_N
+SYS EQS ACTION "label"
+LET k = k + LAST_N
+SYS EQS ACTION "body"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF budget_ch > 0 THEN
+  SYS WRITE budget_meta budget_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "budget write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.plate_lockdown_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "size"
+LET report = LAST
+SYS STR size_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "budget"
+LET report = LAST
+SYS STR budget_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "over"
+LET report = LAST
+SYS STR over_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mode_n"
+LET report = LAST
+SYS STR mode_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "plate_lockdown_board" ACTION hit miss size_n note_msg elapsed
