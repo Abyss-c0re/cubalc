@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 226,
-  "version": "1.15.251-usability",
-  "item": "SYS CRC32 / CRC · CRC32FILE / FILECRC32 IEEE integrity stamps",
-  "item_id": 259,
-  "title": "SYS CRC32|CRC [str] · CRC32FILE|FILECRC32 path — interoperable plate checksums without shell",
-  "commit": "88d53ef2b4ce88df5d761f1b6584dbca0deda1f1",
-  "summary": "IEEE CRC-32 string/file stamps for agent plate integrity. selftest 226.",
+  "iter": 227,
+  "version": "1.15.252-usability",
+  "item": "SYS SYMLINK / LN · READLINK / LINKTARGET plate path aliases",
+  "item_id": 260,
+  "title": "SYS SYMLINK|LN target linkpath · READLINK|LINKTARGET path — plate aliases without shell",
+  "commit": "58fbd5218fcff756729f8af82b4fc4f218117245",
+  "summary": "Symlink create/peel for agent plate layouts without shell ln -s. selftest 227.",
   "proofs": [
-    "800_sys_crc32",
-    "selftest n_pass=226"
+    "801_sys_symlink",
+    "selftest n_pass=227"
   ],
-  "when": "2026-08-06T15:26:00Z",
+  "when": "2026-08-06T15:36:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "88d53ef2b4ce88df5d761f1b6584dbca0deda1f1",
-  "note": "complements FNV HASH with interoperable CRC-32 (cbf43926 vector)"
+  "sha": "58fbd5218fcff756729f8af82b4fc4f218117245",
+  "note": "hostops symlink+readlink; soft fail exists/not-link"
 }
