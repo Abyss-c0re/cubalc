@@ -1,146 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 91,
-  "program": "programs/realworld/host_resource_gate_board.cubalc",
-  "theme": "host resource gate UPTIME MEM DF warmup ram disk admit",
-  "version": "1.15.268-usability",
+  "iter": 92,
+  "program": "programs/realworld/dotenv_sync_board.cubalc",
+  "theme": "dotenv FSYNC durable env plate load gate CHMOD",
+  "version": "1.15.271-usability",
   "pass": true,
   "tests": [
     {
-      "name": "sample",
-      "cmd": "UPTIME+MEM+DF \u2192 META kB/secs",
+      "name": "put_fsync",
+      "cmd": "WRITEATOMIC body + FSYNC",
       "ok": true,
-      "note": "live host"
+      "note": "durable"
     },
     {
-      "name": "admit_ok",
-      "cmd": "warm/ram/disk floors pass",
+      "name": "load",
+      "cmd": "DOTENV n=3 skip comments/bad",
       "ok": true,
-      "note": "allow"
+      "note": "export+quotes"
     },
     {
-      "name": "admit_warm",
-      "cmd": "warm=999999999 soft + REQUIRE\u21922",
+      "name": "gate_role",
+      "cmd": "same-process DOTENV+ENV ROLE=worker",
       "ok": true,
-      "note": "fail_warm"
+      "note": "after ENV var fix"
     },
     {
-      "name": "admit_ram",
-      "cmd": "rammin absurd \u2192 fail_ram soft",
+      "name": "gate_port_export",
+      "cmd": "export CUBALC_DE_PORT=7700",
       "ok": true,
-      "note": "low mem gate"
+      "note": "export strip"
     },
     {
-      "name": "admit_disk",
-      "cmd": "diskmin absurd REQUIRE\u21922",
+      "name": "gate_quoted",
+      "cmd": "NOTE hello world quotes",
       "ok": true,
-      "note": "disk gate"
+      "note": "unquote"
     },
     {
-      "name": "df_miss",
-      "cmd": "bad path soft; REQUIRE\u21922",
+      "name": "gate_miss",
+      "cmd": "soft + REQUIRE\u21922",
       "ok": true,
-      "note": "DF miss"
+      "note": "key miss"
     },
     {
-      "name": "stamp",
-      "cmd": "LOCAL + HUMANSIZE mem/disk labels",
+      "name": "lock_0600",
+      "cmd": "CHMOD string var \u2192 -rw-------",
       "ok": true,
-      "note": "12G/7G floor"
+      "note": "private env"
+    },
+    {
+      "name": "fsync_miss",
+      "cmd": "missing path soft; REQUIRE\u21922",
+      "ok": true,
+      "note": "FSYNC miss"
+    },
+    {
+      "name": "env_var_key_fix",
+      "cmd": "SYS ENV k with k=ROLE \u2192 value not empty",
+      "ok": true,
+      "note": "lang fix"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "241/241 pass"
+      "note": "244/244 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|units",
-      "title": "MEM/DF report kB; HUMANSIZE expects bytes \u2014 silent scale trap",
-      "detail": "Agents stamp HUMANSIZE MEM_AVAIL_N without *1024 and under-report ~1024\u00d7. Board multiplies to bytes; easy to forget.",
-      "repro": "HUMANSIZE MEM_AVAIL_N without *1024"
+      "area": "host|env",
+      "title": "SYS ENV used IDENT text not string-var value (FIXED this iter)",
+      "detail": "SYS ENV k with k=\"ROLE\" looked up env key \"k\". Broke get/need/gate with ARG keys. Fixed: string vars + LAST; bare IDENT still env key token.",
+      "repro": "pre-fix: LET k=\"ROLE\"; ENV k \u2192 empty"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|humansize",
-      "title": "HUMANSIZE floor loses precision on inventory stamps",
-      "detail": "~13GB avail labels as 12G. Operators mis-read free space.",
-      "repro": "HUMANSIZE mem_b \u2192 12G for 13GB-class"
+      "area": "host|dotenv",
+      "title": "DOTENV only mutates current process env",
+      "detail": "Each cubalc run is a new process; load then get in separate invocations loses keys. Agents need gate (load+need same process) or re-load every run.",
+      "repro": "run load; run get ROLE \u2192 empty pre-gate"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|df",
-      "title": "DF on missing path soft-fails; no partial parent walk",
-      "detail": "DF /no/such \u2192 OK=0. Cannot get free space of nearest existing ancestor without agent loop.",
-      "repro": "SYS DF /no/such/path"
+      "area": "host|dotenv",
+      "title": "DOTENV skip count opaque; no bag of loaded keys",
+      "detail": "DOTENV_N/SKIP only. Agents cannot list which keys landed without DUMPENV filter.",
+      "repro": "load n=3 skip=2 no key list"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|mem",
-      "title": "MEM avail vs free dual without guidance",
-      "detail": "MEM_AVAIL_N vs MEM_FREE_N; LAST is avail. Agents may gate on free and thrash under cache pressure.",
-      "repro": "MEM_FREE_N << MEM_AVAIL_N often"
+      "area": "host|fsync",
+      "title": "FSYNC after WRITEATOMIC still soft-miss if path races",
+      "detail": "No combined WRITEATOMIC+FSYNC one-shot; multi-agent crash between write and fsync leaves unflushed plate.",
+      "repro": "two ops; kill between"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|cat",
-      "title": "SYS CAT LAST LAST glues same value twice",
-      "detail": "Stamp path used CAT LAST LAST after STR and doubled uptime until fixed. No strcat of distinct planes without LET val shuttle.",
-      "repro": "SYS STR n; SYS CAT LAST LAST"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "ACTIVE/VAL glue in cat -A.",
+      "repro": "cat -A ACTIVE.txt"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "PATH/WARM/VAL glue in cat -A.",
-      "repro": "cat -A PATH.txt"
+      "area": "host|env",
+      "title": "ENV missing key returns OK=1 empty LAST",
+      "detail": "Cannot distinguish miss from empty value without BLANK; OR fallback always OK=1.",
+      "repro": "ENV MISSING OR \"\" \u2192 OK=1"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "NUM non-numeric soft-zero (carryover)",
-      "detail": "warm/rammin/diskmin garbage becomes 0 floors (disabled).",
-      "repro": "NUM nope \u2192 0"
+      "area": "host|dotenv",
+      "title": "9BAD= and bare lines skip without per-line diagnostics",
+      "detail": "DOTENV_SKIP aggregate only; hard to debug bad .env lines.",
+      "repro": "9BAD=skip counted in SKIP"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|uptime",
-      "title": "UPTIME integer seconds only; no boot-id / reboot detect",
-      "detail": "Cannot tell reboot vs long up without external boot_id plate.",
-      "repro": "UPTIME only monotonic secs since boot"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_DE_REQUIRE=abc leaves REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc gate miss \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Always *1024 before HUMANSIZE on MEM/DF kB",
-    "Gate on MEM_AVAIL_N not FREE for Linux backpressure",
-    "LET val shuttle for multi-part CAT stamps",
-    "Digit-check floors; 0 means disabled",
-    "DF only existing paths; MKDIR first"
+    "Post-fix: ENV NAME with string NAME works",
+    "Use gate action for load+key check in one process",
+    "FSYNC immediately after every put",
+    "BLANK after ENV to detect empty",
+    "CHMOD 0600 after put for secrets"
   ],
   "language_gaps": [
-    "HUMANSIZE of kB-aware helper or unit arg",
-    "DF ancestor fallback",
-    "MEM free vs avail doc in help",
-    "WRITE trailing NL",
-    "NUM strict mode",
-    "boot_id / reboot generation stamp"
+    "ENV string-var key (done this iter)",
+    "DOTENV export to parent / env plate persist helper",
+    "DOTENV key bag return",
+    "WRITEATOMIC+FSYNC combo",
+    "ENV miss OK=0 option",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "sample/admit warm/ram/disk/df paths green",
-    "stamp CAT LAST LAST doubled uptime (fixed in board)",
-    "selftest 241/241; no language fix this iter"
+    "ENV IDENT footgun found+fixed+proof",
+    "DOTENV process-local forced gate action",
+    "put/load/gate ROLE PORT NOTE green",
+    "selftest 244/244"
   ],
-  "commit": "4855506815e31ad58007c1308715c592e63ef12f",
-  "ts": "2026-08-06T17:58:41Z"
+  "commit": "",
+  "ts": "2026-08-06T18:26:10Z"
 }

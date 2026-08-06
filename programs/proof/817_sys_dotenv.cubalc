@@ -69,6 +69,19 @@ ASSERT LAST_N == 0
 SYS LEN LAST_ERR
 ASSERT LAST_N >= 5
 
+# string-var ENV key (not IDENT text "k")
+LET k = "CUBALC_DOTENV_MI_A"
+SYS ENV k
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+SYS ENV k OR "fallback"
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+LET missk = "CUBALC_DOTENV_MI_NONE"
+SYS ENV missk OR "fallback"
+SYS EQS LAST "fallback"
+ASSERT LAST_N == 1
+
 # cleanup process env + plate
 SYS UNSETENV "CUBALC_DOTENV_MI_A"
 SYS UNSETENV "CUBALC_DOTENV_MI_B"
