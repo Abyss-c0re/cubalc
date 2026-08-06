@@ -1,168 +1,171 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 56,
-  "program": "programs/realworld/build_pathglob_board.cubalc",
-  "theme": "CI/release artifact inventory PATHGLOB full paths + STEM/EXT FREQ",
-  "version": "1.15.178-usability",
+  "iter": 57,
+  "program": "programs/realworld/release_filter_gate.cubalc",
+  "theme": "release artifact bag gate FILTERGLOB VFILTERGLOB BASENAMEALL STEMALL EXTALL",
+  "version": "1.15.180-usability",
   "pass": true,
   "tests": [
     {
-      "name": "pglob_bin",
-      "cmd": "PATHGLOB out *.bin \u2192 1 full path app.bin (not nested)",
+      "name": "scan_star",
+      "cmd": "PATHGLOB out * → 8 paths incl nested dir",
       "ok": true,
-      "note": "PATHGLOB_N=1 full path; no recursion"
+      "note": "PATHGLOB inventory"
     },
     {
-      "name": "shellpat_so",
-      "cmd": "one-arg PATHGLOB dir/*.so \u2192 lib.so full path",
+      "name": "allow_bin",
+      "cmd": "FILTERGLOB *.bin → tool.bin+app.bin full paths",
       "ok": true,
-      "note": "shell style"
+      "note": "basename shell match on full paths"
     },
     {
-      "name": "pglob_star_dirs",
-      "cmd": "PATHGLOB out * \u2192 6 entries incl nested/ dir",
+      "name": "deny_tmp_log",
+      "cmd": "VFILTERGLOB *.tmp then *.log drops junk",
       "ok": true,
-      "note": "dirs included; no file-only filter"
+      "note": "invert keep"
     },
     {
-      "name": "measure_fullpath",
-      "cmd": "SIZE each full path \u2192 basename:bytes; nested dir SIZE 0",
+      "name": "names_map",
+      "cmd": "BASENAMEALL → nested/README/pkg.tar.gz/…",
       "ok": true,
-      "note": "no JOIN glue; dir pollutes bag"
+      "note": "one-shot map"
     },
     {
-      "name": "exts_freq",
-      "cmd": "EXTNAME+FREQ \u2192 .gz/.conf/.so/.bin/(none)",
+      "name": "stems_map",
+      "cmd": "STEMALL pkg.tar.gz → pkg.tar",
       "ok": true,
-      "note": "data.tar.gz \u2192 .gz last suffix only"
+      "note": "last-suffix stem only"
     },
     {
-      "name": "keep_bin_substr",
-      "cmd": "KEEPKEY sizes bin \u2192 app.bin only",
+      "name": "exts_raw_freq",
+      "cmd": "EXTALL empty fields; FREQ :2 for no-ext",
       "ok": true,
-      "note": "substring key match"
+      "note": "empty key FREQ awkward"
     },
     {
-      "name": "has_exact_path",
-      "cmd": "HASLINE exact full path hit; dir prefix miss soft",
+      "name": "has_exact_vs_basename",
+      "cmd": "full path hit; bare app.bin miss soft",
       "ok": true,
-      "note": "exact field"
+      "note": "HASLINE exact"
     },
     {
-      "name": "read1_pathglob",
-      "cmd": "SORT+TAKE1+READ full path body AAAAA",
+      "name": "allow_none_require",
+      "cmd": "FILTERGLOB *.xyz REQUIRE exit 2",
       "ok": true,
-      "note": "PATHGLOB value: READ without JOIN"
+      "note": "empty keep gate"
     },
     {
-      "name": "pglob_miss_require",
+      "name": "scan_miss_require",
       "cmd": "bad DIR REQUIRE exit 2",
       "ok": true,
-      "note": "OK=0 soft miss"
+      "note": "OK=0"
     },
     {
-      "name": "pglob_empty_match",
-      "cmd": "empty dir *.bin OK soft; REQUIRE exit 2",
+      "name": "loadlines_allow",
+      "cmd": "||| load + allow *.bin → a.bin d.bin",
       "ok": true,
-      "note": "empty\u2260dir miss"
+      "note": "intake gate"
+    },
+    {
+      "name": "glob_bin_false_friend",
+      "cmd": "FILTERGLOB *bin* hits binary.dat and app.bin",
+      "ok": true,
+      "note": "shell glob not ext-only"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "153/153 pass incl pathglob"
+      "note": "155/155 pass incl filterglob basenameall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs",
-      "title": "PATHGLOB includes directories; no files-only mode",
-      "detail": "PATHGLOB dir * returns subdirs (nested/) alongside files. SIZE on dir is OK=1 LAST_N=0, so measure invents nested:0 junk keys. Agents need ISDIR/ISFILE filter loop.",
-      "repro": "PATHGLOB out * \u2192 \u2026/nested + files; SIZE nested \u2192 0"
+      "area": "host|bag",
+      "title": "FILTERGLOB *bin* matches binary.dat (shell glob false friend)",
+      "detail": "Agents wanting extension-only must use *.bin not *bin*. Shell glob matches anywhere in basename/full path field. No extension-only filter mode.",
+      "repro": "FILTERGLOB bag *bin* → binary.dat + app.bin"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|fs",
-      "title": "PATHGLOB non-recursive; nested artifacts invisible",
-      "detail": "out/nested/deep.bin not matched by *.bin at out/. Pattern is basename-level in one directory only. Same class as GLOB. No ** support.",
-      "repro": "PATHGLOB out *.bin \u2192 app.bin only; deep.bin missed"
+      "area": "host|path",
+      "title": "EXTALL empty fields for no-ext; FREQ yields :N bare key",
+      "detail": "README and directory basenames produce empty EXTALL fields. FREQ of empties is ':2' — hard for LOOKUP and PRINT_JSON agents. No (none) sentinel.",
+      "repro": "EXTALL then FREQ → :2 for no-ext count"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|path",
-      "title": "EXTNAME last suffix only (.tar.gz \u2192 .gz)",
-      "detail": "STEM of data.tar.gz is data.tar not data. Double-extension archives mis-typed in FREQ rollups. No multi-suffix peel.",
-      "repro": "EXTNAME data.tar.gz \u2192 .gz; STEM \u2192 data.tar"
+      "title": "STEMALL last-suffix only (pkg.tar.gz → pkg.tar)",
+      "detail": "Double-extension archives keep intermediate suffix in stem. Same as STEM single-path class.",
+      "repro": "STEMALL …/pkg.tar.gz → pkg.tar"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "SIZE on directory succeeds with 0 bytes",
-      "detail": "ISDIR true but SIZE returns OK=1 LAST_N=0 instead of soft miss. Silent pollution of size bags when PATHGLOB mixes dirs.",
-      "repro": "SIZE nested_dir \u2192 0 OK=1"
+      "title": "PATHGLOB scan still mixes directories into PATHS",
+      "detail": "FILTERGLOB/VFILTERGLOB do not remove dirs unless pattern matches. nested/ survives deny *.tmp/*.log. No files-only PATHGLOB or FILTERISFILE.",
+      "repro": "scan *; deny junk → nested remains"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|fs",
-      "title": "PATHGLOB empty match OK=1 vs missing dir OK=0",
-      "detail": "Same as GLOB: no files matching is success-empty; bad directory fails. Agents checking only OK miss empty inventories.",
-      "repro": "PATHGLOB emptydir *.bin OK=1 N=0"
+      "area": "host|bag",
+      "title": "No multi-pattern FILTERGLOB / allow-list OR",
+      "detail": "Allow *.bin OR *.so needs two FILTERGLOB runs then UNION, or sequential deny. No FILTERGLOB bag '*.bin|*.so' or multi-pat form.",
+      "repro": "want bins+sos → UNION of two FILTERGLOB"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|bag",
-      "title": "KEEPKEY substring on basename keys",
-      "detail": "Needle bin matches app.bin. Exact key needs LOOKUP/EQS after peel.",
-      "repro": "KEEPKEY sizes bin \u2192 app.bin:5"
+      "area": "host|json",
+      "title": "PRINT_JSON bag newline collapse",
+      "detail": "Stable issue — path bags unreadable as arrays from plate JSON alone.",
+      "repro": "PRINT_JSON paths"
     },
     {
       "id": "W7",
-      "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON bag newline collapse",
-      "detail": "Full path bags collapse to one JSON string without \\n separators visible as array. Agents cannot re-split from PRINT_JSON alone.",
-      "repro": "PRINT_JSON paths"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omits final trailing newline",
+      "detail": "cat -A last PATHS/NAMES/STEMS/EXTS line without $.",
+      "repro": "scan; cat -A PATHS.txt"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last PATHS/SIZES/EXTS line without $.",
-      "repro": "pglob; cat -A PATHS.txt"
+      "area": "host|bag",
+      "title": "HASLINE exact: basename token misses full-path bag",
+      "detail": "After PATHGLOB, has app.bin fails; need full path. Expected exactness but traps agents who only keep basenames in mind.",
+      "repro": "HASLINE paths app.bin → 0 after scan"
     }
   ],
   "workarounds": [
-    "After PATHGLOB filter with ISDIR/ISFILE before SIZE",
-    "Prefer extension patterns (*.bin) over * to avoid dirs when possible",
-    "Treat PATHGLOB_N==0 as soft empty even when OK=1",
-    "For archives, peel known multi-suffixes with STRIPSUFFIX before STEM",
-    "Use full-path HASLINE for membership; never prefix-match",
-    "PATHGLOB then READ/SIZE/RM without JOIN \u2014 main win vs GLOB"
+    "Use *.ext patterns not *ext* for extension gates",
+    "Map empty EXTALL to (none) before FREQ if needed",
+    "ISDIR filter or allow-only patterns to drop directories",
+    "UNION two FILTERGLOB results for multi-type allow",
+    "Prefer BASENAMEALL then HASLINE on names for basename membership"
   ],
   "language_gaps": [
-    "PATHGLOB files-only / no-dirs mode",
-    "Recursive PATHGLOB / ** pattern",
-    "SIZE soft-miss or fail on directories",
-    "EXTNAME multi-suffix / full-extension mode",
-    "PATHGLOB empty-match OK=0 option",
-    "KEEPKEY exact-key mode",
+    "FILTERGLOB extension-only mode",
+    "EXTALL/FREQ empty-field sentinel",
+    "STEMALL multi-suffix peel",
+    "FILTERISFILE / files-only PATHGLOB",
+    "Multi-pattern FILTERGLOB OR",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "PATHGLOB full-path measure/read1 clean without JOIN",
-    "Star pattern mixed nested/ dir into inventory",
-    "SIZE dir=0 silent; measure wrote nested:0",
-    "data.tar.gz typed as .gz not .tar.gz",
-    "No language fix this iter \u2014 document gaps for MEANINGFUL_ITER"
+    "FILTERGLOB/VFILTERGLOB/BASENAMEALL/STEMALL/EXTALL all clean on positive path",
+    "*bin* false friend confirmed (binary.dat)",
+    "FREQ of empty ext → :2 awkward key",
+    "No language fix this iter"
   ],
-  "commit": "ed046b3da63a92acb7c187579a631b33bdb71593",
-  "ts": "2026-08-06T03:24:30Z"
+  "commit": "",
+  "ts": "2026-08-06T03:48:10Z"
 }
