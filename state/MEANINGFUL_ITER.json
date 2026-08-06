@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 207,
-  "version": "1.15.231-usability",
-  "item": "SYS WAITFILE / WAITPATH / POLLFILE poll until path exists",
-  "item_id": 240,
-  "title": "SYS WAITFILE|WAITPATH path [ms] — poll until path exists · HIT/MS soft timeout",
-  "commit": "019c11e6394bb0e5be76bb6c184ff2f678f2f4d2",
-  "summary": "Agent plate/peer handoff wait without EXIST+SLEEP loop. selftest 207.",
+  "iter": 208,
+  "version": "1.15.233-usability",
+  "item": "SYS SUBSTFILE / EXPANDFILE / ENVSUBSTFILE materialize template file",
+  "item_id": 241,
+  "title": "SYS SUBSTFILE|EXPANDFILE path [out] — expand $VAR file templates · N/MISS/BYTES",
+  "commit": "617e49d872f4eca564d22cfa9ad75cb7989e0cf1",
+  "summary": "Plate/config template materialize without READ+SUBSTENV+WRITE. selftest 208.",
   "proofs": [
-    "781_sys_waitfile",
-    "selftest n_pass=207"
+    "782_sys_substfile",
+    "selftest n_pass=208"
   ],
-  "when": "2026-08-06T12:16:10Z",
+  "when": "2026-08-06T12:25:49Z",
   "agent": "meaningful_iter_10m",
-  "sha": "019c11e6394bb0e5be76bb6c184ff2f678f2f4d2"
+  "sha": "617e49d872f4eca564d22cfa9ad75cb7989e0cf1"
 }
