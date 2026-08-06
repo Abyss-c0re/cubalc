@@ -1,70 +1,58 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 92,
-  "program": "programs/realworld/dotenv_sync_board.cubalc",
-  "theme": "dotenv FSYNC durable env plate load gate CHMOD",
-  "version": "1.15.271-usability",
+  "iter": 93,
+  "program": "programs/realworld/env_snapshot_board.cubalc",
+  "theme": "env snapshot DUMPENV WRITEENV TRUNCATE FSYNC handoff",
+  "version": "1.15.273-usability",
   "pass": true,
   "tests": [
     {
-      "name": "put_fsync",
-      "cmd": "WRITEATOMIC body + FSYNC",
+      "name": "seed",
+      "cmd": "plant demo ES_ keys + DUMPENV n=3",
       "ok": true,
-      "note": "durable"
+      "note": "same process"
     },
     {
-      "name": "load",
-      "cmd": "DOTENV n=3 skip comments/bad",
+      "name": "filter",
+      "cmd": "GREP ES_ROLE= \u2192 one line",
       "ok": true,
-      "note": "export+quotes"
+      "note": "substring"
     },
     {
-      "name": "gate_role",
-      "cmd": "same-process DOTENV+ENV ROLE=worker",
+      "name": "has_exact",
+      "cmd": "HASLINE PORT=7700 exact; sub 770 miss REQUIRE",
       "ok": true,
-      "note": "after ENV var fix"
+      "note": "exact vs sub"
     },
     {
-      "name": "gate_port_export",
-      "cmd": "export CUBALC_DE_PORT=7700",
+      "name": "snap",
+      "cmd": "WRITEENV+FSYNC snap.env 69B",
       "ok": true,
-      "note": "export strip"
+      "note": "handoff plate"
     },
     {
-      "name": "gate_quoted",
-      "cmd": "NOTE hello world quotes",
+      "name": "wipe",
+      "cmd": "TRUNCATE 0 keep inode; size 0",
       "ok": true,
-      "note": "unquote"
+      "note": "clear plate"
     },
     {
-      "name": "gate_miss",
+      "name": "filter_empty",
+      "cmd": "GREP miss soft; empty VAL clobber",
+      "ok": true,
+      "note": "footgun"
+    },
+    {
+      "name": "wipe_no_active",
       "cmd": "soft + REQUIRE\u21922",
       "ok": true,
-      "note": "key miss"
-    },
-    {
-      "name": "lock_0600",
-      "cmd": "CHMOD string var \u2192 -rw-------",
-      "ok": true,
-      "note": "private env"
-    },
-    {
-      "name": "fsync_miss",
-      "cmd": "missing path soft; REQUIRE\u21922",
-      "ok": true,
-      "note": "FSYNC miss"
-    },
-    {
-      "name": "env_var_key_fix",
-      "cmd": "SYS ENV k with k=ROLE \u2192 value not empty",
-      "ok": true,
-      "note": "lang fix"
+      "note": "edges"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "244/244 pass"
+      "note": "246/246 pass"
     }
   ],
   "weaknesses": [
@@ -72,88 +60,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|env",
-      "title": "SYS ENV used IDENT text not string-var value (FIXED this iter)",
-      "detail": "SYS ENV k with k=\"ROLE\" looked up env key \"k\". Broke get/need/gate with ARG keys. Fixed: string vars + LAST; bare IDENT still env key token.",
-      "repro": "pre-fix: LET k=\"ROLE\"; ENV k \u2192 empty"
+      "title": "SETENV/plant is process-local across cubalc runs",
+      "detail": "plant then dump in separate invocations sees zero keys. Same class as DOTENV. Forces seed/snap compound actions.",
+      "repro": "run plant; run dump \u2192 n=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|dotenv",
-      "title": "DOTENV only mutates current process env",
-      "detail": "Each cubalc run is a new process; load then get in separate invocations loses keys. Agents need gate (load+need same process) or re-load every run.",
-      "repro": "run load; run get ROLE \u2192 empty pre-gate"
+      "area": "host|bag",
+      "title": "filter empty GREP overwrites VAL dump plate",
+      "detail": "Failed filter writes empty bag to VAL; next filter sees no dump. Agents lose inventory on miss without separate DUMP plate.",
+      "repro": "seed; filter NOPE; filter ROLE \u2192 no dump"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|dotenv",
-      "title": "DOTENV skip count opaque; no bag of loaded keys",
-      "detail": "DOTENV_N/SKIP only. Agents cannot list which keys landed without DUMPENV filter.",
-      "repro": "load n=3 skip=2 no key list"
+      "area": "host|grep",
+      "title": "GREP substring false friends on KEY=VAL",
+      "detail": "filter ROLE matches ROLE=worker; also would match ROLE_EXTRA. No key-exact GREP.",
+      "repro": "GREP ROLE on bag"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fsync",
-      "title": "FSYNC after WRITEATOMIC still soft-miss if path races",
-      "detail": "No combined WRITEATOMIC+FSYNC one-shot; multi-agent crash between write and fsync leaves unflushed plate.",
-      "repro": "two ops; kill between"
+      "area": "host|writeenv",
+      "title": "WRITEENV empty prefix match writes 0-byte plate OK",
+      "detail": "Silent empty snapshot; hard to tell intentional empty vs wrong prefix.",
+      "repro": "WRITEENV p WRONG_PFX_ \u2192 size 0 OK"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "ACTIVE/VAL glue in cat -A.",
-      "repro": "cat -A ACTIVE.txt"
+      "area": "host|truncate",
+      "title": "TRUNCATE grow zero-extends without content clear semantics doc",
+      "detail": "Agents may expect clear-only; grow leaves NULs.",
+      "repro": "TRUNCATE p 10 after short body"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|env",
-      "title": "ENV missing key returns OK=1 empty LAST",
-      "detail": "Cannot distinguish miss from empty value without BLANK; OR fallback always OK=1.",
-      "repro": "ENV MISSING OR \"\" \u2192 OK=1"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "PREFIX/ACTIVE glue in cat -A.",
+      "repro": "cat -A PREFIX.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|dotenv",
-      "title": "9BAD= and bare lines skip without per-line diagnostics",
-      "detail": "DOTENV_SKIP aggregate only; hard to debug bad .env lines.",
-      "repro": "9BAD=skip counted in SKIP"
+      "area": "host|dumpenv",
+      "title": "DUMPENV full dump can be huge; TRUNC flag rare",
+      "detail": "Empty prefix inventories entire process env; agents may leak secrets into VAL plate.",
+      "repro": "DUMPENV without prefix"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_DE_REQUIRE=abc leaves REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc gate miss \u2192 rc 0"
+      "detail": "CUBALC_ES_REQUIRE=abc.",
+      "repro": "REQUIRE=abc wipe no active \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Post-fix: ENV NAME with string NAME works",
-    "Use gate action for load+key check in one process",
-    "FSYNC immediately after every put",
-    "BLANK after ENV to detect empty",
-    "CHMOD 0600 after put for secrets"
+    "Use seed/snap for multi-step env plant+dump same process",
+    "Keep DUMP.txt separate from FILTER result plate",
+    "HASLINE for exact KEY=VAL; GREP only for needles",
+    "Always set narrow PREFIX before dump/save",
+    "CHMOD 0600 on snap.env for secrets"
   ],
   "language_gaps": [
-    "ENV string-var key (done this iter)",
-    "DOTENV export to parent / env plate persist helper",
-    "DOTENV key bag return",
-    "WRITEATOMIC+FSYNC combo",
-    "ENV miss OK=0 option",
-    "WRITE trailing NL"
+    "Cross-run env plant persistence (or document only)",
+    "GREPKEY exact on KEY=VAL bags",
+    "WRITEENV dry-run / empty warn",
+    "Non-destructive filter (out plate)",
+    "WRITE trailing NL",
+    "DUMPENV secret redaction"
   ],
   "issues_faced": [
-    "ENV IDENT footgun found+fixed+proof",
-    "DOTENV process-local forced gate action",
-    "put/load/gate ROLE PORT NOTE green",
-    "selftest 244/244"
+    "plant/dump across runs empty \u2192 seed/snap compound",
+    "filter clobber VAL documented",
+    "seed/snap/wipe/has green; selftest 246/246"
   ],
-  "commit": "2998c15d076c840a7611467776893c7b340f0b9e",
-  "ts": "2026-08-06T18:26:10Z"
+  "commit": "",
+  "ts": "2026-08-06T18:49:23Z"
 }

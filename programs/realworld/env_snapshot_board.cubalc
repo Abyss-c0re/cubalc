@@ -1,0 +1,728 @@
+# env_snapshot_board.cubalc — DUMPENV inventory + WRITEENV plate + TRUNCATE wipe
+#
+# Real use: agents snapshot filtered process env for handoff/audit, persist
+# KEY=VAL plates, and clear snapshots without RM (keep inode/mode):
+#   DUMPENV / ENVALL [prefix]  — env as KEY=VAL bag
+#   WRITEENV / SAVENV path [pfx] — persist env plate
+#   TRUNCATE / EMPTYFILE       — clear plate keep inode
+#   FSYNC                      — durable after save
+#   GREP / HASLINE             — filter/probe bag lines
+# Distinct from dotenv_sync (load INTO env): this board is *dump FROM env
+# TO plate + wipe/resize*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — snapshot envfile path
+#   PREFIX.txt     — DUMPENV/WRITEENV prefix filter
+#   VAL.txt        — last dump bag or summary
+#   META.txt       — n/skip/bytes bag
+#   SNAP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_ES_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   prefix    — PREFIX = ARG1
+#   plant     — SETENV ARG1 ARG2 (same-process only)
+#   seed      — plant demo ES_ keys + DUMPENV in one process
+#   dump      — DUMPENV PREFIX → VAL
+#   save      — WRITEENV ACTIVE PREFIX + FSYNC
+#   snap      — seed + WRITEENV ACTIVE + FSYNC (full handoff)
+#   filter    — GREP ARG1 on VAL bag
+#   has       — HASLINE exact ARG1 in VAL
+#   wipe      — TRUNCATE ACTIVE 0
+#   size      — SIZE ACTIVE
+#   unplant   — UNSETENV ARG1
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_es_$$
+#   CUBALC_ARG0=prefix CUBALC_ARG1=CUBALC_ES_ ...
+#   CUBALC_ARG0=plant CUBALC_ARG1=CUBALC_ES_ROLE CUBALC_ARG2=worker ...
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/snap.env ...
+#   CUBALC_ARG0=dump ...
+#   CUBALC_ARG0=save ...
+#   CUBALC_ARG0=wipe ...
+#
+# Env: CUBALC_ES_REQUIRE=1
+#
+# Edges:
+#   empty prefix dumps huge env; WRITEENV empty match 0-byte plate
+#   GREP substring false friends; TRUNCATE grow zeros; FSYNC miss
+#   DUMPENV trunc flag; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "env_snapshot_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT PFILE = "PREFIX.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SNAP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_ES_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_ES_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_ES_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_ES_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir PFILE
+LET prefix_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR prefix_meta OR ""
+LET prefix = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET prefix_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET dump_n = 0
+LET bytes_n = 0
+LET trunc_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "envsnap" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON prefix
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- prefix ---
+SYS EQS ACTION "prefix"
+IF LAST_N == 1 THEN
+  NOTE "action prefix"
+  LET prefix = NAME
+  LET prefix_ch = 1
+  LET hit = 1
+  LET note_msg = "prefix ok"
+  PRINT_JSON prefix
+END
+
+# --- plant SETENV ---
+SYS EQS ACTION "plant"
+IF LAST_N == 1 THEN
+  NOTE "action plant"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "plant needs key"
+  END
+  SYS SETENV NAME A2
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "plant fail"
+    FAIL "plant fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "plant fail"
+    END
+  ELSE
+    LET hit = 1
+    LET val = A2
+    LET val_ch = 1
+    LET note_msg = "plant ok"
+  END
+  PRINT_JSON NAME
+  CLEAR_ERR
+END
+
+# --- unplant ---
+SYS EQS ACTION "unplant"
+IF LAST_N == 1 THEN
+  NOTE "action unplant"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "unplant needs key"
+  END
+  SYS UNSETENV NAME
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "unplant ok"
+END
+
+# --- seed: plant demo keys + dump same process ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK prefix
+  IF LAST_N == 1 THEN
+    LET prefix = "CUBALC_ES_"
+    LET prefix_ch = 1
+  END
+  SYS SETENV "CUBALC_ES_ROLE" "worker"
+  CLEAR_ERR
+  SYS SETENV "CUBALC_ES_PORT" "7700"
+  CLEAR_ERR
+  SYS SETENV "CUBALC_ES_NOTE" "hello world"
+  CLEAR_ERR
+  SYS DUMPENV prefix
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "seed dump fail"
+    FAIL "seed dump fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "seed dump fail"
+    END
+  ELSE
+    LET val = LAST
+    LET dump_n = DUMPENV_N
+    LET trunc_n = DUMPENV_TRUNC
+    LET val_ch = 1
+    LET hit = 1
+    SYS STR dump_n
+    SYS CAT "n:" LAST
+    LET meta = LAST
+    SYS STR trunc_n
+    SYS CAT "trunc:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "prefix:" prefix
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "seed ok"
+  END
+  PRINT_JSON dump_n
+  CLEAR_ERR
+END
+
+# --- dump DUMPENV ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  SYS BLANK prefix
+  IF LAST_N == 1 THEN
+    SYS DUMPENV
+  ELSE
+    SYS DUMPENV prefix
+  END
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "dump fail"
+    FAIL "dump fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dump fail"
+    END
+  ELSE
+    LET val = LAST
+    LET dump_n = DUMPENV_N
+    LET trunc_n = DUMPENV_TRUNC
+    LET val_ch = 1
+    LET hit = 1
+    SYS STR dump_n
+    SYS CAT "n:" LAST
+    LET meta = LAST
+    SYS STR trunc_n
+    SYS CAT "trunc:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "prefix:" prefix
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "dump ok"
+  END
+  PRINT_JSON dump_n trunc_n
+  CLEAR_ERR
+END
+
+# --- snap: seed + WRITEENV + FSYNC same process ---
+SYS EQS ACTION "snap"
+IF LAST_N == 1 THEN
+  NOTE "action snap"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "snap no active"
+    FAIL "snap no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "snap no active"
+    END
+  ELSE
+    SYS BLANK prefix
+    IF LAST_N == 1 THEN
+      LET prefix = "CUBALC_ES_"
+      LET prefix_ch = 1
+    END
+    SYS SETENV "CUBALC_ES_ROLE" "worker"
+    CLEAR_ERR
+    SYS SETENV "CUBALC_ES_PORT" "7700"
+    CLEAR_ERR
+    SYS SETENV "CUBALC_ES_NOTE" "hello world"
+    CLEAR_ERR
+    SYS WRITEENV active prefix
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "snap writeenv fail"
+      FAIL "snap writeenv fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "snap writeenv fail"
+      END
+    ELSE
+      LET dump_n = WRITEENV_N
+      LET bytes_n = WRITEENV_BYTES
+      SYS FSYNC active
+      CLEAR_ERR
+      SYS DUMPENV prefix
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "snap ok"
+      SYS STR dump_n
+      SYS CAT "n:" LAST
+      LET meta = LAST
+      SYS STR bytes_n
+      SYS CAT "bytes:" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS CAT "path:" active
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON dump_n bytes_n
+  CLEAR_ERR
+END
+
+# --- save WRITEENV + FSYNC ---
+SYS EQS ACTION "save"
+IF LAST_N == 1 THEN
+  NOTE "action save"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "save no active"
+    FAIL "save no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "save no active"
+    END
+  ELSE
+    SYS BLANK prefix
+    IF LAST_N == 1 THEN
+      SYS WRITEENV active
+    ELSE
+      SYS WRITEENV active prefix
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "save writeenv fail"
+      FAIL "save writeenv fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "save writeenv fail"
+      END
+    ELSE
+      LET dump_n = WRITEENV_N
+      LET bytes_n = WRITEENV_BYTES
+      SYS FSYNC active
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "save fsync fail"
+        FAIL "save fsync fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "save fsync fail"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "save ok"
+        SYS STR dump_n
+        SYS CAT "n:" LAST
+        LET meta = LAST
+        SYS STR bytes_n
+        SYS CAT "bytes:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS CAT "path:" active
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        SYS STR dump_n
+        LET val = LAST
+        LET val_ch = 1
+      END
+    END
+  END
+  PRINT_JSON dump_n bytes_n
+  CLEAR_ERR
+END
+
+# --- filter GREP ---
+SYS EQS ACTION "filter"
+IF LAST_N == 1 THEN
+  NOTE "action filter"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "filter needs needle"
+  END
+  SYS BLANK val
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "filter no dump"
+    FAIL "filter no dump"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "filter no dump"
+    END
+  ELSE
+    SYS GREP NAME val
+    LET val = LAST
+    LET dump_n = LAST_N
+    LET val_ch = 1
+    SYS BLANK val
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "filter empty"
+      FAIL "filter empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "filter empty"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "filter ok"
+    END
+    SYS STR dump_n
+    SYS CAT "n:" LAST
+    LET meta = LAST
+    SYS CAT "needle:" NAME
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON dump_n
+  CLEAR_ERR
+END
+
+# --- has HASLINE exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+  SYS HASLINE val NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON NAME
+  CLEAR_ERR
+END
+
+# --- wipe TRUNCATE 0 ---
+SYS EQS ACTION "wipe"
+IF LAST_N == 1 THEN
+  NOTE "action wipe"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "wipe no active"
+    FAIL "wipe no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "wipe no active"
+    END
+  ELSE
+    SYS TRUNCATE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "wipe fail"
+      FAIL "wipe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "wipe fail"
+      END
+    ELSE
+      LET trunc_n = TRUNCATE_N
+      LET hit = 1
+      LET note_msg = "wipe ok"
+      SYS STR trunc_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON trunc_n
+  CLEAR_ERR
+END
+
+# --- size ---
+SYS EQS ACTION "size"
+IF LAST_N == 1 THEN
+  NOTE "action size"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "size no active"
+    FAIL "size no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "size no active"
+    END
+  ELSE
+    SYS SIZE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "size miss"
+      FAIL "size miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "size miss"
+      END
+    ELSE
+      LET bytes_n = LAST_N
+      LET hit = 1
+      LET note_msg = "size ok"
+      SYS STR bytes_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON bytes_n
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET prefix = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET prefix_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "prefix"
+LET k = k + LAST_N
+SYS EQS ACTION "plant"
+LET k = k + LAST_N
+SYS EQS ACTION "unplant"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "dump"
+LET k = k + LAST_N
+SYS EQS ACTION "snap"
+LET k = k + LAST_N
+SYS EQS ACTION "save"
+LET k = k + LAST_N
+SYS EQS ACTION "filter"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "wipe"
+LET k = k + LAST_N
+SYS EQS ACTION "size"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF prefix_ch > 0 THEN
+  SYS WRITE prefix_meta prefix
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "prefix write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.env_snapshot_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "n"
+LET report = LAST
+SYS STR dump_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "bytes"
+LET report = LAST
+SYS STR bytes_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "prefix"
+LET report = LAST
+SYS PUSH report prefix
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "env_snapshot_board" ACTION hit miss dump_n note_msg elapsed
