@@ -246,6 +246,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 216. ~~**`SYS SETFILELINE` / `FILESETLINE`**~~ **done** (replace 0-based file line in place · dual of LINEAT).
 217. ~~**`SYS INSERTFILELINE` / `FILEINSERTLINE`**~~ **done** (insert line at 0-based file index · append if past end).
 218. ~~**`SYS DROPFILELINE` / `FILEDROPLINE`**~~ **done** (drop 0-based file line in place · dual of INSERTFILELINE).
+219. ~~**`SYS FINDFILELINE` / `FILEFINDLINE`**~~ **done** (0-based first file line containing needle · locate then SET/DROP).
 
 ## Tick protocol
 

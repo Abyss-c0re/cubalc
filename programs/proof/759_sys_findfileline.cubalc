@@ -1,0 +1,54 @@
+# SYS FINDFILELINE / FILEFINDLINE — 0-based first file line containing needle
+# Usability: locate then SET/DROP/LINEAT without READ+FIRSTMATCH glue
+# FINDFILELINEI case-insensitive. Soft miss path. Miss I=-1.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "findfileline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "alpha\nerror: boom\nbeta\nERROR: late\ngamma"
+
+SYS FINDFILELINE fs "error"
+ASSERT OK == 1
+ASSERT FINDFILELINE_N == 1
+ASSERT FINDFILELINE_I == 1
+ASSERT FINDFILELINE_TOTAL == 5
+SYS EQS LAST "error: boom"
+ASSERT LAST_N == 1
+
+# alias
+SYS FILEFINDLINE fs "beta"
+ASSERT FINDFILELINE_I == 2
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# case-insensitive finds later ERROR
+SYS FINDFILELINEI fs "error"
+ASSERT FINDFILELINE_N == 1
+ASSERT FINDFILELINE_I == 1
+SYS EQS LAST "error: boom"
+ASSERT LAST_N == 1
+
+# miss content
+SYS FINDFILELINE fs "nope"
+ASSERT OK == 1
+ASSERT FINDFILELINE_N == 0
+ASSERT FINDFILELINE_I == -1
+ASSERT FINDFILELINE_TOTAL == 5
+
+# soft miss path
+SYS FINDFILELINE "no_such_findfileline_mi.txt" "x"
+ASSERT OK == 0
+ASSERT FINDFILELINE_N == 0
+ASSERT FINDFILELINE_I == -1
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_findfileline ok"
