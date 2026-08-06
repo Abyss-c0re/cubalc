@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 160,
-  "version": "1.15.185-usability",
-  "item": "SYS SORTMTIME / SORTSIZE order path bags by time/size",
-  "item_id": 193,
-  "title": "SYS SORTMTIME|SORTSIZE [bag] [ASC|DESC] — order paths by mtime/size",
-  "commit": "a647b7f7140ede6b5094d676bd81bc494ff8b31e",
-  "summary": "Order path bags by mtime/size (default newest/largest first). selftest 160.",
+  "iter": 161,
+  "version": "1.15.186-usability",
+  "item": "SYS FRESH / KEEPSTALE filter path bags by age threshold",
+  "item_id": 194,
+  "title": "SYS FRESH|KEEPSTALE bag age_sec — cache/lease path filters",
+  "commit": "53381a990acc524292faba311209e5e343a8cd1b",
+  "summary": "Filter path bags by max/min age for cache gates. selftest 161.",
   "proofs": [
-    "733_sys_sortmtime",
-    "selftest n_pass=160"
+    "734_sys_fresh",
+    "selftest n_pass=161"
   ],
-  "when": "2026-08-06T04:34:02Z",
+  "when": "2026-08-06T04:49:45Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a647b7f7140ede6b5094d676bd81bc494ff8b31e"
+  "sha": "53381a990acc524292faba311209e5e343a8cd1b"
 }
