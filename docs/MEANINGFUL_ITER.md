@@ -261,6 +261,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 231. ~~**`SYS KVFILEDEL` / `FILEKVDEL` / `DELKVFILE`**~~ **done** (drop key=val line from plate file · dual of KVFILESET · ack without READ+WRITE glue).
 232. ~~**`SYS KVFILEINC` / `INCKVFILE` / `FILEKVINC`**~~ **done** (bump numeric key=val in plate file · retry/severity counters without LOOKUP+arith+SET glue).
 233. ~~**`SYS ENSURELINE` / `ENSUREFILELINE` / `ADDIFMISSING`**~~ **done** (append exact line if missing · idempotent config flags/markers).
+234. ~~**`SYS HASFILELINE` / `FILEHASLINE`**~~ **done** (exact file line membership probe · dual of bag HASLINE · IF before ENSURELINE).
 
 ## Tick protocol
 

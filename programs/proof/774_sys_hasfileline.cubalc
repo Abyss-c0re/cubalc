@@ -1,0 +1,66 @@
+# SYS HASFILELINE / FILEHASLINE — exact file line membership probe
+# Usability: IF guards before ENSURELINE/DROP without GREPFILE/READ glue
+# Dual of bag HASLINE. HASFILELINEI icase. Soft path miss → N=0 OK=1.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "hasfileline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "flags.txt"
+LET fs = LAST
+SYS WRITE fs "feature_a\nfeature_b\nSTATUS=live\nmode=soft"
+
+# hit
+SYS HASFILELINE fs "feature_b"
+ASSERT OK == 1
+ASSERT HASFILELINE_N == 1
+ASSERT LAST_N == 1
+ASSERT HASFILELINE_I == 1
+ASSERT HASFILELINE_TOTAL == 4
+SYS EQS LAST "feature_b"
+ASSERT LAST_N == 1
+
+# miss (substring is not enough — exact line)
+SYS HASFILELINE fs "feature"
+ASSERT HASFILELINE_N == 0
+ASSERT LAST_N == 0
+ASSERT HASFILELINE_I == -1
+ASSERT HASFILELINE_TOTAL == 4
+
+# alias
+SYS FILEHASLINE fs "mode=soft"
+ASSERT HASFILELINE_N == 1
+ASSERT HASFILELINE_I == 3
+
+# icase
+SYS HASFILELINEI fs "status=live"
+ASSERT HASFILELINE_N == 1
+ASSERT HASFILELINE_I == 2
+
+# soft path miss → probe false OK=1
+SYS HASFILELINE "no_such_hasfileline_mi.txt" "x"
+ASSERT OK == 1
+ASSERT HASFILELINE_N == 0
+ASSERT HASFILELINE_I == -1
+
+# empty path soft fail
+SYS HASFILELINE "" "x"
+ASSERT OK == 0
+
+# agent: probe then ensure
+SYS HASFILELINE fs "feature_c"
+ASSERT HASFILELINE_N == 0
+SYS ENSURELINE fs "feature_c"
+ASSERT ENSURELINE_NEW == 1
+SYS HASFILELINE fs "feature_c"
+ASSERT HASFILELINE_N == 1
+ASSERT HASFILELINE_I == 4
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_hasfileline ok"
