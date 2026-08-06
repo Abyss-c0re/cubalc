@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 198,
-  "version": "1.15.223-usability",
-  "item": "SYS KVFILEDEL / FILEKVDEL / DELKVFILE drop key=val line from plate file",
-  "item_id": 231,
-  "title": "SYS KVFILEDEL|FILEKVDEL path key [sep] — drop key=val line from plate file",
-  "commit": "4db5d3e863bc1252694686b1f139274390256194",
-  "summary": "Plate file kv delete one-shot; dual of KVFILESET. selftest 198.",
+  "iter": 199,
+  "version": "1.15.224-usability",
+  "item": "SYS KVFILEINC / INCKVFILE / FILEKVINC bump numeric key=val in plate file",
+  "item_id": 232,
+  "title": "SYS KVFILEINC|INCKVFILE path key [delta] [sep] — bump numeric key=val in plate file",
+  "commit": "7dd9d7f72ab491b91ed6f811b4118288f94e44b8",
+  "summary": "Plate file counter bump one-shot; create if missing. selftest 199.",
   "proofs": [
-    "771_sys_kvfiledel",
-    "selftest n_pass=198"
+    "772_sys_kvfileinc",
+    "selftest n_pass=199"
   ],
-  "when": "2026-08-06T10:54:27Z",
+  "when": "2026-08-06T11:05:45Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4db5d3e863bc1252694686b1f139274390256194"
+  "sha": "7dd9d7f72ab491b91ed6f811b4118288f94e44b8"
 }
