@@ -4,14 +4,14 @@
   "version": "1.15.217-usability",
   "item": "SYS DROPALLMATCHFILE / FILEDROPALLMATCH drop all matching file lines",
   "item_id": 225,
-  "title": "SYS DROPALLMATCHFILE|FILEDROPALLMATCH path needle — drop all matching file lines",
+  "title": "SYS DROPALLMATCHFILE|FILEDROPALLMATCH path needle \u2014 drop all matching file lines",
   "commit": "756ac597907c18f30198b89c1ec8115b35508277",
   "summary": "Bulk purge matching file lines one-shot; dual of DROPMATCHFILE. selftest 192.",
   "proofs": [
     "765_sys_dropallmatchfile",
     "selftest n_pass=192"
   ],
-  "when": "2026-08-06T10:00:00Z",
+  "when": "2026-08-06T09:55:44Z",
   "agent": "meaningful_iter_10m",
   "sha": "756ac597907c18f30198b89c1ec8115b35508277"
 }
