@@ -1,0 +1,87 @@
+# SYS LOOKUPN / KVGETN — peel key:val as integer LAST_N
+# Usability: FREQ count arithmetic without LOOKUP+SYS NUM glue
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10"
+
+# hit → LAST_N is the count (not 0|1)
+SYS LOOKUPN hist "error"
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT LOOKUPN_N == 1
+ASSERT LOOKUPN_OR == 0
+ASSERT LOOKUPN_V == 3
+ASSERT LOOKUPN_I == 0
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+SYS LOOKUPN hist "info"
+ASSERT LAST_N == 10
+ASSERT LOOKUPN_V == 10
+
+# miss bare → OK=0 LAST_N=0
+SYS LOOKUPN hist "fatal"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT LOOKUPN_N == 0
+ASSERT LOOKUPN_OR == 0
+ASSERT LOOKUPN_I == -1
+
+# miss + OR numeric default
+SYS LOOKUPN hist "fatal" OR 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LOOKUPN_OR == 1
+ASSERT LOOKUPN_V == 0
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+SYS LOOKUPN hist "fatal" OR 7
+ASSERT OK == 1
+ASSERT LAST_N == 7
+ASSERT LOOKUPN_OR == 1
+ASSERT LOOKUPN_V == 7
+
+# hit ignores OR
+SYS LOOKUPN hist "warn" OR 99
+ASSERT LOOKUPN_OR == 0
+ASSERT LAST_N == 1
+ASSERT LOOKUPN_V == 1
+
+# custom sep
+LET cfg = "retries=2\nport=7700"
+SYS LOOKUPN cfg "retries" "=" OR 0
+ASSERT LAST_N == 2
+SYS LOOKUPN cfg "timeout" "=" OR 30
+ASSERT LAST_N == 30
+ASSERT LOOKUPN_OR == 1
+
+# aliases
+SYS KVGETN hist "error" OR 0
+ASSERT LAST_N == 3
+ASSERT KVGETN_V == 3
+SYS GETKVN hist "info"
+ASSERT LAST_N == 10
+SYS NUMKV hist "warn" OR 0
+ASSERT LAST_N == 1
+
+# agent: FREQ then arithmetic on counts
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR"
+SYS FREQ sev
+LET h = LAST
+SYS LOOKUPN h "ERROR" OR 0
+LET nerr = LAST_N
+SYS LOOKUPN h "WARN" OR 0
+LET nwarn = LAST_N
+SYS LOOKUPN h "FATAL" OR 0
+LET nfat = LAST_N
+ASSERT nerr == 3
+ASSERT nwarn == 1
+ASSERT nfat == 0
+# ratio-ish: errors dominate?
+ASSERT nerr > nwarn
+SYS SUMKV h
+ASSERT LAST_N == 5
+
+PRINT "sys_lookupn ok"

@@ -5408,6 +5408,140 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", (found || used_or) ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS LOOKUPN|KVGETN|GETKVN bag key [sep] [OR default]
+     * — like LOOKUP but LAST_N = integer parse of the value (not 0|1 hit).
+     * LAST still holds value string. On miss+OR: LAST_N = default int, OK=1,
+     * LOOKUPN_OR=1. Bare miss: LAST_N=0, OK=0.
+     * Usability: FREQ count arithmetic without LOOKUP+SYS NUM glue. */
+    if (kw(&L->cur,"LOOKUPN") || kw(&L->cur,"KVGETN") || kw(&L->cur,"GETKVN") ||
+        kw(&L->cur,"DICTGETN") || kw(&L->cur,"MAPGETN") || kw(&L->cur,"NUMKV") ||
+        kw(&L->cur,"KVNUM") || kw(&L->cur,"ICOUNT") || kw(&L->cur,"NLOOKUP")){
+      char bag[CUBALC_HOST_STR_MAX], key[256], sep[32], out[512], line[512];
+      char fb[64];
+      int have_fb = 0, used_or = 0;
+      const char *p, *start;
+      size_t flen, kn, sn;
+      long idx = 0, found = 0, found_i = -1, nval = 0, defv = 0;
+      lex_next(L);
+      bag[0] = 0; key[0] = 0; out[0] = 0; line[0] = 0; fb[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0) key[0] = 0;
+      /* optional sep string (not OR keywords) */
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 strcmp(L->cur.text, "OR") != 0 &&
+                 strcmp(L->cur.text, "DEFAULT") != 0 &&
+                 strcmp(L->cur.text, "ELSE") != 0 &&
+                 strcmp(L->cur.text, "FALLBACK") != 0 &&
+                 strcmp(L->cur.text, "SOFT") != 0) {
+        if (strlen(L->cur.text) <= 2) {
+          snprintf(sep, sizeof sep, "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK") || kw(&L->cur,"SOFT")){
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN) {
+          defv = parse_expr(vm, L);
+          snprintf(fb, sizeof fb, "%ld", defv);
+          have_fb = 1;
+        } else {
+          if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+            fail(vm, "SYS LOOKUPN bag key [sep] OR default");
+            return -1;
+          }
+          {
+            char *end = 0;
+            defv = strtol(fb, &end, 10);
+            if (end == fb) defv = 0;
+          }
+          have_fb = 1;
+        }
+      }
+      kn = strlen(key);
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            char left[256];
+            size_t take = flen, left_n = 0;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (sn == 0) {
+              hit = (strcmp(field, key) == 0);
+              if (hit) snprintf(out, sizeof out, "%s", field);
+            } else {
+              const char *sp = strstr(field, sep);
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              } else {
+                left_n = take;
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              }
+              hit = (strcmp(left, key) == 0);
+              if (hit) {
+                if (sp) snprintf(out, sizeof out, "%s", sp + sn);
+                else out[0] = 0;
+              }
+            }
+            if (hit) {
+              if (flen >= sizeof line) flen = sizeof line - 1;
+              memcpy(line, start, flen);
+              line[flen] = 0;
+              found = 1;
+              found_i = idx;
+              break;
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      (void)kn;
+      if (found) {
+        char *end = 0;
+        nval = strtol(out, &end, 10);
+        if (end == out) nval = 0;
+      } else if (have_fb) {
+        snprintf(out, sizeof out, "%s", fb);
+        nval = defv;
+        used_or = 1;
+      } else {
+        out[0] = 0;
+        nval = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "LOOKUPN", out);
+      var_set_str(vm, "LOOKUP_LINE", line);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nval;
+      var_set_num(vm, "LAST_N", nval);
+      var_set_num(vm, "LOOKUPN_N", found);
+      var_set_num(vm, "LOOKUPN_I", found_i);
+      var_set_num(vm, "LOOKUPN_OR", used_or);
+      var_set_num(vm, "LOOKUPN_V", nval);
+      var_set_num(vm, "KVGETN_V", nval);
+      var_set_num(vm, "OK", (found || used_or) ? 1 : 0);
+      bump(vm); return 1;
+    }
     /* SYS KVSET|SETKV|DICTSET bag key value [sep]
      * — set key:value in bag: if a field's left-of-sep equals key, replace value;
      * else append key+sep+value. Default sep ":". LAST = bag; LAST_N = field count;
@@ -8931,7 +9065,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|TOPKEY|BOTKEY|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|TOPKEY|BOTKEY|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -9223,6 +9357,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS KVGET", "SYS KVGET bag key [sep] [OR fallback] — alias of SYS LOOKUP · FREQ count peel"},
       {"SYS LOOKUPI", "SYS LOOKUPI|KVGETI bag key [sep] [OR fallback] — case-insensitive LOOKUP"},
       {"SYS GETKV", "SYS GETKV bag key [sep] [OR fallback] — alias of SYS LOOKUP"},
+      {"SYS LOOKUPN", "SYS LOOKUPN|KVGETN bag key [sep] [OR n] — peel value as int → LAST_N · FREQ arith"},
+      {"SYS KVGETN", "SYS KVGETN bag key [sep] [OR n] — alias of SYS LOOKUPN · count as number"},
+      {"SYS GETKVN", "SYS GETKVN bag key [sep] [OR n] — alias of SYS LOOKUPN"},
       {"SYS KVSET", "SYS KVSET|SETKV bag key value [sep] — set/update key:val field · dual of LOOKUP"},
       {"SYS SETKV", "SYS SETKV bag key value [sep] — alias of SYS KVSET · plate kv write"},
       {"SYS DICTSET", "SYS DICTSET bag key value [sep] — alias of SYS KVSET"},
