@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "seed_getn",
-      "cmd": "seed api:12 db:3 mesh:1 debug:0; getn api → 12",
+      "cmd": "seed api:12 db:3 mesh:1 debug:0; getn api \u2192 12",
       "ok": true,
       "note": "LOOKUPN peel LAST_N"
     },
     {
       "name": "thresh_page",
-      "cmd": "thresh 3 → api:12 db:3 drop=2; page top api",
+      "cmd": "thresh 3 \u2192 api:12 db:3 drop=2; page top api",
       "ok": true,
       "note": "THRESHKV + TOPKEY"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "bump",
-      "cmd": "bump mesh +5 → 6",
+      "cmd": "bump mesh +5 \u2192 6",
       "ok": true,
       "note": "KVINC"
     },
@@ -50,13 +50,13 @@
     },
     {
       "name": "substring_false",
-      "cmd": "getn ap → OR default not api",
+      "cmd": "getn ap \u2192 OR default not api",
       "ok": true,
       "note": "exact key"
     },
     {
       "name": "lookupn_nonnum",
-      "cmd": "LOOKUPN api:abc → V=0 OK=1 hit as zero",
+      "cmd": "LOOKUPN api:abc \u2192 V=0 OK=1 hit as zero",
       "ok": true,
       "note": "strtol silent"
     },
@@ -79,8 +79,8 @@
       "severity": "high",
       "area": "host|bag",
       "title": "LOOKUPN treats non-numeric values as 0 with OK=1",
-      "detail": "api:abc LOOKUPN → LAST_N=0 LOOKUPN_V=0 OK=1 (hit not miss). Agents cannot distinguish missing, zero, and garbage without dual LOOKUP string check.",
-      "repro": "LOOKUPN 'api:abc' api → 0 OK=1"
+      "detail": "api:abc LOOKUPN \u2192 LAST_N=0 LOOKUPN_V=0 OK=1 (hit not miss). Agents cannot distinguish missing, zero, and garbage without dual LOOKUP string check.",
+      "repro": "LOOKUPN 'api:abc' api \u2192 0 OK=1"
     },
     {
       "id": "W2",
@@ -88,7 +88,7 @@
       "area": "host|bag",
       "title": "LOOKUPN OR still OK=1 on miss",
       "detail": "Same silent-default class as LOOKUP OR. LOOKUPN_OR must be inspected; OK alone is insufficient for present-vs-default.",
-      "repro": "LOOKUPN bag ghost OR 0 → OK=1 OR=1"
+      "repro": "LOOKUPN bag ghost OR 0 \u2192 OK=1 OR=1"
     },
     {
       "id": "W3",
@@ -96,7 +96,7 @@
       "area": "host|bag",
       "title": "THRESHKV drops non-numeric via strtol 0 without signal",
       "detail": "api:abc with min=1 is dropped as value 0; no THRESHKV_SKIP nonnum counter. Metadata keys vanish from HOT plate silently.",
-      "repro": "THRESHKV 'api:abc\\nwarn:3' 1 → warn:3 DROP=1"
+      "repro": "THRESHKV 'api:abc\\nwarn:3' 1 \u2192 warn:3 DROP=1"
     },
     {
       "id": "W4",
@@ -155,10 +155,10 @@
   ],
   "issues_faced": [
     "Positive seed/getn/thresh/page/budget clean",
-    "LOOKUPN non-numeric → 0 hit is high-sev footgun for SLO math",
+    "LOOKUPN non-numeric \u2192 0 hit is high-sev footgun for SLO math",
     "CMP LAST_N -1|0|1 works well for budget gate",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "194be64d898f77926250a0215f393bfb8a6a16ba",
   "ts": "2026-08-06T00:45:00Z"
 }
