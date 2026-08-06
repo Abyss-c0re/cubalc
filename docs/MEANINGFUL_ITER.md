@@ -323,6 +323,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 293. ~~**`SYS RELPATH` / `REL` / `STRIPBASE`**~~ **done** (base+path → relative plate path · portable after WALK/PUSHD).
 294. ~~**`SYS ATIME` / `CTIME`**~~ **done** (access + status-change epoch · plate freshness beyond MTIME).
 295. ~~**`SYS HASENV` / `ENVHAS`**~~ **done** (soft env presence probe · IF before REQUIRE ENV without fatal).
+296. ~~**`SYS GID` / `EGID` / `GROUP`**~~ **done** (process group id + name · agent identity without shell id).
 
 ## Tick protocol
 

@@ -15042,6 +15042,87 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS GID|GROUP_ID|GETGID — real group id → LAST_N/GID.
+     * SYS EGID|EFFECTIVE_GID|GETEGID — effective group id → LAST_N/EGID.
+     * SYS GROUP|GNAME|PRIMARYGROUP — primary group name → LAST/GROUP.
+     * Usability: agent identity + plate ACL checks without shell id. */
+    if (kw(&L->cur,"GID") || kw(&L->cur,"GROUP_ID") || kw(&L->cur,"GROUPID") ||
+        kw(&L->cur,"GETGID") || kw(&L->cur,"RGID") ||
+        kw(&L->cur,"EGID") || kw(&L->cur,"EFFECTIVE_GID") || kw(&L->cur,"GETEGID") ||
+        kw(&L->cur,"EFFECTIVEGID") ||
+        kw(&L->cur,"GROUP") || kw(&L->cur,"GNAME") || kw(&L->cur,"PRIMARYGROUP") ||
+        kw(&L->cur,"PRIMARY_GROUP") || kw(&L->cur,"MYGROUP") || kw(&L->cur,"GROUPNAME_ME")){
+      char op[24];
+      int want_name, want_egid;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      want_name = (strcmp(op, "GROUP") == 0 || strcmp(op, "GNAME") == 0 ||
+                   strcmp(op, "PRIMARYGROUP") == 0 || strcmp(op, "PRIMARY_GROUP") == 0 ||
+                   strcmp(op, "MYGROUP") == 0 || strcmp(op, "GROUPNAME_ME") == 0);
+      want_egid = (strcmp(op, "EGID") == 0 || strcmp(op, "EFFECTIVE_GID") == 0 ||
+                   strcmp(op, "GETEGID") == 0 || strcmp(op, "EFFECTIVEGID") == 0);
+      lex_next(L);
+      if (want_name) {
+        char gname[128];
+        long gid = 0;
+        gname[0] = 0;
+#if defined(CUBALC_OS_WINDOWS)
+        {
+          const char *e = getenv("GROUP");
+          if (e && e[0]) snprintf(gname, sizeof gname, "%s", e);
+          else snprintf(gname, sizeof gname, "%s", "group");
+        }
+#else
+        gid = (long)getegid();
+        {
+          struct group *gr = getgrgid((gid_t)gid);
+          if (gr && gr->gr_name && gr->gr_name[0])
+            snprintf(gname, sizeof gname, "%s", gr->gr_name);
+          else
+            snprintf(gname, sizeof gname, "%ld", gid);
+        }
+#endif
+        if (!gname[0]) snprintf(gname, sizeof gname, "%s", "group");
+        var_set_str(vm, "GROUP", gname);
+        var_set_str(vm, "GNAME", gname);
+        var_set_str(vm, "LAST", gname);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", gname);
+        vm->last_n = (long)strlen(gname);
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "GID", gid);
+        var_set_num(vm, "EGID", gid);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      {
+        long n = 0;
+        char buf[32];
+#if defined(CUBALC_OS_WINDOWS)
+        {
+          const char *e = getenv(want_egid ? "EGID" : "GID");
+          if (e && e[0]) n = strtol(e, NULL, 10);
+        }
+#else
+        n = want_egid ? (long)getegid() : (long)getgid();
+        if (n < 0) n = 0;
+#endif
+        vm->last_n = n;
+        var_set_num(vm, "LAST_N", n);
+        if (want_egid) {
+          var_set_num(vm, "EGID", n);
+          var_set_num(vm, "EGID_N", n);
+        } else {
+          var_set_num(vm, "GID", n);
+          var_set_num(vm, "GID_N", n);
+        }
+        var_set_num(vm, "OK", 1);
+        snprintf(buf, sizeof buf, "%ld", n);
+        var_set_str(vm, "LAST", buf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+        bump(vm); return 1;
+      }
+    }
     /* SYS HOME|HOMEDIR|USER_HOME — home directory → LAST/HOME */
     if (kw(&L->cur,"HOME") || kw(&L->cur,"HOMEDIR") || kw(&L->cur,"USER_HOME") ||
         kw(&L->cur,"HOMEPATH")){
@@ -23155,6 +23236,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ATIME", "SYS ATIME|ACCESSTIME path — last access epoch → LAST_N"},
       {"SYS CTIME", "SYS CTIME|CHANGETIME path — status-change epoch → LAST_N"},
       {"SYS HASENV", "SYS HASENV|ENVHAS name — LAST_N 1 if env set non-empty"},
+      {"SYS GID", "SYS GID|GROUP_ID — real group id → LAST_N"},
+      {"SYS EGID", "SYS EGID|GETEGID — effective group id → LAST_N"},
+      {"SYS GROUP", "SYS GROUP|GNAME — primary group name → LAST"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},

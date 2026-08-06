@@ -1,0 +1,55 @@
+# SYS GID / EGID / GROUP — process group identity
+# Usability: agent ACL plates without shell id -gn
+
+HOLD_FLASH 1
+
+# real group id
+SYS GID
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+LET g = LAST_N
+ASSERT GID == g
+ASSERT GID_N == g
+
+# effective group id (usually same for normal agents)
+SYS EGID
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+LET eg = LAST_N
+ASSERT EGID == eg
+
+# primary group name non-empty
+SYS GROUP
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N >= 1
+LET gname = GROUP
+SYS EQS LAST gname
+ASSERT LAST_N == 1
+
+# aliases
+SYS GETGID
+ASSERT LAST_N == g
+SYS GETEGID
+ASSERT LAST_N == eg
+SYS GNAME
+SYS EQS LAST gname
+ASSERT LAST_N == 1
+SYS PRIMARYGROUP
+SYS EQS LAST gname
+ASSERT LAST_N == 1
+
+# complements FILEGID on plates we create (group may match)
+SYS TMP
+LET td = LAST
+SYS JOIN td "gid_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "gid-probe"
+ASSERT OK == 1
+SYS FILEGID p
+ASSERT OK == 1
+# plate group is some valid gid
+ASSERT LAST_N >= 0
+SYS RM p
+
+PRINT "sys_gid ok"
