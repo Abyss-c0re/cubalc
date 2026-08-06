@@ -1,0 +1,817 @@
+# cache_freshness_board.cubalc — cache/log freshness via AGEALL/SORTMTIME/NEWEST
+#
+# Real use: ops agent inventories a cache or log drop dir for freshness
+# without shell ls -lt. PATHGLOB → KEEPFILES → AGEALL maps age-seconds;
+# SORTMTIME/SORTSIZE order reclaim candidates; NEWEST/OLDEST/LARGEST pick
+# extremes; ZIP basenames with ages for name:age plates and THRESHKV stale.
+#
+# Distinct from stale_plate_gc (EACH AGE + trash/rm) and drop_bytes_board
+# (SIZEALL reclaim): this board is bulk time maps + order/pick for
+# freshness policy without destructive GC.
+#
+# Plate under STATE:
+#   PATHS.txt           — working full path bag
+#   AGES.txt            — parallel AGEALL seconds bag
+#   AGE_KV.txt          — basename:age key:val (ZIP)
+#   FRESH_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CF_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   ages      — AGEALL PATHS → AGES; ZIP BASENAMEALL → AGE_KV
+#   mtimes    — MTIMEALL PATHS → AGES plate reused as epochs (note in report)
+#   sortmt    — SORTMTIME PATHS [ASC|DESC] (ARG1, default DESC newest first)
+#   sortsz    — SORTSIZE PATHS [ASC|DESC]
+#   newest    — NEWEST path → val_s
+#   oldest    — OLDEST path
+#   largest   — LARGEST path (bytes in LARGEST_N)
+#   smallest  — SMALLEST path
+#   stale     — THRESHKV AGE_KV min_age (ARG1) keep old enough
+#   has       — HASLINE exact path
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cf_$$; mkdir -p "$CUBALC_STATE/cache"
+#   # create fixtures; sleep/touch for age spread
+#   CUBALC_CF_DIR=$CUBALC_STATE/cache CUBALC_ARG0=scan CUBALC_ARG1='*' \
+#     ./out/cubalc run -q -s programs/realworld/cache_freshness_board.cubalc
+#   CUBALC_ARG0=files ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=ages ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=sortmt ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=newest ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=stale CUBALC_ARG1=1 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CF_DIR=…  CUBALC_CF_PAT=*  CUBALC_CF_REQUIRE=1  CUBALC_CF_MIN=0
+#
+# Edges deliberately stressed:
+#   AGEALL miss/dir → 0 like brand-new (same class as SIZEALL)
+#   SORTMTIME miss paths order unstable / zero mtime
+#   NEWEST on empty soft; ties first wins
+#   THRESHKV on ages: min age for "stale" is inverted vs size "big"
+#   WRITE NL; PRINT_JSON; soft READ; REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cache_freshness_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT AFILE = "AGES.txt"
+DEFAULT KFILE = "AGE_KV.txt"
+DEFAULT REPORT = "FRESH_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT MIN = 0
+DEFAULT ORDER = "DESC"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CF_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_CF_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_CF_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir AFILE
+LET ages_path = LAST
+SYS JOIN state_dir KFILE
+LET kv_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR ages_path OR ""
+LET ages = LAST
+CLEAR_ERR
+SYS READ OR kv_path OR ""
+LET agekv = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET ages_ch = 0
+LET kv_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET age_max = 0
+LET age_min = 0
+LET hit_n = 0
+LET miss_n = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "stale"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET MIN = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "sortmt"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET ORDER = NAME
+  END
+END
+SYS EQS ACTION "sortsz"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET ORDER = NAME
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES ages
+  LET na = LAST_N
+  SYS LINES agekv
+  LET nk = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "cfresh" np na nk ACTION
+  PRINT_JSON np na nk ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON ages
+  PRINT_JSON agekv
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- ages AGEALL + ZIP ---
+SYS EQS ACTION "ages"
+IF LAST_N == 1 THEN
+  NOTE "action ages"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "ages empty"
+    FAIL "ages empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ages empty"
+    END
+  ELSE
+    SYS AGEALL paths
+    LET ages = LAST
+    LET hit_n = AGEALL_HIT
+    LET miss_n = AGEALL_MISS
+    LET age_max = AGEALL_MAX
+    LET age_min = AGEALL_MIN
+    LET hit = AGEALL_N
+    LET ages_ch = 1
+    SYS BASENAMEALL paths
+    LET bns = LAST
+    SYS ZIP bns ages ":"
+    LET agekv = LAST
+    LET kv_ch = 1
+    LET note_msg = "ages ok"
+    PRINT_JSON hit_n miss_n age_max age_min
+    PRINT_JSON ages
+    PRINT_JSON agekv
+  END
+END
+
+# --- mtimes MTIMEALL (store epochs in AGES plate) ---
+SYS EQS ACTION "mtimes"
+IF LAST_N == 1 THEN
+  NOTE "action mtimes"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "mtimes empty"
+    FAIL "mtimes empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mtimes empty"
+    END
+  ELSE
+    SYS MTIMEALL paths
+    LET ages = LAST
+    LET hit_n = MTIMEALL_HIT
+    LET miss_n = MTIMEALL_MISS
+    LET age_max = MTIMEALL_MAX
+    LET age_min = MTIMEALL_MIN
+    LET hit = MTIMEALL_N
+    LET ages_ch = 1
+    SYS BASENAMEALL paths
+    LET bns = LAST
+    SYS ZIP bns ages ":"
+    LET agekv = LAST
+    LET kv_ch = 1
+    LET note_msg = "mtimes ok"
+    PRINT_JSON hit_n miss_n age_max age_min
+    PRINT_JSON ages
+  END
+END
+
+# --- sortmt ---
+SYS EQS ACTION "sortmt"
+IF LAST_N == 1 THEN
+  NOTE "action sortmt"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "sortmt empty"
+    FAIL "sortmt empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sortmt empty"
+    END
+  ELSE
+    SYS EQSI ORDER "ASC"
+    IF LAST_N == 1 THEN
+      SYS SORTMTIME paths ASC
+    ELSE
+      SYS SORTMTIME paths DESC
+    END
+    LET paths = LAST
+    LET keep_n = SORTMTIME_N
+    LET paths_ch = 1
+    LET hit = keep_n
+    LET note_msg = "sortmt ok"
+    PRINT_JSON ORDER keep_n
+    PRINT_JSON paths
+  END
+END
+
+# --- sortsz ---
+SYS EQS ACTION "sortsz"
+IF LAST_N == 1 THEN
+  NOTE "action sortsz"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "sortsz empty"
+    FAIL "sortsz empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sortsz empty"
+    END
+  ELSE
+    SYS EQSI ORDER "ASC"
+    IF LAST_N == 1 THEN
+      SYS SORTSIZE paths ASC
+    ELSE
+      SYS SORTSIZE paths DESC
+    END
+    LET paths = LAST
+    LET keep_n = SORTSIZE_N
+    LET paths_ch = 1
+    LET hit = keep_n
+    LET note_msg = "sortsz ok"
+    PRINT_JSON ORDER keep_n
+    PRINT_JSON paths
+  END
+END
+
+# --- newest ---
+SYS EQS ACTION "newest"
+IF LAST_N == 1 THEN
+  NOTE "action newest"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "newest empty"
+    FAIL "newest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "newest empty"
+    END
+  ELSE
+    SYS NEWEST paths
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "newest miss"
+      FAIL "newest miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "newest miss"
+      END
+    ELSE
+      LET val_s = LAST
+      LET val_n = NEWEST_N
+      LET hit = 1
+      LET note_msg = "newest ok"
+      PRINT_JSON val_s val_n NEWEST_I
+    END
+  END
+END
+
+# --- oldest ---
+SYS EQS ACTION "oldest"
+IF LAST_N == 1 THEN
+  NOTE "action oldest"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "oldest empty"
+    FAIL "oldest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "oldest empty"
+    END
+  ELSE
+    SYS OLDEST paths
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "oldest miss"
+      FAIL "oldest miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "oldest miss"
+      END
+    ELSE
+      LET val_s = LAST
+      LET val_n = OLDEST_N
+      LET hit = 1
+      LET note_msg = "oldest ok"
+      PRINT_JSON val_s val_n OLDEST_I
+    END
+  END
+END
+
+# --- largest ---
+SYS EQS ACTION "largest"
+IF LAST_N == 1 THEN
+  NOTE "action largest"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "largest empty"
+    FAIL "largest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "largest empty"
+    END
+  ELSE
+    SYS LARGEST paths
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "largest miss"
+      FAIL "largest miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "largest miss"
+      END
+    ELSE
+      LET val_s = LAST
+      LET val_n = LARGEST_N
+      LET hit = 1
+      LET note_msg = "largest ok"
+      PRINT_JSON val_s val_n LARGEST_I
+    END
+  END
+END
+
+# --- smallest ---
+SYS EQS ACTION "smallest"
+IF LAST_N == 1 THEN
+  NOTE "action smallest"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "smallest empty"
+    FAIL "smallest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "smallest empty"
+    END
+  ELSE
+    SYS SMALLEST paths
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "smallest miss"
+      FAIL "smallest miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "smallest miss"
+      END
+    ELSE
+      LET val_s = LAST
+      LET val_n = SMALLEST_N
+      LET hit = 1
+      LET note_msg = "smallest ok"
+      PRINT_JSON val_s val_n SMALLEST_I
+    END
+  END
+END
+
+# --- stale THRESHKV on agekv ---
+SYS EQS ACTION "stale"
+IF LAST_N == 1 THEN
+  NOTE "action stale"
+  SYS BLANK agekv
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stale empty kv"
+    FAIL "stale empty kv"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stale empty kv"
+    END
+  ELSE
+    SYS THRESHKV agekv MIN ":"
+    LET agekv = LAST
+    LET keep_n = THRESHKV_N
+    LET drop_n = THRESHKV_DROP
+    LET kv_ch = 1
+    LET hit = keep_n
+    SYS BLANK agekv
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "stale none"
+      FAIL "stale none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stale none"
+      END
+    ELSE
+      LET note_msg = "stale ok"
+    END
+    PRINT_JSON MIN keep_n drop_n
+    PRINT_JSON agekv
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET ages = ""
+  LET agekv = ""
+  LET paths_ch = 1
+  LET ages_ch = 1
+  LET kv_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "ages"
+LET k = k + LAST_N
+SYS EQS ACTION "mtimes"
+LET k = k + LAST_N
+SYS EQS ACTION "sortmt"
+LET k = k + LAST_N
+SYS EQS ACTION "sortsz"
+LET k = k + LAST_N
+SYS EQS ACTION "newest"
+LET k = k + LAST_N
+SYS EQS ACTION "oldest"
+LET k = k + LAST_N
+SYS EQS ACTION "largest"
+LET k = k + LAST_N
+SYS EQS ACTION "smallest"
+LET k = k + LAST_N
+SYS EQS ACTION "stale"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF ages_ch > 0 THEN
+  SYS WRITE ages_path ages
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "ages write failed"
+  END
+  CLEAR_ERR
+END
+IF kv_ch > 0 THEN
+  SYS WRITE kv_path agekv
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "agekv write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES ages
+LET depth_a = LAST_N
+SYS LINES agekv
+LET depth_k = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.cache_fresh.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "age_max"
+LET report = LAST
+SYS STR age_max
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "age_min"
+LET report = LAST
+SYS STR age_min
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hit_n"
+LET report = LAST
+SYS STR hit_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss_n"
+LET report = LAST
+SYS STR miss_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min"
+LET report = LAST
+SYS STR MIN
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "order"
+LET report = LAST
+SYS PUSH report ORDER
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_a"
+LET report = LAST
+SYS STR depth_a
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_k"
+LET report = LAST
+SYS STR depth_k
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "cache_freshness_board" ACTION hit miss age_max val_s note_msg elapsed
+PRINT_JSON ACTION hit miss keep_n drop_n age_max age_min hit_n miss_n depth_p depth_a depth_k note_msg STATUS_OK
+NOTE "cache_freshness_board: done"
