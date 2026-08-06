@@ -1,164 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 89,
-  "program": "programs/realworld/node_tool_gate_board.cubalc",
-  "theme": "node tool gate UNAME PLATFORM LOCAL WHICHBIN REQUIRE BIN readiness",
-  "version": "1.15.263-usability",
+  "iter": 90,
+  "program": "programs/realworld/load_backpressure_board.cubalc",
+  "theme": "load backpressure LOADAVG NPROC ISATTY admit busy throttle",
+  "version": "1.15.265-usability",
   "pass": true,
   "tests": [
     {
-      "name": "probe",
-      "cmd": "UNAME/ARCH/PLATFORM/HOSTNAME/LOCAL/DATE \u2192 NODE+META",
+      "name": "sample",
+      "cmd": "LOADAVG + NPROC \u2192 META load1_n/cut/busy/ratio",
       "ok": true,
-      "note": "Linux/x86_64@host [local]"
+      "note": "centiload 160 vs cut 400"
     },
     {
-      "name": "need_tools",
-      "cmd": "need sh+ls idempotent",
+      "name": "cut_auto",
+      "cmd": "cut auto \u2192 0 plate means nproc*100",
       "ok": true,
-      "note": "TOOLS bag"
+      "note": "auto"
     },
     {
-      "name": "which_ls",
-      "cmd": "WHICHBIN ls \u2192 /usr/bin/ls",
+      "name": "mode_out",
+      "cmd": "ISATTY OUT under pipe \u2192 0",
       "ok": true,
-      "note": "after var fix"
+      "note": "batch"
     },
     {
-      "name": "which_miss",
-      "cmd": "soft miss; REQUIRE\u21922",
+      "name": "admit_allow",
+      "cmd": "load under auto cut \u2192 allow",
       "ok": true,
-      "note": "no such tool"
+      "note": "idle-ish host"
     },
     {
-      "name": "whichlib_false_friend",
-      "cmd": "WHICH hold_seed finds lib; WHICHBIN misses",
+      "name": "admit_busy",
+      "cmd": "cut=1; load>1 soft deny; REQUIRE\u21922",
       "ok": true,
-      "note": "PATH vs lib"
+      "note": "throttle"
     },
     {
-      "name": "check_ok",
-      "cmd": "EACH LINE WHICHBIN \u2192 2/2",
+      "name": "busy_probe",
+      "cmd": "busy hit when over; no under REQUIRE\u21922",
       "ok": true,
-      "note": "var resolve"
+      "note": "dual of admit"
     },
     {
-      "name": "gate_blocked",
-      "cmd": "missing tool REQUIRE\u21922",
+      "name": "stamp",
+      "cmd": "LOCAL + load line",
       "ok": true,
-      "note": "gate"
+      "note": "audit"
     },
     {
-      "name": "gate_ok",
-      "cmd": "HEAD+REQUIRE BIN first tool",
+      "name": "num_nope",
+      "cmd": "NUM nope OK=1 LAST_N=0 (not fail)",
       "ok": true,
-      "note": "hard PATH"
-    },
-    {
-      "name": "local_vs_utc",
-      "cmd": "LOCAL no Z; DATE has Z",
-      "ok": true,
-      "note": "stamp shape"
-    },
-    {
-      "name": "whichbin_var_fix",
-      "cmd": "WHICHBIN tool with tool=ls \u2192 path not 'tool'",
-      "ok": true,
-      "note": "lang fix"
+      "note": "language footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "236/236 pass"
+      "note": "238/238 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|whichbin",
-      "title": "WHICHBIN used IDENT text not string-var value (FIXED this iter)",
-      "detail": "SYS WHICHBIN tool with tool=\"ls\" searched PATH for name \"tool\". Broke EACH LINE tool bags. Fixed: string vars and LAST resolve; bare IDENT still literal tool token.",
-      "repro": "pre-fix: LET t=\"ls\"; WHICHBIN t \u2192 not found 't'"
+      "area": "host|num",
+      "title": "SYS NUM non-numeric returns OK=1 LAST_N=0",
+      "detail": "NUM \"nope\" / \"1x\" / \"\" succeed with zero. Agents cannot distinguish bad input from zero without digit-check. cut ARG1=nope silently becomes auto-cut 0.",
+      "repro": "SYS NUM \"nope\" \u2192 OK=1 LAST_N=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|which",
-      "title": "WHICH vs WHICHBIN false friend for libs",
-      "detail": "WHICH hold_seed finds CubalC lib path; WHICHBIN misses. Agents using WHICH for deploy tools accept non-executables.",
-      "repro": "WHICH hold_seed OK; WHICHBIN hold_seed miss"
+      "area": "host|loadavg",
+      "title": "LOAD1 string vs LOAD1_N centiload dual plane",
+      "detail": "LAST is \"1.60 1.16 1.20\"; LOAD1_N is 160. Agents comparing LOAD1 to NPROC without _N mis-scale by 100x.",
+      "repro": "LOADAVG; LOAD1 vs LOAD1_N"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|nth",
-      "title": "SYS NTH bag idx form is NTH idx bag not NTH bag idx",
-      "detail": "SYS NTH tools 0 \u2192 unknown form '0'. Correct: SYS NTH 0 tools or HEAD tools.",
-      "repro": "SYS NTH tools 0"
+      "area": "host|cut",
+      "title": "cut=0 means auto nproc*100 not absolute zero",
+      "detail": "No way to set \"never busy\" vs \"auto\" without sentinel. Agent wanting cut 0 (always admit) collides with auto.",
+      "repro": "cut 0 and cut auto identical"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|local",
-      "title": "LOCAL vs DATE timezone dual without offset field",
-      "detail": "LOCAL omits Z; DATE is UTC Z. No LOCAL_OFF or TZ name; agents mis-compare wall vs UTC near midnight.",
-      "repro": "LOCAL no Z; DATE ends Z"
+      "area": "lang|div",
+      "title": "Integer division load1/nproc loses fractional ratio",
+      "detail": "160/4=40; cannot express 1.60 load per CPU as float. Backpressure bands coarse.",
+      "repro": "ratio_n = load1_n / nproc_n"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|print",
-      "title": "PRINT_JSON collapses TOOLS bag newlines",
-      "detail": "sh\\nls looks like shlscat in JSON plate.",
-      "repro": "PRINT_JSON tools"
+      "area": "host|isatty",
+      "title": "ISATTY under selftest/run always non-TTY",
+      "detail": "Cannot positive-test interactive branch in automated runs without real TTY inject.",
+      "repro": "ISATTY OUT \u2192 0 in plate run"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "NODE/TOOLS glue in cat -A.",
-      "repro": "cat -A NODE.txt"
+      "detail": "CUT/MODE/VAL glue in cat -A.",
+      "repro": "cat -A CUT.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|each",
-      "title": "EACH LINE bag vs EACH LINE AS x IN bag form ambiguity",
-      "detail": "Bare EACH LINE tools works when tools is bag; wrong LAST source if form misread as AS binding.",
-      "repro": "prefer EACH LINE IN tools"
+      "area": "host|loadavg",
+      "title": "No soft-fail path for LOADAVG on exotic hosts",
+      "detail": "Proof assumes always OK; no documented miss semantics for containers without /proc/loadavg.",
+      "repro": "LOADAVG on restricted FS"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_NT_REQUIRE=abc \u2192 REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc which miss \u2192 rc 0"
+      "title": "Non-numeric REQUIRE env still softens",
+      "detail": "CUBALC_LB_REQUIRE=abc leaves REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc admit busy \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Post-fix: WHICHBIN LINE and WHICHBIN tool work for string vars",
-    "Use WHICHBIN not WHICH for deploy executables",
-    "SYS NTH 0 bag or HEAD bag",
-    "Compare LOCALDATE vs DATE date-part carefully across TZ",
-    "Digit-check REQUIRE"
+    "Digit-check ARG before NUM; reject non [0-9]+",
+    "Always use LOAD1_N not LOAD1 for compares",
+    "Use cut=1 for force-busy tests; huge cut for force-allow",
+    "ISATTY tests accept both 0/1; branch on value",
+    "Document auto cut as nproc*100 centiload"
   ],
   "language_gaps": [
-    "WHICHBIN string-var (done this iter)",
-    "TZ / UTC offset stamp",
-    "NTH bag-first overload or clearer error",
-    "WRITE trailing NL",
-    "PRINT_JSON bag-as-array"
+    "NUM strict mode OK=0 on garbage",
+    "LOADAVG float LAST_N or load units helper",
+    "cut sentinel never-busy vs auto",
+    "Fractional ratio / fixed-point div helper",
+    "TTY inject for tests",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "WHICHBIN IDENT footgun found+fixed+proof",
-    "NTH arg order broke gate first-tool REQUIRE BIN",
-    "probe/check 2/2/gate green after fix",
-    "selftest 236/236"
+    "sample/admit/busy/mode/stamp green",
+    "NUM nope soft-zero blocks cut validation",
+    "selftest 238/238; no language fix this iter"
   ],
-  "commit": "dd968502751f5c489ebd68b68fcddc242690d782",
-  "ts": "2026-08-06T17:11:41Z"
+  "commit": "",
+  "ts": "2026-08-06T17:33:48Z"
 }

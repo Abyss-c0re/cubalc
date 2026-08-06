@@ -1,0 +1,658 @@
+# load_backpressure_board.cubalc — LOADAVG throttle + ISATTY interactive mode
+#
+# Real use: agents sample host load before heavy work and branch on TTY vs
+# pipe for human vs batch paths (no shell uptime/test -t):
+#   LOADAVG / LOAD1_N / LOAD5_N / LOAD15_N — centiload integers
+#   NPROC / CPUS                             — capacity baseline
+#   ISATTY / TTY [IN|OUT|ERR]                — stream interactive probe
+#   LOCAL                                    — human stamp on decision
+# Distinct from cpu_work_shard (STRIDE partition) and rate_budget (token
+# ledger): this board is *load-ratio admit + tty mode + soft/hard busy gate*.
+#
+# Plate under STATE:
+#   CUT.txt        — busy cut centiload (0 = auto nproc*100)
+#   META.txt       — key:val sample bag
+#   VAL.txt        — last admit/busy/mode summary
+#   MODE.txt       — interactive 0|1
+#   PRESSURE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_LB_ACTION):
+#   list      — plate (default)
+#   sample    — LOADAVG + NPROC → META (ratio, busy flag)
+#   cut       — set cut ARG1 centiload (or "auto")
+#   mode      — ISATTY OUT → MODE plate
+#   admit     — sample; soft miss if busy; REQUIRE→exit 2
+#   busy      — sample; hit if busy else soft miss
+#   stamp     — LOCAL + load line → VAL
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lb_$$
+#   CUBALC_ARG0=sample ...
+#   CUBALC_ARG0=cut CUBALC_ARG1=auto ...
+#   CUBALC_ARG0=mode ...
+#   CUBALC_ARG0=admit ...
+#
+# Env: CUBALC_LB_REQUIRE=1
+#
+# Edges:
+#   centiload vs float string; auto cut nproc*100; ISATTY under pipe=0
+#   empty cut; busy soft; WRITE NL; REQUIRE; CMP shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "load_backpressure_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT CFILE = "CUT.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MODEFILE = "MODE.txt"
+DEFAULT REPORT = "PRESSURE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir CFILE
+LET cut_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MODEFILE
+LET mode_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR cut_path OR ""
+LET cut_s = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR mode_path OR ""
+LET mode_s = LAST
+CLEAR_ERR
+
+LET cut_n = 0
+LET interactive = 0
+SYS BLANK cut_s
+IF LAST_N == 0 THEN
+  SYS NUM cut_s
+  IF OK == 1 THEN
+    LET cut_n = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS BLANK mode_s
+IF LAST_N == 0 THEN
+  SYS NUM mode_s
+  IF OK == 1 THEN
+    LET interactive = LAST_N
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET cut_ch = 0
+LET meta_ch = 0
+LET val_ch = 0
+LET mode_ch = 0
+LET note_msg = "ok"
+LET load1_n = 0
+LET load5_n = 0
+LET load15_n = 0
+LET nproc_n = 0
+LET busy_n = 0
+LET eff_cut = 0
+LET ratio_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "lbpress" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON cut_n interactive
+  PRINT_JSON meta
+  PRINT_JSON val
+  LET note_msg = "list ok"
+END
+
+# --- sample LOADAVG + NPROC ---
+SYS EQS ACTION "sample"
+IF LAST_N == 1 THEN
+  NOTE "action sample"
+  SYS LOADAVG
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "sample load fail"
+    FAIL "sample load fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sample load fail"
+    END
+  ELSE
+    LET load1_n = LOAD1_N
+    LET load5_n = LOAD5_N
+    LET load15_n = LOAD15_N
+    LET load_s = LAST
+    SYS NPROC
+    LET nproc_n = LAST_N
+    IF nproc_n < 1 THEN
+      LET nproc_n = 1
+    END
+    LET eff_cut = cut_n
+    IF eff_cut == 0 THEN
+      LET eff_cut = nproc_n * 100
+    END
+    LET busy_n = 0
+    IF load1_n > eff_cut THEN
+      LET busy_n = 1
+    END
+    # ratio centiload per cpu (load1 / nproc as integer percent-ish)
+    LET ratio_n = load1_n / nproc_n
+    SYS STR load1_n
+    SYS CAT "load1_n:" LAST
+    LET meta = LAST
+    SYS STR load5_n
+    SYS CAT "load5_n:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR load15_n
+    SYS CAT "load15_n:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nproc_n
+    SYS CAT "nproc:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR eff_cut
+    SYS CAT "cut:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR busy_n
+    SYS CAT "busy:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR ratio_n
+    SYS CAT "ratio:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "load:" load_s
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    SYS STR busy_n
+    LET val = LAST
+    SYS CAT val " "
+    LET val = LAST
+    SYS CAT val load_s
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "sample ok"
+  END
+  PRINT_JSON load1_n load5_n load15_n nproc_n eff_cut busy_n
+  CLEAR_ERR
+END
+
+# --- cut ---
+SYS EQS ACTION "cut"
+IF LAST_N == 1 THEN
+  NOTE "action cut"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "cut needs centiload or auto"
+  END
+  SYS EQS NAME "auto"
+  IF LAST_N == 1 THEN
+    LET cut_n = 0
+    LET cut_s = "0"
+    LET cut_ch = 1
+    LET hit = 1
+    LET note_msg = "cut auto"
+    SYS STR cut_n
+    LET val = LAST
+    LET val_ch = 1
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "cut not num"
+      FAIL "cut not num"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "cut not num"
+      END
+    ELSE
+      LET cut_n = LAST_N
+      SYS STR cut_n
+      LET cut_s = LAST
+      LET cut_ch = 1
+      LET val = cut_s
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "cut ok"
+    END
+  END
+  PRINT_JSON cut_n
+  CLEAR_ERR
+END
+
+# --- mode ISATTY ---
+SYS EQS ACTION "mode"
+IF LAST_N == 1 THEN
+  NOTE "action mode"
+  LET stream = "OUT"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS EQSI NAME "in"
+    IF LAST_N == 1 THEN
+      LET stream = "IN"
+    ELSE
+      SYS EQSI NAME "err"
+      IF LAST_N == 1 THEN
+        LET stream = "ERR"
+      ELSE
+        SYS EQSI NAME "out"
+        IF LAST_N == 1 THEN
+          LET stream = "OUT"
+        ELSE
+          LET stream = NAME
+        END
+      END
+    END
+  END
+  SYS EQS stream "IN"
+  IF LAST_N == 1 THEN
+    SYS ISATTY IN
+  ELSE
+    SYS EQS stream "ERR"
+    IF LAST_N == 1 THEN
+      SYS ISATTY ERR
+    ELSE
+      SYS ISATTY OUT
+    END
+  END
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mode isatty fail"
+    FAIL "mode isatty fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mode isatty fail"
+    END
+  ELSE
+    LET interactive = LAST_N
+    LET stream_seen = ISATTY_STREAM
+    SYS STR interactive
+    LET mode_s = LAST
+    LET mode_ch = 1
+    SYS CAT "tty:" stream
+    LET val = LAST
+    SYS CAT val "="
+    LET val = LAST
+    SYS STR interactive
+    SYS CAT val LAST
+    LET val = LAST
+    LET val_ch = 1
+    SYS CAT "tty:" stream
+    LET meta = LAST
+    SYS CAT "stream:" stream_seen
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR interactive
+    SYS CAT "interactive:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "mode ok"
+  END
+  PRINT_JSON interactive
+  CLEAR_ERR
+END
+
+# --- admit: soft miss when busy ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  SYS LOADAVG
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "admit load fail"
+    FAIL "admit load fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit load fail"
+    END
+  ELSE
+    LET load1_n = LOAD1_N
+    LET load5_n = LOAD5_N
+    LET load15_n = LOAD15_N
+    LET load_s = LAST
+    SYS NPROC
+    LET nproc_n = LAST_N
+    IF nproc_n < 1 THEN
+      LET nproc_n = 1
+    END
+    LET eff_cut = cut_n
+    IF eff_cut == 0 THEN
+      LET eff_cut = nproc_n * 100
+    END
+    LET busy_n = 0
+    IF load1_n > eff_cut THEN
+      LET busy_n = 1
+    END
+    SYS STR load1_n
+    SYS CAT "load1_n:" LAST
+    LET meta = LAST
+    SYS STR eff_cut
+    SYS CAT "cut:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR busy_n
+    SYS CAT "busy:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nproc_n
+    SYS CAT "nproc:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF busy_n == 1 THEN
+      LET miss = 1
+      LET note_msg = "admit busy"
+      FAIL "admit busy"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "admit busy"
+      END
+      SYS CAT "deny " load_s
+      LET val = LAST
+      LET val_ch = 1
+    ELSE
+      LET hit = 1
+      LET note_msg = "admit ok"
+      SYS CAT "allow " load_s
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON busy_n load1_n eff_cut
+  CLEAR_ERR
+END
+
+# --- busy: hit when over cut ---
+SYS EQS ACTION "busy"
+IF LAST_N == 1 THEN
+  NOTE "action busy"
+  SYS LOADAVG
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "busy load fail"
+    FAIL "busy load fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "busy load fail"
+    END
+  ELSE
+    LET load1_n = LOAD1_N
+    LET load_s = LAST
+    SYS NPROC
+    LET nproc_n = LAST_N
+    IF nproc_n < 1 THEN
+      LET nproc_n = 1
+    END
+    LET eff_cut = cut_n
+    IF eff_cut == 0 THEN
+      LET eff_cut = nproc_n * 100
+    END
+    LET busy_n = 0
+    IF load1_n > eff_cut THEN
+      LET busy_n = 1
+    END
+    SYS STR busy_n
+    LET val = LAST
+    LET val_ch = 1
+    SYS STR load1_n
+    SYS CAT "load1_n:" LAST
+    LET meta = LAST
+    SYS STR eff_cut
+    SYS CAT "cut:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR busy_n
+    SYS CAT "busy:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF busy_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "busy yes"
+    ELSE
+      LET miss = 1
+      LET note_msg = "busy no"
+      FAIL "busy no"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "busy no"
+      END
+    END
+  END
+  PRINT_JSON busy_n load1_n eff_cut
+  CLEAR_ERR
+END
+
+# --- stamp LOCAL + load ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS LOCAL
+  LET loc = LAST
+  SYS LOADAVG
+  LET load_s = LAST
+  SYS CAT "[" loc
+  SYS CAT LAST "] load "
+  SYS CAT LAST load_s
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "stamp ok"
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET cut_s = ""
+  LET cut_n = 0
+  LET meta = ""
+  LET val = ""
+  LET mode_s = ""
+  LET interactive = 0
+  LET cut_ch = 1
+  LET meta_ch = 1
+  LET val_ch = 1
+  LET mode_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "sample"
+LET k = k + LAST_N
+SYS EQS ACTION "cut"
+LET k = k + LAST_N
+SYS EQS ACTION "mode"
+LET k = k + LAST_N
+SYS EQS ACTION "admit"
+LET k = k + LAST_N
+SYS EQS ACTION "busy"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF cut_ch > 0 THEN
+  SYS WRITE cut_path cut_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "cut write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF mode_ch > 0 THEN
+  SYS WRITE mode_path mode_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "mode write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.load_backpressure_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "load1"
+LET report = LAST
+SYS STR load1_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "cut"
+LET report = LAST
+SYS STR eff_cut
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "busy"
+LET report = LAST
+SYS STR busy_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "nproc"
+LET report = LAST
+SYS STR nproc_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "interactive"
+LET report = LAST
+SYS STR interactive
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "load_backpressure_board" ACTION hit miss load1_n busy_n note_msg elapsed
