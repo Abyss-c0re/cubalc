@@ -6046,6 +6046,108 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TOPKEY|ARGMAXKV|MAXKEY bag [sep]
+     * SYS BOTKEY|ARGMINKV|MINKEY bag [sep]
+     * — pick first key with max (or min) numeric value in a key:val bag.
+     * LAST = winning key; LAST_N = that value; TOPKEY_V/BOTKEY_V = same;
+     * TOPKEY_I = 0-based field index (-1 empty). Default sep ":".
+     * Usability: dominant FREQ severity without SORTFREQ+TAKE+BEFORE glue. */
+    if (kw(&L->cur,"TOPKEY") || kw(&L->cur,"ARGMAXKV") || kw(&L->cur,"MAXKEY") ||
+        kw(&L->cur,"KEYMAX") || kw(&L->cur,"MOSTKEY") || kw(&L->cur,"DOMINANT") ||
+        kw(&L->cur,"BOTKEY") || kw(&L->cur,"ARGMINKV") || kw(&L->cur,"MINKEY") ||
+        kw(&L->cur,"KEYMIN") || kw(&L->cur,"LEASTKEY") || kw(&L->cur,"RAREST")){
+      char op[20];
+      int want_min = 0;
+      char bag[CUBALC_HOST_STR_MAX], sep[32], field[512], key[256], best_key[256];
+      const char *p, *start;
+      size_t flen, sn;
+      long idx = 0, best_i = -1, best_v = 0, found = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "BOTKEY") == 0 || strcmp(op, "ARGMINKV") == 0 ||
+          strcmp(op, "MINKEY") == 0 || strcmp(op, "KEYMIN") == 0 ||
+          strcmp(op, "LEASTKEY") == 0 || strcmp(op, "RAREST") == 0)
+        want_min = 1;
+      lex_next(L);
+      bag[0] = 0; best_key[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            {
+              const char *sp = sn ? strstr(field, sep) : NULL;
+              char *end = 0;
+              long v = 0;
+              int okv = 0;
+              key[0] = 0;
+              if (sp) {
+                size_t kn = (size_t)(sp - field);
+                if (kn >= sizeof key) kn = sizeof key - 1;
+                memcpy(key, field, kn);
+                key[kn] = 0;
+                v = strtol(sp + sn, &end, 10);
+                if (end != sp + sn) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0) okv = 1;
+                }
+              } else if (sn == 0) {
+                /* bare fields: key is field, value treated as 0 */
+                snprintf(key, sizeof key, "%s", field);
+                v = 0;
+                okv = 1;
+              }
+              if (okv && key[0]) {
+                if (!found || (want_min ? (v < best_v) : (v > best_v))) {
+                  best_v = v;
+                  best_i = idx;
+                  snprintf(best_key, sizeof best_key, "%s", key);
+                  found = 1;
+                }
+              }
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", best_key);
+      if (want_min) {
+        var_set_str(vm, "BOTKEY", best_key);
+        var_set_str(vm, "MINKEY", best_key);
+        var_set_num(vm, "BOTKEY_V", found ? best_v : 0);
+        var_set_num(vm, "BOTKEY_I", best_i);
+        var_set_num(vm, "ARGMINKV_V", found ? best_v : 0);
+      } else {
+        var_set_str(vm, "TOPKEY", best_key);
+        var_set_str(vm, "MAXKEY", best_key);
+        var_set_num(vm, "TOPKEY_V", found ? best_v : 0);
+        var_set_num(vm, "TOPKEY_I", best_i);
+        var_set_num(vm, "ARGMAXKV_V", found ? best_v : 0);
+      }
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", best_key);
+      vm->last_n = found ? best_v : 0;
+      var_set_num(vm, "LAST_N", found ? best_v : 0);
+      var_set_num(vm, "OK", found ? 1 : 0);
+      bump(vm); return 1;
+    }
     /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
      * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
      * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
@@ -8829,7 +8931,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|TOPKEY|BOTKEY|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -9139,6 +9241,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SUMKV", "SYS SUMKV|TOTALKV bag [sep] — sum key:val numeric values · FREQ total events"},
       {"SYS TOTALKV", "SYS TOTALKV bag [sep] — alias of SYS SUMKV · histogram grand total"},
       {"SYS SUMVALS", "SYS SUMVALS bag [sep] — alias of SYS SUMKV"},
+      {"SYS TOPKEY", "SYS TOPKEY|ARGMAXKV bag [sep] — key with max numeric value · dominant FREQ"},
+      {"SYS ARGMAXKV", "SYS ARGMAXKV bag [sep] — alias of SYS TOPKEY · LAST=key LAST_N=value"},
+      {"SYS BOTKEY", "SYS BOTKEY|ARGMINKV bag [sep] — key with min numeric value · rarest FREQ"},
+      {"SYS ARGMINKV", "SYS ARGMINKV bag [sep] — alias of SYS BOTKEY"},
       {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
       {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
       {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},

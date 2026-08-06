@@ -1,0 +1,87 @@
+# SYS TOPKEY / BOTKEY — key with max/min numeric value in key:val bag
+# Usability: dominant FREQ severity without SORTFREQ+TAKE+BEFORE
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10"
+
+SYS TOPKEY hist
+ASSERT OK == 1
+ASSERT LAST_N == 10
+ASSERT TOPKEY_V == 10
+ASSERT TOPKEY_I == 2
+SYS EQS LAST "info"
+ASSERT LAST_N == 1
+
+SYS BOTKEY hist
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT BOTKEY_V == 1
+ASSERT BOTKEY_I == 1
+SYS EQS LAST "warn"
+ASSERT LAST_N == 1
+
+# ties: first wins
+LET t = "a:5\nb:5\nc:2"
+SYS TOPKEY t
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+ASSERT TOPKEY_V == 5
+ASSERT TOPKEY_I == 0
+SYS BOTKEY t
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+ASSERT BOTKEY_V == 2
+
+# empty bag soft miss
+SYS TOPKEY ""
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT TOPKEY_I == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "retries=2\nport=7700\ntimeout=5"
+SYS TOPKEY cfg "="
+SYS EQS LAST "port"
+ASSERT LAST_N == 1
+ASSERT TOPKEY_V == 7700
+SYS BOTKEY cfg "="
+SYS EQS LAST "retries"
+ASSERT LAST_N == 1
+ASSERT BOTKEY_V == 2
+
+# aliases
+SYS ARGMAXKV hist
+SYS EQS LAST "info"
+ASSERT LAST_N == 1
+ASSERT ARGMAXKV_V == 10
+SYS MAXKEY hist
+SYS EQS LAST "info"
+ASSERT LAST_N == 1
+SYS ARGMINKV hist
+SYS EQS LAST "warn"
+ASSERT LAST_N == 1
+ASSERT ARGMINKV_V == 1
+SYS MINKEY hist
+SYS EQS LAST "warn"
+ASSERT LAST_N == 1
+
+# agent: FREQ then dominant severity
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR\nWARN\nERROR"
+SYS FREQ sev
+LET h = LAST
+SYS TOPKEY h
+SYS EQS LAST "ERROR"
+ASSERT LAST_N == 1
+ASSERT TOPKEY_V == 4
+SYS BOTKEY h
+# INFO is 1, WARN is 2 — rarest is INFO
+SYS EQS LAST "INFO"
+ASSERT LAST_N == 1
+ASSERT BOTKEY_V == 1
+SYS SUMKV h
+ASSERT LAST_N == 7
+
+PRINT "sys_topkey ok"
