@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 145,
-  "version": "1.15.170-usability",
-  "item": "SYS ABSKV / MAGKV absolute key:val values",
-  "item_id": 178,
-  "title": "SYS ABSKV|MAGKV bag [sep] — abs values for magnitude TOPKEY after DIFFKV",
-  "commit": "b2d827c0d50048b3dab30cae42027086ed5e4ac6",
-  "summary": "ABSKV magnitude-rank DIFFKV deltas via TOPKEY. selftest 145.",
+  "iter": 146,
+  "version": "1.15.171-usability",
+  "item": "SYS SIGNKV / DIRKV map key:val to -1|0|1",
+  "item_id": 179,
+  "title": "SYS SIGNKV|DIRKV bag [sep] — DIFFKV direction without EACH",
+  "commit": "012f305a8c8aa82972fcbe3e7db929e1acd843fa",
+  "summary": "SIGNKV direction map + POS/NEG/ZERO counts. selftest 146. thrash restore.",
   "proofs": [
-    "718_sys_abskv",
-    "selftest n_pass=145"
+    "719_sys_signkv",
+    "selftest n_pass=146"
   ],
-  "when": "2026-08-06T01:53:43Z",
+  "when": "2026-08-06T02:03:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b2d827c0d50048b3dab30cae42027086ed5e4ac6"
+  "sha": "012f305a8c8aa82972fcbe3e7db929e1acd843fa"
 }
