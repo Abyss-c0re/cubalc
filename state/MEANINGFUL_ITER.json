@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 204,
-  "version": "1.15.229-usability",
-  "item": "SYS KVFILEENSURE / ENSUREKVFILE / DEFAULTKVFILE set key only if missing",
-  "item_id": 237,
-  "title": "SYS KVFILEENSURE|ENSUREKVFILE path key value [sep] — plate DEFAULT · NEW/HIT",
-  "commit": "f3b69d37d120e10b63796ca441eedfa31c524e74",
-  "summary": "File DEFAULT for agent config plates. selftest 204.",
+  "iter": 205,
+  "version": "1.15.230-usability",
+  "item": "SYS SUBSTENV / ENVSUBST / EXPANDENV expand $VAR and ${VAR} templates",
+  "item_id": 238,
+  "title": "SYS SUBSTENV|ENVSUBST [tmpl] — expand $NAME/${NAME} from env+vars",
+  "commit": "916fc9b7e27b68f86070097b7ac5456193b0c38e",
+  "summary": "Path/config template expansion without shell envsubst. selftest 205.",
   "proofs": [
-    "777_sys_kvfileensure",
-    "selftest n_pass=204"
+    "778_sys_substenv",
+    "selftest n_pass=205"
   ],
-  "when": "2026-08-06T11:54:55Z",
+  "when": "2026-08-06T12:05:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f3b69d37d120e10b63796ca441eedfa31c524e74"
+  "sha": "916fc9b7e27b68f86070097b7ac5456193b0c38e"
 }
