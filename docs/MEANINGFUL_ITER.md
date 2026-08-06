@@ -195,6 +195,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 165. ~~**`SYS KVDEL` / `DELKV`**~~ **done** (drop key:val bag field · dual of KVSET · ack without FINDLINE+DROPNTH).
 166. ~~**`SYS LOOKUP … OR`**~~ **done** (LOOKUP bag key [sep] OR fallback · FREQ defaults like ENV/ARG).
 167. ~~**`SYS MERGEKV` / `KVADDALL`**~~ **done** (merge key:val bags by sum · combine FREQ without EACH+KVINC).
+168. ~~**`SYS SUMKV` / `TOTALKV`**~~ **done** (sum key:val numeric values · FREQ total without VALS+SUM).
 
 ## Tick protocol
 

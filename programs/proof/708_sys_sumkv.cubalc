@@ -1,0 +1,62 @@
+# SYS SUMKV / TOTALKV — sum numeric values of a key:val bag
+# Usability: FREQ total event count without VALS+SUM glue
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10"
+SYS SUMKV hist
+ASSERT OK == 1
+ASSERT LAST_N == 14
+ASSERT SUMKV_N == 3
+ASSERT SUMKV_KEYS == 3
+SYS EQS LAST "14"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS SUMKV ""
+ASSERT LAST_N == 0
+ASSERT SUMKV_N == 0
+ASSERT SUMKV_KEYS == 0
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# skip non-numeric values
+LET mixed = "a:2\nb:x\nc:5\nd"
+SYS SUMKV mixed
+ASSERT LAST_N == 7
+ASSERT SUMKV_N == 2
+ASSERT SUMKV_KEYS == 4
+
+# custom sep
+LET cfg = "retries=2\nport=7700\ntimeout=5"
+SYS SUMKV cfg "="
+ASSERT LAST_N == 7707
+ASSERT SUMKV_N == 3
+
+# aliases
+SYS TOTALKV hist
+ASSERT TOTALKV_N == 14
+ASSERT LAST_N == 14
+SYS SUMVALS hist
+ASSERT LAST_N == 14
+SYS KVSUM hist
+ASSERT LAST_N == 14
+
+# agent: FREQ then grand total
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR\nWARN"
+SYS FREQ sev
+SYS SUMKV LAST
+ASSERT LAST_N == 6
+ASSERT SUMKV_N == 3
+SYS EQS LAST "6"
+ASSERT LAST_N == 1
+
+# merge then total
+LET h1 = "ERROR:2\nWARN:1"
+LET h2 = "ERROR:1\nINFO:3"
+SYS MERGEKV h1 h2
+SYS SUMKV LAST
+ASSERT LAST_N == 7
+ASSERT SUMKV_KEYS == 3
+
+PRINT "sys_sumkv ok"
