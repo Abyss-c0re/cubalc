@@ -1,0 +1,842 @@
+# status_handoff_board.cubalc — atomic status plates + stamp + peer wait + render
+#
+# Real use: multi-agent handoff without torn WRITE or EXIST-only ready races:
+#   WRITEATOMIC / SAFEWRITE  — temp+rename crash-safer status plate
+#   HASHFILE / FINGERPRINT   — FNV-1a stamp for change detect
+#   WAITMATCH / WAITCONTAINS — poll until content has needle (not mere EXIST)
+#   WAITMATCHI               — case-insensitive content wait
+#   SUBSTFILE / EXPANDFILE   — materialize $VAR template → out
+# Distinct from toggle_flag_board (WAITFILE existence) and env_template_board
+# (READ+SUBSTENV+WRITE glue): this board is *atomic write + hash + content wait
+# + file expand* handoff triad.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — status plate path
+#   TMPL.txt       — template path
+#   OUT.txt        — render destination
+#   STAMP.txt      — last HASHFILE hex
+#   VAL.txt        — last body / hash / out path
+#   META.txt       — hit/miss/bytes bag
+#   HANDOFF_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SH_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   picktmpl  — TMPL = ARG1
+#   pickout   — OUT = ARG1
+#   write     — WRITEATOMIC ACTIVE body(ARG1)
+#   stamp     — HASHFILE ACTIVE → STAMP+VAL
+#   changed   — HASHFILE vs STAMP (hit=1 if different)
+#   wait      — WAITMATCH path(ARG1) needle(ARG2) ms env CUBALC_SH_MS
+#   waiti     — WAITMATCHI
+#   render    — SUBSTFILE TMPL OUT (or in-place if OUT empty)
+#   setenv    — ENV SET key=ARG1 val=ARG2 (same-process seed for render)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sh_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/status.txt ...
+#   CUBALC_ARG0=write CUBALC_ARG1='status=ready' ...
+#   CUBALC_ARG0=stamp ...
+#   CUBALC_ARG0=wait CUBALC_ARG1=$CUBALC_STATE/status.txt CUBALC_ARG2=status=ready ...
+#
+# Env: CUBALC_SH_PATH=… CUBALC_SH_MS=200 CUBALC_SH_REQUIRE=1
+#
+# Edges:
+#   WRITEATOMIC vs WRITE; empty body; HASH empty; WAITMATCH substring ready
+#   WAITMATCH empty needle = file readable; WAITFILE existence vs content
+#   SUBSTFILE miss keys soft; in-place expand; path miss OK=0
+#   REQUIRE soft→hard; WRITE NL; NUM; PRINT_JSON
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "status_handoff_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT TFILE = "TMPL.txt"
+DEFAULT OFILE = "OUT.txt"
+DEFAULT SFILE = "STAMP.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "HANDOFF_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT WAIT_MS = 200
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SH_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SH_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SH_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SH_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SH_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_SH_MS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET WAIT_MS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir TFILE
+LET tmpl_meta = LAST
+SYS JOIN state_dir OFILE
+LET out_meta = LAST
+SYS JOIN state_dir SFILE
+LET stamp_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR tmpl_meta OR ""
+LET tmpl = LAST
+CLEAR_ERR
+SYS READ OR out_meta OR ""
+LET outp = LAST
+CLEAR_ERR
+SYS READ OR stamp_path OR ""
+LET stamp = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET tmpl_ch = 0
+LET out_ch = 0
+LET stamp_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET se_n = 0
+LET se_miss = 0
+LET se_bytes = 0
+LET wait_hit = 0
+LET wait_ms = 0
+LET changed = 0
+LET wa_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "picktmpl"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "picktmpl needs path"
+  END
+END
+SYS EQS ACTION "pickout"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pickout needs path"
+  END
+END
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "write needs body"
+  END
+END
+SYS EQS ACTION "wait"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "wait needs path needle"
+  END
+END
+SYS EQS ACTION "waiti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "waiti needs path needle"
+  END
+END
+SYS EQS ACTION "setenv"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "setenv needs key value"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "shandoff" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON tmpl
+  PRINT_JSON outp
+  PRINT_JSON stamp
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- picktmpl ---
+SYS EQS ACTION "picktmpl"
+IF LAST_N == 1 THEN
+  NOTE "action picktmpl"
+  LET tmpl = NAME
+  LET tmpl_ch = 1
+  LET hit = 1
+  LET note_msg = "picktmpl ok"
+  PRINT_JSON tmpl
+END
+
+# --- pickout ---
+SYS EQS ACTION "pickout"
+IF LAST_N == 1 THEN
+  NOTE "action pickout"
+  LET outp = NAME
+  LET out_ch = 1
+  LET hit = 1
+  LET note_msg = "pickout ok"
+  PRINT_JSON outp
+END
+
+# --- setenv ---
+SYS EQS ACTION "setenv"
+IF LAST_N == 1 THEN
+  NOTE "action setenv"
+  SYS ENV SET NAME A2
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "setenv fail"
+    FAIL "setenv fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setenv fail"
+    END
+  ELSE
+    LET hit = 1
+    LET val = NAME
+    SYS PUSH val A2
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "setenv ok"
+  END
+  PRINT_JSON NAME
+  PRINT_JSON A2
+  CLEAR_ERR
+END
+
+# --- write WRITEATOMIC ---
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  NOTE "action write"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "write no active"
+    FAIL "write no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "write no active"
+    END
+  ELSE
+    SYS WRITEATOMIC active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "write fail"
+      FAIL "write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "write fail"
+      END
+    ELSE
+      LET val = NAME
+      LET wa_n = WRITEATOMIC_N
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "bytes"
+      SYS STR wa_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "path"
+      LET meta = LAST
+      SYS PUSH meta active
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "write ok"
+    END
+    PRINT_JSON wa_n
+    PRINT_JSON active
+    CLEAR_ERR
+  END
+END
+
+# --- stamp HASHFILE ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stamp no active"
+    FAIL "stamp no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stamp no active"
+    END
+  ELSE
+    SYS HASHFILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "stamp miss"
+      FAIL "stamp miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stamp miss"
+      END
+    ELSE
+      LET stamp = LAST
+      LET se_bytes = HASH_BYTES
+      LET stamp_ch = 1
+      LET val = stamp
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hash"
+      SYS PUSH meta stamp
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR se_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stamp ok"
+    END
+    PRINT_JSON stamp se_bytes
+    CLEAR_ERR
+  END
+END
+
+# --- changed: HASHFILE vs STAMP ---
+SYS EQS ACTION "changed"
+IF LAST_N == 1 THEN
+  NOTE "action changed"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "changed no active"
+    FAIL "changed no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "changed no active"
+    END
+  ELSE
+    SYS HASHFILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "changed hash miss"
+      FAIL "changed hash miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "changed hash miss"
+      END
+    ELSE
+      LET val = LAST
+      LET se_bytes = HASH_BYTES
+      LET val_ch = 1
+      LET changed = 0
+      SYS BLANK stamp
+      IF LAST_N == 1 THEN
+        LET changed = 1
+      ELSE
+        SYS EQS val stamp
+        IF LAST_N == 0 THEN
+          LET changed = 1
+        END
+      END
+      LET hit = changed
+      LET meta = "hash"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "prev"
+      LET meta = LAST
+      SYS PUSH meta stamp
+      LET meta = LAST
+      SYS PUSH meta "changed"
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF changed > 0 THEN
+        LET note_msg = "changed yes"
+      ELSE
+        LET note_msg = "changed no"
+        IF REQUIRE_HIT > 0 THEN
+          # optional: require change
+          LET miss = 1
+          FAIL "changed none"
+          CLEAR_ERR
+          EXIT 2 "changed none"
+        END
+      END
+    END
+    PRINT_JSON changed val
+    CLEAR_ERR
+  END
+END
+
+# --- wait WAITMATCH ---
+SYS EQS ACTION "wait"
+IF LAST_N == 1 THEN
+  NOTE "action wait"
+  SYS BLANK A2
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "wait needs needle"
+    FAIL "wait needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "wait needs needle"
+    END
+  ELSE
+    SYS WAITMATCH NAME A2 (WAIT_MS)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET wait_hit = WAITMATCH_HIT
+      LET wait_ms = WAITMATCH_MS
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "path"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "needle"
+      LET meta = LAST
+      SYS PUSH meta A2
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR wait_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "wait timeout"
+      FAIL "wait timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "wait timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET wait_hit = WAITMATCH_HIT
+      LET wait_ms = WAITMATCH_MS
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "path"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "needle"
+      LET meta = LAST
+      SYS PUSH meta A2
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR wait_ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "wait ok"
+    END
+    PRINT_JSON NAME wait_hit wait_ms
+    PRINT_JSON A2
+    CLEAR_ERR
+  END
+END
+
+# --- waiti ---
+SYS EQS ACTION "waiti"
+IF LAST_N == 1 THEN
+  NOTE "action waiti"
+  SYS BLANK A2
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "waiti needs needle"
+    FAIL "waiti needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "waiti needs needle"
+    END
+  ELSE
+    SYS WAITMATCHI NAME A2 (WAIT_MS)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET wait_hit = WAITMATCH_HIT
+      LET wait_ms = WAITMATCH_MS
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "path"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR wait_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "waiti timeout"
+      FAIL "waiti timeout"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "waiti timeout"
+      END
+    ELSE
+      LET val = LAST
+      LET wait_hit = WAITMATCH_HIT
+      LET wait_ms = WAITMATCH_MS
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "path"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "mode"
+      LET meta = LAST
+      SYS PUSH meta "icase"
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "waiti ok"
+    END
+    PRINT_JSON NAME wait_hit wait_ms
+    CLEAR_ERR
+  END
+END
+
+# --- render SUBSTFILE ---
+SYS EQS ACTION "render"
+IF LAST_N == 1 THEN
+  NOTE "action render"
+  SYS BLANK tmpl
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "render no tmpl"
+    FAIL "render no tmpl"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "render no tmpl"
+    END
+  ELSE
+    SYS BLANK outp
+    IF LAST_N == 1 THEN
+      SYS SUBSTFILE tmpl
+    ELSE
+      SYS SUBSTFILE tmpl outp
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "render fail"
+      FAIL "render fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "render fail"
+      END
+    ELSE
+      LET val = LAST
+      LET se_n = SUBSTFILE_N
+      LET se_miss = SUBSTFILE_MISS
+      LET se_bytes = SUBSTFILE_BYTES
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "n"
+      SYS STR se_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "miss"
+      LET meta = LAST
+      SYS STR se_miss
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR se_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF se_miss > 0 THEN
+        LET miss = 1
+        LET note_msg = "render softmiss"
+        FAIL "render softmiss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "render softmiss"
+        END
+      ELSE
+        LET note_msg = "render ok"
+      END
+    END
+    PRINT_JSON se_n se_miss se_bytes
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET tmpl = ""
+  LET outp = ""
+  LET stamp = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET tmpl_ch = 1
+  LET out_ch = 1
+  LET stamp_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "picktmpl"
+LET k = k + LAST_N
+SYS EQS ACTION "pickout"
+LET k = k + LAST_N
+SYS EQS ACTION "setenv"
+LET k = k + LAST_N
+SYS EQS ACTION "write"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "changed"
+LET k = k + LAST_N
+SYS EQS ACTION "wait"
+LET k = k + LAST_N
+SYS EQS ACTION "waiti"
+LET k = k + LAST_N
+SYS EQS ACTION "render"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF tmpl_ch > 0 THEN
+  SYS WRITE tmpl_meta tmpl
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "tmpl write failed"
+  END
+  CLEAR_ERR
+END
+IF out_ch > 0 THEN
+  SYS WRITE out_meta outp
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "out write failed"
+  END
+  CLEAR_ERR
+END
+IF stamp_ch > 0 THEN
+  SYS WRITE stamp_path stamp
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "stamp write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.status_handoff_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "changed"
+LET report = LAST
+SYS STR changed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_hit"
+LET report = LAST
+SYS STR wait_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "se_miss"
+LET report = LAST
+SYS STR se_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "stamp"
+LET report = LAST
+SYS PUSH report stamp
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "status_handoff_board" ACTION hit miss changed wait_hit se_miss note_msg elapsed

@@ -1,154 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 78,
-  "program": "programs/realworld/toggle_flag_board.cubalc",
-  "theme": "toggle flags TOGGLELINE WAITFILE exact on/off handoff",
-  "version": "1.15.233-usability",
+  "iter": 79,
+  "program": "programs/realworld/status_handoff_board.cubalc",
+  "theme": "status handoff WRITEATOMIC HASHFILE WAITMATCH SUBSTFILE",
+  "version": "1.15.236-usability",
   "pass": true,
   "tests": [
     {
-      "name": "has_exact",
-      "cmd": "has canary_web hit; has canary soft miss",
+      "name": "write_stamp",
+      "cmd": "WRITEATOMIC boot plate; HASHFILE stamp hex",
       "ok": true,
-      "note": "substring false friend"
+      "note": "atomic create"
     },
     {
-      "name": "toggle_off_on",
-      "cmd": "toggle was=1 on=0; toggle was=0 on=1 append end",
+      "name": "wait_content",
+      "cmd": "wait status=ready timeout on boot; write ready; wait hit",
       "ok": true,
-      "note": "WAS/ON triad"
+      "note": "WAITMATCH"
     },
     {
-      "name": "toggle_exact",
-      "cmd": "drop web leaves web-prod",
+      "name": "wait_substr",
+      "cmd": "needle ready hits status=ready; hits notready (false friend)",
       "ok": true,
-      "note": "no substring"
+      "note": "substring trap"
     },
     {
-      "name": "togglei",
-      "cmd": "togglei status=live drops STATUS=live",
+      "name": "waiti",
+      "cmd": "waiti STATUS=READY on status=ready",
       "ok": true,
       "note": "icase"
     },
     {
-      "name": "on_off",
-      "cmd": "on add; on present; off drop; off none soft",
+      "name": "changed",
+      "cmd": "stamp; rewrite peer2; changed=1; rewrite same changed=0",
       "ok": true,
-      "note": "force paths"
+      "note": "hash delta"
     },
     {
-      "name": "wait_timeout_hit",
-      "cmd": "wait 80 miss; touch; wait hit; wait 0 miss",
+      "name": "render_hostenv",
+      "cmd": "CUBALC_SH_HOST=api01 render \u2192 host=api01 role=canary cost=$9",
       "ok": true,
-      "note": "WAITFILE"
+      "note": "SUBSTFILE"
     },
     {
-      "name": "require",
-      "cmd": "REQUIRE has miss / wait timeout \u2192 exit 2",
+      "name": "render_softmiss",
+      "cmd": "unset key softmiss; REQUIRE exit 2",
+      "ok": true,
+      "note": "SUBSTFILE_MISS"
+    },
+    {
+      "name": "require_paths",
+      "cmd": "REQUIRE wait timeout / stamp miss \u2192 exit 2",
       "ok": true,
       "note": "hard fail"
     },
     {
-      "name": "create_ghost",
-      "cmd": "toggle missing path creates file",
+      "name": "empty_ready",
+      "cmd": "TOUCH empty; WAITMATCH status=ready soft miss",
       "ok": true,
-      "note": "create-on-miss"
+      "note": "vs WAITFILE existence"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "208/208 pass"
+      "note": "211/211 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs",
-      "title": "TOGGLELINE creates missing path \u2014 typo invents ghost flag files",
-      "detail": "Same create-on-miss class as ENSURELINE/KVFILEINC. Path typo silently seeds new plate; REQUIRE cannot catch miss because create succeeds.",
-      "repro": "TOGGLELINE no_such seed_flag \u2192 creates file"
+      "area": "host|match",
+      "title": "WAITMATCH is substring \u2014 ready matches notready",
+      "detail": "Needle ready hits status=notready. Agents using short ready tokens get false handoff complete. No exact-line or HASFILELINE-style wait mode.",
+      "repro": "WRITE status=notready; WAITMATCH path ready 0 \u2192 HIT=1"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "host|order",
-      "title": "TOGGLE on appends to end \u2014 loses original index/order",
-      "detail": "OFF drops in place; ON re-appends. Flag order and TOGGLELINE_I on re-enable differ from pre-toggle position. Agents using order as priority get reordered.",
-      "repro": "toggle off then on moves line to end"
+      "severity": "high",
+      "area": "host|env",
+      "title": "setenv then separate-run render loses ENV (process-local)",
+      "detail": "Multi-tick setenv+render empties ${HOST}. Must pass host env on same process as SUBSTFILE. No plate-backed rehydrate in this board; same class as env_template W1.",
+      "repro": "run setenv; run render \u2192 host="
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|write",
-      "title": "Toggle/WRITE omit trailing NL \u2014 cat glues flags to next plate",
-      "detail": "maint=off + META line \u2192 visual maint=offline. Recurring plate hygiene issue after DROPEXACT/TOGGLE last-line ops.",
-      "repro": "cat -A flags META after toggle off"
+      "area": "host|hash",
+      "title": "HASHFILE is FNV-1a 32-bit not cryptographic",
+      "detail": "Fine for change stamps; unsafe as integrity or auth. Name HASH/FINGERPRINT may overpromise to agents.",
+      "repro": "HASHFILE plate \u2192 8 hex chars"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|wait",
-      "title": "WAITFILE only existence \u2014 no content/mtime/ready-payload probe",
-      "detail": "Peer may TOUCH empty ready.flag before writing payload. Agents need second READ/SIZE loop. No WAITFILESIZE or WAITNONEMPTY.",
-      "repro": "TOUCH ready; WAITFILE hits; content still empty"
+      "area": "host|write",
+      "title": "WRITEATOMIC still omits trailing NL on last line",
+      "detail": "status plate host=peer1 without $; STAMP+VAL cat glue double hash display. Crash-safer rename does not fix NL hygiene.",
+      "repro": "cat -A after WRITEATOMIC; STAMP VAL glue"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|naming",
-      "title": "feature_flag_board bag toggle vs TOGGLELINE file \u2014 dual families",
-      "detail": "name:on SETMATCH bag vs exact-line file flip. Agents mix models and corrupt either plate.",
-      "repro": "feature_flag toggle vs TOGGLELINE line"
+      "area": "host|wait",
+      "title": "WAITMATCH vs WAITFILE dual \u2014 existence vs content easy to mix",
+      "detail": "WAITFILE empty TOUCH succeeds; WAITMATCH needs needle. Agents upgrading handoffs forget content predicate.",
+      "repro": "TOUCH ready; WAITFILE hit; WAITMATCH status=ready miss"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|wait",
-      "title": "WAITFILE busy-poll burns CPU; default 30s / cap 120s only lightly advertised",
-      "detail": "Short waits ok; long agent handoffs block. No backoff or inotify.",
-      "repro": "WAITFILE path 30000"
+      "severity": "med",
+      "area": "host|arg",
+      "title": "Empty CUBALC_ARG1 blocked as write needs body",
+      "detail": "Cannot atomic-clear plate via empty ARG; language WRITEATOMIC \"\" works in-program. ARG/BLANK conflates empty payload with missing arg.",
+      "repro": "CUBALC_ARG1= write \u2192 EXIT write needs body"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens gates",
-      "detail": "CUBALC_TF_REQUIRE=abc \u2192 soft miss paths exit 0.",
-      "repro": "REQUIRE=abc has gone \u2192 rc 0"
+      "area": "host|subst",
+      "title": "SUBSTFILE soft-miss still writes empty expansions",
+      "detail": "gone=end style; MISS counter only. Corrupt configs unless gate on SUBSTFILE_MISS.",
+      "repro": "render unset \u2192 OK=1 MISS>0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|toggle",
-      "title": "No idempotent desired-state mode (want ON without flip)",
-      "detail": "Must ENSURE for on and DROPEXACT for off; toggle always flips. Race-prone under concurrent agents.",
-      "repro": "two agents toggle same line \u2192 net no-op or wrong"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens",
+      "detail": "CUBALC_SH_REQUIRE=abc \u2192 soft timeouts exit 0.",
+      "repro": "REQUIRE=abc wait miss \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "SYS EXIST before TOGGLE if create-on-miss unwanted",
-    "Use on/off (ENSURE/DROPEXACT) for desired-state not toggle",
-    "WAITFILE then READ/SIZE for payload readiness",
-    "Digit-check REQUIRE env",
-    "Prefer exact lines; never COUNTFILELINE for flags"
+    "WAITMATCH needles with unique delimiters (status=ready\\n or full line)",
+    "Pass CUBALC_* env on same process as SUBSTFILE/render",
+    "Treat HASH as change stamp only not crypto",
+    "Gate render on SUBSTFILE_MISS==0",
+    "Digit-check REQUIRE env"
   ],
   "language_gaps": [
-    "existing-only / no-create flag for TOGGLELINE",
-    "TOGGLE preserve index or insert-at-old-i on re-enable",
-    "WAITFILE content/nonempty/mtime predicates",
-    "WRITE trailing NL preserve on line surgery",
-    "Idempotent SETLINE presence API (want on|off without flip)",
-    "Help dual bag feature flags vs file TOGGLELINE"
+    "WAITMATCH exact-line / HASFILELINE-wait mode",
+    "Plate-backed ENV rehydrate or SUBSTFILE vars file",
+    "WRITEATOMIC trailing NL option",
+    "Crypto hash optional (sha256) for integrity plates",
+    "ARG empty-string vs missing distinction for write body",
+    "SUBSTFILE hard-fail-on-MISS flag"
   ],
   "issues_faced": [
-    "toggle/has/on/off/wait positive paths clean",
-    "exactness preserves web-prod when web toggled",
-    "create-on-miss and WRITE NL glue confirmed",
-    "WAITFILE timeout ms reported accurately",
-    "selftest 208/208; no language fix this iter"
+    "write/stamp/wait/changed/render positive paths clean with host env",
+    "substring ready\u2192notready is sharp handoff footgun",
+    "multi-tick setenv+render empty without host env",
+    "selftest 211/211; no language fix this iter"
   ],
-  "commit": "7454bee8267131683d87753f0348f4e10c0985b1",
-  "ts": "2026-08-06T12:34:00Z"
+  "commit": "",
+  "ts": "2026-08-06T13:00:00Z"
 }
