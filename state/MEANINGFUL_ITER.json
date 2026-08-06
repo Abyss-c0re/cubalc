@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 182,
-  "version": "1.15.207-usability",
-  "item": "SYS LINEAT / FILELINE single file line by index",
-  "item_id": 215,
-  "title": "SYS LINEAT|FILELINE|ATLINE path n \u2014 single 0-based file line \u2192 LAST",
-  "commit": "c0841376876fb12e96ee1c913f1519607208c276",
-  "summary": "File line-by-index extract; LINEAT_N/I/TOTAL. Completes HEAD/TAIL/MID. selftest 182.",
+  "iter": 183,
+  "version": "1.15.208-usability",
+  "item": "SYS SETFILELINE / FILESETLINE replace file line by index",
+  "item_id": 216,
+  "title": "SYS SETFILELINE|FILESETLINE path n value \u2014 replace 0-based file line in place",
+  "commit": "cd2c50f06e29b966b47cd851044025b51cb8d0c6",
+  "summary": "In-place file line replace; dual of LINEAT. Soft OOB. selftest 183.",
   "proofs": [
-    "755_sys_lineat",
-    "selftest n_pass=182"
+    "756_sys_setfileline",
+    "selftest n_pass=183"
   ],
-  "when": "2026-08-06T08:15:52Z",
+  "when": "2026-08-06T08:24:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c0841376876fb12e96ee1c913f1519607208c276"
+  "sha": "cd2c50f06e29b966b47cd851044025b51cb8d0c6"
 }
