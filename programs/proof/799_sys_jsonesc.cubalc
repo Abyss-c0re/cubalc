@@ -1,0 +1,102 @@
+# SYS JSONESC / JESC / ESCJSON · JSONUNESC / JUNESC / UNJSON
+# — JSON string-body escape/unescape for agent plate construction
+# Usability: embed quotes/newlines in cubalc.*.v1 without hand-escaping
+
+HOLD_FLASH 1
+
+# plain pass-through
+SYS JSONESC "hello"
+ASSERT OK == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT JSONESC_N == 5
+
+# quote and backslash
+SYS JSONESC "say \"hi\""
+SYS EQS LAST "say \\\"hi\\\""
+ASSERT LAST_N == 1
+SYS JSONUNESC LAST
+SYS EQS LAST "say \"hi\""
+ASSERT LAST_N == 1
+
+# newline / tab
+SYS JSONESC "a\nb\tc"
+SYS EQS LAST "a\\nb\\tc"
+ASSERT LAST_N == 1
+SYS JSONUNESC "a\\nb\\tc"
+SYS EQS LAST "a\nb\tc"
+ASSERT LAST_N == 1
+
+# slash (escaped for JSON body safety)
+SYS JSONESC "a/b"
+SYS EQS LAST "a\\/b"
+ASSERT LAST_N == 1
+SYS JSONUNESC "a\\/b"
+SYS EQS LAST "a/b"
+ASSERT LAST_N == 1
+
+# empty
+SYS JSONESC ""
+ASSERT OK == 1
+ASSERT JSONESC_N == 0
+SYS JSONUNESC ""
+ASSERT OK == 1
+ASSERT JSONESC_N == 0
+
+# \u00XX round-trip for control (BEL via unescape)
+SYS JSONUNESC "\\u0007"
+ASSERT OK == 1
+ASSERT JSONESC_N == 1
+SYS JSONESC LAST
+SYS EQS LAST "\\u0007"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JESC "x\"y"
+SYS EQS LAST "x\\\"y"
+ASSERT LAST_N == 1
+SYS JUNESC "x\\\"y"
+SYS EQS LAST "x\"y"
+ASSERT LAST_N == 1
+
+SYS ESCJSON "ok"
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+SYS UNJSON "ok"
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# default LAST chain
+SYS JSONESC "note: \"ready\""
+LET e = LAST
+SYS JSONUNESC e
+SYS EQS LAST "note: \"ready\""
+ASSERT LAST_N == 1
+
+# soft fail truncated escape
+SYS JSONUNESC "bad\\"
+ASSERT OK == 0
+ASSERT JSONESC_N == 0
+
+# soft fail bad \u
+SYS JSONUNESC "\\u00zz"
+ASSERT OK == 0
+
+# agent: build a tiny plate fragment with escaped reason
+LET reason = "disk full: \"/tmp\""
+SYS JSONESC reason
+LET esc = LAST
+SYS CAT "{\"ok\":false,\"reason\":\"" esc
+LET p1 = LAST
+SYS CAT p1 "\"}"
+LET plate = LAST
+SYS HAS plate "disk full"
+ASSERT LAST_N == 1
+SYS HAS plate "\\\""
+ASSERT LAST_N == 1
+SYS BETWEEN "\"reason\":\"" "\"}" plate
+SYS JSONUNESC LAST
+SYS EQS LAST reason
+ASSERT LAST_N == 1
+
+PRINT "sys_jsonesc ok"

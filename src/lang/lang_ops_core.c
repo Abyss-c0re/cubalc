@@ -260,6 +260,111 @@ static int cubalc_uuid_fmt(char *out, size_t out_cap, int compact) {
   return (int)o;
 }
 
+/* SYS JSONESC / JSONUNESC — JSON string body escape/unescape for agent plates.
+ * Escapes " \ / and controls (\b \f \n \r \t · \u00XX for other C0). No outer quotes.
+ * Unescape accepts those + \u00XX hex. Soft fail on truncated/bad sequences. */
+static int cubalc_json_esc(const char *in, size_t in_len, char *out, size_t out_cap,
+                           size_t *n_out) {
+  static const char *hx = "0123456789abcdef";
+  size_t i, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  for (i = 0; i < in_len; i++) {
+    unsigned char c = (unsigned char)in[i];
+    const char *rep = NULL;
+    char tmp[8];
+    size_t rlen = 0;
+    if (c == '"') rep = "\\\"";
+    else if (c == '\\') rep = "\\\\";
+    else if (c == '/') rep = "\\/";
+    else if (c == '\b') rep = "\\b";
+    else if (c == '\f') rep = "\\f";
+    else if (c == '\n') rep = "\\n";
+    else if (c == '\r') rep = "\\r";
+    else if (c == '\t') rep = "\\t";
+    else if (c < 0x20) {
+      tmp[0] = '\\'; tmp[1] = 'u'; tmp[2] = '0'; tmp[3] = '0';
+      tmp[4] = hx[c >> 4]; tmp[5] = hx[c & 0xf]; tmp[6] = 0;
+      rep = tmp;
+    }
+    if (rep) {
+      rlen = strlen(rep);
+      if (o + rlen >= out_cap) return -1;
+      memcpy(out + o, rep, rlen);
+      o += rlen;
+    } else {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)c;
+    }
+  }
+  if (o >= out_cap) return -1;
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+static int cubalc_json_unesc(const char *in, size_t in_len, char *out, size_t out_cap,
+                             size_t *n_out) {
+  size_t i = 0, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  while (i < in_len) {
+    unsigned char c = (unsigned char)in[i];
+    if (c != '\\') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)c;
+      i++;
+      continue;
+    }
+    if (i + 1 >= in_len) return -1;
+    c = (unsigned char)in[i + 1];
+    if (c == '"' || c == '\\' || c == '/') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)c;
+      i += 2;
+    } else if (c == 'b') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = '\b';
+      i += 2;
+    } else if (c == 'f') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = '\f';
+      i += 2;
+    } else if (c == 'n') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = '\n';
+      i += 2;
+    } else if (c == 'r') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = '\r';
+      i += 2;
+    } else if (c == 't') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = '\t';
+      i += 2;
+    } else if (c == 'u') {
+      int h0, h1, h2, h3, code;
+      if (i + 5 >= in_len) return -1;
+      h0 = cubalc_hex_nibble((unsigned char)in[i + 2]);
+      h1 = cubalc_hex_nibble((unsigned char)in[i + 3]);
+      h2 = cubalc_hex_nibble((unsigned char)in[i + 4]);
+      h3 = cubalc_hex_nibble((unsigned char)in[i + 5]);
+      if (h0 < 0 || h1 < 0 || h2 < 0 || h3 < 0) return -1;
+      code = (h0 << 12) | (h1 << 8) | (h2 << 4) | h3;
+      /* Agent plate plane is byte-oriented; only emit U+0000..U+00FF. */
+      if (code > 0xff) return -1;
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)code;
+      i += 6;
+    } else {
+      return -1;
+    }
+  }
+  if (o >= out_cap) return -1;
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+
 #if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
@@ -2212,6 +2317,59 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "NEWUUID", out);
       }
       var_set_num(vm, "UUID_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS JSONESC|JESC|ESCJSON|JSON_ESCAPE [str]
+     * SYS JSONUNESC|JUNESC|UNJSON|JSON_UNESCAPE [str]
+     * — JSON string-body escape/unescape (no outer quotes; default prior LAST).
+     * LAST = result; LAST_N / JSONESC_N = length; soft fail OK=0.
+     * Usability: embed agent text in cubalc.*.v1 plates without hand-escaping. */
+    if (kw(&L->cur,"JSONESC") || kw(&L->cur,"JESC") || kw(&L->cur,"ESCJSON") ||
+        kw(&L->cur,"JSON_ESCAPE") || kw(&L->cur,"JSONESCAPE") || kw(&L->cur,"TOJSONSTR") ||
+        kw(&L->cur,"JSONQUOTEBODY") ||
+        kw(&L->cur,"JSONUNESC") || kw(&L->cur,"JUNESC") || kw(&L->cur,"UNJSON") ||
+        kw(&L->cur,"JSON_UNESCAPE") || kw(&L->cur,"JSONUNESCAPE") ||
+        kw(&L->cur,"FROMJSONSTR") || kw(&L->cur,"UNESCJSON")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t n_out = 0;
+      int is_dec = (kw(&L->cur,"JSONUNESC") || kw(&L->cur,"JUNESC") ||
+                   kw(&L->cur,"UNJSON") || kw(&L->cur,"JSON_UNESCAPE") ||
+                   kw(&L->cur,"JSONUNESCAPE") || kw(&L->cur,"FROMJSONSTR") ||
+                   kw(&L->cur,"UNESCJSON"));
+      int rc;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (is_dec)
+        rc = cubalc_json_unesc(src, strlen(src), out, sizeof out, &n_out);
+      else
+        rc = cubalc_json_esc(src, strlen(src), out, sizeof out, &n_out);
+      if (rc != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "JSONESC_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_dec ? "JSONUNESC: decode fail" : "JSONESC: encode fail");
+        var_set_str(vm, "ERR", is_dec ? "JSONUNESC: decode fail" : "JSONESC: encode fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n_out;
+      var_set_num(vm, "LAST_N", (long)n_out);
+      var_set_str(vm, "JSONESC", out);
+      if (is_dec) {
+        var_set_str(vm, "JSONUNESC", out);
+        var_set_str(vm, "JUNESC", out);
+      } else {
+        var_set_str(vm, "JESC", out);
+        var_set_str(vm, "ESCJSON", out);
+      }
+      var_set_num(vm, "JSONESC_N", (long)n_out);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
