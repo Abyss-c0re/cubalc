@@ -1,0 +1,66 @@
+# SYS CAPKV / CLAMPKV — clamp key:val numeric values to max
+# Usability: cap FREQ outliers before PCTKV without EACH+KVSET
+
+HOLD_FLASH 1
+
+LET hist = "error:30\nwarn:1\ninfo:5"
+SYS CAPKV hist 10
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT CAPKV_N == 1
+ASSERT CAPKV_MAX == 10
+SYS EQS LAST "error:10\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+
+# all under max → no caps
+SYS CAPKV hist 100
+ASSERT CAPKV_N == 0
+SYS EQS LAST "error:30\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+
+# cap everything to 0
+SYS CAPKV hist 0
+ASSERT CAPKV_N == 3
+SYS EQS LAST "error:0\nwarn:0\ninfo:0"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS CAPKV "" 5
+ASSERT LAST_N == 0
+ASSERT CAPKV_N == 0
+
+# custom sep
+LET cfg = "retries=20\nport=7700"
+SYS CAPKV cfg 50 "="
+ASSERT CAPKV_N == 1
+SYS EQS LAST "retries=20\nport=50"
+ASSERT LAST_N == 1
+
+# aliases
+SYS CLAMPKV hist 10
+ASSERT CLAMPKV_N == 1
+SYS MAXVAL hist 5
+ASSERT CAPKV_N == 1
+SYS EQS LAST "error:5\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+SYS KVCAP hist 10
+ASSERT CAPKV_MAX == 10
+
+# agent: FREQ spike then cap before share
+LET sev = "ERROR\nERROR\nERROR\nERROR\nERROR\nERROR\nERROR\nERROR\nERROR\nERROR\nWARN\nINFO"
+SYS FREQ sev
+LET h = LAST
+SYS LOOKUPN h "ERROR" OR 0
+ASSERT LAST_N == 10
+SYS CAPKV h 5
+LET c = LAST
+ASSERT CAPKV_N == 1
+SYS LOOKUPN c "ERROR" OR 0
+ASSERT LAST_N == 5
+SYS PCTKV c
+ASSERT PCTKV_SUM == 7
+SYS TOPKEY LAST
+SYS EQS LAST "ERROR"
+ASSERT LAST_N == 1
+
+PRINT "sys_capkv ok"
