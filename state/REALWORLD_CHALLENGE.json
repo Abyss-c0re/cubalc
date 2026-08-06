@@ -154,6 +154,6 @@
     "render/$$/gate/REQUIRE paths green after fix",
     "selftest 206/206; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "fb60129c26294abf73b1f20073c747554d7bebf9",
   "ts": "2026-08-06T12:10:30Z"
 }
