@@ -1,70 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 55,
-  "program": "programs/realworld/plate_glob_board.cubalc",
-  "theme": "plate inventory GLOB KEEPKEY MEDIANKV size lens",
-  "version": "1.15.176-usability",
+  "iter": 56,
+  "program": "programs/realworld/build_pathglob_board.cubalc",
+  "theme": "CI/release artifact inventory PATHGLOB full paths + STEM/EXT FREQ",
+  "version": "1.15.178-usability",
   "pass": true,
   "tests": [
     {
-      "name": "glob_plates",
-      "cmd": "glob *.plate \u2192 4 basenames",
+      "name": "pglob_bin",
+      "cmd": "PATHGLOB out *.bin → 1 full path app.bin (not nested)",
       "ok": true,
-      "note": "GLOB_N=4"
+      "note": "PATHGLOB_N=1 full path; no recursion"
     },
     {
-      "name": "measure_sizes",
-      "cmd": "measure \u2192 name:bytes via SIZE+JOIN",
+      "name": "shellpat_so",
+      "cmd": "one-arg PATHGLOB dir/*.so → lib.so full path",
       "ok": true,
-      "note": "basename JOIN DIR"
+      "note": "shell style"
     },
     {
-      "name": "keep_peer",
-      "cmd": "keep peer \u2192 3 plates drop error.plate",
+      "name": "pglob_star_dirs",
+      "cmd": "PATHGLOB out * → 6 entries incl nested/ dir",
       "ok": true,
-      "note": "KEEPKEY substring"
+      "note": "dirs included; no file-only filter"
     },
     {
-      "name": "median_avg",
-      "cmd": "4 plates med=5 avg=7",
+      "name": "measure_fullpath",
+      "cmd": "SIZE each full path → basename:bytes; nested dir SIZE 0",
       "ok": true,
-      "note": "MEDIAN vs AVG"
+      "note": "no JOIN glue; dir pollutes bag"
     },
     {
-      "name": "keep_err_substr",
-      "cmd": "keep err hits error.plate only",
+      "name": "exts_freq",
+      "cmd": "EXTNAME+FREQ → .gz/.conf/.so/.bin/(none)",
       "ok": true,
-      "note": "substring not exact"
+      "note": "data.tar.gz → .gz last suffix only"
     },
     {
-      "name": "dropk_peer",
-      "cmd": "DROPKEY peer removes peer_* keys",
+      "name": "keep_bin_substr",
+      "cmd": "KEEPKEY sizes bin → app.bin only",
       "ok": true,
-      "note": "DROPKEY invert"
+      "note": "substring key match"
     },
     {
-      "name": "glob_miss_require",
+      "name": "has_exact_path",
+      "cmd": "HASLINE exact full path hit; dir prefix miss soft",
+      "ok": true,
+      "note": "exact field"
+    },
+    {
+      "name": "read1_pathglob",
+      "cmd": "SORT+TAKE1+READ full path body AAAAA",
+      "ok": true,
+      "note": "PATHGLOB value: READ without JOIN"
+    },
+    {
+      "name": "pglob_miss_require",
       "cmd": "bad DIR REQUIRE exit 2",
       "ok": true,
       "note": "OK=0 soft miss"
     },
     {
-      "name": "glob_empty_match",
-      "cmd": "*.plate on log-only dir \u2192 empty OK=1 miss soft",
+      "name": "pglob_empty_match",
+      "cmd": "empty dir *.bin OK soft; REQUIRE exit 2",
       "ok": true,
-      "note": "empty\u2260dir miss"
-    },
-    {
-      "name": "median_even",
-      "cmd": "1,2,8,9 \u2192 med 2 lower mid",
-      "ok": true,
-      "note": "even lower-mid"
+      "note": "empty≠dir miss"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "151/151 pass incl mediankv keepkey glob"
+      "note": "153/153 pass incl pathglob"
     }
   ],
   "weaknesses": [
@@ -72,88 +78,91 @@
       "id": "W1",
       "severity": "high",
       "area": "host|fs",
-      "title": "GLOB returns basenames only not full paths",
-      "detail": "Agents must JOIN dir+basename for SIZE/READ. Easy to SIZE basename relative to CWD and soft-miss. No GLOB_FULL / absolute path mode.",
-      "repro": "GLOB dir *.plate \u2192 alpha.plate only"
+      "title": "PATHGLOB includes directories; no files-only mode",
+      "detail": "PATHGLOB dir * returns subdirs (nested/) alongside files. SIZE on dir is OK=1 LAST_N=0, so measure invents nested:0 junk keys. Agents need ISDIR/ISFILE filter loop.",
+      "repro": "PATHGLOB out * → …/nested + files; SIZE nested → 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|bag",
-      "title": "KEEPKEY is substring on key not exact equality",
-      "detail": "Needle err matches error.plate; peer matches peer_a. Agents wanting exact key must EQS after peel or use LOOKUP. Same class as GREP vs HASLINE.",
-      "repro": "KEEPKEY bag err \u2192 error:5"
+      "area": "host|fs",
+      "title": "PATHGLOB non-recursive; nested artifacts invisible",
+      "detail": "out/nested/deep.bin not matched by *.bin at out/. Pattern is basename-level in one directory only. Same class as GLOB. No ** support.",
+      "repro": "PATHGLOB out *.bin → app.bin only; deep.bin missed"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|fs",
-      "title": "GLOB empty match OK=1 GLOB_N=0 vs missing dir OK=0",
-      "detail": "No files matching pattern is success-empty; missing directory is fail. Agents checking only OK miss empty inventories.",
-      "repro": "GLOB emptydir *.plate OK=1 N=0"
+      "area": "host|path",
+      "title": "EXTNAME last suffix only (.tar.gz → .gz)",
+      "detail": "STEM of data.tar.gz is data.tar not data. Double-extension archives mis-typed in FREQ rollups. No multi-suffix peel.",
+      "repro": "EXTNAME data.tar.gz → .gz; STEM → data.tar"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "MEDIANKV even count uses lower mid not mean of two",
-      "detail": "1,2,8,9 \u2192 2 not 5. Documented in proof but surprises stats agents.",
-      "repro": "MEDIANKV four values"
+      "area": "host|fs",
+      "title": "SIZE on directory succeeds with 0 bytes",
+      "detail": "ISDIR true but SIZE returns OK=1 LAST_N=0 instead of soft miss. Silent pollution of size bags when PATHGLOB mixes dirs.",
+      "repro": "SIZE nested_dir → 0 OK=1"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|fs",
-      "title": "No recursive GLOB / ** pattern",
-      "detail": "Only one directory level basenames. Nested STATE trees need walk glue.",
-      "repro": "GLOB no recursion"
+      "title": "PATHGLOB empty match OK=1 vs missing dir OK=0",
+      "detail": "Same as GLOB: no files matching is success-empty; bad directory fails. Agents checking only OK miss empty inventories.",
+      "repro": "PATHGLOB emptydir *.bin OK=1 N=0"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last NAMES/SIZES line without $.",
-      "repro": "glob; cat -A NAMES.txt"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "KEEPKEY substring on basename keys",
+      "detail": "Needle bin matches app.bin. Exact key needs LOOKUP/EQS after peel.",
+      "repro": "KEEPKEY sizes bin → app.bin:5"
     },
     {
       "id": "W7",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Stable issue.",
-      "repro": "PRINT_JSON names"
+      "detail": "Full path bags collapse to one JSON string without \\n separators visible as array. Agents cannot re-split from PRINT_JSON alone.",
+      "repro": "PRINT_JSON paths"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|bag",
-      "title": "KEEPKEY empty needle keeps all without flag",
-      "detail": "Empty needle is identity keep; easy silent no-op if ARG miss.",
-      "repro": "KEEPKEY bag \"\""
+      "area": "host|write",
+      "title": "WRITE omits final trailing newline",
+      "detail": "cat -A last PATHS/SIZES/EXTS line without $.",
+      "repro": "pglob; cat -A PATHS.txt"
     }
   ],
   "workarounds": [
-    "Always JOIN GLOB dir with basename before SIZE/READ",
-    "After KEEPKEY verify exact keys with LOOKUP/EQS",
-    "Treat GLOB_N==0 as soft empty even when OK=1",
-    "Prefer MEDIANKV for outlier plate sizes vs AVGKV",
-    "Require non-empty needle for keep at agent layer"
+    "After PATHGLOB filter with ISDIR/ISFILE before SIZE",
+    "Prefer extension patterns (*.bin) over * to avoid dirs when possible",
+    "Treat PATHGLOB_N==0 as soft empty even when OK=1",
+    "For archives, peel known multi-suffixes with STRIPSUFFIX before STEM",
+    "Use full-path HASLINE for membership; never prefix-match",
+    "PATHGLOB then READ/SIZE/RM without JOIN — main win vs GLOB"
   ],
   "language_gaps": [
-    "GLOB absolute path mode / GLOB_FULL",
-    "KEEPKEY exact-key mode (not substring)",
-    "GLOB empty-match OK=0 option",
-    "MEDIANKV even mean-of-two mode",
-    "Recursive GLOB",
+    "PATHGLOB files-only / no-dirs mode",
+    "Recursive PATHGLOB / ** pattern",
+    "SIZE soft-miss or fail on directories",
+    "EXTNAME multi-suffix / full-extension mode",
+    "PATHGLOB empty-match OK=0 option",
+    "KEEPKEY exact-key mode",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive glob\u2192measure\u2192keep\u2192median clean",
-    "KEEPKEY err\u2192error.plate substring confirmed",
-    "GLOB basename-only forces JOIN dance every measure",
-    "No language fix this iter"
+    "PATHGLOB full-path measure/read1 clean without JOIN",
+    "Star pattern mixed nested/ dir into inventory",
+    "SIZE dir=0 silent; measure wrote nested:0",
+    "data.tar.gz typed as .gz not .tar.gz",
+    "No language fix this iter — document gaps for MEANINGFUL_ITER"
   ],
-  "commit": "e0ccbf2ccdc956c89a300d697fadf1e7fd38c32e",
-  "ts": "2026-08-06T02:50:00Z"
+  "commit": "",
+  "ts": "2026-08-06T03:24:30Z"
 }

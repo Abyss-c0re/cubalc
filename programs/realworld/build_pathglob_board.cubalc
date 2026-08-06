@@ -1,0 +1,700 @@
+# build_pathglob_board.cubalc — CI/release artifact inventory via PATHGLOB
+#
+# Real use: build/release agent inventories artifacts under a drop/out dir.
+# Unlike plate_glob_board (SYS GLOB basenames + JOIN for SIZE), this board
+# uses SYS PATHGLOB/PGLOB which returns full paths ready for SIZE/READ/RM
+# without PREFIXALL or JOIN glue. STEM/EXTNAME + FREQ roll up type mix;
+# HASLINE exact full-path membership; KEEPKEY filters size bag by basename.
+#
+# Distinct from release_relpath_smoke (manual ABS load + STRIPPREFIX) and
+# drop_folder_scan (single-path probe): this is one-shot PATHGLOB inventory.
+#
+# Plate under STATE:
+#   PATHS.txt         — full path bag from PATHGLOB
+#   SIZES.txt         — basename:bytes key:val bag
+#   EXTS.txt          — extension frequency bag (ext:count)
+#   PATHGLOB_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_BP_ACTION):
+#   list      — depths + ext top (default)
+#   pglob     — PATHGLOB DIR PAT → PATHS (DIR default STATE, PAT ARG1)
+#   shellpat  — one-arg PATHGLOB "DIR/PAT" shell style
+#   measure   — SIZE each full path → SIZES keyed by BASENAME
+#   exts      — EXTNAME each path → FREQ → EXTS
+#   stems     — STEM each path → bag (print; no plate write)
+#   keep      — KEEPKEY SIZES needle (basename substring)
+#   has       — HASLINE exact full path in PATHS
+#   read1     — SORT PATHS, TAKE 1, soft READ first plate
+#   basenames — BASENAME map of PATHS (print)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_bp_$$; mkdir -p "$CUBALC_STATE/out"
+#   # drop fixtures into out/
+#   CUBALC_BP_DIR=$CUBALC_STATE/out CUBALC_ARG0=pglob CUBALC_ARG1='*.bin' \
+#     ./out/cubalc run -q -s programs/realworld/build_pathglob_board.cubalc
+#   CUBALC_ARG0=measure ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=exts ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_BP_DIR=…      # scan dir (default STATE)
+#   CUBALC_BP_PAT=*
+#   CUBALC_BP_REQUIRE=1
+#
+# Edges deliberately stressed:
+#   PATHGLOB full paths vs GLOB basenames (no JOIN for SIZE)
+#   one-arg shell "dir/*.ext" vs two-arg DIR PAT
+#   bare DIR → all full paths
+#   empty match OK=1 N=0 vs missing dir OK=0
+#   EXTNAME .tar.gz → .gz only (last suffix)
+#   KEEPKEY substring on basename keys
+#   HASLINE exact full path (prefix false friend)
+#   WRITE NL; PRINT_JSON collapse; soft READ; REQUIRE miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "build_pathglob_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT SFILE = "SIZES.txt"
+DEFAULT EFILE = "EXTS.txt"
+DEFAULT REPORT = "PATHGLOB_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_BP_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_BP_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_BP_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_BP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_BP_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_BP_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir SFILE
+LET sizes_path = LAST
+SYS JOIN state_dir EFILE
+LET exts_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR sizes_path OR ""
+LET sizes = LAST
+CLEAR_ERR
+SYS READ OR exts_path OR ""
+LET exts = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET sizes_ch = 0
+LET exts_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET ext_n = 0
+LET used_or = 0
+
+# pattern from ARG1 for pglob / shellpat / keep / has
+SYS EQS ACTION "pglob"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "shellpat"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "keep"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = ""
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs full path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES sizes
+  LET ns = LAST_N
+  SYS LINES exts
+  LET ne = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "bpglob" np ns ne ACTION
+  PRINT_JSON np ns ne ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON sizes
+  PRINT_JSON exts
+  LET note_msg = "list ok"
+END
+
+# --- pglob: two-arg PATHGLOB DIR PAT ---
+SYS EQS ACTION "pglob"
+IF LAST_N == 1 THEN
+  NOTE "action pglob"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "pglob miss"
+    FAIL "pglob miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pglob miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "pglob empty"
+      FAIL "pglob empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pglob empty"
+      END
+    ELSE
+      LET note_msg = "pglob ok"
+    END
+    PRINT_JSON PAT pglob_n DIR
+    PRINT_JSON paths
+  END
+END
+
+# --- shellpat: one-arg PATHGLOB "DIR/PAT" ---
+SYS EQS ACTION "shellpat"
+IF LAST_N == 1 THEN
+  NOTE "action shellpat"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET shell = NAME
+  ELSE
+    SYS JOIN DIR PAT
+    LET shell = LAST
+  END
+  SYS PATHGLOB shell
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "shellpat miss"
+    FAIL "shellpat miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shellpat miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "shellpat empty"
+      FAIL "shellpat empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "shellpat empty"
+      END
+    ELSE
+      LET note_msg = "shellpat ok"
+    END
+    PRINT_JSON shell pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- measure: SIZE each full path (no JOIN needed) ---
+SYS EQS ACTION "measure"
+IF LAST_N == 1 THEN
+  NOTE "action measure"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "measure empty paths"
+    FAIL "measure empty paths"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "measure empty paths"
+    END
+  ELSE
+    LET sizes = ""
+    EACH LINE AS fp IN paths
+      SYS BLANK fp
+      IF LAST_N == 0 THEN
+        SYS SIZE fp
+        IF OK == 1 THEN
+          LET sz = LAST_N
+          SYS STR sz
+          LET vs = LAST
+          SYS BASENAME fp
+          LET bn = LAST
+          SYS KVSET sizes bn vs ":"
+          LET sizes = LAST
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+          CLEAR_ERR
+        END
+      END
+    END
+    LET sizes_ch = 1
+    LET note_msg = "measure ok"
+    PRINT_JSON sizes
+  END
+END
+
+# --- exts: EXTNAME each → FREQ ---
+SYS EQS ACTION "exts"
+IF LAST_N == 1 THEN
+  NOTE "action exts"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "exts empty"
+    FAIL "exts empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "exts empty"
+    END
+  ELSE
+    LET raw_exts = ""
+    EACH LINE AS fp IN paths
+      SYS BLANK fp
+      IF LAST_N == 0 THEN
+        SYS EXTNAME fp
+        LET e = LAST
+        SYS BLANK e
+        IF LAST_N == 1 THEN
+          LET e = "(none)"
+        END
+        SYS PUSH raw_exts e
+        LET raw_exts = LAST
+        LET hit = hit + 1
+      END
+    END
+    SYS FREQ raw_exts
+    LET exts = LAST
+    LET ext_n = FREQ_N
+    LET exts_ch = 1
+    LET note_msg = "exts ok"
+    PRINT_JSON ext_n FREQ_TOTAL
+    PRINT_JSON exts
+  END
+END
+
+# --- stems: STEM each (print only) ---
+SYS EQS ACTION "stems"
+IF LAST_N == 1 THEN
+  NOTE "action stems"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stems empty"
+    FAIL "stems empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stems empty"
+    END
+  ELSE
+    LET stems = ""
+    EACH LINE AS fp IN paths
+      SYS BLANK fp
+      IF LAST_N == 0 THEN
+        SYS STEM fp
+        SYS PUSH stems LAST
+        LET stems = LAST
+        LET hit = hit + 1
+      END
+    END
+    LET val_s = stems
+    LET note_msg = "stems ok"
+    PRINT_JSON stems
+  END
+END
+
+# --- basenames: BASENAME map (print) ---
+SYS EQS ACTION "basenames"
+IF LAST_N == 1 THEN
+  NOTE "action basenames"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "basenames empty"
+    FAIL "basenames empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "basenames empty"
+    END
+  ELSE
+    LET bns = ""
+    EACH LINE AS fp IN paths
+      SYS BLANK fp
+      IF LAST_N == 0 THEN
+        SYS BASENAME fp
+        SYS PUSH bns LAST
+        LET bns = LAST
+        LET hit = hit + 1
+      END
+    END
+    LET val_s = bns
+    LET note_msg = "basenames ok"
+    PRINT_JSON bns
+  END
+END
+
+# --- keep KEEPKEY on sizes ---
+SYS EQS ACTION "keep"
+IF LAST_N == 1 THEN
+  NOTE "action keep"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "keep empty"
+    FAIL "keep empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "keep empty"
+    END
+  ELSE
+    SYS KEEPKEY sizes NAME ":"
+    LET sizes = LAST
+    LET keep_n = KEEPKEY_N
+    LET drop_n = KEEPKEY_DROP
+    LET sizes_ch = 1
+    LET hit = keep_n
+    SYS BLANK sizes
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "keep none"
+      FAIL "keep none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "keep none"
+      END
+    ELSE
+      LET note_msg = "keep ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON sizes
+  END
+END
+
+# --- has: HASLINE exact full path ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- read1: SORT + TAKE 1 + soft READ ---
+SYS EQS ACTION "read1"
+IF LAST_N == 1 THEN
+  NOTE "action read1"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "read1 empty"
+    FAIL "read1 empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "read1 empty"
+    END
+  ELSE
+    SYS SORT paths
+    LET sorted = LAST
+    SYS TAKE 1 sorted
+    LET first = LAST
+    LET val_s = first
+    SYS READ OR first OR ""
+    LET body = LAST
+    CLEAR_ERR "soft read1"
+    SYS BLANK body
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "read1 soft empty"
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "read1 soft empty"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "read1 ok"
+    END
+    PRINT_JSON first
+    PRINT_JSON body
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET sizes = ""
+  LET exts = ""
+  LET paths_ch = 1
+  LET sizes_ch = 1
+  LET exts_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pglob"
+LET k = k + LAST_N
+SYS EQS ACTION "shellpat"
+LET k = k + LAST_N
+SYS EQS ACTION "measure"
+LET k = k + LAST_N
+SYS EQS ACTION "exts"
+LET k = k + LAST_N
+SYS EQS ACTION "stems"
+LET k = k + LAST_N
+SYS EQS ACTION "basenames"
+LET k = k + LAST_N
+SYS EQS ACTION "keep"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "read1"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF sizes_ch > 0 THEN
+  SYS WRITE sizes_path sizes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "sizes write failed"
+  END
+  CLEAR_ERR
+END
+IF exts_ch > 0 THEN
+  SYS WRITE exts_path exts
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "exts write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES sizes
+LET depth_s = LAST_N
+SYS LINES exts
+LET depth_e = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.build_pathglob.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pglob_n"
+LET report = LAST
+SYS STR pglob_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ext_n"
+LET report = LAST
+SYS STR ext_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_s"
+LET report = LAST
+SYS STR depth_s
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_e"
+LET report = LAST
+SYS STR depth_e
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "pat"
+LET report = LAST
+SYS PUSH report PAT
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "build_pathglob_board" ACTION hit miss pglob_n note_msg elapsed
+PRINT_JSON ACTION hit miss pglob_n keep_n ext_n depth_p depth_s depth_e note_msg STATUS_OK
+NOTE "build_pathglob_board: done"
