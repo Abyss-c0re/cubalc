@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 173,
-  "version": "1.15.198-usability",
-  "item": "SYS READALL / CATFILES concat path bag file contents",
-  "item_id": 206,
-  "title": "SYS READALL|CATFILES|SLURPALL [bag] [sep] — multi-file join without EACH+READ+CAT",
-  "commit": "a9381f1d070c056a66c4bb6b0fb0457ffc633991",
-  "summary": "Concat path bag contents to LAST; optional sep; soft miss. selftest 173.",
+  "iter": 174,
+  "version": "1.15.199-usability",
+  "item": "SYS WRITEALL / WRITEFILES overwrite path bag with data",
+  "item_id": 207,
+  "title": "SYS WRITEALL|WRITEFILES|BULKWRITE [bag] data — multi-file stamp without EACH+WRITE",
+  "commit": "12e6caccc1bf075a429f6bdf95ed7af7b1cacc1b",
+  "summary": "Overwrite path bags with shared content; dual of LOGALL. selftest 174.",
   "proofs": [
-    "746_sys_readall",
-    "selftest n_pass=173"
+    "747_sys_writeall",
+    "selftest n_pass=174"
   ],
-  "when": "2026-08-06T06:44:02Z",
+  "when": "2026-08-06T06:54:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a9381f1d070c056a66c4bb6b0fb0457ffc633991"
+  "sha": "12e6caccc1bf075a429f6bdf95ed7af7b1cacc1b"
 }
