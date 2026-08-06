@@ -1,0 +1,613 @@
+# work_claim_board.cubalc — exclusive work-item claim + STAT probe + release
+#
+# Real use: agents claim job paths with one-shot CREATEEXCL (no unlock protocol):
+#   CLAIM / CREATEEXCL  — exclusive create; soft miss if exists
+#   STAT / FSTAT        — one-shot exist/kind/size/mtime/isfile
+#   RM                  — release claim (soft miss if free)
+#   WRITEATOMIC         — overwrite claimed body after win
+# Distinct from critical_section_board (LOCKFILE+UNLOCK) and lease_lock
+# (TOUCH TOCTOU): this board is *create-exclusive claim + metadata probe*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — claim path
+#   VAL.txt        — last body / path
+#   META.txt       — hit/pid/exist/size bag
+#   CLAIM_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_WC_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   claim     — CLAIM ACTIVE [body ARG1; default pid stamp]
+#   release   — RM ACTIVE
+#   probe     — STAT ACTIVE
+#   body      — READ ACTIVE
+#   finish    — WRITEATOMIC body(ARG1) then RM (complete job)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_wc_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/jobs/job42.claim ...
+#   CUBALC_ARG0=claim CUBALC_ARG1='worker=alpha' ...
+#   CUBALC_ARG0=probe ...
+#   CUBALC_ARG0=finish CUBALC_ARG1='status=done' ...
+#
+# Env: CUBALC_WC_PATH=… CUBALC_WC_REQUIRE=1
+#
+# Edges:
+#   second claim soft miss; empty path; STAT missing EXIST=0 OK=1
+#   dir vs file KIND; release free soft; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "work_claim_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CLAIM_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_WC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_WC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_WC_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_WC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_WC_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET claim_hit = 0
+LET claim_pid = 0
+LET st_exist = 0
+LET st_kind = 0
+LET st_size = 0
+LET st_mtime = 0
+LET st_isfile = 0
+LET st_isdir = 0
+LET st_age = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "wclaim" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- claim CLAIM ---
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  NOTE "action claim"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "claim no active"
+    FAIL "claim no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "claim no active"
+    END
+  ELSE
+    # ensure parent dir if path has dirname
+    SYS DIRNAME active
+    LET parent = LAST
+    SYS BLANK parent
+    IF LAST_N == 0 THEN
+      SYS EQS parent "."
+      IF LAST_N == 0 THEN
+        SYS EQS parent ""
+        IF LAST_N == 0 THEN
+          SYS MKDIR parent
+          CLEAR_ERR
+        END
+      END
+    END
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      SYS CLAIM active
+    ELSE
+      SYS CLAIM active NAME
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET claim_hit = CLAIM_HIT
+      LET val = active
+      LET val_ch = 1
+      LET meta = "hit"
+      SYS STR claim_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "claim busy"
+      FAIL "claim busy"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "claim busy"
+      END
+    ELSE
+      LET val = LAST
+      LET claim_hit = CLAIM_HIT
+      LET claim_pid = CLAIM_PID
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hit"
+      SYS STR claim_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "pid"
+      LET meta = LAST
+      SYS STR claim_pid
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "path"
+      LET meta = LAST
+      SYS PUSH meta active
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "claim ok"
+    END
+    PRINT_JSON claim_hit claim_pid
+    PRINT_JSON active
+    CLEAR_ERR
+  END
+END
+
+# --- release RM ---
+SYS EQS ACTION "release"
+IF LAST_N == 1 THEN
+  NOTE "action release"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "release no active"
+    FAIL "release no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "release no active"
+    END
+  ELSE
+    SYS EXIST active
+    LET st_exist = LAST_N
+    SYS RM active
+    CLEAR_ERR
+    IF st_exist == 0 THEN
+      LET miss = 1
+      LET hit = 0
+      LET note_msg = "release free"
+      FAIL "release free"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "release free"
+      END
+    ELSE
+      LET hit = 1
+      LET val = active
+      LET val_ch = 1
+      LET meta = "released"
+      SYS PUSH meta "1"
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "release ok"
+    END
+    PRINT_JSON st_exist
+    CLEAR_ERR
+  END
+END
+
+# --- probe STAT ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "probe no active"
+    FAIL "probe no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "probe no active"
+    END
+  ELSE
+    SYS STAT active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "probe fail"
+      FAIL "probe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "probe fail"
+      END
+    ELSE
+      LET st_exist = STAT_EXIST
+      LET st_kind = STAT_KIND
+      LET st_size = STAT_SIZE
+      LET st_mtime = STAT_MTIME
+      LET st_isfile = STAT_ISFILE
+      LET st_isdir = STAT_ISDIR
+      LET st_age = STAT_AGE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = st_exist
+      LET meta = "exist"
+      SYS STR st_exist
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "kind"
+      LET meta = LAST
+      SYS STR st_kind
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "size"
+      LET meta = LAST
+      SYS STR st_size
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "mtime"
+      LET meta = LAST
+      SYS STR st_mtime
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "isfile"
+      LET meta = LAST
+      SYS STR st_isfile
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "isdir"
+      LET meta = LAST
+      SYS STR st_isdir
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "age"
+      LET meta = LAST
+      SYS STR st_age
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF st_exist == 0 THEN
+        LET miss = 1
+        LET note_msg = "probe missing"
+        FAIL "probe missing"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "probe missing"
+        END
+      ELSE
+        LET note_msg = "probe ok"
+      END
+    END
+    PRINT_JSON st_exist st_kind st_size st_isfile st_isdir
+    CLEAR_ERR
+  END
+END
+
+# --- body READ ---
+SYS EQS ACTION "body"
+IF LAST_N == 1 THEN
+  NOTE "action body"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "body no active"
+    FAIL "body no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "body no active"
+    END
+  ELSE
+    SYS READ OR active OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "body miss"
+      FAIL "body miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "body miss"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      SYS BLANK val
+      IF LAST_N == 1 THEN
+        LET miss = 1
+        LET note_msg = "body empty"
+        FAIL "body empty"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "body empty"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "body ok"
+      END
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- finish WRITEATOMIC then RM ---
+SYS EQS ACTION "finish"
+IF LAST_N == 1 THEN
+  NOTE "action finish"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "finish no active"
+    FAIL "finish no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "finish no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = "status=done"
+    END
+    SYS STAT active
+    IF STAT_EXIST == 0 THEN
+      LET miss = 1
+      LET note_msg = "finish no claim"
+      FAIL "finish no claim"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "finish no claim"
+      END
+    ELSE
+      SYS WRITEATOMIC active NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "finish write fail"
+        FAIL "finish write fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "finish write fail"
+        END
+      ELSE
+        LET val = NAME
+        LET val_ch = 1
+        SYS RM active
+        CLEAR_ERR
+        LET hit = 1
+        LET meta = "finished"
+        SYS PUSH meta "1"
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "finish ok"
+      END
+    END
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "claim"
+LET k = k + LAST_N
+SYS EQS ACTION "release"
+LET k = k + LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "body"
+LET k = k + LAST_N
+SYS EQS ACTION "finish"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.work_claim_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "claim_hit"
+LET report = LAST
+SYS STR claim_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "st_exist"
+LET report = LAST
+SYS STR st_exist
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "st_size"
+LET report = LAST
+SYS STR st_size
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "work_claim_board" ACTION hit miss claim_hit st_exist st_size note_msg elapsed

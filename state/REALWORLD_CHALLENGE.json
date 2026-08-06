@@ -1,153 +1,153 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 81,
-  "program": "programs/realworld/plate_settle_board.cubalc",
-  "theme": "plate settle WAITSTABLE WAITCHANGED MKTEMP size+mtime",
-  "version": "1.15.241-usability",
+  "iter": 82,
+  "program": "programs/realworld/work_claim_board.cubalc",
+  "theme": "work claim CLAIM CREATEEXCL STAT exclusive job path",
+  "version": "1.15.243-usability",
   "pass": true,
   "tests": [
     {
-      "name": "mktemp_write_stable",
-      "cmd": "mktemp job; write; stable quiet=50 hit size+mtime",
+      "name": "claim_probe",
+      "cmd": "claim worker=alpha; probe exist kind=1 size isfile",
       "ok": true,
-      "note": "settle"
+      "note": "STAT after CLAIM"
     },
     {
-      "name": "read_stamp",
-      "cmd": "read after stable; HASHFILE stamp",
+      "name": "claim_busy",
+      "cmd": "second claim soft miss; REQUIRE exit 2",
       "ok": true,
-      "note": "post-settle"
+      "note": "exclusive"
     },
     {
-      "name": "snapshot_since_mod",
-      "cmd": "snapshot; rewrite; since FROM=1 modify",
+      "name": "body_finish",
+      "cmd": "body read; finish writes then RM",
       "ok": true,
-      "note": "WAITCHANGED SINCE"
+      "note": "complete"
     },
     {
-      "name": "since_gone",
-      "cmd": "snapshot; rm; since FROM=2 gone",
+      "name": "default_body",
+      "cmd": "claim empty ARG \u2192 default PID body",
       "ok": true,
-      "note": "delete detect"
+      "note": "pid stamp"
     },
     {
-      "name": "since_missing",
-      "cmd": "appear hit FROM=0 after delayed create",
+      "name": "release_free",
+      "cmd": "release ok; release free soft",
       "ok": true,
-      "note": "SINCE MISSING"
+      "note": "idempotent"
     },
     {
-      "name": "stable_miss",
-      "cmd": "missing path soft; REQUIRE exit 2",
+      "name": "probe_dir",
+      "cmd": "STAT dir kind=2 isdir=1",
       "ok": true,
-      "note": "timeout"
+      "note": "kind"
     },
     {
-      "name": "mktemp_sanitize",
-      "cmd": "../evil \u2192 /tmp/evil.* no traversal",
+      "name": "probe_missing",
+      "cmd": "STAT miss EXIST=0 OK=1; REQUIRE exit 2",
       "ok": true,
-      "note": "prefix"
+      "note": "soft probe"
     },
     {
-      "name": "mktemp_unique",
-      "cmd": "two mktemp a \u2192 different paths",
+      "name": "finish_none",
+      "cmd": "finish without claim REQUIRE exit 2",
       "ok": true,
-      "note": "collision-free"
+      "note": "gate"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "216/216 pass"
+      "note": "218/218 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|wait",
-      "title": "WAITSTABLE/WAITCHANGED are size+mtime only \u2014 same-size content rewrite may not fire",
-      "detail": "Peer can rewrite plate with identical byte length and same-second mtime; settle/changed miss content churn. No hash/content quiet mode. Complements WAITMATCH substring traps.",
-      "repro": "WRITE same-length payload; WAITCHANGED may timeout"
+      "area": "host|claim",
+      "title": "CLAIM has no dead-owner reclaim \u2014 orphan job file wedges forever",
+      "detail": "Unlike flock release-on-exit, CREATEEXCL claim file persists after crash. Next CLAIM busy until manual RM. Same class as LOCKFILE orphan but no unlock protocol either.",
+      "repro": "CLAIM j; kill; CLAIM j \u2192 busy"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|tmp",
-      "title": "MKTEMP lands under system TMP not CUBALC_STATE",
-      "detail": "Agent isolation under STATE is broken; temps scatter in /tmp. Concurrent hosts share namespace. No MKTEMP DIR=STATE option.",
-      "repro": "MKTEMP job \u2192 /tmp/job.XXXX"
+      "area": "host|naming",
+      "title": "CLAIM vs LOCKFILE vs TOUCH lease \u2014 three exclusion models",
+      "detail": "Agents mix create-excl, flock path.lock, and TOUCH markers. Semantics and release paths differ; false safety common.",
+      "repro": "CLAIM job vs LOCKFILE plate vs TOUCH agent.lock"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|wait",
-      "title": "WAITSTABLE vs WAITFILE vs WAITMATCH vs WAITCHANGED name swarm",
-      "detail": "Four wait families with different predicates (exist/content/quiet/change). Agents pick wrong waiter under stress.",
-      "repro": "WAITFILE empty TOUCH vs WAITSTABLE missing"
+      "area": "host|write",
+      "title": "CLAIM custom body omits trailing NL",
+      "detail": "worker=alpha glued to next cat; default PID body has NL. Inconsistent body hygiene.",
+      "repro": "cat -A after CLAIM body"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITEATOMIC trailing NL omit after settle write",
-      "detail": "host=peer and line1 without $; cat -A glues.",
-      "repro": "cat -A after write"
+      "area": "host|claim",
+      "title": "No CLAIM\u2192done rename; finish pattern must WRITE then RM loses audit",
+      "detail": "Agent finish overwrites claim body then deletes path. Durable done archive requires COPY before RM glue.",
+      "repro": "finish removes claim; no done plate left"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|snap",
-      "title": "SINCE needs durable size/mtime plates + NUM reparse across ticks",
-      "detail": "No atomic SNAPSHOT primitive returning both; agent WRITE two plates and NUM shuttle fragile under WRITE NL glue.",
-      "repro": "snapshot then since multi-run"
+      "area": "host|stat",
+      "title": "STAT missing OK=1 EXIST=0 vs empty path OK=0 \u2014 dual soft miss",
+      "detail": "Path miss soft true; empty path hard soft-fail. Agents sharing miss handlers confuse codes.",
+      "repro": "STAT no_such OK=1; STAT \"\" OK=0"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|wait",
-      "title": "WAITCHANGED without SINCE only sees future changes after call starts",
-      "detail": "Cannot detect change that already happened; need SINCE snapshot first. Easy agent footgun.",
-      "repro": "rewrite then WAITCHANGED short \u2192 miss"
+      "area": "host|stat",
+      "title": "STAT dual with EXIST+SIZE+MTIME+ISFILE family",
+      "detail": "One-shot STAT helps but old multi-call patterns remain; SIZE alone soft-miss differs.",
+      "repro": "SIZE vs STAT_SIZE"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_PS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc stable miss \u2192 rc 0"
+      "detail": "CUBALC_WC_REQUIRE=abc.",
+      "repro": "REQUIRE=abc claim busy \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|tmp",
-      "title": "MKTEMP no auto-cleanup / no STATE-scoped GC",
-      "detail": "Agents leak /tmp files; no MKTEMP CLEAN or linked lifecycle.",
-      "repro": "mktemp loop fills /tmp"
+      "area": "host|claim",
+      "title": "CLAIM does not create parent dirs",
+      "detail": "Agent must MKDIR parent; language create-excl fails on missing parent. Board works around with DIRNAME+MKDIR.",
+      "repro": "CLAIM missing/dir/job without MKDIR"
     }
   ],
   "workarounds": [
-    "Prefer WAITMATCH for known content; WAITSTABLE only for torn-write settle",
-    "Pair snapshot+since for already-applied changes",
-    "HASHFILE after stable for content identity",
-    "Digit-check REQUIRE; clean MKTEMP paths on exit",
-    "Copy mktemp into STATE if isolation required"
+    "RM orphan claims on deploy recovery / age GC via STAT_AGE",
+    "COPY claim to done/ before finish RM",
+    "Prefer CLAIM for one-shot jobs; LOCKFILE for reentrant CS",
+    "Digit-check REQUIRE env",
+    "MKDIR DIRNAME before CLAIM nested paths"
   ],
   "language_gaps": [
-    "WAITSTABLE content/hash quiet mode",
-    "MKTEMP under CUBALC_STATE or DIR arg",
-    "SNAPSHOT size+mtime one-shot plate op",
-    "MKTEMP cleanup / scoped temp dirs",
-    "WRITEATOMIC trailing NL",
-    "Help matrix of WAIT* family predicates"
+    "CLAIM reclaim/stale break by PID age",
+    "CLAIMDONE rename-or-move primitive",
+    "CLAIM body trailing NL consistency",
+    "MKDIR parent option on CLAIM",
+    "Help matrix CLAIM vs LOCKFILE vs TOUCH",
+    "STAT empty-path policy unify with missing"
   ],
   "issues_faced": [
-    "mktemp/write/stable/read/since modify/gone/appear green",
-    "MKTEMP outside STATE is sharp isolation gap",
-    "size+mtime settle cannot replace content wait",
-    "selftest 216/216; no language fix this iter"
+    "claim/probe/body/finish/release paths clean",
+    "DIRNAME+MKDIR needed for nested job paths",
+    "finish deletes result \u2014 audit gap documented",
+    "selftest 218/218; no language fix this iter"
   ],
-  "commit": "fd05c9ae1ab3bfbfe3eeedc44903948537e9912b",
-  "ts": "2026-08-06T13:50:00Z"
+  "commit": "",
+  "ts": "2026-08-06T14:15:00Z"
 }
