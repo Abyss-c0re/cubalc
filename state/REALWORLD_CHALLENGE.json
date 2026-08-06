@@ -14,7 +14,7 @@
     },
     {
       "name": "rel",
-      "cmd": "RELPATH → sub/art.bin UNDER=1",
+      "cmd": "RELPATH \u2192 sub/art.bin UNDER=1",
       "ok": true,
       "note": "portable key"
     },
@@ -38,19 +38,19 @@
     },
     {
       "name": "gate_require",
-      "cmd": "gate missing REQUIRE → exit 2",
+      "cmd": "gate missing REQUIRE \u2192 exit 2",
       "ok": true,
       "note": "deny"
     },
     {
       "name": "rel_outside",
-      "cmd": "path outside base UNDER=0; REQUIRE→2",
+      "cmd": "path outside base UNDER=0; REQUIRE\u21922",
       "ok": true,
       "note": "abs leak"
     },
     {
       "name": "atime_miss",
-      "cmd": "missing path ATIME REQUIRE→2",
+      "cmd": "missing path ATIME REQUIRE\u21922",
       "ok": true,
       "note": "OK=0"
     },
@@ -66,9 +66,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|relpath",
-      "title": "RELPATH outside base returns absolute with UNDER=0 — easy to publish non-portable keys",
+      "title": "RELPATH outside base returns absolute with UNDER=0 \u2014 easy to publish non-portable keys",
       "detail": "Agents that skip RELPATH_UNDER stamp /tmp into plates. No hard REQUIRE-UNDER mode; OK=1 either way.",
-      "repro": "RELPATH base /tmp → LAST=/tmp UNDER=0 OK=1"
+      "repro": "RELPATH base /tmp \u2192 LAST=/tmp UNDER=0 OK=1"
     },
     {
       "id": "W2",
@@ -90,7 +90,7 @@
       "id": "W4",
       "severity": "med",
       "area": "host|ctime",
-      "title": "CTIME is inode status-change not create-time — agents mislabel birth",
+      "title": "CTIME is inode status-change not create-time \u2014 agents mislabel birth",
       "detail": "chmod/chown bump ctime without content edit. No BIRTHTIME/BTIME form. Docs say CHANGETIME but agents still call it create.",
       "repro": "CHMOD then CTIME > MTIME"
     },
@@ -98,7 +98,7 @@
       "id": "W5",
       "severity": "med",
       "area": "host|triad",
-      "title": "No single STAT_TIMES / TRIAD form — three probes + hand composite",
+      "title": "No single STAT_TIMES / TRIAD form \u2014 three probes + hand composite",
       "detail": "Verbose for audit stamps; race window between ATIME and MTIME reads.",
       "repro": "need 3 SYS for a/c/m"
     },
@@ -107,7 +107,7 @@
       "severity": "med",
       "area": "host|has",
       "title": "HAS on env names false-friends PATH substring",
-      "detail": "HAS CUBALC_PATH_FOO PATH → 1. Gate boards must EQS names not HAS.",
+      "detail": "HAS CUBALC_PATH_FOO PATH \u2192 1. Gate boards must EQS names not HAS.",
       "repro": "HAS name PATH"
     },
     {
@@ -124,7 +124,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_TT_REQUIRE=abc.",
-      "repro": "REQUIRE=abc hasenv absent → rc 0"
+      "repro": "REQUIRE=abc hasenv absent \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -144,9 +144,9 @@
   ],
   "issues_faced": [
     "rel/triad/hasenv/gate/outside/miss green",
-    "noatime collapses atime=mtime on this host — documented",
+    "noatime collapses atime=mtime on this host \u2014 documented",
     "selftest 260/260; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "36d461b5a4c93ff340189abe6e2361251f5c9c8f",
   "ts": "2026-08-06T21:18:47Z"
 }
