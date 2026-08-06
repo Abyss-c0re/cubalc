@@ -237,6 +237,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 207. ~~**`SYS WRITEALL` / `WRITEFILES`**~~ **done** (overwrite every path in bag with data · multi-file stamp without EACH+WRITE).
 208. ~~**`SYS REPLACEFILES` / `SUBFILES`**~~ **done** (REPLACEALL inside every path · bulk rewrite without EACH+READ+WRITE).
 209. ~~**`SYS COUNTINFILES` / `GREPCOUNTFILES`**~~ **done** (total needle hits across path bag · multi-file tally without EACH+READ).
+210. ~~**`SYS FIRSTFILE` / `LASTFILE`**~~ **done** (first/last path whose content matches needle · no GREPFILES+HEAD glue).
 
 ## Tick protocol
 

@@ -1,0 +1,84 @@
+# SYS FIRSTFILE / LASTFILE — first/last path whose content contains needle
+# Usability: one-hit path pick without GREPFILES+HEAD/TAIL glue
+# FIRSTFILEI / LASTFILEI case-insensitive. Soft miss skips unreadable.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "firstfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.log"
+LET fa = LAST
+SYS JOIN fix "b.log"
+LET fb = LAST
+SYS JOIN fix "c.log"
+LET fc = LAST
+SYS JOIN fix "gone.log"
+LET fg = LAST
+
+SYS WRITE fa "info only"
+SYS WRITE fb "ERROR mid"
+SYS WRITE fc "Error end"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST fg
+LET bag = LAST
+
+SYS FIRSTFILE bag "ERROR"
+ASSERT OK == 1
+ASSERT FIRSTFILE_N == 1
+# stops at first hit (b); does not scan c/gone
+ASSERT FIRSTFILE_SCAN == 2
+ASSERT FIRSTFILE_MISS == 0
+SYS EQS LAST fb
+ASSERT LAST_N == 1
+
+# last match case-sensitive only fb (scans all; gone miss)
+SYS LASTFILE bag "ERROR"
+ASSERT LASTFILE_N == 1
+ASSERT LASTFILE_SCAN == 4
+ASSERT LASTFILE_MISS == 1
+SYS EQS LAST fb
+ASSERT LAST_N == 1
+
+# case-insensitive: first is fb (ERROR), last is fc (Error)
+SYS FIRSTFILEI bag "error"
+ASSERT FIRSTFILE_N == 1
+SYS EQS LAST fb
+ASSERT LAST_N == 1
+SYS LASTFILEI bag "error"
+ASSERT LASTFILE_N == 1
+SYS EQS LAST fc
+ASSERT LAST_N == 1
+
+# one-arg after PATHGLOB
+SYS PATHGLOB fix "*.log"
+SYS KEEPFILES
+SYS HITFILE "ERROR"
+ASSERT FIRSTFILE_N == 1
+SYS HAS LAST "b.log"
+ASSERT LAST_N == 1
+
+# miss
+SYS FIRSTFILE bag "FATAL"
+ASSERT FIRSTFILE_N == 0
+ASSERT OK == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# empty bag
+SYS FIRSTFILE "" "x"
+ASSERT FIRSTFILE_N == 0
+ASSERT FIRSTFILE_SCAN == 0
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_firstfile ok"
