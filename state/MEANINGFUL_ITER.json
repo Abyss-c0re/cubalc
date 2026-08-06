@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 234,
-  "version": "1.15.260-usability",
-  "item": "SYS UNAME / OS / ARCH / MACHINE / PLATFORM host identity",
-  "item_id": 268,
-  "title": "SYS UNAME|OS|ARCH|PLATFORM — kernel + arch without shell uname",
-  "commit": "d8e6b4373b03256e2fa9a1a95378ec02be44c800",
-  "summary": "Portable OS/arch probes for agent IF and plate tags. selftest 234.",
+  "iter": 235,
+  "version": "1.15.261-usability",
+  "item": "SYS LOCAL / LOCALTIME / LOCALDATE local wall stamps",
+  "item_id": 269,
+  "title": "SYS LOCAL|LOCALTIME|LOCALDATE — local wall stamp for human logs",
+  "commit": "2059707289fb63f296d8f8d02eee7bb16fb05757",
+  "summary": "Local wall stamps without shell date; complements UTC DATE. selftest 235.",
   "proofs": [
-    "808_sys_uname",
-    "selftest n_pass=234"
+    "809_sys_local",
+    "selftest n_pass=235"
   ],
-  "when": "2026-08-06T16:46:00Z",
+  "when": "2026-08-06T16:56:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d8e6b4373b03256e2fa9a1a95378ec02be44c800",
-  "note": "complements NPROC/HOSTNAME; uname(2) on POSIX"
+  "sha": "2059707289fb63f296d8f8d02eee7bb16fb05757",
+  "note": "no Z vs DATE …Z; LOCALDATE date-only"
 }
