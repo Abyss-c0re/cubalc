@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 164,
-  "version": "1.15.189-usability",
-  "item": "SYS RMALL / UNLINKALL bulk remove path bag",
-  "item_id": 197,
-  "title": "SYS RMALL|UNLINKALL|DELETEALL [bag] — GC reclaim without EACH+RM",
-  "commit": "d33b3750c096a6d3c3ef2a1c4a2a717dfbb6dd70",
-  "summary": "Bulk unlink path bags after KEEP* filters. selftest 164.",
+  "iter": 165,
+  "version": "1.15.190-usability",
+  "item": "SYS TOUCHALL / ENSUREALL bulk create/refresh path bag",
+  "item_id": 198,
+  "title": "SYS TOUCHALL|ENSUREALL|CREATEALL [bag] — lease stamps without EACH+TOUCH",
+  "commit": "ec5ef7bd50397b393dd92bf2a22d7bc82553bcd0",
+  "summary": "Bulk touch path bags with NEW/UPD counts. selftest 165.",
   "proofs": [
-    "737_sys_rmall",
-    "selftest n_pass=164"
+    "738_sys_touchall",
+    "selftest n_pass=165"
   ],
-  "when": "2026-08-06T05:14:34Z",
+  "when": "2026-08-06T05:23:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d33b3750c096a6d3c3ef2a1c4a2a717dfbb6dd70"
+  "sha": "ec5ef7bd50397b393dd92bf2a22d7bc82553bcd0"
 }
