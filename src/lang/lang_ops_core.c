@@ -6282,6 +6282,102 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", found ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS THRESHKV|KEEPVAL|MINCOUNT bag min [sep]
+     * — keep key:val fields whose numeric value >= min (default sep ":").
+     * LAST = filtered bag; LAST_N = remaining field count;
+     * THRESHKV_DROP = removed count; THRESHKV_MIN = threshold used.
+     * Usability: denoise FREQ (drop rare noise) without EACH+LOOKUPN rebuild. */
+    if (kw(&L->cur,"THRESHKV") || kw(&L->cur,"KEEPVAL") || kw(&L->cur,"MINCOUNT") ||
+        kw(&L->cur,"KEEPMIN") || kw(&L->cur,"KVTHRESH") || kw(&L->cur,"FILTERVAL") ||
+        kw(&L->cur,"MINFREQ") || kw(&L->cur,"DROPRARE") || kw(&L->cur,"PRUNEKV")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], field[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, sn, olen = 0;
+      long minv = 1, kept = 0, drop = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* min threshold: number, expr, or numeric var */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        minv = parse_expr(vm, L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          minv = (long)dv->val;
+          lex_next(L);
+        }
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            int keep = 0;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            {
+              const char *rhs = field;
+              char *end = 0;
+              long v;
+              if (sn > 0) {
+                const char *sp = strstr(field, sep);
+                if (sp) rhs = sp + sn;
+                else rhs = NULL;
+              }
+              if (rhs) {
+                v = strtol(rhs, &end, 10);
+                if (end != rhs) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0 && v >= minv) keep = 1;
+                }
+              }
+            }
+            if (keep) {
+              size_t nlen = strlen(field);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + nlen < sizeof out) {
+                memcpy(out + olen, field, nlen);
+                olen += nlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, field, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              kept++;
+            } else {
+              drop++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "THRESHKV", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "THRESHKV_N", kept);
+      var_set_num(vm, "THRESHKV_DROP", drop);
+      var_set_num(vm, "THRESHKV_MIN", minv);
+      var_set_num(vm, "KEEPVAL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
      * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
      * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
@@ -9065,7 +9161,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|TOPKEY|BOTKEY|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|SUMKV|TOTALKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -9382,6 +9478,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ARGMAXKV", "SYS ARGMAXKV bag [sep] — alias of SYS TOPKEY · LAST=key LAST_N=value"},
       {"SYS BOTKEY", "SYS BOTKEY|ARGMINKV bag [sep] — key with min numeric value · rarest FREQ"},
       {"SYS ARGMINKV", "SYS ARGMINKV bag [sep] — alias of SYS BOTKEY"},
+      {"SYS THRESHKV", "SYS THRESHKV|KEEPVAL bag min [sep] — keep key:val with value>=min · denoise FREQ"},
+      {"SYS KEEPVAL", "SYS KEEPVAL bag min [sep] — alias of SYS THRESHKV"},
+      {"SYS MINCOUNT", "SYS MINCOUNT bag min [sep] — alias of SYS THRESHKV · drop rare counts"},
       {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
       {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
       {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},

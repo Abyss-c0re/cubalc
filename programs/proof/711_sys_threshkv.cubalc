@@ -1,0 +1,76 @@
+# SYS THRESHKV / KEEPVAL — keep key:val fields with value >= min
+# Usability: denoise FREQ without EACH+LOOKUPN rebuild
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:10\ndebug:0"
+
+# keep counts >= 2
+SYS THRESHKV hist 2
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT THRESHKV_DROP == 2
+ASSERT THRESHKV_MIN == 2
+SYS EQS LAST "error:3\ninfo:10"
+ASSERT LAST_N == 1
+
+# min=1 drops only zero
+SYS THRESHKV hist 1
+ASSERT LAST_N == 3
+ASSERT THRESHKV_DROP == 1
+SYS LOOKUPN LAST "warn" OR -1
+ASSERT LAST_N == 1
+
+# min higher than all → empty
+SYS THRESHKV hist 100
+ASSERT LAST_N == 0
+ASSERT THRESHKV_DROP == 4
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty bag
+SYS THRESHKV "" 1
+ASSERT LAST_N == 0
+ASSERT THRESHKV_DROP == 0
+
+# custom sep
+LET cfg = "retries=2\nport=7700\ntimeout=5\nmode=1"
+SYS THRESHKV cfg 5 "="
+ASSERT LAST_N == 2
+ASSERT THRESHKV_DROP == 2
+LET cf = LAST
+SYS LOOKUPN cf "port" "=" OR 0
+ASSERT LAST_N == 7700
+SYS LOOKUPN cf "timeout" "=" OR 0
+ASSERT LAST_N == 5
+
+# aliases
+SYS KEEPVAL hist 3
+ASSERT LAST_N == 2
+ASSERT KEEPVAL_N == 2
+SYS MINCOUNT hist 10
+ASSERT LAST_N == 1
+SYS EQS LAST "info:10"
+ASSERT LAST_N == 1
+SYS DROPRARE hist 2
+ASSERT THRESHKV_N == 2
+
+# default min=1 when no number given
+SYS THRESHKV hist
+ASSERT THRESHKV_MIN == 1
+ASSERT LAST_N == 3
+
+# agent: FREQ then drop rare noise then top
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR\nDEBUG\nDEBUG"
+SYS FREQ sev
+LET h = LAST
+SYS THRESHKV h 2
+LET loud = LAST
+ASSERT THRESHKV_DROP >= 1
+SYS TOPKEY loud
+SYS EQS LAST "ERROR"
+ASSERT LAST_N == 1
+SYS SUMKV loud
+ASSERT LAST_N >= 3
+
+PRINT "sys_threshkv ok"
