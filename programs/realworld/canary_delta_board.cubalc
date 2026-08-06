@@ -1,0 +1,649 @@
+# canary_delta_board.cubalc — canary vs baseline metric delta plate
+#
+# Real use: release/canary agent keeps baseline and canary service:count bags
+# under STATE. DIFFKV computes canary−baseline deltas (rising errors positive).
+# ADDKV applies Laplace/offset smoothing; THRESHKV keeps only hot positive
+# regressions for paging.
+#
+# Distinct from traffic_share_board (scale/cap/pct) and shard_err_rollup
+# (MERGEKV sum): this board is subtractive delta + offset pipeline.
+#
+# Plate under STATE:
+#   BASE.txt          — baseline key:count
+#   CANARY.txt        — canary key:count
+#   DELTA.txt         — DIFFKV result
+#   HOT.txt           — THRESHKV of positive deltas
+#   DELTA_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CD_ACTION):
+#   list      — depths + sum base/canary/delta (default)
+#   seedbase  — WORDS svc:n → BASE
+#   seedcanary— WORDS svc:n → CANARY
+#   loadbase  — ||| events FREQ → BASE
+#   loadcanary— ||| events FREQ → CANARY
+#   diff      — DIFFKV CANARY BASE → DELTA
+#   offset    — ADDKV DELTA by delta (ARG1, default 1)
+#   hot       — THRESHKV DELTA min (ARG1) → HOT
+#   getn      — LOOKUPN on DELTA OR 0
+#   top       — TOPKEY DELTA
+#   clear     — empty all
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cd_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seedbase CUBALC_ARG1='api:10 db:5 mesh:2' \
+#     ./out/cubalc run -q -s programs/realworld/canary_delta_board.cubalc
+#   CUBALC_ARG0=seedcanary CUBALC_ARG1='api:14 db:4 mesh:2 crit:3' \
+#     ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=diff ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=hot CUBALC_ARG1=1 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CD_REQUIRE=1
+#   CUBALC_CD_MIN=1
+#   CUBALC_CD_OFFSET=1
+#
+# Edges deliberately stressed:
+#   DIFFKV produces negative values (warn:3-4=-1); only-in-b → negative
+#   DIFFKV empty a → negated b; empty b → copy a
+#   ADDKV only adjusts existing keys (no insert missing)
+#   ADDKV negative can drive values below zero
+#   THRESHKV min=1 drops zeros and negatives
+#   non-numeric preserve/strtol; LOOKUPN OR; WRITE NL; PRINT_JSON
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "canary_delta_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT BFILE = "BASE.txt"
+DEFAULT CFILE = "CANARY.txt"
+DEFAULT DFILE = "DELTA.txt"
+DEFAULT HFILE = "HOT.txt"
+DEFAULT REPORT = "DELTA_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN_T = 1
+DEFAULT OFF = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CD_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CD_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CD_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CD_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN_T = LAST_N
+  END
+END
+SYS ENV "CUBALC_CD_OFFSET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET OFF = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir BFILE
+LET base_path = LAST
+SYS JOIN state_dir CFILE
+LET can_path = LAST
+SYS JOIN state_dir DFILE
+LET delta_path = LAST
+SYS JOIN state_dir HFILE
+LET hot_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR base_path OR ""
+LET base = LAST
+CLEAR_ERR
+SYS READ OR can_path OR ""
+LET canary = LAST
+CLEAR_ERR
+SYS READ OR delta_path OR ""
+LET delta = LAST
+CLEAR_ERR
+SYS READ OR hot_path OR ""
+LET hot = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET base_ch = 0
+LET can_ch = 0
+LET delta_ch = 0
+LET hot_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET total_n = 0
+LET diff_hit = 0
+LET diff_add = 0
+LET drop_n = 0
+LET used_or = 0
+LET top_k = ""
+LET top_v = 0
+
+# numeric override
+SYS EQS ACTION "offset"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET OFF = LAST_N
+    END
+  END
+END
+SYS EQS ACTION "hot"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET MIN_T = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES base
+  LET nb = LAST_N
+  SYS LINES canary
+  LET nc = LAST_N
+  SYS LINES delta
+  LET nd = LAST_N
+  SYS BLANK delta
+  IF LAST_N == 0 THEN
+    SYS SUMKV delta ":"
+    LET total_n = LAST_N
+    SYS TOPKEY delta ":"
+    IF OK == 1 THEN
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+    END
+    CLEAR_ERR
+  END
+  STATUS
+  PRINT "cdelta" nb nc nd total_n ACTION
+  PRINT_JSON nb nc nd total_n top_k top_v ACTION STATUS_OK
+  PRINT_JSON base
+  PRINT_JSON canary
+  PRINT_JSON delta
+  LET note_msg = "list ok"
+END
+
+# helper: seed WORDS into bag target via ACTION branches
+SYS EQS ACTION "seedbase"
+IF LAST_N == 1 THEN
+  NOTE "action seedbase"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seedbase needs tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP base k ":"
+        IF OK == 0 THEN
+          SYS KVSET base k v ":"
+          LET base = LAST
+          LET base_ch = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seedbase ok"
+END
+
+SYS EQS ACTION "seedcanary"
+IF LAST_N == 1 THEN
+  NOTE "action seedcanary"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seedcanary needs tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP canary k ":"
+        IF OK == 0 THEN
+          SYS KVSET canary k v ":"
+          LET canary = LAST
+          LET can_ch = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seedcanary ok"
+END
+
+SYS EQS ACTION "loadbase"
+IF LAST_N == 1 THEN
+  NOTE "action loadbase"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadbase needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  SYS FREQ LAST
+  LET base = LAST
+  LET base_ch = 1
+  SYS LINES base
+  LET hit = LAST_N
+  LET note_msg = "loadbase ok"
+END
+
+SYS EQS ACTION "loadcanary"
+IF LAST_N == 1 THEN
+  NOTE "action loadcanary"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadcanary needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  SYS FREQ LAST
+  LET canary = LAST
+  LET can_ch = 1
+  SYS LINES canary
+  LET hit = LAST_N
+  LET note_msg = "loadcanary ok"
+END
+
+# --- diff DIFFKV canary - base ---
+SYS EQS ACTION "diff"
+IF LAST_N == 1 THEN
+  NOTE "action diff"
+  SYS BLANK canary
+  LET can_blank = LAST_N
+  SYS BLANK base
+  LET base_blank = LAST_N
+  IF can_blank == 1 THEN
+    IF base_blank == 1 THEN
+      LET miss = 1
+      LET note_msg = "diff both empty"
+      FAIL "diff both empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "diff both empty"
+      END
+    END
+  END
+  # always compute even if one empty (language: empty a → negate b)
+  SYS DIFFKV canary base ":"
+  LET delta = LAST
+  LET diff_hit = DIFFKV_HIT
+  LET diff_add = DIFFKV_ADDED
+  LET delta_ch = 1
+  SYS LINES delta
+  LET hit = LAST_N
+  SYS SUMKV delta ":"
+  LET total_n = LAST_N
+  LET note_msg = "diff ok"
+  PRINT_JSON diff_hit diff_add total_n
+  PRINT_JSON delta
+END
+
+# --- offset ADDKV on delta ---
+SYS EQS ACTION "offset"
+IF LAST_N == 1 THEN
+  NOTE "action offset"
+  SYS BLANK delta
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "offset empty"
+    FAIL "offset empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "offset empty"
+    END
+  ELSE
+    SYS ADDKV delta OFF ":"
+    LET delta = LAST
+    LET delta_ch = 1
+    LET hit = ADDKV_N
+    LET note_msg = "offset ok"
+    PRINT_JSON OFF hit
+    PRINT_JSON delta
+  END
+END
+
+# --- hot THRESHKV on delta ---
+SYS EQS ACTION "hot"
+IF LAST_N == 1 THEN
+  NOTE "action hot"
+  SYS BLANK delta
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hot empty"
+    FAIL "hot empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hot empty"
+    END
+  ELSE
+    SYS MAX MIN_T 0
+    LET MIN_T = LAST_N
+    SYS THRESHKV delta MIN_T ":"
+    LET hot = LAST
+    LET drop_n = THRESHKV_DROP
+    LET hot_ch = 1
+    SYS LINES hot
+    LET hit = LAST_N
+    SYS BLANK hot
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "hot none"
+      FAIL "hot none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hot none"
+      END
+    ELSE
+      LET note_msg = "hot ok"
+      SYS TOPKEY hot ":"
+      IF OK == 1 THEN
+        LET top_k = LAST
+        LET top_v = TOPKEY_V
+      END
+      CLEAR_ERR
+    END
+    PRINT_JSON MIN_T drop_n hit top_k top_v
+    PRINT_JSON hot
+  END
+END
+
+# --- getn on delta ---
+SYS EQS ACTION "getn"
+IF LAST_N == 1 THEN
+  NOTE "action getn"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getn needs key"
+  END
+  SYS LOOKUPN delta NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  LET hit = val_n
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "getn default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "getn default only"
+      CLEAR_ERR
+      EXIT 2 "getn default only"
+    END
+  ELSE
+    LET note_msg = "getn ok"
+  END
+END
+
+# --- top on delta ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS TOPKEY delta ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "top empty"
+    FAIL "top empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top empty"
+    END
+  ELSE
+    LET top_k = LAST
+    LET top_v = TOPKEY_V
+    LET val_s = top_k
+    LET val_n = top_v
+    LET hit = top_v
+    LET note_msg = "top ok"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET base = ""
+  LET canary = ""
+  LET delta = ""
+  LET hot = ""
+  LET base_ch = 1
+  LET can_ch = 1
+  LET delta_ch = 1
+  LET hot_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seedbase"
+LET k = k + LAST_N
+SYS EQS ACTION "seedcanary"
+LET k = k + LAST_N
+SYS EQS ACTION "loadbase"
+LET k = k + LAST_N
+SYS EQS ACTION "loadcanary"
+LET k = k + LAST_N
+SYS EQS ACTION "diff"
+LET k = k + LAST_N
+SYS EQS ACTION "offset"
+LET k = k + LAST_N
+SYS EQS ACTION "hot"
+LET k = k + LAST_N
+SYS EQS ACTION "getn"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF base_ch > 0 THEN
+  SYS WRITE base_path base
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "base write failed"
+  END
+  CLEAR_ERR
+END
+IF can_ch > 0 THEN
+  SYS WRITE can_path canary
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "canary write failed"
+  END
+  CLEAR_ERR
+END
+IF delta_ch > 0 THEN
+  SYS WRITE delta_path delta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "delta write failed"
+  END
+  CLEAR_ERR
+END
+IF hot_ch > 0 THEN
+  SYS WRITE hot_path hot
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hot write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES delta
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.cdelta.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "diff_hit"
+LET report = LAST
+SYS STR diff_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "diff_add"
+LET report = LAST
+SYS STR diff_add
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "top_k"
+LET report = LAST
+SYS PUSH report top_k
+LET report = LAST
+SYS PUSH report "top_v"
+LET report = LAST
+SYS STR top_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "cdelta" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 val_n total_n diff_hit elapsed STATUS_OK
+PASS "cdelta tick"
+NOTE "canary_delta_board: done"
+CLEAR_ERR
+EXIT 0 "cdelta ok"

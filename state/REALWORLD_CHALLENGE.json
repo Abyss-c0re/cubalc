@@ -1,76 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 51,
-  "program": "programs/realworld/traffic_share_board.cubalc",
-  "theme": "traffic share SCALEKV CAPKV PCTKV routing digest",
-  "version": "1.15.166-usability",
+  "iter": 52,
+  "program": "programs/realworld/canary_delta_board.cubalc",
+  "theme": "canary vs baseline DIFFKV ADDKV delta hot plate",
+  "version": "1.15.168-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_scale_cap",
-      "cmd": "seed api:30\u2026; scale 2 \u2192 api:60; cap 40 \u2192 api:40 cap_n=1",
+      "name": "seed_diff",
+      "cmd": "base api:10 db:5 mesh:2; canary api:14 db:4 mesh:2 crit:3 → delta api:4 db:-1 mesh:0 crit:3",
       "ok": true,
-      "note": "SCALEKV+CAPKV pipeline"
+      "note": "DIFFKV canary-base"
     },
     {
-      "name": "pct_share",
-      "cmd": "pct on total 72 \u2192 shares 55/27/13/2 field_sum 97",
+      "name": "getn_signed",
+      "cmd": "getn api=4 db=-1 crit=3",
       "ok": true,
-      "note": "integer trunc \u2260100"
+      "note": "LOOKUPN negatives"
     },
     {
-      "name": "getn_getshare",
-      "cmd": "getn api=40; getshare api=55",
+      "name": "hot_positive",
+      "cmd": "hot min1 → api:4 crit:3 drop=2 (db/mesh)",
       "ok": true,
-      "note": "LOOKUPN dual plates"
+      "note": "THRESHKV drops ≤0"
     },
     {
-      "name": "top",
-      "cmd": "top api:40",
+      "name": "offset_addkv",
+      "cmd": "offset +1 → db:0 mesh:1 api:5 crit:4",
       "ok": true,
-      "note": "TOPKEY after cap"
+      "note": "ADDKV existing only"
     },
     {
-      "name": "scale_empty_require",
-      "cmd": "scale empty REQUIRE exit 2",
+      "name": "both_empty_require",
+      "cmd": "diff both empty REQUIRE 2",
       "ok": true,
-      "note": "soft empty"
+      "note": "program gate"
     },
     {
-      "name": "pct_zero_total",
-      "cmd": "a:0 b:0 pct \u2192 zeros; REQUIRE exit 2",
+      "name": "empty_base",
+      "cmd": "empty base + canary api:5 → delta api:5",
       "ok": true,
-      "note": "language OK=1 all zero"
+      "note": "DIFF empty b copy a"
     },
     {
-      "name": "cap_none",
-      "cmd": "cap 100 all under \u2192 CAPKV_N=0 note cap none",
+      "name": "empty_canary",
+      "cmd": "empty canary + base → negated base",
       "ok": true,
-      "note": "no-op signal"
+      "note": "DIFF empty a → -b"
     },
     {
-      "name": "scale_zero",
-      "cmd": "scale 0 \u2192 all zeros",
+      "name": "hot_none_require",
+      "cmd": "all negative delta hot REQUIRE 2",
       "ok": true,
-      "note": "factor 0 destructive"
+      "note": "THRESHKV empty"
     },
     {
-      "name": "pct_trunc_5",
-      "cmd": "3+1+1 pct \u2192 60/20/20 sum 100 clean",
+      "name": "loadlines_freq",
+      "cmd": "FREQ base/canary then diff ERROR+1 WARN-1 INFO+1",
       "ok": true,
-      "note": "divisible case"
+      "note": "real log path"
     },
     {
-      "name": "nonnum_preserve",
-      "cmd": "note:hello survives SCALE/PCT; excluded from PCT sum",
+      "name": "nonnum_diff",
+      "cmd": "note:hello-world → note:0 strtol",
       "ok": true,
-      "note": "mixed bag footgun"
+      "note": "silent zero"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "141/141 pass incl pctkv capkv scalekv"
+      "note": "143/143 pass incl diffkv addkv"
     }
   ],
   "weaknesses": [
@@ -78,88 +78,89 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "PCTKV integer truncation; sum of percents may \u2260 100",
-      "detail": "Total 72 \u2192 shares 55+27+13+2=97. Agents treating shares as a partition of 100 under-allocate. No remainder distribution / largest-remainder mode.",
-      "repro": "PCTKV bag total 72 \u2192 field sum 97"
+      "title": "DIFFKV allows negative values with no floor mode",
+      "detail": "db:3-4=-1 stays negative. Agents treating counts as unsigned mis-page. No DIFFKV_FLOOR0 / max(0,a-b) option.",
+      "repro": "DIFFKV a:3 b:4 → a:-1"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "Non-numeric fields survive SCALEKV/PCTKV unchanged",
-      "detail": "note:hello left as hello after SCALE*2 and PCT; excluded from PCTKV_SUM but still present in bag. Share digests can ship string junk. CAPKV also skips non-numeric (CAPKV_N unaffected).",
-      "repro": "SCALEKV 'api:3\\nnote:hello' 2 keeps note:hello"
+      "title": "DIFFKV empty-a silently negates entire b",
+      "detail": "Empty canary plate vs base → all-negative delta. Easy footgun if canary load failed soft-empty; looks like massive improvement inverted.",
+      "repro": "DIFFKV \"\" base → -base"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "PCTKV zero-total returns all-zero bag OK=1",
-      "detail": "a:0 b:0 \u2192 a:0 b:0 with PCTKV_SUM=0 not soft miss. Program must special-case.",
-      "repro": "PCTKV a:0\\nb:0"
+      "title": "ADDKV never inserts missing keys",
+      "detail": "Laplace smooth only bumps existing FREQ keys; rare tags absent stay absent. Proof documents this; agents expect full key universe.",
+      "repro": "ADDKV bag 1 does not create INFO:1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "SCALEKV factor 0 silently zeros entire bag",
-      "detail": "Destructive with OK=1. No refuse-on-zero-factor. Easy ENV typo FACTOR=0 wipes traffic SoT.",
-      "repro": "SCALEKV bag 0"
+      "title": "SUMKV on signed deltas mixes rise and fall",
+      "detail": "4+(-1)+0+3=6 hides magnitude of regressions. No SUMABS / L1 bag form.",
+      "repro": "SUMKV signed delta bag"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "CAPKV only max clamp; no min floor form",
-      "detail": "Iter 50 wanted CAPKV max \u2014 now have max only. No FLOORKV / clamp range. Outlier floor still EACH.",
-      "repro": "CAPKV bag max only"
+      "title": "DIFFKV non-numeric → strtol 0 delta",
+      "detail": "note:hello − note:world → note:0. String metadata becomes zero delta, not skip/error.",
+      "repro": "DIFFKV note:hello note:world"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last TRAF/SHARE line without $.",
-      "repro": "seed; cat -A TRAF.txt"
+      "detail": "cat -A last DELTA line without $.",
+      "repro": "diff; cat -A DELTA.txt"
     },
     {
       "id": "W7",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Stable; SCALE result looks single-field in JSON.",
-      "repro": "PRINT_JSON bag"
+      "detail": "Stable issue.",
+      "repro": "PRINT_JSON delta"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|bag",
-      "title": "PCTKV_SUM is pre-percent total not sum of shares",
-      "detail": "Naming confuses agents checking whether percents add to 100; must re-SUMKV the share bag.",
-      "repro": "PCTKV_SUM == original SUMKV"
+      "title": "No DIFFKV only-positive / abs form",
+      "detail": "Want rising-only without THRESHKV second pass; or abs delta for magnitude boards.",
+      "repro": "DIFFKV always signed"
     }
   ],
   "workarounds": [
-    "After PCTKV SUMKV share bag and tolerate remainder or redistribute largest remainder in agent",
-    "Strip non-numeric keys before SCALE/CAP/PCT",
-    "Refuse FACTOR<=0 at agent layer before SCALEKV",
-    "Gate pct_sum==0 as miss",
-    "Use CAPKV_N==0 as no-op signal"
+    "Always REQUIRE non-empty canary before DIFFKV",
+    "THRESHKV min 1 after DIFF to page only regressions",
+    "Seed full key universe with zeros before ADDKV Laplace",
+    "Use SUMKV carefully; prefer TOPKEY + hot plate for paging",
+    "Strip non-numeric keys before DIFF"
   ],
   "language_gaps": [
-    "PCTKV remainder distribution / exact-100 mode",
-    "SCALE/CAP/PCT STRICT drop or refuse non-numeric",
-    "SCALEKV refuse factor 0",
-    "FLOORKV / CLAMPKV min..max range",
-    "PCTKV_SHARE_SUM auto or rename PCTKV_SUM clarity",
+    "DIFFKV FLOOR0 / unsigned mode",
+    "DIFFKV refuse empty operands",
+    "ADDKV insert-missing / full-key universe mode",
+    "SUMABS / L1 on bag values",
+    "DIFFKV STRICT non-numeric",
+    "DIFFKV POS only bag form",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive scale\u2192cap\u2192pct pipeline works for LB share digests",
-    "Share field sum 97/100 is severe for routing weight math",
-    "Non-numeric preserve in PCT bag is high-sev contamination",
-    "No language fix \u2014 remainder mode for MEANINGFUL_ITER"
+    "Positive canary-base delta + hot filter clean",
+    "Empty canary → full negate is severe ops footgun",
+    "crit only-in-canary kept as +3 (not DIFFKV_ADDED; ADDED is only-in-b)",
+    "No language fix this iter"
   ],
-  "commit": "8aece8c9dd7d7dbea9ccce2beb5a7e7f8dd97cb0",
-  "ts": "2026-08-06T01:10:00Z"
+  "commit": "",
+  "ts": "2026-08-06T01:35:00Z"
 }
