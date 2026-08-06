@@ -1,0 +1,66 @@
+# SYS WAITFILE / WAITPATH / POLLFILE
+# — poll until path exists (agent plate/peer handoff)
+# Usability: no EXIST+SLEEP loop. Soft timeout OK=0. Default 30s, cap 120s.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "ready.flag"
+LET f = LAST
+SYS RM f
+
+# missing → short timeout soft fail
+SYS WAITFILE f 120
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITFILE_N == 0
+# elapsed should reach ~timeout
+ASSERT WAITFILE_MS >= 100
+
+# create then wait — immediate hit
+SYS TOUCH f
+SYS WAITFILE f 1000
+ASSERT OK == 1
+ASSERT WAITFILE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT WAITFILE_N == 1
+SYS EQS LAST f
+ASSERT LAST_N == 1
+
+# alias WAITPATH
+SYS WAITPATH f 500
+ASSERT WAITFILE_HIT == 1
+ASSERT OK == 1
+
+# alias POLLFILE
+SYS POLLFILE f 500
+ASSERT WAITFILE_HIT == 1
+
+# empty path soft fail
+SYS WAITFILE "" 50
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+
+# zero timeout: already present still hits
+SYS WAITFILE f 0
+ASSERT OK == 1
+ASSERT WAITFILE_HIT == 1
+
+# zero timeout miss
+SYS JOIN fix "never.flag"
+LET nf = LAST
+SYS RM nf
+SYS WAITFILE nf 0
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+
+# cleanup
+SYS RM f
+
+PRINT "sys_waitfile ok"

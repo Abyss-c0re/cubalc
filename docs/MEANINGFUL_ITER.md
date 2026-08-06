@@ -266,6 +266,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 236. ~~**`SYS TOGGLELINE` / `TOGGLEFILELINE` / `FLIPLINE`**~~ **done** (flip exact file line presence · feature flags without HAS+ENSURE/DROP IF).
 237. ~~**`SYS KVFILEENSURE` / `ENSUREKVFILE` / `DEFAULTKVFILE`**~~ **done** (set plate key=val only if missing · file DEFAULT · no LOOKUP+IF+SET glue).
 238. ~~**`SYS SUBSTENV` / `ENVSUBST` / `EXPANDENV`**~~ **done** (expand `$NAME`/`${NAME}` from env+vars · path templates without shell envsubst).
+239. ~~**`SYS SWAPFILES` / `DUPLEX` / `TCPXFER` / `TCPLISTEN`**~~ **done** (bidirectional any-payload host flow · plate swap + mailbox RTT + CBXF TCP).
+240. ~~**`SYS WAITFILE` / `WAITPATH` / `POLLFILE`**~~ **done** (poll until path exists · agent plate/peer handoff without EXIST+SLEEP loop).
 
 ## Tick protocol
 

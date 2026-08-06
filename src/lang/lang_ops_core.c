@@ -1171,6 +1171,105 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "EXIST", e);
       bump(vm); return 1;
     }
+    /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms]
+     * — poll until path exists (agent plate/peer handoff).
+     * Default timeout 30000 ms; cap 120s. Poll every 50 ms.
+     * LAST = path; LAST_N / WAITFILE_HIT = 1 hit | 0 timeout;
+     * WAITFILE_MS = elapsed. Soft timeout / empty path → OK=0.
+     * Usability: wait for peer/flag/plate without EXIST+SLEEP loop. */
+    if (kw(&L->cur,"WAITFILE") || kw(&L->cur,"WAITPATH") ||
+        kw(&L->cur,"POLLFILE") || kw(&L->cur,"AWAITFILE") ||
+        kw(&L->cur,"WAITFORFILE") || kw(&L->cur,"FILEWAIT") ||
+        kw(&L->cur,"WAITEXIST") || kw(&L->cur,"POLLPATH") ||
+        kw(&L->cur,"UNTILFILE") || kw(&L->cur,"WAITON")){
+      char path[512], a[CUBALC_HOST_STR_MAX];
+      long timeout_ms = 30000, elapsed = 0, hit = 0;
+      struct timespec t0, t1, sl;
+      lex_next(L);
+      path[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS WAITFILE path [timeout_ms]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_IDENT) {
+        long t = parse_expr(vm, L);
+        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+          lex_next(L);
+        timeout_ms = t;
+      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT)
+          timeout_ms = parse_expr(vm, L);
+      }
+      if (timeout_ms < 0) timeout_ms = 0;
+      if (timeout_ms > 120000) timeout_ms = 120000;
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITFILE_HIT", 0);
+        var_set_num(vm, "WAITFILE_N", 0);
+        var_set_num(vm, "WAITFILE_MS", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "WAITFILE: empty path");
+        var_set_str(vm, "ERR", "WAITFILE: empty path");
+        bump(vm); return 1;
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+      for (;;) {
+        if (cubalc_host_exists(path)) {
+          hit = 1;
+          break;
+        }
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                  (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+        if (elapsed >= timeout_ms)
+          break;
+        {
+          long left = timeout_ms - elapsed;
+          long step = left < 50 ? left : 50;
+          if (step < 1) step = 1;
+          sl.tv_sec = step / 1000;
+          sl.tv_nsec = (step % 1000) * 1000000L;
+          nanosleep(&sl, NULL);
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+      if (elapsed < 0) elapsed = 0;
+      if (hit) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "WAITFILE", path);
+        var_set_str(vm, "WAITPATH", path);
+        var_set_str(vm, "POLLFILE", path);
+        var_set_num(vm, "WAITFILE_HIT", 1);
+        var_set_num(vm, "WAITFILE_N", 1);
+        var_set_num(vm, "WAITFILE_MS", elapsed);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "WAITFILE", "");
+      var_set_num(vm, "WAITFILE_HIT", 0);
+      var_set_num(vm, "WAITFILE_N", 0);
+      var_set_num(vm, "WAITFILE_MS", elapsed);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WAITFILE: timeout");
+      var_set_str(vm, "ERR", "WAITFILE: timeout");
+      bump(vm); return 1;
+    }
     /* SYS SIZE|FSIZE path — regular-file bytes → LAST_N/SIZE; soft miss OK=0
      * SYS ISDIR path — LAST_N 1 if directory
      * SYS ISFILE path — LAST_N 1 if regular file
@@ -17814,9 +17913,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * Bare HELP → catalog tip pointing at cubalc forms CLI. */
   if (kw(&L->cur,"HELP")||kw(&L->cur,"MAN")||kw(&L->cur,"DOC")){
     static const struct { const char *name; const char *hint; } help[] = {
-      {"HOLD_FLASH", "HOLD_FLASH 1 — user permission BEFORE PLUG (not auto-flash)"},
+      {"HOLD_FLASH", "HOLD_FLASH 0|1 — user permission before PLUG (not auto-flash)"},
       {"CUBE", "CUBE name ROLE host|body PROTON 0|1"},
-      {"PLUG", "PLUG a b — wire cubes (needs HOLD_FLASH 1)"},
+      {"PLUG", "PLUG a b — wire cubes (requires HOLD_FLASH 1)"},
       {"IMPULSE", "IMPULSE cube [0|1] — pulse proton"},
       {"FLOW", "FLOW n — board ticks"},
       {"SETBIT", "SETBIT cube idx 0|1"},
