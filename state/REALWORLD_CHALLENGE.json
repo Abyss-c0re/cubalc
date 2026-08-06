@@ -8,31 +8,31 @@
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB *.log → a b c (no nested)",
+      "cmd": "PATHGLOB *.log \u2192 a b c (no nested)",
       "ok": true,
       "note": "shallow inventory"
     },
     {
       "name": "grephit_ERROR",
-      "cmd": "GREPFILES ERROR → a.log only (not Error)",
+      "cmd": "GREPFILES ERROR \u2192 a.log only (not Error)",
       "ok": true,
       "note": "case-sensitive content"
     },
     {
       "name": "grepi_error",
-      "cmd": "GREPFILESI error → a.log + c.log",
+      "cmd": "GREPFILESI error \u2192 a.log + c.log",
       "ok": true,
       "note": "icase hits Error"
     },
     {
       "name": "grepv_warn",
-      "cmd": "GREPVFILES warn → a+c (drop b)",
+      "cmd": "GREPVFILES warn \u2192 a+c (drop b)",
       "ok": true,
       "note": "invert content"
     },
     {
       "name": "stamp_hits",
-      "cmd": "LOGALL hits incident=INC-42 → a.log only",
+      "cmd": "LOGALL hits incident=INC-42 \u2192 a.log only",
       "ok": true,
       "note": "fanout stamp"
     },
@@ -66,15 +66,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|naming",
-      "title": "GREP filters bag field text; GREPFILES filters file content — easy mix-up",
+      "title": "GREP filters bag field text; GREPFILES filters file content \u2014 easy mix-up",
       "detail": "SYS GREP bag ERROR matches path strings containing ERROR (usually none). SYS GREPFILES reads files. Agents using GREP for log content search silently get empty bags.",
-      "repro": "GREP path_bag ERROR → empty; GREPFILES path_bag ERROR → hits"
+      "repro": "GREP path_bag ERROR \u2192 empty; GREPFILES path_bag ERROR \u2192 hits"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "GREPFILES case-sensitive by default; Error ≠ ERROR",
+      "title": "GREPFILES case-sensitive by default; Error \u2260 ERROR",
       "detail": "Severity tokens often mixed case. Must remember GREPFILESI. Same class as GREP vs GREPI string ops.",
       "repro": "GREPFILES bag ERROR misses gamma Error three"
     },
@@ -82,17 +82,17 @@
       "id": "W3",
       "severity": "high",
       "area": "host|naming",
-      "title": "APPENDALL is string SUFFIXALL — not multi-file append",
+      "title": "APPENDALL is string SUFFIXALL \u2014 not multi-file append",
       "detail": "LOGALL/APPENDFILES is the path-bag stamp. APPENDALL appends a suffix string to every bag *field text*. Wrong op = silent no file IO.",
-      "repro": "APPENDALL bag -suf → field text change only"
+      "repro": "APPENDALL bag -suf \u2192 field text change only"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
       "title": "LOGALL creates missing paths (no create-off mode)",
-      "detail": "Useful for markers but dangerous if path bag has typos — invents junk files. No LOGALL existing-only / fail-on-miss.",
-      "repro": "LOGALL ghost_path line → creates file"
+      "detail": "Useful for markers but dangerous if path bag has typos \u2014 invents junk files. No LOGALL existing-only / fail-on-miss.",
+      "repro": "LOGALL ghost_path line \u2192 creates file"
     },
     {
       "id": "W5",
@@ -100,7 +100,7 @@
       "area": "host|fs",
       "title": "No multi-needle GREPFILES OR (ERROR|FATAL|PANIC)",
       "detail": "Need sequential GREPFILES + UNION. GREPANY is bag-field only.",
-      "repro": "want content any of N needles → multiple greps"
+      "repro": "want content any of N needles \u2192 multiple greps"
     },
     {
       "id": "W6",
@@ -147,6 +147,6 @@
     "LOGALL create-on-miss confirmed",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "bb380a38ade395aab5c7d4e6885fde7ecfe16b9a",
   "ts": "2026-08-06T06:43:40Z"
 }
