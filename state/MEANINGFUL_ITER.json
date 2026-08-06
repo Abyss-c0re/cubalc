@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 251,
-  "version": "1.15.278-usability",
-  "item": "SYS FILEUID / FILEGID / OWNEDBY ownership probes",
-  "item_id": 286,
-  "title": "SYS FILEUID|FILEGID|OWNEDBY path — plate owner/group and euid-owns probe",
-  "commit": "0013c1633a9a9fd02ff1477a06a1ae0950a443ad",
-  "summary": "file uid/gid + OWNEDBY for agent plate security. selftest 251.",
+  "iter": 252,
+  "version": "1.15.279-usability",
+  "item": "SYS CANREAD / CANWRITE / CANEXEC access probes",
+  "item_id": 287,
+  "title": "SYS CANREAD|CANWRITE|CANEXEC path — access R/W/X pre-flight probes",
+  "commit": "4fbea6e2bcf2e9c56a474a7097bf9da44dfa0ba0",
+  "summary": "access(2) R/W/X probes for agent I/O gates. selftest 252.",
   "proofs": [
-    "825_sys_fileuid",
-    "selftest n_pass=251"
+    "826_sys_canread",
+    "selftest n_pass=252"
   ],
-  "when": "2026-08-06T19:35:14Z",
+  "when": "2026-08-06T19:45:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0013c1633a9a9fd02ff1477a06a1ae0950a443ad",
-  "note": "complements MODE/CHMOD for multi-agent plate ACLs"
+  "sha": "4fbea6e2bcf2e9c56a474a7097bf9da44dfa0ba0",
+  "note": "complements OWNEDBY/MODE for multi-agent plate security"
 }
