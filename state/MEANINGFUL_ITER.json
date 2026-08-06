@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 175,
-  "version": "1.15.200-usability",
-  "item": "SYS REPLACEFILES / SUBFILES bulk rewrite path bag content",
-  "item_id": 208,
-  "title": "SYS REPLACEFILES|SUBFILES|GSUBFILES bag old new — bulk file rewrite without EACH+READ+WRITE",
-  "commit": "101ae0ffd9e70ecaf33f691c5cda6e78a26957a1",
-  "summary": "REPLACEALL inside path bags; skip unchanged; soft miss. selftest 175. Restored thrash first.",
+  "iter": 176,
+  "version": "1.15.201-usability",
+  "item": "SYS COUNTINFILES / GREPCOUNTFILES total needle hits in path bag",
+  "item_id": 209,
+  "title": "SYS COUNTINFILES|GREPCOUNTFILES [bag] needle — multi-file hit tally without EACH+READ",
+  "commit": "74814830693feb3e2610d29fd5efd649f3467aaa",
+  "summary": "Count needle occurrences across path bags; COUNTINFILESI. selftest 176.",
   "proofs": [
-    "748_sys_replacefiles",
-    "selftest n_pass=175"
+    "749_sys_countinfiles",
+    "selftest n_pass=176"
   ],
-  "when": "2026-08-06T07:04:36Z",
+  "when": "2026-08-06T07:14:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "101ae0ffd9e70ecaf33f691c5cda6e78a26957a1"
+  "sha": "74814830693feb3e2610d29fd5efd649f3467aaa"
 }
