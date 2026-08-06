@@ -1,0 +1,53 @@
+# SYS HASENV — soft env presence probe (no value, no fatal)
+# Usability: IF before REQUIRE ENV / SYS ENV without soft-fail glue
+
+HOLD_FLASH 1
+
+# PATH almost always present
+SYS HASENV PATH
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASENV_N == 1
+
+# bare IDENT key
+SYS HASENV HOME
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# missing env → 0 but OK=1 (probe)
+SYS HASENV CUBALC_NO_SUCH_HASENV_MI_XYZ
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT HASENV == 0
+
+# aliases
+SYS ENVHAS PATH
+ASSERT LAST_N == 1
+SYS HAS_ENV PATH
+ASSERT LAST_N == 1
+SYS ENVDEFINED PATH
+ASSERT LAST_N == 1
+
+# string var key
+LET k = "PATH"
+SYS HASENV k
+ASSERT LAST_N == 1
+
+# set then unset cycle
+SYS ENV SET CUBALC_HASENV_MI "probe-val"
+ASSERT OK == 1
+SYS HASENV CUBALC_HASENV_MI
+ASSERT LAST_N == 1
+SYS ENV UNSET CUBALC_HASENV_MI
+ASSERT OK == 1
+SYS HASENV CUBALC_HASENV_MI
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# empty name soft fail
+SYS HASENV ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+PRINT "sys_hasenv ok"

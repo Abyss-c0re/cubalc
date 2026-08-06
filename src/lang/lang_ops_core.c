@@ -2784,6 +2784,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HASENV|ENVHAS|HAS_ENV name — LAST_N 1 if host env set and non-empty.
+     * Probe: OK=1 even when 0 (missing). Empty name → OK=0.
+     * Usability: IF before REQUIRE ENV / SYS ENV without soft-fail or fatal. */
+    if (kw(&L->cur,"HASENV") || kw(&L->cur,"ENVHAS") || kw(&L->cur,"HAS_ENV") ||
+        kw(&L->cur,"ENV_HAS") || kw(&L->cur,"ENVDEFINED") || kw(&L->cur,"DEFINEDENV") ||
+        kw(&L->cur,"ENVPRESENT") || kw(&L->cur,"ENV_PRESENT") || kw(&L->cur,"ENVOK")){
+      char ename[256];
+      const char *e;
+      long hit;
+      lex_next(L);
+      ename[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(ename, sizeof ename, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(ename, sizeof ename, "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          Var *ev = var_get(vm, L->cur.text, 0);
+          if (ev && ev->is_str && ev->sval[0]) {
+            snprintf(ename, sizeof ename, "%s", ev->sval);
+            lex_next(L);
+          } else {
+            /* bare unquoted key: SYS HASENV PATH */
+            snprintf(ename, sizeof ename, "%s", L->cur.text);
+            lex_next(L);
+          }
+        }
+      }
+      if (!ename[0]) {
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASENV", 0);
+        var_set_num(vm, "HASENV_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASENV: empty name");
+        var_set_str(vm, "ERR", "HASENV: empty name");
+        bump(vm); return 1;
+      }
+      e = getenv(ename);
+      hit = (e && e[0]) ? 1 : 0;
+      {
+        char buf[8];
+        snprintf(buf, sizeof buf, "%ld", hit);
+        var_set_str(vm, "LAST", buf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "HASENV", hit);
+      var_set_num(vm, "HASENV_N", hit);
+      var_set_num(vm, "ENVHAS", hit);
+      var_set_str(vm, "HASENV_NAME", ename);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV") || kw(&L->cur,"SETENV") || kw(&L->cur,"EXPORT") ||
         kw(&L->cur,"UNSETENV") || kw(&L->cur,"ENVUNSET")){
       /* SYS ENV name [OR fallback] — get.
@@ -23095,6 +23154,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
       {"SYS ATIME", "SYS ATIME|ACCESSTIME path — last access epoch → LAST_N"},
       {"SYS CTIME", "SYS CTIME|CHANGETIME path — status-change epoch → LAST_N"},
+      {"SYS HASENV", "SYS HASENV|ENVHAS name — LAST_N 1 if env set non-empty"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
