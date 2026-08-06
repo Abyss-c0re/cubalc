@@ -1,114 +1,108 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 101,
-  "program": "programs/realworld/process_priv_board.cubalc",
-  "theme": "process privilege EUID/ISROOT + PPID/PGID/SID lineage + SHELL",
-  "version": "1.15.292-usability",
+  "iter": 102,
+  "program": "programs/realworld/operator_session_board.cubalc",
+  "theme": "operator session GECOS/FULLNAME + TTYNAME + ISATTY gate",
+  "version": "1.15.294-usability",
   "pass": true,
   "tests": [
     {
       "name": "who",
-      "cmd": "user@euid root=pid/ppid stamp",
+      "cmd": "USER + FULLNAME composite",
       "ok": true,
-      "note": "root@0 root=1"
+      "note": "root (root); name_eq_user=1"
     },
     {
-      "name": "lineage",
-      "cmd": "pid:ppid:pgid:sid",
+      "name": "full_gecos",
+      "cmd": "FULLNAME and GECOS stamps",
       "ok": true,
-      "note": "PPID!=PID"
+      "note": "root / root"
     },
     {
-      "name": "euid_root_same",
-      "cmd": "EUID=0 ISROOT=1 UID==EUID",
+      "name": "tty_pipe",
+      "cmd": "TTYNAME OUT empty under pipe; REQUIRE→2",
       "ok": true,
-      "note": "this host root"
+      "note": "OK=1 empty"
     },
     {
-      "name": "shell",
-      "cmd": "SHELL /bin/bash abs path",
-      "ok": true,
-      "note": "has_slash"
-    },
-    {
-      "name": "gate_root",
-      "cmd": "gate root admit on euid0",
+      "name": "gate_batch",
+      "cmd": "gate batch admit when ISATTY=0",
       "ok": true,
       "note": "pass"
     },
     {
-      "name": "gate_user_require",
-      "cmd": "gate user REQUIRE \u2192 exit 2",
+      "name": "gate_tty_require",
+      "cmd": "gate tty REQUIRE → exit 2 under pipe",
       "ok": true,
-      "note": "deny on root host"
+      "note": "deny"
     },
     {
-      "name": "gate_noroot",
-      "cmd": "HAS false friend noroot soft deny",
+      "name": "home_shell",
+      "cmd": "HOME=/root SHELL=/bin/bash",
       "ok": true,
-      "note": "ok=0 miss soft"
+      "note": "paths"
     },
     {
       "name": "stamp",
-      "cmd": "durable who+host+lineage meta",
+      "cmd": "fullname <user@host> batch|tty",
       "ok": true,
-      "note": "root@pve euid=0"
+      "note": "root <root@pve> batch; ctty=/dev/tty"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "265/265 pass"
+      "note": "267/267 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|isroot",
-      "title": "ISROOT is always OK=1 probe bit \u2014 no soft-fail semantic",
-      "detail": "Unlike ATIME miss OK=0, ISROOT never fails; agents must branch LAST_N. Easy to ASSERT OK and think privileged.",
-      "repro": "ISROOT as non-root \u2192 OK=1 LAST_N=0"
+      "area": "host|ttyname",
+      "title": "TTYNAME empty is OK=1 not soft-fail — dual with ISATTY",
+      "detail": "Under pipes TTYNAME OUT is empty LAST_N=0 OK=1. Agents treating OK as present stamp blank paths. Must dual-check LAST_N or ISATTY.",
+      "repro": "TTYNAME OUT under pipe → OK=1 empty"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|euid",
-      "title": "No SETEUID/SETUID \u2014 can probe but not drop privilege in-language",
-      "detail": "Agents that detect root cannot demote before untrusted plate work without SPAWN/external helper.",
-      "repro": "ISROOT 1; no drop path"
+      "area": "host|tty",
+      "title": "CTTY vs TTYNAME OUT disagree under redirected stdout",
+      "detail": "stamp saw ctty=/dev/tty while tty_out empty. Controlling tty exists but stream is not a tty. Agents conflating CTTY with interactive OUT.",
+      "repro": "TTYNAME CTRL non-empty; TTYNAME OUT empty; ISATTY OUT 0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|lineage",
-      "title": "PPID/PGID/SID are numbers only \u2014 no parent cmdline/comm stamp",
-      "detail": "Cannot answer who spawned me without /proc read. No PARENT_COMM / EXE form.",
-      "repro": "PPID \u2192 1234 only"
+      "area": "host|gecos",
+      "title": "GECOS/FULLNAME collapse to USER when passwd comment empty",
+      "detail": "root:x:0:0:root:… yields name_eq_user=1. No HAS_REAL_GECOS bit; agents cannot tell missing human name from intentional same-as-login.",
+      "repro": "FULLNAME == USER on bare root"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|has",
-      "title": "Gate mode parsing via HAS is false-friend prone (noroot contains root)",
-      "detail": "HAS noroot root \u2192 1. Board hand-rolls no-prefix. EQS-only safer but agents invent aliases with HAS.",
-      "repro": "HAS noroot root"
+      "area": "host|gecos",
+      "title": "GECOS office fields after comma unused — no GECOS_FIELD n peel",
+      "detail": "FULLNAME peels first field only. Room/phone in GECOS need BEFORE/AFTER hand parse.",
+      "repro": "GECOS name,room,work,home"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|shell",
-      "title": "SHELL source ($SHELL vs passwd) not distinguished",
-      "detail": "Agents cannot tell env override from login shell. Empty SHELL edge host-dependent.",
-      "repro": "SHELL with SHELL= unset"
+      "area": "host|has",
+      "title": "Gate mode HAS false friends (notty contains tty)",
+      "detail": "HAS notty tty → 1. Board hand-rolls no-prefix. Prefer EQS batch|tty.",
+      "repro": "HAS notty tty"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|uid",
-      "title": "UID vs EUID dual under-documented for setuid cubalc",
-      "detail": "same action is the only agent-facing dual check; OWNEDBY uses euid only.",
-      "repro": "UID!=EUID rare"
+      "area": "host|isatty",
+      "title": "ISATTY stream default undocumented for agents",
+      "detail": "ISATTY bare vs OUT/IN/ERR; TTYNAME stream arg names CTRL vs default differ. Easy mismatch when dual-probing.",
+      "repro": "ISATTY vs ISATTY OUT"
     },
     {
       "id": "W7",
@@ -123,29 +117,29 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_PV_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate user \u2192 rc 0"
+      "detail": "CUBALC_OS_REQUIRE=abc.",
+      "repro": "REQUIRE=abc gate tty → rc 0"
     }
   ],
   "workarounds": [
-    "Branch ISROOT on LAST_N not OK",
-    "Prefer EQS gate modes root|user over HAS",
-    "Stamp PPID for audit; resolve parent out-of-band if needed",
-    "Dual UID+EUID before assuming identity",
+    "Dual ISATTY + TTYNAME LAST_N before stamping tty path",
+    "Prefer TTYNAME OUT for interactive gate; CTTY only for session id",
+    "Flag name_eq_user when FULLNAME==USER as unknown display",
+    "EQS gate modes batch|tty not HAS",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "SETEUID/PRIVDROP for in-process demotion",
-    "PARENT_COMM / EXE path for lineage",
-    "SHELL_SOURCE env|passwd tag",
-    "ISROOT soft-fail option or REQUIRE ROOT form",
+    "TTYNAME empty soft-fail option or REQUIRE TTY form",
+    "Document CTTY vs stream TTYNAME semantics",
+    "HAS_GECOS / display-name-present bit",
+    "GECOS_FIELD n peel helper",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "who/lineage/euid/root/same/shell/gate/stamp green on root host",
-    "gate user REQUIRE denies; noroot HAS false friend documented",
-    "selftest 265/265; no language fix this iter"
+    "who/full/gecos/tty-none/gate-batch/stamp green under pipes",
+    "CTTY=/dev/tty with OUT empty is core lesson",
+    "selftest 267/267; no language fix this iter"
   ],
-  "commit": "0ff2bc697474cf28206c0e80ad4affb9151aceed",
-  "ts": "2026-08-06T22:08:40Z"
+  "commit": "",
+  "ts": "2026-08-06T22:33:39Z"
 }
