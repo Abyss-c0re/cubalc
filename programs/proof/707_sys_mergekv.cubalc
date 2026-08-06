@@ -1,0 +1,88 @@
+# SYS MERGEKV / KVADDALL — merge two key:val bags by summing values
+# Usability: combine FREQ histograms without EACH+LOOKUP+KVINC glue
+
+HOLD_FLASH 1
+
+LET a = "error:3\nwarn:1\ninfo:10"
+LET b = "error:2\ncrit:1\nwarn:4"
+
+SYS MERGEKV a b
+ASSERT OK == 1
+ASSERT MERGEKV_HIT == 2
+ASSERT MERGEKV_ADDED == 1
+ASSERT MERGEKV_N == 4
+LET m = LAST
+SYS LOOKUP m "error"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS LOOKUP m "warn"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS LOOKUP m "info"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS LOOKUP m "crit"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# empty a → copy of b
+SYS MERGEKV "" b
+ASSERT MERGEKV_ADDED == 3
+ASSERT MERGEKV_HIT == 0
+SYS EQS LAST "error:2\ncrit:1\nwarn:4"
+ASSERT LAST_N == 1
+
+# empty b → copy of a
+SYS MERGEKV a ""
+ASSERT MERGEKV_ADDED == 0
+ASSERT MERGEKV_HIT == 0
+SYS EQS LAST "error:3\nwarn:1\ninfo:10"
+ASSERT LAST_N == 1
+
+# custom sep
+LET ca = "retries=2\nport=7700"
+LET cb = "retries=3\ntimeout=5"
+SYS MERGEKV ca cb "="
+ASSERT MERGEKV_HIT == 1
+ASSERT MERGEKV_ADDED == 1
+LET cm = LAST
+SYS LOOKUP cm "retries" "="
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS LOOKUP cm "timeout" "="
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS LOOKUP cm "port" "="
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+
+# aliases
+SYS KVADDALL a b
+ASSERT MERGEKV_N == 4
+SYS ADDFREQ a "fatal:1"
+ASSERT MERGEKV_ADDED == 1
+LET af = LAST
+SYS LOOKUP af "fatal"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+# agent: FREQ two logs then merge
+LET log1 = "ERROR\nWARN\nERROR"
+LET log2 = "ERROR\nINFO\nWARN\nWARN"
+SYS FREQ log1
+LET h1 = LAST
+SYS FREQ log2
+LET h2 = LAST
+SYS MERGEKV h1 h2
+LET hist = LAST
+SYS LOOKUP hist "ERROR" OR "0"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LOOKUP hist "WARN" OR "0"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LOOKUP hist "INFO" OR "0"
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+PRINT "sys_mergekv ok"

@@ -5765,6 +5765,215 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MERGEKV|KVADDALL|ADDFREQ bag_a bag_b [sep]
+     * — merge two key:val bags by summing numeric values for shared keys;
+     * keys only in bag_b are appended. Default sep ":". LAST = merged bag;
+     * LAST_N = field count; MERGEKV_N = same; MERGEKV_ADDED = keys appended
+     * from bag_b; MERGEKV_HIT = keys that already existed in bag_a and got
+     * their values summed.
+     * Usability: combine FREQ histograms from multiple logs without EACH+KVINC. */
+    if (kw(&L->cur,"MERGEKV") || kw(&L->cur,"KVADDALL") || kw(&L->cur,"ADDFREQ") ||
+        kw(&L->cur,"KVUNION") || kw(&L->cur,"MERGEHIST") || kw(&L->cur,"SUMFREQ") ||
+        kw(&L->cur,"COMBINEKV") || kw(&L->cur,"KVCOMBINE") || kw(&L->cur,"FUSEKV")){
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX], sep[32];
+      char out[CUBALC_HOST_STR_MAX], field[512], left[256], newline[768], vbuf[40];
+      const char *p, *start;
+      size_t flen, sn, olen = 0, left_n;
+      long kept = 0, added = 0, hit_n = 0;
+      lex_next(L);
+      a[0] = 0; b[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      /* seed out from bag_a */
+      if (a[0]) {
+        p = a;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            {
+              size_t nlen = strlen(field);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + nlen < sizeof out) {
+                memcpy(out + olen, field, nlen);
+                olen += nlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, field, t);
+                olen += t;
+              }
+              out[olen] = 0;
+            }
+            kept++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      /* fold bag_b keys into out (KVINC-style) */
+      if (b[0]) {
+        p = b;
+        while (*p) {
+          long delta = 0, found_i = -1, hit = 0;
+          char key[256];
+          char tmp[CUBALC_HOST_STR_MAX];
+          size_t tolen = 0;
+          long tkept = 0, idx = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            size_t take = flen;
+            const char *sp;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            key[0] = 0;
+            if (sn == 0) {
+              snprintf(key, sizeof key, "%s", field);
+              delta = 1;
+            } else {
+              sp = strstr(field, sep);
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof key) left_n = sizeof key - 1;
+                memcpy(key, field, left_n);
+                key[left_n] = 0;
+                {
+                  char *end = 0;
+                  delta = strtol(sp + sn, &end, 10);
+                  if (end == sp + sn) delta = 0;
+                }
+              } else {
+                snprintf(key, sizeof key, "%s", field);
+                delta = 0;
+              }
+            }
+          }
+          if (key[0]) {
+            const char *q = out;
+            tmp[0] = 0;
+            tolen = 0;
+            tkept = 0;
+            idx = 0;
+            found_i = -1;
+            hit = 0;
+            if (out[0]) {
+              while (*q) {
+                const char *qs = q;
+                size_t qflen;
+                int match = 0;
+                long oldv = 0;
+                while (*q && *q != '\n') q++;
+                qflen = (size_t)(q - qs);
+                {
+                  size_t take = qflen;
+                  if (take >= sizeof field) take = sizeof field - 1;
+                  memcpy(field, qs, take);
+                  field[take] = 0;
+                  {
+                    const char *sp = sn ? strstr(field, sep) : NULL;
+                    if (sp) {
+                      left_n = (size_t)(sp - field);
+                      if (left_n >= sizeof left) left_n = sizeof left - 1;
+                      memcpy(left, field, left_n);
+                      left[left_n] = 0;
+                      match = (strcmp(left, key) == 0);
+                      if (match) {
+                        char *end = 0;
+                        oldv = strtol(sp + sn, &end, 10);
+                      }
+                    } else {
+                      match = (strcmp(field, key) == 0);
+                    }
+                  }
+                  if (match && found_i < 0) {
+                    long newv = oldv + delta;
+                    snprintf(vbuf, sizeof vbuf, "%ld", newv);
+                    if (sn == 0)
+                      snprintf(newline, sizeof newline, "%s", vbuf);
+                    else
+                      snprintf(newline, sizeof newline, "%s%s%s", key, sep, vbuf);
+                    found_i = idx;
+                    hit = 1;
+                  } else {
+                    snprintf(newline, sizeof newline, "%s", field);
+                  }
+                }
+                {
+                  size_t nlen = strlen(newline);
+                  if (tkept > 0 && tolen + 1 < sizeof tmp) tmp[tolen++] = '\n';
+                  if (tolen + nlen < sizeof tmp) {
+                    memcpy(tmp + tolen, newline, nlen);
+                    tolen += nlen;
+                  } else if (tolen < sizeof tmp - 1) {
+                    size_t t = sizeof tmp - 1 - tolen;
+                    memcpy(tmp + tolen, newline, t);
+                    tolen += t;
+                  }
+                  tmp[tolen] = 0;
+                }
+                tkept++;
+                idx++;
+                if (*q == '\n') q++;
+              }
+            }
+            if (!hit) {
+              if (sn == 0)
+                snprintf(newline, sizeof newline, "%s", key);
+              else {
+                snprintf(vbuf, sizeof vbuf, "%ld", delta);
+                snprintf(newline, sizeof newline, "%s%s%s", key, sep, vbuf);
+              }
+              {
+                size_t nlen = strlen(newline);
+                if (tkept > 0 && tolen + 1 < sizeof tmp) tmp[tolen++] = '\n';
+                if (tolen + nlen < sizeof tmp) {
+                  memcpy(tmp + tolen, newline, nlen);
+                  tolen += nlen;
+                } else if (tolen < sizeof tmp - 1) {
+                  size_t t = sizeof tmp - 1 - tolen;
+                  memcpy(tmp + tolen, newline, t);
+                  tolen += t;
+                }
+                tmp[tolen] = 0;
+              }
+              tkept++;
+              added++;
+            } else {
+              hit_n++;
+            }
+            snprintf(out, sizeof out, "%s", tmp);
+            olen = tolen;
+            kept = tkept;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "MERGEKV", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "MERGEKV_N", kept);
+      var_set_num(vm, "MERGEKV_ADDED", added);
+      var_set_num(vm, "MERGEKV_HIT", hit_n);
+      var_set_num(vm, "KVADDALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
      * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
      * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
@@ -8548,7 +8757,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -8852,6 +9061,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DELKV", "SYS DELKV bag key [sep] — alias of SYS KVDEL · remove FREQ/plate key"},
       {"SYS RMKV", "SYS RMKV bag key [sep] — alias of SYS KVDEL"},
       {"SYS UNSETKV", "SYS UNSETKV bag key [sep] — alias of SYS KVDEL · soft miss OK"},
+      {"SYS MERGEKV", "SYS MERGEKV|KVADDALL bag_a bag_b [sep] — sum shared key:val counts · merge FREQ"},
+      {"SYS KVADDALL", "SYS KVADDALL bag_a bag_b [sep] — alias of SYS MERGEKV · combine histograms"},
+      {"SYS ADDFREQ", "SYS ADDFREQ bag_a bag_b [sep] — alias of SYS MERGEKV"},
       {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
       {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
       {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},
