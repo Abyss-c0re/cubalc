@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 258,
-  "version": "1.15.285-usability",
-  "item": "SYS RELPATH / REL / STRIPBASE relative plate paths",
-  "item_id": 293,
-  "title": "SYS RELPATH|REL base path \u2014 portable relative paths after WALK/PUSHD",
-  "commit": "582e8d23fd7ef8881403574e26bba328e25000a1",
-  "summary": "under base \u2192 relative; outside \u2192 absolute. selftest 258.",
+  "iter": 259,
+  "version": "1.15.286-usability",
+  "item": "SYS ATIME / CTIME access and status-change times",
+  "item_id": 294,
+  "title": "SYS ATIME|CTIME path \u2014 access and status-change epoch probes",
+  "commit": "20f366b13f9c7b28ab26e0cdef386c8232ab8919",
+  "summary": "st_atime/st_ctime epoch for plate freshness. selftest 259.",
   "proofs": [
-    "832_sys_relpath",
-    "selftest n_pass=258"
+    "833_sys_atime",
+    "selftest n_pass=259"
   ],
-  "when": "2026-08-06T20:54:41Z",
+  "when": "2026-08-06T21:04:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "582e8d23fd7ef8881403574e26bba328e25000a1",
-  "note": "complements REALPATH/PUSHD/WALK for portable plate trees"
+  "sha": "20f366b13f9c7b28ab26e0cdef386c8232ab8919",
+  "note": "restored thrash (941 deletes) first; complements MTIME/AGE"
 }
