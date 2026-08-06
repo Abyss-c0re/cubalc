@@ -1,166 +1,160 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 74,
-  "program": "programs/realworld/plate_kv_board.cubalc",
-  "theme": "durable plate key=val LOOKUPFILE KVFILESET get set getor",
-  "version": "1.15.222-usability",
+  "iter": 75,
+  "program": "programs/realworld/quota_counter_plate.cubalc",
+  "theme": "quota plate KVFILEINC KVFILEDEL ENSURELINE gate counters",
+  "version": "1.15.225-usability",
   "pass": true,
   "tests": [
     {
-      "name": "get_port",
-      "cmd": "LOOKUPFILE port \u2192 7700",
+      "name": "get_inc",
+      "cmd": "get retries=2; inc → 3",
       "ok": true,
-      "note": "default ="
+      "note": "default +1"
     },
     {
-      "name": "geti_status",
-      "cmd": "LOOKUPFILEI status \u2192 live from STATUS",
+      "name": "inc_delta",
+      "cmd": "inc errors 5 → 5",
       "ok": true,
-      "note": "icase"
+      "note": "custom delta"
     },
     {
-      "name": "set_replace_append",
-      "cmd": "KVFILESET port 8800 HIT=1; ttl 30 NEW=1",
+      "name": "inc_insert",
+      "cmd": "inc missing warns → insert 1 HIT=0",
       "ok": true,
-      "note": "update+append"
+      "note": "create key"
     },
     {
-      "name": "getor_fallback",
-      "cmd": "LOOKUPFILE missing OR default \u2192 default OR=1",
+      "name": "gate",
+      "cmd": "gate under max=10 ok; over max=3 REQUIRE exit 2",
       "ok": true,
-      "note": "soft fallback"
+      "note": "threshold"
     },
     {
-      "name": "get_miss_require",
-      "cmd": "get nope soft; REQUIRE exit 2",
+      "name": "del",
+      "cmd": "del port → returns 7700; del none soft+REQUIRE",
       "ok": true,
-      "note": "key miss"
+      "note": "ack remove"
     },
     {
-      "name": "custom_sep",
-      "cmd": "get/set with : sep on hist plate",
+      "name": "ensure",
+      "cmd": "ensure feature_a present NEW=0; feature_c added",
       "ok": true,
-      "note": "literal sep only"
+      "note": "exact line"
     },
     {
-      "name": "create_plate",
-      "cmd": "KVFILESET missing path creates status=boot",
+      "name": "ensure_exact",
+      "cmd": "ensure feature adds new line not substring match",
       "ok": true,
-      "note": "create"
+      "note": "exact vs match ops"
     },
     {
-      "name": "ghost_getor",
-      "cmd": "ghost get miss; getor \u2192 fb OK=1",
+      "name": "non_num_inc",
+      "cmd": "retries=abc +inc → retries=1 silent coerce",
       "ok": true,
-      "note": "path OR"
+      "note": "data loss"
     },
     {
-      "name": "first_key_only",
-      "cmd": "duplicate port= keys: get first; set rewrites first only",
+      "name": "create_via_inc",
+      "cmd": "inc on missing path creates plate n=1",
       "ok": true,
-      "note": "port=9 leaves port=2"
-    },
-    {
-      "name": "empty_key",
-      "cmd": "LOOKUP \"\" miss; KVFILESET \"\" x appends =x",
-      "ok": true,
-      "note": "empty key footgun"
+      "note": "auto create"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "197/197 pass"
+      "note": "200/200 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parse",
-      "title": "LOOKUPFILE/KVFILESET sep must be string literal \u2014 bare str var fails",
-      "detail": "LET s=\":\"; LOOKUPFILE p key s \u2192 miss; same for KVFILESET third arg bare SEP. Agents cannot pass env sep without EQS branch to literals. Same class as HEADFILE bare n.",
-      "repro": "SYS LOOKUPFILE p \"warn\" s with s=\":\" \u2192 N=0"
+      "area": "host|kv",
+      "title": "KVFILEINC on non-numeric value silently coerces (abc→1 after +1)",
+      "detail": "retries=abc then INC yields retries=1 without OK=0. Corrupts plate counters; agents cannot detect bad seed values.",
+      "repro": "WRITE retries=abc; KVFILEINC p retries → 1"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|naming",
-      "title": "LOOKUP/KVSET are bag; LOOKUPFILE/KVFILESET are disk plates",
-      "detail": "LOOKUP on multi-line string may not peel file path. Classic dual-family trap.",
-      "repro": "LOOKUP bag vs LOOKUPFILE path"
+      "area": "host|fs",
+      "title": "KVFILEINC/ENSURELINE create missing files — path typo becomes new plate",
+      "detail": "Ghost path DEL soft-misses HIT=0; INC creates file. REQUIRE on inc never fires for missing path because create succeeds.",
+      "repro": "KVFILEINC no_such n → creates no_such"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|kv",
-      "title": "First key= only \u2014 duplicate keys leave orphans",
-      "detail": "get returns first port=; set rewrites first only, second port=2 remains. No unique-key enforce or multi-get.",
-      "repro": "port=1\\nport=2 \u2192 set port 9 \u2192 port=9\\nport=2"
+      "area": "host|match",
+      "title": "ENSURELINE is exact line; MATCHFILE ops are substring — dual semantics",
+      "detail": "Good for allowlists: feature != feature_a. Agents mixing ENSURE with FINDFILELINE substring get different membership rules.",
+      "repro": "ENSURE feature when feature_a present → NEW=1 append feature"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|kv",
-      "title": "Empty key KVFILESET appends \"=value\" line",
-      "detail": "LOOKUP empty misses; SET empty creates garbage plate row. Asymmetric empty-key policy.",
-      "repro": "KVFILESET p \"\" \"x\" \u2192 =x"
+      "area": "host|naming",
+      "title": "KVINC bag vs KVFILEINC disk; ENSURELINE vs HASLINE+APPEND glue",
+      "detail": "In-memory KVINC does not touch plate files. Dual-family trap continues for INC/DEL.",
+      "repro": "KVINC bag vs KVFILEINC path"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|fs",
-      "title": "KVFILESET creates missing files with no confirm/mode flag",
-      "detail": "Typo path silently creates new plate. Useful but easy to scatter plates.",
-      "repro": "set on new_plate.txt creates file"
+      "area": "host|kv",
+      "title": "Empty key INC/DEL/ENSURE produce garbage rows or odd hits",
+      "detail": "Empty key ops leave empty lines or =value-class artifacts. Plate hygiene not enforced.",
+      "repro": "KVFILEINC p \"\" / ENSURELINE p \"\""
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE trailing NL omit on VAL and last plate line",
-      "detail": "cat -A VAL often no final $; mode=soft glued to meta after write.",
-      "repro": "cat -A flags after set"
+      "title": "WRITE trailing NL omit glues plate last line to next cat",
+      "detail": "port=7700 glued to meta after first writes.",
+      "repro": "cat -A after inc"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|kv",
-      "title": "No KVFILEDEL / multi-sep freeform beyond literal branches",
-      "detail": "Delete key requires DROPALLMATCHFILE key= glue. Arbitrary seps need language literal support.",
-      "repro": "no FILEKVDEL"
+      "area": "host|fs",
+      "title": "No dry-run or existing-only mode for INC create",
+      "detail": "Cannot require pre-existing plate without agent EXIST check.",
+      "repro": "inc always creates"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens get miss",
-      "detail": "REQUIRE=abc \u2192 exit 0 on miss.",
-      "repro": "CUBALC_PK_REQUIRE=abc get nope"
+      "title": "Non-numeric REQUIRE env silently softens del/gate",
+      "detail": "REQUIRE=abc leaves hard fail off.",
+      "repro": "CUBALC_QC_REQUIRE=abc del missing"
     }
   ],
   "workarounds": [
-    "Branch EQS SEP \":\" to literal \":\" for LOOKUPFILE/KVFILESET",
-    "Use LOOKUPFILE not LOOKUP for disk plates",
-    "Uniq keys before set; purge duplicates with DROPALLMATCHFILE",
-    "Reject empty key at agent layer",
-    "Pick canonical plate path carefully \u2014 set creates missing"
+    "Validate counter values with NUM after LOOKUP before INC",
+    "SYS EXIST active before INC if create-on-miss unwanted",
+    "Use ENSURELINE for exact membership not FINDFILELINE substring",
+    "Reject empty key/line at agent layer",
+    "Digit-check REQUIRE env after NUM"
   ],
   "language_gaps": [
-    "Bare string var as LOOKUPFILE/KVFILESET sep",
-    "KVFILEDEL and unique-key / replace-all-keys modes",
-    "Reject empty key on KVFILESET",
-    "Optional create-only / existing-only for KVFILESET",
-    "WRITE trailing NL; help dual LOOKUP vs LOOKUPFILE",
-    "Arbitrary sep without literal branch explosion"
+    "KVFILEINC refuse non-numeric existing values (OK=0)",
+    "existing-only / no-create flag for KVFILEINC and ENSURELINE",
+    "KVFILE* empty key reject",
+    "Help dual KVINC vs KVFILEINC",
+    "WRITE trailing NL preserve",
+    "ENSURELINE optional substring mode explicitly named if ever needed"
   ],
   "issues_faced": [
-    "Bare SEP var parse fail blocked custom set \u2014 fixed with : literal branch",
-    "Bare A2 sep on get also failed \u2014 same fix",
-    "Empty key SET append =x is live footgun",
-    "Positive get/set/getor/create path clean",
+    "inc/del/ensure/gate positive path clean",
+    "Non-numeric INC coerce is critical plate footgun",
+    "Ghost INC creates file so REQUIRE cannot signal path miss",
+    "ENSURE exactness is a strength vs MATCH substring",
     "No language fix this iter"
   ],
-  "commit": "8f5ff4d03cbcf867aa6971e2d0644161a85249de",
-  "ts": "2026-08-06T10:54:03Z"
+  "commit": "",
+  "ts": "2026-08-06T11:19:03Z"
 }

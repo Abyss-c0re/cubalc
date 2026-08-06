@@ -1,0 +1,758 @@
+# quota_counter_plate.cubalc — plate counters + allowlist ensure
+#
+# Real use: ops agent keeps a durable quota/retry plate (key=val numbers)
+# and an exact-line allowlist/feature file without READ+arith+WRITE glue:
+#   LOOKUPFILE  — read counter
+#   KVFILEINC   — bump (default +1; missing key inserts)
+#   KVFILEDEL   — remove key after ack
+#   ENSURELINE  — idempotent allowlist membership (exact line)
+# Distinct from plate_kv_board (get/set only) and rate_budget_ledger
+# (in-memory): this board is *disk counter* + *exact-line ensure*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — counter plate path
+#   LIST.txt       — allowlist/flags path (optional second)
+#   VAL.txt        — last value/line
+#   META.txt       — hit/new/delta summary
+#   QUOTA_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_QC_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1 (counter plate)
+#   picklist  — LIST = ARG1 (allowlist file)
+#   get       — LOOKUPFILE ACTIVE key(ARG1)
+#   inc       — KVFILEINC ACTIVE key [delta ARG2 default 1]
+#   del       — KVFILEDEL ACTIVE key
+#   ensure    — ENSURELINE LIST line(ARG1)  (or ACTIVE if list empty)
+#   gate      — LOOKUPFILE key; FAIL if val > max(ARG2)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_qc_$$
+#   printf 'retries=2\nerrors=0\n' > $CUBALC_STATE/quota.txt
+#   printf 'feature_a\n' > $CUBALC_STATE/flags.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/quota.txt ...
+#   CUBALC_ARG0=inc CUBALC_ARG1=retries ...
+#   CUBALC_ARG0=ensure CUBALC_ARG1=feature_b ...
+#
+# Env: CUBALC_QC_PATH=… CUBALC_QC_LIST=… CUBALC_QC_REQUIRE=1
+#
+# Edges:
+#   INC missing key inserts; INC missing file creates
+#   DEL soft miss HIT=0 OK=1; path miss OK=0
+#   ENSURE exact line (substring false friend != ensure)
+#   non-numeric INC behavior; bare delta needs (expr)
+#   first key only; empty key; WRITE NL; NUM; PRINT_JSON
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "quota_counter_plate: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT LFILE = "LIST.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "QUOTA_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_QC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_QC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_QC_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_QC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_QC_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_QC_LIST" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_LIST = LAST
+ELSE
+  LET ENV_LIST = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir LFILE
+LET list_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR list_meta OR ""
+LET listp = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_LIST
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "picklist"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_LIST
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET list_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET look_n = 0
+LET inc_hit = 0
+LET inc_v = 0
+LET inc_delta = 0
+LET del_hit = 0
+LET ens_new = 0
+LET ens_i = -1
+LET ens_total = 0
+LET over = 0
+LET max_n = 0
+LET delta = 1
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "picklist"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "picklist needs path"
+  END
+END
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs key"
+  END
+END
+SYS EQS ACTION "inc"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "inc needs key"
+  END
+END
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs key"
+  END
+END
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ensure needs line"
+  END
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "gate needs key max"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "qplate" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON listp
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- picklist ---
+SYS EQS ACTION "picklist"
+IF LAST_N == 1 THEN
+  NOTE "action picklist"
+  LET listp = NAME
+  LET list_ch = 1
+  LET hit = 1
+  LET note_msg = "picklist ok"
+  PRINT_JSON listp
+END
+
+# --- get ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "get no active"
+    FAIL "get no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get no active"
+    END
+  ELSE
+    SYS LOOKUPFILE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET look_n = LOOKUPFILE_N
+      LET val_ch = 1
+      LET note_msg = "get miss"
+      FAIL "get miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "get miss"
+      END
+    ELSE
+      LET val = LAST
+      LET look_n = LOOKUPFILE_N
+      LET val_ch = 1
+      LET hit = look_n
+      IF look_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "get none"
+        FAIL "get none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "get none"
+        END
+      ELSE
+        LET note_msg = "get ok"
+      END
+    END
+    PRINT_JSON NAME look_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- inc KVFILEINC ---
+SYS EQS ACTION "inc"
+IF LAST_N == 1 THEN
+  NOTE "action inc"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "inc no active"
+    FAIL "inc no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "inc no active"
+    END
+  ELSE
+    LET delta = 1
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET delta = LAST_N
+      END
+      CLEAR_ERR
+    END
+    # bare delta var needs (expr)
+    SYS EQS A2 ""
+    IF LAST_N == 1 THEN
+      SYS KVFILEINC active NAME
+    ELSE
+      SYS KVFILEINC active NAME (delta)
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "inc fail"
+      FAIL "inc fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "inc fail"
+      END
+    ELSE
+      LET val = LAST
+      LET inc_hit = KVFILEINC_HIT
+      LET inc_v = KVFILEINC_V
+      LET inc_delta = KVFILEINC_DELTA
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "key"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR inc_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "v"
+      LET meta = LAST
+      SYS STR inc_v
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "delta"
+      LET meta = LAST
+      SYS STR inc_delta
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF inc_hit == 0 THEN
+        LET note_msg = "inc insert"
+      ELSE
+        LET note_msg = "inc bump"
+      END
+    END
+    PRINT_JSON NAME inc_hit inc_v inc_delta
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- del KVFILEDEL ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "del no active"
+    FAIL "del no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del no active"
+    END
+  ELSE
+    SYS KVFILEDEL active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "del path miss"
+      FAIL "del path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "del path miss"
+      END
+    ELSE
+      LET val = LAST
+      LET del_hit = KVFILEDEL_HIT
+      LET val_ch = 1
+      LET hit = del_hit
+      LET meta = "key"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR del_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF del_hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "del none"
+        FAIL "del none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "del none"
+        END
+      ELSE
+        LET note_msg = "del ok"
+      END
+    END
+    PRINT_JSON NAME del_hit
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- ensure ENSURELINE ---
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  NOTE "action ensure"
+  LET val_s = listp
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    LET val_s = active
+  END
+  SYS BLANK val_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "ensure no path"
+    FAIL "ensure no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ensure no path"
+    END
+  ELSE
+    SYS ENSURELINE val_s NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "ensure fail"
+      FAIL "ensure fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ensure fail"
+      END
+    ELSE
+      LET val = LAST
+      LET ens_new = ENSURELINE_NEW
+      LET ens_i = ENSURELINE_I
+      LET ens_total = ENSURELINE_TOTAL
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "new"
+      LET meta = LAST
+      SYS STR ens_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR ens_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR ens_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ens_new > 0 THEN
+        LET note_msg = "ensure added"
+      ELSE
+        LET note_msg = "ensure present"
+      END
+    END
+    PRINT_JSON NAME ens_new ens_i ens_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- gate ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no active"
+    FAIL "gate no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no active"
+    END
+  ELSE
+    LET max_n = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET max_n = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS LOOKUPFILE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss key"
+      FAIL "gate miss key"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate miss key"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      SYS NUM val
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "gate not num"
+        FAIL "gate not num"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate not num"
+        END
+      ELSE
+        LET inc_v = LAST_N
+        LET hit = inc_v
+        LET over = 0
+        IF inc_v > max_n THEN
+          LET over = 1
+        END
+        LET meta = "key"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS PUSH meta "v"
+        LET meta = LAST
+        SYS STR inc_v
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "max"
+        LET meta = LAST
+        SYS STR max_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "over"
+        LET meta = LAST
+        SYS STR over
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        IF over > 0 THEN
+          LET miss = 1
+          LET note_msg = "gate over"
+          FAIL "gate over"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate over"
+          END
+        ELSE
+          LET note_msg = "gate ok"
+        END
+      END
+    END
+    PRINT_JSON NAME inc_v max_n over
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET listp = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET list_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "picklist"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "inc"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "ensure"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF list_ch > 0 THEN
+  SYS WRITE list_meta listp
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "list write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.quota_counter_plate.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "inc_v"
+LET report = LAST
+SYS STR inc_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "inc_hit"
+LET report = LAST
+SYS STR inc_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "del_hit"
+LET report = LAST
+SYS STR del_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ens_new"
+LET report = LAST
+SYS STR ens_new
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "over"
+LET report = LAST
+SYS STR over
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "quota_counter_plate" ACTION hit miss inc_v ens_new over note_msg elapsed
