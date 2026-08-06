@@ -1,0 +1,95 @@
+# SYS WAITGONE / WAITMISSING / WAITDELETE
+# — poll until path does NOT exist (dual of WAITFILE)
+# Usability: wait for unlock/peer cleanup without EXIST+SLEEP loop.
+# Soft timeout OK=0. Default 30s, cap 120s.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitgone_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "busy.flag"
+LET f = LAST
+SYS RM f
+
+# already missing → immediate hit
+SYS WAITGONE f 500
+ASSERT OK == 1
+ASSERT WAITGONE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT WAITGONE_N == 1
+SYS EQS LAST f
+ASSERT LAST_N == 1
+
+# present → short timeout soft fail
+SYS TOUCH f
+SYS WAITGONE f 120
+ASSERT OK == 0
+ASSERT WAITGONE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITGONE_N == 0
+ASSERT WAITGONE_MS >= 100
+
+# remove then wait — immediate hit
+SYS RM f
+SYS WAITGONE f 1000
+ASSERT OK == 1
+ASSERT WAITGONE_HIT == 1
+SYS EQS LAST f
+ASSERT LAST_N == 1
+
+# alias WAITMISSING
+SYS WAITMISSING f 500
+ASSERT WAITGONE_HIT == 1
+ASSERT OK == 1
+
+# alias WAITDELETE
+SYS WAITDELETE f 500
+ASSERT WAITGONE_HIT == 1
+
+# empty path soft fail
+SYS WAITGONE "" 50
+ASSERT OK == 0
+ASSERT WAITGONE_HIT == 0
+
+# zero timeout: already gone still hits
+SYS WAITGONE f 0
+ASSERT OK == 1
+ASSERT WAITGONE_HIT == 1
+
+# zero timeout miss when present
+SYS TOUCH f
+SYS WAITGONE f 0
+ASSERT OK == 0
+ASSERT WAITGONE_HIT == 0
+
+# agent: lock held → WAITGONE on .lock after unlock pattern
+SYS JOIN fix "plate.txt"
+LET fp = LAST
+SYS JOIN fix "plate.txt.lock"
+LET lp = LAST
+SYS RM fp
+SYS RM lp
+SYS LOCKFILE fp 500
+ASSERT LOCKFILE_HIT == 1
+SYS EXIST lp
+ASSERT LAST_N == 1
+# still held → short WAITGONE soft miss
+SYS WAITGONE lp 80
+ASSERT OK == 0
+ASSERT WAITGONE_HIT == 0
+# unlock then gone
+SYS UNLOCKFILE fp
+SYS WAITGONE lp 500
+ASSERT OK == 1
+ASSERT WAITGONE_HIT == 1
+
+# cleanup
+SYS RM f
+SYS RM fp
+SYS RM lp
+
+PRINT "sys_waitgone ok"
