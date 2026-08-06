@@ -5217,6 +5217,175 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF path needle value
+     * — replace every file line containing needle with value (read-modify-write).
+     * Bulk dual of SETMATCHFILE / file map-set. SETALLMATCHFILEI icase.
+     * Value is first line only. LAST = new line text when any hit.
+     * SETALLMATCHFILE_N = count replaced · I = first index · TOTAL lines.
+     * Soft no-match → N=0 OK=1 file unchanged. Soft path miss → OK=0.
+     * Usability: bulk status rewrite without FIND+SET loop / GREP+WRITE glue. */
+    if (kw(&L->cur,"SETALLMATCHFILE") || kw(&L->cur,"FILESETALLMATCH") ||
+        kw(&L->cur,"REPLACEALLMATCHF") || kw(&L->cur,"SUBALLMATCHFILE") ||
+        kw(&L->cur,"PATCHALLFILELINE") || kw(&L->cur,"FILEPATCHALL") ||
+        kw(&L->cur,"SETALLMATCHF") || kw(&L->cur,"REPLALLMATCHF") ||
+        kw(&L->cur,"SETALLMATCHFILEI") || kw(&L->cur,"FILESETALLMATCHI") ||
+        kw(&L->cur,"REPLACEALLMATCHFI") || kw(&L->cur,"SUBALLMATCHFILEI") ||
+        kw(&L->cur,"PATCHALLFILELINEI") || kw(&L->cur,"FILEPATCHALLI") ||
+        kw(&L->cur,"SETALLMATCHFI") || kw(&L->cur,"REPLALLMATCHFI")){
+      char path[512], needle[CUBALC_HOST_STR_MAX], val[CUBALC_HOST_STR_MAX];
+      char clean[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      const char *lp, *ls, *vp;
+      size_t llen, nlen, vlen, o = 0;
+      long total = 0, seen = 0, found_i = -1, hits = 0;
+      int icase = 0, first = 1;
+      cubalc_host_result hr, wr;
+      if (kw(&L->cur,"SETALLMATCHFILEI") || kw(&L->cur,"FILESETALLMATCHI") ||
+          kw(&L->cur,"REPLACEALLMATCHFI") || kw(&L->cur,"SUBALLMATCHFILEI") ||
+          kw(&L->cur,"PATCHALLFILELINEI") || kw(&L->cur,"FILEPATCHALLI") ||
+          kw(&L->cur,"SETALLMATCHFI") || kw(&L->cur,"REPLALLMATCHFI"))
+        icase = 1;
+      lex_next(L);
+      path[0] = 0; needle[0] = 0; val[0] = 0; clean[0] = 0; out[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS SETALLMATCHFILE path needle value");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        needle[0] = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vp = val;
+      {
+        size_t i = 0;
+        while (vp[i] && vp[i] != '\n' && vp[i] != '\r' && i + 1 < sizeof clean) {
+          clean[i] = vp[i];
+          i++;
+        }
+        clean[i] = 0;
+      }
+      vlen = strlen(clean);
+      nlen = strlen(needle);
+      if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_I", -1);
+        var_set_num(vm, "SETALLMATCHFILE_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", path[0] ? "SETALLMATCHFILE: read fail" : "SETALLMATCHFILE: empty path");
+        var_set_str(vm, "ERR", path[0] ? "SETALLMATCHFILE: read fail" : "SETALLMATCHFILE: empty path");
+        bump(vm); return 1;
+      }
+      lp = hr.str;
+      total = 0;
+      seen = 0;
+      found_i = -1;
+      hits = 0;
+      while (*lp) {
+        int match = 0;
+        ls = lp;
+        while (*lp && *lp != '\n') lp++;
+        llen = (size_t)(lp - ls);
+        if (nlen > 0 && llen >= nlen) {
+          if (!icase) {
+            size_t i;
+            for (i = 0; i + nlen <= llen; i++) {
+              if (memcmp(ls + i, needle, nlen) == 0) { match = 1; break; }
+            }
+          } else {
+            size_t i, j;
+            for (i = 0; i + nlen <= llen; i++) {
+              int okm = 1;
+              for (j = 0; j < nlen; j++) {
+                char a2 = ls[i + j], b2 = needle[j];
+                if (a2 >= 'A' && a2 <= 'Z') a2 = (char)(a2 - 'A' + 'a');
+                if (b2 >= 'A' && b2 <= 'Z') b2 = (char)(b2 - 'A' + 'a');
+                if (a2 != b2) { okm = 0; break; }
+              }
+              if (okm) { match = 1; break; }
+            }
+          }
+        }
+        if (!first && o + 1 < sizeof out) out[o++] = '\n';
+        first = 0;
+        if (match) {
+          if (found_i < 0) found_i = seen;
+          hits++;
+          if (o + vlen < sizeof out) {
+            memcpy(out + o, clean, vlen);
+            o += vlen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, clean, take);
+            o += take;
+          }
+        } else {
+          if (o + llen < sizeof out) {
+            memcpy(out + o, ls, llen);
+            o += llen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, ls, take);
+            o += take;
+          }
+        }
+        out[o] = 0;
+        total++;
+        seen++;
+        if (*lp == '\n') lp++;
+        else break;
+      }
+      if (hits == 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_I", -1);
+        var_set_num(vm, "SETALLMATCHFILE_TOTAL", total);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      if (cubalc_host_write(path, out, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_N", 0);
+        var_set_num(vm, "SETALLMATCHFILE_I", found_i);
+        var_set_num(vm, "SETALLMATCHFILE_TOTAL", total);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "SETALLMATCHFILE: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "SETALLMATCHFILE: write fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", clean);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", clean);
+      vm->last_n = hits;
+      var_set_num(vm, "LAST_N", hits);
+      var_set_str(vm, "SETALLMATCHFILE", clean);
+      var_set_str(vm, "FILESETALLMATCH", clean);
+      var_set_num(vm, "SETALLMATCHFILE_N", hits);
+      var_set_num(vm, "SETALLMATCHFILE_I", found_i);
+      var_set_num(vm, "SETALLMATCHFILE_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
@@ -14952,7 +15121,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -15312,6 +15481,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DELALLMATCHFILE", "SYS DELALLMATCHFILE alias of SYS DROPALLMATCHFILE"},
       {"SYS PURGEMATCHFILE", "SYS PURGEMATCHFILE alias of SYS DROPALLMATCHFILE"},
       {"SYS DROPALLMATCHFILEI", "SYS DROPALLMATCHFILEI case-insensitive DROPALLMATCHFILE"},
+      {"SYS SETALLMATCHFILE", "SYS SETALLMATCHFILE|FILESETALLMATCH path needle value — replace all matching file lines"},
+      {"SYS FILESETALLMATCH", "SYS FILESETALLMATCH alias of SYS SETALLMATCHFILE"},
+      {"SYS REPLACEALLMATCHF", "SYS REPLACEALLMATCHF alias of SYS SETALLMATCHFILE"},
+      {"SYS SETALLMATCHFILEI", "SYS SETALLMATCHFILEI case-insensitive SETALLMATCHFILE"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},

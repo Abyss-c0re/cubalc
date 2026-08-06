@@ -1,0 +1,76 @@
+# SYS SETALLMATCHFILE / FILESETALLMATCH — replace all file lines containing needle
+# Usability: bulk status rewrite without FIND+SET loop (dual of SETMATCHFILE + DROPALL)
+# SETALLMATCHFILEI icase. Soft no-match. Soft path miss.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "setallmatchfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "a=1\nstatus=old\nb=2\nstatus=done\nSTATUS=keep\nc=3"
+
+# case-sensitive: replace two status= rows, keep STATUS=keep
+SYS SETALLMATCHFILE fs "status=" "status=new"
+ASSERT OK == 1
+ASSERT SETALLMATCHFILE_N == 2
+ASSERT SETALLMATCHFILE_I == 1
+ASSERT SETALLMATCHFILE_TOTAL == 6
+SYS EQS LAST "status=new"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 0
+SYS EQS LAST "a=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "status=new"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "status=new"
+ASSERT LAST_N == 1
+SYS LINEAT fs 4
+SYS EQS LAST "STATUS=keep"
+ASSERT LAST_N == 1
+SYS LINEAT fs 5
+SYS EQS LAST "c=3"
+ASSERT LAST_N == 1
+
+# icase replaces STATUS=keep too
+SYS WRITE fs "a=1\nstatus=x\nb=2\nSTATUS=y\nc=3"
+SYS SETALLMATCHFILEI fs "status=" "status=ok"
+ASSERT SETALLMATCHFILE_N == 2
+ASSERT SETALLMATCHFILE_I == 1
+ASSERT SETALLMATCHFILE_TOTAL == 5
+SYS LINEAT fs 1
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+SYS LINEAT fs 2
+SYS EQS LAST "b=2"
+ASSERT LAST_N == 1
+
+# alias soft no-match
+SYS FILESETALLMATCH fs "missing=" "nope"
+ASSERT OK == 1
+ASSERT SETALLMATCHFILE_N == 0
+ASSERT SETALLMATCHFILE_I == -1
+ASSERT SETALLMATCHFILE_TOTAL == 5
+
+# soft path miss
+SYS SETALLMATCHFILE "no_such_setallmatchfile_mi.txt" "a" "b"
+ASSERT OK == 0
+ASSERT SETALLMATCHFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_setallmatchfile ok"
