@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "get_port",
-      "cmd": "LOOKUPFILE port → 7700",
+      "cmd": "LOOKUPFILE port \u2192 7700",
       "ok": true,
       "note": "default ="
     },
     {
       "name": "geti_status",
-      "cmd": "LOOKUPFILEI status → live from STATUS",
+      "cmd": "LOOKUPFILEI status \u2192 live from STATUS",
       "ok": true,
       "note": "icase"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "getor_fallback",
-      "cmd": "LOOKUPFILE missing OR default → default OR=1",
+      "cmd": "LOOKUPFILE missing OR default \u2192 default OR=1",
       "ok": true,
       "note": "soft fallback"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "ghost_getor",
-      "cmd": "ghost get miss; getor → fb OK=1",
+      "cmd": "ghost get miss; getor \u2192 fb OK=1",
       "ok": true,
       "note": "path OR"
     },
@@ -78,9 +78,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|parse",
-      "title": "LOOKUPFILE/KVFILESET sep must be string literal — bare str var fails",
-      "detail": "LET s=\":\"; LOOKUPFILE p key s → miss; same for KVFILESET third arg bare SEP. Agents cannot pass env sep without EQS branch to literals. Same class as HEADFILE bare n.",
-      "repro": "SYS LOOKUPFILE p \"warn\" s with s=\":\" → N=0"
+      "title": "LOOKUPFILE/KVFILESET sep must be string literal \u2014 bare str var fails",
+      "detail": "LET s=\":\"; LOOKUPFILE p key s \u2192 miss; same for KVFILESET third arg bare SEP. Agents cannot pass env sep without EQS branch to literals. Same class as HEADFILE bare n.",
+      "repro": "SYS LOOKUPFILE p \"warn\" s with s=\":\" \u2192 N=0"
     },
     {
       "id": "W2",
@@ -94,9 +94,9 @@
       "id": "W3",
       "severity": "med",
       "area": "host|kv",
-      "title": "First key= only — duplicate keys leave orphans",
+      "title": "First key= only \u2014 duplicate keys leave orphans",
       "detail": "get returns first port=; set rewrites first only, second port=2 remains. No unique-key enforce or multi-get.",
-      "repro": "port=1\\nport=2 → set port 9 → port=9\\nport=2"
+      "repro": "port=1\\nport=2 \u2192 set port 9 \u2192 port=9\\nport=2"
     },
     {
       "id": "W4",
@@ -104,7 +104,7 @@
       "area": "host|kv",
       "title": "Empty key KVFILESET appends \"=value\" line",
       "detail": "LOOKUP empty misses; SET empty creates garbage plate row. Asymmetric empty-key policy.",
-      "repro": "KVFILESET p \"\" \"x\" → =x"
+      "repro": "KVFILESET p \"\" \"x\" \u2192 =x"
     },
     {
       "id": "W5",
@@ -135,7 +135,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently softens get miss",
-      "detail": "REQUIRE=abc → exit 0 on miss.",
+      "detail": "REQUIRE=abc \u2192 exit 0 on miss.",
       "repro": "CUBALC_PK_REQUIRE=abc get nope"
     }
   ],
@@ -144,7 +144,7 @@
     "Use LOOKUPFILE not LOOKUP for disk plates",
     "Uniq keys before set; purge duplicates with DROPALLMATCHFILE",
     "Reject empty key at agent layer",
-    "Pick canonical plate path carefully — set creates missing"
+    "Pick canonical plate path carefully \u2014 set creates missing"
   ],
   "language_gaps": [
     "Bare string var as LOOKUPFILE/KVFILESET sep",
@@ -155,12 +155,12 @@
     "Arbitrary sep without literal branch explosion"
   ],
   "issues_faced": [
-    "Bare SEP var parse fail blocked custom set — fixed with : literal branch",
-    "Bare A2 sep on get also failed — same fix",
+    "Bare SEP var parse fail blocked custom set \u2014 fixed with : literal branch",
+    "Bare A2 sep on get also failed \u2014 same fix",
     "Empty key SET append =x is live footgun",
     "Positive get/set/getor/create path clean",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "8f5ff4d03cbcf867aa6971e2d0644161a85249de",
   "ts": "2026-08-06T10:54:03Z"
 }
