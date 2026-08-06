@@ -1,0 +1,73 @@
+# SYS LINECOUNTALL / WCALL — map path bag to line counts + sum
+# Usability: PATHGLOB log inventory without EACH+READ+LINES
+# Dual of SIZEALL. Miss/unreadable → 0 in bag.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "linecountall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.txt"
+LET fa = LAST
+SYS JOIN fix "b.txt"
+LET fb = LAST
+SYS JOIN fix "c.txt"
+LET fc = LAST
+SYS JOIN fix "gone.txt"
+LET fg = LAST
+
+SYS WRITE fa "one\ntwo\nthree"
+SYS WRITE fb "only"
+SYS WRITE fc "x\ny"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST fg
+LET bag = LAST
+
+SYS LINECOUNTALL bag
+ASSERT OK == 1
+ASSERT LINECOUNTALL_N == 4
+ASSERT LINECOUNTALL_FILES == 3
+ASSERT LINECOUNTALL_MISS == 1
+ASSERT LINECOUNTALL_SUM == 6
+SYS NTH 0 LAST
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LINECOUNTALL bag
+SYS NTH 1 LAST
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS LINECOUNTALL bag
+SYS NTH 2 LAST
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+SYS LINECOUNTALL bag
+SYS NTH 3 LAST
+SYS EQS LAST "0"
+ASSERT LAST_N == 1
+
+# zero-arg after PATHGLOB
+SYS PATHGLOB fix "*.txt"
+SYS KEEPFILES
+SYS WCALL
+ASSERT WCALL_N == 3
+ASSERT LINECOUNTALL_SUM == 6
+ASSERT LINECOUNTALL_MISS == 0
+
+# empty bag
+SYS LINECOUNTALL ""
+ASSERT LINECOUNTALL_N == 0
+ASSERT LINECOUNTALL_SUM == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_linecountall ok"

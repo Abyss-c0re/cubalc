@@ -240,6 +240,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 210. ~~**`SYS FIRSTFILE` / `LASTFILE`**~~ **done** (first/last path whose content matches needle · no GREPFILES+HEAD glue).
 211. ~~**`SYS GREPLINES` / `EXTRACTLINES`**~~ **done** (collect matching lines from path bag · multi-file harvest without EACH+READ+GREP).
 212. ~~**`SYS HEADFILE` / `TAILFILE`**~~ **done** (first/last n lines of a file → bag · peek without full READ/shell head).
+213. ~~**`SYS LINECOUNTALL` / `WCALL`**~~ **done** (path bag → line counts + sum · inventory without EACH+READ+LINES).
 
 ## Tick protocol
 
