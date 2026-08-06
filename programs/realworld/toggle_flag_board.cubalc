@@ -1,0 +1,743 @@
+# toggle_flag_board.cubalc — exact-line feature/maint flags + peer wait
+#
+# Real use: ops agent flips durable exact-line flags (maint=on, canary_web)
+# without HASFILELINE+ENSURE/DROP IF glue, and polls peer ready plates:
+#   TOGGLELINE / FLIPLINE  — drop if present else append (exact line)
+#   TOGGLELINEI            — case-insensitive flip
+#   HASFILELINE            — probe membership after flip
+#   ENSURELINE / DROPEXACT — force on / force off
+#   WAITFILE / POLLFILE    — poll until path exists (handoff)
+# Distinct from feature_flag_board (name:on bag SETMATCH) and
+# exact_roster_board (has/ensure/drop without toggle+wait triad).
+#
+# Plate under STATE:
+#   ACTIVE.txt      — flags file path
+#   VAL.txt         — last line / wait path
+#   META.txt        — was/on/i/total or wait hit/ms
+#   TOGGLE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TF_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   has       — HASFILELINE ACTIVE line(ARG1)
+#   toggle    — TOGGLELINE ACTIVE line
+#   togglei   — TOGGLELINEI
+#   on        — ENSURELINE (force present)
+#   off       — DROPEXACTFILE (force absent)
+#   wait      — WAITFILE path(ARG1) ms(ARG2 default 200)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tf_$$
+#   printf 'maint=off\ncanary_web\n' > $CUBALC_STATE/flags.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/flags.txt ...
+#   CUBALC_ARG0=toggle CUBALC_ARG1=canary_web ...
+#   CUBALC_ARG0=wait CUBALC_ARG1=$CUBALC_STATE/ready.flag CUBALC_ARG2=100 ...
+#
+# Env: CUBALC_TF_PATH=… CUBALC_TF_REQUIRE=1
+#
+# Edges:
+#   TOGGLE was/on semantics; create missing file on toggle
+#   substring false friends (web vs web-prod) exact only
+#   WAITFILE soft timeout OK=0; zero ms probe; empty path
+#   REQUIRE has-miss / wait-miss / off-none; WRITE NL; PRINT_JSON
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "toggle_flag_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TOGGLE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TF_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET has_n = 0
+LET has_i = -1
+LET has_total = 0
+LET tog_was = 0
+LET tog_on = 0
+LET tog_i = -1
+LET tog_total = 0
+LET wait_hit = 0
+LET wait_ms = 0
+LET ens_new = 0
+LET drop_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs line"
+  END
+END
+SYS EQS ACTION "toggle"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "toggle needs line"
+  END
+END
+SYS EQS ACTION "togglei"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "togglei needs line"
+  END
+END
+SYS EQS ACTION "on"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "on needs line"
+  END
+END
+SYS EQS ACTION "off"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "off needs line"
+  END
+END
+SYS EQS ACTION "wait"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "wait needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "tflag" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has no active"
+    FAIL "has no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has no active"
+    END
+  ELSE
+    SYS HASFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "has fail"
+      FAIL "has fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has fail"
+      END
+    ELSE
+      LET val = LAST
+      LET has_n = HASFILELINE_N
+      LET has_i = HASFILELINE_I
+      LET has_total = HASFILELINE_TOTAL
+      LET val_ch = 1
+      LET hit = has_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR has_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR has_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF has_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "has miss"
+        FAIL "has miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "has miss"
+        END
+      ELSE
+        LET note_msg = "has ok"
+      END
+    END
+    PRINT_JSON NAME has_n has_i has_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- toggle TOGGLELINE ---
+SYS EQS ACTION "toggle"
+IF LAST_N == 1 THEN
+  NOTE "action toggle"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "toggle no active"
+    FAIL "toggle no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "toggle no active"
+    END
+  ELSE
+    SYS TOGGLELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "toggle fail"
+      FAIL "toggle fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "toggle fail"
+      END
+    ELSE
+      LET val = LAST
+      LET tog_was = TOGGLELINE_WAS
+      LET tog_on = TOGGLELINE_ON
+      LET tog_i = TOGGLELINE_I
+      LET tog_total = TOGGLELINE_TOTAL
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "was"
+      LET meta = LAST
+      SYS STR tog_was
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "on"
+      LET meta = LAST
+      SYS STR tog_on
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "i"
+      LET meta = LAST
+      SYS STR tog_i
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "total"
+      LET meta = LAST
+      SYS STR tog_total
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF tog_on > 0 THEN
+        LET note_msg = "toggle on"
+      ELSE
+        LET note_msg = "toggle off"
+      END
+    END
+    PRINT_JSON NAME tog_was tog_on tog_i tog_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- togglei ---
+SYS EQS ACTION "togglei"
+IF LAST_N == 1 THEN
+  NOTE "action togglei"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "togglei no active"
+    FAIL "togglei no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "togglei no active"
+    END
+  ELSE
+    SYS TOGGLELINEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "togglei fail"
+      FAIL "togglei fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "togglei fail"
+      END
+    ELSE
+      LET val = LAST
+      LET tog_was = TOGGLELINE_WAS
+      LET tog_on = TOGGLELINE_ON
+      LET tog_i = TOGGLELINE_I
+      LET tog_total = TOGGLELINE_TOTAL
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "was"
+      LET meta = LAST
+      SYS STR tog_was
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "on"
+      LET meta = LAST
+      SYS STR tog_on
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "mode"
+      LET meta = LAST
+      SYS PUSH meta "icase"
+      LET meta = LAST
+      LET meta_ch = 1
+      IF tog_on > 0 THEN
+        LET note_msg = "togglei on"
+      ELSE
+        LET note_msg = "togglei off"
+      END
+    END
+    PRINT_JSON NAME tog_was tog_on
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- on ENSURELINE ---
+SYS EQS ACTION "on"
+IF LAST_N == 1 THEN
+  NOTE "action on"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "on no active"
+    FAIL "on no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "on no active"
+    END
+  ELSE
+    SYS ENSURELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "on fail"
+      FAIL "on fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "on fail"
+      END
+    ELSE
+      LET val = LAST
+      LET ens_new = ENSURELINE_NEW
+      LET tog_i = ENSURELINE_I
+      LET tog_total = ENSURELINE_TOTAL
+      LET tog_on = 1
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "new"
+      LET meta = LAST
+      SYS STR ens_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ens_new > 0 THEN
+        LET note_msg = "on added"
+      ELSE
+        LET note_msg = "on present"
+      END
+    END
+    PRINT_JSON NAME ens_new tog_i tog_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- off DROPEXACTFILE ---
+SYS EQS ACTION "off"
+IF LAST_N == 1 THEN
+  NOTE "action off"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "off no active"
+    FAIL "off no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "off no active"
+    END
+  ELSE
+    SYS DROPEXACTFILE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "off path miss"
+      FAIL "off path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "off path miss"
+      END
+    ELSE
+      LET val = LAST
+      LET drop_n = DROPEXACTFILE_N
+      LET tog_i = DROPEXACTFILE_I
+      LET tog_total = DROPEXACTFILE_TOTAL
+      LET tog_on = 0
+      LET val_ch = 1
+      LET hit = drop_n
+      LET meta = "line"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR drop_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF drop_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "off none"
+        FAIL "off none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "off none"
+        END
+      ELSE
+        LET note_msg = "off ok"
+      END
+    END
+    PRINT_JSON NAME drop_n tog_i tog_total
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- wait WAITFILE ---
+SYS EQS ACTION "wait"
+IF LAST_N == 1 THEN
+  NOTE "action wait"
+  LET wait_ms = 200
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET wait_ms = LAST_N
+    END
+    CLEAR_ERR
+  END
+  SYS WAITFILE NAME (wait_ms)
+  IF OK == 0 THEN
+    LET miss = 1
+    LET wait_hit = WAITFILE_HIT
+    LET wait_ms = WAITFILE_MS
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "path"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "hit"
+    LET meta = LAST
+    SYS STR wait_hit
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR wait_ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "wait timeout"
+    FAIL "wait timeout"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "wait timeout"
+    END
+  ELSE
+    LET val = LAST
+    LET wait_hit = WAITFILE_HIT
+    LET wait_ms = WAITFILE_MS
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "path"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "hit"
+    LET meta = LAST
+    SYS STR wait_hit
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR wait_ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "wait ok"
+  END
+  PRINT_JSON NAME wait_hit wait_ms
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "toggle"
+LET k = k + LAST_N
+SYS EQS ACTION "togglei"
+LET k = k + LAST_N
+SYS EQS ACTION "on"
+LET k = k + LAST_N
+SYS EQS ACTION "off"
+LET k = k + LAST_N
+SYS EQS ACTION "wait"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.toggle_flag_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "tog_was"
+LET report = LAST
+SYS STR tog_was
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "tog_on"
+LET report = LAST
+SYS STR tog_on
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_hit"
+LET report = LAST
+SYS STR wait_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_ms"
+LET report = LAST
+SYS STR wait_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "toggle_flag_board" ACTION hit miss tog_was tog_on wait_hit wait_ms note_msg elapsed

@@ -1,159 +1,154 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 77,
-  "program": "programs/realworld/env_template_board.cubalc",
-  "theme": "env template SUBSTENV KVFILESET rehydrate miss gate",
-  "version": "1.15.230-usability",
+  "iter": 78,
+  "program": "programs/realworld/toggle_flag_board.cubalc",
+  "theme": "toggle flags TOGGLELINE WAITFILE exact on/off handoff",
+  "version": "1.15.233-usability",
   "pass": true,
   "tests": [
     {
-      "name": "setvar_show",
-      "cmd": "setvar HOST/PORT/ROLE; showvars KEY=VAL plate",
+      "name": "has_exact",
+      "cmd": "has canary_web hit; has canary soft miss",
       "ok": true,
-      "note": "durable vars"
+      "note": "substring false friend"
     },
     {
-      "name": "expand_rehydrate",
-      "cmd": "expand x=${HOST}/$PORT \u2192 api01/8080 re=3 miss=0",
+      "name": "toggle_off_on",
+      "cmd": "toggle was=1 on=0; toggle was=0 on=1 append end",
       "ok": true,
-      "note": "cross-run rehydrate"
+      "note": "WAS/ON triad"
     },
     {
-      "name": "render_file",
-      "cmd": "render tmpl \u2192 host=api01 port=8080 role=canary cost=$5",
+      "name": "toggle_exact",
+      "cmd": "drop web leaves web-prod",
       "ok": true,
-      "note": "$$ literal + multi-line"
+      "note": "no substring"
     },
     {
-      "name": "softmiss_gate",
-      "cmd": "expand unset MISS; gate 0 soft; REQUIRE gate exit 2",
+      "name": "togglei",
+      "cmd": "togglei status=live drops STATUS=live",
       "ok": true,
-      "note": "SUBSTENV_MISS"
+      "note": "icase"
     },
     {
-      "name": "dollar_tag",
-      "cmd": "dollar cost=$5 tag=gold after setvar TAG",
+      "name": "on_off",
+      "cmd": "on add; on present; off drop; off none soft",
       "ok": true,
-      "note": "$$ and ${}"
+      "note": "force paths"
     },
     {
-      "name": "delvar_miss",
-      "cmd": "delvar HOST; expand HOST softmiss; REQUIRE expand exit 2",
+      "name": "wait_timeout_hit",
+      "cmd": "wait 80 miss; touch; wait hit; wait 0 miss",
       "ok": true,
-      "note": "delete + miss"
+      "note": "WAITFILE"
     },
     {
-      "name": "bare_adjacent",
-      "cmd": "$HOST-y \u2192 z1-y (bare name stops at non-id)",
+      "name": "require",
+      "cmd": "REQUIRE has miss / wait timeout \u2192 exit 2",
       "ok": true,
-      "note": "lexer edge"
+      "note": "hard fail"
     },
     {
-      "name": "value_equals",
-      "cmd": "DSN=user=u;pass=p rehydrate via SPLIT+DROP+JOINLINES",
+      "name": "create_ghost",
+      "cmd": "toggle missing path creates file",
       "ok": true,
-      "note": "embedded ="
-    },
-    {
-      "name": "empty_tmpl",
-      "cmd": "render missing path empty tmpl REQUIRE exit 2",
-      "ok": true,
-      "note": "READ soft"
+      "note": "create-on-miss"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "206/206 pass"
+      "note": "208/208 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|env",
-      "title": "ENV SET is process-local \u2014 multi-tick agents cannot seed expand without plate rehydrate",
-      "detail": "Each cubalc run is a new process. ENV SET in setvar is gone on next render unless agent rehydrates from durable KEY=VAL plate via EACH LINE ENV SET. No ENV export plate or session env.",
-      "repro": "run setenv; separate run expand sees empty + MISS"
+      "area": "host|fs",
+      "title": "TOGGLELINE creates missing path \u2014 typo invents ghost flag files",
+      "detail": "Same create-on-miss class as ENSURELINE/KVFILEINC. Path typo silently seeds new plate; REQUIRE cannot catch miss because create succeeds.",
+      "repro": "TOGGLELINE no_such seed_flag \u2192 creates file"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "host|split",
-      "title": "Naive SPLIT first field loses KEY=VAL values that contain =",
-      "detail": "DSN=user=u;pass=p with NTH 1 yields only user. Must DROP 1 + JOINLINES = or LOOKUP bag key. No first-sep peel helper.",
-      "repro": "SPLIT = on DSN=user=u;pass=p \u2192 NTH1 user"
+      "severity": "med",
+      "area": "host|order",
+      "title": "TOGGLE on appends to end \u2014 loses original index/order",
+      "detail": "OFF drops in place; ON re-appends. Flag order and TOGGLELINE_I on re-enable differ from pre-toggle position. Agents using order as priority get reordered.",
+      "repro": "toggle off then on moves line to end"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|subst",
-      "title": "Unset keys expand to empty without hard fail; only SUBSTENV_MISS counter",
-      "detail": "gone=${NOPE}end \u2192 gone=end with MISS=1 OK=1. Agents must gate on MISS or corrupt configs ship empty values.",
-      "repro": "SUBSTENV gone=${NOPE}end \u2192 gone=end MISS=1"
+      "area": "host|write",
+      "title": "Toggle/WRITE omit trailing NL \u2014 cat glues flags to next plate",
+      "detail": "maint=off + META line \u2192 visual maint=offline. Recurring plate hygiene issue after DROPEXACT/TOGGLE last-line ops.",
+      "repro": "cat -A flags META after toggle off"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE omits trailing NL; VAL/META glue on cat -A",
-      "detail": "gone=end glued to meta n; VARS last line ROLE=canary without $. Recurring plate hygiene footgun.",
-      "repro": "cat -A VAL META after expand softmiss"
+      "area": "host|wait",
+      "title": "WAITFILE only existence \u2014 no content/mtime/ready-payload probe",
+      "detail": "Peer may TOUCH empty ready.flag before writing payload. Agents need second READ/SIZE loop. No WAITFILESIZE or WAITNONEMPTY.",
+      "repro": "TOUCH ready; WAITFILE hits; content still empty"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|subst",
-      "title": "No SUBSTENV on path / file-in expand primitive",
-      "detail": "Agents must READ then SUBSTENV then WRITE. No SUBSTENVFILE path. Race and NL handling on agent.",
-      "repro": "render = READ+SUBSTENV+WRITE glue"
+      "area": "host|naming",
+      "title": "feature_flag_board bag toggle vs TOGGLELINE file \u2014 dual families",
+      "detail": "name:on SETMATCH bag vs exact-line file flip. Agents mix models and corrupt either plate.",
+      "repro": "feature_flag toggle vs TOGGLELINE line"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens gates",
-      "detail": "CUBALC_ET_REQUIRE=abc leaves REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc expand miss \u2192 rc 0"
+      "area": "host|wait",
+      "title": "WAITFILE busy-poll burns CPU; default 30s / cap 120s only lightly advertised",
+      "detail": "Short waits ok; long agent handoffs block. No backoff or inotify.",
+      "repro": "WAITFILE path 30000"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|subst",
-      "title": "Env vs program var precedence only lightly documented",
-      "detail": "Proof says env first then vars; agents may shadow host ENV with LET unintentionally.",
-      "repro": "LET FOO + ENV FOO both set"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens gates",
+      "detail": "CUBALC_TF_REQUIRE=abc \u2192 soft miss paths exit 0.",
+      "repro": "REQUIRE=abc has gone \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|kv",
-      "title": "KVFILESET create-on-miss invents VARS plate path typos",
-      "detail": "Same class as KVFILEINC create footgun for durable vars.",
-      "repro": "setvar always creates VARS.txt"
+      "area": "host|toggle",
+      "title": "No idempotent desired-state mode (want ON without flip)",
+      "detail": "Must ENSURE for on and DROPEXACT for off; toggle always flips. Race-prone under concurrent agents.",
+      "repro": "two agents toggle same line \u2192 net no-op or wrong"
     }
   ],
   "workarounds": [
-    "Always durable KEY=VAL plate + rehydrate before SUBSTENV across ticks",
-    "Peel values with DROP 1 + JOINLINES = or LOOKUP key (not NTH 1 alone)",
-    "Gate on SUBSTENV_MISS > 0 before writing configs",
-    "Digit-check REQUIRE env after NUM",
-    "Prefer ${NAME} braced form for adjacent punctuation"
+    "SYS EXIST before TOGGLE if create-on-miss unwanted",
+    "Use on/off (ENSURE/DROPEXACT) for desired-state not toggle",
+    "WAITFILE then READ/SIZE for payload readiness",
+    "Digit-check REQUIRE env",
+    "Prefer exact lines; never COUNTFILELINE for flags"
   ],
   "language_gaps": [
-    "Session or plate-backed ENV export/import primitive",
-    "SUBSTENVFILE path [out] one-shot file expand",
-    "SUBSTENV hard-fail mode on MISS (or REQUIRE MISS)",
-    "First-sep peel helper (KEY rest-of-line after first =)",
-    "WRITE trailing NL preserve",
-    "Document env-over-var SUBSTENV precedence in help"
+    "existing-only / no-create flag for TOGGLELINE",
+    "TOGGLE preserve index or insert-at-old-i on re-enable",
+    "WAITFILE content/nonempty/mtime predicates",
+    "WRITE trailing NL preserve on line surgery",
+    "Idempotent SETLINE presence API (want on|off without flip)",
+    "Help dual bag feature flags vs file TOGGLELINE"
   ],
   "issues_faced": [
-    "First draft setenv-only failed multi-tick render (empty expand) \u2014 fixed with VARS rehydrate",
-    "DSN embedded = broke NTH1 rehydrate \u2014 fixed DROP+JOINLINES",
-    "render/$$/gate/REQUIRE paths green after fix",
-    "selftest 206/206; no language fix this iter"
+    "toggle/has/on/off/wait positive paths clean",
+    "exactness preserves web-prod when web toggled",
+    "create-on-miss and WRITE NL glue confirmed",
+    "WAITFILE timeout ms reported accurately",
+    "selftest 208/208; no language fix this iter"
   ],
-  "commit": "fb60129c26294abf73b1f20073c747554d7bebf9",
-  "ts": "2026-08-06T12:10:30Z"
+  "commit": "",
+  "ts": "2026-08-06T12:34:00Z"
 }
