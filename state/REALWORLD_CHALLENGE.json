@@ -14,7 +14,7 @@
     },
     {
       "name": "mint16",
-      "cmd": "ENTROPY 16 → 32 hex",
+      "cmd": "ENTROPY 16 \u2192 32 hex",
       "ok": true,
       "note": "nonce"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "bag",
-      "cmd": "3×8-byte tokens bag",
+      "cmd": "3\u00d78-byte tokens bag",
       "ok": true,
       "note": "3 lines"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "mint_zero",
-      "cmd": "ENTROPY 0 REQUIRE→2",
+      "cmd": "ENTROPY 0 REQUIRE\u21922",
       "ok": true,
       "note": "deny"
     },
@@ -62,23 +62,23 @@
       "area": "host|getlogin",
       "title": "GETLOGIN vs USER dual under-documented for su/$USER override",
       "detail": "Agents using only USER miss session utmp identity; only USER miss setuid/login divergence. No LOGIN_EQ_USER helper.",
-      "repro": "su; GETLOGIN may ≠ USER"
+      "repro": "su; GETLOGIN may \u2260 USER"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|entropy",
-      "title": "ENTROPY silent clamp to 256 bytes — no overflow warn",
-      "detail": "ENTROPY 9999 → 512 hex OK=1. Agents requesting 1KB token think they got 9999 bytes. No ENTROPY_CLAMPED bit.",
+      "title": "ENTROPY silent clamp to 256 bytes \u2014 no overflow warn",
+      "detail": "ENTROPY 9999 \u2192 512 hex OK=1. Agents requesting 1KB token think they got 9999 bytes. No ENTROPY_CLAMPED bit.",
       "repro": "ENTROPY 9999; ENTROPY_BYTES==256"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|entropy",
-      "title": "Hex-only output — no base64/raw form",
+      "title": "Hex-only output \u2014 no base64/raw form",
       "detail": "Tokens double size vs binary. No ENTROPY_B64. Agents chain HEXD for binary.",
-      "repro": "ENTROPY 16 → 32 chars"
+      "repro": "ENTROPY 16 \u2192 32 chars"
     },
     {
       "id": "W4",
@@ -118,7 +118,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_SN_REQUIRE=abc.",
-      "repro": "REQUIRE=abc mint 0 → rc 0"
+      "repro": "REQUIRE=abc mint 0 \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -141,6 +141,6 @@
     "silent 256-byte clamp is core lesson",
     "selftest 272/272; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "84bcaa5db036badf41ea5a4765c78f99354d3f8e",
   "ts": "2026-08-06T23:24:10Z"
 }
