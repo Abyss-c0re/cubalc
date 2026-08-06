@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "seed_diff",
-      "cmd": "base api:10 db:5 mesh:2; canary api:14 db:4 mesh:2 crit:3 → delta api:4 db:-1 mesh:0 crit:3",
+      "cmd": "base api:10 db:5 mesh:2; canary api:14 db:4 mesh:2 crit:3 \u2192 delta api:4 db:-1 mesh:0 crit:3",
       "ok": true,
       "note": "DIFFKV canary-base"
     },
@@ -20,13 +20,13 @@
     },
     {
       "name": "hot_positive",
-      "cmd": "hot min1 → api:4 crit:3 drop=2 (db/mesh)",
+      "cmd": "hot min1 \u2192 api:4 crit:3 drop=2 (db/mesh)",
       "ok": true,
-      "note": "THRESHKV drops ≤0"
+      "note": "THRESHKV drops \u22640"
     },
     {
       "name": "offset_addkv",
-      "cmd": "offset +1 → db:0 mesh:1 api:5 crit:4",
+      "cmd": "offset +1 \u2192 db:0 mesh:1 api:5 crit:4",
       "ok": true,
       "note": "ADDKV existing only"
     },
@@ -38,15 +38,15 @@
     },
     {
       "name": "empty_base",
-      "cmd": "empty base + canary api:5 → delta api:5",
+      "cmd": "empty base + canary api:5 \u2192 delta api:5",
       "ok": true,
       "note": "DIFF empty b copy a"
     },
     {
       "name": "empty_canary",
-      "cmd": "empty canary + base → negated base",
+      "cmd": "empty canary + base \u2192 negated base",
       "ok": true,
-      "note": "DIFF empty a → -b"
+      "note": "DIFF empty a \u2192 -b"
     },
     {
       "name": "hot_none_require",
@@ -62,7 +62,7 @@
     },
     {
       "name": "nonnum_diff",
-      "cmd": "note:hello-world → note:0 strtol",
+      "cmd": "note:hello-world \u2192 note:0 strtol",
       "ok": true,
       "note": "silent zero"
     },
@@ -80,15 +80,15 @@
       "area": "host|bag",
       "title": "DIFFKV allows negative values with no floor mode",
       "detail": "db:3-4=-1 stays negative. Agents treating counts as unsigned mis-page. No DIFFKV_FLOOR0 / max(0,a-b) option.",
-      "repro": "DIFFKV a:3 b:4 → a:-1"
+      "repro": "DIFFKV a:3 b:4 \u2192 a:-1"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
       "title": "DIFFKV empty-a silently negates entire b",
-      "detail": "Empty canary plate vs base → all-negative delta. Easy footgun if canary load failed soft-empty; looks like massive improvement inverted.",
-      "repro": "DIFFKV \"\" base → -base"
+      "detail": "Empty canary plate vs base \u2192 all-negative delta. Easy footgun if canary load failed soft-empty; looks like massive improvement inverted.",
+      "repro": "DIFFKV \"\" base \u2192 -base"
     },
     {
       "id": "W3",
@@ -110,8 +110,8 @@
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "DIFFKV non-numeric → strtol 0 delta",
-      "detail": "note:hello − note:world → note:0. String metadata becomes zero delta, not skip/error.",
+      "title": "DIFFKV non-numeric \u2192 strtol 0 delta",
+      "detail": "note:hello \u2212 note:world \u2192 note:0. String metadata becomes zero delta, not skip/error.",
       "repro": "DIFFKV note:hello note:world"
     },
     {
@@ -157,10 +157,10 @@
   ],
   "issues_faced": [
     "Positive canary-base delta + hot filter clean",
-    "Empty canary → full negate is severe ops footgun",
+    "Empty canary \u2192 full negate is severe ops footgun",
     "crit only-in-canary kept as +3 (not DIFFKV_ADDED; ADDED is only-in-b)",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "e42295f582a420861918eb4385dbfc77e48f3888",
   "ts": "2026-08-06T01:35:00Z"
 }
