@@ -1,0 +1,54 @@
+# SYS MONOTONIC / MONO / STEADY_MS / CLOCK_MONO
+# — steady clock milliseconds for agent elapsed timing
+# Usability: duration stamps that ignore wall-clock jumps (NTP/suspend)
+
+HOLD_FLASH 1
+
+# basic read
+SYS MONOTONIC
+ASSERT OK == 1
+ASSERT MONOTONIC_N > 0
+ASSERT LAST_N == MONOTONIC_N
+SYS LEN LAST
+ASSERT LAST_N >= 1
+
+# non-decreasing across two samples (allow equal if same ms tick)
+SYS MONOTONIC
+LET t0 = LAST_N
+SYS MONOTONIC
+LET t1 = LAST_N
+SYS CMP t1 t0
+ASSERT LAST_N >= 0
+
+# after short sleep, advances
+SYS MONOTONIC
+LET a = LAST_N
+SYS SLEEP 50
+SYS MONOTONIC
+LET b = LAST_N
+LET dt = b - a
+ASSERT dt >= 40
+ASSERT dt < 5000
+
+# aliases
+SYS MONO
+ASSERT OK == 1
+ASSERT LAST_N > 0
+SYS STEADY_MS
+ASSERT OK == 1
+ASSERT LAST_N > 0
+
+# agent: measure work window
+SYS MONOTONIC
+LET start = LAST_N
+NOTE "work"
+SYS MONOTONIC
+LET end = LAST_N
+LET elapsed = end - start
+ASSERT elapsed >= 0
+SYS STR elapsed
+SYS CAT LAST "ms"
+SYS LEN LAST
+ASSERT LAST_N >= 3
+
+PRINT "sys_monotonic ok"

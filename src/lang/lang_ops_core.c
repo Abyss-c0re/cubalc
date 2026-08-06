@@ -11597,6 +11597,36 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS MONOTONIC|MONO|CLOCK_MONO|STEADY_MS — CLOCK_MONOTONIC ms.
+     * LAST_N / MONOTONIC_N = ms (arbitrary epoch, steady for deltas).
+     * Usability: elapsed timing that ignores wall-clock jumps; pairs with MS/SLEEP. */
+    if (kw(&L->cur,"MONOTONIC") || kw(&L->cur,"MONO") || kw(&L->cur,"CLOCK_MONO") ||
+        kw(&L->cur,"STEADY_MS") || kw(&L->cur,"MONO_MS") || kw(&L->cur,"STEADY") ||
+        kw(&L->cur,"MONOTONIC_MS") || kw(&L->cur,"CLOCK_MONOTONIC")){
+      struct timespec ts;
+      long n;
+      char buf[40];
+      lex_next(L);
+#if defined(CLOCK_MONOTONIC)
+      if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        n = (long)time(NULL) * 1000L;
+      } else {
+        n = (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+      }
+#else
+      n = (long)time(NULL) * 1000L;
+#endif
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "MONOTONIC", n);
+      var_set_num(vm, "MONOTONIC_N", n);
+      var_set_num(vm, "MONO", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS SLEEP|MSLEEP|DELAY [MS] n — pause n milliseconds (cap 60s).
      * Usability: agent poll/backoff without shell sleep; pairs with SYS MS. */
     if (kw(&L->cur,"SLEEP") || kw(&L->cur,"MSLEEP") || kw(&L->cur,"DELAY") ||
