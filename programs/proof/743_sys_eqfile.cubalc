@@ -1,0 +1,88 @@
+# SYS EQFILE / SAMEFILE — identical file content probe
+# Usability: verify COPYALL/plates without shell cmp
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "eqfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.plate"
+LET fa = LAST
+SYS WRITE fa "hello-cube"
+
+SYS JOIN fix "b.plate"
+LET fb = LAST
+SYS WRITE fb "hello-cube"
+
+SYS JOIN fix "c.plate"
+LET fc = LAST
+SYS WRITE fc "hello-CUBA"
+
+SYS JOIN fix "empty1"
+LET e1 = LAST
+SYS TOUCH e1
+SYS JOIN fix "empty2"
+LET e2 = LAST
+SYS TOUCH e2
+
+SYS JOIN fix "ghost"
+LET ghost = LAST
+
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+# equal content
+SYS EQFILE fa fb
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EQFILE == 1
+ASSERT EQFILE_BYTES == 10
+
+# differ
+SYS EQFILE fa fc
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT EQFILE == 0
+
+# empty files equal
+SYS SAMEFILE e1 e2
+ASSERT OK == 1
+ASSERT SAMEFILE == 1
+ASSERT EQFILE_BYTES == 0
+
+# self equal
+SYS CMPFILE fa fa
+ASSERT CMPFILE == 1
+ASSERT OK == 1
+
+# miss soft
+SYS EQFILE fa ghost
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# dir soft fail
+SYS EQFILE fa sub
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# after COPY verify
+SYS JOIN fix "copy.plate"
+LET fcp = LAST
+SYS COPY fa fcp
+SYS EQFILE fa fcp
+ASSERT EQFILE == 1
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+SYS RM e1
+SYS RM e2
+SYS RM fcp
+
+PRINT "sys_eqfile ok"
