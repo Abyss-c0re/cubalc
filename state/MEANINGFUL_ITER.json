@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 215,
-  "version": "1.15.240-usability",
-  "item": "SYS WAITCHANGED / WAITMODIFIED / POLLCHANGE poll until size/mtime change",
-  "item_id": 248,
-  "title": "SYS WAITCHANGED path [SINCE size mtime|MISSING] [ms] — peer status without known content",
-  "commit": "57e1bb1819dd77f92f000d2c9bd5c621fccb17e4",
-  "summary": "Wait for plate appear/modify/gone; SINCE snapshot baselines. selftest 215.",
+  "iter": 216,
+  "version": "1.15.241-usability",
+  "item": "SYS MKTEMP / TEMPFILE / MAKETEMP unique empty file under TMP",
+  "item_id": 249,
+  "title": "SYS MKTEMP|TEMPFILE [prefix] — collision-free agent plate paths via mkstemp",
+  "commit": "87aa2a001dc459a3ccb55f8c8a5ed1ae60b33792",
+  "summary": "Unique empty temp files under TMP without shell mktemp. selftest 216.",
   "proofs": [
-    "789_sys_waitchanged",
-    "selftest n_pass=215"
+    "790_sys_mktemp",
+    "selftest n_pass=216"
   ],
-  "when": "2026-08-06T13:36:44Z",
+  "when": "2026-08-06T13:45:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "57e1bb1819dd77f92f000d2c9bd5c621fccb17e4",
-  "note": "wait family: WAITFILE/WAITGONE/WAITMATCH/WAITSTABLE/WAITCHANGED"
+  "sha": "87aa2a001dc459a3ccb55f8c8a5ed1ae60b33792",
+  "note": "left wait family; collision-free plate paths for concurrent agents"
 }
