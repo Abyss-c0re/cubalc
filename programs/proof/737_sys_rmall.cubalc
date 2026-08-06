@@ -1,0 +1,96 @@
+# SYS RMALL / UNLINKALL — bulk remove path bag
+# Usability: GC reclaim after KEEP* filters without EACH + RM glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "rmall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.tmp"
+LET fa = LAST
+SYS WRITE fa "a"
+
+SYS JOIN fix "b.tmp"
+LET fb = LAST
+SYS WRITE fb "b"
+
+SYS JOIN fix "c.tmp"
+LET fc = LAST
+SYS WRITE fc "c"
+
+SYS JOIN fix "ghost.tmp"
+LET ghost = LAST
+
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+# bag: three files + ghost + dir
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST ghost
+SYS PUSH LAST sub
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 5
+
+# RMALL removes a,b,c; miss ghost; fail subdir
+SYS RMALL bag
+ASSERT RMALL_N == 3
+ASSERT RMALL_MISS == 1
+ASSERT RMALL_FAIL == 1
+ASSERT RMALL_SCAN == 5
+ASSERT OK == 0
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 1
+SYS EXIST fa
+ASSERT LAST_N == 0
+SYS EXIST fb
+ASSERT LAST_N == 0
+SYS EXIST fc
+ASSERT LAST_N == 0
+SYS ISDIR sub
+ASSERT LAST_N == 1
+
+# recreate files for pipeline smoke
+SYS WRITE fa "a2"
+SYS WRITE fb "b2"
+SYS TOUCH fc
+
+# PATHGLOB → KEEPFILES → RMALL (one-arg LAST)
+SYS PATHGLOB fix "*.tmp"
+SYS KEEPFILES
+SYS RMALL
+ASSERT OK == 1
+ASSERT RMALL_N >= 2
+ASSERT RMALL_FAIL == 0
+
+# idempotent re-run on empty survivors
+SYS PATHGLOB fix "*.tmp"
+SYS KEEPFILES
+SYS RMALL LAST
+ASSERT RMALL_N == 0
+ASSERT OK == 1
+
+# UNLINKALL alias single path bag
+SYS WRITE fa "again"
+SYS UNLINKALL fa
+ASSERT UNLINKALL_N == 1
+SYS EXIST fa
+ASSERT LAST_N == 0
+
+# DELETEALL empty bag soft
+SYS DELETEALL ""
+ASSERT DELETEALL_N == 0
+ASSERT RMALL_SCAN == 0
+ASSERT OK == 1
+
+PRINT "sys_rmall ok"

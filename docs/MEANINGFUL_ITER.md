@@ -224,6 +224,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 194. ~~**`SYS FRESH` / `KEEPSTALE`**~~ **done** (filter path bags by age threshold · cache/lease without EACH+AGE).
 195. ~~**`SYS KEEPNEWER` / `KEEPOLDER`**~~ **done** (filter path bags vs ref mtime · make rebuild without EACH+MTIME).
 196. ~~**`SYS KEEPBIGGER` / `KEEPSMALLER`**~~ **done** (filter path bags by size threshold · GC reclaim without EACH+SIZE).
+197. ~~**`SYS RMALL` / `UNLINKALL`**~~ **done** (bulk remove path bag · GC reclaim close without EACH+RM).
 
 ## Tick protocol
 
