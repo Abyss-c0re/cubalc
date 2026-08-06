@@ -1,0 +1,71 @@
+# SYS ISLINK / ISLNK / ISSYMLINK
+# — probe whether path is a symlink (lstat) without READLINK soft-fail
+# Usability: IF before READLINK / agent plate alias checks
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS UUID0
+SYS JOIN td LAST
+LET dir = LAST
+SYS MKDIR dir
+
+# regular file is not a link
+SYS JOIN dir "real.txt"
+LET real = LAST
+SYS WRITEATOMIC real "payload"
+ASSERT OK == 1
+SYS ISLINK real
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ISLINK == 0
+
+# directory is not a link
+SYS ISLINK dir
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# create symlink → probe 1
+SYS JOIN dir "alias.txt"
+LET link = LAST
+SYS SYMLINK real link
+ASSERT OK == 1
+SYS ISLINK link
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ISLINK == 1
+
+# aliases
+SYS ISLNK link
+ASSERT LAST_N == 1
+SYS ISSYMLINK link
+ASSERT LAST_N == 1
+
+# missing path → 0 (probe, not soft fail)
+SYS ISLINK "/no/such/islink_mi_path"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# empty path → 0
+SYS ISLINK ""
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# agent: only READLINK when ISLINK
+SYS ISLINK link
+IF LAST_N == 1 THEN
+  SYS READLINK link
+  SYS EQS LAST real
+  ASSERT LAST_N == 1
+END
+
+# after RM of link, probe 0
+SYS RM link
+SYS ISLINK link
+ASSERT LAST_N == 0
+
+SYS RM real
+SYS RMDIR dir
+
+PRINT "sys_islink ok"

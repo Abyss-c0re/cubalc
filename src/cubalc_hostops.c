@@ -318,6 +318,26 @@ int cubalc_host_readlink(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS ISLINK path — probe without READLINK soft-fail glue. */
+int cubalc_host_islink(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  if (lstat(path, &st) != 0) {
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  r->n = S_ISLNK(st.st_mode) ? 1 : 0;
+  snprintf(r->str, sizeof r->str, "%s", path);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS COPY|CP src dst — duplicate plate without shell. */
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r) {
   FILE *in = NULL, *out = NULL;

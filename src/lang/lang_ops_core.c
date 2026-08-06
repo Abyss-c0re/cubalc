@@ -3311,6 +3311,34 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS ISLINK|ISLNK|ISSYMLINK path — LAST_N 1 if symlink (lstat).
+     * Missing / not-link → LAST_N 0, OK=1 (probe). Empty path → 0.
+     * Usability: IF before READLINK without soft-fail glue. */
+    if (kw(&L->cur,"ISLINK") || kw(&L->cur,"ISLNK") || kw(&L->cur,"ISSYMLINK") ||
+        kw(&L->cur,"IS_LINK") || kw(&L->cur,"IS_SYMLINK") || kw(&L->cur,"LINKP") ||
+        kw(&L->cur,"SYMLINKP") || kw(&L->cur,"ISSOFTLINK")){
+      char path[512];
+      cubalc_host_result hr;
+      long v;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      cubalc_host_islink(path, &hr);
+      v = hr.n ? 1 : 0;
+      var_set_num(vm, "LAST_N", v);
+      var_set_num(vm, "ISLINK", v);
+      var_set_num(vm, "ISLNK", v);
+      vm->last_n = v;
+      var_set_str(vm, "LAST", path[0] ? path : "");
+      if (path[0])
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      else
+        vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS STAT|FSTAT|FILESTAT path
      * — one-shot path metadata: exist + kind + size + mtime + isfile/isdir.
      * STAT_EXIST 0|1; STAT_KIND 0 miss|1 file|2 dir|3 other;
