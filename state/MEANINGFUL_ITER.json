@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 163,
-  "version": "1.15.188-usability",
-  "item": "SYS KEEPBIGGER / KEEPSMALLER filter path bags by size threshold",
-  "item_id": 196,
-  "title": "SYS KEEPBIGGER|BIGFILES|SIZEGE / KEEPSMALLER|SMALLFILES|SIZELE bag lim — GC reclaim",
-  "commit": "955f9d473c1ee0a2798b8f7576edc9a3136f525e",
-  "summary": "Filter path bags by byte size for reclaim. thrash restore + selftest 163.",
+  "iter": 164,
+  "version": "1.15.189-usability",
+  "item": "SYS RMALL / UNLINKALL bulk remove path bag",
+  "item_id": 197,
+  "title": "SYS RMALL|UNLINKALL|DELETEALL [bag] — GC reclaim without EACH+RM",
+  "commit": "d33b3750c096a6d3c3ef2a1c4a2a717dfbb6dd70",
+  "summary": "Bulk unlink path bags after KEEP* filters. selftest 164.",
   "proofs": [
-    "736_sys_keepbigger",
-    "selftest n_pass=163"
+    "737_sys_rmall",
+    "selftest n_pass=164"
   ],
-  "when": "2026-08-06T05:06:26Z",
+  "when": "2026-08-06T05:14:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "955f9d473c1ee0a2798b8f7576edc9a3136f525e",
-  "note": "restored mass thrash via git restore before feature"
+  "sha": "d33b3750c096a6d3c3ef2a1c4a2a717dfbb6dd70"
 }
