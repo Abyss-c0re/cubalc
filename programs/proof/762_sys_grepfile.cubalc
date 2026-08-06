@@ -1,0 +1,57 @@
+# SYS GREPFILE / FILEGREP — keep matching lines from one file → bag
+# Usability: single-log harvest without path-bag GREPLINES glue
+# Complements COUNTFILELINE. GREPFILEI icase. Soft miss path.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "grepfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "ok one\nerror: a\nok two\nerror: b\nERROR: c\nok three"
+
+SYS GREPFILE fs "error"
+ASSERT OK == 1
+ASSERT GREPFILE_N == 2
+ASSERT GREPFILE_HIT == 2
+ASSERT GREPFILE_TOTAL == 6
+ASSERT LAST_N == 2
+SYS HEAD LAST
+SYS EQS LAST "error: a"
+ASSERT LAST_N == 1
+SYS GREPFILE fs "error"
+SYS TAIL LAST
+SYS EQS LAST "error: b"
+ASSERT LAST_N == 1
+
+# alias icase includes ERROR
+SYS GREPFILEI fs "error"
+ASSERT GREPFILE_N == 3
+ASSERT GREPFILE_HIT == 3
+ASSERT LAST_N == 3
+
+# alias name
+SYS FILEGREP fs "ok"
+ASSERT GREPFILE_N == 3
+ASSERT LAST_N == 3
+
+# miss content → empty ok
+SYS GREPFILE fs "nope"
+ASSERT OK == 1
+ASSERT GREPFILE_N == 0
+ASSERT GREPFILE_HIT == 0
+ASSERT GREPFILE_TOTAL == 6
+
+# soft path miss
+SYS GREPFILE "no_such_grepfile_mi.txt" "x"
+ASSERT OK == 0
+ASSERT GREPFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_grepfile ok"

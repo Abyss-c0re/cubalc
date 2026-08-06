@@ -249,6 +249,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 219. ~~**`SYS FINDFILELINE` / `FILEFINDLINE`**~~ **done** (0-based first file line containing needle · locate then SET/DROP).
 220. ~~**`SYS LASTFINDFILELINE` / `FILELASTFIND`**~~ **done** (0-based last file line containing needle · dual of FINDFILELINE).
 221. ~~**`SYS COUNTFILELINE` / `FILECOUNTLINE`**~~ **done** (count file lines containing needle → LAST_N · single-file tally).
+222. ~~**`SYS GREPFILE` / `FILEGREP`**~~ **done** (keep matching lines from one file → bag · single-log harvest).
 
 ## Tick protocol
 
