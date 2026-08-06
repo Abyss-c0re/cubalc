@@ -1,64 +1,64 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 61,
-  "program": "programs/realworld/cache_reclaim_board.cubalc",
-  "theme": "cache/tmp reclaim KEEPBIGGER KEEPSMALLER RMALL TOUCHALL bulk GC",
-  "version": "1.15.190-usability",
+  "iter": 62,
+  "program": "programs/realworld/release_stage_board.cubalc",
+  "theme": "release stage/mirror COPYALL MKDIRALL basename flatten dest plate",
+  "version": "1.15.193-usability",
   "pass": true,
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB+KEEPFILES \u2192 big/mid/tiny drop nested",
+      "cmd": "PATHGLOB+KEEPFILES → a.plate b.plate c.log",
       "ok": true,
-      "note": "kind filter"
+      "note": "drop nested dir"
     },
     {
-      "name": "big_min10",
-      "cmd": "KEEPBIGGER 10 \u2192 big.dat+mid.dat",
+      "name": "dest_mkdirs",
+      "cmd": "dest+MKDIRALL DEST → stage dir; DEST.txt plate",
       "ok": true,
-      "note": "size >= 10"
+      "note": "durable dest"
     },
     {
-      "name": "small_max3",
-      "cmd": "KEEPSMALLER 3 \u2192 tiny.dat",
+      "name": "stage_copyall",
+      "cmd": "COPYALL → 3 files copy_bytes=17 staged dest paths",
       "ok": true,
-      "note": "size <= 3"
+      "note": "basename flatten"
     },
     {
-      "name": "big_none_require",
-      "cmd": "KEEPBIGGER 9999 REQUIRE exit 2",
+      "name": "hasdst_exact",
+      "cmd": "HASLINE staged full path hit; bare basename soft miss",
+      "ok": true,
+      "note": "exact field"
+    },
+    {
+      "name": "stage_with_dir",
+      "cmd": "COPYALL with nested dir → copy_fail=1 copy_n=3",
+      "ok": true,
+      "note": "partial OK class"
+    },
+    {
+      "name": "multi_mkdirs",
+      "cmd": "MKDIRALL ||| tree/a tree/b/nested tree/c",
+      "ok": true,
+      "note": "nested mkdir -p"
+    },
+    {
+      "name": "mkdir_over_file",
+      "cmd": "MKDIRALL over file → mkdir_fail=1 none",
+      "ok": true,
+      "note": "soft fail"
+    },
+    {
+      "name": "basename_collision",
+      "cmd": "two same.name → one dest file last-wins fromB",
+      "ok": true,
+      "note": "silent overwrite"
+    },
+    {
+      "name": "stage_empty_require",
+      "cmd": "clear then stage REQUIRE exit 2",
       "ok": true,
       "note": "empty gate"
-    },
-    {
-      "name": "reclaim_big",
-      "cmd": "RMALL cand \u2192 rm_n=2 mid+big gone tiny remains",
-      "ok": true,
-      "note": "bulk delete"
-    },
-    {
-      "name": "touch_upd",
-      "cmd": "TOUCHALL paths \u2192 touch_upd=1 tiny",
-      "ok": true,
-      "note": "lease refresh"
-    },
-    {
-      "name": "touch_create",
-      "cmd": "TOUCHALL new markers \u2192 touch_new=2",
-      "ok": true,
-      "note": "ensure leases"
-    },
-    {
-      "name": "rmall_dir_fail",
-      "cmd": "RMALL files+dir \u2192 rm_n=2 rm_fail=1 nested remains",
-      "ok": true,
-      "note": "no rmdir"
-    },
-    {
-      "name": "rmall_ghost_dir",
-      "cmd": "RMALL nested+ghost \u2192 rm_n=0 miss=1 fail=1",
-      "ok": true,
-      "note": "zero removed soft"
     },
     {
       "name": "scan_miss_require",
@@ -70,95 +70,96 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "165/165 pass incl keepbigger rmall touchall"
+      "note": "168/168 pass incl copyall mkdirall moveall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parse",
-      "title": "KEEPBIGGER/KEEPSMALLER reject numeric vars \u2014 STR shuttle required",
-      "detail": "Same class as FRESH: size limit is TK_NUM literal or string only. SYS KEEPBIGGER bag MIN with num MIN fails parse. Agents must SYS STR MIN first.",
-      "repro": "LET MIN=10; SYS KEEPBIGGER paths MIN \u2192 fail; STR then ok"
+      "area": "host|fs",
+      "title": "COPYALL flattens to basenames — no relative-tree preserve",
+      "detail": "src/a/x and src/b/x both become dest/x. Nested release trees collapse; deep.plate under nested/ not even scanned without recursion. No COPYALL --parents / relpath mode.",
+      "repro": "COPYALL full paths → dest/basename only"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "RMALL cannot remove directories \u2014 FAIL, nested trees leftover",
-      "detail": "Dirs count as RMALL_FAIL not recursive delete. GC of PATHGLOB * without KEEPFILES leaves empty dir trees. No RMDIR/RMALL_R.",
-      "repro": "RMALL bag_with_dir \u2192 rm_fail>=1; ISDIR nested still 1"
+      "title": "COPYALL silent basename collision last-wins",
+      "detail": "Two sources same basename both COPYALL_N success; dest content is last writer. No COLLISION count or fail-on-exists mode.",
+      "repro": "srcA/same.name + srcB/same.name → dest/same.name=fromB copy_n=2"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|fs",
-      "title": "TOUCHALL creates files but not parent directories",
-      "detail": "ENSURE deep path without MKDIR parents fails soft (TOUCHALL_FAIL). Agents need MKDIR glue for nested leases.",
-      "repro": "TOUCHALL nested/sub/lease without parents"
+      "title": "COPYALL dirs fail soft; cannot stage directory trees",
+      "detail": "Directory entries → COPYALL_FAIL. Need recursive walk glue or tar. Partial success OK=0 when mixed.",
+      "repro": "COPYALL bag_with_dir → fail>=1 files still copied"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "RMALL/TOUCHALL set OK=0 on any fail while still removing others",
-      "detail": "Partial success: rm_n>0 but OK=0 when dir fail present. -s strict agents may treat as hard fail if sticky ERR not CLEAR_ERR.",
-      "repro": "RMALL files+dir \u2192 OK=0 RMALL_N>0"
+      "title": "MKDIRALL over existing file fails soft (cannot clobber)",
+      "detail": "Useful safety but agents must pre-check ISFILE. No force mode.",
+      "repro": "MKDIRALL path_that_is_file → FAIL=1 N=0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "No exclusive size range filter (min AND max in one op)",
-      "detail": "Mid-band reclaim needs KEEPBIGGER then KEEPSMALLER chain. No KEEPSIZEBETWEEN.",
-      "repro": "want 10<=size<=100 \u2192 two filters"
+      "area": "host|agent",
+      "title": "DEST not language-global — agents need plate/ENV durability",
+      "detail": "Multi-tick dest requires DEST.txt or CUBALC_RS_DEST; pure LET DEST dies each run. No process-persistent agent state beyond plates/env.",
+      "repro": "dest action then new process without plate → default stage"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Removed path bags collapse in JSON line.",
-      "repro": "PRINT_JSON removed"
+      "detail": "STAGED paths collapse in JSON line.",
+      "repro": "PRINT_JSON staged"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last CAND/PATHS line without $.",
-      "repro": "big; cat -A CAND.txt"
+      "detail": "DEST.txt/STAGED last line without $ on cat -A.",
+      "repro": "dest; cat -A DEST.txt"
     },
     {
       "id": "W8",
-      "severity": "med",
-      "area": "host|agent",
-      "title": "Stale CAND plate can reclaim wrong set if not cleared after scan",
-      "detail": "Agent glue: reclaim prefers CAND over PATHS when CAND non-empty. Rescan without clear cand deletes old filter set not new inventory. Language has no paired plate invalidation.",
-      "repro": "big; scan; reclaim without clear \u2192 deletes old cand"
+      "severity": "low",
+      "area": "host|fs",
+      "title": "No COPYALL dry-run / conflict preview",
+      "detail": "Agents cannot list would-be basenames+collisions before write without reimplementing BASENAMEALL+FREQ.",
+      "repro": "want preview before stage"
     }
   ],
   "workarounds": [
-    "SYS STR before KEEPBIGGER/KEEPSMALLER thresholds",
-    "KEEPFILES before RMALL to avoid dir FAIL noise",
-    "CLEAR cand after scan or always write cand from latest filter",
-    "CLEAR_ERR after partial RMALL if rm_n>0 is success",
-    "MKDIR parents before TOUCHALL nested markers"
+    "KEEPFILES before COPYALL to drop dir FAIL noise",
+    "BASENAMEALL+FREQ before stage to detect collisions",
+    "Persist DEST in DEST.txt plate across ticks",
+    "MKDIRALL tree paths for multi-dir stage layouts",
+    "CLEAR_ERR after partial COPYALL if copy_n>0 is success"
   ],
   "language_gaps": [
-    "KEEPBIGGER accept numeric expression/vars",
-    "RMALL recursive / RMDIR bag",
-    "KEEPSIZEBETWEEN min max",
-    "TOUCHALL mkdir -p parents option",
+    "COPYALL preserve relative paths / --parents",
+    "COPYALL fail-on-exists / collision report",
+    "Recursive stage or tree copy",
+    "COPYALL dry-run",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "KEEPBIGGER+RMALL+TOUCHALL positive path clean with STR shuttle",
-    "Dir FAIL + ghost MISS confirmed",
-    "Stale CAND hazard observed mid-test",
+    "COPYALL+MKDIRALL positive path clean",
+    "DEST multi-tick lost until DEST.txt plate added",
+    "Basename collision last-wins confirmed",
+    "Transient selftest moveall flake mid-land then 168/168 green",
     "No language fix this iter"
   ],
-  "commit": "1748e212b66790c7d1e080470c42b0c426c93e90",
-  "ts": "2026-08-06T05:28:40Z"
+  "commit": "",
+  "ts": "2026-08-06T05:54:00Z"
 }
