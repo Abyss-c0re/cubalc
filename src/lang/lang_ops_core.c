@@ -1986,6 +1986,116 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS KEEPBIGGER|BIGFILES|SIZEGE bag min_bytes
+     * SYS KEEPSMALLER|SMALLFILES|SIZELE bag max_bytes
+     * — keep regular-file paths with size >= min (BIGGER) or size <= max (SMALLER).
+     * Dirs/missing/other dropped. Inclusive thresholds. One-arg uses LAST bag.
+     * (MINSIZE/MAXSIZE remain SMALLEST/LARGEST pick aliases — not used here.)
+     * LAST = kept paths; LAST_N / KEEPBIGGER_N / KEEPSMALLER_N; *_DROP; *_BYTES.
+     * Usability: GC/reclaim path filters without EACH+SIZE glue. */
+    if (kw(&L->cur,"KEEPBIGGER") || kw(&L->cur,"BIGFILES") || kw(&L->cur,"SIZEGE") ||
+        kw(&L->cur,"KEEPMINSIZE") || kw(&L->cur,"ATLEAST") || kw(&L->cur,"BIGGERTHAN") ||
+        kw(&L->cur,"KEEPSMALLER") || kw(&L->cur,"SMALLFILES") || kw(&L->cur,"SIZELE") ||
+        kw(&L->cur,"KEEPMAXSIZE") || kw(&L->cur,"ATMOST") || kw(&L->cur,"TINYFILES") ||
+        kw(&L->cur,"SMALLERTHAN")){
+      int want_small = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0, drop = 0, lim = 0;
+      cubalc_host_result hr;
+      if (kw(&L->cur,"KEEPSMALLER") || kw(&L->cur,"SMALLFILES") || kw(&L->cur,"SIZELE") ||
+          kw(&L->cur,"KEEPMAXSIZE") || kw(&L->cur,"ATMOST") || kw(&L->cur,"TINYFILES") ||
+          kw(&L->cur,"SMALLERTHAN"))
+        want_small = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* size limit: number, or string var holding number */
+      if (L->cur.kind == TK_NUM) {
+        lim = L->cur.num;
+        if (lim < 0) lim = 0;
+        lex_next(L);
+      } else {
+        char tbuf[64];
+        if (resolve_str_arg(vm, L, tbuf, sizeof tbuf) == 0) {
+          lim = strtol(tbuf, NULL, 10);
+          if (lim < 0) lim = 0;
+        } else {
+          /* one-arg numeric-as-bag failed: bag was LAST, need limit from bag if it was num?
+           * If bag resolved but no limit, treat bag content as limit and use LAST...
+           * Simpler: if first arg looked like number via string and no second, re-parse. */
+          fail(vm, want_small ? "SYS KEEPSMALLER bag max_bytes"
+                              : "SYS KEEPBIGGER bag min_bytes");
+          return -1;
+        }
+      }
+      /* Detect one-arg: first resolve took LAST_str as bag, second was the only arg
+       * which we put in bag — if we got lim from second and bag was from first resolve
+       * that succeeded... Standard FRESH pattern: bag first (or LAST), then lim.
+       * For `SYS KEEPBIGGER 1024` with LAST bag: resolve_str_arg fails on TK_NUM,
+       * bag=LAST, then TK_NUM → lim. Good.
+       * For `SYS KEEPBIGGER bag 1024`: resolve bag, then TK_NUM lim. Good. */
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen;
+          int hit = 0;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (cubalc_host_path_kind(path, &hr) == 0 && hr.code == 1) {
+            long sz = hr.n;
+            if (want_small)
+              hit = (sz <= lim);
+            else
+              hit = (sz >= lim);
+          }
+          if (hit) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, path, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+          } else {
+            drop++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "OK", 1);
+      if (want_small) {
+        var_set_str(vm, "KEEPSMALLER", out);
+        var_set_str(vm, "SMALLFILES", out);
+        var_set_str(vm, "SIZELE", out);
+        var_set_num(vm, "KEEPSMALLER_N", kept);
+        var_set_num(vm, "KEEPSMALLER_DROP", drop);
+        var_set_num(vm, "KEEPSMALLER_BYTES", lim);
+        var_set_num(vm, "SMALLFILES_N", kept);
+        var_set_num(vm, "SIZELE_N", kept);
+      } else {
+        var_set_str(vm, "KEEPBIGGER", out);
+        var_set_str(vm, "BIGFILES", out);
+        var_set_str(vm, "SIZEGE", out);
+        var_set_num(vm, "KEEPBIGGER_N", kept);
+        var_set_num(vm, "KEEPBIGGER_DROP", drop);
+        var_set_num(vm, "KEEPBIGGER_BYTES", lim);
+        var_set_num(vm, "BIGFILES_N", kept);
+        var_set_num(vm, "SIZEGE_N", kept);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -11627,7 +11737,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11867,6 +11977,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS NEWERTHAN", "SYS NEWERTHAN alias of SYS KEEPNEWER (ref path, not age)"},
       {"SYS KEEPOLDER", "SYS KEEPOLDER|OLDERREF [bag] ref — keep paths mtime < ref · before artifact"},
       {"SYS OLDERREF", "SYS OLDERREF alias of SYS KEEPOLDER"},
+      {"SYS KEEPBIGGER", "SYS KEEPBIGGER|BIGFILES|SIZEGE bag min_bytes — keep regular files size >= min · GC reclaim"},
+      {"SYS BIGFILES", "SYS BIGFILES alias of SYS KEEPBIGGER"},
+      {"SYS SIZEGE", "SYS SIZEGE alias of SYS KEEPBIGGER"},
+      {"SYS KEEPSMALLER", "SYS KEEPSMALLER|SMALLFILES|SIZELE bag max_bytes — keep regular files size <= max · tiny junk"},
+      {"SYS SMALLFILES", "SYS SMALLFILES alias of SYS KEEPSMALLER"},
+      {"SYS SIZELE", "SYS SIZELE alias of SYS KEEPSMALLER"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},

@@ -1,0 +1,98 @@
+# SYS KEEPBIGGER / KEEPSMALLER — filter path bags by size threshold
+# Usability: GC/reclaim path gates without EACH + SIZE glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "keepbigger_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+# tiny = 3 bytes
+SYS JOIN fix "tiny.dat"
+LET ftiny = LAST
+SYS WRITE ftiny "abc"
+
+# mid = 10 bytes
+SYS JOIN fix "mid.dat"
+LET fmid = LAST
+SYS WRITE fmid "0123456789"
+
+# big = 20 bytes
+SYS JOIN fix "big.dat"
+LET fbig = LAST
+SYS WRITE fbig "01234567890123456789"
+
+SYS JOIN fix "ghost.dat"
+LET ghost = LAST
+
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+SYS PUSH "" ftiny
+SYS PUSH LAST fmid
+SYS PUSH LAST fbig
+SYS PUSH LAST ghost
+SYS PUSH LAST sub
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 5
+
+# KEEPBIGGER min 10 → mid + big (size >= 10); tiny/ghost/dir dropped
+SYS KEEPBIGGER bag 10
+ASSERT OK == 1
+ASSERT KEEPBIGGER_N == 2
+ASSERT KEEPBIGGER_DROP == 3
+ASSERT KEEPBIGGER_BYTES == 10
+SYS HASLINE LAST fmid
+ASSERT LAST_N == 1
+SYS HASLINE LAST fbig
+ASSERT LAST_N == 1
+SYS HASLINE LAST ftiny
+ASSERT LAST_N == 0
+
+# MINSIZE alias
+SYS BIGFILES bag 20
+ASSERT BIGFILES_N == 1
+SYS EQS LAST fbig
+ASSERT LAST_N == 1
+
+# KEEPSMALLER max 3 → only tiny
+SYS KEEPSMALLER bag 3
+ASSERT KEEPSMALLER_N == 1
+ASSERT KEEPSMALLER_DROP == 4
+ASSERT KEEPSMALLER_BYTES == 3
+SYS EQS LAST ftiny
+ASSERT LAST_N == 1
+
+# MAXSIZE alias inclusive mid
+SYS SIZELE bag 10
+ASSERT SIZELE_N == 2
+SYS HASLINE LAST ftiny
+ASSERT LAST_N == 1
+SYS HASLINE LAST fmid
+ASSERT LAST_N == 1
+
+# one-arg uses LAST bag
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS KEEPBIGGER 10
+ASSERT KEEPBIGGER_N == 2
+
+# threshold 0 keeps all regular files (empty not present)
+SYS KEEPBIGGER bag 0
+ASSERT KEEPBIGGER_N == 3
+
+# huge threshold keeps none
+SYS KEEPBIGGER bag 1000000
+ASSERT KEEPBIGGER_N == 0
+ASSERT KEEPBIGGER_DROP == 5
+
+# cleanup
+SYS RM ftiny
+SYS RM fmid
+SYS RM fbig
+
+PRINT "sys_keepbigger ok"
