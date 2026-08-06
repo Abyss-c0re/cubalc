@@ -1,0 +1,78 @@
+# SYS MKTEMP / TEMPFILE / MAKETEMP
+# — create unique empty file under TMP (collision-free agent plates)
+# Usability: no shell mktemp · concurrent agents safe paths
+
+HOLD_FLASH 1
+
+# default prefix
+SYS MKTEMP
+ASSERT OK == 1
+ASSERT MKTEMP_N == 1
+ASSERT LAST_N == 1
+ASSERT LAST != ""
+LET p1 = LAST
+SYS EXIST p1
+ASSERT LAST_N == 1
+SYS SIZE p1
+ASSERT LAST_N == 0
+SYS EQS MKTEMP p1
+ASSERT LAST_N == 1
+
+# second call → different path
+SYS MKTEMP
+ASSERT OK == 1
+LET p2 = LAST
+SYS EQS p1 p2
+ASSERT LAST_N == 0
+
+# custom prefix
+SYS MKTEMP "job"
+ASSERT OK == 1
+LET p3 = LAST
+SYS EXIST p3
+ASSERT LAST_N == 1
+SYS HAS p3 "job"
+ASSERT LAST_N == 1
+
+# alias TEMPFILE
+SYS TEMPFILE "plate"
+ASSERT OK == 1
+LET p4 = LAST
+SYS EXIST p4
+ASSERT LAST_N == 1
+
+# alias MAKETEMP
+SYS MAKETEMP
+ASSERT OK == 1
+LET p5 = LAST
+SYS EXIST p5
+ASSERT LAST_N == 1
+
+# agent: mktemp → writeatomic → read
+SYS MKTEMP "agent"
+LET ap = LAST
+SYS WRITEATOMIC ap "status=ok"
+ASSERT OK == 1
+SYS READ ap
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+
+# path-like prefix sanitized (no traversal)
+SYS MKTEMP "../evil"
+ASSERT OK == 1
+LET p6 = LAST
+SYS HAS p6 ".."
+ASSERT LAST_N == 0
+SYS EXIST p6
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM p1
+SYS RM p2
+SYS RM p3
+SYS RM p4
+SYS RM p5
+SYS RM ap
+SYS RM p6
+
+PRINT "sys_mktemp ok"

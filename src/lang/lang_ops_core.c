@@ -9244,6 +9244,124 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MKTEMP|TEMPFILE|MAKETEMP [prefix]
+     * — create unique empty file under TMP (mkstemp template prefix.XXXXXX).
+     * Default prefix "cubalc". Prefix sanitized (alnum/_/- only, max 32).
+     * LAST = path; LAST_N/MKTEMP_N = 1; soft fail OK=0.
+     * Usability: collision-free agent plate paths without shell mktemp. */
+    if (kw(&L->cur,"MKTEMP") || kw(&L->cur,"TEMPFILE") || kw(&L->cur,"MAKETEMP") ||
+        kw(&L->cur,"MKTEMPFILE") || kw(&L->cur,"NEWTEMP") || kw(&L->cur,"TMPFILE") ||
+        kw(&L->cur,"TEMPPATH") || kw(&L->cur,"UNIQUETEMP")){
+      char tdir[512], prefix[40], safe[36], tmpl[560], path[560];
+      const char *e;
+      size_t i, j, pl;
+      int fd = -1;
+      lex_next(L);
+      tdir[0] = 0; prefix[0] = 0; safe[0] = 0; tmpl[0] = 0; path[0] = 0;
+      /* optional prefix string */
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, prefix, sizeof prefix) != 0) {
+          /* no arg — default */
+          prefix[0] = 0;
+        }
+      }
+      /* resolve temp dir (same policy as SYS TMP) */
+      e = getenv("TMPDIR");
+      if (!e || !e[0]) e = getenv("TMP");
+      if (!e || !e[0]) e = getenv("TEMP");
+      if (!e || !e[0]) e = getenv("CUBALC_TMP");
+      if (e && e[0]) snprintf(tdir, sizeof tdir, "%s", e);
+#if defined(CUBALC_OS_WINDOWS)
+      if (!tdir[0]) {
+        e = getenv("LOCALAPPDATA");
+        if (e && e[0]) snprintf(tdir, sizeof tdir, "%s\\Temp", e);
+        else snprintf(tdir, sizeof tdir, ".");
+      }
+#else
+      if (!tdir[0]) snprintf(tdir, sizeof tdir, "/tmp");
+#endif
+      {
+        size_t n = strlen(tdir);
+        while (n > 1 && (tdir[n - 1] == '/' || tdir[n - 1] == '\\')) {
+          tdir[n - 1] = 0;
+          n--;
+        }
+      }
+      /* sanitize prefix: strip path seps, keep alnum _ - */
+      if (!prefix[0]) snprintf(prefix, sizeof prefix, "cubalc");
+      for (i = 0, j = 0; prefix[i] && j + 1 < sizeof safe; i++) {
+        char c = prefix[i];
+        if (c == '/' || c == '\\' || c == '.') continue;
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+            (c >= '0' && c <= '9') || c == '_' || c == '-')
+          safe[j++] = c;
+      }
+      safe[j] = 0;
+      if (!safe[0]) snprintf(safe, sizeof safe, "cubalc");
+      /* cap length so template fits */
+      pl = strlen(safe);
+      if (pl > 32) safe[32] = 0;
+      snprintf(tmpl, sizeof tmpl, "%s/%s.XXXXXX", tdir, safe);
+#if defined(CUBALC_OS_WINDOWS)
+      /* Windows fallback: unique path via pid+ms (no mkstemp) */
+      {
+        struct timespec ts;
+        long ms;
+        FILE *wf;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        ms = (long)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+        snprintf(path, sizeof path, "%s/%s.%ld.%ld.tmp", tdir, safe,
+                 (long)getpid(), ms);
+        wf = fopen(path, "wx");
+        if (!wf) {
+          snprintf(path, sizeof path, "%s/%s.%ld.%ld.%d.tmp", tdir, safe,
+                   (long)getpid(), ms, rand() & 0xffff);
+          wf = fopen(path, "w");
+        }
+        if (!wf) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "MKTEMP_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "MKTEMP: create fail");
+          var_set_str(vm, "ERR", "MKTEMP: create fail");
+          bump(vm); return 1;
+        }
+        fclose(wf);
+      }
+#else
+      {
+        char tcopy[560];
+        snprintf(tcopy, sizeof tcopy, "%s", tmpl);
+        fd = mkstemp(tcopy);
+        if (fd < 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "MKTEMP_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "MKTEMP: mkstemp fail");
+          var_set_str(vm, "ERR", "MKTEMP: mkstemp fail");
+          bump(vm); return 1;
+        }
+        close(fd);
+        snprintf(path, sizeof path, "%s", tcopy);
+      }
+#endif
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "MKTEMP", path);
+      var_set_str(vm, "TEMPFILE", path);
+      var_set_str(vm, "MAKETEMP", path);
+      var_set_num(vm, "MKTEMP_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TMP|TEMP|TMPDIR — portable temp directory for agent plate writes.
      * Prefer TMPDIR / TMP / TEMP env, else /tmp (POSIX) or "." (fallback).
      * Usability: SYS JOIN TMP "plate.json" without shell $TMPDIR glue. */
