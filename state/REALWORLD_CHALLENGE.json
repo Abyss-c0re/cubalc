@@ -8,49 +8,49 @@
   "tests": [
     {
       "name": "scan_star",
-      "cmd": "PATHGLOB drop * → 5 paths incl nested dir",
+      "cmd": "PATHGLOB drop * \u2192 5 paths incl nested dir",
       "ok": true,
       "note": "dirs mixed in"
     },
     {
       "name": "keepfiles",
-      "cmd": "KEEPFILES drops nested → 4 regular files",
+      "cmd": "KEEPFILES drops nested \u2192 4 regular files",
       "ok": true,
       "note": "KEEPFILES_DROP=1"
     },
     {
       "name": "keepdirs",
-      "cmd": "KEEPDIRS → nested only",
+      "cmd": "KEEPDIRS \u2192 nested only",
       "ok": true,
       "note": "invert kind"
     },
     {
       "name": "measure_zip",
-      "cmd": "SIZEALL+BASENAMEALL+ZIP → empty:0 large:20 medium:10 small:5 sum 35",
+      "cmd": "SIZEALL+BASENAMEALL+ZIP \u2192 empty:0 large:20 medium:10 small:5 sum 35",
       "ok": true,
       "note": "SIZEALL_SUM=35"
     },
     {
       "name": "sum_bytes",
-      "cmd": "SUM BYTES → 35",
+      "cmd": "SUM BYTES \u2192 35",
       "ok": true,
       "note": "parallel bag sum"
     },
     {
       "name": "big_thresh",
-      "cmd": "THRESHKV min=8 → large.blob medium.bin",
+      "cmd": "THRESHKV min=8 \u2192 large.blob medium.bin",
       "ok": true,
       "note": "drops empty+small"
     },
     {
       "name": "topkey",
-      "cmd": "TOPKEY → large.blob TOPKEY_V=20",
+      "cmd": "TOPKEY \u2192 large.blob TOPKEY_V=20",
       "ok": true,
       "note": "largest basename"
     },
     {
       "name": "measure_with_dirs",
-      "cmd": "SIZEALL without KEEPFILES → nested:0 miss_n=1 files_n=4",
+      "cmd": "SIZEALL without KEEPFILES \u2192 nested:0 miss_n=1 files_n=4",
       "ok": true,
       "note": "dir as miss+zero pollutes SIZES"
     },
@@ -84,15 +84,15 @@
       "id": "W1",
       "severity": "high",
       "area": "host|fs",
-      "title": "SIZEALL maps dirs/missing to 0 — indistinguishable from empty files",
-      "detail": "Per-field BYTES bag is only decimals; dirs and ghosts become 0 like empty.dat. SIZEALL_MISS/FILES are bag-level meta only — cannot peel which field missed without re-stat.",
-      "repro": "SIZEALL file+dir+ghost → 5\\n0\\n0; empty file also 0"
+      "title": "SIZEALL maps dirs/missing to 0 \u2014 indistinguishable from empty files",
+      "detail": "Per-field BYTES bag is only decimals; dirs and ghosts become 0 like empty.dat. SIZEALL_MISS/FILES are bag-level meta only \u2014 cannot peel which field missed without re-stat.",
+      "repro": "SIZEALL file+dir+ghost \u2192 5\\n0\\n0; empty file also 0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "No SIZEALL key:val mode — need BASENAMEALL+ZIP glue",
+      "title": "No SIZEALL key:val mode \u2014 need BASENAMEALL+ZIP glue",
       "detail": "SIZEALL returns parallel size strings; agents must ZIP with BASENAMEALL for name:bytes. Easy to desync if PATHS filtered after measure without remeasure.",
       "repro": "SIZEALL then ZIP BASENAMEALL bytes :"
     },
@@ -108,9 +108,9 @@
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "SKIP KEEPFILES → nested:0 pollutes reclaim SIZES plate",
+      "title": "SKIP KEEPFILES \u2192 nested:0 pollutes reclaim SIZES plate",
       "detail": "Dir basenames appear as 0-byte reclaim candidates. THRESHKV min>0 drops them but TOPKEY/SUM meta can confuse agents who skip kind filter.",
-      "repro": "scan *; measure → nested:0 in SIZES"
+      "repro": "scan *; measure \u2192 nested:0 in SIZES"
     },
     {
       "id": "W5",
@@ -140,9 +140,9 @@
       "id": "W8",
       "severity": "low",
       "area": "host|kv",
-      "title": "TOPKEY returns key only — value in TOPKEY_V side channel",
+      "title": "TOPKEY returns key only \u2014 value in TOPKEY_V side channel",
       "detail": "Agents expecting name:bytes from TOPKEY get basename only; must read TOPKEY_V separately.",
-      "repro": "TOPKEY sizes → large.blob; TOPKEY_V=20"
+      "repro": "TOPKEY sizes \u2192 large.blob; TOPKEY_V=20"
     }
   ],
   "workarounds": [
@@ -163,9 +163,9 @@
   "issues_faced": [
     "KEEPFILES+SIZEALL+ZIP+THRESHKV+TOPKEY positive path clean",
     "Dir/miss as 0 confirmed pollution without KEEPFILES",
-    "Empty file vs dir both 0 — only bag meta differs",
+    "Empty file vs dir both 0 \u2014 only bag meta differs",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "7326815b12ca6f8a610fe9142c070f2261294a39",
   "ts": "2026-08-06T04:13:10Z"
 }
