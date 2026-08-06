@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "count_DEBUG",
-      "cmd": "COUNTFILELINE DEBUG → 2 of 7",
+      "cmd": "COUNTFILELINE DEBUG \u2192 2 of 7",
       "ok": true,
       "note": "pre tally"
     },
     {
       "name": "drop1",
-      "cmd": "DROPMATCHFILE DEBUG → first DEBUG x only",
+      "cmd": "DROPMATCHFILE DEBUG \u2192 first DEBUG x only",
       "ok": true,
       "note": "ack one"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "residual_clean",
-      "cmd": "residual DEBUG → 0 clean",
+      "cmd": "residual DEBUG \u2192 0 clean",
       "ok": true,
       "note": "post check"
     },
@@ -56,7 +56,7 @@
     },
     {
       "name": "empty_needle",
-      "cmd": "DROP/DROPALL empty → N=0 no-op (safe)",
+      "cmd": "DROP/DROPALL empty \u2192 N=0 no-op (safe)",
       "ok": true,
       "note": "vs GREPFILE empty match-all"
     },
@@ -95,7 +95,7 @@
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON multi-line dropped bag glues without NL",
-      "detail": "Plate DROPPED has NL between removed lines; PRINT_JSON → DEBUG 1DEBUG 2. Recurring.",
+      "detail": "Plate DROPPED has NL between removed lines; PRINT_JSON \u2192 DEBUG 1DEBUG 2. Recurring.",
       "repro": "PRINT_JSON dropped after purge N=2"
     },
     {
@@ -104,7 +104,7 @@
       "area": "host|fs",
       "title": "DROPALLMATCHFILE_I is only first removed index, not full index list",
       "detail": "N counts removals; I is first hit only. Agents cannot reconstruct which indices vanished without pre-scan GREPFILE.",
-      "repro": "purge two lines → I=first only"
+      "repro": "purge two lines \u2192 I=first only"
     },
     {
       "id": "W5",
@@ -126,16 +126,16 @@
       "id": "W7",
       "severity": "low",
       "area": "host|match",
-      "title": "Empty DROP*MATCH needle is safe zero — but inconsistent with GREPFILE empty match-all",
+      "title": "Empty DROP*MATCH needle is safe zero \u2014 but inconsistent with GREPFILE empty match-all",
       "detail": "Good for purge safety; still part of empty-needle policy chaos across file ops.",
-      "repro": "DROPALLMATCHFILE p \"\" → N=0"
+      "repro": "DROPALLMATCHFILE p \"\" \u2192 N=0"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env silently disables hard fail",
-      "detail": "REQUIRE=abc → soft none exit 0.",
+      "detail": "REQUIRE=abc \u2192 soft none exit 0.",
       "repro": "CUBALC_PU_REQUIRE=abc drop1 ZZZ"
     }
   ],
@@ -160,6 +160,6 @@
     "DEB false friend over-purge demonstrated",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "5a7127a9869e399003f69bbf060befef6e89b313",
   "ts": "2026-08-06T10:03:39Z"
 }
