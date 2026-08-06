@@ -1,0 +1,53 @@
+# SYS PPID / PGID / SID — process lineage / session
+# Usability: agent process-tree plates without shell ps/echo $PPID
+
+HOLD_FLASH 1
+
+# parent pid is positive and differs from self on normal hosts
+SYS PID
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+LET me = LAST_N
+
+SYS PPID
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+LET parent = LAST_N
+ASSERT PPID == parent
+ASSERT PPID_N == parent
+# self is not its own parent (init/orphan edge rare for interactive agent)
+ASSERT parent != me
+
+# aliases
+SYS GETPPID
+ASSERT LAST_N == parent
+SYS PARENT_PID
+ASSERT LAST_N == parent
+SYS PARENTPID
+ASSERT LAST_N == parent
+
+# process group id
+SYS PGID
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+LET g = LAST_N
+ASSERT PGID == g
+ASSERT PGID_N == g
+SYS GETPGID
+ASSERT LAST_N == g
+SYS PGRP
+ASSERT LAST_N == g
+
+# session id
+SYS SID
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+LET s = LAST_N
+ASSERT SID == s
+ASSERT SID_N == s
+SYS GETSID
+ASSERT LAST_N == s
+SYS SESSION
+ASSERT LAST_N == s
+
+PRINT "sys_ppid ok"

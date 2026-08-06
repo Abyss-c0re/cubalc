@@ -14965,6 +14965,68 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS PPID|GETPPID|PARENT_PID — parent process id → LAST_N/PPID.
+     * (PARENT alone is SYS DIRNAME path alias — do not steal it.)
+     * SYS PGID|GETPGID|PGRP — process group id → LAST_N/PGID.
+     * SYS SID|GETSID|SESSION — session id → LAST_N/SID.
+     * Usability: process tree/session identity without shell ps/echo $PPID. */
+    if (kw(&L->cur,"PPID") || kw(&L->cur,"GETPPID") ||
+        kw(&L->cur,"PARENT_PID") || kw(&L->cur,"PARENTPID") ||
+        kw(&L->cur,"PGID") || kw(&L->cur,"GETPGID") || kw(&L->cur,"PGRP") ||
+        kw(&L->cur,"PROCESS_GROUP") || kw(&L->cur,"PROCGRP") ||
+        kw(&L->cur,"SID") || kw(&L->cur,"GETSID") || kw(&L->cur,"SESSION") ||
+        kw(&L->cur,"SESSION_ID") || kw(&L->cur,"SESSIONID")){
+      char op[24];
+      long n = 0;
+      char buf[32];
+      int which = 0; /* 0=ppid 1=pgid 2=sid */
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "PGID") == 0 || strcmp(op, "GETPGID") == 0 ||
+          strcmp(op, "PGRP") == 0 || strcmp(op, "PROCESS_GROUP") == 0 ||
+          strcmp(op, "PROCGRP") == 0)
+        which = 1;
+      else if (strcmp(op, "SID") == 0 || strcmp(op, "GETSID") == 0 ||
+               strcmp(op, "SESSION") == 0 || strcmp(op, "SESSION_ID") == 0 ||
+               strcmp(op, "SESSIONID") == 0)
+        which = 2;
+      lex_next(L);
+#if defined(CUBALC_OS_WINDOWS)
+      n = 0;
+#else
+      if (which == 0) {
+        n = (long)getppid();
+      } else if (which == 1) {
+        pid_t g = getpgid(0);
+        n = (g < 0) ? 0 : (long)g;
+      } else {
+        pid_t s = getsid(0);
+        n = (s < 0) ? 0 : (long)s;
+      }
+#endif
+      if (n < 0) n = 0;
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      if (which == 0) {
+        var_set_num(vm, "PPID", n);
+        var_set_num(vm, "PPID_N", n);
+        var_set_num(vm, "PARENT", n);
+      } else if (which == 1) {
+        var_set_num(vm, "PGID", n);
+        var_set_num(vm, "PGID_N", n);
+        var_set_num(vm, "PGRP", n);
+      } else {
+        var_set_num(vm, "SID", n);
+        var_set_num(vm, "SID_N", n);
+        var_set_num(vm, "SESSION", n);
+      }
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
     /* SYS HOSTNAME|HOST — machine hostname → LAST/HOSTNAME */
     if (kw(&L->cur,"HOSTNAME") || kw(&L->cur,"HOST") || kw(&L->cur,"NODENAME")){
       char host[256];
@@ -23326,6 +23388,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS GROUP", "SYS GROUP|GNAME — primary group name → LAST"},
       {"SYS GROUPS", "SYS GROUPS|GROUPLIST — egid+supplementary names bag"},
       {"SYS INGROUP", "SYS INGROUP|MEMBEROF name|gid — membership probe"},
+      {"SYS PPID", "SYS PPID|GETPPID|PARENT_PID — parent process id → LAST_N"},
+      {"SYS PGID", "SYS PGID|GETPGID|PGRP — process group id → LAST_N"},
+      {"SYS SID", "SYS SID|GETSID|SESSION — session id → LAST_N"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
