@@ -15342,6 +15342,42 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SHELL|LOGINSHELL|USERSHELL — login shell path → LAST/SHELL.
+     * Prefer $SHELL, then getpwuid()->pw_shell; fallback /bin/sh.
+     * Usability: agent profile/SPAWN shell without shell echo $SHELL. */
+    if (kw(&L->cur,"SHELL") || kw(&L->cur,"LOGINSHELL") || kw(&L->cur,"USERSHELL") ||
+        kw(&L->cur,"USER_SHELL") || kw(&L->cur,"LOGIN_SHELL") || kw(&L->cur,"PSHELL")){
+      char shell[512];
+      const char *e;
+      lex_next(L);
+      shell[0] = 0;
+      e = getenv("SHELL");
+      if (e && e[0]) snprintf(shell, sizeof shell, "%s", e);
+#if !defined(CUBALC_OS_WINDOWS)
+      if (!shell[0]) {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_shell && pw->pw_shell[0])
+          snprintf(shell, sizeof shell, "%s", pw->pw_shell);
+      }
+#endif
+#if defined(CUBALC_OS_WINDOWS)
+      if (!shell[0]) {
+        e = getenv("COMSPEC");
+        if (e && e[0]) snprintf(shell, sizeof shell, "%s", e);
+        else snprintf(shell, sizeof shell, "%s", "cmd.exe");
+      }
+#else
+      if (!shell[0]) snprintf(shell, sizeof shell, "%s", "/bin/sh");
+#endif
+      var_set_str(vm, "SHELL", shell);
+      var_set_str(vm, "LOGINSHELL", shell);
+      var_set_str(vm, "LAST", shell);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", shell);
+      vm->last_n = (long)strlen(shell);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS APPEND|LOG path data — append line to file (creates if missing).
      * Soft fail OK=0 + sticky LAST_ERR. LAST_N = bytes written (data+newline).
      * Usability: agent history/audit logs without shell >> . */
@@ -23550,6 +23586,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EUID", "SYS EUID|GETEUID — effective user id → LAST_N/EUID"},
       {"SYS ISROOT", "SYS ISROOT|AMROOT — LAST_N 1 if euid==0 privilege probe"},
       {"SYS HOME", "SYS HOME|HOMEDIR — home directory → LAST/HOME"},
+      {"SYS SHELL", "SYS SHELL|LOGINSHELL — login shell path → LAST/SHELL"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

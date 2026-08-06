@@ -1,0 +1,42 @@
+# SYS SHELL — login shell path without shell glue
+# Usability: agent profile / SPAWN planning from $SHELL or passwd
+
+HOLD_FLASH 1
+
+SYS SHELL
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS LEN SHELL
+ASSERT LAST_N >= 1
+SYS EQS LAST SHELL
+ASSERT LAST_N == 1
+
+# path-like: contains slash on unix (or non-empty on all)
+SYS HAS SHELL "/"
+LET has_slash = LAST_N
+# either absolute path with / or at least non-empty name
+SYS LEN SHELL
+ASSERT LAST_N >= 1
+
+# aliases
+SYS LOGINSHELL
+ASSERT OK == 1
+SYS EQS LAST SHELL
+ASSERT LAST_N == 1
+SYS USERSHELL
+ASSERT OK == 1
+SYS EQS LAST SHELL
+ASSERT LAST_N == 1
+SYS USER_SHELL
+ASSERT OK == 1
+SYS EQS LAST SHELL
+ASSERT LAST_N == 1
+
+# stable across calls
+SYS SHELL
+LET a = LAST
+SYS SHELL
+SYS EQS LAST a
+ASSERT LAST_N == 1
+
+PRINT "sys_shell ok"
