@@ -1,17 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 162,
-  "version": "1.15.187-usability",
-  "item": "SYS KEEPNEWER / KEEPOLDER filter path bags vs ref mtime",
-  "item_id": 195,
-  "title": "SYS KEEPNEWER|NEWERTHAN / KEEPOLDER|OLDERREF bag ref — make rebuild gates",
-  "commit": "ab4a6cbea912f6019fae10c1ceb3e2ed64a99c7b",
-  "summary": "Filter path bags by mtime vs ref path for rebuild gates. selftest 162.",
+  "iter": 163,
+  "version": "1.15.188-usability",
+  "item": "SYS KEEPBIGGER / KEEPSMALLER filter path bags by size threshold",
+  "item_id": 196,
+  "title": "SYS KEEPBIGGER|BIGFILES|SIZEGE / KEEPSMALLER|SMALLFILES|SIZELE bag lim — GC reclaim",
+  "commit": "955f9d473c1ee0a2798b8f7576edc9a3136f525e",
+  "summary": "Filter path bags by byte size for reclaim. thrash restore + selftest 163.",
   "proofs": [
-    "735_sys_keepnewer",
-    "selftest n_pass=162"
+    "736_sys_keepbigger",
+    "selftest n_pass=163"
   ],
-  "when": "2026-08-06T04:55:21Z",
+  "when": "2026-08-06T05:06:26Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ab4a6cbea912f6019fae10c1ceb3e2ed64a99c7b"
+  "sha": "955f9d473c1ee0a2798b8f7576edc9a3136f525e",
+  "note": "restored mass thrash via git restore before feature"
 }
