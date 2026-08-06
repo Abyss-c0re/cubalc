@@ -1,0 +1,710 @@
+# scratch_workspace_board.cubalc — MKTEMPDIR workspace + BASE64 pack + RMDIR
+#
+# Real use: agents stage job workspaces under TMP, stamp base64 payloads,
+# then clean empty dirs without shell mktemp -d / base64 / rmdir:
+#   MKTEMPDIR / MKDTEMP   — unique empty work dir
+#   BASE64 / BASE64D      — encode/decode plate payloads
+#   WRITEATOMIC + JOIN    — plate file inside workspace
+#   RMDIR / REMOVEDIR     — remove empty dir (non-empty soft fail)
+#   STAT                  — probe dir after open/cleanup
+# Distinct from plate_settle (MKTEMP file only) and work_claim (CLAIM path):
+# this board is *dir workspace lifecycle + b64 pack/unpack*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — workspace dir path
+#   PLATE.txt      — last plate file path inside workspace
+#   VAL.txt        — last plaintext / b64
+#   META.txt       — hit/n/size bag
+#   SCRATCH_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SW_ACTION):
+#   list      — plate (default)
+#   open      — MKTEMPDIR [prefix ARG1] → ACTIVE
+#   plate     — JOIN ACTIVE name(ARG1 default payload.txt) → PLATE
+#   write     — WRITEATOMIC PLATE body(ARG1)
+#   encode    — BASE64 ARG1 → VAL
+#   decode    — BASE64D ARG1 → VAL
+#   pack      — BASE64 body(ARG1) WRITEATOMIC PLATE.b64
+#   unpack    — READ PLATE|ARG1 then BASE64D → VAL
+#   probe     — STAT ACTIVE
+#   cleanup   — RM PLATE + RMDIR ACTIVE
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sw_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=job ...
+#   CUBALC_ARG0=plate CUBALC_ARG1=msg.b64 ...
+#   CUBALC_ARG0=pack CUBALC_ARG1='status=ready' ...
+#   CUBALC_ARG0=unpack ...
+#   CUBALC_ARG0=cleanup ...
+#
+# Env: CUBALC_SW_REQUIRE=1
+#
+# Edges:
+#   MKTEMPDIR under TMP not STATE; ../evil sanitize
+#   RMDIR non-empty fail; missing soft N=0; file as dir fail
+#   BASE64D bad input OK=0; empty; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "scratch_workspace_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT PFILE = "PLATE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SCRATCH_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir PFILE
+LET plate_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR plate_meta OR ""
+LET plate = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET plate_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET b64_n = 0
+LET rmdir_n = 0
+LET st_exist = 0
+LET st_isdir = 0
+LET st_size = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "scratch" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON plate
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- open MKTEMPDIR ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS MKTEMPDIR
+  ELSE
+    SYS MKTEMPDIR NAME
+  END
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "open fail"
+    FAIL "open fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open fail"
+    END
+  ELSE
+    LET active = LAST
+    LET active_ch = 1
+    LET hit = 1
+    LET val = active
+    LET val_ch = 1
+    LET meta = "dir"
+    SYS PUSH meta active
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "open ok"
+  END
+  PRINT_JSON active
+  CLEAR_ERR
+END
+
+# --- plate JOIN ---
+SYS EQS ACTION "plate"
+IF LAST_N == 1 THEN
+  NOTE "action plate"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "plate no active"
+    FAIL "plate no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "plate no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = "payload.txt"
+    END
+    SYS JOIN active NAME
+    LET plate = LAST
+    LET plate_ch = 1
+    LET hit = 1
+    LET val = plate
+    LET val_ch = 1
+    LET note_msg = "plate ok"
+  END
+  PRINT_JSON plate
+  CLEAR_ERR
+END
+
+# --- write ---
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  NOTE "action write"
+  SYS BLANK plate
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "write no plate"
+    FAIL "write no plate"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "write no plate"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "write needs body"
+    END
+    SYS WRITEATOMIC plate NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "write fail"
+      FAIL "write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "write fail"
+      END
+    ELSE
+      LET val = NAME
+      LET val_ch = 1
+      LET hit = 1
+      LET st_size = WRITEATOMIC_N
+      LET meta = "bytes"
+      SYS STR st_size
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "write ok"
+    END
+    PRINT_JSON st_size
+    CLEAR_ERR
+  END
+END
+
+# --- encode BASE64 ---
+SYS EQS ACTION "encode"
+IF LAST_N == 1 THEN
+  NOTE "action encode"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "encode needs text"
+  END
+  SYS BASE64 NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "encode fail"
+    FAIL "encode fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "encode fail"
+    END
+  ELSE
+    LET val = LAST
+    LET b64_n = BASE64_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR b64_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "encode ok"
+  END
+  PRINT_JSON b64_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- decode BASE64D ---
+SYS EQS ACTION "decode"
+IF LAST_N == 1 THEN
+  NOTE "action decode"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "decode needs b64"
+  END
+  SYS BASE64D NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "decode fail"
+    FAIL "decode fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "decode fail"
+    END
+  ELSE
+    LET val = LAST
+    LET b64_n = BASE64_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR b64_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "decode ok"
+  END
+  PRINT_JSON b64_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pack: encode body to plate file ---
+SYS EQS ACTION "pack"
+IF LAST_N == 1 THEN
+  NOTE "action pack"
+  SYS BLANK plate
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pack no plate"
+    FAIL "pack no plate"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pack no plate"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "pack needs body"
+    END
+    SYS BASE64 NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pack encode fail"
+      FAIL "pack encode fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pack encode fail"
+      END
+    ELSE
+      LET val = LAST
+      LET b64_n = BASE64_N
+      SYS WRITEATOMIC plate val
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "pack write fail"
+        FAIL "pack write fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "pack write fail"
+        END
+      ELSE
+        LET val_ch = 1
+        LET hit = 1
+        LET meta = "n"
+        SYS STR b64_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        LET note_msg = "pack ok"
+      END
+    END
+    PRINT_JSON b64_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- unpack: READ plate decode ---
+SYS EQS ACTION "unpack"
+IF LAST_N == 1 THEN
+  NOTE "action unpack"
+  LET src = plate
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET src = NAME
+  END
+  SYS BLANK src
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "unpack no path"
+    FAIL "unpack no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "unpack no path"
+    END
+  ELSE
+    SYS READ OR src OR ""
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "unpack read miss"
+      FAIL "unpack read miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "unpack read miss"
+      END
+    ELSE
+      LET enc = LAST
+      SYS BLANK enc
+      IF LAST_N == 1 THEN
+        LET miss = 1
+        LET note_msg = "unpack empty"
+        FAIL "unpack empty"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "unpack empty"
+        END
+      ELSE
+        SYS BASE64D enc
+        IF OK == 0 THEN
+          LET miss = 1
+          LET val = ""
+          LET val_ch = 1
+          LET note_msg = "unpack decode fail"
+          FAIL "unpack decode fail"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "unpack decode fail"
+          END
+        ELSE
+          LET val = LAST
+          LET b64_n = BASE64_N
+          LET val_ch = 1
+          LET hit = 1
+          LET meta = "n"
+          SYS STR b64_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+          LET note_msg = "unpack ok"
+        END
+      END
+    END
+    PRINT_JSON b64_n
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- probe STAT ACTIVE ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "probe no active"
+    FAIL "probe no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "probe no active"
+    END
+  ELSE
+    SYS STAT active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "probe fail"
+      FAIL "probe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "probe fail"
+      END
+    ELSE
+      LET st_exist = STAT_EXIST
+      LET st_isdir = STAT_ISDIR
+      LET st_size = STAT_SIZE
+      LET hit = st_exist
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "exist"
+      SYS STR st_exist
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "isdir"
+      LET meta = LAST
+      SYS STR st_isdir
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF st_exist == 0 THEN
+        LET miss = 1
+        LET note_msg = "probe missing"
+        FAIL "probe missing"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "probe missing"
+        END
+      ELSE
+        LET note_msg = "probe ok"
+      END
+    END
+    PRINT_JSON st_exist st_isdir
+    CLEAR_ERR
+  END
+END
+
+# --- cleanup RM plate + RMDIR ---
+SYS EQS ACTION "cleanup"
+IF LAST_N == 1 THEN
+  NOTE "action cleanup"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "cleanup no active"
+    FAIL "cleanup no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "cleanup no active"
+    END
+  ELSE
+    SYS BLANK plate
+    IF LAST_N == 0 THEN
+      SYS RM plate
+      CLEAR_ERR
+    END
+    SYS RMDIR active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET rmdir_n = RMDIR_N
+      LET note_msg = "cleanup rmdir fail"
+      FAIL "cleanup rmdir fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "cleanup rmdir fail"
+      END
+    ELSE
+      LET rmdir_n = RMDIR_N
+      LET hit = 1
+      IF rmdir_n == 0 THEN
+        LET note_msg = "cleanup already gone"
+      ELSE
+        LET note_msg = "cleanup ok"
+      END
+      LET meta = "rmdir_n"
+      SYS STR rmdir_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET active = ""
+      LET plate = ""
+      LET active_ch = 1
+      LET plate_ch = 1
+    END
+    PRINT_JSON rmdir_n
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET plate = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET plate_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "plate"
+LET k = k + LAST_N
+SYS EQS ACTION "write"
+LET k = k + LAST_N
+SYS EQS ACTION "encode"
+LET k = k + LAST_N
+SYS EQS ACTION "decode"
+LET k = k + LAST_N
+SYS EQS ACTION "pack"
+LET k = k + LAST_N
+SYS EQS ACTION "unpack"
+LET k = k + LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "cleanup"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF plate_ch > 0 THEN
+  SYS WRITE plate_meta plate
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "plate write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.scratch_workspace_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "b64_n"
+LET report = LAST
+SYS STR b64_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rmdir_n"
+LET report = LAST
+SYS STR rmdir_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "plate"
+LET report = LAST
+SYS PUSH report plate
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "scratch_workspace_board" ACTION hit miss b64_n rmdir_n note_msg elapsed
