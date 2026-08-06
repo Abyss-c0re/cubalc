@@ -1,0 +1,49 @@
+# SYS MEM / MEMINFO / MEMORY / RAM — host memory (kB)
+# Usability: agent low-memory backpressure without shell free(1)
+
+HOLD_FLASH 1
+
+SYS MEM
+ASSERT OK == 1
+ASSERT MEM_TOTAL_N > 0
+ASSERT MEM_AVAIL_N >= 0
+ASSERT MEM_FREE_N >= 0
+# avail is primary LAST_N
+ASSERT LAST_N == MEM_AVAIL_N
+ASSERT MEM_AVAIL_KB == MEM_AVAIL_N
+ASSERT MEM_TOTAL_KB == MEM_TOTAL_N
+# bag: total avail free (space-separated) — SPLIT sep hay
+LET bag = LAST
+SYS SPLIT " " bag
+ASSERT LAST_N == 3
+ASSERT SPLIT_N == 3
+SYS NTH 0 LAST
+SYS NUM LAST
+ASSERT LAST_N == MEM_TOTAL_N
+
+# avail should not exceed total
+SYS MEM
+SYS CMP MEM_AVAIL_N MEM_TOTAL_N
+ASSERT LAST_N <= 0
+
+# aliases
+SYS MEMINFO
+ASSERT OK == 1
+ASSERT MEM_TOTAL_N > 0
+SYS MEMORY
+ASSERT OK == 1
+SYS RAM
+ASSERT OK == 1
+
+# agent: gate shape for available kB
+SYS MEM
+SYS IN MEM_AVAIL_N 0 999999999999
+ASSERT LAST_N == 1
+
+# plate stamp
+SYS STR MEM_AVAIL_N
+SYS CAT LAST " kB avail"
+SYS HAS LAST "kB avail"
+ASSERT LAST_N == 1
+
+PRINT "sys_mem ok"

@@ -302,6 +302,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 272. ~~**`SYS ISATTY` / `TTY`**~~ **done** (terminal stream probe · pipe-aware agents).
 273. ~~**`SYS LOADAVG` / `LOAD`**~~ **done** (1/5/15 load · centiload IF for agent backpressure).
 274. ~~**`SYS UPTIME` / `BOOTAGE`**~~ **done** (seconds since boot · agent warmup/lease without shell uptime).
+275. ~~**`SYS MEM` / `MEMINFO`**~~ **done** (RAM total/avail/free kB · agent low-mem backpressure without shell free).
 
 ## Tick protocol
 
