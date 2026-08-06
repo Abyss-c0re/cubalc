@@ -60,7 +60,7 @@
       "id": "W1",
       "severity": "high",
       "area": "host|identity",
-      "title": "SAMEINODE vs EQFILE dual — agents conflate hardlink with content twin",
+      "title": "SAMEINODE vs EQFILE dual \u2014 agents conflate hardlink with content twin",
       "detail": "COPY makes EQFILE=1 SAMEINODE=0. After WRITEATOMIC on shared plate, EQFILE may fail while agents still think links share. No combined SAME_OR_EQ helper.",
       "repro": "COPY a b; EQFILE 1; SAMEINODE 0"
     },
@@ -76,7 +76,7 @@
       "id": "W3",
       "severity": "med",
       "area": "host|ownedby",
-      "title": "OWNEDBY is euid-only — no ACL/group-write nuance",
+      "title": "OWNEDBY is euid-only \u2014 no ACL/group-write nuance",
       "detail": "Shared plates writable by group still OWNEDBY=0 for non-owner euid. Agents over-deny.",
       "repro": "group-writable plate; other uid OWNEDBY 0"
     },
@@ -84,7 +84,7 @@
       "id": "W4",
       "severity": "med",
       "area": "host|fileuid",
-      "title": "FILEUID/GID numeric only — no username resolve",
+      "title": "FILEUID/GID numeric only \u2014 no username resolve",
       "detail": "Agents cannot stamp owner=alice without shell getent.",
       "repro": "FILEUID \u2192 0 not root"
     },
@@ -138,9 +138,9 @@
   ],
   "issues_faced": [
     "tee/chain/own/link/same/eq/copy dual green",
-    "COPY makes content twin without inode identity — core lesson",
+    "COPY makes content twin without inode identity \u2014 core lesson",
     "selftest 251/251; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "1a803a63466c85ea0037cd38246d09e2cef74e63",
   "ts": "2026-08-06T19:38:58Z"
 }
