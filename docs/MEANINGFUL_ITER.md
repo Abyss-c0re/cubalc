@@ -227,6 +227,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 197. ~~**`SYS RMALL` / `UNLINKALL`**~~ **done** (bulk remove path bag · GC reclaim close without EACH+RM).
 198. ~~**`SYS TOUCHALL` / `ENSUREALL`**~~ **done** (bulk create/refresh path bag · lease stamps without EACH+TOUCH).
 199. ~~**`SYS COPYALL` / `CPALL`**~~ **done** (bulk copy path bag into dest dir · snapshot without EACH+COPY).
+200. ~~**`SYS MKDIRALL` / `ENSUREDIRS`**~~ **done** (bulk mkdir -p path bag · layout trees without EACH+MKDIR).
 
 ## Tick protocol
 

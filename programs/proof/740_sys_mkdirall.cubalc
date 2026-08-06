@@ -1,0 +1,89 @@
+# SYS MKDIRALL / ENSUREDIRS — bulk mkdir -p path bag
+# Usability: multi-dir plate trees without EACH + MKDIR glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "mkdirall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "alpha"
+LET da = LAST
+SYS JOIN fix "beta/nested"
+LET db = LAST
+SYS JOIN fix "gamma"
+LET dg = LAST
+
+# file path that is not a dir target for fail case
+SYS JOIN fix "file.plate"
+LET ff = LAST
+SYS WRITE ff "notadir"
+
+SYS PUSH "" da
+SYS PUSH LAST db
+SYS PUSH LAST dg
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 3
+
+# MKDIRALL creates all three (nested beta/nested)
+SYS MKDIRALL bag
+ASSERT OK == 1
+ASSERT MKDIRALL_N == 3
+ASSERT MKDIRALL_FAIL == 0
+ASSERT MKDIRALL_SCAN == 3
+SYS ISDIR da
+ASSERT LAST_N == 1
+SYS ISDIR db
+ASSERT LAST_N == 1
+SYS ISDIR dg
+ASSERT LAST_N == 1
+SYS HASLINE LAST da
+ASSERT LAST_N == 1
+
+# idempotent re-run (already exist)
+SYS MKDIRALL bag
+ASSERT OK == 1
+ASSERT MKDIRALL_N == 3
+ASSERT MKDIRALL_FAIL == 0
+
+# file path fails soft (cannot mkdir over file)
+SYS MKDIRALL ff
+ASSERT OK == 0
+ASSERT MKDIRALL_N == 0
+ASSERT MKDIRALL_FAIL == 1
+ASSERT MKDIRALL_SCAN == 1
+
+# ENSUREDIRS / MKDIRS aliases + one-arg LAST
+SYS JOIN fix "delta"
+LET dd = LAST
+SYS JOIN fix "epsilon/sub"
+LET de = LAST
+SYS PUSH "" dd
+SYS PUSH LAST de
+SYS ENSUREDIRS
+ASSERT ENSUREDIRS_N == 2
+ASSERT OK == 1
+SYS ISDIR dd
+ASSERT LAST_N == 1
+SYS ISDIR de
+ASSERT LAST_N == 1
+
+SYS JOIN fix "zeta"
+LET dz = LAST
+SYS PUSH "" dz
+SYS MKDIRS
+ASSERT MKDIRS_N == 1
+
+# empty bag soft
+SYS MKDIRALL ""
+ASSERT MKDIRALL_N == 0
+ASSERT MKDIRALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup files only
+SYS RM ff
+
+PRINT "sys_mkdirall ok"
