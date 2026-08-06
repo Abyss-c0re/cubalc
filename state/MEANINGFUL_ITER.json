@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 190,
-  "version": "1.15.215-usability",
-  "item": "SYS SETMATCHFILE / FILESETMATCH replace first matching file line",
-  "item_id": 223,
-  "title": "SYS SETMATCHFILE|FILESETMATCH path needle value \u2014 replace first matching file line",
-  "commit": "c54a8f8f2112ce34d53545074f2c28de9d638028",
-  "summary": "Find-then-set file line one-shot; SETMATCHFILEI. selftest 190.",
+  "iter": 191,
+  "version": "1.15.216-usability",
+  "item": "SYS DROPMATCHFILE / FILEDROPMATCH drop first matching file line",
+  "item_id": 224,
+  "title": "SYS DROPMATCHFILE|FILEDROPMATCH path needle \u2014 drop first matching file line",
+  "commit": "d30775b93d5d797bbe299da9e0564fb05230e5ca",
+  "summary": "Find-then-drop file line one-shot; dual of SETMATCHFILE. selftest 191.",
   "proofs": [
-    "763_sys_setmatchfile",
-    "selftest n_pass=190"
+    "764_sys_dropmatchfile",
+    "selftest n_pass=191"
   ],
-  "when": "2026-08-06T09:34:20Z",
+  "when": "2026-08-06T09:44:41Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c54a8f8f2112ce34d53545074f2c28de9d638028"
+  "sha": "d30775b93d5d797bbe299da9e0564fb05230e5ca"
 }
