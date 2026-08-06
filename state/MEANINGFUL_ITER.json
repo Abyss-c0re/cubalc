@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 138,
-  "version": "1.15.163-usability",
-  "item": "SYS THRESHKV / KEEPVAL keep key:val value>=min",
-  "item_id": 171,
-  "title": "SYS THRESHKV|KEEPVAL bag min [sep] — keep key:val with value>=min",
-  "commit": "00ee07f2c78280d78640d0eda4715fffd8070c31",
-  "summary": "THRESHKV denoise FREQ by min count without EACH rebuild. selftest 138.",
+  "iter": 139,
+  "version": "1.15.164-usability",
+  "item": "SYS PCTKV / SHAREKV key:val integer percent of total",
+  "item_id": 172,
+  "title": "SYS PCTKV|SHAREKV bag [sep] — rewrite values as integer %% of total",
+  "commit": "29c83b355a423c4271d9639d646e6c04c1725649",
+  "summary": "PCTKV FREQ share-of-total without EACH+arith. PCTKV_SUM. selftest 139.",
   "proofs": [
-    "711_sys_threshkv",
-    "selftest n_pass=138"
+    "712_sys_pctkv",
+    "selftest n_pass=139"
   ],
-  "when": "2026-08-06T00:44:04Z",
+  "when": "2026-08-06T00:53:47Z",
   "agent": "meaningful_iter_10m",
-  "sha": "00ee07f2c78280d78640d0eda4715fffd8070c31"
+  "sha": "29c83b355a423c4271d9639d646e6c04c1725649"
 }
