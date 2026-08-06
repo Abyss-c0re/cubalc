@@ -10754,6 +10754,54 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HUMANSIZE|BYTESFMT|HUMANSZ|PRETTYBYTES [n|LAST_N]
+     * — integer B/K/M/G/T label for byte counts (1024-base floor).
+     * LAST = e.g. "1K"; LAST_N = scaled value; HUMANSIZE_UNIT; HUMANSIZE_BYTES.
+     * Usability: SIZE/SIZEALL inventory plates without shell numfmt. */
+    if (kw(&L->cur,"HUMANSIZE") || kw(&L->cur,"BYTESFMT") || kw(&L->cur,"HUMANSZ") ||
+        kw(&L->cur,"PRETTYBYTES") || kw(&L->cur,"HSIZE") || kw(&L->cur,"BYTEHUMAN") ||
+        kw(&L->cur,"FMTBYTES") || kw(&L->cur,"HUMANBYTES") || kw(&L->cur,"SIZEFMT")){
+      long n = vm->last_n;
+      unsigned long long u, scaled;
+      const char *unit = "B";
+      char buf[48];
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      u = (unsigned long long)n;
+      if (u >= 1024ULL * 1024ULL * 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL * 1024ULL * 1024ULL);
+        unit = "T";
+      } else if (u >= 1024ULL * 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL * 1024ULL);
+        unit = "G";
+      } else if (u >= 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL);
+        unit = "M";
+      } else if (u >= 1024ULL) {
+        scaled = u / 1024ULL;
+        unit = "K";
+      } else {
+        scaled = u;
+        unit = "B";
+      }
+      snprintf(buf, sizeof buf, "%llu%s", scaled, unit);
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANSIZE", buf);
+      var_set_str(vm, "BYTESFMT", buf);
+      var_set_str(vm, "HUMANSIZE_UNIT", unit);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = (long)scaled;
+      var_set_num(vm, "LAST_N", (long)scaled);
+      var_set_num(vm, "HUMANSIZE_N", (long)scaled);
+      var_set_num(vm, "HUMANSIZE_BYTES", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
       lex_next(L);
       long n = 0;
