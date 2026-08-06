@@ -1,0 +1,73 @@
+# SYS SCALEKV / MULKV — multiply key:val numeric values by factor
+# Usability: weight a FREQ source before MERGEKV without EACH+KVSET
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:5"
+SYS SCALEKV hist 2
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT SCALEKV_N == 3
+ASSERT SCALEKV_F == 2
+SYS EQS LAST "error:6\nwarn:2\ninfo:10"
+ASSERT LAST_N == 1
+
+# factor 1 identity
+SYS SCALEKV hist 1
+ASSERT SCALEKV_N == 3
+SYS EQS LAST "error:3\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+
+# factor 0 zeros
+SYS SCALEKV hist 0
+ASSERT SCALEKV_N == 3
+SYS EQS LAST "error:0\nwarn:0\ninfo:0"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS SCALEKV "" 3
+ASSERT LAST_N == 0
+ASSERT SCALEKV_N == 0
+
+# custom sep
+LET cfg = "retries=2\nport=10"
+SYS SCALEKV cfg 3 "="
+ASSERT SCALEKV_N == 2
+SYS EQS LAST "retries=6\nport=30"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MULKV hist 2
+ASSERT MULKV_N == 3
+SYS WEIGHTKV hist 4
+ASSERT WEIGHTKV_F == 4
+SYS EQS LAST "error:12\nwarn:4\ninfo:20"
+ASSERT LAST_N == 1
+SYS KVMUL hist 2
+ASSERT SCALEKV_F == 2
+
+# default factor=1 when omitted
+SYS SCALEKV hist
+ASSERT SCALEKV_F == 1
+SYS EQS LAST "error:3\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+
+# agent: weight primary log 2x then merge secondary
+LET log_a = "ERROR\nERROR\nWARN"
+LET log_b = "ERROR\nINFO"
+SYS FREQ log_a
+SYS SCALEKV LAST 2
+LET ha = LAST
+SYS FREQ log_b
+LET hb = LAST
+SYS MERGEKV ha hb
+LET m = LAST
+SYS LOOKUPN m "ERROR" OR 0
+# log_a ERROR:2 *2 =4 + log_b ERROR:1 =5
+ASSERT LAST_N == 5
+SYS LOOKUPN m "WARN" OR 0
+ASSERT LAST_N == 2
+SYS LOOKUPN m "INFO" OR 0
+ASSERT LAST_N == 1
+
+PRINT "sys_scalekv ok"

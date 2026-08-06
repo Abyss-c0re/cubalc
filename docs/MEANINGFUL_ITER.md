@@ -201,6 +201,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 171. ~~**`SYS THRESHKV` / `KEEPVAL`**~~ **done** (keep key:val value>=min · denoise FREQ without EACH rebuild).
 172. ~~**`SYS PCTKV` / `SHAREKV`**~~ **done** (key:val values as integer %% of total · FREQ share without EACH+arith).
 173. ~~**`SYS CAPKV` / `CLAMPKV`**~~ **done** (clamp key:val values to max · cap FREQ outliers before PCTKV).
+174. ~~**`SYS SCALEKV` / `MULKV`**~~ **done** (multiply key:val values · weight FREQ before MERGEKV).
 
 ## Tick protocol
 
