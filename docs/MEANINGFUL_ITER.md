@@ -307,6 +307,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 277. ~~**`SYS FSYNC` / `SYNCFILE`**~~ **done** (durable file flush after WRITE · multi-agent plate durability).
 278. ~~**`SYS DOTENV` / `LOADENV` / `ENVFILE`**~~ **done** (load KEY=VAL plate into process env · agent .env without shell).
 279. ~~**`SYS DUMPENV` / `ENVALL` / `LISTENV`**~~ **done** (process env as KEY=VAL bag · optional prefix · dual of DOTENV).
+280. ~~**`SYS WRITEENV` / `SAVENV` / `DUMPENVFILE`**~~ **done** (persist process env KEY=VAL plate · dual of DOTENV · optional prefix).
 
 ## Tick protocol
 
