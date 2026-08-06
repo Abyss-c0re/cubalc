@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 133,
-  "version": "1.15.158-usability",
-  "item": "SYS LOOKUP bag key OR fallback",
-  "item_id": 166,
-  "title": "SYS LOOKUP|KVGET bag key [sep] OR|DEFAULT fallback",
-  "commit": "d8cfd36e3c986e35b273e6086d56b44de84e0932",
-  "summary": "LOOKUP OR fallback like ENV/ARG — FREQ defaults without IF EMPTY. selftest 133.",
+  "iter": 134,
+  "version": "1.15.159-usability",
+  "item": "SYS MERGEKV / KVADDALL merge key:val bags by sum",
+  "item_id": 167,
+  "title": "SYS MERGEKV|KVADDALL bag_a bag_b [sep] — sum-merge FREQ/plate kv",
+  "commit": "df32bbbbde7233a257f57be7a5af3f76b17b5e43",
+  "summary": "MERGEKV combine FREQ histograms without EACH+KVINC. selftest 134.",
   "proofs": [
-    "706_sys_lookup_or",
-    "selftest n_pass=133"
+    "707_sys_mergekv",
+    "selftest n_pass=134"
   ],
-  "when": "2026-08-05T23:54:15Z",
+  "when": "2026-08-06T00:05:54Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d8cfd36e3c986e35b273e6086d56b44de84e0932"
+  "sha": "df32bbbbde7233a257f57be7a5af3f76b17b5e43"
 }
