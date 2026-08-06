@@ -199,6 +199,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 169. ~~**`SYS TOPKEY` / `BOTKEY`**~~ **done** (key with max/min value · dominant FREQ without SORTFREQ+TAKE+BEFORE).
 170. ~~**`SYS LOOKUPN` / `KVGETN`**~~ **done** (peel key:val as int LAST_N · FREQ arith without LOOKUP+NUM).
 171. ~~**`SYS THRESHKV` / `KEEPVAL`**~~ **done** (keep key:val value>=min · denoise FREQ without EACH rebuild).
+172. ~~**`SYS PCTKV` / `SHAREKV`**~~ **done** (key:val values as integer %% of total · FREQ share without EACH+arith).
 
 ## Tick protocol
 

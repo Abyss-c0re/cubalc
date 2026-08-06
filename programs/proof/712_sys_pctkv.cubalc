@@ -1,0 +1,68 @@
+# SYS PCTKV / SHAREKV — rewrite key:val values as integer percent of total
+# Usability: FREQ share-of-total without EACH+SUMKV+arith+KVSET
+
+HOLD_FLASH 1
+
+# 3+1+6 = 10 → 30/10/60
+LET hist = "error:3\nwarn:1\ninfo:6"
+SYS PCTKV hist
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT PCTKV_SUM == 10
+ASSERT PCTKV_N == 3
+SYS EQS LAST "error:30\nwarn:10\ninfo:60"
+ASSERT LAST_N == 1
+
+# LOOKUPN on shares
+LET p = LAST
+SYS LOOKUPN p "error" OR 0
+ASSERT LAST_N == 30
+SYS LOOKUPN p "info" OR 0
+ASSERT LAST_N == 60
+
+# empty bag
+SYS PCTKV ""
+ASSERT LAST_N == 0
+ASSERT PCTKV_SUM == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# zero total → all zeros
+LET z = "a:0\nb:0"
+SYS PCTKV z
+ASSERT PCTKV_SUM == 0
+SYS EQS LAST "a:0\nb:0"
+ASSERT LAST_N == 1
+
+# custom sep
+LET cfg = "ok=2\nerr=2"
+SYS PCTKV cfg "="
+ASSERT PCTKV_SUM == 4
+SYS EQS LAST "ok=50\nerr=50"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SHAREKV hist
+ASSERT SHAREKV_SUM == 10
+SYS PERCENTKV hist
+ASSERT PCTKV_N == 3
+SYS KVPCT hist
+ASSERT PCTKV_SUM == 10
+
+# agent: FREQ → percent share → top share key
+LET sev = "ERROR\nWARN\nERROR\nINFO\nERROR\nWARN\nERROR"
+SYS FREQ sev
+LET h = LAST
+SYS SUMKV h
+ASSERT LAST_N == 7
+SYS PCTKV h
+LET shares = LAST
+ASSERT PCTKV_SUM == 7
+SYS TOPKEY shares
+SYS EQS LAST "ERROR"
+ASSERT LAST_N == 1
+# ERROR is 4/7 ≈ 57%
+SYS LOOKUPN shares "ERROR" OR 0
+ASSERT LAST_N == 57
+
+PRINT "sys_pctkv ok"
