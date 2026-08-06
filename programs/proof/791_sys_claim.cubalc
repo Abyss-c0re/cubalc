@@ -1,0 +1,79 @@
+# SYS CLAIM / CLAIMFILE / CREATEEXCL
+# — exclusive create of path for agent work-item claims
+# Usability: one-shot job claim without LOCKFILE unlock protocol
+# Soft miss if exists OK=0. Release with SYS RM.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "claim_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "job.claim"
+LET j = LAST
+SYS RM j
+
+# free path → claim (default body = pid line)
+SYS CLAIM j
+ASSERT OK == 1
+ASSERT CLAIM_HIT == 1
+ASSERT LAST_N == 1
+ASSERT CLAIM_N == 1
+SYS EQS LAST j
+ASSERT LAST_N == 1
+SYS EXIST j
+ASSERT LAST_N == 1
+ASSERT CLAIM_PID > 0
+SYS READ j
+SYS LEN LAST
+ASSERT LAST_N > 0
+
+# second claim soft miss
+SYS CLAIM j
+ASSERT OK == 0
+ASSERT CLAIM_HIT == 0
+ASSERT LAST_N == 0
+
+# CREATEEXCL alias still held
+SYS CREATEEXCL j
+ASSERT OK == 0
+ASSERT CLAIM_HIT == 0
+
+# release and reclaim via CLAIMFILE
+SYS RM j
+SYS CLAIMFILE j
+ASSERT OK == 1
+ASSERT CLAIM_HIT == 1
+
+# custom body
+SYS RM j
+SYS CLAIM j "worker=alpha"
+ASSERT OK == 1
+SYS READ j
+SYS EQS LAST "worker=alpha"
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS CLAIM ""
+ASSERT OK == 0
+ASSERT CLAIM_HIT == 0
+
+# agent: claim → work → release pattern
+SYS JOIN fix "work.item"
+LET w = LAST
+SYS RM w
+SYS CLAIM w "status=mine"
+ASSERT CLAIM_HIT == 1
+SYS WRITEATOMIC w "status=done"
+ASSERT OK == 1
+SYS RM w
+SYS CLAIM w "status=next"
+ASSERT CLAIM_HIT == 1
+SYS RM w
+
+# cleanup
+SYS RM j
+
+PRINT "sys_claim ok"

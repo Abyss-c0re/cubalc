@@ -764,6 +764,101 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR", "LOCKFILE: timeout");
       bump(vm); return 1;
     }
+    /* SYS CLAIM|CLAIMFILE|CREATEEXCL path [body]
+     * — exclusive create of path itself (O_CREAT|O_EXCL), not path.lock.
+     * Default body = "<pid>\n". Soft miss if already exists → OK=0 HIT=0.
+     * LAST = path on claim; CLAIM_HIT 1|0; CLAIM_PID. Empty path soft fail.
+     * Usability: one-shot agent work-item / job-file claim without LOCKFILE
+     * unlock protocol or shell mkdir race. Release with SYS RM path. */
+    if (kw(&L->cur,"CLAIM") || kw(&L->cur,"CLAIMFILE") || kw(&L->cur,"CREATEEXCL") ||
+        kw(&L->cur,"TOUCHEXCL") || kw(&L->cur,"EXCLCREATE") || kw(&L->cur,"TAKECLAIM") ||
+        kw(&L->cur,"CLAIMPATH") || kw(&L->cur,"ONCEFILE") || kw(&L->cur,"EXCLTOUCH")){
+      char path[512], body[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      long pid = 0;
+      int hit = 0;
+      lex_next(L);
+      path[0] = 0; body[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS CLAIM path [body]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      /* optional body */
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, body, sizeof body) != 0)
+          body[0] = 0;
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      pid = 0;
+#else
+      pid = (long)getpid();
+#endif
+      if (!body[0])
+        snprintf(body, sizeof body, "%ld\n", pid);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "CLAIM_HIT", 0);
+        var_set_num(vm, "CLAIM_N", 0);
+        var_set_num(vm, "CLAIM_PID", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "CLAIM: empty path");
+        var_set_str(vm, "ERR", "CLAIM: empty path");
+        bump(vm); return 1;
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        FILE *lf = fopen(path, "r");
+        if (!lf) {
+          cubalc_host_result wr;
+          if (cubalc_host_write(path, body, &wr) == 0)
+            hit = 1;
+        } else {
+          fclose(lf);
+        }
+      }
+#else
+      {
+        int fd = open(path, O_CREAT | O_EXCL | O_WRONLY, 0644);
+        if (fd >= 0) {
+          size_t bl = strlen(body);
+          ssize_t w = write(fd, body, bl);
+          (void)w;
+          close(fd);
+          hit = 1;
+        }
+        /* EEXIST or other → soft miss */
+      }
+#endif
+      if (hit) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "CLAIM", path);
+        var_set_str(vm, "CLAIMFILE", path);
+        var_set_str(vm, "CREATEEXCL", path);
+        var_set_num(vm, "CLAIM_HIT", 1);
+        var_set_num(vm, "CLAIM_N", 1);
+        var_set_num(vm, "CLAIM_PID", pid);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "CLAIM", "");
+      var_set_num(vm, "CLAIM_HIT", 0);
+      var_set_num(vm, "CLAIM_N", 0);
+      var_set_num(vm, "CLAIM_PID", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLAIM: exists");
+      var_set_str(vm, "ERR", "CLAIM: exists");
+      bump(vm); return 1;
+    }
     /* SYS RM|UNLINK|DELETE path — remove regular file; missing soft OK (LAST_N=0)
      * Usability: agents clean STATE/TMP plates without shell rm. */
     if (kw(&L->cur,"RM") || kw(&L->cur,"UNLINK") || kw(&L->cur,"DELETE") ||
