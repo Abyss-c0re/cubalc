@@ -1,0 +1,88 @@
+# SYS DROPEXACTFILE / DROPFILEEXACT / REMOVELINEFILE
+# — drop first exact file line (dual of bag REMOVELINE / complement of HASFILELINE)
+# Usability: drop config flags without substring false positives (DROPMATCHFILE)
+# DROPEXACTFILEI icase. Soft no-match → N=0 OK=1. Soft path miss → OK=0.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "dropexactfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "flags.txt"
+LET fs = LAST
+SYS WRITE fs "feature_a\nfeature_ab\nSTATUS=live\nfeature_b\nmode=soft"
+
+# exact drop — does NOT touch feature_ab
+SYS DROPEXACTFILE fs "feature_a"
+ASSERT OK == 1
+ASSERT DROPEXACTFILE_N == 1
+ASSERT DROPEXACTFILE_I == 0
+ASSERT DROPEXACTFILE_TOTAL == 4
+SYS EQS LAST "feature_a"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 0
+SYS EQS LAST "feature_ab"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "STATUS=live"
+ASSERT LAST_N == 1
+
+# substring would match feature_ab; exact must miss
+SYS DROPEXACTFILE fs "feature"
+ASSERT OK == 1
+ASSERT DROPEXACTFILE_N == 0
+ASSERT DROPEXACTFILE_I == -1
+ASSERT DROPEXACTFILE_TOTAL == 4
+
+# alias
+SYS DROPFILEEXACT fs "feature_b"
+ASSERT DROPEXACTFILE_N == 1
+ASSERT DROPEXACTFILE_I == 2
+SYS EQS LAST "feature_b"
+ASSERT LAST_N == 1
+ASSERT DROPEXACTFILE_TOTAL == 3
+
+# icase
+SYS DROPEXACTFILEI fs "status=live"
+ASSERT DROPEXACTFILE_N == 1
+ASSERT DROPEXACTFILE_I == 1
+SYS EQS LAST "STATUS=live"
+ASSERT LAST_N == 1
+ASSERT DROPEXACTFILE_TOTAL == 2
+
+SYS LINEAT fs 0
+SYS EQS LAST "feature_ab"
+ASSERT LAST_N == 1
+SYS LINEAT fs 1
+SYS EQS LAST "mode=soft"
+ASSERT LAST_N == 1
+
+# REMOVELINEFILE alias soft no-match
+SYS REMOVELINEFILE fs "gone"
+ASSERT OK == 1
+ASSERT DROPEXACTFILE_N == 0
+ASSERT DROPEXACTFILE_I == -1
+
+# soft path miss
+SYS DROPEXACTFILE "no_such_dropexactfile_mi.txt" "x"
+ASSERT OK == 0
+ASSERT DROPEXACTFILE_N == 0
+
+# agent triad: ensure → has → drop exact → has miss
+SYS ENSURELINE fs "feature_c"
+ASSERT ENSURELINE_NEW == 1
+SYS HASFILELINE fs "feature_c"
+ASSERT HASFILELINE_N == 1
+SYS DROPEXACTFILE fs "feature_c"
+ASSERT DROPEXACTFILE_N == 1
+SYS HASFILELINE fs "feature_c"
+ASSERT HASFILELINE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_dropexactfile ok"

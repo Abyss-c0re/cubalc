@@ -6739,6 +6739,168 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS DROPEXACTFILE|DROPFILEEXACT|REMOVELINEFILE path line
+     * — drop first exact file line (dual of bag REMOVELINE / file HASFILELINE).
+     * Exact match only (substring DROPMATCHFILE is separate). DROPEXACTFILEI icase.
+     * LAST = dropped line when hit; DROPEXACTFILE_N 0|1 · I · TOTAL(after).
+     * Soft no-match → N=0 OK=1 file unchanged. Soft path miss → OK=0.
+     * Usability: drop config flag/marker without substring false positives or HAS+DROP glue. */
+    if (kw(&L->cur,"DROPEXACTFILE") || kw(&L->cur,"DROPFILEEXACT") ||
+        kw(&L->cur,"REMOVELINEFILE") || kw(&L->cur,"FILEREMOVELINE") ||
+        kw(&L->cur,"DROPFILELINEEXACT") || kw(&L->cur,"FILEDROPEXACT") ||
+        kw(&L->cur,"DELEXACTLINE") || kw(&L->cur,"REMOVELINEF") ||
+        kw(&L->cur,"DROPEXACTFILEI") || kw(&L->cur,"DROPFILEEXACTI") ||
+        kw(&L->cur,"REMOVELINEFILEI") || kw(&L->cur,"FILEREMOVELINEI") ||
+        kw(&L->cur,"FILEDROPEXACTI") || kw(&L->cur,"DELEXACTLINEI")){
+      char path[512], needle[CUBALC_HOST_STR_MAX], clean[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX], dropped[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      const char *lp, *ls;
+      size_t llen, clen, o = 0;
+      long total = 0, seen = 0, found_i = -1, hit = 0;
+      int icase = 0, first_kept = 1;
+      cubalc_host_result hr, wr;
+      if (kw(&L->cur,"DROPEXACTFILEI") || kw(&L->cur,"DROPFILEEXACTI") ||
+          kw(&L->cur,"REMOVELINEFILEI") || kw(&L->cur,"FILEREMOVELINEI") ||
+          kw(&L->cur,"FILEDROPEXACTI") || kw(&L->cur,"DELEXACTLINEI"))
+        icase = 1;
+      lex_next(L);
+      path[0] = 0; needle[0] = 0; clean[0] = 0; out[0] = 0; dropped[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS DROPEXACTFILE path line");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(needle, sizeof needle, "%ld", n);
+        } else {
+          needle[0] = 0;
+        }
+      }
+      {
+        size_t i = 0;
+        while (needle[i] && needle[i] != '\n' && needle[i] != '\r' && i + 1 < sizeof clean) {
+          clean[i] = needle[i];
+          i++;
+        }
+        clean[i] = 0;
+      }
+      clen = strlen(clean);
+      if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_I", -1);
+        var_set_num(vm, "DROPEXACTFILE_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", path[0] ? "DROPEXACTFILE: read fail" : "DROPEXACTFILE: empty path");
+        var_set_str(vm, "ERR", path[0] ? "DROPEXACTFILE: read fail" : "DROPEXACTFILE: empty path");
+        bump(vm); return 1;
+      }
+      lp = hr.str;
+      total = 0;
+      seen = 0;
+      found_i = -1;
+      if (*lp) {
+        while (*lp) {
+          int match = 0;
+          ls = lp;
+          while (*lp && *lp != '\n') lp++;
+          llen = (size_t)(lp - ls);
+          if (found_i < 0) {
+            if (!icase) {
+              match = (llen == clen && (clen == 0 || memcmp(ls, clean, clen) == 0));
+            } else if (llen == clen) {
+              size_t j;
+              match = 1;
+              for (j = 0; j < clen; j++) {
+                char a2 = ls[j], b2 = clean[j];
+                if (a2 >= 'A' && a2 <= 'Z') a2 = (char)(a2 - 'A' + 'a');
+                if (b2 >= 'A' && b2 <= 'Z') b2 = (char)(b2 - 'A' + 'a');
+                if (a2 != b2) { match = 0; break; }
+              }
+            }
+            if (match) found_i = seen;
+          }
+          total++;
+          seen++;
+          if (*lp == '\n') lp++;
+        }
+      }
+      if (found_i < 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_I", -1);
+        var_set_num(vm, "DROPEXACTFILE_TOTAL", total);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      lp = hr.str;
+      seen = 0;
+      while (seen < total) {
+        ls = lp;
+        while (*lp && *lp != '\n') lp++;
+        llen = (size_t)(lp - ls);
+        if (seen == found_i) {
+          hit = 1;
+          if (llen >= sizeof dropped) llen = sizeof dropped - 1;
+          memcpy(dropped, ls, llen);
+          dropped[llen] = 0;
+        } else {
+          if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+          first_kept = 0;
+          if (o + llen < sizeof out) {
+            memcpy(out + o, ls, llen);
+            o += llen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, ls, take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+        seen++;
+        if (*lp == '\n') lp++;
+        else break;
+      }
+      if (cubalc_host_write(path, out, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_N", 0);
+        var_set_num(vm, "DROPEXACTFILE_I", found_i);
+        var_set_num(vm, "DROPEXACTFILE_TOTAL", total);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "DROPEXACTFILE: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "DROPEXACTFILE: write fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", dropped);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dropped);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_str(vm, "DROPEXACTFILE", dropped);
+      var_set_str(vm, "DROPFILEEXACT", dropped);
+      var_set_str(vm, "REMOVELINEFILE", dropped);
+      var_set_num(vm, "DROPEXACTFILE_N", hit);
+      var_set_num(vm, "DROPEXACTFILE_I", found_i);
+      var_set_num(vm, "DROPEXACTFILE_TOTAL", total > 0 ? total - 1 : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
