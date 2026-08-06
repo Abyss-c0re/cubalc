@@ -1,18 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 169,
-  "version": "1.15.194-usability",
-  "item": "SYS WALK / FINDALL / TREEGLOB recursive full-path discovery",
-  "item_id": 202,
-  "title": "SYS WALK|FINDALL|TREEGLOB root [pattern] — deep trees beyond PATHGLOB",
-  "commit": "9f9310ddc168f23092362057387cfaa1fa640942",
-  "summary": "Recursive path walk with basename pattern. thrash restore + selftest 169.",
+  "iter": 170,
+  "version": "1.15.195-usability",
+  "item": "SYS EQFILE / SAMEFILE identical file content probe",
+  "item_id": 203,
+  "title": "SYS EQFILE|SAMEFILE|CMPFILE a b — verify COPY without shell cmp",
+  "commit": "75338ae8e7c51cfa292f5e77dbf2625fb41fbf3c",
+  "summary": "Streamed file content equality probe. selftest 170.",
   "proofs": [
-    "742_sys_walk",
-    "selftest n_pass=169"
+    "743_sys_eqfile",
+    "selftest n_pass=170"
   ],
-  "when": "2026-08-06T06:06:03Z",
+  "when": "2026-08-06T06:14:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9f9310ddc168f23092362057387cfaa1fa640942",
-  "note": "mass thrash mid-tick; git restore then re-apply WALK"
+  "sha": "75338ae8e7c51cfa292f5e77dbf2625fb41fbf3c"
 }
