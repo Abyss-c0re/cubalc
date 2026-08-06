@@ -1,152 +1,146 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 90,
-  "program": "programs/realworld/load_backpressure_board.cubalc",
-  "theme": "load backpressure LOADAVG NPROC ISATTY admit busy throttle",
-  "version": "1.15.265-usability",
+  "iter": 91,
+  "program": "programs/realworld/host_resource_gate_board.cubalc",
+  "theme": "host resource gate UPTIME MEM DF warmup ram disk admit",
+  "version": "1.15.268-usability",
   "pass": true,
   "tests": [
     {
       "name": "sample",
-      "cmd": "LOADAVG + NPROC \u2192 META load1_n/cut/busy/ratio",
+      "cmd": "UPTIME+MEM+DF \u2192 META kB/secs",
       "ok": true,
-      "note": "centiload 160 vs cut 400"
+      "note": "live host"
     },
     {
-      "name": "cut_auto",
-      "cmd": "cut auto \u2192 0 plate means nproc*100",
+      "name": "admit_ok",
+      "cmd": "warm/ram/disk floors pass",
       "ok": true,
-      "note": "auto"
+      "note": "allow"
     },
     {
-      "name": "mode_out",
-      "cmd": "ISATTY OUT under pipe \u2192 0",
+      "name": "admit_warm",
+      "cmd": "warm=999999999 soft + REQUIRE\u21922",
       "ok": true,
-      "note": "batch"
+      "note": "fail_warm"
     },
     {
-      "name": "admit_allow",
-      "cmd": "load under auto cut \u2192 allow",
+      "name": "admit_ram",
+      "cmd": "rammin absurd \u2192 fail_ram soft",
       "ok": true,
-      "note": "idle-ish host"
+      "note": "low mem gate"
     },
     {
-      "name": "admit_busy",
-      "cmd": "cut=1; load>1 soft deny; REQUIRE\u21922",
+      "name": "admit_disk",
+      "cmd": "diskmin absurd REQUIRE\u21922",
       "ok": true,
-      "note": "throttle"
+      "note": "disk gate"
     },
     {
-      "name": "busy_probe",
-      "cmd": "busy hit when over; no under REQUIRE\u21922",
+      "name": "df_miss",
+      "cmd": "bad path soft; REQUIRE\u21922",
       "ok": true,
-      "note": "dual of admit"
+      "note": "DF miss"
     },
     {
       "name": "stamp",
-      "cmd": "LOCAL + load line",
+      "cmd": "LOCAL + HUMANSIZE mem/disk labels",
       "ok": true,
-      "note": "audit"
-    },
-    {
-      "name": "num_nope",
-      "cmd": "NUM nope OK=1 LAST_N=0 (not fail)",
-      "ok": true,
-      "note": "language footgun"
+      "note": "12G/7G floor"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "238/238 pass"
+      "note": "241/241 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|num",
-      "title": "SYS NUM non-numeric returns OK=1 LAST_N=0",
-      "detail": "NUM \"nope\" / \"1x\" / \"\" succeed with zero. Agents cannot distinguish bad input from zero without digit-check. cut ARG1=nope silently becomes auto-cut 0.",
-      "repro": "SYS NUM \"nope\" \u2192 OK=1 LAST_N=0"
+      "area": "host|units",
+      "title": "MEM/DF report kB; HUMANSIZE expects bytes — silent scale trap",
+      "detail": "Agents stamp HUMANSIZE MEM_AVAIL_N without *1024 and under-report ~1024\u00d7. Board multiplies to bytes; easy to forget.",
+      "repro": "HUMANSIZE MEM_AVAIL_N without *1024"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|loadavg",
-      "title": "LOAD1 string vs LOAD1_N centiload dual plane",
-      "detail": "LAST is \"1.60 1.16 1.20\"; LOAD1_N is 160. Agents comparing LOAD1 to NPROC without _N mis-scale by 100x.",
-      "repro": "LOADAVG; LOAD1 vs LOAD1_N"
+      "area": "host|humansize",
+      "title": "HUMANSIZE floor loses precision on inventory stamps",
+      "detail": "~13GB avail labels as 12G. Operators mis-read free space.",
+      "repro": "HUMANSIZE mem_b \u2192 12G for 13GB-class"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|cut",
-      "title": "cut=0 means auto nproc*100 not absolute zero",
-      "detail": "No way to set \"never busy\" vs \"auto\" without sentinel. Agent wanting cut 0 (always admit) collides with auto.",
-      "repro": "cut 0 and cut auto identical"
+      "area": "host|df",
+      "title": "DF on missing path soft-fails; no partial parent walk",
+      "detail": "DF /no/such \u2192 OK=0. Cannot get free space of nearest existing ancestor without agent loop.",
+      "repro": "SYS DF /no/such/path"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "lang|div",
-      "title": "Integer division load1/nproc loses fractional ratio",
-      "detail": "160/4=40; cannot express 1.60 load per CPU as float. Backpressure bands coarse.",
-      "repro": "ratio_n = load1_n / nproc_n"
+      "area": "host|mem",
+      "title": "MEM avail vs free dual without guidance",
+      "detail": "MEM_AVAIL_N vs MEM_FREE_N; LAST is avail. Agents may gate on free and thrash under cache pressure.",
+      "repro": "MEM_FREE_N << MEM_AVAIL_N often"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|isatty",
-      "title": "ISATTY under selftest/run always non-TTY",
-      "detail": "Cannot positive-test interactive branch in automated runs without real TTY inject.",
-      "repro": "ISATTY OUT \u2192 0 in plate run"
+      "area": "host|cat",
+      "title": "SYS CAT LAST LAST glues same value twice",
+      "detail": "Stamp path used CAT LAST LAST after STR and doubled uptime until fixed. No strcat of distinct planes without LET val shuttle.",
+      "repro": "SYS STR n; SYS CAT LAST LAST"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "CUT/MODE/VAL glue in cat -A.",
-      "repro": "cat -A CUT.txt"
+      "detail": "PATH/WARM/VAL glue in cat -A.",
+      "repro": "cat -A PATH.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|loadavg",
-      "title": "No soft-fail path for LOADAVG on exotic hosts",
-      "detail": "Proof assumes always OK; no documented miss semantics for containers without /proc/loadavg.",
-      "repro": "LOADAVG on restricted FS"
+      "area": "host|num",
+      "title": "NUM non-numeric soft-zero (carryover)",
+      "detail": "warm/rammin/diskmin garbage becomes 0 floors (disabled).",
+      "repro": "NUM nope \u2192 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env still softens",
-      "detail": "CUBALC_LB_REQUIRE=abc leaves REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc admit busy \u2192 rc 0"
+      "area": "host|uptime",
+      "title": "UPTIME integer seconds only; no boot-id / reboot detect",
+      "detail": "Cannot tell reboot vs long up without external boot_id plate.",
+      "repro": "UPTIME only monotonic secs since boot"
     }
   ],
   "workarounds": [
-    "Digit-check ARG before NUM; reject non [0-9]+",
-    "Always use LOAD1_N not LOAD1 for compares",
-    "Use cut=1 for force-busy tests; huge cut for force-allow",
-    "ISATTY tests accept both 0/1; branch on value",
-    "Document auto cut as nproc*100 centiload"
+    "Always *1024 before HUMANSIZE on MEM/DF kB",
+    "Gate on MEM_AVAIL_N not FREE for Linux backpressure",
+    "LET val shuttle for multi-part CAT stamps",
+    "Digit-check floors; 0 means disabled",
+    "DF only existing paths; MKDIR first"
   ],
   "language_gaps": [
-    "NUM strict mode OK=0 on garbage",
-    "LOADAVG float LAST_N or load units helper",
-    "cut sentinel never-busy vs auto",
-    "Fractional ratio / fixed-point div helper",
-    "TTY inject for tests",
-    "WRITE trailing NL"
+    "HUMANSIZE of kB-aware helper or unit arg",
+    "DF ancestor fallback",
+    "MEM free vs avail doc in help",
+    "WRITE trailing NL",
+    "NUM strict mode",
+    "boot_id / reboot generation stamp"
   ],
   "issues_faced": [
-    "sample/admit/busy/mode/stamp green",
-    "NUM nope soft-zero blocks cut validation",
-    "selftest 238/238; no language fix this iter"
+    "sample/admit warm/ram/disk/df paths green",
+    "stamp CAT LAST LAST doubled uptime (fixed in board)",
+    "selftest 241/241; no language fix this iter"
   ],
-  "commit": "87eb98a8913ced74326ef79252196446f0259b83",
-  "ts": "2026-08-06T17:33:48Z"
+  "commit": "",
+  "ts": "2026-08-06T17:58:41Z"
 }

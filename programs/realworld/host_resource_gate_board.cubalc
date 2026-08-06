@@ -1,0 +1,751 @@
+# host_resource_gate_board.cubalc — UPTIME warmup + MEM + DF pre-work gates
+#
+# Real use: agents refuse heavy work until host is warm and has enough RAM
+# and disk free for a target path (no shell uptime/free/df):
+#   UPTIME / BOOTAGE     — seconds since boot (warmup)
+#   MEM / MEMINFO        — total/avail/free kB
+#   DF / DISKFREE path   — filesystem free kB
+#   HUMANSIZE            — human labels for inventory stamps
+# Distinct from load_backpressure (LOADAVG only) and plate_lockdown (MODE):
+# this board is *warmup + RAM + disk free multi-resource admit gate*.
+#
+# Plate under STATE:
+#   PATH.txt       — DF target path (default STATE)
+#   WARM.txt       — min uptime secs (default 0)
+#   RAM_MIN.txt    — min MEM_AVAIL_N kB
+#   DISK_MIN.txt   — min DF_AVAIL_N kB
+#   META.txt       — last sample key:val
+#   VAL.txt        — last admit/deny summary
+#   RESOURCE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_HR_ACTION):
+#   list      — plate (default)
+#   path      — set DF path ARG1
+#   warm      — set min uptime secs ARG1
+#   rammin    — set min avail kB ARG1
+#   diskmin   — set min free kB ARG1
+#   sample    — UPTIME+MEM+DF → META
+#   admit     — sample; soft miss if any floor fails; REQUIRE→2
+#   stamp     — LOCAL + human labels → VAL
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_hr_$$
+#   CUBALC_ARG0=path CUBALC_ARG1=$CUBALC_STATE ...
+#   CUBALC_ARG0=warm CUBALC_ARG1=5 ...
+#   CUBALC_ARG0=rammin CUBALC_ARG1=1024 ...
+#   CUBALC_ARG0=diskmin CUBALC_ARG1=1024 ...
+#   CUBALC_ARG0=sample ...
+#   CUBALC_ARG0=admit ...
+#
+# Env: CUBALC_HR_REQUIRE=1
+#
+# Edges:
+#   DF soft miss bad path; warm not yet; NUM garbage soft-zero
+#   MEM/DF kB vs HUMANSIZE; WRITE NL; REQUIRE; empty path
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "host_resource_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATH.txt"
+DEFAULT WFILE = "WARM.txt"
+DEFAULT RFILE = "RAM_MIN.txt"
+DEFAULT DFILE = "DISK_MIN.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT REPORT = "RESOURCE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_HR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_HR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_HR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_HR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir PFILE
+LET path_meta = LAST
+SYS JOIN state_dir WFILE
+LET warm_meta = LAST
+SYS JOIN state_dir RFILE
+LET ram_meta = LAST
+SYS JOIN state_dir DFILE
+LET disk_meta = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR path_meta OR ""
+LET df_path = LAST
+CLEAR_ERR
+SYS READ OR warm_meta OR ""
+LET warm_s = LAST
+CLEAR_ERR
+SYS READ OR ram_meta OR ""
+LET ram_s = LAST
+CLEAR_ERR
+SYS READ OR disk_meta OR ""
+LET disk_s = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+
+LET warm_n = 0
+LET ram_min = 0
+LET disk_min = 0
+SYS BLANK warm_s
+IF LAST_N == 0 THEN
+  SYS NUM warm_s
+  IF OK == 1 THEN
+    LET warm_n = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS BLANK ram_s
+IF LAST_N == 0 THEN
+  SYS NUM ram_s
+  IF OK == 1 THEN
+    LET ram_min = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS BLANK disk_s
+IF LAST_N == 0 THEN
+  SYS NUM disk_s
+  IF OK == 1 THEN
+    LET disk_min = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS BLANK df_path
+IF LAST_N == 1 THEN
+  LET df_path = state_dir
+END
+
+LET hit = 0
+LET miss = 0
+LET path_ch = 0
+LET warm_ch = 0
+LET ram_ch = 0
+LET disk_ch = 0
+LET meta_ch = 0
+LET val_ch = 0
+LET note_msg = "ok"
+LET up_n = 0
+LET mem_avail = 0
+LET mem_total = 0
+LET df_avail = 0
+LET df_total = 0
+LET fail_warm = 0
+LET fail_ram = 0
+LET fail_disk = 0
+LET fail_df = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "hrgate" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON df_path warm_n ram_min disk_min
+  PRINT_JSON meta
+  PRINT_JSON val
+  LET note_msg = "list ok"
+END
+
+# --- path ---
+SYS EQS ACTION "path"
+IF LAST_N == 1 THEN
+  NOTE "action path"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "path needs dir"
+  END
+  LET df_path = NAME
+  LET path_ch = 1
+  LET hit = 1
+  LET note_msg = "path ok"
+  PRINT_JSON df_path
+END
+
+# --- warm ---
+SYS EQS ACTION "warm"
+IF LAST_N == 1 THEN
+  NOTE "action warm"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "warm needs secs"
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "warm not num"
+    FAIL "warm not num"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "warm not num"
+    END
+  ELSE
+    LET warm_n = LAST_N
+    SYS STR warm_n
+    LET warm_s = LAST
+    LET warm_ch = 1
+    LET val = warm_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "warm ok"
+  END
+  PRINT_JSON warm_n
+  CLEAR_ERR
+END
+
+# --- rammin ---
+SYS EQS ACTION "rammin"
+IF LAST_N == 1 THEN
+  NOTE "action rammin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "rammin needs kB"
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "rammin not num"
+    FAIL "rammin not num"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rammin not num"
+    END
+  ELSE
+    LET ram_min = LAST_N
+    SYS STR ram_min
+    LET ram_s = LAST
+    LET ram_ch = 1
+    LET val = ram_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "rammin ok"
+  END
+  PRINT_JSON ram_min
+  CLEAR_ERR
+END
+
+# --- diskmin ---
+SYS EQS ACTION "diskmin"
+IF LAST_N == 1 THEN
+  NOTE "action diskmin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "diskmin needs kB"
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "diskmin not num"
+    FAIL "diskmin not num"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "diskmin not num"
+    END
+  ELSE
+    LET disk_min = LAST_N
+    SYS STR disk_min
+    LET disk_s = LAST
+    LET disk_ch = 1
+    LET val = disk_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "diskmin ok"
+  END
+  PRINT_JSON disk_min
+  CLEAR_ERR
+END
+
+# --- sample ---
+SYS EQS ACTION "sample"
+IF LAST_N == 1 THEN
+  NOTE "action sample"
+  SYS UPTIME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "sample uptime fail"
+    FAIL "sample uptime fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sample uptime fail"
+    END
+  ELSE
+    LET up_n = LAST_N
+    SYS MEM
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "sample mem fail"
+      FAIL "sample mem fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sample mem fail"
+      END
+    ELSE
+      LET mem_avail = MEM_AVAIL_N
+      LET mem_total = MEM_TOTAL_N
+      SYS DF df_path
+      IF OK == 0 THEN
+        LET miss = 1
+        LET fail_df = 1
+        LET note_msg = "sample df fail"
+        FAIL "sample df fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "sample df fail"
+        END
+      ELSE
+        LET df_avail = DF_AVAIL_N
+        LET df_total = DF_TOTAL_N
+        LET hit = 1
+        LET note_msg = "sample ok"
+      END
+    END
+    SYS STR up_n
+    SYS CAT "uptime:" LAST
+    LET meta = LAST
+    SYS STR mem_avail
+    SYS CAT "mem_avail:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR mem_total
+    SYS CAT "mem_total:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR df_avail
+    SYS CAT "df_avail:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR df_total
+    SYS CAT "df_total:" LAST
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "path:" df_path
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    SYS STR up_n
+    LET val = LAST
+    SYS CAT val "s "
+    LET val = LAST
+    SYS STR mem_avail
+    SYS CAT val LAST
+    LET val = LAST
+    SYS CAT val "kB "
+    LET val = LAST
+    SYS STR df_avail
+    SYS CAT val LAST
+    LET val = LAST
+    SYS CAT val "kB"
+    LET val = LAST
+    LET val_ch = 1
+  END
+  PRINT_JSON up_n mem_avail mem_total df_avail df_total
+  CLEAR_ERR
+END
+
+# --- admit ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET fail_warm = 0
+  LET fail_ram = 0
+  LET fail_disk = 0
+  LET fail_df = 0
+  SYS UPTIME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "admit uptime fail"
+    FAIL "admit uptime fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit uptime fail"
+    END
+  ELSE
+    LET up_n = LAST_N
+    SYS MEM
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "admit mem fail"
+      FAIL "admit mem fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "admit mem fail"
+      END
+    ELSE
+      LET mem_avail = MEM_AVAIL_N
+      LET mem_total = MEM_TOTAL_N
+      SYS DF df_path
+      IF OK == 0 THEN
+        LET fail_df = 1
+        LET miss = 1
+        LET note_msg = "admit df fail"
+        FAIL "admit df fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "admit df fail"
+        END
+      ELSE
+        LET df_avail = DF_AVAIL_N
+        LET df_total = DF_TOTAL_N
+        IF warm_n > 0 THEN
+          IF up_n < warm_n THEN
+            LET fail_warm = 1
+          END
+        END
+        IF ram_min > 0 THEN
+          IF mem_avail < ram_min THEN
+            LET fail_ram = 1
+          END
+        END
+        IF disk_min > 0 THEN
+          IF df_avail < disk_min THEN
+            LET fail_disk = 1
+          END
+        END
+        LET blocked = fail_warm + fail_ram + fail_disk + fail_df
+        SYS STR up_n
+        SYS CAT "uptime:" LAST
+        LET meta = LAST
+        SYS STR mem_avail
+        SYS CAT "mem_avail:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR df_avail
+        SYS CAT "df_avail:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR fail_warm
+        SYS CAT "fail_warm:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR fail_ram
+        SYS CAT "fail_ram:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR fail_disk
+        SYS CAT "fail_disk:" LAST
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        IF blocked > 0 THEN
+          LET miss = 1
+          LET note_msg = "admit blocked"
+          FAIL "admit blocked"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "admit blocked"
+          END
+          SYS STR fail_warm
+          SYS CAT "deny w" LAST
+          LET val = LAST
+          SYS CAT val "r"
+          LET val = LAST
+          SYS STR fail_ram
+          SYS CAT val LAST
+          LET val = LAST
+          SYS CAT val "d"
+          LET val = LAST
+          SYS STR fail_disk
+          SYS CAT val LAST
+          LET val = LAST
+          LET val_ch = 1
+        ELSE
+          LET hit = 1
+          LET note_msg = "admit ok"
+          SYS STR up_n
+          SYS CAT "allow " LAST
+          LET val = LAST
+          SYS CAT val "s mem="
+          LET val = LAST
+          SYS STR mem_avail
+          SYS CAT val LAST
+          LET val = LAST
+          SYS CAT val " disk="
+          LET val = LAST
+          SYS STR df_avail
+          SYS CAT val LAST
+          LET val = LAST
+          LET val_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON up_n mem_avail df_avail fail_warm fail_ram fail_disk
+  CLEAR_ERR
+END
+
+# --- stamp ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS LOCAL
+  LET loc = LAST
+  SYS UPTIME
+  LET up_n = LAST_N
+  SYS MEM
+  LET mem_avail = MEM_AVAIL_N
+  SYS DF df_path
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "stamp df fail"
+    FAIL "stamp df fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stamp df fail"
+    END
+  ELSE
+    LET df_avail = DF_AVAIL_N
+    # HUMANSIZE wants bytes; MEM/DF are kB → *1024
+    LET mem_b = mem_avail * 1024
+    LET df_b = df_avail * 1024
+    SYS HUMANSIZE mem_b
+    LET mem_lab = LAST
+    SYS HUMANSIZE df_b
+    LET df_lab = LAST
+    SYS CAT "[" loc
+    SYS CAT LAST "] up="
+    LET val = LAST
+    SYS STR up_n
+    SYS CAT val LAST
+    LET val = LAST
+    SYS CAT val "s mem="
+    LET val = LAST
+    SYS CAT val mem_lab
+    LET val = LAST
+    SYS CAT val " disk="
+    LET val = LAST
+    SYS CAT val df_lab
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "stamp ok"
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET df_path = ""
+  LET warm_s = ""
+  LET warm_n = 0
+  LET ram_s = ""
+  LET ram_min = 0
+  LET disk_s = ""
+  LET disk_min = 0
+  LET meta = ""
+  LET val = ""
+  LET path_ch = 1
+  LET warm_ch = 1
+  LET ram_ch = 1
+  LET disk_ch = 1
+  LET meta_ch = 1
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "path"
+LET k = k + LAST_N
+SYS EQS ACTION "warm"
+LET k = k + LAST_N
+SYS EQS ACTION "rammin"
+LET k = k + LAST_N
+SYS EQS ACTION "diskmin"
+LET k = k + LAST_N
+SYS EQS ACTION "sample"
+LET k = k + LAST_N
+SYS EQS ACTION "admit"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF path_ch > 0 THEN
+  SYS WRITE path_meta df_path
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "path write failed"
+  END
+  CLEAR_ERR
+END
+IF warm_ch > 0 THEN
+  SYS WRITE warm_meta warm_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "warm write failed"
+  END
+  CLEAR_ERR
+END
+IF ram_ch > 0 THEN
+  SYS WRITE ram_meta ram_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "ram write failed"
+  END
+  CLEAR_ERR
+END
+IF disk_ch > 0 THEN
+  SYS WRITE disk_meta disk_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "disk write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.host_resource_gate_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "uptime"
+LET report = LAST
+SYS STR up_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mem_avail"
+LET report = LAST
+SYS STR mem_avail
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "df_avail"
+LET report = LAST
+SYS STR df_avail
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "fail_warm"
+LET report = LAST
+SYS STR fail_warm
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "fail_ram"
+LET report = LAST
+SYS STR fail_ram
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "fail_disk"
+LET report = LAST
+SYS STR fail_disk
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "host_resource_gate_board" ACTION hit miss up_n note_msg elapsed
