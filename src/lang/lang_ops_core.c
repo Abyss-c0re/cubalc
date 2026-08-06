@@ -4013,6 +4013,173 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS INSERTFILELINE|FILEINSERTLINE|INSFILELINE path n value
+     * — insert line before 0-based index (read-modify-write).
+     * n >= total → append. Empty file / n==0 → front. Soft miss → OK=0.
+     * LAST = inserted line; INSERTFILELINE_N=1 · I · TOTAL (after).
+     * First line of value only. Completes LINEAT/SETFILELINE edit family.
+     * Usability: add plate/config row without READ+INSERTLINE+WRITE glue. */
+    if (kw(&L->cur,"INSERTFILELINE") || kw(&L->cur,"FILEINSERTLINE") ||
+        kw(&L->cur,"INSFILELINE") || kw(&L->cur,"INSLINEF") || kw(&L->cur,"FILEINSLINE") ||
+        kw(&L->cur,"INSERTLINEF") || kw(&L->cur,"ADDLINEF") || kw(&L->cur,"SPLICEFILELINE") ||
+        kw(&L->cur,"FILEADDAT")){
+      char path[512], val[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX], clean[CUBALC_HOST_STR_MAX];
+      const char *lp, *ls, *vp;
+      size_t llen, vlen, o = 0;
+      long idx = 0, total = 0, seen = 0, final_i = 0;
+      int first = 1, inserted = 0;
+      cubalc_host_result hr, wr;
+      lex_next(L);
+      path[0] = 0; val[0] = 0; out[0] = 0; a[0] = 0; clean[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS INSERTFILELINE path n value");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        idx = parse_expr(vm, L);
+      } else {
+        char b[CUBALC_HOST_STR_MAX];
+        b[0] = 0;
+        if (resolve_str_arg(vm, L, b, sizeof b) == 0)
+          idx = atol(b);
+        else
+          idx = 0;
+      }
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vp = val;
+      {
+        size_t i = 0;
+        while (vp[i] && vp[i] != '\n' && vp[i] != '\r' && i + 1 < sizeof clean) {
+          clean[i] = vp[i];
+          i++;
+        }
+        clean[i] = 0;
+      }
+      vlen = strlen(clean);
+      if (idx < 0) idx = 0;
+      if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "INSERTFILELINE_N", 0);
+        var_set_num(vm, "INSERTFILELINE_I", idx);
+        var_set_num(vm, "INSERTFILELINE_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", path[0] ? "INSERTFILELINE: read fail" : "INSERTFILELINE: empty path");
+        var_set_str(vm, "ERR", path[0] ? "INSERTFILELINE: read fail" : "INSERTFILELINE: empty path");
+        bump(vm); return 1;
+      }
+      lp = hr.str;
+      total = 0;
+      if (*lp) {
+        while (*lp) {
+          while (*lp && *lp != '\n') lp++;
+          total++;
+          if (*lp == '\n') lp++;
+        }
+      }
+      if (idx > total) idx = total; /* append past end */
+      final_i = idx;
+      /* empty file → single line */
+      if (total == 0) {
+        if (vlen < sizeof out) {
+          memcpy(out, clean, vlen);
+          o = vlen;
+        } else {
+          size_t take = sizeof out - 1;
+          memcpy(out, clean, take);
+          o = take;
+        }
+        out[o] = 0;
+        inserted = 1;
+        final_i = 0;
+      } else {
+        lp = hr.str;
+        seen = 0;
+        while (seen < total) {
+          ls = lp;
+          while (*lp && *lp != '\n') lp++;
+          llen = (size_t)(lp - ls);
+          if (seen == idx && !inserted) {
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            first = 0;
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, clean, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, clean, take);
+              o += take;
+            }
+            out[o] = 0;
+            inserted = 1;
+          }
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (o + llen < sizeof out) {
+            memcpy(out + o, ls, llen);
+            o += llen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, ls, take);
+            o += take;
+          }
+          out[o] = 0;
+          seen++;
+          if (*lp == '\n') lp++;
+          else break;
+        }
+        if (!inserted) {
+          /* append */
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          if (o + vlen < sizeof out) {
+            memcpy(out + o, clean, vlen);
+            o += vlen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, clean, take);
+            o += take;
+          }
+          out[o] = 0;
+          inserted = 1;
+          final_i = total;
+        }
+      }
+      if (cubalc_host_write(path, out, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "INSERTFILELINE_N", 0);
+        var_set_num(vm, "INSERTFILELINE_I", final_i);
+        var_set_num(vm, "INSERTFILELINE_TOTAL", total);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "INSERTFILELINE: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "INSERTFILELINE: write fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", clean);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", clean);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "INSERTFILELINE", clean);
+      var_set_str(vm, "FILEINSERTLINE", clean);
+      var_set_num(vm, "INSERTFILELINE_N", 1);
+      var_set_num(vm, "INSERTFILELINE_I", final_i);
+      var_set_num(vm, "INSERTFILELINE_TOTAL", total + 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
@@ -13748,7 +13915,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -14071,6 +14238,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FILESETLINE", "SYS FILESETLINE alias of SYS SETFILELINE"},
       {"SYS PUTFILELINE", "SYS PUTFILELINE alias of SYS SETFILELINE"},
       {"SYS SETLINEAT", "SYS SETLINEAT alias of SYS SETFILELINE"},
+      {"SYS INSERTFILELINE", "SYS INSERTFILELINE|FILEINSERTLINE path n value — insert line at 0-based index · append if past end"},
+      {"SYS FILEINSERTLINE", "SYS FILEINSERTLINE alias of SYS INSERTFILELINE"},
+      {"SYS INSFILELINE", "SYS INSFILELINE alias of SYS INSERTFILELINE"},
+      {"SYS INSLINEF", "SYS INSLINEF alias of SYS INSERTFILELINE"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
