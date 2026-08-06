@@ -1,0 +1,57 @@
+# SYS SETMATCHFILE / FILESETMATCH — replace first file line containing needle
+# Usability: FINDFILELINE+SETFILELINE in one for plate/config patches
+# SETMATCHFILEI icase. Soft no-match. Soft path miss.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "setmatchfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "a=1\nstatus=old\nb=2\nSTATUS=keep\nc=3"
+
+SYS SETMATCHFILE fs "status=" "status=new"
+ASSERT OK == 1
+ASSERT SETMATCHFILE_N == 1
+ASSERT SETMATCHFILE_I == 1
+ASSERT SETMATCHFILE_TOTAL == 5
+SYS EQS LAST "status=new"
+ASSERT LAST_N == 1
+
+SYS LINEAT fs 1
+SYS EQS LAST "status=new"
+ASSERT LAST_N == 1
+SYS LINEAT fs 0
+SYS EQS LAST "a=1"
+ASSERT LAST_N == 1
+SYS LINEAT fs 3
+SYS EQS LAST "STATUS=keep"
+ASSERT LAST_N == 1
+
+# icase hits STATUS=keep next
+SYS SETMATCHFILEI fs "status=" "status=done"
+ASSERT SETMATCHFILE_N == 1
+ASSERT SETMATCHFILE_I == 1
+SYS LINEAT fs 1
+SYS EQS LAST "status=done"
+ASSERT LAST_N == 1
+
+# alias no match soft
+SYS FILESETMATCH fs "missing=" "x"
+ASSERT OK == 1
+ASSERT SETMATCHFILE_N == 0
+ASSERT SETMATCHFILE_I == -1
+
+# soft path miss
+SYS SETMATCHFILE "no_such_setmatchfile_mi.txt" "a" "b"
+ASSERT OK == 0
+ASSERT SETMATCHFILE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_setmatchfile ok"
