@@ -295,6 +295,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 265. ~~**`SYS CHMOD` string-var octal**~~ **done** (CHMOD path m with m="0600" parses octal · not strlen coerce).
 266. ~~**`SYS MONOTONIC` / `MONO` / `STEADY_MS`**~~ **done** (CLOCK_MONOTONIC ms · elapsed timing immune to wall jumps).
 267. ~~**`SYS NPROC` / `CPUS` / `CORES`**~~ **done** (online processor count · STRIDE/CHUNK worker partition without shell).
+268. ~~**`SYS UNAME` / `OS` / `ARCH` / `MACHINE` / `PLATFORM`**~~ **done** (kernel + arch probes · portable agent IF without shell uname).
 
 ## Tick protocol
 

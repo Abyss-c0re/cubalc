@@ -1,0 +1,75 @@
+# SYS UNAME / OS / ARCH / MACHINE / PLATFORM
+# — host kernel + machine arch without shell uname
+# Usability: portable agent IF/guards and plate tags
+
+HOLD_FLASH 1
+
+# kernel / OS name
+SYS UNAME
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+SYS LEN UNAME
+ASSERT LAST_N >= 3
+SYS EQS UNAME OS
+ASSERT LAST_N == 1
+
+# aliases for OS
+SYS OS
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+SYS SYSNAME
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+
+# machine architecture
+SYS ARCH
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+SYS LEN ARCH
+ASSERT LAST_N >= 3
+SYS EQS ARCH MACHINE
+ASSERT LAST_N == 1
+
+# ARCH aliases
+SYS MACHINE
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+SYS MACH
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+
+# combined platform tag os/arch
+SYS PLATFORM
+ASSERT OK == 1
+ASSERT LAST_N >= 5
+SYS HAS LAST "/"
+ASSERT LAST_N == 1
+SYS BEFORE LAST "/"
+SYS EQS LAST UNAME
+ASSERT LAST_N == 1
+SYS PLATFORM
+SYS AFTER LAST "/"
+SYS EQS LAST ARCH
+ASSERT LAST_N == 1
+
+# one-shot: UNAME fills ARCH too (and vice versa)
+SYS UNAME
+SYS LEN ARCH
+ASSERT LAST_N >= 3
+SYS ARCH
+SYS LEN UNAME
+ASSERT LAST_N >= 3
+
+# agent: build identity label os/arch@host
+SYS PLATFORM
+LET plat = LAST
+SYS HOSTNAME
+LET host = LAST
+SYS CAT plat "@"
+SYS CAT LAST host
+SYS LEN LAST
+ASSERT LAST_N >= 7
+SYS HAS LAST "@"
+ASSERT LAST_N == 1
+
+PRINT "sys_uname ok"
