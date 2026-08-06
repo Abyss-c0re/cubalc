@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 179,
-  "version": "1.15.204-usability",
-  "item": "SYS HEADFILE / TAILFILE first/last n lines of a file",
-  "item_id": 212,
-  "title": "SYS HEADFILE|TAILFILE path [n] — peek file lines without full READ/shell head",
-  "commit": "73169cfd01e1b0698c247f84472b8827e1595d16",
-  "summary": "First/last n file lines → bag; default 10; TOTAL/WANT stats. selftest 179.",
+  "iter": 180,
+  "version": "1.15.205-usability",
+  "item": "SYS LINECOUNTALL / WCALL path bag line counts + sum",
+  "item_id": 213,
+  "title": "SYS LINECOUNTALL|WCALL|MAPLINES [bag] — line inventory dual of SIZEALL",
+  "commit": "4a1a1bfb7611209338b79094019d8dbb3e66cb1a",
+  "summary": "Path bag → line count bag + SUM; miss=0. selftest 180.",
   "proofs": [
-    "752_sys_headfile",
-    "selftest n_pass=179"
+    "753_sys_linecountall",
+    "selftest n_pass=180"
   ],
-  "when": "2026-08-06T07:44:33Z",
+  "when": "2026-08-06T07:53:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "73169cfd01e1b0698c247f84472b8827e1595d16"
+  "sha": "4a1a1bfb7611209338b79094019d8dbb3e66cb1a"
 }
