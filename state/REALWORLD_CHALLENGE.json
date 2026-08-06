@@ -8,25 +8,25 @@
   "tests": [
     {
       "name": "scan_cfg",
-      "cmd": "PATHGLOB *.cfg → a b c",
+      "cmd": "PATHGLOB *.cfg \u2192 a b c",
       "ok": true,
       "note": "inventory"
     },
     {
       "name": "cat_glue",
-      "cmd": "READALL default → no sep; bytes=46 glued fields",
+      "cmd": "READALL default \u2192 no sep; bytes=46 glued fields",
       "ok": true,
       "note": "default concat no NL"
     },
     {
       "name": "cat_sep",
-      "cmd": "READALL sep ||| → delimited digest",
+      "cmd": "READALL sep ||| \u2192 delimited digest",
       "ok": true,
       "note": "explicit sep"
     },
     {
       "name": "scrub_old_new",
-      "cmd": "REPLACEFILES host=old→new → N=2 SKIP=1 (c keep)",
+      "cmd": "REPLACEFILES host=old\u2192new \u2192 N=2 SKIP=1 (c keep)",
       "ok": true,
       "note": "only changed files"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "cat_soft_miss",
-      "cmd": "READALL with ghost → read_n=2 miss=1 partial",
+      "cmd": "READALL with ghost \u2192 read_n=2 miss=1 partial",
       "ok": true,
       "note": "OK=0 class cleared"
     },
@@ -60,9 +60,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|fs",
-      "title": "READALL default joins files with empty sep — fields glue without NL",
-      "detail": "READALL bag produces host=keep port=3host=old port=2… unless sep given. Agents expecting newline join must pass \"\\n\" or \"|||\". Easy silent parse errors on digest.",
-      "repro": "READALL three cfgs → glued string no boundaries"
+      "title": "READALL default joins files with empty sep \u2014 fields glue without NL",
+      "detail": "READALL bag produces host=keep port=3host=old port=2\u2026 unless sep given. Agents expecting newline join must pass \"\\n\" or \"|||\". Easy silent parse errors on digest.",
+      "repro": "READALL three cfgs \u2192 glued string no boundaries"
     },
     {
       "id": "W2",
@@ -78,7 +78,7 @@
       "area": "host|fs",
       "title": "REPLACEFILES empty old is silent no-op (SKIP all)",
       "detail": "Documented in proof; empty needle from ARG miss can look like success-zero-change if agent does not REQUIRE.",
-      "repro": "REPLACEFILES bag \"\" x → N=0 SKIP=scan"
+      "repro": "REPLACEFILES bag \"\" x \u2192 N=0 SKIP=scan"
     },
     {
       "id": "W4",
@@ -118,7 +118,7 @@
       "area": "host|fs",
       "title": "READALL partial miss sets OK=0 while still returning concat",
       "detail": "Strict -s agents need CLEAR_ERR after partial success. Same class as RMALL/COPYALL partial OK.",
-      "repro": "READALL bag_with_ghost → OK=0 READALL_N>0"
+      "repro": "READALL bag_with_ghost \u2192 OK=0 READALL_N>0"
     }
   ],
   "workarounds": [
@@ -137,10 +137,10 @@
   ],
   "issues_faced": [
     "REPLACEFILES+READALL+WRITEALL positive path clean",
-    "Default READALL glue surprised — need explicit sep",
+    "Default READALL glue surprised \u2014 need explicit sep",
     "Empty ARG1 blocked by agent EXIT before language empty-old no-op",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "3dd8cb980c72138fb88622e1ad0635e76a099d63",
   "ts": "2026-08-06T07:08:30Z"
 }
