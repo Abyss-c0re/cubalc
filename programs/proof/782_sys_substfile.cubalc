@@ -1,0 +1,85 @@
+# SYS SUBSTFILE / EXPANDFILE / ENVSUBSTFILE
+# — read template file, expand $NAME/${NAME}, write result
+# Usability: plate/config materialize without READ+SUBSTENV+WRITE glue
+# Default out = path (in-place). Soft miss read/write → OK=0.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "substfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "tmpl.conf"
+LET tp = LAST
+SYS JOIN fix "out.conf"
+LET op = LAST
+
+SYS ENV SET "CUBALC_MI_SF_HOST" "peer9"
+LET ROLE = "body"
+LET N = 7
+
+SYS WRITE tp "host=${CUBALC_MI_SF_HOST}\nrole=$ROLE\nid=$N\ncost=$$1"
+
+# expand to separate out path
+SYS SUBSTFILE tp op
+ASSERT OK == 1
+ASSERT SUBSTFILE_N == 3
+ASSERT SUBSTFILE_MISS == 0
+ASSERT SUBSTFILE_BYTES >= 20
+SYS EQS LAST op
+ASSERT LAST_N == 1
+
+SYS READ op
+SYS HAS LAST "host=peer9"
+ASSERT LAST_N == 1
+SYS READ op
+SYS HAS LAST "role=body"
+ASSERT LAST_N == 1
+SYS READ op
+SYS HAS LAST "id=7"
+ASSERT LAST_N == 1
+SYS READ op
+SYS HAS LAST "cost=$1"
+ASSERT LAST_N == 1
+
+# original template unchanged
+SYS READ tp
+SYS HAS LAST "${CUBALC_MI_SF_HOST}"
+ASSERT LAST_N == 1
+
+# in-place expand
+SYS WRITE tp "x=$CUBALC_MI_SF_HOST"
+SYS EXPANDFILE tp
+ASSERT OK == 1
+ASSERT SUBSTFILE_N == 1
+SYS READ tp
+SYS EQS LAST "x=peer9"
+ASSERT LAST_N == 1
+
+# alias ENVSUBSTFILE with miss
+SYS WRITE tp "gone=${CUBALC_MI_SF_NOPE}end"
+SYS ENVSUBSTFILE tp op
+ASSERT OK == 1
+ASSERT SUBSTFILE_MISS == 1
+ASSERT SUBSTFILE_N == 1
+SYS READ op
+SYS EQS LAST "gone=end"
+ASSERT LAST_N == 1
+
+# soft path miss
+SYS SUBSTFILE "no_such_substfile_mi.conf" op
+ASSERT OK == 0
+ASSERT SUBSTFILE_N == 0
+
+# empty path
+SYS SUBSTFILE "" op
+ASSERT OK == 0
+
+# cleanup
+SYS ENV UNSET "CUBALC_MI_SF_HOST"
+SYS RM tp
+SYS RM op
+
+PRINT "sys_substfile ok"

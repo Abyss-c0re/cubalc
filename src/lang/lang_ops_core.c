@@ -144,6 +144,98 @@ static void cubalc_sys_walk_rec(const char *dir, const char *pat,
   }
 }
 
+/* Expand $NAME / ${NAME} from process env, then program vars.
+ * $$ → literal $. Unset → empty. *miss_out = count of unset names.
+ * Returns number of $ expansions attempted (hits including miss). */
+static long cubalc_expand_substenv(VM *vm, const char *tmpl, char *out, size_t outcap,
+                                   long *miss_out) {
+  const char *src = tmpl ? tmpl : "";
+  size_t o = 0;
+  long hits = 0, miss = 0;
+  char name[128];
+  if (!out || outcap == 0) {
+    if (miss_out) *miss_out = 0;
+    return 0;
+  }
+  out[0] = 0;
+  while (*src && o + 1 < outcap) {
+    if (*src == '$') {
+      if (src[1] == '$') {
+        out[o++] = '$';
+        src += 2;
+        continue;
+      }
+      name[0] = 0;
+      if (src[1] == '{') {
+        const char *p = src + 2;
+        size_t ni = 0;
+        while (*p && *p != '}' && ni + 1 < sizeof name)
+          name[ni++] = *p++;
+        name[ni] = 0;
+        if (*p == '}')
+          src = p + 1;
+        else {
+          out[o++] = *src++;
+          continue;
+        }
+      } else if ((src[1] >= 'A' && src[1] <= 'Z') ||
+                 (src[1] >= 'a' && src[1] <= 'z') ||
+                 src[1] == '_') {
+        const char *p = src + 1;
+        size_t ni = 0;
+        while (*p && ni + 1 < sizeof name &&
+               ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+                (*p >= '0' && *p <= '9') || *p == '_'))
+          name[ni++] = *p++;
+        name[ni] = 0;
+        src = p;
+      } else {
+        out[o++] = *src++;
+        continue;
+      }
+      {
+        const char *val = NULL;
+        char vbuf[CUBALC_HOST_STR_MAX];
+        cubalc_host_result er;
+        vbuf[0] = 0;
+        cubalc_host_env(name, &er);
+        if (er.str[0] && er.n > 0) {
+          val = er.str;
+        } else {
+          Var *vv = var_get(vm, name, 0);
+          if (vv) {
+            if (vv->is_str) {
+              snprintf(vbuf, sizeof vbuf, "%s", vv->sval);
+              val = vbuf;
+            } else {
+              snprintf(vbuf, sizeof vbuf, "%ld", vv->val);
+              val = vbuf;
+            }
+          }
+        }
+        if (val) {
+          size_t vn = strlen(val);
+          if (o + vn >= outcap) vn = outcap - 1 - o;
+          if (vn > 0) {
+            memcpy(out + o, val, vn);
+            o += vn;
+          }
+          out[o] = 0;
+          hits++;
+        } else {
+          miss++;
+          hits++;
+        }
+      }
+      continue;
+    }
+    out[o++] = *src++;
+  }
+  out[o] = 0;
+  if (miss_out) *miss_out = miss;
+  return hits;
+}
+
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
   skip_nl(L);
@@ -1059,93 +1151,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"TEMPLATEENV") || kw(&L->cur,"ENVTEMPLATE") ||
         kw(&L->cur,"INTERPENV") || kw(&L->cur,"DOLLARENV") ||
         kw(&L->cur,"SHELLSUB") || kw(&L->cur,"SUBENV")){
-      char tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], name[128];
-      const char *src;
-      size_t o = 0;
+      char tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
       long hits = 0, miss = 0;
       lex_next(L);
       tmpl[0] = 0; out[0] = 0;
       if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0)
         snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
-      src = tmpl;
-      while (*src && o + 1 < sizeof out) {
-        if (*src == '$') {
-          if (src[1] == '$') {
-            out[o++] = '$';
-            src += 2;
-            continue;
-          }
-          name[0] = 0;
-          if (src[1] == '{') {
-            const char *p = src + 2;
-            size_t ni = 0;
-            while (*p && *p != '}' && ni + 1 < sizeof name) {
-              name[ni++] = *p++;
-            }
-            name[ni] = 0;
-            if (*p == '}') {
-              src = p + 1;
-            } else {
-              /* unclosed ${ — emit literal */
-              out[o++] = *src++;
-              continue;
-            }
-          } else if ((src[1] >= 'A' && src[1] <= 'Z') ||
-                     (src[1] >= 'a' && src[1] <= 'z') ||
-                     src[1] == '_') {
-            const char *p = src + 1;
-            size_t ni = 0;
-            while (*p && ni + 1 < sizeof name &&
-                   ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
-                    (*p >= '0' && *p <= '9') || *p == '_')) {
-              name[ni++] = *p++;
-            }
-            name[ni] = 0;
-            src = p;
-          } else {
-            out[o++] = *src++;
-            continue;
-          }
-          {
-            const char *val = NULL;
-            char vbuf[CUBALC_HOST_STR_MAX];
-            cubalc_host_result er;
-            vbuf[0] = 0;
-            cubalc_host_env(name, &er);
-            if (er.str[0] && er.n > 0) {
-              val = er.str;
-            } else {
-              Var *vv = var_get(vm, name, 0);
-              if (vv) {
-                if (vv->is_str) {
-                  snprintf(vbuf, sizeof vbuf, "%s", vv->sval);
-                  val = vbuf;
-                } else {
-                  snprintf(vbuf, sizeof vbuf, "%ld", vv->val);
-                  val = vbuf;
-                }
-              }
-            }
-            if (val) {
-              size_t vn = strlen(val);
-              if (o + vn >= sizeof out) vn = sizeof out - 1 - o;
-              if (vn > 0) {
-                memcpy(out + o, val, vn);
-                o += vn;
-              }
-              out[o] = 0;
-              hits++;
-            } else {
-              miss++;
-              hits++;
-              /* leave empty for unset */
-            }
-          }
-          continue;
-        }
-        out[o++] = *src++;
-      }
-      out[o] = 0;
+      hits = cubalc_expand_substenv(vm, tmpl, out, sizeof out, &miss);
       var_set_str(vm, "LAST", out);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
       vm->last_n = hits;
@@ -1157,6 +1169,85 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "ENVSUBST_N", hits);
       var_set_num(vm, "SUBSTENV_MISS", miss);
       var_set_num(vm, "ENVSUBST_MISS", miss);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SUBSTFILE|ENVSUBSTFILE|EXPANDFILE path [out]
+     * — read template file, expand $NAME/${NAME} (env then vars), write result.
+     * Default out = path (in-place). LAST = out path; LAST_N = replacements;
+     * SUBSTFILE_MISS · SUBSTFILE_BYTES. Soft miss read/write → OK=0.
+     * Usability: materialize plate/config templates without READ+SUBSTENV+WRITE glue. */
+    if (kw(&L->cur,"SUBSTFILE") || kw(&L->cur,"ENVSUBSTFILE") ||
+        kw(&L->cur,"EXPANDFILE") || kw(&L->cur,"FILESUBSTENV") ||
+        kw(&L->cur,"TEMPLATEFILE") || kw(&L->cur,"FILEEXPAND") ||
+        kw(&L->cur,"RENDERFILE") || kw(&L->cur,"SUBSTF") ||
+        kw(&L->cur,"ENVSUBFILE") || kw(&L->cur,"MATERIALIZE")){
+      char path[512], outpath[512], a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      char expanded[CUBALC_HOST_STR_MAX];
+      long hits = 0, miss = 0;
+      cubalc_host_result hr, wr;
+      lex_next(L);
+      path[0] = 0; outpath[0] = 0; a[0] = 0; b[0] = 0; expanded[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS SUBSTFILE path [out]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (resolve_str_arg(vm, L, b, sizeof b) == 0 && b[0])
+        snprintf(outpath, sizeof outpath, "%s", b);
+      else
+        snprintf(outpath, sizeof outpath, "%s", path);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SUBSTFILE_N", 0);
+        var_set_num(vm, "SUBSTFILE_MISS", 0);
+        var_set_num(vm, "SUBSTFILE_BYTES", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SUBSTFILE: empty path");
+        var_set_str(vm, "ERR", "SUBSTFILE: empty path");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SUBSTFILE_N", 0);
+        var_set_num(vm, "SUBSTFILE_MISS", 0);
+        var_set_num(vm, "SUBSTFILE_BYTES", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "SUBSTFILE: read fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "SUBSTFILE: read fail");
+        bump(vm); return 1;
+      }
+      hits = cubalc_expand_substenv(vm, hr.str, expanded, sizeof expanded, &miss);
+      if (cubalc_host_write(outpath, expanded, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SUBSTFILE_N", hits);
+        var_set_num(vm, "SUBSTFILE_MISS", miss);
+        var_set_num(vm, "SUBSTFILE_BYTES", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "SUBSTFILE: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "SUBSTFILE: write fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", outpath);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", outpath);
+      vm->last_n = hits;
+      var_set_num(vm, "LAST_N", hits);
+      var_set_str(vm, "SUBSTFILE", outpath);
+      var_set_str(vm, "ENVSUBSTFILE", outpath);
+      var_set_str(vm, "EXPANDFILE", outpath);
+      var_set_str(vm, "SUBSTFILE_BODY", expanded);
+      var_set_num(vm, "SUBSTFILE_N", hits);
+      var_set_num(vm, "SUBSTFILE_MISS", miss);
+      var_set_num(vm, "SUBSTFILE_BYTES", (long)strlen(expanded));
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }

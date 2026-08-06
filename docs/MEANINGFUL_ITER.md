@@ -268,6 +268,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 238. ~~**`SYS SUBSTENV` / `ENVSUBST` / `EXPANDENV`**~~ **done** (expand `$NAME`/`${NAME}` from env+vars · path templates without shell envsubst).
 239. ~~**`SYS SWAPFILES` / `DUPLEX` / `TCPXFER` / `TCPLISTEN`**~~ **done** (bidirectional any-payload host flow · plate swap + mailbox RTT + CBXF TCP).
 240. ~~**`SYS WAITFILE` / `WAITPATH` / `POLLFILE`**~~ **done** (poll until path exists · agent plate/peer handoff without EXIST+SLEEP loop).
+241. ~~**`SYS SUBSTFILE` / `EXPANDFILE` / `ENVSUBSTFILE`**~~ **done** (materialize `$VAR` template file · READ+SUBSTENV+WRITE one-shot).
 
 ## Tick protocol
 
