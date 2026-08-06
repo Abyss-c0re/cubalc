@@ -174,6 +174,6 @@
     "PATHGLOB order non-deterministic for bookend semantics",
     "No language fix this iter \u2014 document for MEANINGFUL_ITER"
   ],
-  "commit": "647aff770274e50c883e9a7aff31147c3a9ad8d7",
+  "commit": "0c8b81c2c151ee5cb238dd681d6e57b4f43bedb6",
   "ts": "2026-08-06T07:34:20Z"
 }
