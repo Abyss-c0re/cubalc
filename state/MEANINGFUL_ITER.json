@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 237,
-  "version": "1.15.264-usability",
-  "item": "SYS ISATTY / TTY terminal stream probe",
-  "item_id": 272,
-  "title": "SYS ISATTY|TTY [IN|OUT|ERR] — terminal probe for pipe-aware agents",
-  "commit": "2172464c80a779676afff3bd6b8d43977a8883f1",
-  "summary": "TTY vs pipe probe for interactive agent paths. selftest 237.",
+  "iter": 238,
+  "version": "1.15.265-usability",
+  "item": "SYS LOADAVG / LOAD host load averages",
+  "item_id": 273,
+  "title": "SYS LOADAVG|LOAD — 1/5/15 load + centiload for agent backpressure",
+  "commit": "846ddaaa28bb9b640ff5d5a738c645e8757be1fc",
+  "summary": "Host load averages with integer centiload for IF/CMP backpressure. selftest 238.",
   "proofs": [
-    "811_sys_isatty",
-    "selftest n_pass=237"
+    "812_sys_loadavg",
+    "selftest n_pass=238"
   ],
-  "when": "2026-08-06T17:16:00Z",
+  "when": "2026-08-06T17:26:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2172464c80a779676afff3bd6b8d43977a8883f1",
-  "note": "WHICHBIN string-var already on main via realworld; this tick ISATTY"
+  "sha": "846ddaaa28bb9b640ff5d5a738c645e8757be1fc",
+  "note": "LOAD1_N = load*100; LAST bag of three floats"
 }
