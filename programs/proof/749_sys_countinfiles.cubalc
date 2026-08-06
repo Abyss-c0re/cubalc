@@ -1,0 +1,68 @@
+# SYS COUNTINFILES / GREPCOUNTFILES — total needle hits across path bag
+# Usability: multi-file severity rollup without EACH+READ+COUNTMATCH
+# Complements GREPFILES (paths) with a tally. COUNTINFILESI icase.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "countinfiles_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.log"
+LET fa = LAST
+SYS JOIN fix "b.log"
+LET fb = LAST
+SYS JOIN fix "c.log"
+LET fc = LAST
+SYS JOIN fix "gone.log"
+LET fg = LAST
+
+SYS WRITE fa "ERROR one ERROR two"
+SYS WRITE fb "warn only"
+SYS WRITE fc "Error three"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST fg
+LET bag = LAST
+
+SYS COUNTINFILES bag "ERROR"
+ASSERT OK == 1
+ASSERT COUNTINFILES_N == 2
+ASSERT COUNTINFILES_FILES == 1
+ASSERT COUNTINFILES_SCAN == 4
+ASSERT COUNTINFILES_MISS == 1
+ASSERT LAST_N == 2
+
+# case-insensitive: ERROR + Error = 3
+SYS COUNTINFILESI bag "error"
+ASSERT COUNTINFILES_N == 3
+ASSERT COUNTINFILES_FILES == 2
+
+# one-arg after PATHGLOB
+SYS PATHGLOB fix "*.log"
+SYS KEEPFILES
+SYS GREPCOUNTFILES "ERROR"
+ASSERT GREPCOUNTFILES == 2
+ASSERT COUNTINFILES_FILES == 1
+
+# empty needle → 0
+SYS COUNTINFILES bag ""
+ASSERT COUNTINFILES_N == 0
+ASSERT COUNTINFILES_FILES == 0
+ASSERT OK == 1
+
+# empty bag
+SYS COUNTINFILES "" "x"
+ASSERT COUNTINFILES_N == 0
+ASSERT COUNTINFILES_SCAN == 0
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_countinfiles ok"
