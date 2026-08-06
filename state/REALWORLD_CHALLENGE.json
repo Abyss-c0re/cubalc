@@ -1,153 +1,146 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 103,
-  "program": "programs/realworld/job_spawn_prep_board.cubalc",
-  "theme": "job spawn prep NICE yield + SHQUOTE/SHUNQUOTE cmd plate",
-  "version": "1.15.297-usability",
+  "iter": 104,
+  "program": "programs/realworld/session_nonce_board.cubalc",
+  "theme": "session nonce GETLOGIN dual + ENTROPY hex mint",
+  "version": "1.15.299-usability",
   "pass": true,
   "tests": [
     {
-      "name": "nice_get",
-      "cmd": "GETNICE \u2192 0",
+      "name": "login_who",
+      "cmd": "GETLOGIN + USER dual same=1",
       "ok": true,
-      "note": "baseline"
+      "note": "root@root"
     },
     {
-      "name": "yield",
-      "cmd": "NICE +1 same process \u2192 1; BASE saved 0",
+      "name": "mint16",
+      "cmd": "ENTROPY 16 → 32 hex",
       "ok": true,
-      "note": "from 0 to 1"
+      "note": "nonce"
     },
     {
-      "name": "nice_reexec",
-      "cmd": "new process nice still 0",
+      "name": "short_cap",
+      "cmd": "4 bytes + 9999 clamp 256/512",
       "ok": true,
-      "note": "process scope"
+      "note": "cap ok"
     },
     {
-      "name": "quote_spaces",
-      "cmd": "SHQUOTE path with spaces",
+      "name": "ticket",
+      "cmd": "login.entropy composite",
       "ok": true,
-      "note": "'path with spaces'"
+      "note": "root.<16hex>"
     },
     {
-      "name": "round_apostrophe",
-      "cmd": "quote/unquote it's round-trip",
+      "name": "bag",
+      "cmd": "3×8-byte tokens bag",
       "ok": true,
-      "note": "double_same=0"
-    },
-    {
-      "name": "build",
-      "cmd": "quoted cmd + arg line",
-      "ok": true,
-      "note": "'/usr/bin/echo' 'hello world'"
+      "note": "3 lines"
     },
     {
       "name": "gate",
-      "cmd": "nice>=0 pass; >=99 REQUIRE\u21922",
+      "cmd": "login==user admit",
       "ok": true,
-      "note": "deny"
+      "note": "pass"
     },
     {
-      "name": "empty_arg",
-      "cmd": "quote empty ARG treated missing",
+      "name": "mint_zero",
+      "cmd": "ENTROPY 0 REQUIRE→2",
       "ok": true,
-      "note": "EXIT 2 needs string"
+      "note": "deny"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "270/270 pass"
+      "note": "272/272 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|nice",
-      "title": "NICE is process-scoped \u2014 lost across cubalc re-execs",
-      "detail": "yield then gate in separate runs sees original nice. Agents assume durable host priority like CHMOD. Same class as UMASK.",
-      "repro": "yield 1; new process GETNICE \u2192 0"
+      "area": "host|getlogin",
+      "title": "GETLOGIN vs USER dual under-documented for su/$USER override",
+      "detail": "Agents using only USER miss session utmp identity; only USER miss setuid/login divergence. No LOGIN_EQ_USER helper.",
+      "repro": "su; GETLOGIN may ≠ USER"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|shquote",
-      "title": "Double SHQUOTE nests \u2014 no idempotent quote mode",
-      "detail": "SHQUOTE of already-quoted string re-wraps (double_same=0). Agents that quote twice corrupt SPAWN lines. No SHQUOTE_IF needed.",
-      "repro": "SHQUOTE 'x' then SHQUOTE LAST"
+      "area": "host|entropy",
+      "title": "ENTROPY silent clamp to 256 bytes — no overflow warn",
+      "detail": "ENTROPY 9999 → 512 hex OK=1. Agents requesting 1KB token think they got 9999 bytes. No ENTROPY_CLAMPED bit.",
+      "repro": "ENTROPY 9999; ENTROPY_BYTES==256"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|nice",
-      "title": "Cannot lower nice without privilege \u2014 restore soft-fail",
-      "detail": "After yield, restore to lower value fails for unprivileged; only root can drop nice. No NICE_CAN_LOWER probe.",
-      "repro": "NICE 5; NICE 0 as non-root \u2192 fail"
+      "severity": "med",
+      "area": "host|entropy",
+      "title": "Hex-only output — no base64/raw form",
+      "detail": "Tokens double size vs binary. No ENTROPY_B64. Agents chain HEXD for binary.",
+      "repro": "ENTROPY 16 → 32 chars"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|arg",
-      "title": "Empty string ARG collapsed to missing by BLANK",
-      "detail": "CUBALC_ARG1='' makes quote exit needs-string; cannot quote empty to '' via empty ARG without sentinel. Language BLANK treats empty as absent.",
-      "repro": "quote ARG1 empty \u2192 EXIT needs string"
+      "area": "host|getlogin",
+      "title": "GETLOGIN empty edge on non-session (daemon) soft-fail model unclear",
+      "detail": "Proof asserts non-empty; daemons without utmp may OK=0 or empty. Agents lack portable fallback path docs.",
+      "repro": "cron GETLOGIN"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|shunquote",
-      "title": "SHUNQUOTE pass-through of unquoted raw is silent",
-      "detail": "UNQUOTE raw \u2192 raw OK=1. Agents cannot tell was-quoted vs never-quoted without STARTS/ENDS ' checks.",
-      "repro": "SHUNQUOTE raw \u2192 raw"
+      "area": "host|has",
+      "title": "HAS on hex tokens is alphabet false-friend",
+      "detail": "HAS token a often 1; cannot validate charset with HAS. No ISHEX helper.",
+      "repro": "HAS nonce a"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS on quoted strings always hits quote chars",
-      "detail": "HAS 'hello' ' \u2192 1 always. False friends when searching for apostrophe content.",
-      "repro": "HAS quoted '"
+      "area": "host|uuid",
+      "title": "ENTROPY vs UUID dual purpose confusion",
+      "detail": "UUID dashed fixed layout; ENTROPY pure hex. Agents mix formats in same plate without type stamp.",
+      "repro": "ticket uses entropy not UUID"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "BASE/CMD glue in cat -A.",
-      "repro": "cat -A BASE.txt"
+      "detail": "VAL short hex glue in cat -A.",
+      "repro": "cat -A VAL.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_JS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate 99 \u2192 rc 0"
+      "detail": "CUBALC_SN_REQUIRE=abc.",
+      "repro": "REQUIRE=abc mint 0 → rc 0"
     }
   ],
   "workarounds": [
-    "Co-locate NICE set with SPAWN in same process",
-    "Never SHQUOTE twice; check STARTS ' before re-quote",
-    "Expect restore fail when lowering nice unprivileged",
-    "Use sentinel token for empty quote body",
+    "Always dual-stamp GETLOGIN and USER",
+    "Check ENTROPY_BYTES after large requests",
+    "Prefix tokens with type=entropy or type=uuid",
+    "Fallback USER when GETLOGIN empty",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "Session/host-persistent nice or CUBALC_NICE auto-apply",
-    "SHQUOTE_ONCE / already-quoted detect",
-    "NICE_CAN_LOWER / privilege probe",
-    "Empty ARG vs missing ARG distinction",
-    "WAS_QUOTED bit from SHUNQUOTE",
+    "LOGIN_EQ_USER one-shot probe",
+    "ENTROPY_CLAMPED / refuse-oversize mode",
+    "ENTROPY_B64 / raw byte bag form",
+    "ISHEX charset probe",
+    "GETLOGIN daemon fallback docs",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "nice/yield/quote/round/build/gate green",
-    "cross-run nice loss and double-quote documented",
-    "empty ARG blank trap on quote",
-    "selftest 270/270; no language fix this iter"
+    "login/who/mint/short/cap/ticket/bag/gate green",
+    "silent 256-byte clamp is core lesson",
+    "selftest 272/272; no language fix this iter"
   ],
-  "commit": "6f090f46c4c09d53c3bebc54bf10c4c1bbc1ec9a",
-  "ts": "2026-08-06T22:58:54Z"
+  "commit": "",
+  "ts": "2026-08-06T23:24:10Z"
 }

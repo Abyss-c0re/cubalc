@@ -1,0 +1,863 @@
+# session_nonce_board.cubalc — GETLOGIN dual + ENTROPY hex nonces
+#
+# Real use: agents mint one-time job/auth nonces bound to session login
+# without shell who am i / od -An -N16 -tx1 /dev/urandom:
+#   GETLOGIN / LOGINNAME     — utmp/session login (may ≠ $USER)
+#   USER                     — process identity companion
+#   ENTROPY / URANDOM [n]    — n random bytes as lowercase hex
+# Distinct from job_ticket (UUID+URLENC+JSONESC+CRC32) and token_blast
+# (grep blast radius): this board is *session login dual + urandom mint*.
+#
+# Plate under STATE:
+#   LAST_TOKEN.txt — last minted hex
+#   BAG.txt        — multi-mint bag
+#   VAL.txt
+#   META.txt
+#   NONCE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SN_ACTION):
+#   list      — plate (default)
+#   login     — GETLOGIN → VAL
+#   who       — login vs USER dual stamp
+#   same      — GETLOGIN EQS USER
+#   mint      — ENTROPY ARG1 bytes (default 16) → VAL/LAST_TOKEN
+#   short     — ENTROPY 4 → 8 hex
+#   cap       — ENTROPY 9999 → clamp 512 hex
+#   ticket    — login + entropy composite id
+#   bag       — mint ARG1 count (default 3) of ARG2-byte tokens
+#   gate      — require same login==user (REQUIRE optional)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sn_$$
+#   CUBALC_ARG0=login ...
+#   CUBALC_ARG0=who ...
+#   CUBALC_ARG0=mint CUBALC_ARG1=16 ...
+#   CUBALC_ARG0=ticket ...
+#   CUBALC_ARG0=bag CUBALC_ARG1=3 CUBALC_ARG2=8 ...
+#   CUBALC_ARG0=gate ...
+#
+# Env: CUBALC_SN_REQUIRE=1  CUBALC_SN_BYTES=16  CUBALC_SN_COUNT=3
+#
+# Edges:
+#   GETLOGIN empty under some non-session contexts (soft)
+#   USER vs LOGIN diverge under su/$USER override
+#   ENTROPY clamp 256 bytes; 0-size soft?
+#   hex only lowercase; no base64 form
+#   collision check soft (no assert inequality)
+#   HAS false friends on hex; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "session_nonce_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT TFILE = "LAST_TOKEN.txt"
+DEFAULT BFILE = "BAG.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "NONCE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_BYTES = "16"
+DEFAULT DEF_COUNT = "3"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SN_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SN_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SN_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SN_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SN_BYTES" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_BYTES = LAST
+ELSE
+  LET ENV_BYTES = ""
+END
+SYS ENV "CUBALC_SN_COUNT" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_COUNT = LAST
+ELSE
+  LET ENV_COUNT = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir TFILE
+LET token_meta = LAST
+SYS JOIN state_dir BFILE
+LET bag_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR token_meta OR ""
+LET last_token = LAST
+CLEAR_ERR
+SYS READ OR bag_meta OR ""
+LET bag = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_BYTES
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "mint"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_BYTES
+    END
+  END
+END
+SYS BLANK ENV_COUNT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "bag"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_COUNT
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET token_ch = 0
+LET bag_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET bytes_n = 0
+LET hex_n = 0
+LET same_n = 0
+LET gate_n = 0
+LET bag_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "snonce" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON last_token
+  PRINT_JSON bag
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- login GETLOGIN ---
+SYS EQS ACTION "login"
+IF LAST_N == 1 THEN
+  NOTE "action login"
+  SYS GETLOGIN
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "login fail"
+    FAIL "login fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "login fail"
+    END
+  ELSE
+    LET val = LAST
+    SYS LEN val
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "login empty"
+      FAIL "login empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "login empty"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "login ok"
+    END
+    LET val_ch = 1
+    LET meta = "login"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- who login vs USER ---
+SYS EQS ACTION "who"
+IF LAST_N == 1 THEN
+  NOTE "action who"
+  SYS GETLOGIN
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "who login fail"
+    FAIL "who login fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "who login fail"
+    END
+  ELSE
+    LET login = LAST
+    SYS USER
+    LET uname = LAST
+    CLEAR_ERR
+    SYS EQS login uname
+    LET same_n = LAST_N
+    # HAS false friend
+    SYS HAS login uname
+    LET has_sub = LAST_N
+    CLEAR_ERR
+    SYS CAT login "@"
+    LET val = LAST
+    SYS CAT val uname
+    LET val = LAST
+    SYS CAT val " same="
+    LET val = LAST
+    SYS STR same_n
+    SYS CAT val LAST
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "who ok"
+    LET meta = "login"
+    SYS PUSH meta login
+    LET meta = LAST
+    SYS PUSH meta "user"
+    LET meta = LAST
+    SYS PUSH meta uname
+    LET meta = LAST
+    SYS PUSH meta "same"
+    LET meta = LAST
+    SYS STR same_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "has_sub"
+    LET meta = LAST
+    SYS STR has_sub
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON same_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- same GETLOGIN EQS USER ---
+SYS EQS ACTION "same"
+IF LAST_N == 1 THEN
+  NOTE "action same"
+  SYS GETLOGIN
+  IF OK == 0 THEN
+    LET miss = 1
+    LET same_n = 0
+    LET note_msg = "same login fail"
+    FAIL "same login fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "same login fail"
+    END
+  ELSE
+    LET login = LAST
+    SYS USER
+    LET uname = LAST
+    SYS EQS login uname
+    LET same_n = LAST_N
+    CLEAR_ERR
+    IF same_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "same no"
+      FAIL "same no"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "same no"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "same ok"
+    END
+    SYS STR same_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "same"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON same_n
+  CLEAR_ERR
+END
+
+# --- mint ENTROPY ---
+SYS EQS ACTION "mint"
+IF LAST_N == 1 THEN
+  NOTE "action mint"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_BYTES
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mint bad bytes"
+    FAIL "mint bad bytes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mint bad bytes"
+    END
+  ELSE
+    LET bytes_n = LAST_N
+    IF bytes_n < 1 THEN
+      LET miss = 1
+      LET note_msg = "mint zero bytes"
+      FAIL "mint zero bytes"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mint zero bytes"
+      END
+    ELSE
+      SYS ENTROPY bytes_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "mint entropy fail"
+        FAIL "mint entropy fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "mint entropy fail"
+        END
+      ELSE
+        LET val = LAST
+        LET hex_n = LAST_N
+        LET bytes_n = ENTROPY_BYTES
+        LET last_token = val
+        LET token_ch = 1
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "mint ok"
+        LET meta = "bytes"
+        SYS STR bytes_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "hex_n"
+        LET meta = LAST
+        SYS STR hex_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "token"
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        # hex charset soft probe: HAS digits/a-f false friends
+        SYS HAS val "g"
+        LET has_g = LAST_N
+        SYS HAS val "a"
+        LET has_a = LAST_N
+        CLEAR_ERR
+        SYS PUSH meta "has_g"
+        LET meta = LAST
+        SYS STR has_g
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "has_a_sub"
+        LET meta = LAST
+        SYS STR has_a
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON bytes_n hex_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- short 4 bytes ---
+SYS EQS ACTION "short"
+IF LAST_N == 1 THEN
+  NOTE "action short"
+  SYS ENTROPY 4
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "short fail"
+    FAIL "short fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "short fail"
+    END
+  ELSE
+    LET val = LAST
+    LET hex_n = LAST_N
+    LET bytes_n = ENTROPY_BYTES
+    LET last_token = val
+    LET token_ch = 1
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "short ok"
+    LET meta = "hex_n"
+    SYS STR hex_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON bytes_n hex_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- cap huge request ---
+SYS EQS ACTION "cap"
+IF LAST_N == 1 THEN
+  NOTE "action cap"
+  SYS ENTROPY 9999
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "cap fail"
+    FAIL "cap fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "cap fail"
+    END
+  ELSE
+    LET val = LAST
+    LET hex_n = LAST_N
+    LET bytes_n = ENTROPY_BYTES
+    LET last_token = val
+    LET token_ch = 1
+    LET val_ch = 1
+    # expect clamp 256/512
+    LET ok_cap = 0
+    IF bytes_n == 256 THEN
+      IF hex_n == 512 THEN
+        LET ok_cap = 1
+      END
+    END
+    IF ok_cap == 0 THEN
+      LET miss = 1
+      LET note_msg = "cap unexpected"
+      FAIL "cap unexpected"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "cap unexpected"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "cap ok"
+    END
+    LET meta = "bytes"
+    SYS STR bytes_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "hex_n"
+    LET meta = LAST
+    SYS STR hex_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON bytes_n hex_n
+  CLEAR_ERR
+END
+
+# --- ticket login + entropy ---
+SYS EQS ACTION "ticket"
+IF LAST_N == 1 THEN
+  NOTE "action ticket"
+  SYS GETLOGIN
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "ticket login fail"
+    FAIL "ticket login fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ticket login fail"
+    END
+  ELSE
+    LET login = LAST
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = DEF_BYTES
+    END
+    SYS NUM NAME
+    IF OK == 0 THEN
+      LET bytes_n = 16
+    ELSE
+      LET bytes_n = LAST_N
+    END
+    CLEAR_ERR
+    IF bytes_n < 1 THEN
+      LET bytes_n = 16
+    END
+    SYS ENTROPY bytes_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "ticket entropy fail"
+      FAIL "ticket entropy fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ticket entropy fail"
+      END
+    ELSE
+      LET tok = LAST
+      LET hex_n = LAST_N
+      LET bytes_n = ENTROPY_BYTES
+      SYS CAT login "."
+      LET val = LAST
+      SYS CAT val tok
+      LET val = LAST
+      LET last_token = val
+      LET token_ch = 1
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "ticket ok"
+      LET meta = "login"
+      SYS PUSH meta login
+      LET meta = LAST
+      SYS PUSH meta "token"
+      LET meta = LAST
+      SYS PUSH meta tok
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR bytes_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON bytes_n hex_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- bag multi mint ---
+SYS EQS ACTION "bag"
+IF LAST_N == 1 THEN
+  NOTE "action bag"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_COUNT
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "bag bad count"
+    FAIL "bag bad count"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "bag bad count"
+    END
+  ELSE
+    LET cnt = LAST_N
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET A2 = "8"
+    END
+    SYS NUM A2
+    IF OK == 0 THEN
+      LET bytes_n = 8
+    ELSE
+      LET bytes_n = LAST_N
+    END
+    CLEAR_ERR
+    IF cnt < 1 THEN
+      LET miss = 1
+      LET note_msg = "bag zero count"
+      FAIL "bag zero count"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "bag zero count"
+      END
+    ELSE
+      IF cnt > 32 THEN
+        LET cnt = 32
+      END
+      LET bag = ""
+      LET bag_n = 0
+      LET i = 0
+      WHILE i < cnt
+        SYS ENTROPY bytes_n
+        IF OK == 1 THEN
+          SYS BLANK bag
+          IF LAST_N == 1 THEN
+            LET bag = LAST
+          ELSE
+            SYS PUSH bag LAST
+            LET bag = LAST
+          END
+          LET bag_n = bag_n + 1
+        END
+        CLEAR_ERR
+        LET i = i + 1
+      END
+      LET bag_ch = 1
+      LET val = bag
+      LET val_ch = 1
+      LET last_token = bag
+      LET token_ch = 1
+      LET hit = 1
+      LET note_msg = "bag ok"
+      LET meta = "count"
+      SYS STR bag_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR bytes_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON bag_n bytes_n
+  CLEAR_ERR
+END
+
+# --- gate same login==user ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS GETLOGIN
+  IF OK == 0 THEN
+    LET gate_n = 0
+    LET miss = 1
+    LET note_msg = "gate login fail"
+    FAIL "gate login fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate login fail"
+    END
+  ELSE
+    LET login = LAST
+    SYS USER
+    LET uname = LAST
+    SYS EQS login uname
+    LET same_n = LAST_N
+    LET gate_n = same_n
+    CLEAR_ERR
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "login"
+    SYS PUSH meta login
+    LET meta = LAST
+    SYS PUSH meta "user"
+    LET meta = LAST
+    SYS PUSH meta uname
+    LET meta = LAST
+    SYS PUSH meta "ok"
+    LET meta = LAST
+    SYS STR gate_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n same_n
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET last_token = ""
+  LET bag = ""
+  LET val = ""
+  LET meta = ""
+  LET token_ch = 1
+  LET bag_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "login"
+LET k = k + LAST_N
+SYS EQS ACTION "who"
+LET k = k + LAST_N
+SYS EQS ACTION "same"
+LET k = k + LAST_N
+SYS EQS ACTION "mint"
+LET k = k + LAST_N
+SYS EQS ACTION "short"
+LET k = k + LAST_N
+SYS EQS ACTION "cap"
+LET k = k + LAST_N
+SYS EQS ACTION "ticket"
+LET k = k + LAST_N
+SYS EQS ACTION "bag"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF token_ch > 0 THEN
+  SYS WRITE token_meta last_token
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "token write failed"
+  END
+  CLEAR_ERR
+END
+IF bag_ch > 0 THEN
+  SYS WRITE bag_meta bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "bag write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.session_nonce_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "bytes"
+LET report = LAST
+SYS STR bytes_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "hex_n"
+LET report = LAST
+SYS STR hex_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "same"
+LET report = LAST
+SYS STR same_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "bag_n"
+LET report = LAST
+SYS STR bag_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "session_nonce_board" ACTION hit miss bytes_n hex_n same_n gate_n note_msg elapsed
