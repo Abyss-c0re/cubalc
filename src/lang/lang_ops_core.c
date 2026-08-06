@@ -15375,6 +15375,47 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS GETLOGIN|LOGINNAME|SESSION_USER — session login via getlogin() → LAST.
+     * Prefer getlogin(); fallback USER/LOGNAME env then passwd name.
+     * Usability: utmp/session identity distinct from $USER override without shell. */
+    if (kw(&L->cur,"GETLOGIN") || kw(&L->cur,"LOGINNAME") || kw(&L->cur,"SESSION_USER") ||
+        kw(&L->cur,"SESSIONUSER") || kw(&L->cur,"LOGIN_NAME") || kw(&L->cur,"UTMPUSER") ||
+        kw(&L->cur,"TTYUSER") || kw(&L->cur,"WHO_AM_I")){
+      char user[128];
+      const char *e;
+      lex_next(L);
+      user[0] = 0;
+#if !defined(CUBALC_OS_WINDOWS)
+      {
+        char *gl = getlogin();
+        if (gl && gl[0])
+          snprintf(user, sizeof user, "%s", gl);
+      }
+#endif
+      if (!user[0]) {
+        e = getenv("LOGNAME");
+        if (!e || !e[0]) e = getenv("USER");
+        if (!e || !e[0]) e = getenv("USERNAME");
+        if (e && e[0]) snprintf(user, sizeof user, "%s", e);
+      }
+#if !defined(CUBALC_OS_WINDOWS)
+      if (!user[0]) {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_name && pw->pw_name[0])
+          snprintf(user, sizeof user, "%s", pw->pw_name);
+      }
+#endif
+      if (!user[0]) snprintf(user, sizeof user, "user");
+      var_set_str(vm, "GETLOGIN", user);
+      var_set_str(vm, "LOGINNAME", user);
+      var_set_str(vm, "SESSION_USER", user);
+      var_set_str(vm, "LAST", user);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", user);
+      vm->last_n = (long)strlen(user);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS UID|RUID|GETUID — real user id → LAST_N/UID.
      * SYS EUID|GETEUID|EFFECTIVE_UID — effective user id → LAST_N/EUID.
      * SYS ISROOT|AMROOT|ROOTPRIV — LAST_N 1 if euid==0 (privilege probe OK=1).
@@ -23955,6 +23996,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
       {"SYS USER", "SYS USER|USERNAME — login name → LAST/USER"},
+      {"SYS GETLOGIN", "SYS GETLOGIN|LOGINNAME — session login via getlogin() → LAST"},
       {"SYS UID", "SYS UID|RUID|GETUID — real user id → LAST_N/UID"},
       {"SYS EUID", "SYS EUID|GETEUID — effective user id → LAST_N/EUID"},
       {"SYS ISROOT", "SYS ISROOT|AMROOT — LAST_N 1 if euid==0 privilege probe"},

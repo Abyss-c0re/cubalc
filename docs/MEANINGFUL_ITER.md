@@ -333,6 +333,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 303. ~~**`SYS NICE` / `RENICE`**~~ **done** (process nice get/set · agent yield/backpressure without shell nice).
 304. ~~**`SYS SHQUOTE` / `SHELLQUOTE`**~~ **done** (POSIX single-quote shell-safe wrap · SPAWN/log strings without hand escaping).
 305. ~~**`SYS SHUNQUOTE` / `UNQUOTE`**~~ **done** (peel POSIX single-quote wrap · dual of SHQUOTE without shell eval).
+306. ~~**`SYS GETLOGIN` / `LOGINNAME`**~~ **done** (session login via getlogin · utmp identity without shell who am i).
 
 ## Tick protocol
 

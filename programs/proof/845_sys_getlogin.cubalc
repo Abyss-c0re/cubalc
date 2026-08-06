@@ -1,0 +1,41 @@
+# SYS GETLOGIN / LOGINNAME — session login without shell who am i
+# Usability: utmp/session identity (may differ from $USER override)
+
+HOLD_FLASH 1
+
+SYS GETLOGIN
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS LEN GETLOGIN
+ASSERT LAST_N >= 1
+SYS EQS LAST GETLOGIN
+ASSERT LAST_N == 1
+
+# aliases
+SYS LOGINNAME
+ASSERT OK == 1
+SYS EQS LAST GETLOGIN
+ASSERT LAST_N == 1
+SYS SESSION_USER
+ASSERT OK == 1
+SYS EQS LAST GETLOGIN
+ASSERT LAST_N == 1
+SYS LOGIN_NAME
+ASSERT OK == 1
+SYS EQS LAST GETLOGIN
+ASSERT LAST_N == 1
+
+# non-empty stable
+SYS GETLOGIN
+LET a = LAST
+SYS GETLOGIN
+SYS EQS LAST a
+ASSERT LAST_N == 1
+
+# complements SYS USER (both non-empty; may equal)
+SYS USER
+ASSERT OK == 1
+SYS LEN USER
+ASSERT LAST_N >= 1
+
+PRINT "sys_getlogin ok"
