@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 261,
-  "version": "1.15.288-usability",
-  "item": "SYS GID / EGID / GROUP process group identity",
-  "item_id": 296,
-  "title": "SYS GID|EGID|GROUP \u2014 process group id and primary group name",
-  "commit": "28663dfda4d76177252aa1e789bf110ff402ef4b",
-  "summary": "getgid/getegid + group name for agent identity. selftest 261.",
+  "iter": 262,
+  "version": "1.15.289-usability",
+  "item": "SYS GROUPS / INGROUP process group membership",
+  "item_id": 297,
+  "title": "SYS GROUPS|INGROUP \u2014 group bag and membership probe",
+  "commit": "7925d41bee28f40f388996f844ac5d09ab0054de",
+  "summary": "getgroups bag + INGROUP name|gid ACL probe. selftest 262.",
   "proofs": [
-    "835_sys_gid",
-    "selftest n_pass=261"
+    "836_sys_groups",
+    "selftest n_pass=262"
   ],
-  "when": "2026-08-06T21:24:31Z",
+  "when": "2026-08-06T21:36:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "28663dfda4d76177252aa1e789bf110ff402ef4b",
-  "note": "complements UID/USER/FILEGID for plate ACL"
+  "sha": "7925d41bee28f40f388996f844ac5d09ab0054de",
+  "note": "complements GID/GROUP for agent ACL without shell id"
 }
