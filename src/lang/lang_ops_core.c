@@ -5808,7 +5808,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
      * Usability: ack/remove FREQ key after handling without FINDLINE+DROPNTH. */
     if (kw(&L->cur,"KVDEL") || kw(&L->cur,"DELKV") || kw(&L->cur,"RMKV") ||
         kw(&L->cur,"DELKEY") || kw(&L->cur,"UNSETKV") || kw(&L->cur,"KVUNSET") ||
-        kw(&L->cur,"DROPKEY") || kw(&L->cur,"KVDROP") || kw(&L->cur,"REMOVEKV")){
+        kw(&L->cur,"KVDROP") || kw(&L->cur,"REMOVEKV")){
       char bag[CUBALC_HOST_STR_MAX], key[256], sep[32], out[CUBALC_HOST_STR_MAX];
       char field[512], left[256], dropped_val[512];
       const char *p, *start;
@@ -6838,6 +6838,127 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "DROPZERO_KEEP", kept);
       var_set_num(vm, "KEEPNZ_N", kept);
       var_set_num(vm, "NZKV_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS KEEPKEY|GREPKEY bag needle [sep]
+     * SYS DROPKEY|GREPVKEY bag needle [sep] — invert (drop matching keys).
+     * SYS KEEPKEYI|GREPKEYI — case-insensitive key match.
+     * Keep (or drop) key:val fields whose key contains needle. Default sep ":".
+     * Empty needle → keep all (or drop all for invert).
+     * LAST = filtered bag; LAST_N = remaining; KEEPKEY_DROP = removed count.
+     * Usability: filter FREQ/plate by key pattern without EACH+BEFORE+HAS. */
+    if (kw(&L->cur,"KEEPKEY") || kw(&L->cur,"GREPKEY") || kw(&L->cur,"FILTERKEY") ||
+        kw(&L->cur,"KEYGREP") || kw(&L->cur,"HASKEY") || kw(&L->cur,"MATCHKEY") ||
+        kw(&L->cur,"DROPKEY") || kw(&L->cur,"GREPVKEY") || kw(&L->cur,"RMKEY") ||
+        kw(&L->cur,"KEEPKEYI") || kw(&L->cur,"GREPKEYI") || kw(&L->cur,"DROPKEYI")){
+      char op[24], bag[CUBALC_HOST_STR_MAX], needle[256], sep[32];
+      char field[512], key[256], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, sn, nlen, olen = 0;
+      long kept = 0, drop = 0;
+      int invert = 0, icase = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "DROPKEY") == 0 || strcmp(op, "GREPVKEY") == 0 ||
+          strcmp(op, "RMKEY") == 0 || strcmp(op, "DROPKEYI") == 0)
+        invert = 1;
+      if (strcmp(op, "KEEPKEYI") == 0 || strcmp(op, "GREPKEYI") == 0 ||
+          strcmp(op, "DROPKEYI") == 0)
+        icase = 1;
+      lex_next(L);
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        /* optional sep — only if looks like sep (short) or explicit after needle */
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      nlen = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            int match = 0, keep;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            key[0] = 0;
+            if (sn > 0) {
+              const char *sp = strstr(field, sep);
+              if (sp) {
+                size_t kn = (size_t)(sp - field);
+                if (kn >= sizeof key) kn = sizeof key - 1;
+                memcpy(key, field, kn);
+                key[kn] = 0;
+              } else {
+                snprintf(key, sizeof key, "%s", field);
+              }
+            } else {
+              snprintf(key, sizeof key, "%s", field);
+            }
+            if (nlen == 0) {
+              match = 1; /* empty needle matches all */
+            } else if (!icase) {
+              match = (strstr(key, needle) != NULL);
+            } else {
+              /* ASCII case-insensitive contains */
+              char kl[256], nl[256];
+              size_t i, kn = strlen(key);
+              if (kn >= sizeof kl) kn = sizeof kl - 1;
+              for (i = 0; i < kn; i++) {
+                char c = key[i];
+                kl[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+              }
+              kl[kn] = 0;
+              for (i = 0; i < nlen && i < sizeof nl - 1; i++) {
+                char c = needle[i];
+                nl[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+              }
+              nl[i] = 0;
+              match = (strstr(kl, nl) != NULL);
+            }
+            keep = invert ? !match : match;
+            if (keep) {
+              size_t fl = strlen(field);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + fl < sizeof out) {
+                memcpy(out + olen, field, fl);
+                olen += fl;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, field, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              kept++;
+            } else {
+              drop++;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "KEEPKEY", out);
+      var_set_str(vm, "GREPKEY", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "KEEPKEY_N", kept);
+      var_set_num(vm, "KEEPKEY_DROP", drop);
+      var_set_num(vm, "GREPKEY_N", kept);
+      var_set_num(vm, "DROPKEY_N", drop);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -10348,7 +10469,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10677,6 +10798,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DROPZERO", "SYS DROPZERO|KEEPNZ bag [sep] — drop value==0 key:val · keep +/− after DIFFKV"},
       {"SYS KEEPNZ", "SYS KEEPNZ bag [sep] — alias of SYS DROPZERO · non-zero deltas only"},
       {"SYS NZKV", "SYS NZKV bag [sep] — alias of SYS DROPZERO"},
+      {"SYS KEEPKEY", "SYS KEEPKEY|GREPKEY bag needle [sep] — keep key:val whose key contains needle"},
+      {"SYS GREPKEY", "SYS GREPKEY bag needle [sep] — alias of SYS KEEPKEY"},
+      {"SYS DROPKEY", "SYS DROPKEY|GREPVKEY bag needle [sep] — drop keys containing needle"},
+      {"SYS KEEPKEYI", "SYS KEEPKEYI bag needle [sep] — case-insensitive KEEPKEY"},
       {"SYS PCTKV", "SYS PCTKV|SHAREKV bag [sep] — rewrite values as integer %% of total · FREQ share"},
       {"SYS SHAREKV", "SYS SHAREKV bag [sep] — alias of SYS PCTKV · share-of-total"},
       {"SYS PERCENTKV", "SYS PERCENTKV bag [sep] — alias of SYS PCTKV"},
