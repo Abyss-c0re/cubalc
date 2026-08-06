@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 221,
-  "version": "1.15.246-usability",
-  "item": "SYS BASE64 / B64ENC · BASE64D / B64DEC encode and decode",
-  "item_id": 254,
-  "title": "SYS BASE64|B64ENC [str] · BASE64D|B64DEC [str] — plate payload transport without shell",
-  "commit": "d2810c771f9fc937bfb810f9fad1b012d25d94c9",
-  "summary": "Standard base64 encode/decode for agent plates without shell. selftest 221.",
+  "iter": 222,
+  "version": "1.15.247-usability",
+  "item": "SYS HEX / HEXENC · HEXD / HEXDEC encode and decode",
+  "item_id": 255,
+  "title": "SYS HEX|HEXENC [str] · HEXD|HEXDEC [str] — binary-safe plate fields without shell xxd",
+  "commit": "91325bbacbf7813b659c25283274de05e08c82c2",
+  "summary": "Lowercase hex encode/decode for agent plates without shell xxd. selftest 222.",
   "proofs": [
-    "795_sys_base64",
-    "selftest n_pass=221"
+    "796_sys_hex",
+    "selftest n_pass=222"
   ],
-  "when": "2026-08-06T14:34:56Z",
+  "when": "2026-08-06T14:44:25Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d2810c771f9fc937bfb810f9fad1b012d25d94c9",
-  "note": "left file/wait family; pure C base64 for plate transport"
+  "sha": "91325bbacbf7813b659c25283274de05e08c82c2",
+  "note": "complements BASE64 for binary-safe plate transport"
 }
