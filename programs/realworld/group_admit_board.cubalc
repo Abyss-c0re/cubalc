@@ -1,0 +1,950 @@
+# group_admit_board.cubalc — process group identity + INGROUP admit
+#
+# Real use: multi-agent hosts gate shared plate ops on supplementary group
+# membership (ops/sre/deploy) without shell id -gn / id -nG:
+#   GID / EGID / GROUP     — real/effective primary group id+name
+#   GROUPS / GROUPLIST     — egid + supplementary names bag
+#   INGROUP / MEMBEROF     — name or numeric gid membership probe
+#   FILEGID / GROUPNAME    — plate group vs process identity dual
+# Distinct from plate_acl (CAN*+OWNERNAME euid) and plate_identity (OWNEDBY):
+# this board is *group membership admit + plate group match*.
+#
+# Plate under STATE:
+#   ALLOW.txt      — allowed group names bag (newline)
+#   PATH.txt       — active plate path for group match
+#   VAL.txt        — last id/name/bit stamp
+#   META.txt
+#   GROUP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_GA_ACTION):
+#   list      — plate (default)
+#   who       — USER+UID+GID+EGID+GROUP stamp → VAL/META
+#   groups    — GROUPS bag → VAL
+#   in        — INGROUP ARG1 (name or gid)
+#   gate      — INGROUP ARG1 must be 1 (REQUIRE optional)
+#   allow     — set ALLOW bag from ARG1 (comma or newline tokens)
+#   check     — HASLINE ALLOW ARG1 (exact roster)
+#   pick      — PATH = ARG1; optional put empty via TOUCH
+#   put       — WRITE PATH ARG1 body
+#   match     — FILEGID==EGID and/or GROUPNAME EQS GROUP
+#   peer      — GROUPNAME PATH then INGROUP that name
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ga_$$
+#   CUBALC_ARG0=who ...
+#   CUBALC_ARG0=groups ...
+#   CUBALC_ARG0=in CUBALC_ARG1=root ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=root ...
+#   CUBALC_ARG0=allow CUBALC_ARG1='root,ops,sre' ...
+#   CUBALC_ARG0=check CUBALC_ARG1=ops ...
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/shared.env ...
+#   CUBALC_ARG0=put CUBALC_ARG1='k=v' ...
+#   CUBALC_ARG0=match ...
+#   CUBALC_ARG0=peer ...
+#
+# Env: CUBALC_GA_REQUIRE=1  CUBALC_GA_GROUP=…  CUBALC_GA_PATH=…
+#
+# Edges:
+#   INGROUP unknown → OK=1 LAST_N=0; empty → OK=0
+#   HASLINE exact vs HAS substring false friends on group bags
+#   GID vs EGID may differ after setgid (rare); FILEGID may ≠ EGID
+#   GROUPNAME vs GROUP string EQS; numeric INGROUP by egid
+#   WRITE NL; REQUIRE; NUM; ALLOW comma split awkward without WORDS
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "group_admit_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ALLOW.txt"
+DEFAULT PFILE = "PATH.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "GROUP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+SYS USER
+LET me_user = LAST
+SYS UID
+LET me_uid = LAST_N
+CLEAR_ERR
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_GA_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_GA_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_GA_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_GA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_GA_GROUP" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_GROUP = LAST
+ELSE
+  LET ENV_GROUP = ""
+END
+SYS ENV "CUBALC_GA_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET allow_meta = LAST
+SYS JOIN state_dir PFILE
+LET path_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR allow_meta OR ""
+LET allow = LAST
+CLEAR_ERR
+SYS READ OR path_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_GROUP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "in"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_GROUP
+    END
+  END
+END
+SYS BLANK ENV_GROUP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "gate"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_GROUP
+    END
+  END
+END
+SYS BLANK ENV_GROUP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "check"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_GROUP
+    END
+  END
+END
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET allow_ch = 0
+LET path_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gid_n = 0
+LET egid_n = 0
+LET in_n = 0
+LET match_n = 0
+LET gate_n = 0
+LET check_n = 0
+LET groups_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "gadmit" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON allow
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- who process identity ---
+SYS EQS ACTION "who"
+IF LAST_N == 1 THEN
+  NOTE "action who"
+  SYS GID
+  LET gid_n = LAST_N
+  SYS EGID
+  LET egid_n = LAST_N
+  SYS GROUP
+  LET gname = LAST
+  CLEAR_ERR
+  # VAL = user:uid:group:gid:egid
+  SYS CAT me_user ":"
+  LET val = LAST
+  SYS STR me_uid
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS CAT val gname
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS STR gid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS STR egid_n
+  SYS CAT val LAST
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "who ok"
+  LET meta = "user"
+  SYS PUSH meta me_user
+  LET meta = LAST
+  SYS PUSH meta "uid"
+  LET meta = LAST
+  SYS STR me_uid
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "group"
+  LET meta = LAST
+  SYS PUSH meta gname
+  LET meta = LAST
+  SYS PUSH meta "gid"
+  LET meta = LAST
+  SYS STR gid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "egid"
+  LET meta = LAST
+  SYS STR egid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  # gid==egid flag
+  LET same_n = 0
+  IF gid_n == egid_n THEN
+    LET same_n = 1
+  END
+  SYS PUSH meta "gid_eq_egid"
+  LET meta = LAST
+  SYS STR same_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON gid_n egid_n me_uid
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- groups bag ---
+SYS EQS ACTION "groups"
+IF LAST_N == 1 THEN
+  NOTE "action groups"
+  SYS GROUPS
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "groups fail"
+    FAIL "groups fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "groups fail"
+    END
+  ELSE
+    LET val = LAST
+    LET groups_n = LAST_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "groups ok"
+    LET meta = "n"
+    SYS STR groups_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "bag"
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON groups_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- in INGROUP ---
+SYS EQS ACTION "in"
+IF LAST_N == 1 THEN
+  NOTE "action in"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "in needs group name or gid"
+  END
+  SYS INGROUP NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET in_n = 0
+    LET note_msg = "in empty/fail"
+    FAIL "in empty/fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "in empty/fail"
+    END
+  ELSE
+    LET in_n = LAST_N
+    IF in_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "in no"
+      FAIL "in no"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "in no"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "in ok"
+    END
+    SYS STR in_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "group"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "in"
+    LET meta = LAST
+    SYS STR in_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    # HAS false friend on group name
+    SYS HAS NAME "root"
+    LET has_root = LAST_N
+    SYS PUSH meta "has_root_sub"
+    LET meta = LAST
+    SYS STR has_root
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON in_n
+  CLEAR_ERR
+END
+
+# --- gate INGROUP required ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "gate needs group"
+  END
+  SYS INGROUP NAME
+  IF OK == 0 THEN
+    LET gate_n = 0
+    LET in_n = 0
+    LET miss = 1
+    LET note_msg = "gate empty"
+    FAIL "gate empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    LET in_n = LAST_N
+    LET gate_n = in_n
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "gate"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ok"
+    LET meta = LAST
+    SYS STR gate_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n in_n
+  CLEAR_ERR
+END
+
+# --- allow set roster bag ---
+SYS EQS ACTION "allow"
+IF LAST_N == 1 THEN
+  NOTE "action allow"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "allow needs group list"
+  END
+  # prefer newline bag; also accept comma-separated via REPLACEALL
+  SYS HAS NAME ","
+  IF LAST_N == 1 THEN
+    SYS REPLACEALL NAME "," "\n"
+    LET allow = LAST
+  ELSE
+    LET allow = NAME
+  END
+  # squeeze blanks
+  SYS SQUEEZE allow
+  LET allow = LAST
+  LET allow_ch = 1
+  LET val = allow
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "allow ok"
+  SYS LINES allow
+  LET groups_n = LAST_N
+  LET meta = "n"
+  SYS STR groups_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "bag"
+  LET meta = LAST
+  SYS PUSH meta allow
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON groups_n
+  PRINT_JSON allow
+  CLEAR_ERR
+END
+
+# --- check HASLINE allow ---
+SYS EQS ACTION "check"
+IF LAST_N == 1 THEN
+  NOTE "action check"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "check needs group"
+  END
+  SYS BLANK allow
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "check no allow"
+    FAIL "check no allow"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "check no allow"
+    END
+  ELSE
+    SYS HASLINE allow NAME
+    LET check_n = LAST_N
+    # substring false friend
+    SYS HAS allow NAME
+    LET has_sub = LAST_N
+    CLEAR_ERR
+    IF check_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "check deny"
+      FAIL "check deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "check deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "check ok"
+    END
+    SYS STR check_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "want"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "exact"
+    LET meta = LAST
+    SYS STR check_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "has_sub"
+    LET meta = LAST
+    SYS STR has_sub
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON check_n
+  CLEAR_ERR
+END
+
+# --- pick path ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET path_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  LET val = active
+  LET val_ch = 1
+  PRINT_JSON active
+END
+
+# --- put body ---
+SYS EQS ACTION "put"
+IF LAST_N == 1 THEN
+  NOTE "action put"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "put no path"
+    FAIL "put no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "put no path"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "put needs body"
+    END
+    SYS DIRNAME active
+    LET parent = LAST
+    SYS BLANK parent
+    IF LAST_N == 0 THEN
+      SYS EQS parent "."
+      IF LAST_N == 0 THEN
+        SYS MKDIR parent
+        CLEAR_ERR
+      END
+    END
+    SYS WRITE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "put fail"
+      FAIL "put fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "put fail"
+      END
+    ELSE
+      LET val = NAME
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "put ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- match FILEGID/GROUPNAME vs process ---
+SYS EQS ACTION "match"
+IF LAST_N == 1 THEN
+  NOTE "action match"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "match no path"
+    FAIL "match no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "match no path"
+    END
+  ELSE
+    SYS EGID
+    LET egid_n = LAST_N
+    SYS GROUP
+    LET gname = LAST
+    SYS FILEGID active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "match filegid miss"
+      FAIL "match filegid miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "match filegid miss"
+      END
+    ELSE
+      LET fgid = LAST_N
+      SYS GROUPNAME active
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "match groupname miss"
+        FAIL "match groupname miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "match groupname miss"
+        END
+      ELSE
+        LET fgname = LAST
+        LET gid_eq = 0
+        IF fgid == egid_n THEN
+          LET gid_eq = 1
+        END
+        SYS EQS fgname gname
+        LET name_eq = LAST_N
+        # also INGROUP plate group name
+        SYS INGROUP fgname
+        LET in_n = LAST_N
+        CLEAR_ERR
+        LET match_n = 0
+        IF gid_eq == 1 THEN
+          IF name_eq == 1 THEN
+            LET match_n = 1
+          END
+        END
+        IF match_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "match no"
+          FAIL "match no"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "match no"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "match ok"
+        END
+        # VAL = plate_group@process_group:gid_eq:name_eq:in
+        SYS CAT fgname "@"
+        LET val = LAST
+        SYS CAT val gname
+        LET val = LAST
+        SYS CAT val ":"
+        LET val = LAST
+        SYS STR gid_eq
+        SYS CAT val LAST
+        LET val = LAST
+        SYS CAT val ":"
+        LET val = LAST
+        SYS STR name_eq
+        SYS CAT val LAST
+        LET val = LAST
+        SYS CAT val ":"
+        LET val = LAST
+        SYS STR in_n
+        SYS CAT val LAST
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "filegid"
+        SYS STR fgid
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "egid"
+        LET meta = LAST
+        SYS STR egid_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "filegroup"
+        LET meta = LAST
+        SYS PUSH meta fgname
+        LET meta = LAST
+        SYS PUSH meta "procgroup"
+        LET meta = LAST
+        SYS PUSH meta gname
+        LET meta = LAST
+        SYS PUSH meta "match"
+        LET meta = LAST
+        SYS STR match_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "ingroup"
+        LET meta = LAST
+        SYS STR in_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON match_n in_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- peer: plate GROUPNAME then INGROUP ---
+SYS EQS ACTION "peer"
+IF LAST_N == 1 THEN
+  NOTE "action peer"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "peer no path"
+    FAIL "peer no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "peer no path"
+    END
+  ELSE
+    SYS GROUPNAME active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "peer groupname miss"
+      FAIL "peer groupname miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "peer groupname miss"
+      END
+    ELSE
+      LET fgname = LAST
+      SYS INGROUP fgname
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "peer in fail"
+        FAIL "peer in fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "peer in fail"
+        END
+      ELSE
+        LET in_n = LAST_N
+        IF in_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "peer not member"
+          FAIL "peer not member"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "peer not member"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "peer ok"
+        END
+        LET val = fgname
+        LET val_ch = 1
+        LET meta = "plate_group"
+        SYS PUSH meta fgname
+        LET meta = LAST
+        SYS PUSH meta "in"
+        LET meta = LAST
+        SYS STR in_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON in_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET allow = ""
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET allow_ch = 1
+  LET path_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "who"
+LET k = k + LAST_N
+SYS EQS ACTION "groups"
+LET k = k + LAST_N
+SYS EQS ACTION "in"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "allow"
+LET k = k + LAST_N
+SYS EQS ACTION "check"
+LET k = k + LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "put"
+LET k = k + LAST_N
+SYS EQS ACTION "match"
+LET k = k + LAST_N
+SYS EQS ACTION "peer"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF allow_ch > 0 THEN
+  SYS WRITE allow_meta allow
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "allow write failed"
+  END
+  CLEAR_ERR
+END
+IF path_ch > 0 THEN
+  SYS WRITE path_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "path write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.group_admit_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gid"
+LET report = LAST
+SYS STR gid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "egid"
+LET report = LAST
+SYS STR egid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "in"
+LET report = LAST
+SYS STR in_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "match"
+LET report = LAST
+SYS STR match_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "check"
+LET report = LAST
+SYS STR check_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "path"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "group_admit_board" ACTION hit miss gid_n egid_n in_n match_n gate_n note_msg elapsed

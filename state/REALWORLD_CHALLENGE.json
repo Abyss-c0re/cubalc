@@ -1,152 +1,145 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 99,
-  "program": "programs/realworld/plate_time_triad_board.cubalc",
-  "theme": "plate time triad RELPATH + ATIME/CTIME/MTIME + HASENV gate",
-  "version": "1.15.287-usability",
+  "iter": 100,
+  "program": "programs/realworld/group_admit_board.cubalc",
+  "theme": "group admit GID/EGID/GROUP + GROUPS/INGROUP plate match",
+  "version": "1.15.289-usability",
   "pass": true,
   "tests": [
     {
-      "name": "base_pick_put",
-      "cmd": "base root; pick sub/art.bin; put body",
+      "name": "who",
+      "cmd": "USER:UID:GROUP:GID:EGID stamp",
       "ok": true,
-      "note": "seed"
+      "note": "root:0:root:0:0"
     },
     {
-      "name": "rel",
-      "cmd": "RELPATH \u2192 sub/art.bin UNDER=1",
+      "name": "groups",
+      "cmd": "GROUPS bag non-empty",
       "ok": true,
-      "note": "portable key"
+      "note": "root"
     },
     {
-      "name": "triad",
-      "cmd": "a/c/m epochs + rel composite",
+      "name": "in_name_gid",
+      "cmd": "INGROUP root and INGROUP 0",
       "ok": true,
-      "note": "VAL rel|a:c:m"
+      "note": "name+num"
     },
     {
-      "name": "hasenv_path",
-      "cmd": "HASENV PATH = 1",
+      "name": "gate_deny",
+      "cmd": "unknown group REQUIRE → exit 2",
       "ok": true,
-      "note": "present"
+      "note": "OK=1 LAST_N=0"
     },
     {
-      "name": "hasenv_absent",
-      "cmd": "missing env OK=1 LAST_N=0 soft",
+      "name": "allow_check",
+      "cmd": "comma roster + HASLINE exact",
       "ok": true,
-      "note": "probe"
+      "note": "root/ops pass admin deny"
     },
     {
-      "name": "gate_require",
-      "cmd": "gate missing REQUIRE \u2192 exit 2",
+      "name": "match_peer",
+      "cmd": "FILEGID/GROUPNAME vs EGID/GROUP + INGROUP",
       "ok": true,
-      "note": "deny"
+      "note": "root@root:1:1:1"
     },
     {
-      "name": "rel_outside",
-      "cmd": "path outside base UNDER=0; REQUIRE\u21922",
+      "name": "empty_in",
+      "cmd": "INGROUP empty exits needs-arg",
       "ok": true,
-      "note": "abs leak"
-    },
-    {
-      "name": "atime_miss",
-      "cmd": "missing path ATIME REQUIRE\u21922",
-      "ok": true,
-      "note": "OK=0"
+      "note": "EXIT 2"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "260/260 pass"
+      "note": "262/262 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|relpath",
-      "title": "RELPATH outside base returns absolute with UNDER=0 \u2014 easy to publish non-portable keys",
-      "detail": "Agents that skip RELPATH_UNDER stamp /tmp into plates. No hard REQUIRE-UNDER mode; OK=1 either way.",
-      "repro": "RELPATH base /tmp \u2192 LAST=/tmp UNDER=0 OK=1"
+      "area": "host|ingroup",
+      "title": "INGROUP unknown is OK=1 LAST_N=0 — same dual as HASENV/CAN*",
+      "detail": "Empty name OK=0 sticky; unknown group probe OK=1. Agents confuse miss kinds when composing gates.",
+      "repro": "INGROUP nosuch OK=1; INGROUP \"\" OK=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|time",
-      "title": "ATIME often equals MTIME on noatime filesystems",
-      "detail": "Triad collapses; access vs content change indistinguishable. No ATIME_TRUSTED or mount-option probe.",
-      "repro": "at_eq_mt=1 after write on typical server FS"
+      "area": "host|match",
+      "title": "No GROUPEDBY / SAMEGROUP helper for plate vs process",
+      "detail": "match requires FILEGID+EGID and GROUPNAME+GROUP dual; agents often check only one and admit wrong.",
+      "repro": "need 4 probes for plate group match"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|hasenv",
-      "title": "HASENV miss is OK=1 LAST_N=0 vs ATIME miss OK=0",
-      "detail": "Soft-probe contracts disagree across host ops. Agents cannot uniform-handle optional env vs optional path times.",
-      "repro": "HASENV missing OK=1; ATIME missing OK=0"
+      "severity": "med",
+      "area": "host|groups",
+      "title": "GROUPS bag format / primary-first order undocumented for agents",
+      "detail": "Only root on this host; multi-group hosts may differ primary placement. No GROUPS_IDS numeric bag dual.",
+      "repro": "GROUPS → names only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|ctime",
-      "title": "CTIME is inode status-change not create-time \u2014 agents mislabel birth",
-      "detail": "chmod/chown bump ctime without content edit. No BIRTHTIME/BTIME form. Docs say CHANGETIME but agents still call it create.",
-      "repro": "CHMOD then CTIME > MTIME"
+      "area": "host|hasline",
+      "title": "HAS vs HASLINE false friends on group allowlists",
+      "detail": "HAS allow ops matches ops_admin substring risk; HASLINE exact is correct but easy to mix.",
+      "repro": "HAS rooty root"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|triad",
-      "title": "No single STAT_TIMES / TRIAD form \u2014 three probes + hand composite",
-      "detail": "Verbose for audit stamps; race window between ATIME and MTIME reads.",
-      "repro": "need 3 SYS for a/c/m"
+      "area": "host|allow",
+      "title": "Comma roster needs REPLACEALL \\\\n dance — no CSV bag form",
+      "detail": "ARG1 root,ops,sre requires REPLACEALL comma→newline. WORDS+JOINLINES alternative still awkward.",
+      "repro": "allow root,ops,sre"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS on env names false-friends PATH substring",
-      "detail": "HAS CUBALC_PATH_FOO PATH \u2192 1. Gate boards must EQS names not HAS.",
-      "repro": "HAS name PATH"
+      "area": "host|gid",
+      "title": "GID vs EGID rarely differ but no setgid/clear_groups story",
+      "detail": "Agents assume always equal; no documentation when they diverge after setgid helpers.",
+      "repro": "who gid_eq_egid flag"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "BASE/PATH glue in cat -A.",
-      "repro": "cat -A BASE.txt"
+      "detail": "PATH/ALLOW short writes glue in cat -A.",
+      "repro": "cat -A PATH.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_TT_REQUIRE=abc.",
-      "repro": "REQUIRE=abc hasenv absent \u2192 rc 0"
+      "detail": "CUBALC_GA_REQUIRE=abc.",
+      "repro": "REQUIRE=abc gate deny → rc 0"
     }
   ],
   "workarounds": [
-    "Always check RELPATH_UNDER before publishing keys",
-    "Treat atime==mtime as noatime unknown access",
-    "Branch HASENV on LAST_N; ATIME on OK",
-    "Prefer MTIME for content freshness; CTIME for meta audit only",
+    "Branch INGROUP on LAST_N; empty on OK",
+    "Dual-probe FILEGID and GROUPNAME for plate match",
+    "HASLINE for allowlists never HAS",
+    "REPLACEALL commas before HASLINE roster",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "RELPATH strict-under mode or fail-outside flag",
-    "ATIME_TRUSTED / mount noatime probe",
-    "Unified soft-probe OK contract (HASENV vs ATIME)",
-    "BIRTHTIME / BTIME where available",
-    "SYS TRIAD or STAT_TIMES one-shot",
+    "SYS GROUPEDBY / SAMEGROUP plate vs process",
+    "GROUPS_IDS numeric bag dual",
+    "CSV/LIST ARG bag helper for allow rosters",
+    "Unified soft-probe contract INGROUP/HASENV/CAN*",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "rel/triad/hasenv/gate/outside/miss green",
-    "noatime collapses atime=mtime on this host \u2014 documented",
-    "selftest 260/260; no language fix this iter"
+    "who/groups/in/gate/allow/check/match/peer green",
+    "comma→newline allow works via REPLACEALL",
+    "selftest 262/262; no language fix this iter"
   ],
-  "commit": "36d461b5a4c93ff340189abe6e2361251f5c9c8f",
-  "ts": "2026-08-06T21:18:47Z"
+  "commit": "",
+  "ts": "2026-08-06T21:43:43Z"
 }
