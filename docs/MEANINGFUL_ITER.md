@@ -215,6 +215,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 185. ~~**`SYS PATHGLOB` / `PGLOB`**~~ **done** (shell-style path glob → full paths · ready for READ/RM).
 186. ~~**`REQUIRE PATH` / `DIR` / `REG`**~~ **done** (fail-fast host path/kind gates · plate layout without EXIST+IF).
 187. ~~**`SYS FILTERGLOB` / `MATCHBAG`**~~ **done** (shell-pattern bag filter · full field or basename · PATHGLOB re-filter).
+188. ~~**`SYS BASENAMEALL` / `DIRNAMEALL` / `EXTALL` / `STEMALL`**~~ **done** (map path peels over bags · PATHGLOB without EACH).
 
 ## Tick protocol
 

@@ -1190,6 +1190,134 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS BASENAMEALL|MAPBASE|MAPBASENAME [bag]
+     * SYS DIRNAMEALL|MAPDIR|MAPDIRNAME [bag]
+     * SYS EXTALL|MAPEXT [bag]
+     * SYS STEMALL|MAPSTEM [bag]
+     * — map path peels over newline bag fields (default LAST).
+     * Usability: PATHGLOB → basenames/stems/dirs without EACH + BASENAME glue. */
+    if (kw(&L->cur,"BASENAMEALL") || kw(&L->cur,"MAPBASE") || kw(&L->cur,"MAPBASENAME") ||
+        kw(&L->cur,"LEAFALL") || kw(&L->cur,"DIRNAMEALL") || kw(&L->cur,"MAPDIR") ||
+        kw(&L->cur,"MAPDIRNAME") || kw(&L->cur,"PARENTALL") || kw(&L->cur,"EXTALL") ||
+        kw(&L->cur,"MAPEXT") || kw(&L->cur,"STEMALL") || kw(&L->cur,"MAPSTEM")){
+      int mode = 0; /* 0 base · 1 dir · 2 ext · 3 stem */
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0;
+      if (kw(&L->cur,"DIRNAMEALL") || kw(&L->cur,"MAPDIR") || kw(&L->cur,"MAPDIRNAME") ||
+          kw(&L->cur,"PARENTALL"))
+        mode = 1;
+      else if (kw(&L->cur,"EXTALL") || kw(&L->cur,"MAPEXT"))
+        mode = 2;
+      else if (kw(&L->cur,"STEMALL") || kw(&L->cur,"MAPSTEM"))
+        mode = 3;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512], piece[512];
+          const char *slash, *dot, *base;
+          size_t n, take = flen;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          n = strlen(path);
+          while (n > 1 && (path[n - 1] == '/' || path[n - 1] == '\\')) {
+            path[n - 1] = 0;
+            n--;
+          }
+          slash = cubalc_path_slash(path);
+          if (mode == 0) {
+            if (slash && slash[1])
+              snprintf(piece, sizeof piece, "%s", slash + 1);
+            else if (slash && (slash[0] == '/' || slash[0] == '\\') && !slash[1])
+              snprintf(piece, sizeof piece, "%s", path);
+            else
+              snprintf(piece, sizeof piece, "%s", path[0] ? path : ".");
+          } else if (mode == 1) {
+            if (slash && slash != path) {
+              size_t dn = (size_t)(slash - path);
+              if (dn >= sizeof piece) dn = sizeof piece - 1;
+              memcpy(piece, path, dn);
+              piece[dn] = 0;
+            } else if (slash && slash == path)
+              snprintf(piece, sizeof piece, "%c", path[0] == '\\' ? '\\' : '/');
+            else
+              snprintf(piece, sizeof piece, ".");
+          } else {
+            char leaf[512];
+            if (slash && slash[1])
+              snprintf(leaf, sizeof leaf, "%s", slash + 1);
+            else if (slash && (slash[0] == '/' || slash[0] == '\\') && !slash[1])
+              snprintf(leaf, sizeof leaf, "%s", path);
+            else
+              snprintf(leaf, sizeof leaf, "%s", path[0] ? path : ".");
+            base = leaf;
+            dot = strrchr(leaf, '.');
+            if (dot && dot != leaf) {
+              if (mode == 2)
+                snprintf(piece, sizeof piece, "%s", dot);
+              else {
+                size_t sn = (size_t)(dot - leaf);
+                if (sn >= sizeof piece) sn = sizeof piece - 1;
+                memcpy(piece, leaf, sn);
+                piece[sn] = 0;
+              }
+            } else {
+              if (mode == 2)
+                piece[0] = 0;
+              else
+                snprintf(piece, sizeof piece, "%s", base);
+            }
+          }
+          {
+            size_t plen = strlen(piece);
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + plen < sizeof out) {
+              memcpy(out + olen, piece, plen);
+              olen += plen;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "OK", 1);
+      if (mode == 0) {
+        var_set_str(vm, "BASENAMEALL", out);
+        var_set_str(vm, "MAPBASE", out);
+        var_set_num(vm, "BASENAMEALL_N", kept);
+        var_set_num(vm, "MAPBASE_N", kept);
+      } else if (mode == 1) {
+        var_set_str(vm, "DIRNAMEALL", out);
+        var_set_str(vm, "MAPDIR", out);
+        var_set_num(vm, "DIRNAMEALL_N", kept);
+        var_set_num(vm, "MAPDIR_N", kept);
+      } else if (mode == 2) {
+        var_set_str(vm, "EXTALL", out);
+        var_set_str(vm, "MAPEXT", out);
+        var_set_num(vm, "EXTALL_N", kept);
+        var_set_num(vm, "MAPEXT_N", kept);
+      } else {
+        var_set_str(vm, "STEMALL", out);
+        var_set_str(vm, "MAPSTEM", out);
+        var_set_num(vm, "STEMALL_N", kept);
+        var_set_num(vm, "MAPSTEM_N", kept);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -10831,7 +10959,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11048,6 +11176,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DIRNAME", "SYS DIRNAME|PARENT path — parent directory → LAST"},
       {"SYS EXTNAME", "SYS EXTNAME|EXT|SUFFIX path — final .ext → LAST/EXT"},
       {"SYS STEM", "SYS STEM|ROOTNAME path — basename without extension → LAST"},
+      {"SYS BASENAMEALL", "SYS BASENAMEALL|MAPBASE [bag] — basename every bag field · PATHGLOB peel"},
+      {"SYS DIRNAMEALL", "SYS DIRNAMEALL|MAPDIR [bag] — dirname every bag field"},
+      {"SYS EXTALL", "SYS EXTALL|MAPEXT [bag] — extension of every bag field"},
+      {"SYS STEMALL", "SYS STEMALL|MAPSTEM [bag] — stem of every bag field"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
