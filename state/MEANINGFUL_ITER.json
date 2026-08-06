@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 238,
-  "version": "1.15.265-usability",
-  "item": "SYS LOADAVG / LOAD host load averages",
-  "item_id": 273,
-  "title": "SYS LOADAVG|LOAD — 1/5/15 load + centiload for agent backpressure",
-  "commit": "846ddaaa28bb9b640ff5d5a738c645e8757be1fc",
-  "summary": "Host load averages with integer centiload for IF/CMP backpressure. selftest 238.",
+  "iter": 239,
+  "version": "1.15.266-usability",
+  "item": "SYS UPTIME / BOOTAGE seconds since boot",
+  "item_id": 274,
+  "title": "SYS UPTIME|BOOTAGE — seconds since boot for agent warmup/lease",
+  "commit": "8a1b480aadd99ef2a1caebc13dfc32e8ab3f9831",
+  "summary": "Seconds since boot without shell uptime; UPTIME_MIN/HOUR helpers. selftest 239.",
   "proofs": [
-    "812_sys_loadavg",
-    "selftest n_pass=238"
+    "813_sys_uptime",
+    "selftest n_pass=239"
   ],
-  "when": "2026-08-06T17:26:00Z",
+  "when": "2026-08-06T17:36:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "846ddaaa28bb9b640ff5d5a738c645e8757be1fc",
-  "note": "LOAD1_N = load*100; LAST bag of three floats"
+  "sha": "8a1b480aadd99ef2a1caebc13dfc32e8ab3f9831",
+  "note": "pairs with LOADAVG/NPROC for capacity-aware agents"
 }
