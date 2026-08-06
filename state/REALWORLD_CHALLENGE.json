@@ -1,76 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 70,
-  "program": "programs/realworld/marker_patch_board.cubalc",
-  "theme": "marker find-then-patch FINDFILELINE LASTFINDFILELINE SET DROP",
-  "version": "1.15.213-usability",
+  "iter": 71,
+  "program": "programs/realworld/severity_file_gate.cubalc",
+  "theme": "canary severity gate COUNTFILELINE GREPFILE SETMATCHFILE threshold",
+  "version": "1.15.215-usability",
   "pass": true,
   "tests": [
     {
-      "name": "find_TODO",
-      "cmd": "FINDFILELINE TODO \u2192 I=1 hit text",
+      "name": "count_cs",
+      "cmd": "COUNTFILELINE error → 2 of 7",
       "ok": true,
-      "note": "first marker"
+      "note": "cs tally"
     },
     {
-      "name": "find_last_error_cs",
-      "cmd": "find/last error cs both early (ERROR != error)",
+      "name": "count_ci",
+      "cmd": "COUNTFILELINEI error → 3",
       "ok": true,
-      "note": "case split"
+      "note": "+ERROR"
     },
     {
-      "name": "lasti_error",
-      "cmd": "LASTFINDFILELINEI error \u2192 ERROR late I=5",
+      "name": "extract",
+      "cmd": "GREPFILE error → 2 lines; extracti → 3",
       "ok": true,
-      "note": "icase last"
+      "note": "harvest"
     },
     {
-      "name": "span_error",
-      "cmd": "span error first=last=3 cs",
+      "name": "gate_under_over",
+      "cmd": "gate max=5 ok; max=1 over soft+REQUIRE exit2",
       "ok": true,
-      "note": "bookend indices"
+      "note": "threshold"
     },
     {
-      "name": "comment_retarget",
-      "cmd": "comment TODO; retarget flag=on\u2192canary",
+      "name": "patch_status",
+      "cmd": "SETMATCHFILE status= → status=blocked I first",
       "ok": true,
-      "note": "mutate via stored IDX"
+      "note": "first-match set"
     },
     {
-      "name": "dropmark",
-      "cmd": "lasti + dropmark removes ERROR late",
+      "name": "patch_none",
+      "cmd": "missing= soft N=0; REQUIRE exit2",
       "ok": true,
-      "note": "find then drop"
+      "note": "no match"
     },
     {
       "name": "false_ERR",
-      "cmd": "find ERR \u2192 ERROR: late (substring)",
+      "cmd": "count ERR → 2 (ERROR + ERR short)",
       "ok": true,
-      "note": "false friend"
+      "note": "substring"
     },
     {
-      "name": "miss_require",
-      "cmd": "find ZZZ soft; REQUIRE exit 2",
+      "name": "empty_polarity",
+      "cmd": "COUNT empty→0; GREPFILE empty→all lines; SETMATCH empty→none",
       "ok": true,
-      "note": "I=-1 N=0 OK=1"
+      "note": "three-way empty split"
     },
     {
-      "name": "ghost_path",
-      "cmd": "find path miss OK=0 REQUIRE exit 2",
+      "name": "ghost",
+      "cmd": "path miss OK=0 REQUIRE exit2",
       "ok": true,
-      "note": "vs content miss"
+      "note": "soft path"
     },
     {
-      "name": "empty_needle",
-      "cmd": "FINDFILELINE '' \u2192 I=0 first line N=1",
+      "name": "print_json",
+      "cmd": "PRINT_JSON hits glues lines",
       "ok": true,
-      "note": "empty matches all"
+      "note": "error: aerror: b"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "188/188 pass"
+      "note": "190/190 pass"
     }
   ],
   "weaknesses": [
@@ -78,89 +78,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|match",
-      "title": "FINDFILELINE empty needle hits first line (N=1 I=0)",
-      "detail": "Empty substring matches every line; first-hit returns line 0 with success. Same polarity class as GREPLINES empty match-all; opposite COUNTINFILES empty\u21920. Blank ARG without agent guard patches wrong row.",
-      "repro": "FINDFILELINE p \"\" \u2192 I=0 N=1 LAST=first line"
+      "title": "Empty needle polarity split across single-file ops",
+      "detail": "COUNTFILELINE \"\" → 0; GREPFILE \"\" → all lines (N=TOTAL); SETMATCHFILE \"\" → N=0 I=-1 no write; FINDFILELINE \"\" → first line. Same empty input, four behaviors. Agents cannot share one blank-needle policy.",
+      "repro": "GREPFILE p \"\" vs COUNTFILELINE p \"\""
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|naming",
-      "title": "FINDLINE is bag; FINDFILELINE is file path",
-      "detail": "Dual-family trap. FINDLINE on path string does not search file content. Agents must pick FILE* ops for disk markers.",
-      "repro": "FINDLINE bag vs FINDFILELINE path"
+      "title": "GREP vs GREPFILE vs GREPLINES vs GREPFILES matrix",
+      "detail": "String GREP, single-file GREPFILE, path-bag GREPLINES, path-list GREPFILES. Wrong op returns empty or wrong shape silently in soft mode.",
+      "repro": "GREP string vs GREPFILE path"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|match",
-      "title": "Substring only \u2014 ERR matches ERROR: late",
-      "detail": "No whole-word/token mode. Short severity markers over-select.",
-      "repro": "FINDFILELINE p ERR \u2192 ERROR line before ERR short"
+      "title": "SETMATCHFILE only first match; replacement may still match needle",
+      "detail": "status=old→status=new then SETMATCHFILEI status= hits same line again (status=done) not STATUS=keep. Flip-all and skip-already-patched not supported.",
+      "repro": "two status lines; patch twice stays on first"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fs",
-      "title": "Content miss OK=1 I=-1; path miss OK=0 I=-1",
-      "detail": "Same dual polarity as LINEAT OOB vs ghost. Must check N and OK separately.",
-      "repro": "find none vs find ghost"
+      "area": "host|match",
+      "title": "Substring false friends ERR⊂ERROR inflate gate counts",
+      "detail": "Canary gate on ERR counts ERROR lines too. No whole-word mode on COUNTFILELINE/GREPFILE.",
+      "repro": "COUNTFILELINE ERR → 2"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE plate omits trailing NL \u2014 HIT+IDX glue on cat -A",
-      "detail": "HIT.txt no final $ so sequential cat looks like certs1 for TODO+idx.",
-      "repro": "cat -A HIT.txt IDX.txt"
+      "area": "host|json",
+      "title": "PRINT_JSON extract bag glues without NL",
+      "detail": "error: aerror: b — recurring bag collapse.",
+      "repro": "PRINT_JSON hits"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|bag",
-      "title": "SYS PUSH rejects bare numeric vars (need STR first)",
-      "detail": "span initially failed unknown form first_i. Agents building reports must STR indices before PUSH.",
-      "repro": "SYS PUSH bag first_i \u2192 parse fail"
+      "area": "host|write",
+      "title": "SETMATCHFILE rewrite may drop trailing NL on last file line",
+      "detail": "cat -A canary after patch shows last line without final $.",
+      "repro": "cat -A after SETMATCHFILE"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|index",
-      "title": "No atomic find-and-set / find-and-drop op",
-      "detail": "Race if file changes between FINDFILELINE and SETFILELINE. Pattern is always two-step with IDX plate.",
-      "repro": "find then retarget is agent glue"
+      "area": "host|fs",
+      "title": "No SETMATCHFILEALL / replace-all matching lines",
+      "detail": "Only first match. Multi-row status flips need loop + FINDFILELINE I progression or REPLACEFILES whole-file.",
+      "repro": "STATUS=keep left after first patch"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|json",
-      "title": "PRINT_JSON span bag collapses NL",
-      "detail": "Recurring bag JSON glue on multi-line plates.",
-      "repro": "PRINT_JSON span_txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently disables hard gate",
+      "detail": "CUBALC_SG_REQUIRE=abc leaves REQUIRE_HIT=0; gate over soft-succeeds.",
+      "repro": "REQUIRE=abc gate over exit 0"
     }
   ],
   "workarounds": [
-    "Reject blank needle before FINDFILELINE",
-    "Use FINDFILELINE not FINDLINE for disk",
-    "Prefer long markers (TODO rotate) over ERR",
-    "Check FINDFILELINE_N==1 and OK for path vs content miss",
-    "SYS STR before PUSH of numeric indices",
-    "Re-find immediately before mutate if file may change"
+    "Reject blank needle before GREPFILE; COUNT empty is safe-zero",
+    "Use full severity tokens (error: not ERR)",
+    "After SETMATCH, change needle or use exact new value that no longer matches",
+    "Read HITS plate not PRINT_JSON",
+    "Validate REQUIRE env with digit check after NUM"
   ],
   "language_gaps": [
-    "Empty FINDFILELINE should miss like COUNTINFILES",
-    "Whole-word FINDFILELINE mode",
-    "Atomic FINDANDSETFILELINE / FINDANDDROPFILELINE",
-    "SYS PUSH accept numeric LAST/vars",
-    "WRITE trailing NL; PRINT_JSON bag-as-array",
-    "Unify content-miss vs path-miss OK"
+    "Unify empty-needle policy (prefer miss/zero for all file ops)",
+    "GREPFILE empty should match zero like COUNTFILELINE",
+    "SETMATCHFILEALL replace-all matches",
+    "Whole-word COUNT/GREP/SETMATCH file modes",
+    "PRINT_JSON bag-as-array; WRITE trailing NL preserve",
+    "Help table for GREP* family disambiguation"
   ],
   "issues_faced": [
-    "span PUSH bare first_i parse fail \u2014 fixed with STR",
-    "Empty needle first-line hit confirmed",
-    "find/last/comment/retarget/dropmark path clean",
+    "COUNT/GREP/SETMATCH file positive path clean",
+    "Empty-needle three-way split is the main language challenge",
+    "SETMATCH first-only re-hits patched line if needle remains",
     "No language fix this iter"
   ],
-  "commit": "dc7d383ebbf5af25bdc5b3a1da9dbc75e4f6fd8f",
-  "ts": "2026-08-06T09:14:28Z"
+  "commit": "",
+  "ts": "2026-08-06T09:38:39Z"
 }

@@ -1,0 +1,822 @@
+# severity_file_gate.cubalc — single-file severity count + extract + match-set
+#
+# Real use: ops/canary agent gates a deploy on how many ERROR lines appear in
+# one log/report file (COUNTFILELINE), harvests those lines (GREPFILE), and
+# flips a status= row via SETMATCHFILE without FIND+SET glue. Distinct from
+# log_line_harvest (path-bag GREPLINES) and marker_patch_board (index find):
+# this board is *one file* count → extract → first-match rewrite + threshold.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target file path
+#   HITS.txt       — last GREPFILE bag
+#   COUNT.txt      — last count + threshold report fields
+#   PATCH.txt      — last SETMATCHFILE result line
+#   GATE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SG_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   count     — COUNTFILELINE ACTIVE needle(ARG1)
+#   counti    — COUNTFILELINEI
+#   extract   — GREPFILE ACTIVE needle → HITS
+#   extracti  — GREPFILEI
+#   gate      — count; EXIT 2 if count > max(ARG2|ENV THRESH default 0) when REQUIRE
+#               soft FAIL if over without REQUIRE
+#   patch     — SETMATCHFILE ACTIVE needle(ARG1) text(ARG2)
+#   patchi    — SETMATCHFILEI
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sg_$$
+#   printf 'ok\nerror: a\nstatus=old\nerror: b\nERROR: c\n' > $CUBALC_STATE/canary.log
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/canary.log \
+#     ./out/cubalc run -q -s programs/realworld/severity_file_gate.cubalc
+#   CUBALC_ARG0=count CUBALC_ARG1=error ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=error CUBALC_ARG2=1 CUBALC_SG_REQUIRE=1 ...
+#   CUBALC_ARG0=patch CUBALC_ARG1='status=' CUBALC_ARG2='status=blocked' ...
+#
+# Env: CUBALC_SG_PATH=… CUBALC_SG_REQUIRE=1 CUBALC_SG_THRESH=0
+#
+# Edges:
+#   COUNTFILELINE empty needle → 0 (≠ FINDFILELINE empty first-line)
+#   GREPFILE empty? substring ERR/ERROR; case cs vs i
+#   SETMATCHFILE first only; no-match N=0 I=-1 OK=1; path miss OK=0
+#   GREPFILE vs GREPLINES bag; SETMATCH vs SETMATCHFILE; PRINT_JSON; WRITE NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "severity_file_gate: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT HFILE = "HITS.txt"
+DEFAULT CFILE = "COUNT.txt"
+DEFAULT PFILE = "PATCH.txt"
+DEFAULT REPORT = "GATE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THRESH = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SG_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SG_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SG_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SG_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_SG_THRESH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THRESH = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir HFILE
+LET hits_path = LAST
+SYS JOIN state_dir CFILE
+LET count_path = LAST
+SYS JOIN state_dir PFILE
+LET patch_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR hits_path OR ""
+LET hits = LAST
+CLEAR_ERR
+SYS READ OR count_path OR ""
+LET count_txt = LAST
+CLEAR_ERR
+SYS READ OR patch_path OR ""
+LET patch_txt = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET hits_ch = 0
+LET count_ch = 0
+LET patch_ch = 0
+LET note_msg = "ok"
+LET cnt = 0
+LET total = 0
+LET grep_n = 0
+LET op_n = 0
+LET op_i = -1
+LET over = 0
+LET max_n = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs needle"
+  END
+END
+SYS EQS ACTION "counti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "counti needs needle"
+  END
+END
+SYS EQS ACTION "extract"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "extract needs needle"
+  END
+END
+SYS EQS ACTION "extracti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "extracti needs needle"
+  END
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "gate needs needle"
+  END
+END
+SYS EQS ACTION "patch"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "patch needs needle text"
+  END
+END
+SYS EQS ACTION "patchi"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "patchi needs needle text"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "sevgate" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON hits
+  PRINT_JSON count_txt
+  PRINT_JSON patch_txt
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count no active"
+    FAIL "count no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count no active"
+    END
+  ELSE
+    SYS COUNTFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET cnt = 0
+      LET total = 0
+      LET note_msg = "count path miss"
+      FAIL "count path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "count path miss"
+      END
+    ELSE
+      LET cnt = COUNTFILELINE_N
+      LET total = COUNTFILELINE_TOTAL
+      LET hit = cnt
+      LET count_txt = "needle"
+      SYS PUSH count_txt NAME
+      LET count_txt = LAST
+      SYS PUSH count_txt "count"
+      LET count_txt = LAST
+      SYS STR cnt
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "total"
+      LET count_txt = LAST
+      SYS STR total
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "mode"
+      LET count_txt = LAST
+      SYS PUSH count_txt "cs"
+      LET count_txt = LAST
+      LET count_ch = 1
+      IF cnt == 0 THEN
+        LET miss = 1
+        LET note_msg = "count zero"
+        FAIL "count zero"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "count zero"
+        END
+      ELSE
+        LET note_msg = "count ok"
+      END
+    END
+    PRINT_JSON NAME cnt total
+    PRINT_JSON count_txt
+    CLEAR_ERR
+  END
+END
+
+# --- counti ---
+SYS EQS ACTION "counti"
+IF LAST_N == 1 THEN
+  NOTE "action counti"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "counti no active"
+    FAIL "counti no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "counti no active"
+    END
+  ELSE
+    SYS COUNTFILELINEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "counti path miss"
+      FAIL "counti path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "counti path miss"
+      END
+    ELSE
+      LET cnt = COUNTFILELINE_N
+      LET total = COUNTFILELINE_TOTAL
+      LET hit = cnt
+      LET count_txt = "needle"
+      SYS PUSH count_txt NAME
+      LET count_txt = LAST
+      SYS PUSH count_txt "count"
+      LET count_txt = LAST
+      SYS STR cnt
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "total"
+      LET count_txt = LAST
+      SYS STR total
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "mode"
+      LET count_txt = LAST
+      SYS PUSH count_txt "ci"
+      LET count_txt = LAST
+      LET count_ch = 1
+      IF cnt == 0 THEN
+        LET miss = 1
+        LET note_msg = "counti zero"
+        FAIL "counti zero"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "counti zero"
+        END
+      ELSE
+        LET note_msg = "counti ok"
+      END
+    END
+    PRINT_JSON NAME cnt total
+    PRINT_JSON count_txt
+    CLEAR_ERR
+  END
+END
+
+# --- extract GREPFILE ---
+SYS EQS ACTION "extract"
+IF LAST_N == 1 THEN
+  NOTE "action extract"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "extract no active"
+    FAIL "extract no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "extract no active"
+    END
+  ELSE
+    SYS GREPFILE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hits = ""
+      LET hits_ch = 1
+      LET note_msg = "extract path miss"
+      FAIL "extract path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "extract path miss"
+      END
+    ELSE
+      LET hits = LAST
+      LET grep_n = GREPFILE_N
+      LET total = GREPFILE_TOTAL
+      LET cnt = GREPFILE_HIT
+      LET hits_ch = 1
+      LET hit = grep_n
+      IF grep_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "extract none"
+        FAIL "extract none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "extract none"
+        END
+      ELSE
+        LET note_msg = "extract ok"
+      END
+    END
+    PRINT_JSON NAME grep_n total
+    PRINT_JSON hits
+    CLEAR_ERR
+  END
+END
+
+# --- extracti ---
+SYS EQS ACTION "extracti"
+IF LAST_N == 1 THEN
+  NOTE "action extracti"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "extracti no active"
+    FAIL "extracti no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "extracti no active"
+    END
+  ELSE
+    SYS GREPFILEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hits = ""
+      LET hits_ch = 1
+      LET note_msg = "extracti path miss"
+      FAIL "extracti path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "extracti path miss"
+      END
+    ELSE
+      LET hits = LAST
+      LET grep_n = GREPFILE_N
+      LET total = GREPFILE_TOTAL
+      LET cnt = GREPFILE_HIT
+      LET hits_ch = 1
+      LET hit = grep_n
+      IF grep_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "extracti none"
+        FAIL "extracti none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "extracti none"
+        END
+      ELSE
+        LET note_msg = "extracti ok"
+      END
+    END
+    PRINT_JSON NAME grep_n total
+    PRINT_JSON hits
+    CLEAR_ERR
+  END
+END
+
+# --- gate: count vs max ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no active"
+    FAIL "gate no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no active"
+    END
+  ELSE
+    LET max_n = THRESH
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET max_n = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS COUNTFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate path miss"
+      FAIL "gate path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate path miss"
+      END
+    ELSE
+      LET cnt = COUNTFILELINE_N
+      LET total = COUNTFILELINE_TOTAL
+      LET hit = cnt
+      LET over = 0
+      IF cnt > max_n THEN
+        LET over = 1
+      END
+      LET count_txt = "needle"
+      SYS PUSH count_txt NAME
+      LET count_txt = LAST
+      SYS PUSH count_txt "count"
+      LET count_txt = LAST
+      SYS STR cnt
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "max"
+      LET count_txt = LAST
+      SYS STR max_n
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "over"
+      LET count_txt = LAST
+      SYS STR over
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "total"
+      LET count_txt = LAST
+      SYS STR total
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      LET count_ch = 1
+      IF over > 0 THEN
+        LET miss = 1
+        LET note_msg = "gate over"
+        FAIL "gate over"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate over"
+        END
+      ELSE
+        LET note_msg = "gate ok"
+      END
+    END
+    PRINT_JSON NAME cnt max_n over total
+    PRINT_JSON count_txt
+    CLEAR_ERR
+  END
+END
+
+# --- patch SETMATCHFILE ---
+SYS EQS ACTION "patch"
+IF LAST_N == 1 THEN
+  NOTE "action patch"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "patch no active"
+    FAIL "patch no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "patch no active"
+    END
+  ELSE
+    SYS SETMATCHFILE active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET patch_txt = ""
+      LET patch_ch = 1
+      LET note_msg = "patch path miss"
+      FAIL "patch path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "patch path miss"
+      END
+    ELSE
+      LET patch_txt = LAST
+      LET op_n = SETMATCHFILE_N
+      LET op_i = SETMATCHFILE_I
+      LET total = SETMATCHFILE_TOTAL
+      LET patch_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "patch none"
+        FAIL "patch none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "patch none"
+        END
+      ELSE
+        LET note_msg = "patch ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i total
+    PRINT_JSON patch_txt
+    CLEAR_ERR
+  END
+END
+
+# --- patchi ---
+SYS EQS ACTION "patchi"
+IF LAST_N == 1 THEN
+  NOTE "action patchi"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "patchi no active"
+    FAIL "patchi no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "patchi no active"
+    END
+  ELSE
+    SYS SETMATCHFILEI active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET patch_txt = ""
+      LET patch_ch = 1
+      LET note_msg = "patchi path miss"
+      FAIL "patchi path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "patchi path miss"
+      END
+    ELSE
+      LET patch_txt = LAST
+      LET op_n = SETMATCHFILE_N
+      LET op_i = SETMATCHFILE_I
+      LET total = SETMATCHFILE_TOTAL
+      LET patch_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "patchi none"
+        FAIL "patchi none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "patchi none"
+        END
+      ELSE
+        LET note_msg = "patchi ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i total
+    PRINT_JSON patch_txt
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET hits = ""
+  LET count_txt = ""
+  LET patch_txt = ""
+  LET active_ch = 1
+  LET hits_ch = 1
+  LET count_ch = 1
+  LET patch_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "counti"
+LET k = k + LAST_N
+SYS EQS ACTION "extract"
+LET k = k + LAST_N
+SYS EQS ACTION "extracti"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "patch"
+LET k = k + LAST_N
+SYS EQS ACTION "patchi"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF hits_ch > 0 THEN
+  SYS WRITE hits_path hits
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hits write failed"
+  END
+  CLEAR_ERR
+END
+IF count_ch > 0 THEN
+  SYS WRITE count_path count_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "count write failed"
+  END
+  CLEAR_ERR
+END
+IF patch_ch > 0 THEN
+  SYS WRITE patch_path patch_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "patch write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.severity_file_gate.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "cnt"
+LET report = LAST
+SYS STR cnt
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "grep_n"
+LET report = LAST
+SYS STR grep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_n"
+LET report = LAST
+SYS STR op_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_i"
+LET report = LAST
+SYS STR op_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "over"
+LET report = LAST
+SYS STR over
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_n"
+LET report = LAST
+SYS STR max_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "severity_file_gate" ACTION hit miss cnt over note_msg elapsed
