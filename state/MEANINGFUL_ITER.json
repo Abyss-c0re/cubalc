@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 245,
-  "version": "1.15.272-usability",
-  "item": "SYS WRITEENV / SAVENV / DUMPENVFILE persist env plates",
-  "item_id": 280,
-  "title": "SYS WRITEENV|SAVENV path [prefix] — write process env KEY=VAL plate for peers",
-  "commit": "406e92734267092edcb8780b9e29c06843bad745",
-  "summary": "persist env KEY=VAL plate + prefix; dual of DOTENV. selftest 245.",
+  "iter": 246,
+  "version": "1.15.273-usability",
+  "item": "SYS TRUNCATE / FTRUNCATE / FILETRUNC resize plates",
+  "item_id": 281,
+  "title": "SYS TRUNCATE|FTRUNCATE path [nbytes] — resize plate file keep inode (default 0)",
+  "commit": "5b506c8d7440178ac2b34908a940c080c9c05c54",
+  "summary": "ftruncate plate files; empty without RM+TOUCH. selftest 246.",
   "proofs": [
-    "819_sys_writeenv",
-    "selftest n_pass=245"
+    "820_sys_truncate",
+    "selftest n_pass=246"
   ],
-  "when": "2026-08-06T18:35:09Z",
+  "when": "2026-08-06T18:44:16Z",
   "agent": "meaningful_iter_10m",
-  "sha": "406e92734267092edcb8780b9e29c06843bad745",
-  "note": "completes DOTENV/DUMPENV/WRITEENV env trilogy"
+  "sha": "5b506c8d7440178ac2b34908a940c080c9c05c54",
+  "note": "not TRUNCALL bag clip; complements WRITE/FSYNC"
 }
