@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 233,
-  "version": "1.15.259-usability",
-  "item": "SYS NPROC / CPUS / CORES online processor count",
-  "item_id": 267,
-  "title": "SYS NPROC|CPUS|CORES — online CPU count for STRIDE/CHUNK worker partition",
-  "commit": "67fd32e194ab53d129abd330e507c35f2c9f0f4e",
-  "summary": "Online processor count for agent work partitioning without shell nproc. selftest 233.",
+  "iter": 234,
+  "version": "1.15.260-usability",
+  "item": "SYS UNAME / OS / ARCH / MACHINE / PLATFORM host identity",
+  "item_id": 268,
+  "title": "SYS UNAME|OS|ARCH|PLATFORM — kernel + arch without shell uname",
+  "commit": "d8e6b4373b03256e2fa9a1a95378ec02be44c800",
+  "summary": "Portable OS/arch probes for agent IF and plate tags. selftest 234.",
   "proofs": [
-    "807_sys_nproc",
-    "selftest n_pass=233"
+    "808_sys_uname",
+    "selftest n_pass=234"
   ],
-  "when": "2026-08-06T16:36:00Z",
+  "when": "2026-08-06T16:46:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "67fd32e194ab53d129abd330e507c35f2c9f0f4e",
-  "note": "complements SYS MONOTONIC; STRIDE workers from NPROC"
+  "sha": "d8e6b4373b03256e2fa9a1a95378ec02be44c800",
+  "note": "complements NPROC/HOSTNAME; uname(2) on POSIX"
 }
