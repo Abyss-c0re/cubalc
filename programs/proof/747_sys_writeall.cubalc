@@ -1,0 +1,88 @@
+# SYS WRITEALL / WRITEFILES — overwrite every path in bag with data
+# Usability: multi-file plate reset/stamp without EACH+WRITE glue
+# Dual of LOGALL (append line). Creates missing files.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "writeall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.txt"
+LET fa = LAST
+SYS JOIN fix "b.txt"
+LET fb = LAST
+SYS JOIN fix "c.txt"
+LET fc = LAST
+
+# seed different content
+SYS WRITE fa "old-a"
+SYS WRITE fb "old-b"
+SYS WRITE fc "old-c"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+LET bag = LAST
+
+SYS WRITEALL bag "plate-v1"
+ASSERT OK == 1
+ASSERT WRITEALL_N == 3
+ASSERT WRITEALL_FAIL == 0
+ASSERT WRITEALL_SCAN == 3
+ASSERT WRITEALL_BYTES == 24
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+
+SYS READ fa
+SYS EQS LAST "plate-v1"
+ASSERT LAST_N == 1
+SYS READ fb
+SYS EQS LAST "plate-v1"
+ASSERT LAST_N == 1
+SYS READ fc
+SYS EQS LAST "plate-v1"
+ASSERT LAST_N == 1
+
+# alias + overwrite again
+SYS WRITEFILES bag "plate-v2"
+ASSERT WRITEFILES_N == 3
+SYS READ fa
+SYS EQS LAST "plate-v2"
+ASSERT LAST_N == 1
+
+# one-arg after PATHGLOB: data only, bag = LAST
+SYS PATHGLOB fix "*.txt"
+SYS KEEPFILES
+SYS WRITEALL "shared"
+ASSERT WRITEALL_N == 3
+SYS READ fb
+SYS EQS LAST "shared"
+ASSERT LAST_N == 1
+
+# create missing path
+SYS JOIN fix "new.txt"
+LET fn = LAST
+SYS WRITEALL fn "born"
+ASSERT WRITEALL_N == 1
+SYS EXIST fn
+ASSERT LAST_N == 1
+SYS READ fn
+SYS EQS LAST "born"
+ASSERT LAST_N == 1
+
+# empty bag soft
+SYS WRITEALL "" "x"
+ASSERT WRITEALL_N == 0
+ASSERT WRITEALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+SYS RM fn
+
+PRINT "sys_writeall ok"

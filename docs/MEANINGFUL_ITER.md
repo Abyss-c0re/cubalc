@@ -234,6 +234,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 204. ~~**`SYS LOGALL` / `APPENDFILES`**~~ **done** (append line to every path in bag · multi-log without EACH+APPEND).
 205. ~~**`SYS GREPFILES` / `SEARCHFILES`**~~ **done** (filter path bag by file content · PATHGLOB triage without EACH+READ+HAS).
 206. ~~**`SYS READALL` / `CATFILES`**~~ **done** (concat path bag file contents → LAST · multi-file join without EACH+READ+CAT).
+207. ~~**`SYS WRITEALL` / `WRITEFILES`**~~ **done** (overwrite every path in bag with data · multi-file stamp without EACH+WRITE).
 
 ## Tick protocol
 
