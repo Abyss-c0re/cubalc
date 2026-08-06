@@ -1,146 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 95,
-  "program": "programs/realworld/plate_identity_board.cubalc",
-  "theme": "plate identity TEE OWNEDBY SAMEINODE EQFILE dual probe",
-  "version": "1.15.278-usability",
+  "iter": 96,
+  "program": "programs/realworld/plate_acl_board.cubalc",
+  "theme": "plate ACL CANREAD/CANWRITE/CANEXEC + OWNERNAME/GROUPNAME admit gate",
+  "version": "1.15.280-usability",
   "pass": true,
   "tests": [
     {
-      "name": "tee",
-      "cmd": "TEE body keep LAST; file matches VAL",
+      "name": "put_canrw",
+      "cmd": "put body; CANREAD=1 CANWRITE=1",
       "ok": true,
-      "note": "chain write"
+      "note": "owner access"
     },
     {
-      "name": "chain",
-      "cmd": "TEE+HAS needle same process; miss REQUIRE",
+      "name": "canx_soft",
+      "cmd": "CANEXEC data plate \u2192 0 soft miss",
       "ok": true,
-      "note": "no READ"
+      "note": "no X bit"
     },
     {
-      "name": "own_uid",
-      "cmd": "OWNEDBY=1 FILEUID matches euid",
+      "name": "owner_group",
+      "cmd": "OWNERNAME/GROUPNAME human labels",
       "ok": true,
-      "note": "owner gate"
+      "note": "root:root"
     },
     {
-      "name": "link_same_eq",
-      "cmd": "HARDLINK \u2192 SAMEINODE=1 EQFILE=1",
+      "name": "stamp",
+      "cmd": "owner:group:mode r=w=x composite",
       "ok": true,
-      "note": "identity"
+      "note": "root:root:0644 r=1 w=1 x=0"
     },
     {
-      "name": "copy_dual",
-      "cmd": "COPY \u2192 EQFILE=1 SAMEINODE=0 REQUIRE",
+      "name": "gate_rw",
+      "cmd": "gate rw admit",
       "ok": true,
-      "note": "content \u2260 inode"
+      "note": "pass"
     },
     {
-      "name": "inode",
-      "cmd": "INODE stamp numeric",
+      "name": "gate_rwx_require",
+      "cmd": "gate rwx REQUIRE \u2192 exit 2",
       "ok": true,
-      "note": "ino"
+      "note": "deny"
     },
     {
-      "name": "own_miss",
-      "cmd": "missing path soft; REQUIRE\u21922",
+      "name": "mine",
+      "cmd": "OWNERNAME EQS USER + OWNEDBY dual",
       "ok": true,
-      "note": "probe"
+      "note": "mine=1"
+    },
+    {
+      "name": "owner_miss",
+      "cmd": "missing path OWNERNAME soft; REQUIRE\u21922",
+      "ok": true,
+      "note": "OK=0 sticky"
+    },
+    {
+      "name": "canr_miss",
+      "cmd": "missing path CANREAD OK=1 LAST_N=0",
+      "ok": true,
+      "note": "probe model"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "251/251 pass"
+      "note": "253/253 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|identity",
-      "title": "SAMEINODE vs EQFILE dual \u2014 agents conflate hardlink with content twin",
-      "detail": "COPY makes EQFILE=1 SAMEINODE=0. After WRITEATOMIC on shared plate, EQFILE may fail while agents still think links share. No combined SAME_OR_EQ helper.",
-      "repro": "COPY a b; EQFILE 1; SAMEINODE 0"
+      "area": "host|access",
+      "title": "CAN* vs OWNERNAME soft-fail models disagree",
+      "detail": "CANREAD missing path \u2192 OK=1 LAST_N=0 (probe). OWNERNAME missing \u2192 OK=0 sticky LAST_ERR. Agents cannot uniform-handle admit vs label soft misses.",
+      "repro": "CANREAD /no/such; OWNERNAME /no/such"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|tee",
-      "title": "TEE vs WRITE LAST semantics undocumented for chains",
-      "detail": "WRITE often leaves path-ish LAST; TEE keeps body. Agents mixing WRITE then HAS on LAST fail silently.",
-      "repro": "WRITE then HAS LAST vs TEE then HAS LAST"
+      "area": "host|gate",
+      "title": "No single CAN_RWX / ACCESSMASK form",
+      "detail": "Three separate probes required for r/w/x. Gate boards hand-roll HAS letter parse on want string \u2014 fragile and verbose.",
+      "repro": "need r+w+x \u2192 3 SYS calls"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|ownedby",
-      "title": "OWNEDBY is euid-only \u2014 no ACL/group-write nuance",
-      "detail": "Shared plates writable by group still OWNEDBY=0 for non-owner euid. Agents over-deny.",
-      "repro": "group-writable plate; other uid OWNEDBY 0"
+      "area": "host|mode",
+      "title": "MODE string vs MODE_N decimal dual confuses agents",
+      "detail": "0644 string but MODE_N=420 (decimal). Agents comparing MODE_N==644 fail silently.",
+      "repro": "MODE file \u2192 LAST=0644 MODE_N=420"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|fileuid",
-      "title": "FILEUID/GID numeric only \u2014 no username resolve",
-      "detail": "Agents cannot stamp owner=alice without shell getent.",
-      "repro": "FILEUID \u2192 0 not root"
+      "area": "host|has",
+      "title": "Gate letter parse via HAS is substring-false-friend prone",
+      "detail": "HAS want \"r\" works for rwx but would match accidental bags containing letter r. No CHARHAS / SET-of-flags helper.",
+      "repro": "HAS owner r \u2192 1"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS substring false friends in TEE chain",
-      "detail": "HAS ready matches status=ready and not_ready. No word-boundary.",
-      "repro": "HAS ready on status=ready"
+      "area": "host|mine",
+      "title": "No MINE/ISOWNERNAME helper \u2014 dual OWNEDBY + OWNERNAME EQS USER",
+      "detail": "OWNEDBY is euid; OWNERNAME is login string. Agents must dual-probe to stamp audit+admit. Race if passwd entry missing \u2192 numeric fallback name.",
+      "repro": "OWNEDBY 1; OWNERNAME EQS USER"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "ACTIVE/PEER glue in cat -A.",
+      "detail": "ACTIVE.txt path and VAL glue in cat -A without $ line ends on short writes.",
       "repro": "cat -A ACTIVE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|sameinode",
-      "title": "SAMEINODE path-miss vs not-same both need care",
-      "detail": "OK=0 miss; OK=1 LAST_N=0 different inodes. Easy to require same and get probe fail.",
-      "repro": "SAMEINODE a missing"
+      "area": "host|canexec",
+      "title": "CANEXEC=0 on ordinary data plates surprises agents",
+      "detail": "Default put body is not +x; agents requiring rwx gate fail on secrets/env plates. Docs should separate data vs runbook gates.",
+      "repro": "WRITE then CANEXEC \u2192 0"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_PI_REQUIRE=abc.",
-      "repro": "REQUIRE=abc same no \u2192 rc 0"
+      "detail": "CUBALC_PA_REQUIRE=abc leaves REQUIRE_HIT=0 so gate deny stays rc 0.",
+      "repro": "REQUIRE=abc gate rwx \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Always dual-probe SAMEINODE and EQFILE for share health",
-    "Prefer TEE when chaining HAS/GREP on body",
-    "OWNEDBY for strict private plates only",
-    "INODE stamp for audit logs",
-    "Digit-check REQUIRE"
+    "Treat CAN* LAST_N as admit bit; OWNERNAME OK as soft exist",
+    "Prefer MODE string for display; MODE_N only for bit math",
+    "Dual-probe OWNEDBY + OWNERNAME for mine stamps",
+    "Use gate=rw for data plates; gate=rx for runbooks",
+    "Digit-check REQUIRE env before NUM"
   ],
   "language_gaps": [
-    "Help matrix SAMEINODE vs EQFILE vs NLINK",
-    "TEE as default WRITE mode option",
-    "OWNER name resolve",
-    "OWNEDBY group/ACL modes",
-    "WRITE trailing NL",
-    "HAS word-boundary"
+    "Unified soft-probe contract for access vs name ops",
+    "SYS ACCESSMASK or CAN_RWX bag form",
+    "MODE_N octal-string dual docs / MODE_OCT helper",
+    "SYS MINE / ISOWNERNAME combined probe",
+    "CHARHAS / flag-set parse for rwx wants",
+    "WRITE trailing NL option"
   ],
   "issues_faced": [
-    "tee/chain/own/link/same/eq/copy dual green",
-    "COPY makes content twin without inode identity \u2014 core lesson",
-    "selftest 251/251; no language fix this iter"
+    "put/canr/canw/owner/group/mode/stamp/gate/mine green",
+    "CAN* missing is OK=1; OWNERNAME missing is OK=0 \u2014 core lesson",
+    "MODE_N=420 for 0644 documented as agent trap",
+    "selftest 253/253; no language fix this iter"
   ],
-  "commit": "1a803a63466c85ea0037cd38246d09e2cef74e63",
-  "ts": "2026-08-06T19:38:58Z"
+  "commit": "06e042536f647ec98d149d86a8f7b094bba2c4cc",
+  "ts": "2026-08-06T20:04:19Z"
 }
