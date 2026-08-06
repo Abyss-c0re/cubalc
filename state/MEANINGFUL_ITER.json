@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 228,
-  "version": "1.15.253-usability",
-  "item": "SYS HUMANSIZE / BYTESFMT / HUMANSZ integer size labels",
-  "item_id": 261,
-  "title": "SYS HUMANSIZE|BYTESFMT [n] — integer B/K/M/G/T labels for SIZE inventory without shell",
-  "commit": "12e06cbbde69eedb3a02b249490b928ff0f53151",
-  "summary": "1024-base floor size labels for agent SIZE plates without numfmt. selftest 228.",
+  "iter": 229,
+  "version": "1.15.254-usability",
+  "item": "SYS ISLINK / ISLNK / ISSYMLINK symlink probe",
+  "item_id": 262,
+  "title": "SYS ISLINK|ISLNK path — LAST_N 1 if symlink · IF before READLINK without soft-fail glue",
+  "commit": "a6e2ca260279adca4f3e9f3b20cde3392ecb45f3",
+  "summary": "lstat symlink probe for agent plate aliases; missing=0 OK=1. selftest 229.",
   "proofs": [
-    "802_sys_humansize",
-    "selftest n_pass=228"
+    "803_sys_islink",
+    "selftest n_pass=229"
   ],
-  "when": "2026-08-06T15:46:00Z",
+  "when": "2026-08-06T15:56:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "12e06cbbde69eedb3a02b249490b928ff0f53151",
-  "note": "pairs with SIZE/SIZEALL; HUMANSIZE_UNIT + HUMANSIZE_BYTES"
+  "sha": "a6e2ca260279adca4f3e9f3b20cde3392ecb45f3",
+  "note": "complements SYMLINK/READLINK; hostops islink"
 }
