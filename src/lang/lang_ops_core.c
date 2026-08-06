@@ -15502,6 +15502,117 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PARSEISO|TOEPOCH|ISO2EPOCH|FROMISO [str]
+     * — parse UTC ISO stamp → Unix epoch seconds (dual of FROMTIME).
+     * Accepts: YYYY-MM-DDTHH:MM:SSZ | …SS | space sep | date-only (midnight).
+     * LAST = decimal epoch; LAST_N / PARSEISO_N / TIME = epoch.
+     * Soft fail OK=0 on empty/bad. Usability: plate DATE stamps → age/compare
+     * without shell date -d. */
+    if (kw(&L->cur,"PARSEISO") || kw(&L->cur,"TOEPOCH") || kw(&L->cur,"ISO2EPOCH") ||
+        kw(&L->cur,"FROMISO") || kw(&L->cur,"ISOEPOCH") || kw(&L->cur,"PARSEDATE") ||
+        kw(&L->cur,"DATEPARSE") || kw(&L->cur,"EPOCHFROM") || kw(&L->cur,"ISO_TO_EPOCH") ||
+        kw(&L->cur,"READISO") || kw(&L->cur,"PARSE_ISO")){
+      char src[128], out[40];
+      const char *p;
+      int y=0, mo=0, d=0, H=0, M=0, S=0, nscan;
+      long epoch = 0;
+      /* days from civil date (Howard Hinnant algorithm) → Unix epoch */
+      long era, yoe, doy, doe, days;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      p = src;
+      while (*p == ' ' || *p == '\t') p++;
+      if (!*p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSEISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSEISO: empty");
+        var_set_str(vm, "ERR", "PARSEISO: empty");
+        bump(vm); return 1;
+      }
+      /* date-only */
+      nscan = sscanf(p, "%d-%d-%d", &y, &mo, &d);
+      if (nscan != 3 || y < 1970 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSEISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSEISO: bad date");
+        var_set_str(vm, "ERR", "PARSEISO: bad date");
+        bump(vm); return 1;
+      }
+      /* optional time after T or space */
+      {
+        const char *t = p;
+        while (*t && *t != 'T' && *t != ' ' && *t != 't') t++;
+        if (*t == 'T' || *t == 't' || *t == ' ') {
+          t++;
+          while (*t == ' ' || *t == '\t') t++;
+          if (*t) {
+            int hs=0, ms=0, ss=0;
+            int nt = sscanf(t, "%d:%d:%d", &hs, &ms, &ss);
+            if (nt < 2) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "PARSEISO_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", "PARSEISO: bad time");
+              var_set_str(vm, "ERR", "PARSEISO: bad time");
+              bump(vm); return 1;
+            }
+            if (nt == 2) ss = 0;
+            if (hs < 0 || hs > 23 || ms < 0 || ms > 59 || ss < 0 || ss > 60) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "PARSEISO_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", "PARSEISO: bad time");
+              var_set_str(vm, "ERR", "PARSEISO: bad time");
+              bump(vm); return 1;
+            }
+            H = hs; M = ms; S = ss;
+            if (S == 60) S = 59; /* leap second clamp */
+          }
+        }
+      }
+      /* civil (y, mo, d) → days since 1970-01-01 (UTC), proleptic Gregorian */
+      {
+        long Y = (long)y;
+        long mp = (long)mo;
+        long dy = (long)d;
+        Y -= mp <= 2;
+        era = (Y >= 0 ? Y : Y - 399) / 400;
+        yoe = Y - era * 400;
+        doy = (153 * (mp + (mp > 2 ? -3 : 9)) + 2) / 5 + dy - 1;
+        doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+        days = era * 146097 + doe - 719468; /* days since 1970-01-01 */
+      }
+      epoch = days * 86400L + (long)H * 3600L + (long)M * 60L + (long)S;
+      if (epoch < 0) epoch = 0;
+      snprintf(out, sizeof out, "%ld", epoch);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = epoch;
+      var_set_num(vm, "LAST_N", epoch);
+      var_set_num(vm, "PARSEISO_N", epoch);
+      var_set_num(vm, "TOEPOCH_N", epoch);
+      var_set_num(vm, "TIME", epoch);
+      var_set_str(vm, "PARSEISO", out);
+      var_set_str(vm, "TOEPOCH", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
      * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
      * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
@@ -24257,6 +24368,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FROMTIME", "SYS FROMTIME|EPOCHISO|TOISO [n] — epoch seconds → UTC ISO stamp"},
       {"SYS EPOCHISO", "SYS EPOCHISO [n] — alias of SYS FROMTIME"},
       {"SYS TOISO", "SYS TOISO [n] — alias of SYS FROMTIME"},
+      {"SYS PARSEISO", "SYS PARSEISO|TOEPOCH|FROMISO [str] — ISO stamp → epoch · dual of FROMTIME"},
+      {"SYS TOEPOCH", "SYS TOEPOCH [str] — alias of SYS PARSEISO"},
+      {"SYS FROMISO", "SYS FROMISO [str] — alias of SYS PARSEISO"},
       {"SYS LOCAL", "SYS LOCAL|LOCALTIME — local wall stamp YYYY-MM-DDTHH:MM:SS → LAST"},
       {"SYS LOCALTIME", "SYS LOCALTIME alias of SYS LOCAL"},
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},
