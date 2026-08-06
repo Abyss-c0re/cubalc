@@ -1,0 +1,63 @@
+# SYS HEADFILE / TAILFILE — first/last n lines of a file → LAST bag
+# Usability: peek plates/logs without full READ or shell head/tail
+# Not SYS HEAD (bag first field). Default n=10. Soft miss empty.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "headfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "L1\nL2\nL3\nL4\nL5"
+
+SYS HEADFILE fs 2
+ASSERT OK == 1
+ASSERT HEADFILE_N == 2
+ASSERT HEADFILE_TOTAL == 5
+ASSERT HEADFILE_WANT == 2
+SYS HEAD LAST
+SYS EQS LAST "L1"
+ASSERT LAST_N == 1
+SYS HEADFILE fs 2
+SYS TAIL LAST
+SYS EQS LAST "L2"
+ASSERT LAST_N == 1
+
+SYS TAILFILE fs 2
+ASSERT OK == 1
+ASSERT TAILFILE_N == 2
+ASSERT TAILFILE_TOTAL == 5
+SYS HEAD LAST
+SYS EQS LAST "L4"
+ASSERT LAST_N == 1
+SYS TAILFILE fs 2
+SYS TAIL LAST
+SYS EQS LAST "L5"
+ASSERT LAST_N == 1
+
+# default n=10 but only 5 lines
+SYS HEADFILE fs
+ASSERT HEADFILE_N == 5
+ASSERT HEADFILE_WANT == 10
+
+# alias
+SYS FILETAIL fs 1
+ASSERT TAILFILE_N == 1
+SYS EQS LAST "L5"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS HEADFILE "no_such_headfile_mi.txt" 3
+ASSERT OK == 0
+ASSERT HEADFILE_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_headfile ok"

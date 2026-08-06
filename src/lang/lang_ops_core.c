@@ -3431,6 +3431,181 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HEADFILE|FILEHEAD|HEADF path [n]
+     * — first n lines of file → LAST bag (default n=10, cap 256).
+     * SYS TAILFILE|FILETAIL|TAILF path [n] — last n lines.
+     * Soft miss → OK=0 empty LAST. HEADFILE_TOTAL = total lines when read.
+     * Not SYS HEAD (bag first field). Usability: peek plates/logs without full READ. */
+    if (kw(&L->cur,"HEADFILE") || kw(&L->cur,"FILEHEAD") || kw(&L->cur,"HEADF") ||
+        kw(&L->cur,"HEADLINES") || kw(&L->cur,"TOPLINES") || kw(&L->cur,"FILETOP") ||
+        kw(&L->cur,"TAILFILE") || kw(&L->cur,"FILETAIL") || kw(&L->cur,"TAILF") ||
+        kw(&L->cur,"TAILLINES") || kw(&L->cur,"BOTTOMLINES") || kw(&L->cur,"FILEBOTTOM")){
+      char path[512], out[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX];
+      const char *lp, *ls;
+      size_t olen = 0, llen;
+      long nwant = 10, total = 0, kept = 0;
+      int want_tail = 0;
+      /* ring for tail: store up to 256 lines of up to 256 chars each is heavy;
+       * simpler: two-pass for tail, or collect all line starts in one pass on hr.str */
+      cubalc_host_result hr;
+      if (kw(&L->cur,"TAILFILE") || kw(&L->cur,"FILETAIL") || kw(&L->cur,"TAILF") ||
+          kw(&L->cur,"TAILLINES") || kw(&L->cur,"BOTTOMLINES") || kw(&L->cur,"FILEBOTTOM"))
+        want_tail = 1;
+      lex_next(L);
+      path[0] = 0; out[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        /* zero-arg: path = LAST, n = 10 */
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      } else {
+        /* if next is num, a is path; if only one arg and looks like number... */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          snprintf(path, sizeof path, "%s", a);
+          nwant = parse_expr(vm, L);
+        } else {
+          char b[CUBALC_HOST_STR_MAX];
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, b, sizeof b) == 0) {
+            /* path n as string number, or n path? Prefer path then n */
+            snprintf(path, sizeof path, "%s", a);
+            nwant = atol(b);
+          } else {
+            /* only one str arg: could be path (n default) */
+            snprintf(path, sizeof path, "%s", a);
+          }
+        }
+      }
+      if (nwant < 0) nwant = 0;
+      if (nwant > 256) nwant = 256;
+      if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, want_tail ? "TAILFILE_N" : "HEADFILE_N", 0);
+        var_set_num(vm, want_tail ? "TAILFILE_TOTAL" : "HEADFILE_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        if (!path[0]) {
+          var_set_str(vm, "LAST_ERR", want_tail ? "TAILFILE: empty path" : "HEADFILE: empty path");
+          var_set_str(vm, "ERR", want_tail ? "TAILFILE: empty path" : "HEADFILE: empty path");
+        } else {
+          var_set_str(vm, "LAST_ERR", want_tail ? "TAILFILE: read fail" : "HEADFILE: read fail");
+          var_set_str(vm, "ERR", want_tail ? "TAILFILE: read fail" : "HEADFILE: read fail");
+        }
+        bump(vm); return 1;
+      }
+      /* count total lines + optionally collect */
+      {
+        /* line start offsets for tail (cap 4096 lines tracked) */
+        const char *starts[4096];
+        long nstarts = 0;
+        lp = hr.str;
+        while (*lp && nstarts < 4096) {
+          starts[nstarts++] = lp;
+          while (*lp && *lp != '\n') lp++;
+          if (*lp == '\n') lp++;
+        }
+        /* if more content after cap, recount remaining for total only */
+        total = nstarts;
+        while (*lp) {
+          if (*lp == '\n') total++;
+          /* count lines: if trailing non-empty after last \n */
+          lp++;
+        }
+        /* recount properly: scan full for total */
+        total = 0;
+        lp = hr.str;
+        while (*lp) {
+          while (*lp && *lp != '\n') lp++;
+          total++;
+          if (*lp == '\n') lp++;
+        }
+        if (want_tail) {
+          long start_i = total > nwant ? total - nwant : 0;
+          long i;
+          /* rebuild starts if total > 4096 — fall back to full scan collect */
+          if (total <= 4096 && nstarts == total) {
+            for (i = start_i; i < total; i++) {
+              ls = starts[i];
+              lp = ls;
+              while (*lp && *lp != '\n') lp++;
+              llen = (size_t)(lp - ls);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + llen < sizeof out) {
+                memcpy(out + olen, ls, llen);
+                olen += llen;
+              } else if (olen < sizeof out - 1) {
+                size_t room = sizeof out - 1 - olen;
+                memcpy(out + olen, ls, room);
+                olen += room;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+          } else {
+            /* full scan: skip first (total-nwant) lines */
+            long skip = total > nwant ? total - nwant : 0;
+            long seen = 0;
+            lp = hr.str;
+            while (*lp) {
+              ls = lp;
+              while (*lp && *lp != '\n') lp++;
+              llen = (size_t)(lp - ls);
+              if (seen >= skip) {
+                if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+                if (olen + llen < sizeof out) {
+                  memcpy(out + olen, ls, llen);
+                  olen += llen;
+                }
+                out[olen] = 0;
+                kept++;
+              }
+              seen++;
+              if (*lp == '\n') lp++;
+            }
+          }
+        } else {
+          /* head: first nwant lines */
+          lp = hr.str;
+          while (*lp && kept < nwant) {
+            ls = lp;
+            while (*lp && *lp != '\n') lp++;
+            llen = (size_t)(lp - ls);
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + llen < sizeof out) {
+              memcpy(out + olen, ls, llen);
+              olen += llen;
+            } else if (olen < sizeof out - 1) {
+              size_t room = sizeof out - 1 - olen;
+              memcpy(out + olen, ls, room);
+              olen += room;
+            }
+            out[olen] = 0;
+            kept++;
+            if (*lp == '\n') lp++;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      if (want_tail) {
+        var_set_str(vm, "TAILFILE", out);
+        var_set_str(vm, "FILETAIL", out);
+        var_set_num(vm, "TAILFILE_N", kept);
+        var_set_num(vm, "TAILFILE_TOTAL", total);
+        var_set_num(vm, "TAILFILE_WANT", nwant);
+      } else {
+        var_set_str(vm, "HEADFILE", out);
+        var_set_str(vm, "FILEHEAD", out);
+        var_set_num(vm, "HEADFILE_N", kept);
+        var_set_num(vm, "HEADFILE_TOTAL", total);
+        var_set_num(vm, "HEADFILE_WANT", nwant);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
@@ -13166,7 +13341,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -13467,6 +13642,12 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS EXTRACTLINES", "SYS EXTRACTLINES alias of SYS GREPLINES"},
       {"SYS FILEGREPLINES", "SYS FILEGREPLINES alias of SYS GREPLINES"},
       {"SYS GREPLINESI", "SYS GREPLINESI case-insensitive GREPLINES"},
+      {"SYS HEADFILE", "SYS HEADFILE|FILEHEAD path [n] — first n lines of file → LAST bag (default 10)"},
+      {"SYS FILEHEAD", "SYS FILEHEAD alias of SYS HEADFILE (not bag HEAD)"},
+      {"SYS TAILFILE", "SYS TAILFILE|FILETAIL path [n] — last n lines of file → LAST bag"},
+      {"SYS FILETAIL", "SYS FILETAIL alias of SYS TAILFILE"},
+      {"SYS HEADF", "SYS HEADF alias of SYS HEADFILE"},
+      {"SYS TAILF", "SYS TAILF alias of SYS TAILFILE"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
