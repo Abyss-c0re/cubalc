@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 153,
-  "version": "1.15.178-usability",
-  "item": "REQUIRE PATH / DIR / REG fail-fast host path gates",
-  "item_id": 186,
-  "title": "REQUIRE PATH|DIR|REG path — plate layout gates without EXIST+IF",
-  "commit": "61be082bb5bc4f0fc5c0a40962a14b191369077f",
-  "summary": "Fail-fast path/kind gates for agents. selftest 153.",
+  "iter": 154,
+  "version": "1.15.179-usability",
+  "item": "SYS FILTERGLOB / MATCHBAG shell-pattern bag filter",
+  "item_id": 187,
+  "title": "SYS FILTERGLOB|MATCHBAG bag pattern — shell bag filter (basename-aware)",
+  "commit": "e9b4ab5f40104ccbb0ffa7ada9c1ebe5aab7e4b3",
+  "summary": "Filter bags by fnmatch; basename match for PATHGLOB. selftest 154.",
   "proofs": [
-    "726_require_path",
-    "selftest n_pass=153"
+    "727_sys_filterglob",
+    "selftest n_pass=154"
   ],
-  "when": "2026-08-06T03:24:14Z",
+  "when": "2026-08-06T03:34:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "61be082bb5bc4f0fc5c0a40962a14b191369077f"
+  "sha": "e9b4ab5f40104ccbb0ffa7ada9c1ebe5aab7e4b3"
 }
