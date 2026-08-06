@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 148,
-  "version": "1.15.173-usability",
-  "item": "SYS AVGKV / MEANKV integer mean of key:val values",
-  "item_id": 181,
-  "title": "SYS AVGKV|MEANKV bag [sep] — typical FREQ count without SUM+DIV",
-  "commit": "3b0af9c552d6667d197e2bfe8fd4ac1b45c41541",
-  "summary": "AVGKV mean of key:val values. selftest 148.",
+  "iter": 149,
+  "version": "1.15.174-usability",
+  "item": "SYS MEDIANKV / P50KV median of key:val values",
+  "item_id": 182,
+  "title": "SYS MEDIANKV|P50KV bag [sep] — robust FREQ mid vs AVGKV",
+  "commit": "71089e866fdbc5471d70266d210539e5b2e090d4",
+  "summary": "MEDIANKV median of key:val values. selftest 149.",
   "proofs": [
-    "721_sys_avgkv",
-    "selftest n_pass=148"
+    "722_sys_mediankv",
+    "selftest n_pass=149"
   ],
-  "when": "2026-08-06T02:24:11Z",
+  "when": "2026-08-06T02:33:53Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3b0af9c552d6667d197e2bfe8fd4ac1b45c41541"
+  "sha": "71089e866fdbc5471d70266d210539e5b2e090d4"
 }
