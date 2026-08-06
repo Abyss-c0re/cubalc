@@ -1,0 +1,90 @@
+# SYS FRESH / KEEPSTALE — filter path bags by age threshold
+# Usability: cache/lease plate gates without EACH + AGE glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "fresh_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "old.plate"
+LET fold = LAST
+SYS WRITE fold "old"
+
+# make old.plate actually old enough for STALE tests
+SYS SLEEP 2100
+
+SYS JOIN fix "new.plate"
+LET fnew = LAST
+SYS WRITE fnew "new"
+SYS TOUCH fnew
+
+SYS JOIN fix "ghost.plate"
+LET ghost = LAST
+
+SYS PUSH "" fold
+SYS PUSH LAST fnew
+SYS PUSH LAST ghost
+LET bag = LAST
+
+# FRESH with large max_age keeps both real files (age << 1e6)
+SYS FRESH bag 1000000
+ASSERT OK == 1
+ASSERT FRESH_N == 2
+ASSERT FRESH_DROP == 1
+ASSERT FRESH_AGE == 1000000
+SYS HASLINE LAST fold
+ASSERT LAST_N == 1
+SYS HASLINE LAST fnew
+ASSERT LAST_N == 1
+SYS HASLINE LAST ghost
+ASSERT LAST_N == 0
+
+# FRESH with max_age 0 keeps only age==0 (just-touched)
+SYS FRESH bag 0
+ASSERT FRESH_N >= 1
+SYS HASLINE LAST fnew
+ASSERT LAST_N == 1
+# old should be dropped (age > 0 after sleep)
+SYS HASLINE LAST fold
+ASSERT LAST_N == 0
+
+# KEEPSTALE min_age 1 keeps only old (age >= 1)
+SYS KEEPSTALE bag 1
+ASSERT STALE_N == 1
+ASSERT STALE_DROP == 2
+SYS EQS LAST fold
+ASSERT LAST_N == 1
+ASSERT STALE_AGE == 1
+
+# AGED huge threshold keeps none
+SYS KEEPSTALE bag 1000000
+ASSERT STALE_N == 0
+ASSERT STALE_DROP == 3
+
+# aliases + default LAST
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS KEEPFRESH 1000000
+ASSERT KEEPFRESH_N == 2
+
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS KEEPSTALE 1
+ASSERT KEEPSTALE_N == 1
+SYS EQS LAST fold
+ASSERT LAST_N == 1
+
+# one-arg: SYS FRESH 1000000 uses LAST bag
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS FRESH 1000000
+ASSERT FRESH_N == 2
+
+# cleanup
+SYS RM fold
+SYS RM fnew
+
+PRINT "sys_fresh ok"
