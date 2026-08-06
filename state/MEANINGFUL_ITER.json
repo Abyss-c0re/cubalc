@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 216,
-  "version": "1.15.241-usability",
-  "item": "SYS MKTEMP / TEMPFILE / MAKETEMP unique empty file under TMP",
-  "item_id": 249,
-  "title": "SYS MKTEMP|TEMPFILE [prefix] — collision-free agent plate paths via mkstemp",
-  "commit": "87aa2a001dc459a3ccb55f8c8a5ed1ae60b33792",
-  "summary": "Unique empty temp files under TMP without shell mktemp. selftest 216.",
+  "iter": 217,
+  "version": "1.15.242-usability",
+  "item": "SYS CLAIM / CLAIMFILE / CREATEEXCL exclusive path work-item claims",
+  "item_id": 250,
+  "title": "SYS CLAIM|CREATEEXCL path [body] — one-shot O_EXCL job claim · soft miss · RM release",
+  "commit": "716c4bef605821900e8edbf692680ddc564a948f",
+  "summary": "Exclusive path create for agent work claims without LOCKFILE protocol. selftest 217.",
   "proofs": [
-    "790_sys_mktemp",
-    "selftest n_pass=216"
+    "791_sys_claim",
+    "selftest n_pass=217"
   ],
-  "when": "2026-08-06T13:45:07Z",
+  "when": "2026-08-06T13:54:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "87aa2a001dc459a3ccb55f8c8a5ed1ae60b33792",
-  "note": "left wait family; collision-free plate paths for concurrent agents"
+  "sha": "716c4bef605821900e8edbf692680ddc564a948f",
+  "note": "complements LOCKFILE (path.lock mutex) and MKTEMP (random path)"
 }
