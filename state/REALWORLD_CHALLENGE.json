@@ -1,145 +1,153 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 102,
-  "program": "programs/realworld/operator_session_board.cubalc",
-  "theme": "operator session GECOS/FULLNAME + TTYNAME + ISATTY gate",
-  "version": "1.15.294-usability",
+  "iter": 103,
+  "program": "programs/realworld/job_spawn_prep_board.cubalc",
+  "theme": "job spawn prep NICE yield + SHQUOTE/SHUNQUOTE cmd plate",
+  "version": "1.15.297-usability",
   "pass": true,
   "tests": [
     {
-      "name": "who",
-      "cmd": "USER + FULLNAME composite",
+      "name": "nice_get",
+      "cmd": "GETNICE → 0",
       "ok": true,
-      "note": "root (root); name_eq_user=1"
+      "note": "baseline"
     },
     {
-      "name": "full_gecos",
-      "cmd": "FULLNAME and GECOS stamps",
+      "name": "yield",
+      "cmd": "NICE +1 same process → 1; BASE saved 0",
       "ok": true,
-      "note": "root / root"
+      "note": "from 0 to 1"
     },
     {
-      "name": "tty_pipe",
-      "cmd": "TTYNAME OUT empty under pipe; REQUIRE\u21922",
+      "name": "nice_reexec",
+      "cmd": "new process nice still 0",
       "ok": true,
-      "note": "OK=1 empty"
+      "note": "process scope"
     },
     {
-      "name": "gate_batch",
-      "cmd": "gate batch admit when ISATTY=0",
+      "name": "quote_spaces",
+      "cmd": "SHQUOTE path with spaces",
       "ok": true,
-      "note": "pass"
+      "note": "'path with spaces'"
     },
     {
-      "name": "gate_tty_require",
-      "cmd": "gate tty REQUIRE \u2192 exit 2 under pipe",
+      "name": "round_apostrophe",
+      "cmd": "quote/unquote it's round-trip",
+      "ok": true,
+      "note": "double_same=0"
+    },
+    {
+      "name": "build",
+      "cmd": "quoted cmd + arg line",
+      "ok": true,
+      "note": "'/usr/bin/echo' 'hello world'"
+    },
+    {
+      "name": "gate",
+      "cmd": "nice>=0 pass; >=99 REQUIRE→2",
       "ok": true,
       "note": "deny"
     },
     {
-      "name": "home_shell",
-      "cmd": "HOME=/root SHELL=/bin/bash",
+      "name": "empty_arg",
+      "cmd": "quote empty ARG treated missing",
       "ok": true,
-      "note": "paths"
-    },
-    {
-      "name": "stamp",
-      "cmd": "fullname <user@host> batch|tty",
-      "ok": true,
-      "note": "root <root@pve> batch; ctty=/dev/tty"
+      "note": "EXIT 2 needs string"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "267/267 pass"
+      "note": "270/270 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|ttyname",
-      "title": "TTYNAME empty is OK=1 not soft-fail \u2014 dual with ISATTY",
-      "detail": "Under pipes TTYNAME OUT is empty LAST_N=0 OK=1. Agents treating OK as present stamp blank paths. Must dual-check LAST_N or ISATTY.",
-      "repro": "TTYNAME OUT under pipe \u2192 OK=1 empty"
+      "area": "host|nice",
+      "title": "NICE is process-scoped — lost across cubalc re-execs",
+      "detail": "yield then gate in separate runs sees original nice. Agents assume durable host priority like CHMOD. Same class as UMASK.",
+      "repro": "yield 1; new process GETNICE → 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|tty",
-      "title": "CTTY vs TTYNAME OUT disagree under redirected stdout",
-      "detail": "stamp saw ctty=/dev/tty while tty_out empty. Controlling tty exists but stream is not a tty. Agents conflating CTTY with interactive OUT.",
-      "repro": "TTYNAME CTRL non-empty; TTYNAME OUT empty; ISATTY OUT 0"
+      "area": "host|shquote",
+      "title": "Double SHQUOTE nests — no idempotent quote mode",
+      "detail": "SHQUOTE of already-quoted string re-wraps (double_same=0). Agents that quote twice corrupt SPAWN lines. No SHQUOTE_IF needed.",
+      "repro": "SHQUOTE 'x' then SHQUOTE LAST"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|gecos",
-      "title": "GECOS/FULLNAME collapse to USER when passwd comment empty",
-      "detail": "root:x:0:0:root:\u2026 yields name_eq_user=1. No HAS_REAL_GECOS bit; agents cannot tell missing human name from intentional same-as-login.",
-      "repro": "FULLNAME == USER on bare root"
+      "severity": "high",
+      "area": "host|nice",
+      "title": "Cannot lower nice without privilege — restore soft-fail",
+      "detail": "After yield, restore to lower value fails for unprivileged; only root can drop nice. No NICE_CAN_LOWER probe.",
+      "repro": "NICE 5; NICE 0 as non-root → fail"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|gecos",
-      "title": "GECOS office fields after comma unused \u2014 no GECOS_FIELD n peel",
-      "detail": "FULLNAME peels first field only. Room/phone in GECOS need BEFORE/AFTER hand parse.",
-      "repro": "GECOS name,room,work,home"
+      "area": "host|arg",
+      "title": "Empty string ARG collapsed to missing by BLANK",
+      "detail": "CUBALC_ARG1='' makes quote exit needs-string; cannot quote empty to '' via empty ARG without sentinel. Language BLANK treats empty as absent.",
+      "repro": "quote ARG1 empty → EXIT needs string"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|has",
-      "title": "Gate mode HAS false friends (notty contains tty)",
-      "detail": "HAS notty tty \u2192 1. Board hand-rolls no-prefix. Prefer EQS batch|tty.",
-      "repro": "HAS notty tty"
+      "area": "host|shunquote",
+      "title": "SHUNQUOTE pass-through of unquoted raw is silent",
+      "detail": "UNQUOTE raw → raw OK=1. Agents cannot tell was-quoted vs never-quoted without STARTS/ENDS ' checks.",
+      "repro": "SHUNQUOTE raw → raw"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|isatty",
-      "title": "ISATTY stream default undocumented for agents",
-      "detail": "ISATTY bare vs OUT/IN/ERR; TTYNAME stream arg names CTRL vs default differ. Easy mismatch when dual-probing.",
-      "repro": "ISATTY vs ISATTY OUT"
+      "area": "host|has",
+      "title": "HAS on quoted strings always hits quote chars",
+      "detail": "HAS 'hello' ' → 1 always. False friends when searching for apostrophe content.",
+      "repro": "HAS quoted '"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "VAL short stamps glue in cat -A.",
-      "repro": "cat -A VAL.txt"
+      "detail": "BASE/CMD glue in cat -A.",
+      "repro": "cat -A BASE.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_OS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate tty \u2192 rc 0"
+      "detail": "CUBALC_JS_REQUIRE=abc.",
+      "repro": "REQUIRE=abc gate 99 → rc 0"
     }
   ],
   "workarounds": [
-    "Dual ISATTY + TTYNAME LAST_N before stamping tty path",
-    "Prefer TTYNAME OUT for interactive gate; CTTY only for session id",
-    "Flag name_eq_user when FULLNAME==USER as unknown display",
-    "EQS gate modes batch|tty not HAS",
+    "Co-locate NICE set with SPAWN in same process",
+    "Never SHQUOTE twice; check STARTS ' before re-quote",
+    "Expect restore fail when lowering nice unprivileged",
+    "Use sentinel token for empty quote body",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "TTYNAME empty soft-fail option or REQUIRE TTY form",
-    "Document CTTY vs stream TTYNAME semantics",
-    "HAS_GECOS / display-name-present bit",
-    "GECOS_FIELD n peel helper",
+    "Session/host-persistent nice or CUBALC_NICE auto-apply",
+    "SHQUOTE_ONCE / already-quoted detect",
+    "NICE_CAN_LOWER / privilege probe",
+    "Empty ARG vs missing ARG distinction",
+    "WAS_QUOTED bit from SHUNQUOTE",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "who/full/gecos/tty-none/gate-batch/stamp green under pipes",
-    "CTTY=/dev/tty with OUT empty is core lesson",
-    "selftest 267/267; no language fix this iter"
+    "nice/yield/quote/round/build/gate green",
+    "cross-run nice loss and double-quote documented",
+    "empty ARG blank trap on quote",
+    "selftest 270/270; no language fix this iter"
   ],
-  "commit": "ec9fffd006923350efd9a5a2c57edb9957b2f2f5",
-  "ts": "2026-08-06T22:33:39Z"
+  "commit": "",
+  "ts": "2026-08-06T22:58:54Z"
 }

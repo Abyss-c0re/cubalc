@@ -1,0 +1,889 @@
+# job_spawn_prep_board.cubalc — NICE yield + SHQUOTE/SHUNQUOTE SPAWN prep
+#
+# Real use: before SPAWN/runbook agents raise process nice for yield and
+# shell-quote paths/args into durable command plates without shell nice/'…':
+#   NICE / GETNICE / RENICE / SETNICE — process priority get/set
+#   SHQUOTE / SHELLQUOTE              — POSIX single-quote safe wrap
+#   SHUNQUOTE / UNQUOTE               — peel quote wrap for verify
+# Distinct from priority_fifo_inbox (queue bag order) and load_backpressure
+# (LOADAVG gates): this board is *nice stamp + quote round-trip + cmd plate*.
+#
+# Plate under STATE:
+#   BASE.txt       — saved original nice
+#   CMD.txt        — raw command/path
+#   LINE.txt       — quoted command line bag
+#   VAL.txt        — last nice / quoted / raw
+#   META.txt
+#   SPAWN_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_JS_ACTION):
+#   list      — plate (default)
+#   nice      — GETNICE → VAL
+#   yield     — NICE += ARG1 (default 1); save BASE first
+#   restore   — NICE from BASE or ARG1
+#   quote     — SHQUOTE ARG1 → VAL (+ LINE push)
+#   unquote   — SHUNQUOTE ARG1 or VAL → VAL
+#   round     — quote ARG1 then unquote; EQS original
+#   cmd       — CMD = ARG1 raw path/body
+#   build     — SHQUOTE CMD (+ optional ARG2 arg) → LINE
+#   gate      — require current nice >= ARG1 (default 5)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_js_$$
+#   CUBALC_ARG0=nice ...
+#   CUBALC_ARG0=yield CUBALC_ARG1=1 ...
+#   CUBALC_ARG0=quote CUBALC_ARG1="path with spaces" ...
+#   CUBALC_ARG0=round CUBALC_ARG1="it's" ...
+#   CUBALC_ARG0=cmd CUBALC_ARG1=/usr/bin/echo ...
+#   CUBALC_ARG0=build CUBALC_ARG1='hello world' ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=0 ...
+#   CUBALC_ARG0=restore ...
+#
+# Env: CUBALC_JS_REQUIRE=1  CUBALC_JS_NICE=…  CUBALC_JS_CMD=…
+#
+# Edges:
+#   NICE process-scoped — lost across cubalc re-execs (like UMASK)
+#   yield cannot lower without root; restore may soft-fail
+#   double SHQUOTE wraps already-quoted strings
+#   SHUNQUOTE pass-through of unquoted raw
+#   apostrophe quote form it's → 'it'\''s'
+#   HAS on quoted false friends; WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "job_spawn_prep_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT BFILE = "BASE.txt"
+DEFAULT CFILE = "CMD.txt"
+DEFAULT LFILE = "LINE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SPAWN_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_YIELD = "1"
+DEFAULT DEF_GATE = "0"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_JS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_JS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_JS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_JS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_JS_NICE" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_NICE = LAST
+ELSE
+  LET ENV_NICE = ""
+END
+SYS ENV "CUBALC_JS_CMD" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_CMD = LAST
+ELSE
+  LET ENV_CMD = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir BFILE
+LET base_meta = LAST
+SYS JOIN state_dir CFILE
+LET cmd_meta = LAST
+SYS JOIN state_dir LFILE
+LET line_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR base_meta OR ""
+LET base_s = LAST
+CLEAR_ERR
+SYS READ OR cmd_meta OR ""
+LET cmd = LAST
+CLEAR_ERR
+SYS READ OR line_meta OR ""
+LET line = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET base_n = 0
+SYS BLANK base_s
+IF LAST_N == 0 THEN
+  SYS NUM base_s
+  IF OK == 1 THEN
+    LET base_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_NICE
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "yield"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_NICE
+    END
+  END
+END
+SYS BLANK ENV_NICE
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "gate"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_NICE
+    END
+  END
+END
+SYS BLANK ENV_CMD
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "cmd"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_CMD
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET base_ch = 0
+LET cmd_ch = 0
+LET line_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nice_n = 0
+LET gate_n = 0
+LET round_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "jspawn" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON base_s
+  PRINT_JSON cmd
+  PRINT_JSON line
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- nice get ---
+SYS EQS ACTION "nice"
+IF LAST_N == 1 THEN
+  NOTE "action nice"
+  SYS GETNICE
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "nice fail"
+    FAIL "nice fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "nice fail"
+    END
+  ELSE
+    LET nice_n = LAST_N
+    SYS STR nice_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "nice ok"
+    LET meta = "nice"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nice_n
+  CLEAR_ERR
+END
+
+# --- yield raise nice ---
+# NICE is process-scoped: only affects this cubalc process (not durable host)
+SYS EQS ACTION "yield"
+IF LAST_N == 1 THEN
+  NOTE "action yield"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_YIELD
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "yield bad delta"
+    FAIL "yield bad delta"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "yield bad delta"
+    END
+  ELSE
+    LET delta = LAST_N
+    SYS GETNICE
+    LET cur = LAST_N
+    CLEAR_ERR
+    # save base once
+    SYS BLANK base_s
+    IF LAST_N == 1 THEN
+      SYS STR cur
+      LET base_s = LAST
+      LET base_n = cur
+      LET base_ch = 1
+    END
+    LET target = cur + delta
+    IF target > 19 THEN
+      LET target = 19
+    END
+    IF target < -20 THEN
+      LET target = -20
+    END
+    SYS NICE target
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "yield set fail"
+      FAIL "yield set fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "yield set fail"
+      END
+    ELSE
+      LET nice_n = LAST_N
+      SYS STR nice_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "yield ok"
+      LET meta = "from"
+      SYS STR cur
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "to"
+      LET meta = LAST
+      SYS STR nice_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "delta"
+      LET meta = LAST
+      SYS STR delta
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "base"
+      LET meta = LAST
+      SYS PUSH meta base_s
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON nice_n
+  CLEAR_ERR
+END
+
+# --- restore nice ---
+SYS EQS ACTION "restore"
+IF LAST_N == 1 THEN
+  NOTE "action restore"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET want = NAME
+  ELSE
+    SYS BLANK base_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "restore no base"
+      FAIL "restore no base"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "restore no base"
+      END
+      LET want = ""
+    ELSE
+      LET want = base_s
+    END
+  END
+  SYS BLANK want
+  IF LAST_N == 0 THEN
+    SYS NUM want
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "restore bad nice"
+      FAIL "restore bad nice"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "restore bad nice"
+      END
+    ELSE
+      LET target = LAST_N
+      SYS NICE target
+      IF OK == 0 THEN
+        # unprivileged cannot lower nice — soft miss
+        LET miss = 1
+        LET note_msg = "restore set fail"
+        FAIL "restore set fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "restore set fail"
+        END
+      ELSE
+        LET nice_n = LAST_N
+        SYS STR nice_n
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "restore ok"
+        LET meta = "nice"
+        SYS PUSH meta val
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON nice_n
+  CLEAR_ERR
+END
+
+# --- quote SHQUOTE ---
+SYS EQS ACTION "quote"
+IF LAST_N == 1 THEN
+  NOTE "action quote"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "quote needs string"
+  END
+  SYS SHQUOTE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "quote fail"
+    FAIL "quote fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "quote fail"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "quote ok"
+    SYS STARTS val "'"
+    LET starts_q = LAST_N
+    SYS ENDS val "'"
+    LET ends_q = LAST_N
+    SYS HAS val "'"
+    LET has_q = LAST_N
+    CLEAR_ERR
+    LET meta = "raw"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "quoted"
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "starts_q"
+    LET meta = LAST
+    SYS STR starts_q
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ends_q"
+    LET meta = LAST
+    SYS STR ends_q
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "has_q"
+    LET meta = LAST
+    SYS STR has_q
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    # also append to LINE bag
+    SYS BLANK line
+    IF LAST_N == 1 THEN
+      LET line = val
+    ELSE
+      SYS PUSH line val
+      LET line = LAST
+    END
+    LET line_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- unquote ---
+SYS EQS ACTION "unquote"
+IF LAST_N == 1 THEN
+  NOTE "action unquote"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS BLANK val
+    IF LAST_N == 1 THEN
+      EXIT 2 "unquote needs string"
+    END
+    LET NAME = val
+  END
+  SYS SHUNQUOTE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "unquote fail"
+    FAIL "unquote fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "unquote fail"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "unquote ok"
+    LET meta = "out"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- round trip quote/unquote ---
+SYS EQS ACTION "round"
+IF LAST_N == 1 THEN
+  NOTE "action round"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "round needs string"
+  END
+  SYS SHQUOTE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "round quote fail"
+    FAIL "round quote fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "round quote fail"
+    END
+  ELSE
+    LET q = LAST
+    SYS SHUNQUOTE q
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "round unquote fail"
+      FAIL "round unquote fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "round unquote fail"
+      END
+    ELSE
+      LET back = LAST
+      SYS EQS back NAME
+      LET round_n = LAST_N
+      CLEAR_ERR
+      IF round_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "round mismatch"
+        FAIL "round mismatch"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round mismatch"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "round ok"
+      END
+      # VAL shows quoted form; meta has round
+      LET val = q
+      LET val_ch = 1
+      LET meta = "raw"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "quoted"
+      LET meta = LAST
+      SYS PUSH meta q
+      LET meta = LAST
+      SYS PUSH meta "back"
+      LET meta = LAST
+      SYS PUSH meta back
+      LET meta = LAST
+      SYS PUSH meta "ok"
+      LET meta = LAST
+      SYS STR round_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      # double-quote trap: SHQUOTE already-quoted
+      SYS SHQUOTE q
+      LET dq = LAST
+      SYS EQS dq q
+      LET same_dq = LAST_N
+      CLEAR_ERR
+      SYS PUSH meta "double_same"
+      LET meta = LAST
+      SYS STR same_dq
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "double"
+      LET meta = LAST
+      SYS PUSH meta dq
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON round_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- cmd set raw ---
+SYS EQS ACTION "cmd"
+IF LAST_N == 1 THEN
+  NOTE "action cmd"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "cmd needs path or body"
+  END
+  LET cmd = NAME
+  LET cmd_ch = 1
+  LET hit = 1
+  LET note_msg = "cmd ok"
+  LET val = cmd
+  LET val_ch = 1
+  PRINT_JSON cmd
+END
+
+# --- build quoted LINE from CMD + optional arg ---
+SYS EQS ACTION "build"
+IF LAST_N == 1 THEN
+  NOTE "action build"
+  SYS BLANK cmd
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "build no cmd"
+      FAIL "build no cmd"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "build no cmd"
+      END
+    ELSE
+      LET cmd = NAME
+      LET cmd_ch = 1
+      LET NAME = ""
+    END
+  END
+  SYS BLANK cmd
+  IF LAST_N == 0 THEN
+    SYS SHQUOTE cmd
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "build quote cmd fail"
+      FAIL "build quote cmd fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "build quote cmd fail"
+      END
+    ELSE
+      LET qcmd = LAST
+      LET line = qcmd
+      # optional arg: NAME if non-empty else A2
+      LET arg = ""
+      SYS BLANK NAME
+      IF LAST_N == 0 THEN
+        LET arg = NAME
+      ELSE
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          LET arg = A2
+        END
+      END
+      SYS BLANK arg
+      IF LAST_N == 0 THEN
+        SYS SHQUOTE arg
+        LET qarg = LAST
+        SYS CAT line " "
+        LET line = LAST
+        SYS CAT line qarg
+        LET line = LAST
+        CLEAR_ERR
+      END
+      LET line_ch = 1
+      LET val = line
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "build ok"
+      LET meta = "cmd"
+      SYS PUSH meta cmd
+      LET meta = LAST
+      SYS PUSH meta "line"
+      LET meta = LAST
+      SYS PUSH meta line
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate nice >= threshold ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_GATE
+  END
+  SYS NUM NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad threshold"
+    FAIL "gate bad threshold"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate bad threshold"
+    END
+  ELSE
+    LET thresh = LAST_N
+    SYS GETNICE
+    LET nice_n = LAST_N
+    CLEAR_ERR
+    LET gate_n = 0
+    IF nice_n >= thresh THEN
+      LET gate_n = 1
+    END
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "nice"
+    SYS STR nice_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "thresh"
+    LET meta = LAST
+    SYS STR thresh
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ok"
+    LET meta = LAST
+    SYS STR gate_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n nice_n
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET base_s = ""
+  LET cmd = ""
+  LET line = ""
+  LET val = ""
+  LET meta = ""
+  LET base_ch = 1
+  LET cmd_ch = 1
+  LET line_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "nice"
+LET k = k + LAST_N
+SYS EQS ACTION "yield"
+LET k = k + LAST_N
+SYS EQS ACTION "restore"
+LET k = k + LAST_N
+SYS EQS ACTION "quote"
+LET k = k + LAST_N
+SYS EQS ACTION "unquote"
+LET k = k + LAST_N
+SYS EQS ACTION "round"
+LET k = k + LAST_N
+SYS EQS ACTION "cmd"
+LET k = k + LAST_N
+SYS EQS ACTION "build"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF base_ch > 0 THEN
+  SYS WRITE base_meta base_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "base write failed"
+  END
+  CLEAR_ERR
+END
+IF cmd_ch > 0 THEN
+  SYS WRITE cmd_meta cmd
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "cmd write failed"
+  END
+  CLEAR_ERR
+END
+IF line_ch > 0 THEN
+  SYS WRITE line_meta line
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "line write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.job_spawn_prep_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "nice"
+LET report = LAST
+SYS STR nice_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "round"
+LET report = LAST
+SYS STR round_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "base"
+LET report = LAST
+SYS PUSH report base_s
+LET report = LAST
+SYS PUSH report "cmd"
+LET report = LAST
+SYS PUSH report cmd
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "job_spawn_prep_board" ACTION hit miss nice_n gate_n round_n note_msg elapsed
