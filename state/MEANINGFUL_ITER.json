@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 149,
-  "version": "1.15.174-usability",
-  "item": "SYS MEDIANKV / P50KV median of key:val values",
-  "item_id": 182,
-  "title": "SYS MEDIANKV|P50KV bag [sep] — robust FREQ mid vs AVGKV",
-  "commit": "71089e866fdbc5471d70266d210539e5b2e090d4",
-  "summary": "MEDIANKV median of key:val values. selftest 149.",
+  "iter": 150,
+  "version": "1.15.175-usability",
+  "item": "SYS KEEPKEY / GREPKEY filter key:val by key needle",
+  "item_id": 183,
+  "title": "SYS KEEPKEY|GREPKEY bag needle [sep] — DROPKEY invert · KEEPKEYI",
+  "commit": "206077deeb0dcd0abbb0d883095c3d7f7ed96a98",
+  "summary": "KEEPKEY filter FREQ by key needle. selftest 150.",
   "proofs": [
-    "722_sys_mediankv",
-    "selftest n_pass=149"
+    "723_sys_keepkey",
+    "selftest n_pass=150"
   ],
-  "when": "2026-08-06T02:33:53Z",
+  "when": "2026-08-06T02:45:59Z",
   "agent": "meaningful_iter_10m",
-  "sha": "71089e866fdbc5471d70266d210539e5b2e090d4"
+  "sha": "206077deeb0dcd0abbb0d883095c3d7f7ed96a98"
 }
