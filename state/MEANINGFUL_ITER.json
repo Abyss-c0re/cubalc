@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 212,
-  "version": "1.15.237-usability",
-  "item": "SYS LOCKFILE / UNLOCKFILE / FLOCK exclusive agent path.lock mutex",
-  "item_id": 245,
-  "title": "SYS LOCKFILE|FLOCK path [ms] · UNLOCKFILE — exclusive path.lock agent mutex",
-  "commit": "235e81f88e073f3304064ce63087881019eb0043",
-  "summary": "Multi-agent exclusive critical sections without shell flock. selftest 212.",
+  "iter": 213,
+  "version": "1.15.238-usability",
+  "item": "SYS WAITGONE / WAITMISSING / WAITDELETE poll until path does not exist",
+  "item_id": 246,
+  "title": "SYS WAITGONE|WAITMISSING path [ms] — dual of WAITFILE · unlock/cleanup handoff",
+  "commit": "004018227e41eab97bd00418682136dc3dcbe3b1",
+  "summary": "Poll until path gone for unlock/peer cleanup without EXIST+SLEEP. selftest 213.",
   "proofs": [
-    "786_sys_lockfile",
-    "selftest n_pass=212"
+    "787_sys_waitgone",
+    "selftest n_pass=213"
   ],
-  "when": "2026-08-06T13:05:30Z",
+  "when": "2026-08-06T13:20:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "235e81f88e073f3304064ce63087881019eb0043",
-  "note": "restored mass thrash delete from HEAD before implement"
+  "sha": "004018227e41eab97bd00418682136dc3dcbe3b1",
+  "note": "invented dual of WAITFILE after backlog 1-245 complete"
 }
