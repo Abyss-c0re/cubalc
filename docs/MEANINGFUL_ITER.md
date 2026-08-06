@@ -312,6 +312,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 282. ~~**`SYS DIRSYNC` / `FSYNCDIR` / `SYNCDIR`**~~ **done** (fsync directory or parent of file · durable WRITEATOMIC renames).
 283. ~~**`SYS HARDLINK` / `HLINK` · `NLINK` / `LINKS`**~~ **done** (hard link same inode + link count · shared plates without COPY).
 284. ~~**`SYS SAMEINODE` / `EQINODE` · `INODE`**~~ **done** (same device+inode probe + inode stamp · verify HARDLINK ≠ EQFILE content).
+285. ~~**`SYS TEE` / `WRITETEE` / `SAVEKEEP`**~~ **done** (write file keep content in LAST · chain without READ back).
 
 ## Tick protocol
 

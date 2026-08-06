@@ -1,0 +1,64 @@
+# SYS TEE / WRITETEE — write plate keep content in LAST (chain without READ)
+# Usability: agents write then GREP/HAS without re-READ; dual of WRITE path-only
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "tee_mi_plate.txt"
+LET p = LAST
+
+# TEE leaves content in LAST (WRITE typically leaves path-ish state)
+SYS TEE p "status=ok count=3"
+ASSERT OK == 1
+ASSERT TEE_N > 5
+SYS EQS LAST "status=ok count=3"
+ASSERT LAST_N == 1
+SYS EQS TEE_PATH p
+ASSERT LAST_N == 1
+
+# chain on LAST without READ
+SYS HAS LAST "status=ok"
+ASSERT LAST_N == 1
+SYS TEE p "status=ok count=3"
+SYS BEFORE LAST " "
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+
+# file actually written
+SYS READ p
+SYS EQS LAST "status=ok count=3"
+ASSERT LAST_N == 1
+
+# zero data arg → prior LAST
+SYS CAT "agent-" "ready"
+LET body = LAST
+SYS TEE p
+ASSERT OK == 1
+SYS EQS LAST body
+ASSERT LAST_N == 1
+SYS READ p
+SYS EQS LAST body
+ASSERT LAST_N == 1
+
+# aliases
+SYS WRITETEE p "via-writetee"
+ASSERT OK == 1
+SYS EQS LAST "via-writetee"
+ASSERT LAST_N == 1
+SYS SAVEKEEP p "via-savekeep"
+ASSERT OK == 1
+SYS EQS LAST "via-savekeep"
+ASSERT LAST_N == 1
+
+# soft miss empty path
+SYS TEE ""
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 3
+
+# cleanup
+SYS RM p
+
+PRINT "sys_tee ok"
