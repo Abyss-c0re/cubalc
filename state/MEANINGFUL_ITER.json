@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 253,
-  "version": "1.15.280-usability",
-  "item": "SYS OWNERNAME / GROUPNAME login and group name probes",
-  "item_id": 288,
-  "title": "SYS OWNERNAME|GROUPNAME path \u2014 login/group labels without shell stat",
-  "commit": "3a786d71b5e132b1d8ed2dd9a8099eed83ff509d",
-  "summary": "path \u2192 owner/group names via getpwuid/getgrgid. selftest 253.",
+  "iter": 254,
+  "version": "1.15.281-usability",
+  "item": "SYS CANCREATE / CREATABLE create-overwrite probe",
+  "item_id": 289,
+  "title": "SYS CANCREATE|CREATABLE path \u2014 create/overwrite pre-flight probe",
+  "commit": "d336b93423e6b3c28c679e66c989fe49bd836959",
+  "summary": "parent W_OK|X_OK or path W_OK for plate WRITE gates. selftest 254.",
   "proofs": [
-    "827_sys_ownername",
-    "selftest n_pass=253"
+    "828_sys_cancreate",
+    "selftest n_pass=254"
   ],
-  "when": "2026-08-06T19:55:30Z",
+  "when": "2026-08-06T20:05:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "3a786d71b5e132b1d8ed2dd9a8099eed83ff509d",
-  "note": "complements FILEUID/FILEGID numeric probes for human plate labels"
+  "sha": "d336b93423e6b3c28c679e66c989fe49bd836959",
+  "note": "restored thrash deletions first; complements CANREAD family"
 }
