@@ -1,0 +1,80 @@
+# SYS WAITMATCH / WAITCONTAINS / POLLMATCH
+# — poll until file exists and content contains needle
+# Usability: peer plate "status=ready" without READ+HAS+SLEEP loop
+# WAITMATCHI icase. Soft timeout OK=0. Default 30s, cap 120s.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitmatch_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fp = LAST
+SYS RM fp
+
+# missing file → short timeout soft fail
+SYS WAITMATCH fp "ready" 120
+ASSERT OK == 0
+ASSERT WAITMATCH_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITMATCH_MS >= 100
+
+# exists but wrong content → timeout
+SYS WRITE fp "status=boot"
+SYS WAITMATCH fp "status=ready" 100
+ASSERT OK == 0
+ASSERT WAITMATCH_HIT == 0
+
+# content present → immediate hit
+SYS WRITE fp "host=peer1\nstatus=ready\nmode=soft"
+SYS WAITMATCH fp "status=ready" 1000
+ASSERT OK == 1
+ASSERT WAITMATCH_HIT == 1
+ASSERT LAST_N == 1
+ASSERT WAITMATCH_N == 1
+SYS EQS LAST fp
+ASSERT LAST_N == 1
+
+# alias WAITCONTAINS
+SYS WAITCONTAINS fp "mode=soft" 500
+ASSERT WAITMATCH_HIT == 1
+ASSERT OK == 1
+
+# alias POLLMATCH
+SYS POLLMATCH fp "host=peer1" 500
+ASSERT WAITMATCH_HIT == 1
+
+# icase
+SYS WRITE fp "STATUS=Ready"
+SYS WAITMATCHI fp "status=ready" 500
+ASSERT WAITMATCH_HIT == 1
+ASSERT OK == 1
+
+# empty needle → hit when file readable
+SYS WAITMATCH fp "" 200
+ASSERT WAITMATCH_HIT == 1
+
+# empty path soft fail
+SYS WAITMATCH "" "x" 50
+ASSERT OK == 0
+ASSERT WAITMATCH_HIT == 0
+
+# zero timeout miss
+SYS WRITE fp "nope"
+SYS WAITMATCH fp "ready" 0
+ASSERT OK == 0
+ASSERT WAITMATCH_HIT == 0
+
+# zero timeout hit
+SYS WRITE fp "ready-now"
+SYS WAITMATCH fp "ready" 0
+ASSERT OK == 1
+ASSERT WAITMATCH_HIT == 1
+
+# cleanup
+SYS RM fp
+
+PRINT "sys_waitmatch ok"

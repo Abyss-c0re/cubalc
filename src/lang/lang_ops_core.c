@@ -1459,6 +1459,153 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR", "WAITFILE: timeout");
       bump(vm); return 1;
     }
+    /* SYS WAITMATCH|WAITCONTAINS|POLLMATCH path needle [timeout_ms]
+     * — poll until file exists and content contains needle (substring).
+     * WAITMATCHI icase. Default timeout 30000 ms; cap 120s; poll 50 ms.
+     * LAST = path; LAST_N / WAITMATCH_HIT = 1|0; WAITMATCH_MS elapsed.
+     * Soft timeout / empty path → OK=0. Empty needle → hit when file readable.
+     * Usability: wait for peer plate content (status=ready) without READ+HAS+SLEEP loop. */
+    if (kw(&L->cur,"WAITMATCH") || kw(&L->cur,"WAITCONTAINS") ||
+        kw(&L->cur,"POLLMATCH") || kw(&L->cur,"AWAITMATCH") ||
+        kw(&L->cur,"WAITFOR") || kw(&L->cur,"WAITCONTENT") ||
+        kw(&L->cur,"WAITNEEDLE") || kw(&L->cur,"POLLCONTENT") ||
+        kw(&L->cur,"UNTILMATCH") || kw(&L->cur,"WAITGREP") ||
+        kw(&L->cur,"WAITMATCHI") || kw(&L->cur,"WAITCONTAINSI") ||
+        kw(&L->cur,"POLLMATCHI") || kw(&L->cur,"AWAITMATCHI") ||
+        kw(&L->cur,"WAITCONTENTI") || kw(&L->cur,"WAITGREPI")){
+      char path[512], needle[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      long timeout_ms = 30000, elapsed = 0, hit = 0;
+      int icase = 0;
+      size_t nlen;
+      struct timespec t0, t1, sl;
+      cubalc_host_result hr;
+      if (kw(&L->cur,"WAITMATCHI") || kw(&L->cur,"WAITCONTAINSI") ||
+          kw(&L->cur,"POLLMATCHI") || kw(&L->cur,"AWAITMATCHI") ||
+          kw(&L->cur,"WAITCONTENTI") || kw(&L->cur,"WAITGREPI"))
+        icase = 1;
+      lex_next(L);
+      path[0] = 0; needle[0] = 0; a[0] = 0;
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS WAITMATCH path needle [timeout_ms]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(needle, sizeof needle, "%ld", n);
+        } else {
+          needle[0] = 0;
+        }
+      }
+      nlen = strlen(needle);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_IDENT) {
+        long t = parse_expr(vm, L);
+        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+          lex_next(L);
+        timeout_ms = t;
+      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT)
+          timeout_ms = parse_expr(vm, L);
+      }
+      if (timeout_ms < 0) timeout_ms = 0;
+      if (timeout_ms > 120000) timeout_ms = 120000;
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITMATCH_HIT", 0);
+        var_set_num(vm, "WAITMATCH_N", 0);
+        var_set_num(vm, "WAITMATCH_MS", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "WAITMATCH: empty path");
+        var_set_str(vm, "ERR", "WAITMATCH: empty path");
+        bump(vm); return 1;
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+      for (;;) {
+        if (cubalc_host_read(path, &hr) == 0) {
+          int found = 0;
+          if (nlen == 0) {
+            found = 1;
+          } else if (!icase) {
+            found = (strstr(hr.str, needle) != NULL) ? 1 : 0;
+          } else {
+            /* case-insensitive substring scan */
+            size_t blen = strlen(hr.str), i, j;
+            if (blen >= nlen) {
+              for (i = 0; i + nlen <= blen; i++) {
+                int okm = 1;
+                for (j = 0; j < nlen; j++) {
+                  char a2 = hr.str[i + j], b2 = needle[j];
+                  if (a2 >= 'A' && a2 <= 'Z') a2 = (char)(a2 - 'A' + 'a');
+                  if (b2 >= 'A' && b2 <= 'Z') b2 = (char)(b2 - 'A' + 'a');
+                  if (a2 != b2) { okm = 0; break; }
+                }
+                if (okm) { found = 1; break; }
+              }
+            }
+          }
+          if (found) {
+            hit = 1;
+            break;
+          }
+        }
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                  (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+        if (elapsed >= timeout_ms)
+          break;
+        {
+          long left = timeout_ms - elapsed;
+          long step = left < 50 ? left : 50;
+          if (step < 1) step = 1;
+          sl.tv_sec = step / 1000;
+          sl.tv_nsec = (step % 1000) * 1000000L;
+          nanosleep(&sl, NULL);
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+      if (elapsed < 0) elapsed = 0;
+      if (hit) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "WAITMATCH", path);
+        var_set_str(vm, "WAITCONTAINS", path);
+        var_set_str(vm, "POLLMATCH", path);
+        var_set_num(vm, "WAITMATCH_HIT", 1);
+        var_set_num(vm, "WAITMATCH_N", 1);
+        var_set_num(vm, "WAITMATCH_MS", elapsed);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "WAITMATCH", "");
+      var_set_num(vm, "WAITMATCH_HIT", 0);
+      var_set_num(vm, "WAITMATCH_N", 0);
+      var_set_num(vm, "WAITMATCH_MS", elapsed);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WAITMATCH: timeout");
+      var_set_str(vm, "ERR", "WAITMATCH: timeout");
+      bump(vm); return 1;
+    }
     /* SYS SIZE|FSIZE path — regular-file bytes → LAST_N/SIZE; soft miss OK=0
      * SYS ISDIR path — LAST_N 1 if directory
      * SYS ISFILE path — LAST_N 1 if regular file

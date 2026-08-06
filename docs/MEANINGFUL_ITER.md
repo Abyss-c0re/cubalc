@@ -270,6 +270,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 240. ~~**`SYS WAITFILE` / `WAITPATH` / `POLLFILE`**~~ **done** (poll until path exists · agent plate/peer handoff without EXIST+SLEEP loop).
 241. ~~**`SYS SUBSTFILE` / `EXPANDFILE` / `ENVSUBSTFILE`**~~ **done** (materialize `$VAR` template file · READ+SUBSTENV+WRITE one-shot).
 242. ~~**`SYS HASH` / `HASHFILE` / `FINGERPRINT`**~~ **done** (FNV-1a 32-bit hex stamps for plate/cache integrity without shell md5).
+243. ~~**`SYS WAITMATCH` / `WAITCONTAINS` / `POLLMATCH`**~~ **done** (poll until file content contains needle · peer plate ready without READ+HAS+SLEEP).
 
 ## Tick protocol
 
