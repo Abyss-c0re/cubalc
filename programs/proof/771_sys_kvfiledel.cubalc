@@ -1,0 +1,79 @@
+# SYS KVFILEDEL / FILEKVDEL / DELKVFILE — drop key=val line from plate file
+# Usability: dual of KVFILESET · ack/remove plate status without READ+KVDEL+WRITE
+# Default sep "=". Soft key miss. Soft path miss.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "kvfiledel_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fs = LAST
+SYS WRITE fs "host=peer1\nport=7700\nmode=soft\nttl=30"
+
+# delete existing key
+SYS KVFILEDEL fs "port"
+ASSERT OK == 1
+ASSERT KVFILEDEL_HIT == 1
+ASSERT KVFILEDEL_I == 1
+ASSERT KVFILEDEL_TOTAL == 3
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+SYS EQS KVFILEDEL_V "7700"
+ASSERT LAST_N == 1
+SYS EQS KVFILEDEL_LINE "port=7700"
+ASSERT LAST_N == 1
+
+SYS LOOKUPFILE fs "port"
+ASSERT OK == 0
+SYS LOOKUPFILE fs "host"
+SYS EQS LAST "peer1"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "ttl"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+
+# alias soft miss
+SYS FILEKVDEL fs "missing"
+ASSERT OK == 1
+ASSERT KVFILEDEL_HIT == 0
+ASSERT KVFILEDEL_I == -1
+ASSERT KVFILEDEL_TOTAL == 3
+
+# custom sep :
+SYS JOIN fix "hist.txt"
+LET hs = LAST
+SYS WRITE hs "error:3\nwarn:1\ninfo:10"
+SYS KVFILEDEL hs "warn" ":"
+ASSERT KVFILEDEL_HIT == 1
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE hs "error" ":"
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE hs "info" ":"
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE hs "warn" ":"
+ASSERT OK == 0
+
+# PLATEDEL alias
+SYS PLATEDEL fs "mode"
+ASSERT KVFILEDEL_HIT == 1
+SYS EQS LAST "soft"
+ASSERT LAST_N == 1
+ASSERT KVFILEDEL_TOTAL == 2
+
+# soft path miss
+SYS KVFILEDEL "no_such_kvfiledel_mi.txt" "a"
+ASSERT OK == 0
+ASSERT KVFILEDEL_HIT == 0
+
+# cleanup
+SYS RM fs
+SYS RM hs
+
+PRINT "sys_kvfiledel ok"
