@@ -14,37 +14,37 @@
     },
     {
       "name": "line_3",
-      "cmd": "LINEAT index 3 → frame3 ERROR boom TOTAL=7",
+      "cmd": "LINEAT index 3 \u2192 frame3 ERROR boom TOTAL=7",
       "ok": true,
       "note": "single frame"
     },
     {
       "name": "window_2_3",
-      "cmd": "MIDFILE start=2 count=3 → frames 2..4",
+      "cmd": "MIDFILE start=2 count=3 \u2192 frames 2..4",
       "ok": true,
       "note": "slice"
     },
     {
       "name": "window_rest",
-      "cmd": "MIDFILE start=5 omit count → cleanup+exit",
+      "cmd": "MIDFILE start=5 omit count \u2192 cleanup+exit",
       "ok": true,
       "note": "rest of file"
     },
     {
       "name": "around_center",
-      "cmd": "around idx=3 r=1 → work/ERROR/handler + center LINE",
+      "cmd": "around idx=3 r=1 \u2192 work/ERROR/handler + center LINE",
       "ok": true,
       "note": "context packet"
     },
     {
       "name": "around_clamp",
-      "cmd": "around idx=0 r=2 clamps start≥0",
+      "cmd": "around idx=0 r=2 clamps start\u22650",
       "ok": true,
       "note": "edge start"
     },
     {
       "name": "total",
-      "cmd": "LINEAT 0 → LINEAT_TOTAL as file depth",
+      "cmd": "LINEAT 0 \u2192 LINEAT_TOTAL as file depth",
       "ok": true,
       "note": "wc without LINECOUNTALL"
     },
@@ -70,11 +70,11 @@
       "name": "print_json_glue",
       "cmd": "PRINT_JSON window collapses NL",
       "ok": true,
-      "note": "frame1 initframe2 work…"
+      "note": "frame1 initframe2 work\u2026"
     },
     {
       "name": "neg_clamp",
-      "cmd": "LINEAT/MIDFILE -1 → silent clamp to 0",
+      "cmd": "LINEAT/MIDFILE -1 \u2192 silent clamp to 0",
       "ok": true,
       "note": "language edge"
     },
@@ -92,15 +92,15 @@
       "area": "host|parse",
       "title": "LINEAT/MIDFILE bare numeric var is form error (need expr parens)",
       "detail": "Same trap as HEADFILE: SYS LINEAT p i fails unknown form 'i'; SYS LINEAT p (i) works. Parameterized incident peels must remember (expr).",
-      "repro": "LET i=1; SYS LINEAT p i → parse fail"
+      "repro": "LET i=1; SYS LINEAT p i \u2192 parse fail"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|index",
       "title": "Negative LINEAT/MIDFILE index silently clamps to 0",
-      "detail": "LINEAT p -1 returns line 0 with OK=1 N=1 I=0; MIDFILE -1 starts at 0. Agents cannot detect underflow — looks like a valid first line.",
-      "repro": "SYS LINEAT p -1 → LAST=L0 not miss"
+      "detail": "LINEAT p -1 returns line 0 with OK=1 N=1 I=0; MIDFILE -1 starts at 0. Agents cannot detect underflow \u2014 looks like a valid first line.",
+      "repro": "SYS LINEAT p -1 \u2192 LAST=L0 not miss"
     },
     {
       "id": "W3",
@@ -130,9 +130,9 @@
       "id": "W6",
       "severity": "low",
       "area": "host|index",
-      "title": "0-based only — no 1-based LINEAT1 / human line numbers",
+      "title": "0-based only \u2014 no 1-based LINEAT1 / human line numbers",
       "detail": "Stack dumps and editor UIs are 1-based; agents must subtract one. No FILELINE1 alias.",
-      "repro": "editor line 4 → LINEAT 3"
+      "repro": "editor line 4 \u2192 LINEAT 3"
     },
     {
       "id": "W7",
@@ -168,10 +168,10 @@
   ],
   "issues_faced": [
     "LINEAT+MIDFILE positive path clean with (expr) form",
-    "Silent negative clamp discovered — high footgun",
+    "Silent negative clamp discovered \u2014 high footgun",
     "OOB vs ghost OK polarity split needs dual checks",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "37208e629df3c1e635443935e1bf105b75b472cd",
   "ts": "2026-08-06T08:23:29Z"
 }
