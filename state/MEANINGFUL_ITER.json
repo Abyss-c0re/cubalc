@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 161,
-  "version": "1.15.186-usability",
-  "item": "SYS FRESH / KEEPSTALE filter path bags by age threshold",
-  "item_id": 194,
-  "title": "SYS FRESH|KEEPSTALE bag age_sec — cache/lease path filters",
-  "commit": "53381a990acc524292faba311209e5e343a8cd1b",
-  "summary": "Filter path bags by max/min age for cache gates. selftest 161.",
+  "iter": 162,
+  "version": "1.15.187-usability",
+  "item": "SYS KEEPNEWER / KEEPOLDER filter path bags vs ref mtime",
+  "item_id": 195,
+  "title": "SYS KEEPNEWER|NEWERTHAN / KEEPOLDER|OLDERREF bag ref — make rebuild gates",
+  "commit": "ab4a6cbea912f6019fae10c1ceb3e2ed64a99c7b",
+  "summary": "Filter path bags by mtime vs ref path for rebuild gates. selftest 162.",
   "proofs": [
-    "734_sys_fresh",
-    "selftest n_pass=161"
+    "735_sys_keepnewer",
+    "selftest n_pass=162"
   ],
-  "when": "2026-08-06T04:49:45Z",
+  "when": "2026-08-06T04:55:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "53381a990acc524292faba311209e5e343a8cd1b"
+  "sha": "ab4a6cbea912f6019fae10c1ceb3e2ed64a99c7b"
 }
