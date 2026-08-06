@@ -1,0 +1,47 @@
+# SYS UPTIME / BOOTAGE / UPSECS — seconds since host boot
+# Usability: agent warmup / lease age without shell uptime
+
+HOLD_FLASH 1
+
+SYS UPTIME
+ASSERT OK == 1
+ASSERT UPTIME >= 1
+ASSERT LAST_N == UPTIME
+ASSERT UPTIME_N == UPTIME
+ASSERT BOOTAGE == UPTIME
+# derived units
+ASSERT UPTIME_MIN == UPTIME / 60
+ASSERT UPTIME_HOUR == UPTIME / 3600
+SYS LEN LAST
+ASSERT LAST_N >= 1
+
+# aliases
+SYS BOOTAGE
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS UPSECS
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS HOST_UPTIME
+ASSERT OK == 1
+
+# non-decreasing across two samples (allow equal within same second)
+SYS UPTIME
+LET t0 = LAST_N
+SYS UPTIME
+LET t1 = LAST_N
+SYS CMP t1 t0
+ASSERT LAST_N >= 0
+
+# agent: skip heavy work on very fresh boot (< 5s) — just probe shape
+SYS UPTIME
+SYS IN UPTIME 0 999999999
+ASSERT LAST_N == 1
+
+# plate stamp
+SYS STR UPTIME
+SYS CAT LAST "s up"
+SYS HAS LAST "s up"
+ASSERT LAST_N == 1
+
+PRINT "sys_uptime ok"
