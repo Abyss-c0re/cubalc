@@ -15378,6 +15378,80 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS GECOS|FULLNAME|REALNAME — passwd GECOS / display name → LAST.
+     * Full gecos in LAST/GECOS; FULLNAME peels field before first comma.
+     * Usability: human plate labels without shell getent/finger. */
+    if (kw(&L->cur,"GECOS") || kw(&L->cur,"FULLNAME") || kw(&L->cur,"REALNAME") ||
+        kw(&L->cur,"DISPLAYNAME") || kw(&L->cur,"CN") || kw(&L->cur,"GECOS_NAME") ||
+        kw(&L->cur,"PW_GECOS") || kw(&L->cur,"COMMENT")){
+      char op[24];
+      char gecos[512];
+      char full[256];
+      int want_full;
+      size_t i;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      want_full = (strcmp(op, "FULLNAME") == 0 || strcmp(op, "REALNAME") == 0 ||
+                   strcmp(op, "DISPLAYNAME") == 0 || strcmp(op, "CN") == 0 ||
+                   strcmp(op, "GECOS_NAME") == 0);
+      lex_next(L);
+      gecos[0] = 0;
+      full[0] = 0;
+#if !defined(CUBALC_OS_WINDOWS)
+      {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_gecos && pw->pw_gecos[0])
+          snprintf(gecos, sizeof gecos, "%s", pw->pw_gecos);
+      }
+#endif
+      /* peel name before first comma (finger/GECOS convention) */
+      for (i = 0; gecos[i] && gecos[i] != ',' && i + 1 < sizeof full; i++)
+        full[i] = gecos[i];
+      full[i] = 0;
+      /* trim trailing spaces on full */
+      while (i > 0 && (full[i - 1] == ' ' || full[i - 1] == '\t')) {
+        i--;
+        full[i] = 0;
+      }
+      if (!full[0] && gecos[0])
+        snprintf(full, sizeof full, "%s", gecos);
+      if (!gecos[0]) {
+        /* soft fallback: USER env / login */
+        const char *e = getenv("USER");
+        if (!e || !e[0]) e = getenv("LOGNAME");
+        if (!e || !e[0]) e = getenv("USERNAME");
+        if (e && e[0]) {
+          snprintf(gecos, sizeof gecos, "%s", e);
+          snprintf(full, sizeof full, "%s", e);
+        }
+#if !defined(CUBALC_OS_WINDOWS)
+        if (!gecos[0]) {
+          struct passwd *pw = getpwuid(getuid());
+          if (pw && pw->pw_name && pw->pw_name[0]) {
+            snprintf(gecos, sizeof gecos, "%s", pw->pw_name);
+            snprintf(full, sizeof full, "%s", pw->pw_name);
+          }
+        }
+#endif
+        if (!gecos[0]) {
+          snprintf(gecos, sizeof gecos, "%s", "user");
+          snprintf(full, sizeof full, "%s", "user");
+        }
+      }
+      {
+        const char *out = want_full ? full : gecos;
+        var_set_str(vm, "GECOS", gecos);
+        var_set_str(vm, "FULLNAME", full);
+        var_set_str(vm, "REALNAME", full);
+        var_set_str(vm, "LAST", out);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)strlen(out);
+        var_set_num(vm, "LAST_N", vm->last_n);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+    }
     /* SYS APPEND|LOG path data — append line to file (creates if missing).
      * Soft fail OK=0 + sticky LAST_ERR. LAST_N = bytes written (data+newline).
      * Usability: agent history/audit logs without shell >> . */
@@ -23587,6 +23661,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ISROOT", "SYS ISROOT|AMROOT — LAST_N 1 if euid==0 privilege probe"},
       {"SYS HOME", "SYS HOME|HOMEDIR — home directory → LAST/HOME"},
       {"SYS SHELL", "SYS SHELL|LOGINSHELL — login shell path → LAST/SHELL"},
+      {"SYS GECOS", "SYS GECOS|FULLNAME|REALNAME — passwd display name → LAST"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
       {"SMX EXCHANGE", "SMX EXCHANGE a b — bidirectional TALK"},

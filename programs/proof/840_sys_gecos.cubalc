@@ -1,0 +1,45 @@
+# SYS GECOS / FULLNAME — passwd display name without shell getent
+# Usability: human plate labels for agents
+
+HOLD_FLASH 1
+
+SYS GECOS
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS LEN GECOS
+ASSERT LAST_N >= 1
+SYS EQS LAST GECOS
+ASSERT LAST_N == 1
+
+# FULLNAME is non-empty peel (before comma or whole)
+SYS FULLNAME
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS LEN FULLNAME
+ASSERT LAST_N >= 1
+SYS EQS LAST FULLNAME
+ASSERT LAST_N == 1
+
+# REALNAME alias
+SYS REALNAME
+ASSERT OK == 1
+SYS EQS LAST FULLNAME
+ASSERT LAST_N == 1
+
+# GECOS still available after FULLNAME call
+SYS LEN GECOS
+ASSERT LAST_N >= 1
+
+# DISPLAYNAME alias
+SYS DISPLAYNAME
+ASSERT OK == 1
+SYS EQS LAST FULLNAME
+ASSERT LAST_N == 1
+
+# COMMENT alias of full gecos string
+SYS COMMENT
+ASSERT OK == 1
+SYS EQS LAST GECOS
+ASSERT LAST_N == 1
+
+PRINT "sys_gecos ok"
