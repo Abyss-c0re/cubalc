@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 240,
-  "version": "1.15.267-usability",
-  "item": "SYS MEM / MEMINFO host RAM total/avail kB",
-  "item_id": 275,
-  "title": "SYS MEM|MEMINFO — RAM total/avail/free kB for low-mem agent gates",
-  "commit": "9e0ef3a6e8557aba3d89a7dc85f41c02b77ec777",
-  "summary": "Host RAM probe (kB); LAST_N=avail for IF gates without shell free. selftest 240.",
+  "iter": 241,
+  "version": "1.15.268-usability",
+  "item": "SYS DF / DISKFREE filesystem free kB",
+  "item_id": 276,
+  "title": "SYS DF|DISKFREE [path] — filesystem free kB for pre-write disk gates",
+  "commit": "122de60f51f589678b14c0c17eb90296a845ad57",
+  "summary": "Path disk free via statvfs; LAST_N=avail kB for IF gates without shell df. selftest 241.",
   "proofs": [
-    "814_sys_mem",
-    "selftest n_pass=240"
+    "815_sys_df",
+    "selftest n_pass=241"
   ],
-  "when": "2026-08-06T17:46:00Z",
+  "when": "2026-08-06T17:56:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9e0ef3a6e8557aba3d89a7dc85f41c02b77ec777",
-  "note": "pairs with LOADAVG/NPROC/UPTIME for capacity-aware agents"
+  "sha": "122de60f51f589678b14c0c17eb90296a845ad57",
+  "note": "pairs with MEM/LOADAVG for capacity-aware agents"
 }
