@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 222,
-  "version": "1.15.247-usability",
-  "item": "SYS HEX / HEXENC · HEXD / HEXDEC encode and decode",
-  "item_id": 255,
-  "title": "SYS HEX|HEXENC [str] · HEXD|HEXDEC [str] — binary-safe plate fields without shell xxd",
-  "commit": "91325bbacbf7813b659c25283274de05e08c82c2",
-  "summary": "Lowercase hex encode/decode for agent plates without shell xxd. selftest 222.",
+  "iter": 223,
+  "version": "1.15.248-usability",
+  "item": "SYS URLENC / URLENCODE · URLDEC / URLDECODE percent-encode",
+  "item_id": 256,
+  "title": "SYS URLENC|URLENCODE [str] · URLDEC|URLDECODE [str] — path/query-safe plates without shell",
+  "commit": "66b82e50b83d9e14cb3bcf571eef47b90cf41431",
+  "summary": "RFC 3986 percent-encode/decode for agent plate paths without shell. selftest 223.",
   "proofs": [
-    "796_sys_hex",
-    "selftest n_pass=222"
+    "797_sys_urlenc",
+    "selftest n_pass=223"
   ],
-  "when": "2026-08-06T14:44:25Z",
+  "when": "2026-08-06T14:55:25Z",
   "agent": "meaningful_iter_10m",
-  "sha": "91325bbacbf7813b659c25283274de05e08c82c2",
-  "note": "complements BASE64 for binary-safe plate transport"
+  "sha": "66b82e50b83d9e14cb3bcf571eef47b90cf41431",
+  "note": "complements BASE64 and HEX for plate field transport"
 }
