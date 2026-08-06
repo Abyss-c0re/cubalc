@@ -3805,6 +3805,83 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ENTROPY|URANDOM|RANDHEX [n] — n random bytes as lowercase hex → LAST.
+     * Default n=16 (32 hex chars); cap 256 bytes. LAST_N = hex length.
+     * Usability: agent nonces/tokens/salts beyond UUID (fixed) / RAND (int). */
+    if (kw(&L->cur,"ENTROPY") || kw(&L->cur,"URANDOM") || kw(&L->cur,"RANDHEX") ||
+        kw(&L->cur,"RANDOMHEX") || kw(&L->cur,"HEXRAND") || kw(&L->cur,"RAND_BYTES") ||
+        kw(&L->cur,"RANDBYTES") || kw(&L->cur,"SECURE_RAND") || kw(&L->cur,"NONCE")){
+      long nbytes = 16;
+      unsigned char raw[256];
+      char out[256 * 2 + 4];
+      size_t o = 0;
+      long i;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && var_get(vm, L->cur.text, 0) &&
+           !var_get(vm, L->cur.text, 0)->is_str)) {
+        if (L->cur.kind == TK_IDENT) {
+          Var *gv = var_get(vm, L->cur.text, 0);
+          nbytes = gv->val;
+          lex_next(L);
+        } else {
+          nbytes = parse_expr(vm, L);
+        }
+      }
+      if (nbytes < 1) nbytes = 1;
+      if (nbytes > 256) nbytes = 256;
+      memset(raw, 0, (size_t)nbytes);
+#if !defined(CUBALC_OS_WINDOWS)
+      {
+        FILE *rf = fopen("/dev/urandom", "rb");
+        if (!rf) {
+          /* soft fail */
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "ENTROPY_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "ENTROPY: urandom open fail");
+          var_set_str(vm, "ERR", "ENTROPY: urandom open fail");
+          bump(vm); return 1;
+        }
+        if (fread(raw, 1, (size_t)nbytes, rf) != (size_t)nbytes) {
+          fclose(rf);
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "ENTROPY: short read");
+          var_set_str(vm, "ERR", "ENTROPY: short read");
+          bump(vm); return 1;
+        }
+        fclose(rf);
+      }
+#else
+      /* weak fallback */
+      for (i = 0; i < nbytes; i++)
+        raw[i] = (unsigned char)(rand() & 0xff);
+#endif
+      for (i = 0; i < nbytes; i++) {
+        static const char *hx = "0123456789abcdef";
+        out[o++] = hx[(raw[i] >> 4) & 0xf];
+        out[o++] = hx[raw[i] & 0xf];
+      }
+      out[o] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)o;
+      var_set_num(vm, "LAST_N", (long)o);
+      var_set_str(vm, "ENTROPY", out);
+      var_set_str(vm, "URANDOM", out);
+      var_set_str(vm, "RANDHEX", out);
+      var_set_num(vm, "ENTROPY_N", (long)o);
+      var_set_num(vm, "ENTROPY_BYTES", nbytes);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS JSONESC|JESC|ESCJSON|JSON_ESCAPE [str]
      * SYS JSONUNESC|JUNESC|UNJSON|JSON_UNESCAPE [str]
      * — JSON string-body escape/unescape (no outer quotes; default prior LAST).
@@ -23888,6 +23965,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
+      {"SYS ENTROPY", "SYS ENTROPY|URANDOM [n] — n random bytes as hex · nonces/tokens"},
       {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS PICK", "SYS PICK|CHOICE|SAMPLE [str] — random newline field → LAST · index LAST_N"},
       {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},

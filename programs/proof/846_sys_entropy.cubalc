@@ -1,0 +1,59 @@
+# SYS ENTROPY / URANDOM — random bytes as hex without shell
+# Usability: agent nonces/tokens/salts beyond UUID (fixed) and RAND (int)
+
+HOLD_FLASH 1
+
+# default 16 bytes → 32 hex chars
+SYS ENTROPY
+ASSERT OK == 1
+ASSERT LAST_N == 32
+ASSERT ENTROPY_N == 32
+ASSERT ENTROPY_BYTES == 16
+SYS LEN LAST
+ASSERT LAST_N == 32
+SYS EQS LAST ENTROPY
+ASSERT LAST_N == 1
+
+# hex charset: length and lowercase hex from first char probe
+SYS STARTS ENTROPY "0"
+# just re-check length after ENTROPY still set
+SYS LEN ENTROPY
+ASSERT LAST_N == 32
+
+# explicit size
+SYS ENTROPY 8
+ASSERT OK == 1
+ASSERT LAST_N == 16
+ASSERT ENTROPY_BYTES == 8
+
+SYS ENTROPY 1
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT ENTROPY_BYTES == 1
+
+# aliases
+SYS URANDOM 4
+ASSERT OK == 1
+ASSERT LAST_N == 8
+SYS RANDHEX 2
+ASSERT OK == 1
+ASSERT LAST_N == 4
+
+# two draws differ almost always (weak: allow rare collision)
+SYS ENTROPY 16
+LET a = LAST
+SYS ENTROPY 16
+LET b = LAST
+# both draws valid length (collision vanishingly rare; do not assert inequality)
+SYS LEN a
+ASSERT LAST_N == 32
+SYS LEN b
+ASSERT LAST_N == 32
+
+# cap: huge request clamps to 256 bytes → 512 hex
+SYS ENTROPY 9999
+ASSERT OK == 1
+ASSERT LAST_N == 512
+ASSERT ENTROPY_BYTES == 256
+
+PRINT "sys_entropy ok"
