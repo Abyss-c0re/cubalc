@@ -1,0 +1,76 @@
+# SYS ADDKV / OFFSETKV — add integer delta to every key:val value
+# Usability: Laplace +1 / score offset before PCTKV without EACH+KVINC
+
+HOLD_FLASH 1
+
+LET hist = "error:3\nwarn:1\ninfo:5"
+SYS ADDKV hist 1
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT ADDKV_N == 3
+ASSERT ADDKV_D == 1
+SYS EQS LAST "error:4\nwarn:2\ninfo:6"
+ASSERT LAST_N == 1
+
+# delta 0 identity
+SYS ADDKV hist 0
+ASSERT ADDKV_N == 3
+ASSERT ADDKV_D == 0
+SYS EQS LAST "error:3\nwarn:1\ninfo:5"
+ASSERT LAST_N == 1
+
+# negative delta
+SYS ADDKV hist -1
+ASSERT ADDKV_D == -1
+SYS EQS LAST "error:2\nwarn:0\ninfo:4"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS ADDKV "" 5
+ASSERT LAST_N == 0
+ASSERT ADDKV_N == 0
+
+# custom sep
+LET cfg = "retries=2\nport=10"
+SYS ADDKV cfg 3 "="
+ASSERT ADDKV_N == 2
+SYS EQS LAST "retries=5\nport=13"
+ASSERT LAST_N == 1
+
+# aliases
+SYS OFFSETKV hist 2
+ASSERT OFFSETKV_N == 3
+ASSERT OFFSETKV_D == 2
+SYS EQS LAST "error:5\nwarn:3\ninfo:7"
+ASSERT LAST_N == 1
+SYS ADDVAL hist 1
+ASSERT ADDVAL_N == 3
+SYS LAPLACE hist
+ASSERT ADDKV_D == 1
+SYS EQS LAST "error:4\nwarn:2\ninfo:6"
+ASSERT LAST_N == 1
+
+# default delta=1 when omitted
+SYS ADDKV hist
+ASSERT ADDKV_D == 1
+SYS EQS LAST "error:4\nwarn:2\ninfo:6"
+ASSERT LAST_N == 1
+
+# agent: Laplace smooth FREQ then check no zero share
+LET log = "ERROR\nERROR\nWARN"
+SYS FREQ log
+SYS ADDKV LAST 1
+LET smooth = LAST
+SYS LOOKUPN smooth "ERROR" OR 0
+# FREQ ERROR:2 +1 =3
+ASSERT LAST_N == 3
+SYS LOOKUPN smooth "WARN" OR 0
+ASSERT LAST_N == 2
+# rare tag missing from FREQ still absent (ADDKV only adjusts existing keys)
+SYS LOOKUPN smooth "INFO" OR 0
+ASSERT LAST_N == 0
+SYS SUMKV smooth
+# 3+2=5
+ASSERT LAST_N == 5
+
+PRINT "sys_addkv ok"

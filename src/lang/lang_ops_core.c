@@ -5670,7 +5670,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
      * KVINC_V = new value; KVINC_I = index; KVINC_HIT 1=existed 0=inserted.
      * Usability: bump FREQ/severity counters without LOOKUP+arith+KVSET glue. */
     if (kw(&L->cur,"KVINC") || kw(&L->cur,"INCKV") || kw(&L->cur,"BUMPKV") ||
-        kw(&L->cur,"KVADD") || kw(&L->cur,"ADDKV") || kw(&L->cur,"INCKEY") ||
+        kw(&L->cur,"KVADD") || kw(&L->cur,"INCKEY") ||
         kw(&L->cur,"COUNTUP") || kw(&L->cur,"KVBUMP")){
       char bag[CUBALC_HOST_STR_MAX], key[256], sep[32], out[CUBALC_HOST_STR_MAX];
       char field[512], left[256], newline[768], vbuf[40];
@@ -6918,6 +6918,109 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "SCALEKV_F", factor);
       var_set_num(vm, "MULKV_N", scaled);
       var_set_num(vm, "WEIGHTKV_F", factor);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ADDKV|OFFSETKV|ADDVAL bag delta [sep]
+     * — add integer delta to each numeric key:val value. Default sep ":".
+     * LAST = bag; LAST_N = field count; ADDKV_N = fields adjusted;
+     * ADDKV_D = delta used.
+     * Usability: Laplace +1 / score offset before PCTKV without EACH+KVINC. */
+    if (kw(&L->cur,"ADDKV") || kw(&L->cur,"OFFSETKV") || kw(&L->cur,"ADDVAL") ||
+        kw(&L->cur,"BIASKV") || kw(&L->cur,"SHIFTKV") || kw(&L->cur,"ADDFALL") ||
+        kw(&L->cur,"INCALL") || kw(&L->cur,"BUMPALL") || kw(&L->cur,"LAPLACE")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], field[512], out[CUBALC_HOST_STR_MAX];
+      char left[256], newline[768], vbuf[40];
+      const char *p, *start;
+      size_t flen, sn, olen = 0, left_n;
+      long delta = 1, kept = 0, adjusted = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        delta = parse_expr(vm, L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          delta = (long)dv->val;
+          lex_next(L);
+        }
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            {
+              const char *sp = sn ? strstr(field, sep) : NULL;
+              char *end = 0;
+              long v;
+              int did = 0;
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+                v = strtol(sp + sn, &end, 10);
+                if (end != sp + sn) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0) {
+                    v = v + delta;
+                    snprintf(vbuf, sizeof vbuf, "%ld", v);
+                    snprintf(newline, sizeof newline, "%s%s%s", left, sep, vbuf);
+                    did = 1;
+                    adjusted++;
+                  }
+                }
+              }
+              if (!did)
+                snprintf(newline, sizeof newline, "%s", field);
+            }
+            {
+              size_t nlen = strlen(newline);
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + nlen < sizeof out) {
+                memcpy(out + olen, newline, nlen);
+                olen += nlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, newline, t);
+                olen += t;
+              }
+              out[olen] = 0;
+            }
+            kept++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "ADDKV", out);
+      var_set_str(vm, "OFFSETKV", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "ADDKV_N", adjusted);
+      var_set_num(vm, "ADDKV_D", delta);
+      var_set_num(vm, "OFFSETKV_N", adjusted);
+      var_set_num(vm, "OFFSETKV_D", delta);
+      var_set_num(vm, "ADDVAL_N", adjusted);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
@@ -9704,7 +9807,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|ADDKV|OFFSETKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10036,6 +10139,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DIFFKV", "SYS DIFFKV|SUBKV bag_a bag_b [sep] — subtract key:val values · FREQ delta"},
       {"SYS SUBKV", "SYS SUBKV bag_a bag_b [sep] — alias of SYS DIFFKV · a−b by key"},
       {"SYS DELTAKV", "SYS DELTAKV bag_a bag_b [sep] — alias of SYS DIFFKV · now−baseline"},
+      {"SYS ADDKV", "SYS ADDKV|OFFSETKV bag delta [sep] — add delta to key:val values · Laplace/offset"},
+      {"SYS OFFSETKV", "SYS OFFSETKV bag delta [sep] — alias of SYS ADDKV · score offset"},
+      {"SYS ADDVAL", "SYS ADDVAL bag delta [sep] — alias of SYS ADDKV"},
       {"SYS LASTMATCH", "SYS LASTMATCH|GREP1L bag needle — last field containing needle · LAST_N 0|1"},
       {"SYS GREP1L", "SYS GREP1L bag needle — alias of SYS LASTMATCH · latest hit without REVL"},
       {"SYS LASTMATCHI", "SYS LASTMATCHI|GREP1LI bag needle — case-insensitive LASTMATCH"},

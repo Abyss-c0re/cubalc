@@ -203,6 +203,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 173. ~~**`SYS CAPKV` / `CLAMPKV`**~~ **done** (clamp key:val values to max · cap FREQ outliers before PCTKV).
 174. ~~**`SYS SCALEKV` / `MULKV`**~~ **done** (multiply key:val values · weight FREQ before MERGEKV).
 175. ~~**`SYS DIFFKV` / `SUBKV`**~~ **done** (subtract key:val bags by key · FREQ now−baseline without EACH).
+176. ~~**`SYS ADDKV` / `OFFSETKV`**~~ **done** (add delta to key:val values · Laplace/score offset without EACH).
 
 ## Tick protocol
 
