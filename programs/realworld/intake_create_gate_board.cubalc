@@ -1,0 +1,898 @@
+# intake_create_gate_board.cubalc — CANCREATE admit + UMASK create mask
+#
+# Real use: intake/ops agents must pre-flight whether a drop path is
+# creatable and set a private umask before materializing secret plates
+# (no shell access/touch/umask glue):
+#   CANCREATE / CREATABLE   — create/overwrite probe (parent W+X)
+#   UMASK / GETUMASK / SET  — process file-creation mask (octal)
+#   MODE / WRITE            — post-create perm stamp vs mask intent
+# Distinct from plate_acl (R/W/X access on existing) and plate_lockdown
+# (CHMOD after write): this board is *create admit + umask + mode proof*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target intake path
+#   MASK.txt       — saved prior umask string (for restore)
+#   VAL.txt        — last admit/mode/mask stamp
+#   META.txt       — probe bag
+#   CREATE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_IC_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   canmk     — CANCREATE ACTIVE → VAL 0|1
+#   umask     — GETUMASK → VAL
+#   mask      — SETUMASK ARG1 (e.g. 0077); VAL=previous; MASK saved
+#   restore   — UMASK from MASK.txt (or ARG1)
+#   gate      — CANCREATE must be 1 (REQUIRE optional)
+#   seed      — WRITE ACTIVE ARG1; optional A2/CUBALC_IC_MASK umask same-run
+#   mode      — MODE ACTIVE → VAL
+#   check     — EQS MODE vs ARG1 expected (e.g. 0600)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ic_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/in/drop.env ...
+#   CUBALC_ARG0=canmk ...
+#   CUBALC_ARG0=mask CUBALC_ARG1=0077 ...
+#   CUBALC_ARG0=seed CUBALC_ARG1='token=s3cr3t' CUBALC_ARG2=0077 ...
+#   CUBALC_ARG0=check CUBALC_ARG1=0600 ...
+#   CUBALC_ARG0=restore ...
+#
+# Env: CUBALC_IC_REQUIRE=1  CUBALC_IC_PATH=…  CUBALC_IC_MASK=0077
+#
+# Edges:
+#   CANCREATE missing parent → OK=1 LAST_N=0 (probe)
+#   CANCREATE empty → OK=0 sticky
+#   UMASK set returns *previous* not new (false friend)
+#   UMASK_N decimal 63 vs string 0077 dual
+#   WRITE overwrite keeps prior mode — seed RM+WRITE for fresh create
+#   process-scoped umask (lost across cubalc invocations unless A2/ENV)
+#   WRITE NL; REQUIRE; NUM; HAS substring on mode labels
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "intake_create_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT KFILE = "MASK.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CREATE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_MASK = "0077"
+DEFAULT EXP_MODE = "0600"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_IC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_IC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_IC_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_IC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_IC_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_IC_MASK" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_MASK = LAST
+ELSE
+  LET ENV_MASK = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir KFILE
+LET mask_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR mask_meta OR ""
+LET saved_mask = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_MASK
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "mask"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_MASK
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET mask_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET canmk_n = 0
+LET umask_n = 0
+LET mode_n = 0
+LET gate_n = 0
+LET check_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "icgate" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON saved_mask
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ACTIVE ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- canmk CANCREATE ---
+SYS EQS ACTION "canmk"
+IF LAST_N == 1 THEN
+  NOTE "action canmk"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "canmk no active"
+    FAIL "canmk no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "canmk no active"
+    END
+  ELSE
+    SYS CANCREATE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET canmk_n = 0
+      LET note_msg = "canmk empty/fail"
+      FAIL "canmk empty/fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "canmk empty/fail"
+      END
+    ELSE
+      LET canmk_n = LAST_N
+      IF canmk_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "canmk denied"
+        FAIL "canmk denied"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "canmk denied"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "canmk ok"
+      END
+      SYS STR canmk_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "canmk"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON canmk_n
+  CLEAR_ERR
+END
+
+# --- umask GET ---
+SYS EQS ACTION "umask"
+IF LAST_N == 1 THEN
+  NOTE "action umask"
+  SYS GETUMASK
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "umask get fail"
+    FAIL "umask get fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "umask get fail"
+    END
+  ELSE
+    LET val = LAST
+    LET umask_n = LAST_N
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "umask ok"
+    LET meta = "umask"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "n"
+    LET meta = LAST
+    SYS STR umask_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON umask_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- mask SETUMASK (VAL = previous) ---
+SYS EQS ACTION "mask"
+IF LAST_N == 1 THEN
+  NOTE "action mask"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_MASK
+  END
+  # capture current before set for MASK plate
+  SYS GETUMASK
+  IF OK == 1 THEN
+    LET prev_s = LAST
+    LET prev_n = LAST_N
+  ELSE
+    LET prev_s = ""
+    LET prev_n = 0
+  END
+  CLEAR_ERR
+  SYS UMASK NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "mask set fail"
+    FAIL "mask set fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mask set fail"
+    END
+  ELSE
+    # LAST is previous mask (not newly applied) — document dual
+    LET val = LAST
+    LET umask_n = LAST_N
+    LET val_ch = 1
+    # persist previous so restore works across process restarts? no —
+    # umask is process-local; we still store for same-process multi-action
+    # and for report. Prefer prev_s from GET before set.
+    SYS BLANK prev_s
+    IF LAST_N == 0 THEN
+      LET saved_mask = prev_s
+    ELSE
+      LET saved_mask = val
+    END
+    LET mask_ch = 1
+    # prove current is NAME
+    SYS GETUMASK
+    LET cur_s = LAST
+    LET umask_n = LAST_N
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "mask ok"
+    LET meta = "prev"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "now"
+    LET meta = LAST
+    SYS PUSH meta cur_s
+    LET meta = LAST
+    SYS PUSH meta "want"
+    LET meta = LAST
+    SYS PUSH meta NAME
+    LET meta = LAST
+    LET meta_ch = 1
+    # substring false friend: HAS on mask digits
+    SYS HAS cur_s "7"
+    LET has7 = LAST_N
+    SYS PUSH meta "has7"
+    LET meta = LAST
+    SYS STR has7
+    SYS PUSH meta LAST
+    LET meta = LAST
+  END
+  PRINT_JSON umask_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- restore prior mask ---
+SYS EQS ACTION "restore"
+IF LAST_N == 1 THEN
+  NOTE "action restore"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET want = NAME
+  ELSE
+    SYS BLANK saved_mask
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "restore no mask"
+      FAIL "restore no mask"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "restore no mask"
+      END
+      LET want = ""
+    ELSE
+      LET want = saved_mask
+    END
+  END
+  SYS BLANK want
+  IF LAST_N == 0 THEN
+    SYS UMASK want
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "restore fail"
+      FAIL "restore fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "restore fail"
+      END
+    ELSE
+      SYS GETUMASK
+      LET val = LAST
+      LET umask_n = LAST_N
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "restore ok"
+      LET meta = "umask"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON umask_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate CANCREATE must admit ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no active"
+    FAIL "gate no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no active"
+    END
+  ELSE
+    SYS CANCREATE active
+    IF OK == 0 THEN
+      LET canmk_n = 0
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate empty"
+      FAIL "gate empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate empty"
+      END
+    ELSE
+      LET canmk_n = LAST_N
+      LET gate_n = canmk_n
+      IF gate_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate ok"
+      END
+      SYS STR gate_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "gate"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "canmk"
+      LET meta = LAST
+      SYS STR canmk_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON gate_n canmk_n
+  CLEAR_ERR
+END
+
+# --- seed WRITE under current umask ---
+# UMASK is process-scoped: prior `mask` action in another cubalc run is LOST.
+# Same-process: apply A2 or CUBALC_IC_MASK before WRITE (agent must co-locate).
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "seed no active"
+    FAIL "seed no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "seed no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "seed needs body"
+    END
+    # optional same-process mask: A2 then ENV_MASK then DEF none
+    LET apply_mask = ""
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET apply_mask = A2
+    ELSE
+      SYS BLANK ENV_MASK
+      IF LAST_N == 0 THEN
+        LET apply_mask = ENV_MASK
+      END
+    END
+    SYS BLANK apply_mask
+    IF LAST_N == 0 THEN
+      SYS GETUMASK
+      IF OK == 1 THEN
+        LET saved_mask = LAST
+        LET mask_ch = 1
+      END
+      CLEAR_ERR
+      SYS UMASK apply_mask
+      CLEAR_ERR
+    END
+    # pre-flight create
+    SYS CANCREATE active
+    LET canmk_n = LAST_N
+    CLEAR_ERR
+    IF canmk_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "seed not creatable"
+      FAIL "seed not creatable"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "seed not creatable"
+      END
+    ELSE
+      # ensure parent dir if nested under STATE
+      SYS DIRNAME active
+      LET parent = LAST
+      SYS BLANK parent
+      IF LAST_N == 0 THEN
+        SYS EQS parent "."
+        IF LAST_N == 0 THEN
+          SYS EQS parent "/"
+          IF LAST_N == 0 THEN
+            SYS MKDIR parent
+            CLEAR_ERR
+          END
+        END
+      END
+      # if path already exists, overwrite keeps prior mode — umask only on create
+      SYS EXIST active
+      LET existed = LAST_N
+      CLEAR_ERR
+      IF existed == 1 THEN
+        SYS RM active
+        CLEAR_ERR
+      END
+      SYS WRITE active NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "seed write fail"
+        FAIL "seed write fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "seed write fail"
+        END
+      ELSE
+        SYS MODE active
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "seed mode miss"
+          FAIL "seed mode miss"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "seed mode miss"
+          END
+        ELSE
+          LET mstr = LAST
+          LET mode_n = MODE_N
+          SYS GETUMASK
+          LET umask_s = LAST
+          LET umask_n = LAST_N
+          CLEAR_ERR
+          # VAL = mode@umask
+          SYS CAT mstr "@"
+          LET val = LAST
+          SYS CAT val umask_s
+          LET val = LAST
+          LET val_ch = 1
+          LET hit = 1
+          LET note_msg = "seed ok"
+          LET meta = "mode"
+          SYS PUSH meta mstr
+          LET meta = LAST
+          SYS PUSH meta "mode_n"
+          LET meta = LAST
+          SYS STR mode_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "umask"
+          LET meta = LAST
+          SYS PUSH meta umask_s
+          LET meta = LAST
+          SYS PUSH meta "existed"
+          LET meta = LAST
+          SYS STR existed
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "body"
+          LET meta = LAST
+          SYS PUSH meta NAME
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON canmk_n mode_n umask_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- mode probe ---
+SYS EQS ACTION "mode"
+IF LAST_N == 1 THEN
+  NOTE "action mode"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "mode no active"
+    FAIL "mode no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mode no active"
+    END
+  ELSE
+    SYS MODE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET val = ""
+      LET val_ch = 1
+      LET note_msg = "mode miss"
+      FAIL "mode miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mode miss"
+      END
+    ELSE
+      LET val = LAST
+      LET mode_n = MODE_N
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "mode ok"
+      LET meta = "mode"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "n"
+      LET meta = LAST
+      SYS STR mode_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON mode_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- check MODE EQS expected ---
+SYS EQS ACTION "check"
+IF LAST_N == 1 THEN
+  NOTE "action check"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "check no active"
+    FAIL "check no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "check no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = EXP_MODE
+    END
+    SYS MODE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "check mode miss"
+      FAIL "check mode miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "check mode miss"
+      END
+    ELSE
+      LET mstr = LAST
+      LET mode_n = MODE_N
+      SYS EQS mstr NAME
+      LET check_n = LAST_N
+      # also try without leading zero false friend (0600 vs 600)
+      SYS HAS mstr NAME
+      LET has_n = LAST_N
+      CLEAR_ERR
+      IF check_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "check mismatch"
+        FAIL "check mismatch"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "check mismatch"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "check ok"
+      END
+      LET val = mstr
+      LET val_ch = 1
+      LET meta = "mode"
+      SYS PUSH meta mstr
+      LET meta = LAST
+      SYS PUSH meta "want"
+      LET meta = LAST
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "ok"
+      LET meta = LAST
+      SYS STR check_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "has_sub"
+      LET meta = LAST
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON check_n mode_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET saved_mask = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET mask_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "canmk"
+LET k = k + LAST_N
+SYS EQS ACTION "umask"
+LET k = k + LAST_N
+SYS EQS ACTION "mask"
+LET k = k + LAST_N
+SYS EQS ACTION "restore"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "mode"
+LET k = k + LAST_N
+SYS EQS ACTION "check"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF mask_ch > 0 THEN
+  SYS WRITE mask_meta saved_mask
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "mask write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.intake_create_gate_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "canmk"
+LET report = LAST
+SYS STR canmk_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "umask_n"
+LET report = LAST
+SYS STR umask_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mode_n"
+LET report = LAST
+SYS STR mode_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "check"
+LET report = LAST
+SYS STR check_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "saved_mask"
+LET report = LAST
+SYS PUSH report saved_mask
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "intake_create_gate_board" ACTION hit miss canmk_n umask_n mode_n gate_n note_msg elapsed

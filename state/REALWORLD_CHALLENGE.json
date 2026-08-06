@@ -1,159 +1,153 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 96,
-  "program": "programs/realworld/plate_acl_board.cubalc",
-  "theme": "plate ACL CANREAD/CANWRITE/CANEXEC + OWNERNAME/GROUPNAME admit gate",
-  "version": "1.15.280-usability",
+  "iter": 97,
+  "program": "programs/realworld/intake_create_gate_board.cubalc",
+  "theme": "intake create gate CANCREATE + UMASK private plate mask",
+  "version": "1.15.283-usability",
   "pass": true,
   "tests": [
     {
-      "name": "put_canrw",
-      "cmd": "put body; CANREAD=1 CANWRITE=1",
+      "name": "canmk_ok",
+      "cmd": "CANCREATE under STATE/in = 1",
       "ok": true,
-      "note": "owner access"
+      "note": "parent W+X"
     },
     {
-      "name": "canx_soft",
-      "cmd": "CANEXEC data plate \u2192 0 soft miss",
+      "name": "umask_get",
+      "cmd": "GETUMASK string 0ooo + UMASK_N",
       "ok": true,
-      "note": "no X bit"
+      "note": "0022"
     },
     {
-      "name": "owner_group",
-      "cmd": "OWNERNAME/GROUPNAME human labels",
+      "name": "mask_set",
+      "cmd": "UMASK 0077 LAST=previous not new",
       "ok": true,
-      "note": "root:root"
+      "note": "prev 0022 now 0077"
     },
     {
-      "name": "stamp",
-      "cmd": "owner:group:mode r=w=x composite",
+      "name": "seed_private",
+      "cmd": "seed body ARG2=0077 → MODE 0600",
       "ok": true,
-      "note": "root:root:0644 r=1 w=1 x=0"
+      "note": "VAL 0600@0077"
     },
     {
-      "name": "gate_rw",
-      "cmd": "gate rw admit",
+      "name": "check_0600",
+      "cmd": "EQS MODE 0600",
       "ok": true,
       "note": "pass"
     },
     {
-      "name": "gate_rwx_require",
-      "cmd": "gate rwx REQUIRE \u2192 exit 2",
+      "name": "check_mismatch_require",
+      "cmd": "check 0644 REQUIRE → exit 2",
       "ok": true,
       "note": "deny"
     },
     {
-      "name": "mine",
-      "cmd": "OWNERNAME EQS USER + OWNEDBY dual",
+      "name": "canmk_bad_parent",
+      "cmd": "missing parent OK=1 LAST_N=0; REQUIRE→2",
       "ok": true,
-      "note": "mine=1"
+      "note": "probe"
     },
     {
-      "name": "owner_miss",
-      "cmd": "missing path OWNERNAME soft; REQUIRE\u21922",
+      "name": "require_abc",
+      "cmd": "REQUIRE=abc softens",
       "ok": true,
-      "note": "OK=0 sticky"
-    },
-    {
-      "name": "canr_miss",
-      "cmd": "missing path CANREAD OK=1 LAST_N=0",
-      "ok": true,
-      "note": "probe model"
+      "note": "rc 0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "253/253 pass"
+      "note": "256/256 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|access",
-      "title": "CAN* vs OWNERNAME soft-fail models disagree",
-      "detail": "CANREAD missing path \u2192 OK=1 LAST_N=0 (probe). OWNERNAME missing \u2192 OK=0 sticky LAST_ERR. Agents cannot uniform-handle admit vs label soft misses.",
-      "repro": "CANREAD /no/such; OWNERNAME /no/such"
+      "area": "host|umask",
+      "title": "UMASK is process-scoped — lost across cubalc invocations",
+      "detail": "Action dispatch re-execs binary each time. mask then seed in separate runs does not apply private mask unless seed re-sets via ARG2/ENV. Agents assume durable umask like CHMOD.",
+      "repro": "mask 0077; new process seed → host default umask"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|gate",
-      "title": "No single CAN_RWX / ACCESSMASK form",
-      "detail": "Three separate probes required for r/w/x. Gate boards hand-roll HAS letter parse on want string \u2014 fragile and verbose.",
-      "repro": "need r+w+x \u2192 3 SYS calls"
+      "area": "host|umask",
+      "title": "UMASK set returns previous mask not newly applied",
+      "detail": "SYS UMASK 0077 → LAST=0022 (old). Agents that print LAST as current mis-stamp plates. Must GETUMASK after set.",
+      "repro": "UMASK 0077; LAST is prev"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|mode",
-      "title": "MODE string vs MODE_N decimal dual confuses agents",
-      "detail": "0644 string but MODE_N=420 (decimal). Agents comparing MODE_N==644 fail silently.",
-      "repro": "MODE file \u2192 LAST=0644 MODE_N=420"
+      "severity": "high",
+      "area": "host|write",
+      "title": "WRITE overwrite keeps prior mode — umask only on create",
+      "detail": "Re-seed existing path does not re-apply umask. Board must RM then WRITE for private mode proof. No WRITECREATE or FORCE_CREATE flag.",
+      "repro": "WRITE existing 0644 under umask 0077 → still 0644"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|has",
-      "title": "Gate letter parse via HAS is substring-false-friend prone",
-      "detail": "HAS want \"r\" works for rwx but would match accidental bags containing letter r. No CHARHAS / SET-of-flags helper.",
-      "repro": "HAS owner r \u2192 1"
+      "area": "host|mode",
+      "title": "MODE_N decimal vs UMASK_N vs octal strings triple trap",
+      "detail": "0600 → MODE_N=384; 0077 → UMASK_N=63. Agents compare numeric 600/77 and fail.",
+      "repro": "MODE_N==600 false; UMASK_N==77 false"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|mine",
-      "title": "No MINE/ISOWNERNAME helper \u2014 dual OWNEDBY + OWNERNAME EQS USER",
-      "detail": "OWNEDBY is euid; OWNERNAME is login string. Agents must dual-probe to stamp audit+admit. Race if passwd entry missing \u2192 numeric fallback name.",
-      "repro": "OWNEDBY 1; OWNERNAME EQS USER"
+      "area": "host|cancreate",
+      "title": "CANCREATE silent 0 on missing parent vs empty path OK=0",
+      "detail": "Bad parent: OK=1 LAST_N=0. Empty path: OK=0 sticky ERR. Same dual as CANREAD family — agents need two branches.",
+      "repro": "CANCREATE /no/such/x; CANCREATE \"\""
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "ACTIVE.txt path and VAL glue in cat -A without $ line ends on short writes.",
-      "repro": "cat -A ACTIVE.txt"
+      "area": "host|has",
+      "title": "HAS on umask/mode strings is digit false-friend",
+      "detail": "HAS 0077 \"7\" → 1; HAS 0600 \"600\" may glue poorly. No bit-mask expected-mode helper (0666 & ~umask).",
+      "repro": "HAS 0077 7"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|canexec",
-      "title": "CANEXEC=0 on ordinary data plates surprises agents",
-      "detail": "Default put body is not +x; agents requiring rwx gate fail on secrets/env plates. Docs should separate data vs runbook gates.",
-      "repro": "WRITE then CANEXEC \u2192 0"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "ACTIVE path and short VAL glue in cat -A.",
+      "repro": "cat -A ACTIVE.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_PA_REQUIRE=abc leaves REQUIRE_HIT=0 so gate deny stays rc 0.",
-      "repro": "REQUIRE=abc gate rwx \u2192 rc 0"
+      "detail": "CUBALC_IC_REQUIRE=abc → REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc canmk deny → rc 0"
     }
   ],
   "workarounds": [
-    "Treat CAN* LAST_N as admit bit; OWNERNAME OK as soft exist",
-    "Prefer MODE string for display; MODE_N only for bit math",
-    "Dual-probe OWNEDBY + OWNERNAME for mine stamps",
-    "Use gate=rw for data plates; gate=rx for runbooks",
-    "Digit-check REQUIRE env before NUM"
+    "Co-locate UMASK set with WRITE in same process (ARG2/ENV on seed)",
+    "GETUMASK after SET to stamp current mask",
+    "RM existing before private seed so umask applies",
+    "Compare MODE string 0600 not MODE_N 600",
+    "Digit-check REQUIRE env"
   ],
   "language_gaps": [
-    "Unified soft-probe contract for access vs name ops",
-    "SYS ACCESSMASK or CAN_RWX bag form",
-    "MODE_N octal-string dual docs / MODE_OCT helper",
-    "SYS MINE / ISOWNERNAME combined probe",
-    "CHARHAS / flag-set parse for rwx wants",
-    "WRITE trailing NL option"
+    "Session/process-persistent umask plate or auto CUBALC_UMASK env apply",
+    "UMASK set LAST=new option or dual PREV/CUR vars",
+    "WRITECREATE / CREATEONLY that always applies umask",
+    "Expected mode helper: 0666 & ~umask → 0600 string",
+    "Unified empty vs denied probe contract",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "put/canr/canw/owner/group/mode/stamp/gate/mine green",
-    "CAN* missing is OK=1; OWNERNAME missing is OK=0 \u2014 core lesson",
-    "MODE_N=420 for 0644 documented as agent trap",
-    "selftest 253/253; no language fix this iter"
+    "canmk/umask/mask/seed/check/gate green",
+    "cross-run umask loss forced same-process A2 mask on seed",
+    "overwrite mode sticky without RM — core lesson",
+    "selftest 256/256; no language fix this iter"
   ],
-  "commit": "4464a5d74f099c01a96551e5a607a0eb95a93fbb",
-  "ts": "2026-08-06T20:05:30Z"
+  "commit": "",
+  "ts": "2026-08-06T20:37:47Z"
 }
