@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 180,
-  "version": "1.15.205-usability",
-  "item": "SYS LINECOUNTALL / WCALL path bag line counts + sum",
-  "item_id": 213,
-  "title": "SYS LINECOUNTALL|WCALL|MAPLINES [bag] — line inventory dual of SIZEALL",
-  "commit": "4a1a1bfb7611209338b79094019d8dbb3e66cb1a",
-  "summary": "Path bag → line count bag + SUM; miss=0. selftest 180.",
+  "iter": 181,
+  "version": "1.15.206-usability",
+  "item": "SYS MIDFILE / LINESLICE file line window extract",
+  "item_id": 214,
+  "title": "SYS MIDFILE|LINESLICE path start [count] — page file lines without READ+DROP+TAKE",
+  "commit": "63d3349b6f257cc3e915718e0ec62c1e30cdd458",
+  "summary": "File line window extract; TOTAL/START/WANT stats. thrash restore first. selftest 181.",
   "proofs": [
-    "753_sys_linecountall",
-    "selftest n_pass=180"
+    "754_sys_midfile",
+    "selftest n_pass=181"
   ],
-  "when": "2026-08-06T07:53:51Z",
+  "when": "2026-08-06T08:04:13Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4a1a1bfb7611209338b79094019d8dbb3e66cb1a"
+  "sha": "63d3349b6f257cc3e915718e0ec62c1e30cdd458"
 }
