@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 144,
-  "version": "1.15.169-usability",
-  "item": "SYS DROPZERO / KEEPNZ drop key:val value==0",
-  "item_id": 177,
-  "title": "SYS DROPZERO|KEEPNZ bag [sep] — drop zeros keep +/− after DIFFKV",
-  "commit": "c48777cf0204ca7610bef7a4cd93cb604f6dc095",
-  "summary": "DROPZERO clean DIFFKV zeros keep negatives. selftest 144.",
+  "iter": 145,
+  "version": "1.15.170-usability",
+  "item": "SYS ABSKV / MAGKV absolute key:val values",
+  "item_id": 178,
+  "title": "SYS ABSKV|MAGKV bag [sep] — abs values for magnitude TOPKEY after DIFFKV",
+  "commit": "b2d827c0d50048b3dab30cae42027086ed5e4ac6",
+  "summary": "ABSKV magnitude-rank DIFFKV deltas via TOPKEY. selftest 145.",
   "proofs": [
-    "717_sys_dropzero",
-    "selftest n_pass=144"
+    "718_sys_abskv",
+    "selftest n_pass=145"
   ],
-  "when": "2026-08-06T01:44:05Z",
+  "when": "2026-08-06T01:53:43Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c48777cf0204ca7610bef7a4cd93cb604f6dc095"
+  "sha": "b2d827c0d50048b3dab30cae42027086ed5e4ac6"
 }
