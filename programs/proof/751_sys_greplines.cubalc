@@ -1,0 +1,69 @@
+# SYS GREPLINES / EXTRACTLINES — collect matching lines from every path
+# Usability: multi-file log harvest without EACH+READ+GREP+PUSH
+# Complements GREPFILES (paths) and COUNTINFILES (tally). GREPLINESI icase.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "greplines_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.log"
+LET fa = LAST
+SYS JOIN fix "b.log"
+LET fb = LAST
+SYS JOIN fix "c.log"
+LET fc = LAST
+SYS JOIN fix "gone.log"
+LET fg = LAST
+
+SYS WRITE fa "info start\nERROR alpha\ninfo mid"
+SYS WRITE fb "warn only\nERROR beta"
+SYS WRITE fc "Error gamma\nok"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST fg
+LET bag = LAST
+
+SYS GREPLINES bag "ERROR"
+ASSERT OK == 1
+ASSERT GREPLINES_N == 2
+ASSERT GREPLINES_FILES == 2
+ASSERT GREPLINES_SCAN == 4
+ASSERT GREPLINES_MISS == 1
+SYS HASLINE LAST "ERROR alpha"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "ERROR beta"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "Error gamma"
+ASSERT LAST_N == 0
+
+# case-insensitive: + Error gamma
+SYS GREPLINESI bag "error"
+ASSERT GREPLINES_N == 3
+ASSERT GREPLINES_FILES == 3
+SYS HASLINE LAST "Error gamma"
+ASSERT LAST_N == 1
+
+# one-arg after PATHGLOB
+SYS PATHGLOB fix "*.log"
+SYS KEEPFILES
+SYS EXTRACTLINES "ERROR"
+ASSERT EXTRACTLINES_N == 2
+
+# empty bag
+SYS GREPLINES "" "x"
+ASSERT GREPLINES_N == 0
+ASSERT GREPLINES_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_greplines ok"
