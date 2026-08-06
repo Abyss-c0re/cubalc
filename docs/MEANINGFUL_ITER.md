@@ -263,6 +263,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 233. ~~**`SYS ENSURELINE` / `ENSUREFILELINE` / `ADDIFMISSING`**~~ **done** (append exact line if missing · idempotent config flags/markers).
 234. ~~**`SYS HASFILELINE` / `FILEHASLINE`**~~ **done** (exact file line membership probe · dual of bag HASLINE · IF before ENSURELINE).
 235. ~~**`SYS DROPEXACTFILE` / `DROPFILEEXACT` / `REMOVELINEFILE`**~~ **done** (drop first exact file line · dual of bag REMOVELINE · no substring false positives).
+236. ~~**`SYS TOGGLELINE` / `TOGGLEFILELINE` / `FLIPLINE`**~~ **done** (flip exact file line presence · feature flags without HAS+ENSURE/DROP IF).
 
 ## Tick protocol
 

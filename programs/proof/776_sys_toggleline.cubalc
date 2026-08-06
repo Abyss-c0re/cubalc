@@ -1,0 +1,88 @@
+# SYS TOGGLELINE / TOGGLEFILELINE / FLIPLINE
+# — flip exact file line presence (drop if present, else append)
+# Usability: feature flags one-shot without HASFILELINE+ENSURE/DROP IF glue
+# TOGGLELINEI icase. Missing file → create. Soft empty path → OK=0.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "toggleline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "flags.txt"
+LET fs = LAST
+SYS WRITE fs "feature_a\nmode=soft\nSTATUS=live"
+
+# present → drop OFF
+SYS TOGGLELINE fs "feature_a"
+ASSERT OK == 1
+ASSERT TOGGLELINE_WAS == 1
+ASSERT TOGGLELINE_ON == 0
+ASSERT LAST_N == 0
+ASSERT TOGGLELINE_N == 1
+ASSERT TOGGLELINE_I == 0
+ASSERT TOGGLELINE_TOTAL == 2
+SYS EQS LAST "feature_a"
+ASSERT LAST_N == 1
+SYS HASFILELINE fs "feature_a"
+ASSERT HASFILELINE_N == 0
+
+# absent → append ON
+SYS TOGGLELINE fs "feature_a"
+ASSERT TOGGLELINE_WAS == 0
+ASSERT TOGGLELINE_ON == 1
+ASSERT LAST_N == 1
+ASSERT TOGGLELINE_I == 2
+ASSERT TOGGLELINE_TOTAL == 3
+SYS HASFILELINE fs "feature_a"
+ASSERT HASFILELINE_N == 1
+
+# alias FLIPLINE
+SYS FLIPLINE fs "feature_a"
+ASSERT TOGGLELINE_ON == 0
+ASSERT TOGGLELINE_WAS == 1
+
+# TOGGLEFILELINE alias + icase drop STATUS=live
+SYS TOGGLEFILELINE fs "mode=soft"
+ASSERT TOGGLELINE_ON == 0
+ASSERT TOGGLELINE_WAS == 1
+SYS TOGGLELINEI fs "status=live"
+ASSERT TOGGLELINE_ON == 0
+ASSERT TOGGLELINE_WAS == 1
+SYS EQS LAST "STATUS=live"
+ASSERT LAST_N == 1
+
+# file empty of lines after toggles — re-add
+SYS TOGGLELINE fs "boot=1"
+ASSERT TOGGLELINE_ON == 1
+ASSERT TOGGLELINE_WAS == 0
+ASSERT TOGGLELINE_TOTAL == 1
+
+# create missing file
+SYS JOIN fix "new_flag.txt"
+LET nf = LAST
+SYS RM nf
+SYS TOGGLELINE nf "debug=on"
+ASSERT OK == 1
+ASSERT TOGGLELINE_ON == 1
+ASSERT TOGGLELINE_WAS == 0
+ASSERT TOGGLELINE_TOTAL == 1
+SYS HASFILELINE nf "debug=on"
+ASSERT HASFILELINE_N == 1
+SYS TOGGLELINE nf "debug=on"
+ASSERT TOGGLELINE_ON == 0
+SYS HASFILELINE nf "debug=on"
+ASSERT HASFILELINE_N == 0
+
+# empty path soft fail
+SYS TOGGLELINE "" "x"
+ASSERT OK == 0
+ASSERT TOGGLELINE_N == 0
+
+# cleanup
+SYS RM fs
+SYS RM nf
+
+PRINT "sys_toggleline ok"

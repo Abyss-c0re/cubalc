@@ -6901,6 +6901,248 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TOGGLELINE|TOGGLEFILELINE|FLIPLINE path line
+     * — flip exact file line presence: drop if present, else append.
+     * TOGGLELINEI icase. Missing file → create with line (ON=1).
+     * LAST = line; LAST_N / TOGGLELINE_ON = present after (0|1);
+     * TOGGLELINE_WAS before; N=1 always on flip; I · TOTAL(after).
+     * Soft empty path → OK=0.
+     * Usability: feature flags/markers one-shot without HAS+ENSURE/DROP IF glue. */
+    if (kw(&L->cur,"TOGGLELINE") || kw(&L->cur,"TOGGLEFILELINE") ||
+        kw(&L->cur,"FLIPLINE") || kw(&L->cur,"FILETOGGLE") ||
+        kw(&L->cur,"TOGGLELN") || kw(&L->cur,"FLIPFILELINE") ||
+        kw(&L->cur,"TOGGLEEXACT") || kw(&L->cur,"FLIPFLAG") ||
+        kw(&L->cur,"TOGGLELINEI") || kw(&L->cur,"TOGGLEFILELINEI") ||
+        kw(&L->cur,"FLIPLINEI") || kw(&L->cur,"FILETOGGLEI") ||
+        kw(&L->cur,"TOGGLELNI") || kw(&L->cur,"FLIPFILELINEI")){
+      char path[512], needle[CUBALC_HOST_STR_MAX], clean[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      const char *lp, *ls;
+      size_t llen, clen, o = 0;
+      long total = 0, seen = 0, found_i = -1;
+      int icase = 0, first_kept = 1;
+      cubalc_host_result hr, wr;
+      if (kw(&L->cur,"TOGGLELINEI") || kw(&L->cur,"TOGGLEFILELINEI") ||
+          kw(&L->cur,"FLIPLINEI") || kw(&L->cur,"FILETOGGLEI") ||
+          kw(&L->cur,"TOGGLELNI") || kw(&L->cur,"FLIPFILELINEI"))
+        icase = 1;
+      lex_next(L);
+      path[0] = 0; needle[0] = 0; clean[0] = 0; out[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS TOGGLELINE path line");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(needle, sizeof needle, "%ld", n);
+        } else {
+          needle[0] = 0;
+        }
+      }
+      {
+        size_t i = 0;
+        while (needle[i] && needle[i] != '\n' && needle[i] != '\r' && i + 1 < sizeof clean) {
+          clean[i] = needle[i];
+          i++;
+        }
+        clean[i] = 0;
+      }
+      clen = strlen(clean);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "TOGGLELINE_N", 0);
+        var_set_num(vm, "TOGGLELINE_ON", 0);
+        var_set_num(vm, "TOGGLELINE_WAS", 0);
+        var_set_num(vm, "TOGGLELINE_I", -1);
+        var_set_num(vm, "TOGGLELINE_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "TOGGLELINE: empty path");
+        var_set_str(vm, "ERR", "TOGGLELINE: empty path");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(path, &hr) != 0) {
+        /* missing file → create with line (ON) */
+        FILE *af = fopen(path, "w");
+        if (!af) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "TOGGLELINE_N", 0);
+          var_set_num(vm, "TOGGLELINE_ON", 0);
+          var_set_num(vm, "TOGGLELINE_WAS", 0);
+          var_set_num(vm, "TOGGLELINE_I", -1);
+          var_set_num(vm, "TOGGLELINE_TOTAL", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "TOGGLELINE: create fail");
+          var_set_str(vm, "ERR", "TOGGLELINE: create fail");
+          bump(vm); return 1;
+        }
+        fputs(clean, af);
+        fputc('\n', af);
+        fclose(af);
+        var_set_str(vm, "LAST", clean);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", clean);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "TOGGLELINE", clean);
+        var_set_str(vm, "TOGGLEFILELINE", clean);
+        var_set_str(vm, "FLIPLINE", clean);
+        var_set_num(vm, "TOGGLELINE_N", 1);
+        var_set_num(vm, "TOGGLELINE_ON", 1);
+        var_set_num(vm, "TOGGLELINE_WAS", 0);
+        var_set_num(vm, "TOGGLELINE_I", 0);
+        var_set_num(vm, "TOGGLELINE_TOTAL", 1);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      lp = hr.str;
+      total = 0;
+      seen = 0;
+      found_i = -1;
+      if (*lp) {
+        while (*lp) {
+          int match = 0;
+          ls = lp;
+          while (*lp && *lp != '\n') lp++;
+          llen = (size_t)(lp - ls);
+          if (found_i < 0) {
+            if (!icase) {
+              match = (llen == clen && (clen == 0 || memcmp(ls, clean, clen) == 0));
+            } else if (llen == clen) {
+              size_t j;
+              match = 1;
+              for (j = 0; j < clen; j++) {
+                char a2 = ls[j], b2 = clean[j];
+                if (a2 >= 'A' && a2 <= 'Z') a2 = (char)(a2 - 'A' + 'a');
+                if (b2 >= 'A' && b2 <= 'Z') b2 = (char)(b2 - 'A' + 'a');
+                if (a2 != b2) { match = 0; break; }
+              }
+            }
+            if (match) found_i = seen;
+          }
+          total++;
+          seen++;
+          if (*lp == '\n') lp++;
+        }
+      }
+      if (found_i >= 0) {
+        /* present → drop; LAST = actual file line (matters for icase) */
+        char dropped[CUBALC_HOST_STR_MAX];
+        dropped[0] = 0;
+        lp = hr.str;
+        seen = 0;
+        o = 0;
+        first_kept = 1;
+        while (seen < total) {
+          ls = lp;
+          while (*lp && *lp != '\n') lp++;
+          llen = (size_t)(lp - ls);
+          if (seen == found_i) {
+            size_t take = llen;
+            if (take >= sizeof dropped) take = sizeof dropped - 1;
+            memcpy(dropped, ls, take);
+            dropped[take] = 0;
+          } else {
+            if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+            first_kept = 0;
+            if (o + llen < sizeof out) {
+              memcpy(out + o, ls, llen);
+              o += llen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, ls, take);
+              o += take;
+            }
+            out[o] = 0;
+          }
+          seen++;
+          if (*lp == '\n') lp++;
+          else break;
+        }
+        if (cubalc_host_write(path, out, &wr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "TOGGLELINE_N", 0);
+          var_set_num(vm, "TOGGLELINE_ON", 1);
+          var_set_num(vm, "TOGGLELINE_WAS", 1);
+          var_set_num(vm, "TOGGLELINE_I", found_i);
+          var_set_num(vm, "TOGGLELINE_TOTAL", total);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "TOGGLELINE: write fail");
+          var_set_str(vm, "ERR", wr.err[0] ? wr.err : "TOGGLELINE: write fail");
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", dropped);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", dropped);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "TOGGLELINE", dropped);
+        var_set_str(vm, "TOGGLEFILELINE", dropped);
+        var_set_str(vm, "FLIPLINE", dropped);
+        var_set_num(vm, "TOGGLELINE_N", 1);
+        var_set_num(vm, "TOGGLELINE_ON", 0);
+        var_set_num(vm, "TOGGLELINE_WAS", 1);
+        var_set_num(vm, "TOGGLELINE_I", found_i);
+        var_set_num(vm, "TOGGLELINE_TOTAL", total > 0 ? total - 1 : 0);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* absent → append */
+      {
+        FILE *af = fopen(path, "a");
+        if (!af) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "TOGGLELINE_N", 0);
+          var_set_num(vm, "TOGGLELINE_ON", 0);
+          var_set_num(vm, "TOGGLELINE_WAS", 0);
+          var_set_num(vm, "TOGGLELINE_I", -1);
+          var_set_num(vm, "TOGGLELINE_TOTAL", total);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "TOGGLELINE: append fail");
+          var_set_str(vm, "ERR", "TOGGLELINE: append fail");
+          bump(vm); return 1;
+        }
+        if (total > 0) {
+          size_t blen = strlen(hr.str);
+          if (blen > 0 && hr.str[blen - 1] != '\n')
+            fputc('\n', af);
+        }
+        fputs(clean, af);
+        fputc('\n', af);
+        fclose(af);
+      }
+      var_set_str(vm, "LAST", clean);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", clean);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "TOGGLELINE", clean);
+      var_set_str(vm, "TOGGLEFILELINE", clean);
+      var_set_str(vm, "FLIPLINE", clean);
+      var_set_num(vm, "TOGGLELINE_N", 1);
+      var_set_num(vm, "TOGGLELINE_ON", 1);
+      var_set_num(vm, "TOGGLELINE_WAS", 0);
+      var_set_num(vm, "TOGGLELINE_I", total);
+      var_set_num(vm, "TOGGLELINE_TOTAL", total + 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
