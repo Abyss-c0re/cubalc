@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 235,
-  "version": "1.15.261-usability",
-  "item": "SYS LOCAL / LOCALTIME / LOCALDATE local wall stamps",
-  "item_id": 269,
-  "title": "SYS LOCAL|LOCALTIME|LOCALDATE — local wall stamp for human logs",
-  "commit": "2059707289fb63f296d8f8d02eee7bb16fb05757",
-  "summary": "Local wall stamps without shell date; complements UTC DATE. selftest 235.",
+  "iter": 236,
+  "version": "1.15.262-usability",
+  "item": "REQUIRE BIN / SYS WHICHBIN PATH tool gates",
+  "item_id": 270,
+  "title": "REQUIRE BIN|CMD + SYS WHICHBIN — PATH-only host tool gates",
+  "commit": "322bc544b68e645007bc212589a9cfedf2d47560",
+  "summary": "PATH-only soft probe and fail-fast tool gates without shell which. selftest 236.",
   "proofs": [
-    "809_sys_local",
-    "selftest n_pass=235"
+    "810_require_bin",
+    "selftest n_pass=236"
   ],
-  "when": "2026-08-06T16:56:00Z",
+  "when": "2026-08-06T17:06:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2059707289fb63f296d8f8d02eee7bb16fb05757",
-  "note": "no Z vs DATE …Z; LOCALDATE date-only"
+  "sha": "322bc544b68e645007bc212589a9cfedf2d47560",
+  "note": "restored thrash-deleted tree first; which_bin no lib fallback"
 }
