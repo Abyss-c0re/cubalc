@@ -1,172 +1,165 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 47,
-  "program": "programs/realworld/svc_err_kv_board.cubalc",
-  "theme": "service error KV tally LOOKUP KVSET KVINC soft counters",
-  "version": "1.15.156-usability",
+  "iter": 48,
+  "program": "programs/realworld/route_weight_board.cubalc",
+  "theme": "mesh route weights LOOKUP OR default + KVDEL drain",
+  "version": "1.15.158-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_bump_get",
-      "cmd": "seed api:3 db:1 mesh:0; bump api 2 \u2192 5; get api",
+      "name": "seed_get",
+      "cmd": "seed peer_a:10 peer_b:5 peer_c:1; get peer_a → 10 OR=0",
       "ok": true,
-      "note": "KVINC + LOOKUP"
+      "note": "LOOKUP hit"
     },
     {
-      "name": "geti_case",
-      "cmd": "geti API \u2192 5",
+      "name": "get_or_default",
+      "cmd": "get peer_z → DEF 1 LOOKUP_OR=1",
       "ok": true,
-      "note": "LOOKUPI"
+      "note": "soft default OK=1"
     },
     {
-      "name": "bump_insert_set",
-      "cmd": "bump crit insert; set mesh 9",
+      "name": "get_or_zero",
+      "cmd": "CUBALC_RW_DEF=0 get peer_z → val 0 hit 0",
       "ok": true,
-      "note": "KVINC_HIT=0 insert; KVSET"
+      "note": "hit confuses with miss"
     },
     {
-      "name": "loadlines_freq",
-      "cmd": "loadlines api|||api|||warn|||api \u2192 api+3 warn:1",
+      "name": "get_or_require",
+      "cmd": "REQUIRE get missing → exit 2 default only",
       "ok": true,
-      "note": "FREQ merge KVINC"
+      "note": "agent policy on OR"
     },
     {
-      "name": "pin_drop",
-      "cmd": "pin db front; drop mesh",
+      "name": "getraw_miss",
+      "cmd": "getraw peer_z soft miss",
       "ok": true,
-      "note": "MOVELINE LOOKUP_I; REMOVELINE LOOKUP_LINE"
+      "note": "no OR OK=0"
     },
     {
-      "name": "get_miss_require",
-      "cmd": "get ghost soft; REQUIRE exit 2",
+      "name": "bump_del",
+      "cmd": "bump peer_b +3 → 8; del peer_c",
       "ok": true,
-      "note": "soft+REQUIRE"
+      "note": "KVINC + KVDEL"
+    },
+    {
+      "name": "del_miss_require",
+      "cmd": "del ghost soft; REQUIRE exit 2",
+      "ok": true,
+      "note": "KVDEL_HIT=0 OK=1"
+    },
+    {
+      "name": "pin_set_seed",
+      "cmd": "pin peer_b; set peer_d; seed skip peer_a",
+      "ok": true,
+      "note": "MOVELINE + skip"
     },
     {
       "name": "substring_false",
-      "cmd": "get err miss; get error hit",
+      "cmd": "getraw peer miss (not peer_a)",
       "ok": true,
-      "note": "exact key not GREP"
+      "note": "exact key"
     },
     {
-      "name": "sep_eq_plate",
-      "cmd": "CUBALC_SE_SEP== seed/bump api=3\u21925",
+      "name": "dup_del_first",
+      "cmd": "peer_a:1\\npeer_a:9 del → residual peer_a:9",
       "ok": true,
-      "note": "literal sep branch"
-    },
-    {
-      "name": "nonnum_coerce",
-      "cmd": "set api abc; bump \u2192 api:1",
-      "ok": true,
-      "note": "strtol silent 0"
-    },
-    {
-      "name": "dup_first_wins",
-      "cmd": "error:3\\nerror:9 bump \u2192 error:4 residual 9",
-      "ok": true,
-      "note": "first key only"
-    },
-    {
-      "name": "neg_delta_clear",
-      "cmd": "bump -2; clear empty plate",
-      "ok": true,
-      "note": "no floor; WRITE empty"
+      "note": "first-only KVDEL"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "131/131 pass incl lookup kvset kvinc"
+      "note": "133/133 after restore of deleted proofs"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "lang|parse",
-      "title": "LOOKUP/KVSET/KVINC sep cannot be a variable",
-      "detail": "SYS LOOKUP bag key SEP fails unknown form 'SEP'. KVINC/KVSET only accept TK_STR for sep; LOOKUP bare IDENT only if strlen<=2. Configurable CUBALC_SE_SEP forces EQS branch + duplicated ops with \":\"/\"=\" literals. BEFORE/AFTER accept vars \u2014 inconsistent.",
-      "repro": "LET SEP=\":\"; SYS LOOKUP bag k SEP \u2192 unknown form"
+      "area": "host|bag",
+      "title": "LOOKUP OR sets OK=1 on miss — silent default",
+      "detail": "Agents that only check OK treat missing peer as success. Must inspect LOOKUP_OR or LOOKUP_I==-1. Asymmetric with bare LOOKUP miss OK=0.",
+      "repro": "LOOKUP bag ghost OR 1 → OK=1 LOOKUP_OR=1"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "KVINC silently coerces non-numeric values to 0",
-      "detail": "error:abc +1 \u2192 error:1 with KVINC_HIT=1. No OK=0 / refuse mode for non-numeric. Corrupts string metadata plates if reused as counters.",
-      "repro": "KVINC 'error:abc' error \u2192 error:1"
+      "title": "KVDEL miss keeps OK=1 with HIT=0",
+      "detail": "Unlike LOOKUP miss, KVDEL never soft-fails OK. REQUIRE paths must gate on KVDEL_HIT not OK. Easy to think del always succeeded.",
+      "repro": "KVDEL bag ghost → OK=1 HIT=0"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "Duplicate keys: first-wins only; residual siblings stay",
-      "detail": "LOOKUP/KVINC touch only first matching key. error:3\\nerror:9 bump \u2192 error:4\\nerror:9. No de-dupe or multi-key bump. Agents must UNIQ/normalize first.",
-      "repro": "KVINC dup-key bag"
+      "title": "KVDEL first-only leaves duplicate residual keys",
+      "detail": "peer_a:1\\npeer_a:9 after del peer_a keeps peer_a:9. No DELALL / multi-key policy. Drain incomplete without loop.",
+      "repro": "KVDEL dup-key bag"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|bag",
-      "title": "No floor/clamp on negative KVINC delta",
-      "detail": "bump -2 from 5 \u2192 3 ok; can go negative freely. Budget-like agents need MIN 0 after every bump.",
-      "repro": "KVINC bag k -99"
+      "area": "agent|api",
+      "title": "Zero default weight makes hit=0 look like miss",
+      "detail": "Program maps hit=val_n; DEF=0 → hit=0 while get succeeded with default. Agents conflate success with non-zero weight.",
+      "repro": "get peer_z DEF=0 → hit 0 used_or 1"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON collapses bag newlines",
-      "detail": "PRINT_JSON LAST shows error:1warn:1 not multi-line. Agents misread plate depth from JSON dump.",
-      "repro": "PRINT_JSON bag"
+      "area": "lang|parse",
+      "title": "LOOKUP sep+OR argument order is fragile",
+      "detail": "Correct: LOOKUP bag key \\\"=\\\" OR \\\"x\\\". Wrong: LOOKUP bag key OR \\\"x\\\" \\\"=\\\" → unknown form '='. Same sep-literal class as prior KV ops.",
+      "repro": "LOOKUP cfg port OR 7700 ="
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last key:val without $.",
-      "repro": "seed; cat -A ERRKV.txt"
+      "detail": "cat -A last route line without $.",
+      "repro": "seed; cat -A ROUTES.txt"
     },
     {
       "id": "W7",
       "severity": "med",
-      "area": "host|bag",
-      "title": "Empty-key KVINC can produce malformed fields",
-      "detail": "KVINC bag '' 1 may yield a:1:1 or :n depending on bag. No key validation.",
-      "repro": "KVINC bag \"\" 1"
+      "area": "host|json",
+      "title": "PRINT_JSON collapses bag newlines",
+      "detail": "Stable issue; route plate looks like single field in JSON dump.",
+      "repro": "PRINT_JSON bag"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|bag",
-      "title": "No KVDEL / drop-by-key primitive",
-      "detail": "Must LOOKUP \u2192 LOOKUP_LINE \u2192 REMOVELINE. Works but multi-step; residual dups need loop.",
-      "repro": "drop key needs LOOKUP_LINE"
+      "title": "No KVDEL ALL / WHILE-HIT loop primitive",
+      "detail": "Draining all duplicate keys needs agent WHILE LOOKUP loop. MEANINGFUL_ITER candidate.",
+      "repro": "dup keys drain"
     }
   ],
   "workarounds": [
-    "Branch EQS SEP \"=\" then call with \":\" or \"=\" string literals only",
-    "Never store non-numeric values in counter plates; validate before KVINC",
-    "Normalize with UNIQ/FREQ before tallies to avoid duplicate keys",
-    "After negative delta SYS MAX 0 or reject delta < 0 at agent layer",
-    "Drop via LOOKUP_LINE + REMOVELINE; loop while LOOKUP hits for dups"
+    "Always check LOOKUP_OR after LOOKUP … OR; REQUIRE on used_or if real peer required",
+    "Gate del on KVDEL_HIT not OK",
+    "Loop KVDEL while LOOKUP hits for full drain of dups",
+    "Report used_or and val separately; never use hit==0 alone as miss when DEF can be 0",
+    "sep before OR: bag key \\\":\\\" OR DEF with string literals only"
   ],
   "language_gaps": [
-    "resolve_str_arg for LOOKUP/KVSET/KVINC optional sep (accept vars)",
-    "KVINC STRICT / non-numeric refuse mode",
-    "KVINC floor 0 / clamp option",
-    "KVDEL / DROPKEY one-shot",
-    "De-dupe or multi-match KVINC policy",
-    "PRINT_JSON preserve bag newlines or bag-as-array",
+    "LOOKUP OR option to keep OK=0 on default (STRICT_OR)",
+    "KVDEL hard-miss mode OK=0 when HIT=0",
+    "KVDELALL / DELKEY* multi match",
+    "resolve_str_arg for sep on LOOKUP/KV*",
+    "PRINT_JSON bag as array lines",
     "WRITE force trailing NL"
   ],
   "issues_faced": [
-    "First seed failed: unknown form SEP \u2014 forced literal-sep rewrite and documented as W1",
-    "Positive seed/bump/get/geti/loadlines/pin/drop clean after fix",
-    "Non-numeric coerce and dup first-wins confirmed as language behavior not bug",
-    "No language fix this iter \u2014 sep resolve_str_arg for MEANINGFUL_ITER"
+    "Workspace had mass-deleted proofs/plate at fire start — restored from HEAD; selftest 133/133",
+    "Positive seed/get/OR/del/pin clean",
+    "DEF=0 hit=0 footgun documented W4",
+    "No language fix this iter"
   ],
-  "commit": "738992f15ebd71fb6e3f7e4663caca579ee93a95",
-  "ts": "2026-08-05T23:40:00Z"
+  "commit": "",
+  "ts": "2026-08-05T23:55:00Z"
 }

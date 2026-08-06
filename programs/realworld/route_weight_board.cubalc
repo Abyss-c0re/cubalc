@@ -1,0 +1,541 @@
+# route_weight_board.cubalc — mesh route weights plate (LOOKUP OR + KVDEL)
+#
+# Real use: load-balancer / mesh agent keeps peer:weight counters under STATE.
+# Missing peers default via LOOKUP … OR (no IF EMPTY glue). Drained peers are
+# removed with KVDEL (no FINDLINE+REMOVELINE). Bump/set via KVINC/KVSET.
+#
+# Distinct from svc_err_kv_board (severity tallies) and rate_budget_ledger
+# (debit/credit SETMATCH rebuild): this board is routing weights + defaults +
+# drain, stressing LOOKUP OR and KVDEL.
+#
+# Plate under STATE:
+#   ROUTES.txt
+#   ROUTE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RW_ACTION):
+#   list     — depth + bag (default)
+#   seed     — WORDS peer:w tokens (skip existing key)
+#   set      — KVSET NAME VAL
+#   bump     — KVINC NAME [delta]
+#   get      — LOOKUP NAME OR DEF (default weight); hit=weight
+#   getraw   — LOOKUP without OR (soft miss if absent)
+#   has      — LOOKUP hit 1/0
+#   del      — KVDEL NAME (drain peer); soft if missing
+#   pin      — MOVELINE LOOKUP_I to front
+#   clear    — empty plate
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rw_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1='peer_a:10 peer_b:5 peer_c:1' \
+#     ./out/cubalc run -q -s programs/realworld/route_weight_board.cubalc
+#   CUBALC_ARG0=get CUBALC_ARG1=peer_z ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=del CUBALC_ARG1=peer_c ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_RW_FILE=ROUTES.txt
+#   CUBALC_RW_REQUIRE=1
+#   CUBALC_RW_DEF=1          # LOOKUP OR default weight
+#   CUBALC_RW_DELTA=1
+#
+# Edges deliberately stressed:
+#   LOOKUP OR sets OK=1 on miss with LOOKUP_OR=1 — soft default vs hard miss
+#   getraw miss OK=0; get with OR always OK=1
+#   KVDEL miss: OK=1 HIT=0 (not a hard fail) — REQUIRE must check HIT
+#   KVDEL first-only on duplicate keys
+#   sep must be string literal ":" (not var) — see svc_err_kv_board W1
+#   LOOKUP sep OR order: bag key "=" OR "x" not bag key OR "x" "="
+#   PRINT_JSON bag collapse; WRITE trailing NL; substring false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "route_weight_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ROUTES.txt"
+DEFAULT REPORT = "ROUTE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF = "1"
+DEFAULT DELTA = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RW_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_RW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RW_DEF" OR ""
+IF LAST_N > 0 THEN
+  LET DEF = LAST
+END
+SYS ENV "CUBALC_RW_DELTA" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft routes load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET kv_hit = 0
+LET kv_i = -1
+LET kv_v = 0
+LET used_or = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "routes" depth0 ACTION
+  PRINT_JSON depth0 ACTION STATUS_OK
+  PRINT_JSON bag
+  LET note_msg = "list ok"
+END
+
+# --- seed WORDS peer:w ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs peer:w tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP bag k ":"
+        IF OK == 0 THEN
+          SYS KVSET bag k v ":"
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- set ---
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs peer"
+  END
+  SYS BLANK A2
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs weight"
+  END
+  SYS KVSET bag NAME A2 ":"
+  LET bag = LAST
+  LET kv_hit = KVSET_HIT
+  LET kv_i = KVSET_I
+  LET val_s = A2
+  SYS PREPEND "" A2
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET val_n = LAST_N
+  END
+  CLEAR_ERR
+  LET changed = 1
+  LET hit = 1
+  IF kv_hit == 0 THEN
+    LET note_msg = "set insert"
+  ELSE
+    LET note_msg = "set ok"
+  END
+  PRINT_JSON NAME val_s
+END
+
+# --- bump ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "bump needs peer"
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DELTA = LAST_N
+    END
+  END
+  SYS KVINC bag NAME DELTA ":"
+  LET bag = LAST
+  LET kv_hit = KVINC_HIT
+  LET kv_i = KVINC_I
+  LET kv_v = KVINC_V
+  LET val_n = kv_v
+  SYS STR kv_v
+  LET val_s = LAST
+  LET changed = 1
+  LET hit = 1
+  IF kv_hit == 0 THEN
+    LET note_msg = "bumped insert"
+  ELSE
+    LET note_msg = "bumped"
+  END
+  PRINT_JSON NAME val_s kv_v
+END
+
+# --- get LOOKUP OR DEF ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs peer"
+  END
+  SYS LOOKUP bag NAME ":" OR DEF
+  LET val_s = LAST
+  LET used_or = LOOKUP_OR
+  LET kv_i = LOOKUP_I
+  SYS PREPEND "" val_s
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET val_n = LAST_N
+    LET hit = val_n
+  ELSE
+    LET hit = 1
+  END
+  CLEAR_ERR
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "get default"
+    # soft default is intentional; REQUIRE still fails if agent wants real peer
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "get default only"
+      CLEAR_ERR
+      EXIT 2 "get default only"
+    END
+  ELSE
+    LET note_msg = "get ok"
+  END
+  PRINT_JSON NAME val_s used_or
+END
+
+# --- getraw LOOKUP no OR ---
+SYS EQS ACTION "getraw"
+IF LAST_N == 1 THEN
+  NOTE "action getraw"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getraw needs peer"
+  END
+  SYS LOOKUP bag NAME ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "getraw miss"
+    FAIL "getraw miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "getraw miss"
+    END
+  ELSE
+    LET val_s = LAST
+    LET kv_i = LOOKUP_I
+    SYS PREPEND "" val_s
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET val_n = LAST_N
+      LET hit = val_n
+    ELSE
+      LET hit = 1
+    END
+    CLEAR_ERR
+    LET note_msg = "getraw ok"
+    PRINT_JSON NAME val_s
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs peer"
+  END
+  SYS LOOKUP bag NAME ":"
+  IF OK == 0 THEN
+    LET hit = 0
+    LET miss = 1
+    LET note_msg = "has no"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET hit = 1
+    LET val_s = LAST
+    LET note_msg = "has yes"
+    CLEAR_ERR
+  END
+END
+
+# --- del KVDEL ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs peer"
+  END
+  SYS KVDEL bag NAME ":"
+  LET bag = LAST
+  LET kv_hit = KVDEL_HIT
+  LET kv_i = KVDEL_I
+  LET val_s = KVDEL_V
+  CLEAR_ERR
+  IF kv_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "del miss"
+    FAIL "del miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del miss"
+    END
+  ELSE
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "deleted"
+    PRINT_JSON NAME val_s
+  END
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pin needs peer"
+  END
+  SYS LOOKUP bag NAME ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "pin miss"
+    FAIL "pin miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin miss"
+    END
+  ELSE
+    LET kv_i = LOOKUP_I
+    CLEAR_ERR
+    SYS MOVELINE bag kv_i 0
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin moveline miss"
+      FAIL "pin moveline"
+      CLEAR_ERR
+    ELSE
+      LET bag = LAST
+      LET changed = 1
+      LET hit = 1
+      LET note_msg = "pinned"
+    END
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "bump"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "getraw"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "routes write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.routes.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "kv_hit"
+LET report = LAST
+SYS STR kv_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "kv_i"
+LET report = LAST
+SYS STR kv_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "routes" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 used_or elapsed STATUS_OK
+PASS "routes tick"
+NOTE "route_weight_board: done"
+CLEAR_ERR
+EXIT 0 "routes ok"
