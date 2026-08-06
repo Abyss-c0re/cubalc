@@ -1,0 +1,83 @@
+# SYS HASH / HASHFILE / FINGERPRINT — FNV-1a 32-bit content fingerprint
+# Usability: plate/cache change stamps without shell md5sum
+# LAST = 8-char lowercase hex · LAST_N / HASH_N = numeric · HASH_BYTES
+
+HOLD_FLASH 1
+
+# known empty string: FNV-1a of empty is 0x811c9dc5
+SYS HASH ""
+ASSERT OK == 1
+SYS EQS LAST "811c9dc5"
+ASSERT LAST_N == 1
+ASSERT HASH_BYTES == 0
+
+# stable non-empty
+SYS HASH "cubalc"
+LET h1 = LAST
+ASSERT HASH_BYTES == 6
+SYS LEN h1
+ASSERT LAST_N == 8
+
+# same input → same hash
+SYS FINGERPRINT "cubalc"
+SYS EQS LAST h1
+ASSERT LAST_N == 1
+
+# different input → different hash
+SYS HASH "cubalc!"
+SYS EQS LAST h1
+ASSERT LAST_N == 0
+
+# zero-arg uses prior LAST body... set via COALESCE then HASH
+SYS COALESCE "plate-v1"
+SYS HASH
+SYS LEN LAST
+ASSERT LAST_N == 8
+
+# HASHFILE
+SYS TMP
+LET td = LAST
+SYS JOIN td "hash_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "plate.txt"
+LET fp = LAST
+SYS WRITE fp "cubalc"
+SYS HASHFILE fp
+SYS EQS LAST h1
+ASSERT LAST_N == 1
+ASSERT HASH_BYTES == 6
+ASSERT OK == 1
+
+# FILEHASH alias after content change
+SYS WRITE fp "cubalc!"
+SYS FILEHASH fp
+SYS EQS LAST h1
+ASSERT LAST_N == 0
+
+# soft path miss
+SYS HASHFILE "no_such_hash_mi.txt"
+ASSERT OK == 0
+ASSERT HASH_BYTES == 0
+
+# empty path
+SYS HASHFILE ""
+ASSERT OK == 0
+
+# agent: stamp after write for change detect
+SYS WRITE fp "status=live"
+SYS HASHFILE fp
+LET stamp = LAST
+SYS WRITE fp "status=live"
+SYS HASHFILE fp
+SYS EQS LAST stamp
+ASSERT LAST_N == 1
+SYS WRITE fp "status=done"
+SYS HASHFILE fp
+SYS EQS LAST stamp
+ASSERT LAST_N == 0
+
+# cleanup
+SYS RM fp
+
+PRINT "sys_hash ok"

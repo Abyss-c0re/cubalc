@@ -236,6 +236,28 @@ static long cubalc_expand_substenv(VM *vm, const char *tmpl, char *out, size_t o
   return hits;
 }
 
+/* FNV-1a 32-bit — fast non-crypto fingerprint for plate/cache stamps. */
+static uint32_t cubalc_fnv1a32(const char *s, size_t n) {
+  uint32_t h = 2166136261u;
+  size_t i;
+  if (!s) return h;
+  for (i = 0; i < n; i++) {
+    h ^= (uint8_t)s[i];
+    h *= 16777619u;
+  }
+  return h;
+}
+
+static void cubalc_hash_hex8(uint32_t h, char out[9]) {
+  static const char *hex = "0123456789abcdef";
+  int i;
+  for (i = 7; i >= 0; i--) {
+    out[i] = hex[h & 0xfu];
+    h >>= 4;
+  }
+  out[8] = 0;
+}
+
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
   skip_nl(L);
@@ -1260,6 +1282,82 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       int e = cubalc_host_exists(path);
       var_set_num(vm, "LAST_N", e);
       var_set_num(vm, "EXIST", e);
+      bump(vm); return 1;
+    }
+    /* SYS HASH|FINGERPRINT|FNV [str]
+     * — FNV-1a 32-bit hex fingerprint of string (default prior LAST).
+     * LAST = 8-char lowercase hex; LAST_N / HASH_N = hash as unsigned long.
+     * SYS HASHFILE|FILEHASH|FINGERPRINTFILE path — same for file bytes.
+     * Soft path miss → OK=0. Empty string → still OK with FNV seed digest.
+     * Usability: plate/cache change stamps without shell md5sum/sha. */
+    if (kw(&L->cur,"HASH") || kw(&L->cur,"FINGERPRINT") || kw(&L->cur,"FNV") ||
+        kw(&L->cur,"FNV1A") || kw(&L->cur,"DIGEST") || kw(&L->cur,"HASHSTR") ||
+        kw(&L->cur,"STRHASH") || kw(&L->cur,"HASH32") ||
+        kw(&L->cur,"HASHFILE") || kw(&L->cur,"FILEHASH") ||
+        kw(&L->cur,"FINGERPRINTFILE") || kw(&L->cur,"FNVFILE") ||
+        kw(&L->cur,"DIGESTFILE") || kw(&L->cur,"FILEFNV") ||
+        kw(&L->cur,"HASHF") || kw(&L->cur,"CONTENTHASH")){
+      char src[CUBALC_HOST_STR_MAX], path[512], hex[9], a[CUBALC_HOST_STR_MAX];
+      uint32_t h;
+      long n_as_long;
+      int is_file = (kw(&L->cur,"HASHFILE") || kw(&L->cur,"FILEHASH") ||
+                    kw(&L->cur,"FINGERPRINTFILE") || kw(&L->cur,"FNVFILE") ||
+                    kw(&L->cur,"DIGESTFILE") || kw(&L->cur,"FILEFNV") ||
+                    kw(&L->cur,"HASHF") || kw(&L->cur,"CONTENTHASH"));
+      lex_next(L);
+      src[0] = 0; path[0] = 0; hex[0] = 0; a[0] = 0;
+      if (is_file) {
+        cubalc_host_result hr;
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+          fail(vm, "SYS HASHFILE path");
+          return -1;
+        }
+        snprintf(path, sizeof path, "%s", a);
+        if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "HASH_N", 0);
+          var_set_num(vm, "HASHFILE_N", 0);
+          var_set_num(vm, "HASH_BYTES", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", path[0] ? "HASHFILE: read fail" : "HASHFILE: empty path");
+          var_set_str(vm, "ERR", path[0] ? "HASHFILE: read fail" : "HASHFILE: empty path");
+          bump(vm); return 1;
+        }
+        h = cubalc_fnv1a32(hr.str, strlen(hr.str));
+        cubalc_hash_hex8(h, hex);
+        n_as_long = (long)(uint32_t)h;
+        var_set_str(vm, "LAST", hex);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hex);
+        vm->last_n = n_as_long;
+        var_set_num(vm, "LAST_N", n_as_long);
+        var_set_str(vm, "HASH", hex);
+        var_set_str(vm, "HASHFILE", hex);
+        var_set_str(vm, "FINGERPRINT", hex);
+        var_set_num(vm, "HASH_N", n_as_long);
+        var_set_num(vm, "HASHFILE_N", n_as_long);
+        var_set_num(vm, "HASH_BYTES", (long)strlen(hr.str));
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* string hash */
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      h = cubalc_fnv1a32(src, strlen(src));
+      cubalc_hash_hex8(h, hex);
+      n_as_long = (long)(uint32_t)h;
+      var_set_str(vm, "LAST", hex);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hex);
+      vm->last_n = n_as_long;
+      var_set_num(vm, "LAST_N", n_as_long);
+      var_set_str(vm, "HASH", hex);
+      var_set_str(vm, "FINGERPRINT", hex);
+      var_set_str(vm, "FNV", hex);
+      var_set_num(vm, "HASH_N", n_as_long);
+      var_set_num(vm, "HASH_BYTES", (long)strlen(src));
+      var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
     /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms]
