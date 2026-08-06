@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 255,
-  "version": "1.15.282-usability",
-  "item": "SYS UMASK / GETUMASK / SETUMASK process creation mask",
-  "item_id": 290,
-  "title": "SYS UMASK [mode] \u2014 get/set process file-creation mask",
-  "commit": "d20af6896298221cdf281bce13544c9a25cb595a",
-  "summary": "octal LAST + decimal LAST_N; set returns previous. selftest 255.",
+  "iter": 256,
+  "version": "1.15.283-usability",
+  "item": "SYS PUSHD / POPD / DIRSTACK cwd stack",
+  "item_id": 291,
+  "title": "SYS PUSHD|POPD|DIRSTACK \u2014 cwd stack for temp relative plate I/O",
+  "commit": "cc779173e7ff77bd1c144e7c3f73311c26bc93f4",
+  "summary": "save/restore cwd without shell pushd. selftest 256.",
   "proofs": [
-    "829_sys_umask",
-    "selftest n_pass=255"
+    "830_sys_pushd",
+    "selftest n_pass=256"
   ],
-  "when": "2026-08-06T20:16:44Z",
+  "when": "2026-08-06T20:34:14Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d20af6896298221cdf281bce13544c9a25cb595a",
-  "note": "complements MODE/CHMOD for private plate defaults"
+  "sha": "cc779173e7ff77bd1c144e7c3f73311c26bc93f4",
+  "note": "complements CHDIR/CWD for nested workdir walks"
 }
