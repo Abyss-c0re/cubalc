@@ -14,7 +14,7 @@
     },
     {
       "name": "abs_mag",
-      "cmd": "abs → edge:5 db:1; DRIFT SoT unchanged",
+      "cmd": "abs \u2192 edge:5 db:1; DRIFT SoT unchanged",
       "ok": true,
       "note": "ABSKV side plate"
     },
@@ -26,13 +26,13 @@
     },
     {
       "name": "rank_mover",
-      "cmd": "rank biggest |delta| → edge:5 not algebraic top",
+      "cmd": "rank biggest |delta| \u2192 edge:5 not algebraic top",
       "ok": true,
       "note": "DROPZERO+ABSKV+TOPKEY"
     },
     {
       "name": "topkey_signed_trap",
-      "cmd": "list TOPKEY api:2 over edge:-9; rank → edge:9",
+      "cmd": "list TOPKEY api:2 over edge:-9; rank \u2192 edge:9",
       "ok": true,
       "note": "must ABS first"
     },
@@ -50,7 +50,7 @@
     },
     {
       "name": "getn_signed",
-      "cmd": "getn db → -1",
+      "cmd": "getn db \u2192 -1",
       "ok": true,
       "note": "LOOKUPN negatives"
     },
@@ -74,7 +74,7 @@
       "area": "host|bag",
       "title": "TOPKEY is algebraic max not magnitude",
       "detail": "On signed drift api:2 edge:-9 TOPKEY picks api. Biggest mover needs ABSKV first. Easy paging miss for large regressions.",
-      "repro": "TOPKEY api:2\\nedge:-9 → api"
+      "repro": "TOPKEY api:2\\nedge:-9 \u2192 api"
     },
     {
       "id": "W2",
@@ -153,6 +153,6 @@
     "Non-numeric preserve across all three new ops",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "f92c8eff5ce97b780864fee8170c75579f60d780",
   "ts": "2026-08-06T02:00:00Z"
 }
