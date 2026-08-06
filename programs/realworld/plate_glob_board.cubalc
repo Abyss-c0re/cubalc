@@ -1,0 +1,593 @@
+# plate_glob_board.cubalc — STATE plate inventory via GLOB + KEEPKEY + MEDIANKV
+#
+# Real use: ops agent inventories durable plates under a drop dir (often
+# CUBALC_STATE). GLOB lists basenames by shell pattern; sizes folded into a
+# name:bytes bag; KEEPKEY/DROPKEY filters by key needle; MEDIANKV/AVGKV give
+# robust size baselines without shell ls|awk.
+#
+# Distinct from drop_folder_scan / artifact_intake (path probes): this board
+# is basename GLOB + KV size bag lens (KEEPKEY/MEDIAN).
+#
+# Plate under STATE:
+#   NAMES.txt         — last GLOB basenames bag
+#   SIZES.txt         — name:bytes key:val bag
+#   GLOB_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PG_ACTION):
+#   list      — depth + median/avg of SIZES (default)
+#   glob      — GLOB DIR PAT → NAMES (DIR default STATE, PAT ARG1)
+#   seedsize  — WORDS name:n into SIZES
+#   measure   — for each NAME, SIZE under DIR → SIZES bag
+#   keep      — KEEPKEY SIZES needle
+#   dropk     — DROPKEY SIZES needle
+#   median    — MEDIANKV SIZES
+#   avg       — AVGKV SIZES
+#   getn      — LOOKUPN SIZES
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pg_$$; mkdir -p "$CUBALC_STATE"
+#   # create fixtures or use measure after glob
+#   CUBALC_ARG0=glob CUBALC_ARG1='*.plate' \
+#     ./out/cubalc run -q -s programs/realworld/plate_glob_board.cubalc
+#   CUBALC_ARG0=measure ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=keep CUBALC_ARG1=peer \
+#     ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_PG_DIR=…     # scan dir (default STATE)
+#   CUBALC_PG_PAT=*
+#   CUBALC_PG_REQUIRE=1
+#
+# Edges deliberately stressed:
+#   GLOB soft miss bad dir OK=0
+#   GLOB returns basenames only not full paths
+#   KEEPKEY substring "err" hits error (not exact key)
+#   KEEPKEY empty needle keeps all
+#   MEDIANKV even-count lower mid; empty → 0
+#   AVG vs MEDIAN outlier gap
+#   WRITE NL; PRINT_JSON; soft READ
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_glob_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NFILE = "NAMES.txt"
+DEFAULT SFILE = "SIZES.txt"
+DEFAULT REPORT = "GLOB_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PG_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PG_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PG_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PG_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PG_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_PG_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir NFILE
+LET names_path = LAST
+SYS JOIN state_dir SFILE
+LET sizes_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR names_path OR ""
+LET names = LAST
+CLEAR_ERR
+SYS READ OR sizes_path OR ""
+LET sizes = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET names_ch = 0
+LET sizes_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET glob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET med_n = 0
+LET avg_n = 0
+LET used_or = 0
+
+# pattern from ARG1 for glob
+SYS EQS ACTION "glob"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "keep"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    # allow empty needle via explicit empty
+    LET NAME = ""
+  END
+END
+SYS EQS ACTION "dropk"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "dropk needs needle"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES names
+  LET nn = LAST_N
+  SYS LINES sizes
+  LET ns = LAST_N
+  SYS BLANK sizes
+  IF LAST_N == 0 THEN
+    SYS MEDIANKV sizes ":"
+    LET med_n = LAST_N
+    SYS AVGKV sizes ":"
+    LET avg_n = LAST_N
+  END
+  CLEAR_ERR
+  STATUS
+  PRINT "pglob" nn ns med_n avg_n ACTION
+  PRINT_JSON nn ns med_n avg_n ACTION STATUS_OK
+  PRINT_JSON names
+  PRINT_JSON sizes
+  LET note_msg = "list ok"
+END
+
+# --- glob ---
+SYS EQS ACTION "glob"
+IF LAST_N == 1 THEN
+  NOTE "action glob"
+  SYS GLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET names = ""
+    LET names_ch = 1
+    LET note_msg = "glob miss"
+    FAIL "glob miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "glob miss"
+    END
+  ELSE
+    LET names = LAST
+    LET glob_n = GLOB_N
+    LET names_ch = 1
+    LET hit = glob_n
+    SYS BLANK names
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "glob empty"
+      FAIL "glob empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "glob empty"
+      END
+    ELSE
+      LET note_msg = "glob ok"
+    END
+    PRINT_JSON PAT glob_n
+    PRINT_JSON names
+  END
+END
+
+# --- seedsize ---
+SYS EQS ACTION "seedsize"
+IF LAST_N == 1 THEN
+  NOTE "action seedsize"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seedsize needs name:n tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS KVSET sizes k v ":"
+        LET sizes = LAST
+        LET sizes_ch = 1
+        LET hit = hit + 1
+      END
+      CLEAR_ERR
+    END
+  END
+  LET note_msg = "seedsize ok"
+END
+
+# --- measure: SIZE each name under DIR ---
+SYS EQS ACTION "measure"
+IF LAST_N == 1 THEN
+  NOTE "action measure"
+  SYS BLANK names
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "measure empty names"
+    FAIL "measure empty names"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "measure empty names"
+    END
+  ELSE
+    LET sizes = ""
+    EACH LINE AS bn IN names
+      SYS BLANK bn
+      IF LAST_N == 0 THEN
+        SYS JOIN DIR bn
+        LET fp = LAST
+        SYS SIZE fp
+        IF OK == 1 THEN
+          LET sz = LAST_N
+          SYS STR sz
+          LET vs = LAST
+          SYS KVSET sizes bn vs ":"
+          LET sizes = LAST
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+          CLEAR_ERR
+        END
+      END
+    END
+    LET sizes_ch = 1
+    LET note_msg = "measure ok"
+    PRINT_JSON sizes
+  END
+END
+
+# --- keep KEEPKEY ---
+SYS EQS ACTION "keep"
+IF LAST_N == 1 THEN
+  NOTE "action keep"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "keep empty"
+    FAIL "keep empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "keep empty"
+    END
+  ELSE
+    SYS KEEPKEY sizes NAME ":"
+    LET sizes = LAST
+    LET keep_n = KEEPKEY_N
+    LET drop_n = KEEPKEY_DROP
+    LET sizes_ch = 1
+    LET hit = keep_n
+    SYS BLANK sizes
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "keep none"
+      FAIL "keep none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "keep none"
+      END
+    ELSE
+      LET note_msg = "keep ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON sizes
+  END
+END
+
+# --- dropk DROPKEY ---
+SYS EQS ACTION "dropk"
+IF LAST_N == 1 THEN
+  NOTE "action dropk"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "dropk empty"
+    FAIL "dropk empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dropk empty"
+    END
+  ELSE
+    SYS DROPKEY sizes NAME ":"
+    LET sizes = LAST
+    LET drop_n = DROPKEY_N
+    LET sizes_ch = 1
+    SYS LINES sizes
+    LET hit = LAST_N
+    LET note_msg = "dropk ok"
+    PRINT_JSON drop_n hit
+  END
+END
+
+# --- median ---
+SYS EQS ACTION "median"
+IF LAST_N == 1 THEN
+  NOTE "action median"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "median empty"
+    FAIL "median empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "median empty"
+    END
+  ELSE
+    SYS MEDIANKV sizes ":"
+    LET med_n = LAST_N
+    LET val_n = med_n
+    SYS STR med_n
+    LET val_s = LAST
+    LET hit = med_n
+    LET note_msg = "median ok"
+    PRINT_JSON med_n MEDIANKV_N
+  END
+END
+
+# --- avg ---
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  NOTE "action avg"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "avg empty"
+    FAIL "avg empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "avg empty"
+    END
+  ELSE
+    SYS AVGKV sizes ":"
+    LET avg_n = LAST_N
+    LET val_n = avg_n
+    SYS STR avg_n
+    LET val_s = LAST
+    LET hit = avg_n
+    LET note_msg = "avg ok"
+  END
+END
+
+# --- getn ---
+SYS EQS ACTION "getn"
+IF LAST_N == 1 THEN
+  NOTE "action getn"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getn needs key"
+  END
+  SYS LOOKUPN sizes NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  LET hit = val_n
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "getn default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "getn default only"
+      CLEAR_ERR
+      EXIT 2 "getn default only"
+    END
+  ELSE
+    LET note_msg = "getn ok"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET names = ""
+  LET sizes = ""
+  LET names_ch = 1
+  LET sizes_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "glob"
+LET k = k + LAST_N
+SYS EQS ACTION "seedsize"
+LET k = k + LAST_N
+SYS EQS ACTION "measure"
+LET k = k + LAST_N
+SYS EQS ACTION "keep"
+LET k = k + LAST_N
+SYS EQS ACTION "dropk"
+LET k = k + LAST_N
+SYS EQS ACTION "median"
+LET k = k + LAST_N
+SYS EQS ACTION "avg"
+LET k = k + LAST_N
+SYS EQS ACTION "getn"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF names_ch > 0 THEN
+  SYS WRITE names_path names
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "names write failed"
+  END
+  CLEAR_ERR
+END
+IF sizes_ch > 0 THEN
+  SYS WRITE sizes_path sizes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "sizes write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES names
+LET depth_n = LAST_N
+SYS LINES sizes
+LET depth_s = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.pglob.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "glob_n"
+LET report = LAST
+SYS STR glob_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "med_n"
+LET report = LAST
+SYS STR med_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "avg_n"
+LET report = LAST
+SYS STR avg_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_n"
+LET report = LAST
+SYS STR depth_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_s"
+LET report = LAST
+SYS STR depth_s
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pat"
+LET report = LAST
+SYS PUSH report PAT
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "pglob" ACTION hit miss depth_n depth_s
+PRINT_JSON ACTION hit miss depth_n depth_s med_n avg_n elapsed STATUS_OK
+PASS "pglob tick"
+NOTE "plate_glob_board: done"
+CLEAR_ERR
+EXIT 0 "pglob ok"
