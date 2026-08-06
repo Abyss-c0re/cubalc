@@ -1,0 +1,81 @@
+# SYS READALL / CATFILES — concatenate contents of every path in bag
+# Usability: multi-file plate/log join after PATHGLOB without EACH+READ+CAT
+# Optional sep between files. Soft miss skips. READALL_PATHS = ok paths.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "readall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.txt"
+LET fa = LAST
+SYS JOIN fix "b.txt"
+LET fb = LAST
+SYS JOIN fix "c.txt"
+LET fc = LAST
+SYS JOIN fix "gone.txt"
+LET fg = LAST
+
+SYS WRITE fa "AAA"
+SYS WRITE fb "BBB"
+SYS WRITE fc "CCC"
+# fg missing
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+LET bag = LAST
+
+SYS READALL bag
+ASSERT OK == 1
+ASSERT READALL_N == 3
+ASSERT READALL_SCAN == 3
+ASSERT READALL_MISS == 0
+ASSERT READALL_BYTES == 9
+SYS EQS LAST "AAABBBCCC"
+ASSERT LAST_N == 1
+SYS HASLINE READALL_PATHS fa
+ASSERT LAST_N == 1
+SYS HASLINE READALL_PATHS fc
+ASSERT LAST_N == 1
+
+# separator between files
+SYS READALL bag "|"
+ASSERT OK == 1
+SYS EQS LAST "AAA|BBB|CCC"
+ASSERT LAST_N == 1
+ASSERT CATFILES_N == 3
+
+# soft miss
+SYS PUSH bag fg
+LET bag2 = LAST
+SYS CATFILES bag2
+ASSERT READALL_N == 3
+ASSERT READALL_MISS == 1
+ASSERT OK == 0
+SYS HAS LAST "AAA"
+ASSERT LAST_N == 1
+
+# zero-arg after PATHGLOB
+SYS PATHGLOB fix "*.txt"
+SYS KEEPFILES
+SYS SLURPALL
+ASSERT READALL_N == 3
+SYS HAS LAST "BBB"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS READALL ""
+ASSERT READALL_N == 0
+ASSERT READALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_readall ok"
