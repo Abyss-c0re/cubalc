@@ -10931,6 +10931,104 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS PARSESIZE|FROMHUMAN|PARSEBYTES|UNHUMAN [str]
+     * — parse "512" / "1K" / "2M" / "1G" / "1T" (1024-base) → bytes.
+     * LAST = decimal string of bytes; LAST_N / PARSESIZE_N = bytes.
+     * Soft fail OK=0 on empty/bad unit. Usability: agent size configs reverse of HUMANSIZE. */
+    if (kw(&L->cur,"PARSESIZE") || kw(&L->cur,"FROMHUMAN") || kw(&L->cur,"PARSEBYTES") ||
+        kw(&L->cur,"UNHUMAN") || kw(&L->cur,"PARSEHUMAN") || kw(&L->cur,"HUMANPARSE") ||
+        kw(&L->cur,"TOBYTES") || kw(&L->cur,"SIZEPARSE") || kw(&L->cur,"BYTESPARSE")){
+      char src[256], out[48], unitc = 0;
+      const char *p;
+      unsigned long long n = 0, mul = 1;
+      char *end = NULL;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      /* trim leading/trailing whitespace */
+      p = src;
+      while (*p == ' ' || *p == '\t') p++;
+      if (!*p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: empty");
+        var_set_str(vm, "ERR", "PARSESIZE: empty");
+        bump(vm); return 1;
+      }
+      n = strtoull(p, &end, 10);
+      if (end == p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: bad number");
+        var_set_str(vm, "ERR", "PARSESIZE: bad number");
+        bump(vm); return 1;
+      }
+      while (*end == ' ' || *end == '\t') end++;
+      unitc = *end;
+      if (unitc >= 'a' && unitc <= 'z') unitc = (char)(unitc - 'a' + 'A');
+      if (unitc == 0 || unitc == 'B') {
+        mul = 1;
+      } else if (unitc == 'K') {
+        mul = 1024ULL;
+      } else if (unitc == 'M') {
+        mul = 1024ULL * 1024ULL;
+      } else if (unitc == 'G') {
+        mul = 1024ULL * 1024ULL * 1024ULL;
+      } else if (unitc == 'T') {
+        mul = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: bad unit");
+        var_set_str(vm, "ERR", "PARSESIZE: bad unit");
+        bump(vm); return 1;
+      }
+      /* optional trailing iB/B after unit letter (KiB, MB) — skip one more letter if B/I */
+      if (unitc && end[1]) {
+        char c2 = end[1];
+        if (c2 >= 'a' && c2 <= 'z') c2 = (char)(c2 - 'a' + 'A');
+        if (!(c2 == 'B' || c2 == 'I' || c2 == 0 || c2 == ' ' || c2 == '\t')) {
+          /* e.g. "1XX" — only allow B/i after unit */
+          if (unitc != 'B') {
+            /* already consumed unit; if junk after, soft fail unless only B/iB */
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "PARSESIZE_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", "PARSESIZE: bad unit");
+            var_set_str(vm, "ERR", "PARSESIZE: bad unit");
+            bump(vm); return 1;
+          }
+        }
+      }
+      n = n * mul;
+      if (n > (unsigned long long)LONG_MAX) n = (unsigned long long)LONG_MAX;
+      snprintf(out, sizeof out, "%llu", n);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "PARSESIZE_N", (long)n);
+      var_set_str(vm, "PARSESIZE", out);
+      var_set_str(vm, "FROMHUMAN", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
       lex_next(L);
       long n = 0;
