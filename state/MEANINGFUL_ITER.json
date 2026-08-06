@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 166,
-  "version": "1.15.191-usability",
-  "item": "SYS COPYALL / CPALL bulk copy path bag into dest dir",
-  "item_id": 199,
-  "title": "SYS COPYALL|CPALL|BULKCOPY [bag] dest_dir — snapshot without EACH+COPY",
-  "commit": "d8bb757e00a6423ef128490c7db333940db7c319",
-  "summary": "Bulk copy path bags into dest by basename. selftest 166.",
+  "iter": 167,
+  "version": "1.15.192-usability",
+  "item": "SYS MKDIRALL / ENSUREDIRS bulk mkdir -p path bag",
+  "item_id": 200,
+  "title": "SYS MKDIRALL|ENSUREDIRS|MKDIRS [bag] — layout trees without EACH+MKDIR",
+  "commit": "29a7158ee6c7b81b75826f4e401a685a35fff026",
+  "summary": "Bulk mkdir -p path bags for plate layouts. selftest 167.",
   "proofs": [
-    "739_sys_copyall",
-    "selftest n_pass=166"
+    "740_sys_mkdirall",
+    "selftest n_pass=167"
   ],
-  "when": "2026-08-06T05:34:22Z",
+  "when": "2026-08-06T05:43:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d8bb757e00a6423ef128490c7db333940db7c319"
+  "sha": "29a7158ee6c7b81b75826f4e401a685a35fff026"
 }
