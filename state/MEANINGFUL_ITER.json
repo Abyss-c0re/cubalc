@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 236,
-  "version": "1.15.262-usability",
-  "item": "REQUIRE BIN / SYS WHICHBIN PATH tool gates",
-  "item_id": 270,
-  "title": "REQUIRE BIN|CMD + SYS WHICHBIN — PATH-only host tool gates",
-  "commit": "322bc544b68e645007bc212589a9cfedf2d47560",
-  "summary": "PATH-only soft probe and fail-fast tool gates without shell which. selftest 236.",
+  "iter": 237,
+  "version": "1.15.264-usability",
+  "item": "SYS ISATTY / TTY terminal stream probe",
+  "item_id": 272,
+  "title": "SYS ISATTY|TTY [IN|OUT|ERR] — terminal probe for pipe-aware agents",
+  "commit": "2172464c80a779676afff3bd6b8d43977a8883f1",
+  "summary": "TTY vs pipe probe for interactive agent paths. selftest 237.",
   "proofs": [
-    "810_require_bin",
-    "selftest n_pass=236"
+    "811_sys_isatty",
+    "selftest n_pass=237"
   ],
-  "when": "2026-08-06T17:06:00Z",
+  "when": "2026-08-06T17:16:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "322bc544b68e645007bc212589a9cfedf2d47560",
-  "note": "restored thrash-deleted tree first; which_bin no lib fallback"
+  "sha": "2172464c80a779676afff3bd6b8d43977a8883f1",
+  "note": "WHICHBIN string-var already on main via realworld; this tick ISATTY"
 }
