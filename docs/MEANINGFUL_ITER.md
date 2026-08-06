@@ -329,6 +329,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 299. ~~**`SYS EUID` / `ISROOT`**~~ **done** (effective uid + root privilege probe · setuid-aware gates without shell id -u).
 300. ~~**`SYS SHELL`**~~ **done** (login shell path · $SHELL/passwd · agent profile without shell echo).
 301. ~~**`SYS GECOS` / `FULLNAME`**~~ **done** (passwd display name · human plate labels without getent/finger).
+302. ~~**`SYS TTYNAME` / `CTTY`**~~ **done** (terminal device path · session identity beyond ISATTY without shell tty).
 
 ## Tick protocol
 

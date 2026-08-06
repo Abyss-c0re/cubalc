@@ -1,0 +1,54 @@
+# SYS TTYNAME / CTTY — terminal device path without shell tty
+# Usability: session identity beyond ISATTY 0|1 for agent plates
+
+HOLD_FLASH 1
+
+# probe always OK=1; empty path when non-tty (selftest/pipes)
+SYS TTYNAME
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+ASSERT TTYNAME_N == LAST_N
+SYS EQS LAST TTYNAME
+ASSERT LAST_N == 1
+
+# explicit controlling stream
+SYS TTYNAME CTRL
+ASSERT OK == 1
+SYS EQS TTYNAME_STREAM "CTRL"
+ASSERT LAST_N == 1
+
+# stream variants soft-empty under pipes
+SYS TTYNAME IN
+ASSERT OK == 1
+SYS EQS TTYNAME_STREAM "IN"
+ASSERT LAST_N == 1
+SYS TTYNAME OUT
+ASSERT OK == 1
+SYS EQS TTYNAME_STREAM "OUT"
+ASSERT LAST_N == 1
+SYS TTYNAME ERR
+ASSERT OK == 1
+SYS EQS TTYNAME_STREAM "ERR"
+ASSERT LAST_N == 1
+
+# aliases
+SYS CTTY
+ASSERT OK == 1
+SYS TTYDEV
+ASSERT OK == 1
+SYS TTYPATH
+ASSERT OK == 1
+
+# complements ISATTY: when ISATTY OUT is 0, TTYNAME OUT is empty
+SYS ISATTY OUT
+LET is_out = LAST_N
+SYS TTYNAME OUT
+IF is_out == 0 THEN
+  ASSERT LAST_N == 0
+ELSE
+  ASSERT LAST_N >= 1
+  SYS HAS LAST "/dev"
+  ASSERT LAST_N == 1
+END
+
+PRINT "sys_ttyname ok"

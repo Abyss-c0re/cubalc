@@ -13375,6 +13375,71 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
       bump(vm); return 1;
     }
+    /* SYS TTYNAME|CTTY|TTYDEV [IN|OUT|ERR|CTRL] — terminal device path → LAST.
+     * Default: controlling tty (ctermid) if available else stdin ttyname.
+     * Soft empty LAST + LAST_N=0 when no tty (pipes); OK=1 always (probe).
+     * Usability: agent session identity beyond ISATTY 0|1 without shell tty. */
+    if (kw(&L->cur,"TTYNAME") || kw(&L->cur,"CTTY") || kw(&L->cur,"TTYDEV") ||
+        kw(&L->cur,"TTYPATH") || kw(&L->cur,"TTY_NAME") || kw(&L->cur,"DEV_TTY") ||
+        kw(&L->cur,"CONTROLLING_TTY") || kw(&L->cur,"CTERMID")){
+      char op[24];
+      int fd = -1; /* -1 = controlling */
+      const char *stream = "CTRL";
+      char name[256];
+      const char *tn = NULL;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      lex_next(L);
+      if (kw(&L->cur,"IN") || kw(&L->cur,"STDIN") || kw(&L->cur,"0") ||
+          kw(&L->cur,"INPUT")){
+        fd = 0; stream = "IN";
+        lex_next(L);
+      } else if (kw(&L->cur,"OUT") || kw(&L->cur,"STDOUT") || kw(&L->cur,"1") ||
+                 kw(&L->cur,"OUTPUT")){
+        fd = 1; stream = "OUT";
+        lex_next(L);
+      } else if (kw(&L->cur,"ERR") || kw(&L->cur,"STDERR") || kw(&L->cur,"2") ||
+                 kw(&L->cur,"ERROR")){
+        fd = 2; stream = "ERR";
+        lex_next(L);
+      } else if (kw(&L->cur,"CTRL") || kw(&L->cur,"CTL") || kw(&L->cur,"CONTROL") ||
+                 kw(&L->cur,"CTTY") || kw(&L->cur,"CONTROLLING")){
+        fd = -1; stream = "CTRL";
+        lex_next(L);
+      }
+      name[0] = 0;
+#if !defined(CUBALC_OS_WINDOWS)
+      if (fd < 0) {
+        /* controlling terminal path (may be /dev/tty even if not attached) */
+        char ct[L_ctermid > 0 ? L_ctermid + 1 : 64];
+        ct[0] = 0;
+        if (ctermid(ct) && ct[0])
+          snprintf(name, sizeof name, "%s", ct);
+        /* prefer real ttyname of stdin if controlling not open */
+        if (isatty(0)) {
+          tn = ttyname(0);
+          if (tn && tn[0]) snprintf(name, sizeof name, "%s", tn);
+        }
+      } else {
+        if (isatty(fd)) {
+          tn = ttyname(fd);
+          if (tn && tn[0]) snprintf(name, sizeof name, "%s", tn);
+        }
+      }
+#endif
+      var_set_str(vm, "TTYNAME", name);
+      var_set_str(vm, "TTYDEV", name);
+      var_set_str(vm, "CTTY", name);
+      var_set_str(vm, "TTYNAME_STREAM", stream);
+      var_set_str(vm, "LAST", name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", name);
+      vm->last_n = (long)strlen(name);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "TTYNAME_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOADAVG|LOAD|GETLOADAVG — host load averages (1/5/15 min).
      * LAST = "a.bb c.dd e.ff" (space bag); LOAD1/5/15 str; LOAD1_N/5_N/15_N = centiload
      * (load*100 as int for IF/CMP without float). LAST_N = LOAD1_N (1-min primary).
@@ -23602,6 +23667,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},
       {"SYS NPROC", "SYS NPROC|CPUS|CORES — online processor count → LAST_N/NPROC"},
       {"SYS ISATTY", "SYS ISATTY|TTY [IN|OUT|ERR] — terminal probe → LAST_N 0|1"},
+      {"SYS TTYNAME", "SYS TTYNAME|CTTY|TTYDEV [IN|OUT|ERR] — terminal device path → LAST"},
       {"SYS LOADAVG", "SYS LOADAVG|LOAD — 1/5/15 load · LOAD1_N centiload for IF"},
       {"SYS LOAD", "SYS LOAD alias of SYS LOADAVG"},
       {"SYS UPTIME", "SYS UPTIME|BOOTAGE — seconds since boot → LAST_N/UPTIME"},
