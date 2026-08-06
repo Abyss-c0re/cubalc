@@ -1,0 +1,74 @@
+# SYS LOCAL / LOCALTIME / LOCALISO / LOCALDATE
+# — local wall clock stamps (no Z) for human logs
+# Usability: complements UTC SYS DATE without shell date(1)
+
+HOLD_FLASH 1
+
+# full local datetime
+SYS LOCAL
+ASSERT OK == 1
+ASSERT LAST_N == 19 "YYYY-MM-DDTHH:MM:SS length"
+SYS HAS LAST "T"
+ASSERT LAST_N == 1
+SYS HAS LAST "Z"
+ASSERT LAST_N == 0 "local stamp has no Z"
+ASSERT TIME > 0
+DEFINED LOCAL
+ASSERT DEFINED == 1
+DEFINED LOCALTIME
+ASSERT DEFINED == 1
+DEFINED LOCALDATE
+ASSERT DEFINED == 1
+
+# date portion always filled
+SYS LEN LOCALDATE
+ASSERT LAST_N == 10
+SYS LOCAL
+SYS STARTS LAST LOCALDATE
+ASSERT LAST_N == 1
+
+# aliases
+SYS LOCALTIME
+ASSERT OK == 1
+ASSERT LAST_N == 19
+SYS LOCALISO
+ASSERT OK == 1
+ASSERT LAST_N == 19
+SYS WALLTIME
+ASSERT OK == 1
+ASSERT LAST_N == 19
+
+# date-only form
+SYS LOCALDATE
+ASSERT OK == 1
+ASSERT LAST_N == 10
+SYS HAS LAST "T"
+ASSERT LAST_N == 0
+SYS HAS LAST "-"
+ASSERT LAST_N == 1
+
+# aliases for date-only
+SYS DAYLOCAL
+ASSERT LAST_N == 10
+SYS TODAY_LOCAL
+ASSERT LAST_N == 10
+
+# distinct from UTC DATE (may equal near UTC midnight, shape always differs by Z)
+SYS DATE
+SYS HAS LAST "Z"
+ASSERT LAST_N == 1
+SYS LOCAL
+SYS HAS LAST "Z"
+ASSERT LAST_N == 0
+
+# agent: stamp a plate line
+SYS LOCAL
+LET stamp = LAST
+SYS CAT "[" stamp
+SYS CAT LAST "] ready"
+SYS STARTS LAST "["
+ASSERT LAST_N == 1
+SYS HAS LAST "] ready"
+ASSERT LAST_N == 1
+
+PRINT "sys_local ok"

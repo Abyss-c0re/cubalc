@@ -296,6 +296,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 266. ~~**`SYS MONOTONIC` / `MONO` / `STEADY_MS`**~~ **done** (CLOCK_MONOTONIC ms · elapsed timing immune to wall jumps).
 267. ~~**`SYS NPROC` / `CPUS` / `CORES`**~~ **done** (online processor count · STRIDE/CHUNK worker partition without shell).
 268. ~~**`SYS UNAME` / `OS` / `ARCH` / `MACHINE` / `PLATFORM`**~~ **done** (kernel + arch probes · portable agent IF without shell uname).
+269. ~~**`SYS LOCAL` / `LOCALTIME` / `LOCALDATE`**~~ **done** (local wall stamp · human logs without shell date · complements UTC DATE).
 
 ## Tick protocol
 
