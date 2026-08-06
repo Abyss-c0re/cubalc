@@ -1,0 +1,89 @@
+# SYS CRC32 / CRC / CHECKSUM32 · CRC32FILE / FILECRC32
+# — IEEE/ISO 3309 CRC-32 hex stamps for agent plate integrity
+# Usability: interoperable checksums without shell cksum/crc32
+
+HOLD_FLASH 1
+
+# classic vector: "123456789" → cbf43926
+SYS CRC32 "123456789"
+ASSERT OK == 1
+SYS EQS LAST "cbf43926"
+ASSERT LAST_N == 1
+ASSERT CRC32_BYTES == 9
+
+# empty → 00000000
+SYS CRC32 ""
+ASSERT OK == 1
+SYS EQS LAST "00000000"
+ASSERT LAST_N == 1
+ASSERT CRC32_BYTES == 0
+
+# stable
+SYS CRC32 "cubalc"
+LET a = LAST
+SYS CRC32 "cubalc"
+SYS EQS LAST a
+ASSERT LAST_N == 1
+
+# changes with content
+SYS CRC32 "cubalc!"
+SYS EQS LAST a
+ASSERT LAST_N == 0
+
+# aliases
+SYS CRC "123456789"
+SYS EQS LAST "cbf43926"
+ASSERT LAST_N == 1
+SYS CHECKSUM32 "123456789"
+SYS EQS LAST "cbf43926"
+ASSERT LAST_N == 1
+
+# default LAST
+SYS PREPEND "" "status=ok"
+# put status into LAST via explicit string then chain
+SYS CRC32 "status=ok"
+LET c1 = LAST
+# re-hash via LAST default
+SYS CRC32 "status=ok"
+LET c2 = LAST
+SYS EQS c1 c2
+ASSERT LAST_N == 1
+
+# CRC32FILE
+SYS TMP
+LET td = LAST
+SYS JOIN td "crc32_mi"
+LET dir = LAST
+SYS MKDIR dir
+SYS JOIN dir "plate.txt"
+LET fp = LAST
+SYS WRITEATOMIC fp "123456789"
+ASSERT OK == 1
+SYS CRC32FILE fp
+ASSERT OK == 1
+SYS EQS LAST "cbf43926"
+ASSERT LAST_N == 1
+ASSERT CRC32_BYTES == 9
+SYS FILECRC32 fp
+SYS EQS LAST "cbf43926"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS CRC32FILE "/no/such/crc32_path_mi"
+ASSERT OK == 0
+ASSERT CRC32_N == 0
+
+SYS RM fp
+SYS RMDIR dir
+
+# complements HASH (different algorithm, both stamps)
+SYS HASH "123456789"
+LET h = LAST
+SYS CRC32 "123456789"
+LET c = LAST
+SYS EQS h c
+ASSERT LAST_N == 0
+SYS LEN c
+ASSERT LAST_N == 8
+
+PRINT "sys_crc32 ok"

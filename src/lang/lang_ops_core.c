@@ -612,6 +612,30 @@ static void cubalc_hash_hex8(uint32_t h, char out[9]) {
   out[8] = 0;
 }
 
+/* IEEE/ISO 3309 CRC-32 (poly 0xEDB88320) — interoperable plate integrity stamp. */
+static uint32_t cubalc_crc32(const char *s, size_t n) {
+  static uint32_t table[256];
+  static int ready = 0;
+  uint32_t c;
+  size_t i;
+  if (!ready) {
+    uint32_t k;
+    int j;
+    for (k = 0; k < 256; k++) {
+      uint32_t crc = k;
+      for (j = 0; j < 8; j++)
+        crc = (crc & 1u) ? (0xEDB88320u ^ (crc >> 1)) : (crc >> 1);
+      table[k] = crc;
+    }
+    ready = 1;
+  }
+  c = 0xFFFFFFFFu;
+  if (!s) s = "";
+  for (i = 0; i < n; i++)
+    c = table[(c ^ (uint8_t)s[i]) & 0xffu] ^ (c >> 8);
+  return c ^ 0xFFFFFFFFu;
+}
+
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
   skip_nl(L);
@@ -2108,6 +2132,82 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "FNV", hex);
       var_set_num(vm, "HASH_N", n_as_long);
       var_set_num(vm, "HASH_BYTES", (long)strlen(src));
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CRC32|CRC|CHECKSUM32 [str]
+     * — IEEE CRC-32 hex stamp of string (default prior LAST).
+     * LAST = 8-char lowercase hex; LAST_N / CRC32_N = value as unsigned long.
+     * SYS CRC32FILE|FILECRC32|CRCFILE path — same for file bytes.
+     * Soft path miss → OK=0. Empty string still OK (known digest).
+     * Usability: interoperable integrity vs tools/zip without shell cksum. */
+    if (kw(&L->cur,"CRC32") || kw(&L->cur,"CRC") || kw(&L->cur,"CHECKSUM32") ||
+        kw(&L->cur,"CRC32SUM") || kw(&L->cur,"ISOCRC") || kw(&L->cur,"PKZIPCRC") ||
+        kw(&L->cur,"CRC32FILE") || kw(&L->cur,"FILECRC32") || kw(&L->cur,"CRCFILE") ||
+        kw(&L->cur,"FILECRC") || kw(&L->cur,"CRC32F") || kw(&L->cur,"CHECKSUMFILE") ||
+        kw(&L->cur,"CRC32PATH")){
+      char src[CUBALC_HOST_STR_MAX], path[512], hex[9], a[CUBALC_HOST_STR_MAX];
+      uint32_t h;
+      long n_as_long;
+      size_t nbytes = 0;
+      int is_file = (kw(&L->cur,"CRC32FILE") || kw(&L->cur,"FILECRC32") ||
+                    kw(&L->cur,"CRCFILE") || kw(&L->cur,"FILECRC") ||
+                    kw(&L->cur,"CRC32F") || kw(&L->cur,"CHECKSUMFILE") ||
+                    kw(&L->cur,"CRC32PATH"));
+      lex_next(L);
+      src[0] = 0; path[0] = 0; hex[0] = 0; a[0] = 0;
+      if (is_file) {
+        cubalc_host_result hr;
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+          fail(vm, "SYS CRC32FILE path");
+          return -1;
+        }
+        snprintf(path, sizeof path, "%s", a);
+        if (!path[0] || cubalc_host_read(path, &hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "CRC32_N", 0);
+          var_set_num(vm, "CRC32FILE_N", 0);
+          var_set_num(vm, "CRC32_BYTES", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", path[0] ? "CRC32FILE: read fail" : "CRC32FILE: empty path");
+          var_set_str(vm, "ERR", path[0] ? "CRC32FILE: read fail" : "CRC32FILE: empty path");
+          bump(vm); return 1;
+        }
+        nbytes = strlen(hr.str);
+        h = cubalc_crc32(hr.str, nbytes);
+        cubalc_hash_hex8(h, hex);
+        n_as_long = (long)(uint32_t)h;
+        var_set_str(vm, "LAST", hex);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hex);
+        vm->last_n = n_as_long;
+        var_set_num(vm, "LAST_N", n_as_long);
+        var_set_str(vm, "CRC32", hex);
+        var_set_str(vm, "CRC32FILE", hex);
+        var_set_str(vm, "CRC", hex);
+        var_set_num(vm, "CRC32_N", n_as_long);
+        var_set_num(vm, "CRC32FILE_N", n_as_long);
+        var_set_num(vm, "CRC32_BYTES", (long)nbytes);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      nbytes = strlen(src);
+      h = cubalc_crc32(src, nbytes);
+      cubalc_hash_hex8(h, hex);
+      n_as_long = (long)(uint32_t)h;
+      var_set_str(vm, "LAST", hex);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hex);
+      vm->last_n = n_as_long;
+      var_set_num(vm, "LAST_N", n_as_long);
+      var_set_str(vm, "CRC32", hex);
+      var_set_str(vm, "CRC", hex);
+      var_set_str(vm, "CHECKSUM32", hex);
+      var_set_num(vm, "CRC32_N", n_as_long);
+      var_set_num(vm, "CRC32_BYTES", (long)nbytes);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }

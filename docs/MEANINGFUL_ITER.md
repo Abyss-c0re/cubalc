@@ -286,6 +286,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 256. ~~**`SYS URLENC` / `URLENCODE` · `URLDEC` / `URLDECODE`**~~ **done** (RFC 3986 percent-encode/decode · path/query-safe plates without shell).
 257. ~~**`SYS UUID` / `GUID` · `UUID0` / `UUIDNODASH`**~~ **done** (RFC 4122 v4 ids · agent work/claim stamps without shell uuidgen).
 258. ~~**`SYS JSONESC` / `JESC` · `JSONUNESC` / `JUNESC`**~~ **done** (JSON string-body escape/unescape · plate fields without hand-escaping).
+259. ~~**`SYS CRC32` / `CRC` · `CRC32FILE` / `FILECRC32`**~~ **done** (IEEE CRC-32 hex stamps · interoperable integrity without shell cksum).
 
 ## Tick protocol
 
