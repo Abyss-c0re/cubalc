@@ -149,6 +149,6 @@
     "path .lock suffix via SUBSTENV awkward",
     "selftest 213/213; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "66d8fb061b2907816885c1404c77bc81c4ebf478",
   "ts": "2026-08-06T13:25:00Z"
 }
