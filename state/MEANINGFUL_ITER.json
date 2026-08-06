@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 155,
-  "version": "1.15.180-usability",
-  "item": "SYS BASENAMEALL / DIRNAMEALL / EXTALL / STEMALL path bag maps",
-  "item_id": 188,
-  "title": "SYS BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL [bag] — path peels over bags",
-  "commit": "c0705bf3deac5a69a13bdef5c6d3557232222c80",
-  "summary": "Map basename/dirname/ext/stem over PATHGLOB bags. selftest 155.",
+  "iter": 156,
+  "version": "1.15.181-usability",
+  "item": "SYS KEEPFILES / KEEPDIRS / KEEPEXIST path bag kind filters",
+  "item_id": 189,
+  "title": "SYS KEEPFILES|KEEPDIRS|KEEPEXIST [bag] — filter paths by host kind",
+  "commit": "eecc9682ded5db1149f80b45f8b4c5bc268d5ca7",
+  "summary": "Keep files/dirs/existing paths in bags after PATHGLOB. selftest 156.",
   "proofs": [
-    "728_sys_basenameall",
-    "selftest n_pass=155"
+    "729_sys_keepfiles",
+    "selftest n_pass=156"
   ],
-  "when": "2026-08-06T03:43:57Z",
+  "when": "2026-08-06T03:55:21Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c0705bf3deac5a69a13bdef5c6d3557232222c80"
+  "sha": "eecc9682ded5db1149f80b45f8b4c5bc268d5ca7"
 }
