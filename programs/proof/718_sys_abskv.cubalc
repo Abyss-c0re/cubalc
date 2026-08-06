@@ -1,0 +1,62 @@
+# SYS ABSKV / MAGKV — absolute value of every key:val numeric value
+# Usability: rank DIFFKV deltas by magnitude with TOPKEY without EACH+IABS
+
+HOLD_FLASH 1
+
+LET d = "error:3\nwarn:-5\ninfo:0\ncrit:-1"
+SYS ABSKV d
+ASSERT OK == 1
+ASSERT LAST_N == 4
+ASSERT ABSKV_N == 2
+ASSERT ABSKV_KEYS == 4
+SYS EQS LAST "error:3\nwarn:5\ninfo:0\ncrit:1"
+ASSERT LAST_N == 1
+
+# already non-negative → ABSKV_N=0 identity
+SYS ABSKV "a:1\nb:2"
+ASSERT ABSKV_N == 0
+SYS EQS LAST "a:1\nb:2"
+ASSERT LAST_N == 1
+
+# empty
+SYS ABSKV ""
+ASSERT LAST_N == 0
+ASSERT ABSKV_N == 0
+
+# custom sep
+LET cfg = "delta=-4\nport=10"
+SYS ABSKV cfg "="
+ASSERT ABSKV_N == 1
+SYS EQS LAST "delta=4\nport=10"
+ASSERT LAST_N == 1
+
+# aliases
+SYS MAGKV d
+ASSERT MAGKV_N == 2
+SYS ABSALL d
+ASSERT ABSKV_KEYS == 4
+SYS KVMAG d
+ASSERT ABSKV_N == 2
+
+# agent: DIFFKV → DROPZERO → ABSKV → TOPKEY biggest mover
+LET now_log = "ERROR\nERROR\nERROR\nWARN\nINFO"
+LET base_log = "ERROR\nWARN\nWARN\nWARN\nWARN\nINFO"
+SYS FREQ now_log
+LET hn = LAST
+SYS FREQ base_log
+LET hb = LAST
+SYS DIFFKV hn hb
+# ERROR:3-1=2 WARN:1-4=-3 INFO:0
+SYS DROPZERO LAST
+SYS ABSKV LAST
+LET mag = LAST
+SYS LOOKUPN mag "ERROR" OR 0
+ASSERT LAST_N == 2
+SYS LOOKUPN mag "WARN" OR 0
+ASSERT LAST_N == 3
+SYS TOPKEY mag
+SYS EQS LAST "WARN"
+ASSERT LAST_N == 1
+ASSERT TOPKEY_V == 3
+
+PRINT "sys_abskv ok"

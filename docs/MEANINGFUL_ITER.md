@@ -205,6 +205,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 175. ~~**`SYS DIFFKV` / `SUBKV`**~~ **done** (subtract key:val bags by key · FREQ now−baseline without EACH).
 176. ~~**`SYS ADDKV` / `OFFSETKV`**~~ **done** (add delta to key:val values · Laplace/score offset without EACH).
 177. ~~**`SYS DROPZERO` / `KEEPNZ`**~~ **done** (drop key:val value==0 · clean DIFFKV zeros keep +/−).
+178. ~~**`SYS ABSKV` / `MAGKV`**~~ **done** (absolute key:val values · rank DIFFKV deltas by magnitude).
 
 ## Tick protocol
 
