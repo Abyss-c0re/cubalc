@@ -1,172 +1,166 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 69,
-  "program": "programs/realworld/file_line_surgery.cubalc",
-  "theme": "hosts config file line surgery SET INSERT DROP FILELINE",
-  "version": "1.15.210-usability",
+  "iter": 70,
+  "program": "programs/realworld/marker_patch_board.cubalc",
+  "theme": "marker find-then-patch FINDFILELINE LASTFINDFILELINE SET DROP",
+  "version": "1.15.213-usability",
   "pass": true,
   "tests": [
     {
-      "name": "pick_get",
-      "cmd": "pick hosts + LINEAT get 1 \u2192 10.0.0.2 web",
+      "name": "find_TODO",
+      "cmd": "FINDFILELINE TODO → I=1 hit text",
       "ok": true,
-      "note": "read row"
+      "note": "first marker"
     },
     {
-      "name": "set_1",
-      "cmd": "SETFILELINE 1 web-v2 persists",
+      "name": "find_last_error_cs",
+      "cmd": "find/last error cs both early (ERROR != error)",
       "ok": true,
-      "note": "in-place replace"
+      "note": "case split"
     },
     {
-      "name": "insert_0",
-      "cmd": "INSERTFILELINE 0 comment header",
+      "name": "lasti_error",
+      "cmd": "LASTFINDFILELINEI error → ERROR late I=5",
       "ok": true,
-      "note": "front insert"
+      "note": "icase last"
     },
     {
-      "name": "append",
-      "cmd": "append cache row at TOTAL",
+      "name": "span_error",
+      "cmd": "span error first=last=3 cs",
       "ok": true,
-      "note": "tail insert"
+      "note": "bookend indices"
     },
     {
-      "name": "drop_2",
-      "cmd": "DROPFILELINE 2 removes web-v2 returns text",
+      "name": "comment_retarget",
+      "cmd": "comment TODO; retarget flag=on→canary",
       "ok": true,
-      "note": "drop returns dropped line"
+      "note": "mutate via stored IDX"
     },
     {
-      "name": "insert_past_end",
-      "cmd": "INSERTFILELINE 999 \u2192 append I remapped",
+      "name": "dropmark",
+      "cmd": "lasti + dropmark removes ERROR late",
       "ok": true,
-      "note": "past-end append"
+      "note": "find then drop"
     },
     {
-      "name": "set_oob_require",
-      "cmd": "SET 99 soft N=0; REQUIRE exit 2",
+      "name": "false_ERR",
+      "cmd": "find ERR → ERROR: late (substring)",
       "ok": true,
-      "note": "OOB soft"
+      "note": "false friend"
     },
     {
-      "name": "ghost_miss",
-      "cmd": "ghost path SET OK=0 REQUIRE exit 2",
+      "name": "miss_require",
+      "cmd": "find ZZZ soft; REQUIRE exit 2",
       "ok": true,
-      "note": "read fail"
+      "note": "I=-1 N=0 OK=1"
     },
     {
-      "name": "preview_json",
-      "cmd": "PRINT_JSON preview glues lines",
+      "name": "ghost_path",
+      "cmd": "find path miss OK=0 REQUIRE exit 2",
       "ok": true,
-      "note": "NL collapse"
+      "note": "vs content miss"
     },
     {
-      "name": "neg_clamp",
-      "cmd": "SET/DROPFILELINE -1 clamps to 0 mutates first row",
+      "name": "empty_needle",
+      "cmd": "FINDFILELINE '' → I=0 first line N=1",
       "ok": true,
-      "note": "silent under/overflow"
-    },
-    {
-      "name": "setline_trap",
-      "cmd": "SETLINE bag vs SETFILELINE path",
-      "ok": true,
-      "note": "naming"
+      "note": "empty matches all"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "185/185 pass"
+      "note": "188/188 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|index",
-      "title": "SET/DROPFILELINE negative index silently clamps to 0 and mutates first line",
-      "detail": "SETFILELINE p -1 \"Z\" rewrites line 0 with OK=1 N=1. DROPFILELINE -1 drops first row. Worse than LINEAT read clamp \u2014 write ops destroy data on underflow.",
-      "repro": "SYS SETFILELINE p -1 \"Z\" \u2192 L0 becomes Z"
+      "area": "host|match",
+      "title": "FINDFILELINE empty needle hits first line (N=1 I=0)",
+      "detail": "Empty substring matches every line; first-hit returns line 0 with success. Same polarity class as GREPLINES empty match-all; opposite COUNTINFILES empty→0. Blank ARG without agent guard patches wrong row.",
+      "repro": "FINDFILELINE p \"\" → I=0 N=1 LAST=first line"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|naming",
-      "title": "SETLINE/INSERTLINE/DROPNTH are bag ops; *FILELINE are disk ops",
-      "detail": "Classic dual-family trap. SETLINE bag leaves file unchanged. Agents editing hosts on disk must use SETFILELINE not SETLINE.",
-      "repro": "SETLINE bag 0 X; LINEAT file still old"
+      "title": "FINDLINE is bag; FINDFILELINE is file path",
+      "detail": "Dual-family trap. FINDLINE on path string does not search file content. Agents must pick FILE* ops for disk markers.",
+      "repro": "FINDLINE bag vs FINDFILELINE path"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|fs",
-      "title": "SET/DROP OOB OK=1 N=0; INSERT past end succeeds as append",
-      "detail": "Asymmetric: OOB set/drop soft-no-op; huge insert index remaps to TOTAL and writes. Agents treating any OK as \"row idx honored\" mis-place appends.",
-      "repro": "INSERTFILELINE fs 999 TAIL \u2192 I=TOTAL"
+      "area": "host|match",
+      "title": "Substring only — ERR matches ERROR: late",
+      "detail": "No whole-word/token mode. Short severity markers over-select.",
+      "repro": "FINDFILELINE p ERR → ERROR line before ERR short"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON preview bag glues without NL",
-      "detail": "# managed hosts10.0.0.1 api\u2026 recurring bag JSON collapse.",
-      "repro": "PRINT_JSON preview after HEADFILE"
+      "area": "host|fs",
+      "title": "Content miss OK=1 I=-1; path miss OK=0 I=-1",
+      "detail": "Same dual polarity as LINEAT OOB vs ghost. Must check N and OK separately.",
+      "repro": "find none vs find ghost"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|write",
-      "title": "FILELINE rewrite may drop trailing NL on final file line",
-      "detail": "After DROP/SET sequence, last hosts line often lacks final $ on cat -A. Same WRITE family gap for in-place rewrites.",
-      "repro": "cat -A hosts after DROPFILELINE"
+      "title": "WRITE plate omits trailing NL — HIT+IDX glue on cat -A",
+      "detail": "HIT.txt no final $ so sequential cat looks like certs1 for TODO+idx.",
+      "repro": "cat -A HIT.txt IDX.txt"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|parse",
-      "title": "Index args need (expr) form for bare numeric vars",
-      "detail": "Same HEADFILE/LINEAT trap: SYS SETFILELINE p idx text fails parse unless (idx).",
-      "repro": "SYS SETFILELINE p i \"x\" \u2192 unknown form"
+      "area": "host|bag",
+      "title": "SYS PUSH rejects bare numeric vars (need STR first)",
+      "detail": "span initially failed unknown form first_i. Agents building reports must STR indices before PUSH.",
+      "repro": "SYS PUSH bag first_i → parse fail"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|fs",
-      "title": "No dry-run / backup mode for destructive FILELINE ops",
-      "detail": "SET/DROP mutate immediately. No SETFILELINE soft-preview. Hosts boards need agent-side copy first.",
-      "repro": "DROPFILELINE is immediate"
+      "area": "host|index",
+      "title": "No atomic find-and-set / find-and-drop op",
+      "detail": "Race if file changes between FINDFILELINE and SETFILELINE. Pattern is always two-step with IDX plate.",
+      "repro": "find then retarget is agent glue"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|index",
-      "title": "0-based only; no 1-based hosts-line addressing",
-      "detail": "Human line 1 is index 0. Recurring with LINEAT family.",
-      "repro": "editor L1 \u2192 SETFILELINE 0"
+      "area": "host|json",
+      "title": "PRINT_JSON span bag collapses NL",
+      "detail": "Recurring bag JSON glue on multi-line plates.",
+      "repro": "PRINT_JSON span_txt"
     }
   ],
   "workarounds": [
-    "Reject idx < 0 before SET/DROPFILELINE",
-    "Use *FILELINE not bag SETLINE/INSERTLINE/DROPNTH for disk",
-    "Check op_n > 0 not only OK for OOB",
-    "Treat INSERT I vs requested idx as append remap signal",
-    "Copy file before surgery if rollback needed",
-    "Always (idx) for variable indices"
+    "Reject blank needle before FINDFILELINE",
+    "Use FINDFILELINE not FINDLINE for disk",
+    "Prefer long markers (TODO rotate) over ERR",
+    "Check FINDFILELINE_N==1 and OK for path vs content miss",
+    "SYS STR before PUSH of numeric indices",
+    "Re-find immediately before mutate if file may change"
   ],
   "language_gaps": [
-    "Negative FILELINE index must miss/error not clamp-write",
-    "Bare numeric index vars without (expr)",
-    "INSERT past-end should optionally fail instead of silent append",
-    "Dry-run / backup flag for FILELINE family",
-    "Trailing NL preserve on rewrite; PRINT_JSON bag-as-array",
-    "Optional 1-based FILELINE1 aliases"
+    "Empty FINDFILELINE should miss like COUNTINFILES",
+    "Whole-word FINDFILELINE mode",
+    "Atomic FINDANDSETFILELINE / FINDANDDROPFILELINE",
+    "SYS PUSH accept numeric LAST/vars",
+    "WRITE trailing NL; PRINT_JSON bag-as-array",
+    "Unify content-miss vs path-miss OK"
   ],
   "issues_faced": [
-    "SET/INSERT/DROP FILELINE positive path clean",
-    "Neg index write clamp is critical footgun on live hosts files",
-    "INSERT 999 append asymmetry vs SET/DROP OOB",
+    "span PUSH bare first_i parse fail — fixed with STR",
+    "Empty needle first-line hit confirmed",
+    "find/last/comment/retarget/dropmark path clean",
     "No language fix this iter"
   ],
-  "commit": "04f42956d49c5b987e0fc37c5e0092f8ce6a0f8f",
-  "ts": "2026-08-06T08:48:25Z"
+  "commit": "",
+  "ts": "2026-08-06T09:14:28Z"
 }

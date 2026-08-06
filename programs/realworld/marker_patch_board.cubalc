@@ -1,0 +1,1016 @@
+# marker_patch_board.cubalc — find marker line then patch by index
+#
+# Real use: ops agent locates a feature-flag / TODO / ERROR marker in a
+# durable config or runbook file (FINDFILELINE / LASTFINDFILELINE), then
+# SETFILELINE / DROPFILELINE / insert-after without shell grep -n | sed.
+# Complements file_line_surgery (index-known edits) and log_line_harvest
+# (multi-file line bag): this board is *needle → index → mutate* on one file.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target path
+#   HIT.txt        — last found line text
+#   IDX.txt        — last found index (decimal string)
+#   SPAN.txt       — first_i last_i for span action
+#   MARKER_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_MP_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   find      — FINDFILELINE ACTIVE needle(ARG1) → HIT + IDX
+#   findi     — FINDFILELINEI
+#   last      — LASTFINDFILELINE
+#   lasti     — LASTFINDFILELINEI
+#   span      — first + last index for needle (cs)
+#   retarget  — SETFILELINE at last IDX with ARG1 text (needs prior find)
+#   dropmark  — DROPFILELINE at last IDX
+#   comment   — prefix last HIT with ARG1 (default "# ") via SET at IDX
+#   get       — LINEAT ACTIVE at IDX
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mp_$$
+#   printf 'flag=off\n# TODO rotate\nflag=on\nERROR early\nok\nERROR late\n' \
+#     > $CUBALC_STATE/app.conf
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/app.conf \
+#     ./out/cubalc run -q -s programs/realworld/marker_patch_board.cubalc
+#   CUBALC_ARG0=find CUBALC_ARG1='TODO' ...
+#   CUBALC_ARG0=comment CUBALC_ARG1='# done: ' ...
+#
+# Env: CUBALC_MP_PATH=… CUBALC_MP_REQUIRE=1 CUBALC_MP_PREFIX="# "
+#
+# Edges:
+#   FIND miss → N=0 I=-1 OK=1; path miss OK=0
+#   substring false friends (ERR vs ERROR); case first vs last
+#   retarget without find (IDX empty/-1); SET after find uses (idx)
+#   FINDFILELINE vs FINDLINE bag; PRINT_JSON; WRITE NL; NUM shuttle
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "marker_patch_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT HFILE = "HIT.txt"
+DEFAULT IFILE = "IDX.txt"
+DEFAULT SFILE = "SPAN.txt"
+DEFAULT REPORT = "MARKER_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PREFIX = "# "
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_MP_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_MP_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_MP_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_MP_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_MP_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_MP_PREFIX" OR ""
+IF LAST_N > 0 THEN
+  LET PREFIX = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir HFILE
+LET hit_path = LAST
+SYS JOIN state_dir IFILE
+LET idx_path = LAST
+SYS JOIN state_dir SFILE
+LET span_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR hit_path OR ""
+LET hit_txt = LAST
+CLEAR_ERR
+SYS READ OR idx_path OR ""
+LET idx_s = LAST
+CLEAR_ERR
+SYS READ OR span_path OR ""
+LET span_txt = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET hit_ch = 0
+LET idx_ch = 0
+LET span_ch = 0
+LET note_msg = "ok"
+LET idx = -1
+LET find_n = 0
+LET find_total = 0
+LET first_i = -1
+LET last_i = -1
+LET op_n = 0
+LET op_total = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "find"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "find needs needle"
+  END
+END
+SYS EQS ACTION "findi"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "findi needs needle"
+  END
+END
+SYS EQS ACTION "last"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "last needs needle"
+  END
+END
+SYS EQS ACTION "lasti"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "lasti needs needle"
+  END
+END
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "span needs needle"
+  END
+END
+SYS EQS ACTION "retarget"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "retarget needs text"
+  END
+END
+SYS EQS ACTION "comment"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PREFIX = NAME
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "mpatch" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON hit_txt
+  PRINT_JSON idx_s
+  PRINT_JSON span_txt
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- find FINDFILELINE ---
+SYS EQS ACTION "find"
+IF LAST_N == 1 THEN
+  NOTE "action find"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "find no active"
+    FAIL "find no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "find no active"
+    END
+  ELSE
+    SYS FINDFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hit_txt = ""
+      LET idx = -1
+      LET idx_s = "-1"
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET note_msg = "find path miss"
+      FAIL "find path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "find path miss"
+      END
+    ELSE
+      LET hit_txt = LAST
+      LET find_n = FINDFILELINE_N
+      LET idx = FINDFILELINE_I
+      LET find_total = FINDFILELINE_TOTAL
+      SYS STR idx
+      LET idx_s = LAST
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET hit = find_n
+      IF find_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "find none"
+        FAIL "find none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "find none"
+        END
+      ELSE
+        LET note_msg = "find ok"
+      END
+    END
+    PRINT_JSON NAME find_n idx find_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- findi ---
+SYS EQS ACTION "findi"
+IF LAST_N == 1 THEN
+  NOTE "action findi"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "findi no active"
+    FAIL "findi no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "findi no active"
+    END
+  ELSE
+    SYS FINDFILELINEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hit_txt = ""
+      LET idx = -1
+      LET idx_s = "-1"
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET note_msg = "findi path miss"
+      FAIL "findi path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "findi path miss"
+      END
+    ELSE
+      LET hit_txt = LAST
+      LET find_n = FINDFILELINE_N
+      LET idx = FINDFILELINE_I
+      LET find_total = FINDFILELINE_TOTAL
+      SYS STR idx
+      LET idx_s = LAST
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET hit = find_n
+      IF find_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "findi none"
+        FAIL "findi none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "findi none"
+        END
+      ELSE
+        LET note_msg = "findi ok"
+      END
+    END
+    PRINT_JSON NAME find_n idx find_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- last LASTFINDFILELINE ---
+SYS EQS ACTION "last"
+IF LAST_N == 1 THEN
+  NOTE "action last"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "last no active"
+    FAIL "last no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "last no active"
+    END
+  ELSE
+    SYS LASTFINDFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hit_txt = ""
+      LET idx = -1
+      LET idx_s = "-1"
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET note_msg = "last path miss"
+      FAIL "last path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "last path miss"
+      END
+    ELSE
+      LET hit_txt = LAST
+      LET find_n = LASTFINDFILELINE_N
+      LET idx = LASTFINDFILELINE_I
+      LET find_total = LASTFINDFILELINE_TOTAL
+      SYS STR idx
+      LET idx_s = LAST
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET hit = find_n
+      IF find_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "last none"
+        FAIL "last none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "last none"
+        END
+      ELSE
+        LET note_msg = "last ok"
+      END
+    END
+    PRINT_JSON NAME find_n idx find_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- lasti ---
+SYS EQS ACTION "lasti"
+IF LAST_N == 1 THEN
+  NOTE "action lasti"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "lasti no active"
+    FAIL "lasti no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lasti no active"
+    END
+  ELSE
+    SYS LASTFINDFILELINEI active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET hit_txt = ""
+      LET idx = -1
+      LET idx_s = "-1"
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET note_msg = "lasti path miss"
+      FAIL "lasti path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "lasti path miss"
+      END
+    ELSE
+      LET hit_txt = LAST
+      LET find_n = LASTFINDFILELINE_N
+      LET idx = LASTFINDFILELINE_I
+      LET find_total = LASTFINDFILELINE_TOTAL
+      SYS STR idx
+      LET idx_s = LAST
+      LET hit_ch = 1
+      LET idx_ch = 1
+      LET hit = find_n
+      IF find_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "lasti none"
+        FAIL "lasti none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "lasti none"
+        END
+      ELSE
+        LET note_msg = "lasti ok"
+      END
+    END
+    PRINT_JSON NAME find_n idx find_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- span first+last indices ---
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  NOTE "action span"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "span no active"
+    FAIL "span no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "span no active"
+    END
+  ELSE
+    SYS FINDFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "span path miss"
+      FAIL "span path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "span path miss"
+      END
+    ELSE
+      LET first_i = FINDFILELINE_I
+      LET find_n = FINDFILELINE_N
+      LET find_total = FINDFILELINE_TOTAL
+      LET hit_txt = LAST
+      CLEAR_ERR
+      SYS LASTFINDFILELINE active NAME
+      LET last_i = LASTFINDFILELINE_I
+      CLEAR_ERR
+      IF find_n == 0 THEN
+        LET miss = 1
+        LET span_txt = ""
+        LET idx = -1
+        LET idx_s = "-1"
+        LET hit_ch = 1
+        LET idx_ch = 1
+        LET span_ch = 1
+        LET note_msg = "span none"
+        FAIL "span none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "span none"
+        END
+      ELSE
+        # SYS PUSH needs string fields — STR numeric indices first
+        LET span_txt = "first"
+        SYS STR first_i
+        SYS PUSH span_txt LAST
+        LET span_txt = LAST
+        SYS PUSH span_txt "last"
+        LET span_txt = LAST
+        SYS STR last_i
+        SYS PUSH span_txt LAST
+        LET span_txt = LAST
+        SYS PUSH span_txt "needle"
+        LET span_txt = LAST
+        SYS PUSH span_txt NAME
+        LET span_txt = LAST
+        LET idx = first_i
+        SYS STR idx
+        LET idx_s = LAST
+        LET hit_ch = 1
+        LET idx_ch = 1
+        LET span_ch = 1
+        LET hit = 1
+        LET note_msg = "span ok"
+      END
+    END
+    PRINT_JSON NAME first_i last_i find_total
+    PRINT_JSON span_txt
+    CLEAR_ERR
+  END
+END
+
+# load idx from plate string for mutate actions
+# --- retarget SETFILELINE at stored IDX ---
+SYS EQS ACTION "retarget"
+IF LAST_N == 1 THEN
+  NOTE "action retarget"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "retarget no active"
+    FAIL "retarget no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "retarget no active"
+    END
+  ELSE
+    SYS BLANK idx_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "retarget no idx"
+      FAIL "retarget no idx"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "retarget no idx"
+      END
+    ELSE
+      SYS NUM idx_s
+      IF OK == 0 THEN
+        EXIT 2 "retarget idx not num"
+      END
+      LET idx = LAST_N
+      CLEAR_ERR
+      IF idx < 0 THEN
+        LET miss = 1
+        LET note_msg = "retarget bad idx"
+        FAIL "retarget bad idx"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "retarget bad idx"
+        END
+      ELSE
+        SYS SETFILELINE active (idx) NAME
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "retarget miss"
+          FAIL "retarget miss"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "retarget miss"
+          END
+        ELSE
+          LET hit_txt = LAST
+          LET op_n = SETFILELINE_N
+          LET op_total = SETFILELINE_TOTAL
+          LET hit_ch = 1
+          LET hit = op_n
+          IF op_n == 0 THEN
+            LET miss = 1
+            LET note_msg = "retarget oob"
+            FAIL "retarget oob"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "retarget oob"
+            END
+          ELSE
+            LET note_msg = "retarget ok"
+          END
+        END
+      END
+    END
+    PRINT_JSON idx op_n op_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- dropmark ---
+SYS EQS ACTION "dropmark"
+IF LAST_N == 1 THEN
+  NOTE "action dropmark"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "dropmark no active"
+    FAIL "dropmark no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dropmark no active"
+    END
+  ELSE
+    SYS BLANK idx_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "dropmark no idx"
+      FAIL "dropmark no idx"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "dropmark no idx"
+      END
+    ELSE
+      SYS NUM idx_s
+      IF OK == 0 THEN
+        EXIT 2 "dropmark idx not num"
+      END
+      LET idx = LAST_N
+      CLEAR_ERR
+      IF idx < 0 THEN
+        LET miss = 1
+        LET note_msg = "dropmark bad idx"
+        FAIL "dropmark bad idx"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "dropmark bad idx"
+        END
+      ELSE
+        SYS DROPFILELINE active (idx)
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "dropmark miss"
+          FAIL "dropmark miss"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "dropmark miss"
+          END
+        ELSE
+          LET hit_txt = LAST
+          LET op_n = DROPFILELINE_N
+          LET op_total = DROPFILELINE_TOTAL
+          LET hit_ch = 1
+          LET idx = -1
+          LET idx_s = "-1"
+          LET idx_ch = 1
+          LET hit = op_n
+          IF op_n == 0 THEN
+            LET miss = 1
+            LET note_msg = "dropmark oob"
+            FAIL "dropmark oob"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "dropmark oob"
+            END
+          ELSE
+            LET note_msg = "dropmark ok"
+          END
+        END
+      END
+    END
+    PRINT_JSON op_n op_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- comment: prefix stored HIT and SET at IDX ---
+SYS EQS ACTION "comment"
+IF LAST_N == 1 THEN
+  NOTE "action comment"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "comment no active"
+    FAIL "comment no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "comment no active"
+    END
+  ELSE
+    SYS BLANK idx_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "comment no idx"
+      FAIL "comment no idx"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "comment no idx"
+      END
+    ELSE
+      SYS NUM idx_s
+      IF OK == 0 THEN
+        EXIT 2 "comment idx not num"
+      END
+      LET idx = LAST_N
+      CLEAR_ERR
+      IF idx < 0 THEN
+        LET miss = 1
+        LET note_msg = "comment bad idx"
+        FAIL "comment bad idx"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "comment bad idx"
+        END
+      ELSE
+        # refresh line text at idx
+        SYS LINEAT active (idx)
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "comment line miss"
+          FAIL "comment line miss"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "comment line miss"
+          END
+        ELSE
+          IF LINEAT_N == 0 THEN
+            LET miss = 1
+            LET note_msg = "comment oob"
+            FAIL "comment oob"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "comment oob"
+            END
+          ELSE
+            LET hit_txt = LAST
+            SYS CAT PREFIX hit_txt
+            LET hit_txt = LAST
+            SYS SETFILELINE active (idx) hit_txt
+            IF OK == 0 THEN
+              LET miss = 1
+              LET note_msg = "comment set miss"
+              FAIL "comment set miss"
+              CLEAR_ERR
+              IF REQUIRE_HIT > 0 THEN
+                EXIT 2 "comment set miss"
+              END
+            ELSE
+              LET hit_txt = LAST
+              LET op_n = SETFILELINE_N
+              LET op_total = SETFILELINE_TOTAL
+              LET hit_ch = 1
+              LET hit = op_n
+              LET note_msg = "comment ok"
+            END
+          END
+        END
+      END
+    END
+    PRINT_JSON idx op_n PREFIX
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- get LINEAT at stored IDX ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "get no active"
+    FAIL "get no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get no active"
+    END
+  ELSE
+    SYS NUM idx_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "get no idx"
+      FAIL "get no idx"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "get no idx"
+      END
+    ELSE
+      LET idx = LAST_N
+      CLEAR_ERR
+      SYS LINEAT active (idx)
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "get miss"
+        FAIL "get miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "get miss"
+        END
+      ELSE
+        LET hit_txt = LAST
+        LET find_n = LINEAT_N
+        LET find_total = LINEAT_TOTAL
+        LET hit_ch = 1
+        LET hit = find_n
+        IF find_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "get oob"
+          FAIL "get oob"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "get oob"
+          END
+        ELSE
+          LET note_msg = "get ok"
+        END
+      END
+    END
+    PRINT_JSON idx find_n find_total
+    PRINT_JSON hit_txt
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET hit_txt = ""
+  LET idx_s = ""
+  LET span_txt = ""
+  LET active_ch = 1
+  LET hit_ch = 1
+  LET idx_ch = 1
+  LET span_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "find"
+LET k = k + LAST_N
+SYS EQS ACTION "findi"
+LET k = k + LAST_N
+SYS EQS ACTION "last"
+LET k = k + LAST_N
+SYS EQS ACTION "lasti"
+LET k = k + LAST_N
+SYS EQS ACTION "span"
+LET k = k + LAST_N
+SYS EQS ACTION "retarget"
+LET k = k + LAST_N
+SYS EQS ACTION "dropmark"
+LET k = k + LAST_N
+SYS EQS ACTION "comment"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF hit_ch > 0 THEN
+  SYS WRITE hit_path hit_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hit write failed"
+  END
+  CLEAR_ERR
+END
+IF idx_ch > 0 THEN
+  SYS WRITE idx_path idx_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "idx write failed"
+  END
+  CLEAR_ERR
+END
+IF span_ch > 0 THEN
+  SYS WRITE span_path span_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "span write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.marker_patch_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "find_n"
+LET report = LAST
+SYS STR find_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "find_total"
+LET report = LAST
+SYS STR find_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "first_i"
+LET report = LAST
+SYS STR first_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "last_i"
+LET report = LAST
+SYS STR last_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_n"
+LET report = LAST
+SYS STR op_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_total"
+LET report = LAST
+SYS STR op_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "marker_patch_board" ACTION hit miss find_n idx note_msg elapsed
