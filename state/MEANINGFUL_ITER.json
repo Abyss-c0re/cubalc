@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 203,
-  "version": "1.15.228-usability",
-  "item": "SYS TOGGLELINE / TOGGLEFILELINE / FLIPLINE flip exact file line presence",
-  "item_id": 236,
-  "title": "SYS TOGGLELINE|TOGGLEFILELINE path line — flip exact line presence · ON after",
-  "commit": "759fdd3c3e8a6a00479055e9e6b7c25fe10931cc",
-  "summary": "Feature-flag toggle one-shot. selftest 203.",
+  "iter": 204,
+  "version": "1.15.229-usability",
+  "item": "SYS KVFILEENSURE / ENSUREKVFILE / DEFAULTKVFILE set key only if missing",
+  "item_id": 237,
+  "title": "SYS KVFILEENSURE|ENSUREKVFILE path key value [sep] — plate DEFAULT · NEW/HIT",
+  "commit": "f3b69d37d120e10b63796ca441eedfa31c524e74",
+  "summary": "File DEFAULT for agent config plates. selftest 204.",
   "proofs": [
-    "776_sys_toggleline",
-    "selftest n_pass=203"
+    "777_sys_kvfileensure",
+    "selftest n_pass=204"
   ],
-  "when": "2026-08-06T11:46:32Z",
+  "when": "2026-08-06T11:54:55Z",
   "agent": "meaningful_iter_10m",
-  "sha": "759fdd3c3e8a6a00479055e9e6b7c25fe10931cc"
+  "sha": "f3b69d37d120e10b63796ca441eedfa31c524e74"
 }
