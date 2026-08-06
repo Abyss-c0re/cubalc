@@ -1,0 +1,68 @@
+# SYS CANREAD / CANWRITE / CANEXEC — access(2) pre-flight probes
+# Usability: agent plate I/O gates without soft READ/WRITE fail glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "canread_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "access-probe-payload"
+ASSERT OK == 1
+SYS CHMOD p "0600"
+ASSERT OK == 1
+
+# owner can read/write own plate
+SYS CANREAD p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT CANREAD_N == 1
+SYS CANWRITE p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT CANWRITE_N == 1
+
+# not executable typically
+SYS CANEXEC p
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# exist access
+SYS CANACCESS p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# aliases
+SYS READABLE p
+ASSERT LAST_N == 1
+SYS WRITABLE p
+ASSERT LAST_N == 1
+
+# missing path → 0 but OK=1 (probe)
+SYS CANREAD "/no/such/canread_mi_xyz"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS CANWRITE "/no/such/canread_mi_xyz"
+ASSERT LAST_N == 0
+SYS CANACCESS "/no/such/canread_mi_xyz"
+ASSERT LAST_N == 0
+
+# empty path soft fail OK=0
+SYS CANREAD ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 3
+
+# chmod 000 then restore (may need rootless: still owner often can? on linux access uses real/effective)
+# use non-writable sibling dir probe instead: tmp dir should be writable
+SYS CANWRITE td
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS CANREAD td
+ASSERT LAST_N == 1
+
+# cleanup
+SYS CHMOD p "0644"
+SYS RM p
+
+PRINT "sys_canread ok"

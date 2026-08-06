@@ -52,6 +52,8 @@ int cubalc_host_inode(const char *path, cubalc_host_result *r);
 int cubalc_host_fileuid(const char *path, cubalc_host_result *r);
 /* group gid: r->n = st_gid; soft miss missing path */
 int cubalc_host_filegid(const char *path, cubalc_host_result *r);
+/* access probe: mode is R_OK/W_OK/X_OK/F_OK; r->n = 1 if allowed, 0 if not; always ok if path non-empty */
+int cubalc_host_can_access(const char *path, int mode, cubalc_host_result *r);
 /* read symlink target into r->str; soft fail if not a symlink / missing */
 int cubalc_host_readlink(const char *path, cubalc_host_result *r);
 /* probe: r->n = 1 if path is a symlink, 0 if missing or not a link; always ok */
