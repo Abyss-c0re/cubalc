@@ -331,6 +331,42 @@ int cubalc_host_nlink(const char *path, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS SAMEINODE a b — true if HARDLINK pair (dev+ino), not content EQFILE. */
+int cubalc_host_sameinode(const char *a, const char *b, cubalc_host_result *r) {
+  struct stat sa, sb;
+  r_clear(r);
+  if (!a || !a[0] || !b || !b[0]) {
+    snprintf(r->err, sizeof r->err, "sameinode: empty path");
+    return -1;
+  }
+  if (stat(a, &sa) != 0 || stat(b, &sb) != 0) {
+    snprintf(r->err, sizeof r->err, "sameinode: missing");
+    return -1;
+  }
+  r->n = (sa.st_dev == sb.st_dev && sa.st_ino == sb.st_ino) ? 1 : 0;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS INODE path — plate identity stamp without shell stat. */
+int cubalc_host_inode(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "inode: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "inode: missing");
+    return -1;
+  }
+  r->n = (long)st.st_ino;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS READLINK path — peel symlink target without shell. */
 int cubalc_host_readlink(const char *path, cubalc_host_result *r) {
   char buf[CUBALC_HOST_STR_MAX];

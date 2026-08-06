@@ -1,0 +1,65 @@
+# SYS SAMEINODE / EQINODE · INODE — hard-link identity (not content EQFILE)
+# Usability: verify HARDLINK pairs without shell stat
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "sameino_mi_a.txt"
+LET a = LAST
+SYS JOIN td "sameino_mi_b.txt"
+LET b = LAST
+SYS JOIN td "sameino_mi_c.txt"
+LET c = LAST
+
+SYS WRITE a "payload-shared"
+SYS COPY a c
+ASSERT OK == 1
+# c is content-equal but different inode
+
+SYS HARDLINK a b
+ASSERT OK == 1
+
+# hard-linked pair → same inode
+SYS SAMEINODE a b
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT SAMEINODE_N == 1
+
+# content-equal copy → different inode
+SYS EQFILE a c
+ASSERT LAST_N == 1
+SYS SAMEINODE a c
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT SAMEINODE_N == 0
+
+# INODE numbers match for hard links
+SYS INODE a
+ASSERT OK == 1
+ASSERT LAST_N > 0
+LET ia = LAST_N
+SYS INODE b
+ASSERT LAST_N == ia
+SYS INODE c
+ASSERT LAST_N != ia
+
+# aliases
+SYS EQINODE a b
+ASSERT LAST_N == 1
+SYS INO a
+ASSERT LAST_N == ia
+
+# soft miss
+SYS SAMEINODE a "/no/such/sameino_mi"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS INODE "/no/such/sameino_mi"
+ASSERT OK == 0
+
+# cleanup
+SYS RM a
+SYS RM b
+SYS RM c
+
+PRINT "sys_sameinode ok"

@@ -44,6 +44,10 @@ int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_re
 int cubalc_host_hardlink(const char *existing, const char *newpath, cubalc_host_result *r);
 /* link count: r->n = st_nlink; soft miss if path missing */
 int cubalc_host_nlink(const char *path, cubalc_host_result *r);
+/* same inode+device: r->n = 1 if a and b are same file; soft miss either missing */
+int cubalc_host_sameinode(const char *a, const char *b, cubalc_host_result *r);
+/* inode number: r->n = st_ino; soft miss missing path */
+int cubalc_host_inode(const char *path, cubalc_host_result *r);
 /* read symlink target into r->str; soft fail if not a symlink / missing */
 int cubalc_host_readlink(const char *path, cubalc_host_result *r);
 /* probe: r->n = 1 if path is a symlink, 0 if missing or not a link; always ok */
