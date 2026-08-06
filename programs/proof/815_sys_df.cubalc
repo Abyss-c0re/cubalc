@@ -1,0 +1,65 @@
+# SYS DF / DISKFREE / SPACE — filesystem free space (kB) for a path
+# Usability: agent pre-write disk gate without shell df(1)
+
+HOLD_FLASH 1
+
+# default path = cwd
+SYS DF
+ASSERT OK == 1
+ASSERT DF_TOTAL_N > 0
+ASSERT DF_AVAIL_N >= 0
+ASSERT DF_USED_N >= 0
+ASSERT LAST_N == DF_AVAIL_N
+ASSERT DF_AVAIL_KB == DF_AVAIL_N
+ASSERT DF_TOTAL_KB == DF_TOTAL_N
+SYS LEN DF_PATH
+ASSERT LAST_N >= 1
+
+# bag total avail used
+LET bag = LAST
+SYS SPLIT " " bag
+ASSERT LAST_N == 3
+ASSERT SPLIT_N == 3
+
+# explicit path
+SYS TMP
+LET td = LAST
+SYS DF td
+ASSERT OK == 1
+ASSERT DF_TOTAL_N > 0
+ASSERT LAST_N == DF_AVAIL_N
+SYS EQS DF_PATH td
+ASSERT LAST_N == 1
+
+# aliases
+SYS DISKFREE "."
+ASSERT OK == 1
+ASSERT DF_TOTAL_N > 0
+SYS SPACE "."
+ASSERT OK == 1
+SYS DISKSPACE td
+ASSERT OK == 1
+
+# avail <= total
+SYS DF "."
+SYS CMP DF_AVAIL_N DF_TOTAL_N
+ASSERT LAST_N <= 0
+
+# soft miss on nonsense path
+SYS DF "/no/such/cubalc_df_path_xyz_mi"
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 3
+
+# agent: gate if less than 1 kB free (shape only)
+SYS DF "."
+SYS IN DF_AVAIL_N 0 999999999999
+ASSERT LAST_N == 1
+
+# plate stamp
+SYS STR DF_AVAIL_N
+SYS CAT LAST " kB free"
+SYS HAS LAST "kB free"
+ASSERT LAST_N == 1
+
+PRINT "sys_df ok"
