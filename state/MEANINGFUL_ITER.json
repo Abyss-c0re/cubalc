@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 242,
-  "version": "1.15.269-usability",
-  "item": "SYS FSYNC / SYNCFILE durable file flush",
-  "item_id": 277,
-  "title": "SYS FSYNC|SYNCFILE path — durable flush after WRITE for multi-agent plates",
-  "commit": "4f3d0274046fac951a5b6e60c567aad2ab4955e1",
-  "summary": "fsync after write for durable plates; soft miss + LAST_ERR. selftest 242.",
+  "iter": 243,
+  "version": "1.15.270-usability",
+  "item": "SYS DOTENV / LOADENV / ENVFILE load KEY=VAL plates",
+  "item_id": 278,
+  "title": "SYS DOTENV|LOADENV|ENVFILE path — load dotenv plate into process env for agents",
+  "commit": "880b33881325000e994eb4b48c12e1730b6774b3",
+  "summary": "dotenv KEY=VAL plate → setenv; export/quotes/skip; soft miss. selftest 243.",
   "proofs": [
-    "816_sys_fsync",
-    "selftest n_pass=242"
+    "817_sys_dotenv",
+    "selftest n_pass=243"
   ],
-  "when": "2026-08-06T18:06:00Z",
+  "when": "2026-08-06T18:16:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4f3d0274046fac951a5b6e60c567aad2ab4955e1",
-  "note": "restored thrash first; complements WRITEATOMIC"
+  "sha": "880b33881325000e994eb4b48c12e1730b6774b3",
+  "note": "complements SETENV/SUBSTENV; agent .env without shell"
 }
