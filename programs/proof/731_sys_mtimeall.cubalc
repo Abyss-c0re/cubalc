@@ -1,0 +1,103 @@
+# SYS MTIMEALL / AGEALL — mtime/age maps over path bags
+# Usability: PATHGLOB freshness inventory without EACH + MTIME/AGE
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "mtimeall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "old.plate"
+LET f1 = LAST
+SYS WRITE f1 "a"
+SYS JOIN fix "new.plate"
+LET f2 = LAST
+SYS WRITE f2 "b"
+
+# ensure f1 is older: touch f2 after sleep
+SYS SLEEP 1100
+SYS TOUCH f2
+ASSERT OK == 1
+
+SYS JOIN fix "ghost.plate"
+LET ghost = LAST
+
+# MTIMEALL — both files + missing
+SYS PUSH "" f1
+SYS PUSH LAST f2
+SYS PUSH LAST ghost
+LET bag = LAST
+SYS MTIMEALL bag
+ASSERT OK == 1
+ASSERT MTIMEALL_N == 3
+ASSERT MTIMEALL_HIT == 2
+ASSERT MTIMEALL_MISS == 1
+ASSERT MTIMEALL_MAX > 0
+ASSERT MTIMEALL_MIN > 0
+ASSERT MTIMEALL_MAX >= MTIMEALL_MIN
+
+# min is older file (f1), max is f2
+LET mt = LAST
+SYS NTH 0 mt
+LET t1 = LAST_N
+# NTH sets LAST to field text; LAST_N is index? Use NUM or parse
+# actually NTH leaves field in LAST; convert via SYS NUM if available
+SYS NTH 0 mt
+SYS NUM LAST
+LET e1 = LAST_N
+SYS NTH 1 mt
+SYS NUM LAST
+LET e2 = LAST_N
+SYS NTH 2 mt
+SYS NUM LAST
+LET e3 = LAST_N
+ASSERT e3 == 0
+ASSERT e2 >= e1
+ASSERT e2 == MTIMEALL_MAX
+ASSERT e1 == MTIMEALL_MIN
+
+# AGEALL — ages non-negative; older file has larger age
+SYS AGEALL bag
+ASSERT AGEALL_N == 3
+ASSERT AGEALL_HIT == 2
+ASSERT AGEALL_MISS == 1
+ASSERT AGEALL_MAX >= AGEALL_MIN
+LET ag = LAST
+SYS NTH 0 ag
+SYS NUM LAST
+LET a1 = LAST_N
+SYS NTH 1 ag
+SYS NUM LAST
+LET a2 = LAST_N
+ASSERT a1 >= a2
+ASSERT a1 == AGEALL_MAX
+ASSERT a2 == AGEALL_MIN
+
+# aliases + default LAST pipeline
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS MAPMTIME
+ASSERT MAPMTIME_N == 2
+ASSERT MTIMEALL_HIT == 2
+
+SYS PATHGLOB fix
+SYS KEEPFILES
+SYS MAPAGE
+ASSERT MAPAGE_N == 2
+ASSERT AGEALL_MAX >= 0
+
+# missing-only bag
+SYS PUSH "" ghost
+SYS AGEALL LAST
+ASSERT AGEALL_HIT == 0
+ASSERT AGEALL_MISS == 1
+ASSERT AGEALL_MAX == 0
+ASSERT AGEALL_MIN == 0
+
+# cleanup
+SYS RM f1
+SYS RM f2
+
+PRINT "sys_mtimeall ok"

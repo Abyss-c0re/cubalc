@@ -1477,6 +1477,98 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MTIMEALL|MAPMTIME [bag] — epoch mtime of each path field (0 if miss).
+     * SYS AGEALL|MAPAGE [bag] — age seconds (now-mtime, clamped ≥0; 0 if miss).
+     * LAST = decimal bag; LAST_N = count; MTIMEALL_HIT/AGEALL_HIT = existing paths;
+     * MTIMEALL_MAX / MTIMEALL_MIN among hits (0 if none); AGEALL_MAX / AGEALL_MIN.
+     * Usability: PATHGLOB freshness inventory without EACH+MTIME/AGE glue. */
+    if (kw(&L->cur,"MTIMEALL") || kw(&L->cur,"MAPMTIME") || kw(&L->cur,"MTIMES") ||
+        kw(&L->cur,"FILETIMES") || kw(&L->cur,"AGEALL") || kw(&L->cur,"MAPAGE") ||
+        kw(&L->cur,"AGES") || kw(&L->cur,"FILEAGES") || kw(&L->cur,"STALEALL")){
+      int want_age = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], nbuf[32];
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0, hit = 0, miss = 0;
+      long vmax = 0, vmin = 0, have_ex = 0;
+      long now = (long)time(NULL);
+      cubalc_host_result hr;
+      if (kw(&L->cur,"AGEALL") || kw(&L->cur,"MAPAGE") || kw(&L->cur,"AGES") ||
+          kw(&L->cur,"FILEAGES") || kw(&L->cur,"STALEALL"))
+        want_age = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen, nlen;
+          long v = 0;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (cubalc_host_mtime(path, &hr) == 0 && hr.ok) {
+            if (want_age) {
+              v = now - hr.n;
+              if (v < 0) v = 0;
+            } else {
+              v = hr.n;
+            }
+            hit++;
+            if (!have_ex) {
+              vmax = vmin = v;
+              have_ex = 1;
+            } else {
+              if (v > vmax) vmax = v;
+              if (v < vmin) vmin = v;
+            }
+          } else {
+            miss++;
+            v = 0;
+          }
+          snprintf(nbuf, sizeof nbuf, "%ld", v);
+          nlen = strlen(nbuf);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + nlen < sizeof out) {
+            memcpy(out + olen, nbuf, nlen);
+            olen += nlen;
+          }
+          out[olen] = 0;
+          kept++;
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "OK", 1);
+      if (want_age) {
+        var_set_str(vm, "AGEALL", out);
+        var_set_str(vm, "MAPAGE", out);
+        var_set_num(vm, "AGEALL_N", kept);
+        var_set_num(vm, "MAPAGE_N", kept);
+        var_set_num(vm, "AGEALL_HIT", hit);
+        var_set_num(vm, "AGEALL_MISS", miss);
+        var_set_num(vm, "AGEALL_MAX", have_ex ? vmax : 0);
+        var_set_num(vm, "AGEALL_MIN", have_ex ? vmin : 0);
+      } else {
+        var_set_str(vm, "MTIMEALL", out);
+        var_set_str(vm, "MAPMTIME", out);
+        var_set_num(vm, "MTIMEALL_N", kept);
+        var_set_num(vm, "MAPMTIME_N", kept);
+        var_set_num(vm, "MTIMEALL_HIT", hit);
+        var_set_num(vm, "MTIMEALL_MISS", miss);
+        var_set_num(vm, "MTIMEALL_MAX", have_ex ? vmax : 0);
+        var_set_num(vm, "MTIMEALL_MIN", have_ex ? vmin : 0);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -11118,7 +11210,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11344,6 +11436,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS KEEPEXIST", "SYS KEEPEXIST|FILTEREXIST [bag] — keep existing paths"},
       {"SYS SIZEALL", "SYS SIZEALL|MAPSIZE [bag] — byte sizes of path bag · SIZEALL_SUM total"},
       {"SYS MAPSIZE", "SYS MAPSIZE alias of SYS SIZEALL"},
+      {"SYS MTIMEALL", "SYS MTIMEALL|MAPMTIME [bag] — epoch mtime bag · MTIMEALL_MAX/MIN"},
+      {"SYS AGEALL", "SYS AGEALL|MAPAGE [bag] — age-seconds bag · AGEALL_MAX/MIN freshness"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
