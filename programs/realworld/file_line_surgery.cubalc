@@ -1,0 +1,784 @@
+# file_line_surgery.cubalc — in-place hosts/config line edit on disk
+#
+# Real use: ops agent patches a durable plate (hosts map, allowlist, runbook
+# steps on disk) by index without READ+SETLINE+WRITE glue:
+#   SETFILELINE    — replace one 0-based line
+#   INSERTFILELINE — insert (append if past end)
+#   DROPFILELINE   — remove one line
+#   LINEAT         — verify / total
+# Distinct from ordered_runbook (in-memory bag plate) and
+# fleet_config_scrub (bulk string rewrite): this board is *file row* surgery.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — target file path
+#   LASTLINE.txt   — last get/set/insert/drop line text
+#   PREVIEW.txt    — optional HEADFILE preview
+#   SURGERY_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FL_ACTION):
+#   list      — show active + last (default)
+#   pick      — ACTIVE = ARG1 path
+#   seed      — WRITE ACTIVE with ARG1 (bootstrap multi-line via \n in env)
+#   get       — LINEAT ACTIVE idx(ARG1) → LASTLINE
+#   set       — SETFILELINE ACTIVE idx(ARG1) text(ARG2)
+#   insert    — INSERTFILELINE ACTIVE idx(ARG1) text(ARG2)
+#   drop      — DROPFILELINE ACTIVE idx(ARG1)
+#   append    — INSERTFILELINE at TOTAL (tail)
+#   total     — line count via LINEAT 0 TOTAL
+#   preview   — HEADFILE ACTIVE n(ARG1|10)
+#   clear     — clear plate meta (not the target file)
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_fl_$$; mkdir -p "$CUBALC_STATE"
+#   printf 'a\nb\nc\n' > $CUBALC_STATE/hosts.txt
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/hosts.txt \
+#     ./out/cubalc run -q -s programs/realworld/file_line_surgery.cubalc
+#   CUBALC_ARG0=set CUBALC_ARG1=1 CUBALC_ARG2='b-fixed' ...
+#   CUBALC_ARG0=insert CUBALC_ARG1=0 CUBALC_ARG2='HEAD' ...
+#   CUBALC_ARG0=drop CUBALC_ARG1=2 ...
+#
+# Env:
+#   CUBALC_FL_PATH=…  CUBALC_FL_REQUIRE=1  CUBALC_FL_N=10
+#
+# Edges deliberately stressed:
+#   SET/DROP OOB → OK=1 N=0 no write; INSERT past end appends (I remapped)
+#   ghost path OK=0; bare idx form needs (expr); 0-based only
+#   SETFILELINE vs SETLINE (bag) naming trap; WRITE NL; PRINT_JSON
+#   negative idx clamp?; REQUIRE miss; NUM shuttle; LINEAT verify
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "file_line_surgery: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT LFILE = "LASTLINE.txt"
+DEFAULT VFILE = "PREVIEW.txt"
+DEFAULT REPORT = "SURGERY_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT NPEEK = 10
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FL_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FL_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FL_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FL_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_FL_N" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NPEEK = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir LFILE
+LET lastline_path = LAST
+SYS JOIN state_dir VFILE
+LET preview_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR lastline_path OR ""
+LET lastline = LAST
+CLEAR_ERR
+SYS READ OR preview_path OR ""
+LET preview = LAST
+CLEAR_ERR
+
+# ENV path fills pick default when NAME blank on pick
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET last_ch = 0
+LET prev_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET idx = 0
+LET line_n = 0
+LET line_total = 0
+LET line_i = 0
+LET op_n = 0
+LET op_total = 0
+LET op_i = 0
+LET peek_n = 0
+LET peek_total = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs data"
+  END
+END
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs index"
+  END
+END
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "set needs index text"
+  END
+END
+SYS EQS ACTION "insert"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "insert needs index text"
+  END
+END
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs index"
+  END
+END
+SYS EQS ACTION "append"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "append needs text"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "flsurg" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON lastline
+  PRINT_JSON preview
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- seed WRITE full content ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "seed no active"
+    FAIL "seed no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "seed no active"
+    END
+  ELSE
+    SYS WRITE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "seed write fail"
+      FAIL "seed write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "seed write fail"
+      END
+    ELSE
+      LET lastline = NAME
+      LET last_ch = 1
+      LET hit = 1
+      LET note_msg = "seed ok"
+    END
+    PRINT_JSON active
+    CLEAR_ERR
+  END
+END
+
+# --- get LINEAT ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "get no active"
+    FAIL "get no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "get index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    SYS LINEAT active (idx)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastline = ""
+      LET last_ch = 1
+      LET note_msg = "get miss"
+      FAIL "get miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "get miss"
+      END
+    ELSE
+      LET lastline = LAST
+      LET line_n = LINEAT_N
+      LET line_total = LINEAT_TOTAL
+      LET line_i = LINEAT_I
+      LET last_ch = 1
+      LET hit = line_n
+      IF line_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "get oob"
+        FAIL "get oob"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "get oob"
+        END
+      ELSE
+        LET note_msg = "get ok"
+      END
+    END
+    PRINT_JSON idx line_n line_total line_i
+    PRINT_JSON lastline
+    CLEAR_ERR
+  END
+END
+
+# --- set SETFILELINE ---
+SYS EQS ACTION "set"
+IF LAST_N == 1 THEN
+  NOTE "action set"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "set no active"
+    FAIL "set no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "set no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "set index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    SYS SETFILELINE active (idx) A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastline = ""
+      LET last_ch = 1
+      LET note_msg = "set miss"
+      FAIL "set miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "set miss"
+      END
+    ELSE
+      LET lastline = LAST
+      LET op_n = SETFILELINE_N
+      LET op_total = SETFILELINE_TOTAL
+      LET op_i = SETFILELINE_I
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "set oob"
+        FAIL "set oob"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "set oob"
+        END
+      ELSE
+        LET note_msg = "set ok"
+      END
+    END
+    PRINT_JSON idx op_n op_total op_i
+    PRINT_JSON lastline
+    CLEAR_ERR
+  END
+END
+
+# --- insert INSERTFILELINE ---
+SYS EQS ACTION "insert"
+IF LAST_N == 1 THEN
+  NOTE "action insert"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "insert no active"
+    FAIL "insert no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "insert no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "insert index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    SYS INSERTFILELINE active (idx) A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastline = ""
+      LET last_ch = 1
+      LET note_msg = "insert miss"
+      FAIL "insert miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "insert miss"
+      END
+    ELSE
+      LET lastline = LAST
+      LET op_n = INSERTFILELINE_N
+      LET op_total = INSERTFILELINE_TOTAL
+      LET op_i = INSERTFILELINE_I
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "insert none"
+        FAIL "insert none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "insert none"
+        END
+      ELSE
+        LET note_msg = "insert ok"
+      END
+    END
+    PRINT_JSON idx op_n op_total op_i
+    PRINT_JSON lastline
+    CLEAR_ERR
+  END
+END
+
+# --- drop DROPFILELINE ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop no active"
+    FAIL "drop no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop no active"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      EXIT 2 "drop index not num"
+    END
+    LET idx = LAST_N
+    CLEAR_ERR
+    SYS DROPFILELINE active (idx)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastline = ""
+      LET last_ch = 1
+      LET note_msg = "drop miss"
+      FAIL "drop miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drop miss"
+      END
+    ELSE
+      LET lastline = LAST
+      LET op_n = DROPFILELINE_N
+      LET op_total = DROPFILELINE_TOTAL
+      LET op_i = DROPFILELINE_I
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "drop oob"
+        FAIL "drop oob"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "drop oob"
+        END
+      ELSE
+        LET note_msg = "drop ok"
+      END
+    END
+    PRINT_JSON idx op_n op_total op_i
+    PRINT_JSON lastline
+    CLEAR_ERR
+  END
+END
+
+# --- append at end ---
+SYS EQS ACTION "append"
+IF LAST_N == 1 THEN
+  NOTE "action append"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "append no active"
+    FAIL "append no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "append no active"
+    END
+  ELSE
+    # TOTAL via LINEAT 0; insert at huge index also works — use TOTAL
+    SYS LINEAT active 0
+    IF OK == 0 THEN
+      # empty/missing: try insert at 0
+      CLEAR_ERR
+      SYS INSERTFILELINE active 0 NAME
+    ELSE
+      LET idx = LINEAT_TOTAL
+      CLEAR_ERR
+      SYS INSERTFILELINE active (idx) NAME
+    END
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastline = ""
+      LET last_ch = 1
+      LET note_msg = "append miss"
+      FAIL "append miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "append miss"
+      END
+    ELSE
+      LET lastline = LAST
+      LET op_n = INSERTFILELINE_N
+      LET op_total = INSERTFILELINE_TOTAL
+      LET op_i = INSERTFILELINE_I
+      LET last_ch = 1
+      LET hit = op_n
+      LET note_msg = "append ok"
+    END
+    PRINT_JSON op_n op_total op_i
+    PRINT_JSON lastline
+    CLEAR_ERR
+  END
+END
+
+# --- total ---
+SYS EQS ACTION "total"
+IF LAST_N == 1 THEN
+  NOTE "action total"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "total no active"
+    FAIL "total no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "total no active"
+    END
+  ELSE
+    SYS LINEAT active 0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET line_total = 0
+      LET note_msg = "total miss"
+      FAIL "total miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "total miss"
+      END
+    ELSE
+      LET line_total = LINEAT_TOTAL
+      LET line_n = LINEAT_N
+      LET lastline = LAST
+      LET last_ch = 1
+      LET hit = line_total
+      LET note_msg = "total ok"
+    END
+    PRINT_JSON line_total line_n
+    CLEAR_ERR
+  END
+END
+
+# --- preview HEADFILE ---
+SYS EQS ACTION "preview"
+IF LAST_N == 1 THEN
+  NOTE "action preview"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "preview no active"
+    FAIL "preview no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "preview no active"
+    END
+  ELSE
+    LET idx = NPEEK
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET idx = LAST_N
+      END
+      CLEAR_ERR
+    END
+    SYS HEADFILE active (idx)
+    IF OK == 0 THEN
+      LET miss = 1
+      LET preview = ""
+      LET prev_ch = 1
+      LET note_msg = "preview miss"
+      FAIL "preview miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "preview miss"
+      END
+    ELSE
+      LET preview = LAST
+      LET peek_n = HEADFILE_N
+      LET peek_total = HEADFILE_TOTAL
+      LET prev_ch = 1
+      LET hit = peek_n
+      LET note_msg = "preview ok"
+    END
+    PRINT_JSON peek_n peek_total idx
+    PRINT_JSON preview
+    CLEAR_ERR
+  END
+END
+
+# --- clear meta ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET lastline = ""
+  LET preview = ""
+  LET active_ch = 1
+  LET last_ch = 1
+  LET prev_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "set"
+LET k = k + LAST_N
+SYS EQS ACTION "insert"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "append"
+LET k = k + LAST_N
+SYS EQS ACTION "total"
+LET k = k + LAST_N
+SYS EQS ACTION "preview"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF last_ch > 0 THEN
+  SYS WRITE lastline_path lastline
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "lastline write failed"
+  END
+  CLEAR_ERR
+END
+IF prev_ch > 0 THEN
+  SYS WRITE preview_path preview
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "preview write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.file_line_surgery.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "a2"
+LET report = LAST
+SYS PUSH report A2
+LET report = LAST
+SYS PUSH report "idx"
+LET report = LAST
+SYS STR idx
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_n"
+LET report = LAST
+SYS STR op_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_total"
+LET report = LAST
+SYS STR op_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_i"
+LET report = LAST
+SYS STR op_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "line_total"
+LET report = LAST
+SYS STR line_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "file_line_surgery" ACTION hit miss op_n op_total note_msg elapsed

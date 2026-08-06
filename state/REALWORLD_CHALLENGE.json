@@ -1,177 +1,172 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 68,
-  "program": "programs/realworld/trace_window_board.cubalc",
-  "theme": "trace stack context window LINEAT MIDFILE file-index peel",
-  "version": "1.15.207-usability",
+  "iter": 69,
+  "program": "programs/realworld/file_line_surgery.cubalc",
+  "theme": "hosts config file line surgery SET INSERT DROP FILELINE",
+  "version": "1.15.210-usability",
   "pass": true,
   "tests": [
     {
-      "name": "scan_pick",
-      "cmd": "PATHGLOB + pick ACTIVE dump path",
+      "name": "pick_get",
+      "cmd": "pick hosts + LINEAT get 1 → 10.0.0.2 web",
       "ok": true,
-      "note": "inventory"
+      "note": "read row"
     },
     {
-      "name": "line_3",
-      "cmd": "LINEAT index 3 \u2192 frame3 ERROR boom TOTAL=7",
+      "name": "set_1",
+      "cmd": "SETFILELINE 1 web-v2 persists",
       "ok": true,
-      "note": "single frame"
+      "note": "in-place replace"
     },
     {
-      "name": "window_2_3",
-      "cmd": "MIDFILE start=2 count=3 \u2192 frames 2..4",
+      "name": "insert_0",
+      "cmd": "INSERTFILELINE 0 comment header",
       "ok": true,
-      "note": "slice"
+      "note": "front insert"
     },
     {
-      "name": "window_rest",
-      "cmd": "MIDFILE start=5 omit count \u2192 cleanup+exit",
+      "name": "append",
+      "cmd": "append cache row at TOTAL",
       "ok": true,
-      "note": "rest of file"
+      "note": "tail insert"
     },
     {
-      "name": "around_center",
-      "cmd": "around idx=3 r=1 \u2192 work/ERROR/handler + center LINE",
+      "name": "drop_2",
+      "cmd": "DROPFILELINE 2 removes web-v2 returns text",
       "ok": true,
-      "note": "context packet"
+      "note": "drop returns dropped line"
     },
     {
-      "name": "around_clamp",
-      "cmd": "around idx=0 r=2 clamps start\u22650",
+      "name": "insert_past_end",
+      "cmd": "INSERTFILELINE 999 → append I remapped",
       "ok": true,
-      "note": "edge start"
+      "note": "past-end append"
     },
     {
-      "name": "total",
-      "cmd": "LINEAT 0 \u2192 LINEAT_TOTAL as file depth",
-      "ok": true,
-      "note": "wc without LINECOUNTALL"
-    },
-    {
-      "name": "oob_line_require",
-      "cmd": "LINEAT 99 soft N=0 OK=1; REQUIRE exit 2",
+      "name": "set_oob_require",
+      "cmd": "SET 99 soft N=0; REQUIRE exit 2",
       "ok": true,
       "note": "OOB soft"
     },
     {
-      "name": "window_past_end",
-      "cmd": "MIDFILE start=50 empty OK=1; REQUIRE exit 2",
-      "ok": true,
-      "note": "past end"
-    },
-    {
       "name": "ghost_miss",
-      "cmd": "LINEAT missing file OK=0; REQUIRE exit 2",
+      "cmd": "ghost path SET OK=0 REQUIRE exit 2",
       "ok": true,
-      "note": "read fail vs OOB"
+      "note": "read fail"
     },
     {
-      "name": "print_json_glue",
-      "cmd": "PRINT_JSON window collapses NL",
+      "name": "preview_json",
+      "cmd": "PRINT_JSON preview glues lines",
       "ok": true,
-      "note": "frame1 initframe2 work\u2026"
+      "note": "NL collapse"
     },
     {
       "name": "neg_clamp",
-      "cmd": "LINEAT/MIDFILE -1 \u2192 silent clamp to 0",
+      "cmd": "SET/DROPFILELINE -1 clamps to 0 mutates first row",
       "ok": true,
-      "note": "language edge"
+      "note": "silent under/overflow"
+    },
+    {
+      "name": "setline_trap",
+      "cmd": "SETLINE bag vs SETFILELINE path",
+      "ok": true,
+      "note": "naming"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "182/182 pass"
+      "note": "185/185 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parse",
-      "title": "LINEAT/MIDFILE bare numeric var is form error (need expr parens)",
-      "detail": "Same trap as HEADFILE: SYS LINEAT p i fails unknown form 'i'; SYS LINEAT p (i) works. Parameterized incident peels must remember (expr).",
-      "repro": "LET i=1; SYS LINEAT p i \u2192 parse fail"
+      "area": "host|index",
+      "title": "SET/DROPFILELINE negative index silently clamps to 0 and mutates first line",
+      "detail": "SETFILELINE p -1 \"Z\" rewrites line 0 with OK=1 N=1. DROPFILELINE -1 drops first row. Worse than LINEAT read clamp — write ops destroy data on underflow.",
+      "repro": "SYS SETFILELINE p -1 \"Z\" → L0 becomes Z"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|index",
-      "title": "Negative LINEAT/MIDFILE index silently clamps to 0",
-      "detail": "LINEAT p -1 returns line 0 with OK=1 N=1 I=0; MIDFILE -1 starts at 0. Agents cannot detect underflow \u2014 looks like a valid first line.",
-      "repro": "SYS LINEAT p -1 \u2192 LAST=L0 not miss"
+      "area": "host|naming",
+      "title": "SETLINE/INSERTLINE/DROPNTH are bag ops; *FILELINE are disk ops",
+      "detail": "Classic dual-family trap. SETLINE bag leaves file unchanged. Agents editing hosts on disk must use SETFILELINE not SETLINE.",
+      "repro": "SETLINE bag 0 X; LINEAT file still old"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|fs",
-      "title": "LINEAT OOB OK=1 N=0 but missing file OK=0",
-      "detail": "Out-of-range index is soft success-empty; unreadable path is hard soft-fail. Agents checking only OK miss OOB; checking only N conflate miss types.",
-      "repro": "LINEAT fs 99 OK=1 N=0; LINEAT gone 0 OK=0"
+      "title": "SET/DROP OOB OK=1 N=0; INSERT past end succeeds as append",
+      "detail": "Asymmetric: OOB set/drop soft-no-op; huge insert index remaps to TOTAL and writes. Agents treating any OK as \"row idx honored\" mis-place appends.",
+      "repro": "INSERTFILELINE fs 999 TAIL → I=TOTAL"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|json",
-      "title": "PRINT_JSON window bag glues lines",
-      "detail": "Recurring: frame1 initframe2 workframe3 ERROR boom without separators.",
-      "repro": "PRINT_JSON window after MIDFILE"
+      "title": "PRINT_JSON preview bag glues without NL",
+      "detail": "# managed hosts10.0.0.1 api… recurring bag JSON collapse.",
+      "repro": "PRINT_JSON preview after HEADFILE"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|naming",
-      "title": "MIDFILE vs MIDLINES vs WINDOW bag ops are easy to confuse",
-      "detail": "MIDFILE is file path; MIDLINES/WINDOW are in-memory bag slices. Wrong op peels STATE bag not dump on disk.",
-      "repro": "MIDLINES on path string vs MIDFILE path"
+      "area": "host|write",
+      "title": "FILELINE rewrite may drop trailing NL on final file line",
+      "detail": "After DROP/SET sequence, last hosts line often lacks final $ on cat -A. Same WRITE family gap for in-place rewrites.",
+      "repro": "cat -A hosts after DROPFILELINE"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|index",
-      "title": "0-based only \u2014 no 1-based LINEAT1 / human line numbers",
-      "detail": "Stack dumps and editor UIs are 1-based; agents must subtract one. No FILELINE1 alias.",
-      "repro": "editor line 4 \u2192 LINEAT 3"
+      "area": "host|parse",
+      "title": "Index args need (expr) form for bare numeric vars",
+      "detail": "Same HEADFILE/LINEAT trap: SYS SETFILELINE p idx text fails parse unless (idx).",
+      "repro": "SYS SETFILELINE p i \"x\" → unknown form"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits trailing NL on single-line LINE plate",
-      "detail": "cat -A LINE.txt shows frame3 ERROR boom without final $.",
-      "repro": "LINEAT write plate"
+      "area": "host|fs",
+      "title": "No dry-run / backup mode for destructive FILELINE ops",
+      "detail": "SET/DROP mutate immediately. No SETFILELINE soft-preview. Hosts boards need agent-side copy first.",
+      "repro": "DROPFILELINE is immediate"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|fs",
-      "title": "No MIDFILE around-index primitive",
-      "detail": "Context window requires agent arithmetic (clamp start, want=2r+1) + dual LINEAT. Common incident pattern not first-class.",
-      "repro": "around action is pure agent glue"
+      "area": "host|index",
+      "title": "0-based only; no 1-based hosts-line addressing",
+      "detail": "Human line 1 is index 0. Recurring with LINEAT family.",
+      "repro": "editor L1 → SETFILELINE 0"
     }
   ],
   "workarounds": [
-    "Always SYS LINEAT path (idx) and SYS MIDFILE path (start) (count)",
-    "Treat LINEAT_N==0 as miss even when OK==1",
-    "Reject idx < 0 at agent layer before call",
-    "Read WINDOW.txt plate not PRINT_JSON for multiline",
-    "Document 0-based in runbook contracts"
+    "Reject idx < 0 before SET/DROPFILELINE",
+    "Use *FILELINE not bag SETLINE/INSERTLINE/DROPNTH for disk",
+    "Check op_n > 0 not only OK for OOB",
+    "Treat INSERT I vs requested idx as append remap signal",
+    "Copy file before surgery if rollback needed",
+    "Always (idx) for variable indices"
   ],
   "language_gaps": [
-    "Bare numeric vars for LINEAT/MIDFILE/HEADFILE n args",
-    "Negative index should miss or error not clamp to 0",
-    "Optional 1-based line addressing",
-    "AROUNDFILE path idx radius first-class op",
-    "PRINT_JSON bag-as-array; WRITE trailing NL",
-    "Unify OOB vs missing-file OK semantics"
+    "Negative FILELINE index must miss/error not clamp-write",
+    "Bare numeric index vars without (expr)",
+    "INSERT past-end should optionally fail instead of silent append",
+    "Dry-run / backup flag for FILELINE family",
+    "Trailing NL preserve on rewrite; PRINT_JSON bag-as-array",
+    "Optional 1-based FILELINE1 aliases"
   ],
   "issues_faced": [
-    "LINEAT+MIDFILE positive path clean with (expr) form",
-    "Silent negative clamp discovered \u2014 high footgun",
-    "OOB vs ghost OK polarity split needs dual checks",
+    "SET/INSERT/DROP FILELINE positive path clean",
+    "Neg index write clamp is critical footgun on live hosts files",
+    "INSERT 999 append asymmetry vs SET/DROP OOB",
     "No language fix this iter"
   ],
-  "commit": "37208e629df3c1e635443935e1bf105b75b472cd",
-  "ts": "2026-08-06T08:23:29Z"
+  "commit": "",
+  "ts": "2026-08-06T08:48:25Z"
 }
