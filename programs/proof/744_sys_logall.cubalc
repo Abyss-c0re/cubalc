@@ -1,0 +1,85 @@
+# SYS LOGALL / APPENDFILES — append line to every path in bag
+# Usability: multi-log stamp without EACH + APPEND glue
+# Note: APPENDALL remains string SUFFIXALL
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "logall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.log"
+LET fa = LAST
+SYS JOIN fix "b.log"
+LET fb = LAST
+SYS JOIN fix "c.log"
+LET fc = LAST
+
+# create empty logs
+SYS TOUCH fa
+SYS TOUCH fb
+SYS TOUCH fc
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+LET bag = LAST
+
+SYS LOGALL bag "stamp-1"
+ASSERT OK == 1
+ASSERT LOGALL_N == 3
+ASSERT LOGALL_FAIL == 0
+ASSERT LOGALL_SCAN == 3
+ASSERT LOGALL_BYTES == 24
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+
+SYS READ fa
+SYS EQS LAST "stamp-1\n"
+ASSERT LAST_N == 1
+SYS READ fb
+SYS HAS LAST "stamp-1"
+ASSERT LAST_N == 1
+
+# second stamp
+SYS APPENDFILES bag "stamp-2"
+ASSERT APPENDFILES_N == 3
+SYS READ fa
+SYS HAS LAST "stamp-2"
+ASSERT LAST_N == 1
+
+# one-arg: data only, bag from LAST after PATHGLOB
+SYS PATHGLOB fix "*.log"
+SYS KEEPFILES
+SYS LOGALL "stamp-3"
+ASSERT LOGALL_N == 3
+SYS READ fc
+SYS HAS LAST "stamp-3"
+ASSERT LAST_N == 1
+
+# create-on-append new path
+SYS JOIN fix "new.log"
+LET fn = LAST
+SYS LOGALL fn "born"
+ASSERT LOGALL_N == 1
+SYS EXIST fn
+ASSERT LAST_N == 1
+SYS READ fn
+SYS HAS LAST "born"
+ASSERT LAST_N == 1
+
+# empty bag soft
+SYS LOGALL "" "x"
+ASSERT LOGALL_N == 0
+ASSERT LOGALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+SYS RM fn
+
+PRINT "sys_logall ok"
