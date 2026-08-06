@@ -14,7 +14,7 @@
     },
     {
       "name": "kind_missing",
-      "cmd": "KINDSTR missing soft; REQUIRE→2",
+      "cmd": "KINDSTR missing soft; REQUIRE\u21922",
       "ok": true,
       "note": "OK=1 label"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "kind_link",
-      "cmd": "symlink → kind=link (lstat)",
+      "cmd": "symlink \u2192 kind=link (lstat)",
       "ok": true,
       "note": "not target"
     },
@@ -44,13 +44,13 @@
     },
     {
       "name": "leave_empty",
-      "cmd": "POPD empty REQUIRE→2",
+      "cmd": "POPD empty REQUIRE\u21922",
       "ok": true,
       "note": "soft stack"
     },
     {
       "name": "enter_file",
-      "cmd": "PUSHD file path REQUIRE→2",
+      "cmd": "PUSHD file path REQUIRE\u21922",
       "ok": true,
       "note": "cwd unchanged"
     },
@@ -68,30 +68,30 @@
       "area": "host|pushd",
       "title": "PUSHD/POPD/DIRSTACK are process-scoped only",
       "detail": "Action dispatch re-execs cubalc each time. enter then put in separate runs loses stack; leave sees empty. Agents must compound visit in one process.",
-      "repro": "enter; new process leave → empty stack"
+      "repro": "enter; new process leave \u2192 empty stack"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|kindstr",
       "title": "KINDSTR missing is OK=1 not soft-fail",
-      "detail": "Missing path → LAST=missing KIND_N=0 OK=1. Empty path OK=0. Agents treating OK as exist fail; dual-branch needed with CANACCESS/EXIST.",
-      "repro": "KINDSTR /no/such → OK=1 missing"
+      "detail": "Missing path \u2192 LAST=missing KIND_N=0 OK=1. Empty path OK=0. Agents treating OK as exist fail; dual-branch needed with CANACCESS/EXIST.",
+      "repro": "KINDSTR /no/such \u2192 OK=1 missing"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|kindstr",
-      "title": "KINDSTR uses lstat — link not target kind",
+      "title": "KINDSTR uses lstat \u2014 link not target kind",
       "detail": "Symlink to file is kind=link not file. Agents that want target type need READLINK+KINDSTR chain. No KINDFOLLOW form.",
-      "repro": "symlink file → kind link"
+      "repro": "symlink file \u2192 kind link"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|pushd",
-      "title": "No WITHDIR / ENTER…LEAVE block form",
-      "detail": "Must hand-roll PUSHD … POPD and recover on mid-fail. visit write fail path needs explicit POPD. Easy to leak cwd on EXIT.",
+      "title": "No WITHDIR / ENTER\u2026LEAVE block form",
+      "detail": "Must hand-roll PUSHD \u2026 POPD and recover on mid-fail. visit write fail path needs explicit POPD. Easy to leak cwd on EXIT.",
       "repro": "PUSHD; EXIT 2 leaves process in workdir"
     },
     {
@@ -100,7 +100,7 @@
       "area": "host|has",
       "title": "HAS on CWD paths is basename false-friend prone",
       "detail": "HAS cwd site matches any path containing site. Prefer ENDS/BASENAME EQS for site checks.",
-      "repro": "HAS /tmp/…/site site"
+      "repro": "HAS /tmp/\u2026/site site"
     },
     {
       "id": "W6",
@@ -123,7 +123,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_WS_REQUIRE=abc → leave empty rc 0.",
+      "detail": "CUBALC_WS_REQUIRE=abc \u2192 leave empty rc 0.",
       "repro": "REQUIRE=abc leave"
     }
   ],
@@ -136,7 +136,7 @@
   ],
   "language_gaps": [
     "Persistent or plate-backed DIRSTACK across runs",
-    "WITHDIR path … END auto-pop on fail/exit",
+    "WITHDIR path \u2026 END auto-pop on fail/exit",
     "KINDFOLLOW / KINDSTR -L",
     "KINDSTR missing soft-fail option",
     "WRITE trailing NL",
@@ -144,9 +144,9 @@
   ],
   "issues_faced": [
     "work/probe/kind/visit/link/leave-empty green",
-    "stack empty across re-exec — core lesson; visit compounds",
+    "stack empty across re-exec \u2014 core lesson; visit compounds",
     "selftest 257/257; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "fba0a5699fda2bf49aa45397c87141dc3283d8fa",
   "ts": "2026-08-06T20:53:23Z"
 }
