@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 188,
-  "version": "1.15.213-usability",
-  "item": "SYS COUNTFILELINE / FILECOUNTLINE count matching file lines",
-  "item_id": 221,
-  "title": "SYS COUNTFILELINE|FILECOUNTLINE path needle \u2014 count lines containing needle \u2192 LAST_N",
-  "commit": "b3291ec99884e701537ae52365d8ae907269f16a",
-  "summary": "Count matching file lines; COUNTFILELINEI. Complements FINDFILELINE. selftest 188.",
+  "iter": 189,
+  "version": "1.15.214-usability",
+  "item": "SYS GREPFILE / FILEGREP keep matching lines from one file",
+  "item_id": 222,
+  "title": "SYS GREPFILE|FILEGREP path needle \u2014 keep matching file lines \u2192 bag",
+  "commit": "5dc9bd5ae4711b91cda3b2ab8f138ec013bbb29b",
+  "summary": "Single-file line harvest bag; GREPFILEI; HIT/TOTAL. selftest 189.",
   "proofs": [
-    "761_sys_countfileline",
-    "selftest n_pass=188"
+    "762_sys_grepfile",
+    "selftest n_pass=189"
   ],
-  "when": "2026-08-06T09:14:22Z",
+  "when": "2026-08-06T09:24:09Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b3291ec99884e701537ae52365d8ae907269f16a"
+  "sha": "5dc9bd5ae4711b91cda3b2ab8f138ec013bbb29b"
 }
