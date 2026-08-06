@@ -694,6 +694,115 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS FILTERGLOB|MATCHBAG|GREPGLOB bag pattern
+     * SYS VFILTERGLOB|GREPVGLOB|DROPGLOB bag pattern — invert (drop matches).
+     * Keep/drop newline fields matching shell pattern (* ? []).
+     * Matches full field OR its basename (so "*.plate" works after PATHGLOB).
+     * LAST = filtered bag; LAST_N/FILTERGLOB_N = kept; FILTERGLOB_DROP = dropped.
+     * Usability: re-filter LIST/PATHGLOB bags without shell or EACH+IF glue. */
+    if (kw(&L->cur,"FILTERGLOB") || kw(&L->cur,"MATCHBAG") || kw(&L->cur,"GREPGLOB") ||
+        kw(&L->cur,"GLOBFILTER") || kw(&L->cur,"FNMATCHBAG") || kw(&L->cur,"GLOBBAG") ||
+        kw(&L->cur,"VFILTERGLOB") || kw(&L->cur,"GREPVGLOB") || kw(&L->cur,"DROPGLOB") ||
+        kw(&L->cur,"VMATCHBAG") || kw(&L->cur,"VGREPGLOB") || kw(&L->cur,"DROPBAGGLOB")){
+      char bag[CUBALC_HOST_STR_MAX], pat[256], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start, *slash, *base;
+      size_t flen, olen = 0;
+      long kept = 0, drop = 0;
+      int invert = 0;
+      if (kw(&L->cur,"VFILTERGLOB") || kw(&L->cur,"GREPVGLOB") || kw(&L->cur,"DROPGLOB") ||
+          kw(&L->cur,"VMATCHBAG") || kw(&L->cur,"VGREPGLOB") || kw(&L->cur,"DROPBAGGLOB"))
+        invert = 1;
+      lex_next(L);
+      bag[0] = 0; pat[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) {
+        /* no bag arg — use LAST, then require pattern */
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      }
+      if (resolve_str_arg(vm, L, pat, sizeof pat) != 0) {
+        /* one-arg form: SYS FILTERGLOB "*.plate" → bag was pattern, source LAST */
+        if (bag[0] && (strchr(bag, '*') || strchr(bag, '?') || strchr(bag, '['))) {
+          snprintf(pat, sizeof pat, "%s", bag);
+          snprintf(bag, sizeof bag, "%s", vm->last_str);
+        } else {
+          fail(vm, "SYS FILTERGLOB bag pattern | SYS FILTERGLOB pattern (uses LAST)");
+          return -1;
+        }
+      }
+      if (!pat[0]) snprintf(pat, sizeof pat, "%s", "*");
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char field[CUBALC_HOST_STR_MAX];
+          size_t take = flen;
+          int hit = 0;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          slash = strrchr(field, '/');
+          base = slash ? slash + 1 : field;
+#if defined(CUBALC_OS_WINDOWS)
+          {
+            const char *cands[2];
+            int ci;
+            cands[0] = field;
+            cands[1] = base;
+            for (ci = 0; ci < 2 && !hit; ci++) {
+              const char *name = cands[ci];
+              size_t nlen = strlen(name);
+              if (ci == 1 && name == field) continue;
+              if (strcmp(pat, "*") == 0) hit = 1;
+              else if (pat[0] == '*' && pat[1] && !strchr(pat + 1, '*'))
+                hit = (nlen >= strlen(pat + 1) &&
+                       strcmp(name + nlen - strlen(pat + 1), pat + 1) == 0);
+              else if (pat[0] && pat[strlen(pat) - 1] == '*') {
+                size_t pn = strlen(pat) - 1;
+                hit = (strncmp(name, pat, pn) == 0);
+              } else
+                hit = (strcmp(name, pat) == 0);
+            }
+          }
+#else
+          hit = (fnmatch(pat, field, 0) == 0) ||
+                (base != field && fnmatch(pat, base, 0) == 0);
+#endif
+          if (invert) hit = !hit;
+          if (hit) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, field, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+          } else {
+            drop++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "FILTERGLOB", out);
+      var_set_str(vm, "MATCHBAG", out);
+      var_set_str(vm, "GREPGLOB", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "FILTERGLOB_N", kept);
+      var_set_num(vm, "MATCHBAG_N", kept);
+      var_set_num(vm, "GREPGLOB_N", kept);
+      var_set_num(vm, "FILTERGLOB_DROP", drop);
+      var_set_num(vm, "MATCHBAG_DROP", drop);
+      if (invert) {
+        var_set_num(vm, "VFILTERGLOB_N", kept);
+        var_set_num(vm, "GREPVGLOB_N", kept);
+        var_set_num(vm, "DROPGLOB_N", drop);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"ENV") || kw(&L->cur,"SETENV") || kw(&L->cur,"EXPORT") ||
         kw(&L->cur,"UNSETENV") || kw(&L->cur,"ENVUNSET")){
       /* SYS ENV name [OR fallback] — get.
@@ -10722,7 +10831,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10954,6 +11063,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PATHGLOB", "SYS PATHGLOB|PGLOB path|pattern [pattern] — full paths matching * ? [] · ready for READ/RM"},
       {"SYS PGLOB", "SYS PGLOB alias of SYS PATHGLOB"},
       {"SYS FULLGLOB", "SYS FULLGLOB alias of SYS PATHGLOB"},
+      {"SYS FILTERGLOB", "SYS FILTERGLOB|MATCHBAG bag pattern — keep fields matching * ? [] (basename too)"},
+      {"SYS MATCHBAG", "SYS MATCHBAG alias of SYS FILTERGLOB"},
+      {"SYS GREPGLOB", "SYS GREPGLOB alias of SYS FILTERGLOB"},
+      {"SYS VFILTERGLOB", "SYS VFILTERGLOB|GREPVGLOB bag pattern — drop matching fields"},
       {"SYS NTH", "SYS NTH n [str] — 0-based newline field · pairs with LIST"},
       {"SYS LINE", "SYS LINE n [str] — 1-based newline field"},
       {"SYS HEAD", "SYS HEAD [str] — first newline field"},

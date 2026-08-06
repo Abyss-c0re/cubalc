@@ -1,0 +1,88 @@
+# SYS FILTERGLOB / MATCHBAG — keep bag fields matching shell pattern
+# Usability: re-filter LIST/PATHGLOB results without EACH+IF or shell
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "fglob_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "alpha.plate"
+LET f1 = LAST
+SYS JOIN fix "beta.plate"
+LET f2 = LAST
+SYS JOIN fix "gamma.log"
+LET f3 = LAST
+SYS JOIN fix "readme.txt"
+LET f4 = LAST
+SYS TOUCH f1
+SYS TOUCH f2
+SYS TOUCH f3
+SYS TOUCH f4
+
+# LIST then FILTERGLOB basenames
+SYS LIST fix
+LET bag = LAST
+SYS FILTERGLOB bag "*.plate"
+ASSERT OK == 1
+ASSERT FILTERGLOB_N == 2
+ASSERT FILTERGLOB_DROP == 2
+SYS HASLINE LAST "alpha.plate"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "beta.plate"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "gamma.log"
+ASSERT LAST_N == 0
+
+# PATHGLOB full paths + basename match (*.plate matches /path/alpha.plate)
+SYS PATHGLOB fix
+SYS FILTERGLOB LAST "*.plate"
+ASSERT MATCHBAG_N == 2
+SYS HASLINE LAST f1
+ASSERT LAST_N == 1
+SYS HASLINE LAST f2
+ASSERT LAST_N == 1
+
+# invert — drop plates
+SYS LIST fix
+SYS VFILTERGLOB LAST "*.plate"
+ASSERT VFILTERGLOB_N == 2
+SYS HASLINE LAST "gamma.log"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "readme.txt"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "alpha.plate"
+ASSERT LAST_N == 0
+
+# aliases + prefix pattern
+SYS LIST fix
+SYS MATCHBAG LAST "g*"
+ASSERT MATCHBAG_N == 1
+SYS EQS LAST "gamma.log"
+ASSERT LAST_N == 1
+
+SYS LIST fix
+SYS GREPGLOB LAST "readme*"
+ASSERT GREPGLOB_N == 1
+
+SYS LIST fix
+SYS GREPVGLOB LAST "*.log"
+ASSERT GREPVGLOB_N == 3
+SYS HASLINE LAST "gamma.log"
+ASSERT LAST_N == 0
+
+# one-arg form uses LAST as bag
+SYS LIST fix
+SYS FILTERGLOB "*.txt"
+ASSERT FILTERGLOB_N == 1
+SYS EQS LAST "readme.txt"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM f1
+SYS RM f2
+SYS RM f3
+SYS RM f4
+
+PRINT "sys_filterglob ok"
