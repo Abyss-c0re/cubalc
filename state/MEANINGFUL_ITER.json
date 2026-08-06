@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 219,
-  "version": "1.15.244-usability",
-  "item": "SYS MKTEMPDIR / MKDTEMP / MAKETEMPDIR unique empty dir under TMP",
-  "item_id": 252,
-  "title": "SYS MKTEMPDIR|MKDTEMP [prefix] — collision-free agent workspaces via mkdtemp",
-  "commit": "f1ef77aed9fecb22b4260e4221b8b218c918cb65",
-  "summary": "Unique empty temp dirs under TMP without shell mktemp -d. selftest 219.",
+  "iter": 220,
+  "version": "1.15.245-usability",
+  "item": "SYS RMDIR / REMOVEDIR / RD empty directory cleanup",
+  "item_id": 253,
+  "title": "SYS RMDIR|REMOVEDIR path — remove empty dir · miss soft · non-empty soft fail",
+  "commit": "e56d467a10afd63eba62b03125e397e0f92331ab",
+  "summary": "Empty dir cleanup for MKTEMPDIR workspaces without shell rmdir. selftest 220.",
   "proofs": [
-    "793_sys_mktempdir",
-    "selftest n_pass=219"
+    "794_sys_rmdir",
+    "selftest n_pass=220"
   ],
-  "when": "2026-08-06T14:14:40Z",
+  "when": "2026-08-06T14:24:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f1ef77aed9fecb22b4260e4221b8b218c918cb65",
-  "note": "complements MKTEMP files with mkdtemp work dirs"
+  "sha": "e56d467a10afd63eba62b03125e397e0f92331ab",
+  "note": "completes MKTEMPDIR lifecycle: create workdir → work → rmdir"
 }
