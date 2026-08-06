@@ -3936,6 +3936,55 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SHUNQUOTE|UNQUOTE|SHELLUNQUOTE [str] — peel POSIX single-quote wrap.
+     * Inverse of SHQUOTE: strip outer quotes; map '\'' → ' inside.
+     * Unquoted input returned as-is (OK=1). Missing arg uses LAST.
+     * Usability: recover raw plate text from shell-quoted fields without shell eval. */
+    if (kw(&L->cur,"SHUNQUOTE") || kw(&L->cur,"UNQUOTE") || kw(&L->cur,"SHELLUNQUOTE") ||
+        kw(&L->cur,"UNSHQUOTE") || kw(&L->cur,"DEQUOTE") || kw(&L->cur,"UNSQUOTE") ||
+        kw(&L->cur,"POSIXUNQUOTE") || kw(&L->cur,"SH_UNQUOTE")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t i = 0, o = 0, n;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      n = strlen(src);
+      /* if starts and ends with single-quote and len>=2, peel */
+      if (n >= 2 && src[0] == (char)39 && src[n - 1] == (char)39) {
+        i = 1;
+        while (i + 1 < n) { /* stop before final closing quote */
+          if (src[i] == (char)39 && i + 3 < n &&
+              src[i + 1] == (char)92 && src[i + 2] == (char)39 && src[i + 3] == (char)39) {
+            /* '\'' sequence → one ' */
+            if (o + 1 >= sizeof out) break;
+            out[o++] = (char)39;
+            i += 4;
+          } else if (src[i] == (char)39 && i + 1 == n - 1) {
+            /* closing quote reached */
+            break;
+          } else {
+            if (o + 1 >= sizeof out) break;
+            out[o++] = src[i];
+            i++;
+          }
+        }
+        out[o] = 0;
+      } else {
+        /* not single-quoted — pass through */
+        snprintf(out, sizeof out, "%s", src);
+        o = strlen(out);
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)o;
+      var_set_num(vm, "LAST_N", (long)o);
+      var_set_str(vm, "SHUNQUOTE", out);
+      var_set_str(vm, "UNQUOTE", out);
+      var_set_num(vm, "SHUNQUOTE_N", (long)o);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms]
      * — poll until path exists (agent plate/peer handoff).
      * Default timeout 30000 ms; cap 120s. Poll every 50 ms.
@@ -23851,6 +23900,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TTYNAME", "SYS TTYNAME|CTTY|TTYDEV [IN|OUT|ERR] — terminal device path → LAST"},
       {"SYS NICE", "SYS NICE|GETNICE [n] — process nice get/set → LAST_N"},
       {"SYS SHQUOTE", "SYS SHQUOTE|SHELLQUOTE [str] — POSIX single-quote shell-safe wrap"},
+      {"SYS SHUNQUOTE", "SYS SHUNQUOTE|UNQUOTE [str] — peel POSIX single-quote shell wrap"},
       {"SYS LOADAVG", "SYS LOADAVG|LOAD — 1/5/15 load · LOAD1_N centiload for IF"},
       {"SYS LOAD", "SYS LOAD alias of SYS LOADAVG"},
       {"SYS UPTIME", "SYS UPTIME|BOOTAGE — seconds since boot → LAST_N/UPTIME"},

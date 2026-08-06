@@ -1,0 +1,69 @@
+# SYS SHUNQUOTE / UNQUOTE — peel POSIX single-quote shell wrap
+# Usability: recover raw text from SHQUOTE fields without shell eval
+
+HOLD_FLASH 1
+
+# round-trip plain
+SYS SHQUOTE "hello"
+ASSERT OK == 1
+SYS SHUNQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT SHUNQUOTE_N == 5
+
+# empty
+SYS SHQUOTE ""
+SYS SHUNQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# spaces
+SYS SHQUOTE "a b c"
+SYS UNQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST "a b c"
+ASSERT LAST_N == 1
+
+# embedded quote via SHQUOTE then SHUNQUOTE
+SYS SHQUOTE "it"
+# build it's by quoting pieces then? use REPLACEALL on a SHQUOTE of itX then...
+# simpler: SHQUOTE already tested; craft quoted form via CAT
+SYS SHQUOTE "ab"
+LET q = LAST
+SYS SHUNQUOTE q
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+
+# unquoted pass-through
+SYS SHUNQUOTE "raw"
+ASSERT OK == 1
+SYS EQS LAST "raw"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SHQUOTE "z"
+SYS SHELLUNQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+SYS SHQUOTE "w"
+SYS DEQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST "w"
+ASSERT LAST_N == 1
+
+# round-trip with apostrophe: SHQUOTE then SHUNQUOTE
+SYS SHQUOTE "it's"
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N == 9
+SYS SHUNQUOTE LAST
+ASSERT OK == 1
+SYS EQS LAST "it's"
+ASSERT LAST_N == 1
+SYS LEN LAST
+ASSERT LAST_N == 4
+
+PRINT "sys_shunquote ok"
