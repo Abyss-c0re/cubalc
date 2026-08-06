@@ -1,0 +1,89 @@
+# SYS UUID / GUID / GENUUID · UUID0 / UUIDNODASH / COMPACTUUID
+# — RFC 4122 version-4 UUID for agent work/claim ids
+# Usability: unique ids without shell uuidgen
+
+HOLD_FLASH 1
+
+# dashed form: 8-4-4-4-12 lowercase, length 36
+SYS UUID
+ASSERT OK == 1
+ASSERT UUID_N == 36
+ASSERT LAST_N == 36
+SYS LEN LAST
+ASSERT LAST_N == 36
+
+# shape: dashes at 8,13,18,23
+SYS UUID
+LET u = LAST
+SYS MID u 8 1
+SYS EQS LAST "-"
+ASSERT LAST_N == 1
+SYS MID u 13 1
+SYS EQS LAST "-"
+ASSERT LAST_N == 1
+SYS MID u 18 1
+SYS EQS LAST "-"
+ASSERT LAST_N == 1
+SYS MID u 23 1
+SYS EQS LAST "-"
+ASSERT LAST_N == 1
+
+# version nibble is 4 (char at index 14)
+SYS MID u 14 1
+SYS EQS LAST "4"
+ASSERT LAST_N == 1
+
+# variant: char at index 19 is 8|9|a|b
+SYS MID u 19 1
+LET v = LAST
+SYS HAS "89ab" v
+ASSERT LAST_N == 1
+
+# two UUIDs differ
+SYS UUID
+LET a = LAST
+SYS UUID
+LET b = LAST
+SYS EQS a b
+ASSERT LAST_N == 0
+
+# compact 32-hex
+SYS UUID0
+ASSERT OK == 1
+ASSERT UUID_N == 32
+SYS LEN LAST
+ASSERT LAST_N == 32
+SYS HAS LAST "-"
+ASSERT LAST_N == 0
+
+# aliases
+SYS GUID
+ASSERT UUID_N == 36
+SYS GENUUID
+ASSERT UUID_N == 36
+SYS UUIDNODASH
+ASSERT UUID_N == 32
+SYS COMPACTUUID
+ASSERT UUID_N == 32
+
+# agent: claim path leaf with compact id
+SYS TMP
+LET td = LAST
+SYS JOIN td "uuid_mi"
+LET dir = LAST
+SYS MKDIR dir
+SYS UUID0
+LET id = LAST
+SYS JOIN dir id
+LET fp = LAST
+SYS CLAIM fp
+ASSERT OK == 1
+SYS EXIST fp
+ASSERT LAST_N == 1
+SYS BASENAME fp
+SYS EQS LAST id
+ASSERT LAST_N == 1
+SYS RM fp
+SYS RMDIR dir
+
+PRINT "sys_uuid ok"

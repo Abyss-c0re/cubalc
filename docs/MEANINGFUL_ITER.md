@@ -284,6 +284,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 254. ~~**`SYS BASE64` / `B64ENC` · `BASE64D` / `B64DEC`**~~ **done** (standard base64 encode/decode · plate payload transport without shell base64).
 255. ~~**`SYS HEX` / `HEXENC` · `HEXD` / `HEXDEC`**~~ **done** (lowercase hex encode/decode · binary-safe plate fields without shell xxd).
 256. ~~**`SYS URLENC` / `URLENCODE` · `URLDEC` / `URLDECODE`**~~ **done** (RFC 3986 percent-encode/decode · path/query-safe plates without shell).
+257. ~~**`SYS UUID` / `GUID` · `UUID0` / `UUIDNODASH`**~~ **done** (RFC 4122 v4 ids · agent work/claim stamps without shell uuidgen).
 
 ## Tick protocol
 

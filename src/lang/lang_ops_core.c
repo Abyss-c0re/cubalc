@@ -202,6 +202,64 @@ static int cubalc_url_dec(const char *in, size_t in_len, char *out, size_t out_c
   return 0;
 }
 
+/* SYS UUID / UUID0 — RFC 4122 version-4 UUID for agent work/claim ids.
+ * dashed: 8-4-4-4-12 lowercase; compact (nodash): 32 hex. Entropy: /dev/urandom
+ * then time+pid+rand fallback. */
+static void cubalc_uuid_rand16(unsigned char b[16]) {
+  size_t got = 0;
+#if !defined(CUBALC_OS_WINDOWS)
+  {
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd >= 0) {
+      while (got < 16) {
+        ssize_t n = read(fd, b + got, 16 - got);
+        if (n <= 0) break;
+        got += (size_t)n;
+      }
+      close(fd);
+    }
+  }
+#endif
+  if (got < 16) {
+    static unsigned long seed;
+    unsigned long s;
+    size_t i;
+    if (!seed) {
+      seed = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+      seed ^= (unsigned long)getpid() << 16;
+#endif
+      seed ^= (unsigned long)(size_t)&seed;
+      if (!seed) seed = 0xC0B1CUL;
+    }
+    s = seed;
+    for (i = 0; i < 16; i++) {
+      s = s * 1103515245UL + 12345UL;
+      b[i] = (unsigned char)((s >> 16) & 0xff);
+    }
+    seed = s;
+  }
+  /* RFC 4122: version 4, variant 10xx */
+  b[6] = (unsigned char)((b[6] & 0x0f) | 0x40);
+  b[8] = (unsigned char)((b[8] & 0x3f) | 0x80);
+}
+static int cubalc_uuid_fmt(char *out, size_t out_cap, int compact) {
+  static const char *hx = "0123456789abcdef";
+  unsigned char b[16];
+  size_t need = compact ? 32 : 36;
+  size_t i, o = 0;
+  if (!out || out_cap < need + 1) return -1;
+  cubalc_uuid_rand16(b);
+  for (i = 0; i < 16; i++) {
+    if (!compact && (i == 4 || i == 6 || i == 8 || i == 10))
+      out[o++] = '-';
+    out[o++] = hx[b[i] >> 4];
+    out[o++] = hx[b[i] & 0xf];
+  }
+  out[o] = 0;
+  return (int)o;
+}
+
 #if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
@@ -2106,6 +2164,54 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "PERCENTENC", out);
       }
       var_set_num(vm, "URLENC_N", (long)n_out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UUID|GUID|GENUUID|NEWUUID
+     * SYS UUID0|UUIDNODASH|GUID0|COMPACTUUID
+     * — RFC 4122 v4 UUID (dashed or 32-hex compact).
+     * LAST = id; LAST_N / UUID_N = length (36|32); OK=1.
+     * Usability: unique agent work/claim ids without shell uuidgen. */
+    if (kw(&L->cur,"UUID") || kw(&L->cur,"GUID") || kw(&L->cur,"GENUUID") ||
+        kw(&L->cur,"NEWUUID") || kw(&L->cur,"GENID") || kw(&L->cur,"MAKEUUID") ||
+        kw(&L->cur,"UUIDV4") || kw(&L->cur,"UUID4") ||
+        kw(&L->cur,"UUID0") || kw(&L->cur,"UUIDNODASH") || kw(&L->cur,"GUID0") ||
+        kw(&L->cur,"COMPACTUUID") || kw(&L->cur,"UUIDCOMPACT") ||
+        kw(&L->cur,"UUIDN") || kw(&L->cur,"NODASHUUID")){
+      char out[48];
+      int compact = (kw(&L->cur,"UUID0") || kw(&L->cur,"UUIDNODASH") ||
+                    kw(&L->cur,"GUID0") || kw(&L->cur,"COMPACTUUID") ||
+                    kw(&L->cur,"UUIDCOMPACT") || kw(&L->cur,"UUIDN") ||
+                    kw(&L->cur,"NODASHUUID"));
+      int n;
+      lex_next(L);
+      out[0] = 0;
+      n = cubalc_uuid_fmt(out, sizeof out, compact);
+      if (n < 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "UUID_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "UUID: format fail");
+        var_set_str(vm, "ERR", "UUID: format fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_str(vm, "UUID", out);
+      var_set_str(vm, "GUID", out);
+      if (compact) {
+        var_set_str(vm, "UUID0", out);
+        var_set_str(vm, "UUIDNODASH", out);
+      } else {
+        var_set_str(vm, "GENUUID", out);
+        var_set_str(vm, "NEWUUID", out);
+      }
+      var_set_num(vm, "UUID_N", (long)n);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
