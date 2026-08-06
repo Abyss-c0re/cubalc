@@ -267,6 +267,57 @@ int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r) 
   return 0;
 }
 
+/* Usability: SYS SYMLINK|LN target linkpath — plate alias without shell ln -s. */
+int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_result *r) {
+  r_clear(r);
+  if (!target || !target[0] || !linkpath || !linkpath[0]) {
+    snprintf(r->err, sizeof r->err, "symlink: empty path");
+    return -1;
+  }
+  if (access(linkpath, F_OK) == 0) {
+    snprintf(r->err, sizeof r->err, "symlink: link exists");
+    return -1;
+  }
+  if (symlink(target, linkpath) != 0) {
+    snprintf(r->err, sizeof r->err, "symlink: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", linkpath);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS READLINK path — peel symlink target without shell. */
+int cubalc_host_readlink(const char *path, cubalc_host_result *r) {
+  char buf[CUBALC_HOST_STR_MAX];
+  ssize_t n;
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "readlink: empty path");
+    return -1;
+  }
+  if (lstat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "readlink: missing");
+    return -1;
+  }
+  if (!S_ISLNK(st.st_mode)) {
+    snprintf(r->err, sizeof r->err, "readlink: not a symlink");
+    return -1;
+  }
+  n = readlink(path, buf, sizeof buf - 1);
+  if (n < 0) {
+    snprintf(r->err, sizeof r->err, "readlink: %s", strerror(errno));
+    return -1;
+  }
+  buf[n] = 0;
+  snprintf(r->str, sizeof r->str, "%s", buf);
+  r->n = (long)n;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS COPY|CP src dst — duplicate plate without shell. */
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r) {
   FILE *in = NULL, *out = NULL;

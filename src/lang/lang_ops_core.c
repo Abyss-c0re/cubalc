@@ -1312,6 +1312,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SYMLINK|LN|LINK target linkpath — create symlink (plate alias).
+     * LAST = linkpath; LAST_N/SYMLINK_N = 1; soft fail if link exists or empty.
+     * Usability: plate layout aliases without shell ln -s. */
+    if (kw(&L->cur,"SYMLINK") || kw(&L->cur,"LN") || kw(&L->cur,"MAKELINK") ||
+        kw(&L->cur,"LINKTO") || kw(&L->cur,"SOFTLINK") || kw(&L->cur,"SYMLN") ||
+        kw(&L->cur,"MLINK")){
+      char target[512], linkpath[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      target[0] = 0; linkpath[0] = 0;
+      if (resolve_str_arg(vm, L, target, sizeof target) != 0) {
+        fail(vm, "SYS SYMLINK target linkpath");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, linkpath, sizeof linkpath) != 0) {
+        fail(vm, "SYS SYMLINK target linkpath");
+        return -1;
+      }
+      if (!target[0] || !linkpath[0] || cubalc_host_symlink(target, linkpath, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "SYMLINK_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "SYMLINK: fail");
+          var_set_str(vm, "ERR", "SYMLINK: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", linkpath);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", linkpath);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "SYMLINK_N", hr.n);
+      var_set_str(vm, "SYMLINK", linkpath);
+      var_set_str(vm, "SYMLINK_TARGET", target);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS READLINK|READLN|LINKTARGET path — peel symlink target → LAST.
+     * LAST_N = target length; soft miss / not-link → OK=0.
+     * Usability: resolve plate aliases without shell readlink. */
+    if (kw(&L->cur,"READLINK") || kw(&L->cur,"READLN") || kw(&L->cur,"LINKTARGET") ||
+        kw(&L->cur,"GETLINK") || kw(&L->cur,"LNKTARGET") || kw(&L->cur,"SYMLINKTARGET") ||
+        kw(&L->cur,"READSYMLINK") || kw(&L->cur,"RESOLVELINK")){
+      char path[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] || cubalc_host_readlink(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "READLINK_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "READLINK: fail");
+          var_set_str(vm, "ERR", "READLINK: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "READLINK_N", hr.n);
+      var_set_str(vm, "READLINK", hr.str);
+      var_set_str(vm, "LINKTARGET", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS RENAME|MV|MOVE from to — move plate path without shell. */
     if (kw(&L->cur,"RENAME") || kw(&L->cur,"MV") || kw(&L->cur,"MOVE")){
       char from[512], to[512];

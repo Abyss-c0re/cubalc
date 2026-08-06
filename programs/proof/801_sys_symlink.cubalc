@@ -1,0 +1,87 @@
+# SYS SYMLINK / LN · READLINK / LINKTARGET
+# — create and peel plate path aliases without shell ln -s / readlink
+# Usability: agent layout links for current.json → stamp.json
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "symlink_mi"
+LET dir = LAST
+SYS MKDIR dir
+
+# real plate file
+SYS JOIN dir "status.json"
+LET real = LAST
+SYS WRITEATOMIC real "{\"ok\":true}"
+ASSERT OK == 1
+
+# symlink alias
+SYS JOIN dir "current.json"
+LET link = LAST
+SYS SYMLINK real link
+ASSERT OK == 1
+ASSERT SYMLINK_N == 1
+SYS EQS LAST link
+ASSERT LAST_N == 1
+
+# peel target
+SYS READLINK link
+ASSERT OK == 1
+SYS EQS LAST real
+ASSERT LAST_N == 1
+
+# read through symlink
+SYS READ link
+SYS EQS LAST "{\"ok\":true}"
+ASSERT LAST_N == 1
+
+# aliases
+SYS JOIN dir "alias.json"
+LET link2 = LAST
+SYS LN real link2
+ASSERT OK == 1
+SYS LINKTARGET link2
+SYS EQS LAST real
+ASSERT LAST_N == 1
+
+# soft fail: link already exists
+SYS SYMLINK real link
+ASSERT OK == 0
+ASSERT SYMLINK_N == 0
+
+# soft fail: not a symlink
+SYS READLINK real
+ASSERT OK == 0
+ASSERT READLINK_N == 0
+
+# soft fail: missing
+SYS READLINK "/no/such/symlink_mi_path"
+ASSERT OK == 0
+
+# relative target works
+SYS JOIN dir "rel_tgt.txt"
+LET rt = LAST
+SYS WRITEATOMIC rt "hello"
+SYS JOIN dir "rel_link"
+LET rl = LAST
+SYS BASENAME rt
+LET leaf = LAST
+SYS SYMLINK leaf rl
+ASSERT OK == 1
+SYS READLINK rl
+SYS EQS LAST leaf
+ASSERT LAST_N == 1
+SYS READ rl
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# cleanup (RM removes symlink, not target)
+SYS RM link
+SYS RM link2
+SYS RM rl
+SYS RM real
+SYS RM rt
+SYS RMDIR dir
+
+PRINT "sys_symlink ok"

@@ -38,6 +38,10 @@ int cubalc_host_rmdir(const char *path, cubalc_host_result *r);
 int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 /* copy regular file src → dst; r->n = bytes written */
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r);
+/* create symlink linkpath → target; r->str = linkpath; soft fail if linkpath exists */
+int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_result *r);
+/* read symlink target into r->str; soft fail if not a symlink / missing */
+int cubalc_host_readlink(const char *path, cubalc_host_result *r);
 /* absolute path: realpath if exists, else cwd-join relative; always fills r->str */
 int cubalc_host_abspath(const char *path, cubalc_host_result *r);
 /* create empty file or update mtime; r->n=1 created, 0 updated */

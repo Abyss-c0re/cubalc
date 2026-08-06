@@ -287,6 +287,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 257. ~~**`SYS UUID` / `GUID` · `UUID0` / `UUIDNODASH`**~~ **done** (RFC 4122 v4 ids · agent work/claim stamps without shell uuidgen).
 258. ~~**`SYS JSONESC` / `JESC` · `JSONUNESC` / `JUNESC`**~~ **done** (JSON string-body escape/unescape · plate fields without hand-escaping).
 259. ~~**`SYS CRC32` / `CRC` · `CRC32FILE` / `FILECRC32`**~~ **done** (IEEE CRC-32 hex stamps · interoperable integrity without shell cksum).
+260. ~~**`SYS SYMLINK` / `LN` · `READLINK` / `LINKTARGET`**~~ **done** (create/peel plate path aliases without shell ln -s/readlink).
 
 ## Tick protocol
 
