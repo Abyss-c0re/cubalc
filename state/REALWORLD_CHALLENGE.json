@@ -8,25 +8,25 @@
   "tests": [
     {
       "name": "scan_logs",
-      "cmd": "PATHGLOB *.log → 4 paths",
+      "cmd": "PATHGLOB *.log \u2192 4 paths",
       "ok": true,
       "note": "inventory"
     },
     {
       "name": "volume",
-      "cmd": "LINECOUNTALL → bag 1/3/2/5 SUM=11",
+      "cmd": "LINECOUNTALL \u2192 bag 1/3/2/5 SUM=11",
       "ok": true,
       "note": "parallel counts"
     },
     {
       "name": "harvest_ERROR",
-      "cmd": "GREPLINES ERROR → 2 lines a.log only",
+      "cmd": "GREPLINES ERROR \u2192 2 lines a.log only",
       "ok": true,
       "note": "cs harvest"
     },
     {
       "name": "harvesti_error",
-      "cmd": "GREPLINESI error → +Error gamma = 3",
+      "cmd": "GREPLINESI error \u2192 +Error gamma = 3",
       "ok": true,
       "note": "icase"
     },
@@ -56,13 +56,13 @@
     },
     {
       "name": "ghost_volume",
-      "cmd": "LINECOUNTALL ghost → 0 slot MISS=1 SUM partial",
+      "cmd": "LINECOUNTALL ghost \u2192 0 slot MISS=1 SUM partial",
       "ok": true,
       "note": "aligned bag"
     },
     {
       "name": "empty_greplines",
-      "cmd": "GREPLINES bag '' → N=all lines (empty matches)",
+      "cmd": "GREPLINES bag '' \u2192 N=all lines (empty matches)",
       "ok": true,
       "note": "language empty needle"
     },
@@ -85,8 +85,8 @@
       "severity": "high",
       "area": "host|match",
       "title": "GREPLINES empty needle matches every line (N=linecount)",
-      "detail": "Unlike COUNTINFILES empty→0, empty substring is true for all lines. Agent blank ARG harvest floods LINES plate. Opposite polarity of empty-needle family across ops.",
-      "repro": "GREPLINES bag \"\" → GREPLINES_N == total lines"
+      "detail": "Unlike COUNTINFILES empty\u21920, empty substring is true for all lines. Agent blank ARG harvest floods LINES plate. Opposite polarity of empty-needle family across ops.",
+      "repro": "GREPLINES bag \"\" \u2192 GREPLINES_N == total lines"
     },
     {
       "id": "W2",
@@ -94,21 +94,21 @@
       "area": "host|parse",
       "title": "HEADFILE/TAILFILE n bare numeric var is form error",
       "detail": "SYS HEADFILE path n fails with unknown form 'n'; need (n) expr or string var. Literal 2 works. Easy agent trap when peeks are parameterized.",
-      "repro": "LET n=2; SYS HEADFILE p n → parse fail; SYS HEADFILE p (n) ok"
+      "repro": "LET n=2; SYS HEADFILE p n \u2192 parse fail; SYS HEADFILE p (n) ok"
     },
     {
       "id": "W3",
       "severity": "high",
       "area": "host|json",
       "title": "PRINT_JSON harvest bag glues lines without separators",
-      "detail": "lines plate has NL between ERROR lines; PRINT_JSON → ERROR alpha oneERROR alpha two. Recurring bag JSON collapse.",
+      "detail": "lines plate has NL between ERROR lines; PRINT_JSON \u2192 ERROR alpha oneERROR alpha two. Recurring bag JSON collapse.",
       "repro": "PRINT_JSON lines after GREPLINES"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "GREPLINES returns bare lines — no path:line provenance",
+      "title": "GREPLINES returns bare lines \u2014 no path:line provenance",
       "detail": "Harvest packet loses which file produced each line. Agents must dual GREPFILES or custom EACH. No GREPLINES --with-filename mode.",
       "repro": "FATAL boom alone; multi-file harvest loses source"
     },
@@ -126,7 +126,7 @@
       "area": "host|match",
       "title": "Substring false friends: ERR matches ERROR lines",
       "detail": "No whole-word mode on GREPLINES. Short severity needles over-harvest.",
-      "repro": "GREPLINES ERR → ERR line + ERROR alpha*"
+      "repro": "GREPLINES ERR \u2192 ERR line + ERROR alpha*"
     },
     {
       "id": "W7",
@@ -134,7 +134,7 @@
       "area": "host|fs",
       "title": "LINECOUNTALL miss keeps bag length with 0 slots",
       "detail": "Useful for ZIP with PATHS but silent zero can look like empty files. MISS counter is the only signal.",
-      "repro": "bag with ghost → VOLUME 5\\n0\\n2 MISS=1"
+      "repro": "bag with ghost \u2192 VOLUME 5\\n0\\n2 MISS=1"
     },
     {
       "id": "W8",
@@ -161,11 +161,11 @@
     "HEAD vs HEADFILE naming clarity in help"
   ],
   "issues_faced": [
-    "Bare HEADFILE n parse fail blocked first head/tail tests — fixed with (peek_want)",
-    "Empty GREPLINES polarity opposite COUNTINFILES — documented",
+    "Bare HEADFILE n parse fail blocked first head/tail tests \u2014 fixed with (peek_want)",
+    "Empty GREPLINES polarity opposite COUNTINFILES \u2014 documented",
     "Positive harvest/volume/packet/soft miss clean",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "4acc4e625b21510903622e12dd303fc9bdb7d482",
   "ts": "2026-08-06T07:59:44Z"
 }
