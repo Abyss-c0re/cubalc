@@ -1,166 +1,164 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 86,
-  "program": "programs/realworld/release_pointer_board.cubalc",
-  "theme": "release pointer SYMLINK READLINK ISLINK STAT HUMANSIZE BASE64 promote",
-  "version": "1.15.254-usability",
+  "iter": 87,
+  "program": "programs/realworld/plate_lockdown_board.cubalc",
+  "theme": "plate lockdown PARSESIZE budget CHMOD MODE HUMANSIZE secret gate",
+  "version": "1.15.257-usability",
   "pass": true,
   "tests": [
     {
-      "name": "root_stage",
-      "cmd": "root + stage v1.0.0/v1.1.0 WRITEATOMIC manifest",
+      "name": "budget_2k",
+      "cmd": "PARSESIZE 2K \u2192 2048 BUDGET",
       "ok": true,
-      "note": "versioned layout"
+      "note": "human config"
     },
     {
-      "name": "promote",
-      "cmd": "SYMLINK ACTIVE \u2192 ROOT/current",
+      "name": "put_ok",
+      "cmd": "WRITEATOMIC body under budget",
       "ok": true,
-      "note": "alias"
+      "note": "token body"
     },
     {
-      "name": "resolve",
-      "cmd": "READLINK current \u2192 staged path",
+      "name": "put_oversize",
+      "cmd": "16B budget rejects long body; REQUIRE\u21922",
       "ok": true,
-      "note": "peel"
+      "note": "gate"
     },
     {
-      "name": "probe_stat",
-      "cmd": "STAT active exist/size/kind/isfile",
+      "name": "lock_0600",
+      "cmd": "CHMOD string var DEF_MODE \u2192 -rw-------",
       "ok": true,
-      "note": "follows link"
+      "note": "after fix"
     },
     {
-      "name": "islink",
-      "cmd": "ISLINK current \u2192 1; dual of STAT",
+      "name": "mode_probe",
+      "cmd": "MODE \u2192 0600 / 0644 / 0640",
       "ok": true,
-      "note": "lstat"
+      "note": "octal stamp"
     },
     {
-      "name": "label_hsize",
-      "cmd": "SIZE + HUMANSIZE; 1536 \u2192 1K floor",
+      "name": "unlock",
+      "cmd": "CHMOD 0644 open again",
+      "ok": true,
+      "note": "public"
+    },
+    {
+      "name": "label",
+      "cmd": "SIZE + HUMANSIZE \u2192 18B",
       "ok": true,
       "note": "inventory"
     },
     {
-      "name": "b64_round",
-      "cmd": "BASE64 hello / BASE64D aGVsbG8=",
+      "name": "parsesize_bad",
+      "cmd": "1X/nope soft; REQUIRE exit 2",
       "ok": true,
-      "note": "transport"
+      "note": "parse fail"
     },
     {
-      "name": "repromote",
-      "cmd": "RM then SYMLINK switch v1.1\u2192v1.0",
+      "name": "mode_miss",
+      "cmd": "MODE missing path soft; REQUIRE 2",
       "ok": true,
-      "note": "no force"
+      "note": "probe"
     },
     {
-      "name": "demote",
-      "cmd": "RM current; target remains",
+      "name": "chmod_strvar_fix",
+      "cmd": "SYS CHMOD fp m with m=0600 \u2192 384 not strlen 4",
       "ok": true,
-      "note": "link only"
-    },
-    {
-      "name": "soft_require",
-      "cmd": "promote/resolve/probe/b64d soft rc0; REQUIRE=1 \u2192 2",
-      "ok": true,
-      "note": "edges"
+      "note": "lang fix"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "229/229 pass"
+      "note": "231/231 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|symlink",
-      "title": "SYMLINK has no force/replace \u2014 promote needs RM first (TOCTOU)",
-      "detail": "Second SYMLINK soft-fails if link exists (OK=0 SYMLINK_N=0). Board RM then SYMLINK opens a race: concurrent reader can see missing current. No atomic rename-over-symlink helper.",
-      "repro": "SYMLINK tgt link twice \u2192 second OK=0"
+      "area": "host|chmod",
+      "title": "CHMOD string-var used parse_expr strlen (FIXED this iter)",
+      "detail": "SYS CHMOD fp m with m=\"0600\" applied mode 4 (strlen) not octal 384. Literals worked; DEFAULT/LET modes silently mis-locked plates to -------r--. Fixed: string idents parse as octal.",
+      "repro": "pre-fix: LET m=\"0600\"; CHMOD fp m \u2192 MODE 0004"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|stat",
-      "title": "STAT follows symlinks; no STAT_ISLINK \u2014 dual ISLINK required",
-      "detail": "STAT on current reports KIND=1 ISFILE=1 SIZE=target bytes. Agents cannot tell alias from real plate without separate SYS ISLINK. Easy to treat pointer as durable file.",
-      "repro": "STAT link \u2192 isfile; ISLINK link \u2192 1"
+      "area": "host|humansize",
+      "title": "HUMANSIZE\u2194PARSESIZE asymmetric after floor",
+      "detail": "HUMANSIZE 1536 \u2192 1K; PARSESIZE 1K \u2192 1024. Budget round-trips lose bytes. Agents that label then re-parse shrink ceilings.",
+      "repro": "HUMANSIZE 1536; PARSESIZE LAST \u2192 1024"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|humansize",
-      "title": "HUMANSIZE floors integer units \u2014 precision loss for inventory",
-      "detail": "1536 bytes \u2192 1K (drops 512B). 1023\u21921023B vs 1024\u21921K cliff. Agents comparing labels mis-rank near thresholds.",
-      "repro": "HUMANSIZE 1536 \u2192 1K; HUMANSIZE_BYTES still 1536"
+      "area": "lang|literal",
+      "title": "Bare DEFAULT NQ = 0600 is decimal 600 not octal",
+      "detail": "Unquoted 0600 becomes 600 decimal; CHMOD then sets 1130 octal. Only quoted \"0600\" is safe octal mode text.",
+      "repro": "DEFAULT NQ = 0600 \u2192 NQ=600"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITE plate fragments omit trailing NL",
-      "detail": "ROOT/ACTIVE/CURRENT/VAL/META glue in cat -A. Report bags use newlines via PUSH but path metas do not.",
-      "repro": "cat -A ROOT.txt after root"
+      "title": "WRITE plate metas omit trailing NL",
+      "detail": "ACTIVE/BUDGET/VAL glue in cat -A.",
+      "repro": "cat -A ACTIVE.txt after pick"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|base64",
-      "title": "BASE64 standard alphabet only \u2014 no URL-safe variant",
-      "detail": "Transport stamps with +/ may break path/query embedding. Agents invent ad-hoc tr maps.",
-      "repro": "BASE64 binary often yields +/"
+      "area": "host|chmod",
+      "title": "CHMOD success does not re-stat for umask/ACL surprises",
+      "detail": "CHMOD_N reports requested mode bits; host may still differ under restricted FS. Board re-MODE after lock as workaround.",
+      "repro": "CHMOD then MODE for verify"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|readlink",
-      "title": "READLINK returns stored target not realpath",
-      "detail": "Relative symlink targets resolve only relative to link dir; plate stores raw string. No READLINK -f / REALPATH-of-link combo.",
-      "repro": "SYMLINK leaf link; READLINK \u2192 leaf"
+      "area": "host|parsesize",
+      "title": "PARSESIZE rejects fractional labels (1.5K)",
+      "detail": "Only integer+unit; agents with SI 1.5K configs soft-fail.",
+      "repro": "PARSESIZE 1.5K \u2192 OK=0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|rm",
-      "title": "RM on symlink unlinks alias only \u2014 good but easy to confuse with release delete",
-      "detail": "Demote drops current; version dir remains. Agents may assume RM CURRENT removes staged release tree.",
-      "repro": "demote; v1.1.0/manifest still present"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens",
+      "detail": "CUBALC_PL_REQUIRE=abc leaves REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc budget nope \u2192 rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_RP_REQUIRE=abc leaves REQUIRE_HIT=0; soft miss stays rc 0.",
-      "repro": "REQUIRE=abc b64d !!!! \u2192 rc 0"
+      "area": "host|put",
+      "title": "put gates on LEN(body) not SIZE after write",
+      "detail": "Correct for pure text; binary/WRITE NL mismatch could diverge. No atomic size-check-after-write retry.",
+      "repro": "LEN vs SIZE post WRITEATOMIC"
     }
   ],
   "workarounds": [
-    "RM current before SYMLINK; accept race or LOCKFILE promote critical section",
-    "Always ISLINK then STAT for pointer vs body distinction",
-    "Keep raw SIZE/HUMANSIZE_BYTES for compare; labels for display only",
-    "Prefer BASE64 for opaque body plates not path leaves",
-    "REALPATH after READLINK when absolute identity needed",
-    "Digit-check REQUIRE before soft\u2192hard gate"
+    "Always quote mode strings \"0600\"; never bare 0600 DEFAULT",
+    "Compare budgets with PARSESIZE_N/SIZE not HUMANSIZE labels",
+    "MODE after CHMOD to confirm",
+    "Digit-check REQUIRE",
+    "Prefer string vars post-fix for lock mode ARG"
   ],
   "language_gaps": [
-    "SYMLINK force / atomic promote (rename swap)",
-    "STAT_ISLINK or STAT_KIND=symlink without follow mode",
-    "HUMANSIZE fractional or ceil modes",
+    "Octal number literals 0o600 / leading-zero octal policy",
+    "HUMANSIZE fractional / ceil mode for round-trip",
+    "PARSESIZE fractions",
     "WRITE trailing NL option",
-    "BASE64URL alphabet",
-    "READLINK -f realpath peel"
+    "CHMOD verify=1 re-stat"
   ],
   "issues_faced": [
-    "stage/promote/resolve/label/b64/demote green",
-    "SYMLINK no-force + STAT-follow dual probe are sharp promote footguns",
-    "HUMANSIZE floor 1536\u21921K confirmed",
-    "selftest 229/229; no language fix this iter"
+    "CHMOD string-var strlen footgun found+fixed+proof",
+    "PARSESIZE/HUMANSIZE floor asymmetry remains",
+    "board pick/budget/put/lock/mode/unlock/label green",
+    "selftest 231/231"
   ],
   "commit": "2b1639ae6bca3e58ce427106df4f844ed3bec361",
-  "ts": "2026-08-06T15:55:22Z"
+  "ts": "2026-08-06T16:22:00Z"
 }
