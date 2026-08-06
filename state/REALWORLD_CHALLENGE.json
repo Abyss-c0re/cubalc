@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "glob_plates",
-      "cmd": "glob *.plate → 4 basenames",
+      "cmd": "glob *.plate \u2192 4 basenames",
       "ok": true,
       "note": "GLOB_N=4"
     },
     {
       "name": "measure_sizes",
-      "cmd": "measure → name:bytes via SIZE+JOIN",
+      "cmd": "measure \u2192 name:bytes via SIZE+JOIN",
       "ok": true,
       "note": "basename JOIN DIR"
     },
     {
       "name": "keep_peer",
-      "cmd": "keep peer → 3 plates drop error.plate",
+      "cmd": "keep peer \u2192 3 plates drop error.plate",
       "ok": true,
       "note": "KEEPKEY substring"
     },
@@ -50,13 +50,13 @@
     },
     {
       "name": "glob_empty_match",
-      "cmd": "*.plate on log-only dir → empty OK=1 miss soft",
+      "cmd": "*.plate on log-only dir \u2192 empty OK=1 miss soft",
       "ok": true,
-      "note": "empty≠dir miss"
+      "note": "empty\u2260dir miss"
     },
     {
       "name": "median_even",
-      "cmd": "1,2,8,9 → med 2 lower mid",
+      "cmd": "1,2,8,9 \u2192 med 2 lower mid",
       "ok": true,
       "note": "even lower-mid"
     },
@@ -74,7 +74,7 @@
       "area": "host|fs",
       "title": "GLOB returns basenames only not full paths",
       "detail": "Agents must JOIN dir+basename for SIZE/READ. Easy to SIZE basename relative to CWD and soft-miss. No GLOB_FULL / absolute path mode.",
-      "repro": "GLOB dir *.plate → alpha.plate only"
+      "repro": "GLOB dir *.plate \u2192 alpha.plate only"
     },
     {
       "id": "W2",
@@ -82,7 +82,7 @@
       "area": "host|bag",
       "title": "KEEPKEY is substring on key not exact equality",
       "detail": "Needle err matches error.plate; peer matches peer_a. Agents wanting exact key must EQS after peel or use LOOKUP. Same class as GREP vs HASLINE.",
-      "repro": "KEEPKEY bag err → error:5"
+      "repro": "KEEPKEY bag err \u2192 error:5"
     },
     {
       "id": "W3",
@@ -97,7 +97,7 @@
       "severity": "med",
       "area": "host|bag",
       "title": "MEDIANKV even count uses lower mid not mean of two",
-      "detail": "1,2,8,9 → 2 not 5. Documented in proof but surprises stats agents.",
+      "detail": "1,2,8,9 \u2192 2 not 5. Documented in proof but surprises stats agents.",
       "repro": "MEDIANKV four values"
     },
     {
@@ -149,11 +149,11 @@
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive glob→measure→keep→median clean",
-    "KEEPKEY err→error.plate substring confirmed",
+    "Positive glob\u2192measure\u2192keep\u2192median clean",
+    "KEEPKEY err\u2192error.plate substring confirmed",
     "GLOB basename-only forces JOIN dance every measure",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "e0ccbf2ccdc956c89a300d697fadf1e7fd38c32e",
   "ts": "2026-08-06T02:50:00Z"
 }
