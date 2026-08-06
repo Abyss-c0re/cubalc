@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 227,
-  "version": "1.15.252-usability",
-  "item": "SYS SYMLINK / LN · READLINK / LINKTARGET plate path aliases",
-  "item_id": 260,
-  "title": "SYS SYMLINK|LN target linkpath · READLINK|LINKTARGET path — plate aliases without shell",
-  "commit": "58fbd5218fcff756729f8af82b4fc4f218117245",
-  "summary": "Symlink create/peel for agent plate layouts without shell ln -s. selftest 227.",
+  "iter": 228,
+  "version": "1.15.253-usability",
+  "item": "SYS HUMANSIZE / BYTESFMT / HUMANSZ integer size labels",
+  "item_id": 261,
+  "title": "SYS HUMANSIZE|BYTESFMT [n] — integer B/K/M/G/T labels for SIZE inventory without shell",
+  "commit": "12e06cbbde69eedb3a02b249490b928ff0f53151",
+  "summary": "1024-base floor size labels for agent SIZE plates without numfmt. selftest 228.",
   "proofs": [
-    "801_sys_symlink",
-    "selftest n_pass=227"
+    "802_sys_humansize",
+    "selftest n_pass=228"
   ],
-  "when": "2026-08-06T15:36:00Z",
+  "when": "2026-08-06T15:46:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "58fbd5218fcff756729f8af82b4fc4f218117245",
-  "note": "hostops symlink+readlink; soft fail exists/not-link"
+  "sha": "12e06cbbde69eedb3a02b249490b928ff0f53151",
+  "note": "pairs with SIZE/SIZEALL; HUMANSIZE_UNIT + HUMANSIZE_BYTES"
 }
