@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 172,
-  "version": "1.15.197-usability",
-  "item": "SYS GREPFILES / SEARCHFILES filter path bag by file content",
-  "item_id": 205,
-  "title": "SYS GREPFILES|SEARCHFILES|FILESGREP [bag] needle — content path filter without EACH+READ+HAS",
-  "commit": "4e350aa13182da65771d51a76321967209d03bde",
-  "summary": "Filter PATHGLOB/WALK bags by file content; GREPFILESI/GREPVFILES. selftest 172.",
+  "iter": 173,
+  "version": "1.15.198-usability",
+  "item": "SYS READALL / CATFILES concat path bag file contents",
+  "item_id": 206,
+  "title": "SYS READALL|CATFILES|SLURPALL [bag] [sep] — multi-file join without EACH+READ+CAT",
+  "commit": "a9381f1d070c056a66c4bb6b0fb0457ffc633991",
+  "summary": "Concat path bag contents to LAST; optional sep; soft miss. selftest 173.",
   "proofs": [
-    "745_sys_grepfiles",
-    "selftest n_pass=172"
+    "746_sys_readall",
+    "selftest n_pass=173"
   ],
-  "when": "2026-08-06T06:35:00Z",
+  "when": "2026-08-06T06:44:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4e350aa13182da65771d51a76321967209d03bde"
+  "sha": "a9381f1d070c056a66c4bb6b0fb0457ffc633991"
 }
