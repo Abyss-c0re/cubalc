@@ -147,6 +147,6 @@
     "HASH vs HEX dual fingerprints is agent footgun",
     "selftest 223/223; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "75937f3d07aadee9a39210655608efb048e3337e",
   "ts": "2026-08-06T15:05:00Z"
 }
