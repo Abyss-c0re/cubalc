@@ -1,0 +1,778 @@
+# plate_identity_board.cubalc — TEE write + OWNEDBY + SAMEINODE vs EQFILE
+#
+# Real use: agents write plates keeping content in LAST (TEE), gate on
+# ownership (OWNEDBY/FILEUID), and distinguish hard-link identity from
+# content equality (SAMEINODE vs EQFILE):
+#   TEE / WRITETEE           — write keep LAST (chain without READ)
+#   OWNEDBY / FILEUID/GID    — euid owns / owner ids
+#   SAMEINODE / INODE        — hard-link identity
+#   EQFILE                   — content equality (false friend of SAMEINODE)
+#   HARDLINK / NLINK         — establish share for probes
+# Distinct from plate_share (publish durable): this board is *identity
+# dual-probe + ownership gate + TEE chain*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — primary path
+#   PEER.txt       — second path (link or copy)
+#   VAL.txt        — last body / stamp
+#   META.txt       — key:val probe bag
+#   ID_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PI_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   peer      — PEER = ARG1
+#   tee       — TEE ACTIVE ARG1 body; VAL=body
+#   own       — OWNEDBY ACTIVE; soft miss if not owner
+#   uid       — FILEUID ACTIVE → VAL
+#   link      — HARDLINK ACTIVE PEER
+#   copy      — COPY ACTIVE PEER (content twin)
+#   same      — SAMEINODE ACTIVE PEER
+#   eq        — EQFILE ACTIVE PEER
+#   inode     — INODE ACTIVE → VAL
+#   chain     — TEE then HAS needle ARG1 on LAST (no READ)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pi_$$
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/a.txt ...
+#   CUBALC_ARG0=peer CUBALC_ARG1=$CUBALC_STATE/b.txt ...
+#   CUBALC_ARG0=tee CUBALC_ARG1='status=ready' ...
+#   CUBALC_ARG0=own ...
+#   CUBALC_ARG0=link ...
+#   CUBALC_ARG0=same ...
+#   CUBALC_ARG0=eq ...
+#
+# Env: CUBALC_PI_REQUIRE=1
+#
+# Edges:
+#   SAMEINODE 0 with EQFILE 1 after COPY; WRITEATOMIC breaks hardlinks
+#   OWNEDBY miss; TEE empty path; HAS false friends; WRITE NL; REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_identity_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT PFILE = "PEER.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "ID_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PI_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PI_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PI_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PI_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir PFILE
+LET peer_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR peer_meta OR ""
+LET peer = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET peer_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET same_n = 0
+LET eq_n = 0
+LET own_n = 0
+LET uid_n = 0
+LET ino_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "pidboard" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON peer
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- peer ---
+SYS EQS ACTION "peer"
+IF LAST_N == 1 THEN
+  NOTE "action peer"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "peer needs path"
+  END
+  LET peer = NAME
+  LET peer_ch = 1
+  LET hit = 1
+  LET note_msg = "peer ok"
+  PRINT_JSON peer
+END
+
+# --- tee ---
+SYS EQS ACTION "tee"
+IF LAST_N == 1 THEN
+  NOTE "action tee"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "tee no active"
+    FAIL "tee no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "tee no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "tee needs body"
+    END
+    SYS TEE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "tee fail"
+      FAIL "tee fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "tee fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      SYS STR TEE_N
+      SYS CAT "bytes:" LAST
+      LET meta = LAST
+      SYS CAT "path:" active
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "tee ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- chain: TEE then HAS needle on LAST ---
+SYS EQS ACTION "chain"
+IF LAST_N == 1 THEN
+  NOTE "action chain"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "chain no active"
+    FAIL "chain no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "chain no active"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "chain needs body"
+    END
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      EXIT 2 "chain needs needle ARG2"
+    END
+    SYS TEE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "chain tee fail"
+      FAIL "chain tee fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "chain tee fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      SYS HAS LAST A2
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "chain has miss"
+        FAIL "chain has miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "chain has miss"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "chain ok"
+      END
+      SYS CAT "needle:" A2
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- own OWNEDBY ---
+SYS EQS ACTION "own"
+IF LAST_N == 1 THEN
+  NOTE "action own"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "own no active"
+    FAIL "own no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "own no active"
+    END
+  ELSE
+    SYS OWNEDBY active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET own_n = 0
+      LET note_msg = "own probe fail"
+      FAIL "own probe fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "own probe fail"
+      END
+    ELSE
+      LET own_n = LAST_N
+      IF own_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "own not owner"
+        FAIL "own not owner"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "own not owner"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "own ok"
+      END
+      SYS STR own_n
+      LET val = LAST
+      LET val_ch = 1
+      SYS STR FILEUID
+      SYS CAT "uid:" LAST
+      LET meta = LAST
+      SYS STR FILEGID
+      SYS CAT "gid:" LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON own_n
+  CLEAR_ERR
+END
+
+# --- uid FILEUID ---
+SYS EQS ACTION "uid"
+IF LAST_N == 1 THEN
+  NOTE "action uid"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "uid no active"
+    FAIL "uid no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "uid no active"
+    END
+  ELSE
+    SYS FILEUID active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "uid miss"
+      FAIL "uid miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "uid miss"
+      END
+    ELSE
+      LET uid_n = LAST_N
+      LET hit = 1
+      LET note_msg = "uid ok"
+      SYS STR uid_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON uid_n
+  CLEAR_ERR
+END
+
+# --- link HARDLINK ---
+SYS EQS ACTION "link"
+IF LAST_N == 1 THEN
+  NOTE "action link"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "link no active"
+    FAIL "link no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "link no active"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "link no peer"
+      FAIL "link no peer"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "link no peer"
+      END
+    ELSE
+      SYS RM peer
+      CLEAR_ERR
+      SYS HARDLINK active peer
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "link fail"
+        FAIL "link fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "link fail"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "link ok"
+        SYS NLINK active
+        SYS STR LAST_N
+        SYS CAT "nlink:" LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON peer
+  CLEAR_ERR
+END
+
+# --- copy content twin ---
+SYS EQS ACTION "copy"
+IF LAST_N == 1 THEN
+  NOTE "action copy"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "copy no active"
+    FAIL "copy no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "copy no active"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "copy no peer"
+      FAIL "copy no peer"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "copy no peer"
+      END
+    ELSE
+      SYS RM peer
+      CLEAR_ERR
+      SYS COPY active peer
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "copy fail"
+        FAIL "copy fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "copy fail"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "copy ok"
+      END
+    END
+  END
+  PRINT_JSON peer
+  CLEAR_ERR
+END
+
+# --- same SAMEINODE ---
+SYS EQS ACTION "same"
+IF LAST_N == 1 THEN
+  NOTE "action same"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "same no active"
+    FAIL "same no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "same no active"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "same no peer"
+      FAIL "same no peer"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "same no peer"
+      END
+    ELSE
+      SYS SAMEINODE active peer
+      IF OK == 0 THEN
+        LET miss = 1
+        LET same_n = 0
+        LET note_msg = "same probe fail"
+        FAIL "same probe fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "same probe fail"
+        END
+      ELSE
+        LET same_n = LAST_N
+        IF same_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "same no"
+          FAIL "same no"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "same no"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "same yes"
+        END
+        SYS STR same_n
+        LET val = LAST
+        LET val_ch = 1
+      END
+    END
+  END
+  PRINT_JSON same_n
+  CLEAR_ERR
+END
+
+# --- eq EQFILE ---
+SYS EQS ACTION "eq"
+IF LAST_N == 1 THEN
+  NOTE "action eq"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "eq no active"
+    FAIL "eq no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "eq no active"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "eq no peer"
+      FAIL "eq no peer"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "eq no peer"
+      END
+    ELSE
+      SYS EQFILE active peer
+      IF OK == 0 THEN
+        LET miss = 1
+        LET eq_n = 0
+        LET note_msg = "eq probe fail"
+        FAIL "eq probe fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "eq probe fail"
+        END
+      ELSE
+        LET eq_n = LAST_N
+        IF eq_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "eq no"
+          FAIL "eq no"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "eq no"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "eq yes"
+        END
+        SYS STR eq_n
+        LET val = LAST
+        LET val_ch = 1
+      END
+    END
+  END
+  PRINT_JSON eq_n
+  CLEAR_ERR
+END
+
+# --- inode ---
+SYS EQS ACTION "inode"
+IF LAST_N == 1 THEN
+  NOTE "action inode"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "inode no active"
+    FAIL "inode no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "inode no active"
+    END
+  ELSE
+    SYS INODE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "inode miss"
+      FAIL "inode miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "inode miss"
+      END
+    ELSE
+      LET ino_n = LAST_N
+      LET hit = 1
+      LET note_msg = "inode ok"
+      SYS STR ino_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON ino_n
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET peer = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET peer_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "peer"
+LET k = k + LAST_N
+SYS EQS ACTION "tee"
+LET k = k + LAST_N
+SYS EQS ACTION "chain"
+LET k = k + LAST_N
+SYS EQS ACTION "own"
+LET k = k + LAST_N
+SYS EQS ACTION "uid"
+LET k = k + LAST_N
+SYS EQS ACTION "link"
+LET k = k + LAST_N
+SYS EQS ACTION "copy"
+LET k = k + LAST_N
+SYS EQS ACTION "same"
+LET k = k + LAST_N
+SYS EQS ACTION "eq"
+LET k = k + LAST_N
+SYS EQS ACTION "inode"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF peer_ch > 0 THEN
+  SYS WRITE peer_meta peer
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "peer write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.plate_identity_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "same"
+LET report = LAST
+SYS STR same_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "eq"
+LET report = LAST
+SYS STR eq_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "own"
+LET report = LAST
+SYS STR own_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "peer"
+LET report = LAST
+SYS PUSH report peer
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "plate_identity_board" ACTION hit miss same_n eq_n note_msg elapsed

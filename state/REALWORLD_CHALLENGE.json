@@ -1,152 +1,146 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 94,
-  "program": "programs/realworld/plate_share_board.cubalc",
-  "theme": "plate share HARDLINK NLINK DIRSYNC FSYNC durable publish",
-  "version": "1.15.275-usability",
+  "iter": 95,
+  "program": "programs/realworld/plate_identity_board.cubalc",
+  "theme": "plate identity TEE OWNEDBY SAMEINODE EQFILE dual probe",
+  "version": "1.15.278-usability",
   "pass": true,
   "tests": [
     {
-      "name": "put_durable",
-      "cmd": "WRITEATOMIC+FSYNC+DIRSYNC",
+      "name": "tee",
+      "cmd": "TEE body keep LAST; file matches VAL",
       "ok": true,
-      "note": "publish"
+      "note": "chain write"
     },
     {
-      "name": "link_nlink",
-      "cmd": "HARDLINK nlink 1\u21922 same inode",
+      "name": "chain",
+      "cmd": "TEE+HAS needle same process; miss REQUIRE",
       "ok": true,
-      "note": "share"
+      "note": "no READ"
     },
     {
-      "name": "verify_same",
-      "cmd": "EQFILE active alias same=1",
+      "name": "own_uid",
+      "cmd": "OWNEDBY=1 FILEUID matches euid",
       "ok": true,
-      "note": "shared content"
+      "note": "owner gate"
     },
     {
-      "name": "mutate_alias",
-      "cmd": "write alias \u2192 primary sees payload-v2",
+      "name": "link_same_eq",
+      "cmd": "HARDLINK \u2192 SAMEINODE=1 EQFILE=1",
       "ok": true,
-      "note": "same inode"
+      "note": "identity"
     },
     {
-      "name": "link_busy",
-      "cmd": "HARDLINK dest exists soft; REQUIRE\u21922",
+      "name": "copy_dual",
+      "cmd": "COPY \u2192 EQFILE=1 SAMEINODE=0 REQUIRE",
       "ok": true,
-      "note": "no force"
+      "note": "content \u2260 inode"
     },
     {
-      "name": "unlink",
-      "cmd": "RM alias; nlink decrements; primary remains",
+      "name": "inode",
+      "cmd": "INODE stamp numeric",
       "ok": true,
-      "note": "drop link"
+      "note": "ino"
     },
     {
-      "name": "verify_differ",
-      "cmd": "EQFILE differ soft; REQUIRE\u21922",
+      "name": "own_miss",
+      "cmd": "missing path soft; REQUIRE\u21922",
       "ok": true,
-      "note": "content"
-    },
-    {
-      "name": "writeatomic_breaks_hl",
-      "cmd": "put after link \u2192 new inode; alias stuck on old body",
-      "ok": true,
-      "note": "critical footgun"
+      "note": "probe"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "248/248 pass"
+      "note": "251/251 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|writeatomic",
-      "title": "WRITEATOMIC renames new inode \u2014 severs HARDLINK share",
-      "detail": "After HARDLINK, put WRITEATOMIC leaves alias on old inode/content; primary is new inode. Agents expect shared update; get silent fork. No WRITEATOMIC-in-place or re-hardlink helper.",
-      "repro": "link; put v2; primary=v2 alias=v1 different inodes"
+      "area": "host|identity",
+      "title": "SAMEINODE vs EQFILE dual — agents conflate hardlink with content twin",
+      "detail": "COPY makes EQFILE=1 SAMEINODE=0. After WRITEATOMIC on shared plate, EQFILE may fail while agents still think links share. No combined SAME_OR_EQ helper.",
+      "repro": "COPY a b; EQFILE 1; SAMEINODE 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|hardlink",
-      "title": "HARDLINK dest-exists soft fail; no force/replace",
-      "detail": "Republish must RM alias then HARDLINK (TOCTOU). Same class as SYMLINK no-force.",
-      "repro": "HARDLINK src dst twice \u2192 second OK=0"
+      "area": "host|tee",
+      "title": "TEE vs WRITE LAST semantics undocumented for chains",
+      "detail": "WRITE often leaves path-ish LAST; TEE keeps body. Agents mixing WRITE then HAS on LAST fail silently.",
+      "repro": "WRITE then HAS LAST vs TEE then HAS LAST"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|hardlink",
-      "title": "No cross-device HARDLINK diagnostic plate field",
-      "detail": "EXDEV soft fail only via LAST_ERR string; agents hard to branch.",
-      "repro": "HARDLINK across mounts"
+      "area": "host|ownedby",
+      "title": "OWNEDBY is euid-only — no ACL/group-write nuance",
+      "detail": "Shared plates writable by group still OWNEDBY=0 for non-owner euid. Agents over-deny.",
+      "repro": "group-writable plate; other uid OWNEDBY 0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|dirsync",
-      "title": "DIRSYNC missing leaf still syncs parent OK",
-      "detail": "Surprising success when path does not exist; looks like durable publish of missing file.",
-      "repro": "DIRSYNC /tmp/no_such_leaf \u2192 OK=1 parent"
+      "area": "host|fileuid",
+      "title": "FILEUID/GID numeric only — no username resolve",
+      "detail": "Agents cannot stamp owner=alice without shell getent.",
+      "repro": "FILEUID \u2192 0 not root"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|symlink",
-      "title": "HARDLINK vs SYMLINK agent confusion",
-      "detail": "release_pointer uses SYMLINK (peelable); this board hardlinks (mutate-all). No help matrix.",
-      "repro": "ISLINK on hardlink \u2192 0; NLINK>1"
+      "area": "host|has",
+      "title": "HAS substring false friends in TEE chain",
+      "detail": "HAS ready matches status=ready and not_ready. No word-boundary.",
+      "repro": "HAS ready on status=ready"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "ACTIVE/ALIAS glue in cat -A.",
+      "detail": "ACTIVE/PEER glue in cat -A.",
       "repro": "cat -A ACTIVE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|eqfile",
-      "title": "EQFILE soft miss vs content-differ both need decode",
-      "detail": "OK=0 vs OK=1 LAST_N=0 for differ; easy to conflate path miss with differ.",
-      "repro": "EQFILE a missing; EQFILE a b_differ"
+      "area": "host|sameinode",
+      "title": "SAMEINODE path-miss vs not-same both need care",
+      "detail": "OK=0 miss; OK=1 LAST_N=0 different inodes. Easy to require same and get probe fail.",
+      "repro": "SAMEINODE a missing"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_PS_REQUIRE=abc.",
-      "repro": "REQUIRE=abc link busy \u2192 rc 0"
+      "detail": "CUBALC_PI_REQUIRE=abc.",
+      "repro": "REQUIRE=abc same no \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "After WRITEATOMIC on shared plate: RM aliases and re-HARDLINK",
-    "Or mutate with plain WRITE (in-place) to keep inode",
-    "RM dest before HARDLINK republish",
-    "NLINK after put to detect broken share (nlink dropped)",
-    "DIRSYNC after FSYNC for durable rename publish"
+    "Always dual-probe SAMEINODE and EQFILE for share health",
+    "Prefer TEE when chaining HAS/GREP on body",
+    "OWNEDBY for strict private plates only",
+    "INODE stamp for audit logs",
+    "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "WRITEATOMIC option keep-inode / re-link aliases",
-    "HARDLINK force/replace",
-    "DIRSYNC fail if path missing (strict)",
-    "Hardlink vs symlink matrix in help",
-    "EQFILE miss vs differ distinct codes",
-    "WRITE trailing NL"
+    "Help matrix SAMEINODE vs EQFILE vs NLINK",
+    "TEE as default WRITE mode option",
+    "OWNER name resolve",
+    "OWNEDBY group/ACL modes",
+    "WRITE trailing NL",
+    "HAS word-boundary"
   ],
   "issues_faced": [
-    "put/link/verify/mutate/unlink green",
-    "WRITEATOMIC after HARDLINK severs share \u2014 documented W1",
-    "selftest 248/248; no language fix this iter"
+    "tee/chain/own/link/same/eq/copy dual green",
+    "COPY makes content twin without inode identity — core lesson",
+    "selftest 251/251; no language fix this iter"
   ],
-  "commit": "11eb39afc645541c8d7679a8dedddbcf069455c9",
-  "ts": "2026-08-06T19:13:50Z"
+  "commit": "",
+  "ts": "2026-08-06T19:38:58Z"
 }
