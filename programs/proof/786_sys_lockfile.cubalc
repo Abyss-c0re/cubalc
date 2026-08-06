@@ -1,0 +1,99 @@
+# SYS LOCKFILE / UNLOCKFILE / FLOCK — exclusive agent path.lock mutex
+# Usability: multi-agent critical sections without shell flock
+# LOCKFILE path [ms] · HIT/MS/PID · UNLOCK soft miss OK
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "lockfile_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fp = LAST
+SYS JOIN fix "plate.txt.lock"
+LET lp = LAST
+SYS RM fp
+SYS RM lp
+
+# acquire free lock
+SYS LOCKFILE fp 1000
+ASSERT OK == 1
+ASSERT LOCKFILE_HIT == 1
+ASSERT LAST_N == 1
+ASSERT LOCKFILE_N == 1
+SYS EXIST lp
+ASSERT LAST_N == 1
+SYS EQS LAST lp
+ASSERT LAST_N == 1
+ASSERT LOCKFILE_PID > 0
+
+# second acquire fails (held) short timeout
+SYS LOCKFILE fp 100
+ASSERT OK == 0
+ASSERT LOCKFILE_HIT == 0
+ASSERT LOCKFILE_MS >= 80
+
+# FLOCK alias still held
+SYS FLOCK fp 50
+ASSERT OK == 0
+
+# unlock releases
+SYS UNLOCKFILE fp
+ASSERT OK == 1
+ASSERT UNLOCKFILE_N == 1
+SYS EXIST lp
+ASSERT LAST_N == 0
+
+# re-acquire after unlock
+SYS LOCKFILE fp 200
+ASSERT OK == 1
+ASSERT LOCKFILE_HIT == 1
+
+# FUNLOCK alias
+SYS FUNLOCK fp
+ASSERT OK == 1
+SYS EXIST lp
+ASSERT LAST_N == 0
+
+# unlock soft miss when free
+SYS UNLOCKFILE fp
+ASSERT OK == 1
+ASSERT UNLOCKFILE_N == 0
+
+# path ending .lock used as-is
+SYS JOIN fix "direct.lock"
+LET dl = LAST
+SYS RM dl
+SYS LOCKFILE dl 200
+ASSERT OK == 1
+SYS EXIST dl
+ASSERT LAST_N == 1
+SYS UNLOCKFILE dl
+ASSERT OK == 1
+SYS EXIST dl
+ASSERT LAST_N == 0
+
+# empty path soft fail
+SYS LOCKFILE "" 50
+ASSERT OK == 0
+SYS UNLOCKFILE ""
+ASSERT OK == 0
+
+# agent: lock → writeatomic → unlock
+SYS LOCKFILE fp 500
+ASSERT LOCKFILE_HIT == 1
+SYS WRITEATOMIC fp "status=critical"
+ASSERT OK == 1
+SYS UNLOCKFILE fp
+ASSERT OK == 1
+SYS READ fp
+SYS EQS LAST "status=critical"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM fp
+SYS RM lp
+
+PRINT "sys_lockfile ok"

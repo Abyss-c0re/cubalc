@@ -5,6 +5,7 @@
 #  include <fnmatch.h>
 #  include <unistd.h>
 #  include <errno.h>
+#  include <fcntl.h>
 #  include <poll.h>
 #  include <arpa/inet.h>
 #  include <netinet/in.h>
@@ -587,6 +588,180 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "SAFEWRITE", path);
       var_set_num(vm, "WRITEATOMIC_N", hr.n);
       var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LOCKFILE|FLOCK|MUTEX path [timeout_ms]
+     * — exclusive agent lock via path.lock (O_CREAT|O_EXCL + pid body).
+     * Poll until acquired or timeout (default 30000, cap 120s, step 50ms).
+     * LAST = lock path; LAST_N / LOCKFILE_HIT 1|0; LOCKFILE_MS elapsed.
+     * Soft timeout / empty path → OK=0.
+     * SYS UNLOCKFILE|FUNLOCK|RELEASELOCK path — remove path.lock (soft miss OK).
+     * Usability: multi-agent exclusive plate critical sections without shell flock. */
+    if (kw(&L->cur,"LOCKFILE") || kw(&L->cur,"FLOCK") || kw(&L->cur,"MUTEX") ||
+        kw(&L->cur,"FILELOCK") || kw(&L->cur,"LOCKF") || kw(&L->cur,"ACQUIRELOCK") ||
+        kw(&L->cur,"TAKELOCK") || kw(&L->cur,"LOCKPATH") ||
+        kw(&L->cur,"UNLOCKFILE") || kw(&L->cur,"FUNLOCK") || kw(&L->cur,"RELEASELOCK") ||
+        kw(&L->cur,"FILEUNLOCK") || kw(&L->cur,"UNLOCKF") || kw(&L->cur,"DROPLOCK") ||
+        kw(&L->cur,"FREELOCK") || kw(&L->cur,"UNLOCKPATH")){
+      char path[512], lockp[560], a[CUBALC_HOST_STR_MAX], body[64];
+      long timeout_ms = 30000, elapsed = 0, hit = 0, pid;
+      int is_unlock = (kw(&L->cur,"UNLOCKFILE") || kw(&L->cur,"FUNLOCK") ||
+                      kw(&L->cur,"RELEASELOCK") || kw(&L->cur,"FILEUNLOCK") ||
+                      kw(&L->cur,"UNLOCKF") || kw(&L->cur,"DROPLOCK") ||
+                      kw(&L->cur,"FREELOCK") || kw(&L->cur,"UNLOCKPATH"));
+      struct timespec t0, t1, sl;
+      lex_next(L);
+      path[0] = 0; lockp[0] = 0; a[0] = 0; body[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, is_unlock ? "SYS UNLOCKFILE path" : "SYS LOCKFILE path [timeout_ms]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (!is_unlock) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_IDENT) {
+          long t = parse_expr(vm, L);
+          if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+            lex_next(L);
+          timeout_ms = t;
+        } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
+          lex_next(L);
+          if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+              L->cur.kind == TK_IDENT)
+            timeout_ms = parse_expr(vm, L);
+        }
+        if (timeout_ms < 0) timeout_ms = 0;
+        if (timeout_ms > 120000) timeout_ms = 120000;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "LOCKFILE_HIT", 0);
+        var_set_num(vm, "LOCKFILE_N", 0);
+        var_set_num(vm, "LOCKFILE_MS", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_unlock ? "UNLOCKFILE: empty path" : "LOCKFILE: empty path");
+        var_set_str(vm, "ERR", is_unlock ? "UNLOCKFILE: empty path" : "LOCKFILE: empty path");
+        bump(vm); return 1;
+      }
+      /* lock path = path + ".lock" (if path already ends .lock, use as-is) */
+      {
+        size_t pl = strlen(path);
+        if (pl >= 5 && strcmp(path + pl - 5, ".lock") == 0)
+          snprintf(lockp, sizeof lockp, "%s", path);
+        else
+          snprintf(lockp, sizeof lockp, "%s.lock", path);
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      pid = 0;
+#else
+      pid = (long)getpid();
+#endif
+      snprintf(body, sizeof body, "%ld\n", pid);
+      if (is_unlock) {
+        cubalc_host_result hr;
+        int existed = cubalc_host_exists(lockp);
+        if (cubalc_host_rm(lockp, &hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "LOCKFILE_HIT", 0);
+          var_set_num(vm, "UNLOCKFILE_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "UNLOCKFILE: rm fail");
+          var_set_str(vm, "ERR", hr.err[0] ? hr.err : "UNLOCKFILE: rm fail");
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", lockp);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", lockp);
+        vm->last_n = existed ? 1 : 0;
+        var_set_num(vm, "LAST_N", existed ? 1 : 0);
+        var_set_str(vm, "UNLOCKFILE", lockp);
+        var_set_str(vm, "LOCKFILE", lockp);
+        var_set_num(vm, "UNLOCKFILE_N", existed ? 1 : 0);
+        var_set_num(vm, "LOCKFILE_HIT", 0);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* acquire: O_CREAT|O_EXCL exclusive create of lock file */
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+      for (;;) {
+#if defined(CUBALC_OS_WINDOWS)
+        {
+          /* Windows: try create exclusive */
+          FILE *lf = fopen(lockp, "r");
+          if (!lf) {
+            cubalc_host_result wr;
+            if (cubalc_host_write(lockp, body, &wr) == 0) {
+              hit = 1;
+              break;
+            }
+          } else {
+            fclose(lf);
+          }
+        }
+#else
+        {
+          int fd = open(lockp, O_CREAT | O_EXCL | O_WRONLY, 0644);
+          if (fd >= 0) {
+            size_t bl = strlen(body);
+            ssize_t w = write(fd, body, bl);
+            (void)w;
+            close(fd);
+            hit = 1;
+            break;
+          }
+          /* EEXIST → contended; other errors soft-continue until timeout */
+        }
+#endif
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                  (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+        if (elapsed >= timeout_ms)
+          break;
+        {
+          long left = timeout_ms - elapsed;
+          long step = left < 50 ? left : 50;
+          if (step < 1) step = 1;
+          sl.tv_sec = step / 1000;
+          sl.tv_nsec = (step % 1000) * 1000000L;
+          nanosleep(&sl, NULL);
+        }
+      }
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      elapsed = (t1.tv_sec - t0.tv_sec) * 1000L +
+                (t1.tv_nsec - t0.tv_nsec) / 1000000L;
+      if (elapsed < 0) elapsed = 0;
+      if (hit) {
+        var_set_str(vm, "LAST", lockp);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", lockp);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "LOCKFILE", lockp);
+        var_set_str(vm, "FLOCK", lockp);
+        var_set_str(vm, "MUTEX", lockp);
+        var_set_num(vm, "LOCKFILE_HIT", 1);
+        var_set_num(vm, "LOCKFILE_N", 1);
+        var_set_num(vm, "LOCKFILE_MS", elapsed);
+        var_set_num(vm, "LOCKFILE_PID", pid);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_str(vm, "LOCKFILE", "");
+      var_set_num(vm, "LOCKFILE_HIT", 0);
+      var_set_num(vm, "LOCKFILE_N", 0);
+      var_set_num(vm, "LOCKFILE_MS", elapsed);
+      var_set_num(vm, "LOCKFILE_PID", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LOCKFILE: timeout");
+      var_set_str(vm, "ERR", "LOCKFILE: timeout");
       bump(vm); return 1;
     }
     /* SYS RM|UNLINK|DELETE path — remove regular file; missing soft OK (LAST_N=0)
