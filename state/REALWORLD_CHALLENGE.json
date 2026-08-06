@@ -1,50 +1,56 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 72,
-  "program": "programs/realworld/match_purge_board.cubalc",
-  "theme": "config match purge DROPMATCHFILE DROPALLMATCHFILE residual",
-  "version": "1.15.217-usability",
+  "iter": 73,
+  "program": "programs/realworld/section_match_board.cubalc",
+  "theme": "ini section annotate SETALLMATCH INSERTMATCH BEFOREMATCH",
+  "version": "1.15.220-usability",
   "pass": true,
   "tests": [
     {
-      "name": "count_DEBUG",
-      "cmd": "COUNTFILELINE DEBUG \u2192 2 of 7",
+      "name": "before_section",
+      "cmd": "BEFOREMATCHFILE [section] → preamble before header",
       "ok": true,
-      "note": "pre tally"
+      "note": "insert before"
     },
     {
-      "name": "drop1",
-      "cmd": "DROPMATCHFILE DEBUG \u2192 first DEBUG x only",
+      "name": "after_section",
+      "cmd": "INSERTMATCHFILE [section] → key=val under section",
       "ok": true,
-      "note": "ack one"
+      "note": "insert after"
     },
     {
-      "name": "purge",
-      "cmd": "DROPALLMATCHFILE remaining DEBUG y N=1",
+      "name": "setall_status",
+      "cmd": "SETALLMATCHFILE status= → both rows status=new; STATUS=keep",
       "ok": true,
-      "note": "bulk"
+      "note": "bulk cs"
     },
     {
-      "name": "residual_clean",
-      "cmd": "residual DEBUG \u2192 0 clean",
+      "name": "setalli",
+      "cmd": "SETALLMATCHFILEI status= rewrites STATUS too",
       "ok": true,
-      "note": "post check"
+      "note": "icase bulk"
     },
     {
-      "name": "purgei",
-      "cmd": "DROPALLMATCHFILEI debug drops DEBUG+debug",
+      "name": "afteri_double",
+      "cmd": "afteri + second after stacks under section (newest first)",
       "ok": true,
-      "note": "icase purge"
+      "note": "grow"
     },
     {
-      "name": "false_DEB",
-      "cmd": "purge DEB removes DEBUG full and DEB short",
+      "name": "substring_sec",
+      "cmd": "after [sec injects under [section] not [sections]",
       "ok": true,
-      "note": "substring"
+      "note": "first substring"
+    },
+    {
+      "name": "setmatch_vs_setall",
+      "cmd": "SETMATCH first only; SETALL both rows",
+      "ok": true,
+      "note": "family"
     },
     {
       "name": "none_require",
-      "cmd": "drop1/purge none soft; REQUIRE exit 2",
+      "cmd": "soft none; REQUIRE exit 2",
       "ok": true,
       "note": "N=0 I=-1"
     },
@@ -56,21 +62,15 @@
     },
     {
       "name": "empty_needle",
-      "cmd": "DROP/DROPALL empty \u2192 N=0 no-op (safe)",
+      "cmd": "SETALL/INSERT/BEFORE empty → N=0 no-op",
       "ok": true,
-      "note": "vs GREPFILE empty match-all"
-    },
-    {
-      "name": "print_json_glue",
-      "cmd": "PRINT_JSON dropped multi-line glues",
-      "ok": true,
-      "note": "DEBUG 1DEBUG 2"
+      "note": "safe empty"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "192/192 pass"
+      "note": "195/195 pass"
     }
   ],
   "weaknesses": [
@@ -78,88 +78,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|naming",
-      "title": "DROP family matrix: DROPNTH bag, DROPFILELINE index, DROPMATCHFILE needle, DROPALLMATCHFILE purge",
-      "detail": "Four different DROP* shapes. Wrong op drops wrong thing or soft-misses. Agents must distinguish index vs needle vs bag vs bulk.",
-      "repro": "DROPFILELINE p 1 vs DROPMATCHFILE p DEBUG"
+      "title": "MATCHFILE family explosion: SET/SETALL/DROP/DROPALL/INSERT/BEFORE + I variants",
+      "detail": "Agents must pick first vs all, set vs drop vs insert-before vs insert-after. Wrong op partially mutates config silently in soft mode.",
+      "repro": "SETMATCHFILE vs SETALLMATCHFILE on two status rows"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|match",
-      "title": "Substring false friends: DEB purges DEBUG lines",
-      "detail": "No whole-word mode. Short purge needles over-delete config rows.",
-      "repro": "DROPALLMATCHFILE p DEB removes DEBUG full"
+      "title": "INSERTMATCH after first match only — multi-section files only patch first",
+      "detail": "No AFTERALLMATCH. Repeated after stacks under same first [section] (newest nearest). Second [sections] never auto-annotated.",
+      "repro": "double after → x=2 then x=1 under one section"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON multi-line dropped bag glues without NL",
-      "detail": "Plate DROPPED has NL between removed lines; PRINT_JSON \u2192 DEBUG 1DEBUG 2. Recurring.",
-      "repro": "PRINT_JSON dropped after purge N=2"
+      "area": "host|match",
+      "title": "Substring [sec matches [section] before [sections]",
+      "detail": "Partial section needles inject under wrong header. No whole-token / line-start anchors.",
+      "repro": "after [sec on [section]+[sections] file"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "DROPALLMATCHFILE_I is only first removed index, not full index list",
-      "detail": "N counts removals; I is first hit only. Agents cannot reconstruct which indices vanished without pre-scan GREPFILE.",
-      "repro": "purge two lines \u2192 I=first only"
+      "title": "SETALLMATCHFILE LAST is single replacement text, not bag of touched lines",
+      "detail": "N counts rewrites; LAST is just the new line string once. Agents cannot audit old values from LAST.",
+      "repro": "setall N=2 LAST=status=new only"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|fs",
-      "title": "No dry-run / preview for DROPALLMATCHFILE",
-      "detail": "Bulk purge is immediate rewrite. GREPFILE can preview but is a separate op agents must remember.",
-      "repro": "purge is live"
+      "title": "SETALLMATCHFILE_I is first index only",
+      "detail": "Same class as DROPALLMATCHFILE_I. No index bag of all rewritten rows.",
+      "repro": "setall I=first only"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE trailing NL omit on DROPPED plate and last file line",
-      "detail": "cat -A DROPPED last line often no $; rewritten cfg same class.",
-      "repro": "cat -A DROPPED.txt"
+      "title": "WRITE trailing NL omit on LASTOP and last file line",
+      "detail": "footer often no final $ after mutations.",
+      "repro": "cat -A app.ini after setall"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|match",
-      "title": "Empty DROP*MATCH needle is safe zero \u2014 but inconsistent with GREPFILE empty match-all",
-      "detail": "Good for purge safety; still part of empty-needle policy chaos across file ops.",
-      "repro": "DROPALLMATCHFILE p \"\" \u2192 N=0"
+      "area": "host|naming",
+      "title": "SYS BEFORE vs BEFOREMATCHFILE — string vs file op",
+      "detail": "BEFORE is substring peel of a string; BEFOREMATCHFILE inserts on disk. Classic dual trap.",
+      "repro": "BEFORE string vs BEFOREMATCHFILE path"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently disables hard fail",
-      "detail": "REQUIRE=abc \u2192 soft none exit 0.",
-      "repro": "CUBALC_PU_REQUIRE=abc drop1 ZZZ"
+      "title": "Non-numeric REQUIRE env silently softens misses",
+      "detail": "REQUIRE=abc leaves hard gates off.",
+      "repro": "CUBALC_SM_REQUIRE=abc setall missing"
     }
   ],
   "workarounds": [
-    "Use DROPALLMATCHFILE for bulk; DROPMATCHFILE for ack-one",
-    "Prefer long unique markers (DEBUG not DEB)",
-    "GREPFILE before purge for dry-run preview",
-    "Read DROPPED plate not PRINT_JSON for multi-line",
-    "residual count after purge with REQUIRE for clean assert"
+    "Use SETALLMATCHFILE for bulk status; SETMATCHFILE for single flip",
+    "Use full markers [section] not [sec",
+    "Count after setall to verify N vs expectation",
+    "Idempotent after: FINDFILELINE for insert line first or HASLINE check",
+    "Validate REQUIRE env digits after NUM"
   ],
   "language_gaps": [
-    "Whole-word DROP*MATCH modes",
-    "DROPALLMATCHFILE return index bag of all removals",
-    "Dry-run flag for destructive match file ops",
-    "Help disambiguation table for DROP* family",
-    "PRINT_JSON bag-as-array; WRITE trailing NL",
-    "Unify empty-needle docs across GREPFILE vs DROPALLMATCH"
+    "AFTERALLMATCH / BEFOREALLMATCH multi-section insert",
+    "SETALLMATCH return old-line bag or index bag",
+    "Whole-line / whole-token match mode",
+    "Help matrix for *MATCHFILE family",
+    "WRITE trailing NL; PRINT_JSON bag-as-array",
+    "Dry-run for bulk rewrites"
   ],
   "issues_faced": [
-    "DROP first vs ALL positive path clean",
-    "Empty needle safe no-op (contrast GREPFILE)",
-    "DEB false friend over-purge demonstrated",
+    "before/after/setall positive path clean",
+    "Double after reverse-stacks under first section",
+    "SETALL LAST single-string not multi-audit",
     "No language fix this iter"
   ],
-  "commit": "5a7127a9869e399003f69bbf060befef6e89b313",
-  "ts": "2026-08-06T10:03:39Z"
+  "commit": "",
+  "ts": "2026-08-06T10:28:27Z"
 }

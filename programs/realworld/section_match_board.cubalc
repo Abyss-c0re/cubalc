@@ -1,0 +1,738 @@
+# section_match_board.cubalc — section annotate + bulk status rewrite by match
+#
+# Real use: ops agent patches an ini/runbook plate by needle without index math:
+#   SETALLMATCHFILE  — rewrite every status= row at once
+#   INSERTMATCHFILE  — insert AFTER first [section] (section body line)
+#   BEFOREMATCHFILE  — insert BEFORE first [section] (preamble/import)
+# Complements match_purge_board (delete by match) and severity_file_gate
+# (first SETMATCH only): this board is *bulk set* + *before/after insert*.
+#
+# Plate under STATE:
+#   ACTIVE.txt      — target path
+#   LASTOP.txt      — last op result line / note
+#   COUNT.txt       — optional residual count
+#   SECTION_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SM_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   setall    — SETALLMATCHFILE ACTIVE needle(ARG1) text(ARG2)
+#   setalli   — SETALLMATCHFILEI
+#   after     — INSERTMATCHFILE ACTIVE needle text
+#   afteri    — INSERTMATCHFILEI
+#   before    — BEFOREMATCHFILE ACTIVE needle text
+#   beforei   — BEFOREMATCHFILEI
+#   count     — COUNTFILELINE residual
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sm_$$
+#   printf 'header\n[section]\nstatus=old\nstatus=done\nSTATUS=keep\nfooter\n' \
+#     > $CUBALC_STATE/app.ini
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/app.ini \
+#     ./out/cubalc run -q -s programs/realworld/section_match_board.cubalc
+#   CUBALC_ARG0=before CUBALC_ARG1='[section]' CUBALC_ARG2='preamble=1' ...
+#   CUBALC_ARG0=after CUBALC_ARG1='[section]' CUBALC_ARG2='key=val' ...
+#   CUBALC_ARG0=setall CUBALC_ARG1='status=' CUBALC_ARG2='status=new' ...
+#
+# Env: CUBALC_SM_PATH=… CUBALC_SM_REQUIRE=1
+#
+# Edges:
+#   SETALL first-only LAST text (not bag of all new lines); I=first index
+#   after/before first match only; no multi-section insert
+#   no-match N=0 I=-1 OK=1; path miss OK=0
+#   substring false friends; case I; SETALL vs SETMATCH; PRINT_JSON; WRITE NL
+#   empty needle; re-insert after same marker (grows file)
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "section_match_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT LFILE = "LASTOP.txt"
+DEFAULT CFILE = "COUNT.txt"
+DEFAULT REPORT = "SECTION_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SM_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SM_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SM_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SM_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SM_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir LFILE
+LET lastop_path = LAST
+SYS JOIN state_dir CFILE
+LET count_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR lastop_path OR ""
+LET lastop = LAST
+CLEAR_ERR
+SYS READ OR count_path OR ""
+LET count_txt = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET last_ch = 0
+LET count_ch = 0
+LET note_msg = "ok"
+LET op_n = 0
+LET op_i = -1
+LET op_total = 0
+LET cnt = 0
+LET total = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "setall"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "setall needs needle text"
+  END
+END
+SYS EQS ACTION "setalli"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "setalli needs needle text"
+  END
+END
+SYS EQS ACTION "after"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "after needs needle text"
+  END
+END
+SYS EQS ACTION "afteri"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "afteri needs needle text"
+  END
+END
+SYS EQS ACTION "before"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "before needs needle text"
+  END
+END
+SYS EQS ACTION "beforei"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "beforei needs needle text"
+  END
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "count needs needle"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "smatch" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON lastop
+  PRINT_JSON count_txt
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- setall ---
+SYS EQS ACTION "setall"
+IF LAST_N == 1 THEN
+  NOTE "action setall"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setall no active"
+    FAIL "setall no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setall no active"
+    END
+  ELSE
+    SYS SETALLMATCHFILE active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "setall path miss"
+      FAIL "setall path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setall path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = SETALLMATCHFILE_N
+      LET op_i = SETALLMATCHFILE_I
+      LET op_total = SETALLMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "setall none"
+        FAIL "setall none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setall none"
+        END
+      ELSE
+        LET note_msg = "setall ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- setalli ---
+SYS EQS ACTION "setalli"
+IF LAST_N == 1 THEN
+  NOTE "action setalli"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setalli no active"
+    FAIL "setalli no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setalli no active"
+    END
+  ELSE
+    SYS SETALLMATCHFILEI active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "setalli path miss"
+      FAIL "setalli path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setalli path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = SETALLMATCHFILE_N
+      LET op_i = SETALLMATCHFILE_I
+      LET op_total = SETALLMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "setalli none"
+        FAIL "setalli none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setalli none"
+        END
+      ELSE
+        LET note_msg = "setalli ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- after INSERTMATCHFILE ---
+SYS EQS ACTION "after"
+IF LAST_N == 1 THEN
+  NOTE "action after"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "after no active"
+    FAIL "after no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "after no active"
+    END
+  ELSE
+    SYS INSERTMATCHFILE active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "after path miss"
+      FAIL "after path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "after path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = INSERTMATCHFILE_N
+      LET op_i = INSERTMATCHFILE_I
+      LET op_total = INSERTMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "after none"
+        FAIL "after none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "after none"
+        END
+      ELSE
+        LET note_msg = "after ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- afteri ---
+SYS EQS ACTION "afteri"
+IF LAST_N == 1 THEN
+  NOTE "action afteri"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "afteri no active"
+    FAIL "afteri no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "afteri no active"
+    END
+  ELSE
+    SYS INSERTMATCHFILEI active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "afteri path miss"
+      FAIL "afteri path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "afteri path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = INSERTMATCHFILE_N
+      LET op_i = INSERTMATCHFILE_I
+      LET op_total = INSERTMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "afteri none"
+        FAIL "afteri none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "afteri none"
+        END
+      ELSE
+        LET note_msg = "afteri ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- before BEFOREMATCHFILE ---
+SYS EQS ACTION "before"
+IF LAST_N == 1 THEN
+  NOTE "action before"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "before no active"
+    FAIL "before no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "before no active"
+    END
+  ELSE
+    SYS BEFOREMATCHFILE active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "before path miss"
+      FAIL "before path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "before path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = BEFOREMATCHFILE_N
+      LET op_i = BEFOREMATCHFILE_I
+      LET op_total = BEFOREMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "before none"
+        FAIL "before none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "before none"
+        END
+      ELSE
+        LET note_msg = "before ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- beforei ---
+SYS EQS ACTION "beforei"
+IF LAST_N == 1 THEN
+  NOTE "action beforei"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "beforei no active"
+    FAIL "beforei no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "beforei no active"
+    END
+  ELSE
+    SYS BEFOREMATCHFILEI active NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET lastop = ""
+      LET last_ch = 1
+      LET note_msg = "beforei path miss"
+      FAIL "beforei path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "beforei path miss"
+      END
+    ELSE
+      LET lastop = LAST
+      LET op_n = BEFOREMATCHFILE_N
+      LET op_i = BEFOREMATCHFILE_I
+      LET op_total = BEFOREMATCHFILE_TOTAL
+      LET last_ch = 1
+      LET hit = op_n
+      IF op_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "beforei none"
+        FAIL "beforei none"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "beforei none"
+        END
+      ELSE
+        LET note_msg = "beforei ok"
+      END
+    END
+    PRINT_JSON NAME A2 op_n op_i op_total
+    PRINT_JSON lastop
+    CLEAR_ERR
+  END
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count no active"
+    FAIL "count no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count no active"
+    END
+  ELSE
+    SYS COUNTFILELINE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "count path miss"
+      FAIL "count path miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "count path miss"
+      END
+    ELSE
+      LET cnt = COUNTFILELINE_N
+      LET total = COUNTFILELINE_TOTAL
+      LET hit = cnt
+      LET count_txt = "needle"
+      SYS PUSH count_txt NAME
+      LET count_txt = LAST
+      SYS PUSH count_txt "count"
+      LET count_txt = LAST
+      SYS STR cnt
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      SYS PUSH count_txt "total"
+      LET count_txt = LAST
+      SYS STR total
+      SYS PUSH count_txt LAST
+      LET count_txt = LAST
+      LET count_ch = 1
+      IF cnt == 0 THEN
+        LET miss = 1
+        LET note_msg = "count zero"
+        FAIL "count zero"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "count zero"
+        END
+      ELSE
+        LET note_msg = "count ok"
+      END
+    END
+    PRINT_JSON NAME cnt total
+    PRINT_JSON count_txt
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET lastop = ""
+  LET count_txt = ""
+  LET active_ch = 1
+  LET last_ch = 1
+  LET count_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "setall"
+LET k = k + LAST_N
+SYS EQS ACTION "setalli"
+LET k = k + LAST_N
+SYS EQS ACTION "after"
+LET k = k + LAST_N
+SYS EQS ACTION "afteri"
+LET k = k + LAST_N
+SYS EQS ACTION "before"
+LET k = k + LAST_N
+SYS EQS ACTION "beforei"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF last_ch > 0 THEN
+  SYS WRITE lastop_path lastop
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "lastop write failed"
+  END
+  CLEAR_ERR
+END
+IF count_ch > 0 THEN
+  SYS WRITE count_path count_txt
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "count write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.section_match_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "a2"
+LET report = LAST
+SYS PUSH report A2
+LET report = LAST
+SYS PUSH report "op_n"
+LET report = LAST
+SYS STR op_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_i"
+LET report = LAST
+SYS STR op_i
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "op_total"
+LET report = LAST
+SYS STR op_total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "cnt"
+LET report = LAST
+SYS STR cnt
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "section_match_board" ACTION hit miss op_n op_i note_msg elapsed
