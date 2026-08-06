@@ -6470,6 +6470,92 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MEDIANKV|P50KV|MIDKV bag [sep]
+     * — integer median of key:val numeric values (sort; even n → lower mid).
+     * Cap 256 values. Empty → 0. Default sep ":".
+     * LAST = decimal median; LAST_N = median; MEDIANKV_N = fields used.
+     * Usability: outlier-robust typical FREQ count (vs AVGKV) without VALS+MEDIAN. */
+    if (kw(&L->cur,"MEDIANKV") || kw(&L->cur,"P50KV") || kw(&L->cur,"MIDKV") ||
+        kw(&L->cur,"KVMEDIAN") || kw(&L->cur,"MEDVALS") || kw(&L->cur,"MIDCOUNT") ||
+        kw(&L->cur,"FREQMED") || kw(&L->cur,"MEDHIST") || kw(&L->cur,"P50HIST")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], field[512], out[40];
+      long vals[256];
+      const char *p, *start;
+      size_t flen, sn;
+      long keys = 0, med = 0;
+      int n = 0, i;
+      lex_next(L);
+      bag[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      sn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen > 0) {
+            size_t take = flen;
+            keys++;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (n < 256) {
+              const char *rhs = field;
+              char *end = 0;
+              long v;
+              if (sn > 0) {
+                const char *sp = strstr(field, sep);
+                if (sp) rhs = sp + sn;
+                else rhs = NULL;
+              }
+              if (rhs) {
+                v = strtol(rhs, &end, 10);
+                if (end != rhs) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0)
+                    vals[n++] = v;
+                }
+              }
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (n > 0) {
+        for (i = 1; i < n; i++) {
+          long key = vals[i];
+          int j = i - 1;
+          while (j >= 0 && vals[j] > key) {
+            vals[j + 1] = vals[j];
+            j--;
+          }
+          vals[j + 1] = key;
+        }
+        med = vals[(n - 1) / 2];
+      }
+      snprintf(out, sizeof out, "%ld", med);
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "MEDIANKV", out);
+      var_set_str(vm, "P50KV", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = med;
+      var_set_num(vm, "LAST_N", med);
+      var_set_num(vm, "MEDIANKV_N", n);
+      var_set_num(vm, "MEDIANKV_KEYS", keys);
+      var_set_num(vm, "P50KV_N", n);
+      var_set_num(vm, "MIDKV_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TOPKEY|ARGMAXKV|MAXKEY bag [sep]
      * SYS BOTKEY|ARGMINKV|MINKEY bag [sep]
      * — pick first key with max (or min) numeric value in a key:val bag.
@@ -10262,7 +10348,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -10578,6 +10664,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS AVGKV", "SYS AVGKV|MEANKV bag [sep] — integer mean of key:val values · typical FREQ count"},
       {"SYS MEANKV", "SYS MEANKV bag [sep] — alias of SYS AVGKV · mean count across keys"},
       {"SYS MEANVAL", "SYS MEANVAL bag [sep] — alias of SYS AVGKV"},
+      {"SYS MEDIANKV", "SYS MEDIANKV|P50KV bag [sep] — integer median of key:val values · robust FREQ mid"},
+      {"SYS P50KV", "SYS P50KV bag [sep] — alias of SYS MEDIANKV"},
+      {"SYS MIDKV", "SYS MIDKV bag [sep] — alias of SYS MEDIANKV"},
       {"SYS TOPKEY", "SYS TOPKEY|ARGMAXKV bag [sep] — key with max numeric value · dominant FREQ"},
       {"SYS ARGMAXKV", "SYS ARGMAXKV bag [sep] — alias of SYS TOPKEY · LAST=key LAST_N=value"},
       {"SYS BOTKEY", "SYS BOTKEY|ARGMINKV bag [sep] — key with min numeric value · rarest FREQ"},

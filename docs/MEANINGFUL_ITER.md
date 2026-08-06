@@ -209,6 +209,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 179. ~~**`SYS SIGNKV` / `DIRKV`**~~ **done** (map key:val to −1|0|1 · DIFFKV direction without EACH).
 180. ~~**`SYS DIVKV` / `IDIVKV`**~~ **done** (integer-divide key:val values · mean after N-way MERGEKV).
 181. ~~**`SYS AVGKV` / `MEANKV`**~~ **done** (integer mean of key:val values · typical FREQ count ≠ DIVKV).
+182. ~~**`SYS MEDIANKV` / `P50KV`**~~ **done** (integer median of key:val values · robust FREQ mid vs AVGKV).
 
 ## Tick protocol
 
