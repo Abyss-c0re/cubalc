@@ -1,17 +1,16 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 205,
+  "iter": 206,
   "version": "1.15.230-usability",
-  "item": "SYS SUBSTENV / ENVSUBST / EXPANDENV expand $VAR and ${VAR} templates",
-  "item_id": 238,
-  "title": "SYS SUBSTENV|ENVSUBST [tmpl] — expand $NAME/${NAME} from env+vars",
-  "commit": "916fc9b7e27b68f86070097b7ac5456193b0c38e",
-  "summary": "Path/config template expansion without shell envsubst. selftest 205.",
+  "item": "SYS SWAPFILES/DUPLEX/TCPXFER bidirectional any-data flow",
+  "item_id": 239,
+  "title": "SYS SWAPFILES \u00b7 DUPLEX \u00b7 TCPXFER/TCPLISTEN \u2014 bidirectional any-payload host flow",
+  "commit": "c151a7f",
+  "summary": "Host-plane bidirectional flow for arbitrary string/bag data: plate content swap (SWAPFILES), mailbox RTT write-out/read-in (DUPLEX/BIDXFER), and CBXF-framed TCP peer send+recv (TCPXFER/TCPLISTEN). Complements SMX EXCHANGE which is matrix-bit only.",
   "proofs": [
-    "778_sys_substenv",
-    "selftest n_pass=205"
+    "programs/proof/779_sys_bidir_flow.cubalc"
   ],
-  "when": "2026-08-06T12:05:10Z",
+  "when": "2026-08-06T12:09:36Z",
   "agent": "meaningful_iter_10m",
-  "sha": "916fc9b7e27b68f86070097b7ac5456193b0c38e"
+  "sha": "c151a7f56905c390d17e37e4ade97085493f5817"
 }
