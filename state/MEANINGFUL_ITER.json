@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 178,
-  "version": "1.15.203-usability",
-  "item": "SYS GREPLINES / EXTRACTLINES collect matching lines from path bag",
-  "item_id": 211,
-  "title": "SYS GREPLINES|EXTRACTLINES [bag] needle — multi-file line harvest without EACH+READ+GREP",
-  "commit": "66a31ddddd30674e292a40daa4f08f7a8412bc36",
-  "summary": "Collect matching lines from path bags; GREPLINESI. selftest 178.",
+  "iter": 179,
+  "version": "1.15.204-usability",
+  "item": "SYS HEADFILE / TAILFILE first/last n lines of a file",
+  "item_id": 212,
+  "title": "SYS HEADFILE|TAILFILE path [n] — peek file lines without full READ/shell head",
+  "commit": "73169cfd01e1b0698c247f84472b8827e1595d16",
+  "summary": "First/last n file lines → bag; default 10; TOTAL/WANT stats. selftest 179.",
   "proofs": [
-    "751_sys_greplines",
-    "selftest n_pass=178"
+    "752_sys_headfile",
+    "selftest n_pass=179"
   ],
-  "when": "2026-08-06T07:34:08Z",
+  "when": "2026-08-06T07:44:33Z",
   "agent": "meaningful_iter_10m",
-  "sha": "66a31ddddd30674e292a40daa4f08f7a8412bc36"
+  "sha": "73169cfd01e1b0698c247f84472b8827e1595d16"
 }
