@@ -1,0 +1,853 @@
+# process_priv_board.cubalc — EUID/ISROOT + PPID/PGID/SID lineage + SHELL
+#
+# Real use: before privileged plate writes or SPAWN, agents stamp process
+# identity and gate root vs unprivileged workers without shell id/ps/$SHELL:
+#   EUID / UID / ISROOT     — effective privilege + real vs effective dual
+#   PID / PPID / PGID / SID — lineage / process-group / session
+#   SHELL / LOGINSHELL      — login shell path for profile/spawn planning
+# Distinct from group_admit (GID/INGROUP) and plate_acl (CAN*/OWNERNAME):
+# this board is *privilege probe + process-tree stamp + shell path*.
+#
+# Plate under STATE:
+#   VAL.txt        — last stamp / bit
+#   META.txt       — key bag
+#   PRIV_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_PV_ACTION):
+#   list      — plate (default)
+#   who       — full identity composite → VAL/META
+#   lineage   — pid:ppid:pgid:sid
+#   euid      — EUID stamp
+#   root      — ISROOT → VAL 0|1 (miss if not root when soft-deny mode)
+#   same      — UID==EUID (no setuid delta)
+#   shell     — SHELL path → VAL
+#   gate      — ARG1=root|user admit (REQUIRE optional)
+#   stamp     — durable who+lineage+shell into META+VAL
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pv_$$
+#   CUBALC_ARG0=who ...
+#   CUBALC_ARG0=lineage ...
+#   CUBALC_ARG0=root ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=root ...
+#   CUBALC_ARG0=same ...
+#   CUBALC_ARG0=shell ...
+#   CUBALC_ARG0=stamp ...
+#
+# Env: CUBALC_PV_REQUIRE=1  CUBALC_PV_GATE=root|user
+#
+# Edges:
+#   ISROOT is OK=1 always (probe bit); not soft-fail
+#   UID may ≠ EUID under setuid binary (rare for cubalc)
+#   PPID!=PID usual; orphan edge not handled
+#   SHELL may be empty-ish without / on odd hosts
+#   HAS SHELL "/" false friends; WRITE NL; REQUIRE; NUM
+#   gate user on root host soft-misses; gate root on non-root denies
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "process_priv_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "PRIV_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_GATE = "root"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_PV_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_PV_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_PV_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_PV_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_PV_GATE" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_GATE = LAST
+ELSE
+  LET ENV_GATE = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_GATE
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "gate"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_GATE
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET pid_n = 0
+LET ppid_n = 0
+LET pgid_n = 0
+LET sid_n = 0
+LET uid_n = 0
+LET euid_n = 0
+LET root_n = 0
+LET same_n = 0
+LET gate_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "ppriv" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- who full stamp ---
+SYS EQS ACTION "who"
+IF LAST_N == 1 THEN
+  NOTE "action who"
+  SYS PID
+  LET pid_n = LAST_N
+  SYS PPID
+  LET ppid_n = LAST_N
+  SYS PGID
+  LET pgid_n = LAST_N
+  SYS SID
+  LET sid_n = LAST_N
+  SYS UID
+  LET uid_n = LAST_N
+  SYS EUID
+  LET euid_n = LAST_N
+  SYS ISROOT
+  LET root_n = LAST_N
+  SYS USER
+  LET uname = LAST
+  SYS SHELL
+  LET sh = LAST
+  CLEAR_ERR
+  LET same_n = 0
+  IF uid_n == euid_n THEN
+    LET same_n = 1
+  END
+  # VAL = user@euid root=n pid/ppid
+  SYS CAT uname "@"
+  LET val = LAST
+  SYS STR euid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val " root="
+  LET val = LAST
+  SYS STR root_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val " "
+  LET val = LAST
+  SYS STR pid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val "/"
+  LET val = LAST
+  SYS STR ppid_n
+  SYS CAT val LAST
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "who ok"
+  LET meta = "user"
+  SYS PUSH meta uname
+  LET meta = LAST
+  SYS PUSH meta "uid"
+  LET meta = LAST
+  SYS STR uid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "euid"
+  LET meta = LAST
+  SYS STR euid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "isroot"
+  LET meta = LAST
+  SYS STR root_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "same_uid"
+  LET meta = LAST
+  SYS STR same_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "pid"
+  LET meta = LAST
+  SYS STR pid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ppid"
+  LET meta = LAST
+  SYS STR ppid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "pgid"
+  LET meta = LAST
+  SYS STR pgid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "sid"
+  LET meta = LAST
+  SYS STR sid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "shell"
+  LET meta = LAST
+  SYS PUSH meta sh
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON pid_n ppid_n euid_n root_n same_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- lineage ---
+SYS EQS ACTION "lineage"
+IF LAST_N == 1 THEN
+  NOTE "action lineage"
+  SYS PID
+  LET pid_n = LAST_N
+  SYS PPID
+  LET ppid_n = LAST_N
+  SYS PGID
+  LET pgid_n = LAST_N
+  SYS SID
+  LET sid_n = LAST_N
+  CLEAR_ERR
+  # self != parent usual
+  LET orphan_n = 0
+  IF ppid_n == pid_n THEN
+    LET orphan_n = 1
+  END
+  IF ppid_n == 0 THEN
+    LET orphan_n = 1
+  END
+  SYS STR pid_n
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS STR ppid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS STR pgid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val ":"
+  LET val = LAST
+  SYS STR sid_n
+  SYS CAT val LAST
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "lineage ok"
+  LET meta = "pid"
+  SYS STR pid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ppid"
+  LET meta = LAST
+  SYS STR ppid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "pgid"
+  LET meta = LAST
+  SYS STR pgid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "sid"
+  LET meta = LAST
+  SYS STR sid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "orphanish"
+  LET meta = LAST
+  SYS STR orphan_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON pid_n ppid_n pgid_n sid_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- euid ---
+SYS EQS ACTION "euid"
+IF LAST_N == 1 THEN
+  NOTE "action euid"
+  SYS EUID
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "euid fail"
+    FAIL "euid fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "euid fail"
+    END
+  ELSE
+    LET euid_n = LAST_N
+    SYS STR euid_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "euid ok"
+    LET meta = "euid"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON euid_n
+  CLEAR_ERR
+END
+
+# --- root ISROOT ---
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  NOTE "action root"
+  SYS ISROOT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET root_n = 0
+    LET note_msg = "root probe fail"
+    FAIL "root probe fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "root probe fail"
+    END
+  ELSE
+    LET root_n = LAST_N
+    IF root_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "not root"
+      FAIL "not root"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "not root"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "root ok"
+    END
+    SYS STR root_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "isroot"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON root_n
+  CLEAR_ERR
+END
+
+# --- same UID==EUID ---
+SYS EQS ACTION "same"
+IF LAST_N == 1 THEN
+  NOTE "action same"
+  SYS UID
+  LET uid_n = LAST_N
+  SYS EUID
+  LET euid_n = LAST_N
+  CLEAR_ERR
+  LET same_n = 0
+  IF uid_n == euid_n THEN
+    LET same_n = 1
+  END
+  IF same_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "setuid delta"
+    FAIL "setuid delta"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setuid delta"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "same ok"
+  END
+  SYS STR same_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "uid"
+  SYS STR uid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "euid"
+  LET meta = LAST
+  SYS STR euid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "same"
+  LET meta = LAST
+  SYS STR same_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON same_n uid_n euid_n
+  CLEAR_ERR
+END
+
+# --- shell ---
+SYS EQS ACTION "shell"
+IF LAST_N == 1 THEN
+  NOTE "action shell"
+  SYS SHELL
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "shell fail"
+    FAIL "shell fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "shell fail"
+    END
+  ELSE
+    LET val = LAST
+    SYS LEN val
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "shell empty"
+      FAIL "shell empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "shell empty"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "shell ok"
+    END
+    LET val_ch = 1
+    # false friends
+    SYS HAS val "/"
+    LET has_slash = LAST_N
+    SYS HAS val "sh"
+    LET has_sh = LAST_N
+    SYS STARTS val "/"
+    LET abs_n = LAST_N
+    CLEAR_ERR
+    LET meta = "shell"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "has_slash"
+    LET meta = LAST
+    SYS STR has_slash
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "has_sh_sub"
+    LET meta = LAST
+    SYS STR has_sh
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "abs"
+    LET meta = LAST
+    SYS STR abs_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate root|user ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_GATE
+  END
+  SYS LOWER NAME
+  LET want = LAST
+  SYS ISROOT
+  LET root_n = LAST_N
+  SYS EUID
+  LET euid_n = LAST_N
+  CLEAR_ERR
+  LET gate_n = 0
+  SYS EQS want "root"
+  IF LAST_N == 1 THEN
+    IF root_n == 1 THEN
+      LET gate_n = 1
+    END
+  ELSE
+    SYS EQS want "user"
+    IF LAST_N == 1 THEN
+      IF root_n == 0 THEN
+        LET gate_n = 1
+      END
+    ELSE
+      # also accept nonroot / unpriv aliases via HAS false-friend prone path
+      SYS HAS want "root"
+      IF LAST_N == 1 THEN
+        # "noroot" / "nonroot" contain root — false friend!
+        SYS HAS want "no"
+        IF LAST_N == 1 THEN
+          IF root_n == 0 THEN
+            LET gate_n = 1
+          END
+        ELSE
+          IF root_n == 1 THEN
+            LET gate_n = 1
+          END
+        END
+      ELSE
+        SYS EQS want "unpriv"
+        IF LAST_N == 1 THEN
+          IF root_n == 0 THEN
+            LET gate_n = 1
+          END
+        ELSE
+          LET miss = 1
+          LET note_msg = "gate unknown mode"
+          FAIL "gate unknown mode"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate unknown mode"
+          END
+        END
+      END
+    END
+  END
+  SYS EQS note_msg "gate unknown mode"
+  IF LAST_N == 0 THEN
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "want"
+    SYS PUSH meta want
+    LET meta = LAST
+    SYS PUSH meta "isroot"
+    LET meta = LAST
+    SYS STR root_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "euid"
+    LET meta = LAST
+    SYS STR euid_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ok"
+    LET meta = LAST
+    SYS STR gate_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n root_n euid_n
+  CLEAR_ERR
+END
+
+# --- stamp durable who ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS PID
+  LET pid_n = LAST_N
+  SYS PPID
+  LET ppid_n = LAST_N
+  SYS PGID
+  LET pgid_n = LAST_N
+  SYS SID
+  LET sid_n = LAST_N
+  SYS UID
+  LET uid_n = LAST_N
+  SYS EUID
+  LET euid_n = LAST_N
+  SYS ISROOT
+  LET root_n = LAST_N
+  SYS USER
+  LET uname = LAST
+  SYS HOSTNAME
+  LET hname = LAST
+  SYS SHELL
+  LET sh = LAST
+  CLEAR_ERR
+  LET same_n = 0
+  IF uid_n == euid_n THEN
+    LET same_n = 1
+  END
+  # VAL compact
+  SYS CAT uname "@"
+  LET val = LAST
+  SYS CAT val hname
+  LET val = LAST
+  SYS CAT val " euid="
+  LET val = LAST
+  SYS STR euid_n
+  SYS CAT val LAST
+  LET val = LAST
+  SYS CAT val " root="
+  LET val = LAST
+  SYS STR root_n
+  SYS CAT val LAST
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "stamp ok"
+  LET meta = "user"
+  SYS PUSH meta uname
+  LET meta = LAST
+  SYS PUSH meta "host"
+  LET meta = LAST
+  SYS PUSH meta hname
+  LET meta = LAST
+  SYS PUSH meta "uid"
+  LET meta = LAST
+  SYS STR uid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "euid"
+  LET meta = LAST
+  SYS STR euid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "isroot"
+  LET meta = LAST
+  SYS STR root_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "same"
+  LET meta = LAST
+  SYS STR same_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "pid"
+  LET meta = LAST
+  SYS STR pid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "ppid"
+  LET meta = LAST
+  SYS STR ppid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "pgid"
+  LET meta = LAST
+  SYS STR pgid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "sid"
+  LET meta = LAST
+  SYS STR sid_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "shell"
+  LET meta = LAST
+  SYS PUSH meta sh
+  LET meta = LAST
+  SYS PUSH meta "identity"
+  LET meta = LAST
+  SYS PUSH meta IDENTITY
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON root_n euid_n pid_n ppid_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET val = ""
+  LET meta = ""
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "who"
+LET k = k + LAST_N
+SYS EQS ACTION "lineage"
+LET k = k + LAST_N
+SYS EQS ACTION "euid"
+LET k = k + LAST_N
+SYS EQS ACTION "root"
+LET k = k + LAST_N
+SYS EQS ACTION "same"
+LET k = k + LAST_N
+SYS EQS ACTION "shell"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.process_priv_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pid"
+LET report = LAST
+SYS STR pid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ppid"
+LET report = LAST
+SYS STR ppid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "euid"
+LET report = LAST
+SYS STR euid_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "isroot"
+LET report = LAST
+SYS STR root_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "same"
+LET report = LAST
+SYS STR same_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "process_priv_board" ACTION hit miss pid_n ppid_n euid_n root_n gate_n note_msg elapsed

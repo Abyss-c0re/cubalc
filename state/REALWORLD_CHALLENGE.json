@@ -1,145 +1,151 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 100,
-  "program": "programs/realworld/group_admit_board.cubalc",
-  "theme": "group admit GID/EGID/GROUP + GROUPS/INGROUP plate match",
-  "version": "1.15.289-usability",
+  "iter": 101,
+  "program": "programs/realworld/process_priv_board.cubalc",
+  "theme": "process privilege EUID/ISROOT + PPID/PGID/SID lineage + SHELL",
+  "version": "1.15.292-usability",
   "pass": true,
   "tests": [
     {
       "name": "who",
-      "cmd": "USER:UID:GROUP:GID:EGID stamp",
+      "cmd": "user@euid root=pid/ppid stamp",
       "ok": true,
-      "note": "root:0:root:0:0"
+      "note": "root@0 root=1"
     },
     {
-      "name": "groups",
-      "cmd": "GROUPS bag non-empty",
+      "name": "lineage",
+      "cmd": "pid:ppid:pgid:sid",
       "ok": true,
-      "note": "root"
+      "note": "PPID!=PID"
     },
     {
-      "name": "in_name_gid",
-      "cmd": "INGROUP root and INGROUP 0",
+      "name": "euid_root_same",
+      "cmd": "EUID=0 ISROOT=1 UID==EUID",
       "ok": true,
-      "note": "name+num"
+      "note": "this host root"
     },
     {
-      "name": "gate_deny",
-      "cmd": "unknown group REQUIRE \u2192 exit 2",
+      "name": "shell",
+      "cmd": "SHELL /bin/bash abs path",
       "ok": true,
-      "note": "OK=1 LAST_N=0"
+      "note": "has_slash"
     },
     {
-      "name": "allow_check",
-      "cmd": "comma roster + HASLINE exact",
+      "name": "gate_root",
+      "cmd": "gate root admit on euid0",
       "ok": true,
-      "note": "root/ops pass admin deny"
+      "note": "pass"
     },
     {
-      "name": "match_peer",
-      "cmd": "FILEGID/GROUPNAME vs EGID/GROUP + INGROUP",
+      "name": "gate_user_require",
+      "cmd": "gate user REQUIRE → exit 2",
       "ok": true,
-      "note": "root@root:1:1:1"
+      "note": "deny on root host"
     },
     {
-      "name": "empty_in",
-      "cmd": "INGROUP empty exits needs-arg",
+      "name": "gate_noroot",
+      "cmd": "HAS false friend noroot soft deny",
       "ok": true,
-      "note": "EXIT 2"
+      "note": "ok=0 miss soft"
+    },
+    {
+      "name": "stamp",
+      "cmd": "durable who+host+lineage meta",
+      "ok": true,
+      "note": "root@pve euid=0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "262/262 pass"
+      "note": "265/265 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|ingroup",
-      "title": "INGROUP unknown is OK=1 LAST_N=0 \u2014 same dual as HASENV/CAN*",
-      "detail": "Empty name OK=0 sticky; unknown group probe OK=1. Agents confuse miss kinds when composing gates.",
-      "repro": "INGROUP nosuch OK=1; INGROUP \"\" OK=0"
+      "area": "host|isroot",
+      "title": "ISROOT is always OK=1 probe bit — no soft-fail semantic",
+      "detail": "Unlike ATIME miss OK=0, ISROOT never fails; agents must branch LAST_N. Easy to ASSERT OK and think privileged.",
+      "repro": "ISROOT as non-root → OK=1 LAST_N=0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|match",
-      "title": "No GROUPEDBY / SAMEGROUP helper for plate vs process",
-      "detail": "match requires FILEGID+EGID and GROUPNAME+GROUP dual; agents often check only one and admit wrong.",
-      "repro": "need 4 probes for plate group match"
+      "area": "host|euid",
+      "title": "No SETEUID/SETUID — can probe but not drop privilege in-language",
+      "detail": "Agents that detect root cannot demote before untrusted plate work without SPAWN/external helper.",
+      "repro": "ISROOT 1; no drop path"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|groups",
-      "title": "GROUPS bag format / primary-first order undocumented for agents",
-      "detail": "Only root on this host; multi-group hosts may differ primary placement. No GROUPS_IDS numeric bag dual.",
-      "repro": "GROUPS \u2192 names only"
+      "area": "host|lineage",
+      "title": "PPID/PGID/SID are numbers only — no parent cmdline/comm stamp",
+      "detail": "Cannot answer who spawned me without /proc read. No PARENT_COMM / EXE form.",
+      "repro": "PPID → 1234 only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|hasline",
-      "title": "HAS vs HASLINE false friends on group allowlists",
-      "detail": "HAS allow ops matches ops_admin substring risk; HASLINE exact is correct but easy to mix.",
-      "repro": "HAS rooty root"
+      "area": "host|has",
+      "title": "Gate mode parsing via HAS is false-friend prone (noroot contains root)",
+      "detail": "HAS noroot root → 1. Board hand-rolls no-prefix. EQS-only safer but agents invent aliases with HAS.",
+      "repro": "HAS noroot root"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|allow",
-      "title": "Comma roster needs REPLACEALL \\\\n dance \u2014 no CSV bag form",
-      "detail": "ARG1 root,ops,sre requires REPLACEALL comma\u2192newline. WORDS+JOINLINES alternative still awkward.",
-      "repro": "allow root,ops,sre"
+      "area": "host|shell",
+      "title": "SHELL source ($SHELL vs passwd) not distinguished",
+      "detail": "Agents cannot tell env override from login shell. Empty SHELL edge host-dependent.",
+      "repro": "SHELL with SHELL= unset"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|gid",
-      "title": "GID vs EGID rarely differ but no setgid/clear_groups story",
-      "detail": "Agents assume always equal; no documentation when they diverge after setgid helpers.",
-      "repro": "who gid_eq_egid flag"
+      "area": "host|uid",
+      "title": "UID vs EUID dual under-documented for setuid cubalc",
+      "detail": "same action is the only agent-facing dual check; OWNEDBY uses euid only.",
+      "repro": "UID!=EUID rare"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "PATH/ALLOW short writes glue in cat -A.",
-      "repro": "cat -A PATH.txt"
+      "detail": "VAL short stamps glue in cat -A.",
+      "repro": "cat -A VAL.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_GA_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate deny \u2192 rc 0"
+      "detail": "CUBALC_PV_REQUIRE=abc.",
+      "repro": "REQUIRE=abc gate user → rc 0"
     }
   ],
   "workarounds": [
-    "Branch INGROUP on LAST_N; empty on OK",
-    "Dual-probe FILEGID and GROUPNAME for plate match",
-    "HASLINE for allowlists never HAS",
-    "REPLACEALL commas before HASLINE roster",
+    "Branch ISROOT on LAST_N not OK",
+    "Prefer EQS gate modes root|user over HAS",
+    "Stamp PPID for audit; resolve parent out-of-band if needed",
+    "Dual UID+EUID before assuming identity",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "SYS GROUPEDBY / SAMEGROUP plate vs process",
-    "GROUPS_IDS numeric bag dual",
-    "CSV/LIST ARG bag helper for allow rosters",
-    "Unified soft-probe contract INGROUP/HASENV/CAN*",
+    "SETEUID/PRIVDROP for in-process demotion",
+    "PARENT_COMM / EXE path for lineage",
+    "SHELL_SOURCE env|passwd tag",
+    "ISROOT soft-fail option or REQUIRE ROOT form",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "who/groups/in/gate/allow/check/match/peer green",
-    "comma\u2192newline allow works via REPLACEALL",
-    "selftest 262/262; no language fix this iter"
+    "who/lineage/euid/root/same/shell/gate/stamp green on root host",
+    "gate user REQUIRE denies; noroot HAS false friend documented",
+    "selftest 265/265; no language fix this iter"
   ],
-  "commit": "125bc3989559f9c95e4dfe5bb50dbec8ecc1d64d",
-  "ts": "2026-08-06T21:43:43Z"
+  "commit": "",
+  "ts": "2026-08-06T22:08:40Z"
 }
