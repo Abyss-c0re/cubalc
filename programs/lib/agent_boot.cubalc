@@ -1,8 +1,11 @@
 # INCLUDE agent_boot — one-shot agent program preamble
-# Usability: REQUIRE version floor + HOLD_FLASH seed + VERSION plate
+# Usability: REQUIRE version floor + VERSION plate
 #   INCLUDE agent_boot
 #   # then place cubes / run logic
+#
+# HOLD_FLASH is NOT required here. Runtime defaults hold_flash=1 so PLUG works.
+# HOLD_FLASH is only a device/firmware-connection safeguard — use hold_seed
+# when you intentionally gate firmware-capable hosts (see docs/HOLD_FLASH.md).
 
 REQUIRE VERSION "1.15"
-INCLUDE hold_seed
 VERSION

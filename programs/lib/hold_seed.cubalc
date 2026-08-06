@@ -1,5 +1,15 @@
 // INCLUDE "lib/hold_seed.cubalc"  (from a programs/* path) or absolute path
-// HOLD_FLASH = user permission before plug-in (safeguard, not auto-flash)
+//
+// HOLD_FLASH is a **device/firmware connection safeguard**, not a program
+// preamble. Runtime already defaults hold_flash=1 for normal cube PLUG.
+//
+// Use this seed only when you need an explicit sticky ack for hosts that
+// can change firmware / physical devices. Ordinary agent programs should
+// NOT require this INCLUDE.
+//
+//   HOLD_FLASH 1  — allow device plug (default at runtime anyway)
+//   HOLD_FLASH 0  — deny PLUG (tests / lock-down)
+
 HOLD_FLASH 1
 BUDGET 40
 SHARE state_matrix_only

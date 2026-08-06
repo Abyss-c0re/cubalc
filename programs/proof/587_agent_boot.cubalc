@@ -1,19 +1,18 @@
 # INCLUDE agent_boot — stdlib one-shot agent preamble
-# Usability: REQUIRE + hold_seed + VERSION without repeating boilerplate
+# Usability: REQUIRE VERSION + VERSION without HOLD_FLASH boilerplate
+# Runtime defaults hold_flash=1 — PLUG works without HOLD_FLASH form
 
 INCLUDE agent_boot
 ASSERT OK == 1 "agent_boot ok"
 ASSERT INCLUDE_OK == 1 "include path set"
-# nested INCLUDE hold_seed leaves INCLUDE_PATH on leaf
-SYS HAS INCLUDE_PATH "hold_seed"
-ASSERT LAST_N == 1 "nested hold_seed path"
 SYS HAS VERSION "1.15"
 ASSERT LAST_N == 1 "VERSION from boot"
-# hold_seed applied HOLD_FLASH 1 (PLUG would hard-fail if 0)
+
+# no HOLD_FLASH form required — default permits plug
 CUBE a ROLE host PROTON 1
 CUBE b ROLE body PROTON 1
 PLUG a b
-ASSERT OK == 1 "HOLD_FLASH seed permits plug"
+ASSERT OK == 1 "default hold_flash permits plug"
 
 PRINT "agent_boot ok" VERSION
 PRINT_JSON VERSION OK INCLUDE_OK

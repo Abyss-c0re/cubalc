@@ -1,0 +1,20 @@
+# Runtime defaults hold_flash=1 — programs need NOT start with HOLD_FLASH 1
+# HOLD_FLASH is a device/firmware connection safeguard, not a preamble tax
+
+# no HOLD_FLASH form in this file
+PRINT "hello"
+ASSERT 1 == 1
+
+CUBE a ROLE host PROTON 1
+CUBE b ROLE body PROTON 1
+PLUG a b
+ASSERT OK == 1 "plug without HOLD_FLASH form"
+
+# SYS-only path also fine without HOLD_FLASH form
+SYS TMP
+ASSERT OK == 1
+SYS STR 42
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+PRINT "no_hold_flash_preamble ok"
