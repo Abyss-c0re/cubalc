@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 177,
-  "version": "1.15.202-usability",
-  "item": "SYS FIRSTFILE / LASTFILE first/last path with content match",
-  "item_id": 210,
-  "title": "SYS FIRSTFILE|LASTFILE|HITFILE [bag] needle — one-hit path pick without GREPFILES+HEAD",
-  "commit": "649900be813fed3a51022850ce2b6c191d13ad72",
-  "summary": "First/last path content match; FIRSTFILEI/LASTFILEI. selftest 177.",
+  "iter": 178,
+  "version": "1.15.203-usability",
+  "item": "SYS GREPLINES / EXTRACTLINES collect matching lines from path bag",
+  "item_id": 211,
+  "title": "SYS GREPLINES|EXTRACTLINES [bag] needle — multi-file line harvest without EACH+READ+GREP",
+  "commit": "66a31ddddd30674e292a40daa4f08f7a8412bc36",
+  "summary": "Collect matching lines from path bags; GREPLINESI. selftest 178.",
   "proofs": [
-    "750_sys_firstfile",
-    "selftest n_pass=177"
+    "751_sys_greplines",
+    "selftest n_pass=178"
   ],
-  "when": "2026-08-06T07:24:19Z",
+  "when": "2026-08-06T07:34:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "649900be813fed3a51022850ce2b6c191d13ad72"
+  "sha": "66a31ddddd30674e292a40daa4f08f7a8412bc36"
 }
