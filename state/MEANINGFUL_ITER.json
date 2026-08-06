@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 243,
-  "version": "1.15.270-usability",
-  "item": "SYS DOTENV / LOADENV / ENVFILE load KEY=VAL plates",
-  "item_id": 278,
-  "title": "SYS DOTENV|LOADENV|ENVFILE path — load dotenv plate into process env for agents",
-  "commit": "880b33881325000e994eb4b48c12e1730b6774b3",
-  "summary": "dotenv KEY=VAL plate → setenv; export/quotes/skip; soft miss. selftest 243.",
+  "iter": 244,
+  "version": "1.15.271-usability",
+  "item": "SYS DUMPENV / ENVALL / LISTENV process env KEY=VAL bag",
+  "item_id": 279,
+  "title": "SYS DUMPENV|ENVALL [prefix] — process env as KEY=VAL bag for agent inventory",
+  "commit": "98c73e92a3cb039a726c90bc03561096280d4c2c",
+  "summary": "environ KEY=VAL bag + optional prefix; dual of DOTENV. selftest 244.",
   "proofs": [
-    "817_sys_dotenv",
-    "selftest n_pass=243"
+    "818_sys_dumpenv",
+    "selftest n_pass=244"
   ],
-  "when": "2026-08-06T18:16:08Z",
+  "when": "2026-08-06T18:26:46Z",
   "agent": "meaningful_iter_10m",
-  "sha": "880b33881325000e994eb4b48c12e1730b6774b3",
-  "note": "complements SETENV/SUBSTENV; agent .env without shell"
+  "sha": "98c73e92a3cb039a726c90bc03561096280d4c2c",
+  "note": "complements DOTENV/SETENV; printenv without shell"
 }
