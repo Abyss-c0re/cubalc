@@ -6123,6 +6123,250 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS KVFILEENSURE|ENSUREKVFILE|DEFAULTKVFILE path key value [sep]
+     * — set key=val in plate file only if key missing (file DEFAULT).
+     * Existing key → leave value; NEW=0 HIT=1; LAST = existing line.
+     * Missing key / file → write default; NEW=1 HIT=0.
+     * LAST_N = NEW; default sep "=". Soft empty path → OK=0.
+     * Usability: agent config defaults without LOOKUPFILE+IF+KVFILESET glue. */
+    if (kw(&L->cur,"KVFILEENSURE") || kw(&L->cur,"ENSUREKVFILE") ||
+        kw(&L->cur,"DEFAULTKVFILE") || kw(&L->cur,"KVFILEDEFAULT") ||
+        kw(&L->cur,"PLATEENSURE") || kw(&L->cur,"CONFIGENSURE") ||
+        kw(&L->cur,"ENSUREFILEKV") || kw(&L->cur,"FILEENSUREKV") ||
+        kw(&L->cur,"PUTKVIF") || kw(&L->cur,"SETKVIFMISS") ||
+        kw(&L->cur,"KVFILEIFMISS") || kw(&L->cur,"IFNOTKVFILE")){
+      char path[512], key[256], val[512], sep[32], a[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX], newline[768], field[512], left[256];
+      char existing[768], exist_val[512];
+      const char *p, *start;
+      size_t flen, kn, sn, vn, olen = 0, left_n;
+      long idx = 0, kept = 0, hit = 0, found_i = -1;
+      int first = 1;
+      cubalc_host_result hr, wr;
+      lex_next(L);
+      path[0] = 0; key[0] = 0; val[0] = 0; out[0] = 0; a[0] = 0;
+      newline[0] = 0; existing[0] = 0; exist_val[0] = 0;
+      snprintf(sep, sizeof sep, "%s", "=");
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS KVFILEENSURE path key value [sep]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0) key[0] = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      {
+        size_t i = 0;
+        while (val[i] && val[i] != '\n' && val[i] != '\r' && i + 1 < sizeof val) i++;
+        val[i] = 0;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", "=");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && strlen(L->cur.text) <= 2) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      kn = strlen(key);
+      sn = strlen(sep);
+      vn = strlen(val);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KVFILEENSURE_N", 0);
+        var_set_num(vm, "KVFILEENSURE_I", -1);
+        var_set_num(vm, "KVFILEENSURE_HIT", 0);
+        var_set_num(vm, "KVFILEENSURE_NEW", 0);
+        var_set_num(vm, "KVFILEENSURE_TOTAL", 0);
+        var_set_str(vm, "KVFILEENSURE_V", "");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "KVFILEENSURE: empty path");
+        var_set_str(vm, "ERR", "KVFILEENSURE: empty path");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(path, &hr) != 0) {
+        /* missing file → create with default */
+        if (sn == 0)
+          snprintf(newline, sizeof newline, "%s", key[0] ? key : val);
+        else
+          snprintf(newline, sizeof newline, "%s%s%s", key, sep, val);
+        if (cubalc_host_write(path, newline, &wr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "KVFILEENSURE_N", 0);
+          var_set_num(vm, "KVFILEENSURE_I", -1);
+          var_set_num(vm, "KVFILEENSURE_HIT", 0);
+          var_set_num(vm, "KVFILEENSURE_NEW", 0);
+          var_set_num(vm, "KVFILEENSURE_TOTAL", 0);
+          var_set_str(vm, "KVFILEENSURE_V", "");
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "KVFILEENSURE: write fail");
+          var_set_str(vm, "ERR", wr.err[0] ? wr.err : "KVFILEENSURE: write fail");
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", newline);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", newline);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_str(vm, "KVFILEENSURE", newline);
+        var_set_str(vm, "ENSUREKVFILE", newline);
+        var_set_str(vm, "DEFAULTKVFILE", newline);
+        var_set_str(vm, "KVFILEENSURE_V", val);
+        var_set_num(vm, "KVFILEENSURE_N", 1);
+        var_set_num(vm, "KVFILEENSURE_I", 0);
+        var_set_num(vm, "KVFILEENSURE_HIT", 0);
+        var_set_num(vm, "KVFILEENSURE_NEW", 1);
+        var_set_num(vm, "KVFILEENSURE_TOTAL", 1);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      p = hr.str;
+      if (*p) {
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (sn == 0) {
+              match = (strcmp(field, key) == 0);
+            } else {
+              const char *sp = strstr(field, sep);
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              } else {
+                left_n = take;
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              }
+              match = (strcmp(left, key) == 0);
+            }
+            if (match && found_i < 0) {
+              found_i = idx;
+              hit = 1;
+              snprintf(existing, sizeof existing, "%s", field);
+              if (sn == 0) {
+                snprintf(exist_val, sizeof exist_val, "%s", field);
+              } else {
+                const char *sp = strstr(field, sep);
+                if (sp) {
+                  snprintf(exist_val, sizeof exist_val, "%s", sp + sn);
+                } else {
+                  exist_val[0] = 0;
+                }
+              }
+            }
+            /* always keep original lines (no rewrite of existing keys) */
+            {
+              size_t nlen = strlen(field);
+              if (!first && olen + 1 < sizeof out) out[olen++] = '\n';
+              first = 0;
+              if (olen + nlen < sizeof out) {
+                memcpy(out + olen, field, nlen);
+                olen += nlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, field, t);
+                olen += t;
+              }
+              out[olen] = 0;
+            }
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (hit) {
+        /* key already present — leave file untouched */
+        var_set_str(vm, "LAST", existing);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", existing);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "KVFILEENSURE", existing);
+        var_set_str(vm, "ENSUREKVFILE", existing);
+        var_set_str(vm, "DEFAULTKVFILE", existing);
+        var_set_str(vm, "KVFILEENSURE_V", exist_val);
+        var_set_num(vm, "KVFILEENSURE_N", 0);
+        var_set_num(vm, "KVFILEENSURE_I", found_i);
+        var_set_num(vm, "KVFILEENSURE_HIT", 1);
+        var_set_num(vm, "KVFILEENSURE_NEW", 0);
+        var_set_num(vm, "KVFILEENSURE_TOTAL", kept);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* append default */
+      if (sn == 0)
+        snprintf(newline, sizeof newline, "%s", key[0] ? key : val);
+      else
+        snprintf(newline, sizeof newline, "%s%s%s", key, sep, val);
+      {
+        size_t nlen = strlen(newline);
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + nlen < sizeof out) {
+          memcpy(out + olen, newline, nlen);
+          olen += nlen;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, newline, t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      found_i = kept;
+      kept++;
+      if (cubalc_host_write(path, out, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KVFILEENSURE_N", 0);
+        var_set_num(vm, "KVFILEENSURE_I", found_i);
+        var_set_num(vm, "KVFILEENSURE_HIT", 0);
+        var_set_num(vm, "KVFILEENSURE_NEW", 0);
+        var_set_num(vm, "KVFILEENSURE_TOTAL", kept - 1);
+        var_set_str(vm, "KVFILEENSURE_V", "");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "KVFILEENSURE: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "KVFILEENSURE: write fail");
+        bump(vm); return 1;
+      }
+      (void)kn; (void)vn;
+      var_set_str(vm, "LAST", newline);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", newline);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_str(vm, "KVFILEENSURE", newline);
+      var_set_str(vm, "ENSUREKVFILE", newline);
+      var_set_str(vm, "DEFAULTKVFILE", newline);
+      var_set_str(vm, "KVFILEENSURE_V", val);
+      var_set_num(vm, "KVFILEENSURE_N", 1);
+      var_set_num(vm, "KVFILEENSURE_I", found_i);
+      var_set_num(vm, "KVFILEENSURE_HIT", 0);
+      var_set_num(vm, "KVFILEENSURE_NEW", 1);
+      var_set_num(vm, "KVFILEENSURE_TOTAL", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS KVFILEDEL|FILEKVDEL|DELKVFILE path key [sep]
      * — drop first key=val line from a plate file (read-modify-write).
      * Dual of KVFILESET / file KVDEL. Default sep "=".

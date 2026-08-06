@@ -1,0 +1,106 @@
+# SYS KVFILEENSURE / ENSUREKVFILE / DEFAULTKVFILE
+# — set key=val in plate file only if key missing (file DEFAULT)
+# Usability: agent config defaults without LOOKUPFILE+IF+KVFILESET glue
+# Existing key left untouched. Missing file → create. Soft empty path → OK=0.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "kvfileensure_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fs = LAST
+SYS WRITE fs "host=peer1\nport=7700\nmode=soft"
+
+# existing key → no overwrite
+SYS KVFILEENSURE fs "port" "9999"
+ASSERT OK == 1
+ASSERT KVFILEENSURE_HIT == 1
+ASSERT KVFILEENSURE_NEW == 0
+ASSERT LAST_N == 0
+ASSERT KVFILEENSURE_N == 0
+ASSERT KVFILEENSURE_I == 1
+ASSERT KVFILEENSURE_TOTAL == 3
+SYS EQS LAST "port=7700"
+ASSERT LAST_N == 1
+SYS EQS KVFILEENSURE_V "7700"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "port"
+SYS EQS LAST "7700"
+ASSERT LAST_N == 1
+
+# missing key → append default
+SYS KVFILEENSURE fs "ttl" "30"
+ASSERT KVFILEENSURE_HIT == 0
+ASSERT KVFILEENSURE_NEW == 1
+ASSERT LAST_N == 1
+ASSERT KVFILEENSURE_I == 3
+ASSERT KVFILEENSURE_TOTAL == 4
+SYS EQS LAST "ttl=30"
+ASSERT LAST_N == 1
+SYS EQS KVFILEENSURE_V "30"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "ttl"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+
+# second ensure is no-op
+SYS ENSUREKVFILE fs "ttl" "99"
+ASSERT KVFILEENSURE_NEW == 0
+ASSERT KVFILEENSURE_HIT == 1
+SYS EQS KVFILEENSURE_V "30"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "ttl"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+
+# custom sep :
+SYS JOIN fix "hist.txt"
+LET hs = LAST
+SYS WRITE hs "error:3\nwarn:1"
+SYS KVFILEENSURE hs "error" "99" ":"
+ASSERT KVFILEENSURE_HIT == 1
+ASSERT KVFILEENSURE_NEW == 0
+SYS EQS KVFILEENSURE_V "3"
+ASSERT LAST_N == 1
+SYS DEFAULTKVFILE hs "crit" "2" ":"
+ASSERT KVFILEENSURE_NEW == 1
+ASSERT KVFILEENSURE_HIT == 0
+SYS LOOKUPFILE hs "crit" ":"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# create missing plate
+SYS JOIN fix "new_plate.txt"
+LET np = LAST
+SYS RM np
+SYS PLATEENSURE np "status" "boot"
+ASSERT OK == 1
+ASSERT KVFILEENSURE_NEW == 1
+ASSERT KVFILEENSURE_HIT == 0
+ASSERT KVFILEENSURE_TOTAL == 1
+SYS EQS LAST "status=boot"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE np "status"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+SYS KVFILEENSURE np "status" "gone"
+ASSERT KVFILEENSURE_NEW == 0
+SYS LOOKUPFILE np "status"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS KVFILEENSURE "" "a" "b"
+ASSERT OK == 0
+ASSERT KVFILEENSURE_NEW == 0
+
+# cleanup
+SYS RM fs
+SYS RM hs
+SYS RM np
+
+PRINT "sys_kvfileensure ok"
