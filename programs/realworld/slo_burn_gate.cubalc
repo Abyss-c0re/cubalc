@@ -1,0 +1,630 @@
+# slo_burn_gate.cubalc — SLO burn / alert denoise plate (LOOKUPN + THRESHKV)
+#
+# Real use: SRE agent folds service:error_count bags under STATE, denoise with
+# THRESHKV (keep value>=min for paging), peel counts via LOOKUPN for burn
+# arithmetic without LOOKUP+SYS NUM glue, compare against budget ceiling.
+#
+# Distinct from shard_err_rollup (MERGEKV multi-shard) and svc_err_kv_board
+# (raw KVINC): this board is threshold gate + numeric peel for SLO burn.
+#
+# Plate under STATE:
+#   BURN.txt          — service:count bag
+#   HOT.txt           — last THRESHKV result (paged subset)
+#   BURN_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SB_ACTION):
+#   list      — depth + sum + top (default)
+#   seed      — WORDS svc:n into BURN (skip existing)
+#   loadlines — ||| events → FREQ → replace or merge into BURN
+#   bump      — KVINC NAME [delta]
+#   getn      — LOOKUPN NAME OR 0 → hit=count
+#   thresh    — THRESHKV min (ARG1/ENV) → HOT plate; soft empty
+#   page      — thresh then TOPKEY of HOT (hottest paged)
+#   budget    — LOOKUPN NAME; hit if count < CEIL else miss (burned)
+#   sum       — SUMKV
+#   del       — KVDEL
+#   clear     — empty plates
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sb_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1='api:12 db:3 mesh:1 debug:0' \
+#     ./out/cubalc run -q -s programs/realworld/slo_burn_gate.cubalc
+#   CUBALC_ARG0=thresh CUBALC_ARG1=3 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=budget CUBALC_ARG1=api ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_SB_FILE=BURN.txt
+#   CUBALC_SB_HOT=HOT.txt
+#   CUBALC_SB_REQUIRE=1
+#   CUBALC_SB_MIN=2
+#   CUBALC_SB_CEIL=10
+#   CUBALC_SB_DELTA=1
+#
+# Edges deliberately stressed:
+#   LOOKUPN OR 0 → OK=1 LOOKUPN_OR=1 (silent default like LOOKUP OR)
+#   LOOKUPN non-numeric value? strtol → 0?
+#   THRESHKV min > all → empty HOT soft
+#   THRESHKV drops zeros; min default 1
+#   THRESHKV non-numeric field handling
+#   budget uses LOOKUPN then CMP to CEIL without dual NUM
+#   substring false friends; WRITE NL; PRINT_JSON collapse
+#   sep string literal only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "slo_burn_gate: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "BURN.txt"
+DEFAULT HFILE = "HOT.txt"
+DEFAULT REPORT = "BURN_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN_T = 2
+DEFAULT CEIL = 10
+DEFAULT DELTA = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SB_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_SB_HOT" OR ""
+IF LAST_N > 0 THEN
+  LET HFILE = LAST
+END
+SYS ENV "CUBALC_SB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SB_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN_T = LAST_N
+  END
+END
+SYS ENV "CUBALC_SB_CEIL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET CEIL = LAST_N
+  END
+END
+SYS ENV "CUBALC_SB_DELTA" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir HFILE
+LET hot_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft burn load"
+SYS READ OR hot_path OR ""
+LET hot = LAST
+CLEAR_ERR "soft hot load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET hot_changed = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET total_n = 0
+LET drop_n = 0
+LET used_or = 0
+LET top_k = ""
+LET top_v = 0
+
+# parse min for thresh when NAME is numeric
+SYS EQS ACTION "thresh"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET MIN_T = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    SYS TOPKEY bag ":"
+    IF OK == 1 THEN
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+    END
+    CLEAR_ERR
+  END
+  STATUS
+  PRINT "burn" depth0 total_n ACTION
+  PRINT_JSON depth0 total_n top_k top_v MIN_T CEIL ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON hot
+  LET note_msg = "list ok"
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs svc:n tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP bag k ":"
+        IF OK == 0 THEN
+          SYS KVSET bag k v ":"
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- loadlines FREQ replace bag ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  LET evs = LAST
+  SYS FREQ evs
+  LET bag = LAST
+  LET changed = 1
+  SYS LINES bag
+  LET hit = LAST_N
+  LET note_msg = "freq loaded"
+  PRINT_JSON bag
+END
+
+# --- bump ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "bump needs svc"
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DELTA = LAST_N
+    END
+  END
+  SYS KVINC bag NAME DELTA ":"
+  LET bag = LAST
+  LET val_n = KVINC_V
+  SYS STR val_n
+  LET val_s = LAST
+  LET changed = 1
+  LET hit = val_n
+  LET note_msg = "bumped"
+  PRINT_JSON NAME val_s
+END
+
+# --- getn LOOKUPN OR 0 ---
+SYS EQS ACTION "getn"
+IF LAST_N == 1 THEN
+  NOTE "action getn"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getn needs svc"
+  END
+  SYS LOOKUPN bag NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  LET hit = val_n
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "getn default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "getn default only"
+      CLEAR_ERR
+      EXIT 2 "getn default only"
+    END
+  ELSE
+    LET note_msg = "getn ok"
+  END
+  PRINT_JSON NAME val_n used_or
+END
+
+# --- thresh THRESHKV ---
+SYS EQS ACTION "thresh"
+IF LAST_N == 1 THEN
+  NOTE "action thresh"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "thresh empty"
+    FAIL "thresh empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "thresh empty"
+    END
+  ELSE
+    SYS MAX MIN_T 0
+    LET MIN_T = LAST_N
+    SYS THRESHKV bag MIN_T ":"
+    LET hot = LAST
+    LET drop_n = THRESHKV_DROP
+    LET hot_changed = 1
+    SYS LINES hot
+    LET hit = LAST_N
+    SYS BLANK hot
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "thresh none kept"
+      FAIL "thresh none kept"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "thresh none kept"
+      END
+    ELSE
+      LET note_msg = "thresh ok"
+    END
+    PRINT_JSON MIN_T drop_n hit
+    PRINT_JSON hot
+  END
+END
+
+# --- page: thresh then TOPKEY hot ---
+SYS EQS ACTION "page"
+IF LAST_N == 1 THEN
+  NOTE "action page"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "page empty"
+    FAIL "page empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "page empty"
+    END
+  ELSE
+    SYS MAX MIN_T 0
+    LET MIN_T = LAST_N
+    SYS THRESHKV bag MIN_T ":"
+    LET hot = LAST
+    LET drop_n = THRESHKV_DROP
+    LET hot_changed = 1
+    SYS TOPKEY hot ":"
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "page none"
+      FAIL "page none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "page none"
+      END
+    ELSE
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+      LET val_s = top_k
+      LET val_n = top_v
+      LET hit = top_v
+      LET note_msg = "page ok"
+      PRINT_JSON top_k top_v drop_n
+    END
+  END
+END
+
+# --- budget: LOOKUPN < CEIL ---
+SYS EQS ACTION "budget"
+IF LAST_N == 1 THEN
+  NOTE "action budget"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "budget needs svc"
+  END
+  SYS LOOKUPN bag NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  # burned if count >= CEIL
+  SYS CMP val_n CEIL
+  # CMP: LAST_N -1|0|1 for < = >
+  IF LAST_N >= 0 THEN
+    # val_n >= CEIL → burned
+    LET miss = 1
+    LET hit = 0
+    LET note_msg = "budget burned"
+    FAIL "budget burned"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "budget burned"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "budget ok"
+  END
+  PRINT_JSON NAME val_n CEIL used_or
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "sum empty"
+    FAIL "sum empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sum empty"
+    END
+  ELSE
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    LET hit = total_n
+    SYS STR total_n
+    LET val_s = LAST
+    LET note_msg = "sum ok"
+  END
+END
+
+# --- del ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs svc"
+  END
+  SYS KVDEL bag NAME ":"
+  LET bag = LAST
+  IF KVDEL_HIT == 0 THEN
+    LET miss = 1
+    LET note_msg = "del miss"
+    FAIL "del miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del miss"
+    END
+  ELSE
+    LET val_s = KVDEL_V
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "deleted"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET hot = ""
+  LET changed = 1
+  LET hot_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "bump"
+LET k = k + LAST_N
+SYS EQS ACTION "getn"
+LET k = k + LAST_N
+SYS EQS ACTION "thresh"
+LET k = k + LAST_N
+SYS EQS ACTION "page"
+LET k = k + LAST_N
+SYS EQS ACTION "budget"
+LET k = k + LAST_N
+SYS EQS ACTION "sum"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "burn write failed"
+  END
+  CLEAR_ERR
+END
+IF hot_changed > 0 THEN
+  SYS WRITE hot_path hot
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hot write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.burn.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min_t"
+LET report = LAST
+SYS STR MIN_T
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ceil"
+LET report = LAST
+SYS STR CEIL
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "top_k"
+LET report = LAST
+SYS PUSH report top_k
+LET report = LAST
+SYS PUSH report "top_v"
+LET report = LAST
+SYS STR top_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "burn" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 val_n total_n drop_n elapsed STATUS_OK
+PASS "burn tick"
+NOTE "slo_burn_gate: done"
+CLEAR_ERR
+EXIT 0 "burn ok"

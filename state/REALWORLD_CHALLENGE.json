@@ -1,76 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 49,
-  "program": "programs/realworld/shard_err_rollup.cubalc",
-  "theme": "multi-shard error rollup MERGEKV SUMKV TOPKEY BOTKEY",
-  "version": "1.15.161-usability",
+  "iter": 50,
+  "program": "programs/realworld/slo_burn_gate.cubalc",
+  "theme": "SLO burn gate LOOKUPN THRESHKV budget page denoise",
+  "version": "1.15.163-usability",
   "pass": true,
   "tests": [
     {
-      "name": "shard_merge",
-      "cmd": "shard api:3 db:1 warn:2 + api:2 mesh:4 db:1 \u2192 api:5 db:2 mesh:4",
+      "name": "seed_getn",
+      "cmd": "seed api:12 db:3 mesh:1 debug:0; getn api → 12",
       "ok": true,
-      "note": "MERGEKV sum overlap"
+      "note": "LOOKUPN peel LAST_N"
     },
     {
-      "name": "list_lens",
-      "cmd": "list total=13 top=api:5 bot=db:2",
+      "name": "thresh_page",
+      "cmd": "thresh 3 → api:12 db:3 drop=2; page top api",
       "ok": true,
-      "note": "SUMKV TOPKEY BOTKEY"
+      "note": "THRESHKV + TOPKEY"
     },
     {
-      "name": "sum_top_bot",
-      "cmd": "sum 13; top api; bot db",
+      "name": "budget_burn",
+      "cmd": "budget api CEIL10 burned; db ok; REQUIRE exit 2",
       "ok": true,
-      "note": "aggregate actions"
+      "note": "LOOKUPN+CMP >= ceil"
     },
     {
-      "name": "loadlines_freq",
-      "cmd": "loadlines api|||api|||crit \u2192 api:7 crit:1",
+      "name": "getn_or",
+      "cmd": "getn ghost OR 0 used_or=1",
       "ok": true,
-      "note": "FREQ+MERGEKV"
+      "note": "LOOKUPN OR silent OK=1"
     },
     {
-      "name": "get_or",
-      "cmd": "get api=7; get ghost OR 0",
+      "name": "bump",
+      "cmd": "bump mesh +5 → 6",
       "ok": true,
-      "note": "LOOKUP OR"
+      "note": "KVINC"
     },
     {
-      "name": "top_empty_require",
-      "cmd": "top empty REQUIRE exit 2",
+      "name": "thresh_none_require",
+      "cmd": "thresh 50 none kept REQUIRE 2",
       "ok": true,
-      "note": "TOPKEY OK=0"
+      "note": "empty HOT soft"
     },
     {
-      "name": "sum_empty_soft",
-      "cmd": "sum empty soft miss (program gate)",
+      "name": "page_empty",
+      "cmd": "page empty REQUIRE 2",
       "ok": true,
-      "note": "language SUMKV empty \u2192 0"
+      "note": "empty bag"
     },
     {
-      "name": "ties_first",
-      "cmd": "a:5 b:5 c:2 \u2192 TOPKEY a BOTKEY c",
+      "name": "substring_false",
+      "cmd": "getn ap → OR default not api",
       "ok": true,
-      "note": "first extreme wins"
+      "note": "exact key"
     },
     {
-      "name": "nonnum_sum_merge",
-      "cmd": "note:hello+world \u2192 note:0; SUMKV skips/zeros",
+      "name": "lookupn_nonnum",
+      "cmd": "LOOKUPN api:abc → V=0 OK=1 hit as zero",
       "ok": true,
       "note": "strtol silent"
     },
     {
-      "name": "substring_del",
-      "cmd": "get ap OR; del ghost REQUIRE 2",
+      "name": "thresh_nonnum",
+      "cmd": "THRESHKV drops non-numeric as 0 below min",
       "ok": true,
-      "note": "exact key"
+      "note": "silent drop"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "136/136 pass incl mergekv sumkv topkey"
+      "note": "138/138 pass incl lookupn threshkv"
     }
   ],
   "weaknesses": [
@@ -78,88 +78,87 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "MERGEKV strtol non-numeric values to 0 and sum",
-      "detail": "note:hello + note:world \u2192 note:0 silently. String metadata keys corrupt into zero counters. No STRICT/refuse on non-numeric merge.",
-      "repro": "MERGEKV 'note:hello' 'note:world' \u2192 note:0"
+      "title": "LOOKUPN treats non-numeric values as 0 with OK=1",
+      "detail": "api:abc LOOKUPN → LAST_N=0 LOOKUPN_V=0 OK=1 (hit not miss). Agents cannot distinguish missing, zero, and garbage without dual LOOKUP string check.",
+      "repro": "LOOKUPN 'api:abc' api → 0 OK=1"
     },
     {
       "id": "W2",
-      "severity": "med",
+      "severity": "high",
       "area": "host|bag",
-      "title": "SUMKV silently skips non-numeric; N < KEYS",
-      "detail": "mixed a:2 b:x c:5 \u2192 sum 7 SUMKV_N=2 KEYS=4. Agents may think all keys counted. No list of skipped keys.",
-      "repro": "SUMKV mixed bag"
+      "title": "LOOKUPN OR still OK=1 on miss",
+      "detail": "Same silent-default class as LOOKUP OR. LOOKUPN_OR must be inspected; OK alone is insufficient for present-vs-default.",
+      "repro": "LOOKUPN bag ghost OR 0 → OK=1 OR=1"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "TOPKEY/BOTKEY ties pick first only",
-      "detail": "a:5 b:5 \u2192 TOPKEY a only. No all-ties bag or TOPKEYS k form. Same first-wins class as LONGEST.",
-      "repro": "TOPKEY a:5\\nb:5 \u2192 a"
+      "title": "THRESHKV drops non-numeric via strtol 0 without signal",
+      "detail": "api:abc with min=1 is dropped as value 0; no THRESHKV_SKIP nonnum counter. Metadata keys vanish from HOT plate silently.",
+      "repro": "THRESHKV 'api:abc\\nwarn:3' 1 → warn:3 DROP=1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "SUMKV empty bag returns 0 with OK=1 not soft miss",
-      "detail": "Unlike TOPKEY empty OK=0, SUMKV \"\" \u2192 LAST_N=0 LAST=0 OK=1. Inconsistent empty semantics across aggregate ops. Program must BLANK-gate.",
-      "repro": "SUMKV \"\" \u2192 0 OK=1"
+      "title": "THRESHKV only >= min, no upper bound / range form",
+      "detail": "Want KEEPVAL between lo..hi for SLO bands; only min. Agents need second pass or EACH filter.",
+      "repro": "THRESHKV bag min only"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last rollup line without $.",
-      "repro": "shard; cat -A ROLLUP.txt"
+      "detail": "cat -A last BURN/HOT line without $.",
+      "repro": "seed; cat -A BURN.txt"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
-      "title": "PRINT_JSON collapses bag newlines",
-      "detail": "MERGEKV result dumps as api:5note:0 single field in JSON.",
+      "title": "PRINT_JSON bag newline collapse",
+      "detail": "Stable issue across KV boards.",
       "repro": "PRINT_JSON bag"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|bag",
-      "title": "No TOPKEYS k / multi-hot bag",
-      "detail": "Want top-3 hottest services for dashboard; only single TOPKEY. Work around SORTFREQ+TAKE.",
-      "repro": "TOPKEY single only"
+      "title": "No THRESHKV max / DROPVAL above form",
+      "detail": "Cap outliers for burn ratio; only KEEPVAL >= min. MEANINGFUL_ITER candidate.",
+      "repro": "no CAPKV"
     },
     {
       "id": "W8",
       "severity": "med",
       "area": "lang|parse",
-      "title": "sep still string-literal only on MERGEKV/SUMKV/TOPKEY",
-      "detail": "Same SEP-var footgun as LOOKUP/KV* family; must pass \":\" literal.",
-      "repro": "SUMKV bag SEP unknown form if var"
+      "title": "sep still string-literal only on LOOKUPN/THRESHKV",
+      "detail": "Same family footgun as prior KV ops.",
+      "repro": "LOOKUPN bag k SEP"
     }
   ],
   "workarounds": [
-    "Validate all values numeric before MERGEKV; reject string plates",
-    "Compare SUMKV_N vs LINES/KEYS after sum to detect skips",
-    "BLANK bag before SUMKV if empty should be miss",
-    "For ties, SORTFREQ then TAKE if all-max needed",
-    "Always use \":\" string literal for sep args"
+    "After LOOKUPN check LOOKUPN_OR; dual LOOKUP string if value must be numeric",
+    "Inspect THRESHKV_DROP vs expected; validate values before thresh",
+    "Budget: CMP val_n CEIL with LAST_N>=0 as burned (>=)",
+    "Always \":\" string literal for sep"
   ],
   "language_gaps": [
-    "MERGEKV STRICT non-numeric refuse",
-    "SUMKV skipped-key bag / STRICT",
-    "TOPKEYS k multi-hot; all-ties bag",
-    "Consistent empty: SUMKV OK=0 like TOPKEY",
-    "resolve_str_arg sep for MERGEKV/SUMKV/TOPKEY",
+    "LOOKUPN STRICT refuse non-numeric (OK=0)",
+    "LOOKUPN OR with OK=0 option on default",
+    "THRESHKV skipped-nonnum counter / STRICT",
+    "THRESHKV max / BETWEEN lo hi",
+    "resolve_str_arg sep",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive two-shard merge + list lens clean (total 13 top api)",
-    "MERGEKV non-numeric \u2192 note:0 is severe agent footgun",
-    "BOTKEY among ties (db:2 warn:2) first min only",
-    "No language fix \u2014 STRICT merge for MEANINGFUL_ITER"
+    "Positive seed/getn/thresh/page/budget clean",
+    "LOOKUPN non-numeric → 0 hit is high-sev footgun for SLO math",
+    "CMP LAST_N -1|0|1 works well for budget gate",
+    "No language fix this iter"
   ],
-  "commit": "44c75167c43c3911c8c578e42126e7909be106c1",
-  "ts": "2026-08-06T00:20:00Z"
+  "commit": "",
+  "ts": "2026-08-06T00:45:00Z"
 }
