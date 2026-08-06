@@ -148,6 +148,6 @@
     "size+mtime settle cannot replace content wait",
     "selftest 216/216; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "fd05c9ae1ab3bfbfe3eeedc44903948537e9912b",
   "ts": "2026-08-06T13:50:00Z"
 }
