@@ -3858,6 +3858,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS SHQUOTE|SHELLQUOTE|SQUOTE [str] — shell-safe single-quote wrap.
+     * 'foo' + internal ' → '\''  (POSIX shell-safe for SPAWN/logs).
+     * Missing arg uses LAST. LAST_N = length. Soft fail if overflow.
+     * Usability: quote plate/user strings for shell without hand escaping. */
+    if (kw(&L->cur,"SHQUOTE") || kw(&L->cur,"SHELLQUOTE") || kw(&L->cur,"SQUOTE") ||
+        kw(&L->cur,"SHELL_QUOTE") || kw(&L->cur,"QUOTE_SHELL") || kw(&L->cur,"SQ") ||
+        kw(&L->cur,"POSIXQUOTE") || kw(&L->cur,"SH_QUOTE")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t i, o = 0;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      /* wrap in single quotes; escape ' as '\'' (quote, backslash, quote, quote) */
+      if (o + 1 >= sizeof out) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SHQUOTE: overflow");
+        var_set_str(vm, "ERR", "SHQUOTE: overflow");
+        bump(vm); return 1;
+      }
+      out[o++] = (char)39; /* ' */
+      for (i = 0; src[i]; i++) {
+        if (src[i] == (char)39) {
+          if (o + 4 >= sizeof out) {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", "SHQUOTE: overflow");
+            var_set_str(vm, "ERR", "SHQUOTE: overflow");
+            bump(vm); return 1;
+          }
+          out[o++] = (char)39;  /* end quote */
+          out[o++] = (char)92;  /* backslash */
+          out[o++] = (char)39;  /* quote */
+          out[o++] = (char)39;  /* reopen quote */
+        } else {
+          if (o + 1 >= sizeof out) {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", "SHQUOTE: overflow");
+            var_set_str(vm, "ERR", "SHQUOTE: overflow");
+            bump(vm); return 1;
+          }
+          out[o++] = src[i];
+        }
+      }
+      if (o + 1 >= sizeof out) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SHQUOTE: overflow");
+        var_set_str(vm, "ERR", "SHQUOTE: overflow");
+        bump(vm); return 1;
+      }
+      out[o++] = (char)39; /* closing ' */
+      out[o] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)o;
+      var_set_num(vm, "LAST_N", (long)o);
+      var_set_str(vm, "SHQUOTE", out);
+      var_set_str(vm, "SHELLQUOTE", out);
+      var_set_str(vm, "SQUOTE", out);
+      var_set_num(vm, "SHQUOTE_N", (long)o);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms]
      * — poll until path exists (agent plate/peer handoff).
      * Default timeout 30000 ms; cap 120s. Poll every 50 ms.
@@ -23772,6 +23850,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ISATTY", "SYS ISATTY|TTY [IN|OUT|ERR] — terminal probe → LAST_N 0|1"},
       {"SYS TTYNAME", "SYS TTYNAME|CTTY|TTYDEV [IN|OUT|ERR] — terminal device path → LAST"},
       {"SYS NICE", "SYS NICE|GETNICE [n] — process nice get/set → LAST_N"},
+      {"SYS SHQUOTE", "SYS SHQUOTE|SHELLQUOTE [str] — POSIX single-quote shell-safe wrap"},
       {"SYS LOADAVG", "SYS LOADAVG|LOAD — 1/5/15 load · LOAD1_N centiload for IF"},
       {"SYS LOAD", "SYS LOAD alias of SYS LOADAVG"},
       {"SYS UPTIME", "SYS UPTIME|BOOTAGE — seconds since boot → LAST_N/UPTIME"},

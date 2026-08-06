@@ -331,6 +331,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 301. ~~**`SYS GECOS` / `FULLNAME`**~~ **done** (passwd display name · human plate labels without getent/finger).
 302. ~~**`SYS TTYNAME` / `CTTY`**~~ **done** (terminal device path · session identity beyond ISATTY without shell tty).
 303. ~~**`SYS NICE` / `RENICE`**~~ **done** (process nice get/set · agent yield/backpressure without shell nice).
+304. ~~**`SYS SHQUOTE` / `SHELLQUOTE`**~~ **done** (POSIX single-quote shell-safe wrap · SPAWN/log strings without hand escaping).
 
 ## Tick protocol
 

@@ -1,0 +1,60 @@
+# SYS SHQUOTE / SHELLQUOTE — POSIX shell-safe single-quote wrap
+# Usability: agents quote plate/user strings for SPAWN/logs without hand escaping
+
+HOLD_FLASH 1
+
+# plain word
+SYS SHQUOTE "hello"
+ASSERT OK == 1
+SYS EQS LAST "'hello'"
+ASSERT LAST_N == 1
+ASSERT SHQUOTE_N == 7
+SYS EQS SHQUOTE "'hello'"
+ASSERT LAST_N == 1
+
+# empty
+SYS SHQUOTE ""
+ASSERT OK == 1
+SYS EQS LAST "''"
+ASSERT LAST_N == 1
+
+# space
+SYS SHQUOTE "a b"
+ASSERT OK == 1
+SYS EQS LAST "'a b'"
+ASSERT LAST_N == 1
+
+# embedded single quote → '\''
+SYS SHQUOTE "it's"
+ASSERT OK == 1
+# expected: 'it'\''s'
+SYS HAS LAST "it"
+ASSERT LAST_N == 1
+SYS HAS LAST "'"
+ASSERT LAST_N == 1
+SYS STARTS LAST "'"
+ASSERT LAST_N == 1
+SYS ENDS LAST "'"
+ASSERT LAST_N == 1
+SYS LEN LAST
+ASSERT LAST_N == 9
+
+# aliases
+SYS SHELLQUOTE "x"
+ASSERT OK == 1
+SYS EQS LAST "'x'"
+ASSERT LAST_N == 1
+SYS SQUOTE "y"
+ASSERT OK == 1
+SYS EQS LAST "'y'"
+ASSERT LAST_N == 1
+
+# default from LAST
+SYS SHQUOTE "z"
+SYS SHQUOTE
+ASSERT OK == 1
+# last was already quoted 'z' so re-quote wraps again
+SYS STARTS LAST "'"
+ASSERT LAST_N == 1
+
+PRINT "sys_shquote ok"
