@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 165,
-  "version": "1.15.190-usability",
-  "item": "SYS TOUCHALL / ENSUREALL bulk create/refresh path bag",
-  "item_id": 198,
-  "title": "SYS TOUCHALL|ENSUREALL|CREATEALL [bag] — lease stamps without EACH+TOUCH",
-  "commit": "ec5ef7bd50397b393dd92bf2a22d7bc82553bcd0",
-  "summary": "Bulk touch path bags with NEW/UPD counts. selftest 165.",
+  "iter": 166,
+  "version": "1.15.191-usability",
+  "item": "SYS COPYALL / CPALL bulk copy path bag into dest dir",
+  "item_id": 199,
+  "title": "SYS COPYALL|CPALL|BULKCOPY [bag] dest_dir — snapshot without EACH+COPY",
+  "commit": "d8bb757e00a6423ef128490c7db333940db7c319",
+  "summary": "Bulk copy path bags into dest by basename. selftest 166.",
   "proofs": [
-    "738_sys_touchall",
-    "selftest n_pass=165"
+    "739_sys_copyall",
+    "selftest n_pass=166"
   ],
-  "when": "2026-08-06T05:23:44Z",
+  "when": "2026-08-06T05:34:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ec5ef7bd50397b393dd92bf2a22d7bc82553bcd0"
+  "sha": "d8bb757e00a6423ef128490c7db333940db7c319"
 }
