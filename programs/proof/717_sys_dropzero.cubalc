@@ -1,0 +1,86 @@
+# SYS DROPZERO / KEEPNZ — drop key:val fields with value exactly 0
+# Usability: clean DIFFKV stable keys without THRESHKV (which drops negatives)
+
+HOLD_FLASH 1
+
+LET d = "error:3\nwarn:0\ninfo:-2\ncrit:0\ndebug:1"
+SYS DROPZERO d
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT DROPZERO_N == 2
+ASSERT DROPZERO_KEEP == 3
+LET nz = LAST
+SYS LOOKUPN nz "error" OR 999
+ASSERT LAST_N == 3
+SYS LOOKUPN nz "info" OR 999
+ASSERT LAST_N == -2
+SYS LOOKUPN nz "debug" OR 999
+ASSERT LAST_N == 1
+SYS LOOKUPN nz "warn" OR 999
+ASSERT LAST_N == 999
+SYS LOOKUPN nz "crit" OR 999
+ASSERT LAST_N == 999
+
+# all zero → empty
+SYS DROPZERO "a:0\nb:0"
+ASSERT LAST_N == 0
+ASSERT DROPZERO_N == 2
+
+# no zeros → identity
+SYS DROPZERO "x:1\ny:-3"
+ASSERT LAST_N == 2
+ASSERT DROPZERO_N == 0
+SYS EQS LAST "x:1\ny:-3"
+ASSERT LAST_N == 1
+
+# empty bag
+SYS DROPZERO ""
+ASSERT LAST_N == 0
+ASSERT DROPZERO_N == 0
+
+# custom sep
+LET cfg = "retries=0\nport=7700\ntimeout=-1"
+SYS DROPZERO cfg "="
+ASSERT LAST_N == 2
+ASSERT DROPZERO_N == 1
+LET cz = LAST
+SYS LOOKUPN cz "port" "=" OR 0
+ASSERT LAST_N == 7700
+SYS LOOKUPN cz "timeout" "=" OR 0
+ASSERT LAST_N == -1
+
+# aliases
+SYS KEEPNZ d
+ASSERT KEEPNZ_N == 3
+SYS NZKV d
+ASSERT NZKV_N == 3
+SYS DROPZ d
+ASSERT DROPZERO_KEEP == 3
+SYS NONZERO d
+ASSERT DROPZERO_N == 2
+
+# contrast THRESHKV: min 1 drops negatives too
+SYS THRESHKV d 1
+# only error:3 and debug:1 (info:-2 and zeros gone)
+ASSERT LAST_N == 2
+
+# agent: DIFFKV then drop stable (zero-delta) keys
+LET now_log = "ERROR\nERROR\nWARN\nINFO"
+LET base_log = "ERROR\nWARN\nWARN\nINFO"
+SYS FREQ now_log
+LET hn = LAST
+SYS FREQ base_log
+LET hb = LAST
+SYS DIFFKV hn hb
+# ERROR:2-1=1 WARN:1-2=-1 INFO:1-1=0
+SYS DROPZERO LAST
+LET delta = LAST
+ASSERT LAST_N == 2
+SYS LOOKUPN delta "ERROR" OR 0
+ASSERT LAST_N == 1
+SYS LOOKUPN delta "WARN" OR 0
+ASSERT LAST_N == -1
+SYS LOOKUPN delta "INFO" OR 999
+ASSERT LAST_N == 999
+
+PRINT "sys_dropzero ok"
