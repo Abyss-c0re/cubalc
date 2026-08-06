@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 195,
-  "version": "1.15.220-usability",
-  "item": "SYS BEFOREMATCHFILE / INSERTBEFOREMATCH insert line before first match",
-  "item_id": 228,
-  "title": "SYS BEFOREMATCHFILE|INSERTBEFOREMATCH path needle value — insert line before first match",
-  "commit": "91066fd956d9834ca0c8a9667e55220e0108e0e0",
-  "summary": "Find-then-insert-before file line one-shot for headers/imports. selftest 195.",
+  "iter": 196,
+  "version": "1.15.221-usability",
+  "item": "SYS LOOKUPFILE / FILELOOKUP / KVFILEGET peel key=val from plate file",
+  "item_id": 229,
+  "title": "SYS LOOKUPFILE|FILELOOKUP path key [sep] [OR fb] — peel key=val from plate file",
+  "commit": "c94a5796e1770d8a6ad61b78601304aff9d669b9",
+  "summary": "Plate file kv peel one-shot with OR fallback. selftest 196.",
   "proofs": [
-    "768_sys_beforematchfile",
-    "selftest n_pass=195"
+    "769_sys_lookupfile",
+    "selftest n_pass=196"
   ],
-  "when": "2026-08-06T10:24:23Z",
+  "when": "2026-08-06T10:35:17Z",
   "agent": "meaningful_iter_10m",
-  "sha": "91066fd956d9834ca0c8a9667e55220e0108e0e0"
+  "sha": "c94a5796e1770d8a6ad61b78601304aff9d669b9"
 }
