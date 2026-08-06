@@ -1,0 +1,93 @@
+# SYS KEEPFILES / KEEPDIRS / KEEPEXIST — filter path bags by host kind
+# Usability: PATHGLOB then drop dirs/missing before READ without EACH+ISFILE
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "keepf_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "alpha.plate"
+LET f1 = LAST
+SYS JOIN fix "beta.log"
+LET f2 = LAST
+SYS TOUCH f1
+SYS TOUCH f2
+
+# subdir inside fixture
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+ASSERT OK == 1
+
+# missing path marker (not created)
+SYS JOIN fix "ghost.plate"
+LET ghost = LAST
+
+# mixed bag: files + dir + missing
+SYS PUSH "" f1
+SYS PUSH LAST f2
+SYS PUSH LAST sub
+SYS PUSH LAST ghost
+LET mixed = LAST
+SYS LINES mixed
+ASSERT LAST_N == 4
+
+# KEEPFILES — only regular files
+SYS KEEPFILES mixed
+ASSERT OK == 1
+ASSERT KEEPFILES_N == 2
+ASSERT KEEPFILES_DROP == 2
+SYS HASLINE LAST f1
+ASSERT LAST_N == 1
+SYS HASLINE LAST f2
+ASSERT LAST_N == 1
+SYS HASLINE LAST sub
+ASSERT LAST_N == 0
+SYS HASLINE LAST ghost
+ASSERT LAST_N == 0
+
+# KEEPDIRS
+SYS KEEPDIRS mixed
+ASSERT KEEPDIRS_N == 1
+SYS EQS LAST sub
+ASSERT LAST_N == 1
+ASSERT KEEPDIRS_DROP == 3
+
+# KEEPEXIST — files + dir, drop missing
+SYS KEEPEXIST mixed
+ASSERT KEEPEXIST_N == 3
+ASSERT KEEPEXIST_DROP == 1
+SYS HASLINE LAST ghost
+ASSERT LAST_N == 0
+SYS HASLINE LAST sub
+ASSERT LAST_N == 1
+
+# aliases + default LAST
+SYS PATHGLOB fix
+SYS FILTERFILES
+ASSERT FILTERFILES_N >= 2
+SYS HASLINE LAST f1
+ASSERT LAST_N == 1
+
+SYS PATHGLOB fix
+SYS ONLYDIRS
+ASSERT ONLYDIRS_N >= 1
+SYS HASLINE LAST sub
+ASSERT LAST_N == 1
+
+# agent: PATHGLOB → KEEPFILES → READ first plate
+SYS PATHGLOB fix
+SYS KEEPFILES LAST
+SYS FILTERGLOB LAST "*.plate"
+SYS SORT LAST
+SYS TAKE 1 LAST
+SYS READ LAST
+ASSERT OK == 1
+
+# cleanup
+SYS RM f1
+SYS RM f2
+
+PRINT "sys_keepfiles ok"

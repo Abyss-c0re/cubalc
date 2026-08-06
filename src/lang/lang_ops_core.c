@@ -1318,6 +1318,102 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS KEEPFILES|FILTERFILES|ONLYFILES [bag]
+     * SYS KEEPDIRS|FILTERDIRS|ONLYDIRS [bag]
+     * SYS KEEPEXIST|FILTEREXIST|ONLYEXIST [bag]
+     * — keep path bag fields that are regular files / directories / any existing path.
+     * Default bag LAST. LAST = kept paths; LAST_N = count; KEEP*_DROP = removed.
+     * Usability: PATHGLOB/LIST then drop dirs/missing before READ without EACH+ISFILE. */
+    if (kw(&L->cur,"KEEPFILES") || kw(&L->cur,"FILTERFILES") || kw(&L->cur,"ONLYFILES") ||
+        kw(&L->cur,"KEEPFILE") || kw(&L->cur,"FILESONLY") ||
+        kw(&L->cur,"KEEPDIRS") || kw(&L->cur,"FILTERDIRS") || kw(&L->cur,"ONLYDIRS") ||
+        kw(&L->cur,"KEEPDIR") || kw(&L->cur,"DIRSONLY") ||
+        kw(&L->cur,"KEEPEXIST") || kw(&L->cur,"FILTEREXIST") || kw(&L->cur,"ONLYEXIST") ||
+        kw(&L->cur,"KEEPEXISTS") || kw(&L->cur,"EXISTONLY") || kw(&L->cur,"EXISTING")){
+      int mode = 0; /* 0 files · 1 dirs · 2 exist */
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long kept = 0, drop = 0;
+      cubalc_host_result hr;
+      if (kw(&L->cur,"KEEPDIRS") || kw(&L->cur,"FILTERDIRS") || kw(&L->cur,"ONLYDIRS") ||
+          kw(&L->cur,"KEEPDIR") || kw(&L->cur,"DIRSONLY"))
+        mode = 1;
+      else if (kw(&L->cur,"KEEPEXIST") || kw(&L->cur,"FILTEREXIST") || kw(&L->cur,"ONLYEXIST") ||
+               kw(&L->cur,"KEEPEXISTS") || kw(&L->cur,"EXISTONLY") || kw(&L->cur,"EXISTING"))
+        mode = 2;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen;
+          int hit = 0;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (mode == 2) {
+            hit = cubalc_host_exists(path) ? 1 : 0;
+          } else {
+            if (cubalc_host_path_kind(path, &hr) == 0) {
+              if (mode == 0) hit = (hr.code == 1);
+              else hit = (hr.code == 2);
+            } else {
+              hit = 0;
+            }
+          }
+          if (hit) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, path, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+          } else {
+            drop++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "OK", 1);
+      if (mode == 0) {
+        var_set_str(vm, "KEEPFILES", out);
+        var_set_str(vm, "FILTERFILES", out);
+        var_set_str(vm, "ONLYFILES", out);
+        var_set_num(vm, "KEEPFILES_N", kept);
+        var_set_num(vm, "KEEPFILES_DROP", drop);
+        var_set_num(vm, "FILTERFILES_N", kept);
+        var_set_num(vm, "ONLYFILES_N", kept);
+      } else if (mode == 1) {
+        var_set_str(vm, "KEEPDIRS", out);
+        var_set_str(vm, "FILTERDIRS", out);
+        var_set_str(vm, "ONLYDIRS", out);
+        var_set_num(vm, "KEEPDIRS_N", kept);
+        var_set_num(vm, "KEEPDIRS_DROP", drop);
+        var_set_num(vm, "FILTERDIRS_N", kept);
+        var_set_num(vm, "ONLYDIRS_N", kept);
+      } else {
+        var_set_str(vm, "KEEPEXIST", out);
+        var_set_str(vm, "FILTEREXIST", out);
+        var_set_str(vm, "ONLYEXIST", out);
+        var_set_num(vm, "KEEPEXIST_N", kept);
+        var_set_num(vm, "KEEPEXIST_DROP", drop);
+        var_set_num(vm, "FILTEREXIST_N", kept);
+        var_set_num(vm, "ONLYEXIST_N", kept);
+      }
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -10959,7 +11055,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -11180,6 +11276,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DIRNAMEALL", "SYS DIRNAMEALL|MAPDIR [bag] — dirname every bag field"},
       {"SYS EXTALL", "SYS EXTALL|MAPEXT [bag] — extension of every bag field"},
       {"SYS STEMALL", "SYS STEMALL|MAPSTEM [bag] — stem of every bag field"},
+      {"SYS KEEPFILES", "SYS KEEPFILES|FILTERFILES [bag] — keep regular-file paths · PATHGLOB gate"},
+      {"SYS KEEPDIRS", "SYS KEEPDIRS|FILTERDIRS [bag] — keep directory paths"},
+      {"SYS KEEPEXIST", "SYS KEEPEXIST|FILTEREXIST [bag] — keep existing paths"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
