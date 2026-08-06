@@ -336,6 +336,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 306. ~~**`SYS GETLOGIN` / `LOGINNAME`**~~ **done** (session login via getlogin · utmp identity without shell who am i).
 307. ~~**`SYS ENTROPY` / `URANDOM`**~~ **done** (n random bytes as hex · agent nonces/tokens beyond UUID/RAND).
 308. ~~**`SYS PARSEMS` / `DURATION`**~~ **done** (human duration 5s/2m/1h → ms · SLEEP/WAITFILE configs).
+309. ~~**`SYS HUMANMS` / `FMTMS`**~~ **done** (ms → compact 5s/1m30s plate labels · dual of PARSEMS).
 
 ## Tick protocol
 

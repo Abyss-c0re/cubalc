@@ -13036,6 +13036,77 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HUMANMS|FMTMS|HUMANDUR|PRETTYMS [n|LAST_N]
+     * — format milliseconds as compact human duration (reverse of PARSEMS).
+     * LAST = e.g. "5s", "1m30s", "1h2m", "250ms"; LAST_N / HUMANMS_MS = original ms.
+     * Units: w d h m s ms (compound, omit zero parts). Usability: plate labels for
+     * WAITFILE_MS / SLEEP_MS / elapsed without shell. */
+    if (kw(&L->cur,"HUMANMS") || kw(&L->cur,"FMTMS") || kw(&L->cur,"HUMANDUR") ||
+        kw(&L->cur,"PRETTYMS") || kw(&L->cur,"MSFMT") || kw(&L->cur,"FMTTIME") ||
+        kw(&L->cur,"DURSTR") || kw(&L->cur,"MSHUMAN") || kw(&L->cur,"PRETTYDUR") ||
+        kw(&L->cur,"FORMATMS") || kw(&L->cur,"MS_HUMAN")){
+      long n = vm->last_n;
+      unsigned long long u, w, d, h, m, s, ms;
+      char buf[96];
+      size_t o = 0;
+      int parts = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      u = (unsigned long long)n;
+      w = u / (7ULL * 24ULL * 60ULL * 60ULL * 1000ULL);
+      u %= (7ULL * 24ULL * 60ULL * 60ULL * 1000ULL);
+      d = u / (24ULL * 60ULL * 60ULL * 1000ULL);
+      u %= (24ULL * 60ULL * 60ULL * 1000ULL);
+      h = u / (60ULL * 60ULL * 1000ULL);
+      u %= (60ULL * 60ULL * 1000ULL);
+      m = u / (60ULL * 1000ULL);
+      u %= (60ULL * 1000ULL);
+      s = u / 1000ULL;
+      ms = u % 1000ULL;
+      buf[0] = 0;
+      o = 0;
+#define CUBALC_HMS_PART(val, suf) do { \
+        if ((val) > 0) { \
+          int wrote = snprintf(buf + o, sizeof(buf) - o, "%llu%s", \
+                               (unsigned long long)(val), (suf)); \
+          if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0; \
+          o += (size_t)wrote; \
+          parts++; \
+        } \
+      } while (0)
+      CUBALC_HMS_PART(w, "w");
+      CUBALC_HMS_PART(d, "d");
+      CUBALC_HMS_PART(h, "h");
+      CUBALC_HMS_PART(m, "m");
+      CUBALC_HMS_PART(s, "s");
+      /* include ms when non-zero, or when whole duration is zero, or only sub-second */
+      if (ms > 0 || parts == 0) {
+        int wrote = snprintf(buf + o, sizeof(buf) - o, "%llums",
+                             (unsigned long long)ms);
+        if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0;
+        o += (size_t)wrote;
+        parts++;
+      }
+#undef CUBALC_HMS_PART
+      if (o >= sizeof(buf)) o = sizeof(buf) - 1;
+      buf[o] = 0;
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANMS", buf);
+      var_set_str(vm, "FMTMS", buf);
+      var_set_str(vm, "HUMANDUR", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "HUMANMS_N", n);
+      var_set_num(vm, "HUMANMS_MS", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
       lex_next(L);
       long n = 0;
@@ -24088,6 +24159,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PARSEMS", "SYS PARSEMS|DURATION|TOMS [str] — 5s/2m/1h → ms · SLEEP/WAIT timeouts"},
       {"SYS DURATION", "SYS DURATION [str] — alias of SYS PARSEMS · human duration → ms"},
       {"SYS TOMS", "SYS TOMS [str] — alias of SYS PARSEMS"},
+      {"SYS HUMANMS", "SYS HUMANMS|FMTMS [n] — ms → 5s/1m30s plate label · dual of PARSEMS"},
+      {"SYS FMTMS", "SYS FMTMS [n] — alias of SYS HUMANMS"},
+      {"SYS HUMANDUR", "SYS HUMANDUR [n] — alias of SYS HUMANMS"},
       {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS PICK", "SYS PICK|CHOICE|SAMPLE [str] — random newline field → LAST · index LAST_N"},
       {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},
