@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 199,
-  "version": "1.15.224-usability",
-  "item": "SYS KVFILEINC / INCKVFILE / FILEKVINC bump numeric key=val in plate file",
-  "item_id": 232,
-  "title": "SYS KVFILEINC|INCKVFILE path key [delta] [sep] — bump numeric key=val in plate file",
-  "commit": "7dd9d7f72ab491b91ed6f811b4118288f94e44b8",
-  "summary": "Plate file counter bump one-shot; create if missing. selftest 199.",
+  "iter": 200,
+  "version": "1.15.225-usability",
+  "item": "SYS ENSURELINE / ENSUREFILELINE / ADDIFMISSING append exact line if missing",
+  "item_id": 233,
+  "title": "SYS ENSURELINE|ENSUREFILELINE path line — append line if exact line missing",
+  "commit": "7a7510362303f3ad4b26b62c23903a151702bdd1",
+  "summary": "Idempotent file line ensure for config flags/markers. selftest 200.",
   "proofs": [
-    "772_sys_kvfileinc",
-    "selftest n_pass=199"
+    "773_sys_ensureline",
+    "selftest n_pass=200"
   ],
-  "when": "2026-08-06T11:05:45Z",
+  "when": "2026-08-06T11:16:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7dd9d7f72ab491b91ed6f811b4118288f94e44b8"
+  "sha": "7a7510362303f3ad4b26b62c23903a151702bdd1"
 }
