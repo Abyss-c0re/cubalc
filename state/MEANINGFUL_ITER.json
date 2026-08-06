@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 185,
-  "version": "1.15.210-usability",
-  "item": "SYS DROPFILELINE / FILEDROPLINE drop file line by index",
-  "item_id": 218,
-  "title": "SYS DROPFILELINE|FILEDROPLINE path n \u2014 drop 0-based file line in place",
-  "commit": "5791f629c3156d0fcc16febca7b02dd1b7971135",
-  "summary": "Drop file line by index; dual of INSERTFILELINE. Soft OOB. selftest 185.",
+  "iter": 186,
+  "version": "1.15.211-usability",
+  "item": "SYS FINDFILELINE / FILEFINDLINE first file line index by needle",
+  "item_id": 219,
+  "title": "SYS FINDFILELINE|FILEFINDLINE path needle \u2014 0-based first line containing needle",
+  "commit": "d3ace16d252f9c369469063977dbc1fe5a30d0bc",
+  "summary": "Locate file line by needle; FINDFILELINEI; I=-1 miss. selftest 186.",
   "proofs": [
-    "758_sys_dropfileline",
-    "selftest n_pass=185"
+    "759_sys_findfileline",
+    "selftest n_pass=186"
   ],
-  "when": "2026-08-06T08:44:05Z",
+  "when": "2026-08-06T08:54:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5791f629c3156d0fcc16febca7b02dd1b7971135"
+  "sha": "d3ace16d252f9c369469063977dbc1fe5a30d0bc"
 }
