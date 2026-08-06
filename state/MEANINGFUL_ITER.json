@@ -5,14 +5,14 @@
   "item": "SYS UMASK / GETUMASK / SETUMASK process creation mask",
   "item_id": 290,
   "title": "SYS UMASK [mode] \u2014 get/set process file-creation mask",
-  "commit": "85e186889f00cb6e40bd59644c911dcae8e64ca8",
+  "commit": "d20af6896298221cdf281bce13544c9a25cb595a",
   "summary": "octal LAST + decimal LAST_N; set returns previous. selftest 255.",
   "proofs": [
     "829_sys_umask",
     "selftest n_pass=255"
   ],
-  "when": "2026-08-06T20:16:03Z",
+  "when": "2026-08-06T20:16:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "85e186889f00cb6e40bd59644c911dcae8e64ca8",
+  "sha": "d20af6896298221cdf281bce13544c9a25cb595a",
   "note": "complements MODE/CHMOD for private plate defaults"
 }
