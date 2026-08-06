@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 259,
-  "version": "1.15.286-usability",
-  "item": "SYS ATIME / CTIME access and status-change times",
-  "item_id": 294,
-  "title": "SYS ATIME|CTIME path \u2014 access and status-change epoch probes",
-  "commit": "20f366b13f9c7b28ab26e0cdef386c8232ab8919",
-  "summary": "st_atime/st_ctime epoch for plate freshness. selftest 259.",
+  "iter": 260,
+  "version": "1.15.287-usability",
+  "item": "SYS HASENV / ENVHAS soft env presence probe",
+  "item_id": 295,
+  "title": "SYS HASENV|ENVHAS name \u2014 LAST_N 1 if env set non-empty",
+  "commit": "1ebc87423cd4ae930cabe734e7ebd47db5c90628",
+  "summary": "soft env presence for IF before REQUIRE ENV. selftest 260.",
   "proofs": [
-    "833_sys_atime",
-    "selftest n_pass=259"
+    "834_sys_hasenv",
+    "selftest n_pass=260"
   ],
-  "when": "2026-08-06T21:04:40Z",
+  "when": "2026-08-06T21:14:23Z",
   "agent": "meaningful_iter_10m",
-  "sha": "20f366b13f9c7b28ab26e0cdef386c8232ab8919",
-  "note": "restored thrash (941 deletes) first; complements MTIME/AGE"
+  "sha": "1ebc87423cd4ae930cabe734e7ebd47db5c90628",
+  "note": "complements SYS ENV and REQUIRE ENV"
 }
