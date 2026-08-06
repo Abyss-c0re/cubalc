@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 181,
-  "version": "1.15.206-usability",
-  "item": "SYS MIDFILE / LINESLICE file line window extract",
-  "item_id": 214,
-  "title": "SYS MIDFILE|LINESLICE path start [count] — page file lines without READ+DROP+TAKE",
-  "commit": "63d3349b6f257cc3e915718e0ec62c1e30cdd458",
-  "summary": "File line window extract; TOTAL/START/WANT stats. thrash restore first. selftest 181.",
+  "iter": 182,
+  "version": "1.15.207-usability",
+  "item": "SYS LINEAT / FILELINE single file line by index",
+  "item_id": 215,
+  "title": "SYS LINEAT|FILELINE|ATLINE path n \u2014 single 0-based file line \u2192 LAST",
+  "commit": "c0841376876fb12e96ee1c913f1519607208c276",
+  "summary": "File line-by-index extract; LINEAT_N/I/TOTAL. Completes HEAD/TAIL/MID. selftest 182.",
   "proofs": [
-    "754_sys_midfile",
-    "selftest n_pass=181"
+    "755_sys_lineat",
+    "selftest n_pass=182"
   ],
-  "when": "2026-08-06T08:04:13Z",
+  "when": "2026-08-06T08:15:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "63d3349b6f257cc3e915718e0ec62c1e30cdd458"
+  "sha": "c0841376876fb12e96ee1c913f1519607208c276"
 }
