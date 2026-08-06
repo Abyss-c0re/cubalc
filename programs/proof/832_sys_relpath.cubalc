@@ -1,0 +1,71 @@
+# SYS RELPATH — path relative to base (portable plate paths)
+# Usability: WALK/PUSHD results without shell realpath tricks
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "relpath_mi_root"
+LET root = LAST
+SYS MKDIR root
+ASSERT OK == 1
+
+SYS JOIN root "sub"
+LET sub = LAST
+SYS MKDIR sub
+ASSERT OK == 1
+
+SYS JOIN sub "plate.txt"
+LET fp = LAST
+SYS WRITE fp "rel-payload"
+ASSERT OK == 1
+
+# under base → relative
+SYS RELPATH root fp
+ASSERT OK == 1
+SYS EQS LAST "sub/plate.txt"
+ASSERT LAST_N == 1
+ASSERT RELPATH_UNDER == 1
+
+# same path → "."
+SYS RELPATH root root
+ASSERT OK == 1
+SYS EQS LAST "."
+ASSERT LAST_N == 1
+ASSERT RELPATH_UNDER == 1
+
+# nested base
+SYS RELPATH sub fp
+ASSERT OK == 1
+SYS EQS LAST "plate.txt"
+ASSERT LAST_N == 1
+
+# aliases
+SYS REL root fp
+SYS EQS LAST "sub/plate.txt"
+ASSERT LAST_N == 1
+SYS STRIPBASE root fp
+SYS EQS LAST "sub/plate.txt"
+ASSERT LAST_N == 1
+
+# outside base → absolute (not under)
+SYS RELPATH sub td
+ASSERT OK == 1
+ASSERT RELPATH_UNDER == 0
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+
+# empty soft fail
+SYS RELPATH "" fp
+ASSERT OK == 0
+SYS RELPATH root ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM fp
+SYS RMDIR sub
+SYS RMDIR root
+
+PRINT "sys_relpath ok"

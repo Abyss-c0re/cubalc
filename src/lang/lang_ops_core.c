@@ -2320,6 +2320,48 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS RELPATH|REL|MAKE_RELATIVE base path — path relative to base.
+     * Under base → strip prefix; same → "."; outside → absolute path.
+     * LAST_N = strlen; RELPATH_UNDER 1|0. Soft fail empty args.
+     * Usability: portable plate paths after WALK/PUSHD without shell. */
+    if (kw(&L->cur,"RELPATH") || kw(&L->cur,"REL") || kw(&L->cur,"MAKE_RELATIVE") ||
+        kw(&L->cur,"MAKEREL") || kw(&L->cur,"STRIPBASE") || kw(&L->cur,"PATHREL") ||
+        kw(&L->cur,"REL_TO") || kw(&L->cur,"RELATIVE_TO")){
+      char base[512], path[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      base[0] = 0; path[0] = 0;
+      if (resolve_str_arg(vm, L, base, sizeof base) != 0)
+        base[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        path[0] = 0;
+      if (!base[0] || !path[0] || cubalc_host_relpath(base, path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "RELPATH_UNDER", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "RELPATH: empty base or path");
+          var_set_str(vm, "ERR", "RELPATH: empty base or path");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "RELPATH", hr.str);
+      var_set_num(vm, "RELPATH_UNDER", hr.code ? 1 : 0);
+      var_set_num(vm, "REL_UNDER", hr.code ? 1 : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TOUCH path — create empty file or refresh mtime (plate markers).
      * LAST_N/TOUCH_N: 1 if newly created, 0 if updated existing. Soft fail on dir. */
     if (kw(&L->cur,"TOUCH") || kw(&L->cur,"ENSURE_FILE") || kw(&L->cur,"CREATE") ||
@@ -22537,6 +22579,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS POPD", "SYS POPD|POPDIR — restore previous cwd from stack"},
       {"SYS DIRSTACK", "SYS DIRSTACK|DIRS — newline bag of saved directories"},
       {"SYS KINDSTR", "SYS KINDSTR|FILEKIND path — kind label file|dir|link|missing"},
+      {"SYS RELPATH", "SYS RELPATH|REL base path — relative to base or absolute"},
       {"SYS CHDIR", "SYS CHDIR|CD path — change process cwd · LAST_N 0|1 soft miss"},
       {"SYS CD", "SYS CD path — alias of SYS CHDIR"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},

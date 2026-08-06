@@ -571,6 +571,57 @@ int cubalc_host_dirstack(cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS RELPATH base path — portable relative plate paths without shell. */
+int cubalc_host_relpath(const char *base, const char *path, cubalc_host_result *r) {
+  cubalc_host_result ba, pa;
+  size_t bl, pl;
+  r_clear(r);
+  if (!base || !base[0] || !path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "relpath: empty base or path");
+    return -1;
+  }
+  memset(&ba, 0, sizeof ba);
+  memset(&pa, 0, sizeof pa);
+  if (cubalc_host_abspath(base, &ba) != 0 || !ba.str[0]) {
+    snprintf(r->err, sizeof r->err, "relpath: bad base");
+    return -1;
+  }
+  if (cubalc_host_abspath(path, &pa) != 0 || !pa.str[0]) {
+    snprintf(r->err, sizeof r->err, "relpath: bad path");
+    return -1;
+  }
+  bl = strlen(ba.str);
+  pl = strlen(pa.str);
+  while (bl > 1 && ba.str[bl - 1] == '/') {
+    ba.str[bl - 1] = 0;
+    bl--;
+  }
+  while (pl > 1 && pa.str[pl - 1] == '/') {
+    pa.str[pl - 1] = 0;
+    pl--;
+  }
+  if (strcmp(ba.str, pa.str) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", ".");
+    r->n = 1;
+    r->code = 1; /* under / same */
+    r->ok = 1;
+    return 0;
+  }
+  if (pl > bl && strncmp(pa.str, ba.str, bl) == 0 && pa.str[bl] == '/') {
+    snprintf(r->str, sizeof r->str, "%s", pa.str + bl + 1);
+    r->n = (long)strlen(r->str);
+    r->code = 1;
+    r->ok = 1;
+    return 0;
+  }
+  /* outside base — keep absolute */
+  snprintf(r->str, sizeof r->str, "%s", pa.str);
+  r->n = (long)strlen(r->str);
+  r->code = 0;
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS KINDSTR path — human path kind without multi ISDIR/ISFILE/ISLINK glue. */
 int cubalc_host_kindstr(const char *path, cubalc_host_result *r) {
   struct stat st;
