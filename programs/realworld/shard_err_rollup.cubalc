@@ -1,0 +1,593 @@
+# shard_err_rollup.cubalc — multi-shard error histogram rollup under STATE
+#
+# Real use: SRE agent folds per-shard severity/service counters (key:count)
+# into a durable rollup plate. MERGEKV sums overlapping keys; SUMKV grand
+# total; TOPKEY/BOTKEY hottest/coldest without SORTFREQ+TAKE glue.
+#
+# Distinct from svc_err_kv_board (single plate KVINC) and route_weight_board
+# (weights + OR defaults): this board is multi-source merge + aggregate lens.
+#
+# Plate under STATE:
+#   ROLLUP.txt        — merged key:count bag
+#   SHARD.txt         — last ingested shard bag (debug)
+#   ROLLUP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_SR_ACTION):
+#   list      — depth + SUMKV + TOPKEY/BOTKEY (default)
+#   seed      — WORDS key:n into ROLLUP (skip existing)
+#   shard     — WORDS key:n → SHARD then MERGEKV into ROLLUP
+#   loadlines — ||| raw events → FREQ → merge into ROLLUP
+#   sum       — SUMKV rollup → hit=total
+#   top       — TOPKEY (hottest); soft empty
+#   bot       — BOTKEY (coldest); soft empty
+#   get       — LOOKUP OR "0"
+#   bump      — KVINC key [delta]
+#   del       — KVDEL key
+#   clear     — empty rollup+shard
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sr_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=shard CUBALC_ARG1='api:3 db:1' \
+#     ./out/cubalc run -q -s programs/realworld/shard_err_rollup.cubalc
+#   CUBALC_ARG0=shard CUBALC_ARG1='api:2 mesh:4' ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=list ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_SR_FILE=ROLLUP.txt
+#   CUBALC_SR_SHARD=SHARD.txt
+#   CUBALC_SR_REQUIRE=1
+#   CUBALC_SR_DELTA=1
+#
+# Edges deliberately stressed:
+#   MERGEKV non-numeric values may poison sums (strtol)
+#   SUMKV skips non-numeric; SUMKV_N < KEYS when mixed
+#   TOPKEY/BOTKEY ties: first wins; empty bag OK=0 soft
+#   TOPKEY on empty + REQUIRE
+#   LOOKUP OR OK=1 on miss; substring false friends
+#   sep must be ":" literal not var
+#   PRINT_JSON bag collapse; WRITE trailing NL
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "shard_err_rollup: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ROLLUP.txt"
+DEFAULT SFILE = "SHARD.txt"
+DEFAULT REPORT = "ROLLUP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DELTA = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SR_FILE" OR ""
+IF LAST_N > 0 THEN
+  LET RFILE = LAST
+END
+SYS ENV "CUBALC_SR_SHARD" OR ""
+IF LAST_N > 0 THEN
+  LET SFILE = LAST
+END
+SYS ENV "CUBALC_SR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SR_DELTA" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir SFILE
+LET shard_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR "soft rollup load"
+SYS READ OR shard_path OR ""
+LET shard = LAST
+CLEAR_ERR "soft shard load"
+SYS LINES bag
+LET depth0 = LAST_N
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET shard_changed = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET total_n = 0
+LET top_k = ""
+LET bot_k = ""
+LET top_v = 0
+LET bot_v = 0
+LET merge_hit = 0
+LET merge_add = 0
+LET used_or = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    SYS STR total_n
+    LET val_s = LAST
+    SYS TOPKEY bag ":"
+    IF OK == 1 THEN
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+    END
+    CLEAR_ERR
+    SYS BOTKEY bag ":"
+    IF OK == 1 THEN
+      LET bot_k = LAST
+      LET bot_v = BOTKEY_V
+    END
+    CLEAR_ERR
+  END
+  STATUS
+  PRINT "rollup" depth0 total_n ACTION
+  PRINT_JSON depth0 total_n top_k top_v bot_k bot_v ACTION STATUS_OK
+  PRINT_JSON bag
+  LET note_msg = "list ok"
+END
+
+# --- seed WORDS into rollup ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs key:n tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP bag k ":"
+        IF OK == 0 THEN
+          SYS KVSET bag k v ":"
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- shard: WORDS → SHARD plate then MERGEKV ---
+SYS EQS ACTION "shard"
+IF LAST_N == 1 THEN
+  NOTE "action shard"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "shard needs key:n tokens"
+  END
+  LET shard = ""
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS KVSET shard k v ":"
+        LET shard = LAST
+        LET hit = hit + 1
+      END
+      CLEAR_ERR
+    END
+  END
+  LET shard_changed = 1
+  SYS MERGEKV bag shard ":"
+  LET bag = LAST
+  LET merge_hit = MERGEKV_HIT
+  LET merge_add = MERGEKV_ADDED
+  LET changed = 1
+  LET note_msg = "shard merged"
+  PRINT_JSON merge_hit merge_add
+  PRINT_JSON bag
+END
+
+# --- loadlines: ||| events FREQ merge ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  LET evs = LAST
+  SYS FREQ evs
+  LET shard = LAST
+  LET shard_changed = 1
+  SYS LINES shard
+  LET hit = LAST_N
+  SYS MERGEKV bag shard ":"
+  LET bag = LAST
+  LET merge_hit = MERGEKV_HIT
+  LET merge_add = MERGEKV_ADDED
+  LET changed = 1
+  LET note_msg = "freq merged"
+  PRINT_JSON bag
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET total_n = 0
+    LET note_msg = "sum empty"
+    FAIL "sum empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sum empty"
+    END
+  ELSE
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    LET hit = total_n
+    SYS STR total_n
+    LET val_s = LAST
+    LET note_msg = "sum ok"
+    PRINT_JSON total_n SUMKV_N SUMKV_KEYS
+  END
+END
+
+# --- top ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS TOPKEY bag ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "top empty"
+    FAIL "top empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top empty"
+    END
+  ELSE
+    LET top_k = LAST
+    LET top_v = TOPKEY_V
+    LET val_s = top_k
+    LET val_n = top_v
+    LET hit = top_v
+    LET note_msg = "top ok"
+    PRINT_JSON top_k top_v
+  END
+END
+
+# --- bot ---
+SYS EQS ACTION "bot"
+IF LAST_N == 1 THEN
+  NOTE "action bot"
+  SYS BOTKEY bag ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "bot empty"
+    FAIL "bot empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "bot empty"
+    END
+  ELSE
+    LET bot_k = LAST
+    LET bot_v = BOTKEY_V
+    LET val_s = bot_k
+    LET val_n = bot_v
+    LET hit = bot_v
+    LET note_msg = "bot ok"
+    PRINT_JSON bot_k bot_v
+  END
+END
+
+# --- get LOOKUP OR 0 ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "get needs key"
+  END
+  SYS LOOKUP bag NAME ":" OR "0"
+  LET val_s = LAST
+  LET used_or = LOOKUP_OR
+  SYS PREPEND "" val_s
+  SYS HEAD LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET val_n = LAST_N
+    LET hit = val_n
+  ELSE
+    LET hit = 1
+  END
+  CLEAR_ERR
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "get default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "get default only"
+      CLEAR_ERR
+      EXIT 2 "get default only"
+    END
+  ELSE
+    LET note_msg = "get ok"
+  END
+  PRINT_JSON NAME val_s used_or
+END
+
+# --- bump ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "bump needs key"
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DELTA = LAST_N
+    END
+  END
+  SYS KVINC bag NAME DELTA ":"
+  LET bag = LAST
+  LET val_n = KVINC_V
+  SYS STR val_n
+  LET val_s = LAST
+  LET changed = 1
+  LET hit = 1
+  LET note_msg = "bumped"
+  PRINT_JSON NAME val_s
+END
+
+# --- del ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs key"
+  END
+  SYS KVDEL bag NAME ":"
+  LET bag = LAST
+  IF KVDEL_HIT == 0 THEN
+    LET miss = 1
+    LET note_msg = "del miss"
+    FAIL "del miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del miss"
+    END
+  ELSE
+    LET val_s = KVDEL_V
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "deleted"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET shard = ""
+  LET changed = 1
+  LET shard_changed = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "shard"
+LET k = k + LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "sum"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "bot"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "bump"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rollup write failed"
+  END
+  CLEAR_ERR
+END
+IF shard_changed > 0 THEN
+  SYS WRITE shard_path shard
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "shard write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.rollup.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "top_k"
+LET report = LAST
+SYS PUSH report top_k
+LET report = LAST
+SYS PUSH report "top_v"
+LET report = LAST
+SYS STR top_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "bot_k"
+LET report = LAST
+SYS PUSH report bot_k
+LET report = LAST
+SYS PUSH report "bot_v"
+LET report = LAST
+SYS STR bot_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "merge_hit"
+LET report = LAST
+SYS STR merge_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "merge_add"
+LET report = LAST
+SYS STR merge_add
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "rollup" ACTION hit miss depth1 total_n
+PRINT_JSON ACTION hit miss depth1 total_n top_k bot_k elapsed STATUS_OK
+PASS "rollup tick"
+NOTE "shard_err_rollup: done"
+CLEAR_ERR
+EXIT 0 "rollup ok"

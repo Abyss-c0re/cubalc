@@ -1,76 +1,76 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 48,
-  "program": "programs/realworld/route_weight_board.cubalc",
-  "theme": "mesh route weights LOOKUP OR default + KVDEL drain",
-  "version": "1.15.158-usability",
+  "iter": 49,
+  "program": "programs/realworld/shard_err_rollup.cubalc",
+  "theme": "multi-shard error rollup MERGEKV SUMKV TOPKEY BOTKEY",
+  "version": "1.15.161-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_get",
-      "cmd": "seed peer_a:10 peer_b:5 peer_c:1; get peer_a \u2192 10 OR=0",
+      "name": "shard_merge",
+      "cmd": "shard api:3 db:1 warn:2 + api:2 mesh:4 db:1 → api:5 db:2 mesh:4",
       "ok": true,
-      "note": "LOOKUP hit"
+      "note": "MERGEKV sum overlap"
     },
     {
-      "name": "get_or_default",
-      "cmd": "get peer_z \u2192 DEF 1 LOOKUP_OR=1",
+      "name": "list_lens",
+      "cmd": "list total=13 top=api:5 bot=db:2",
       "ok": true,
-      "note": "soft default OK=1"
+      "note": "SUMKV TOPKEY BOTKEY"
     },
     {
-      "name": "get_or_zero",
-      "cmd": "CUBALC_RW_DEF=0 get peer_z \u2192 val 0 hit 0",
+      "name": "sum_top_bot",
+      "cmd": "sum 13; top api; bot db",
       "ok": true,
-      "note": "hit confuses with miss"
+      "note": "aggregate actions"
     },
     {
-      "name": "get_or_require",
-      "cmd": "REQUIRE get missing \u2192 exit 2 default only",
+      "name": "loadlines_freq",
+      "cmd": "loadlines api|||api|||crit → api:7 crit:1",
       "ok": true,
-      "note": "agent policy on OR"
+      "note": "FREQ+MERGEKV"
     },
     {
-      "name": "getraw_miss",
-      "cmd": "getraw peer_z soft miss",
+      "name": "get_or",
+      "cmd": "get api=7; get ghost OR 0",
       "ok": true,
-      "note": "no OR OK=0"
+      "note": "LOOKUP OR"
     },
     {
-      "name": "bump_del",
-      "cmd": "bump peer_b +3 \u2192 8; del peer_c",
+      "name": "top_empty_require",
+      "cmd": "top empty REQUIRE exit 2",
       "ok": true,
-      "note": "KVINC + KVDEL"
+      "note": "TOPKEY OK=0"
     },
     {
-      "name": "del_miss_require",
-      "cmd": "del ghost soft; REQUIRE exit 2",
+      "name": "sum_empty_soft",
+      "cmd": "sum empty soft miss (program gate)",
       "ok": true,
-      "note": "KVDEL_HIT=0 OK=1"
+      "note": "language SUMKV empty → 0"
     },
     {
-      "name": "pin_set_seed",
-      "cmd": "pin peer_b; set peer_d; seed skip peer_a",
+      "name": "ties_first",
+      "cmd": "a:5 b:5 c:2 → TOPKEY a BOTKEY c",
       "ok": true,
-      "note": "MOVELINE + skip"
+      "note": "first extreme wins"
     },
     {
-      "name": "substring_false",
-      "cmd": "getraw peer miss (not peer_a)",
+      "name": "nonnum_sum_merge",
+      "cmd": "note:hello+world → note:0; SUMKV skips/zeros",
+      "ok": true,
+      "note": "strtol silent"
+    },
+    {
+      "name": "substring_del",
+      "cmd": "get ap OR; del ghost REQUIRE 2",
       "ok": true,
       "note": "exact key"
-    },
-    {
-      "name": "dup_del_first",
-      "cmd": "peer_a:1\\npeer_a:9 del \u2192 residual peer_a:9",
-      "ok": true,
-      "note": "first-only KVDEL"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "133/133 after restore of deleted proofs"
+      "note": "136/136 pass incl mergekv sumkv topkey"
     }
   ],
   "weaknesses": [
@@ -78,88 +78,88 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "LOOKUP OR sets OK=1 on miss \u2014 silent default",
-      "detail": "Agents that only check OK treat missing peer as success. Must inspect LOOKUP_OR or LOOKUP_I==-1. Asymmetric with bare LOOKUP miss OK=0.",
-      "repro": "LOOKUP bag ghost OR 1 \u2192 OK=1 LOOKUP_OR=1"
+      "title": "MERGEKV strtol non-numeric values to 0 and sum",
+      "detail": "note:hello + note:world → note:0 silently. String metadata keys corrupt into zero counters. No STRICT/refuse on non-numeric merge.",
+      "repro": "MERGEKV 'note:hello' 'note:world' → note:0"
     },
     {
       "id": "W2",
-      "severity": "high",
+      "severity": "med",
       "area": "host|bag",
-      "title": "KVDEL miss keeps OK=1 with HIT=0",
-      "detail": "Unlike LOOKUP miss, KVDEL never soft-fails OK. REQUIRE paths must gate on KVDEL_HIT not OK. Easy to think del always succeeded.",
-      "repro": "KVDEL bag ghost \u2192 OK=1 HIT=0"
+      "title": "SUMKV silently skips non-numeric; N < KEYS",
+      "detail": "mixed a:2 b:x c:5 → sum 7 SUMKV_N=2 KEYS=4. Agents may think all keys counted. No list of skipped keys.",
+      "repro": "SUMKV mixed bag"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "KVDEL first-only leaves duplicate residual keys",
-      "detail": "peer_a:1\\npeer_a:9 after del peer_a keeps peer_a:9. No DELALL / multi-key policy. Drain incomplete without loop.",
-      "repro": "KVDEL dup-key bag"
+      "title": "TOPKEY/BOTKEY ties pick first only",
+      "detail": "a:5 b:5 → TOPKEY a only. No all-ties bag or TOPKEYS k form. Same first-wins class as LONGEST.",
+      "repro": "TOPKEY a:5\\nb:5 → a"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "agent|api",
-      "title": "Zero default weight makes hit=0 look like miss",
-      "detail": "Program maps hit=val_n; DEF=0 \u2192 hit=0 while get succeeded with default. Agents conflate success with non-zero weight.",
-      "repro": "get peer_z DEF=0 \u2192 hit 0 used_or 1"
+      "area": "host|bag",
+      "title": "SUMKV empty bag returns 0 with OK=1 not soft miss",
+      "detail": "Unlike TOPKEY empty OK=0, SUMKV \"\" → LAST_N=0 LAST=0 OK=1. Inconsistent empty semantics across aggregate ops. Program must BLANK-gate.",
+      "repro": "SUMKV \"\" → 0 OK=1"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "lang|parse",
-      "title": "LOOKUP sep+OR argument order is fragile",
-      "detail": "Correct: LOOKUP bag key \\\"=\\\" OR \\\"x\\\". Wrong: LOOKUP bag key OR \\\"x\\\" \\\"=\\\" \u2192 unknown form '='. Same sep-literal class as prior KV ops.",
-      "repro": "LOOKUP cfg port OR 7700 ="
-    },
-    {
-      "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last route line without $.",
-      "repro": "seed; cat -A ROUTES.txt"
+      "detail": "cat -A last rollup line without $.",
+      "repro": "shard; cat -A ROLLUP.txt"
     },
     {
-      "id": "W7",
+      "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON collapses bag newlines",
-      "detail": "Stable issue; route plate looks like single field in JSON dump.",
+      "detail": "MERGEKV result dumps as api:5note:0 single field in JSON.",
       "repro": "PRINT_JSON bag"
     },
     {
-      "id": "W8",
+      "id": "W7",
       "severity": "low",
       "area": "host|bag",
-      "title": "No KVDEL ALL / WHILE-HIT loop primitive",
-      "detail": "Draining all duplicate keys needs agent WHILE LOOKUP loop. MEANINGFUL_ITER candidate.",
-      "repro": "dup keys drain"
+      "title": "No TOPKEYS k / multi-hot bag",
+      "detail": "Want top-3 hottest services for dashboard; only single TOPKEY. Work around SORTFREQ+TAKE.",
+      "repro": "TOPKEY single only"
+    },
+    {
+      "id": "W8",
+      "severity": "med",
+      "area": "lang|parse",
+      "title": "sep still string-literal only on MERGEKV/SUMKV/TOPKEY",
+      "detail": "Same SEP-var footgun as LOOKUP/KV* family; must pass \":\" literal.",
+      "repro": "SUMKV bag SEP unknown form if var"
     }
   ],
   "workarounds": [
-    "Always check LOOKUP_OR after LOOKUP \u2026 OR; REQUIRE on used_or if real peer required",
-    "Gate del on KVDEL_HIT not OK",
-    "Loop KVDEL while LOOKUP hits for full drain of dups",
-    "Report used_or and val separately; never use hit==0 alone as miss when DEF can be 0",
-    "sep before OR: bag key \\\":\\\" OR DEF with string literals only"
+    "Validate all values numeric before MERGEKV; reject string plates",
+    "Compare SUMKV_N vs LINES/KEYS after sum to detect skips",
+    "BLANK bag before SUMKV if empty should be miss",
+    "For ties, SORTFREQ then TAKE if all-max needed",
+    "Always use \":\" string literal for sep args"
   ],
   "language_gaps": [
-    "LOOKUP OR option to keep OK=0 on default (STRICT_OR)",
-    "KVDEL hard-miss mode OK=0 when HIT=0",
-    "KVDELALL / DELKEY* multi match",
-    "resolve_str_arg for sep on LOOKUP/KV*",
-    "PRINT_JSON bag as array lines",
-    "WRITE force trailing NL"
+    "MERGEKV STRICT non-numeric refuse",
+    "SUMKV skipped-key bag / STRICT",
+    "TOPKEYS k multi-hot; all-ties bag",
+    "Consistent empty: SUMKV OK=0 like TOPKEY",
+    "resolve_str_arg sep for MERGEKV/SUMKV/TOPKEY",
+    "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Workspace had mass-deleted proofs/plate at fire start \u2014 restored from HEAD; selftest 133/133",
-    "Positive seed/get/OR/del/pin clean",
-    "DEF=0 hit=0 footgun documented W4",
-    "No language fix this iter"
+    "Positive two-shard merge + list lens clean (total 13 top api)",
+    "MERGEKV non-numeric → note:0 is severe agent footgun",
+    "BOTKEY among ties (db:2 warn:2) first min only",
+    "No language fix — STRICT merge for MEANINGFUL_ITER"
   ],
-  "commit": "ce3814f2fe3efb01b984bf86d1d4c99871f29027",
-  "ts": "2026-08-05T23:55:00Z"
+  "commit": "",
+  "ts": "2026-08-06T00:20:00Z"
 }
