@@ -1,0 +1,61 @@
+# SYS FILEUID / FILEGID / OWNEDBY — plate ownership probes
+# Usability: agent security gates without shell stat
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "fileuid_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "owned-by-me"
+ASSERT OK == 1
+
+# process identity
+SYS UID
+LET me = LAST_N
+ASSERT me >= 0
+
+# file owner should match process uid for plates we create
+SYS FILEUID p
+ASSERT OK == 1
+ASSERT LAST_N == me
+ASSERT FILEUID == me
+
+SYS OWNERUID p
+ASSERT OK == 1
+ASSERT LAST_N == me
+
+# group present (gid >= 0)
+SYS FILEGID p
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+LET g = LAST_N
+SYS OWNERGID p
+ASSERT LAST_N == g
+
+# we own our plate
+SYS OWNEDBY p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ISOWNER == 1
+SYS MYFILE p
+ASSERT LAST_N == 1
+
+# soft miss missing path
+SYS FILEUID "/no/such/fileuid_mi"
+ASSERT OK == 0
+SYS FILEGID "/no/such/fileuid_mi"
+ASSERT OK == 0
+SYS OWNEDBY "/no/such/fileuid_mi"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+SYS FILEUID ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM p
+
+PRINT "sys_fileuid ok"

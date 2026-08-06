@@ -313,6 +313,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 283. ~~**`SYS HARDLINK` / `HLINK` · `NLINK` / `LINKS`**~~ **done** (hard link same inode + link count · shared plates without COPY).
 284. ~~**`SYS SAMEINODE` / `EQINODE` · `INODE`**~~ **done** (same device+inode probe + inode stamp · verify HARDLINK ≠ EQFILE content).
 285. ~~**`SYS TEE` / `WRITETEE` / `SAVEKEEP`**~~ **done** (write file keep content in LAST · chain without READ back).
+286. ~~**`SYS FILEUID` / `FILEGID` / `OWNEDBY`**~~ **done** (file owner uid/gid + euid owns probe · agent plate security).
 
 ## Tick protocol
 
