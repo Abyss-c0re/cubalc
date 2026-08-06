@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 196,
-  "version": "1.15.221-usability",
-  "item": "SYS LOOKUPFILE / FILELOOKUP / KVFILEGET peel key=val from plate file",
-  "item_id": 229,
-  "title": "SYS LOOKUPFILE|FILELOOKUP path key [sep] [OR fb] — peel key=val from plate file",
-  "commit": "c94a5796e1770d8a6ad61b78601304aff9d669b9",
-  "summary": "Plate file kv peel one-shot with OR fallback. selftest 196.",
+  "iter": 197,
+  "version": "1.15.222-usability",
+  "item": "SYS KVFILESET / FILEKVSET / SETKVFILE set/update key=val in plate file",
+  "item_id": 230,
+  "title": "SYS KVFILESET|FILEKVSET path key value [sep] — set/update key=val in plate file",
+  "commit": "997412ef300a43a430bc5b8b573f6b7ae8145909",
+  "summary": "Plate file kv write one-shot; create if missing. selftest 197.",
   "proofs": [
-    "769_sys_lookupfile",
-    "selftest n_pass=196"
+    "770_sys_kvfileset",
+    "selftest n_pass=197"
   ],
-  "when": "2026-08-06T10:35:17Z",
+  "when": "2026-08-06T10:44:36Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c94a5796e1770d8a6ad61b78601304aff9d669b9"
+  "sha": "997412ef300a43a430bc5b8b573f6b7ae8145909"
 }
