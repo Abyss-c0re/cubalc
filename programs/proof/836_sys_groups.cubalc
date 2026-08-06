@@ -1,0 +1,52 @@
+# SYS GROUPS / INGROUP — process group membership
+# Usability: agent ACL checks without shell id -nG
+
+HOLD_FLASH 1
+
+# group bag non-empty
+SYS GROUPS
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT GROUPS_N == LAST_N
+SYS LEN LAST
+ASSERT LAST_N >= 1
+
+# primary group name is a member
+SYS GROUP
+LET gname = LAST
+SYS LEN gname
+ASSERT LAST_N >= 1
+
+SYS INGROUP gname
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT INGROUP_N == 1
+
+# by numeric egid
+SYS EGID
+LET eg = LAST_N
+SYS INGROUP eg
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# aliases
+SYS MEMBEROF gname
+ASSERT LAST_N == 1
+SYS HASGROUP gname
+ASSERT LAST_N == 1
+SYS GROUPLIST
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+# unknown group → 0 probe OK=1
+SYS INGROUP "cubalc_no_such_group_mi_xyz"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# empty soft fail
+SYS INGROUP ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+PRINT "sys_groups ok"

@@ -15123,6 +15123,91 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
+    /* SYS GROUPS|GROUPLIST|MYGROUPS — egid+supplementary names → LAST bag; LAST_N=count.
+     * SYS INGROUP|MEMBEROF|INGRP name|gid — LAST_N 1 if process in group (probe OK=1).
+     * Usability: agent ACL membership without shell id -nG. */
+    if (kw(&L->cur,"GROUPS") || kw(&L->cur,"GROUPLIST") || kw(&L->cur,"MYGROUPS") ||
+        kw(&L->cur,"SUPGROUPS") || kw(&L->cur,"ALLGROUPS") ||
+        kw(&L->cur,"INGROUP") || kw(&L->cur,"MEMBEROF") || kw(&L->cur,"INGRP") ||
+        kw(&L->cur,"IN_GROUP") || kw(&L->cur,"HASGROUP") || kw(&L->cur,"GROUPMEMBER")){
+      char op[24];
+      cubalc_host_result hr;
+      int is_in;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_in = (strcmp(op, "INGROUP") == 0 || strcmp(op, "MEMBEROF") == 0 ||
+               strcmp(op, "INGRP") == 0 || strcmp(op, "IN_GROUP") == 0 ||
+               strcmp(op, "HASGROUP") == 0 || strcmp(op, "GROUPMEMBER") == 0);
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      if (is_in) {
+        char name[256];
+        name[0] = 0;
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(name, sizeof name, "%ld", n);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *gv = var_get(vm, L->cur.text, 0);
+          if (gv && !gv->is_str) {
+            /* numeric var (incl. 0) → decimal gid text */
+            snprintf(name, sizeof name, "%ld", gv->val);
+            lex_next(L);
+          } else if (gv && gv->is_str && gv->sval[0]) {
+            snprintf(name, sizeof name, "%s", gv->sval);
+            lex_next(L);
+          } else {
+            /* bare group name IDENT */
+            snprintf(name, sizeof name, "%s", L->cur.text);
+            lex_next(L);
+          }
+        } else if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+          if (L->cur.kind == TK_STR) {
+            snprintf(name, sizeof name, "%s", L->cur.text);
+            lex_next(L);
+          }
+        }
+        if (!name[0] || cubalc_host_ingroup(name, &hr) != 0) {
+          var_set_str(vm, "LAST", "0");
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "INGROUP_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", "INGROUP: empty name");
+          var_set_str(vm, "ERR", "INGROUP: empty name");
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", hr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "INGROUP", hr.n);
+        var_set_num(vm, "INGROUP_N", hr.n);
+        var_set_num(vm, "MEMBEROF", hr.n);
+        var_set_str(vm, "INGROUP_NAME", name);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* GROUPS list */
+      if (cubalc_host_groups(&hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "GROUPS_N", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "GROUPS_N", hr.n);
+      var_set_str(vm, "GROUPS", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS HOME|HOMEDIR|USER_HOME — home directory → LAST/HOME */
     if (kw(&L->cur,"HOME") || kw(&L->cur,"HOMEDIR") || kw(&L->cur,"USER_HOME") ||
         kw(&L->cur,"HOMEPATH")){
@@ -23239,6 +23324,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS GID", "SYS GID|GROUP_ID — real group id → LAST_N"},
       {"SYS EGID", "SYS EGID|GETEGID — effective group id → LAST_N"},
       {"SYS GROUP", "SYS GROUP|GNAME — primary group name → LAST"},
+      {"SYS GROUPS", "SYS GROUPS|GROUPLIST — egid+supplementary names bag"},
+      {"SYS INGROUP", "SYS INGROUP|MEMBEROF name|gid — membership probe"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},

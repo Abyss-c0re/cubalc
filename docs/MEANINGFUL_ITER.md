@@ -324,6 +324,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 294. ~~**`SYS ATIME` / `CTIME`**~~ **done** (access + status-change epoch · plate freshness beyond MTIME).
 295. ~~**`SYS HASENV` / `ENVHAS`**~~ **done** (soft env presence probe · IF before REQUIRE ENV without fatal).
 296. ~~**`SYS GID` / `EGID` / `GROUP`**~~ **done** (process group id + name · agent identity without shell id).
+297. ~~**`SYS GROUPS` / `INGROUP`**~~ **done** (supplementary group bag + membership probe · ACL without shell id -nG).
 
 ## Tick protocol
 

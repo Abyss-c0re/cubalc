@@ -76,6 +76,10 @@ int cubalc_host_kindstr(const char *path, cubalc_host_result *r);
 /* path relative to base (abspath both). Under base → relative; same → ".";
  * outside → absolute path. r->n = strlen; r->code = 1 if under base, 0 else */
 int cubalc_host_relpath(const char *base, const char *path, cubalc_host_result *r);
+/* process groups as newline names (egid+supplementary); r->n = count */
+int cubalc_host_groups(cubalc_host_result *r);
+/* membership: name or decimal gid; r->n = 0|1 */
+int cubalc_host_ingroup(const char *name_or_gid, cubalc_host_result *r);
 /* owner login name from st_uid via getpwuid; fallback decimal uid string; r->n = uid */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r);
 /* group name from st_gid via getgrgid; fallback decimal gid string; r->n = gid */
