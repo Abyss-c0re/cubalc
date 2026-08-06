@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 248,
-  "version": "1.15.275-usability",
-  "item": "SYS HARDLINK / HLINK · NLINK / LINKS shared plate inodes",
-  "item_id": 283,
-  "title": "SYS HARDLINK existing newpath + SYS NLINK path — shared inode plates",
-  "commit": "e63e71b4995980d5c7b0cc229e35ce79497357d1",
-  "summary": "hard link + nlink count for multi-agent shared plates. selftest 248.",
+  "iter": 249,
+  "version": "1.15.276-usability",
+  "item": "SYS SAMEINODE / EQINODE · INODE hard-link identity",
+  "item_id": 284,
+  "title": "SYS SAMEINODE a b + SYS INODE path — verify hard-link plate identity",
+  "commit": "61131d254d40cb67d4973fb22a5e3954a0192454",
+  "summary": "same dev+ino probe + inode stamp; dual of HARDLINK ≠ EQFILE. selftest 249.",
   "proofs": [
-    "822_sys_hardlink",
-    "selftest n_pass=248"
+    "823_sys_sameinode",
+    "selftest n_pass=249"
   ],
-  "when": "2026-08-06T19:04:32Z",
+  "when": "2026-08-06T19:14:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e63e71b4995980d5c7b0cc229e35ce79497357d1",
-  "note": "restored thrash first; dual of SYMLINK without copy"
+  "sha": "61131d254d40cb67d4973fb22a5e3954a0192454",
+  "note": "complements HARDLINK/NLINK for multi-agent shared plates"
 }
