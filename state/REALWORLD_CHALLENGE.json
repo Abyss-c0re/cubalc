@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "walk_all",
-      "cmd": "WALK drop * → 7 paths files=5 dirs=2",
+      "cmd": "WALK drop * \u2192 7 paths files=5 dirs=2",
       "ok": true,
       "note": "recursive inventory"
     },
     {
       "name": "walk_plate",
-      "cmd": "WALK *.plate → a + sub/b + sub/deep/d (3)",
+      "cmd": "WALK *.plate \u2192 a + sub/b + sub/deep/d (3)",
       "ok": true,
       "note": "basename pattern any depth"
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "eq_differ",
-      "cmd": "EQFILE a.plate other.txt → differ soft exit 0",
+      "cmd": "EQFILE a.plate other.txt \u2192 differ soft exit 0",
       "ok": true,
       "note": "OK=1 EQFILE=0"
     },
@@ -44,7 +44,7 @@
     },
     {
       "name": "archive_moveall",
-      "cmd": "MOVEALL plates → archive flat; drop keeps other+c.log",
+      "cmd": "MOVEALL plates \u2192 archive flat; drop keeps other+c.log",
       "ok": true,
       "note": "relocate 3"
     },
@@ -68,15 +68,15 @@
       "area": "host|fs",
       "title": "WALK * includes directories; no files-only walk mode",
       "detail": "WALK_DIRS mixed into path bag. Agents must KEEPFILES after every unrestricted walk. No WALK --files-only / WALKFILES.",
-      "repro": "WALK root * → sub + sub/deep dirs in bag"
+      "repro": "WALK root * \u2192 sub + sub/deep dirs in bag"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "MOVEALL flattens basenames — deep tree structure lost on archive",
+      "title": "MOVEALL flattens basenames \u2014 deep tree structure lost on archive",
       "detail": "sub/b.plate and sub/deep/d.plate become archive/b.plate archive/d.plate. Same class as COPYALL. Collision if two same basenames at different depths.",
-      "repro": "MOVEALL deep plates → dest basenames only"
+      "repro": "MOVEALL deep plates \u2192 dest basenames only"
     },
     {
       "id": "W3",
@@ -90,9 +90,9 @@
       "id": "W4",
       "severity": "med",
       "area": "host|naming",
-      "title": "FIND is string index; FINDALL is recursive walk — naming trap",
+      "title": "FIND is string index; FINDALL is recursive walk \u2014 naming trap",
       "detail": "Agents expecting find(1) semantics from FIND get character index. FINDALL/WALK is the tree walk. Documented but high agent footgun.",
-      "repro": "SYS FIND hay needle → index; SYS FINDALL root pat → paths"
+      "repro": "SYS FIND hay needle \u2192 index; SYS FINDALL root pat \u2192 paths"
     },
     {
       "id": "W5",
@@ -122,7 +122,7 @@
       "id": "W8",
       "severity": "low",
       "area": "host|fs",
-      "title": "WALK pattern is basename fnmatch only — no path-glob ** semantics",
+      "title": "WALK pattern is basename fnmatch only \u2014 no path-glob ** semantics",
       "detail": "Cannot match sub/**/*.plate vs top-level differently beyond full walk+FILTERGLOB.",
       "repro": "WALK root 'sub/*' may not do what shell does"
     }
@@ -148,6 +148,6 @@
     "Empty dir shells left after archive",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "ffc5c0839927c10042f76e051db36294c7acf02a",
   "ts": "2026-08-06T06:18:40Z"
 }
