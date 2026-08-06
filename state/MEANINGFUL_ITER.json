@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 152,
-  "version": "1.15.177-usability",
-  "item": "SYS PATHGLOB / PGLOB full paths matching shell pattern",
-  "item_id": 185,
-  "title": "SYS PATHGLOB|PGLOB path|pattern [pattern] — full paths for READ/RM",
-  "commit": "672dbd37ad74a73afb92049fb5e5c4cc350ccfa1",
-  "summary": "PATHGLOB returns full paths (shell-style dir/*.ext or two-arg). selftest 152.",
+  "iter": 153,
+  "version": "1.15.178-usability",
+  "item": "REQUIRE PATH / DIR / REG fail-fast host path gates",
+  "item_id": 186,
+  "title": "REQUIRE PATH|DIR|REG path — plate layout gates without EXIST+IF",
+  "commit": "61be082bb5bc4f0fc5c0a40962a14b191369077f",
+  "summary": "Fail-fast path/kind gates for agents. selftest 153.",
   "proofs": [
-    "725_sys_pathglob",
-    "selftest n_pass=152"
+    "726_require_path",
+    "selftest n_pass=153"
   ],
-  "when": "2026-08-06T03:11:09Z",
+  "when": "2026-08-06T03:24:14Z",
   "agent": "meaningful_iter_10m",
-  "sha": "672dbd37ad74a73afb92049fb5e5c4cc350ccfa1"
+  "sha": "61be082bb5bc4f0fc5c0a40962a14b191369077f"
 }
