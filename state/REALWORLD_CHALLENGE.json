@@ -1,146 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 93,
-  "program": "programs/realworld/env_snapshot_board.cubalc",
-  "theme": "env snapshot DUMPENV WRITEENV TRUNCATE FSYNC handoff",
-  "version": "1.15.273-usability",
+  "iter": 94,
+  "program": "programs/realworld/plate_share_board.cubalc",
+  "theme": "plate share HARDLINK NLINK DIRSYNC FSYNC durable publish",
+  "version": "1.15.275-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed",
-      "cmd": "plant demo ES_ keys + DUMPENV n=3",
+      "name": "put_durable",
+      "cmd": "WRITEATOMIC+FSYNC+DIRSYNC",
       "ok": true,
-      "note": "same process"
+      "note": "publish"
     },
     {
-      "name": "filter",
-      "cmd": "GREP ES_ROLE= \u2192 one line",
+      "name": "link_nlink",
+      "cmd": "HARDLINK nlink 1\u21922 same inode",
       "ok": true,
-      "note": "substring"
+      "note": "share"
     },
     {
-      "name": "has_exact",
-      "cmd": "HASLINE PORT=7700 exact; sub 770 miss REQUIRE",
+      "name": "verify_same",
+      "cmd": "EQFILE active alias same=1",
       "ok": true,
-      "note": "exact vs sub"
+      "note": "shared content"
     },
     {
-      "name": "snap",
-      "cmd": "WRITEENV+FSYNC snap.env 69B",
+      "name": "mutate_alias",
+      "cmd": "write alias \u2192 primary sees payload-v2",
       "ok": true,
-      "note": "handoff plate"
+      "note": "same inode"
     },
     {
-      "name": "wipe",
-      "cmd": "TRUNCATE 0 keep inode; size 0",
+      "name": "link_busy",
+      "cmd": "HARDLINK dest exists soft; REQUIRE\u21922",
       "ok": true,
-      "note": "clear plate"
+      "note": "no force"
     },
     {
-      "name": "filter_empty",
-      "cmd": "GREP miss soft; empty VAL clobber",
+      "name": "unlink",
+      "cmd": "RM alias; nlink decrements; primary remains",
       "ok": true,
-      "note": "footgun"
+      "note": "drop link"
     },
     {
-      "name": "wipe_no_active",
-      "cmd": "soft + REQUIRE\u21922",
+      "name": "verify_differ",
+      "cmd": "EQFILE differ soft; REQUIRE\u21922",
       "ok": true,
-      "note": "edges"
+      "note": "content"
+    },
+    {
+      "name": "writeatomic_breaks_hl",
+      "cmd": "put after link \u2192 new inode; alias stuck on old body",
+      "ok": true,
+      "note": "critical footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "246/246 pass"
+      "note": "248/248 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|env",
-      "title": "SETENV/plant is process-local across cubalc runs",
-      "detail": "plant then dump in separate invocations sees zero keys. Same class as DOTENV. Forces seed/snap compound actions.",
-      "repro": "run plant; run dump \u2192 n=0"
+      "area": "host|writeatomic",
+      "title": "WRITEATOMIC renames new inode — severs HARDLINK share",
+      "detail": "After HARDLINK, put WRITEATOMIC leaves alias on old inode/content; primary is new inode. Agents expect shared update; get silent fork. No WRITEATOMIC-in-place or re-hardlink helper.",
+      "repro": "link; put v2; primary=v2 alias=v1 different inodes"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|bag",
-      "title": "filter empty GREP overwrites VAL dump plate",
-      "detail": "Failed filter writes empty bag to VAL; next filter sees no dump. Agents lose inventory on miss without separate DUMP plate.",
-      "repro": "seed; filter NOPE; filter ROLE \u2192 no dump"
+      "area": "host|hardlink",
+      "title": "HARDLINK dest-exists soft fail; no force/replace",
+      "detail": "Republish must RM alias then HARDLINK (TOCTOU). Same class as SYMLINK no-force.",
+      "repro": "HARDLINK src dst twice \u2192 second OK=0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|grep",
-      "title": "GREP substring false friends on KEY=VAL",
-      "detail": "filter ROLE matches ROLE=worker; also would match ROLE_EXTRA. No key-exact GREP.",
-      "repro": "GREP ROLE on bag"
+      "area": "host|hardlink",
+      "title": "No cross-device HARDLINK diagnostic plate field",
+      "detail": "EXDEV soft fail only via LAST_ERR string; agents hard to branch.",
+      "repro": "HARDLINK across mounts"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|writeenv",
-      "title": "WRITEENV empty prefix match writes 0-byte plate OK",
-      "detail": "Silent empty snapshot; hard to tell intentional empty vs wrong prefix.",
-      "repro": "WRITEENV p WRONG_PFX_ \u2192 size 0 OK"
+      "area": "host|dirsync",
+      "title": "DIRSYNC missing leaf still syncs parent OK",
+      "detail": "Surprising success when path does not exist; looks like durable publish of missing file.",
+      "repro": "DIRSYNC /tmp/no_such_leaf \u2192 OK=1 parent"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|truncate",
-      "title": "TRUNCATE grow zero-extends without content clear semantics doc",
-      "detail": "Agents may expect clear-only; grow leaves NULs.",
-      "repro": "TRUNCATE p 10 after short body"
+      "area": "host|symlink",
+      "title": "HARDLINK vs SYMLINK agent confusion",
+      "detail": "release_pointer uses SYMLINK (peelable); this board hardlinks (mutate-all). No help matrix.",
+      "repro": "ISLINK on hardlink \u2192 0; NLINK>1"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "PREFIX/ACTIVE glue in cat -A.",
-      "repro": "cat -A PREFIX.txt"
+      "detail": "ACTIVE/ALIAS glue in cat -A.",
+      "repro": "cat -A ACTIVE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|dumpenv",
-      "title": "DUMPENV full dump can be huge; TRUNC flag rare",
-      "detail": "Empty prefix inventories entire process env; agents may leak secrets into VAL plate.",
-      "repro": "DUMPENV without prefix"
+      "area": "host|eqfile",
+      "title": "EQFILE soft miss vs content-differ both need decode",
+      "detail": "OK=0 vs OK=1 LAST_N=0 for differ; easy to conflate path miss with differ.",
+      "repro": "EQFILE a missing; EQFILE a b_differ"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_ES_REQUIRE=abc.",
-      "repro": "REQUIRE=abc wipe no active \u2192 rc 0"
+      "detail": "CUBALC_PS_REQUIRE=abc.",
+      "repro": "REQUIRE=abc link busy \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Use seed/snap for multi-step env plant+dump same process",
-    "Keep DUMP.txt separate from FILTER result plate",
-    "HASLINE for exact KEY=VAL; GREP only for needles",
-    "Always set narrow PREFIX before dump/save",
-    "CHMOD 0600 on snap.env for secrets"
+    "After WRITEATOMIC on shared plate: RM aliases and re-HARDLINK",
+    "Or mutate with plain WRITE (in-place) to keep inode",
+    "RM dest before HARDLINK republish",
+    "NLINK after put to detect broken share (nlink dropped)",
+    "DIRSYNC after FSYNC for durable rename publish"
   ],
   "language_gaps": [
-    "Cross-run env plant persistence (or document only)",
-    "GREPKEY exact on KEY=VAL bags",
-    "WRITEENV dry-run / empty warn",
-    "Non-destructive filter (out plate)",
-    "WRITE trailing NL",
-    "DUMPENV secret redaction"
+    "WRITEATOMIC option keep-inode / re-link aliases",
+    "HARDLINK force/replace",
+    "DIRSYNC fail if path missing (strict)",
+    "Hardlink vs symlink matrix in help",
+    "EQFILE miss vs differ distinct codes",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "plant/dump across runs empty \u2192 seed/snap compound",
-    "filter clobber VAL documented",
-    "seed/snap/wipe/has green; selftest 246/246"
+    "put/link/verify/mutate/unlink green",
+    "WRITEATOMIC after HARDLINK severs share — documented W1",
+    "selftest 248/248; no language fix this iter"
   ],
-  "commit": "a36d4e7fa8ea45e5b737264def31be2393862a89",
-  "ts": "2026-08-06T18:49:23Z"
+  "commit": "",
+  "ts": "2026-08-06T19:13:50Z"
 }
