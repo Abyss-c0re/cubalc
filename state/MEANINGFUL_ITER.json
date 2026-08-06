@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 184,
-  "version": "1.15.209-usability",
-  "item": "SYS INSERTFILELINE / FILEINSERTLINE insert file line by index",
-  "item_id": 217,
-  "title": "SYS INSERTFILELINE|FILEINSERTLINE path n value \u2014 insert line at 0-based index \u00b7 append if past end",
-  "commit": "7fb9c172919a03bf2194555826c14a1a98b56841",
-  "summary": "Insert file line by index; completes LINEAT/SETFILELINE. selftest 184.",
+  "iter": 185,
+  "version": "1.15.210-usability",
+  "item": "SYS DROPFILELINE / FILEDROPLINE drop file line by index",
+  "item_id": 218,
+  "title": "SYS DROPFILELINE|FILEDROPLINE path n \u2014 drop 0-based file line in place",
+  "commit": "5791f629c3156d0fcc16febca7b02dd1b7971135",
+  "summary": "Drop file line by index; dual of INSERTFILELINE. Soft OOB. selftest 185.",
   "proofs": [
-    "757_sys_insertfileline",
-    "selftest n_pass=184"
+    "758_sys_dropfileline",
+    "selftest n_pass=185"
   ],
-  "when": "2026-08-06T08:34:25Z",
+  "when": "2026-08-06T08:44:05Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7fb9c172919a03bf2194555826c14a1a98b56841"
+  "sha": "5791f629c3156d0fcc16febca7b02dd1b7971135"
 }
