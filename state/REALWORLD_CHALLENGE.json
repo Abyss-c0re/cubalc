@@ -1,165 +1,165 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 71,
-  "program": "programs/realworld/severity_file_gate.cubalc",
-  "theme": "canary severity gate COUNTFILELINE GREPFILE SETMATCHFILE threshold",
-  "version": "1.15.215-usability",
+  "iter": 72,
+  "program": "programs/realworld/match_purge_board.cubalc",
+  "theme": "config match purge DROPMATCHFILE DROPALLMATCHFILE residual",
+  "version": "1.15.217-usability",
   "pass": true,
   "tests": [
     {
-      "name": "count_cs",
-      "cmd": "COUNTFILELINE error \u2192 2 of 7",
+      "name": "count_DEBUG",
+      "cmd": "COUNTFILELINE DEBUG → 2 of 7",
       "ok": true,
-      "note": "cs tally"
+      "note": "pre tally"
     },
     {
-      "name": "count_ci",
-      "cmd": "COUNTFILELINEI error \u2192 3",
+      "name": "drop1",
+      "cmd": "DROPMATCHFILE DEBUG → first DEBUG x only",
       "ok": true,
-      "note": "+ERROR"
+      "note": "ack one"
     },
     {
-      "name": "extract",
-      "cmd": "GREPFILE error \u2192 2 lines; extracti \u2192 3",
+      "name": "purge",
+      "cmd": "DROPALLMATCHFILE remaining DEBUG y N=1",
       "ok": true,
-      "note": "harvest"
+      "note": "bulk"
     },
     {
-      "name": "gate_under_over",
-      "cmd": "gate max=5 ok; max=1 over soft+REQUIRE exit2",
+      "name": "residual_clean",
+      "cmd": "residual DEBUG → 0 clean",
       "ok": true,
-      "note": "threshold"
+      "note": "post check"
     },
     {
-      "name": "patch_status",
-      "cmd": "SETMATCHFILE status= \u2192 status=blocked I first",
+      "name": "purgei",
+      "cmd": "DROPALLMATCHFILEI debug drops DEBUG+debug",
       "ok": true,
-      "note": "first-match set"
+      "note": "icase purge"
     },
     {
-      "name": "patch_none",
-      "cmd": "missing= soft N=0; REQUIRE exit2",
-      "ok": true,
-      "note": "no match"
-    },
-    {
-      "name": "false_ERR",
-      "cmd": "count ERR \u2192 2 (ERROR + ERR short)",
+      "name": "false_DEB",
+      "cmd": "purge DEB removes DEBUG full and DEB short",
       "ok": true,
       "note": "substring"
     },
     {
-      "name": "empty_polarity",
-      "cmd": "COUNT empty\u21920; GREPFILE empty\u2192all lines; SETMATCH empty\u2192none",
+      "name": "none_require",
+      "cmd": "drop1/purge none soft; REQUIRE exit 2",
       "ok": true,
-      "note": "three-way empty split"
+      "note": "N=0 I=-1"
     },
     {
       "name": "ghost",
-      "cmd": "path miss OK=0 REQUIRE exit2",
+      "cmd": "path miss OK=0 REQUIRE exit 2",
       "ok": true,
       "note": "soft path"
     },
     {
-      "name": "print_json",
-      "cmd": "PRINT_JSON hits glues lines",
+      "name": "empty_needle",
+      "cmd": "DROP/DROPALL empty → N=0 no-op (safe)",
       "ok": true,
-      "note": "error: aerror: b"
+      "note": "vs GREPFILE empty match-all"
+    },
+    {
+      "name": "print_json_glue",
+      "cmd": "PRINT_JSON dropped multi-line glues",
+      "ok": true,
+      "note": "DEBUG 1DEBUG 2"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "190/190 pass"
+      "note": "192/192 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|match",
-      "title": "Empty needle polarity split across single-file ops",
-      "detail": "COUNTFILELINE \"\" \u2192 0; GREPFILE \"\" \u2192 all lines (N=TOTAL); SETMATCHFILE \"\" \u2192 N=0 I=-1 no write; FINDFILELINE \"\" \u2192 first line. Same empty input, four behaviors. Agents cannot share one blank-needle policy.",
-      "repro": "GREPFILE p \"\" vs COUNTFILELINE p \"\""
+      "area": "host|naming",
+      "title": "DROP family matrix: DROPNTH bag, DROPFILELINE index, DROPMATCHFILE needle, DROPALLMATCHFILE purge",
+      "detail": "Four different DROP* shapes. Wrong op drops wrong thing or soft-misses. Agents must distinguish index vs needle vs bag vs bulk.",
+      "repro": "DROPFILELINE p 1 vs DROPMATCHFILE p DEBUG"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|naming",
-      "title": "GREP vs GREPFILE vs GREPLINES vs GREPFILES matrix",
-      "detail": "String GREP, single-file GREPFILE, path-bag GREPLINES, path-list GREPFILES. Wrong op returns empty or wrong shape silently in soft mode.",
-      "repro": "GREP string vs GREPFILE path"
+      "area": "host|match",
+      "title": "Substring false friends: DEB purges DEBUG lines",
+      "detail": "No whole-word mode. Short purge needles over-delete config rows.",
+      "repro": "DROPALLMATCHFILE p DEB removes DEBUG full"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|match",
-      "title": "SETMATCHFILE only first match; replacement may still match needle",
-      "detail": "status=old\u2192status=new then SETMATCHFILEI status= hits same line again (status=done) not STATUS=keep. Flip-all and skip-already-patched not supported.",
-      "repro": "two status lines; patch twice stays on first"
+      "area": "host|json",
+      "title": "PRINT_JSON multi-line dropped bag glues without NL",
+      "detail": "Plate DROPPED has NL between removed lines; PRINT_JSON → DEBUG 1DEBUG 2. Recurring.",
+      "repro": "PRINT_JSON dropped after purge N=2"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|match",
-      "title": "Substring false friends ERR\u2282ERROR inflate gate counts",
-      "detail": "Canary gate on ERR counts ERROR lines too. No whole-word mode on COUNTFILELINE/GREPFILE.",
-      "repro": "COUNTFILELINE ERR \u2192 2"
+      "area": "host|fs",
+      "title": "DROPALLMATCHFILE_I is only first removed index, not full index list",
+      "detail": "N counts removals; I is first hit only. Agents cannot reconstruct which indices vanished without pre-scan GREPFILE.",
+      "repro": "purge two lines → I=first only"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON extract bag glues without NL",
-      "detail": "error: aerror: b \u2014 recurring bag collapse.",
-      "repro": "PRINT_JSON hits"
+      "area": "host|fs",
+      "title": "No dry-run / preview for DROPALLMATCHFILE",
+      "detail": "Bulk purge is immediate rewrite. GREPFILE can preview but is a separate op agents must remember.",
+      "repro": "purge is live"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "SETMATCHFILE rewrite may drop trailing NL on last file line",
-      "detail": "cat -A canary after patch shows last line without final $.",
-      "repro": "cat -A after SETMATCHFILE"
+      "title": "WRITE trailing NL omit on DROPPED plate and last file line",
+      "detail": "cat -A DROPPED last line often no $; rewritten cfg same class.",
+      "repro": "cat -A DROPPED.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|fs",
-      "title": "No SETMATCHFILEALL / replace-all matching lines",
-      "detail": "Only first match. Multi-row status flips need loop + FINDFILELINE I progression or REPLACEFILES whole-file.",
-      "repro": "STATUS=keep left after first patch"
+      "area": "host|match",
+      "title": "Empty DROP*MATCH needle is safe zero — but inconsistent with GREPFILE empty match-all",
+      "detail": "Good for purge safety; still part of empty-needle policy chaos across file ops.",
+      "repro": "DROPALLMATCHFILE p \"\" → N=0"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently disables hard gate",
-      "detail": "CUBALC_SG_REQUIRE=abc leaves REQUIRE_HIT=0; gate over soft-succeeds.",
-      "repro": "REQUIRE=abc gate over exit 0"
+      "title": "Non-numeric REQUIRE env silently disables hard fail",
+      "detail": "REQUIRE=abc → soft none exit 0.",
+      "repro": "CUBALC_PU_REQUIRE=abc drop1 ZZZ"
     }
   ],
   "workarounds": [
-    "Reject blank needle before GREPFILE; COUNT empty is safe-zero",
-    "Use full severity tokens (error: not ERR)",
-    "After SETMATCH, change needle or use exact new value that no longer matches",
-    "Read HITS plate not PRINT_JSON",
-    "Validate REQUIRE env with digit check after NUM"
+    "Use DROPALLMATCHFILE for bulk; DROPMATCHFILE for ack-one",
+    "Prefer long unique markers (DEBUG not DEB)",
+    "GREPFILE before purge for dry-run preview",
+    "Read DROPPED plate not PRINT_JSON for multi-line",
+    "residual count after purge with REQUIRE for clean assert"
   ],
   "language_gaps": [
-    "Unify empty-needle policy (prefer miss/zero for all file ops)",
-    "GREPFILE empty should match zero like COUNTFILELINE",
-    "SETMATCHFILEALL replace-all matches",
-    "Whole-word COUNT/GREP/SETMATCH file modes",
-    "PRINT_JSON bag-as-array; WRITE trailing NL preserve",
-    "Help table for GREP* family disambiguation"
+    "Whole-word DROP*MATCH modes",
+    "DROPALLMATCHFILE return index bag of all removals",
+    "Dry-run flag for destructive match file ops",
+    "Help disambiguation table for DROP* family",
+    "PRINT_JSON bag-as-array; WRITE trailing NL",
+    "Unify empty-needle docs across GREPFILE vs DROPALLMATCH"
   ],
   "issues_faced": [
-    "COUNT/GREP/SETMATCH file positive path clean",
-    "Empty-needle three-way split is the main language challenge",
-    "SETMATCH first-only re-hits patched line if needle remains",
+    "DROP first vs ALL positive path clean",
+    "Empty needle safe no-op (contrast GREPFILE)",
+    "DEB false friend over-purge demonstrated",
     "No language fix this iter"
   ],
-  "commit": "02bc5dbd6fe02d7822557f1ae6a0b7534c9537e7",
-  "ts": "2026-08-06T09:38:39Z"
+  "commit": "",
+  "ts": "2026-08-06T10:03:39Z"
 }
