@@ -1,0 +1,680 @@
+# artifact_fingerprint_board.cubalc — hex stamp + EQFILE verify + KV defaults
+#
+# Real use: release/intake agents fingerprint payloads and prove plate
+# copies match without shell xxd/cmp, and seed config defaults safely:
+#   HEX / HEXD          — lowercase hex encode/decode of text payloads
+#   HASHFILE            — FNV-1a content stamp of artifact path
+#   EQFILE / SAMEFILE   — identical content probe (a vs b)
+#   KVFILEENSURE        — set key=val only if missing (no clobber)
+# Distinct from scratch_workspace (BASE64 + temp dirs) and status_handoff
+# (WAITMATCH): this board is *hex digests + byte-equal verify + defaults*.
+#
+# Plate under STATE:
+#   ACTIVE.txt     — primary artifact path
+#   PEER.txt       — compare/peer path
+#   META_PLATE.txt — KV defaults plate path
+#   VAL.txt        — last hex/hash/body
+#   META.txt       — hit/n/eq bag
+#   FP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_AF_ACTION):
+#   list      — plate (default)
+#   pick      — ACTIVE = ARG1
+#   pickpeer  — PEER = ARG1
+#   pickmeta  — META_PLATE = ARG1
+#   hex       — HEX ARG1 → VAL
+#   unhex     — HEXD ARG1 → VAL
+#   stamp     — HASHFILE ACTIVE → VAL
+#   eq        — EQFILE ACTIVE PEER
+#   ensure    — KVFILEENSURE META_PLATE key(ARG1) val(ARG2)
+#   write     — WRITEATOMIC ACTIVE body(ARG1)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_af_$$
+#   printf 'v1' > $CUBALC_STATE/a.bin; cp $CUBALC_STATE/a.bin $CUBALC_STATE/b.bin
+#   CUBALC_ARG0=pick CUBALC_ARG1=$CUBALC_STATE/a.bin ...
+#   CUBALC_ARG0=pickpeer CUBALC_ARG1=$CUBALC_STATE/b.bin ...
+#   CUBALC_ARG0=eq ...
+#   CUBALC_ARG0=hex CUBALC_ARG1='status=ok' ...
+#
+# Env: CUBALC_AF_REQUIRE=1
+#
+# Edges:
+#   EQFILE equal/unequal/miss; HEX odd length / bad nibble
+#   KVFILEENSURE existing vs new; create missing plate
+#   HASH vs HEX dual; WRITE NL; REQUIRE; empty ARG; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "artifact_fingerprint_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT AFILE = "ACTIVE.txt"
+DEFAULT PFILE = "PEER.txt"
+DEFAULT MPLATE = "META_PLATE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "FP_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_AF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_AF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_AF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_AF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_AF_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir AFILE
+LET active_meta = LAST
+SYS JOIN state_dir PFILE
+LET peer_meta = LAST
+SYS JOIN state_dir MPLATE
+LET mplate_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR active_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR peer_meta OR ""
+LET peer = LAST
+CLEAR_ERR
+SYS READ OR mplate_meta OR ""
+LET mplate = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET active_ch = 0
+LET peer_ch = 0
+LET mplate_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET hex_n = 0
+LET eq_n = 0
+LET ens_new = 0
+LET ens_hit = 0
+LET se_bytes = 0
+
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+END
+SYS EQS ACTION "pickpeer"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pickpeer needs path"
+  END
+END
+SYS EQS ACTION "pickmeta"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pickmeta needs path"
+  END
+END
+SYS EQS ACTION "hex"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "hex needs text"
+  END
+END
+SYS EQS ACTION "unhex"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "unhex needs hex"
+  END
+END
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "ensure needs key value"
+  END
+END
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "write needs body"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "afp" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON active
+  PRINT_JSON peer
+  PRINT_JSON mplate
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- pick ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  LET active = NAME
+  LET active_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  PRINT_JSON active
+END
+
+# --- pickpeer ---
+SYS EQS ACTION "pickpeer"
+IF LAST_N == 1 THEN
+  NOTE "action pickpeer"
+  LET peer = NAME
+  LET peer_ch = 1
+  LET hit = 1
+  LET note_msg = "pickpeer ok"
+  PRINT_JSON peer
+END
+
+# --- pickmeta ---
+SYS EQS ACTION "pickmeta"
+IF LAST_N == 1 THEN
+  NOTE "action pickmeta"
+  LET mplate = NAME
+  LET mplate_ch = 1
+  LET hit = 1
+  LET note_msg = "pickmeta ok"
+  PRINT_JSON mplate
+END
+
+# --- write ---
+SYS EQS ACTION "write"
+IF LAST_N == 1 THEN
+  NOTE "action write"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "write no active"
+    FAIL "write no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "write no active"
+    END
+  ELSE
+    SYS WRITEATOMIC active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "write fail"
+      FAIL "write fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "write fail"
+      END
+    ELSE
+      LET val = NAME
+      LET se_bytes = WRITEATOMIC_N
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "write ok"
+    END
+    PRINT_JSON se_bytes
+    CLEAR_ERR
+  END
+END
+
+# --- hex ---
+SYS EQS ACTION "hex"
+IF LAST_N == 1 THEN
+  NOTE "action hex"
+  SYS HEX NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "hex fail"
+    FAIL "hex fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hex fail"
+    END
+  ELSE
+    LET val = LAST
+    LET hex_n = HEX_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR hex_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "hex ok"
+  END
+  PRINT_JSON hex_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- unhex ---
+SYS EQS ACTION "unhex"
+IF LAST_N == 1 THEN
+  NOTE "action unhex"
+  SYS HEXD NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "unhex fail"
+    FAIL "unhex fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "unhex fail"
+    END
+  ELSE
+    LET val = LAST
+    LET hex_n = HEX_N
+    LET val_ch = 1
+    LET hit = 1
+    LET meta = "n"
+    SYS STR hex_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET note_msg = "unhex ok"
+  END
+  PRINT_JSON hex_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- stamp HASHFILE ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stamp no active"
+    FAIL "stamp no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stamp no active"
+    END
+  ELSE
+    SYS HASHFILE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "stamp miss"
+      FAIL "stamp miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stamp miss"
+      END
+    ELSE
+      LET val = LAST
+      LET se_bytes = HASH_BYTES
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "hash"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "bytes"
+      LET meta = LAST
+      SYS STR se_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LET note_msg = "stamp ok"
+    END
+    PRINT_JSON val se_bytes
+    CLEAR_ERR
+  END
+END
+
+# --- eq EQFILE ---
+SYS EQS ACTION "eq"
+IF LAST_N == 1 THEN
+  NOTE "action eq"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "eq no active"
+    FAIL "eq no active"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "eq no active"
+    END
+  ELSE
+    SYS BLANK peer
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "eq no peer"
+      FAIL "eq no peer"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "eq no peer"
+      END
+    ELSE
+      SYS EQFILE active peer
+      IF OK == 0 THEN
+        LET miss = 1
+        LET eq_n = 0
+        LET note_msg = "eq path miss"
+        FAIL "eq path miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "eq path miss"
+        END
+      ELSE
+        LET eq_n = LAST_N
+        LET hit = eq_n
+        LET val = active
+        LET val_ch = 1
+        LET meta = "eq"
+        SYS STR eq_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "a"
+        LET meta = LAST
+        SYS PUSH meta active
+        LET meta = LAST
+        SYS PUSH meta "b"
+        LET meta = LAST
+        SYS PUSH meta peer
+        LET meta = LAST
+        LET meta_ch = 1
+        IF eq_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "eq differ"
+          FAIL "eq differ"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "eq differ"
+          END
+        ELSE
+          LET note_msg = "eq same"
+        END
+      END
+      PRINT_JSON eq_n
+      CLEAR_ERR
+    END
+  END
+END
+
+# --- ensure KVFILEENSURE ---
+SYS EQS ACTION "ensure"
+IF LAST_N == 1 THEN
+  NOTE "action ensure"
+  SYS BLANK mplate
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "ensure no meta plate"
+    FAIL "ensure no meta plate"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ensure no meta plate"
+    END
+  ELSE
+    SYS KVFILEENSURE mplate NAME A2
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "ensure fail"
+      FAIL "ensure fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ensure fail"
+      END
+    ELSE
+      LET val = LAST
+      LET ens_hit = KVFILEENSURE_HIT
+      LET ens_new = KVFILEENSURE_NEW
+      LET val_ch = 1
+      LET hit = 1
+      LET meta = "key"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "hit"
+      LET meta = LAST
+      SYS STR ens_hit
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "new"
+      LET meta = LAST
+      SYS STR ens_new
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ens_new > 0 THEN
+        LET note_msg = "ensure added"
+      ELSE
+        LET note_msg = "ensure present"
+      END
+    END
+    PRINT_JSON ens_hit ens_new
+    PRINT_JSON val
+    CLEAR_ERR
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET active = ""
+  LET peer = ""
+  LET mplate = ""
+  LET val = ""
+  LET meta = ""
+  LET active_ch = 1
+  LET peer_ch = 1
+  LET mplate_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "pickpeer"
+LET k = k + LAST_N
+SYS EQS ACTION "pickmeta"
+LET k = k + LAST_N
+SYS EQS ACTION "write"
+LET k = k + LAST_N
+SYS EQS ACTION "hex"
+LET k = k + LAST_N
+SYS EQS ACTION "unhex"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "eq"
+LET k = k + LAST_N
+SYS EQS ACTION "ensure"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF active_ch > 0 THEN
+  SYS WRITE active_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "active write failed"
+  END
+  CLEAR_ERR
+END
+IF peer_ch > 0 THEN
+  SYS WRITE peer_meta peer
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "peer write failed"
+  END
+  CLEAR_ERR
+END
+IF mplate_ch > 0 THEN
+  SYS WRITE mplate_meta mplate
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "mplate write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.artifact_fingerprint_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "eq_n"
+LET report = LAST
+SYS STR eq_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ens_new"
+LET report = LAST
+SYS STR ens_new
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "active"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "peer"
+LET report = LAST
+SYS PUSH report peer
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "artifact_fingerprint_board" ACTION hit miss eq_n ens_new note_msg elapsed

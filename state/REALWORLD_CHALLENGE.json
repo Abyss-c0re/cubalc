@@ -1,153 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 83,
-  "program": "programs/realworld/scratch_workspace_board.cubalc",
-  "theme": "scratch workspace MKTEMPDIR RMDIR BASE64 pack unpack",
-  "version": "1.15.246-usability",
+  "iter": 84,
+  "program": "programs/realworld/artifact_fingerprint_board.cubalc",
+  "theme": "artifact fingerprint HEX EQFILE HASHFILE KVFILEENSURE",
+  "version": "1.15.248-usability",
   "pass": true,
   "tests": [
     {
-      "name": "open_probe",
-      "cmd": "MKTEMPDIR job; STAT isdir",
+      "name": "eq_same",
+      "cmd": "eq a.bin b.bin identical hit",
       "ok": true,
-      "note": "workspace"
+      "note": "EQFILE"
     },
     {
-      "name": "pack_unpack",
-      "cmd": "plate msg.b64; pack status=ready; unpack \u2192 status=ready",
+      "name": "eq_differ",
+      "cmd": "eq a vs c soft differ; REQUIRE exit 2",
       "ok": true,
-      "note": "b64 roundtrip"
+      "note": "mismatch"
     },
     {
-      "name": "encode_decode",
-      "cmd": "hello \u2192 aGVsbG8= \u2192 hello",
+      "name": "stamp",
+      "cmd": "HASHFILE hex stamp",
       "ok": true,
-      "note": "known vector"
+      "note": "FNV"
     },
     {
-      "name": "decode_bad",
-      "cmd": "!!!! soft fail; REQUIRE exit 2",
+      "name": "hex_roundtrip",
+      "cmd": "hex status=ok; unhex 7374617475733d6f6b",
       "ok": true,
-      "note": "invalid b64"
+      "note": "HEX/HEXD"
     },
     {
-      "name": "cleanup_empty",
-      "cmd": "RM plate + RMDIR workspace",
+      "name": "unhex_bad",
+      "cmd": "odd length abc; zz nibble; REQUIRE",
       "ok": true,
-      "note": "lifecycle"
+      "note": "soft fail"
     },
     {
-      "name": "rmdir_nonempty",
-      "cmd": "extra file \u2192 RMDIR soft fail leaves dir",
+      "name": "ensure_keep",
+      "cmd": "ensure port 9999 keeps 7700 NEW=0",
       "ok": true,
-      "note": "non-empty"
+      "note": "no clobber"
     },
     {
-      "name": "evil_prefix",
-      "cmd": "../evil \u2192 /tmp/evil.* sanitized",
+      "name": "ensure_add",
+      "cmd": "ensure mode soft NEW=1; ensure mode hard stays soft",
       "ok": true,
-      "note": "no traversal"
+      "note": "default only"
     },
     {
-      "name": "rmdir_file",
-      "cmd": "RMDIR on file soft fail",
+      "name": "eq_miss",
+      "cmd": "missing path soft eq path miss",
       "ok": true,
-      "note": "kind guard"
+      "note": "path"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "221/221 pass"
+      "note": "223/223 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|tmp",
-      "title": "MKTEMPDIR always under system TMP not CUBALC_STATE",
-      "detail": "Same isolation gap as MKTEMP. Agent workspaces scatter in /tmp; multi-tenant hosts share namespace. No DIR=STATE option.",
-      "repro": "MKTEMPDIR job \u2192 /tmp/job.XXXX"
+      "area": "host|hash",
+      "title": "HASHFILE FNV-1a 32-bit vs HEX full payload \u2014 dual fingerprint models",
+      "detail": "Agents confuse short HASH stamps with cryptographic integrity. HEX is full content; HASH is 8-hex FNV. Naming suggests stronger than collision resistance.",
+      "repro": "HASHFILE vs HEX of same body different widths"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|fs",
-      "title": "RMDIR non-empty only soft-fails; no recursive cleanup",
-      "detail": "Agents must RM each child then RMDIR. No RMDIR -r / RMALL-dir. Orphan /tmp trees accumulate on partial cleanup.",
-      "repro": "extra.txt in dir; RMDIR OK=0"
+      "area": "host|encode",
+      "title": "HEX/BASE64/URLENC encode family sprawl without FILE variants",
+      "detail": "String-only encode; no HEXFILE/BASE64FILE. Binary artifacts need READ (text plane) then HEX. Same binary gap as BASE64 W from scratch board.",
+      "repro": "no HEXFILE path form"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|b64",
-      "title": "BASE64 is text/string plane \u2014 not binary-safe file stream",
-      "detail": "No BASE64FILE path encode. Binary artifacts need READ (may truncate/null) then BASE64. Agents cannot stamp opaque blobs cleanly.",
-      "repro": "no BASE64FILE form"
+      "area": "host|eq",
+      "title": "EQFILE equal=LAST_N 1 differ=0 both OK=1; path miss OK=0",
+      "detail": "Agents must branch on OK then LAST_N. Differ looks like soft success with hit=0. Easy REQUIRE glue mistakes.",
+      "repro": "EQFILE same OK=1 N=1; differ OK=1 N=0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|write",
-      "title": "WRITEATOMIC b64 plate omits trailing NL",
-      "detail": "c3RhdHVzPXJlYWR5 without $; readers that require line-oriented plates glue.",
-      "repro": "cat -A msg.b64 after pack"
+      "area": "host|kv",
+      "title": "KVFILEENSURE create-on-miss invents plates on path typo",
+      "detail": "Same create footgun as ENSURELINE/KVFILESET. Typo path becomes new config.",
+      "repro": "KVFILEENSURE no_such k v \u2192 creates"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|arg",
-      "title": "Empty CUBALC_ARG1 blocked for encode/decode empty string",
-      "detail": "Language BASE64 \"\" works; agent ARG empty \u2192 needs text EXIT. Cannot test empty round-trip via ARG path.",
-      "repro": "CUBALC_ARG1= encode \u2192 EXIT needs text"
+      "area": "host|write",
+      "title": "WRITE/ensure plate trailing NL omit",
+      "detail": "mode=soft last line no $; cfg glue risk.",
+      "repro": "cat -A cfg after ensure mode"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|tmp",
-      "title": "MKTEMP vs MKTEMPDIR dual family; no auto-cleanup",
-      "detail": "File temps vs dir temps; no scoped session GC for either.",
-      "repro": "MKTEMP vs MKTEMPDIR"
+      "area": "host|eq",
+      "title": "EQFILE no size-only or mtime-only fast path",
+      "detail": "Always full content compare; large artifacts expensive. No EQSTAT prefilter.",
+      "repro": "large files always full read"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env silently softens",
-      "detail": "CUBALC_SW_REQUIRE=abc.",
-      "repro": "REQUIRE=abc decode bad \u2192 rc 0"
+      "area": "host|arg",
+      "title": "Empty ARG1 blocked for HEX empty string",
+      "detail": "In-lang HEX \"\" works; agent empty ARG \u2192 needs text.",
+      "repro": "CUBALC_ARG1= hex \u2192 EXIT"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|rmdir",
-      "title": "RMDIR missing soft N=0 OK=1 looks like success",
-      "detail": "Idempotent miss same shape as success except N; agents must check RMDIR_N.",
-      "repro": "RMDIR already-gone \u2192 OK=1 N=0"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env silently softens",
+      "detail": "CUBALC_AF_REQUIRE=abc.",
+      "repro": "REQUIRE=abc eq differ \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Copy workspace under STATE if isolation required",
-    "RM all children then RMDIR; or RMALL bag of files",
-    "Prefer text payloads for BASE64; HASHFILE for binary identity",
-    "Digit-check REQUIRE; check RMDIR_N after cleanup",
-    "Track open dirs in plate for GC on exit"
+    "Use EQFILE for equality; HASHFILE only for cheap change detect",
+    "HEX for full portable stamps; document FNV limits",
+    "EXIST plate before KVFILEENSURE if create unwanted",
+    "Digit-check REQUIRE; treat eq N==0 as miss",
+    "Prefer BASE64/HEX for text; avoid binary via string READ"
   ],
   "language_gaps": [
-    "MKTEMPDIR under CUBALC_STATE / DIR arg",
-    "RMDIR recursive or RMTREE",
-    "BASE64FILE path encode/decode",
-    "WRITEATOMIC trailing NL",
-    "ARG empty-string vs missing for encode \"\"",
-    "Session temp registry / auto cleanup"
+    "Crypto hash option (sha256) for artifacts",
+    "HEXFILE/BASE64FILE path codecs",
+    "EQFILE OK policy document / EQ_DIFFER sticky",
+    "existing-only KVFILEENSURE flag",
+    "WRITE trailing NL",
+    "Help encode family matrix HEX/BASE64/URLENC/HASH"
   ],
   "issues_faced": [
-    "open/plate/pack/unpack/cleanup happy path clean",
-    "non-empty rmdir soft-fail confirmed",
-    "TMP isolation and no recursive rmdir are sharp gaps",
-    "selftest 221/221; no language fix this iter"
+    "eq same/differ/hex/ensure keep-add paths clean",
+    "HASH vs HEX dual fingerprints is agent footgun",
+    "selftest 223/223; no language fix this iter"
   ],
-  "commit": "0fb0aedbce50e13afa74d552da54e2aed93a0984",
-  "ts": "2026-08-06T14:40:00Z"
+  "commit": "",
+  "ts": "2026-08-06T15:05:00Z"
 }
