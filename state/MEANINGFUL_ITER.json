@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 252,
-  "version": "1.15.279-usability",
-  "item": "SYS CANREAD / CANWRITE / CANEXEC access probes",
-  "item_id": 287,
-  "title": "SYS CANREAD|CANWRITE|CANEXEC path — access R/W/X pre-flight probes",
-  "commit": "4fbea6e2bcf2e9c56a474a7097bf9da44dfa0ba0",
-  "summary": "access(2) R/W/X probes for agent I/O gates. selftest 252.",
+  "iter": 253,
+  "version": "1.15.280-usability",
+  "item": "SYS OWNERNAME / GROUPNAME login and group name probes",
+  "item_id": 288,
+  "title": "SYS OWNERNAME|GROUPNAME path \u2014 login/group labels without shell stat",
+  "commit": "3a786d71b5e132b1d8ed2dd9a8099eed83ff509d",
+  "summary": "path \u2192 owner/group names via getpwuid/getgrgid. selftest 253.",
   "proofs": [
-    "826_sys_canread",
-    "selftest n_pass=252"
+    "827_sys_ownername",
+    "selftest n_pass=253"
   ],
-  "when": "2026-08-06T19:45:03Z",
+  "when": "2026-08-06T19:55:30Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4fbea6e2bcf2e9c56a474a7097bf9da44dfa0ba0",
-  "note": "complements OWNEDBY/MODE for multi-agent plate security"
+  "sha": "3a786d71b5e132b1d8ed2dd9a8099eed83ff509d",
+  "note": "complements FILEUID/FILEGID numeric probes for human plate labels"
 }
