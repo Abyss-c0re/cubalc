@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 217,
-  "version": "1.15.242-usability",
-  "item": "SYS CLAIM / CLAIMFILE / CREATEEXCL exclusive path work-item claims",
-  "item_id": 250,
-  "title": "SYS CLAIM|CREATEEXCL path [body] — one-shot O_EXCL job claim · soft miss · RM release",
-  "commit": "716c4bef605821900e8edbf692680ddc564a948f",
-  "summary": "Exclusive path create for agent work claims without LOCKFILE protocol. selftest 217.",
+  "iter": 218,
+  "version": "1.15.243-usability",
+  "item": "SYS STAT / FSTAT / FILESTAT one-shot path metadata",
+  "item_id": 251,
+  "title": "SYS STAT|FSTAT path — EXIST/KIND/SIZE/MTIME/ISFILE/ISDIR one probe",
+  "commit": "29442a8d981434ccc0ab92e80c02334221039153",
+  "summary": "One-shot path metadata without EXIST+SIZE+MTIME glue. selftest 218.",
   "proofs": [
-    "791_sys_claim",
-    "selftest n_pass=217"
+    "792_sys_stat",
+    "selftest n_pass=218"
   ],
-  "when": "2026-08-06T13:54:27Z",
+  "when": "2026-08-06T14:04:50Z",
   "agent": "meaningful_iter_10m",
-  "sha": "716c4bef605821900e8edbf692680ddc564a948f",
-  "note": "complements LOCKFILE (path.lock mutex) and MKTEMP (random path)"
+  "sha": "29442a8d981434ccc0ab92e80c02334221039153",
+  "note": "restored mass thrash delete from HEAD before implement"
 }
