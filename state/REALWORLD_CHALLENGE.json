@@ -1,152 +1,152 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 98,
-  "program": "programs/realworld/workdir_stack_board.cubalc",
-  "theme": "workdir stack PUSHD/POPD/DIRSTACK + KINDSTR triage",
-  "version": "1.15.284-usability",
+  "iter": 99,
+  "program": "programs/realworld/plate_time_triad_board.cubalc",
+  "theme": "plate time triad RELPATH + ATIME/CTIME/MTIME + HASENV gate",
+  "version": "1.15.287-usability",
   "pass": true,
   "tests": [
     {
-      "name": "work_probe",
-      "cmd": "MKDIR+REALPATH site; KINDSTR=dir",
+      "name": "base_pick_put",
+      "cmd": "base root; pick sub/art.bin; put body",
       "ok": true,
-      "note": "probe ok"
+      "note": "seed"
     },
     {
-      "name": "kind_missing",
-      "cmd": "KINDSTR missing soft; REQUIRE\u21922",
+      "name": "rel",
+      "cmd": "RELPATH → sub/art.bin UNDER=1",
       "ok": true,
-      "note": "OK=1 label"
+      "note": "portable key"
     },
     {
-      "name": "visit",
-      "cmd": "PUSHD+WRITE relative+POPD same process",
+      "name": "triad",
+      "cmd": "a/c/m epochs + rel composite",
       "ok": true,
-      "note": "VAL file@0; STATUS body"
+      "note": "VAL rel|a:c:m"
     },
     {
-      "name": "kind_file",
-      "cmd": "after visit KINDSTR=file",
+      "name": "hasenv_path",
+      "cmd": "HASENV PATH = 1",
       "ok": true,
-      "note": "joined path"
+      "note": "present"
     },
     {
-      "name": "kind_link",
-      "cmd": "symlink \u2192 kind=link (lstat)",
+      "name": "hasenv_absent",
+      "cmd": "missing env OK=1 LAST_N=0 soft",
       "ok": true,
-      "note": "not target"
+      "note": "probe"
     },
     {
-      "name": "stack_empty",
-      "cmd": "DIRSTACK depth 0 across re-exec",
+      "name": "gate_require",
+      "cmd": "gate missing REQUIRE → exit 2",
       "ok": true,
-      "note": "process scope"
+      "note": "deny"
     },
     {
-      "name": "leave_empty",
-      "cmd": "POPD empty REQUIRE\u21922",
+      "name": "rel_outside",
+      "cmd": "path outside base UNDER=0; REQUIRE→2",
       "ok": true,
-      "note": "soft stack"
+      "note": "abs leak"
     },
     {
-      "name": "enter_file",
-      "cmd": "PUSHD file path REQUIRE\u21922",
+      "name": "atime_miss",
+      "cmd": "missing path ATIME REQUIRE→2",
       "ok": true,
-      "note": "cwd unchanged"
+      "note": "OK=0"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "257/257 pass"
+      "note": "260/260 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|pushd",
-      "title": "PUSHD/POPD/DIRSTACK are process-scoped only",
-      "detail": "Action dispatch re-execs cubalc each time. enter then put in separate runs loses stack; leave sees empty. Agents must compound visit in one process.",
-      "repro": "enter; new process leave \u2192 empty stack"
+      "area": "host|relpath",
+      "title": "RELPATH outside base returns absolute with UNDER=0 — easy to publish non-portable keys",
+      "detail": "Agents that skip RELPATH_UNDER stamp /tmp into plates. No hard REQUIRE-UNDER mode; OK=1 either way.",
+      "repro": "RELPATH base /tmp → LAST=/tmp UNDER=0 OK=1"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|kindstr",
-      "title": "KINDSTR missing is OK=1 not soft-fail",
-      "detail": "Missing path \u2192 LAST=missing KIND_N=0 OK=1. Empty path OK=0. Agents treating OK as exist fail; dual-branch needed with CANACCESS/EXIST.",
-      "repro": "KINDSTR /no/such \u2192 OK=1 missing"
+      "area": "host|time",
+      "title": "ATIME often equals MTIME on noatime filesystems",
+      "detail": "Triad collapses; access vs content change indistinguishable. No ATIME_TRUSTED or mount-option probe.",
+      "repro": "at_eq_mt=1 after write on typical server FS"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|kindstr",
-      "title": "KINDSTR uses lstat \u2014 link not target kind",
-      "detail": "Symlink to file is kind=link not file. Agents that want target type need READLINK+KINDSTR chain. No KINDFOLLOW form.",
-      "repro": "symlink file \u2192 kind link"
+      "severity": "high",
+      "area": "host|hasenv",
+      "title": "HASENV miss is OK=1 LAST_N=0 vs ATIME miss OK=0",
+      "detail": "Soft-probe contracts disagree across host ops. Agents cannot uniform-handle optional env vs optional path times.",
+      "repro": "HASENV missing OK=1; ATIME missing OK=0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|pushd",
-      "title": "No WITHDIR / ENTER\u2026LEAVE block form",
-      "detail": "Must hand-roll PUSHD \u2026 POPD and recover on mid-fail. visit write fail path needs explicit POPD. Easy to leak cwd on EXIT.",
-      "repro": "PUSHD; EXIT 2 leaves process in workdir"
+      "area": "host|ctime",
+      "title": "CTIME is inode status-change not create-time — agents mislabel birth",
+      "detail": "chmod/chown bump ctime without content edit. No BIRTHTIME/BTIME form. Docs say CHANGETIME but agents still call it create.",
+      "repro": "CHMOD then CTIME > MTIME"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS on CWD paths is basename false-friend prone",
-      "detail": "HAS cwd site matches any path containing site. Prefer ENDS/BASENAME EQS for site checks.",
-      "repro": "HAS /tmp/\u2026/site site"
+      "area": "host|triad",
+      "title": "No single STAT_TIMES / TRIAD form — three probes + hand composite",
+      "detail": "Verbose for audit stamps; race window between ATIME and MTIME reads.",
+      "repro": "need 3 SYS for a/c/m"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|mkdir",
-      "title": "work action MKDIR may create deep paths agents did not intend",
-      "detail": "work /no/such/site may succeed if MKDIR is -p style; enter then works. File-as-workdir is the reliable enter-fail case.",
-      "repro": "work /no/such/x; enter may ok"
+      "area": "host|has",
+      "title": "HAS on env names false-friends PATH substring",
+      "detail": "HAS CUBALC_PATH_FOO PATH → 1. Gate boards must EQS names not HAS.",
+      "repro": "HAS name PATH"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "WORK/TARGET glue in cat -A.",
-      "repro": "cat -A WORK.txt"
+      "detail": "BASE/PATH glue in cat -A.",
+      "repro": "cat -A BASE.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_WS_REQUIRE=abc \u2192 leave empty rc 0.",
-      "repro": "REQUIRE=abc leave"
+      "detail": "CUBALC_TT_REQUIRE=abc.",
+      "repro": "REQUIRE=abc hasenv absent → rc 0"
     }
   ],
   "workarounds": [
-    "Compound enter+relative I/O+leave in one process (visit)",
-    "Treat KINDSTR missing as soft miss via EQS not OK",
-    "READLINK then KINDSTR for follow-kind",
-    "POPD in every fail path after PUSHD",
+    "Always check RELPATH_UNDER before publishing keys",
+    "Treat atime==mtime as noatime unknown access",
+    "Branch HASENV on LAST_N; ATIME on OK",
+    "Prefer MTIME for content freshness; CTIME for meta audit only",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "Persistent or plate-backed DIRSTACK across runs",
-    "WITHDIR path \u2026 END auto-pop on fail/exit",
-    "KINDFOLLOW / KINDSTR -L",
-    "KINDSTR missing soft-fail option",
-    "WRITE trailing NL",
-    "Safe relative plate root bound to WORK"
+    "RELPATH strict-under mode or fail-outside flag",
+    "ATIME_TRUSTED / mount noatime probe",
+    "Unified soft-probe OK contract (HASENV vs ATIME)",
+    "BIRTHTIME / BTIME where available",
+    "SYS TRIAD or STAT_TIMES one-shot",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "work/probe/kind/visit/link/leave-empty green",
-    "stack empty across re-exec \u2014 core lesson; visit compounds",
-    "selftest 257/257; no language fix this iter"
+    "rel/triad/hasenv/gate/outside/miss green",
+    "noatime collapses atime=mtime on this host — documented",
+    "selftest 260/260; no language fix this iter"
   ],
-  "commit": "fba0a5699fda2bf49aa45397c87141dc3283d8fa",
-  "ts": "2026-08-06T20:53:23Z"
+  "commit": "",
+  "ts": "2026-08-06T21:18:47Z"
 }

@@ -1,0 +1,984 @@
+# plate_time_triad_board.cubalc — RELPATH keys + ATIME/CTIME/MTIME triad + HASENV
+#
+# Real use: release/audit agents store portable relative artifact keys under a
+# base root and stamp access / content / inode-change times without shell
+# realpath/stat, then soft-gate optional env before REQUIRE ENV:
+#   RELPATH / REL / STRIPBASE     — path relative to base (or abs if outside)
+#   ATIME / CTIME / MTIME / AGE  — access, status-change, modify, age-sec
+#   HASENV / ENVHAS              — soft env presence (OK=1 even if 0)
+# Distinct from cache_freshness (bag AGEALL/NEWEST) and release_relpath_smoke
+# (SAMPLEK smoke): this board is *single-plate triad + rel key + env probe*.
+#
+# Plate under STATE:
+#   BASE.txt       — root for RELPATH
+#   PATH.txt       — active absolute path
+#   VAL.txt        — last rel key / triad / env bit
+#   META.txt
+#   TRIAD_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TT_ACTION):
+#   list      — plate (default)
+#   base      — BASE = ARG1 (mkdir+realpath)
+#   pick      — PATH = ARG1 (abs or join under BASE)
+#   put       — WRITE PATH ARG1 body (seed)
+#   rel       — RELPATH BASE PATH → VAL; note UNDER bit
+#   atime     — ATIME PATH → VAL
+#   ctime     — CTIME PATH → VAL
+#   mtime     — MTIME PATH → VAL
+#   age       — AGE PATH → VAL
+#   triad     — a/c/m epochs + rel key composite → VAL/META
+#   hasenv    — HASENV ARG1 (or CUBALC_TT_ENV) → VAL 0|1
+#   gate      — HASENV must be 1 (REQUIRE optional)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tt_$$
+#   CUBALC_ARG0=base CUBALC_ARG1=$CUBALC_STATE/root ...
+#   CUBALC_ARG0=pick CUBALC_ARG1=sub/art.bin ...
+#   CUBALC_ARG0=put CUBALC_ARG1='payload' ...
+#   CUBALC_ARG0=rel ...
+#   CUBALC_ARG0=triad ...
+#   CUBALC_ARG0=hasenv CUBALC_ARG1=PATH ...
+#   CUBALC_ARG0=gate CUBALC_ARG1=CUBALC_TT_FEATURE ...
+#
+# Env: CUBALC_TT_REQUIRE=1  CUBALC_TT_BASE=…  CUBALC_TT_PATH=…  CUBALC_TT_ENV=…
+#
+# Edges:
+#   RELPATH outside base → abs path, RELPATH_UNDER=0
+#   same path → "." ; empty base/path soft OK=0
+#   ATIME/CTIME miss OK=0; HASENV miss OK=1 LAST_N=0
+#   noatime FS may equalize atime=mtime; ctime>=mtime usual
+#   HASENV empty name OK=0; WRITE NL; REQUIRE; NUM; HAS false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "plate_time_triad_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT BFILE = "BASE.txt"
+DEFAULT PFILE = "PATH.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TRIAD_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_ENV = "PATH"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TT_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TT_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TT_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TT_BASE" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_BASE = LAST
+ELSE
+  LET ENV_BASE = ""
+END
+SYS ENV "CUBALC_TT_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_TT_ENV" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_KEY = LAST
+ELSE
+  LET ENV_KEY = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir BFILE
+LET base_meta = LAST
+SYS JOIN state_dir PFILE
+LET path_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR base_meta OR ""
+LET base = LAST
+CLEAR_ERR
+SYS READ OR path_meta OR ""
+LET active = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+SYS BLANK ENV_BASE
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "base"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_BASE
+    END
+  END
+END
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pick"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_KEY
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "hasenv"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_KEY
+    END
+  END
+END
+SYS BLANK ENV_KEY
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "gate"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_KEY
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET base_ch = 0
+LET path_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET under_n = 0
+LET at_n = 0
+LET ct_n = 0
+LET mt_n = 0
+LET age_n = 0
+LET env_n = 0
+LET gate_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "ttriad" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON base
+  PRINT_JSON active
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- base ---
+SYS EQS ACTION "base"
+IF LAST_N == 1 THEN
+  NOTE "action base"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "base needs path"
+  END
+  SYS MKDIR NAME
+  CLEAR_ERR
+  SYS REALPATH NAME
+  IF OK == 1 THEN
+    LET base = LAST
+  ELSE
+    LET base = NAME
+  END
+  CLEAR_ERR
+  LET base_ch = 1
+  LET hit = 1
+  LET note_msg = "base ok"
+  LET val = base
+  LET val_ch = 1
+  PRINT_JSON base
+END
+
+# --- pick PATH ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "pick needs path"
+  END
+  SYS STARTS NAME "/"
+  IF LAST_N == 1 THEN
+    LET active = NAME
+  ELSE
+    SYS BLANK base
+    IF LAST_N == 1 THEN
+      LET active = NAME
+    ELSE
+      SYS JOIN base NAME
+      LET active = LAST
+    END
+  END
+  # ensure parent for nested rel picks
+  SYS DIRNAME active
+  LET parent = LAST
+  SYS BLANK parent
+  IF LAST_N == 0 THEN
+    SYS EQS parent "."
+    IF LAST_N == 0 THEN
+      SYS MKDIR parent
+      CLEAR_ERR
+    END
+  END
+  LET path_ch = 1
+  LET hit = 1
+  LET note_msg = "pick ok"
+  LET val = active
+  LET val_ch = 1
+  PRINT_JSON active
+END
+
+# --- put seed body ---
+SYS EQS ACTION "put"
+IF LAST_N == 1 THEN
+  NOTE "action put"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "put no path"
+    FAIL "put no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "put no path"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      EXIT 2 "put needs body"
+    END
+    SYS DIRNAME active
+    LET parent = LAST
+    SYS BLANK parent
+    IF LAST_N == 0 THEN
+      SYS EQS parent "."
+      IF LAST_N == 0 THEN
+        SYS MKDIR parent
+        CLEAR_ERR
+      END
+    END
+    SYS WRITE active NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "put fail"
+      FAIL "put fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "put fail"
+      END
+    ELSE
+      LET val = NAME
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "put ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- rel RELPATH ---
+SYS EQS ACTION "rel"
+IF LAST_N == 1 THEN
+  NOTE "action rel"
+  SYS BLANK base
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "rel no base"
+    FAIL "rel no base"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rel no base"
+    END
+  ELSE
+    SYS BLANK active
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "rel no path"
+      FAIL "rel no path"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "rel no path"
+      END
+    ELSE
+      SYS RELPATH base active
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "rel fail"
+        FAIL "rel fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "rel fail"
+        END
+      ELSE
+        LET val = LAST
+        LET under_n = RELPATH_UNDER
+        LET val_ch = 1
+        IF under_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "rel outside"
+          FAIL "rel outside"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "rel outside"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "rel ok"
+        END
+        LET meta = "rel"
+        SYS PUSH meta val
+        LET meta = LAST
+        SYS PUSH meta "under"
+        LET meta = LAST
+        SYS STR under_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON under_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- atime ---
+SYS EQS ACTION "atime"
+IF LAST_N == 1 THEN
+  NOTE "action atime"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "atime no path"
+    FAIL "atime no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "atime no path"
+    END
+  ELSE
+    SYS ATIME active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET at_n = 0
+      LET note_msg = "atime miss"
+      FAIL "atime miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "atime miss"
+      END
+    ELSE
+      LET at_n = LAST_N
+      LET hit = 1
+      LET note_msg = "atime ok"
+      SYS STR at_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "atime"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON at_n
+  CLEAR_ERR
+END
+
+# --- ctime ---
+SYS EQS ACTION "ctime"
+IF LAST_N == 1 THEN
+  NOTE "action ctime"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "ctime no path"
+    FAIL "ctime no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ctime no path"
+    END
+  ELSE
+    SYS CTIME active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET ct_n = 0
+      LET note_msg = "ctime miss"
+      FAIL "ctime miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ctime miss"
+      END
+    ELSE
+      LET ct_n = LAST_N
+      LET hit = 1
+      LET note_msg = "ctime ok"
+      SYS STR ct_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "ctime"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ct_n
+  CLEAR_ERR
+END
+
+# --- mtime ---
+SYS EQS ACTION "mtime"
+IF LAST_N == 1 THEN
+  NOTE "action mtime"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "mtime no path"
+    FAIL "mtime no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "mtime no path"
+    END
+  ELSE
+    SYS MTIME active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET mt_n = 0
+      LET note_msg = "mtime miss"
+      FAIL "mtime miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "mtime miss"
+      END
+    ELSE
+      LET mt_n = LAST_N
+      LET hit = 1
+      LET note_msg = "mtime ok"
+      SYS STR mt_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "mtime"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON mt_n
+  CLEAR_ERR
+END
+
+# --- age ---
+SYS EQS ACTION "age"
+IF LAST_N == 1 THEN
+  NOTE "action age"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "age no path"
+    FAIL "age no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "age no path"
+    END
+  ELSE
+    SYS AGE active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET age_n = 0
+      LET note_msg = "age miss"
+      FAIL "age miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "age miss"
+      END
+    ELSE
+      LET age_n = LAST_N
+      LET hit = 1
+      LET note_msg = "age ok"
+      SYS STR age_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "age"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON age_n
+  CLEAR_ERR
+END
+
+# --- triad composite ---
+SYS EQS ACTION "triad"
+IF LAST_N == 1 THEN
+  NOTE "action triad"
+  SYS BLANK active
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "triad no path"
+    FAIL "triad no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "triad no path"
+    END
+  ELSE
+    SYS ATIME active
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "triad atime miss"
+      FAIL "triad atime miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "triad atime miss"
+      END
+    ELSE
+      LET at_n = LAST_N
+      SYS CTIME active
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "triad ctime miss"
+        FAIL "triad ctime miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "triad ctime miss"
+        END
+      ELSE
+        LET ct_n = LAST_N
+        SYS MTIME active
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "triad mtime miss"
+          FAIL "triad mtime miss"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "triad mtime miss"
+          END
+        ELSE
+          LET mt_n = LAST_N
+          SYS AGE active
+          LET age_n = LAST_N
+          CLEAR_ERR
+          LET rel_s = ""
+          LET under_n = 0
+          SYS BLANK base
+          IF LAST_N == 0 THEN
+            SYS RELPATH base active
+            IF OK == 1 THEN
+              LET rel_s = LAST
+              LET under_n = RELPATH_UNDER
+            END
+            CLEAR_ERR
+          END
+          # VAL = rel|a:c:m
+          SYS BLANK rel_s
+          IF LAST_N == 1 THEN
+            LET rel_s = "-"
+          END
+          SYS CAT rel_s "|"
+          LET val = LAST
+          SYS STR at_n
+          SYS CAT val LAST
+          LET val = LAST
+          SYS CAT val ":"
+          LET val = LAST
+          SYS STR ct_n
+          SYS CAT val LAST
+          LET val = LAST
+          SYS CAT val ":"
+          LET val = LAST
+          SYS STR mt_n
+          SYS CAT val LAST
+          LET val = LAST
+          LET val_ch = 1
+          LET hit = 1
+          LET note_msg = "triad ok"
+          LET meta = "rel"
+          SYS PUSH meta rel_s
+          LET meta = LAST
+          SYS PUSH meta "under"
+          LET meta = LAST
+          SYS STR under_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "atime"
+          LET meta = LAST
+          SYS STR at_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "ctime"
+          LET meta = LAST
+          SYS STR ct_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "mtime"
+          LET meta = LAST
+          SYS STR mt_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "age"
+          LET meta = LAST
+          SYS STR age_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          # relation flags: ctime>=mtime usual; atime may == mtime on noatime
+          LET ct_ge_mt = 0
+          IF ct_n >= mt_n THEN
+            LET ct_ge_mt = 1
+          END
+          LET at_eq_mt = 0
+          IF at_n == mt_n THEN
+            LET at_eq_mt = 1
+          END
+          SYS PUSH meta "ct_ge_mt"
+          LET meta = LAST
+          SYS STR ct_ge_mt
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "at_eq_mt"
+          LET meta = LAST
+          SYS STR at_eq_mt
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON at_n ct_n mt_n age_n under_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- hasenv ---
+SYS EQS ACTION "hasenv"
+IF LAST_N == 1 THEN
+  NOTE "action hasenv"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_ENV
+  END
+  SYS HASENV NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET env_n = 0
+    LET note_msg = "hasenv empty/fail"
+    FAIL "hasenv empty/fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasenv empty/fail"
+    END
+  ELSE
+    LET env_n = LAST_N
+    IF env_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "hasenv absent"
+      FAIL "hasenv absent"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hasenv absent"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "hasenv ok"
+    END
+    SYS STR env_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "env"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "has"
+    LET meta = LAST
+    SYS STR env_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    # false friend: HAS on env name substring
+    SYS HAS NAME "PATH"
+    LET has_path = LAST_N
+    SYS PUSH meta "has_path_sub"
+    LET meta = LAST
+    SYS STR has_path
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON env_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate HASENV must be set ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_ENV
+  END
+  SYS HASENV NAME
+  IF OK == 0 THEN
+    LET gate_n = 0
+    LET env_n = 0
+    LET miss = 1
+    LET note_msg = "gate empty"
+    FAIL "gate empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate empty"
+    END
+  ELSE
+    LET env_n = LAST_N
+    LET gate_n = env_n
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate deny"
+      FAIL "gate deny"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "gate"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ok"
+    LET meta = LAST
+    SYS STR gate_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n env_n
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET base = ""
+  LET active = ""
+  LET val = ""
+  LET meta = ""
+  LET base_ch = 1
+  LET path_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "base"
+LET k = k + LAST_N
+SYS EQS ACTION "pick"
+LET k = k + LAST_N
+SYS EQS ACTION "put"
+LET k = k + LAST_N
+SYS EQS ACTION "rel"
+LET k = k + LAST_N
+SYS EQS ACTION "atime"
+LET k = k + LAST_N
+SYS EQS ACTION "ctime"
+LET k = k + LAST_N
+SYS EQS ACTION "mtime"
+LET k = k + LAST_N
+SYS EQS ACTION "age"
+LET k = k + LAST_N
+SYS EQS ACTION "triad"
+LET k = k + LAST_N
+SYS EQS ACTION "hasenv"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF base_ch > 0 THEN
+  SYS WRITE base_meta base
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "base write failed"
+  END
+  CLEAR_ERR
+END
+IF path_ch > 0 THEN
+  SYS WRITE path_meta active
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "path write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.plate_time_triad_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "under"
+LET report = LAST
+SYS STR under_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "atime"
+LET report = LAST
+SYS STR at_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ctime"
+LET report = LAST
+SYS STR ct_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mtime"
+LET report = LAST
+SYS STR mt_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "age"
+LET report = LAST
+SYS STR age_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "env"
+LET report = LAST
+SYS STR env_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "base"
+LET report = LAST
+SYS PUSH report base
+LET report = LAST
+SYS PUSH report "path"
+LET report = LAST
+SYS PUSH report active
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "plate_time_triad_board" ACTION hit miss under_n at_n ct_n mt_n env_n note_msg elapsed
