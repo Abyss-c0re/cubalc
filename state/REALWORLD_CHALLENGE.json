@@ -26,7 +26,7 @@
     },
     {
       "name": "seed_private",
-      "cmd": "seed body ARG2=0077 → MODE 0600",
+      "cmd": "seed body ARG2=0077 \u2192 MODE 0600",
       "ok": true,
       "note": "VAL 0600@0077"
     },
@@ -38,13 +38,13 @@
     },
     {
       "name": "check_mismatch_require",
-      "cmd": "check 0644 REQUIRE → exit 2",
+      "cmd": "check 0644 REQUIRE \u2192 exit 2",
       "ok": true,
       "note": "deny"
     },
     {
       "name": "canmk_bad_parent",
-      "cmd": "missing parent OK=1 LAST_N=0; REQUIRE→2",
+      "cmd": "missing parent OK=1 LAST_N=0; REQUIRE\u21922",
       "ok": true,
       "note": "probe"
     },
@@ -66,32 +66,32 @@
       "id": "W1",
       "severity": "high",
       "area": "host|umask",
-      "title": "UMASK is process-scoped — lost across cubalc invocations",
+      "title": "UMASK is process-scoped \u2014 lost across cubalc invocations",
       "detail": "Action dispatch re-execs binary each time. mask then seed in separate runs does not apply private mask unless seed re-sets via ARG2/ENV. Agents assume durable umask like CHMOD.",
-      "repro": "mask 0077; new process seed → host default umask"
+      "repro": "mask 0077; new process seed \u2192 host default umask"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|umask",
       "title": "UMASK set returns previous mask not newly applied",
-      "detail": "SYS UMASK 0077 → LAST=0022 (old). Agents that print LAST as current mis-stamp plates. Must GETUMASK after set.",
+      "detail": "SYS UMASK 0077 \u2192 LAST=0022 (old). Agents that print LAST as current mis-stamp plates. Must GETUMASK after set.",
       "repro": "UMASK 0077; LAST is prev"
     },
     {
       "id": "W3",
       "severity": "high",
       "area": "host|write",
-      "title": "WRITE overwrite keeps prior mode — umask only on create",
+      "title": "WRITE overwrite keeps prior mode \u2014 umask only on create",
       "detail": "Re-seed existing path does not re-apply umask. Board must RM then WRITE for private mode proof. No WRITECREATE or FORCE_CREATE flag.",
-      "repro": "WRITE existing 0644 under umask 0077 → still 0644"
+      "repro": "WRITE existing 0644 under umask 0077 \u2192 still 0644"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|mode",
       "title": "MODE_N decimal vs UMASK_N vs octal strings triple trap",
-      "detail": "0600 → MODE_N=384; 0077 → UMASK_N=63. Agents compare numeric 600/77 and fail.",
+      "detail": "0600 \u2192 MODE_N=384; 0077 \u2192 UMASK_N=63. Agents compare numeric 600/77 and fail.",
       "repro": "MODE_N==600 false; UMASK_N==77 false"
     },
     {
@@ -99,7 +99,7 @@
       "severity": "med",
       "area": "host|cancreate",
       "title": "CANCREATE silent 0 on missing parent vs empty path OK=0",
-      "detail": "Bad parent: OK=1 LAST_N=0. Empty path: OK=0 sticky ERR. Same dual as CANREAD family — agents need two branches.",
+      "detail": "Bad parent: OK=1 LAST_N=0. Empty path: OK=0 sticky ERR. Same dual as CANREAD family \u2014 agents need two branches.",
       "repro": "CANCREATE /no/such/x; CANCREATE \"\""
     },
     {
@@ -107,7 +107,7 @@
       "severity": "med",
       "area": "host|has",
       "title": "HAS on umask/mode strings is digit false-friend",
-      "detail": "HAS 0077 \"7\" → 1; HAS 0600 \"600\" may glue poorly. No bit-mask expected-mode helper (0666 & ~umask).",
+      "detail": "HAS 0077 \"7\" \u2192 1; HAS 0600 \"600\" may glue poorly. No bit-mask expected-mode helper (0666 & ~umask).",
       "repro": "HAS 0077 7"
     },
     {
@@ -123,8 +123,8 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_IC_REQUIRE=abc → REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc canmk deny → rc 0"
+      "detail": "CUBALC_IC_REQUIRE=abc \u2192 REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc canmk deny \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -138,16 +138,16 @@
     "Session/process-persistent umask plate or auto CUBALC_UMASK env apply",
     "UMASK set LAST=new option or dual PREV/CUR vars",
     "WRITECREATE / CREATEONLY that always applies umask",
-    "Expected mode helper: 0666 & ~umask → 0600 string",
+    "Expected mode helper: 0666 & ~umask \u2192 0600 string",
     "Unified empty vs denied probe contract",
     "WRITE trailing NL"
   ],
   "issues_faced": [
     "canmk/umask/mask/seed/check/gate green",
     "cross-run umask loss forced same-process A2 mask on seed",
-    "overwrite mode sticky without RM — core lesson",
+    "overwrite mode sticky without RM \u2014 core lesson",
     "selftest 256/256; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "bfabeb1c2ed8a7bc4680bd599d93d14344082b59",
   "ts": "2026-08-06T20:37:47Z"
 }
