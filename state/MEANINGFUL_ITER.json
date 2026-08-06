@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 257,
-  "version": "1.15.284-usability",
-  "item": "SYS KINDSTR / FILEKIND path kind labels",
-  "item_id": 292,
-  "title": "SYS KINDSTR|FILEKIND path \u2014 human kind label + code",
-  "commit": "c0bbbcab50f39841acb59115be468edbae0a01ca",
-  "summary": "lstat kind file|dir|link|missing; selftest rows 512. selftest 257.",
+  "iter": 258,
+  "version": "1.15.285-usability",
+  "item": "SYS RELPATH / REL / STRIPBASE relative plate paths",
+  "item_id": 293,
+  "title": "SYS RELPATH|REL base path \u2014 portable relative paths after WALK/PUSHD",
+  "commit": "582e8d23fd7ef8881403574e26bba328e25000a1",
+  "summary": "under base \u2192 relative; outside \u2192 absolute. selftest 258.",
   "proofs": [
-    "831_sys_kindstr",
-    "selftest n_pass=257"
+    "832_sys_relpath",
+    "selftest n_pass=258"
   ],
-  "when": "2026-08-06T20:47:49Z",
+  "when": "2026-08-06T20:54:41Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c0bbbcab50f39841acb59115be468edbae0a01ca",
-  "note": "complements ISDIR/ISFILE/ISLINK; fixed selftest silent skip at 256"
+  "sha": "582e8d23fd7ef8881403574e26bba328e25000a1",
+  "note": "complements REALPATH/PUSHD/WALK for portable plate trees"
 }
