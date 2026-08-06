@@ -1,0 +1,53 @@
+# SYS COUNTFILELINE / FILECOUNTLINE — count file lines containing needle
+# Usability: "how many error lines?" without GREPLINES bag rebuild
+# Complements FINDFILELINE. COUNTFILELINEI icase. Soft miss path.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "countfileline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "ok\nerror: a\nwarn\nerror: b\nERROR: c\nok"
+
+SYS COUNTFILELINE fs "error"
+ASSERT OK == 1
+ASSERT COUNTFILELINE_N == 2
+ASSERT COUNTFILELINE_TOTAL == 6
+ASSERT LAST_N == 2
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# alias
+SYS FILECOUNTLINE fs "ok"
+ASSERT COUNTFILELINE_N == 2
+ASSERT LAST_N == 2
+
+# icase includes ERROR
+SYS COUNTFILELINEI fs "error"
+ASSERT COUNTFILELINE_N == 3
+ASSERT LAST_N == 3
+
+# empty needle → 0
+SYS COUNTFILELINE fs ""
+ASSERT OK == 1
+ASSERT COUNTFILELINE_N == 0
+ASSERT COUNTFILELINE_TOTAL == 6
+
+# miss content
+SYS COUNTFILELINE fs "nope"
+ASSERT COUNTFILELINE_N == 0
+
+# soft path miss
+SYS COUNTFILELINE "no_such_countfileline_mi.txt" "x"
+ASSERT OK == 0
+ASSERT COUNTFILELINE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_countfileline ok"
