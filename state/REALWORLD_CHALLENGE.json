@@ -1,70 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 53,
-  "program": "programs/realworld/fleet_drift_board.cubalc",
-  "theme": "fleet drift DROPZERO ABSKV SIGNKV magnitude direction",
-  "version": "1.15.171-usability",
+  "iter": 54,
+  "program": "programs/realworld/cost_unit_board.cubalc",
+  "theme": "cost unit rates DIVKV AVGKV FinOps window mean",
+  "version": "1.15.173-usability",
   "pass": true,
   "tests": [
     {
-      "name": "seed_dropz",
-      "cmd": "seed api:4 db:-1 mesh:0 crit:3 edge:-5; dropz drops mesh only keeps neg",
+      "name": "seed_list_avg",
+      "cmd": "seed 900/300/150/50; list total=1400 avg=350 top=api",
       "ok": true,
-      "note": "DROPZERO keeps negatives"
+      "note": "SUMKV+AVGKV+TOPKEY"
     },
     {
-      "name": "abs_mag",
-      "cmd": "abs \u2192 edge:5 db:1; DRIFT SoT unchanged",
+      "name": "div_window",
+      "cmd": "div 3 → api:300 … edge:16 trunc; COST SoT intact",
       "ok": true,
-      "note": "ABSKV side plate"
+      "note": "DIVKV side RATE plate"
     },
     {
-      "name": "sign_pulse",
-      "cmd": "sign pos=2 neg=2 zero=1; pulse net 0",
+      "name": "getrate",
+      "cmd": "getrate api=300",
       "ok": true,
-      "note": "SIGNKV counters"
+      "note": "LOOKUPN RATE"
     },
     {
-      "name": "rank_mover",
-      "cmd": "rank biggest |delta| \u2192 edge:5 not algebraic top",
+      "name": "div_rewrite",
+      "cmd": "REWRITE=1 div 2 rewrites COST SoT",
       "ok": true,
-      "note": "DROPZERO+ABSKV+TOPKEY"
+      "note": "optional mutate"
     },
     {
-      "name": "topkey_signed_trap",
-      "cmd": "list TOPKEY api:2 over edge:-9; rank \u2192 edge:9",
+      "name": "div_zero",
+      "cmd": "div 0 soft zeros; REQUIRE exit 2",
       "ok": true,
-      "note": "must ABS first"
+      "note": "language soft zero all"
     },
     {
-      "name": "dropz_all_flat",
-      "cmd": "a:0 b:0 dropz REQUIRE 2",
+      "name": "avg_trunc",
+      "cmd": "avg a:1 b:2 → 1 not 1.5",
       "ok": true,
-      "note": "empty after clean"
+      "note": "integer trunc toward 0"
     },
     {
-      "name": "rank_empty",
-      "cmd": "rank empty REQUIRE 2",
+      "name": "div_trunc",
+      "cmd": "9/2 → 4; 4/2 → 2",
       "ok": true,
-      "note": "soft empty"
+      "note": "remainder lost"
     },
     {
-      "name": "getn_signed",
-      "cmd": "getn db \u2192 -1",
+      "name": "avg_empty_require",
+      "cmd": "avg empty REQUIRE 2",
       "ok": true,
-      "note": "LOOKUPN negatives"
+      "note": "program gate vs lang 0"
     },
     {
-      "name": "nonnum_preserve",
-      "cmd": "note:hello survives DROPZERO/ABS/SIGN",
+      "name": "nonnum_avg_div",
+      "cmd": "note:hello preserved DIV; AVGKV_N=2 KEYS=3 mean 6",
       "ok": true,
-      "note": "bag contamination"
+      "note": "KEYS≠N footgun"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "146/146 pass incl dropzero abskv signkv"
+      "note": "148/148 pass incl divkv avgkv"
     }
   ],
   "weaknesses": [
@@ -72,49 +72,49 @@
       "id": "W1",
       "severity": "high",
       "area": "host|bag",
-      "title": "TOPKEY is algebraic max not magnitude",
-      "detail": "On signed drift api:2 edge:-9 TOPKEY picks api. Biggest mover needs ABSKV first. Easy paging miss for large regressions.",
-      "repro": "TOPKEY api:2\\nedge:-9 \u2192 api"
+      "title": "DIVKV divisor 0 soft-zeros entire bag OK=1",
+      "detail": "No hard fail; ENV typo DIV=0 wipes rates to zeros. Agents must refuse before call.",
+      "repro": "DIVKV bag 0 → all :0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "Non-numeric fields survive DROPZERO/ABSKV/SIGNKV",
-      "detail": "note:hello kept through all three ops; SIGNKV may leave string while POS/NEG/ZERO ignore it. Direction plates contaminate.",
-      "repro": "SIGNKV bag with note:hello"
+      "title": "AVGKV_KEYS counts non-numeric but mean uses AVGKV_N only",
+      "detail": "api:9 note:hello mesh:3 → SUM=12 N=2 KEYS=3 mean=6. Agents dividing SUM/KEYS get wrong 4. KEYS≠N silent.",
+      "repro": "AVGKV mixed bag"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|bag",
-      "title": "DROPZERO only exact 0; THRESHKV min1 drops negatives too",
-      "detail": "Correct distinction but agents confuse DROPZERO with denoise-flat-and-neg. Document: DROPZERO keeps falls, THRESHKV drops them.",
-      "repro": "DROPZERO info:-2 keeps; THRESHKV 1 drops"
+      "title": "DIVKV and AVGKV integer truncation toward zero",
+      "detail": "50/3=16; (1+2)/2=1. No remainder bag / rounding mode. Unit rates understate.",
+      "repro": "DIVKV edge:50 3 → 16"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|bag",
-      "title": "ABSKV_N counts only fields that flipped sign",
-      "detail": "ABSKV_N=2 when two negatives became positive; zeros and positives not in N. Agents may think ABSKV_N==LINES means full bag.",
-      "repro": "ABSKV_N vs ABSKV_KEYS"
+      "title": "Non-numeric preserved by DIVKV",
+      "detail": "note:hello survives divide; contaminates RATE plate.",
+      "repro": "DIVKV bag with string val"
     },
     {
       "id": "W5",
-      "severity": "low",
+      "severity": "med",
       "area": "host|bag",
-      "title": "No SIGNKV-only-pos / filter by sign form",
-      "detail": "Want KEEP POS after SIGN without THRESHKV on original. Must THRESHKV source or GREP dir plate.",
-      "repro": "SIGNKV then filter"
+      "title": "AVGKV empty returns 0 OK=1 not soft miss",
+      "detail": "Same class as SUMKV empty. Program must BLANK-gate.",
+      "repro": "AVGKV \"\" → 0"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last DRIFT/MAG/DIR line without $.",
-      "repro": "seed; cat -A DRIFT.txt"
+      "detail": "cat -A last COST/RATE line without $.",
+      "repro": "seed; cat -A COST.txt"
     },
     {
       "id": "W7",
@@ -126,33 +126,34 @@
     },
     {
       "id": "W8",
-      "severity": "med",
+      "severity": "low",
       "area": "host|bag",
-      "title": "No combined MAGRANK / TOPABS primitive",
-      "detail": "Biggest-mover needs DROPZERO+ABSKV+TOPKEY glue every agent. MEANINGFUL_ITER candidate TOPABSKV.",
-      "repro": "rank action three steps"
+      "title": "No DIVKV remainder / AVGKV float mode",
+      "detail": "FinOps often wants cents remainder or millirate; only integer.",
+      "repro": "no REMKV or fdiv"
     }
   ],
   "workarounds": [
-    "Always ABSKV before TOPKEY on signed deltas",
-    "DROPZERO for flat clean; THRESHKV min1 for rise-only",
-    "Strip non-numeric before SIGN/ABS",
-    "Use SIGNKV_POS/NEG for pulse; ignore ZERO for bias",
-    "Compare ABSKV_N to count of negatives not total lines"
+    "Refuse DIVN<=0 before DIVKV",
+    "Assert AVGKV_N==AVGKV_KEYS or strip non-numeric first",
+    "Prefer RATE side plate; only REWRITE when intentional",
+    "BLANK-gate AVG empty as miss",
+    "Document trunc for window means"
   ],
   "language_gaps": [
-    "TOPABSKV / magnitude TOPKEY mode",
-    "STRICT drop non-numeric on DROPZERO/ABS/SIGN",
-    "KEEPSIGN +1 / KEEPSIGN -1 filters",
-    "SUMABS bag L1",
+    "DIVKV refuse divisor 0",
+    "AVGKV STRICT numeric-only KEYS==N",
+    "DIVKV/AVGKV remainder or round modes",
+    "Strip non-numeric on DIV",
+    "AVGKV empty OK=0 option",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive dropz/abs/sign/rank/pulse clean",
-    "TOPKEY signed trap confirmed high-sev for fleet paging",
-    "Non-numeric preserve across all three new ops",
+    "Positive seed/div/avg/getrate clean; edge 50/3→16 trunc",
+    "AVGKV_KEYS vs N high-sev for mixed bags",
+    "DIV 0 soft wipe confirmed",
     "No language fix this iter"
   ],
-  "commit": "f92c8eff5ce97b780864fee8170c75579f60d780",
-  "ts": "2026-08-06T02:00:00Z"
+  "commit": "",
+  "ts": "2026-08-06T02:25:00Z"
 }

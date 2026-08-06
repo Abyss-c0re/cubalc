@@ -1,0 +1,624 @@
+# cost_unit_board.cubalc — cost/usage rates via DIVKV + fleet AVGKV
+#
+# Real use: FinOps/SRE agent holds service:cost_or_count bags under STATE.
+# DIVKV divides by window count N for per-window unit rates; AVGKV peels
+# integer fleet mean for budget baselines without SUMKV+count+DIV glue.
+#
+# Distinct from traffic_share_board (PCTKV shares) and slo_burn_gate (THRESH):
+# this board is per-key integer divide + cross-key mean for unit economics.
+#
+# Plate under STATE:
+#   COST.txt          — service:amount SoT
+#   RATE.txt          — last DIVKV result (unit rates)
+#   COST_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CU_ACTION):
+#   list      — depth + sum + top + avg (default)
+#   seed      — WORDS svc:n
+#   loadlines — ||| events FREQ → COST
+#   bump      — KVINC
+#   div       — DIVKV divisor (ARG1/ENV) → RATE (+ optional rewrite COST)
+#   avg       — AVGKV on COST → hit=mean
+#   getn      — LOOKUPN COST OR 0
+#   getrate   — LOOKUPN RATE OR 0
+#   top       — TOPKEY COST
+#   del / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cu_$$; mkdir -p "$CUBALC_STATE"
+#   CUBALC_ARG0=seed CUBALC_ARG1='api:900 db:300 mesh:150 edge:50' \
+#     ./out/cubalc run -q -s programs/realworld/cost_unit_board.cubalc
+#   CUBALC_ARG0=div CUBALC_ARG1=3 ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=avg ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_CU_REQUIRE=1
+#   CUBALC_CU_DIV=3
+#   CUBALC_CU_REWRITE=1   # div also rewrites COST SoT
+#
+# Edges deliberately stressed:
+#   DIVKV divisor 0 → soft zeros entire bag
+#   DIVKV integer trunc (9/2=4); remainder lost
+#   AVGKV trunc toward 0 (1+2)/2=1; empty → 0 not miss
+#   AVGKV includes negatives in mean
+#   non-numeric skip/preserve under DIV/AVG
+#   LOOKUPN OR; WRITE NL; PRINT_JSON collapse
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cost_unit_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "COST.txt"
+DEFAULT TFILE = "RATE.txt"
+DEFAULT REPORT = "COST_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DIVN = 3
+DEFAULT REWRITE = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CU_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CU_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CU_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CU_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CU_DIV" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DIVN = LAST_N
+  END
+END
+SYS ENV "CUBALC_CU_REWRITE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REWRITE = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir RFILE
+LET bag_path = LAST
+SYS JOIN state_dir TFILE
+LET rate_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR bag_path OR ""
+LET bag = LAST
+CLEAR_ERR
+SYS READ OR rate_path OR ""
+LET rate = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET changed = 0
+LET rate_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET total_n = 0
+LET avg_n = 0
+LET avg_sum = 0
+LET avg_keys = 0
+LET div_n = 0
+LET used_or = 0
+LET top_k = ""
+LET top_v = 0
+
+SYS EQS ACTION "div"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" NAME
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DIVN = LAST_N
+    END
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES bag
+  LET depth0 = LAST_N
+  SYS BLANK bag
+  IF LAST_N == 0 THEN
+    SYS SUMKV bag ":"
+    LET total_n = LAST_N
+    SYS AVGKV bag ":"
+    LET avg_n = LAST_N
+    LET avg_sum = AVGKV_SUM
+    LET avg_keys = AVGKV_KEYS
+    SYS TOPKEY bag ":"
+    IF OK == 1 THEN
+      LET top_k = LAST
+      LET top_v = TOPKEY_V
+    END
+    CLEAR_ERR
+  END
+  STATUS
+  PRINT "costu" depth0 total_n avg_n ACTION
+  PRINT_JSON depth0 total_n avg_n top_k top_v DIVN ACTION STATUS_OK
+  PRINT_JSON bag
+  PRINT_JSON rate
+  LET note_msg = "list ok"
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "seed needs svc:n tokens"
+  END
+  SYS WORDS NAME
+  LET toks = LAST
+  EACH LINE AS t IN toks
+    SYS BLANK t
+    IF LAST_N == 0 THEN
+      SYS BEFORE t ":"
+      LET k = LAST
+      SYS AFTER t ":"
+      LET v = LAST
+      SYS BLANK k
+      IF LAST_N == 0 THEN
+        SYS LOOKUP bag k ":"
+        IF OK == 0 THEN
+          SYS KVSET bag k v ":"
+          LET bag = LAST
+          LET changed = 1
+          LET hit = hit + 1
+        ELSE
+          LET miss = miss + 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  LET note_msg = "seeded"
+END
+
+# --- loadlines ---
+SYS EQS ACTION "loadlines"
+IF LAST_N == 1 THEN
+  NOTE "action loadlines"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "loadlines needs ||| events"
+  END
+  SYS SPLIT "|||" NAME
+  SYS FREQ LAST
+  LET bag = LAST
+  LET changed = 1
+  SYS LINES bag
+  LET hit = LAST_N
+  LET note_msg = "freq loaded"
+END
+
+# --- bump ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "bump needs svc"
+  END
+  LET DELTA = 1
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS PREPEND "" A2
+    SYS HEAD LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET DELTA = LAST_N
+    END
+  END
+  SYS KVINC bag NAME DELTA ":"
+  LET bag = LAST
+  LET val_n = KVINC_V
+  SYS STR val_n
+  LET val_s = LAST
+  LET changed = 1
+  LET hit = val_n
+  LET note_msg = "bumped"
+END
+
+# --- div DIVKV ---
+SYS EQS ACTION "div"
+IF LAST_N == 1 THEN
+  NOTE "action div"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "div empty"
+    FAIL "div empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "div empty"
+    END
+  ELSE
+    IF DIVN == 0 THEN
+      LET miss = 1
+      LET note_msg = "div zero divisor"
+      FAIL "div zero divisor"
+      CLEAR_ERR
+      # still run language soft-zero path for observation unless REQUIRE
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "div zero divisor"
+      END
+      SYS DIVKV bag 0 ":"
+      LET rate = LAST
+      LET div_n = DIVKV_N
+      LET rate_ch = 1
+      IF REWRITE > 0 THEN
+        LET bag = rate
+        LET changed = 1
+      END
+    ELSE
+      SYS DIVKV bag DIVN ":"
+      LET rate = LAST
+      LET div_n = DIVKV_N
+      LET rate_ch = 1
+      LET hit = 1
+      LET note_msg = "div ok"
+      IF REWRITE > 0 THEN
+        LET bag = rate
+        LET changed = 1
+        LET note_msg = "div rewrite"
+      END
+    END
+    PRINT_JSON DIVN div_n
+    PRINT_JSON rate
+  END
+END
+
+# --- avg AVGKV ---
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  NOTE "action avg"
+  SYS BLANK bag
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET avg_n = 0
+    LET note_msg = "avg empty"
+    FAIL "avg empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "avg empty"
+    END
+  ELSE
+    SYS AVGKV bag ":"
+    LET avg_n = LAST_N
+    LET avg_sum = AVGKV_SUM
+    LET avg_keys = AVGKV_KEYS
+    LET val_n = avg_n
+    SYS STR avg_n
+    LET val_s = LAST
+    LET hit = avg_n
+    # language returns 0 for empty; for non-empty all-zero also 0
+    LET note_msg = "avg ok"
+    PRINT_JSON avg_n avg_sum avg_keys
+  END
+END
+
+# --- getn ---
+SYS EQS ACTION "getn"
+IF LAST_N == 1 THEN
+  NOTE "action getn"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getn needs svc"
+  END
+  SYS LOOKUPN bag NAME ":" OR 0
+  LET val_n = LAST_N
+  LET used_or = LOOKUPN_OR
+  SYS STR val_n
+  LET val_s = LAST
+  LET hit = val_n
+  IF used_or == 1 THEN
+    LET miss = 1
+    LET note_msg = "getn default"
+    IF REQUIRE_HIT > 0 THEN
+      FAIL "getn default only"
+      CLEAR_ERR
+      EXIT 2 "getn default only"
+    END
+  ELSE
+    LET note_msg = "getn ok"
+  END
+END
+
+# --- getrate ---
+SYS EQS ACTION "getrate"
+IF LAST_N == 1 THEN
+  NOTE "action getrate"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "getrate needs svc"
+  END
+  SYS BLANK rate
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "getrate empty"
+    FAIL "getrate empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "getrate empty"
+    END
+  ELSE
+    SYS LOOKUPN rate NAME ":" OR 0
+    LET val_n = LAST_N
+    LET used_or = LOOKUPN_OR
+    SYS STR val_n
+    LET val_s = LAST
+    LET hit = val_n
+    IF used_or == 1 THEN
+      LET miss = 1
+      LET note_msg = "getrate default"
+      IF REQUIRE_HIT > 0 THEN
+        FAIL "getrate default only"
+        CLEAR_ERR
+        EXIT 2 "getrate default only"
+      END
+    ELSE
+      LET note_msg = "getrate ok"
+    END
+  END
+END
+
+# --- top ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS TOPKEY bag ":"
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "top empty"
+    FAIL "top empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top empty"
+    END
+  ELSE
+    LET top_k = LAST
+    LET top_v = TOPKEY_V
+    LET val_s = top_k
+    LET val_n = top_v
+    LET hit = top_v
+    LET note_msg = "top ok"
+  END
+END
+
+# --- del ---
+SYS EQS ACTION "del"
+IF LAST_N == 1 THEN
+  NOTE "action del"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "del needs svc"
+  END
+  SYS KVDEL bag NAME ":"
+  LET bag = LAST
+  IF KVDEL_HIT == 0 THEN
+    LET miss = 1
+    LET note_msg = "del miss"
+    FAIL "del miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "del miss"
+    END
+  ELSE
+    LET val_s = KVDEL_V
+    LET changed = 1
+    LET hit = 1
+    LET note_msg = "deleted"
+  END
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET bag = ""
+  LET rate = ""
+  LET changed = 1
+  LET rate_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "seed"
+LET k = k + LAST_N
+SYS EQS ACTION "loadlines"
+LET k = k + LAST_N
+SYS EQS ACTION "bump"
+LET k = k + LAST_N
+SYS EQS ACTION "div"
+LET k = k + LAST_N
+SYS EQS ACTION "avg"
+LET k = k + LAST_N
+SYS EQS ACTION "getn"
+LET k = k + LAST_N
+SYS EQS ACTION "getrate"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "del"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF changed > 0 THEN
+  SYS WRITE bag_path bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "cost write failed"
+  END
+  CLEAR_ERR
+END
+IF rate_ch > 0 THEN
+  SYS WRITE rate_path rate
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "rate write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES bag
+LET depth1 = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.costu.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "total"
+LET report = LAST
+SYS STR total_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "avg_n"
+LET report = LAST
+SYS STR avg_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "avg_sum"
+LET report = LAST
+SYS STR avg_sum
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "avg_keys"
+LET report = LAST
+SYS STR avg_keys
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "div_n"
+LET report = LAST
+SYS STR div_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "divn"
+LET report = LAST
+SYS STR DIVN
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "top_k"
+LET report = LAST
+SYS PUSH report top_k
+LET report = LAST
+SYS PUSH report "top_v"
+LET report = LAST
+SYS STR top_v
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "used_or"
+LET report = LAST
+SYS STR used_or
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth1"
+LET report = LAST
+SYS STR depth1
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+
+STATUS
+PRINT "costu" ACTION hit miss depth1
+PRINT_JSON ACTION hit miss depth1 val_n avg_n div_n elapsed STATUS_OK
+PASS "costu tick"
+NOTE "cost_unit_board: done"
+CLEAR_ERR
+EXIT 0 "costu ok"
