@@ -243,6 +243,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 213. ~~**`SYS LINECOUNTALL` / `WCALL`**~~ **done** (path bag → line counts + sum · inventory without EACH+READ+LINES).
 214. ~~**`SYS MIDFILE` / `LINESLICE`**~~ **done** (file line window [start..start+count) · page without READ+DROP+TAKE).
 215. ~~**`SYS LINEAT` / `FILELINE`**~~ **done** (single 0-based file line → LAST · no MIDFILE+HEAD glue).
+216. ~~**`SYS SETFILELINE` / `FILESETLINE`**~~ **done** (replace 0-based file line in place · dual of LINEAT).
 
 ## Tick protocol
 

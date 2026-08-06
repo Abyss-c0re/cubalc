@@ -1,0 +1,60 @@
+# SYS SETFILELINE / FILESETLINE — replace single 0-based file line in place
+# Usability: edit plate/config row without READ+SETLINE+WRITE glue
+# Dual of LINEAT. Soft OOB no write. Soft miss empty.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "setfileline_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "sample.txt"
+LET fs = LAST
+SYS WRITE fs "L0\nL1\nL2\nL3\nL4"
+
+SYS SETFILELINE fs 2 "L2x"
+ASSERT OK == 1
+ASSERT SETFILELINE_N == 1
+ASSERT SETFILELINE_I == 2
+ASSERT SETFILELINE_TOTAL == 5
+SYS EQS LAST "L2x"
+ASSERT LAST_N == 1
+
+# verify persisted via LINEAT
+SYS LINEAT fs 2
+SYS EQS LAST "L2x"
+ASSERT LAST_N == 1
+SYS LINEAT fs 0
+SYS EQS LAST "L0"
+ASSERT LAST_N == 1
+SYS LINEAT fs 4
+SYS EQS LAST "L4"
+ASSERT LAST_N == 1
+
+# alias first line
+SYS FILESETLINE fs 0 "HEAD"
+ASSERT SETFILELINE_N == 1
+SYS LINEAT fs 0
+SYS EQS LAST "HEAD"
+ASSERT LAST_N == 1
+
+# OOB soft — no write
+SYS SETFILELINE fs 99 "NOPE"
+ASSERT OK == 1
+ASSERT SETFILELINE_N == 0
+ASSERT SETFILELINE_TOTAL == 5
+SYS LINEAT fs 2
+SYS EQS LAST "L2x"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS SETFILELINE "no_such_setfileline_mi.txt" 0 "x"
+ASSERT OK == 0
+ASSERT SETFILELINE_N == 0
+
+# cleanup
+SYS RM fs
+
+PRINT "sys_setfileline ok"
