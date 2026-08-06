@@ -8,19 +8,19 @@
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB+KEEPFILES → big/mid/tiny drop nested",
+      "cmd": "PATHGLOB+KEEPFILES \u2192 big/mid/tiny drop nested",
       "ok": true,
       "note": "kind filter"
     },
     {
       "name": "big_min10",
-      "cmd": "KEEPBIGGER 10 → big.dat+mid.dat",
+      "cmd": "KEEPBIGGER 10 \u2192 big.dat+mid.dat",
       "ok": true,
       "note": "size >= 10"
     },
     {
       "name": "small_max3",
-      "cmd": "KEEPSMALLER 3 → tiny.dat",
+      "cmd": "KEEPSMALLER 3 \u2192 tiny.dat",
       "ok": true,
       "note": "size <= 3"
     },
@@ -32,31 +32,31 @@
     },
     {
       "name": "reclaim_big",
-      "cmd": "RMALL cand → rm_n=2 mid+big gone tiny remains",
+      "cmd": "RMALL cand \u2192 rm_n=2 mid+big gone tiny remains",
       "ok": true,
       "note": "bulk delete"
     },
     {
       "name": "touch_upd",
-      "cmd": "TOUCHALL paths → touch_upd=1 tiny",
+      "cmd": "TOUCHALL paths \u2192 touch_upd=1 tiny",
       "ok": true,
       "note": "lease refresh"
     },
     {
       "name": "touch_create",
-      "cmd": "TOUCHALL new markers → touch_new=2",
+      "cmd": "TOUCHALL new markers \u2192 touch_new=2",
       "ok": true,
       "note": "ensure leases"
     },
     {
       "name": "rmall_dir_fail",
-      "cmd": "RMALL files+dir → rm_n=2 rm_fail=1 nested remains",
+      "cmd": "RMALL files+dir \u2192 rm_n=2 rm_fail=1 nested remains",
       "ok": true,
       "note": "no rmdir"
     },
     {
       "name": "rmall_ghost_dir",
-      "cmd": "RMALL nested+ghost → rm_n=0 miss=1 fail=1",
+      "cmd": "RMALL nested+ghost \u2192 rm_n=0 miss=1 fail=1",
       "ok": true,
       "note": "zero removed soft"
     },
@@ -78,17 +78,17 @@
       "id": "W1",
       "severity": "high",
       "area": "host|parse",
-      "title": "KEEPBIGGER/KEEPSMALLER reject numeric vars — STR shuttle required",
+      "title": "KEEPBIGGER/KEEPSMALLER reject numeric vars \u2014 STR shuttle required",
       "detail": "Same class as FRESH: size limit is TK_NUM literal or string only. SYS KEEPBIGGER bag MIN with num MIN fails parse. Agents must SYS STR MIN first.",
-      "repro": "LET MIN=10; SYS KEEPBIGGER paths MIN → fail; STR then ok"
+      "repro": "LET MIN=10; SYS KEEPBIGGER paths MIN \u2192 fail; STR then ok"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|fs",
-      "title": "RMALL cannot remove directories — FAIL, nested trees leftover",
+      "title": "RMALL cannot remove directories \u2014 FAIL, nested trees leftover",
       "detail": "Dirs count as RMALL_FAIL not recursive delete. GC of PATHGLOB * without KEEPFILES leaves empty dir trees. No RMDIR/RMALL_R.",
-      "repro": "RMALL bag_with_dir → rm_fail>=1; ISDIR nested still 1"
+      "repro": "RMALL bag_with_dir \u2192 rm_fail>=1; ISDIR nested still 1"
     },
     {
       "id": "W3",
@@ -104,7 +104,7 @@
       "area": "host|fs",
       "title": "RMALL/TOUCHALL set OK=0 on any fail while still removing others",
       "detail": "Partial success: rm_n>0 but OK=0 when dir fail present. -s strict agents may treat as hard fail if sticky ERR not CLEAR_ERR.",
-      "repro": "RMALL files+dir → OK=0 RMALL_N>0"
+      "repro": "RMALL files+dir \u2192 OK=0 RMALL_N>0"
     },
     {
       "id": "W5",
@@ -112,7 +112,7 @@
       "area": "host|bag",
       "title": "No exclusive size range filter (min AND max in one op)",
       "detail": "Mid-band reclaim needs KEEPBIGGER then KEEPSMALLER chain. No KEEPSIZEBETWEEN.",
-      "repro": "want 10<=size<=100 → two filters"
+      "repro": "want 10<=size<=100 \u2192 two filters"
     },
     {
       "id": "W6",
@@ -136,7 +136,7 @@
       "area": "host|agent",
       "title": "Stale CAND plate can reclaim wrong set if not cleared after scan",
       "detail": "Agent glue: reclaim prefers CAND over PATHS when CAND non-empty. Rescan without clear cand deletes old filter set not new inventory. Language has no paired plate invalidation.",
-      "repro": "big; scan; reclaim without clear → deletes old cand"
+      "repro": "big; scan; reclaim without clear \u2192 deletes old cand"
     }
   ],
   "workarounds": [
@@ -159,6 +159,6 @@
     "Stale CAND hazard observed mid-test",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "1748e212b66790c7d1e080470c42b0c426c93e90",
   "ts": "2026-08-06T05:28:40Z"
 }
