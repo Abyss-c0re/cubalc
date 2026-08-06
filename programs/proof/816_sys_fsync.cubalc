@@ -1,0 +1,62 @@
+# SYS FSYNC / SYNCFILE — durable flush of a file to disk
+# Usability: multi-agent plate durability after WRITE without shell sync
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "fsync_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "durable-v1"
+ASSERT OK == 1
+
+# flush after write
+SYS FSYNC p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT FSYNC_N == 1
+SYS EQS LAST p
+ASSERT LAST_N == 1
+SYS EQS FSYNC_PATH p
+ASSERT LAST_N == 1
+
+# content still readable
+SYS READ p
+SYS EQS LAST "durable-v1"
+ASSERT LAST_N == 1
+
+# aliases
+SYS SYNCFILE p
+ASSERT OK == 1
+ASSERT FSYNC_N == 1
+SYS FILESYNC p
+ASSERT OK == 1
+SYS FDATASYNC p
+ASSERT OK == 1
+
+# WRITEATOMIC then fsync
+SYS JOIN td "fsync_mi_atomic.txt"
+LET a = LAST
+SYS WRITEATOMIC a "atomic-v2"
+ASSERT OK == 1
+SYS FSYNC a
+ASSERT OK == 1
+SYS READ a
+SYS EQS LAST "atomic-v2"
+ASSERT LAST_N == 1
+
+# soft miss empty path / missing file
+SYS FSYNC ""
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS FSYNC "/no/such/cubalc_fsync_xyz_mi"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM p
+SYS RM a
+
+PRINT "sys_fsync ok"
