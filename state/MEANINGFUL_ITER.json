@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 256,
-  "version": "1.15.283-usability",
-  "item": "SYS PUSHD / POPD / DIRSTACK cwd stack",
-  "item_id": 291,
-  "title": "SYS PUSHD|POPD|DIRSTACK \u2014 cwd stack for temp relative plate I/O",
-  "commit": "cc779173e7ff77bd1c144e7c3f73311c26bc93f4",
-  "summary": "save/restore cwd without shell pushd. selftest 256.",
+  "iter": 257,
+  "version": "1.15.284-usability",
+  "item": "SYS KINDSTR / FILEKIND path kind labels",
+  "item_id": 292,
+  "title": "SYS KINDSTR|FILEKIND path \u2014 human kind label + code",
+  "commit": "c0bbbcab50f39841acb59115be468edbae0a01ca",
+  "summary": "lstat kind file|dir|link|missing; selftest rows 512. selftest 257.",
   "proofs": [
-    "830_sys_pushd",
-    "selftest n_pass=256"
+    "831_sys_kindstr",
+    "selftest n_pass=257"
   ],
-  "when": "2026-08-06T20:34:14Z",
+  "when": "2026-08-06T20:47:49Z",
   "agent": "meaningful_iter_10m",
-  "sha": "cc779173e7ff77bd1c144e7c3f73311c26bc93f4",
-  "note": "complements CHDIR/CWD for nested workdir walks"
+  "sha": "c0bbbcab50f39841acb59115be468edbae0a01ca",
+  "note": "complements ISDIR/ISFILE/ISLINK; fixed selftest silent skip at 256"
 }
