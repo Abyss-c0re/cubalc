@@ -1,0 +1,85 @@
+# SYS REPLACEFILES / SUBFILES — REPLACEALL old→new inside every path
+# Usability: bulk config/plate rewrite without EACH+READ+REPLACEALL+WRITE
+# Only rewrites files that actually change. Soft miss skips unreadable.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "replacefiles_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.cfg"
+LET fa = LAST
+SYS JOIN fix "b.cfg"
+LET fb = LAST
+SYS JOIN fix "c.cfg"
+LET fc = LAST
+SYS JOIN fix "gone.cfg"
+LET fg = LAST
+
+SYS WRITE fa "host=old port=1"
+SYS WRITE fb "host=old port=2"
+SYS WRITE fc "host=keep port=3"
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+LET bag = LAST
+
+SYS REPLACEFILES bag "host=old" "host=new"
+ASSERT OK == 1
+ASSERT REPLACEFILES_N == 2
+ASSERT REPLACEFILES_SUBS == 2
+ASSERT REPLACEFILES_SCAN == 3
+ASSERT REPLACEFILES_SKIP == 1
+ASSERT REPLACEFILES_MISS == 0
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 0
+
+SYS READ fa
+SYS EQS LAST "host=new port=1"
+ASSERT LAST_N == 1
+SYS READ fb
+SYS HAS LAST "host=new"
+ASSERT LAST_N == 1
+SYS READ fc
+SYS EQS LAST "host=keep port=3"
+ASSERT LAST_N == 1
+
+# two-arg form: bag from LAST after PATHGLOB
+SYS PATHGLOB fix "*.cfg"
+SYS KEEPFILES
+SYS SUBFILES "port=" "p="
+ASSERT SUBFILES_N == 3
+ASSERT REPLACEFILES_SUBS == 3
+SYS READ fa
+SYS HAS LAST "p=1"
+ASSERT LAST_N == 1
+
+# soft miss
+SYS PUSH bag fg
+LET bag2 = LAST
+SYS REPLACEFILES bag2 "host=" "node="
+ASSERT REPLACEFILES_MISS == 1
+ASSERT OK == 0
+# fa/fb had host=new → rewritten; fc host=keep rewritten too
+ASSERT REPLACEFILES_N >= 1
+
+# empty old → no-op
+SYS REPLACEFILES bag "" "x"
+ASSERT REPLACEFILES_N == 0
+ASSERT REPLACEFILES_SKIP == 3
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_replacefiles ok"
