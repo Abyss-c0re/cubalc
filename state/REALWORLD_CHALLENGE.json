@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB * + KEEPFILES → 3 logs drop nested",
+      "cmd": "PATHGLOB * + KEEPFILES \u2192 3 logs drop nested",
       "ok": true,
       "note": "kind filter"
     },
@@ -44,13 +44,13 @@
     },
     {
       "name": "stale_thresh",
-      "cmd": "THRESHKV age>=1 → mid+old_small",
+      "cmd": "THRESHKV age>=1 \u2192 mid+old_small",
       "ok": true,
       "note": "drops age 0 fresh"
     },
     {
       "name": "ages_with_dirs",
-      "cmd": "AGEALL without KEEPFILES → nested:0 HIT (dir has mtime)",
+      "cmd": "AGEALL without KEEPFILES \u2192 nested:0 HIT (dir has mtime)",
       "ok": true,
       "note": "dir is AGE hit not miss unlike SIZEALL"
     },
@@ -86,13 +86,13 @@
       "area": "host|fs",
       "title": "AGEALL treats directories as HIT (real mtime) while SIZEALL treats them as MISS",
       "detail": "Inconsistent bag-map semantics: AGEALL on nested/ succeeds with age seconds (often 0 if just created); SIZEALL on same path is MISS+0. Agents cannot share KEEPFILES-optional pipelines across size and age boards safely.",
-      "repro": "AGEALL paths_with_dir → nested:0 AGEALL_HIT includes dir; SIZEALL → SIZEALL_MISS"
+      "repro": "AGEALL paths_with_dir \u2192 nested:0 AGEALL_HIT includes dir; SIZEALL \u2192 SIZEALL_MISS"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
-      "title": "No AGEALL name:age / path:age single-shot — need BASENAMEALL+ZIP",
+      "title": "No AGEALL name:age / path:age single-shot \u2014 need BASENAMEALL+ZIP",
       "detail": "Same class as SIZEALL: parallel decimal bag only. Desync if PATHS filtered after ages without remap.",
       "repro": "AGEALL then ZIP BASENAMEALL ages"
     },
@@ -101,7 +101,7 @@
       "severity": "med",
       "area": "host|time",
       "title": "AGEALL age 0 == brand-new and == just-created dir pollution",
-      "detail": "Fresh files age 0; dirs also often 0. THRESHKV min=1 drops both fresh files and dir noise — cannot keep zero-age files if filtering dirs via age alone.",
+      "detail": "Fresh files age 0; dirs also often 0. THRESHKV min=1 drops both fresh files and dir noise \u2014 cannot keep zero-age files if filtering dirs via age alone.",
       "repro": "new_big.log:0 and nested:0 both age 0"
     },
     {
@@ -109,16 +109,16 @@
       "severity": "med",
       "area": "host|pick",
       "title": "NEWEST_N is mtime epoch not age seconds; LARGEST_N is bytes",
-      "detail": "Side-channel units differ across pick ops sharing *_N suffix. Agents must remember NEWEST_N≠age.",
-      "repro": "NEWEST → path; NEWEST_N=1785991085 epoch"
+      "detail": "Side-channel units differ across pick ops sharing *_N suffix. Agents must remember NEWEST_N\u2260age.",
+      "repro": "NEWEST \u2192 path; NEWEST_N=1785991085 epoch"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
       "title": "No AGEALL threshold filter on path bag (keep paths age>=min)",
-      "detail": "Stale path selection needs ZIP to KV then THRESHKV then KEYS peel — multi-step. No KEEPOLD/FILTERAGE path op.",
-      "repro": "want paths with age>=60 → ZIP+THRESHKV+KEYS"
+      "detail": "Stale path selection needs ZIP to KV then THRESHKV then KEYS peel \u2014 multi-step. No KEEPOLD/FILTERAGE path op.",
+      "repro": "want paths with age>=60 \u2192 ZIP+THRESHKV+KEYS"
     },
     {
       "id": "W6",
@@ -126,7 +126,7 @@
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
       "detail": "Ages bag collapses to digit run e.g. \"013\" unreadable as array.",
-      "repro": "PRINT_JSON ages → \"013\""
+      "repro": "PRINT_JSON ages \u2192 \"013\""
     },
     {
       "id": "W7",
@@ -140,9 +140,9 @@
       "id": "W8",
       "severity": "low",
       "area": "host|time",
-      "title": "No bulk utime set — cannot fabricate historical mtimes in-language",
+      "title": "No bulk utime set \u2014 cannot fabricate historical mtimes in-language",
       "detail": "Tests need host sleep/touch -d. TOUCH only refreshes to now. Blocks pure-CubalC stale fixture setup.",
-      "repro": "TOUCH path → now only"
+      "repro": "TOUCH path \u2192 now only"
     }
   ],
   "workarounds": [
@@ -166,6 +166,6 @@
     "PRINT_JSON ages collapse to digit soup",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "d8120257bc2acd828f824b23c678f2543c8a4634",
   "ts": "2026-08-06T04:38:30Z"
 }
