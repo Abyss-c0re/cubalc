@@ -321,6 +321,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 291. ~~**`SYS PUSHD` / `POPD` / `DIRSTACK`**~~ **done** (cwd stack · temp relative plate I/O without losing base).
 292. ~~**`SYS KINDSTR` / `FILEKIND`**~~ **done** (path → file|dir|link|missing|… · triage without multi-probe glue).
 293. ~~**`SYS RELPATH` / `REL` / `STRIPBASE`**~~ **done** (base+path → relative plate path · portable after WALK/PUSHD).
+294. ~~**`SYS ATIME` / `CTIME`**~~ **done** (access + status-change epoch · plate freshness beyond MTIME).
 
 ## Tick protocol
 

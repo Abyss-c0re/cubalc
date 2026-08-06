@@ -1,0 +1,63 @@
+# SYS ATIME / CTIME — access and status-change epoch probes
+# Usability: plate freshness beyond MTIME without shell stat
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "atime_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "atime-ctime-payload"
+ASSERT OK == 1
+
+# both stamps present after create
+SYS MTIME p
+ASSERT OK == 1
+LET mt = LAST_N
+ASSERT mt > 1000000000
+
+SYS ATIME p
+ASSERT OK == 1
+ASSERT LAST_N > 1000000000
+ASSERT ATIME_N == LAST_N
+LET at = LAST_N
+
+SYS CTIME p
+ASSERT OK == 1
+ASSERT LAST_N > 1000000000
+ASSERT CTIME_N == LAST_N
+LET ct = LAST_N
+
+# ctime typically >= mtime around create; atime may equal mtime on noatime
+ASSERT ct >= mt
+ASSERT at > 0
+
+# aliases
+SYS ACCESSTIME p
+ASSERT OK == 1
+ASSERT LAST_N == at
+SYS CHANGETIME p
+ASSERT OK == 1
+ASSERT LAST_N == ct
+SYS STATUSTIME p
+ASSERT LAST_N == ct
+
+# soft miss missing path
+SYS ATIME "/no/such/atime_mi_xyz"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS CTIME "/no/such/atime_mi_xyz"
+ASSERT OK == 0
+
+# empty path soft fail
+SYS ATIME ""
+ASSERT OK == 0
+SYS CTIME ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 4
+
+# cleanup
+SYS RM p
+
+PRINT "sys_atime ok"

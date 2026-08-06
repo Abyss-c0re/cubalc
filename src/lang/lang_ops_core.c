@@ -4969,6 +4969,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS ATIME|ACCESSTIME path — st_atime epoch → LAST_N/ATIME; soft miss OK=0.
+     * SYS CTIME|CHANGETIME|STATUSTIME path — st_ctime epoch → LAST_N/CTIME.
+     * Usability: read/status freshness beyond MTIME without shell stat. */
+    if (kw(&L->cur,"ATIME") || kw(&L->cur,"ACCESSTIME") || kw(&L->cur,"ACCESS_TIME") ||
+        kw(&L->cur,"LASTACCESS") || kw(&L->cur,"READTIME") ||
+        kw(&L->cur,"CTIME") || kw(&L->cur,"CHANGETIME") || kw(&L->cur,"CHANGE_TIME") ||
+        kw(&L->cur,"STATUSTIME") || kw(&L->cur,"INODETIME") || kw(&L->cur,"STATUS_TIME")){
+      char path[512], op[24];
+      cubalc_host_result hr;
+      int want_ctime;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      want_ctime = (strcmp(op, "CTIME") == 0 || strcmp(op, "CHANGETIME") == 0 ||
+                    strcmp(op, "CHANGE_TIME") == 0 || strcmp(op, "STATUSTIME") == 0 ||
+                    strcmp(op, "INODETIME") == 0 || strcmp(op, "STATUS_TIME") == 0);
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] ||
+          (want_ctime ? cubalc_host_ctime(path, &hr) : cubalc_host_atime(path, &hr)) != 0 ||
+          !hr.ok) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, want_ctime ? "CTIME" : "ATIME", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", want_ctime ? "CTIME: fail" : "ATIME: fail");
+          var_set_str(vm, "ERR", want_ctime ? "CTIME: fail" : "ATIME: fail");
+        }
+        bump(vm); return 1;
+      }
+      {
+        char buf[40];
+        snprintf(buf, sizeof buf, "%ld", hr.n);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        if (want_ctime) {
+          var_set_num(vm, "CTIME", hr.n);
+          var_set_num(vm, "CTIME_N", hr.n);
+          var_set_str(vm, "CTIME_PATH", path);
+        } else {
+          var_set_num(vm, "ATIME", hr.n);
+          var_set_num(vm, "ATIME_N", hr.n);
+          var_set_str(vm, "ATIME_PATH", path);
+        }
+        var_set_num(vm, "OK", 1);
+        var_set_str(vm, "LAST", buf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      }
+      bump(vm); return 1;
+    }
     /* SYS MKDIR|MAKEDIR path — mkdir -p; OK if dir already exists.
      * Usability: agents create STATE/TMP plate trees without shell. */
     if (kw(&L->cur,"MKDIR") || kw(&L->cur,"MAKEDIR") || kw(&L->cur,"MAKE_DIR") ||
@@ -23034,6 +23093,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS NVL", "SYS NVL a b [c…] — alias of SYS COALESCE · default chain"},
       {"SYS MTIME", "SYS MTIME|MODTIME path — file mtime epoch → LAST_N · soft miss"},
       {"SYS AGE", "SYS AGE|FILEAGE path — seconds since mtime → LAST_N · plate freshness"},
+      {"SYS ATIME", "SYS ATIME|ACCESSTIME path — last access epoch → LAST_N"},
+      {"SYS CTIME", "SYS CTIME|CHANGETIME path — status-change epoch → LAST_N"},
       {"SYS STARTSI", "SYS STARTSI|ISTARTS|STARTS I hay pref — case-insensitive prefix · LAST_N"},
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
