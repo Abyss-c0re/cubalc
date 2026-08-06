@@ -26,7 +26,7 @@
     },
     {
       "name": "gate_deny",
-      "cmd": "unknown group REQUIRE → exit 2",
+      "cmd": "unknown group REQUIRE \u2192 exit 2",
       "ok": true,
       "note": "OK=1 LAST_N=0"
     },
@@ -60,7 +60,7 @@
       "id": "W1",
       "severity": "high",
       "area": "host|ingroup",
-      "title": "INGROUP unknown is OK=1 LAST_N=0 — same dual as HASENV/CAN*",
+      "title": "INGROUP unknown is OK=1 LAST_N=0 \u2014 same dual as HASENV/CAN*",
       "detail": "Empty name OK=0 sticky; unknown group probe OK=1. Agents confuse miss kinds when composing gates.",
       "repro": "INGROUP nosuch OK=1; INGROUP \"\" OK=0"
     },
@@ -78,7 +78,7 @@
       "area": "host|groups",
       "title": "GROUPS bag format / primary-first order undocumented for agents",
       "detail": "Only root on this host; multi-group hosts may differ primary placement. No GROUPS_IDS numeric bag dual.",
-      "repro": "GROUPS → names only"
+      "repro": "GROUPS \u2192 names only"
     },
     {
       "id": "W4",
@@ -92,8 +92,8 @@
       "id": "W5",
       "severity": "med",
       "area": "host|allow",
-      "title": "Comma roster needs REPLACEALL \\\\n dance — no CSV bag form",
-      "detail": "ARG1 root,ops,sre requires REPLACEALL comma→newline. WORDS+JOINLINES alternative still awkward.",
+      "title": "Comma roster needs REPLACEALL \\\\n dance \u2014 no CSV bag form",
+      "detail": "ARG1 root,ops,sre requires REPLACEALL comma\u2192newline. WORDS+JOINLINES alternative still awkward.",
       "repro": "allow root,ops,sre"
     },
     {
@@ -118,7 +118,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_GA_REQUIRE=abc.",
-      "repro": "REQUIRE=abc gate deny → rc 0"
+      "repro": "REQUIRE=abc gate deny \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -137,9 +137,9 @@
   ],
   "issues_faced": [
     "who/groups/in/gate/allow/check/match/peer green",
-    "comma→newline allow works via REPLACEALL",
+    "comma\u2192newline allow works via REPLACEALL",
     "selftest 262/262; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "125bc3989559f9c95e4dfe5bb50dbec8ecc1d64d",
   "ts": "2026-08-06T21:43:43Z"
 }
