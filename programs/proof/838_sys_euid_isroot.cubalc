@@ -1,0 +1,56 @@
+# SYS EUID / ISROOT — effective uid + root privilege probe
+# Usability: setuid-aware identity and agent root gates without shell id -u
+
+HOLD_FLASH 1
+
+# real uid
+SYS UID
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+LET r = LAST_N
+ASSERT UID == r
+ASSERT UID_N == r
+
+# RUID alias
+SYS RUID
+ASSERT LAST_N == r
+SYS GETUID
+ASSERT LAST_N == r
+
+# effective uid (same as real for normal agents)
+SYS EUID
+ASSERT OK == 1
+ASSERT LAST_N >= 0
+LET e = LAST_N
+ASSERT EUID == e
+ASSERT EUID_N == e
+SYS GETEUID
+ASSERT LAST_N == e
+SYS EFFECTIVE_UID
+ASSERT LAST_N == e
+
+# on ordinary (non-setuid) cubalc binary, real == effective
+ASSERT r == e
+
+# privilege probe: soft 0|1, always OK=1
+SYS ISROOT
+ASSERT OK == 1
+SYS IN LAST_N 0 1
+ASSERT LAST_N == 1
+LET rootish = ISROOT
+ASSERT ISROOT_N == rootish
+
+# euid==0 iff ISROOT
+IF e == 0 THEN
+  ASSERT rootish == 1
+ELSE
+  ASSERT rootish == 0
+END
+
+# aliases
+SYS AMROOT
+ASSERT LAST_N == rootish
+SYS ROOTPRIV
+ASSERT LAST_N == rootish
+
+PRINT "sys_euid_isroot ok"

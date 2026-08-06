@@ -326,6 +326,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 296. ~~**`SYS GID` / `EGID` / `GROUP`**~~ **done** (process group id + name · agent identity without shell id).
 297. ~~**`SYS GROUPS` / `INGROUP`**~~ **done** (supplementary group bag + membership probe · ACL without shell id -nG).
 298. ~~**`SYS PPID` / `PGID` / `SID`**~~ **done** (parent / process-group / session ids · process tree without shell · not DIRNAME PARENT).
+299. ~~**`SYS EUID` / `ISROOT`**~~ **done** (effective uid + root privilege probe · setuid-aware gates without shell id -u).
 
 ## Tick protocol
 

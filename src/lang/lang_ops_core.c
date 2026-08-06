@@ -15080,25 +15080,66 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS UID|USER_ID|EUID — numeric user id → LAST_N/UID */
+    /* SYS UID|RUID|GETUID — real user id → LAST_N/UID.
+     * SYS EUID|GETEUID|EFFECTIVE_UID — effective user id → LAST_N/EUID.
+     * SYS ISROOT|AMROOT|ROOTPRIV — LAST_N 1 if euid==0 (privilege probe OK=1).
+     * Usability: setuid-aware identity + agent root gates without shell id -u. */
     if (kw(&L->cur,"UID") || kw(&L->cur,"USER_ID") || kw(&L->cur,"USERID") ||
-        kw(&L->cur,"EUID") || kw(&L->cur,"GETUID")){
+        kw(&L->cur,"RUID") || kw(&L->cur,"REAL_UID") || kw(&L->cur,"REALUID") ||
+        kw(&L->cur,"GETUID") ||
+        kw(&L->cur,"EUID") || kw(&L->cur,"GETEUID") || kw(&L->cur,"EFFECTIVE_UID") ||
+        kw(&L->cur,"EFFECTIVEUID") ||
+        kw(&L->cur,"ISROOT") || kw(&L->cur,"AMROOT") || kw(&L->cur,"ROOTPRIV") ||
+        kw(&L->cur,"AS_ROOT")){
+      char op[24];
       long n = 0;
       char buf[32];
+      int want_euid = 0, want_root = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      want_root = (strcmp(op, "ISROOT") == 0 || strcmp(op, "AMROOT") == 0 ||
+                   strcmp(op, "ROOTPRIV") == 0 || strcmp(op, "AS_ROOT") == 0);
+      want_euid = (strcmp(op, "EUID") == 0 || strcmp(op, "GETEUID") == 0 ||
+                   strcmp(op, "EFFECTIVE_UID") == 0 || strcmp(op, "EFFECTIVEUID") == 0);
       lex_next(L);
+      if (want_root) {
+#if defined(CUBALC_OS_WINDOWS)
+        n = 0;
+#else
+        n = (geteuid() == 0) ? 1 : 0;
+#endif
+        vm->last_n = n;
+        var_set_num(vm, "LAST_N", n);
+        var_set_num(vm, "ISROOT", n);
+        var_set_num(vm, "ISROOT_N", n);
+        var_set_num(vm, "AMROOT", n);
+        var_set_num(vm, "OK", 1);
+        snprintf(buf, sizeof buf, "%ld", n);
+        var_set_str(vm, "LAST", buf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+        bump(vm); return 1;
+      }
 #if defined(CUBALC_OS_WINDOWS)
       {
-        const char *e = getenv("UID");
+        const char *e = getenv(want_euid ? "EUID" : "UID");
         if (e && e[0]) n = strtol(e, NULL, 10);
       }
 #else
-      n = (long)getuid();
+      n = want_euid ? (long)geteuid() : (long)getuid();
       if (n < 0) n = 0;
 #endif
       vm->last_n = n;
       var_set_num(vm, "LAST_N", n);
-      var_set_num(vm, "UID", n);
       var_set_num(vm, "OK", 1);
+      if (want_euid) {
+        var_set_num(vm, "EUID", n);
+        var_set_num(vm, "EUID_N", n);
+      } else {
+        var_set_num(vm, "UID", n);
+        var_set_num(vm, "UID_N", n);
+        var_set_num(vm, "RUID", n);
+      }
       snprintf(buf, sizeof buf, "%ld", n);
       var_set_str(vm, "LAST", buf);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
@@ -23505,7 +23546,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PID", "SYS PID — process id → LAST_N/PID"},
       {"SYS HOSTNAME", "SYS HOSTNAME|HOST — machine name → LAST/HOSTNAME"},
       {"SYS USER", "SYS USER|USERNAME — login name → LAST/USER"},
-      {"SYS UID", "SYS UID|USER_ID — numeric user id → LAST_N/UID"},
+      {"SYS UID", "SYS UID|RUID|GETUID — real user id → LAST_N/UID"},
+      {"SYS EUID", "SYS EUID|GETEUID — effective user id → LAST_N/EUID"},
+      {"SYS ISROOT", "SYS ISROOT|AMROOT — LAST_N 1 if euid==0 privilege probe"},
       {"SYS HOME", "SYS HOME|HOMEDIR — home directory → LAST/HOME"},
       {"SMX", "SMX KEY|TALK|EXCHANGE|SERVE|DIAL — binary mesh, no HTTP"},
       {"SMX KEY", "SMX KEY — load CUBALC_SMX_KEY / demo key"},
