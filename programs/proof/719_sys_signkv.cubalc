@@ -1,0 +1,69 @@
+# SYS SIGNKV / DIRKV — map key:val values to signum -1|0|1
+# Usability: DIFFKV direction plate without EACH+SIGN+KVSET (pairs with ABSKV)
+
+HOLD_FLASH 1
+
+LET d = "error:5\nwarn:-3\ninfo:0\ncrit:-1\ndebug:2"
+SYS SIGNKV d
+ASSERT OK == 1
+ASSERT LAST_N == 5
+ASSERT SIGNKV_N == 5
+ASSERT SIGNKV_POS == 2
+ASSERT SIGNKV_NEG == 2
+ASSERT SIGNKV_ZERO == 1
+SYS EQS LAST "error:1\nwarn:-1\ninfo:0\ncrit:-1\ndebug:1"
+ASSERT LAST_N == 1
+
+# all positive
+SYS SIGNKV "a:9\nb:1"
+ASSERT SIGNKV_POS == 2
+ASSERT SIGNKV_NEG == 0
+ASSERT SIGNKV_ZERO == 0
+SYS EQS LAST "a:1\nb:1"
+ASSERT LAST_N == 1
+
+# empty
+SYS SIGNKV ""
+ASSERT LAST_N == 0
+ASSERT SIGNKV_N == 0
+
+# custom sep
+LET cfg = "up=4\ndown=-2\nflat=0"
+SYS SIGNKV cfg "="
+ASSERT SIGNKV_POS == 1
+ASSERT SIGNKV_NEG == 1
+ASSERT SIGNKV_ZERO == 1
+SYS EQS LAST "up=1\ndown=-1\nflat=0"
+ASSERT LAST_N == 1
+
+# aliases
+SYS DIRKV d
+ASSERT DIRKV_POS == 2
+ASSERT DIRKV_NEG == 2
+SYS SGNKV d
+ASSERT SIGNKV_N == 5
+SYS TRENDKV d
+ASSERT SIGNKV_ZERO == 1
+
+# agent: DIFFKV → SIGNKV → count rising vs falling severities
+LET now_log = "ERROR\nERROR\nERROR\nWARN\nINFO"
+LET base_log = "ERROR\nWARN\nWARN\nWARN\nINFO\nINFO"
+SYS FREQ now_log
+LET hn = LAST
+SYS FREQ base_log
+LET hb = LAST
+SYS DIFFKV hn hb
+# ERROR:3-1=2 WARN:1-3=-2 INFO:1-2=-1
+SYS DROPZERO LAST
+SYS SIGNKV LAST
+LET dir = LAST
+ASSERT SIGNKV_POS == 1
+ASSERT SIGNKV_NEG == 2
+SYS LOOKUPN dir "ERROR" OR 0
+ASSERT LAST_N == 1
+SYS LOOKUPN dir "WARN" OR 0
+ASSERT LAST_N == -1
+SYS LOOKUPN dir "INFO" OR 0
+ASSERT LAST_N == -1
+
+PRINT "sys_signkv ok"
