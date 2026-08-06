@@ -1,0 +1,85 @@
+# SYS KVFILESET / FILEKVSET / SETKVFILE — set/update key=val in plate file
+# Usability: dual of LOOKUPFILE · plate write without READ+KVSET+WRITE glue
+# Default sep "=". Create file if missing. HIT 1=replace 0=append.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "kvfileset_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fs = LAST
+SYS WRITE fs "host=peer1\nport=7700\nmode=soft"
+
+# update existing
+SYS KVFILESET fs "port" "8800"
+ASSERT OK == 1
+ASSERT KVFILESET_HIT == 1
+ASSERT KVFILESET_I == 1
+ASSERT KVFILESET_TOTAL == 3
+SYS EQS LAST "port=8800"
+ASSERT LAST_N == 1
+
+SYS LOOKUPFILE fs "port"
+SYS EQS LAST "8800"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "host"
+SYS EQS LAST "peer1"
+ASSERT LAST_N == 1
+
+# append new key
+SYS FILEKVSET fs "ttl" "30"
+ASSERT KVFILESET_HIT == 0
+ASSERT KVFILESET_NEW == 1
+ASSERT KVFILESET_I == 3
+ASSERT KVFILESET_TOTAL == 4
+SYS EQS LAST "ttl=30"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE fs "ttl"
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+
+# custom sep :
+SYS JOIN fix "hist.txt"
+LET hs = LAST
+SYS WRITE hs "error:3\nwarn:1"
+SYS KVFILESET hs "error" "5" ":"
+ASSERT KVFILESET_HIT == 1
+SYS EQS LAST "error:5"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE hs "error" ":"
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+SYS KVFILESET hs "crit" "2" ":"
+ASSERT KVFILESET_HIT == 0
+SYS LOOKUPFILE hs "crit" ":"
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# create missing plate
+SYS JOIN fix "new_plate.txt"
+LET np = LAST
+SYS RM np
+SYS PLATESET np "status" "boot"
+ASSERT OK == 1
+ASSERT KVFILESET_HIT == 0
+ASSERT KVFILESET_TOTAL == 1
+SYS EQS LAST "status=boot"
+ASSERT LAST_N == 1
+SYS LOOKUPFILE np "status"
+SYS EQS LAST "boot"
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS KVFILESET "" "a" "b"
+ASSERT OK == 0
+
+# cleanup
+SYS RM fs
+SYS RM hs
+SYS RM np
+
+PRINT "sys_kvfileset ok"

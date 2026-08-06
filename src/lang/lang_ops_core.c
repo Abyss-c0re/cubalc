@@ -5935,6 +5935,194 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", (found || used_or) ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS KVFILESET|FILEKVSET|SETKVFILE path key value [sep]
+     * — set/update key=val line in a plate file (read-modify-write).
+     * Dual of LOOKUPFILE / file KVSET. Default sep "=".
+     * Hit → replace first matching key; miss → append. Missing file → create.
+     * LAST = key+sep+value line; KVFILESET_HIT 1|0 · I · TOTAL(after).
+     * Soft empty path → OK=0. Soft write fail → OK=0.
+     * Usability: plate status write without READ+KVSET+WRITE glue. */
+    if (kw(&L->cur,"KVFILESET") || kw(&L->cur,"FILEKVSET") ||
+        kw(&L->cur,"SETKVFILE") || kw(&L->cur,"PUTKVFILE") ||
+        kw(&L->cur,"PLATESET") || kw(&L->cur,"CONFIGSET") ||
+        kw(&L->cur,"FILESETKV") || kw(&L->cur,"KVFILEPUT") ||
+        kw(&L->cur,"SETFILEKV") || kw(&L->cur,"WRITEKVFILE")){
+      char path[512], key[256], val[512], sep[32], a[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX], newline[768], field[512], left[256];
+      const char *p, *start;
+      size_t flen, kn, sn, vn, olen = 0, left_n;
+      long idx = 0, kept = 0, hit = 0, found_i = -1;
+      int first = 1, created = 0;
+      cubalc_host_result hr, wr;
+      lex_next(L);
+      path[0] = 0; key[0] = 0; val[0] = 0; out[0] = 0; a[0] = 0; newline[0] = 0;
+      snprintf(sep, sizeof sep, "%s", "=");
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS KVFILESET path key value [sep]");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (resolve_str_arg(vm, L, key, sizeof key) != 0) key[0] = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      /* strip value to first line */
+      {
+        size_t i = 0;
+        while (val[i] && val[i] != '\n' && val[i] != '\r' && i + 1 < sizeof val) i++;
+        val[i] = 0;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", "=");
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && strlen(L->cur.text) <= 2) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      kn = strlen(key);
+      sn = strlen(sep);
+      vn = strlen(val);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KVFILESET_N", 0);
+        var_set_num(vm, "KVFILESET_I", -1);
+        var_set_num(vm, "KVFILESET_HIT", 0);
+        var_set_num(vm, "KVFILESET_TOTAL", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "KVFILESET: empty path");
+        var_set_str(vm, "ERR", "KVFILESET: empty path");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_read(path, &hr) != 0) {
+        /* create new plate with single key=val */
+        created = 1;
+        hr.str[0] = 0;
+      }
+      p = hr.str;
+      if (*p) {
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (sn == 0) {
+              match = (strcmp(field, key) == 0);
+            } else {
+              const char *sp = strstr(field, sep);
+              if (sp) {
+                left_n = (size_t)(sp - field);
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              } else {
+                left_n = take;
+                if (left_n >= sizeof left) left_n = sizeof left - 1;
+                memcpy(left, field, left_n);
+                left[left_n] = 0;
+              }
+              match = (strcmp(left, key) == 0);
+            }
+            if (match && found_i < 0) {
+              if (sn == 0)
+                snprintf(newline, sizeof newline, "%s", val);
+              else
+                snprintf(newline, sizeof newline, "%s%s%s", key, sep, val);
+              found_i = idx;
+              hit = 1;
+            } else {
+              snprintf(newline, sizeof newline, "%s", field);
+            }
+          }
+          {
+            size_t nlen = strlen(newline);
+            if (!first && olen + 1 < sizeof out) out[olen++] = '\n';
+            first = 0;
+            if (olen + nlen < sizeof out) {
+              memcpy(out + olen, newline, nlen);
+              olen += nlen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, newline, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (!hit) {
+        if (sn == 0)
+          snprintf(newline, sizeof newline, "%s", key[0] ? key : val);
+        else
+          snprintf(newline, sizeof newline, "%s%s%s", key, sep, val);
+        {
+          size_t nlen = strlen(newline);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + nlen < sizeof out) {
+            memcpy(out + olen, newline, nlen);
+            olen += nlen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, newline, t);
+            olen += t;
+          }
+          out[olen] = 0;
+        }
+        found_i = kept;
+        kept++;
+      } else {
+        /* rebuild newline for LAST reporting */
+        if (sn == 0)
+          snprintf(newline, sizeof newline, "%s", val);
+        else
+          snprintf(newline, sizeof newline, "%s%s%s", key, sep, val);
+      }
+      if (cubalc_host_write(path, out, &wr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "KVFILESET_N", 0);
+        var_set_num(vm, "KVFILESET_I", found_i);
+        var_set_num(vm, "KVFILESET_HIT", hit);
+        var_set_num(vm, "KVFILESET_TOTAL", kept);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", wr.err[0] ? wr.err : "KVFILESET: write fail");
+        var_set_str(vm, "ERR", wr.err[0] ? wr.err : "KVFILESET: write fail");
+        bump(vm); return 1;
+      }
+      (void)kn; (void)vn; (void)created;
+      var_set_str(vm, "LAST", newline);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", newline);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_str(vm, "KVFILESET", newline);
+      var_set_str(vm, "FILEKVSET", newline);
+      var_set_str(vm, "SETKVFILE", newline);
+      var_set_num(vm, "KVFILESET_N", kept);
+      var_set_num(vm, "KVFILESET_I", found_i);
+      var_set_num(vm, "KVFILESET_HIT", hit);
+      var_set_num(vm, "KVFILESET_TOTAL", kept);
+      var_set_num(vm, "KVFILESET_NEW", hit ? 0 : 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS READALL|CATFILES|SLURPALL bag [sep]
      * — concatenate contents of every path in bag → LAST.
      * Optional sep between files (default empty). Soft miss skips unreadable.
@@ -15670,7 +15858,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|READALL|CATFILES|SLURPALL|CATALL|CONCATFILES|READFILES|WRITEALL|WRITEFILES|BULKWRITE|SPLATALL|OVERWRITEALL|REPLACEFILES|SUBFILES|GSUBFILES|FILEGSUB|BULKREPLACE|COUNTINFILES|GREPCOUNTFILES|FILECOUNT|COUNTINFILESI|FIRSTFILE|HITFILE|GREP1FILE|LASTFILE|HITFILEL|FIRSTFILEI|LASTFILEI|GREPLINES|EXTRACTLINES|FILEGREPLINES|GREPLINESI|HEADFILE|FILEHEAD|TAILFILE|FILETAIL|HEADF|TAILF|LINECOUNTALL|WCALL|MAPLINES|LINESALL|MIDFILE|FILEMID|LINESLICE|SLICEFILE|FILESLICE|LINEAT|FILELINE|ATLINE|NTHFILELINE|SETFILELINE|FILESETLINE|PUTFILELINE|SETLINEAT|INSERTFILELINE|FILEINSERTLINE|INSFILELINE|INSLINEF|DROPFILELINE|FILEDROPLINE|DELFILELINE|DROPLINEF|FINDFILELINE|FILEFINDLINE|LINEINDEXF|FINDLINEF|FINDFILELINEI|LASTFINDFILELINE|FILELASTFIND|LINEINDEXFL|LASTFINDFILELINEI|COUNTFILELINE|FILECOUNTLINE|COUNTMATCHF|COUNTFILELINEI|GREPFILE|FILEGREP|MATCHFILELINES|GREPFILEI|SETMATCHFILE|FILESETMATCH|REPLACEMATCHF|SETMATCHFILEI|DROPMATCHFILE|FILEDROPMATCH|DELMATCHFILE|DROPMATCHFILEI|DROPALLMATCHFILE|FILEDROPALLMATCH|DELALLMATCHFILE|PURGEMATCHFILE|DROPALLMATCHFILEI|SETALLMATCHFILE|FILESETALLMATCH|REPLACEALLMATCHF|SETALLMATCHFILEI|INSERTMATCHFILE|FILEINSERTMATCH|AFTERMATCHFILE|INSERTMATCHFILEI|BEFOREMATCHFILE|INSERTBEFOREMATCH|FILEINSERTBEFORE|BEFOREMATCHFILEI|LOOKUPFILE|FILELOOKUP|KVFILEGET|PLATEGET|LOOKUPFILEI|KVFILESET|FILEKVSET|SETKVFILE|PLATESET|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -16047,6 +16235,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS KVFILEGET", "SYS KVFILEGET alias of SYS LOOKUPFILE"},
       {"SYS PLATEGET", "SYS PLATEGET alias of SYS LOOKUPFILE"},
       {"SYS LOOKUPFILEI", "SYS LOOKUPFILEI case-insensitive LOOKUPFILE"},
+      {"SYS KVFILESET", "SYS KVFILESET|FILEKVSET|SETKVFILE path key value [sep] — set/update key=val in plate file"},
+      {"SYS FILEKVSET", "SYS FILEKVSET alias of SYS KVFILESET"},
+      {"SYS SETKVFILE", "SYS SETKVFILE alias of SYS KVFILESET"},
+      {"SYS PLATESET", "SYS PLATESET alias of SYS KVFILESET"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
