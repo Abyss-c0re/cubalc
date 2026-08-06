@@ -1,0 +1,41 @@
+# SYS NPROC / CPUS / CORES / PROCESSORS
+# — online processor count for agent work partitioning
+# Usability: STRIDE/CHUNK worker fan-out without shell nproc
+
+HOLD_FLASH 1
+
+# basic read
+SYS NPROC
+ASSERT OK == 1
+ASSERT NPROC >= 1
+ASSERT LAST_N == NPROC
+ASSERT CPUS == NPROC
+ASSERT CORES == NPROC
+SYS LEN LAST
+ASSERT LAST_N >= 1
+
+# aliases
+SYS CPUS
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS CORES
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+SYS PROCESSORS
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+# agent: partition work bag by CPU count
+SYS NPROC
+LET workers = LAST_N
+SYS RANGE 0 15
+SYS STRIDE workers 0
+SYS LINES
+ASSERT LAST_N >= 1
+ASSERT LAST_N <= 16
+
+# sane upper bound for one host
+SYS NPROC
+ASSERT LAST_N <= 65536
+
+PRINT "sys_nproc ok"
