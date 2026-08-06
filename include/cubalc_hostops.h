@@ -72,6 +72,10 @@ int cubalc_host_spawn(const char *bin, char *const argv[], cubalc_host_result *r
 /* which — resolve binary on PATH, then CubalC lib/program (readable) */
 int cubalc_host_which(const char *name, cubalc_host_result *r);
 
+/* which_bin — PATH / absolute / ./out / ~/.local/bin only (X_OK). No lib fallback.
+ * Usability: REQUIRE BIN / SYS WHICHBIN host tool gates. */
+int cubalc_host_which_bin(const char *name, cubalc_host_result *r);
+
 /* find CubalC resource only: lib short name · programs/ · proof/ · path.
  * Prefer over PATH when callers want INCLUDE-style resolution (not bins). */
 int cubalc_host_find_cubalc(const char *name, cubalc_host_result *r);

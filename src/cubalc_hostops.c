@@ -770,12 +770,12 @@ int cubalc_host_find_cubalc(const char *name, cubalc_host_result *r) {
   return -1;
 }
 
-int cubalc_host_which(const char *name, cubalc_host_result *r) {
-  r_clear(r);
-  if (!name) return -1;
+/* PATH/abs/out/local-bin only — shared by which_bin and which. */
+static int cubalc_host_which_bin_inner(const char *name, cubalc_host_result *r) {
   char try[512];
   const char *home = getenv("HOME");
   const char *cbin = getenv("CUBALC_BIN");
+  if (!name || !name[0]) return -1;
   if (cbin && strstr(name, "cubalc") && access(cbin, X_OK) == 0) {
     snprintf(r->str, sizeof r->str, "%s", cbin); r->ok=1; r->n=1; return 0;
   }
@@ -789,16 +789,37 @@ int cubalc_host_which(const char *name, cubalc_host_result *r) {
     if (access(try, X_OK) == 0) { snprintf(r->str, sizeof r->str, "%s", try); r->ok=1; r->n=1; return 0; }
   }
   /* PATH search */
-  const char *path = getenv("PATH");
-  if (path) {
-    char pbuf[4096]; snprintf(pbuf, sizeof pbuf, "%s", path);
-    for (char *tok = strtok(pbuf, ":"); tok; tok = strtok(NULL, ":")) {
-      snprintf(try, sizeof try, "%s/%s", tok, name);
-      if (access(try, X_OK) == 0) {
-        snprintf(r->str, sizeof r->str, "%s", try); r->ok=1; r->n=1; return 0;
+  {
+    const char *path = getenv("PATH");
+    if (path) {
+      char pbuf[4096]; snprintf(pbuf, sizeof pbuf, "%s", path);
+      for (char *tok = strtok(pbuf, ":"); tok; tok = strtok(NULL, ":")) {
+        snprintf(try, sizeof try, "%s/%s", tok, name);
+        if (access(try, X_OK) == 0) {
+          snprintf(r->str, sizeof r->str, "%s", try); r->ok=1; r->n=1; return 0;
+        }
       }
     }
   }
+  return -1;
+}
+
+int cubalc_host_which_bin(const char *name, cubalc_host_result *r) {
+  r_clear(r);
+  if (!name) return -1;
+  if (cubalc_host_which_bin_inner(name, r) == 0)
+    return 0;
+  snprintf(r->err, sizeof r->err, "which_bin: not found %s", name);
+  r->ok = 0;
+  r->str[0] = 0;
+  return -1;
+}
+
+int cubalc_host_which(const char *name, cubalc_host_result *r) {
+  r_clear(r);
+  if (!name) return -1;
+  if (cubalc_host_which_bin_inner(name, r) == 0)
+    return 0;
   /* Usability: fall back to CubalC lib/program resolve (SYS WHICH hold_seed). */
   if (cubalc_host_find_cubalc(name, r) == 0)
     return 0;

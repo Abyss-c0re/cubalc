@@ -1,0 +1,67 @@
+# REQUIRE BIN / CMD / EXE + SYS WHICHBIN / PATHWHICH
+# — PATH-only executable gates (no CubalC lib fallback)
+# Usability: fail-fast missing host tools without shell which
+
+HOLD_FLASH 1
+
+# soft probe: common shell tools
+SYS WHICHBIN "sh"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+LET sh0 = LAST
+SYS LEN sh0
+ASSERT LAST_N >= 3
+SYS STARTS sh0 "/"
+ASSERT LAST_N == 1
+DEFINED WHICHBIN
+ASSERT DEFINED == 1
+SYS EQS sh0 WHICHBIN
+ASSERT LAST_N == 1
+
+# aliases
+SYS PATHWHICH "ls"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS WHICH BIN "cat"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# missing tool soft-fails (sticky LAST_ERR)
+SYS WHICHBIN "cubalc_no_such_tool_xyz_mi"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 8
+
+# REQUIRE BIN — hard gate success
+REQUIRE BIN "sh"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_BIN LAST
+ASSERT LAST_N == 1
+SYS STARTS REQUIRE_BIN "/"
+ASSERT LAST_N == 1
+
+REQUIRE CMD "ls"
+ASSERT OK == 1
+REQUIRE EXE "cat"
+ASSERT OK == 1
+
+# absolute path form
+SYS WHICHBIN "sh"
+LET shpath = LAST
+REQUIRE BIN shpath
+ASSERT OK == 1
+SYS EQS LAST shpath
+ASSERT LAST_N == 1
+
+# WHICHBIN does not resolve CubalC libs (PATH-only)
+SYS WHICHBIN "hold_seed"
+ASSERT OK == 0
+
+# WHICH still finds libs (regression)
+SYS WHICH "hold_seed"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+PRINT "require_bin ok"
