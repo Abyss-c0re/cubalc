@@ -300,6 +300,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 270. ~~**`REQUIRE BIN` / `SYS WHICHBIN`**~~ **done** (PATH-only tool gate · soft probe + fail-fast · no lib fallback).
 271. ~~**`SYS WHICHBIN` string-var / LAST name**~~ **done** (resolve tool bag vars · not IDENT text "tool").
 272. ~~**`SYS ISATTY` / `TTY`**~~ **done** (terminal stream probe · pipe-aware agents).
+273. ~~**`SYS LOADAVG` / `LOAD`**~~ **done** (1/5/15 load · centiload IF for agent backpressure).
 
 ## Tick protocol
 

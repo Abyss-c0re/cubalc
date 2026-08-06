@@ -1,0 +1,63 @@
+# SYS LOADAVG / LOAD / GETLOADAVG — host load averages
+# Usability: agent backpressure without shell uptime/w
+
+HOLD_FLASH 1
+
+SYS LOADAVG
+ASSERT OK == 1
+# LAST = "a.bb c.dd e.ff" bag
+SYS WORDS LAST
+ASSERT LAST_N == 3
+DEFINED LOAD1
+ASSERT DEFINED == 1
+DEFINED LOAD5
+ASSERT DEFINED == 1
+DEFINED LOAD15
+ASSERT DEFINED == 1
+DEFINED LOAD1_N
+ASSERT DEFINED == 1
+
+# centiload non-negative integers
+ASSERT LOAD1_N >= 0
+ASSERT LOAD5_N >= 0
+ASSERT LOAD15_N >= 0
+# LAST_N mirrors 1-min centiload
+SYS LOADAVG
+ASSERT LAST_N == LOAD1_N
+ASSERT LOADAVG_N == LOAD1_N
+
+# string fields look numeric
+SYS LEN LOAD1
+ASSERT LAST_N >= 3
+SYS HAS LOAD1 "."
+ASSERT LAST_N == 1
+
+# aliases
+SYS LOAD
+ASSERT OK == 1
+SYS WORDS LAST
+ASSERT LAST_N == 3
+SYS GETLOADAVG
+ASSERT OK == 1
+SYS LA
+ASSERT OK == 1
+
+# agent: throttle when load > 50.00 (centiload 5000)
+SYS LOADAVG
+SYS NPROC
+LET cpus = LAST_N
+SYS LOADAVG
+# busy if 1-min centiload > cpus*100 (load > nproc)
+LET busy_cut = cpus * 100
+SYS CMP LOAD1_N busy_cut
+# LAST_N from CMP: -1|0|1 — just ensure CMP works
+ASSERT LAST_N >= -1
+ASSERT LAST_N <= 1
+
+# plate line
+SYS LOADAVG
+SYS CAT "load " LAST
+SYS HAS LAST "load "
+ASSERT LAST_N == 1
+
+PRINT "sys_loadavg ok"
