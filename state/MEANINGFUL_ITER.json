@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 150,
-  "version": "1.15.175-usability",
-  "item": "SYS KEEPKEY / GREPKEY filter key:val by key needle",
-  "item_id": 183,
-  "title": "SYS KEEPKEY|GREPKEY bag needle [sep] — DROPKEY invert · KEEPKEYI",
-  "commit": "206077deeb0dcd0abbb0d883095c3d7f7ed96a98",
-  "summary": "KEEPKEY filter FREQ by key needle. selftest 150.",
+  "iter": 151,
+  "version": "1.15.176-usability",
+  "item": "SYS GLOB / MATCHFILES list basenames matching pattern",
+  "item_id": 184,
+  "title": "SYS GLOB|MATCHFILES path [pattern] — plate discovery without shell",
+  "commit": "2eca31368cc565e482ec534ac14486f5b528c28d",
+  "summary": "GLOB fnmatch basenames for agent file discovery. selftest 151.",
   "proofs": [
-    "723_sys_keepkey",
-    "selftest n_pass=150"
+    "724_sys_glob",
+    "selftest n_pass=151"
   ],
-  "when": "2026-08-06T02:45:59Z",
+  "when": "2026-08-06T02:55:38Z",
   "agent": "meaningful_iter_10m",
-  "sha": "206077deeb0dcd0abbb0d883095c3d7f7ed96a98"
+  "sha": "2eca31368cc565e482ec534ac14486f5b528c28d"
 }
