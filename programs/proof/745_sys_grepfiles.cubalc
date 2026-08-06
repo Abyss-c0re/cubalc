@@ -1,0 +1,80 @@
+# SYS GREPFILES / SEARCHFILES — keep paths whose content contains needle
+# Usability: content search over PATHGLOB bags without EACH+READ+HAS glue
+# Not string GREP (filters bag field text). GREPFILESI icase · GREPVFILES invert.
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "grepfiles_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.txt"
+LET fa = LAST
+SYS JOIN fix "b.txt"
+LET fb = LAST
+SYS JOIN fix "c.txt"
+LET fc = LAST
+SYS JOIN fix "miss.txt"
+LET fm = LAST
+
+SYS WRITE fa "alpha ERROR one"
+SYS WRITE fb "beta warn two"
+SYS WRITE fc "gamma Error three"
+# fm intentionally missing
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST fm
+LET bag = LAST
+
+SYS GREPFILES bag "ERROR"
+ASSERT OK == 1
+ASSERT GREPFILES_N == 1
+ASSERT GREPFILES_SCAN == 4
+ASSERT GREPFILES_MISS == 1
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE GREPFILES fb
+ASSERT LAST_N == 0
+
+# case-insensitive
+SYS GREPFILESI bag "error"
+ASSERT GREPFILES_N == 2
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 1
+
+# invert: paths without "warn" (readable only; miss stays out)
+SYS GREPVFILES bag "warn"
+ASSERT GREPFILES_N == 2
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 0
+
+# one-arg form after PATHGLOB
+SYS PATHGLOB fix "*.txt"
+SYS KEEPFILES
+SYS SEARCHFILES "beta"
+ASSERT SEARCHFILES_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+
+# empty bag
+SYS GREPFILES "" "x"
+ASSERT GREPFILES_N == 0
+ASSERT GREPFILES_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RM fa
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_grepfiles ok"

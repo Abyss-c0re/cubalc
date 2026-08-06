@@ -2782,6 +2782,117 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", failc == 0 ? 1 : 0);
       bump(vm); return 1;
     }
+    /* SYS GREPFILES|SEARCHFILES|FILESGREP bag needle
+     * — keep paths whose file content contains needle (soft miss skip).
+     * GREPFILESI case-insensitive; GREPVFILES invert (no needle in content).
+     * Not string GREP (that filters bag fields). LAST = hit paths bag.
+     * LAST_N / GREPFILES_N · GREPFILES_SCAN · GREPFILES_MISS · GREPFILES_HIT.
+     * One-arg: needle uses LAST bag. Empty needle → keep all readable.
+     * Usability: content search over PATHGLOB/WALK without EACH+READ+HAS. */
+    if (kw(&L->cur,"GREPFILES") || kw(&L->cur,"SEARCHFILES") || kw(&L->cur,"FILESGREP") ||
+        kw(&L->cur,"CONTENTGREP") || kw(&L->cur,"KEEPCONTENT") || kw(&L->cur,"FILECONTAINS") ||
+        kw(&L->cur,"GREPFILESI") || kw(&L->cur,"SEARCHFILESI") || kw(&L->cur,"FILESGREPI") ||
+        kw(&L->cur,"CONTENTGREPI") || kw(&L->cur,"GREPVFILES") || kw(&L->cur,"VGREPFILES") ||
+        kw(&L->cur,"DROPCONTENT") || kw(&L->cur,"GREPFILESV") || kw(&L->cur,"GREPVFILESI") ||
+        kw(&L->cur,"VGREPFILESI") || kw(&L->cur,"SEARCHFILESV") || kw(&L->cur,"FILESCONTAIN")){
+      char bag[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t flen, olen = 0, nlen;
+      long kept = 0, nscan = 0, nmiss = 0, nhit = 0;
+      int icase = 0, invert = 0;
+      if (kw(&L->cur,"GREPFILESI") || kw(&L->cur,"SEARCHFILESI") || kw(&L->cur,"FILESGREPI") ||
+          kw(&L->cur,"CONTENTGREPI") || kw(&L->cur,"GREPVFILESI") || kw(&L->cur,"VGREPFILESI"))
+        icase = 1;
+      if (kw(&L->cur,"GREPVFILES") || kw(&L->cur,"VGREPFILES") || kw(&L->cur,"DROPCONTENT") ||
+          kw(&L->cur,"GREPFILESV") || kw(&L->cur,"GREPVFILESI") || kw(&L->cur,"VGREPFILESI") ||
+          kw(&L->cur,"SEARCHFILESV"))
+        invert = 1;
+      lex_next(L);
+      bag[0] = 0; needle[0] = 0; out[0] = 0; a[0] = 0; b[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS GREPFILES [bag] needle");
+        return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) == 0) {
+        snprintf(bag, sizeof bag, "%s", a);
+        snprintf(needle, sizeof needle, "%s", b);
+      } else {
+        /* one-arg: needle = a, bag = LAST */
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+        snprintf(needle, sizeof needle, "%s", a);
+      }
+      nlen = strlen(needle);
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen > 0) {
+          char path[512];
+          size_t take = flen;
+          cubalc_host_result hr;
+          int hit = 0, readable = 0;
+          nscan++;
+          if (take >= sizeof path) take = sizeof path - 1;
+          memcpy(path, start, take);
+          path[take] = 0;
+          if (cubalc_host_read(path, &hr) != 0) {
+            nmiss++;
+            /* soft: unreadable never kept (even invert — no content probe) */
+            hit = 0;
+            readable = 0;
+          } else {
+            readable = 1;
+            if (nlen == 0) {
+              hit = 1;
+            } else if (!icase) {
+              hit = (strstr(hr.str, needle) != NULL) ? 1 : 0;
+            } else {
+              size_t fi;
+              hit = 0;
+              for (fi = 0; hr.str[fi] && !hit; fi++) {
+                size_t j;
+                for (j = 0; j < nlen; j++) {
+                  char ca = hr.str[fi + j], cb = needle[j];
+                  if (!ca) break;
+                  if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+                  if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+                  if (ca != cb) break;
+                }
+                if (j == nlen) hit = 1;
+              }
+            }
+            if (invert) hit = !hit;
+          }
+          (void)readable;
+          if (hit) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + take < sizeof out) {
+              memcpy(out + olen, path, take);
+              olen += take;
+            }
+            out[olen] = 0;
+            kept++;
+            nhit++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_str(vm, "GREPFILES", out);
+      var_set_str(vm, "SEARCHFILES", out);
+      var_set_num(vm, "GREPFILES_N", kept);
+      var_set_num(vm, "SEARCHFILES_N", kept);
+      var_set_num(vm, "GREPFILES_HIT", nhit);
+      var_set_num(vm, "GREPFILES_SCAN", nscan);
+      var_set_num(vm, "GREPFILES_MISS", nmiss);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"WHICH")){
       lex_next(L);
       if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS WHICH name"); return -1; }
@@ -12423,7 +12534,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|EQFILE|SAMEFILE|CMPFILE|LOGALL|APPENDFILES|BULKAPPEND|GREPFILES|SEARCHFILES|FILESGREP|GREPFILESI|GREPVFILES|VGREPFILES|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -12693,6 +12804,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS LOGALL", "SYS LOGALL|APPENDFILES bag data — append line to every path · multi-log"},
       {"SYS APPENDFILES", "SYS APPENDFILES alias of SYS LOGALL (not string APPENDALL)"},
       {"SYS BULKAPPEND", "SYS BULKAPPEND alias of SYS LOGALL"},
+      {"SYS GREPFILES", "SYS GREPFILES|SEARCHFILES bag needle — keep paths whose content contains needle"},
+      {"SYS SEARCHFILES", "SYS SEARCHFILES alias of SYS GREPFILES"},
+      {"SYS FILESGREP", "SYS FILESGREP alias of SYS GREPFILES"},
+      {"SYS GREPFILESI", "SYS GREPFILESI case-insensitive content path filter"},
+      {"SYS GREPVFILES", "SYS GREPVFILES|VGREPFILES bag needle — keep paths without needle in content"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
