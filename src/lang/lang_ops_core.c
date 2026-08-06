@@ -2,6 +2,7 @@
 #include "lang/cubalc_lang_internal.h"
 #if !defined(CUBALC_OS_WINDOWS)
 #  include <pwd.h>
+#  include <grp.h>
 #  include <fnmatch.h>
 #  include <unistd.h>
 #  include <errno.h>
@@ -2050,6 +2051,99 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "ACCESSIBLE", hr.n);
       }
       var_set_str(vm, "CAN_PATH", path);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS OWNERNAME|OWNERUSER|NAMEOWNER path — st_uid → login name in LAST.
+     * SYS GROUPNAME|OWNERGROUP|GRNAME path — st_gid → group name in LAST.
+     * LAST_N = uid/gid; soft miss missing path. Numeric fallback if no pw/gr entry.
+     * Usability: human owner labels for plates without shell stat -c %U/%G. */
+    if (kw(&L->cur,"OWNERNAME") || kw(&L->cur,"OWNERUSER") || kw(&L->cur,"NAMEOWNER") ||
+        kw(&L->cur,"OWNER_NAME") || kw(&L->cur,"PWNAME") || kw(&L->cur,"UNAMEOF") ||
+        kw(&L->cur,"FILEUNAME") || kw(&L->cur,"OWNERLOGIN") ||
+        kw(&L->cur,"GROUPNAME") || kw(&L->cur,"OWNERGROUP") || kw(&L->cur,"GRNAME") ||
+        kw(&L->cur,"GROUP_NAME") || kw(&L->cur,"GNAMEOF") || kw(&L->cur,"FILEGNAME") ||
+        kw(&L->cur,"OWNERGRP") || kw(&L->cur,"NAMEGROUP")){
+      char path[512], op[24];
+      cubalc_host_result hr;
+      int is_grp;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_grp = (strcmp(op, "GROUPNAME") == 0 || strcmp(op, "OWNERGROUP") == 0 ||
+                strcmp(op, "GRNAME") == 0 || strcmp(op, "GROUP_NAME") == 0 ||
+                strcmp(op, "GNAMEOF") == 0 || strcmp(op, "FILEGNAME") == 0 ||
+                strcmp(op, "OWNERGRP") == 0 || strcmp(op, "NAMEGROUP") == 0);
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_grp ? "GROUPNAME: empty path" : "OWNERNAME: empty path");
+        var_set_str(vm, "ERR", is_grp ? "GROUPNAME: empty path" : "OWNERNAME: empty path");
+        bump(vm); return 1;
+      }
+      if (is_grp) {
+        if (cubalc_host_groupname(path, &hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_str(vm, "GROUPNAME", "");
+          var_set_num(vm, "OK", 0);
+          if (hr.err[0]) {
+            var_set_str(vm, "LAST_ERR", hr.err);
+            var_set_str(vm, "ERR", hr.err);
+          } else {
+            var_set_str(vm, "LAST_ERR", "GROUPNAME: fail");
+            var_set_str(vm, "ERR", "GROUPNAME: fail");
+          }
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", hr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_str(vm, "GROUPNAME", hr.str);
+        var_set_str(vm, "OWNERGROUP", hr.str);
+        var_set_str(vm, "GRNAME", hr.str);
+        var_set_num(vm, "FILEGID", hr.n);
+        var_set_str(vm, "GROUPNAME_PATH", path);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* OWNERNAME */
+      if (cubalc_host_ownername(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_str(vm, "OWNERNAME", "");
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "OWNERNAME: fail");
+          var_set_str(vm, "ERR", "OWNERNAME: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "OWNERNAME", hr.str);
+      var_set_str(vm, "OWNERUSER", hr.str);
+      var_set_str(vm, "NAMEOWNER", hr.str);
+      var_set_num(vm, "FILEUID", hr.n);
+      var_set_str(vm, "OWNERNAME_PATH", path);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }

@@ -17,6 +17,10 @@
 #include <ctype.h>
 #include <limits.h>
 #include <dirent.h>
+#if !defined(CUBALC_OS_WINDOWS)
+#  include <pwd.h>
+#  include <grp.h>
+#endif
 
 static void r_clear(cubalc_host_result *r) {
   if (!r) return;
@@ -411,6 +415,63 @@ int cubalc_host_can_access(const char *path, int mode, cubalc_host_result *r) {
     return -1;
   }
   r->n = (access(path, mode) == 0) ? 1 : 0;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS OWNERNAME path — login name for st_uid without shell stat -c %U. */
+int cubalc_host_ownername(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "ownername: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "ownername: missing");
+    return -1;
+  }
+  r->n = (long)st.st_uid;
+#if !defined(CUBALC_OS_WINDOWS)
+  {
+    struct passwd *pw = getpwuid(st.st_uid);
+    if (pw && pw->pw_name && pw->pw_name[0]) {
+      snprintf(r->str, sizeof r->str, "%s", pw->pw_name);
+      r->ok = 1;
+      return 0;
+    }
+  }
+#endif
+  /* numeric fallback when passwd has no entry (containers, deleted users) */
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS GROUPNAME path — group name for st_gid without shell stat -c %G. */
+int cubalc_host_groupname(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "groupname: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "groupname: missing");
+    return -1;
+  }
+  r->n = (long)st.st_gid;
+#if !defined(CUBALC_OS_WINDOWS)
+  {
+    struct group *gr = getgrgid(st.st_gid);
+    if (gr && gr->gr_name && gr->gr_name[0]) {
+      snprintf(r->str, sizeof r->str, "%s", gr->gr_name);
+      r->ok = 1;
+      return 0;
+    }
+  }
+#endif
   snprintf(r->str, sizeof r->str, "%ld", r->n);
   r->ok = 1;
   return 0;

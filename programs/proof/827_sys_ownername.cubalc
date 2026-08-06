@@ -1,0 +1,68 @@
+# SYS OWNERNAME / GROUPNAME — login and group name from path
+# Usability: human owner labels without shell stat -c %U/%G
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "ownername_mi_plate.txt"
+LET p = LAST
+SYS WRITE p "owner-name-probe"
+ASSERT OK == 1
+
+# process identity names
+SYS USER
+LET me = LAST
+SYS LEN me
+ASSERT LAST_N >= 1
+
+# plate we create → owner login matches process user
+SYS OWNERNAME p
+ASSERT OK == 1
+ASSERT LAST == me
+ASSERT OWNERNAME == me
+SYS LEN LAST
+ASSERT LAST_N >= 1
+# LAST_N after LEN was length; re-fetch uid side channel
+SYS OWNERNAME p
+ASSERT FILEUID >= 0
+ASSERT LAST_N >= 0
+
+# aliases
+SYS OWNERUSER p
+ASSERT OK == 1
+ASSERT LAST == me
+SYS NAMEOWNER p
+ASSERT LAST == me
+
+# group name non-empty (root/root or user/group)
+SYS GROUPNAME p
+ASSERT OK == 1
+SYS LEN LAST
+ASSERT LAST_N >= 1
+SYS GROUPNAME p
+LET gname = LAST
+ASSERT GROUPNAME == gname
+SYS OWNERGROUP p
+ASSERT LAST == gname
+SYS GRNAME p
+ASSERT LAST == gname
+
+# soft miss missing path
+SYS OWNERNAME "/no/such/ownername_mi_xyz"
+ASSERT OK == 0
+SYS GROUPNAME "/no/such/ownername_mi_xyz"
+ASSERT OK == 0
+
+# empty path soft fail
+SYS OWNERNAME ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+SYS GROUPNAME ""
+ASSERT OK == 0
+
+# cleanup
+SYS RM p
+
+PRINT "sys_ownername ok"

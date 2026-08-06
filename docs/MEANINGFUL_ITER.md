@@ -315,6 +315,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 285. ~~**`SYS TEE` / `WRITETEE` / `SAVEKEEP`**~~ **done** (write file keep content in LAST · chain without READ back).
 286. ~~**`SYS FILEUID` / `FILEGID` / `OWNEDBY`**~~ **done** (file owner uid/gid + euid owns probe · agent plate security).
 287. ~~**`SYS CANREAD` / `CANWRITE` / `CANEXEC`**~~ **done** (access R/W/X probes · pre-flight plate I/O without soft-fail glue).
+288. ~~**`SYS OWNERNAME` / `GROUPNAME`**~~ **done** (path → login/group name · human plate labels without shell stat %U/%G).
 
 ## Tick protocol
 
