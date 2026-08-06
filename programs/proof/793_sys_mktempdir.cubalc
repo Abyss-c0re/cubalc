@@ -1,0 +1,76 @@
+# SYS MKTEMPDIR / MKDTEMP / MAKETEMPDIR
+# — create unique empty directory under TMP (collision-free agent work dirs)
+# Usability: no shell mktemp -d · concurrent agents safe workspaces
+
+HOLD_FLASH 1
+
+# default prefix
+SYS MKTEMPDIR
+ASSERT OK == 1
+ASSERT MKTEMPDIR_N == 1
+ASSERT LAST_N == 1
+ASSERT LAST != ""
+LET d1 = LAST
+SYS STAT d1
+ASSERT STAT_EXIST == 1
+ASSERT STAT_ISDIR == 1
+ASSERT STAT_ISFILE == 0
+
+# second call → different path
+SYS MKTEMPDIR
+ASSERT OK == 1
+LET d2 = LAST
+SYS EQS d1 d2
+ASSERT LAST_N == 0
+SYS STAT d2
+ASSERT STAT_ISDIR == 1
+
+# custom prefix
+SYS MKTEMPDIR "job"
+ASSERT OK == 1
+LET d3 = LAST
+SYS HAS d3 "job"
+ASSERT LAST_N == 1
+SYS STAT d3
+ASSERT STAT_ISDIR == 1
+
+# alias MKDTEMP
+SYS MKDTEMP "work"
+ASSERT OK == 1
+LET d4 = LAST
+SYS STAT d4
+ASSERT STAT_ISDIR == 1
+
+# alias MAKETEMPDIR
+SYS MAKETEMPDIR
+ASSERT OK == 1
+LET d5 = LAST
+SYS STAT d5
+ASSERT STAT_ISDIR == 1
+
+# agent: mktempdir → plate file inside → writeatomic → read
+SYS MKTEMPDIR "agent"
+LET ad = LAST
+SYS JOIN ad "status.plate"
+LET ap = LAST
+SYS WRITEATOMIC ap "status=ok"
+ASSERT OK == 1
+SYS READ ap
+SYS EQS LAST "status=ok"
+ASSERT LAST_N == 1
+SYS RM ap
+
+# path-like prefix sanitized (no traversal)
+SYS MKTEMPDIR "../evil"
+ASSERT OK == 1
+LET d6 = LAST
+SYS HAS d6 ".."
+ASSERT LAST_N == 0
+SYS STAT d6
+ASSERT STAT_ISDIR == 1
+
+# cleanup (rmdir via... we only have RM for files; leave dirs or use RMALL?)
+# dirs remain under TMP — acceptable for proof; no rmdir form required
+SYS RM ap
+
+PRINT "sys_mktempdir ok"

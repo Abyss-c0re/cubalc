@@ -279,6 +279,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 249. ~~**`SYS MKTEMP` / `TEMPFILE` / `MAKETEMP`**~~ **done** (unique empty file under TMP · collision-free agent plate paths without shell mktemp).
 250. ~~**`SYS CLAIM` / `CLAIMFILE` / `CREATEEXCL`**~~ **done** (exclusive path create for one-shot work-item claims · soft miss if held · release with RM).
 251. ~~**`SYS STAT` / `FSTAT` / `FILESTAT`**~~ **done** (one-shot path metadata · exist/kind/size/mtime/isfile · no EXIST+SIZE+MTIME glue).
+252. ~~**`SYS MKTEMPDIR` / `MKDTEMP` / `MAKETEMPDIR`**~~ **done** (unique empty dir under TMP · collision-free agent workspaces without shell mktemp -d).
 
 ## Tick protocol
 
