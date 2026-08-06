@@ -154,6 +154,6 @@
     "multi-tick setenv+render empty without host env",
     "selftest 211/211; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "35227a68d5e6b5a52d531af7e7e55bc27c72a541",
   "ts": "2026-08-06T13:00:00Z"
 }
