@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 229,
-  "version": "1.15.254-usability",
-  "item": "SYS ISLINK / ISLNK / ISSYMLINK symlink probe",
-  "item_id": 262,
-  "title": "SYS ISLINK|ISLNK path — LAST_N 1 if symlink · IF before READLINK without soft-fail glue",
-  "commit": "a6e2ca260279adca4f3e9f3b20cde3392ecb45f3",
-  "summary": "lstat symlink probe for agent plate aliases; missing=0 OK=1. selftest 229.",
+  "iter": 230,
+  "version": "1.15.255-usability",
+  "item": "SYS MODE / PERM · CHMOD / SETMODE plate permissions",
+  "item_id": 263,
+  "title": "SYS MODE|PERM path · CHMOD path mode — octal permission probe/set without shell",
+  "commit": "ead4acd4d5ed9ae4eaf422217b00f37a7d6ccd50",
+  "summary": "Octal MODE/CHMOD for agent plate lock-down without shell. selftest 230.",
   "proofs": [
-    "803_sys_islink",
-    "selftest n_pass=229"
+    "804_sys_mode",
+    "selftest n_pass=230"
   ],
-  "when": "2026-08-06T15:56:00Z",
+  "when": "2026-08-06T16:06:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "a6e2ca260279adca4f3e9f3b20cde3392ecb45f3",
-  "note": "complements SYMLINK/READLINK; hostops islink"
+  "sha": "ead4acd4d5ed9ae4eaf422217b00f37a7d6ccd50",
+  "note": "thrash restore first; mode string 0644 or decimal 420"
 }
