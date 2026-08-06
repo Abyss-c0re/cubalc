@@ -1,160 +1,164 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 88,
-  "program": "programs/realworld/cpu_work_shard_board.cubalc",
-  "theme": "cpu work shard NPROC STRIDE MONOTONIC elapsed budget partition",
-  "version": "1.15.260-usability",
+  "iter": 89,
+  "program": "programs/realworld/node_tool_gate_board.cubalc",
+  "theme": "node tool gate UNAME PLATFORM LOCAL WHICHBIN REQUIRE BIN readiness",
+  "version": "1.15.263-usability",
   "pass": true,
   "tests": [
     {
-      "name": "nproc",
-      "cmd": "SYS NPROC \u2192 workers default + META key:val",
+      "name": "probe",
+      "cmd": "UNAME/ARCH/PLATFORM/HOSTNAME/LOCAL/DATE \u2192 NODE+META",
       "ok": true,
-      "note": "4 cpus here"
+      "note": "Linux/x86_64@host [local]"
     },
     {
-      "name": "workers_shard",
-      "cmd": "workers=4 shard=1",
+      "name": "need_tools",
+      "cmd": "need sh+ls idempotent",
       "ok": true,
-      "note": "force partition"
+      "note": "TOOLS bag"
     },
     {
-      "name": "seed_range",
-      "cmd": "RANGE 0..(N-1) for N=16 \u2192 0..15",
+      "name": "which_ls",
+      "cmd": "WHICHBIN ls \u2192 /usr/bin/ls",
       "ok": true,
-      "note": "inclusive ends"
+      "note": "after var fix"
     },
     {
-      "name": "plan_stride",
-      "cmd": "STRIDE workers OFF shard \u2192 1,5,9,13",
+      "name": "which_miss",
+      "cmd": "soft miss; REQUIRE\u21922",
       "ok": true,
-      "note": "OFF keyword"
+      "note": "no such tool"
     },
     {
-      "name": "tick_tock",
-      "cmd": "MONOTONIC delta under budget 5000",
+      "name": "whichlib_false_friend",
+      "cmd": "WHICH hold_seed finds lib; WHICHBIN misses",
       "ok": true,
-      "note": "steady elapsed"
+      "note": "PATH vs lib"
     },
     {
-      "name": "over_budget",
-      "cmd": "budget=1; sleep; tock soft; REQUIRE\u21922",
+      "name": "check_ok",
+      "cmd": "EACH LINE WHICHBIN \u2192 2/2",
+      "ok": true,
+      "note": "var resolve"
+    },
+    {
+      "name": "gate_blocked",
+      "cmd": "missing tool REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "shard_oor",
-      "cmd": "shard 9 with workers 4 REQUIRE\u21922",
+      "name": "gate_ok",
+      "cmd": "HEAD+REQUIRE BIN first tool",
       "ok": true,
-      "note": "OOR"
+      "note": "hard PATH"
     },
     {
-      "name": "plan_empty",
-      "cmd": "clear then plan soft; REQUIRE\u21922",
+      "name": "local_vs_utc",
+      "cmd": "LOCAL no Z; DATE has Z",
       "ok": true,
-      "note": "no work"
+      "note": "stamp shape"
     },
     {
-      "name": "workers_zero",
-      "cmd": "workers 0 REQUIRE\u21922",
+      "name": "whichbin_var_fix",
+      "cmd": "WHICHBIN tool with tool=ls \u2192 path not 'tool'",
       "ok": true,
-      "note": "STRIDE step"
+      "note": "lang fix"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "234/234 pass"
+      "note": "236/236 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "lang|keyword",
-      "title": "Identifier end is END keyword \u2014 LET end corrupts control flow",
-      "detail": "LET end = count - 1 parsed as LET then END closing the IF, leaving '= count - 1' as unknown form and breaking later writes. Agents naming loop bounds end silently wreck programs.",
-      "repro": "LET end = 5 \u2192 ok:false; unknown form ''"
+      "area": "host|whichbin",
+      "title": "WHICHBIN used IDENT text not string-var value (FIXED this iter)",
+      "detail": "SYS WHICHBIN tool with tool=\"ls\" searched PATH for name \"tool\". Broke EACH LINE tool bags. Fixed: string vars and LAST resolve; bare IDENT still literal tool token.",
+      "repro": "pre-fix: LET t=\"ls\"; WHICHBIN t \u2192 not found 't'"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|stride",
-      "title": "Bare mid-arg STRIDE offset var is unknown form",
-      "detail": "SYS STRIDE workers shard_id work fails; must use SYS STRIDE workers OFF shard_id work. Same class as canary board OFF footgun.",
-      "repro": "SYS STRIDE 4 shard_id bag \u2192 unknown form shard_id"
+      "area": "host|which",
+      "title": "WHICH vs WHICHBIN false friend for libs",
+      "detail": "WHICH hold_seed finds CubalC lib path; WHICHBIN misses. Agents using WHICH for deploy tools accept non-executables.",
+      "repro": "WHICH hold_seed OK; WHICHBIN hold_seed miss"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|range",
-      "title": "RANGE inclusive both ends \u2014 off-by-one vs half-open intuition",
-      "detail": "RANGE 0 16 yields 17 ids. Seed N needs RANGE 0 (N-1). Easy to over-seed worker bags.",
-      "repro": "RANGE 0 3 \u2192 4 lines"
+      "area": "host|nth",
+      "title": "SYS NTH bag idx form is NTH idx bag not NTH bag idx",
+      "detail": "SYS NTH tools 0 \u2192 unknown form '0'. Correct: SYS NTH 0 tools or HEAD tools.",
+      "repro": "SYS NTH tools 0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|join",
-      "title": "SYS JOIN is path join not string concat",
-      "detail": "JOIN \"workers:\" \"4\" \u2192 workers:/4. No simple strcat; REPLACEALL templates required for key:val stamps.",
-      "repro": "SYS JOIN \"workers:\" \"4\""
+      "area": "host|local",
+      "title": "LOCAL vs DATE timezone dual without offset field",
+      "detail": "LOCAL omits Z; DATE is UTC Z. No LOCAL_OFF or TZ name; agents mis-compare wall vs UTC near midnight.",
+      "repro": "LOCAL no Z; DATE ends Z"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|print",
-      "title": "PRINT_JSON collapses bag newlines",
-      "detail": "Multi-line SHARD/WORK look glued in JSON plates; agents mis-count fields without LINES.",
-      "repro": "PRINT_JSON shard_bag"
+      "title": "PRINT_JSON collapses TOOLS bag newlines",
+      "detail": "sh\\nls looks like shlscat in JSON plate.",
+      "repro": "PRINT_JSON tools"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITE omit trailing NL \u2014 wc -l undercounts WORK",
-      "detail": "16 ids 0..15 show wc -l 15 without final NL.",
-      "repro": "cat -A WORK.txt"
+      "title": "WRITE metas omit trailing NL",
+      "detail": "NODE/TOOLS glue in cat -A.",
+      "repro": "cat -A NODE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|lookup",
-      "title": "LOOKUP default sep is colon not equals",
-      "detail": "workers=4 needs LOOKUP sep \"=\"; key:val works with default. Mixed plate conventions confuse agents.",
-      "repro": "LOOKUP bag workers with = lines fails bare"
+      "area": "host|each",
+      "title": "EACH LINE bag vs EACH LINE AS x IN bag form ambiguity",
+      "detail": "Bare EACH LINE tools works when tools is bag; wrong LAST source if form misread as AS binding.",
+      "repro": "prefer EACH LINE IN tools"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_CW_REQUIRE=abc leaves REQUIRE_HIT=0.",
-      "repro": "REQUIRE=abc plan empty \u2192 rc 0"
+      "detail": "CUBALC_NT_REQUIRE=abc \u2192 REQUIRE_HIT=0.",
+      "repro": "REQUIRE=abc which miss \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Never name vars end/if/then; use rend/last_i",
-    "Always STRIDE step OFF off bag form for var offsets",
-    "RANGE 0 (N-1) for N items; document inclusive",
-    "REPLACEALL templates for key:val; not JOIN",
-    "LINES after PRINT_JSON for bag counts",
+    "Post-fix: WHICHBIN LINE and WHICHBIN tool work for string vars",
+    "Use WHICHBIN not WHICH for deploy executables",
+    "SYS NTH 0 bag or HEAD bag",
+    "Compare LOCALDATE vs DATE date-part carefully across TZ",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "Reserved-word diagnostic on LET end (not silent END)",
-    "STRIDE mid-arg numeric/var without OFF keyword",
-    "RANGE half-open mode or exclusive end flag",
-    "SYS STRCAT / CAT for non-path concat",
-    "WRITE trailing NL option",
-    "PRINT_JSON bag as array mode"
+    "WHICHBIN string-var (done this iter)",
+    "TZ / UTC offset stamp",
+    "NTH bag-first overload or clearer error",
+    "WRITE trailing NL",
+    "PRINT_JSON bag-as-array"
   ],
   "issues_faced": [
-    "LET end keyword collision nearly broke whole board",
-    "STRIDE bare mid-arg fixed via OFF",
-    "nproc/plan 1,5,9,13 + mono tick/tock green",
-    "selftest 234/234; no language fix this iter"
+    "WHICHBIN IDENT footgun found+fixed+proof",
+    "NTH arg order broke gate first-tool REQUIRE BIN",
+    "probe/check 2/2/gate green after fix",
+    "selftest 236/236"
   ],
-  "commit": "114f06242ab7568621349997dd92bc5df4d997a0",
-  "ts": "2026-08-06T16:46:46Z"
+  "commit": "",
+  "ts": "2026-08-06T17:11:41Z"
 }

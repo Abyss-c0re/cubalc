@@ -10305,13 +10305,48 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bin_only = 1;
         lex_next(L);
       }
-      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
+      /* name: "lit" | LAST | string-var | bare IDENT tool token.
+       * Usability: SYS WHICHBIN tool with tool="ls" must resolve sval, not
+       * the identifier text "tool" (agent tool bags / EACH LINE). */
+      char name[256];
+      name[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(name, sizeof name, "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          Var *nv = var_get(vm, L->cur.text, 0);
+          if (nv && nv->is_str && nv->sval[0]) {
+            snprintf(name, sizeof name, "%s", nv->sval);
+            lex_next(L);
+          } else {
+            /* bare unquoted tool name: WHICHBIN ls */
+            snprintf(name, sizeof name, "%s", L->cur.text);
+            lex_next(L);
+          }
+        }
+      } else {
         fail(vm, bin_only ? "SYS WHICHBIN name" : "SYS WHICH name");
         return -1;
       }
+      if (!name[0]) {
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "");
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (bin_only) {
+          var_set_str(vm, "LAST_ERR", "WHICHBIN: empty name");
+          var_set_str(vm, "ERR", "WHICHBIN: empty name");
+        }
+        bump(vm); return 1;
+      }
       /* Usability: WHICHBIN = host executable only; WHICH also finds libs. */
-      if ((bin_only ? cubalc_host_which_bin(L->cur.text, &hr)
-                    : cubalc_host_which(L->cur.text, &hr)) != 0){
+      if ((bin_only ? cubalc_host_which_bin(name, &hr)
+                    : cubalc_host_which(name, &hr)) != 0){
         vm->last_str[0] = 0;
         vm->last_n = 0;
         var_set_str(vm, "LAST", "");
@@ -10319,7 +10354,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_num(vm, "OK", 0);
         if (bin_only) {
           char err[120];
-          snprintf(err, sizeof err, "WHICHBIN '%s' not found", L->cur.text);
+          snprintf(err, sizeof err, "WHICHBIN '%s' not found", name);
           var_set_str(vm, "ERR", err);
           var_set_str(vm, "LAST_ERR", err);
         }
@@ -10334,7 +10369,6 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           var_set_str(vm, "BIN", hr.str);
         }
       }
-      lex_next(L);
       bump(vm); return 1;
     }
     /* SYS CWD|PWD — process working directory → LAST

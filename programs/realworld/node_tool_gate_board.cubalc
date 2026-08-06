@@ -1,0 +1,643 @@
+# node_tool_gate_board.cubalc — node identity + PATH tool readiness gate
+#
+# Real use: before deploy/runbook agents stamp host platform and verify
+# required host tools are on PATH (no shell uname/which/date):
+#   UNAME / OS / ARCH / PLATFORM — kernel + machine identity
+#   HOSTNAME / LOCAL / LOCALDATE — node + local wall stamps
+#   WHICHBIN / PATHWHICH         — PATH-only soft tool resolve
+#   WHICH                        — also finds CubalC libs (false friend)
+# Distinct from fleet_drift (host bags) and soft_boot (mesh): this board is
+# *platform stamp + required-bin inventory + soft/hard tool gates*.
+#
+# Plate under STATE:
+#   TOOLS.txt      — required tool names (exact bag)
+#   MISS.txt       — tools missing from PATH
+#   NODE.txt       — last identity stamp line
+#   VAL.txt        — last which path / summary
+#   META.txt       — key:val platform bag
+#   GATE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_NT_ACTION):
+#   list      — plate (default)
+#   probe     — UNAME/ARCH/PLATFORM/HOSTNAME/LOCAL → META+NODE
+#   need      — ENSURELINE tool ARG1 into TOOLS
+#   drop      — DROPEXACTFILE first exact tool
+#   which     — WHICHBIN ARG1 → VAL (soft miss)
+#   whichlib  — WHICH ARG1 (lib false friend demo)
+#   check     — scan TOOLS with WHICHBIN; fill MISS
+#   gate      — check; if any miss soft or REQUIRE→exit 2
+#   stamp     — rebuild NODE from META + LOCAL
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_nt_$$
+#   CUBALC_ARG0=probe ...
+#   CUBALC_ARG0=need CUBALC_ARG1=sh ...
+#   CUBALC_ARG0=need CUBALC_ARG1=ls ...
+#   CUBALC_ARG0=check ...
+#   CUBALC_ARG0=gate ...
+#
+# Env: CUBALC_NT_REQUIRE=1
+#
+# Edges:
+#   WHICHBIN miss soft; WHICH finds libs; LOCAL no Z vs DATE Z
+#   empty tools check; need empty; REQUIRE; WRITE NL; CAT identity
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "node_tool_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT TFILE = "TOOLS.txt"
+DEFAULT MISSFILE = "MISS.txt"
+DEFAULT NFILE = "NODE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "GATE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_NT_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_NT_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_NT_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_NT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir TFILE
+LET tools_path = LAST
+SYS JOIN state_dir MISSFILE
+LET miss_path = LAST
+SYS JOIN state_dir NFILE
+LET node_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR tools_path OR ""
+LET tools = LAST
+CLEAR_ERR
+SYS READ OR miss_path OR ""
+LET miss_bag = LAST
+CLEAR_ERR
+SYS READ OR node_path OR ""
+LET node = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET tools_ch = 0
+LET miss_ch = 0
+LET node_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET need_n = 0
+LET miss_n = 0
+LET ok_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "ntgate" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON tools
+  PRINT_JSON miss_bag
+  PRINT_JSON node
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- probe identity ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  SYS UNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "probe uname fail"
+    FAIL "probe uname fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "probe uname fail"
+    END
+  ELSE
+    LET os_name = LAST
+    SYS ARCH
+    LET arch_name = LAST
+    SYS PLATFORM
+    LET plat = LAST
+    SYS HOSTNAME
+    LET host = LAST
+    SYS LOCAL
+    LET loc = LAST
+    SYS LOCALDATE
+    LET locd = LAST
+    SYS DATE
+    LET utc = LAST
+    # meta key:val via CAT (not JOIN path)
+    SYS CAT "os:" os_name
+    LET meta = LAST
+    SYS CAT "arch:" arch_name
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "platform:" plat
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "host:" host
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "local:" loc
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "localdate:" locd
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS CAT "utc:" utc
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    # identity stamp: platform@host [local]
+    SYS CAT plat "@"
+    SYS CAT LAST host
+    SYS CAT LAST " ["
+    SYS CAT LAST loc
+    SYS CAT LAST "]"
+    LET node = LAST
+    LET node_ch = 1
+    LET val = plat
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "probe ok"
+  END
+  PRINT_JSON val
+  PRINT_JSON node
+  CLEAR_ERR
+END
+
+# --- need tool ---
+SYS EQS ACTION "need"
+IF LAST_N == 1 THEN
+  NOTE "action need"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "need needs tool name"
+  END
+  SYS HASLINE tools NAME
+  IF LAST_N == 1 THEN
+    LET hit = 1
+    LET note_msg = "need already"
+  ELSE
+    SYS PUSH tools NAME
+    LET tools = LAST
+    LET tools_ch = 1
+    LET hit = 1
+    LET note_msg = "need ok"
+  END
+  SYS LINES tools
+  LET need_n = LAST_N
+  SYS STR need_n
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON need_n
+  PRINT_JSON tools
+  CLEAR_ERR
+END
+
+# --- drop tool exact ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "drop needs tool name"
+  END
+  SYS HASLINE tools NAME
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "drop miss"
+    FAIL "drop miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop miss"
+    END
+  ELSE
+    SYS REMOVELINE tools NAME
+    LET tools = LAST
+    LET tools_ch = 1
+    LET hit = 1
+    LET note_msg = "drop ok"
+  END
+  SYS LINES tools
+  LET need_n = LAST_N
+  SYS STR need_n
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON need_n
+  CLEAR_ERR
+END
+
+# --- which WHICHBIN ---
+SYS EQS ACTION "which"
+IF LAST_N == 1 THEN
+  NOTE "action which"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "which needs tool name"
+  END
+  SYS WHICHBIN NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "which miss"
+    FAIL "which miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "which miss"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "which ok"
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- whichlib WHICH (finds libs — false friend) ---
+SYS EQS ACTION "whichlib"
+IF LAST_N == 1 THEN
+  NOTE "action whichlib"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "whichlib needs name"
+  END
+  SYS WHICH NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET val = ""
+    LET val_ch = 1
+    LET note_msg = "whichlib miss"
+    FAIL "whichlib miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "whichlib miss"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "whichlib ok"
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- check: scan TOOLS ---
+SYS EQS ACTION "check"
+IF LAST_N == 1 THEN
+  NOTE "action check"
+  SYS BLANK tools
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "check no tools"
+    FAIL "check no tools"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "check no tools"
+    END
+  ELSE
+    LET miss_bag = ""
+    LET ok_n = 0
+    LET miss_n = 0
+    SYS LINES tools
+    LET need_n = LAST_N
+    EACH LINE tools
+      SYS WHICHBIN LINE
+      IF OK == 0 THEN
+        SYS PUSH miss_bag LINE
+        LET miss_bag = LAST
+        LET miss_n = miss_n + 1
+      ELSE
+        LET ok_n = ok_n + 1
+      END
+      CLEAR_ERR
+    END
+    LET miss_ch = 1
+    IF miss_n > 0 THEN
+      LET miss = 1
+      LET note_msg = "check has miss"
+      FAIL "check has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "check has miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "check ok"
+    END
+    SYS STR ok_n
+    LET val = LAST
+    SYS CAT val "/"
+    LET val = LAST
+    SYS STR need_n
+    SYS CAT val LAST
+    LET val = LAST
+    LET val_ch = 1
+  END
+  PRINT_JSON ok_n miss_n need_n
+  PRINT_JSON miss_bag
+  CLEAR_ERR
+END
+
+# --- gate: check then REQUIRE path ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK tools
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no tools"
+    FAIL "gate no tools"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no tools"
+    END
+  ELSE
+    LET miss_bag = ""
+    LET ok_n = 0
+    LET miss_n = 0
+    SYS LINES tools
+    LET need_n = LAST_N
+    EACH LINE tools
+      SYS WHICHBIN LINE
+      IF OK == 0 THEN
+        SYS PUSH miss_bag LINE
+        LET miss_bag = LAST
+        LET miss_n = miss_n + 1
+      ELSE
+        LET ok_n = ok_n + 1
+      END
+      CLEAR_ERR
+    END
+    LET miss_ch = 1
+    IF miss_n > 0 THEN
+      LET miss = 1
+      LET note_msg = "gate blocked"
+      FAIL "gate blocked"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate blocked"
+      END
+    ELSE
+      # optional hard REQUIRE BIN on first tool as PATH proof
+      SYS HEAD tools
+      LET first = LAST
+      SYS BLANK first
+      IF LAST_N == 0 THEN
+        REQUIRE BIN first
+        CLEAR_ERR
+      END
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR ok_n
+    LET val = LAST
+    SYS CAT val "/"
+    LET val = LAST
+    SYS STR need_n
+    SYS CAT val LAST
+    LET val = LAST
+    LET val_ch = 1
+  END
+  PRINT_JSON ok_n miss_n need_n
+  PRINT_JSON miss_bag
+  CLEAR_ERR
+END
+
+# --- stamp NODE from live clocks ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS PLATFORM
+  LET plat = LAST
+  SYS HOSTNAME
+  LET host = LAST
+  SYS LOCAL
+  LET loc = LAST
+  SYS CAT plat "@"
+  SYS CAT LAST host
+  SYS CAT LAST " ["
+  SYS CAT LAST loc
+  SYS CAT LAST "]"
+  LET node = LAST
+  LET node_ch = 1
+  LET val = node
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "stamp ok"
+  PRINT_JSON node
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET tools = ""
+  LET miss_bag = ""
+  LET node = ""
+  LET val = ""
+  LET meta = ""
+  LET tools_ch = 1
+  LET miss_ch = 1
+  LET node_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "need"
+LET k = k + LAST_N
+SYS EQS ACTION "drop"
+LET k = k + LAST_N
+SYS EQS ACTION "which"
+LET k = k + LAST_N
+SYS EQS ACTION "whichlib"
+LET k = k + LAST_N
+SYS EQS ACTION "check"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF tools_ch > 0 THEN
+  SYS WRITE tools_path tools
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "tools write failed"
+  END
+  CLEAR_ERR
+END
+IF miss_ch > 0 THEN
+  SYS WRITE miss_path miss_bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "miss write failed"
+  END
+  CLEAR_ERR
+END
+IF node_ch > 0 THEN
+  SYS WRITE node_path node
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "node write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.node_tool_gate_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "need"
+LET report = LAST
+SYS STR need_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss_n"
+LET report = LAST
+SYS STR miss_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ok_n"
+LET report = LAST
+SYS STR ok_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "node"
+LET report = LAST
+SYS PUSH report node
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "node_tool_gate_board" ACTION hit miss need_n miss_n note_msg elapsed

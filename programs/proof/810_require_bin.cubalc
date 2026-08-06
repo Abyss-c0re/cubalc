@@ -64,4 +64,24 @@ SYS WHICH "hold_seed"
 ASSERT OK == 1
 ASSERT LAST_N == 1
 
+# string var tool name (not IDENT text "tool")
+LET tool = "ls"
+SYS WHICHBIN tool
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+# LAST form + bag head
+LET tools = "sh\ncat"
+SYS HEAD tools
+SYS WHICHBIN LAST
+ASSERT OK == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+SYS TAIL tools
+SYS WHICHBIN LAST
+ASSERT OK == 1
+SYS STARTS LAST "/"
+ASSERT LAST_N == 1
+
 PRINT "require_bin ok"
