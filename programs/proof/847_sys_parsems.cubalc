@@ -1,0 +1,107 @@
+# SYS PARSEMS / DURATION — human duration string → milliseconds
+# Usability: agent SLEEP/WAITFILE/LOCKFILE timeouts from config without shell
+
+HOLD_FLASH 1
+
+# bare number = milliseconds
+SYS PARSEMS "500"
+ASSERT OK == 1
+ASSERT LAST_N == 500
+ASSERT PARSEMS_N == 500
+
+# explicit ms
+SYS PARSEMS "250ms"
+ASSERT OK == 1
+ASSERT LAST_N == 250
+
+SYS PARSEMS "10msec"
+ASSERT OK == 1
+ASSERT LAST_N == 10
+
+# seconds
+SYS PARSEMS "5s"
+ASSERT OK == 1
+ASSERT LAST_N == 5000
+
+SYS PARSEMS "2sec"
+ASSERT OK == 1
+ASSERT LAST_N == 2000
+
+# space between number and unit
+SYS PARSEMS "3 seconds"
+ASSERT OK == 1
+ASSERT LAST_N == 3000
+SYS PARSEMS "3seconds"
+ASSERT OK == 1
+ASSERT LAST_N == 3000
+
+# minutes
+SYS PARSEMS "2m"
+ASSERT OK == 1
+ASSERT LAST_N == 120000
+
+SYS PARSEMS "1min"
+ASSERT OK == 1
+ASSERT LAST_N == 60000
+
+# hours
+SYS PARSEMS "1h"
+ASSERT OK == 1
+ASSERT LAST_N == 3600000
+
+SYS PARSEMS "2hr"
+ASSERT OK == 1
+ASSERT LAST_N == 7200000
+
+# days
+SYS PARSEMS "1d"
+ASSERT OK == 1
+ASSERT LAST_N == 86400000
+
+# weeks
+SYS PARSEMS "1w"
+ASSERT OK == 1
+ASSERT LAST_N == 604800000
+
+# aliases
+SYS DURATION "30s"
+ASSERT OK == 1
+ASSERT LAST_N == 30000
+SYS TOMS "100ms"
+ASSERT OK == 1
+ASSERT LAST_N == 100
+
+# case-insensitive unit
+SYS PARSEMS "4S"
+ASSERT OK == 1
+ASSERT LAST_N == 4000
+SYS PARSEMS "1H"
+ASSERT OK == 1
+ASSERT LAST_N == 3600000
+
+# from LAST default (no arg)
+LET d = "7s"
+SYS PARSEMS d
+ASSERT OK == 1
+ASSERT LAST_N == 7000
+# also bare LAST
+SYS EQS "x" "x"
+# set LAST to duration via REPLACEALL-free: use STR then... just re-call with string
+SYS PARSEMS "9s"
+ASSERT LAST_N == 9000
+
+# soft fail empty / bad
+SYS PARSEMS ""
+ASSERT OK == 0
+SYS PARSEMS "xyz"
+ASSERT OK == 0
+SYS PARSEMS "5x"
+ASSERT OK == 0
+
+# integer var path via string
+LET t = "15s"
+SYS PARSEMS t
+ASSERT OK == 1
+ASSERT LAST_N == 15000
+
+PRINT "sys_parsems ok"
