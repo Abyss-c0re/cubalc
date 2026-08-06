@@ -72,7 +72,7 @@
       "id": "W1",
       "severity": "high",
       "area": "lang|keyword",
-      "title": "Identifier end is END keyword — LET end corrupts control flow",
+      "title": "Identifier end is END keyword \u2014 LET end corrupts control flow",
       "detail": "LET end = count - 1 parsed as LET then END closing the IF, leaving '= count - 1' as unknown form and breaking later writes. Agents naming loop bounds end silently wreck programs.",
       "repro": "LET end = 5 \u2192 ok:false; unknown form ''"
     },
@@ -88,7 +88,7 @@
       "id": "W3",
       "severity": "med",
       "area": "host|range",
-      "title": "RANGE inclusive both ends — off-by-one vs half-open intuition",
+      "title": "RANGE inclusive both ends \u2014 off-by-one vs half-open intuition",
       "detail": "RANGE 0 16 yields 17 ids. Seed N needs RANGE 0 (N-1). Easy to over-seed worker bags.",
       "repro": "RANGE 0 3 \u2192 4 lines"
     },
@@ -112,7 +112,7 @@
       "id": "W6",
       "severity": "med",
       "area": "host|write",
-      "title": "WRITE omit trailing NL — wc -l undercounts WORK",
+      "title": "WRITE omit trailing NL \u2014 wc -l undercounts WORK",
       "detail": "16 ids 0..15 show wc -l 15 without final NL.",
       "repro": "cat -A WORK.txt"
     },
@@ -155,6 +155,6 @@
     "nproc/plan 1,5,9,13 + mono tick/tock green",
     "selftest 234/234; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "114f06242ab7568621349997dd92bc5df4d997a0",
   "ts": "2026-08-06T16:46:46Z"
 }
