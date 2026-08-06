@@ -316,6 +316,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 286. ~~**`SYS FILEUID` / `FILEGID` / `OWNEDBY`**~~ **done** (file owner uid/gid + euid owns probe · agent plate security).
 287. ~~**`SYS CANREAD` / `CANWRITE` / `CANEXEC`**~~ **done** (access R/W/X probes · pre-flight plate I/O without soft-fail glue).
 288. ~~**`SYS OWNERNAME` / `GROUPNAME`**~~ **done** (path → login/group name · human plate labels without shell stat %U/%G).
+289. ~~**`SYS CANCREATE` / `CREATABLE`**~~ **done** (create/overwrite pre-flight · parent W_OK|X_OK or path W_OK).
 
 ## Tick protocol
 

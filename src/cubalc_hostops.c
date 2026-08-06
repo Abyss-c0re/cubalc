@@ -420,6 +420,45 @@ int cubalc_host_can_access(const char *path, int mode, cubalc_host_result *r) {
   return 0;
 }
 
+/* Usability: SYS CANCREATE path — pre-flight create/overwrite without soft WRITE fail.
+ * Existing path: W_OK on the path itself (file or dir).
+ * Missing path: W_OK|X_OK on parent directory (basename strip). */
+int cubalc_host_can_create(const char *path, cubalc_host_result *r) {
+  char parent[CUBALC_HOST_STR_MAX];
+  const char *slash;
+  size_t n;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "cancreate: empty path");
+    return -1;
+  }
+  if (access(path, F_OK) == 0) {
+    /* path exists — can we overwrite / write into it? */
+    r->n = (access(path, W_OK) == 0) ? 1 : 0;
+    snprintf(r->str, sizeof r->str, "%ld", r->n);
+    r->ok = 1;
+    return 0;
+  }
+  /* missing: parent must allow create (write+search) */
+  slash = strrchr(path, '/');
+  if (!slash) {
+    /* bare basename → cwd */
+    snprintf(parent, sizeof parent, "%s", ".");
+  } else if (slash == path) {
+    /* "/name" → "/" */
+    snprintf(parent, sizeof parent, "%s", "/");
+  } else {
+    n = (size_t)(slash - path);
+    if (n >= sizeof parent) n = sizeof parent - 1;
+    memcpy(parent, path, n);
+    parent[n] = 0;
+  }
+  r->n = (access(parent, W_OK | X_OK) == 0) ? 1 : 0;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS OWNERNAME path — login name for st_uid without shell stat -c %U. */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r) {
   struct stat st;

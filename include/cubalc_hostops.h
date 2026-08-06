@@ -54,6 +54,8 @@ int cubalc_host_fileuid(const char *path, cubalc_host_result *r);
 int cubalc_host_filegid(const char *path, cubalc_host_result *r);
 /* access probe: mode is R_OK/W_OK/X_OK/F_OK; r->n = 1 if allowed, 0 if not; always ok if path non-empty */
 int cubalc_host_can_access(const char *path, int mode, cubalc_host_result *r);
+/* create/overwrite probe: existing file W_OK, else parent dir W_OK|X_OK; r->n = 0|1 */
+int cubalc_host_can_create(const char *path, cubalc_host_result *r);
 /* owner login name from st_uid via getpwuid; fallback decimal uid string; r->n = uid */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r);
 /* group name from st_gid via getgrgid; fallback decimal gid string; r->n = gid */

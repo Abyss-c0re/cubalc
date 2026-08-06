@@ -2054,6 +2054,43 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS CANCREATE|CREATABLE|MAYCREATE path — LAST_N 1 if create/overwrite allowed.
+     * Exists → W_OK; missing → parent W_OK|X_OK. Empty → OK=0.
+     * Usability: pre-flight plate WRITE/TOUCH/MKDIR without soft-fail glue. */
+    if (kw(&L->cur,"CANCREATE") || kw(&L->cur,"CREATABLE") || kw(&L->cur,"MAYCREATE") ||
+        kw(&L->cur,"CAN_CREATE") || kw(&L->cur,"ISCREATABLE") || kw(&L->cur,"CANMK") ||
+        kw(&L->cur,"CANTOUCH") || kw(&L->cur,"CANWRITEPATH") || kw(&L->cur,"PARENTWRITABLE")){
+      char path[512];
+      cubalc_host_result hr;
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] || cubalc_host_can_create(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "CANCREATE_N", 0);
+        var_set_num(vm, "CREATABLE", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "CANCREATE: empty path");
+        var_set_str(vm, "ERR", "CANCREATE: empty path");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "CANCREATE", hr.n);
+      var_set_num(vm, "CANCREATE_N", hr.n);
+      var_set_num(vm, "CREATABLE", hr.n);
+      var_set_num(vm, "MAYCREATE", hr.n);
+      var_set_str(vm, "CANCREATE_PATH", path);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS OWNERNAME|OWNERUSER|NAMEOWNER path — st_uid → login name in LAST.
      * SYS GROUPNAME|OWNERGROUP|GRNAME path — st_gid → group name in LAST.
      * LAST_N = uid/gid; soft miss missing path. Numeric fallback if no pw/gr entry.
@@ -22795,6 +22832,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS CANREAD", "SYS CANREAD|READABLE path — access R_OK → LAST_N 0|1"},
       {"SYS CANWRITE", "SYS CANWRITE|WRITABLE path — access W_OK → LAST_N 0|1"},
       {"SYS CANEXEC", "SYS CANEXEC|EXECUTABLE path — access X_OK → LAST_N 0|1"},
+      {"SYS CANCREATE", "SYS CANCREATE|CREATABLE path — create/overwrite probe LAST_N 0|1"},
+      {"SYS OWNERNAME", "SYS OWNERNAME|OWNERUSER path — owner login name → LAST"},
+      {"SYS GROUPNAME", "SYS GROUPNAME|OWNERGROUP path — group name → LAST"},
       {"SYS DOTENV", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "SYS LOADENV alias of SYS DOTENV"},
       {"SYS ENVFILE", "SYS ENVFILE alias of SYS DOTENV"},

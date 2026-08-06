@@ -1,0 +1,52 @@
+# SYS CANCREATE — pre-flight create/overwrite probe
+# Usability: agent plate WRITE gate without soft-fail glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "cancreate_mi_plate.txt"
+LET p = LAST
+
+# missing path under writable tmp → creatable
+SYS CANCREATE p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT CANCREATE_N == 1
+ASSERT CREATABLE == 1
+
+# create it
+SYS WRITE p "created-via-cancreate"
+ASSERT OK == 1
+
+# existing writable file → can overwrite
+SYS CANCREATE p
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# aliases
+SYS CREATABLE p
+ASSERT LAST_N == 1
+SYS MAYCREATE p
+ASSERT LAST_N == 1
+
+# parent dir itself is writable (dir exists)
+SYS CANCREATE td
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# impossible parent → not creatable (probe OK=1, LAST_N=0)
+SYS CANCREATE "/no/such/dir_cancreate_mi/xyz_plate.txt"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# empty path soft fail OK=0
+SYS CANCREATE ""
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# cleanup
+SYS RM p
+
+PRINT "sys_cancreate ok"
