@@ -1,64 +1,70 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 59,
-  "program": "programs/realworld/cache_freshness_board.cubalc",
-  "theme": "cache/log freshness AGEALL SORTMTIME NEWEST LARGEST THRESHKV stale",
-  "version": "1.15.185-usability",
+  "iter": 60,
+  "program": "programs/realworld/build_delta_board.cubalc",
+  "theme": "make-style rebuild delta KEEPNEWER KEEPOLDER FRESH KEEPSTALE stamp",
+  "version": "1.15.187-usability",
   "pass": true,
   "tests": [
     {
       "name": "scan_files",
-      "cmd": "PATHGLOB * + KEEPFILES \u2192 3 logs drop nested",
+      "cmd": "PATHGLOB+KEEPFILES → also/new/old.src",
       "ok": true,
-      "note": "kind filter"
+      "note": "drop nested"
     },
     {
-      "name": "ages_zip",
-      "cmd": "AGEALL + ZIP basename:age ages 0/1/3 max=3",
+      "name": "stamp_newer",
+      "cmd": "KEEPNEWER vs build.out → also+new (drop old) ref_ok=1",
       "ok": true,
-      "note": "AGEALL_MAX=3"
+      "note": "rebuild candidates"
     },
     {
-      "name": "sortmt_desc_asc",
-      "cmd": "SORTMTIME DESC newest first; ASC oldest first",
+      "name": "older",
+      "cmd": "KEEPOLDER → old.src only",
       "ok": true,
-      "note": "order flip"
+      "note": "already built sources"
     },
     {
-      "name": "newest_oldest",
-      "cmd": "NEWEST new_big; OLDEST old_small; NEWEST_N=epoch",
+      "name": "missing_ref_newer",
+      "cmd": "KEEPNEWER missing.out → all 3 existing ref_ok=0",
       "ok": true,
-      "note": "pick extremes"
+      "note": "make rebuild-all"
     },
     {
-      "name": "largest_smallest",
-      "cmd": "LARGEST 13B new_big; SMALLEST 1B old_small",
+      "name": "missing_ref_older",
+      "cmd": "KEEPOLDER missing → empty soft",
       "ok": true,
-      "note": "size pick"
+      "note": "asymmetric miss ref"
     },
     {
-      "name": "sortsz",
-      "cmd": "SORTSIZE DESC largest first",
+      "name": "fresh_large",
+      "cmd": "FRESH 1e6 keeps all 3",
       "ok": true,
-      "note": "new_big mid old_small"
+      "note": "after STR AGE shuttle"
     },
     {
-      "name": "stale_thresh",
-      "cmd": "THRESHKV age>=1 \u2192 mid+old_small",
+      "name": "fresh_zero",
+      "cmd": "FRESH 0 keeps just-touched new+also",
       "ok": true,
-      "note": "drops age 0 fresh"
+      "note": "age==0 only"
     },
     {
-      "name": "ages_with_dirs",
-      "cmd": "AGEALL without KEEPFILES \u2192 nested:0 HIT (dir has mtime)",
+      "name": "stale_one",
+      "cmd": "KEEPSTALE 1 → old.src",
       "ok": true,
-      "note": "dir is AGE hit not miss unlike SIZEALL"
+      "note": "min age gate"
+    },
+    {
+      "name": "touchref_newer_none",
+      "cmd": "TOUCH stamp then newer REQUIRE exit 2",
+      "ok": true,
+      "note": "up-to-date"
     },
     {
       "name": "stale_none_require",
-      "cmd": "min 999999 REQUIRE exit 2",
+      "cmd": "KEEPSTALE 999999 REQUIRE exit 2",
       "ok": true,
-      "note": "empty stale"
+      "note": "empty gate"
     },
     {
       "name": "scan_miss_require",
@@ -67,105 +73,98 @@
       "note": "OK=0"
     },
     {
-      "name": "newest_empty_require",
-      "cmd": "clear then newest REQUIRE exit 2",
-      "ok": true,
-      "note": "empty bag"
-    },
-    {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "160/160 pass incl mtimeall newest sortmtime"
+      "note": "162/162 pass incl fresh keepnewer"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|fs",
-      "title": "AGEALL treats directories as HIT (real mtime) while SIZEALL treats them as MISS",
-      "detail": "Inconsistent bag-map semantics: AGEALL on nested/ succeeds with age seconds (often 0 if just created); SIZEALL on same path is MISS+0. Agents cannot share KEEPFILES-optional pipelines across size and age boards safely.",
-      "repro": "AGEALL paths_with_dir \u2192 nested:0 AGEALL_HIT includes dir; SIZEALL \u2192 SIZEALL_MISS"
+      "area": "host|parse",
+      "title": "FRESH/KEEPSTALE reject numeric vars — need STR shuttle",
+      "detail": "Age limit accepts TK_NUM literal or string arg only. SYS FRESH bag AGE with num AGE fails parse (SYS FRESH bag max_age_sec). Agents must SYS STR AGE first. THRESHKV accepts nums; inconsistent.",
+      "repro": "LET AGE=60; SYS FRESH paths AGE → fail; STR then FRESH ok"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|bag",
-      "title": "No AGEALL name:age / path:age single-shot \u2014 need BASENAMEALL+ZIP",
-      "detail": "Same class as SIZEALL: parallel decimal bag only. Desync if PATHS filtered after ages without remap.",
-      "repro": "AGEALL then ZIP BASENAMEALL ages"
+      "area": "host|fs",
+      "title": "KEEPNEWER missing ref keeps all; KEEPOLDER missing keeps none",
+      "detail": "Asymmetric make-style: missing stamp = rebuild everything for NEWER, but OLDER empties. Easy to mis-gate backup-older-than-checkpoint vs rebuild-all.",
+      "repro": "KEEPNEWER bag miss → all exist; KEEPOLDER bag miss → empty"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|time",
-      "title": "AGEALL age 0 == brand-new and == just-created dir pollution",
-      "detail": "Fresh files age 0; dirs also often 0. THRESHKV min=1 drops both fresh files and dir noise \u2014 cannot keep zero-age files if filtering dirs via age alone.",
-      "repro": "new_big.log:0 and nested:0 both age 0"
+      "title": "FRESH max_age=0 is only age==0 not inclusive window",
+      "detail": "Just-touched files only; any clock tick drops them. No ms-resolution; tests race on slow hosts.",
+      "repro": "FRESH bag 0 after TOUCH"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|pick",
-      "title": "NEWEST_N is mtime epoch not age seconds; LARGEST_N is bytes",
-      "detail": "Side-channel units differ across pick ops sharing *_N suffix. Agents must remember NEWEST_N\u2260age.",
-      "repro": "NEWEST \u2192 path; NEWEST_N=1785991085 epoch"
+      "area": "host|fs",
+      "title": "No mtime equality mode (newer-or-equal / older-or-equal)",
+      "detail": "KEEPNEWER is strict >; same mtime sources not rebuilt. Touch-equal race can skip rebuild.",
+      "repro": "source mtime == stamp → not in KEEPNEWER"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|bag",
-      "title": "No AGEALL threshold filter on path bag (keep paths age>=min)",
-      "detail": "Stale path selection needs ZIP to KV then THRESHKV then KEYS peel \u2014 multi-step. No KEEPOLD/FILTERAGE path op.",
-      "repro": "want paths with age>=60 \u2192 ZIP+THRESHKV+KEYS"
+      "area": "host|json",
+      "title": "PRINT_JSON bag newline collapse",
+      "detail": "DELTA full paths collapse into one string.",
+      "repro": "PRINT_JSON delta"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|json",
-      "title": "PRINT_JSON bag newline collapse",
-      "detail": "Ages bag collapses to digit run e.g. \"013\" unreadable as array.",
-      "repro": "PRINT_JSON ages \u2192 \"013\""
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE omits final trailing newline",
+      "detail": "STAMP.txt and DELTA last line without $ on cat -A.",
+      "repro": "stamp; cat -A STAMP.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last AGES/AGE_KV line without $.",
-      "repro": "ages; cat -A AGES.txt"
+      "area": "host|time",
+      "title": "TOUCH cannot set historical mtime for fixtures",
+      "detail": "Stamp/source age spread needs host sleep or touch -d.",
+      "repro": "TOUCH only now"
     },
     {
       "id": "W8",
-      "severity": "low",
-      "area": "host|time",
-      "title": "No bulk utime set \u2014 cannot fabricate historical mtimes in-language",
-      "detail": "Tests need host sleep/touch -d. TOUCH only refreshes to now. Blocks pure-CubalC stale fixture setup.",
-      "repro": "TOUCH path \u2192 now only"
+      "severity": "med",
+      "area": "host|bag",
+      "title": "FRESH/KEEPSTALE drop missing paths silently (no MISS count in path form)",
+      "detail": "Ghost paths disappear into DROP; no parallel MISS bag. KEEPNEWER_DROP mixes older+missing+ghost.",
+      "repro": "FRESH bag_with_ghost → ghost in DROP not separate"
     }
   ],
   "workarounds": [
-    "Always KEEPFILES before AGEALL for file-only freshness",
-    "Remap ages after any PATHS reorder/filter",
-    "THRESHKV min>=1 to drop age-0 noise including fresh+dirs",
-    "Read NEWEST_N as epoch; LARGEST_N as bytes",
-    "Host touch -d / sleep for age fixtures"
+    "Always SYS STR age_var before FRESH/KEEPSTALE",
+    "Check KEEPNEWER_REF_OK before treating empty as up-to-date",
+    "Missing stamp: use newer for rebuild-all; do not use older",
+    "KEEPFILES before delta filters",
+    "Host sleep/touch -d for age fixtures"
   ],
   "language_gaps": [
-    "AGEALL name:age single-shot mode",
-    "Consistent dir policy across SIZEALL vs AGEALL",
-    "KEEPOLD/FILTERAGE path bag by age threshold",
-    "NEWEST return age seconds option",
+    "FRESH/KEEPSTALE accept numeric expression/vars",
+    "KEEPNEWERGE / KEEPOLDERLE inclusive mtime modes",
+    "Per-path miss markers distinct from older-drop",
     "In-language historical mtime set",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "AGEALL/SORTMTIME/NEWEST/LARGEST positive path clean",
-    "Dir AGE hit vs SIZE miss inconsistency confirmed",
-    "PRINT_JSON ages collapse to digit soup",
-    "No language fix this iter"
+    "KEEPNEWER/OLDER positive path clean",
+    "Hit W1 immediately: FRESH AGE num var parse fail — worked around with STR",
+    "Missing-ref asymmetry confirmed",
+    "No language fix this iter (STR shuttle workaround)"
   ],
-  "commit": "d8120257bc2acd828f824b23c678f2543c8a4634",
-  "ts": "2026-08-06T04:38:30Z"
+  "commit": "",
+  "ts": "2026-08-06T05:04:30Z"
 }

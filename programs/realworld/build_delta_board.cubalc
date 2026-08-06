@@ -1,0 +1,703 @@
+# build_delta_board.cubalc — make-style rebuild delta via KEEPNEWER/FRESH
+#
+# Real use: CI/build agent inventories a source drop and gates rebuild vs a
+# stamp/artifact mtime (KEEPNEWER/KEEPOLDER) without EACH+MTIME CMP. Also
+# FRESH/KEEPSTALE age gates for cache TTL and lease expiry candidates.
+# Distinct from cache_freshness_board (AGEALL maps + THRESHKV glue) and
+# stale_plate_gc (destructive trash): this board is path-filter delta only.
+#
+# Plate under STATE:
+#   PATHS.txt          — working path bag
+#   DELTA.txt          — last filter result (rebuild candidates)
+#   STAMP.txt          — path of stamp/ref (text one line)
+#   DELTA_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_BD_ACTION):
+#   list      — depths (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   stamp     — set/write STAMP path (ARG1) or default DIR/.stamp
+#   touchref  — TOUCH stamp path (refresh ref mtime)
+#   newer     — KEEPNEWER PATHS stamp → DELTA (rebuild if newer than stamp)
+#   older     — KEEPOLDER PATHS stamp → DELTA
+#   fresh     — FRESH PATHS max_age (ARG1) → DELTA
+#   stale     — KEEPSTALE PATHS min_age (ARG1) → DELTA
+#   has       — HASLINE exact on PATHS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_bd_$$; mkdir -p "$CUBALC_STATE/src"
+#   # fixtures with sleep/touch age spread
+#   CUBALC_BD_DIR=$CUBALC_STATE/src CUBALC_ARG0=scan CUBALC_ARG1='*' \
+#     ./out/cubalc run -q -s programs/realworld/build_delta_board.cubalc
+#   CUBALC_ARG0=files ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=stamp CUBALC_ARG1=$CUBALC_STATE/build.out ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=newer ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=fresh CUBALC_ARG1=2 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_BD_DIR=…  CUBALC_BD_PAT=*  CUBALC_BD_REQUIRE=1
+#   CUBALC_BD_STAMP=…  CUBALC_BD_AGE=60
+#
+# Edges deliberately stressed:
+#   KEEPNEWER missing ref → keeps all existing (make rebuild-all)
+#   KEEPOLDER missing ref → keeps none
+#   FRESH max_age 0 keeps only age==0
+#   KEEPSTALE min_age; ghost paths dropped
+#   dirs in PATHGLOB without KEEPFILES
+#   WRITE NL; PRINT_JSON; soft READ; REQUIRE empty delta
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "build_delta_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT DFILE = "DELTA.txt"
+DEFAULT SFILE = "STAMP.txt"
+DEFAULT REPORT = "DELTA_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT STAMP = ""
+DEFAULT AGE = 60
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_BD_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_BD_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_BD_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_BD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_BD_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_BD_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_BD_STAMP" OR ""
+IF LAST_N > 0 THEN
+  LET STAMP = LAST
+END
+SYS ENV "CUBALC_BD_AGE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET AGE = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir DFILE
+LET delta_path = LAST
+SYS JOIN state_dir SFILE
+LET stamp_file = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR delta_path OR ""
+LET delta = LAST
+CLEAR_ERR
+SYS READ OR stamp_file OR ""
+LET stamp_stored = LAST
+CLEAR_ERR
+SYS BLANK STAMP
+IF LAST_N == 1 THEN
+  SYS BLANK stamp_stored
+  IF LAST_N == 0 THEN
+    LET STAMP = stamp_stored
+  ELSE
+    SYS JOIN DIR ".stamp"
+    LET STAMP = LAST
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET delta_ch = 0
+LET stamp_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET ref_ok = 0
+
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET STAMP = NAME
+  END
+END
+SYS EQS ACTION "fresh"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET AGE = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "stale"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET AGE = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES delta
+  LET nd = LAST_N
+  CLEAR_ERR
+  STATUS
+  PRINT "bdelta" np nd STAMP ACTION
+  PRINT_JSON np nd STAMP ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON delta
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n
+    PRINT_JSON paths
+  END
+END
+
+# --- files ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- stamp: record stamp path ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  SYS BLANK STAMP
+  IF LAST_N == 1 THEN
+    SYS JOIN DIR ".stamp"
+    LET STAMP = LAST
+  END
+  LET stamp_stored = STAMP
+  LET stamp_ch = 1
+  LET hit = 1
+  LET val_s = STAMP
+  LET note_msg = "stamp ok"
+  PRINT_JSON STAMP
+END
+
+# --- touchref: TOUCH stamp ---
+SYS EQS ACTION "touchref"
+IF LAST_N == 1 THEN
+  NOTE "action touchref"
+  SYS BLANK STAMP
+  IF LAST_N == 1 THEN
+    EXIT 2 "touchref needs stamp"
+  END
+  SYS TOUCH STAMP
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "touchref miss"
+    FAIL "touchref miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "touchref miss"
+    END
+  ELSE
+    LET hit = 1
+    LET val_s = STAMP
+    LET stamp_ch = 1
+    LET stamp_stored = STAMP
+    LET note_msg = "touchref ok"
+  END
+  PRINT_JSON STAMP
+END
+
+# --- newer KEEPNEWER ---
+SYS EQS ACTION "newer"
+IF LAST_N == 1 THEN
+  NOTE "action newer"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "newer empty"
+    FAIL "newer empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "newer empty"
+    END
+  ELSE
+    SYS BLANK STAMP
+    IF LAST_N == 1 THEN
+      EXIT 2 "newer needs stamp"
+    END
+    SYS KEEPNEWER paths STAMP
+    LET delta = LAST
+    LET keep_n = KEEPNEWER_N
+    LET drop_n = KEEPNEWER_DROP
+    LET ref_ok = KEEPNEWER_REF_OK
+    LET delta_ch = 1
+    LET hit = keep_n
+    SYS BLANK delta
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "newer none"
+      FAIL "newer none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "newer none"
+      END
+    ELSE
+      LET note_msg = "newer ok"
+    END
+    PRINT_JSON keep_n drop_n ref_ok STAMP
+    PRINT_JSON delta
+  END
+END
+
+# --- older KEEPOLDER ---
+SYS EQS ACTION "older"
+IF LAST_N == 1 THEN
+  NOTE "action older"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "older empty"
+    FAIL "older empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "older empty"
+    END
+  ELSE
+    SYS BLANK STAMP
+    IF LAST_N == 1 THEN
+      EXIT 2 "older needs stamp"
+    END
+    SYS KEEPOLDER paths STAMP
+    LET delta = LAST
+    LET keep_n = KEEPOLDER_N
+    LET drop_n = KEEPOLDER_DROP
+    LET ref_ok = KEEPOLDER_REF_OK
+    LET delta_ch = 1
+    LET hit = keep_n
+    SYS BLANK delta
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "older none"
+      FAIL "older none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "older none"
+      END
+    ELSE
+      LET note_msg = "older ok"
+    END
+    PRINT_JSON keep_n drop_n ref_ok STAMP
+    PRINT_JSON delta
+  END
+END
+
+# --- fresh FRESH ---
+SYS EQS ACTION "fresh"
+IF LAST_N == 1 THEN
+  NOTE "action fresh"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "fresh empty"
+    FAIL "fresh empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "fresh empty"
+    END
+  ELSE
+    # FRESH age limit is TK_NUM or string — num vars need STR shuttle
+    SYS STR AGE
+    LET age_s = LAST
+    SYS FRESH paths age_s
+    LET delta = LAST
+    LET keep_n = FRESH_N
+    LET drop_n = FRESH_DROP
+    LET val_n = FRESH_AGE
+    LET delta_ch = 1
+    LET hit = keep_n
+    SYS BLANK delta
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "fresh none"
+      FAIL "fresh none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "fresh none"
+      END
+    ELSE
+      LET note_msg = "fresh ok"
+    END
+    PRINT_JSON AGE keep_n drop_n
+    PRINT_JSON delta
+  END
+END
+
+# --- stale KEEPSTALE ---
+SYS EQS ACTION "stale"
+IF LAST_N == 1 THEN
+  NOTE "action stale"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "stale empty"
+    FAIL "stale empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "stale empty"
+    END
+  ELSE
+    SYS STR AGE
+    LET age_s = LAST
+    SYS KEEPSTALE paths age_s
+    LET delta = LAST
+    LET keep_n = STALE_N
+    LET drop_n = STALE_DROP
+    LET val_n = STALE_AGE
+    LET delta_ch = 1
+    LET hit = keep_n
+    SYS BLANK delta
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "stale none"
+      FAIL "stale none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "stale none"
+      END
+    ELSE
+      LET note_msg = "stale ok"
+    END
+    PRINT_JSON AGE keep_n drop_n
+    PRINT_JSON delta
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET delta = ""
+  LET paths_ch = 1
+  LET delta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "stamp"
+LET k = k + LAST_N
+SYS EQS ACTION "touchref"
+LET k = k + LAST_N
+SYS EQS ACTION "newer"
+LET k = k + LAST_N
+SYS EQS ACTION "older"
+LET k = k + LAST_N
+SYS EQS ACTION "fresh"
+LET k = k + LAST_N
+SYS EQS ACTION "stale"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF delta_ch > 0 THEN
+  SYS WRITE delta_path delta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "delta write failed"
+  END
+  CLEAR_ERR
+END
+IF stamp_ch > 0 THEN
+  SYS WRITE stamp_file stamp_stored
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "stamp write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES delta
+LET depth_d = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.build_delta.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "stamp"
+LET report = LAST
+SYS PUSH report STAMP
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ref_ok"
+LET report = LAST
+SYS STR ref_ok
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "age"
+LET report = LAST
+SYS STR AGE
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_d"
+LET report = LAST
+SYS STR depth_d
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "build_delta_board" ACTION hit miss keep_n ref_ok note_msg elapsed
+PRINT_JSON ACTION hit miss keep_n drop_n ref_ok AGE depth_p depth_d note_msg STATUS_OK
+NOTE "build_delta_board: done"
