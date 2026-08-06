@@ -1,0 +1,78 @@
+# SYS WRITEATOMIC / ATOMICWRITE / SAFEWRITE
+# — write via sibling temp then rename (crash-safer plate update)
+# Usability: multi-agent status plates without torn WRITE mid-read
+# LAST = path · LAST_N / WRITEATOMIC_N = bytes · soft empty path OK=0
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "writeatomic_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET fp = LAST
+SYS RM fp
+
+# create new plate
+SYS WRITEATOMIC fp "status=boot\nhost=peer1"
+ASSERT OK == 1
+ASSERT WRITEATOMIC_N >= 18
+ASSERT LAST_N >= 18
+SYS EQS LAST fp
+ASSERT LAST_N == 1
+SYS EXIST fp
+ASSERT LAST_N == 1
+SYS READ fp
+SYS HAS LAST "status=boot"
+ASSERT LAST_N == 1
+SYS READ fp
+SYS HAS LAST "host=peer1"
+ASSERT LAST_N == 1
+
+# no leftover temp
+SYS LIST fix
+SYS GREP LAST "cubalc-tmp"
+ASSERT LAST_N == 0
+
+# overwrite existing
+SYS ATOMICWRITE fp "status=ready"
+ASSERT OK == 1
+SYS READ fp
+SYS EQS LAST "status=ready"
+ASSERT LAST_N == 1
+SYS HAS LAST "boot"
+ASSERT LAST_N == 0
+
+# SAFEWRITE alias with empty body
+SYS SAFEWRITE fp ""
+ASSERT OK == 1
+ASSERT WRITEATOMIC_N == 0
+SYS SIZE fp
+ASSERT LAST_N == 0
+
+# rewrite payload and hash-stamp change detect
+SYS WRITEATOMIC fp "payload=v1"
+SYS HASHFILE fp
+LET h1 = LAST
+SYS WRITEATOMIC fp "payload=v2"
+SYS HASHFILE fp
+SYS EQS LAST h1
+ASSERT LAST_N == 0
+SYS HASHFILE fp
+LET h2 = LAST
+SYS WRITEATOMIC fp "payload=v2"
+SYS HASHFILE fp
+SYS EQS LAST h2
+ASSERT LAST_N == 1
+
+# empty path soft fail
+SYS WRITEATOMIC "" "x"
+ASSERT OK == 0
+ASSERT WRITEATOMIC_N == 0
+
+# cleanup
+SYS RM fp
+
+PRINT "sys_writeatomic ok"

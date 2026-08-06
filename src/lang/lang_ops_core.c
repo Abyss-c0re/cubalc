@@ -507,6 +507,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS WRITEATOMIC|ATOMICWRITE|SAFEWRITE path data
+     * — write to sibling temp then rename into place (crash-safer plate update).
+     * Temp: path.cubalc-tmp.<pid>. Soft empty path / write|rename fail → OK=0.
+     * LAST = path; LAST_N / WRITEATOMIC_N = bytes.
+     * Usability: multi-agent plate status without torn WRITE mid-read. */
+    if (kw(&L->cur,"WRITEATOMIC") || kw(&L->cur,"ATOMICWRITE") ||
+        kw(&L->cur,"SAFEWRITE") || kw(&L->cur,"WRITE_ATOMIC") ||
+        kw(&L->cur,"ATOMWRITE") || kw(&L->cur,"WRITESAFE") ||
+        kw(&L->cur,"PLATEWRITE") || kw(&L->cur,"COMMITWRITE") ||
+        kw(&L->cur,"WRITEA") || kw(&L->cur,"AWRITE")){
+      char path[512], tmp[560], data[CUBALC_HOST_STR_MAX], a[CUBALC_HOST_STR_MAX];
+      cubalc_host_result hr, rr;
+      long pid;
+      lex_next(L);
+      path[0] = 0; tmp[0] = 0; data[0] = 0; a[0] = 0;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+        fail(vm, "SYS WRITEATOMIC path data");
+        return -1;
+      }
+      snprintf(path, sizeof path, "%s", a);
+      if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(data, sizeof data, "%ld", n);
+        } else {
+          /* empty data allowed */
+          data[0] = 0;
+        }
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEATOMIC_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "WRITEATOMIC: empty path");
+        var_set_str(vm, "ERR", "WRITEATOMIC: empty path");
+        bump(vm); return 1;
+      }
+#if defined(CUBALC_OS_WINDOWS)
+      pid = 0;
+#else
+      pid = (long)getpid();
+#endif
+      snprintf(tmp, sizeof tmp, "%s.cubalc-tmp.%ld", path, pid);
+      if (cubalc_host_write(tmp, data, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEATOMIC_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", hr.err[0] ? hr.err : "WRITEATOMIC: write temp fail");
+        var_set_str(vm, "ERR", hr.err[0] ? hr.err : "WRITEATOMIC: write temp fail");
+        bump(vm); return 1;
+      }
+      if (cubalc_host_rename(tmp, path, &rr) != 0) {
+        /* best-effort cleanup of temp */
+        cubalc_host_result trash;
+        cubalc_host_rm(tmp, &trash);
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEATOMIC_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", rr.err[0] ? rr.err : "WRITEATOMIC: rename fail");
+        var_set_str(vm, "ERR", rr.err[0] ? rr.err : "WRITEATOMIC: rename fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_str(vm, "WRITEATOMIC", path);
+      var_set_str(vm, "ATOMICWRITE", path);
+      var_set_str(vm, "SAFEWRITE", path);
+      var_set_num(vm, "WRITEATOMIC_N", hr.n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS RM|UNLINK|DELETE path — remove regular file; missing soft OK (LAST_N=0)
      * Usability: agents clean STATE/TMP plates without shell rm. */
     if (kw(&L->cur,"RM") || kw(&L->cur,"UNLINK") || kw(&L->cur,"DELETE") ||
