@@ -1,0 +1,95 @@
+# SYS TOUCHALL / ENSUREALL — bulk create/refresh path bag
+# Usability: lease/marker stamps without EACH + TOUCH glue
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "touchall_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "a.lease"
+LET fa = LAST
+SYS JOIN fix "b.lease"
+LET fb = LAST
+SYS JOIN fix "c.lease"
+LET fc = LAST
+
+# existing file to update
+SYS WRITE fa "lease-a"
+
+# dir should fail soft
+SYS JOIN fix "subdir"
+LET sub = LAST
+SYS MKDIR sub
+
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS PUSH LAST sub
+LET bag = LAST
+SYS LINES bag
+ASSERT LAST_N == 4
+
+# TOUCHALL: update a, create b+c, fail subdir
+SYS TOUCHALL bag
+ASSERT TOUCHALL_N == 3
+ASSERT TOUCHALL_NEW == 2
+ASSERT TOUCHALL_UPD == 1
+ASSERT TOUCHALL_FAIL == 1
+ASSERT TOUCHALL_SCAN == 4
+ASSERT OK == 0
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 1
+SYS EXIST fa
+ASSERT LAST_N == 1
+SYS EXIST fb
+ASSERT LAST_N == 1
+SYS EXIST fc
+ASSERT LAST_N == 1
+SYS ISDIR sub
+ASSERT LAST_N == 1
+
+# second pass: all three update (0 new)
+SYS PUSH "" fa
+SYS PUSH LAST fb
+SYS PUSH LAST fc
+SYS TOUCHALL LAST
+ASSERT OK == 1
+ASSERT TOUCHALL_N == 3
+ASSERT TOUCHALL_NEW == 0
+ASSERT TOUCHALL_UPD == 3
+ASSERT TOUCHALL_FAIL == 0
+
+# ENSUREALL alias + one-arg after PATHGLOB
+SYS JOIN fix "d.lease"
+LET fd = LAST
+SYS JOIN fix "e.lease"
+LET fe = LAST
+SYS PUSH "" fd
+SYS PUSH LAST fe
+SYS ENSUREALL
+ASSERT ENSUREALL_N == 2
+ASSERT TOUCHALL_NEW == 2
+SYS EXIST fd
+ASSERT LAST_N == 1
+
+# CREATEALL empty bag soft
+SYS CREATEALL ""
+ASSERT CREATEALL_N == 0
+ASSERT TOUCHALL_SCAN == 0
+ASSERT OK == 1
+
+# cleanup
+SYS RMALL fa
+# bag of remaining leases
+SYS PATHGLOB fix "*.lease"
+SYS KEEPFILES
+SYS RMALL
+
+PRINT "sys_touchall ok"
