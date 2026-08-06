@@ -17915,7 +17915,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     static const struct { const char *name; const char *hint; } help[] = {
       {"HOLD_FLASH", "HOLD_FLASH 0|1 — device/firmware safeguard; default 1 (omit preamble)"},
       {"CUBE", "CUBE name ROLE host|body PROTON 0|1"},
-      {"PLUG", "PLUG a b — wire cubes (requires HOLD_FLASH 1)"},
+      {"PLUG", "PLUG a b — wire cubes (denied only if HOLD_FLASH 0; default 1)"},
       {"IMPULSE", "IMPULSE cube [0|1] — pulse proton"},
       {"FLOW", "FLOW n — board ticks"},
       {"SETBIT", "SETBIT cube idx 0|1"},
@@ -18492,7 +18492,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (!q[0]){
       snprintf(out, sizeof out,
                "HELP [form] · cubalc forms [prefix] · cookbook: docs/COOKBOOK.md · "
-               "HOLD_FLASH 1 before PLUG · SMX binary mesh");
+               "HOLD_FLASH default 1 (device/firmware safeguard) · SMX binary mesh");
       found = 1; hits = nhelp;
     } else {
       size_t o = 0;

@@ -19,7 +19,9 @@
  *   · English / pseudo verbs: plug, flow, impulse, decide, deconstruct…
  *   · raw text → hash into State Matrix SETBIT program + DECIDE
  *
- * Output always lawful: HOLD_FLASH, creed, braincube pipeline, DECIDE.
+ * Output always lawful: creed, budget, braincube pipeline, DECIDE.
+ * HOLD_FLASH is NOT forced — runtime defaults hold_flash=1 (device/firmware
+ * safeguard only; see docs/HOLD_FLASH.md).
  * ============================================================================= */
 
 int cubalc_looks_like_cubalc(const char *in, size_t n) {
@@ -65,7 +67,6 @@ static void emit_header(char *out, size_t cap, size_t *o, const char *note) {
   (void)note;
   append(out, cap, o,
     "CREED \"C3\"\n"
-    "HOLD_FLASH 1\n"
     "BUDGET 40\n"
     "SHARE smx\n\n");
 }

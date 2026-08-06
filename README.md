@@ -61,8 +61,7 @@ CUBALC_HUMAN=1 CUBALC_ASCII=1 ./out/cubalc run programs/hello_cube.cubalc
 ## Mini language tour
 
 ```cubalc
-HOLD_FLASH 1
-
+// No HOLD_FLASH needed — runtime defaults hold_flash=1
 CUBE a ROLE host PROTON 1
 CUBE b ROLE body PROTON 1
 PLUG a b
@@ -82,7 +81,9 @@ ASSERT SMX_TALKS >= 2
 ASSERT SET(b) >= 3
 ```
 
-Compact play forms still work: `[hold]` · `[name:role]` · `[a~b]` · `[name!]` · `[~n]` · `?`.
+`HOLD_FLASH` is a **device/firmware connection safeguard** only (set `0` to deny
+PLUG). Compact play forms still work: `[hold]` · `[name:role]` · `[a~b]` ·
+`[name!]` · `[~n]` · `?`.
 
 ### Forms you will use most
 
@@ -239,7 +240,9 @@ emit .cubalc  →  cubalc run  →  JSON / PRINT / ASSERT  →  next action
 
 ### Contract
 
-1. **HOLD_FLASH 1** = user permission before any unit is **plugged in** (safeguard; not auto-flash).
+1. **Do not** start every program with `HOLD_FLASH 1` — runtime already
+   defaults `hold_flash=1`. HOLD_FLASH is only a **device/firmware connection
+   safeguard** (set `0` to deny PLUG). See `docs/HOLD_FLASH.md`.
 2. **ASSERT** outcomes (`ASSERT SMX_OK == 1`, `ASSERT OK == 1`).
 3. Use **SYS** for host effects; do not invent device flashes.
 4. **No hard-coded device paths** or machine-local absolute homes in programs.
@@ -307,7 +310,7 @@ Optional OpenCL: `make USE_OPENCL=1 all`.
 | Matrix is SoT | Bits decide; prose does not |
 | Flow before compile | No flow → no compile |
 | Binary talk | SMX2/CBLC; HTTP is optional host edge |
-| HOLD_FLASH sticky | User permission before plug-in; SMX frames require hold; no auto-flash |
+| HOLD_FLASH sticky | Device/firmware connection safeguard (default 1); set 0 to deny PLUG; no auto-flash |
 | Devices free | No auto-flash; no layout hardcode |
 | Fail closed | No SMX key → no secure talk (lab may use demo key) |
 | Share matrix only | Peer share is state_matrix, not prose dumps |

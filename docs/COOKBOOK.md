@@ -1,7 +1,7 @@
 # CubalC cookbook — usable recipes
 
-**HOLD_FLASH is user permission before plug-in** (not auto-flash).  
-**Wire is SMX2 binary** (HTTP never required for peers).
+**HOLD_FLASH is a device/firmware connection safeguard** (default 1 — not a
+program preamble). Wire is SMX2 binary (HTTP never required for peers).
 
 ## 0. Doctor
 
@@ -14,30 +14,31 @@ make all
 ./out/cubalc libs        # programs/lib INCLUDE catalog (JSON)
 ./out/cubalc env [pfx]   # host CUBALC_* contract (set/default/hint JSON)
 ./out/cubalc examples    # curated runnable starters (JSON · filterable)
-./out/cubalc cat hold_seed  # dump lib/program source + meta plate
+./out/cubalc cat agent_boot  # dump lib/program source + meta plate
 ./out/cubalc forms SMX   # play-form catalog
-# agents: pipe source without a temp file
-printf 'HOLD_FLASH 1\nASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
+# agents: pipe source without a temp file (no HOLD_FLASH tax)
+printf 'ASSERT 1 == 1\nPRINT "piped"\n' | ./out/cubalc run -
 ./out/cubalc help
 ```
 
-## 1. Hello hold → place → plug → assert
+## 1. Hello place → plug → assert
 
 ```cubalc
-HOLD_FLASH 1
+// hold_flash defaults to 1 — no HOLD_FLASH line needed
 CUBE a ROLE host PROTON 1
 CUBE b ROLE body PROTON 1
 SETBIT a 0 1
 SETBIT a 1 1
 SETBIT b 0 1
 PLUG a b
-ASSERT OK == 1 "plug needs HOLD_FLASH 1"
+ASSERT OK == 1 "plug ok under default hold_flash"
 PRINT "hello" CUBES UNITY
 ```
 
 ```bash
 ./out/cubalc run programs/hello_cube.cubalc
 ./out/cubalc run programs/proof/12_hold_flash_plug.cubalc
+# device/firmware-only seed: cubalc cat hold_seed · docs/HOLD_FLASH.md
 ```
 
 ### Soft checks (multi-probe without abort)
@@ -60,7 +61,6 @@ Run result JSON always includes `last_err` (sticky soft FAIL/EXPECT reason) even
 ## 2. Decide from matrix
 
 ```cubalc
-HOLD_FLASH 1
 CUBE peer0 ROLE host PROTON 1
 CUBE brain ROLE braincube PROTON 1
 PLUG peer0 brain
@@ -74,7 +74,6 @@ ASSERT DECIDE <= 9
 ## 3. In-process SMX mesh
 
 ```cubalc
-HOLD_FLASH 1
 CUBE a ROLE host PROTON 1
 CUBE b ROLE body PROTON 1
 PLUG a b

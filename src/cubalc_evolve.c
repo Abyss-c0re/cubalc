@@ -642,7 +642,6 @@ static int emit_cubalc_program(const cubalc_evolve_mind *m, const char *prog_dir
   /* free-flow braincube + algocube optimize plate */
   fprintf(f,
     "# CubalC self-evolve gen=%d — braincube solves · algocube optimizes (pure C emitter)\n"
-    "HOLD_FLASH 1\n"
     "SHARE state_matrix_only\n"
     "BUDGET 40\n"
     "GENESIS \"NEXUS_COORD v1 | from=cubalc_evolve | type=self_evolve | gen=%d | "

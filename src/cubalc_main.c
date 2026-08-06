@@ -909,7 +909,7 @@ static int cmd_protect(int argc, char **argv) {
            "\"last_plate_ok\":%s,\"version\":\"%s\","
            "\"program\":\"%s\","
            "\"note\":\"status only — no board/smx; run cubalc protect all for checks\","
-           "\"hints\":[\"HOLD_FLASH 1 before PLUG\","
+           "\"hints\":[\"HOLD_FLASH default 1 (device/firmware safeguard; omit preamble)\","
            "\"cubalc protect all · cubalc doctor\"]}\n",
            CUBALC_HOLD_FLASH, CUBALC_BUDGET, CUBALC_SHARE,
            protect_env ? "true" : "false",
@@ -1674,7 +1674,7 @@ int main(int argc, char **argv) {
       int ok = modular && (CUBALC_HOLD_FLASH == 1);
       printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,"
              "\"version\":\"%s\",\"paradigm\":\"%s\",\"creed\":\"%s\","
-             "\"hold_flash\":%d,\"hold_flash_means\":\"user_permission_before_plug\","
+             "\"hold_flash\":%d,\"hold_flash_means\":\"device_firmware_connection_safeguard\","
              "\"share\":\"%s\",\"http_required\":false,"
              "\"modular_lang\":%s,\"smx_key_configured\":%s,"
              "\"smx_key_preview\":\"%s\","
@@ -1682,7 +1682,7 @@ int main(int argc, char **argv) {
              "\"core_protect_path\":\"%s\","
              "\"bin_ok\":%s,"
              "\"hints\":["
-             "\"HOLD_FLASH 1 before PLUG\","
+             "\"HOLD_FLASH default 1 — omit preamble; HOLD_FLASH 0 denies PLUG\","
              "\"export CUBALC_SMX_KEY=$(openssl rand -hex 32) for P2P\","
              "\"cubalc protect · cubalc smx-bus prove-tcp\","
              "\"cubalc selftest — live usability proofs\","
@@ -2062,9 +2062,9 @@ int main(int argc, char **argv) {
     /* Usability: live human/agent catalog of play forms (not opcode soup).
      * cubalc forms [prefix] — case-insensitive substring filter. */
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
+      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1 (omit preamble)"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
-      {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
+      {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"UNPLUG", "core", "remove plug edge"},
       {"REVERSE", "core", "flip I/O direction on plug"},
       {"IMPULSE", "core", "pulse proton on cube"},
@@ -3627,7 +3627,7 @@ int main(int argc, char **argv) {
     printf("{\"schema\":\"cubalc.version.v1\",\"ok\":true,\"cmd\":\"version\","
            "\"version\":\"%s\",\"name\":\"%s\",\"paradigm\":\"%s\",\"creed\":\"%s\","
            "\"share\":\"%s\",\"hold_flash\":%d,"
-           "\"hold_flash_means\":\"user_permission_before_plug\","
+           "\"hold_flash_means\":\"device_firmware_connection_safeguard\","
            "\"http_required\":false,\"wire\":\"smx2\","
            "\"note\":\"in-language: VERSION → LAST/VERSION string\"}\n",
            CUBALC_LANG_VERSION, CUBALC_LANG_NAME, CUBALC_LANG_PARADIGM,
@@ -3646,7 +3646,7 @@ int main(int argc, char **argv) {
       {"protect", "programs/protect", "core protect samples"},
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "user permission before plug"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"lang_src", "src/lang", "modular language planes"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
@@ -3745,16 +3745,16 @@ int main(int argc, char **argv) {
     static const struct { const char *name; const char *path; const char *hint; } aliases[] = {
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "user permission before plug"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
       {"lib", "programs/lib", "INCLUDE short-name stdlib dir"},
       {"proof", "programs/proof", "usability + ISA proofs dir"},
     };
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "user permission BEFORE plug"},
+      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1"},
       {"CUBE", "core", "place cube"},
-      {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
+      {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] path|libname → programs/lib/"},
       {"DEFAULT", "flow", "DEFAULT name = value if unset"},
       {"DEFINED", "flow", "DEFINED name → LAST_N 0|1"},
@@ -4377,9 +4377,9 @@ int main(int argc, char **argv) {
     int nh = 0, i;
     size_t k;
     static const struct { const char *name; const char *plane; const char *hint; } forms[] = {
-      {"HOLD_FLASH", "law", "user permission BEFORE plug (not auto-flash)"},
+      {"HOLD_FLASH", "law", "device/firmware safeguard · default 1 (omit preamble)"},
       {"CUBE", "core", "place cube · CUBE name ROLE host|body"},
-      {"PLUG", "core", "wire cubes · requires HOLD_FLASH 1"},
+      {"PLUG", "core", "wire cubes · denied only if HOLD_FLASH 0"},
       {"INCLUDE", "flow", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"DEFAULT", "flow", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "flow", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
@@ -5115,7 +5115,7 @@ int main(int argc, char **argv) {
     static const struct { const char *name; const char *path; const char *hint; } aliases[] = {
       {"cookbook", "docs/COOKBOOK.md", "hold → plug → smx recipes"},
       {"agents", "docs/FOR_AGENTS.md", "agent prompt snippet"},
-      {"hold_flash", "docs/HOLD_FLASH.md", "user permission before plug"},
+      {"hold_flash", "docs/HOLD_FLASH.md", "device/firmware connection safeguard"},
       {"p2p_doc", "docs/P2P_SMX.md", "binary mesh wire"},
       {"hello", "programs/hello_cube.cubalc", "minimal starter"},
       {"init", "cubalc init", "scaffold agent_boot starter program"},
@@ -5343,7 +5343,7 @@ int main(int argc, char **argv) {
       "    law|manifest           law plate JSON\n"
       "    protect|core-guard     Core protect checks → state/CORE_PROTECT.json\n"
       "    protect status         JSON summary only (no board/smx run)\n"
-      "    HOLD_FLASH 1           user permission BEFORE any PLUG (not auto-flash)\n"
+      "    HOLD_FLASH             device/firmware safeguard · default 1 (omit preamble)\n"
       "\n"
       "  P2P / SMX2 (binary wire)\n"
       "    smx|smx-selftest       seal/open/anti-replay\n"

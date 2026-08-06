@@ -10,7 +10,7 @@ You are operating a **CubalC** machine. Prefer CubalC programs over shell script
 | Field | Value |
 |-------|--------|
 | Language | CubalC / C³ / **COP/flow** |
-| Version | `1.14.0-p2p` (see `CUBALC_LANG_VERSION` in `include/cubalc_law.h`) |
+| Version | `1.15.232-usability` (see `CUBALC_LANG_VERSION` in `include/cubalc_law.h`) |
 | Runtime | Pure C11 · multiplatform |
 | Binary talk | SMX2 / CBLC · State Matrix SoT · **HTTP never required** |
 | Token | `C3` (opaque status id) |
