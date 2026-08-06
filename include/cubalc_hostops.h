@@ -40,6 +40,10 @@ int cubalc_host_rename(const char *from, const char *to, cubalc_host_result *r);
 int cubalc_host_copy(const char *src, const char *dst, cubalc_host_result *r);
 /* create symlink linkpath → target; r->str = linkpath; soft fail if linkpath exists */
 int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_result *r);
+/* create hard link newpath → existing (same inode); soft fail if new exists or src missing */
+int cubalc_host_hardlink(const char *existing, const char *newpath, cubalc_host_result *r);
+/* link count: r->n = st_nlink; soft miss if path missing */
+int cubalc_host_nlink(const char *path, cubalc_host_result *r);
 /* read symlink target into r->str; soft fail if not a symlink / missing */
 int cubalc_host_readlink(const char *path, cubalc_host_result *r);
 /* probe: r->n = 1 if path is a symlink, 0 if missing or not a link; always ok */

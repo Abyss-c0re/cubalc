@@ -1,0 +1,78 @@
+# SYS HARDLINK / HLINK · NLINK / LINKS — hard-link shared plate inodes
+# Usability: multi-agent shared plates without COPY/shell ln
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "hardlink_mi_src.txt"
+LET src = LAST
+SYS JOIN td "hardlink_mi_dst.txt"
+LET dst = LAST
+SYS JOIN td "hardlink_mi_dst2.txt"
+LET dst2 = LAST
+
+SYS WRITE src "shared-plate-payload"
+ASSERT OK == 1
+
+# single file starts at nlink >= 1
+SYS NLINK src
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+LET n0 = LAST_N
+
+# create hard link
+SYS HARDLINK src dst
+ASSERT OK == 1
+ASSERT HARDLINK_N == 1
+SYS EQS LAST dst
+ASSERT LAST_N == 1
+SYS EQS HARDLINK_SRC src
+ASSERT LAST_N == 1
+
+# same content, independent path
+SYS READ dst
+SYS EQS LAST "shared-plate-payload"
+ASSERT LAST_N == 1
+SYS NLINK src
+ASSERT LAST_N == n0 + 1
+SYS NLINK dst
+ASSERT LAST_N == n0 + 1
+
+# write via dst reflects in src (same inode)
+SYS WRITE dst "mutated-via-hardlink"
+SYS READ src
+SYS EQS LAST "mutated-via-hardlink"
+ASSERT LAST_N == 1
+
+# aliases
+SYS HLINK src dst2
+ASSERT OK == 1
+ASSERT HLINK_N == 1
+SYS NLINK src
+ASSERT LAST_N == n0 + 2
+SYS LINKCOUNT src
+ASSERT LAST_N == n0 + 2
+
+# soft fail: dest exists
+SYS HARDLINK src dst
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 5
+
+# soft fail: source missing
+SYS HARDLINK "/no/such/hardlink_src_mi" dst
+ASSERT OK == 0
+
+# soft fail NLINK missing
+SYS NLINK "/no/such/hardlink_nlink_mi"
+ASSERT OK == 0
+
+# cleanup — remove links; content lives until last unlink
+SYS RM dst
+SYS RM dst2
+SYS NLINK src
+ASSERT LAST_N == n0
+SYS RM src
+
+PRINT "sys_hardlink ok"

@@ -288,6 +288,49 @@ int cubalc_host_symlink(const char *target, const char *linkpath, cubalc_host_re
   return 0;
 }
 
+/* Usability: SYS HARDLINK existing newpath — shared plate inode without copy/shell ln. */
+int cubalc_host_hardlink(const char *existing, const char *newpath, cubalc_host_result *r) {
+  r_clear(r);
+  if (!existing || !existing[0] || !newpath || !newpath[0]) {
+    snprintf(r->err, sizeof r->err, "hardlink: empty path");
+    return -1;
+  }
+  if (access(existing, F_OK) != 0) {
+    snprintf(r->err, sizeof r->err, "hardlink: source missing");
+    return -1;
+  }
+  if (access(newpath, F_OK) == 0) {
+    snprintf(r->err, sizeof r->err, "hardlink: dest exists");
+    return -1;
+  }
+  if (link(existing, newpath) != 0) {
+    snprintf(r->err, sizeof r->err, "hardlink: %s", strerror(errno));
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", newpath);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
+
+/* Usability: SYS NLINK path — hard-link count for shared-plate IF guards. */
+int cubalc_host_nlink(const char *path, cubalc_host_result *r) {
+  struct stat st;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "nlink: empty path");
+    return -1;
+  }
+  if (stat(path, &st) != 0) {
+    snprintf(r->err, sizeof r->err, "nlink: missing");
+    return -1;
+  }
+  r->n = (long)st.st_nlink;
+  snprintf(r->str, sizeof r->str, "%ld", r->n);
+  r->ok = 1;
+  return 0;
+}
+
 /* Usability: SYS READLINK path — peel symlink target without shell. */
 int cubalc_host_readlink(const char *path, cubalc_host_result *r) {
   char buf[CUBALC_HOST_STR_MAX];
