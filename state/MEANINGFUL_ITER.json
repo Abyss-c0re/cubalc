@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 159,
-  "version": "1.15.184-usability",
-  "item": "SYS NEWEST / OLDEST / LARGEST / SMALLEST path bag pick",
-  "item_id": 192,
-  "title": "SYS NEWEST|OLDEST|LARGEST|SMALLEST [bag] — pick path by mtime/size",
-  "commit": "e9a65e663e946eb17f05aef3eb033f94b90891a9",
-  "summary": "One-shot freshest/heaviest path from bag. selftest 159.",
+  "iter": 160,
+  "version": "1.15.185-usability",
+  "item": "SYS SORTMTIME / SORTSIZE order path bags by time/size",
+  "item_id": 193,
+  "title": "SYS SORTMTIME|SORTSIZE [bag] [ASC|DESC] — order paths by mtime/size",
+  "commit": "a647b7f7140ede6b5094d676bd81bc494ff8b31e",
+  "summary": "Order path bags by mtime/size (default newest/largest first). selftest 160.",
   "proofs": [
-    "732_sys_newest",
-    "selftest n_pass=159"
+    "733_sys_sortmtime",
+    "selftest n_pass=160"
   ],
-  "when": "2026-08-06T04:24:06Z",
+  "when": "2026-08-06T04:34:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e9a65e663e946eb17f05aef3eb033f94b90891a9"
+  "sha": "a647b7f7140ede6b5094d676bd81bc494ff8b31e"
 }
