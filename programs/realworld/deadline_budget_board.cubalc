@@ -1,0 +1,845 @@
+# deadline_budget_board.cubalc — PARSEMS budget + HUMANMS label + FROMTIME ISO
+#
+# Real use: agents parse config durations ("30s"/"5m"), stamp wall deadlines as
+# UTC ISO, and gate work on remaining budget without shell date/sleep math:
+#   PARSEMS / DURATION / TOMS  — 5s/2m/1h → milliseconds
+#   HUMANMS / FMTMS            — ms → 5s / 1m30s labels
+#   FROMTIME / EPOCHISO        — epoch seconds → UTC ISO
+#   TIME / MS                  — wall clocks for remain math
+# Distinct from maint_window (hour freezes), probe_latency (name:ms samples),
+# and plate_time_triad (file a/c/m): this board is *budget→deadline→remain*.
+#
+# Plate under STATE:
+#   BUDGET.txt     — budget ms (decimal)
+#   DEADLINE.txt   — absolute epoch seconds
+#   VAL.txt        — last label / iso / remain
+#   META.txt
+#   DEADLINE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_DB_ACTION):
+#   list      — plate (default)
+#   budget    — PARSEMS ARG1 → BUDGET ms
+#   label     — HUMANMS BUDGET → VAL
+#   start     — set DEADLINE = TIME + budget_s from current budget
+#   remain    — max(0, deadline - TIME)*1000 → VAL ms (approx)
+#   human     — HUMANMS remain
+#   iso       — FROMTIME DEADLINE → VAL
+#   now       — FROMTIME TIME → VAL
+#   gate      — remain > 0 admit (REQUIRE optional)
+#   round     — PARSEMS ARG1; HUMANMS; PARSEMS label dual check
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_db_$$
+#   CUBALC_ARG0=budget CUBALC_ARG1=30s ...
+#   CUBALC_ARG0=label ...
+#   CUBALC_ARG0=start ...
+#   CUBALC_ARG0=remain ...
+#   CUBALC_ARG0=iso ...
+#   CUBALC_ARG0=gate ...
+#
+# Env: CUBALC_DB_REQUIRE=1  CUBALC_DB_BUDGET=30s
+#
+# Edges:
+#   PARSEMS bad unit soft OK=0; empty soft
+#   HUMANMS multi-unit may not fully PARSEMS round-trip
+#   remain uses whole-second TIME — sub-second budget imprecise
+#   negative HUMANMS clamps 0ms; FROMTIME negative clamps epoch0
+#   HAS on labels false friends (s in 5s); WRITE NL; REQUIRE; NUM
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "deadline_budget_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT BFILE = "BUDGET.txt"
+DEFAULT DFILE = "DEADLINE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "DEADLINE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_BUDGET = "60s"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_DB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_DB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_DB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_DB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_DB_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_BUDGET = LAST
+ELSE
+  LET ENV_BUDGET = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir BFILE
+LET budget_meta = LAST
+SYS JOIN state_dir DFILE
+LET deadline_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR budget_meta OR ""
+LET budget_s = LAST
+CLEAR_ERR
+SYS READ OR deadline_meta OR ""
+LET deadline_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET budget_n = 0
+SYS BLANK budget_s
+IF LAST_N == 0 THEN
+  SYS NUM budget_s
+  IF OK == 1 THEN
+    LET budget_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET deadline_n = 0
+SYS BLANK deadline_s
+IF LAST_N == 0 THEN
+  SYS NUM deadline_s
+  IF OK == 1 THEN
+    LET deadline_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_BUDGET
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "budget"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_BUDGET
+    END
+  END
+END
+SYS BLANK ENV_BUDGET
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "round"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_BUDGET
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET budget_ch = 0
+LET deadline_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET remain_n = 0
+LET gate_n = 0
+LET round_n = 0
+LET parse_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "dline" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON budget_s
+  PRINT_JSON deadline_s
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- budget PARSEMS ---
+SYS EQS ACTION "budget"
+IF LAST_N == 1 THEN
+  NOTE "action budget"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_BUDGET
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET parse_n = 0
+    LET note_msg = "budget parse fail"
+    FAIL "budget parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "budget parse fail"
+    END
+  ELSE
+    LET budget_n = LAST_N
+    LET parse_n = PARSEMS_N
+    SYS STR budget_n
+    LET budget_s = LAST
+    LET budget_ch = 1
+    LET val = NAME
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "budget ok"
+    LET meta = "label"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR budget_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON parse_n budget_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- label HUMANMS budget ---
+SYS EQS ACTION "label"
+IF LAST_N == 1 THEN
+  NOTE "action label"
+  IF budget_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "label no budget"
+    FAIL "label no budget"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "label no budget"
+    END
+  ELSE
+    SYS HUMANMS budget_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "label fail"
+      FAIL "label fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "label fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "label ok"
+      LET meta = "human"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR budget_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON budget_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- start set deadline epoch ---
+SYS EQS ACTION "start"
+IF LAST_N == 1 THEN
+  NOTE "action start"
+  IF budget_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "start no budget"
+    FAIL "start no budget"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "start no budget"
+    END
+  ELSE
+    SYS TIME
+    LET now_ep = LAST_N
+    # budget_ms → whole seconds (floor)
+    LET add_s = budget_n / 1000
+    IF add_s < 1 THEN
+      # sub-second budgets: still at least 0s remaining edge
+      LET add_s = 0
+    END
+    LET deadline_n = now_ep + add_s
+    SYS STR deadline_n
+    LET deadline_s = LAST
+    LET deadline_ch = 1
+    SYS FROMTIME deadline_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "start ok"
+    LET meta = "now"
+    SYS STR now_ep
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "add_s"
+    LET meta = LAST
+    SYS STR add_s
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "deadline"
+    LET meta = LAST
+    SYS STR deadline_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "iso"
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON deadline_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- remain ms approx ---
+SYS EQS ACTION "remain"
+IF LAST_N == 1 THEN
+  NOTE "action remain"
+  IF deadline_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "remain no deadline"
+    FAIL "remain no deadline"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "remain no deadline"
+    END
+  ELSE
+    SYS TIME
+    LET now_ep = LAST_N
+    CLEAR_ERR
+    LET rem_s = deadline_n - now_ep
+    IF rem_s < 0 THEN
+      LET rem_s = 0
+    END
+    LET remain_n = rem_s * 1000
+    SYS STR remain_n
+    LET val = LAST
+    LET val_ch = 1
+    IF remain_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "remain zero"
+      FAIL "remain zero"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "remain zero"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "remain ok"
+    END
+    LET meta = "remain_ms"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "deadline"
+    LET meta = LAST
+    SYS STR deadline_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "now"
+    LET meta = LAST
+    SYS STR now_ep
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON remain_n
+  CLEAR_ERR
+END
+
+# --- human remain ---
+SYS EQS ACTION "human"
+IF LAST_N == 1 THEN
+  NOTE "action human"
+  IF deadline_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "human no deadline"
+    FAIL "human no deadline"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "human no deadline"
+    END
+  ELSE
+    SYS TIME
+    LET now_ep = LAST_N
+    LET rem_s = deadline_n - now_ep
+    IF rem_s < 0 THEN
+      LET rem_s = 0
+    END
+    LET remain_n = rem_s * 1000
+    SYS HUMANMS remain_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "human fail"
+      FAIL "human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "human fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "human ok"
+      LET meta = "human"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- iso deadline ---
+SYS EQS ACTION "iso"
+IF LAST_N == 1 THEN
+  NOTE "action iso"
+  IF deadline_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "iso no deadline"
+    FAIL "iso no deadline"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "iso no deadline"
+    END
+  ELSE
+    SYS FROMTIME deadline_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "iso fail"
+      FAIL "iso fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "iso fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "iso ok"
+      SYS ENDS val "Z"
+      LET ends_z = LAST_N
+      SYS LEN val
+      LET len_n = LAST_N
+      CLEAR_ERR
+      LET meta = "iso"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "epoch"
+      LET meta = LAST
+      SYS STR deadline_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ends_z"
+      LET meta = LAST
+      SYS STR ends_z
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "len"
+      LET meta = LAST
+      SYS STR len_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON deadline_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- now ISO ---
+SYS EQS ACTION "now"
+IF LAST_N == 1 THEN
+  NOTE "action now"
+  SYS TIME
+  LET now_ep = LAST_N
+  SYS FROMTIME now_ep
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "now fail"
+    FAIL "now fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "now fail"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "now ok"
+    LET meta = "iso"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "epoch"
+    LET meta = LAST
+    SYS STR now_ep
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate remain > 0 ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF deadline_n <= 0 THEN
+    LET miss = 1
+    LET gate_n = 0
+    LET note_msg = "gate no deadline"
+    FAIL "gate no deadline"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no deadline"
+    END
+  ELSE
+    SYS TIME
+    LET now_ep = LAST_N
+    LET rem_s = deadline_n - now_ep
+    CLEAR_ERR
+    LET gate_n = 0
+    IF rem_s > 0 THEN
+      LET gate_n = 1
+    END
+    LET remain_n = rem_s * 1000
+    IF remain_n < 0 THEN
+      LET remain_n = 0
+    END
+    IF gate_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate expired"
+      FAIL "gate expired"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate expired"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gate ok"
+    END
+    SYS STR gate_n
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "ok"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "remain_ms"
+    LET meta = LAST
+    SYS STR remain_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n remain_n
+  CLEAR_ERR
+END
+
+# --- round PARSEMS → HUMANMS → PARSEMS ---
+SYS EQS ACTION "round"
+IF LAST_N == 1 THEN
+  NOTE "action round"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_BUDGET
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "round parse fail"
+    FAIL "round parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "round parse fail"
+    END
+  ELSE
+    LET ms1 = LAST_N
+    SYS HUMANMS ms1
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "round human fail"
+      FAIL "round human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "round human fail"
+      END
+    ELSE
+      LET lab = LAST
+      SYS PARSEMS lab
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "round reparse fail"
+        FAIL "round reparse fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round reparse fail"
+        END
+      ELSE
+        LET ms2 = LAST_N
+        LET round_n = 0
+        IF ms1 == ms2 THEN
+          LET round_n = 1
+        END
+        IF round_n == 0 THEN
+          LET miss = 1
+          LET note_msg = "round mismatch"
+          FAIL "round mismatch"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "round mismatch"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "round ok"
+        END
+        LET val = lab
+        LET val_ch = 1
+        LET parse_n = ms1
+        LET meta = "in"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS PUSH meta "ms1"
+        LET meta = LAST
+        SYS STR ms1
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "label"
+        LET meta = LAST
+        SYS PUSH meta lab
+        LET meta = LAST
+        SYS PUSH meta "ms2"
+        LET meta = LAST
+        SYS STR ms2
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "ok"
+        LET meta = LAST
+        SYS STR round_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        # HAS false friend on unit letter
+        SYS HAS lab "s"
+        LET has_s = LAST_N
+        SYS PUSH meta "has_s"
+        LET meta = LAST
+        SYS STR has_s
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON round_n parse_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET budget_s = ""
+  LET deadline_s = ""
+  LET val = ""
+  LET meta = ""
+  LET budget_n = 0
+  LET deadline_n = 0
+  LET budget_ch = 1
+  LET deadline_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "budget"
+LET k = k + LAST_N
+SYS EQS ACTION "label"
+LET k = k + LAST_N
+SYS EQS ACTION "start"
+LET k = k + LAST_N
+SYS EQS ACTION "remain"
+LET k = k + LAST_N
+SYS EQS ACTION "human"
+LET k = k + LAST_N
+SYS EQS ACTION "iso"
+LET k = k + LAST_N
+SYS EQS ACTION "now"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "round"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF budget_ch > 0 THEN
+  SYS WRITE budget_meta budget_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "budget write failed"
+  END
+  CLEAR_ERR
+END
+IF deadline_ch > 0 THEN
+  SYS WRITE deadline_meta deadline_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "deadline write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.deadline_budget_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "budget_ms"
+LET report = LAST
+SYS STR budget_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "deadline"
+LET report = LAST
+SYS STR deadline_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "remain_ms"
+LET report = LAST
+SYS STR remain_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "round"
+LET report = LAST
+SYS STR round_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "deadline_budget_board" ACTION hit miss budget_n remain_n gate_n note_msg elapsed

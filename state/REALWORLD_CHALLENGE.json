@@ -1,146 +1,145 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 104,
-  "program": "programs/realworld/session_nonce_board.cubalc",
-  "theme": "session nonce GETLOGIN dual + ENTROPY hex mint",
-  "version": "1.15.299-usability",
+  "iter": 105,
+  "program": "programs/realworld/deadline_budget_board.cubalc",
+  "theme": "deadline budget PARSEMS + HUMANMS + FROMTIME ISO remain gate",
+  "version": "1.15.302-usability",
   "pass": true,
   "tests": [
     {
-      "name": "login_who",
-      "cmd": "GETLOGIN + USER dual same=1",
+      "name": "budget_label",
+      "cmd": "PARSEMS 30s → 30000; HUMANMS → 30s",
       "ok": true,
-      "note": "root@root"
+      "note": "parse"
     },
     {
-      "name": "mint16",
-      "cmd": "ENTROPY 16 \u2192 32 hex",
+      "name": "start_iso",
+      "cmd": "deadline epoch + FROMTIME ISO Z",
       "ok": true,
-      "note": "nonce"
+      "note": "UTC stamp"
     },
     {
-      "name": "short_cap",
-      "cmd": "4 bytes + 9999 clamp 256/512",
+      "name": "remain_gate",
+      "cmd": "remain~30s; gate admit while live",
       "ok": true,
-      "note": "cap ok"
+      "note": "live"
     },
     {
-      "name": "ticket",
-      "cmd": "login.entropy composite",
+      "name": "round_2m",
+      "cmd": "PARSEMS↔HUMANMS single-unit",
       "ok": true,
-      "note": "root.<16hex>"
+      "note": "2m"
     },
     {
-      "name": "bag",
-      "cmd": "3\u00d78-byte tokens bag",
+      "name": "round_multi",
+      "cmd": "HUMANMS 1250→1s250ms; PARSEMS fail trailing junk",
       "ok": true,
-      "note": "3 lines"
+      "note": "asymmetry"
     },
     {
-      "name": "gate",
-      "cmd": "login==user admit",
+      "name": "expire",
+      "cmd": "1s budget sleep2 gate REQUIRE→2",
       "ok": true,
-      "note": "pass"
+      "note": "expired"
     },
     {
-      "name": "mint_zero",
-      "cmd": "ENTROPY 0 REQUIRE\u21922",
+      "name": "budget_bad",
+      "cmd": "PARSEMS xyz soft; 5x REQUIRE→2",
       "ok": true,
-      "note": "deny"
+      "note": "parse fail"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "272/272 pass"
+      "note": "275/275 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|getlogin",
-      "title": "GETLOGIN vs USER dual under-documented for su/$USER override",
-      "detail": "Agents using only USER miss session utmp identity; only USER miss setuid/login divergence. No LOGIN_EQ_USER helper.",
-      "repro": "su; GETLOGIN may \u2260 USER"
+      "area": "host|duration",
+      "title": "HUMANMS multi-unit labels are not PARSEMS-round-trippable",
+      "detail": "HUMANMS 1250 → 1s250ms; PARSEMS fails trailing junk. HUMANMS 90000 → 1m30s also fails. Only pure single-unit labels reparse. Agents that store human labels lose budgets.",
+      "repro": "HUMANMS 1250; PARSEMS LAST → OK=0 trailing junk"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|entropy",
-      "title": "ENTROPY silent clamp to 256 bytes \u2014 no overflow warn",
-      "detail": "ENTROPY 9999 \u2192 512 hex OK=1. Agents requesting 1KB token think they got 9999 bytes. No ENTROPY_CLAMPED bit.",
-      "repro": "ENTROPY 9999; ENTROPY_BYTES==256"
+      "area": "host|time",
+      "title": "Remain math forced to whole-second TIME — sub-second budgets imprecise",
+      "detail": "No MS-based wall clock for deadlines. budget_ms/1000 floor drops sub-second. Agents needing 500ms budgets get 0s deadline delta.",
+      "repro": "budget 500ms; start add_s=0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|entropy",
-      "title": "Hex-only output \u2014 no base64/raw form",
-      "detail": "Tokens double size vs binary. No ENTROPY_B64. Agents chain HEXD for binary.",
-      "repro": "ENTROPY 16 \u2192 32 chars"
+      "area": "host|fromtime",
+      "title": "FROMTIME is UTC only — no local ISO dual",
+      "detail": "LOCAL exists separately; agents wanting local deadline stamps must hand-format. No FROMTIME LOCAL flag.",
+      "repro": "FROMTIME → always Z"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|getlogin",
-      "title": "GETLOGIN empty edge on non-session (daemon) soft-fail model unclear",
-      "detail": "Proof asserts non-empty; daemons without utmp may OK=0 or empty. Agents lack portable fallback path docs.",
-      "repro": "cron GETLOGIN"
+      "area": "host|parsems",
+      "title": "No compound input parse (1h30m) despite HUMANMS compound output",
+      "detail": "Asymmetry: format multi-unit, parse single-unit only. Config authors write 1h30m and get soft fail.",
+      "repro": "PARSEMS 1m30s → fail"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|has",
-      "title": "HAS on hex tokens is alphabet false-friend",
-      "detail": "HAS token a often 1; cannot validate charset with HAS. No ISHEX helper.",
-      "repro": "HAS nonce a"
+      "title": "HAS on duration labels unit false friends",
+      "detail": "HAS 5s s → 1; HAS 1m30s m → 1. Cannot classify unit with HAS.",
+      "repro": "HAS 30s s"
     },
     {
       "id": "W6",
       "severity": "med",
-      "area": "host|uuid",
-      "title": "ENTROPY vs UUID dual purpose confusion",
-      "detail": "UUID dashed fixed layout; ENTROPY pure hex. Agents mix formats in same plate without type stamp.",
-      "repro": "ticket uses entropy not UUID"
+      "area": "host|deadline",
+      "title": "No DEADLINE/REMAIN one-shot helpers",
+      "detail": "Agents hand TIME + budget/1000 + FROMTIME. Race window and unit bugs common.",
+      "repro": "need 4 ops for remain"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "VAL short hex glue in cat -A.",
-      "repro": "cat -A VAL.txt"
+      "detail": "BUDGET/DEADLINE glue in cat -A.",
+      "repro": "cat -A BUDGET.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_SN_REQUIRE=abc.",
-      "repro": "REQUIRE=abc mint 0 \u2192 rc 0"
+      "detail": "CUBALC_DB_REQUIRE=abc.",
+      "repro": "REQUIRE=abc budget bad → rc 0"
     }
   ],
   "workarounds": [
-    "Always dual-stamp GETLOGIN and USER",
-    "Check ENTROPY_BYTES after large requests",
-    "Prefix tokens with type=entropy or type=uuid",
-    "Fallback USER when GETLOGIN empty",
+    "Store budget as integer ms not human label",
+    "Round-trip only single-unit HUMANMS labels (5s, 2m, 1h)",
+    "Use whole-second budgets for TIME-based deadlines",
+    "Prefer UTC ISO stamps; LOCAL only for display",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "LOGIN_EQ_USER one-shot probe",
-    "ENTROPY_CLAMPED / refuse-oversize mode",
-    "ENTROPY_B64 / raw byte bag form",
-    "ISHEX charset probe",
-    "GETLOGIN daemon fallback docs",
+    "PARSEMS multi-unit compound (1h30m / 1s250ms)",
+    "Wall deadline helpers using MS not only TIME seconds",
+    "FROMTIME LOCAL / timezone flag",
+    "SYS REMAIN deadline_ms or DEADLINE_AT",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "login/who/mint/short/cap/ticket/bag/gate green",
-    "silent 256-byte clamp is core lesson",
-    "selftest 272/272; no language fix this iter"
+    "budget/label/start/remain/iso/gate/round-2m/expire green",
+    "multi-unit HUMANMS→PARSEMS fail is core lesson",
+    "selftest 275/275; no language fix this iter"
   ],
-  "commit": "84bcaa5db036badf41ea5a4765c78f99354d3f8e",
-  "ts": "2026-08-06T23:24:10Z"
+  "commit": "",
+  "ts": "2026-08-06T23:49:13Z"
 }
