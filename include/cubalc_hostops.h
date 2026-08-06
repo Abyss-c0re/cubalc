@@ -60,6 +60,12 @@ int cubalc_host_can_create(const char *path, cubalc_host_result *r);
 int cubalc_host_umask_get(cubalc_host_result *r);
 /* set umask to mode&0777; r->n/str = previous mask (decimal / 4-digit octal) */
 int cubalc_host_umask_set(long mode, cubalc_host_result *r);
+/* push cwd then chdir path; r->str = new cwd; r->n = stack depth */
+int cubalc_host_pushd(const char *path, cubalc_host_result *r);
+/* pop saved cwd and chdir; r->str = restored cwd; r->n = remaining depth */
+int cubalc_host_popd(cubalc_host_result *r);
+/* list dirstack as newline bag (bottom→top); r->n = depth */
+int cubalc_host_dirstack(cubalc_host_result *r);
 /* owner login name from st_uid via getpwuid; fallback decimal uid string; r->n = uid */
 int cubalc_host_ownername(const char *path, cubalc_host_result *r);
 /* group name from st_gid via getgrgid; fallback decimal gid string; r->n = gid */

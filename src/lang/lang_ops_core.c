@@ -11694,6 +11694,108 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", vm->last_n);
       bump(vm); return 1;
     }
+    /* SYS PUSHD|PUSHDIR path — save cwd then chdir → LAST = new cwd.
+     * LAST_N = stack depth after push. Soft miss OK=0 sticky LAST_ERR.
+     * SYS POPD|POPDIR — restore previous cwd → LAST = restored; LAST_N = depth.
+     * SYS DIRSTACK|DIRS — newline bag of saved dirs (bottom→top); LAST_N = depth.
+     * Usability: temp relative plate I/O without losing base (no shell pushd). */
+    if (kw(&L->cur,"PUSHD") || kw(&L->cur,"PUSHDIR") || kw(&L->cur,"ENTERDIR") ||
+        kw(&L->cur,"PUSHCWD") || kw(&L->cur,"CDPUSH") ||
+        kw(&L->cur,"POPD") || kw(&L->cur,"POPDIR") || kw(&L->cur,"LEAVEDIR") ||
+        kw(&L->cur,"POPCWD") || kw(&L->cur,"CDBACK") || kw(&L->cur,"BACKDIR") ||
+        kw(&L->cur,"DIRSTACK") || kw(&L->cur,"DIRS") || kw(&L->cur,"DIR_STACK") ||
+        kw(&L->cur,"CWDSTACK") || kw(&L->cur,"STACKDIRS")){
+      char op[24], path[512];
+      cubalc_host_result hr;
+      int is_pop, is_list;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_pop = (strcmp(op, "POPD") == 0 || strcmp(op, "POPDIR") == 0 ||
+                strcmp(op, "LEAVEDIR") == 0 || strcmp(op, "POPCWD") == 0 ||
+                strcmp(op, "CDBACK") == 0 || strcmp(op, "BACKDIR") == 0);
+      is_list = (strcmp(op, "DIRSTACK") == 0 || strcmp(op, "DIRS") == 0 ||
+                 strcmp(op, "DIR_STACK") == 0 || strcmp(op, "CWDSTACK") == 0 ||
+                 strcmp(op, "STACKDIRS") == 0);
+      memset(&hr, 0, sizeof hr);
+      lex_next(L);
+      if (is_list) {
+        if (cubalc_host_dirstack(&hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "DIRSTACK_N", 0);
+          var_set_num(vm, "OK", 0);
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", hr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "DIRSTACK_N", hr.n);
+        var_set_str(vm, "DIRSTACK", hr.str);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      if (is_pop) {
+        if (cubalc_host_popd(&hr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "POPD_N", 0);
+          var_set_num(vm, "DIRSTACK_N", 0);
+          var_set_num(vm, "OK", 0);
+          if (hr.err[0]) {
+            var_set_str(vm, "LAST_ERR", hr.err);
+            var_set_str(vm, "ERR", hr.err);
+          } else {
+            var_set_str(vm, "LAST_ERR", "POPD: empty stack");
+            var_set_str(vm, "ERR", "POPD: empty stack");
+          }
+          bump(vm); return 1;
+        }
+        var_set_str(vm, "LAST", hr.str);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+        vm->last_n = hr.n;
+        var_set_num(vm, "LAST_N", hr.n);
+        var_set_num(vm, "POPD_N", hr.n);
+        var_set_num(vm, "DIRSTACK_N", hr.n);
+        var_set_str(vm, "CWD", hr.str);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      /* PUSHD path */
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0)
+        snprintf(path, sizeof path, "%s", vm->last_str);
+      if (!path[0] || cubalc_host_pushd(path, &hr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PUSHD_N", 0);
+        var_set_num(vm, "OK", 0);
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "PUSHD: fail");
+          var_set_str(vm, "ERR", "PUSHD: fail");
+        }
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = hr.n;
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "PUSHD_N", hr.n);
+      var_set_num(vm, "DIRSTACK_N", hr.n);
+      var_set_str(vm, "CWD", hr.str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS CHDIR|CD path — change process working directory → LAST = new cwd.
      * LAST_N = 1 success, 0 soft miss (cwd unchanged). Updates CWD var.
      * Usability: relative READ/WRITE/LIST under STATE/TMP without shell cd. */
@@ -22393,6 +22495,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS DUMPENVFILE", "SYS DUMPENVFILE alias of SYS WRITEENV"},
       {"SYS ARG", "SYS ARG n|name [OR fallback] via CUBALC_ARGn"},
       {"SYS CWD", "SYS CWD — process working directory → LAST/CWD"},
+      {"SYS PUSHD", "SYS PUSHD|PUSHDIR path — save cwd then chdir · LAST_N=depth"},
+      {"SYS POPD", "SYS POPD|POPDIR — restore previous cwd from stack"},
+      {"SYS DIRSTACK", "SYS DIRSTACK|DIRS — newline bag of saved directories"},
       {"SYS CHDIR", "SYS CHDIR|CD path — change process cwd · LAST_N 0|1 soft miss"},
       {"SYS CD", "SYS CD path — alias of SYS CHDIR"},
       {"SYS STATE", "SYS STATE — CUBALC_STATE plate dir → LAST"},

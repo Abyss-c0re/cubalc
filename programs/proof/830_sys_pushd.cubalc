@@ -1,0 +1,99 @@
+# SYS PUSHD / POPD / DIRSTACK — cwd stack for temporary chdir
+# Usability: relative plate I/O without losing base (no shell pushd)
+
+HOLD_FLASH 1
+
+SYS CWD
+LET base = LAST
+SYS LEN base
+ASSERT LAST_N >= 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "pushd_mi_a"
+LET da = LAST
+SYS JOIN td "pushd_mi_b"
+LET db = LAST
+SYS MKDIR da
+ASSERT OK == 1
+SYS MKDIR db
+ASSERT OK == 1
+
+# empty stack
+SYS DIRSTACK
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# push into da
+SYS PUSHD da
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT PUSHD_N == 1
+SYS CWD
+SYS HAS LAST "pushd_mi_a"
+ASSERT LAST_N == 1
+
+# nested push into db
+SYS PUSHD db
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS CWD
+SYS HAS LAST "pushd_mi_b"
+ASSERT LAST_N == 1
+
+# dirstack has base then da (saved, bottom→top)
+SYS DIRSTACK
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT DIRSTACK_N == 2
+SYS LINES
+ASSERT LAST_N == 2
+
+# pop back to da
+SYS POPD
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS CWD
+SYS HAS LAST "pushd_mi_a"
+ASSERT LAST_N == 1
+
+# aliases
+SYS PUSHDIR db
+ASSERT OK == 1
+ASSERT LAST_N == 2
+SYS POPDIR
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# pop to base
+SYS POPD
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SYS CWD
+SYS EQS LAST base
+ASSERT LAST_N == 1
+
+# empty pop soft fail
+SYS POPD
+ASSERT OK == 0
+SYS LEN LAST_ERR
+ASSERT LAST_N >= 4
+
+# bad push soft fail (cwd unchanged)
+SYS CWD
+LET still = LAST
+SYS PUSHD "/no/such/pushd_mi_xyz"
+ASSERT OK == 0
+SYS CWD
+SYS EQS LAST still
+ASSERT LAST_N == 1
+
+# empty path fail
+SYS PUSHD ""
+ASSERT OK == 0
+
+# cleanup
+SYS RMDIR da
+SYS RMDIR db
+
+PRINT "sys_pushd ok"
