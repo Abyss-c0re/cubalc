@@ -8,13 +8,13 @@
   "tests": [
     {
       "name": "scan_star",
-      "cmd": "PATHGLOB out * → 8 paths incl nested dir",
+      "cmd": "PATHGLOB out * \u2192 8 paths incl nested dir",
       "ok": true,
       "note": "PATHGLOB inventory"
     },
     {
       "name": "allow_bin",
-      "cmd": "FILTERGLOB *.bin → tool.bin+app.bin full paths",
+      "cmd": "FILTERGLOB *.bin \u2192 tool.bin+app.bin full paths",
       "ok": true,
       "note": "basename shell match on full paths"
     },
@@ -26,13 +26,13 @@
     },
     {
       "name": "names_map",
-      "cmd": "BASENAMEALL → nested/README/pkg.tar.gz/…",
+      "cmd": "BASENAMEALL \u2192 nested/README/pkg.tar.gz/\u2026",
       "ok": true,
       "note": "one-shot map"
     },
     {
       "name": "stems_map",
-      "cmd": "STEMALL pkg.tar.gz → pkg.tar",
+      "cmd": "STEMALL pkg.tar.gz \u2192 pkg.tar",
       "ok": true,
       "note": "last-suffix stem only"
     },
@@ -62,7 +62,7 @@
     },
     {
       "name": "loadlines_allow",
-      "cmd": "||| load + allow *.bin → a.bin d.bin",
+      "cmd": "||| load + allow *.bin \u2192 a.bin d.bin",
       "ok": true,
       "note": "intake gate"
     },
@@ -86,23 +86,23 @@
       "area": "host|bag",
       "title": "FILTERGLOB *bin* matches binary.dat (shell glob false friend)",
       "detail": "Agents wanting extension-only must use *.bin not *bin*. Shell glob matches anywhere in basename/full path field. No extension-only filter mode.",
-      "repro": "FILTERGLOB bag *bin* → binary.dat + app.bin"
+      "repro": "FILTERGLOB bag *bin* \u2192 binary.dat + app.bin"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|path",
       "title": "EXTALL empty fields for no-ext; FREQ yields :N bare key",
-      "detail": "README and directory basenames produce empty EXTALL fields. FREQ of empties is ':2' — hard for LOOKUP and PRINT_JSON agents. No (none) sentinel.",
-      "repro": "EXTALL then FREQ → :2 for no-ext count"
+      "detail": "README and directory basenames produce empty EXTALL fields. FREQ of empties is ':2' \u2014 hard for LOOKUP and PRINT_JSON agents. No (none) sentinel.",
+      "repro": "EXTALL then FREQ \u2192 :2 for no-ext count"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|path",
-      "title": "STEMALL last-suffix only (pkg.tar.gz → pkg.tar)",
+      "title": "STEMALL last-suffix only (pkg.tar.gz \u2192 pkg.tar)",
       "detail": "Double-extension archives keep intermediate suffix in stem. Same as STEM single-path class.",
-      "repro": "STEMALL …/pkg.tar.gz → pkg.tar"
+      "repro": "STEMALL \u2026/pkg.tar.gz \u2192 pkg.tar"
     },
     {
       "id": "W4",
@@ -110,7 +110,7 @@
       "area": "host|fs",
       "title": "PATHGLOB scan still mixes directories into PATHS",
       "detail": "FILTERGLOB/VFILTERGLOB do not remove dirs unless pattern matches. nested/ survives deny *.tmp/*.log. No files-only PATHGLOB or FILTERISFILE.",
-      "repro": "scan *; deny junk → nested remains"
+      "repro": "scan *; deny junk \u2192 nested remains"
     },
     {
       "id": "W5",
@@ -118,14 +118,14 @@
       "area": "host|bag",
       "title": "No multi-pattern FILTERGLOB / allow-list OR",
       "detail": "Allow *.bin OR *.so needs two FILTERGLOB runs then UNION, or sequential deny. No FILTERGLOB bag '*.bin|*.so' or multi-pat form.",
-      "repro": "want bins+sos → UNION of two FILTERGLOB"
+      "repro": "want bins+sos \u2192 UNION of two FILTERGLOB"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Stable issue — path bags unreadable as arrays from plate JSON alone.",
+      "detail": "Stable issue \u2014 path bags unreadable as arrays from plate JSON alone.",
       "repro": "PRINT_JSON paths"
     },
     {
@@ -142,7 +142,7 @@
       "area": "host|bag",
       "title": "HASLINE exact: basename token misses full-path bag",
       "detail": "After PATHGLOB, has app.bin fails; need full path. Expected exactness but traps agents who only keep basenames in mind.",
-      "repro": "HASLINE paths app.bin → 0 after scan"
+      "repro": "HASLINE paths app.bin \u2192 0 after scan"
     }
   ],
   "workarounds": [
@@ -163,9 +163,9 @@
   "issues_faced": [
     "FILTERGLOB/VFILTERGLOB/BASENAMEALL/STEMALL/EXTALL all clean on positive path",
     "*bin* false friend confirmed (binary.dat)",
-    "FREQ of empty ext → :2 awkward key",
+    "FREQ of empty ext \u2192 :2 awkward key",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "488c45c4fd9176c90e55f2bf94decc1dd3dde955",
   "ts": "2026-08-06T03:48:10Z"
 }
