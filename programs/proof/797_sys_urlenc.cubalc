@@ -1,0 +1,117 @@
+# SYS URLENC / URLENCODE / PERCENTENC · URLDEC / URLDECODE / PERCENTDEC
+# — RFC 3986 percent-encode/decode for agent plate paths and queries
+# Usability: path/query-safe fields without shell urlencode/python urllib
+
+HOLD_FLASH 1
+
+# space and specials
+SYS URLENC "hello world"
+ASSERT OK == 1
+SYS EQS LAST "hello%20world"
+ASSERT LAST_N == 1
+
+SYS URLDEC "hello%20world"
+ASSERT OK == 1
+SYS EQS LAST "hello world"
+ASSERT LAST_N == 1
+ASSERT URLENC_N == 11
+
+# unreserved pass-through
+SYS URLENC "Aa0-._~"
+SYS EQS LAST "Aa0-._~"
+ASSERT LAST_N == 1
+SYS URLDEC "Aa0-._~"
+SYS EQS LAST "Aa0-._~"
+ASSERT LAST_N == 1
+
+# path-like plate key
+SYS URLENC "peer/name=agent one"
+SYS EQS LAST "peer%2Fname%3Dagent%20one"
+ASSERT LAST_N == 1
+LET enc = LAST
+SYS URLDEC enc
+SYS EQS LAST "peer/name=agent one"
+ASSERT LAST_N == 1
+
+# empty
+SYS URLENC ""
+ASSERT OK == 1
+ASSERT URLENC_N == 0
+SYS URLDEC ""
+ASSERT OK == 1
+ASSERT URLENC_N == 0
+
+# form-style + as space on decode
+SYS URLDEC "a+b"
+SYS EQS LAST "a b"
+ASSERT LAST_N == 1
+
+# lowercase hex digits accepted on decode
+SYS URLDEC "a%2fb"
+SYS EQS LAST "a/b"
+ASSERT LAST_N == 1
+
+# aliases
+SYS URLENCODE "x y"
+SYS EQS LAST "x%20y"
+ASSERT LAST_N == 1
+SYS URLDECODE "x%20y"
+SYS EQS LAST "x y"
+ASSERT LAST_N == 1
+
+SYS PERCENTENC "a=b"
+SYS EQS LAST "a%3Db"
+ASSERT LAST_N == 1
+SYS PERCENTDEC "a%3Db"
+SYS EQS LAST "a=b"
+ASSERT LAST_N == 1
+
+# default LAST as input
+SYS URLENC "status ok"
+LET u = LAST
+SYS URLDEC u
+SYS EQS LAST "status ok"
+ASSERT LAST_N == 1
+
+# soft fail: truncated percent
+SYS URLDEC "bad%"
+ASSERT OK == 0
+ASSERT URLENC_N == 0
+
+# soft fail: bad nibble
+SYS URLDEC "%zz"
+ASSERT OK == 0
+
+# agent: encode plate path leaf then join
+SYS TMP
+LET td = LAST
+SYS JOIN td "urlenc_mi"
+LET dir = LAST
+SYS MKDIR dir
+SYS URLENC "file name.json"
+LET leaf = LAST
+SYS JOIN dir leaf
+LET fp = LAST
+SYS WRITEATOMIC fp "payload"
+ASSERT OK == 1
+SYS READ fp
+SYS EQS LAST "payload"
+ASSERT LAST_N == 1
+SYS BASENAME fp
+SYS URLDEC LAST
+SYS EQS LAST "file name.json"
+ASSERT LAST_N == 1
+SYS RM fp
+SYS RMDIR dir
+
+# complements HEX/BASE64 transport family
+SYS URLENC "payload"
+LET ue = LAST
+SYS URLDEC ue
+SYS HEX LAST
+LET hx = LAST
+SYS HEXD hx
+SYS EQS LAST "payload"
+ASSERT LAST_N == 1
+
+PRINT "sys_urlenc ok"

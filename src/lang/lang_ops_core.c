@@ -140,6 +140,68 @@ static int cubalc_hex_dec(const char *in, size_t in_len, char *out, size_t out_c
   return 0;
 }
 
+/* SYS URLENC / URLDEC — RFC 3986 percent-encode/decode for plate paths/queries.
+ * Unreserved A-Za-z0-9-._~ pass through; space → %20; others → %XX (upper hex).
+ * Decode accepts %XX (any hex case) and '+' as space (form-urlencoded). Soft fail. */
+static int cubalc_url_unreserved(unsigned char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+         (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~';
+}
+static int cubalc_url_enc(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  static const char *hx = "0123456789ABCDEF";
+  size_t i, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  for (i = 0; i < in_len; i++) {
+    unsigned char c = (unsigned char)in[i];
+    if (cubalc_url_unreserved(c)) {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)c;
+    } else {
+      if (o + 3 >= out_cap) return -1;
+      out[o++] = '%';
+      out[o++] = hx[c >> 4];
+      out[o++] = hx[c & 0xf];
+    }
+  }
+  if (o >= out_cap) return -1;
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+static int cubalc_url_dec(const char *in, size_t in_len, char *out, size_t out_cap,
+                          size_t *n_out) {
+  size_t i = 0, o = 0;
+  if (!out || out_cap < 1) return -1;
+  if (!in) in = "";
+  while (i < in_len) {
+    unsigned char c = (unsigned char)in[i];
+    if (c == '%') {
+      int hi, lo;
+      if (i + 2 >= in_len) return -1;
+      hi = cubalc_hex_nibble((unsigned char)in[i + 1]);
+      lo = cubalc_hex_nibble((unsigned char)in[i + 2]);
+      if (hi < 0 || lo < 0) return -1;
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)((hi << 4) | lo);
+      i += 3;
+    } else if (c == '+') {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = ' ';
+      i++;
+    } else {
+      if (o + 1 >= out_cap) return -1;
+      out[o++] = (char)c;
+      i++;
+    }
+  }
+  if (o >= out_cap) return -1;
+  out[o] = 0;
+  if (n_out) *n_out = o;
+  return 0;
+}
+
 #if !defined(CUBALC_OS_WINDOWS)
 /* CBXF — CubalC Bidirectional XFer framing (any payload ≤ CUBALC_HOST_STR_MAX-1).
  * wire: magic "CBXF" + uint32 BE length + payload bytes. */
@@ -1989,6 +2051,61 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "TOHEX", out);
       }
       var_set_num(vm, "HEX_N", (long)n_out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS URLENC|URLENCODE|PERCENTENC|PCTENC [str]
+     * SYS URLDEC|URLDECODE|PERCENTDEC|PCTDEC [str]
+     * — RFC 3986 percent-encode/decode (default prior LAST).
+     * LAST = result; LAST_N / URLENC_N = output length; soft fail OK=0.
+     * Usability: path/query-safe plate fields without shell urlencode. */
+    if (kw(&L->cur,"URLENC") || kw(&L->cur,"URLENCODE") || kw(&L->cur,"PERCENTENC") ||
+        kw(&L->cur,"PCTENC") || kw(&L->cur,"URIENC") || kw(&L->cur,"URIENCODE") ||
+        kw(&L->cur,"PERCENTENCODE") || kw(&L->cur,"URL_ENCODE") ||
+        kw(&L->cur,"URLDEC") || kw(&L->cur,"URLDECODE") || kw(&L->cur,"PERCENTDEC") ||
+        kw(&L->cur,"PCTDEC") || kw(&L->cur,"URIDEC") || kw(&L->cur,"URLDECODE") ||
+        kw(&L->cur,"PERCENTDECODE") || kw(&L->cur,"URL_DECODE") ||
+        kw(&L->cur,"UNURL") || kw(&L->cur,"DEPERCENT")){
+      char src[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      size_t n_out = 0;
+      int is_dec = (kw(&L->cur,"URLDEC") || kw(&L->cur,"URLDECODE") ||
+                   kw(&L->cur,"PERCENTDEC") || kw(&L->cur,"PCTDEC") ||
+                   kw(&L->cur,"URIDEC") || kw(&L->cur,"PERCENTDECODE") ||
+                   kw(&L->cur,"URL_DECODE") || kw(&L->cur,"UNURL") ||
+                   kw(&L->cur,"DEPERCENT"));
+      int rc;
+      lex_next(L);
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (is_dec)
+        rc = cubalc_url_dec(src, strlen(src), out, sizeof out, &n_out);
+      else
+        rc = cubalc_url_enc(src, strlen(src), out, sizeof out, &n_out);
+      if (rc != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "URLENC_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", is_dec ? "URLDEC: decode fail" : "URLENC: encode fail");
+        var_set_str(vm, "ERR", is_dec ? "URLDEC: decode fail" : "URLENC: encode fail");
+        bump(vm); return 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n_out;
+      var_set_num(vm, "LAST_N", (long)n_out);
+      var_set_str(vm, "URLENC", out);
+      if (is_dec) {
+        var_set_str(vm, "URLDEC", out);
+        var_set_str(vm, "URLDECODE", out);
+      } else {
+        var_set_str(vm, "URLENCODE", out);
+        var_set_str(vm, "PERCENTENC", out);
+      }
+      var_set_num(vm, "URLENC_N", (long)n_out);
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
