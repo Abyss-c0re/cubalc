@@ -1,56 +1,68 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 57,
-  "program": "programs/realworld/release_filter_gate.cubalc",
-  "theme": "release artifact bag gate FILTERGLOB VFILTERGLOB BASENAMEALL STEMALL EXTALL",
-  "version": "1.15.180-usability",
+  "iter": 58,
+  "program": "programs/realworld/drop_bytes_board.cubalc",
+  "theme": "drop/tmp byte inventory KEEPFILES SIZEALL ZIP THRESHKV TOPKEY",
+  "version": "1.15.182-usability",
   "pass": true,
   "tests": [
     {
       "name": "scan_star",
-      "cmd": "PATHGLOB out * \u2192 8 paths incl nested dir",
+      "cmd": "PATHGLOB drop * → 5 paths incl nested dir",
       "ok": true,
-      "note": "PATHGLOB inventory"
+      "note": "dirs mixed in"
     },
     {
-      "name": "allow_bin",
-      "cmd": "FILTERGLOB *.bin \u2192 tool.bin+app.bin full paths",
+      "name": "keepfiles",
+      "cmd": "KEEPFILES drops nested → 4 regular files",
       "ok": true,
-      "note": "basename shell match on full paths"
+      "note": "KEEPFILES_DROP=1"
     },
     {
-      "name": "deny_tmp_log",
-      "cmd": "VFILTERGLOB *.tmp then *.log drops junk",
+      "name": "keepdirs",
+      "cmd": "KEEPDIRS → nested only",
       "ok": true,
-      "note": "invert keep"
+      "note": "invert kind"
     },
     {
-      "name": "names_map",
-      "cmd": "BASENAMEALL \u2192 nested/README/pkg.tar.gz/\u2026",
+      "name": "measure_zip",
+      "cmd": "SIZEALL+BASENAMEALL+ZIP → empty:0 large:20 medium:10 small:5 sum 35",
       "ok": true,
-      "note": "one-shot map"
+      "note": "SIZEALL_SUM=35"
     },
     {
-      "name": "stems_map",
-      "cmd": "STEMALL pkg.tar.gz \u2192 pkg.tar",
+      "name": "sum_bytes",
+      "cmd": "SUM BYTES → 35",
       "ok": true,
-      "note": "last-suffix stem only"
+      "note": "parallel bag sum"
     },
     {
-      "name": "exts_raw_freq",
-      "cmd": "EXTALL empty fields; FREQ :2 for no-ext",
+      "name": "big_thresh",
+      "cmd": "THRESHKV min=8 → large.blob medium.bin",
       "ok": true,
-      "note": "empty key FREQ awkward"
+      "note": "drops empty+small"
     },
     {
-      "name": "has_exact_vs_basename",
-      "cmd": "full path hit; bare app.bin miss soft",
+      "name": "topkey",
+      "cmd": "TOPKEY → large.blob TOPKEY_V=20",
       "ok": true,
-      "note": "HASLINE exact"
+      "note": "largest basename"
     },
     {
-      "name": "allow_none_require",
-      "cmd": "FILTERGLOB *.xyz REQUIRE exit 2",
+      "name": "measure_with_dirs",
+      "cmd": "SIZEALL without KEEPFILES → nested:0 miss_n=1 files_n=4",
+      "ok": true,
+      "note": "dir as miss+zero pollutes SIZES"
+    },
+    {
+      "name": "keepexist_ghost",
+      "cmd": "KEEPEXIST drops ghost.missing",
+      "ok": true,
+      "note": "missing path filter"
+    },
+    {
+      "name": "big_none_require",
+      "cmd": "THRESHKV 9999 REQUIRE exit 2",
       "ok": true,
       "note": "empty keep gate"
     },
@@ -61,111 +73,99 @@
       "note": "OK=0"
     },
     {
-      "name": "loadlines_allow",
-      "cmd": "||| load + allow *.bin \u2192 a.bin d.bin",
-      "ok": true,
-      "note": "intake gate"
-    },
-    {
-      "name": "glob_bin_false_friend",
-      "cmd": "FILTERGLOB *bin* hits binary.dat and app.bin",
-      "ok": true,
-      "note": "shell glob not ext-only"
-    },
-    {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "155/155 pass incl filterglob basenameall"
+      "note": "157/157 pass incl keepfiles sizeall"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|bag",
-      "title": "FILTERGLOB *bin* matches binary.dat (shell glob false friend)",
-      "detail": "Agents wanting extension-only must use *.bin not *bin*. Shell glob matches anywhere in basename/full path field. No extension-only filter mode.",
-      "repro": "FILTERGLOB bag *bin* \u2192 binary.dat + app.bin"
+      "area": "host|fs",
+      "title": "SIZEALL maps dirs/missing to 0 — indistinguishable from empty files",
+      "detail": "Per-field BYTES bag is only decimals; dirs and ghosts become 0 like empty.dat. SIZEALL_MISS/FILES are bag-level meta only — cannot peel which field missed without re-stat.",
+      "repro": "SIZEALL file+dir+ghost → 5\\n0\\n0; empty file also 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|path",
-      "title": "EXTALL empty fields for no-ext; FREQ yields :N bare key",
-      "detail": "README and directory basenames produce empty EXTALL fields. FREQ of empties is ':2' \u2014 hard for LOOKUP and PRINT_JSON agents. No (none) sentinel.",
-      "repro": "EXTALL then FREQ \u2192 :2 for no-ext count"
+      "area": "host|bag",
+      "title": "No SIZEALL key:val mode — need BASENAMEALL+ZIP glue",
+      "detail": "SIZEALL returns parallel size strings; agents must ZIP with BASENAMEALL for name:bytes. Easy to desync if PATHS filtered after measure without remeasure.",
+      "repro": "SIZEALL then ZIP BASENAMEALL bytes :"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|path",
-      "title": "STEMALL last-suffix only (pkg.tar.gz \u2192 pkg.tar)",
-      "detail": "Double-extension archives keep intermediate suffix in stem. Same as STEM single-path class.",
-      "repro": "STEMALL \u2026/pkg.tar.gz \u2192 pkg.tar"
+      "area": "host|bag",
+      "title": "Parallel PATHS/BYTES desync on post-measure filter",
+      "detail": "KEEPFILES after measure shortens PATHS but BYTES/SIZES plates stay old until measure again. No atomic paired filter.",
+      "repro": "measure; files without remeasure"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|fs",
-      "title": "PATHGLOB scan still mixes directories into PATHS",
-      "detail": "FILTERGLOB/VFILTERGLOB do not remove dirs unless pattern matches. nested/ survives deny *.tmp/*.log. No files-only PATHGLOB or FILTERISFILE.",
-      "repro": "scan *; deny junk \u2192 nested remains"
+      "title": "SKIP KEEPFILES → nested:0 pollutes reclaim SIZES plate",
+      "detail": "Dir basenames appear as 0-byte reclaim candidates. THRESHKV min>0 drops them but TOPKEY/SUM meta can confuse agents who skip kind filter.",
+      "repro": "scan *; measure → nested:0 in SIZES"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|bag",
-      "title": "No multi-pattern FILTERGLOB / allow-list OR",
-      "detail": "Allow *.bin OR *.so needs two FILTERGLOB runs then UNION, or sequential deny. No FILTERGLOB bag '*.bin|*.so' or multi-pat form.",
-      "repro": "want bins+sos \u2192 UNION of two FILTERGLOB"
+      "title": "ZIP unequal lengths pad empty partner silently",
+      "detail": "Documented pad; if BYTES shorter, trailing name: empty keys. No hard fail mode for length mismatch.",
+      "repro": "ZIP names shorter_sizes"
     },
     {
       "id": "W6",
       "severity": "med",
       "area": "host|json",
       "title": "PRINT_JSON bag newline collapse",
-      "detail": "Stable issue \u2014 path bags unreadable as arrays from plate JSON alone.",
-      "repro": "PRINT_JSON paths"
+      "detail": "BYTES/SIZES/PATHS collapse in JSON line.",
+      "repro": "PRINT_JSON sizes"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE omits final trailing newline",
-      "detail": "cat -A last PATHS/NAMES/STEMS/EXTS line without $.",
-      "repro": "scan; cat -A PATHS.txt"
+      "detail": "cat -A last line without $.",
+      "repro": "measure; cat -A BYTES.txt"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|bag",
-      "title": "HASLINE exact: basename token misses full-path bag",
-      "detail": "After PATHGLOB, has app.bin fails; need full path. Expected exactness but traps agents who only keep basenames in mind.",
-      "repro": "HASLINE paths app.bin \u2192 0 after scan"
+      "area": "host|kv",
+      "title": "TOPKEY returns key only — value in TOPKEY_V side channel",
+      "detail": "Agents expecting name:bytes from TOPKEY get basename only; must read TOPKEY_V separately.",
+      "repro": "TOPKEY sizes → large.blob; TOPKEY_V=20"
     }
   ],
   "workarounds": [
-    "Use *.ext patterns not *ext* for extension gates",
-    "Map empty EXTALL to (none) before FREQ if needed",
-    "ISDIR filter or allow-only patterns to drop directories",
-    "UNION two FILTERGLOB results for multi-type allow",
-    "Prefer BASENAMEALL then HASLINE on names for basename membership"
+    "Always KEEPFILES before SIZEALL for reclaim inventories",
+    "Remeasure after any PATHS filter to keep BYTES/SIZES aligned",
+    "Use SIZEALL_MISS/FILES as bag-level health not per-field",
+    "THRESHKV min>=1 drops zero-byte noise including dir pollution",
+    "Print TOPKEY + TOPKEY_V together for agents"
   ],
   "language_gaps": [
-    "FILTERGLOB extension-only mode",
-    "EXTALL/FREQ empty-field sentinel",
-    "STEMALL multi-suffix peel",
-    "FILTERISFILE / files-only PATHGLOB",
-    "Multi-pattern FILTERGLOB OR",
+    "SIZEALL name:bytes / path:bytes single-shot mode",
+    "Per-field miss/dir markers in SIZEALL output",
+    "Paired filter (filter paths+sizes together)",
+    "ZIP strict equal-length mode (fail on mismatch)",
+    "TOPKEY return key:val option",
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "FILTERGLOB/VFILTERGLOB/BASENAMEALL/STEMALL/EXTALL all clean on positive path",
-    "*bin* false friend confirmed (binary.dat)",
-    "FREQ of empty ext \u2192 :2 awkward key",
+    "KEEPFILES+SIZEALL+ZIP+THRESHKV+TOPKEY positive path clean",
+    "Dir/miss as 0 confirmed pollution without KEEPFILES",
+    "Empty file vs dir both 0 — only bag meta differs",
     "No language fix this iter"
   ],
-  "commit": "488c45c4fd9176c90e55f2bf94decc1dd3dde955",
-  "ts": "2026-08-06T03:48:10Z"
+  "commit": "",
+  "ts": "2026-08-06T04:13:10Z"
 }

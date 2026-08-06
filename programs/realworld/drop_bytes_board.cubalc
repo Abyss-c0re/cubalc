@@ -1,0 +1,713 @@
+# drop_bytes_board.cubalc — drop/tmp dir byte inventory via KEEPFILES + SIZEALL
+#
+# Real use: ops/GC agent inventories a drop or cache directory. PATHGLOB
+# returns mixed files+dirs; KEEPFILES drops dirs/missing; SIZEALL maps
+# byte sizes in one shot (SIZEALL_SUM total) without EACH+SIZE. ZIP with
+# BASENAMEALL builds name:bytes plates for THRESHKV big-file gates.
+#
+# Distinct from build_pathglob_board (EACH SIZE + dirs pollute) and
+# stale_plate_gc (AGE/mtime focus): this board is kind-filter + bulk
+# byte sum/threshold for reclaim decisions.
+#
+# Plate under STATE:
+#   PATHS.txt        — working full path bag
+#   BYTES.txt        — parallel SIZEALL decimal bag
+#   SIZES.txt        — basename:bytes key:val bag (ZIP sep :)
+#   DROP_BYTES_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_DB_ACTION):
+#   list      — depths + last sum (default)
+#   scan      — PATHGLOB DIR PAT → PATHS
+#   files     — KEEPFILES PATHS
+#   dirs      — KEEPDIRS PATHS
+#   exist     — KEEPEXIST PATHS
+#   measure   — SIZEALL PATHS → BYTES; ZIP BASENAMEALL → SIZES
+#   sum       — report SIZEALL_SUM / recompute via SUM BYTES
+#   big       — THRESHKV SIZES min (ARG1) keep large artifacts
+#   top       — TOPKEY SIZES largest basename
+#   has       — HASLINE exact path
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_db_$$; mkdir -p "$CUBALC_STATE/drop"
+#   # fixtures of known sizes
+#   CUBALC_DB_DIR=$CUBALC_STATE/drop CUBALC_ARG0=scan CUBALC_ARG1='*' \
+#     ./out/cubalc run -q -s programs/realworld/drop_bytes_board.cubalc
+#   CUBALC_ARG0=files ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=measure ./out/cubalc run -q -s ...
+#   CUBALC_ARG0=big CUBALC_ARG1=8 ./out/cubalc run -q -s ...
+#
+# Env:
+#   CUBALC_DB_DIR=…     # scan dir (default STATE)
+#   CUBALC_DB_PAT=*
+#   CUBALC_DB_REQUIRE=1
+#   CUBALC_DB_MIN=0     # default big threshold
+#
+# Edges deliberately stressed:
+#   PATHGLOB * includes dirs; KEEPFILES drops them
+#   SIZEALL on dirs/missing → 0 with SIZEALL_MISS; SUM still includes 0s
+#   parallel PATHS/BYTES desync if files filter after measure without remeasure
+#   ZIP length mismatch soft?
+#   THRESHKV min boundary; TOPKEY ties
+#   WRITE NL; PRINT_JSON; soft READ; REQUIRE empty
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "drop_bytes_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT BFILE = "BYTES.txt"
+DEFAULT SFILE = "SIZES.txt"
+DEFAULT REPORT = "DROP_BYTES_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT PAT = "*"
+DEFAULT DIR = ""
+DEFAULT MIN = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_DB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_DB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_DB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_DB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_DB_PAT" OR ""
+IF LAST_N > 0 THEN
+  LET PAT = LAST
+END
+SYS ENV "CUBALC_DB_DIR" OR ""
+IF LAST_N > 0 THEN
+  LET DIR = LAST
+END
+SYS ENV "CUBALC_DB_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS BLANK DIR
+IF LAST_N == 1 THEN
+  LET DIR = state_dir
+END
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir BFILE
+LET bytes_path = LAST
+SYS JOIN state_dir SFILE
+LET sizes_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR bytes_path OR ""
+LET bytes = LAST
+CLEAR_ERR
+SYS READ OR sizes_path OR ""
+LET sizes = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET paths_ch = 0
+LET bytes_ch = 0
+LET sizes_ch = 0
+LET note_msg = "ok"
+LET val_s = ""
+LET val_n = 0
+LET pglob_n = 0
+LET keep_n = 0
+LET drop_n = 0
+LET sum_n = 0
+LET miss_n = 0
+LET files_n = 0
+
+# ARG1 pattern/min for scan/big/has
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET PAT = NAME
+  END
+END
+SYS EQS ACTION "big"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET MIN = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    EXIT 2 "has needs path"
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  SYS LINES paths
+  LET np = LAST_N
+  SYS LINES bytes
+  LET nb = LAST_N
+  SYS LINES sizes
+  LET ns = LAST_N
+  SYS BLANK bytes
+  IF LAST_N == 0 THEN
+    SYS SUM bytes
+    LET sum_n = LAST_N
+  END
+  CLEAR_ERR
+  STATUS
+  PRINT "dbytes" np nb ns sum_n ACTION
+  PRINT_JSON np nb ns sum_n ACTION STATUS_OK
+  PRINT_JSON paths
+  PRINT_JSON bytes
+  PRINT_JSON sizes
+  LET note_msg = "list ok"
+END
+
+# --- scan ---
+SYS EQS ACTION "scan"
+IF LAST_N == 1 THEN
+  NOTE "action scan"
+  SYS PATHGLOB DIR PAT
+  IF OK == 0 THEN
+    LET miss = 1
+    LET paths = ""
+    LET paths_ch = 1
+    LET note_msg = "scan miss"
+    FAIL "scan miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scan miss"
+    END
+  ELSE
+    LET paths = LAST
+    LET pglob_n = PATHGLOB_N
+    LET paths_ch = 1
+    LET hit = pglob_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "scan empty"
+      FAIL "scan empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "scan empty"
+      END
+    ELSE
+      LET note_msg = "scan ok"
+    END
+    PRINT_JSON PAT pglob_n DIR
+    PRINT_JSON paths
+  END
+END
+
+# --- files KEEPFILES ---
+SYS EQS ACTION "files"
+IF LAST_N == 1 THEN
+  NOTE "action files"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "files empty"
+    FAIL "files empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "files empty"
+    END
+  ELSE
+    SYS KEEPFILES paths
+    LET paths = LAST
+    LET keep_n = KEEPFILES_N
+    LET drop_n = KEEPFILES_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "files none"
+      FAIL "files none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "files none"
+      END
+    ELSE
+      LET note_msg = "files ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- dirs KEEPDIRS ---
+SYS EQS ACTION "dirs"
+IF LAST_N == 1 THEN
+  NOTE "action dirs"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "dirs empty"
+    FAIL "dirs empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dirs empty"
+    END
+  ELSE
+    SYS KEEPDIRS paths
+    LET paths = LAST
+    LET keep_n = KEEPDIRS_N
+    LET drop_n = KEEPDIRS_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "dirs none"
+      FAIL "dirs none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "dirs none"
+      END
+    ELSE
+      LET note_msg = "dirs ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- exist KEEPEXIST ---
+SYS EQS ACTION "exist"
+IF LAST_N == 1 THEN
+  NOTE "action exist"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "exist empty"
+    FAIL "exist empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "exist empty"
+    END
+  ELSE
+    SYS KEEPEXIST paths
+    LET paths = LAST
+    LET keep_n = KEEPEXIST_N
+    LET drop_n = KEEPEXIST_DROP
+    LET paths_ch = 1
+    LET hit = keep_n
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "exist none"
+      FAIL "exist none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "exist none"
+      END
+    ELSE
+      LET note_msg = "exist ok"
+    END
+    PRINT_JSON keep_n drop_n
+    PRINT_JSON paths
+  END
+END
+
+# --- measure SIZEALL + ZIP basenames ---
+SYS EQS ACTION "measure"
+IF LAST_N == 1 THEN
+  NOTE "action measure"
+  SYS BLANK paths
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "measure empty"
+    FAIL "measure empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "measure empty"
+    END
+  ELSE
+    SYS SIZEALL paths
+    LET bytes = LAST
+    LET files_n = SIZEALL_FILES
+    LET miss_n = SIZEALL_MISS
+    LET sum_n = SIZEALL_SUM
+    LET hit = SIZEALL_N
+    LET bytes_ch = 1
+    SYS BASENAMEALL paths
+    LET bns = LAST
+    SYS ZIP bns bytes ":"
+    LET sizes = LAST
+    LET sizes_ch = 1
+    LET note_msg = "measure ok"
+    PRINT_JSON files_n miss_n sum_n
+    PRINT_JSON bytes
+    PRINT_JSON sizes
+  END
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SYS BLANK bytes
+  IF LAST_N == 1 THEN
+    # recompute from paths if bytes empty
+    SYS BLANK paths
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "sum empty"
+      FAIL "sum empty"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sum empty"
+      END
+    ELSE
+      SYS SIZEALL paths
+      LET bytes = LAST
+      LET sum_n = SIZEALL_SUM
+      LET files_n = SIZEALL_FILES
+      LET miss_n = SIZEALL_MISS
+      LET bytes_ch = 1
+      LET hit = sum_n
+      LET val_n = sum_n
+      SYS STR sum_n
+      LET val_s = LAST
+      LET note_msg = "sum via paths ok"
+    END
+  ELSE
+    SYS SUM bytes
+    LET sum_n = LAST_N
+    LET hit = sum_n
+    LET val_n = sum_n
+    SYS STR sum_n
+    LET val_s = LAST
+    LET note_msg = "sum ok"
+  END
+  PRINT_JSON sum_n files_n miss_n
+END
+
+# --- big THRESHKV ---
+SYS EQS ACTION "big"
+IF LAST_N == 1 THEN
+  NOTE "action big"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "big empty sizes"
+    FAIL "big empty sizes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "big empty sizes"
+    END
+  ELSE
+    SYS THRESHKV sizes MIN ":"
+    LET sizes = LAST
+    LET keep_n = THRESHKV_N
+    LET drop_n = THRESHKV_DROP
+    LET sizes_ch = 1
+    LET hit = keep_n
+    SYS BLANK sizes
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "big none"
+      FAIL "big none"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "big none"
+      END
+    ELSE
+      LET note_msg = "big ok"
+    END
+    PRINT_JSON MIN keep_n drop_n
+    PRINT_JSON sizes
+  END
+END
+
+# --- top TOPKEY ---
+SYS EQS ACTION "top"
+IF LAST_N == 1 THEN
+  NOTE "action top"
+  SYS BLANK sizes
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "top empty"
+    FAIL "top empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "top empty"
+    END
+  ELSE
+    SYS TOPKEY sizes ":"
+    LET val_s = LAST
+    LET val_n = TOPKEY_V
+    LET hit = 1
+    LET note_msg = "top ok"
+    PRINT_JSON val_s val_n TOPKEY_I
+  END
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS HASLINE paths NAME
+  LET val_n = LAST_N
+  LET hit = val_n
+  IF val_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  ELSE
+    LET note_msg = "has ok"
+  END
+  PRINT_JSON val_n NAME
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET paths = ""
+  LET bytes = ""
+  LET sizes = ""
+  LET paths_ch = 1
+  LET bytes_ch = 1
+  LET sizes_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "scan"
+LET k = k + LAST_N
+SYS EQS ACTION "files"
+LET k = k + LAST_N
+SYS EQS ACTION "dirs"
+LET k = k + LAST_N
+SYS EQS ACTION "exist"
+LET k = k + LAST_N
+SYS EQS ACTION "measure"
+LET k = k + LAST_N
+SYS EQS ACTION "sum"
+LET k = k + LAST_N
+SYS EQS ACTION "big"
+LET k = k + LAST_N
+SYS EQS ACTION "top"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF bytes_ch > 0 THEN
+  SYS WRITE bytes_path bytes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "bytes write failed"
+  END
+  CLEAR_ERR
+END
+IF sizes_ch > 0 THEN
+  SYS WRITE sizes_path sizes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "sizes write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS LINES paths
+LET depth_p = LAST_N
+SYS LINES bytes
+LET depth_b = LAST_N
+SYS LINES sizes
+LET depth_s = LAST_N
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.drop_bytes.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "key"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "val"
+LET report = LAST
+SYS PUSH report val_s
+LET report = LAST
+SYS PUSH report "val_n"
+LET report = LAST
+SYS STR val_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "pglob_n"
+LET report = LAST
+SYS STR pglob_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "keep_n"
+LET report = LAST
+SYS STR keep_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "drop_n"
+LET report = LAST
+SYS STR drop_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sum_n"
+LET report = LAST
+SYS STR sum_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "files_n"
+LET report = LAST
+SYS STR files_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss_n"
+LET report = LAST
+SYS STR miss_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "min"
+LET report = LAST
+SYS STR MIN
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_p"
+LET report = LAST
+SYS STR depth_p
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_b"
+LET report = LAST
+SYS STR depth_b
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "depth_s"
+LET report = LAST
+SYS STR depth_s
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dir"
+LET report = LAST
+SYS PUSH report DIR
+LET report = LAST
+SYS PUSH report "pat"
+LET report = LAST
+SYS PUSH report PAT
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "drop_bytes_board" ACTION hit miss sum_n keep_n note_msg elapsed
+PRINT_JSON ACTION hit miss sum_n keep_n drop_n files_n miss_n depth_p depth_b depth_s note_msg STATUS_OK
+NOTE "drop_bytes_board: done"
