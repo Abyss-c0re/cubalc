@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 202,
-  "version": "1.15.227-usability",
-  "item": "SYS DROPEXACTFILE / DROPFILEEXACT / REMOVELINEFILE exact file line drop",
-  "item_id": 235,
-  "title": "SYS DROPEXACTFILE|DROPFILEEXACT path line — drop first exact file line (no substring false positives)",
-  "commit": "9417d74db61d5872669981f41d7fe4e92a797e3f",
-  "summary": "Exact file line drop for flag/marker ack. selftest 202.",
+  "iter": 203,
+  "version": "1.15.228-usability",
+  "item": "SYS TOGGLELINE / TOGGLEFILELINE / FLIPLINE flip exact file line presence",
+  "item_id": 236,
+  "title": "SYS TOGGLELINE|TOGGLEFILELINE path line — flip exact line presence · ON after",
+  "commit": "759fdd3c3e8a6a00479055e9e6b7c25fe10931cc",
+  "summary": "Feature-flag toggle one-shot. selftest 203.",
   "proofs": [
-    "775_sys_dropexactfile",
-    "selftest n_pass=202"
+    "776_sys_toggleline",
+    "selftest n_pass=203"
   ],
-  "when": "2026-08-06T11:35:00Z",
+  "when": "2026-08-06T11:46:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9417d74db61d5872669981f41d7fe4e92a797e3f"
+  "sha": "759fdd3c3e8a6a00479055e9e6b7c25fe10931cc"
 }
