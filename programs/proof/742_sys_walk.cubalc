@@ -1,0 +1,93 @@
+# SYS WALK / FINDALL / TREEGLOB — recursive full-path discovery
+# Usability: deep plate trees beyond non-recursive PATHGLOB
+# Note: SYS FIND remains string index (not walk)
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "walk_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+# layout: fix/a.plate, fix/sub/b.plate, fix/sub/deep/c.log, fix/other.txt
+SYS JOIN fix "a.plate"
+LET fa = LAST
+SYS WRITE fa "a"
+
+SYS JOIN fix "other.txt"
+LET fo = LAST
+SYS WRITE fo "o"
+
+SYS JOIN fix "sub"
+LET sub = LAST
+SYS MKDIR sub
+SYS JOIN sub "b.plate"
+LET fb = LAST
+SYS WRITE fb "b"
+
+SYS JOIN sub "deep"
+LET deep = LAST
+SYS MKDIR deep
+SYS JOIN deep "c.log"
+LET fc = LAST
+SYS WRITE fc "c"
+
+# WALK all: files + dirs under fix
+SYS WALK fix
+ASSERT OK == 1
+ASSERT WALK_N >= 5
+ASSERT WALK_FILES >= 3
+ASSERT WALK_DIRS >= 2
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 1
+SYS HASLINE LAST sub
+ASSERT LAST_N == 1
+SYS EQS WALK_ROOT fix
+ASSERT LAST_N == 1
+
+# pattern *.plate only plates
+SYS WALK fix "*.plate"
+ASSERT WALK_N == 2
+ASSERT WALK_FILES == 2
+SYS HASLINE LAST fa
+ASSERT LAST_N == 1
+SYS HASLINE LAST fb
+ASSERT LAST_N == 1
+SYS HASLINE LAST fc
+ASSERT LAST_N == 0
+SYS HASLINE LAST fo
+ASSERT LAST_N == 0
+
+# FINDALL alias
+SYS FINDALL fix "*.log"
+ASSERT FINDALL_N == 1
+SYS EQS LAST fc
+ASSERT LAST_N == 1
+
+# TREEGLOB
+SYS TREEGLOB fix "other.txt"
+ASSERT WALK_N == 1
+SYS HASLINE LAST fo
+ASSERT LAST_N == 1
+
+# soft miss non-dir
+SYS WALK fa
+ASSERT OK == 0
+ASSERT WALK_N == 0
+
+# string FIND still works (not walk)
+SYS FIND "hello" "ll"
+ASSERT LAST_N == 2
+
+# cleanup
+SYS RM fa
+SYS RM fo
+SYS RM fb
+SYS RM fc
+
+PRINT "sys_walk ok"

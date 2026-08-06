@@ -229,6 +229,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 199. ~~**`SYS COPYALL` / `CPALL`**~~ **done** (bulk copy path bag into dest dir · snapshot without EACH+COPY).
 200. ~~**`SYS MKDIRALL` / `ENSUREDIRS`**~~ **done** (bulk mkdir -p path bag · layout trees without EACH+MKDIR).
 201. ~~**`SYS MOVEALL` / `MVALL`**~~ **done** (bulk move path bag into dest dir · archive without EACH+RENAME).
+202. ~~**`SYS WALK` / `FINDALL` / `TREEGLOB`**~~ **done** (recursive full-path discovery · deep trees beyond PATHGLOB).
 
 ## Tick protocol
 

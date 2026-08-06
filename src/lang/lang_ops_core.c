@@ -5,6 +5,68 @@
 #  include <fnmatch.h>
 #endif
 
+/* Basename shell match for WALK (fnmatch when available). */
+static int cubalc_walk_match(const char *pat, const char *name) {
+  if (!pat || !pat[0] || (pat[0] == '*' && pat[1] == 0)) return 1;
+  if (!name) return 0;
+#if !defined(CUBALC_OS_WINDOWS)
+  return fnmatch(pat, name, 0) == 0;
+#else
+  return strstr(name, pat) != NULL;
+#endif
+}
+
+/* Recursive find-style walk: list full paths whose basename matches pat.
+ * Always recurses into directories (even if name does not match). Depth cap 40. */
+static void cubalc_sys_walk_rec(const char *dir, const char *pat,
+                                char *out, size_t outsz, size_t *olen, long *kept,
+                                int depth, long *ndirs, long *nfiles) {
+  cubalc_host_result hr, jr, kr;
+  const char *p, *start;
+  size_t flen;
+  if (depth > 40 || !dir || !dir[0] || !out || !olen || !kept) return;
+  if (*olen + 1 >= outsz) return;
+  if (cubalc_host_listdir(dir, &hr) != 0) return;
+  p = hr.str;
+  while (*p) {
+    start = p;
+    while (*p && *p != '\n') p++;
+    flen = (size_t)(p - start);
+    if (flen > 0) {
+      char name[256], full[512];
+      size_t take = flen;
+      int isdir = 0;
+      if (take >= sizeof name) take = sizeof name - 1;
+      memcpy(name, start, take);
+      name[take] = 0;
+      if (!(name[0] == '.' && (name[1] == 0 || (name[1] == '.' && name[2] == 0)))) {
+        if (cubalc_host_join(dir, name, &jr) == 0) {
+          size_t dlen;
+          snprintf(full, sizeof full, "%s", jr.str);
+          if (cubalc_host_path_kind(full, &kr) == 0 && kr.code == 2)
+            isdir = 1;
+          if (cubalc_walk_match(pat, name)) {
+            dlen = strlen(full);
+            if (*kept > 0 && *olen + 1 < outsz) out[(*olen)++] = '\n';
+            if (*olen + dlen < outsz) {
+              memcpy(out + *olen, full, dlen);
+              *olen += dlen;
+            }
+            out[*olen] = 0;
+            (*kept)++;
+            if (isdir) { if (ndirs) (*ndirs)++; }
+            else { if (nfiles) (*nfiles)++; }
+          }
+          if (isdir)
+            cubalc_sys_walk_rec(full, pat, out, outsz, olen, kept, depth + 1,
+                                ndirs, nfiles);
+        }
+      }
+    }
+    if (*p == '\n') p++;
+  }
+}
+
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
   skip_nl(L);
@@ -2491,6 +2553,65 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "MOVEALL_FAIL", failc);
       var_set_num(vm, "MOVEALL_SCAN", nscan);
       var_set_num(vm, "OK", failc == 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS WALK|TREEGLOB|FINDALL root [pattern]
+     * — recursive full paths under root whose basename matches pattern (*?[]).
+     * Recurses into all dirs (find -name style). Soft miss non-dir → OK=0.
+     * Do NOT use FIND alone (reserved for string index SYS FIND).
+     * LAST = paths; LAST_N / WALK_N; WALK_FILES · WALK_DIRS · WALK_ROOT · WALK_PAT.
+     * Usability: deep plate discovery beyond non-recursive PATHGLOB. */
+    if (kw(&L->cur,"WALK") || kw(&L->cur,"FINDALL") || kw(&L->cur,"TREEGLOB") ||
+        kw(&L->cur,"RGLOB") || kw(&L->cur,"WALKDIR") || kw(&L->cur,"FINDFILES") ||
+        kw(&L->cur,"TREEWALK") || kw(&L->cur,"RWALK") || kw(&L->cur,"DEEPGLOB")){
+      char root[512], pat[256], out[CUBALC_HOST_STR_MAX];
+      size_t olen = 0;
+      long kept = 0, nfiles = 0, ndirs = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      root[0] = 0; pat[0] = 0; out[0] = 0;
+      snprintf(pat, sizeof pat, "%s", "*");
+      if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+        fail(vm, "SYS WALK root [pattern]");
+        return -1;
+      }
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, pat, sizeof pat) != 0)
+          snprintf(pat, sizeof pat, "%s", "*");
+        if (!pat[0]) snprintf(pat, sizeof pat, "%s", "*");
+      }
+      if (cubalc_host_path_kind(root, &hr) != 0 || hr.code != 2) {
+        var_set_num(vm, "OK", 0);
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WALK_N", 0);
+        var_set_str(vm, "LAST", "");
+        var_set_str(vm, "WALK", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        if (hr.err[0]) {
+          var_set_str(vm, "LAST_ERR", hr.err);
+          var_set_str(vm, "ERR", hr.err);
+        } else {
+          var_set_str(vm, "LAST_ERR", "walk: not a directory");
+          var_set_str(vm, "ERR", "walk: not a directory");
+        }
+        bump(vm); return 1;
+      }
+      cubalc_sys_walk_rec(root, pat, out, sizeof out, &olen, &kept, 0, &ndirs, &nfiles);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_str(vm, "WALK", out);
+      var_set_str(vm, "FINDALL", out);
+      var_set_str(vm, "TREEGLOB", out);
+      var_set_str(vm, "WALK_ROOT", root);
+      var_set_str(vm, "WALK_PAT", pat);
+      var_set_num(vm, "WALK_N", kept);
+      var_set_num(vm, "FINDALL_N", kept);
+      var_set_num(vm, "TREEGLOB_N", kept);
+      var_set_num(vm, "WALK_FILES", nfiles);
+      var_set_num(vm, "WALK_DIRS", ndirs);
+      var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
     if (kw(&L->cur,"WHICH")){
@@ -12134,7 +12255,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
+    fail(vm, "SYS: READ|WRITE|RM|RENAME|COPY|REALPATH|TOUCH|LIST|GLOB|MATCHFILES|PATHGLOB|PGLOB|FULLGLOB|FILTERGLOB|MATCHBAG|GREPGLOB|NTH|GREP|GREPANY|GREPALL|FIRSTMATCH|GREP1|LASTMATCH|GREP1L|LOOKUP|KVGET|LOOKUPN|KVGETN|KVSET|SETKV|KVINC|INCKV|KVDEL|DELKV|MERGEKV|KVADDALL|DIFFKV|SUBKV|SUMKV|TOTALKV|AVGKV|MEANKV|MEDIANKV|P50KV|TOPKEY|BOTKEY|THRESHKV|KEEPVAL|DROPZERO|KEEPNZ|KEEPKEY|GREPKEY|DROPKEY|PCTKV|SHAREKV|CAPKV|CLAMPKV|SCALEKV|MULKV|DIVKV|IDIVKV|ADDKV|OFFSETKV|ABSKV|MAGKV|SIGNKV|DIRKV|CHUNK|BATCH|WINDOW|SLIDE|STRIDE|EVERY|ROTATE|ROTL|ROTR|FLATTEN|UNCHUNK|TAKE|DROP|SPLIT|WORDS|CUT|CUTALL|COLUMN|SORT|SORTN|SORTLEN|UNIQ|UNION|DISTINCT|INTERSECT|DIFF|ZIP|KEYS|VALS|PREFIXALL|SUFFIXALL|FILL|ENUMERATE|NUMBER|SQUEEZE|COMPACT|TRIMALL|UPPERALL|LOWERALL|MAPREPLACE|GSUBALL|FREQ|HIST|SORTFREQ|BEFOREALL|AFTERALL|MIDLINES|SLICEBAG|REVL|JOINLINES|PUSH|PREPEND|POP|POPHEAD|LINES|HASLINE|COUNTLINE|COUNTMATCH|GREPCOUNT|FINDLINE|SETLINE|SETMATCH|INSERTLINE|DROPNTH|MOVELINE|REMOVELINE|ENV|SETENV|UNSETENV|EXIST|SIZE|ISDIR|ISFILE|MTIME|AGE|MKDIR|BASENAME|DIRNAME|EXTNAME|STEM|BASENAMEALL|DIRNAMEALL|EXTALL|STEMALL|KEEPFILES|KEEPDIRS|KEEPEXIST|SIZEALL|MAPSIZE|MTIMEALL|AGEALL|NEWEST|OLDEST|LARGEST|SMALLEST|SORTMTIME|SORTSIZE|FRESH|KEEPSTALE|AGED|KEEPNEWER|NEWERTHAN|KEEPOLDER|OLDERREF|KEEPBIGGER|BIGFILES|SIZEGE|KEEPSMALLER|SMALLFILES|SIZELE|RMALL|UNLINKALL|DELETEALL|TOUCHALL|ENSUREALL|CREATEALL|COPYALL|CPALL|BULKCOPY|MKDIRALL|ENSUREDIRS|MKDIRS|MOVEALL|MVALL|RENAMEALL|WALK|FINDALL|TREEGLOB|WHICH|CWD|CHDIR|STATE|ROOT|TMP|HTTP|SPAWN|JOIN|JSON|CHAT|ARG|NUM|STR|ITOA|LEN|LENALL|MAPLEN|MAXLEN|MINLEN|LONGEST|SHORTEST|COMMONPREFIX|COMMONSUFFIX|STRIPPREFIX|STRIPSUFFIX|STRIPCOMMON|LCP|EMPTY|BLANK|COALESCE|NVL|TIME|MS|SLEEP|RAND|PICK|CHOICE|SHUFFLE|SHUF|DRAWN|SAMPLEK|NPICK|MIN|MAX|ARGMAX|ARGMIN|CLAMP|IN|WITHIN|CMP|SCMP|IABS|SIGN|DIV|MOD|GCD|LCM|POW|ISQRT|SUM|PROD|AVG|MEDIAN|RANGE|SEQ|IOTA|DATE|PID|HOSTNAME|USER|UID|HOME|APPEND|HEX|TOHEX|ORD|CHR|MID|CAT|FIND|FINDI|NTH|EQS|EQSI|HAS|HASI|BEFORE|AFTER|BETWEEN|REVS|UPPER|LOWER|TRIM|STARTS|STARTSI|ENDS|ENDSI|REPLACE|REPLACEALL|LPAD|RPAD|PADALL|LPADALL|RPADALL|TRUNCALL|CLIPALL|STREPEAT");
     return -1;
   }
 
@@ -12395,6 +12516,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS MOVEALL", "SYS MOVEALL|MVALL|RENAMEALL bag dest_dir — move every path into dest · archive"},
       {"SYS MVALL", "SYS MVALL alias of SYS MOVEALL"},
       {"SYS RENAMEALL", "SYS RENAMEALL alias of SYS MOVEALL"},
+      {"SYS WALK", "SYS WALK|FINDALL|TREEGLOB root [pattern] — recursive full paths · deep discovery"},
+      {"SYS FINDALL", "SYS FINDALL alias of SYS WALK (not string FIND)"},
+      {"SYS TREEGLOB", "SYS TREEGLOB alias of SYS WALK"},
       {"SYS SIZE", "SYS SIZE|FSIZE path — file bytes → LAST_N/SIZE · soft miss"},
       {"SYS ISDIR", "SYS ISDIR path — LAST_N 1 if directory"},
       {"SYS ISFILE", "SYS ISFILE path — LAST_N 1 if regular file"},
