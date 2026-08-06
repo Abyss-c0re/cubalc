@@ -8,7 +8,7 @@
   "tests": [
     {
       "name": "budget_label",
-      "cmd": "PARSEMS 30s → 30000; HUMANMS → 30s",
+      "cmd": "PARSEMS 30s \u2192 30000; HUMANMS \u2192 30s",
       "ok": true,
       "note": "parse"
     },
@@ -26,25 +26,25 @@
     },
     {
       "name": "round_2m",
-      "cmd": "PARSEMS↔HUMANMS single-unit",
+      "cmd": "PARSEMS\u2194HUMANMS single-unit",
       "ok": true,
       "note": "2m"
     },
     {
       "name": "round_multi",
-      "cmd": "HUMANMS 1250→1s250ms; PARSEMS fail trailing junk",
+      "cmd": "HUMANMS 1250\u21921s250ms; PARSEMS fail trailing junk",
       "ok": true,
       "note": "asymmetry"
     },
     {
       "name": "expire",
-      "cmd": "1s budget sleep2 gate REQUIRE→2",
+      "cmd": "1s budget sleep2 gate REQUIRE\u21922",
       "ok": true,
       "note": "expired"
     },
     {
       "name": "budget_bad",
-      "cmd": "PARSEMS xyz soft; 5x REQUIRE→2",
+      "cmd": "PARSEMS xyz soft; 5x REQUIRE\u21922",
       "ok": true,
       "note": "parse fail"
     },
@@ -61,14 +61,14 @@
       "severity": "high",
       "area": "host|duration",
       "title": "HUMANMS multi-unit labels are not PARSEMS-round-trippable",
-      "detail": "HUMANMS 1250 → 1s250ms; PARSEMS fails trailing junk. HUMANMS 90000 → 1m30s also fails. Only pure single-unit labels reparse. Agents that store human labels lose budgets.",
-      "repro": "HUMANMS 1250; PARSEMS LAST → OK=0 trailing junk"
+      "detail": "HUMANMS 1250 \u2192 1s250ms; PARSEMS fails trailing junk. HUMANMS 90000 \u2192 1m30s also fails. Only pure single-unit labels reparse. Agents that store human labels lose budgets.",
+      "repro": "HUMANMS 1250; PARSEMS LAST \u2192 OK=0 trailing junk"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|time",
-      "title": "Remain math forced to whole-second TIME — sub-second budgets imprecise",
+      "title": "Remain math forced to whole-second TIME \u2014 sub-second budgets imprecise",
       "detail": "No MS-based wall clock for deadlines. budget_ms/1000 floor drops sub-second. Agents needing 500ms budgets get 0s deadline delta.",
       "repro": "budget 500ms; start add_s=0"
     },
@@ -76,9 +76,9 @@
       "id": "W3",
       "severity": "med",
       "area": "host|fromtime",
-      "title": "FROMTIME is UTC only — no local ISO dual",
+      "title": "FROMTIME is UTC only \u2014 no local ISO dual",
       "detail": "LOCAL exists separately; agents wanting local deadline stamps must hand-format. No FROMTIME LOCAL flag.",
-      "repro": "FROMTIME → always Z"
+      "repro": "FROMTIME \u2192 always Z"
     },
     {
       "id": "W4",
@@ -86,14 +86,14 @@
       "area": "host|parsems",
       "title": "No compound input parse (1h30m) despite HUMANMS compound output",
       "detail": "Asymmetry: format multi-unit, parse single-unit only. Config authors write 1h30m and get soft fail.",
-      "repro": "PARSEMS 1m30s → fail"
+      "repro": "PARSEMS 1m30s \u2192 fail"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|has",
       "title": "HAS on duration labels unit false friends",
-      "detail": "HAS 5s s → 1; HAS 1m30s m → 1. Cannot classify unit with HAS.",
+      "detail": "HAS 5s s \u2192 1; HAS 1m30s m \u2192 1. Cannot classify unit with HAS.",
       "repro": "HAS 30s s"
     },
     {
@@ -118,7 +118,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "CUBALC_DB_REQUIRE=abc.",
-      "repro": "REQUIRE=abc budget bad → rc 0"
+      "repro": "REQUIRE=abc budget bad \u2192 rc 0"
     }
   ],
   "workarounds": [
@@ -137,9 +137,9 @@
   ],
   "issues_faced": [
     "budget/label/start/remain/iso/gate/round-2m/expire green",
-    "multi-unit HUMANMS→PARSEMS fail is core lesson",
+    "multi-unit HUMANMS\u2192PARSEMS fail is core lesson",
     "selftest 275/275; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "bcefd75d1d7f701fc84f0a8f55cb6a7fb34e0bc9",
   "ts": "2026-08-06T23:49:13Z"
 }
