@@ -14,7 +14,7 @@
     },
     {
       "name": "div_window",
-      "cmd": "div 3 → api:300 … edge:16 trunc; COST SoT intact",
+      "cmd": "div 3 \u2192 api:300 \u2026 edge:16 trunc; COST SoT intact",
       "ok": true,
       "note": "DIVKV side RATE plate"
     },
@@ -38,13 +38,13 @@
     },
     {
       "name": "avg_trunc",
-      "cmd": "avg a:1 b:2 → 1 not 1.5",
+      "cmd": "avg a:1 b:2 \u2192 1 not 1.5",
       "ok": true,
       "note": "integer trunc toward 0"
     },
     {
       "name": "div_trunc",
-      "cmd": "9/2 → 4; 4/2 → 2",
+      "cmd": "9/2 \u2192 4; 4/2 \u2192 2",
       "ok": true,
       "note": "remainder lost"
     },
@@ -58,7 +58,7 @@
       "name": "nonnum_avg_div",
       "cmd": "note:hello preserved DIV; AVGKV_N=2 KEYS=3 mean 6",
       "ok": true,
-      "note": "KEYS≠N footgun"
+      "note": "KEYS\u2260N footgun"
     },
     {
       "name": "selftest",
@@ -74,14 +74,14 @@
       "area": "host|bag",
       "title": "DIVKV divisor 0 soft-zeros entire bag OK=1",
       "detail": "No hard fail; ENV typo DIV=0 wipes rates to zeros. Agents must refuse before call.",
-      "repro": "DIVKV bag 0 → all :0"
+      "repro": "DIVKV bag 0 \u2192 all :0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|bag",
       "title": "AVGKV_KEYS counts non-numeric but mean uses AVGKV_N only",
-      "detail": "api:9 note:hello mesh:3 → SUM=12 N=2 KEYS=3 mean=6. Agents dividing SUM/KEYS get wrong 4. KEYS≠N silent.",
+      "detail": "api:9 note:hello mesh:3 \u2192 SUM=12 N=2 KEYS=3 mean=6. Agents dividing SUM/KEYS get wrong 4. KEYS\u2260N silent.",
       "repro": "AVGKV mixed bag"
     },
     {
@@ -90,7 +90,7 @@
       "area": "host|bag",
       "title": "DIVKV and AVGKV integer truncation toward zero",
       "detail": "50/3=16; (1+2)/2=1. No remainder bag / rounding mode. Unit rates understate.",
-      "repro": "DIVKV edge:50 3 → 16"
+      "repro": "DIVKV edge:50 3 \u2192 16"
     },
     {
       "id": "W4",
@@ -106,7 +106,7 @@
       "area": "host|bag",
       "title": "AVGKV empty returns 0 OK=1 not soft miss",
       "detail": "Same class as SUMKV empty. Program must BLANK-gate.",
-      "repro": "AVGKV \"\" → 0"
+      "repro": "AVGKV \"\" \u2192 0"
     },
     {
       "id": "W6",
@@ -149,11 +149,11 @@
     "PRINT_JSON bag-as-array; WRITE trailing NL"
   ],
   "issues_faced": [
-    "Positive seed/div/avg/getrate clean; edge 50/3→16 trunc",
+    "Positive seed/div/avg/getrate clean; edge 50/3\u219216 trunc",
     "AVGKV_KEYS vs N high-sev for mixed bags",
     "DIV 0 soft wipe confirmed",
     "No language fix this iter"
   ],
-  "commit": "",
+  "commit": "e2b122e1420e2f5ad0fd90faa9dbaf722d891933",
   "ts": "2026-08-06T02:25:00Z"
 }
