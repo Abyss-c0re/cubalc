@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 156,
-  "version": "1.15.181-usability",
-  "item": "SYS KEEPFILES / KEEPDIRS / KEEPEXIST path bag kind filters",
-  "item_id": 189,
-  "title": "SYS KEEPFILES|KEEPDIRS|KEEPEXIST [bag] — filter paths by host kind",
-  "commit": "eecc9682ded5db1149f80b45f8b4c5bc268d5ca7",
-  "summary": "Keep files/dirs/existing paths in bags after PATHGLOB. selftest 156.",
+  "iter": 157,
+  "version": "1.15.182-usability",
+  "item": "SYS SIZEALL / MAPSIZE path bag byte sizes + sum",
+  "item_id": 190,
+  "title": "SYS SIZEALL|MAPSIZE [bag] — byte sizes over paths · SIZEALL_SUM",
+  "commit": "5e29c5645f771df739e29e459df6ae5f4e066c27",
+  "summary": "Path bag inventory sizes + sum after PATHGLOB/KEEPFILES. selftest 157.",
   "proofs": [
-    "729_sys_keepfiles",
-    "selftest n_pass=156"
+    "730_sys_sizeall",
+    "selftest n_pass=157"
   ],
-  "when": "2026-08-06T03:55:21Z",
+  "when": "2026-08-06T04:04:04Z",
   "agent": "meaningful_iter_10m",
-  "sha": "eecc9682ded5db1149f80b45f8b4c5bc268d5ca7"
+  "sha": "5e29c5645f771df739e29e459df6ae5f4e066c27"
 }
