@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 209,
-  "version": "1.15.234-usability",
-  "item": "SYS HASH / HASHFILE / FINGERPRINT FNV-1a content stamps",
-  "item_id": 242,
-  "title": "SYS HASH|HASHFILE [str|path] — FNV-1a 32-bit hex · N/BYTES plate stamps",
-  "commit": "5f4395f94bd748669662f13b37ab9a305694da73",
-  "summary": "Plate/cache fingerprints without shell md5. selftest 209.",
+  "iter": 210,
+  "version": "1.15.235-usability",
+  "item": "SYS WAITMATCH / WAITCONTAINS / POLLMATCH poll until content match",
+  "item_id": 243,
+  "title": "SYS WAITMATCH|WAITCONTAINS path needle [ms] — poll until file contains needle",
+  "commit": "e20fa85eed2b7dcc533d5a45b9a5e55ac04713b2",
+  "summary": "Content-ready handoff wait without READ+HAS+SLEEP. selftest 210.",
   "proofs": [
-    "783_sys_hash",
-    "selftest n_pass=209"
+    "784_sys_waitmatch",
+    "selftest n_pass=210"
   ],
-  "when": "2026-08-06T12:35:13Z",
+  "when": "2026-08-06T12:44:44Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5f4395f94bd748669662f13b37ab9a305694da73"
+  "sha": "e20fa85eed2b7dcc533d5a45b9a5e55ac04713b2"
 }
