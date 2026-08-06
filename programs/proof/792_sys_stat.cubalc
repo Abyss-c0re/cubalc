@@ -1,0 +1,78 @@
+# SYS STAT / FSTAT / FILESTAT
+# — one-shot path metadata (exist + kind + size + mtime + isfile/isdir)
+# Usability: replace EXIST+SIZE+MTIME+ISDIR glue for agent plate checks
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "stat_mi_fixture"
+LET fix = LAST
+SYS MKDIR fix
+
+SYS JOIN fix "plate.txt"
+LET f = LAST
+SYS RM f
+
+# missing path: soft probe OK=1, EXIST=0
+SYS STAT f
+ASSERT OK == 1
+ASSERT STAT_EXIST == 0
+ASSERT LAST_N == 0
+ASSERT STAT_KIND == 0
+ASSERT STAT_ISFILE == 0
+ASSERT STAT_ISDIR == 0
+ASSERT STAT_SIZE == 0
+
+# file: write then stat
+SYS WRITE f "hello"
+SYS STAT f
+ASSERT OK == 1
+ASSERT STAT_EXIST == 1
+ASSERT LAST_N == 1
+ASSERT STAT_KIND == 1
+ASSERT STAT_ISFILE == 1
+ASSERT STAT_ISDIR == 0
+ASSERT STAT_SIZE == 5
+ASSERT STAT_MTIME > 0
+ASSERT STAT_AGE >= 0
+SYS EQS LAST f
+ASSERT LAST_N == 1
+# mirrors common vars
+ASSERT SIZE == 5
+ASSERT ISFILE == 1
+ASSERT ISDIR == 0
+
+# directory
+SYS STAT fix
+ASSERT OK == 1
+ASSERT STAT_EXIST == 1
+ASSERT STAT_KIND == 2
+ASSERT STAT_ISDIR == 1
+ASSERT STAT_ISFILE == 0
+
+# alias FSTAT
+SYS FSTAT f
+ASSERT STAT_EXIST == 1
+ASSERT STAT_ISFILE == 1
+
+# alias FILESTAT
+SYS FILESTAT f
+ASSERT STAT_SIZE == 5
+
+# empty path soft fail
+SYS STAT ""
+ASSERT OK == 0
+ASSERT STAT_EXIST == 0
+
+# agent: one-shot gate before READ
+SYS STAT f
+ASSERT STAT_ISFILE == 1
+SYS READ f
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# cleanup
+SYS RM f
+
+PRINT "sys_stat ok"

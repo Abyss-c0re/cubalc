@@ -2466,6 +2466,80 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       }
       bump(vm); return 1;
     }
+    /* SYS STAT|FSTAT|FILESTAT path
+     * — one-shot path metadata: exist + kind + size + mtime + isfile/isdir.
+     * STAT_EXIST 0|1; STAT_KIND 0 miss|1 file|2 dir|3 other;
+     * STAT_SIZE; STAT_MTIME; STAT_ISFILE; STAT_ISDIR; STAT_AGE (seconds).
+     * LAST = path if exist else ""; LAST_N = STAT_EXIST.
+     * Empty path soft OK=0. Miss still OK=1 (probe). Usability: replace
+     * EXIST+SIZE+MTIME+ISDIR glue for agent plate checks. */
+    if (kw(&L->cur,"STAT") || kw(&L->cur,"FSTAT") || kw(&L->cur,"FILESTAT") ||
+        kw(&L->cur,"PATHSTAT") || kw(&L->cur,"STATPATH") || kw(&L->cur,"META") ||
+        kw(&L->cur,"FILEMETA") || kw(&L->cur,"PATHMETA")){
+      char path[512];
+      cubalc_host_result kr, mr;
+      long exist = 0, kind = 0, size = 0, mtime = 0, age = 0;
+      long isfile = 0, isdir = 0;
+      lex_next(L);
+      path[0] = 0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "SYS STAT path");
+        return -1;
+      }
+      if (!path[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "STAT_EXIST", 0);
+        var_set_num(vm, "STAT_KIND", 0);
+        var_set_num(vm, "STAT_SIZE", 0);
+        var_set_num(vm, "STAT_MTIME", 0);
+        var_set_num(vm, "STAT_AGE", 0);
+        var_set_num(vm, "STAT_ISFILE", 0);
+        var_set_num(vm, "STAT_ISDIR", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "STAT: empty path");
+        var_set_str(vm, "ERR", "STAT: empty path");
+        bump(vm); return 1;
+      }
+      cubalc_host_path_kind(path, &kr);
+      kind = (long)kr.code; /* 0 miss 1 file 2 dir 3 other */
+      if (kind > 0) {
+        exist = 1;
+        size = kr.n;
+        isfile = (kind == 1) ? 1 : 0;
+        isdir = (kind == 2) ? 1 : 0;
+        if (cubalc_host_mtime(path, &mr) == 0 && mr.ok) {
+          mtime = mr.n;
+          age = (long)time(NULL) - mtime;
+          if (age < 0) age = 0;
+        }
+      }
+      if (exist) {
+        var_set_str(vm, "LAST", path);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+      }
+      vm->last_n = exist;
+      var_set_num(vm, "LAST_N", exist);
+      var_set_str(vm, "STAT", path);
+      var_set_num(vm, "STAT_EXIST", exist);
+      var_set_num(vm, "STAT_KIND", kind);
+      var_set_num(vm, "STAT_SIZE", size);
+      var_set_num(vm, "STAT_MTIME", mtime);
+      var_set_num(vm, "STAT_AGE", age);
+      var_set_num(vm, "STAT_ISFILE", isfile);
+      var_set_num(vm, "STAT_ISDIR", isdir);
+      var_set_num(vm, "SIZE", size);
+      var_set_num(vm, "MTIME", mtime);
+      var_set_num(vm, "ISFILE", isfile);
+      var_set_num(vm, "ISDIR", isdir);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MTIME|MODTIME path — st_mtime epoch seconds → LAST_N/MTIME; soft miss OK=0.
      * SYS AGE|FILEAGE path — now - mtime seconds → LAST_N/AGE (0 if miss or future).
      * Usability: lease/plate freshness without shell stat. */

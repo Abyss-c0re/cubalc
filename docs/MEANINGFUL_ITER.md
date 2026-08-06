@@ -278,6 +278,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 248. ~~**`SYS WAITCHANGED` / `WAITMODIFIED` / `POLLCHANGE`**~~ **done** (poll until appear or size/mtime change · SINCE snapshot · peer status without known content).
 249. ~~**`SYS MKTEMP` / `TEMPFILE` / `MAKETEMP`**~~ **done** (unique empty file under TMP · collision-free agent plate paths without shell mktemp).
 250. ~~**`SYS CLAIM` / `CLAIMFILE` / `CREATEEXCL`**~~ **done** (exclusive path create for one-shot work-item claims · soft miss if held · release with RM).
+251. ~~**`SYS STAT` / `FSTAT` / `FILESTAT`**~~ **done** (one-shot path metadata · exist/kind/size/mtime/isfile · no EXIST+SIZE+MTIME glue).
 
 ## Tick protocol
 
