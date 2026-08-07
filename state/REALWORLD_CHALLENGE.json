@@ -1,39 +1,39 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 154,
-  "program": "programs/realworld/incident_note_triage_board.cubalc",
-  "theme": "HASINF/COUNTINF/LENF + REPLACEF/CLEARF incident note triage",
-  "version": "1.15.421-usability",
+  "iter": 155,
+  "program": "programs/realworld/svc_send_dispatch_board.cubalc",
+  "theme": "SEND/TRYSEND arity + EQF status live service dispatch",
+  "version": "1.15.423-usability",
   "pass": true,
-  "prior_note": "iter 153 EACH METHOD catalog; this iter first focused HASINF+COUNTINF+LENF+CLEARF note triage board",
+  "prior_note": "iter 154 HASINF/COUNTINF note triage; this iter first realworld SEND arity wall (973) + EQF dispatch",
   "tests": [
     {
-      "name": "has_count",
-      "cmd": "HASINF ERROR present; case error soft-absent; COUNTINF ERROR=2",
+      "name": "bump_send",
+      "cmd": "SEND bump 5 → n=5; bump 3 → n=8",
       "ok": true,
-      "note": "HASINF/COUNTINF"
+      "note": "SEND"
     },
     {
-      "name": "len_scrub",
-      "cmd": "LENF 31; REPLACEF secret=REDACTED",
+      "name": "setst_ping",
+      "cmd": "setst hot; ping → pong",
       "ok": true,
-      "note": "LENF/REPLACEF"
+      "note": "methods"
+    },
+    {
+      "name": "eq",
+      "cmd": "EQF hot true; cold REQUIRE→2; EQFI Hot/hot on s1",
+      "ok": true,
+      "note": "EQF"
     },
     {
       "name": "gate",
-      "cmd": "MINLEN=10 MINHITS=2 admit; MINHITS=99 REQUIRE\u21922",
+      "cmd": "n>=5 admit; MINN=99 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "icase_clear",
-      "cmd": "HASIFI on i1; CLEARF note \u2192 empty closed",
-      "ok": true,
-      "note": "HASIFI/CLEARF"
-    },
-    {
       "name": "probe",
-      "cmd": "TRY* soft; case HASINF miss; EMPTYF after clear",
+      "cmd": "TRYSEND under-arity needs1 got0; over-arity OK=1 got2; EQF case",
       "ok": true,
       "note": "probe"
     },
@@ -47,38 +47,30 @@
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "host|note",
-      "title": "Var named NOTE is poisoned by NOTE statement",
-      "detail": "DEFAULT NOTE=... then NOTE \"action open\" overwrites the var with log text (dump showed note:action open). Agents must use BODY/MSG not NOTE for payload vars.",
-      "repro": "DEFAULT NOTE=\"ERROR...\"; NOTE \"action open\"; SETF note NOTE \u2192 action open"
+      "severity": "med",
+      "area": "oop|send",
+      "title": "Over-arity SEND soft-accepts (extra args ignored)",
+      "detail": "TRYSEND s bump 1 2 → OK=1 ARITY_GOT=2 with no hard fail. Under-arity correctly soft-fails needs/got. Agents cannot detect extra-arg mistakes at call site.",
+      "repro": "TRYSEND s0 bump 1 2 → OK=1 got 2"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "oop|countinf",
-      "title": "COUNTINF needle var NEEDLE hard-fails",
-      "detail": "COUNTINF obj field NEEDLE \u2192 err 'COUNTINF object field needle'. Same reserved class as GREPF NEEDLE. Use WANT.",
-      "repro": "DEFAULT NEEDLE=\"ERROR\"; COUNTINF i note NEEDLE \u2192 hard err"
+      "severity": "med",
+      "area": "oop|send",
+      "title": "SEND method name still literal-only",
+      "detail": "Cannot SEND s0 METH with METH from ENV; same class as HASMETHOD var miss. Dispatch boards hardcode method tokens.",
+      "repro": "SEND s0 m with m=bump fails / not dynamic"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "oop|replacef",
-      "title": "REPLACEF args FROM/TO reserved",
-      "detail": "REPLACEF note FROM TO \u2192 'REPLACEF object field old new'. Rename OLDSTR/NEWSTR.",
-      "repro": "REPLACEF i note FROM TO with FROM/TO vars"
+      "severity": "low",
+      "area": "oop|eqf",
+      "title": "EQF case-sensitive; need EQFI for status fold",
+      "detail": "Hot vs hot miss on EQF; slot-local EQFI works. Ops status strings need explicit icase path.",
+      "repro": "EQF status hot on Hot → 0; EQFI → 1"
     },
     {
       "id": "W4",
-      "severity": "low",
-      "area": "oop|hasinf",
-      "title": "HASINF case-sensitive vs HASIFI dual path",
-      "detail": "Easy false miss on ERROR vs error; agents must pick HASIFI for logs. Not a bug but ops footgun.",
-      "repro": "HASINF note ERROR on 'error lower' \u2192 0"
-    },
-    {
-      "id": "W5",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
@@ -86,34 +78,32 @@
       "repro": "od -c META.txt after dump"
     },
     {
-      "id": "W6",
+      "id": "W5",
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINHITS=99 gate soft"
+      "repro": "REQUIRE=abc MINN=99 gate soft"
     }
   ],
   "workarounds": [
-    "Never name payload vars NOTE \u2014 use BODY",
-    "Never name COUNTINF/GREPF needle NEEDLE \u2014 use WANT",
-    "Never name REPLACEF args FROM/TO \u2014 use OLDSTR/NEWSTR",
-    "HASIFI for case-fold log triage; HASINF exact",
-    "Fixed i0/i1/i2; TRY* soft; numeric REQUIRE only"
+    "Always pass exact arity; treat over-arity as silent accept",
+    "Literal SEND method names only; catalog board for discovery",
+    "EQFI for case-fold status; EQF for exact",
+    "TRYSEND before SEND when args optional; check ARITY_* knobs",
+    "Fixed s0/s1/s2; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Warn or shadow-protect NOTE statement vs NOTE var",
-    "Reserve NEEDLE/FROM/TO in form arg slots or soft-error",
-    "Consistent reserved-name diagnostics across forms",
+    "Strict over-arity fail mode (SEND STRICT / ARITY_STRICT)",
+    "Dynamic SEND method name from string/var",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NOTE var poisoned by NOTE stmt \u2014 renamed BODY",
-    "NEEDLE/FROM hard-fail COUNTINF/REPLACEF \u2014 WANT/OLDSTR",
-    "COUNTINF ERROR=2; scrub REDACTED; CLEARF closed",
-    "HASIFI icase; gate len+hits dual wall",
+    "SEND bump 5+3 → n=8; setst hot; ping pong",
+    "TRYSEND under-arity needs1 got0 LAST_ERR; over OK=1",
+    "EQF/EQFI status gate; counter MINN gate",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "f5c098be229c18ea6bb25cdf8678ea81c01619b9",
-  "ts": "2026-08-07T19:50:44Z"
+  "commit": "",
+  "ts": "2026-08-07T20:16:24Z"
 }
