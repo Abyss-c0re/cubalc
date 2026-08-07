@@ -1,0 +1,1371 @@
+# incident_note_triage_board.cubalc — HASINF/COUNTINF/LENF + REPLACEF/CLEARF triage
+#
+# Real use: incident agents scan note text for error markers (HASINF/HASIFI),
+# tally severity tokens (COUNTINF), gate on note length (LENF), scrub secrets
+# (REPLACEF), and wipe notes on close (CLEARF) without GETF+SYS HAS/LEN glue.
+#
+# Surfaces forced (proof 943–945, 941, 944, 954):
+#   HASINF / HASIFI / CONTAINSF / STARTSF / ENDSF · TRYHASINF
+#   COUNTINF / COUNTINFI · TRYCOUNTINF
+#   LENF / EMPTYF / BLANKF / NONEMPTYF · TRYLENF
+#   REPLACEF / GSUBF · TRYREPLACEF
+#   CLEARF / WIPEF / ZEROF · TRYCLEARF
+#   soft miss + REQUIRE wall
+#
+# Distinct from alert_field_peel (WORDSF/CUTF CSV), fleet_label_scrub
+# (CATFALL bulk), metric_label_peel (BEFOREF kv): this is *note probe +
+# tally + scrub + wipe for incident slots*.
+#
+# Slots: i0 i1 i2
+#
+# Plate under STATE:
+#   dump/i0 dump/i1 dump/i2
+#   VAL.txt META.txt OBJS.txt INC_REPORT.txt
+#
+# Actions:
+#   list | open | setnote | has | count | len | scrub | clearnote
+#   startswith | gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_int_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=i0
+#   CUBALC_FS_NOTE='ERROR: timeout ERROR secret=abc' CUBALC_ARG0=setnote CUBALC_ARG1=i0
+#   CUBALC_FS_NEEDLE=ERROR CUBALC_ARG0=has CUBALC_ARG1=i0
+#   CUBALC_FS_MINLEN=10 CUBALC_ARG0=gate CUBALC_ARG1=i0
+#
+# Env: CUBALC_FS_REQUIRE NAME NOTE NEEDLE OLDSTR NEWSTR MINLEN MINHITS ACTION
+#
+# Edges:
+#   HASINF case-sensitive; HASIFI icase
+#   COUNTINF counts non-overlap? overlapping needles
+#   REPLACEF all occurrences; CLEARF empties string
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Incident
+  FIELD id ""
+  FIELD note ""
+  FIELD hits 0
+  FIELD nlen 0
+  FIELD status "open"
+  METHOD init i
+    SETF THIS id i
+    SETF THIS note ""
+    SETF THIS hits 0
+    SETF THIS nlen 0
+    SETF THIS status "open"
+  END
+END
+
+REQUIRE CLASS Incident
+REQUIRE METHOD Incident init
+
+NOTE "incident_note_triage_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT BODY = "ERROR: timeout ERROR secret=abc"
+DEFAULT WANT = "ERROR"
+DEFAULT OLDSTR = "secret=abc"
+DEFAULT NEWSTR = "secret=REDACTED"
+DEFAULT MINLEN = 1
+DEFAULT MINHITS = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET BODY = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET BODY = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_NOTE" OR ""
+IF LAST_N > 0 THEN
+  LET BODY = LAST
+END
+SYS ENV "CUBALC_FS_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_FROM" OR ""
+IF LAST_N > 0 THEN
+  LET OLDSTR = LAST
+END
+SYS ENV "CUBALC_FS_TO" OR ""
+IF LAST_N > 0 THEN
+  LET NEWSTR = LAST
+END
+SYS ENV "CUBALC_FS_MINLEN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINLEN = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINHITS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINHITS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "INC_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "i0"
+LET d_i0 = LAST
+SYS JOIN dump_dir "i1"
+LET d_i1 = LAST
+SYS JOIN dump_dir "i2"
+LET d_i2 = LAST
+
+LET slot = -1
+SYS EQS NAME "i0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "i1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "i2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "i0"
+END
+IF slot == 1 THEN
+  LET sn = "i1"
+END
+IF slot == 2 THEN
+  LET sn = "i2"
+END
+
+# rehydrate (note is single-line friendly for DUMPOBJ)
+SYS READ OR d_i0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ i0
+  IF LAST_N == 1 THEN
+    DELETEOBJ i0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "note"
+  LET rnote = LAST
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  SYS LOOKUPN snap "nlen"
+  LET rl = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Incident i0 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF i0 id rid
+  END
+  TRYSETF i0 note rnote
+  TRYSETF i0 hits rh
+  TRYSETF i0 nlen rl
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF i0 status rst
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_i1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ i1
+  IF LAST_N == 1 THEN
+    DELETEOBJ i1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "note"
+  LET rnote = LAST
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  SYS LOOKUPN snap "nlen"
+  LET rl = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Incident i1 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF i1 id rid
+  END
+  TRYSETF i1 note rnote
+  TRYSETF i1 hits rh
+  TRYSETF i1 nlen rl
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF i1 status rst
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_i2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ i2
+  IF LAST_N == 1 THEN
+    DELETEOBJ i2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "note"
+  LET rnote = LAST
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  SYS LOOKUPN snap "nlen"
+  LET rl = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Incident i2 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF i2 id rid
+  END
+  TRYSETF i2 note rnote
+  TRYSETF i2 hits rh
+  TRYSETF i2 nlen rl
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF i2 status rst
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "incident_note_triage_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Incident
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        DELETEOBJ i0
+        CLEAR_ERR
+      END
+      NEW Incident i0 sn
+      SETF i0 note BODY
+      DUMPOBJ i0
+      SYS WRITE d_i0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        DELETEOBJ i1
+        CLEAR_ERR
+      END
+      NEW Incident i1 sn
+      SETF i1 note BODY
+      DUMPOBJ i1
+      SYS WRITE d_i1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        DELETEOBJ i2
+        CLEAR_ERR
+      END
+      NEW Incident i2 sn
+      SETF i2 note BODY
+      DUMPOBJ i2
+      SYS WRITE d_i2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Incident
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setnote ---
+SYS EQS ACTION "setnote"
+IF LAST_N == 1 THEN
+  NOTE "action setnote"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setnote bad slot"
+    FAIL "setnote bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setnote bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        SETF i0 note BODY
+        LENF i0 note
+        SETF i0 nlen LAST_N
+        LET o_ok = 1
+        LET val = BODY
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        SETF i1 note BODY
+        LENF i1 note
+        SETF i1 nlen LAST_N
+        LET o_ok = 1
+        LET val = BODY
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        SETF i2 note BODY
+        LENF i2 note
+        SETF i2 nlen LAST_N
+        LET o_ok = 1
+        LET val = BODY
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setnote miss"
+      FAIL "setnote miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setnote miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setnote ok"
+      LET val_ch = 1
+      LET meta = "setnote"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- has: HASINF / HASIFI ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "has bad slot"
+    FAIL "has bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "has bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        HASINF i0 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        HASIFI i1 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        CONTAINSF i2 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    ELSE
+      IF ret_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "has absent"
+        LET val = WANT
+        LET val_ch = 1
+        LET meta = "has absent"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta WANT
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "has absent"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "has absent"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "has present"
+        LET val = WANT
+        LET val_ch = 1
+        LET meta = "has present"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta WANT
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count: COUNTINF ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "count bad slot"
+    FAIL "count bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        COUNTINF i0 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i0 hits ret_n
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        COUNTINFI i1 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i1 hits ret_n
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        COUNTINF i2 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i2 hits ret_n
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "count miss"
+      FAIL "count miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "count miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "count ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "count"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta WANT
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- len ---
+SYS EQS ACTION "len"
+IF LAST_N == 1 THEN
+  NOTE "action len"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "len bad slot"
+    FAIL "len bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "len bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        LENF i0 note
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i0 nlen ret_n
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        LENF i1 note
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i1 nlen ret_n
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        LENF i2 note
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF i2 nlen ret_n
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "len miss"
+      FAIL "len miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "len miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "len ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "len"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- scrub: REPLACEF ---
+SYS EQS ACTION "scrub"
+IF LAST_N == 1 THEN
+  NOTE "action scrub"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "scrub bad slot"
+    FAIL "scrub bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "scrub bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        REPLACEF i0 note OLDSTR NEWSTR
+        LET o_ok = OK
+        LET ret_n = REPLACEF_COUNT
+        GETF i0 note
+        LET val = LAST
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        GSUBF i1 note OLDSTR NEWSTR
+        LET o_ok = OK
+        LET ret_n = REPLACEF_COUNT
+        GETF i1 note
+        LET val = LAST
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        SUBSTF i2 note OLDSTR WITH NEWSTR
+        LET o_ok = OK
+        LET ret_n = REPLACEF_COUNT
+        GETF i2 note
+        LET val = LAST
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "scrub miss"
+      FAIL "scrub miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "scrub miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "scrub ok"
+      LET val_ch = 1
+      LET meta = "scrub"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clearnote ---
+SYS EQS ACTION "clearnote"
+IF LAST_N == 1 THEN
+  NOTE "action clearnote"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "clearnote bad slot"
+    FAIL "clearnote bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "clearnote bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        CLEARF i0 note
+        LET o_ok = OK
+        SETF i0 status "closed"
+        SETF i0 nlen 0
+        SETF i0 hits 0
+        EMPTYF i0 note
+        LET ret_n = LAST_N
+        LET val = ""
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        WIPEF i1 note
+        LET o_ok = OK
+        SETF i1 status "closed"
+        SETF i1 nlen 0
+        EMPTYF i1 note
+        LET ret_n = LAST_N
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        CLEARF i2 note
+        LET o_ok = OK
+        SETF i2 status "closed"
+        SETF i2 nlen 0
+        EMPTYF i2 note
+        LET ret_n = LAST_N
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "clearnote miss"
+      FAIL "clearnote miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "clearnote miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "clearnote ok"
+      LET val_ch = 1
+      LET meta = "clearnote"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- startswith ---
+SYS EQS ACTION "startswith"
+IF LAST_N == 1 THEN
+  NOTE "action startswith"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "startswith bad slot"
+    FAIL "startswith bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "startswith bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        STARTSF i0 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        STARTSF i1 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        ENDSF i2 note WANT
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "startswith miss"
+      FAIL "startswith miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "startswith miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "startswith ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "startswith"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: LENF >= MINLEN and COUNTINF >= MINHITS ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET ln = 0
+    LET hn = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        LENF i0 note
+        LET ln = LAST_N
+        COUNTINF i0 note WANT
+        LET hn = LAST_N
+        SETF i0 nlen ln
+        SETF i0 hits hn
+        LET o_ok = 1
+        DUMPOBJ i0
+        SYS WRITE d_i0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        LENF i1 note
+        LET ln = LAST_N
+        COUNTINF i1 note WANT
+        LET hn = LAST_N
+        SETF i1 nlen ln
+        SETF i1 hits hn
+        LET o_ok = 1
+        DUMPOBJ i1
+        SYS WRITE d_i1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        LENF i2 note
+        LET ln = LAST_N
+        COUNTINF i2 note WANT
+        LET hn = LAST_N
+        SETF i2 nlen ln
+        SETF i2 hits hn
+        LET o_ok = 1
+        DUMPOBJ i2
+        SYS WRITE d_i2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = ln
+      IF ln < MINLEN THEN
+        LET miss = 1
+        LET note_msg = "gate deny len"
+        SYS STR ln
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny len"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR ln
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINLEN
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny len"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny len"
+        END
+      ELSE
+        IF hn < MINHITS THEN
+          LET miss = 1
+          LET note_msg = "gate deny hits"
+          SYS STR hn
+          LET val = LAST
+          LET val_ch = 1
+          LET meta = "gate deny hits"
+          SYS PUSH meta sn
+          LET meta = LAST
+          SYS STR hn
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS STR MINHITS
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+          FAIL "gate deny hits"
+          CLEAR_ERR
+          IF NEED_HIT > 0 THEN
+            EXIT 2 "gate deny hits"
+          END
+        ELSE
+          LET hit = 1
+          LET note_msg = "gate admit"
+          SYS STR ln
+          LET val = LAST
+          LET val_ch = 1
+          LET meta = "gate admit"
+          SYS PUSH meta sn
+          LET meta = LAST
+          SYS STR ln
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS STR hn
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  TRYHASINF nosuch note "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYHASINF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYLENF nosuch note
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYLENF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYCOUNTINF nosuch note "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYCOUNTINF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYCLEARF nosuch note
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYCLEARF should soft-fail"
+  END
+  CLEAR_ERR
+  HASOBJ i0
+  IF LAST_N == 1 THEN
+    # case sensitive miss
+    GETF i0 note
+    LET save_n = LAST
+    SETF i0 note "error lower only"
+    HASINF i0 note "ERROR"
+    IF LAST_N != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe HASINF case should miss"
+    END
+    HASIFI i0 note "ERROR"
+    IF LAST_N != 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe HASIFI should hit"
+    END
+    SETF i0 note save_n
+    CLEAR_ERR
+    # empty LEN
+    SETF i0 note ""
+    LENF i0 note
+    IF LAST_N != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe empty LEN should 0"
+    END
+    EMPTYF i0 note
+    IF LAST_N != 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe EMPTYF should 1"
+    END
+    SETF i0 note save_n
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ i0
+      IF LAST_N == 1 THEN
+        DUMPOBJ i0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_i0 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ i1
+      IF LAST_N == 1 THEN
+        DUMPOBJ i1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_i1 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ i2
+      IF LAST_N == 1 THEN
+        DUMPOBJ i2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_i2 val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ i0
+  IF LAST_N == 1 THEN
+    DELETEOBJ i0
+    CLEAR_ERR
+  END
+  HASOBJ i1
+  IF LAST_N == 1 THEN
+    DELETEOBJ i1
+    CLEAR_ERR
+  END
+  HASOBJ i2
+  IF LAST_N == 1 THEN
+    DELETEOBJ i2
+    CLEAR_ERR
+  END
+  SYS WRITE d_i0 ""
+  SYS WRITE d_i1 ""
+  SYS WRITE d_i2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setnote"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "len"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "scrub"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clearnote"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "startswith"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "incident_note_triage_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

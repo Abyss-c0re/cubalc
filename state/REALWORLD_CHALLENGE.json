@@ -1,47 +1,41 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 153,
-  "program": "programs/realworld/svc_method_catalog_board.cubalc",
-  "theme": "EACH METHOD + HASMETHOD literal + TRIMF/LOWERF svc method catalog",
-  "version": "1.15.419-usability",
+  "iter": 154,
+  "program": "programs/realworld/incident_note_triage_board.cubalc",
+  "theme": "HASINF/COUNTINF/LENF + REPLACEF/CLEARF incident note triage",
+  "version": "1.15.421-usability",
   "pass": true,
-  "prior_note": "iter 152 ENSUREBAGLINE+EACH PROP; this iter first realworld EACH METHOD (968) + HASMETHOD var-name gap",
+  "prior_note": "iter 153 EACH METHOD catalog; this iter first focused HASINF+COUNTINF+LENF+CLEARF note triage board",
   "tests": [
     {
-      "name": "catalog",
-      "cmd": "EACH METHOD \u2192 PUSHF bag init/ping/health/deploy N=4",
+      "name": "has_count",
+      "cmd": "HASINF ERROR present; case error soft-absent; COUNTINF ERROR=2",
       "ok": true,
-      "note": "EACH METHOD"
+      "note": "HASINF/COUNTINF"
     },
     {
-      "name": "has_require",
-      "cmd": "walk has ping; require deploy ok; missing REQUIRE\u21922",
+      "name": "len_scrub",
+      "cmd": "LENF 31; REPLACEF secret=REDACTED",
       "ok": true,
-      "note": "require"
-    },
-    {
-      "name": "normalize",
-      "cmd": "TRIMF+LOWERF '  Ready  ' \u2192 ready; s1 UPPERF \u2192 READY",
-      "ok": true,
-      "note": "TRIMF"
+      "note": "LENF/REPLACEF"
     },
     {
       "name": "gate",
-      "cmd": "NMETHODS>=3 admit; MINN=99 REQUIRE\u21922",
+      "cmd": "MINLEN=10 MINHITS=2 admit; MINHITS=99 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "probe",
-      "cmd": "HASMETHOD var\u21920; literal deploy\u21921; walk finds; BREAK at 2",
+      "name": "icase_clear",
+      "cmd": "HASIFI on i1; CLEARF note → empty closed",
       "ok": true,
-      "note": "probe"
+      "note": "HASIFI/CLEARF"
     },
     {
-      "name": "class_catalog",
-      "cmd": "catalog no-slot \u2192 class methods N=4",
+      "name": "probe",
+      "cmd": "TRY* soft; case HASINF miss; EMPTYF after clear",
       "ok": true,
-      "note": "class"
+      "note": "probe"
     },
     {
       "name": "selftest",
@@ -54,34 +48,34 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|hasmethod",
-      "title": "HASMETHOD only accepts literal method names",
-      "detail": "HASMETHOD s0 m with m=\"deploy\" \u2192 LAST_N=0 always. HASMETHOD s0 deploy works. Agents cannot gate on ENV/ARG method without EACH METHOD+EQS walk. SEND prep with dynamic names needs dual path.",
-      "repro": "LET m=\"deploy\"; HASMETHOD s m \u2192 0; HASMETHOD s deploy \u2192 1"
+      "area": "host|note",
+      "title": "Var named NOTE is poisoned by NOTE statement",
+      "detail": "DEFAULT NOTE=... then NOTE \"action open\" overwrites the var with log text (dump showed note:action open). Agents must use BODY/MSG not NOTE for payload vars.",
+      "repro": "DEFAULT NOTE=\"ERROR...\"; NOTE \"action open\"; SETF note NOTE → action open"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "host|str",
-      "title": "SYS CAT bag \"\\\\n\" does not build newline bags reliably",
-      "detail": "PRINT_JSON of CAT-built method list collapses to initpinghealthdeploy. PUSHF into field bag is the working multi-line builder.",
-      "repro": "SYS CAT bag \"\\n\"; SYS CAT bag m \u2192 no line split"
+      "severity": "high",
+      "area": "oop|countinf",
+      "title": "COUNTINF needle var NEEDLE hard-fails",
+      "detail": "COUNTINF obj field NEEDLE → err 'COUNTINF object field needle'. Same reserved class as GREPF NEEDLE. Use WANT.",
+      "repro": "DEFAULT NEEDLE=\"ERROR\"; COUNTINF i note NEEDLE → hard err"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|dumpobj|plate",
-      "title": "DUMPOBJ multiline methods bag plate-unsafe",
-      "detail": "Same side-file dump/sN.bag pattern as prior bag boards.",
-      "repro": "LOOKUP methods after DUMPOBJ truncates"
+      "area": "oop|replacef",
+      "title": "REPLACEF args FROM/TO reserved",
+      "detail": "REPLACEF note FROM TO → 'REPLACEF object field old new'. Rename OLDSTR/NEWSTR.",
+      "repro": "REPLACEF i note FROM TO with FROM/TO vars"
     },
     {
       "id": "W4",
       "severity": "low",
-      "area": "oop|each",
-      "title": "INCF local LET still fails in walks",
-      "detail": "Must LET c = c + 1 inside EACH METHOD. Same as fleet_allowlist iter.",
-      "repro": "INCF c \u2192 INCF field"
+      "area": "oop|hasinf",
+      "title": "HASINF case-sensitive vs HASIFI dual path",
+      "detail": "Easy false miss on ERROR vs error; agents must pick HASIFI for logs. Not a bug but ops footgun.",
+      "repro": "HASINF note ERROR on 'error lower' → 0"
     },
     {
       "id": "W5",
@@ -97,30 +91,29 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINN=99 gate soft"
+      "repro": "REQUIRE=abc MINHITS=99 gate soft"
     }
   ],
   "workarounds": [
-    "EACH METHOD + SYS EQS for dynamic method membership",
-    "HASMETHOD only for compile-time literal names",
-    "PUSHF methods bag not CAT newlines",
-    "dump/sN.bag side files; LET n = n + 1 in walks",
-    "Fixed s0/s1/s2; TRY* soft; numeric REQUIRE only"
+    "Never name payload vars NOTE — use BODY",
+    "Never name COUNTINF/GREPF needle NEEDLE — use WANT",
+    "Never name REPLACEF args FROM/TO — use OLDSTR/NEWSTR",
+    "HASIFI for case-fold log triage; HASINF exact",
+    "Fixed i0/i1/i2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "HASMETHOD dynamic string/var method name",
-    "Native newline bag builder without PUSHF object field",
-    "DUMPOBJ escape multiline fields",
-    "INCF on LET scalars",
+    "Warn or shadow-protect NOTE statement vs NOTE var",
+    "Reserve NEEDLE/FROM/TO in form arg slots or soft-error",
+    "Consistent reserved-name diagnostics across forms",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "catalog 4 methods via EACH+PUSHF; size 4",
-    "HASMETHOD var always miss \u2014 walked EQS for require/has",
-    "TRIMF+LOWERF Ready\u2192ready; UPPERF READY",
-    "probe documents literal-only HASMETHOD + BREAK",
+    "NOTE var poisoned by NOTE stmt — renamed BODY",
+    "NEEDLE/FROM hard-fail COUNTINF/REPLACEF — WANT/OLDSTR",
+    "COUNTINF ERROR=2; scrub REDACTED; CLEARF closed",
+    "HASIFI icase; gate len+hits dual wall",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "84df3b5b1f271de0d19e238cb5e1f19222b568d9",
-  "ts": "2026-08-07T19:24:26Z"
+  "commit": "",
+  "ts": "2026-08-07T19:50:44Z"
 }
