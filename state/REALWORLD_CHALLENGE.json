@@ -5,7 +5,7 @@
   "theme": "SPLITF/JOINF/STRIPPREFIXF + COUNTINF API route segment registry",
   "version": "1.15.407-usability",
   "pass": true,
-  "prior_note": "iter 147 MAXF/MINF quota floor; this iter first realworld SPLITF+JOINF (proof 955–956) + STRIPPREFIXF (957)",
+  "prior_note": "iter 147 MAXF/MINF quota floor; this iter first realworld SPLITF+JOINF (proof 955\u2013956) + STRIPPREFIXF (957)",
   "tests": [
     {
       "name": "open_routes",
@@ -15,31 +15,31 @@
     },
     {
       "name": "split",
-      "cmd": "SPLITF → SEGS 4; rootseg=svc leaf=health depth=4",
+      "cmd": "SPLITF \u2192 SEGS 4; rootseg=svc leaf=health depth=4",
       "ok": true,
       "note": "SPLITF"
     },
     {
       "name": "strip",
-      "cmd": "STRIPPREFIXF svc/ → api/v1/health HIT=1; miss other/x HIT=0",
+      "cmd": "STRIPPREFIXF svc/ \u2192 api/v1/health HIT=1; miss other/x HIT=0",
       "ok": true,
       "note": "STRIPPREFIXF"
     },
     {
       "name": "join",
-      "cmd": "JOINF route from SEGS → svc/api/v1/health N=4",
+      "cmd": "JOINF route from SEGS \u2192 svc/api/v1/health N=4",
       "ok": true,
       "note": "JOINF"
     },
     {
       "name": "suffix",
-      "cmd": "STRIPSUFFIXF leaf .json → app",
+      "cmd": "STRIPSUFFIXF leaf .json \u2192 app",
       "ok": true,
       "note": "STRIPSUFFIXF"
     },
     {
       "name": "gate",
-      "cmd": "depth>=2 admit; MINDEPTH=10 REQUIRE→2",
+      "cmd": "depth>=2 admit; MINDEPTH=10 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -62,8 +62,8 @@
       "severity": "high",
       "area": "oop|splitf",
       "title": "Sep var name SEP hard-fails SPLITF",
-      "detail": "DEFAULT SEP=\"/\" then SPLITF obj field SEP → err 'SPLITF object field sep' (halted). Same class as FLOOR/CAP collision for MAXF/MINF. Must use DELIM/S/DIV.",
-      "repro": "DEFAULT SEP=\"/\"; SPLITF r path SEP → SPLITF object field sep"
+      "detail": "DEFAULT SEP=\"/\" then SPLITF obj field SEP \u2192 err 'SPLITF object field sep' (halted). Same class as FLOOR/CAP collision for MAXF/MINF. Must use DELIM/S/DIV.",
+      "repro": "DEFAULT SEP=\"/\"; SPLITF r path SEP \u2192 SPLITF object field sep"
     },
     {
       "id": "W2",
@@ -71,7 +71,7 @@
       "area": "oop|splitf|joinf",
       "title": "SEGS plate stale after strip without re-split",
       "detail": "JOIN reads SEGS.txt written by prior SPLITF; strip mutates path but not SEGS. Join rebuilt pre-strip route while path was post-strip. Agents must invalidate or re-split after path mutators.",
-      "repro": "split; strip svc/; join → route still full pre-strip bag"
+      "repro": "split; strip svc/; join \u2192 route still full pre-strip bag"
     },
     {
       "id": "W3",
@@ -86,14 +86,14 @@
       "severity": "med",
       "area": "host|arg",
       "title": "Empty ARG2 cannot clear PATHIN (falls to default)",
-      "detail": "CUBALC_ARG2= with empty string → LAST_N=0 branch; open/setpath keeps DEFAULT PATHIN. Need ENV CUBALC_FS_PATH blank handling or sentinel.",
+      "detail": "CUBALC_ARG2= with empty string \u2192 LAST_N=0 branch; open/setpath keeps DEFAULT PATHIN. Need ENV CUBALC_FS_PATH blank handling or sentinel.",
       "repro": "setpath ARG2= empty leaves default path"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "oop|splitf",
-      "title": "SPLITF non-mutating but JOINF mutates — asymmetric pair",
+      "title": "SPLITF non-mutating but JOINF mutates \u2014 asymmetric pair",
       "detail": "SPLITF leaves field intact (bag in LAST only); JOINF writes field. Agents expecting split to replace path must SETF manually. Documented in proof but easy to misread as in-place split.",
       "repro": "SPLITF path still a/b/c after"
     },
@@ -115,7 +115,7 @@
     }
   ],
   "workarounds": [
-    "Never name sep var SEP — use DELIM",
+    "Never name sep var SEP \u2014 use DELIM",
     "Re-SPLITF or clear SEGS after strip/setpath before join",
     "Prefer SPLITF_N for depth over COUNTINF slashes",
     "Use FIELDSF/PARTSF aliases on secondary slots",
@@ -129,12 +129,12 @@
     "WRITE NL; strict NUM REQUIRE; plate invalidation hooks"
   ],
   "issues_faced": [
-    "SEP var hard-fail — renamed DELIM",
-    "SPLITF 4 segs root svc leaf health; strip → api/v1/health",
+    "SEP var hard-fail \u2014 renamed DELIM",
+    "SPLITF 4 segs root svc leaf health; strip \u2192 api/v1/health",
     "JOINF from stale SEGS after strip (documented)",
     "suffix .json leaf app; /a/b/ leading empty N=4",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "034b9493499ae4ca888d9b7633dea730e31dc471",
   "ts": "2026-08-07T17:20:53Z"
 }
