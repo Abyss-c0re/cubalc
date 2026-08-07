@@ -1,0 +1,100 @@
+# WHEREOBJ / FINDOBJ — select live objects by field equality
+# Usability: no EACH OBJ + GETF + IF glue for fleet queries
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 10 0
+NEW Cell d 1 30 0
+
+CLASS Marker
+  FIELD tag 0
+  FIELD label ""
+  METHOD init t lab
+    SETF THIS tag t
+    SETF THIS label lab
+  END
+END
+NEW Marker m1 1 "alpha"
+NEW Marker m2 2 "beta"
+NEW Marker m3 1 "gamma"
+
+# bag of matches by class + num field
+WHEREOBJ Cell energy 10
+ASSERT OK == 1
+ASSERT WHEREOBJ_N == 2
+ASSERT LAST_N == 2
+SYS HASLINE WHEREOBJ "a"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREOBJ "c"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREOBJ "b"
+ASSERT LAST_N == 0
+
+# FILTEROBJS / KEEPOBJS aliases
+FILTEROBJS Cell energy 20
+ASSERT FILTEROBJS_N == 1
+SYS HASLINE LAST "b"
+ASSERT LAST_N == 1
+KEEPOBJS Cell energy 30
+ASSERT KEEPOBJS_N == 1
+SYS HASLINE LAST "d"
+ASSERT LAST_N == 1
+
+# FINDOBJ first match only
+FINDOBJ Cell energy 10
+ASSERT FINDOBJ_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1 "first Cell with energy 10 is a"
+
+# FIRSTOBJ alias + miss soft
+FIRSTOBJ Cell energy 999
+ASSERT OK == 1
+ASSERT FINDOBJ_N == 0
+ASSERT LAST_N == 0
+
+# OF sugar
+WHEREOBJ OF Marker tag 1
+ASSERT WHEREOBJ_N == 2
+SYS HASLINE WHEREOBJ "m1"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREOBJ "m3"
+ASSERT LAST_N == 1
+
+# string field equality
+WHEREOBJ Marker label "beta"
+ASSERT WHEREOBJ_N == 1
+SYS HASLINE LAST "m2"
+ASSERT LAST_N == 1
+
+FINDOBJ Marker label "gamma"
+ASSERT FINDOBJ_N == 1
+SYS EQS LAST "m3"
+ASSERT LAST_N == 1
+
+# bare field (no class) across types
+WHEREOBJ tag 1
+ASSERT WHEREOBJ_N == 2 "m1 m3 only; Cells have no tag"
+
+# empty result soft
+WHEREOBJ Cell energy 0
+ASSERT OK == 1
+ASSERT WHEREOBJ_N == 0
+
+# string field name + var value
+LET want = 20
+WHEREOBJ Cell "energy" want
+ASSERT WHEREOBJ_N == 1
+SYS HASLINE LAST "b"
+ASSERT LAST_N == 1
+
+# ZIP with GETFALL on filtered set: find then GETF
+FINDOBJ Cell energy 30
+GETF LAST energy
+ASSERT LAST_N == 30
+
+PRINT "oop_whereobj ok"
