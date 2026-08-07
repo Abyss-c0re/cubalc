@@ -1,0 +1,42 @@
+# SYS ARGC / ARGS — program arg bag without ARG 0/1/2 glue
+# CUBALC_ARG* may come from cubalc run … -- args or env
+
+HOLD_FLASH 1
+
+# seed args via env (suite-safe; CLI -- also works)
+SYS ENV SET CUBALC_ARG0 "alice"
+SYS ENV SET CUBALC_ARG1 "bob"
+SYS ENV SET CUBALC_ARG2 "carol"
+SYS ENV SET CUBALC_ARGC "3"
+
+SYS ARGC
+ASSERT LAST_N == 3
+ASSERT ARGC == 3
+
+SYS ARGS
+ASSERT LAST_N == 3
+SYS EQS LAST "alice\nbob\ncarol"
+ASSERT LAST_N == 1
+SYS HAS LAST "alice"
+ASSERT LAST_N == 1
+SYS HAS LAST "carol"
+ASSERT LAST_N == 1
+
+# individual still works
+SYS ARG 1
+SYS EQS LAST "bob"
+ASSERT LAST_N == 1
+
+# empty bag when no args
+SYS ENV SET CUBALC_ARGC "0"
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ARGC
+ASSERT LAST_N == 0
+SYS ARGS
+ASSERT LAST_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+PRINT "sys_args_argc ok"

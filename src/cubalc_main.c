@@ -1447,6 +1447,10 @@ int main(int argc, char **argv) {
     int quiet = 0, strict = 0, i, rc;
     int plate_ok;
     int have_expr = 0;
+    int src_idx = -1;
+    int ddash = 0;
+    int n_parg = 0;
+    const char *parg[32];
     const char *src_path = NULL;
     const char *src_label;
     const char *eq;
@@ -1529,12 +1533,40 @@ int main(int argc, char **argv) {
         have_expr = 1;
         continue;
       }
-      if (!src_path && argv[i][0] != '-')
+      if (!strcmp(argv[i], "--")) {
+        ddash = 1;
+        for (i = i + 1; i < argc && n_parg < 32; i++)
+          parg[n_parg++] = argv[i];
+        break;
+      }
+      if (argv[i][0] == '-')
+        continue;
+      /* First bare token is the program file when not using -e.
+       * Every later bare token is a program arg (CUBALC_ARGn). */
+      if (!have_expr && !src_path) {
         src_path = argv[i];
+        src_idx = i;
+      } else if (n_parg < 32) {
+        parg[n_parg++] = argv[i];
+      }
+    }
+    /* Publish program args for SYS ARG / ARGC / ARGS */
+    {
+      char nm[32], ac[16];
+      int k;
+      for (k = 0; k < 32; k++) {
+        snprintf(nm, sizeof nm, "CUBALC_ARG%d", k);
+        if (k < n_parg && parg[k])
+          setenv(nm, parg[k], 1);
+        else
+          unsetenv(nm);
+      }
+      snprintf(ac, sizeof ac, "%d", n_parg);
+      setenv("CUBALC_ARGC", ac, 1);
     }
     if (!have_expr && !src_path) {
       fprintf(stderr,
-              "usage: cubalc run [-q] [-s] [-e CODE]... <file.cubalc>|-\n"
+              "usage: cubalc run [-q] [-s] [-e CODE]... <file.cubalc>|- [-- args…]\n"
               "       cubalc eval [-q] [-s] [-e CODE]... <file>|-\n"
               "       cubalc -e 'SYS DATE\\nPRINT LAST'   # top-level alias\n"
               "       multiple -e join with newline; \\n \\t \\\\ escapes\n"
