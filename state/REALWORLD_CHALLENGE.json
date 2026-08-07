@@ -21,13 +21,13 @@
     },
     {
       "name": "sum_load",
-      "cmd": "SUMWHERE load zone us-east → 60 N=2",
+      "cmd": "SUMWHERE load zone us-east \u2192 60 N=2",
       "ok": true,
       "note": "SUMWHERE"
     },
     {
       "name": "avg_load",
-      "cmd": "AVGWHERE → 30 N=2",
+      "cmd": "AVGWHERE \u2192 30 N=2",
       "ok": true,
       "note": "AVGWHERE"
     },
@@ -51,7 +51,7 @@
     },
     {
       "name": "empty_zone_zero",
-      "cmd": "nozone sum/avg/min → 0; admit budget 10 → admit",
+      "cmd": "nozone sum/avg/min \u2192 0; admit budget 10 \u2192 admit",
       "ok": true,
       "note": "empty"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two h0:scale → SETMATCH leaves 1",
+      "cmd": "two h0:scale \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -87,39 +87,39 @@
       "area": "oop|sumwhere|empty",
       "title": "Empty WHERE and true-zero both yield LAST_N=0",
       "detail": "SUM/AVG/MIN/MAX on no match return 0. Agents cannot tell missing zone from all-zero loads without also checking SUMWHERE_N / MINWHERE_N.",
-      "repro": "sum nozone → 0 N=0; sum us-east with loads 0 → 0 N=2"
+      "repro": "sum nozone \u2192 0 N=0; sum us-east with loads 0 \u2192 0 N=2"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|admit",
-      "title": "Budget admit on empty zone always succeeds for BUDGET≥0",
-      "detail": "sum=0 ≤ budget admits ghost zones; no built-in require N>0. Must gate SUMWHERE_N separately.",
-      "repro": "admit nozone budget 10 → admit N=0"
+      "title": "Budget admit on empty zone always succeeds for BUDGET\u22650",
+      "detail": "sum=0 \u2264 budget admits ghost zones; no built-in require N>0. Must gate SUMWHERE_N separately.",
+      "repro": "admit nozone budget 10 \u2192 admit N=0"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|minwhere",
-      "title": "MINWHERE/MAXWHERE return value only — no argmin object id",
+      "title": "MINWHERE/MAXWHERE return value only \u2014 no argmin object id",
       "detail": "Cannot pick least-loaded shard in zone without GETFWHERE+scan or MAXOBJ-style sibling. Value alone is not actionable for schedule-to.",
-      "repro": "MINWHERE load zone us-east → 20 not h1"
+      "repro": "MINWHERE load zone us-east \u2192 20 not h1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|where",
-      "title": "Zone match equality only — no prefix/glob",
+      "title": "Zone match equality only \u2014 no prefix/glob",
       "detail": "us vs us-east is exact false friend (good for safety) but multi-zone rollups need repeated SUMWHERE or FREQF-style groupby (missing).",
-      "repro": "count_zn us → 0"
+      "repro": "count_zn us \u2192 0"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "oop|avgwhere",
-      "title": "AVGWHERE integer mean — truncates",
+      "title": "AVGWHERE integer mean \u2014 truncates",
       "detail": "Proof uses even sums; fractional means floor. Capacity ratios may under-read without float path.",
-      "repro": "loads 1+2 avg → likely 1 not 1.5"
+      "repro": "loads 1+2 avg \u2192 likely 1 not 1.5"
     },
     {
       "id": "W6",
@@ -134,7 +134,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/BUDGET softens",
-      "detail": "CUBALC_FS_REQUIRE=abc → soft; BUDGET garbage keeps default.",
+      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft; BUDGET garbage keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,7 +142,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two h0:scale → one SETMATCH leaves 1.",
+      "detail": "Two h0:scale \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -164,11 +164,11 @@
   "issues_faced": [
     "SUMWHERE us-east load 60; AVG 30; MIN 20; MAX 40; cost 55",
     "admit budget 100 ok; 50 REQUIRE deny",
-    "empty zone sum 0 admits under budget — documented W2",
+    "empty zone sum 0 admits under budget \u2014 documented W2",
     "us substring false friend count 0",
     "zero load still N=2 distinguishes via SUMWHERE_N",
     "selftest 335/335 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "a2504d89d67d888280e188a0f65cabe15c6096da",
   "ts": "2026-08-07T09:23:40Z"
 }
