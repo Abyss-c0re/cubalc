@@ -127,6 +127,6 @@
     "CLONE existing hard fail documented",
     "selftest green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "b7324b5f35617721337b9917eaa15af81a7f8f20",
   "ts": "2026-08-07T03:37:02Z"
 }
