@@ -15,25 +15,25 @@
     },
     {
       "name": "sendwhere_ack",
-      "cmd": "SENDWHERE state done ack → N=1; acked:1",
+      "cmd": "SENDWHERE state done ack \u2192 N=1; acked:1",
       "ok": true,
       "note": "SENDWHERE"
     },
     {
       "name": "sendwhere_requeue",
-      "cmd": "SENDWHERE failed requeue → j1 queued tries:1",
+      "cmd": "SENDWHERE failed requeue \u2192 j1 queued tries:1",
       "ok": true,
       "note": "requeue"
     },
     {
       "name": "mark_stale",
-      "cmd": "SENDWHERE running stale_out → j2 stale",
+      "cmd": "SENDWHERE running stale_out \u2192 j2 stale",
       "ok": true,
       "note": "poison"
     },
     {
       "name": "gate_stale_require",
-      "cmd": "gate soft deny; REQUIRE→rc2",
+      "cmd": "gate soft deny; REQUIRE\u2192rc2",
       "ok": true,
       "note": "gate"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2→1; pin",
+      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
       "ok": true,
       "note": "journal"
     },
@@ -87,13 +87,13 @@
     },
     {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE→2",
+      "cmd": "open xx soft/REQUIRE\u21922",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "num_require_softens",
-      "cmd": "REQUIRE=abc gate → soft",
+      "cmd": "REQUIRE=abc gate \u2192 soft",
       "ok": true,
       "note": "NUM"
     },
@@ -115,15 +115,15 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|persist",
-      "title": "DELETEWHERE is process-local — plate dumps rehydrate freed jobs",
-      "detail": "GC must RM dump/jN for each name in DELETEWHERE bag or next ARG run restores objects. No cascade free→plate. Same class as DELETEALL trap.",
+      "title": "DELETEWHERE is process-local \u2014 plate dumps rehydrate freed jobs",
+      "detail": "GC must RM dump/jN for each name in DELETEWHERE bag or next ARG run restores objects. No cascade free\u2192plate. Same class as DELETEALL trap.",
       "repro": "DELETEWHERE state stale without RM dump; next list rehydrates"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|where",
-      "title": "DELETEWHERE/SENDWHERE equality only — no multi-state or range GC",
+      "title": "DELETEWHERE/SENDWHERE equality only \u2014 no multi-state or range GC",
       "detail": "Cannot DELETEWHERE state in {done,failed} or tries>3. Agents run multiple gc_state or EACH.",
       "repro": "need two DELETEWHERE for done+failed cleanup"
     },
@@ -131,9 +131,9 @@
       "id": "W3",
       "severity": "med",
       "area": "oop|sendwhere",
-      "title": "SENDWHERE miss method soft skip — no hard fail mode",
-      "detail": "SENDWHERE Job state queued no_meth_zz → N=0 SKIP>0 OK=1. Typo methods silent under -s without agent checks.",
-      "repro": "SENDWHERE … typo_method → soft"
+      "title": "SENDWHERE miss method soft skip \u2014 no hard fail mode",
+      "detail": "SENDWHERE Job state queued no_meth_zz \u2192 N=0 SKIP>0 OK=1. Typo methods silent under -s without agent checks.",
+      "repro": "SENDWHERE \u2026 typo_method \u2192 soft"
     },
     {
       "id": "W4",
@@ -141,14 +141,14 @@
       "area": "oop|name",
       "title": "Fixed slot EQS + dump RM wall for freed names",
       "detail": "Cannot loop DELETEWHERE bag names to RM dumps without per-slot HASLINE j0|j1|j2. Dynamic path from free name still awkward.",
-      "repro": "HASLINE fbag j0; RM d_j0 ×3"
+      "repro": "HASLINE fbag j0; RM d_j0 \u00d73"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two j0:ack → one SETMATCH leaves 1.",
+      "detail": "Two j0:ack \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -164,16 +164,16 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_JG_REQUIRE=abc → soft gate.",
+      "detail": "CUBALC_JG_REQUIRE=abc \u2192 soft gate.",
       "repro": "REQUIRE=abc"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|join",
-      "title": "SYS JOIN path-only — harvest uses REPLACEALL template",
+      "title": "SYS JOIN path-only \u2014 harvest uses REPLACEALL template",
       "detail": "n:N sum:S not JOIN.",
-      "repro": "SYS JOIN n: count → n:/1"
+      "repro": "SYS JOIN n: count \u2192 n:/1"
     },
     {
       "id": "W9",
@@ -206,9 +206,9 @@
     "DELETEWHERE gc_stale freed j2 kept j0/j1; dump RM hygiene ok",
     "empty DELETEWHERE/SENDWHERE soft N=0",
     "NEW reuses freed j0 name after gc",
-    "SETMATCH first-only 2→1; COUNTLINE false friend j0→0",
+    "SETMATCH first-only 2\u21921; COUNTLINE false friend j0\u21920",
     "selftest 311/311 green (transient 4-fail was mid-rebuild race); no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T05:15:00Z"
+  "commit": "ff4721f93fda564caaaf131cc8e02e235e64046f",
+  "ts": "2026-08-07T05:16:01Z"
 }
