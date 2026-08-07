@@ -382,6 +382,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 352. ~~**`HASWHERE` / `HASWHEREGE`…`**~~ **done** (soft 0|1 existence · ANYWHERE/HASATLEAST · IF without COUNTWHERE compare).
 353. ~~**`WHEREBETWEEN` / `COUNTBETWEEN` / `HASBETWEEN`**~~ **done** (closed lo..hi band select/count/probe · no dual WHEREGE+WHERELE glue).
 354. ~~**`DELETEBETWEEN` / `FREEBETWEEN` / `FREEBAND`**~~ **done** (free live objs in closed field range · band GC without dual threshold free).
+355. ~~**`SENDBETWEEN` / `SENDBAND` / `INVOKEBETWEEN`**~~ **done** (method on closed-range matched objs · completes BETWEEN triad).
 
 ## Tick protocol
 

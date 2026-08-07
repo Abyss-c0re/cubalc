@@ -1,0 +1,109 @@
+# SENDBETWEEN / SENDBAND — method on closed-range matched objects
+# Usability: WHEREBETWEEN + SENDALL one-shot · band tick without dual SENDWHEREGE
+# Completes BETWEEN triad: WHEREBETWEEN · DELETEBETWEEN · SENDBETWEEN
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+NEW Cell e 1 20 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+  METHOD add d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+  END
+  METHOD bump
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+  END
+END
+NEW Counter k1 3
+NEW Counter k2 50
+NEW Counter k3 15
+NEW Counter k4 25
+
+# tick cells with energy in [5, 20] → a d e
+SENDBETWEEN Cell energy 5 20 tick
+ASSERT OK == 1
+ASSERT SENDBETWEEN_N == 3
+ASSERT LAST_N == 3
+ASSERT SENDBETWEEN_LO == 5
+ASSERT SENDBETWEEN_HI == 20
+GETF a energy
+ASSERT LAST_N >= 10
+GETF d energy
+ASSERT LAST_N >= 5
+GETF e energy
+ASSERT LAST_N >= 20
+GETF b energy
+ASSERT LAST_N == 0 "out of band not ticked"
+GETF c energy
+ASSERT LAST_N == 30
+
+# TO sugar + auto-swap
+SENDBETWEEN Cell energy 25 TO 0 tick
+ASSERT SENDBETWEEN_N == 4 "a b d e · c=30 out"
+ASSERT SENDBETWEEN_LO == 0
+ASSERT SENDBETWEEN_HI == 25
+
+# SENDBAND + method with args
+SENDBAND Counter n 10 30 add 5
+ASSERT SENDBAND_N == 2 "k3 k4"
+GETF k3 n
+ASSERT LAST_N == 20
+GETF k4 n
+ASSERT LAST_N == 30
+GETF k1 n
+ASSERT LAST_N == 3 "below band"
+GETF k2 n
+ASSERT LAST_N == 50 "above band"
+
+# OF sugar + no-arg
+SENDBETWEEN OF Counter n 15 30 bump
+ASSERT SENDBETWEEN_N == 2 "k3=20 k4=30"
+GETF k3 n
+ASSERT LAST_N == 21
+GETF k4 n
+ASSERT LAST_N == 31
+
+# string method name
+SENDBETWEEN Counter n 50 50 "bump"
+ASSERT SENDBETWEEN_N == 1
+GETF k2 n
+ASSERT LAST_N == 51
+
+# INVOKEBETWEEN alias
+INVOKEBETWEEN Counter n 0 5 bump
+ASSERT INVOKEBETWEEN_N == 1 "k1"
+GETF k1 n
+ASSERT LAST_N == 4
+
+# missing method soft skip
+SENDBETWEEN Counter n 0 100 no_meth_zz
+ASSERT OK == 1
+ASSERT SENDBETWEEN_N == 0
+ASSERT SENDBETWEEN_SKIP == 4
+
+# empty match soft
+SENDBETWEEN Cell energy 900 999 tick
+ASSERT OK == 1
+ASSERT SENDBETWEEN_N == 0
+
+# bare field
+SENDBETWEEN n 4 4 bump
+ASSERT SENDBETWEEN_N == 1 "k1 only"
+GETF k1 n
+ASSERT LAST_N == 5
+
+PRINT "oop_sendbetween ok"
