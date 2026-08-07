@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 392,
-  "version": "1.15.419-usability",
-  "item": "unknown form did-you-mean + OOP forms catalog",
-  "item_id": 428,
-  "title": "unknown form did-you-mean · CLI forms CLASS/NEW/SEND/GETF",
-  "commit": "0f77b13afb34530de5e17cbfc915a52d058f98dd",
-  "summary": "Typo recovery did-you-mean; forms catalog core OOP. proof 969 8/8 + SEEND smoke.",
+  "iter": 393,
+  "version": "1.15.420-usability",
+  "item": "OOP/FN name did-you-mean",
+  "item_id": 429,
+  "title": "SEND/GETF/SETF/NEW/CALL typo → closest class/obj/method/field/FN",
+  "commit": "8236fe9dbc61cec243b132d1d6705f199cf7a999",
+  "summary": "OOP/FN name did-you-mean on soft LAST_ERR + fatal; proof 970 18/18.",
   "proofs": [
-    "969_form_suggest",
-    "asserts 8/8",
-    "smoke SEEND→SEND GETFX→GETF ASSRET→ASSERT"
+    "970_oop_name_suggest",
+    "asserts 18/18",
+    "smoke bumpp→bump scor→score Tickett→Ticket grett→greett"
   ],
-  "when": "2026-08-07T19:20:06Z",
+  "when": "2026-08-07T19:26:52Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0f77b13afb34530de5e17cbfc915a52d058f98dd",
-  "note": "fail() must not snprintf(vm->err, vm->err); fixed overlap"
+  "sha": "8236fe9dbc61cec243b132d1d6705f199cf7a999",
+  "note": "complements form_suggest 428; ebuf separate from vm->err"
 }
