@@ -1,0 +1,95 @@
+# TIMESF / SCALEOBJ — single-object numeric field multiply for agents
+# Usability: double/zero/decay without GETF+*+SETF · METHOD/THIS · pairs INCF/BOUNDF
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD energy 10
+  FIELD tag "x"
+  METHOD init e
+    SETF THIS energy e
+  END
+  METHOD double
+    TIMESF THIS energy 2
+  END
+END
+
+NEW Cell c 10
+
+# multiply by 3
+TIMESF c energy 3
+ASSERT OK == 1
+ASSERT TIMESF_N == 1
+ASSERT TIMESF_FACTOR == 3
+ASSERT LAST_N == 30
+SYS EQS FIELD "energy"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 30
+
+# BY glue
+TIMESF c energy BY 2
+ASSERT LAST_N == 60
+ASSERT TIMESF_FACTOR == 2
+
+# zero out
+TIMESF c energy 0
+ASSERT LAST_N == 0
+
+# aliases
+SETF c energy 5
+SCALEOBJ c energy 4
+ASSERT LAST_N == 20
+MULOBJ c energy 2
+ASSERT LAST_N == 40
+SCALEONE c energy 1
+ASSERT LAST_N == 40
+
+# METHOD + THIS
+SETF c energy 7
+SEND c double
+GETF c energy
+ASSERT LAST_N == 14
+
+# soft miss object
+TRYTIMESF nosuch energy 2
+ASSERT OK == 0
+ASSERT TIMESF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+TIMESF SOFT c nosuch 2
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYTIMESF c tag 2
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF c energy 9
+TIMESF c energy 3
+ASSERT OK == 1
+ASSERT LAST_N == 27
+
+# string field name
+TIMESF c "energy" 2
+ASSERT LAST_N == 54
+
+# negative factor
+TIMESF c energy -1
+ASSERT LAST_N == -54
+
+# HELP
+HELP TIMESF
+ASSERT OK == 1
+SYS HAS LAST "TIMESF"
+ASSERT LAST_N == 1
+
+NOTE "938_oop_timesf ok"

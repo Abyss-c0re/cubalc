@@ -424,6 +424,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 394. ~~**`OBJINFO` / `DESCRIBEOBJ`**~~ **done** (live object plate name/class/methods+fields · no DUMPOBJ+CLASSINFO+LISTMETHODS glue).
 395. ~~**`INCF` / `DECF` / `ADDF` / `BUMPF`**~~ **done** (single-object numeric field bump · no GETF+arith+SETF · METHOD bodies).
 396. ~~**`BOUNDF` / `LIMITF` / `CLIPOBJ`**~~ **done** (single-object numeric field clamp · no GETF+IF+SETF · METHOD/THIS; CLAMPF stays fleet).
+397. ~~**`TIMESF` / `SCALEOBJ` / `MULOBJ`**~~ **done** (single-object numeric field multiply · no GETF+*+SETF · METHOD/THIS; MULF stays fleet).
 
 ## Tick protocol
 

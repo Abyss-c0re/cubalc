@@ -10160,6 +10160,153 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* TIMESF|SCALEOBJ|MULOBJ obj field factor
+   * TRYTIMESF|TIMESF SOFT — soft miss OK=0.
+   * Multiply one object's numeric field by factor (integer).
+   * Note: MULF/SCALEF remain fleet MULFALL aliases — this is the single-obj form.
+   * Usability: double/zero/decay energy without GETF+*+SETF (METHOD/THIS; pairs INCF/BOUNDF). */
+  if (kw(&L->cur, "TIMESF") || kw(&L->cur, "SCALEOBJ") ||
+      kw(&L->cur, "MULOBJ") || kw(&L->cur, "TIMESOBJ") ||
+      kw(&L->cur, "SCALEONE") || kw(&L->cur, "MULONE") ||
+      kw(&L->cur, "PRODUCTOBJ") || kw(&L->cur, "MULFIELD") ||
+      kw(&L->cur, "SCALEFIELD") || kw(&L->cur, "TIMESFIELD") ||
+      kw(&L->cur, "TRYTIMESF") || kw(&L->cur, "TIMESFSOFT") ||
+      kw(&L->cur, "SOFTTIMESF") || kw(&L->cur, "TRYSCALEOBJ") ||
+      kw(&L->cur, "TRYMULOBJ")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0;
+    long factor = 1, nv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYTIMESF") == 0 || strcmp(op, "TIMESFSOFT") == 0 ||
+        strcmp(op, "SOFTTIMESF") == 0 || strcmp(op, "TRYSCALEOBJ") == 0 ||
+        strcmp(op, "TRYMULOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "TIMESF object field factor"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "TIMESF field"); return -1;
+    }
+    if (kw(&L->cur, "BY") || kw(&L->cur, "TIMES") || kw(&L->cur, "MUL") ||
+        kw(&L->cur, "SCALE") || kw(&L->cur, "*"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        factor = parse_expr(vm, L);
+      } else {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          factor = dv->val;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          factor = vm->last_n;
+          lex_next(L);
+        } else {
+          fail(vm, "TIMESF object field factor"); return -1;
+        }
+      }
+    } else {
+      fail(vm, "TIMESF object field factor"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "TIMESF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "TIMESF_N", 0);
+      var_set_num(vm, "TIMESF_FACTOR", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TIMESF: unknown object");
+      var_set_str(vm, "ERR", "TIMESF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "TIMESF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "TIMESF_N", 0);
+      var_set_num(vm, "TIMESF_FACTOR", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TIMESF: unknown field");
+      var_set_str(vm, "ERR", "TIMESF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "TIMESF field %s is string", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "TIMESF_N", 0);
+      var_set_num(vm, "TIMESF_FACTOR", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TIMESF: string field");
+      var_set_str(vm, "ERR", "TIMESF: string field");
+      bump(vm);
+      return 1;
+    }
+    nv = ob->fnum[fi] * factor;
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    var_set_num(vm, "TIMESF_N", 1);
+    var_set_num(vm, "TIMESF_FACTOR", factor);
+    var_set_num(vm, "SCALEOBJ_N", 1);
+    var_set_num(vm, "MULOBJ_N", 1);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

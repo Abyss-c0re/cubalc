@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 360,
-  "version": "1.15.387-usability",
-  "item": "BOUNDF/LIMITF single-object numeric field clamp",
-  "item_id": 396,
-  "title": "BOUNDF|LIMITF|CLIPOBJ \u2014 single-object numeric field clamp",
-  "commit": "90150234437d46458e3a1abb91b41daa596d0eae",
-  "summary": "Clamp one numeric field into [lo,hi]. METHOD/THIS ready. proof 937 36/36.",
+  "iter": 361,
+  "version": "1.15.388-usability",
+  "item": "TIMESF/SCALEOBJ single-object numeric field multiply",
+  "item_id": 397,
+  "title": "TIMESF|SCALEOBJ|MULOBJ \u2014 single-object numeric field multiply",
+  "commit": "69b79d726840fc50b33fe9f061783984f88dfd1e",
+  "summary": "Multiply one numeric field by factor. METHOD/THIS ready. proof 938 27/27.",
   "proofs": [
-    "937_oop_boundf",
-    "asserts 36/36",
-    "936 still green"
+    "938_oop_timesf",
+    "asserts 27/27",
+    "937 still green"
   ],
-  "when": "2026-08-07T13:54:42Z",
+  "when": "2026-08-07T14:04:53Z",
   "agent": "meaningful_iter_10m",
-  "sha": "90150234437d46458e3a1abb91b41daa596d0eae",
-  "note": "CLAMPF remains fleet CLAMPFALL; BOUNDF is single-obj twin of INCF"
+  "sha": "69b79d726840fc50b33fe9f061783984f88dfd1e",
+  "note": "restored thrash first; MULF stays fleet; completes INCF/BOUNDF/TIMESF single-obj triad"
 }
