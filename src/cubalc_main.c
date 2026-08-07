@@ -2052,6 +2052,7 @@ int main(int argc, char **argv) {
       {"oop_freqwhere", "programs/proof/911_oop_freqwhere.cubalc", "FREQWHERE/HISTWHERE filtered fleet field histogram on match"},
       {"oop_modewhere", "programs/proof/912_oop_modewhere.cubalc", "MODEWHERE/DOMINANTWHERE filtered fleet mode on match"},
       {"oop_uniquwhere", "programs/proof/913_oop_uniquwhere.cubalc", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
+      {"oop_clampwhere", "programs/proof/914_oop_clampwhere.cubalc", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5971,6 +5972,7 @@ int main(int argc, char **argv) {
       {"programs/proof/911_oop_freqwhere.cubalc", "oop_freqwhere", "FREQWHERE/HISTWHERE filtered fleet field histogram on match"},
       {"programs/proof/912_oop_modewhere.cubalc", "oop_modewhere", "MODEWHERE/DOMINANTWHERE filtered fleet mode on match"},
       {"programs/proof/913_oop_uniquwhere.cubalc", "oop_uniquwhere", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
+      {"programs/proof/914_oop_clampwhere.cubalc", "oop_clampwhere", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6282,6 +6284,7 @@ int main(int argc, char **argv) {
       {"programs/proof/911_oop_freqwhere.cubalc", "oop_freqwhere", "FREQWHERE/HISTWHERE filtered fleet field histogram on match"},
       {"programs/proof/912_oop_modewhere.cubalc", "oop_modewhere", "MODEWHERE/DOMINANTWHERE filtered fleet mode on match"},
       {"programs/proof/913_oop_uniquwhere.cubalc", "oop_uniquwhere", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
+      {"programs/proof/914_oop_clampwhere.cubalc", "oop_clampwhere", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

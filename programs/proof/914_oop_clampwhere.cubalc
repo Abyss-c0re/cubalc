@@ -1,0 +1,117 @@
+# CLAMPWHERE / CLIPWHERE — selective clamp numeric field on match
+# Usability: bound subset energy/retries without EACH+GETF+IF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 150 0
+NEW Cell d 1 5 0
+NEW Cell e 1 0 0
+SETF e energy -20
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+
+# clamp energy into [0,100] only where age==1 → a10, c150→100, e-20→0
+CLAMPWHERE Cell energy age 1 0 100
+ASSERT OK == 1
+ASSERT CLAMPWHERE_N == 3
+ASSERT LAST_N == 3
+ASSERT CLAMPWHERE_CHANGED == 2 "c and e moved"
+ASSERT CLAMPWHERE_LO == 0
+ASSERT CLAMPWHERE_HI == 100
+GETF a energy
+ASSERT LAST_N == 10
+GETF c energy
+ASSERT LAST_N == 100
+GETF e energy
+ASSERT LAST_N == 0
+# age==0 untouched
+GETF b energy
+ASSERT LAST_N == 0
+GETF d energy
+ASSERT LAST_N == 5
+
+# already in range among age=1 → changed 0
+CLAMPWHERE Cell energy age 1 0 100
+ASSERT CLAMPWHERE_N == 3
+ASSERT CLAMPWHERE_CHANGED == 0
+
+# WHERE sugar + TO + auto-swap: age==0 energy into [5,20]
+# b=0→5, d=5 stays
+CLAMPWHERE Cell energy WHERE age 0 20 TO 5
+ASSERT CLAMPWHERE_N == 2
+ASSERT CLAMPWHERE_LO == 5
+ASSERT CLAMPWHERE_HI == 20
+ASSERT CLAMPWHERE_CHANGED == 1
+GETF b energy
+ASSERT LAST_N == 5
+GETF d energy
+ASSERT LAST_N == 5
+
+# OF sugar
+CLAMPWHERE OF Cell energy age 1 0 TO 50
+ASSERT CLAMPWHERE_N == 3
+# a10 stays, c100→50, e0 stays → 1 change
+ASSERT CLAMPWHERE_CHANGED == 1
+GETF c energy
+ASSERT LAST_N == 50
+
+# aliases
+CLIPWHERE Cell energy age 0 0 100
+ASSERT CLIPWHERE_N == 2
+BOUNDWHERE Cell energy age 1 0 100
+ASSERT BOUNDWHERE_N == 3
+CLAMPFWHERE Cell energy age 0 0 10
+ASSERT CLAMPFWHERE_N == 2
+CLAMPIF Cell energy age 1 10 10
+ASSERT CLAMPWHERE_N == 3
+ASSERT CLAMPWHERE_CHANGED == 2 "a10 stays? a is 10; c50→10 e0→10"
+GETF a energy
+ASSERT LAST_N == 10
+GETF c energy
+ASSERT LAST_N == 10
+GETF e energy
+ASSERT LAST_N == 10
+
+# string match · cap open ticket retries to [0,3]
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 9
+NEW Ticket t3 "open" 7
+NEW Ticket t4 "open" -1
+CLAMPWHERE Ticket retries status "open" 0 TO 3
+ASSERT OK == 1
+ASSERT CLAMPWHERE_N == 3
+ASSERT CLAMPWHERE_CHANGED == 2 "t3 7→3, t4 -1→0"
+GETF t1 retries
+ASSERT LAST_N == 2
+GETF t3 retries
+ASSERT LAST_N == 3
+GETF t4 retries
+ASSERT LAST_N == 0
+# closed untouched
+GETF t2 retries
+ASSERT LAST_N == 9
+
+# no match → 0
+CLAMPWHERE Ticket retries status "missing" 0 5
+ASSERT OK == 1
+ASSERT CLAMPWHERE_N == 0
+ASSERT CLAMPWHERE_CHANGED == 0
+ASSERT LAST_N == 0
+
+PRINT "proof914_oop_clampwhere" 1
+ASSERT OK == 1
