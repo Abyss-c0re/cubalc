@@ -26290,6 +26290,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
+      {"SUBCMD", "SUBCMD|COMMAND [OR def] — first positional → LAST · RESTPOS = remaining files"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -29178,6 +29179,90 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", (hit || have_fb) ? 1 : 0);
     if (vm->trace)
       fprintf(vm->trace, "# nthpos %ld hit=%ld → %s\n", idx, hit, field);
+    bump(vm); return 1;
+  }
+  /* SUBCMD|COMMAND|CMD [OR|DEFAULT fallback]
+   * Peel first non-flag positional as subcommand for CASEI/ONEOF dispatch.
+   * LAST/SUBCMD = cmd · LAST_N/SUBCMD_HIT = 1 if present · RESTPOS = remaining
+   * positionals bag (files after subcommand) · RESTPOS_N = count.
+   * Usability: tool seal a.txt without NTHPOS 0 + RESTARGS + DROP 1 glue. */
+  if (kw(&L->cur,"SUBCMD") || kw(&L->cur,"COMMAND") || kw(&L->cur,"CMD") ||
+      kw(&L->cur,"SUBCOMMAND") || kw(&L->cur,"VERB") || kw(&L->cur,"ACTIONPOS") ||
+      kw(&L->cur,"FIRSTPOS") || kw(&L->cur,"HEADPOS")){
+    long have, hit = 0, rest_n = 0;
+    char bag[CUBALC_HOST_STR_MAX], cmd[CUBALC_HOST_STR_MAX], rest[CUBALC_HOST_STR_MAX];
+    char fb[512];
+    const char *p, *start;
+    int have_fb = 0;
+    size_t ro = 0;
+    lex_next(L);
+    cmd[0] = 0;
+    rest[0] = 0;
+    fb[0] = 0;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "SUBCMD OR \"default\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    p = bag;
+    /* first field → cmd */
+    if (*p) {
+      start = p;
+      while (*p && *p != '\n') p++;
+      {
+        size_t fl = (size_t)(p - start);
+        if (fl >= sizeof cmd) fl = sizeof cmd - 1;
+        memcpy(cmd, start, fl);
+        cmd[fl] = 0;
+        hit = 1;
+      }
+      if (*p == '\n') p++;
+      /* remainder → RESTPOS bag */
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t fl = (size_t)(p - start);
+          if (fl > 0 && ro + fl + 2 < sizeof rest) {
+            if (ro) rest[ro++] = '\n';
+            memcpy(rest + ro, start, fl);
+            ro += fl;
+            rest[ro] = 0;
+            rest_n++;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(cmd, sizeof cmd, "%s", fb);
+      else
+        cmd[0] = 0;
+    }
+    var_set_str(vm, "LAST", cmd);
+    var_set_str(vm, "SUBCMD", cmd);
+    var_set_str(vm, "COMMAND", cmd);
+    var_set_str(vm, "CMD", cmd);
+    var_set_str(vm, "RESTPOS", rest);
+    var_set_str(vm, "TAILPOS", rest);
+    var_set_str(vm, "TAILARGS", rest);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", cmd);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "SUBCMD_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "SUBCMD_N", hit ? 1L : 0L);
+    var_set_num(vm, "RESTPOS_N", rest_n);
+    var_set_num(vm, "TAILPOS_N", rest_n);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", (hit || have_fb) ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# subcmd hit=%ld → %s rest_n=%ld\n", hit, cmd, rest_n);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.

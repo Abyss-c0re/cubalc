@@ -1,0 +1,87 @@
+# SUBCMD / COMMAND — first positional + RESTPOS remaining files
+
+HOLD_FLASH 1
+
+# empty + default
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV SET CUBALC_ARGC "0"
+SUBCMD OR "help"
+ASSERT SUBCMD_HIT == 0
+SYS EQS LAST "help"
+ASSERT LAST_N == 1
+ASSERT RESTPOS_N == 0
+SYS EMPTY RESTPOS
+ASSERT LAST_N == 1
+
+# bare miss no default
+SUBCMD
+ASSERT SUBCMD_HIT == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# single subcommand
+SYS ENV SET CUBALC_ARG0 "seal"
+SYS ENV SET CUBALC_ARGC "1"
+SUBCMD OR "help"
+ASSERT SUBCMD_HIT == 1
+SYS EQS LAST "seal"
+ASSERT LAST_N == 1
+SYS EQS SUBCMD "seal"
+ASSERT LAST_N == 1
+ASSERT RESTPOS_N == 0
+
+# subcommand + files (flags mixed; prefer --name=val so bare flags don't eat cmd)
+SYS ENV SET CUBALC_ARG0 "--verbose=1"
+SYS ENV SET CUBALC_ARG1 "parse"
+SYS ENV SET CUBALC_ARG2 "a.txt"
+SYS ENV SET CUBALC_ARG3 "b.txt"
+SYS ENV SET CUBALC_ARGC "4"
+COMMAND OR "help"
+ASSERT SUBCMD_HIT == 1
+SYS EQS CMD "parse"
+ASSERT LAST_N == 1
+ASSERT RESTPOS_N == 2
+# RESTPOS bag via LINES / HASLINE
+SYS HASLINE RESTPOS "a.txt"
+ASSERT LAST_N == 1
+SYS HASLINE RESTPOS "b.txt"
+ASSERT LAST_N == 1
+ASSERT TAILPOS_N == 2
+
+# CASEI dispatch pattern
+SYS ENV SET CUBALC_ARG0 "List"
+SYS ENV SET CUBALC_ARG1 "out.bin"
+SYS ENV SET CUBALC_ARGC "2"
+SUBCMD OR "help"
+CASEI LAST
+  WHEN "list", "ls" THEN
+    LET act "L"
+  WHEN "seal", "s" THEN
+    LET act "S"
+  DEFAULT
+    LET act "?"
+END
+SYS EQS act "L"
+ASSERT LAST_N == 1
+# RESTPOS still set from SUBCMD (CASE may not clobber)
+SUBCMD OR "help"
+SYS EQS RESTPOS "out.bin"
+ASSERT LAST_N == 1
+
+# ONEOF gate
+SYS ENV SET CUBALC_ARG0 "seal"
+SYS ENV SET CUBALC_ARGC "1"
+SUBCMD OR "help"
+REQUIRE ONEOF LAST "list", "seal", "help"
+ASSERT OK == 1
+
+# FIRSTPOS alias
+SYS ENV SET CUBALC_ARG0 "x"
+SYS ENV SET CUBALC_ARGC "1"
+FIRSTPOS
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+PRINT "subcmd ok"

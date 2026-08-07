@@ -481,6 +481,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 451. ~~**`BOOLFLAG` / `TRUTHY` / `FALSY`**~~ **done** (CLI flag truthy LAST_N · false/0/off · IF without GETFLAG+EQS · OR default).
 452. ~~**`GETFLAGN` / `FLAGN`**~~ **done** (CLI flag as int LAST_N · OR default · ports/retries without GETFLAG+NUM).
 453. ~~**`ONEOF` / `REQUIRE ONEOF`**~~ **done** (soft/fatal membership in multi-alias set · ONEOFI icase · GETFLAG action gate).
+454. ~~**`SUBCMD` / `COMMAND`**~~ **done** (first positional → LAST · RESTPOS remaining files · CASEI/ONEOF CLI tools).
 
 ## Tick protocol
 
