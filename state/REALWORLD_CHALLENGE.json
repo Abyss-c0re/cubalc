@@ -15,13 +15,13 @@
     },
     {
       "name": "words",
-      "cmd": "WORDSF level=error host=… → 3 tokens; CSV no-space → 1; ws → 0",
+      "cmd": "WORDSF level=error host=\u2026 \u2192 3 tokens; CSV no-space \u2192 1; ws \u2192 0",
       "ok": true,
       "note": "WORDSF"
     },
     {
       "name": "cut",
-      "cmd": "CUTF CIDX=1 → web-01 mutates raw; keep intact; OOR HIT=0",
+      "cmd": "CUTF CIDX=1 \u2192 web-01 mutates raw; keep intact; OOR HIT=0",
       "ok": true,
       "note": "CUTF"
     },
@@ -33,13 +33,13 @@
     },
     {
       "name": "col",
-      "cmd": "COLUMNF COLI=2 → web-01 (1-based)",
+      "cmd": "COLUMNF COLI=2 \u2192 web-01 (1-based)",
       "ok": true,
       "note": "COLUMNF"
     },
     {
       "name": "gate",
-      "cmd": "ntok>=2 admit; MINTOK=10 REQUIRE→2",
+      "cmd": "ntok>=2 admit; MINTOK=10 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -63,7 +63,7 @@
       "area": "oop|cutf",
       "title": "CUTF mutates source field to column text",
       "detail": "CUTF/COLUMNF replace the field with the peeled column (not non-destructive extract). Agents must copy to keep/level/host first. Silent data loss if keep omitted.",
-      "repro": "CUTF a raw \",\" 1 → raw becomes web-01 only"
+      "repro": "CUTF a raw \",\" 1 \u2192 raw becomes web-01 only"
     },
     {
       "id": "W2",
@@ -71,7 +71,7 @@
       "area": "oop|cutf",
       "title": "Index var COL silently forces CUTF_I=0",
       "detail": "DEFAULT COL=2; CUTF x raw \",\" COL peels column 0 (a) with CUTF_I=0. Form-token collision with COLUMNF/COLF. Must use CIDX/COLI. Same class as SEP/FLOOR/CAP.",
-      "repro": "DEFAULT COL=2; CUTF x raw \",\" COL → LAST a CUTF_I 0"
+      "repro": "DEFAULT COL=2; CUTF x raw \",\" COL \u2192 LAST a CUTF_I 0"
     },
     {
       "id": "W3",
@@ -79,14 +79,14 @@
       "area": "host|arg",
       "title": "Multi-word ARG2 needs quotes or CUBALC_FS_RAW",
       "detail": "CUBALC_ARG2=level=error host=web splits at shell; only first token reaches agent. Prefer CUBALC_FS_RAW for free-text alerts.",
-      "repro": "unquoted ARG2 multi-word → single token"
+      "repro": "unquoted ARG2 multi-word \u2192 single token"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|cutf",
       "title": "No single-object COPYF for keep backup",
-      "detail": "COPYF is fleet class→field copy (COPYF Class src dst). Per-object backup needs GETF+SETF. Agents lack one-shot SNAPSHOTF on one object.",
+      "detail": "COPYF is fleet class\u2192field copy (COPYF Class src dst). Per-object backup needs GETF+SETF. Agents lack one-shot SNAPSHOTF on one object.",
       "repro": "COPYF a0 raw keep fails pattern; fleet only"
     },
     {
@@ -94,7 +94,7 @@
       "severity": "low",
       "area": "oop|wordsf",
       "title": "WORDSF ignores commas (CSV is one token)",
-      "detail": "error,web-01,timeout → ntok=1. Must CUTF for CSV; WORDSF only whitespace. Easy false friend when choosing tokenizer.",
+      "detail": "error,web-01,timeout \u2192 ntok=1. Must CUTF for CSV; WORDSF only whitespace. Easy false friend when choosing tokenizer.",
       "repro": "WORDSF CSV line N=1"
     },
     {
@@ -116,9 +116,9 @@
   ],
   "workarounds": [
     "Always keep field + GETF/SETF before destructive CUTF",
-    "Never name index COL — use CIDX (0-based) or COLI (1-based COLUMNF)",
+    "Never name index COL \u2014 use CIDX (0-based) or COLI (1-based COLUMNF)",
     "CUBALC_FS_RAW for multi-word alert text",
-    "WORDSF for free text; CUTF for CSV — do not mix assumptions",
+    "WORDSF for free text; CUTF for CSV \u2014 do not mix assumptions",
     "Fixed a0/a1/a2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
@@ -129,12 +129,12 @@
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "CUTF CIDX=1 mutates raw→web-01; peel via keep restores",
+    "CUTF CIDX=1 mutates raw\u2192web-01; peel via keep restores",
     "COL index var silent I=0 footgun documented",
     "WORDSF 3 tokens from FS_RAW free text; CSV ntok=1",
     "ws-only ntok=0; OOR HIT=0 field unchanged",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "9faadc3b49b44f378ca23cbf4cea3b90cc3b491a",
   "ts": "2026-08-07T17:44:48Z"
 }
