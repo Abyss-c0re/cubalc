@@ -45,7 +45,7 @@ Status legend: **DONE** · **PARTIAL** · **OPEN** · **ACTIVE** · **SUPERSEDED
 | B1 | Inject into NexusCore as SEED | **PARTIAL** | CubalC/Nexus wiring exists in products/`command-center`; ongoing seed/loop posture |
 | B2 | Constant self-developing cycle (braincube solves / algocube optimizes) | **SUPERSEDED** → usability loops | Pure evolve thrash paused; MEANINGFUL_ITER + REALWORLD preferred |
 | B3 | Use CubalC and C — no Python language path | **DONE** | Runtime pure C11; Python only host daemons outside language |
-| B4 | Keep `data/Workdir/voldemar/ProjectNexus/products/` up to date | **OPEN / STALE** | products/cubalc git tip still **1.12.x**; lab tip **1.15.315** — needs sync |
+| B4 | Keep `data/Workdir/voldemar/ProjectNexus/products/` up to date | **DONE** | rsync lab→`ProjectNexus/products/cubalc` @ 1.15.315 + product commit |
 | B5 | Pure science (bio/chem/physics) + math as pure logic in CubalC | **DONE** | `programs/science/**` (biology, chemistry, earth, math, physics, …) |
 | B6 | No schools/diploma framing — direction only | **DONE** | Docs avoid diploma; science = language direction |
 | B7 | Don’t mention cube in convars | **DONE** | Host env `CUBALC_*` not product-brand cube spam |
@@ -93,8 +93,7 @@ realworld:   programs/realworld/ (100+ boards)
 
 ## E. Recommended next actions (from open rows)
 
-1. **Sync products:** update `ProjectNexus/products/cubalc` from lab `1.15.315` (rsync or vendor commit).
-2. **Absorb maturity deep-research** when `deep-research-10` completes — file gaps into MEANINGFUL_ITER backlog.
+1. **Absorb maturity deep-research** when `deep-research-10` completes — file gaps into MEANINGFUL_ITER backlog.
 3. **Optional bridge docs:** Life Simulator gaps + real-time streaming posture (honest limits + SYS/SMX paths).
 4. **Engine roadmap:** multi-CLASS components, NEST scene graphs, deterministic TICK budgets (listed in COP_ENGINE.md).
 
