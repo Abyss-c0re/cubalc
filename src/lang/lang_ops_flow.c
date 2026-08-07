@@ -10013,6 +10013,153 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* BOUNDF|LIMITF|CLIPOBJ|CLAMPOBJ obj field lo [TO] hi
+   * TRYBOUNDF|BOUNDF SOFT — soft miss OK=0.
+   * Clamp one object's numeric field into [lo,hi] (auto-swap lo/hi).
+   * Note: CLAMPF/CLIPF remain fleet CLAMPFALL aliases — this is the single-obj form.
+   * Usability: bound energy/retries after INCF without GETF+IF+SETF (METHOD/THIS). */
+  if (kw(&L->cur, "BOUNDF") || kw(&L->cur, "LIMITF") ||
+      kw(&L->cur, "CLIPOBJ") || kw(&L->cur, "CLAMPOBJ") ||
+      kw(&L->cur, "BOUNDFIELD") || kw(&L->cur, "LIMITFIELD") ||
+      kw(&L->cur, "SATOBJ") || kw(&L->cur, "SATFIELD") ||
+      kw(&L->cur, "CLAMPONE") || kw(&L->cur, "BOUNDONE") ||
+      kw(&L->cur, "TRYBOUNDF") || kw(&L->cur, "BOUNDFSOFT") ||
+      kw(&L->cur, "SOFTBOUNDF") || kw(&L->cur, "TRYLIMITF") ||
+      kw(&L->cur, "TRYCLIPOBJ")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, changed = 0;
+    long lo = 0, hi = 0, t, nv, oldv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYBOUNDF") == 0 || strcmp(op, "BOUNDFSOFT") == 0 ||
+        strcmp(op, "SOFTBOUNDF") == 0 || strcmp(op, "TRYLIMITF") == 0 ||
+        strcmp(op, "TRYCLIPOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "BOUNDF object field lo hi"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "BOUNDF field"); return -1;
+    }
+    if (kw(&L->cur, "IN") || kw(&L->cur, "BETWEEN") || kw(&L->cur, "RANGE") ||
+        kw(&L->cur, "TO") || kw(&L->cur, "WITHIN"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT) {
+      lo = parse_expr(vm, L);
+    } else {
+      fail(vm, "BOUNDF object field lo hi"); return -1;
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "AND") || kw(&L->cur, "..") ||
+        kw(&L->cur, "THRU") || kw(&L->cur, "THROUGH"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT) {
+      hi = parse_expr(vm, L);
+    } else {
+      fail(vm, "BOUNDF object field lo hi"); return -1;
+    }
+    if (lo > hi) { t = lo; lo = hi; hi = t; }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "BOUNDF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "BOUNDF_N", 0);
+      var_set_num(vm, "BOUNDF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "BOUNDF: unknown object");
+      var_set_str(vm, "ERR", "BOUNDF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "BOUNDF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "BOUNDF_N", 0);
+      var_set_num(vm, "BOUNDF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "BOUNDF: unknown field");
+      var_set_str(vm, "ERR", "BOUNDF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "BOUNDF field %s is string", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "BOUNDF_N", 0);
+      var_set_num(vm, "BOUNDF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "BOUNDF: string field");
+      var_set_str(vm, "ERR", "BOUNDF: string field");
+      bump(vm);
+      return 1;
+    }
+    oldv = ob->fnum[fi];
+    nv = oldv;
+    if (nv < lo) nv = lo;
+    if (nv > hi) nv = hi;
+    if (nv != oldv) changed = 1;
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    var_set_num(vm, "BOUNDF_N", 1);
+    var_set_num(vm, "BOUNDF_CHANGED", changed);
+    var_set_num(vm, "BOUNDF_LO", lo);
+    var_set_num(vm, "BOUNDF_HI", hi);
+    var_set_num(vm, "LIMITF_N", 1);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

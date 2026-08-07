@@ -423,6 +423,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 393. ~~**`REQUIRE FN` / `CLASS` / `METHOD`**~~ **done** (fail-fast language-plane gates after INCLUDE · twin of HASFN soft).
 394. ~~**`OBJINFO` / `DESCRIBEOBJ`**~~ **done** (live object plate name/class/methods+fields · no DUMPOBJ+CLASSINFO+LISTMETHODS glue).
 395. ~~**`INCF` / `DECF` / `ADDF` / `BUMPF`**~~ **done** (single-object numeric field bump · no GETF+arith+SETF · METHOD bodies).
+396. ~~**`BOUNDF` / `LIMITF` / `CLIPOBJ`**~~ **done** (single-object numeric field clamp · no GETF+IF+SETF · METHOD/THIS; CLAMPF stays fleet).
 
 ## Tick protocol
 

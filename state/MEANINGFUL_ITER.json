@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 359,
-  "version": "1.15.386-usability",
-  "item": "INCF/DECF single-object numeric field bump",
-  "item_id": 395,
-  "title": "INCF|DECF|ADDF|BUMPF \u2014 single-object numeric field bump",
-  "commit": "38f9764e6d7491a9bad7390c6e3d7befdfc5dffb",
-  "summary": "Single-obj field \u00b1delta without GETF+SETF. METHOD/THIS ready. proof 936 31/31.",
+  "iter": 360,
+  "version": "1.15.387-usability",
+  "item": "BOUNDF/LIMITF single-object numeric field clamp",
+  "item_id": 396,
+  "title": "BOUNDF|LIMITF|CLIPOBJ \u2014 single-object numeric field clamp",
+  "commit": "66e0d8a3a8460dcfcf13e32ac1c66f86c9cf7f1a",
+  "summary": "Clamp one numeric field into [lo,hi]. METHOD/THIS ready. proof 937 36/36.",
   "proofs": [
-    "936_oop_incf",
-    "asserts 31/31",
-    "935 still green"
+    "937_oop_boundf",
+    "asserts 36/36",
+    "936 still green"
   ],
-  "when": "2026-08-07T13:44:19Z",
+  "when": "2026-08-07T13:54:42Z",
   "agent": "meaningful_iter_10m",
-  "sha": "38f9764e6d7491a9bad7390c6e3d7befdfc5dffb",
-  "note": "fills gap between SETF and INCFALL/INCFWHERE"
+  "sha": "66e0d8a3a8460dcfcf13e32ac1c66f86c9cf7f1a",
+  "note": "CLAMPF remains fleet CLAMPFALL; BOUNDF is single-obj twin of INCF"
 }

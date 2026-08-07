@@ -1,0 +1,113 @@
+# BOUNDF / LIMITF — single-object numeric field clamp for agents
+# Usability: bound energy/retries after INCF without GETF+IF+SETF (METHOD/THIS)
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD energy 50
+  FIELD retries 0
+  FIELD tag "x"
+  METHOD init e
+    SETF THIS energy e
+  END
+  METHOD cap
+    BOUNDF THIS energy 0 100
+  END
+END
+
+NEW Cell c 150
+
+# clamp high
+BOUNDF c energy 0 100
+ASSERT OK == 1
+ASSERT BOUNDF_N == 1
+ASSERT BOUNDF_CHANGED == 1
+ASSERT LAST_N == 100
+ASSERT BOUNDF_LO == 0
+ASSERT BOUNDF_HI == 100
+SYS EQS FIELD "energy"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 100
+
+# already in range — changed=0
+BOUNDF c energy 0 100
+ASSERT OK == 1
+ASSERT BOUNDF_CHANGED == 0
+ASSERT LAST_N == 100
+
+# clamp low
+SETF c energy -20
+BOUNDF c energy 0 100
+ASSERT LAST_N == 0
+ASSERT BOUNDF_CHANGED == 1
+
+# lo/hi auto-swap
+SETF c energy 200
+BOUNDF c energy 100 0
+ASSERT LAST_N == 100
+ASSERT BOUNDF_LO == 0
+ASSERT BOUNDF_HI == 100
+
+# TO glue
+SETF c energy 5
+BOUNDF c energy 10 TO 90
+ASSERT LAST_N == 10
+ASSERT BOUNDF_CHANGED == 1
+
+# aliases
+SETF c energy 999
+LIMITF c energy 0 50
+ASSERT LAST_N == 50
+SETF c energy -5
+CLIPOBJ c energy 0 10
+ASSERT LAST_N == 0
+SETF c energy 75
+CLAMPOBJ c energy 0 100
+ASSERT LAST_N == 75
+ASSERT BOUNDF_CHANGED == 0
+
+# METHOD + THIS
+SETF c energy 500
+SEND c cap
+GETF c energy
+ASSERT LAST_N == 100
+
+# soft miss object
+TRYBOUNDF nosuch energy 0 1
+ASSERT OK == 0
+ASSERT BOUNDF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+BOUNDF SOFT c nosuch 0 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYBOUNDF c tag 0 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF c energy 200
+BOUNDF c energy 0 80
+ASSERT OK == 1
+ASSERT LAST_N == 80
+
+# string field name
+BOUNDF c "energy" 0 70
+ASSERT LAST_N == 70
+
+# HELP
+HELP BOUNDF
+ASSERT OK == 1
+SYS HAS LAST "BOUNDF"
+ASSERT LAST_N == 1
+
+NOTE "937_oop_boundf ok"
