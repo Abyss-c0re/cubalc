@@ -1,0 +1,1004 @@
+# field_contract_board.cubalc — FIELDINFO + REQUIRE CLASS/METHOD SETF prep gate
+#
+# Real use: ops agents verify Ticket field kind/default (and live value)
+# before SETF/NEW — contract check without HASFIELD-only guess of type —
+# plus fail-fast REQUIRE CLASS/METHOD after INCLUDE for boot deps.
+#
+# Surfaces forced (1.15.383–384):
+#   FIELDINFO / DUMPFIELD / DESCRIBEFIELD / PROPINFO [JSON]
+#   REQUIRE CLASS|TYPE · REQUIRE METHOD|METH
+#   CLASSINFO · HASFIELD · LISTFIELDS · NEW · SETF · GETF · DUMPOBJ
+#   soft miss + CUBALC_FS_REQUIRE hard wall
+#
+# Distinct from schema_contract (CLASSINFO/METHODINFO arity) and
+# ticket_object (HASMETHOD pool): this board is *field kind/default +
+# language-plane REQUIRE gates for SETF prep*.
+#
+# Slots: t0 t1  (Ticket instances for live FIELDINFO value)
+#
+# Plate under STATE:
+#   dump/t0 dump/t1
+#   FIELD.txt SCHEMA.txt VAL.txt META.txt OBJS.txt FIELD_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Ticket
+#   open       — NEW Ticket ARG1=tN [status=ARG2]
+#   field      — FIELDINFO Ticket ARG1=fname → FIELD plate
+#   fieldj     — FIELDINFO JSON Ticket ARG1
+#   live       — FIELDINFO live obj (t0) ARG1 → includes value
+#   gate_kind  — KIND must equal EXPECT_KIND (str|num); REQUIRE deny
+#   gate_def   — HAS_DEF must be 1 (REQUIRE deny if bare field)
+#   hasf       — HASFIELD Ticket ARG1
+#   setf       — SETF after FIELDINFO kind gate (num vs str)
+#   boot       — REQUIRE CLASS Ticket + REQUIRE METHOD Ticket init (ok path)
+#   probe      — soft FIELDINFO miss paths
+#   dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_field_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=t0 CUBALC_ARG2=open
+#   CUBALC_ARG0=field CUBALC_ARG1=status
+#   CUBALC_FS_EXPECT_KIND=str CUBALC_ARG0=gate_kind CUBALC_ARG1=status
+#   CUBALC_FS_REQUIRE=1 CUBALC_ARG0=gate_kind CUBALC_ARG1=retries CUBALC_FS_EXPECT_KIND=str
+#   CUBALC_ARG0=setf CUBALC_ARG1=retries CUBALC_ARG2=3
+#
+# Env: CUBALC_FS_REQUIRE NAME FNAME EXPECT_KIND ACTION
+#
+# Edges:
+#   FIELD without default → kind num HAS_DEF=0 (surprising for "note")
+#   FIELDINFO from class has no value:; from live obj has value:
+#   REQUIRE CLASS/METHOD hard-fail (not soft) — boot only; probe uses FIELDINFO
+#   no REQUIRE FIELD language-plane gate (must FIELDINFO+IF)
+#   WRITE NL; NUM softens REQUIRE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD prio 1
+  FIELD retries 0
+  FIELD note
+  METHOD init s
+    SETF THIS status s
+    SETF THIS prio 1
+    SETF THIS retries 0
+  END
+  METHOD bump
+    GETF THIS retries
+    LET r = LAST_N + 1
+    SETF THIS retries r
+    RET r
+  END
+END
+
+# Fail-fast language-plane: class + critical methods present after CLASS
+REQUIRE CLASS Ticket
+REQUIRE METHOD Ticket init
+REQUIRE METHOD Ticket bump
+
+NOTE "field_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT FNAME = "status"
+DEFAULT EXPECT_KIND = "str"
+DEFAULT N_A2 = -1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  # capture numeric ARG2 while LAST still holds the token (NUM shuttle)
+  SYS NUM
+  IF OK == 1 THEN
+    LET N_A2 = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET N_A2 = LAST_N
+    END
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_EXPECT_KIND" OR ""
+IF LAST_N > 0 THEN
+  LET EXPECT_KIND = LAST
+END
+SYS ENV "CUBALC_FS_FNAME" OR ""
+IF LAST_N > 0 THEN
+  LET FNAME = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "FIELD.txt"
+LET field_path = LAST
+SYS JOIN state_dir "SCHEMA.txt"
+LET schema_path = LAST
+SYS JOIN state_dir "FIELD_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "t0"
+LET d_t0 = LAST
+SYS JOIN dump_dir "t1"
+LET d_t1 = LAST
+
+LET slot = -1
+SYS EQS NAME "t0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "t1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "t0"
+END
+IF slot == 1 THEN
+  LET sn = "t1"
+END
+
+# For field-centric actions, ARG1 is field name not slot
+SYS EQS ACTION "field"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "fieldj"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "live"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "gate_kind"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "gate_def"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "hasf"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+SYS EQS ACTION "setf"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET FNAME = NAME
+  END
+END
+
+# rehydrate t0
+SYS READ OR d_t0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "status:"
+IF LAST_N == 1 THEN
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DELETEOBJ t0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "prio"
+  LET rp = LAST_N
+  SYS LOOKUPN snap "retries"
+  LET rr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t0 rst
+  TRYSETF t0 prio rp
+  TRYSETF t0 retries rr
+  CLEAR_ERR
+END
+# rehydrate t1
+SYS READ OR d_t1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "status:"
+IF LAST_N == 1 THEN
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DELETEOBJ t1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "prio"
+  LET rp = LAST_N
+  SYS LOOKUPN snap "retries"
+  LET rr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t1 rst
+  TRYSETF t1 prio rp
+  TRYSETF t1 retries rr
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET kind = ""
+LET has_def = 0
+LET is_str = 0
+LET board_rep = "field_contract_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Ticket
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET st0 = "new"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET st0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        DELETEOBJ t0
+        CLEAR_ERR
+      END
+      NEW Ticket t0 st0
+      DUMPOBJ t0
+      SYS WRITE d_t0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        DELETEOBJ t1
+        CLEAR_ERR
+      END
+      NEW Ticket t1 st0
+      DUMPOBJ t1
+      SYS WRITE d_t1 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Ticket
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta st0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- field (class FIELDINFO bag) ---
+SYS EQS ACTION "field"
+IF LAST_N == 1 THEN
+  NOTE "action field"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  FIELDINFO Ticket FNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "field miss"
+    FAIL "field miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "field miss"
+    END
+  ELSE
+    LET val = LAST
+    LET kind = KIND
+    LET has_def = HAS_DEF
+    LET is_str = IS_STR
+    SYS WRITE field_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "field ok"
+    LET val_ch = 1
+    LET meta = "field"
+    SYS PUSH meta FNAME
+    LET meta = LAST
+    SYS PUSH meta kind
+    LET meta = LAST
+    SYS STR has_def
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON kind
+  PRINT_JSON has_def
+  CLEAR_ERR
+END
+
+# --- fieldj ---
+SYS EQS ACTION "fieldj"
+IF LAST_N == 1 THEN
+  NOTE "action fieldj"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  FIELDINFO JSON Ticket FNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "fieldj miss"
+    FAIL "fieldj miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "fieldj miss"
+    END
+  ELSE
+    LET val = LAST
+    LET kind = KIND
+    LET has_def = HAS_DEF
+    SYS WRITE field_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "fieldj ok"
+    LET val_ch = 1
+    LET meta = "fieldj"
+    SYS PUSH meta FNAME
+    LET meta = LAST
+    SYS PUSH meta kind
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON kind
+  CLEAR_ERR
+END
+
+# --- live FIELDINFO from t0 ---
+SYS EQS ACTION "live"
+IF LAST_N == 1 THEN
+  NOTE "action live"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  HASOBJ t0
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "live no t0"
+    FAIL "live no t0"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "live no t0"
+    END
+  ELSE
+    FIELDINFO t0 FNAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "live field miss"
+      FAIL "live field miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "live field miss"
+      END
+    ELSE
+      LET val = LAST
+      LET kind = KIND
+      SYS WRITE field_path val
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "live ok"
+      LET val_ch = 1
+      LET meta = "live"
+      SYS PUSH meta FNAME
+      LET meta = LAST
+      SYS PUSH meta kind
+      LET meta = LAST
+      SYS PUSH meta VALUE
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate_kind ---
+SYS EQS ACTION "gate_kind"
+IF LAST_N == 1 THEN
+  NOTE "action gate_kind"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  FIELDINFO Ticket FNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate_kind miss"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate_kind miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_kind miss"
+    END
+  ELSE
+    LET kind = KIND
+    LET has_def = HAS_DEF
+    SYS WRITE field_path LAST
+    CLEAR_ERR
+    SYS EQS kind EXPECT_KIND
+    IF LAST_N == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate_kind ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate_kind deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate_kind deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate_kind deny"
+      END
+    END
+  END
+  LET meta = "gate_kind"
+  SYS PUSH meta FNAME
+  LET meta = LAST
+  SYS PUSH meta kind
+  LET meta = LAST
+  SYS PUSH meta EXPECT_KIND
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate_def: field must have explicit default ---
+SYS EQS ACTION "gate_def"
+IF LAST_N == 1 THEN
+  NOTE "action gate_def"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  FIELDINFO Ticket FNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate_def miss"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate_def miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_def miss"
+    END
+  ELSE
+    LET kind = KIND
+    LET has_def = HAS_DEF
+    SYS WRITE field_path LAST
+    CLEAR_ERR
+    IF has_def == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate_def ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate_def deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate_def deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate_def deny"
+      END
+    END
+  END
+  LET meta = "gate_def"
+  SYS PUSH meta FNAME
+  LET meta = LAST
+  SYS STR has_def
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- hasf ---
+SYS EQS ACTION "hasf"
+IF LAST_N == 1 THEN
+  NOTE "action hasf"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "status"
+  END
+  # HASFIELD takes raw token — use FIELDINFO OK as dynamic probe (like HASMETHOD gap)
+  FIELDINFO Ticket FNAME
+  LET has_n = 0
+  IF OK == 1 THEN
+    LET has_n = 1
+  END
+  CLEAR_ERR
+  # smoke literal HASFIELD
+  HASFIELD Ticket status
+  LET has_lit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "hasf ok"
+    LET val = "1"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasf miss"
+    LET val = "0"
+    FAIL "hasf miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "hasf miss"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "hasf"
+  SYS PUSH meta FNAME
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR has_lit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- setf after kind gate ---
+SYS EQS ACTION "setf"
+IF LAST_N == 1 THEN
+  NOTE "action setf"
+  SYS BLANK FNAME
+  IF LAST_N == 1 THEN
+    LET FNAME = "retries"
+  END
+  HASOBJ t0
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "setf no t0"
+    FAIL "setf no t0"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setf no t0"
+    END
+  ELSE
+    FIELDINFO Ticket FNAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "setf field miss"
+      FAIL "setf field miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setf field miss"
+      END
+    ELSE
+      LET kind = KIND
+      LET is_str = IS_STR
+      LET did = 0
+      SYS EQS FNAME "status"
+      IF LAST_N == 1 THEN
+        LET sv = "patched"
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          LET sv = A2
+        END
+        SETF t0 status sv
+        LET did = 1
+        LET val = sv
+      END
+      SYS EQS FNAME "retries"
+      IF LAST_N == 1 THEN
+        LET nv = 1
+        IF N_A2 >= 0 THEN
+          LET nv = N_A2
+        END
+        SETF t0 retries nv
+        LET did = 1
+        SYS STR nv
+        LET val = LAST
+      END
+      SYS EQS FNAME "prio"
+      IF LAST_N == 1 THEN
+        LET nv = 1
+        IF N_A2 >= 0 THEN
+          LET nv = N_A2
+        END
+        SETF t0 prio nv
+        LET did = 1
+        SYS STR nv
+        LET val = LAST
+      END
+      IF did == 0 THEN
+        LET miss = 1
+        LET note_msg = "setf unsupported"
+        FAIL "setf unsupported"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setf unsupported"
+        END
+      ELSE
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+        LET hit = 1
+        LET note_msg = "setf ok"
+        LET val_ch = 1
+      END
+    END
+  END
+  LET meta = "setf"
+  SYS PUSH meta FNAME
+  LET meta = LAST
+  SYS PUSH meta kind
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- boot: re-assert REQUIRE CLASS/METHOD (already at top; document plate) ---
+SYS EQS ACTION "boot"
+IF LAST_N == 1 THEN
+  NOTE "action boot"
+  REQUIRE CLASS Ticket
+  REQUIRE METHOD Ticket init
+  REQUIRE METHOD Ticket bump
+  CLASSINFO Ticket
+  LET nfields = NFIELDS
+  LET nmethods = NMETHODS
+  SYS WRITE schema_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "boot ok"
+  LET val = "ready"
+  LET val_ch = 1
+  LET meta = "boot"
+  SYS STR nfields
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nmethods
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- fields list ---
+SYS EQS ACTION "fields"
+IF LAST_N == 1 THEN
+  NOTE "action fields"
+  LISTFIELDS Ticket
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "fields ok"
+  LET val_ch = 1
+  LET meta = "fields"
+  LET meta_ch = 1
+  SYS WRITE schema_path val
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  FIELDINFO Ticket nosuch_field_xyz
+  LET f_ok = OK
+  LET f_n = FIELDINFO_N
+  CLEAR_ERR
+  FIELDINFO NoSuchClass status
+  LET c_ok = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR f_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR f_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR c_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF f_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe field not soft"
+  END
+  IF c_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe class not soft"
+  END
+  PRINT_JSON f_ok
+  PRINT_JSON c_ok
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DUMPOBJ t0
+    LET val = LAST
+    SYS WRITE d_t0 val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "dump ok"
+    LET val_ch = 1
+    LET meta = "dump"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "dump no t0"
+    FAIL "dump no t0"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump no t0"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DELETEOBJ t0
+    CLEAR_ERR
+  END
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DELETEOBJ t1
+    CLEAR_ERR
+  END
+  SYS WRITE d_t0 ""
+  SYS WRITE d_t1 ""
+  SYS WRITE objs_path ""
+  SYS WRITE field_path ""
+  SYS WRITE schema_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "field"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "fieldj"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "live"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_kind"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_def"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "hasf"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setf"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "boot"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "fields"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS PUSH board_rep kind
+LET board_rep = LAST
+SYS STR has_def
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "field_contract_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

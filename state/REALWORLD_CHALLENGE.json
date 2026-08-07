@@ -1,75 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 138,
-  "program": "programs/realworld/fn_runbook_board.cubalc",
-  "theme": "LISTFNS/HASFN/FNINFO/TRYCALL pipeline runbook dispatch",
-  "version": "1.15.382-usability",
+  "iter": 139,
+  "program": "programs/realworld/field_contract_board.cubalc",
+  "theme": "FIELDINFO + REQUIRE CLASS/METHOD field kind contract for SETF prep",
+  "version": "1.15.385-usability",
   "pass": true,
-  "prior_note": "iter 137 CLASSINFO/METHODINFO OOP contract; this iter stresses FN catalog + soft CALL (7dfa8d5/57e396f/3baad9c)",
+  "prior_note": "iter 138 FN catalog TRYCALL; this iter stresses FIELDINFO (e0434c5) + REQUIRE CLASS/METHOD (076b733)",
   "tests": [
     {
-      "name": "list_catalog",
-      "cmd": "LISTFNS \u2192 admit score escalate ping NFNS=4",
+      "name": "boot_require",
+      "cmd": "REQUIRE CLASS Ticket + METHOD init/bump at load",
       "ok": true,
-      "note": "LISTFNS"
+      "note": "REQUIRE"
     },
     {
-      "name": "has_step",
-      "cmd": "HASFN score hit; ghost soft; REQUIRE\u21922",
+      "name": "open_pool",
+      "cmd": "open t0/t1 status open/triaged",
       "ok": true,
-      "note": "HASFN"
+      "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "fninfo",
-      "cmd": "score n_params:2 base,weight; ping 0; miss soft",
+      "name": "field_str",
+      "cmd": "FIELDINFO status kind:str has_def:1 default:new",
       "ok": true,
-      "note": "FNINFO"
+      "note": "FIELDINFO"
     },
     {
-      "name": "fninfo_json",
-      "cmd": "FNINFO JSON admit \u2192 cubalc.fn.v1",
+      "name": "field_num",
+      "cmd": "retries kind:num; note kind:num has_def:0",
       "ok": true,
-      "note": "FNINFO JSON"
+      "note": "defaults"
     },
     {
-      "name": "gate_cat",
-      "cmd": "MINN=3 admit; MINN=99 deny REQUIRE\u21922",
+      "name": "field_json",
+      "cmd": "FIELDINFO JSON → cubalc.field.v1",
       "ok": true,
-      "note": "gate_cat"
+      "note": "JSON"
     },
     {
-      "name": "gate_arity",
-      "cmd": "EXPECT=2 score admit; EXPECT=0 deny; zzz REQUIRE\u21922",
+      "name": "live_value",
+      "cmd": "FIELDINFO t0 status includes value:open",
       "ok": true,
-      "note": "gate_arity"
+      "note": "live"
     },
     {
-      "name": "trycall",
-      "cmd": "score 10*3=30; ping; escalate 5\u21926; ghost soft REQUIRE\u21922",
+      "name": "gate_kind",
+      "cmd": "EXPECT str status admit; retries deny REQUIRE→2",
       "ok": true,
-      "note": "TRYCALL"
+      "note": "gate_kind"
     },
     {
-      "name": "call_hard",
-      "cmd": "CALL ping \u2192 1 after HASFN gate",
+      "name": "gate_def",
+      "cmd": "status admit; bare note deny REQUIRE→2",
       "ok": true,
-      "note": "CALL"
+      "note": "gate_def"
     },
     {
-      "name": "admit",
-      "cmd": "HASFN+arity admit; arity deny; nofn REQUIRE\u21922",
+      "name": "setf_num",
+      "cmd": "setf retries 7 via N_A2 NUM shuttle",
       "ok": true,
-      "note": "admit"
-    },
-    {
-      "name": "journal_bag",
-      "cmd": "try journal + pin + setmatch first-only",
-      "ok": true,
-      "note": "journal"
+      "note": "setf"
     },
     {
       "name": "probe_soft",
-      "cmd": "HASFN/FNINFO/TRYCALL unknown all soft zero",
+      "cmd": "unknown field/class FIELDINFO soft OK=0",
       "ok": true,
       "note": "probe"
     },
@@ -84,89 +78,89 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "fn|catalog",
-      "title": "FN catalog is process-local \u2014 no plate rehydrate of FNs",
-      "detail": "LISTFNS/HASFN/FNINFO only see FNs defined in the current process. Multi-run ARG agents re-declare FNs each fire; cannot load FN catalog from STATE plate. Clear cannot un-define FNs.",
-      "repro": "clear leaves LISTFNS still 4; second process without FN bodies empty catalog"
+      "area": "oop|field",
+      "title": "Bare FIELD note defaults to kind:num HAS_DEF=0",
+      "detail": "FIELD note without initializer is treated as numeric kind with no default — surprising for free-text notes. Agents SETF string into note may hit type friction; contract boards must gate_def + kind.",
+      "repro": "FIELDINFO Ticket note → kind:num has_def:0"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "fn|trycall",
-      "title": "TRYCALL arity mismatch behavior unclear vs soft miss",
-      "detail": "Unknown FN is soft. Wrong-arity CALL may still hard-fail depending on body; agents must FNINFO gate before TRYCALL with correct arg count. No automatic arity check on TRYCALL.",
-      "repro": "TRYCALL score with 0 args \u2014 agent must pre-gate NPARAMS"
+      "area": "lang|require",
+      "title": "No REQUIRE FIELD language-plane gate",
+      "detail": "REQUIRE FN/CLASS/METHOD exist; REQUIRE FIELD Class name missing. Agents FIELDINFO+IF+FAIL or soft probe. Asymmetry with METHOD/FN fail-fast boot.",
+      "repro": "must FIELDINFO Ticket status; IF OK for field contract"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "fn|dispatch",
-      "title": "No FNWHERE / tagged catalog \u2014 flat name bag only",
-      "detail": "LISTFNS returns all FNs. Cannot filter by prefix/tag (runbook vs util). Agents substring-filter bags manually; false friends risk.",
-      "repro": "LISTFNS includes admit+score+escalate+ping mixed"
+      "area": "host|num",
+      "title": "SYS NUM only on LAST — ARG2 must be NUMed immediately",
+      "detail": "After other ops, A2 string cannot be re-NUMed without shuttle. N_A2 capture at ARG parse required for SETF numeric; easy to silently keep default.",
+      "repro": "setf retries ARG2=7 without early NUM → stuck default"
     },
     {
       "id": "W4",
-      "severity": "low",
-      "area": "fn|hasfn",
-      "title": "HASFN resolves string vars (contrast HASMETHOD)",
-      "detail": "Positive: HASFN STEP works with string var. Documents inconsistency with HASMETHOD which does not resolve vars \u2014 agent mental model split across OOP vs FN surfaces.",
-      "repro": "HASFN STEP with STEP=score \u2192 1; HASMETHOD Handler MNAME fails"
+      "severity": "med",
+      "area": "lang|require",
+      "title": "REQUIRE CLASS/METHOD is hard-fail only",
+      "detail": "Cannot soft-probe missing method with REQUIRE; use HASMETHOD/FIELDINFO for optional contracts. Boot REQUIRE is correct for hard deps.",
+      "repro": "REQUIRE METHOD Ticket nosuch aborts process"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact line only",
-      "detail": "Journal setmatch replaces first matching line; duplicates need loop.",
-      "repro": "setmatch score:30 \u2192 score:99 leaves one"
+      "area": "oop|fieldinfo",
+      "title": "Class FIELDINFO omits value:; live obj includes value:",
+      "detail": "Agents must branch plate parse on class vs object target.",
+      "repro": "FIELDINFO Ticket status vs FIELDINFO t0 status"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c VAL cleared without \\n.",
-      "repro": "od -c VAL.txt"
+      "area": "oop|hasfield",
+      "title": "HASFIELD likely raw-token like HASMETHOD",
+      "detail": "Dynamic field names via FIELDINFO OK workaround (same gap as HASMETHOD string-var).",
+      "repro": "hasf uses FIELDINFO Ticket FNAME"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE leaves NEED_HIT=0; miss exits 0.",
-      "repro": "CUBALC_FS_REQUIRE=abc has ghost \u2192 exit 0"
+      "area": "host|write",
+      "title": "WRITE VAL omit trailing NL",
+      "detail": "od -c cleared without \\n",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "fn|call",
-      "title": "Bare CALL unknown is fatal \u2014 TRYCALL required for optional hooks",
-      "detail": "Agents must remember soft form; HASFN gate + CALL still races if FN deleted mid-script (not possible now but twin of SEND).",
-      "repro": "CALL ghost would hard-fail; TRYCALL ghost soft"
+      "area": "host|num",
+      "title": "REQUIRE=abc softens NEED_HIT",
+      "detail": "Non-numeric REQUIRE leaves soft miss exit 0",
+      "repro": "CUBALC_FS_REQUIRE=abc field zzz → exit 0"
     }
   ],
   "workarounds": [
-    "Declare runbook FNs at top of every multi-run agent program",
-    "HASFN + FNINFO NPARAMS gate before TRYCALL with matching arg count",
-    "Use TRYCALL not CALL for optional hooks",
-    "REQUIRE EXIT in action bodies; soft unknown wall",
-    "Journal via PUSH + SETMATCH for step audit trail"
+    "Always init string fields with \"\" default not bare FIELD name",
+    "Capture SYS NUM immediately after ARG/ENV for numeric setf",
+    "REQUIRE CLASS/METHOD at top for hard boot; FIELDINFO for soft field contract",
+    "gate_kind + gate_def before SETF; live FIELDINFO for value plate",
+    "FIELDINFO FNAME for dynamic has-field (not HASFIELD var)"
   ],
   "language_gaps": [
-    "Persistent / plate-loadable FN catalog",
-    "TRYCALL auto arity check vs FNINFO",
-    "LISTFNS prefix/tag filter",
-    "UNDEFINE FN / clear catalog",
-    "Align HASMETHOD string-var resolve with HASFN; WRITE NL; strict NUM REQUIRE"
+    "Bare FIELD should default kind str or require initializer",
+    "REQUIRE FIELD Class name fail-fast",
+    "NUM of named var without LAST shuttle",
+    "Soft REQUIRE variant; HASFIELD string-var resolve",
+    "WRITE trailing NL; strict NUM REQUIRE env"
   ],
   "issues_faced": [
-    "LISTFNS 4 steps; FNINFO score 2 params; JSON cubalc.fn.v1",
-    "TRYCALL score 10*3=30 journaled; ghost soft REQUIRE\u21922",
-    "HASFN resolves STEP var (unlike HASMETHOD) \u2014 document asymmetry",
-    "FN catalog cannot rehydrate from STATE; clear only wipes plates",
-    "selftest 355/355 green; proofs 930-932 exist; no language fix this iter"
+    "FIELDINFO status str default new; note num has_def 0 surprise",
+    "REQUIRE CLASS/METHOD boot ok; soft probe via FIELDINFO only",
+    "SETF retries needed early N_A2 NUM shuttle (fixed in board)",
+    "gate_kind str vs num; gate_def bare note deny",
+    "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "059872b29a8dd6ebf8109c2ec6863d1567c9c315",
-  "ts": "2026-08-07T13:08:53Z"
+  "commit": "",
+  "ts": "2026-08-07T13:34:28Z"
 }

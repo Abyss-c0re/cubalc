@@ -1,0 +1,7 @@
+name:retries
+class:Ticket
+kind:num
+has_def:1
+is_str:0
+default:0
+value:3
