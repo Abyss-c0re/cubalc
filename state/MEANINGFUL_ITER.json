@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 394,
-  "version": "1.15.421-usability",
-  "item": "SYS/INCLUDE name did-you-mean",
-  "item_id": 430,
-  "title": "SYS unknown op + INCLUDE lib typo → did you mean",
-  "commit": "8de9a7149929a3295187c7a417e433a55e09a21c",
-  "summary": "Replace SYS catalog soup with did-you-mean; INCLUDE lib stem suggest. proof 971 7/7.",
+  "iter": 395,
+  "version": "1.15.422-usability",
+  "item": "ASSERT/EXPECT got/expected",
+  "item_id": 431,
+  "title": "ASSERT/EXPECT cmp fail shows got/expected + ASSERT_GOT knobs",
+  "commit": "b5a93a4eec813113c871bcbc42aa26e2f616d124",
+  "summary": "Comparison fails report 3 == 1 is false; ASSERT_GOT/EXPECTED/OP. proof 972 20/20.",
   "proofs": [
-    "971_sys_include_suggest",
-    "asserts 7/7",
-    "smoke GRPE→GREP READD→READ hold_sead→hold_seed"
+    "972_assert_got_expected",
+    "asserts 20/20",
+    "smoke 3==1 is false · string · why · falsey"
   ],
-  "when": "2026-08-07T19:41:58Z",
+  "when": "2026-08-07T19:57:11Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8de9a7149929a3295187c7a417e433a55e09a21c",
-  "note": "completes form/OOP/host did-you-mean triad"
+  "sha": "b5a93a4eec813113c871bcbc42aa26e2f616d124",
+  "note": "parse_cmp records last_cmp_*; assert_fail_msg formats"
 }
