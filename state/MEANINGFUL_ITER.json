@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 393,
-  "version": "1.15.420-usability",
-  "item": "OOP/FN name did-you-mean",
-  "item_id": 429,
-  "title": "SEND/GETF/SETF/NEW/CALL typo → closest class/obj/method/field/FN",
-  "commit": "8236fe9dbc61cec243b132d1d6705f199cf7a999",
-  "summary": "OOP/FN name did-you-mean on soft LAST_ERR + fatal; proof 970 18/18.",
+  "iter": 394,
+  "version": "1.15.421-usability",
+  "item": "SYS/INCLUDE name did-you-mean",
+  "item_id": 430,
+  "title": "SYS unknown op + INCLUDE lib typo → did you mean",
+  "commit": "8de9a7149929a3295187c7a417e433a55e09a21c",
+  "summary": "Replace SYS catalog soup with did-you-mean; INCLUDE lib stem suggest. proof 971 7/7.",
   "proofs": [
-    "970_oop_name_suggest",
-    "asserts 18/18",
-    "smoke bumpp→bump scor→score Tickett→Ticket grett→greett"
+    "971_sys_include_suggest",
+    "asserts 7/7",
+    "smoke GRPE→GREP READD→READ hold_sead→hold_seed"
   ],
-  "when": "2026-08-07T19:26:52Z",
+  "when": "2026-08-07T19:41:58Z",
   "agent": "meaningful_iter_10m",
-  "sha": "8236fe9dbc61cec243b132d1d6705f199cf7a999",
-  "note": "complements form_suggest 428; ebuf separate from vm->err"
+  "sha": "8de9a7149929a3295187c7a417e433a55e09a21c",
+  "note": "completes form/OOP/host did-you-mean triad"
 }
