@@ -1620,6 +1620,141 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COPYF|COPYFALL|COPYFIELD|MAPCOPYF [Class] src dst
+   * — copy src field → dst field on every live object (optional class).
+   * Preserves num/str kind per object. Soft skip if either field missing.
+   * LAST_N = copy count. TO sugar: COPYF Cell energy TO prev.
+   * Usability: snapshot fields before tick/mutation without EACH+GETF+SETF. */
+  if (kw(&L->cur, "COPYF") || kw(&L->cur, "COPYFALL") ||
+      kw(&L->cur, "COPYFIELD") || kw(&L->cur, "MAPCOPYF") ||
+      kw(&L->cur, "COPYFIELDALL") || kw(&L->cur, "DUPFIELD") ||
+      kw(&L->cur, "CLONEFIELD") || kw(&L->cur, "FIELDCOPY") ||
+      kw(&L->cur, "SNAPSHOTF") || kw(&L->cur, "BACKUPF")) {
+    char filt[48], srcf[48], dstf[48], tok1[48];
+    int has_filt = 0, i, n = 0, n_skip = 0;
+    lex_next(L);
+    filt[0] = 0;
+    srcf[0] = 0;
+    dstf[0] = 0;
+    tok1[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "COPYF OF Class src dst"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      /* Class src dst when tok1 is known CLASS */
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "TO") && !kw(&L->cur, "INTO") &&
+          !kw(&L->cur, "AS") && !oop_stmt_kw(L)) {
+        /* peek: Class src [TO] dst needs a third token; if only one more field name
+         * without third, tok1 might be src. Prefer class when known + next is field. */
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(srcf, sizeof srcf, "%s", vv->sval);
+          else
+            snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(srcf, sizeof srcf, "%s", vv->sval);
+        else
+          snprintf(srcf, sizeof srcf, "%s", tok1);
+      }
+    } else {
+      fail(vm, "COPYF [Class] src dst"); return -1;
+    }
+    if (!srcf[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "TO") && !kw(&L->cur, "INTO") && !kw(&L->cur, "AS")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(srcf, sizeof srcf, "%s", vv->sval);
+        else
+          snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "COPYF [Class] src dst"); return -1;
+      }
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "INTO") || kw(&L->cur, "AS") ||
+        kw(&L->cur, "->") || kw(&L->cur, "=")) {
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(dstf, sizeof dstf, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(dstf, sizeof dstf, "%s", vv->sval);
+      else
+        snprintf(dstf, sizeof dstf, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "COPYF [Class] src dst"); return -1;
+    }
+    if (!srcf[0] || !dstf[0]) {
+      fail(vm, "COPYF [Class] src dst"); return -1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int si, di;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      si = oop_field_idx(cd, srcf);
+      di = oop_field_idx(cd, dstf);
+      if (si < 0 || di < 0) { n_skip++; continue; }
+      if (ob->fis_str[si]) {
+        snprintf(ob->fstr[di], sizeof ob->fstr[di], "%s", ob->fstr[si]);
+        ob->fis_str[di] = 1;
+      } else {
+        ob->fnum[di] = ob->fnum[si];
+        ob->fis_str[di] = 0;
+      }
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "COPYF_N", n);
+    var_set_num(vm, "COPYFALL_N", n);
+    var_set_num(vm, "MAPCOPYF_N", n);
+    var_set_num(vm, "COPYF_SKIP", n_skip);
+    var_set_str(vm, "FIELD", srcf);
+    var_set_str(vm, "SRC", srcf);
+    var_set_str(vm, "DST", dstf);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* INCFALL|ADDFALL|DECFALL [Class] field [delta]
    * — add delta (default +1; DECFALL default −1) to numeric field on every live obj.
    * Soft always; missing or string fields skipped (INCFALL_SKIP). LAST_N = update count.

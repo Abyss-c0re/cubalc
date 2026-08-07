@@ -1,0 +1,115 @@
+# COPYF / COPYFALL — copy field→field on every live object
+# Usability: snapshot before tick/mutation without EACH+GETF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# Cell has energy + age; snapshot energy into age then restore
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+# init sets age=0; energy is 10/20/30
+COPYF Cell energy age
+ASSERT OK == 1
+ASSERT COPYF_N == 3
+ASSERT LAST_N == 3
+ASSERT COPYF_SKIP == 0
+GETF a age
+ASSERT LAST_N == 10
+GETF b age
+ASSERT LAST_N == 20
+GETF c age
+ASSERT LAST_N == 30
+# energy unchanged
+GETF a energy
+ASSERT LAST_N == 10
+
+# TO sugar
+SETF a energy 11
+SETF b energy 22
+SETF c energy 33
+COPYF Cell energy TO age
+ASSERT COPYF_N == 3
+GETF a age
+ASSERT LAST_N == 11
+GETF b age
+ASSERT LAST_N == 22
+
+# OF sugar
+SETFALL Cell energy 5
+COPYF OF Cell energy age
+GETF a age
+ASSERT LAST_N == 5
+GETF c age
+ASSERT LAST_N == 5
+
+# aliases
+SETFALL Cell energy 7
+COPYFALL Cell energy age
+ASSERT COPYFALL_N == 3
+GETF b age
+ASSERT LAST_N == 7
+SNAPSHOTF Cell energy age
+ASSERT LAST_N == 3
+BACKUPF Cell energy age
+ASSERT LAST_N == 3
+
+# string field copy
+CLASS Ticket
+  FIELD status "new"
+  FIELD prev ""
+  METHOD init s
+    SETF THIS status s
+    SETF THIS prev ""
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "closed"
+COPYF Ticket status prev
+ASSERT COPYF_N == 2
+GETF t1 prev
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+GETF t2 prev
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+# status unchanged
+GETF t1 status
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+
+# bare fields (all classes with both fields)
+CLASS Counter
+  FIELD n 0
+  FIELD m 0
+  METHOD init x
+    SETF THIS n x
+    SETF THIS m 0
+  END
+END
+NEW Counter k1 9
+NEW Counter k2 15
+COPYF n m
+ASSERT COPYF_N == 2
+GETF k1 m
+ASSERT LAST_N == 9
+GETF k2 m
+ASSERT LAST_N == 15
+
+# class filter
+SETF k1 n 100
+COPYF Counter n m
+ASSERT COPYF_N == 2
+GETF k1 m
+ASSERT LAST_N == 100
+GETF k2 m
+ASSERT LAST_N == 15
+
+# missing dst field soft skip
+COPYF Ticket status age
+ASSERT COPYF_N == 0
+ASSERT COPYF_SKIP == 2
+
+PRINT "proof903_oop_copyf" 1
+ASSERT OK == 1
