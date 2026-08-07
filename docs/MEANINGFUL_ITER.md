@@ -352,6 +352,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 322. ~~**`SYS DIFFISO` / `ISOAGE`**~~ **done** (ISO − ISO / now−ISO secs · dual ADDISO · no PARSEISO+TIMEDIFF glue).
 323. ~~**OOP/COP plane**~~ **done** (`CLASS`/`METHOD`/`NEW`/`SEND` · `ENTITY`/`SPAWN`/`TICK` · reusable cubes beyond FN).
 324. ~~**INCLUDE retains source**~~ **done** (FN/CLASS METHOD bodies from lib stay valid · life_cell + life_engine).
+325. ~~**`SYS HUMANSECS` / `HUMANAGE`**~~ **done** (secs → 5s/1m30s labels · AGE/REMAINING/DIFFISO without SEC2MS+HUMANMS).
 
 ## Tick protocol
 

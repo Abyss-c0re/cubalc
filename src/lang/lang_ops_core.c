@@ -13383,6 +13383,85 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS HUMANSECS|HUMANAGE|FMTSECS|SECSFMT|PRETTYSECS [n|LAST_N]
+     * — format non-negative seconds as compact human duration (no ms unit).
+     * LAST e.g. "0s", "5s", "1m30s", "2h", "1d". LAST_N / HUMANSECS_N = input secs.
+     * Signed input: leading "-" on label, magnitude formatted (DIFFISO ages).
+     * Usability: AGE / REMAINING / TIMEDIFF / DIFFISO plate labels without
+     * SEC2MS + HUMANMS glue. Dual of HUMANMS for host second-plane values. */
+    if (kw(&L->cur,"HUMANSECS") || kw(&L->cur,"HUMANAGE") || kw(&L->cur,"FMTSECS") ||
+        kw(&L->cur,"SECSFMT") || kw(&L->cur,"PRETTYSECS") || kw(&L->cur,"SECSHUMAN") ||
+        kw(&L->cur,"HUMANS") || kw(&L->cur,"AGESTR") || kw(&L->cur,"FMTAGE") ||
+        kw(&L->cur,"SECHUMAN") || kw(&L->cur,"PRETTYAGE") || kw(&L->cur,"DURSECS")){
+      long n = vm->last_n, mag;
+      int neg = 0;
+      unsigned long long u, w, d, h, m, s;
+      char buf[96];
+      size_t o = 0;
+      int parts = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      mag = n;
+      if (mag < 0) {
+        neg = 1;
+        if (mag <= -LONG_MAX) mag = LONG_MAX;
+        else mag = -mag;
+      }
+      u = (unsigned long long)mag;
+      w = u / (7ULL * 24ULL * 60ULL * 60ULL);
+      u %= (7ULL * 24ULL * 60ULL * 60ULL);
+      d = u / (24ULL * 60ULL * 60ULL);
+      u %= (24ULL * 60ULL * 60ULL);
+      h = u / (60ULL * 60ULL);
+      u %= (60ULL * 60ULL);
+      m = u / 60ULL;
+      s = u % 60ULL;
+      buf[0] = 0;
+      o = 0;
+      if (neg) {
+        buf[o++] = '-';
+        buf[o] = 0;
+      }
+#define CUBALC_HSEC_PART(val, suf) do { \
+        if ((val) > 0) { \
+          int wrote = snprintf(buf + o, sizeof(buf) - o, "%llu%s", \
+                               (unsigned long long)(val), (suf)); \
+          if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0; \
+          o += (size_t)wrote; \
+          parts++; \
+        } \
+      } while (0)
+      CUBALC_HSEC_PART(w, "w");
+      CUBALC_HSEC_PART(d, "d");
+      CUBALC_HSEC_PART(h, "h");
+      CUBALC_HSEC_PART(m, "m");
+      /* always include seconds when zero whole duration or residual secs */
+      if (s > 0 || parts == 0) {
+        int wrote = snprintf(buf + o, sizeof(buf) - o, "%llus",
+                             (unsigned long long)s);
+        if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0;
+        o += (size_t)wrote;
+        parts++;
+      }
+#undef CUBALC_HSEC_PART
+      if (o >= sizeof(buf)) o = sizeof(buf) - 1;
+      buf[o] = 0;
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANSECS", buf);
+      var_set_str(vm, "HUMANAGE", buf);
+      var_set_str(vm, "FMTSECS", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "HUMANSECS_N", n);
+      var_set_num(vm, "HUMANAGE_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS MS2SEC|TOSECS|FROMMS|MS_TO_SEC [n|LAST_N]
      * — floor(ms / 1000) → seconds for DEADLINE/ADDTIME after PARSEMS.
      * SYS SEC2MS|MSECFROM|SECS2MS|SEC_TO_MS [n|LAST_N]
@@ -25332,6 +25411,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS HUMANMS", "SYS HUMANMS|FMTMS [n] — ms → 5s/1m30s plate label · dual of PARSEMS"},
       {"SYS FMTMS", "SYS FMTMS [n] — alias of SYS HUMANMS"},
       {"SYS HUMANDUR", "SYS HUMANDUR [n] — alias of SYS HUMANMS"},
+      {"SYS HUMANSECS", "SYS HUMANSECS|HUMANAGE|FMTSECS [n] — secs → 5s/1m30s · AGE/REMAINING labels"},
+      {"SYS HUMANAGE", "SYS HUMANAGE [n] — alias of SYS HUMANSECS"},
+      {"SYS FMTSECS", "SYS FMTSECS [n] — alias of SYS HUMANSECS"},
       {"SYS RANDOM", "SYS RANDOM [n]|[lo hi] — alias of SYS RAND"},
       {"SYS PICK", "SYS PICK|CHOICE|SAMPLE [str] — random newline field → LAST · index LAST_N"},
       {"SYS CHOICE", "SYS CHOICE [str] — alias of SYS PICK · sample LIST/RANGE bag"},

@@ -1,0 +1,90 @@
+# SYS HUMANSECS / HUMANAGE / FMTSECS — seconds → human duration labels
+# Usability: AGE / REMAINING / DIFFISO / TIMEDIFF plates without SEC2MS+HUMANMS
+
+HOLD_FLASH 1
+
+# zero
+SYS HUMANSECS 0
+ASSERT OK == 1
+SYS EQS LAST "0s"
+ASSERT LAST_N == 1
+ASSERT HUMANSECS_N == 0
+
+# pure seconds
+SYS HUMANSECS 5
+SYS EQS LAST "5s"
+ASSERT LAST_N == 1
+ASSERT HUMANSECS_N == 5
+
+# minutes + seconds
+SYS HUMANSECS 90
+SYS EQS LAST "1m30s"
+ASSERT LAST_N == 1
+
+SYS HUMANSECS 60
+SYS EQS LAST "1m"
+ASSERT LAST_N == 1
+
+# hours
+SYS HUMANSECS 3600
+SYS EQS LAST "1h"
+ASSERT LAST_N == 1
+
+SYS HUMANSECS 3661
+SYS EQS LAST "1h1m1s"
+ASSERT LAST_N == 1
+
+# days / weeks
+SYS HUMANSECS 86400
+SYS EQS LAST "1d"
+ASSERT LAST_N == 1
+
+SYS HUMANSECS 604800
+SYS EQS LAST "1w"
+ASSERT LAST_N == 1
+
+# compound
+SYS HUMANSECS 90061
+SYS EQS LAST "1d1h1m1s"
+ASSERT LAST_N == 1
+
+# signed (DIFFISO future / countdown feel)
+SYS HUMANSECS -90
+SYS EQS LAST "-1m30s"
+ASSERT LAST_N == 1
+ASSERT HUMANSECS_N == -90
+
+# aliases
+SYS HUMANAGE 120
+SYS EQS LAST "2m"
+ASSERT LAST_N == 1
+SYS FMTSECS 45
+SYS EQS LAST "45s"
+ASSERT LAST_N == 1
+
+# chain: REMAINING-style LAST_N → label
+SYS DEADLINE "2m"
+LET due = LAST_N
+SYS REMAINING due
+LET left = LAST_N
+ASSERT left >= 110
+ASSERT left <= 120
+SYS HUMANSECS left
+LET lab = LAST
+# 110..120s → 1m50s..2m
+SYS HAS lab "m"
+ASSERT LAST_N == 1 "human label contains minutes"
+
+# chain: AGE file
+SYS TMP
+LET td = LAST
+SYS JOIN td "humansecs_age_fix"
+LET p = LAST
+SYS WRITE p "x"
+SYS AGE p
+SYS HUMANSECS LAST_N
+# fresh file → 0s
+SYS EQS LAST "0s"
+ASSERT LAST_N == 1
+
+PRINT "sys_humansecs ok"

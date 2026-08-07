@@ -2004,6 +2004,7 @@ int main(int argc, char **argv) {
       {"cop_entity_tick", "programs/proof/863_cop_entity_tick.cubalc", "ENTITY/SPAWN/TICK COP game-engine plane"},
       {"life_engine", "programs/proof/865_life_engine_division.cubalc", "COP life engine cell division mitosis demo"},
       {"include_class_lib", "programs/proof/864_include_class_lib.cubalc", "INCLUDE retains CLASS/METHOD bodies from programs/lib"},
+      {"sys_humansecs", "programs/proof/866_sys_humansecs.cubalc", "SYS HUMANSECS/HUMANAGE seconds to human duration labels"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5874,6 +5875,7 @@ int main(int argc, char **argv) {
       {"programs/proof/863_cop_entity_tick.cubalc", "cop_entity_tick", "ENTITY/SPAWN/TICK COP game-engine plane"},
       {"programs/proof/865_life_engine_division.cubalc", "life_engine", "COP life engine cell division mitosis demo"},
       {"programs/proof/864_include_class_lib.cubalc", "include_class_lib", "INCLUDE retains CLASS/METHOD bodies from programs/lib"},
+      {"programs/proof/866_sys_humansecs.cubalc", "sys_humansecs", "SYS HUMANSECS/HUMANAGE seconds to human duration labels"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6137,6 +6139,7 @@ int main(int argc, char **argv) {
       {"programs/proof/863_cop_entity_tick.cubalc", "cop_entity_tick", "ENTITY/SPAWN/TICK COP game-engine plane"},
       {"programs/proof/865_life_engine_division.cubalc", "life_engine", "COP life engine cell division mitosis demo"},
       {"programs/proof/864_include_class_lib.cubalc", "include_class_lib", "INCLUDE retains CLASS/METHOD bodies from programs/lib"},
+      {"programs/proof/866_sys_humansecs.cubalc", "sys_humansecs", "SYS HUMANSECS/HUMANAGE seconds to human duration labels"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
