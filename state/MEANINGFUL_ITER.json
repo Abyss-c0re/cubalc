@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 386,
-  "version": "1.15.413-usability",
-  "item": "SORTBAGF/UNIQBAGF/UNIQUEBAGF bag hygiene on fields",
-  "item_id": 422,
-  "title": "SORTBAGF|UNIQBAGF|UNIQUEBAGF — sort/dedupe bag lines in field",
-  "commit": "dfd975567f2349c6896a9540ca8400bde900fc97",
-  "summary": "Worklist sort/dedupe without GETF+SYS SORT/UNIQ+SETF. Soft miss. proof 963 38/38.",
+  "iter": 387,
+  "version": "1.15.414-usability",
+  "item": "LINESF/HASBAGLINE/DROPBAGLINE bag count and ack",
+  "item_id": 423,
+  "title": "LINESF|HASBAGLINE|DROPBAGLINE — bag count/membership/ack on fields",
+  "commit": "815efd9aa132458e07f881a69e585c6255a93190",
+  "summary": "Work-queue IF/ack without GETF+SYS LINES/HASLINE/REMOVELINE+SETF. proof 964 53/53.",
   "proofs": [
-    "963_oop_sortbagf",
-    "asserts 38/38",
-    "962 still green"
+    "964_oop_hasbagline",
+    "asserts 53/53",
+    "963 still green"
   ],
-  "when": "2026-08-07T18:19:18Z",
+  "when": "2026-08-07T18:25:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dfd975567f2349c6896a9540ca8400bde900fc97",
-  "note": "UNIQUEBAGF not fleet DISTINCTF; SORTF alias of SORTBAGF"
+  "sha": "815efd9aa132458e07f881a69e585c6255a93190",
+  "note": "HASBAGLINEI/DROPBAGLINEI; not file HASLINEF"
 }
