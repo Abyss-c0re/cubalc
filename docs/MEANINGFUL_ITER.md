@@ -415,6 +415,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 385. ~~**`DRAWNOBJ` / `SAMPLEKOBJ` / `PICKNOBJ`**~~ **done** (sample k unique live objs · no LISTOBJS+SYS DRAWN glue).
 386. ~~**`SHUFFLEOBJS` / `SHUFOBJS` / `PERMUTEOBJS`**~~ **done** (shuffle live object names · no LISTOBJS+SYS SHUFFLE glue).
 387. ~~**`CLASSINFO` / `DUMPCLASS` / `DESCRIBECLASS`**~~ **done** (class schema plate fields/methods/live · no LISTFIELDS+LISTMETHODS+count glue).
+388. ~~**`METHODINFO` / `DUMPMETHOD` / `DESCRIBEMETHOD`**~~ **done** (method arity/params plate · no HASMETHOD-only guess for SEND).
 
 ## Tick protocol
 

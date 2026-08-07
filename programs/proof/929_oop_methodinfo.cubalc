@@ -1,0 +1,131 @@
+# METHODINFO / DUMPMETHOD — method arity/params plate for agent SEND prep
+# Usability: no HASMETHOD-only guess of formals
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+
+# init a e g — 3 params
+METHODINFO Cell init
+ASSERT OK == 1
+ASSERT METHODINFO_N == 3
+ASSERT NPARAMS == 3
+ASSERT ARITY == 3
+ASSERT LAST_N == 3
+SYS EQS METHOD "init"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Cell"
+ASSERT LAST_N == 1
+SYS HAS LAST "name:init"
+ASSERT LAST_N == 1
+SYS HAS LAST "class:Cell"
+ASSERT LAST_N == 1
+SYS HAS LAST "n_params:3"
+ASSERT LAST_N == 1
+SYS HAS LAST "params:"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "a"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "e"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "g"
+ASSERT LAST_N == 1
+
+# tick — 0 params
+METHODINFO Cell tick
+ASSERT OK == 1
+ASSERT NPARAMS == 0
+ASSERT ARITY == 0
+SYS HAS LAST "n_params:0"
+ASSERT LAST_N == 1
+SYS EQS PARAMS ""
+ASSERT LAST_N == 1
+
+# JSON plate
+METHODINFO JSON Cell init
+ASSERT OK == 1
+SYS HAS LAST "cubalc.method.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"name\":\"init\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"class\":\"Cell\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"n_params\":3"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"params\":["
+ASSERT LAST_N == 1
+
+# from live object
+METHODINFO a init
+ASSERT OK == 1
+ASSERT NPARAMS == 3
+SYS EQS CLASS "Cell"
+ASSERT LAST_N == 1
+
+# string method name
+METHODINFO Cell "tick"
+ASSERT OK == 1
+ASSERT ARITY == 0
+
+# METHOD keyword sugar
+METHODINFO Cell METHOD init
+ASSERT NPARAMS == 3
+
+# aliases
+DUMPMETHOD Cell tick
+ASSERT OK == 1
+ASSERT ARITY == 0
+DESCRIBEMETHOD JSON a init
+SYS HAS LAST "cubalc.method.v1"
+ASSERT LAST_N == 1
+METHINFO Cell init
+ASSERT NPARAMS == 3
+PARAMINFO Cell init
+ASSERT METHODINFO_N == 3
+
+# dynamic method name var
+LET m = "tick"
+METHODINFO Cell m
+ASSERT OK == 1
+ASSERT ARITY == 0
+SYS EQS METHOD "tick"
+ASSERT LAST_N == 1
+
+# unknown method soft
+METHODINFO Cell nosuch
+ASSERT OK == 0
+ASSERT NPARAMS == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# unknown class soft
+METHODINFO NoClass init
+ASSERT OK == 0
+ASSERT METHODINFO_N == 0
+
+# custom class multi-param
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+  METHOD bump
+    INCF THIS retries
+  END
+END
+METHODINFO Ticket init
+ASSERT OK == 1
+ASSERT NPARAMS == 2
+SYS HAS PARAMS "s"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "r"
+ASSERT LAST_N == 1
+METHODINFO Ticket bump
+ASSERT NPARAMS == 0
+
+PRINT "proof929_oop_methodinfo" 1
+ASSERT OK == 1

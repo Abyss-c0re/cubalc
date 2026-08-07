@@ -2067,6 +2067,7 @@ int main(int argc, char **argv) {
       {"oop_drawnobj", "programs/proof/926_oop_drawnobj.cubalc", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"oop_shuffleobjs", "programs/proof/927_oop_shuffleobjs.cubalc", "SHUFFLEOBJS/SHUFOBJS shuffle live object name bag"},
       {"oop_classinfo", "programs/proof/928_oop_classinfo.cubalc", "CLASSINFO/DUMPCLASS class schema plate for agents"},
+      {"oop_methodinfo", "programs/proof/929_oop_methodinfo.cubalc", "METHODINFO/DUMPMETHOD method arity/params plate"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -6001,6 +6002,7 @@ int main(int argc, char **argv) {
       {"programs/proof/926_oop_drawnobj.cubalc", "oop_drawnobj", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"programs/proof/927_oop_shuffleobjs.cubalc", "oop_shuffleobjs", "SHUFFLEOBJS/SHUFOBJS shuffle live object name bag"},
       {"programs/proof/928_oop_classinfo.cubalc", "oop_classinfo", "CLASSINFO/DUMPCLASS class schema plate for agents"},
+      {"programs/proof/929_oop_methodinfo.cubalc", "oop_methodinfo", "METHODINFO/DUMPMETHOD method arity/params plate"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6327,6 +6329,7 @@ int main(int argc, char **argv) {
       {"programs/proof/926_oop_drawnobj.cubalc", "oop_drawnobj", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"programs/proof/927_oop_shuffleobjs.cubalc", "oop_shuffleobjs", "SHUFFLEOBJS/SHUFOBJS shuffle live object name bag"},
       {"programs/proof/928_oop_classinfo.cubalc", "oop_classinfo", "CLASSINFO/DUMPCLASS class schema plate for agents"},
+      {"programs/proof/929_oop_methodinfo.cubalc", "oop_methodinfo", "METHODINFO/DUMPMETHOD method arity/params plate"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

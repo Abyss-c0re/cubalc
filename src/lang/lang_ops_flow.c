@@ -10932,6 +10932,150 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* METHODINFO|DUMPMETHOD|DESCRIBEMETHOD [JSON] Class|obj method
+   * — method arity/params plate for agent SEND prep.
+   * Default bag: name/class/n_params/params. JSON → cubalc.method.v1.
+   * Soft OK=0 if class or method missing. Complements HASMETHOD + CLASSINFO. */
+  if (kw(&L->cur, "METHODINFO") || kw(&L->cur, "DUMPMETHOD") ||
+      kw(&L->cur, "DESCRIBEMETHOD") || kw(&L->cur, "METHINFO") ||
+      kw(&L->cur, "INSPECTMETHOD") || kw(&L->cur, "METHODMETA") ||
+      kw(&L->cur, "ARITY") || kw(&L->cur, "METHODDEF") ||
+      kw(&L->cur, "METHODSCHEMA") || kw(&L->cur, "PARAMINFO")) {
+    char a[48], mname[48], bag[2048], pbag[512];
+    ClassDef *cd = NULL;
+    MethodDef *md = NULL;
+    ObjInst *ob;
+    size_t o = 0, po = 0;
+    int i, as_json = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "METHODINFO [JSON] Class|obj method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional METHOD keyword before name */
+    if (kw(&L->cur, "METHOD") || kw(&L->cur, "METH") || kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(mname, sizeof mname, "%s", vm->last_str);
+      else
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "METHODINFO [JSON] Class|obj method"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) md = oop_find_method(cd, mname);
+    bag[0] = 0;
+    pbag[0] = 0;
+    if (!cd || !md) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NPARAMS", 0);
+      var_set_num(vm, "METHODINFO_N", 0);
+      var_set_num(vm, "ARITY", 0);
+      var_set_str(vm, "METHODINFO", "");
+      var_set_str(vm, "PARAMS", "");
+      var_set_str(vm, "METHOD", mname);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  !cd ? "METHODINFO: unknown class/obj"
+                      : "METHODINFO: unknown method");
+      var_set_str(vm, "ERR",
+                  !cd ? "METHODINFO: unknown class/obj"
+                      : "METHODINFO: unknown method");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < md->n_params; i++) {
+      size_t ln = strlen(md->params[i]);
+      if (i > 0 && po + 1 < sizeof pbag) pbag[po++] = ',';
+      if (po + ln < sizeof pbag) {
+        memcpy(pbag + po, md->params[i], ln);
+        po += ln;
+      }
+      pbag[po] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.method.v1\",\"class\":\"%s\",\"name\":\"%s\","
+          "\"n_params\":%d,\"params\":[",
+          cd->name, md->name, md->n_params);
+      for (i = 0; i < md->n_params && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"", md->params[i]);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nclass:%s\nn_params:%d\nparams:%s",
+          md->name, cd->name, md->n_params, pbag);
+      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "METHODINFO", bag);
+    var_set_str(vm, "DUMPMETHOD", bag);
+    var_set_str(vm, "DESCRIBEMETHOD", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = md->n_params;
+    var_set_num(vm, "LAST_N", md->n_params);
+    var_set_num(vm, "NPARAMS", md->n_params);
+    var_set_num(vm, "METHODINFO_N", md->n_params);
+    var_set_num(vm, "ARITY", md->n_params);
+    var_set_str(vm, "METHOD", md->name);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "PARAMS", pbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* DUMPOBJ|INSPECT|OBJDUMP|DUMPF obj — field:value bag of live object state.
    * Complements LISTFIELDS (names only): one-shot snapshot for agents without
    * EACH+GETF. LAST = newline bag field:val (LOOKUP/KVGET ready); LAST_N =
