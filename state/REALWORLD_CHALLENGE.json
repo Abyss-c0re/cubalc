@@ -1,57 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 144,
-  "program": "programs/realworld/session_token_scrub_board.cubalc",
-  "theme": "CLEARF/EQF/LEFTF/TRUNCF session token redact and status gate",
-  "version": "1.15.397-usability",
+  "iter": 145,
+  "program": "programs/realworld/metric_label_peel_board.cubalc",
+  "theme": "BEFOREF/AFTERF/BETWEENF + NUMF/STRF metric label peel coerce",
+  "version": "1.15.399-usability",
   "pass": true,
-  "prior_note": "iter 143 LENF/HASINF read-only gates; this iter stresses CLEARF (f198b15) EQF/FINDF (d02ae74) LEFTF/TRUNCF (7b15817)",
+  "prior_note": "iter 144 CLEARF/EQF/LEFTF session tokens; this iter stresses BEFOREF (03cc223) + NUMF (2771755)",
   "tests": [
     {
-      "name": "open_sessions",
-      "cmd": "open s0/s1 with full tokens status active",
+      "name": "open_labels",
+      "cmd": "open m0 web01:cpu=42; m1 svc[code=99]; m2 plain",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "eq_gate",
-      "cmd": "EQF status active admit; revoked miss",
+      "name": "host_peel",
+      "cmd": "BEFOREF : \u2192 web01",
       "ok": true,
-      "note": "EQF"
+      "note": "BEFOREF"
     },
     {
-      "name": "redact",
-      "cmd": "LEFTF token 8 \u2192 tok_abcd",
+      "name": "name_peel",
+      "cmd": "AFTERF : + BEFOREF = \u2192 cpu",
       "ok": true,
-      "note": "LEFTF"
+      "note": "AFTERF"
     },
     {
-      "name": "find_peel",
-      "cmd": "FINDF : idx 4; SLICEF peel \u2192 login:ok",
+      "name": "val_num",
+      "cmd": "AFTERF = \u2192 42; NUMF \u2192 value 42 NUMF_OK=1",
       "ok": true,
-      "note": "FINDF+SLICEF"
+      "note": "NUMF"
     },
     {
-      "name": "clear_reset",
-      "cmd": "CLEARF token + revoked; RESETF status active",
+      "name": "bump_emit",
+      "cmd": "INCF +3 \u2192 45; emit web01:cpu=45",
       "ok": true,
-      "note": "CLEARF/RESETF"
+      "note": "INCF+CATF"
     },
     {
-      "name": "default",
-      "cmd": "DEFAULTF fill when empty N=1; skip when set N=0",
+      "name": "between",
+      "cmd": "BETWEENF [ ] \u2192 code=99",
       "ok": true,
-      "note": "DEFAULTF"
+      "note": "BETWEENF"
     },
     {
-      "name": "trunc",
-      "cmd": "TRUNCF token 4 \u2192 anon",
+      "name": "num_junk",
+      "cmd": "AFTER miss empty; NUMF junk \u2192 0 NUMF_OK=0",
       "ok": true,
-      "note": "TRUNCF"
+      "note": "soft coerce"
+    },
+    {
+      "name": "gate",
+      "cmd": "value>=MINV admit; high MINV deny REQUIRE\u21922",
+      "ok": true,
+      "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYLEFTF/TRYCLEARF soft; FINDF empty \u2192 0",
+      "cmd": "TRYBEFOREF/TRYNUMF soft; empty needle BEFORE blanks",
       "ok": true,
       "note": "probe"
     },
@@ -66,50 +72,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|leftf|keyword",
-      "title": "LEFTF/TRUNCF glue steals N/WIDTH/TO/LEN/BY vars",
-      "detail": "Optional glue before length expr: TO|OF|LEN|WIDTH|N|BY. LEFTF s token N or LEFTF s token WIDTH consumes the var name as glue then fails LEFTF object field n. Must use non-glue names (KLEN).",
-      "repro": "LEFTF s0 token N \u2192 parse fail; LEFTF s0 token WIDTH \u2192 parse fail; KLEN works"
+      "area": "oop|beforef",
+      "title": "BEFOREF/AFTERF only first delimiter occurrence",
+      "detail": "Path a/b/c peels first / only. Nested metrics host:ns:name need repeated AFTERF. No LAST-delimiter peel.",
+      "repro": "AFTERF path / \u2192 b/c.txt not c.txt"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|leftf",
-      "title": "LEFTF/TRUNCF promote numeric fields to string",
-      "detail": "Same poison class as CATF; digit peel leaves string field.",
-      "repro": "proof 947 LEFTF retries 3 \u2192 string 123"
+      "area": "oop|beforef",
+      "title": "BEFORE miss keeps whole; AFTER miss empties \u2014 asymmetric",
+      "detail": "Agents must check BEFOREF_N/AFTERF_N; silent whole-keep on BEFORE miss can look like success host=full_label.",
+      "repro": "BEFOREF nocolon \u2192 LAST_N=0 still whole string"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|clearf",
-      "title": "CLEARF has no selective secret policy / audit trail",
-      "detail": "Wipe is silent; agents must journal separately. No CLEARF WHERE fleet wipe.",
-      "repro": "clear per-slot only"
+      "area": "oop|numf",
+      "title": "NUMF partial parse 42x\u219242 NUMF_OK=1",
+      "detail": "Looks successful while trailing junk discarded. No strict full-string numeric mode.",
+      "repro": "proof 949 mixed 42x"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|findf",
-      "title": "FINDF empty needle \u2192 index 0 always",
-      "detail": "Same empty-needle class as HASINF; peel with empty NEEDLE peels whole string from 0+1.",
-      "repro": "FINDF label \"\" \u2192 0"
+      "area": "oop|peel",
+      "title": "No multi-field peel macro \u2014 copy label to host/name/tag first",
+      "detail": "BEFOREF mutates in place; must GETF label + SETF scratch field before each peel or destroy source.",
+      "repro": "host action copies label to host then peels"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|eqf",
-      "title": "EQF case-sensitive by default \u2014 need EQFI for status Open/open",
-      "detail": "Easy gate miss if mixed case from intake.",
-      "repro": "EQF status open vs Open"
+      "area": "oop|beforef",
+      "title": "Empty needle BEFORE\u2192empty AFTER\u2192whole",
+      "detail": "Dangerous with blank SEP env; can wipe field.",
+      "repro": "probe empty_before blanks field"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|defaultf",
-      "title": "DEFAULTF treats blank whitespace as empty",
-      "detail": "Fill triggers on \"   \"; may surprise if intentional pad.",
-      "repro": "proof 945 DEFAULTF blank note"
+      "area": "oop|strf",
+      "title": "STRF normalizes leading zeros 07\u21927",
+      "detail": "May break zero-padded metric ids if treated as numbers.",
+      "repro": "proof 949 STRF 07"
     },
     {
       "id": "W7",
@@ -125,29 +131,29 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc gate deny soft path"
+      "repro": "REQUIRE=abc gate soft path"
     }
   ],
   "workarounds": [
-    "Never name LEFTF/TRUNCF length vars N/WIDTH/TO/LEN; use KLEN",
-    "Capture FINDF_N before EQS; reject empty NEEDLE for peel",
-    "EQFI for case-insensitive status gates",
-    "DEFAULTF only after intentional CLEARF",
-    "Fixed s0/s1/s2; TRY* soft probes"
+    "Copy label to scratch fields before each BEFOREF/AFTERF",
+    "Check BEFOREF_N/AFTERF_N/NUMF_OK not only LAST",
+    "Reject empty SEP before peel",
+    "Partial NUMF: validate with ENDSF/EQF digits if strict",
+    "Fixed m0/m1/m2; TRY* soft probes"
   ],
   "language_gaps": [
-    "LEFTF length glue must not steal string/num vars named N/WIDTH",
-    "CLEARFALL secret fleet wipe + audit flag",
-    "Strict empty-needle policy for FINDF",
+    "Last-delimiter / split-all peel",
+    "Strict NUMF full-string only mode",
+    "Non-destructive peels (return without mutate)",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "LEFTF token N and WIDTH both parse-failed on glue keywords",
-    "Renamed KLEN; redact tok_abcd; FINDF : peel login:ok",
-    "CLEARF wipe+revoked; RESETF active; DEFAULTF fill/skip",
-    "TRUNCF 4 \u2192 anon; gate active admit/deny",
+    "BEFOREF host web01; AFTERF name cpu; AFTERF val 42",
+    "NUMF\u219242 INCF+3\u219245 emit web01:cpu=45",
+    "BETWEENF code=99; junk AFTER empty NUMF_OK=0",
+    "Empty needle BEFORE blanks tag in probe",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "e07d5579c3bb8e36c8a8b13c2ea29299858d530b",
-  "ts": "2026-08-07T15:39:47Z"
+  "commit": "",
+  "ts": "2026-08-07T16:04:39Z"
 }

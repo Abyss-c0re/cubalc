@@ -1,0 +1,6 @@
+id:m0
+label:web01:cpu=45
+host:web01
+name:cpu
+value:45
+tag:42
