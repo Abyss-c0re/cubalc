@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 407,
-  "version": "1.15.434-usability",
-  "item": "REQUIRE RESTARGS min positionals",
-  "item_id": 443,
-  "title": "REQUIRE RESTARGS|POS [min] fail-fast non-flag count \u00b7 LAST=bag",
-  "commit": "293d44e0591483f2bd7a4740cbd1de68054d071a",
-  "summary": "Min non-flag positionals gate (flags ignored); LAST bag + USAGE tip. proof 984 14/14.",
+  "iter": 408,
+  "version": "1.15.435-usability",
+  "item": "HASRESTARGS soft positional probe",
+  "item_id": 444,
+  "title": "HASRESTARGS|HASPOS [min] soft 0|1 non-flag count",
+  "commit": "d26b389573e5f01a7e7e38519af55def8d22e988",
+  "summary": "Soft min non-flag probe twin REQUIRE RESTARGS; thrash restore. proof 985 12/12.",
   "proofs": [
-    "984_require_restargs",
-    "asserts 14/14",
-    "smoke REQUIRE RESTARGS 1 -- --mode=x in.txt",
-    "fail REQUIRE RESTARGS 1 with USAGE tip"
+    "985_hasrestargs",
+    "asserts 12/12",
+    "smoke HASRESTARGS 1 -- --mode=x only.txt"
   ],
-  "when": "2026-08-07T21:54:29Z",
+  "when": "2026-08-07T22:04:31Z",
   "agent": "meaningful_iter_10m",
-  "sha": "293d44e0591483f2bd7a4740cbd1de68054d071a",
-  "note": "no thrash; EVOLVE_PAUSED"
+  "sha": "d26b389573e5f01a7e7e38519af55def8d22e988",
+  "note": "thrash restore before implement; EVOLVE_PAUSED"
 }
