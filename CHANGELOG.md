@@ -1,3 +1,12 @@
+## Meaningful — COP life engine cell division demo — 2026-08-07
+
+### Demo
+- `programs/apps/life_engine/` petri-dish game loop: Cell CLASS, TICK growth, mitosis into free slots, FLOW medium
+- `programs/lib/life_cell.cubalc` INCLUDE-safe Cell type
+- INCLUDE keeps source buffers so CLASS METHOD bodies remain valid
+- Proof: `865_life_engine_division.cubalc`
+- Version: `1.15.316-usability`
+
 ## Meaningful — OOP + COP engine plane (beyond C++) — 2026-08-07
 
 ### Language

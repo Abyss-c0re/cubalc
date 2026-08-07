@@ -8,7 +8,7 @@
 # Run:
 #   ./out/cubalc run programs/apps/life_engine/life_engine.cubalc
 # Short / assert mode:
-#   ./out/cubalc run programs/proof/864_life_engine_division.cubalc
+#   ./out/cubalc run programs/proof/865_life_engine_division.cubalc
 #
 # Optional: CUBALC_LIFE_STEPS=n  (default 12)
 

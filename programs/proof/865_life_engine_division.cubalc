@@ -1,0 +1,59 @@
+# Proof 865 — life engine: cell division (mitosis) + population growth
+# Short assert gate for the COP life_engine demo
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+SCIENCE LOAD
+SCENE petri
+CUBE medium ROLE host PROTON 1
+ENTITY c0 OF Cell 1 8 0
+ENTITY c1 OF Cell 0 0 0
+ENTITY c2 OF Cell 0 0 0
+ENTITY c3 OF Cell 0 0 0
+PLUG medium c0
+IMPULSE medium 1
+
+LET births = 0
+LET s = 0
+WHILE s < 6
+  TICK 1
+  FLOW 1
+  GETF c0 alive
+  LET al = LAST_N
+  GETF c0 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c0 energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF c0 gen
+      LET dg = LAST_N + 1
+      GETF c1 alive
+      IF LAST_N == 0 THEN
+        SEND c1 birth half dg
+        SEND c0 after_div
+        PLUG medium c1
+        LET births = births + 1
+      END
+    END
+  END
+  LET s = s + 1
+END
+
+GETF c0 alive
+LET a0 = LAST_N
+GETF c1 alive
+LET a1 = LAST_N
+LET pop = a0 + a1
+ASSERT births >= 1 "mitosis birth"
+ASSERT pop >= 2 "population after division"
+GETF c1 gen
+ASSERT LAST_N >= 1 "daughter gen"
+ASSERT CUBES >= 4
+
+PRINT births pop CUBES
+ASSERT OK == 1
