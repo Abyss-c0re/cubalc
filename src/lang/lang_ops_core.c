@@ -2974,6 +2974,88 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ENVDEFAULT|ENSUREENV|DEFAULTENV|SETENVIF name value
+     * — set process env only if name missing or empty (agent boot defaults).
+     * LAST = final value; LAST_N / ENVDEFAULT_N = 1 if wrote, 0 if kept existing.
+     * ENVDEFAULT_SET mirrors LAST_N. Soft fail empty name OK=0.
+     * Usability: DEFAULT for host env without IF HASENV + SETENV glue.
+     * Distinct from SYS ENV OR (read-only fallback) and SETENV (always overwrite). */
+    if (kw(&L->cur,"ENVDEFAULT") || kw(&L->cur,"ENSUREENV") || kw(&L->cur,"DEFAULTENV") ||
+        kw(&L->cur,"SETENVIF") || kw(&L->cur,"SETENVDEFAULT") || kw(&L->cur,"ENVENSURE") ||
+        kw(&L->cur,"PUTENVIF") || kw(&L->cur,"ENV_DEFAULT") || kw(&L->cur,"DEFAULT_ENV") ||
+        kw(&L->cur,"ENSURE_ENV") || kw(&L->cur,"ENVIFUNSET")){
+      char name[256] = "", val[CUBALC_HOST_STR_MAX];
+      const char *cur;
+      int wrote = 0;
+      cubalc_host_result hr;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+        if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+          snprintf(name, sizeof name, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "SYS ENVDEFAULT name value"); return -1;
+        }
+      }
+      if (!name[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "ENVDEFAULT_N", 0);
+        var_set_num(vm, "ENVDEFAULT_SET", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "ENVDEFAULT: empty name");
+        var_set_str(vm, "ERR", "ENVDEFAULT: empty name");
+        bump(vm); return 1;
+      }
+      val[0] = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && !v->is_str) {
+            snprintf(val, sizeof val, "%ld", v->val);
+            lex_next(L);
+          } else if (v && v->is_str) {
+            snprintf(val, sizeof val, "%s", v->sval);
+            lex_next(L);
+          } else {
+            fail(vm, "SYS ENVDEFAULT name value"); return -1;
+          }
+        }
+        /* else empty default value */
+      }
+      cur = getenv(name);
+      if (cur && cur[0]) {
+        /* keep existing non-empty */
+        wrote = 0;
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", cur);
+        var_set_str(vm, "LAST", cur);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "ENVDEFAULT_N", 0);
+        var_set_num(vm, "ENVDEFAULT_SET", 0);
+        var_set_str(vm, "ENVDEFAULT", cur);
+        var_set_num(vm, "OK", 1);
+        bump(vm); return 1;
+      }
+      if (cubalc_host_env_set(name, val, &hr) != 0) {
+        fail(vm, hr.err[0] ? hr.err : "SYS ENVDEFAULT set failed"); return -1;
+      }
+      wrote = 1;
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str[0] ? hr.str : val);
+      var_set_str(vm, "LAST", vm->last_str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "ENVDEFAULT_N", 1);
+      var_set_num(vm, "ENVDEFAULT_SET", 1);
+      var_set_str(vm, "ENVDEFAULT", vm->last_str);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS DOTENV|LOADENV|ENVFILE|SOURCEENV path
      * — load dotenv-style KEY=VAL lines from a plate into process env.
      * Skips blank lines and # comments. Optional "export " prefix.
@@ -23870,6 +23952,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS", "SYS ENV|ARG|READ|WRITE|CWD|STATE|ROOT|TIME|MS … · ENV/ARG OR fallback"},
       {"SYS ENV", "SYS ENV NAME [OR fallback] · ENV SET name val · ENV UNSET name"},
       {"SYS SETENV", "SYS SETENV|ENV SET name value — process setenv (CUBALC_* without shell)"},
+      {"SYS ENVDEFAULT", "SYS ENVDEFAULT|ENSUREENV name value — setenv only if missing/empty"},
+      {"SYS ENSUREENV", "SYS ENSUREENV name value — alias of SYS ENVDEFAULT"},
+      {"SYS DEFAULTENV", "SYS DEFAULTENV name value — alias of SYS ENVDEFAULT"},
       {"SYS UNSETENV", "SYS UNSETENV|ENV UNSET name — process unsetenv · LAST_N 1 if was set"},
       {"SYS DOTENV", "SYS DOTENV|LOADENV|ENVFILE path — load KEY=VAL plate into process env"},
       {"SYS LOADENV", "SYS LOADENV alias of SYS DOTENV"},

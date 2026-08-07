@@ -340,6 +340,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 310. ~~**`SYS FROMTIME` / `EPOCHISO`**~~ **done** (epoch seconds → UTC ISO stamp · MTIME plates without shell date).
 311. ~~**`SYS PARSEISO` / `TOEPOCH`**~~ **done** (ISO stamp → epoch · dual of FROMTIME · plate age/compare).
 312. ~~**`SYS TIMEDIFF` / `ELAPSED`**~~ **done** (epoch second delta a−b or now−a · plate age/deadline math).
+313. ~~**`SYS ENVDEFAULT` / `ENSUREENV`**~~ **done** (setenv only if missing/empty · agent boot defaults).
 
 ## Tick protocol
 
