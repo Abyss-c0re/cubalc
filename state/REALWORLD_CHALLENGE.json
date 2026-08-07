@@ -15,13 +15,13 @@
     },
     {
       "name": "walk_prefix",
-      "cmd": "EACH LINE OF allow PFX=api → pref=2 dig api.prod,api.staging",
+      "cmd": "EACH LINE OF allow PFX=api \u2192 pref=2 dig api.prod,api.staging",
       "ok": true,
       "note": "EACH LINE OF"
     },
     {
       "name": "props",
-      "cmd": "EACH PROP OF a0 → 5 names; OF AllowList class → 5",
+      "cmd": "EACH PROP OF a0 \u2192 5 names; OF AllowList class \u2192 5",
       "ok": true,
       "note": "EACH PROP"
     },
@@ -33,7 +33,7 @@
     },
     {
       "name": "has_gate",
-      "cmd": "has present; missing REQUIRE→2; MINN gate admit/deny",
+      "cmd": "has present; missing REQUIRE\u21922; MINN gate admit/deny",
       "ok": true,
       "note": "gate"
     },
@@ -57,7 +57,7 @@
       "area": "oop|ensurebagline",
       "title": "Empty-string ENSUREBAGLINE appends blank line (NEW=1)",
       "detail": "ENSUREBAGLINE allow \"\" is treated as a real membership add. Agents with blank HOST/ENV can pollute allowlists with empty bag lines that LINESF counts.",
-      "repro": "ENSUREBAGLINE a allow \"\" → NEW=1 N increases"
+      "repro": "ENSUREBAGLINE a allow \"\" \u2192 NEW=1 N increases"
     },
     {
       "id": "W2",
@@ -72,16 +72,16 @@
       "severity": "med",
       "area": "oop|dumpobj|plate",
       "title": "DUMPOBJ multiline allow still plate-unsafe",
-      "detail": "Same class as roster/queue boards — dump/aN.bag side files required for rehydrate.",
+      "detail": "Same class as roster/queue boards \u2014 dump/aN.bag side files required for rehydrate.",
       "repro": "LOOKUP allow after DUMPOBJ truncates at first NL"
     },
     {
       "id": "W4",
       "severity": "low",
       "area": "oop|each",
-      "title": "INCF local counter fails — need LET n = n + 1",
+      "title": "INCF local counter fails \u2014 need LET n = n + 1",
       "detail": "INCF c errors with INCF field when c is a LET var. Field INCF only. Walk loops verbose.",
-      "repro": "LET c=0; INCF c → err INCF field"
+      "repro": "LET c=0; INCF c \u2192 err INCF field"
     },
     {
       "id": "W5",
@@ -89,7 +89,7 @@
       "area": "oop|ensurebagline",
       "title": "Exact membership only (no DNS suffix match)",
       "detail": "ensure api does not satisfy has api.prod; prefix walk needs EACH+STARTS. No ENSUREBAGLINE SUFFIX mode.",
-      "repro": "ensure api; has api.prod → absent"
+      "repro": "ensure api; has api.prod \u2192 absent"
     },
     {
       "id": "W6",
@@ -129,6 +129,6 @@
     "empty ENSURE NEW=1 documented; bag side-files",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "3c410e6b6730edefc1f351a8fea883e49aad4649",
   "ts": "2026-08-07T18:59:28Z"
 }
