@@ -5,7 +5,7 @@
   "item": "CATF/APPENDF/PREPENDF string field concat",
   "item_id": 398,
   "title": "CATF|APPENDF|PREPENDF \u2014 single-object string field concat",
-  "commit": "d41cd9937fe63f0fa523bd5acf50da2a36d83585",
+  "commit": "552cc0ab50836370b74081d0a4bd669adccfb50a",
   "summary": "Append/prepend string field without GETF+CAT+SETF. proof 939 29/29.",
   "proofs": [
     "939_oop_catf",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T14:14:38Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d41cd9937fe63f0fa523bd5acf50da2a36d83585",
+  "sha": "552cc0ab50836370b74081d0a4bd669adccfb50a",
   "note": "string dual of INCF; completes single-obj field mutators with INCF/BOUNDF/TIMESF"
 }
