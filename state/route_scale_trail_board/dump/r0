@@ -1,0 +1,4 @@
+id:api-east
+status:up
+weight:200
+trail:|canary

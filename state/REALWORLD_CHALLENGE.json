@@ -1,59 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 140,
-  "program": "programs/realworld/retry_budget_obj_board.cubalc",
-  "theme": "OBJINFO + INCF/DECF + BOUNDF per-slot job retry budget",
-  "version": "1.15.387-usability",
+  "iter": 141,
+  "program": "programs/realworld/route_scale_trail_board.cubalc",
+  "theme": "TIMESF weight scale + CATF/PREPENDF audit trail on Route",
+  "version": "1.15.389-usability",
   "pass": true,
-  "prior_note": "iter 139 FIELDINFO/REQUIRE; this iter stresses OBJINFO (1938a17) + INCF (38f9764) + BOUNDF (9015023)",
+  "prior_note": "iter 140 OBJINFO+INCF+BOUNDF; this iter stresses TIMESF (fe36380) + CATF (552cc0a)",
   "tests": [
     {
-      "name": "open_jobs",
-      "cmd": "open j0/j1 job-a/job-b budget=MAXB",
+      "name": "open_routes",
+      "cmd": "open r0/r1 api-east/west weight 100",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "objinfo",
-      "cmd": "OBJINFO j0 class+methods+field values plate",
+      "name": "scale",
+      "cmd": "TIMESF *2 → 200; *3 → 600",
       "ok": true,
-      "note": "OBJINFO"
+      "note": "TIMESF"
     },
     {
-      "name": "objinfo_json",
-      "cmd": "OBJINFO JSON cubalc.objinfo.v1",
+      "name": "tag_trail",
+      "cmd": "CATF trail |v1|v2; PREPENDF [",
       "ok": true,
-      "note": "JSON"
+      "note": "CATF"
     },
     {
-      "name": "bump_decf",
-      "cmd": "INCF +1 +2 \u2192 3; DECF 1 \u2192 2",
+      "name": "mark_status",
+      "cmd": "CATF status WITH :canary → up:canary",
       "ok": true,
-      "note": "INCF/DECF"
+      "note": "CATF WITH"
     },
     {
-      "name": "fail_clamp",
-      "cmd": "fail bump+clamp; overshoot clamp to budget 3",
+      "name": "decay_bound",
+      "cmd": "TIMESF*10 then BOUNDF HI 500",
       "ok": true,
-      "note": "BOUNDF"
+      "note": "decay"
     },
     {
-      "name": "gate",
-      "cmd": "retries>=MAXB deny REQUIRE\u21922; recover admit",
+      "name": "zero_gate",
+      "cmd": "TIMESF 0 drain; gate MINW deny REQUIRE→2",
       "ok": true,
-      "note": "gate"
+      "note": "zero"
     },
     {
       "name": "probe_soft",
-      "cmd": "OBJINFO/TRYINCF/TRYBOUNDF unknown soft; TRYINCF status soft",
+      "cmd": "TRYTIMESF/TRYCATF unknown soft; TRYTIMESF trail soft",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "rehydrate_status",
-      "cmd": "status:retry persists across process after LOOKUP status",
-      "ok": true,
-      "note": "plate"
     },
     {
       "name": "selftest",
@@ -66,50 +60,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|rehydrate",
-      "title": "Objects memory-only \u2014 multi-run must plate rehydrate every field",
-      "detail": "DUMPOBJ+READ+NEW+TRYSETF required per process. Missed status LOOKUP reset status to init default. No bulk rehydrate from DUMPOBJ bag.",
-      "repro": "omit TRYSETF status \u2192 status open after fail plate"
+      "area": "bag|push",
+      "title": "SYS PUSH is bag newline join — not string concat",
+      "detail": "Building trail pieces with SYS PUSH piece TAG inserts NL between tokens (|\\nv1). Agents must SYS CAT/STRCAT for string plane. Easy false friend after bag training.",
+      "repro": "SYS PUSH \"|\" \"v1\" → multi-line; SYS CAT \"|\" \"v1\" → |v1"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "oop|incF",
-      "title": "No atomic INCF+BOUNDF compound",
-      "detail": "fail action is two ops; concurrent agents can race (no object lock). BOUNDF_CHANGED only on clamp half.",
-      "repro": "INCF then BOUNDF separate"
+      "severity": "high",
+      "area": "oop|timesf",
+      "title": "TIMESF integer-only — no fractional half/decay",
+      "detail": "Cannot TIMESF weight 0.5 for canary half-step; agents SETF/DECF or scale by 0 then SETF. Integer domain only.",
+      "repro": "no factor 0.5; half traffic needs non-TIMESF path"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|boundf",
-      "title": "BOUNDF clamp silent \u2014 no soft overflow signal beyond CHANGED",
-      "detail": "Agents must read BOUNDF_CHANGED; LAST is post-clamp value only. Easy to miss exhaustion without gate on MAXB.",
-      "repro": "INCF 10 then BOUNDF 0 5 \u2192 LAST 5 CHANGED 1"
+      "area": "oop|catf",
+      "title": "CATF promotes numeric field to string irreversibly",
+      "detail": "Proof CATF retries \"x\" → field becomes string \"0x\"; TIMESF/INCF then soft-fail. Audit mistakes can poison counters.",
+      "repro": "CATF t retries \"x\" then TIMESF fails string"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|slot",
-      "title": "Fixed ident slots only \u2014 no dynamic object names from ARG",
-      "detail": "NEW Job NAME uses ident token; board hardcodes j0/j1/j2 branches. Same long-standing OOP gap.",
-      "repro": "slot switch IF slot == 0/1/2"
+      "area": "oop|timesf",
+      "title": "No compound TIMESF+BOUNDF / scale-with-cap op",
+      "detail": "decay action is two ops; overshoot then clamp like INCF+BOUNDF gap.",
+      "repro": "decay = TIMESF then BOUNDF"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|tryincf",
-      "title": "Hard INCF unknown object fatal \u2014 TRYINCF required for probe",
-      "detail": "Soft path is TRYINCF / INCF SOFT; agents must remember.",
-      "repro": "TRYINCF nosuch retries OK=0"
+      "area": "print|last",
+      "title": "PRINT LAST after SYS CAT may show length-ish plate noise",
+      "detail": "CAT works (EQS); PRINT LAST output can look numeric (LAST_N). Agents should prefer PRINT_JSON or GETF plates.",
+      "repro": "SYS CAT a b; PRINT LAST"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|string",
-      "title": "INCF/BOUNDF on string field soft miss",
-      "detail": "TRYINCF j0 status \u2192 string err; good but no auto-coerce.",
-      "repro": "probe s_ok=0"
+      "area": "oop|try",
+      "title": "Hard TIMESF/CATF unknown object fatal — TRY* required",
+      "detail": "Soft probe needs TRYTIMESF/TRYCATF.",
+      "repro": "TRYTIMESF nosuch weight 2 OK=0"
     },
     {
       "id": "W7",
@@ -124,31 +118,31 @@
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE \u2192 exit 0 on miss",
-      "repro": "REQUIRE=abc bump j2 \u2192 exit 0"
+      "detail": "Non-numeric REQUIRE → miss exit 0",
+      "repro": "REQUIRE=abc scale r2 → exit 0"
     }
   ],
   "workarounds": [
-    "Rehydrate all DUMPOBJ fields (id,status,retries,budget) every process",
-    "fail = INCF + BOUNDF + explicit gate on retries < MAXB",
-    "TRYINCF/TRYBOUNDF for soft probes; hard INCF only after HASOBJ",
-    "Fixed j0/j1/j2 slots; REQUIRE CLASS Job at boot",
-    "REQUIRE EXIT in action bodies"
+    "SYS CAT for string pieces; never SYS PUSH for trail tags",
+    "Integer scale factors only; half-weight via SETF absolute",
+    "Never CATF onto numeric counters; keep trail on string field",
+    "decay = TIMESF + BOUNDF; TRY* for soft probes",
+    "Fixed r0/r1/r2 slots; rehydrate all DUMPOBJ fields"
   ],
   "language_gaps": [
-    "Bulk object rehydrate from DUMPOBJ plate",
-    "Atomic INCFBOUND / budget transaction",
-    "Dynamic object names from string ARG",
-    "Hard vs soft INCF default policy flag",
-    "WRITE trailing NL; strict NUM REQUIRE"
+    "Fractional TIMESF or fixed-point scale",
+    "TIMESFBOUND compound",
+    "String-safe PUSH alias or clearer bag vs string docs",
+    "CATF refuse numeric fields option",
+    "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "OBJINFO bag+JSON; INCF delta var works; BOUNDF clamps overshoot",
-    "status rehydrate missing first pass \u2014 fixed LOOKUP status",
-    "gate exhaust at MAXB; recover DECF admits",
-    "probe soft all zero including TRYINCF string field",
+    "TIMESF *2/*3 works; zero drain status draining",
+    "First tag used SYS PUSH → NL trail; fixed to SYS CAT",
+    "CATF trail [|v1|v2; mark up:canary; decay clamps HI",
+    "gate MINW admit/deny; probe soft zeros",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "fe02b62dde6540d841336a7a9b413850231e565e",
-  "ts": "2026-08-07T13:59:30Z"
+  "commit": "",
+  "ts": "2026-08-07T14:24:38Z"
 }

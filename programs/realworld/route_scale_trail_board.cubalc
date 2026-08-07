@@ -1,0 +1,1385 @@
+# route_scale_trail_board.cubalc — TIMESF weight scale + CATF audit trail
+#
+# Real use: ops agents scale a single Route object's traffic weight
+# (half/double/zero for canary steps) and append/prepend an audit trail
+# on a string field without GETF+arith/CAT+SETF glue.
+#
+# Surfaces forced (1.15.388–389):
+#   TIMESF / SCALEOBJ / MULOBJ / SCALEONE · TRYTIMESF · TIMESF SOFT
+#   CATF / APPENDF / PREPENDF / STRCATF / PREFIXF · TRYCATF · CATF SOFT
+#   BOUNDF weight after scale · OBJINFO · DUMPOBJ rehydrate
+#   soft miss + REQUIRE wall
+#
+# Distinct from canary_weight_mul_board (fleet MULWHERE) and
+# route_weight_board (bag weights): this is *single-object scale+trail*.
+#
+# Slots: r0 r1 r2
+#
+# Plate under STATE:
+#   dump/r0 dump/r1 dump/r2
+#   OBJ.txt VAL.txt META.txt OBJS.txt TRAIL_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Route
+#   open       — NEW Route ARG1=rN [id=ARG2]
+#   scale      — TIMESF weight FACTOR (default 2)
+#   half       — TIMESF weight 0 (zero) or FACTOR=1 via recover; half uses 1/2? integer only!
+#   decay      — TIMESF by FACTOR then BOUNDF LO HI
+#   tag        — CATF trail ARG2/TAG piece
+#   prefix     — PREPENDF trail piece
+#   mark       — CATF status WITH ":"+TAG
+#   getw / gett
+#   gate       — weight >= MINW admit (REQUIRE deny)
+#   info       — OBJINFO
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rst_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=r0 CUBALC_ARG2=api-east
+#   CUBALC_FS_FACTOR=2 CUBALC_ARG0=scale CUBALC_ARG1=r0
+#   CUBALC_ARG0=tag CUBALC_ARG1=r0 CUBALC_ARG2=v2
+#   CUBALC_FS_MINW=50 CUBALC_ARG0=gate CUBALC_ARG1=r0
+#
+# Env: CUBALC_FS_REQUIRE NAME FACTOR MINW LO HI TAG ACTION
+#
+# Edges:
+#   TIMESF integer-only — no half via factor 0.5 (must DECF/SETF)
+#   CATF promotes numeric field to string (retries "x" → "0x") irreversible
+#   TRYTIMESF string field soft; hard TIMESF unknown object may fatal
+#   WRITE NL; NUM softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Route
+  FIELD id ""
+  FIELD status "up"
+  FIELD weight 100
+  FIELD trail ""
+  METHOD init i
+    SETF THIS id i
+    SETF THIS status "up"
+    SETF THIS weight 100
+    SETF THIS trail ""
+  END
+  METHOD double
+    TIMESF THIS weight 2
+  END
+  METHOD mark t
+    CATF THIS trail t
+  END
+END
+
+REQUIRE CLASS Route
+REQUIRE METHOD Route init
+
+NOTE "route_scale_trail_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT FACTOR = 2
+DEFAULT MINW = 1
+DEFAULT LO = 0
+DEFAULT HI = 1000
+DEFAULT TAG = "x"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET TAG = LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET FACTOR = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET TAG = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_FACTOR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FACTOR = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINW" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINW = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_TAG" OR ""
+IF LAST_N > 0 THEN
+  LET TAG = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "OBJ.txt"
+LET obj_path = LAST
+SYS JOIN state_dir "TRAIL_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "r0"
+LET d_r0 = LAST
+SYS JOIN dump_dir "r1"
+LET d_r1 = LAST
+SYS JOIN dump_dir "r2"
+LET d_r2 = LAST
+
+LET slot = -1
+SYS EQS NAME "r0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "r1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "r2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "r0"
+END
+IF slot == 1 THEN
+  LET sn = "r1"
+END
+IF slot == 2 THEN
+  LET sn = "r2"
+END
+
+# rehydrate all fields
+SYS READ OR d_r0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUP snap "trail"
+  LET rtr = LAST
+  CLEAR_ERR
+  NEW Route r0 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF r0 status rst
+  END
+  TRYSETF r0 weight rw
+  SYS BLANK rtr
+  IF LAST_N == 0 THEN
+    TRYSETF r0 trail rtr
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_r1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUP snap "trail"
+  LET rtr = LAST
+  CLEAR_ERR
+  NEW Route r1 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF r1 status rst
+  END
+  TRYSETF r1 weight rw
+  SYS BLANK rtr
+  IF LAST_N == 0 THEN
+    TRYSETF r1 trail rtr
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_r2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUP snap "trail"
+  LET rtr = LAST
+  CLEAR_ERR
+  NEW Route r2 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF r2 status rst
+  END
+  TRYSETF r2 weight rw
+  SYS BLANK rtr
+  IF LAST_N == 0 THEN
+    TRYSETF r2 trail rtr
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET weight_n = 0
+LET board_rep = "route_scale_trail_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Route
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET id0 = sn
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET id0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DELETEOBJ r0
+        CLEAR_ERR
+      END
+      NEW Route r0 id0
+      DUMPOBJ r0
+      SYS WRITE d_r0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DELETEOBJ r1
+        CLEAR_ERR
+      END
+      NEW Route r1 id0
+      DUMPOBJ r1
+      SYS WRITE d_r1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DELETEOBJ r2
+        CLEAR_ERR
+      END
+      NEW Route r2 id0
+      DUMPOBJ r2
+      SYS WRITE d_r2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Route
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta id0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- scale TIMESF ---
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  NOTE "action scale"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "scale bad slot"
+    FAIL "scale bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "scale bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        TIMESF r0 weight FACTOR
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        TIMESF r1 weight FACTOR
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        TIMESF r2 weight FACTOR
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "scale miss"
+      FAIL "scale miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "scale miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "scale ok"
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "scale"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR FACTOR
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR weight_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON weight_n
+  CLEAR_ERR
+END
+
+# --- zero weight ---
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  NOTE "action zero"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "zero bad slot"
+    FAIL "zero bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "zero bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        TIMESF r0 weight 0
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        SETF r0 status "draining"
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        TIMESF r1 weight 0
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        SETF r1 status "draining"
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        TIMESF r2 weight 0
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        SETF r2 status "draining"
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "zero miss"
+      FAIL "zero miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "zero miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "zero ok"
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "zero"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON weight_n
+  CLEAR_ERR
+END
+
+# --- decay: scale + bound ---
+SYS EQS ACTION "decay"
+IF LAST_N == 1 THEN
+  NOTE "action decay"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "decay bad slot"
+    FAIL "decay bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "decay bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF FACTOR < 1 THEN
+      LET FACTOR = 1
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        TIMESF r0 weight FACTOR
+        BOUNDF r0 weight LO HI
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        TIMESF r1 weight FACTOR
+        BOUNDF r1 weight LO HI
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        TIMESF r2 weight FACTOR
+        BOUNDF r2 weight LO HI
+        LET o_ok = OK
+        LET weight_n = LAST_N
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "decay miss"
+      FAIL "decay miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "decay miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "decay ok"
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "decay"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR weight_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON weight_n
+  CLEAR_ERR
+END
+
+# --- tag CATF trail ---
+SYS EQS ACTION "tag"
+IF LAST_N == 1 THEN
+  NOTE "action tag"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "tag bad slot"
+    FAIL "tag bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "tag bad slot"
+    END
+  ELSE
+    SYS BLANK TAG
+    IF LAST_N == 1 THEN
+      LET TAG = "x"
+    END
+    # SYS PUSH is bag (newline) — use SYS CAT for string piece
+    LET piece = "|"
+    SYS CAT piece TAG
+    LET piece = LAST
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        CATF r0 trail piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        CATF r1 trail piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        CATF r2 trail piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "tag miss"
+      FAIL "tag miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "tag miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "tag ok"
+      LET val_ch = 1
+      LET meta = "tag"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta TAG
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- prefix PREPENDF ---
+SYS EQS ACTION "prefix"
+IF LAST_N == 1 THEN
+  NOTE "action prefix"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "prefix bad slot"
+    FAIL "prefix bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "prefix bad slot"
+    END
+  ELSE
+    SYS BLANK TAG
+    IF LAST_N == 1 THEN
+      LET TAG = "["
+    END
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        PREPENDF r0 trail TAG
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        PREPENDF r1 trail TAG
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        PREPENDF r2 trail TAG
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "prefix miss"
+      FAIL "prefix miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "prefix miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "prefix ok"
+      LET val_ch = 1
+      LET meta = "prefix"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- mark status WITH ---
+SYS EQS ACTION "mark"
+IF LAST_N == 1 THEN
+  NOTE "action mark"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "mark bad slot"
+    FAIL "mark bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "mark bad slot"
+    END
+  ELSE
+    SYS BLANK TAG
+    IF LAST_N == 1 THEN
+      LET TAG = "ok"
+    END
+    LET piece = ":"
+    SYS CAT piece TAG
+    LET piece = LAST
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        CATF r0 status WITH piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        CATF r1 status WITH piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        CATF r2 status WITH piece
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "mark miss"
+      FAIL "mark miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "mark miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "mark ok"
+      LET val_ch = 1
+      LET meta = "mark"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- getw ---
+SYS EQS ACTION "getw"
+IF LAST_N == 1 THEN
+  NOTE "action getw"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "getw bad slot"
+    FAIL "getw bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "getw bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        GETF r0 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        GETF r1 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        GETF r2 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "getw miss"
+      FAIL "getw miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "getw miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "getw ok"
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "getw"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR weight_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON weight_n
+  CLEAR_ERR
+END
+
+# --- gett ---
+SYS EQS ACTION "gett"
+IF LAST_N == 1 THEN
+  NOTE "action gett"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gett bad slot"
+    FAIL "gett bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gett bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        GETF r0 trail
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        GETF r1 trail
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        GETF r2 trail
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gett miss"
+      FAIL "gett miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gett miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "gett ok"
+      LET val_ch = 1
+      LET meta = "gett"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate weight >= MINW ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        GETF r0 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        GETF r1 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        GETF r2 weight
+        LET weight_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      IF weight_n < MINW THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate ok"
+        LET val = "admit"
+        LET val_ch = 1
+      END
+    END
+  END
+  LET meta = "gate"
+  SYS PUSH meta sn
+  LET meta = LAST
+  SYS STR weight_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MINW
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- info ---
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  NOTE "action info"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "info bad slot"
+    FAIL "info bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "info bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      OBJINFO r0
+      LET o_ok = OK
+    END
+    IF slot == 1 THEN
+      OBJINFO r1
+      LET o_ok = OK
+    END
+    IF slot == 2 THEN
+      OBJINFO r2
+      LET o_ok = OK
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "info miss"
+      FAIL "info miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "info miss"
+      END
+    ELSE
+      LET val = LAST
+      SYS WRITE obj_path val
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "info ok"
+      LET val_ch = 1
+      LET meta = "info"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  TRYTIMESF nosuch_route weight 2
+  LET t_ok = OK
+  CLEAR_ERR
+  TRYCATF nosuch_route trail "x"
+  LET c_ok = OK
+  CLEAR_ERR
+  LET s_ok = 1
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    TRYTIMESF r0 trail 2
+    LET s_ok = OK
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR t_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR c_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR s_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF t_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe trytimesf not soft"
+  END
+  IF c_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe trycatf not soft"
+  END
+  PRINT_JSON t_ok
+  PRINT_JSON c_ok
+  PRINT_JSON s_ok
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DUMPOBJ r0
+        LET val = LAST
+        SYS WRITE d_r0 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DUMPOBJ r1
+        LET val = LAST
+        SYS WRITE d_r1 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DUMPOBJ r2
+        LET val = LAST
+        SYS WRITE d_r2 val
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS WRITE d_r0 ""
+  SYS WRITE d_r1 ""
+  SYS WRITE d_r2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE obj_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "decay"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "tag"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "prefix"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "mark"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "getw"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gett"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR weight_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "route_scale_trail_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
