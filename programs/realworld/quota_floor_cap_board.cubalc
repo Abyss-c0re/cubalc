@@ -1,0 +1,1522 @@
+# quota_floor_cap_board.cubalc — MAXF/MINF/CAPF/FLOORF API quota floor + burst cap
+#
+# Real use: edge agents track per-client API quotas (remaining tokens, burst
+# qps, priority score). After debit, floor remaining at 0 with MAXF/FLOORF
+# (no negative ledger). Cap burst with MINF/CAPF/ATMOSTF. Two-sided BOUNDF
+# for score. Admit when remaining ≥ NEED without GETF+IF+SETF glue.
+#
+# Surfaces forced (1.15.403–404 / proof 953 MINF·MAXF, 937 BOUNDF):
+#   MAXF / FLOORF / ATLEASTF / RAISEF · TRYMAXF · MAXF SOFT
+#   MINF / CAPF / ATMOSTF · TRYMINF · MINF SOFT
+#   BOUNDF / LIMITF · TRYBOUNDF (dual compare only; primary is one-sided)
+#   DECF / INCF · DUMPOBJ rehydrate · soft miss + REQUIRE wall
+#
+# Distinct from retry_budget_obj (BOUNDF retries only), pool_rate_clamp
+# (CLAMPWHERE fleet), rate_budget_ledger (host bag): this board is
+# *single-object one-sided floor/cap for remaining + burst + score*.
+#
+# Slots: q0 q1 q2
+#
+# Plate under STATE:
+#   dump/q0 dump/q1 dump/q2
+#   VAL.txt META.txt OBJS.txt QUOTA_REPORT.txt
+#
+# Actions:
+#   list | open | debit | credit | floor | cap | bound
+#   setrem | setburst | setscore | gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_qfc_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=q0 CUBALC_ARG2=100
+#   CUBALC_ARG0=debit CUBALC_ARG1=q0 CUBALC_ARG2=30
+#   CUBALC_ARG0=floor CUBALC_ARG1=q0
+#   CUBALC_FS_CAP=50 CUBALC_ARG0=cap CUBALC_ARG1=q0
+#   CUBALC_FS_LO=0 CUBALC_FS_HI=100 CUBALC_ARG0=bound CUBALC_ARG1=q0
+#   CUBALC_FS_NEED=10 CUBALC_ARG0=gate CUBALC_ARG1=q0
+#
+# Env: CUBALC_FS_REQUIRE NAME CAP FLOOR LO HI NEED REM BURST SCORE ACTION
+#
+# Edges:
+#   MAXF = floor (max(field,lim)); MINF = cap (min(field,lim)) — naming trap
+#   MAXF string field soft; bare miss hard?
+#   CHANGED flag; already-in-range no-op
+#   WRITE NL; NUM softens REQUIRE=abc
+#   ARG NUM capture immediately for open rem
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Quota
+  FIELD id ""
+  FIELD remaining 0
+  FIELD burst 0
+  FIELD score 50
+  FIELD tag "api"
+  METHOD init i rem
+    SETF THIS id i
+    SETF THIS remaining rem
+    SETF THIS burst 0
+    SETF THIS score 50
+    SETF THIS tag "api"
+  END
+  METHOD floor0
+    MAXF THIS remaining 0
+  END
+  METHOD capburst lim
+    MINF THIS burst lim
+  END
+END
+
+REQUIRE CLASS Quota
+REQUIRE METHOD Quota init
+
+NOTE "quota_floor_cap_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT CLIM = 100
+DEFAULT FLIM = 0
+DEFAULT LO = 0
+DEFAULT HI = 100
+DEFAULT NEED = 1
+DEFAULT REM = 100
+DEFAULT BURST = 0
+DEFAULT SCORE = 50
+DEFAULT DEBIT_N = 1
+DEFAULT A2_N = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  # NUM while LAST still holds ARG2 — single A2_N; action picks field
+  SYS NUM
+  IF OK == 1 THEN
+    LET A2_N = LAST_N
+    LET REM = LAST_N
+    LET DEBIT_N = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    SYS NUM
+    IF OK == 1 THEN
+      LET A2_N = LAST_N
+    END
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_CAP" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET CLIM = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_FLOOR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FLIM = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_NEED" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_REM" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REM = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_BURST" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BURST = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_SCORE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET SCORE = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_DEBIT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DEBIT_N = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "QUOTA_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "q0"
+LET d_q0 = LAST
+SYS JOIN dump_dir "q1"
+LET d_q1 = LAST
+SYS JOIN dump_dir "q2"
+LET d_q2 = LAST
+
+LET slot = -1
+SYS EQS NAME "q0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "q1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "q2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "q0"
+END
+IF slot == 1 THEN
+  LET sn = "q1"
+END
+IF slot == 2 THEN
+  LET sn = "q2"
+END
+
+# rehydrate
+SYS READ OR d_q0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    DELETEOBJ q0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "remaining"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "burst"
+  LET rb = LAST_N
+  SYS LOOKUPN snap "score"
+  LET rs = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Quota q0 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF q0 id rid
+  END
+  TRYSETF q0 remaining rr
+  TRYSETF q0 burst rb
+  TRYSETF q0 score rs
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF q0 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_q1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q1
+  IF LAST_N == 1 THEN
+    DELETEOBJ q1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "remaining"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "burst"
+  LET rb = LAST_N
+  SYS LOOKUPN snap "score"
+  LET rs = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Quota q1 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF q1 id rid
+  END
+  TRYSETF q1 remaining rr
+  TRYSETF q1 burst rb
+  TRYSETF q1 score rs
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF q1 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_q2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q2
+  IF LAST_N == 1 THEN
+    DELETEOBJ q2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "remaining"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "burst"
+  LET rb = LAST_N
+  SYS LOOKUPN snap "score"
+  LET rs = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Quota q2 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF q2 id rid
+  END
+  TRYSETF q2 remaining rr
+  TRYSETF q2 burst rb
+  TRYSETF q2 score rs
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF q2 tag rtag
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "quota_floor_cap_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Quota
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        DELETEOBJ q0
+        CLEAR_ERR
+      END
+      NEW Quota q0 sn REM
+      SETF q0 burst BURST
+      SETF q0 score SCORE
+      DUMPOBJ q0
+      SYS WRITE d_q0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        DELETEOBJ q1
+        CLEAR_ERR
+      END
+      NEW Quota q1 sn REM
+      SETF q1 burst BURST
+      SETF q1 score SCORE
+      DUMPOBJ q1
+      SYS WRITE d_q1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        DELETEOBJ q2
+        CLEAR_ERR
+      END
+      NEW Quota q2 sn REM
+      SETF q2 burst BURST
+      SETF q2 score SCORE
+      DUMPOBJ q2
+      SYS WRITE d_q2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Quota
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR REM
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- debit: DECF remaining by DEBIT_N then MAXF floor at 0 ---
+SYS EQS ACTION "debit"
+IF LAST_N == 1 THEN
+  NOTE "action debit"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "debit bad slot"
+    FAIL "debit bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "debit bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF DEBIT_N < 0 THEN
+      LET DEBIT_N = 0 - DEBIT_N
+    END
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        DECF q0 remaining DEBIT_N
+        MAXF q0 remaining 0
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        DECF q1 remaining DEBIT_N
+        MAXF q1 remaining 0
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        DECF q2 remaining DEBIT_N
+        MAXF q2 remaining 0
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "debit miss"
+      FAIL "debit miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "debit miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "debit ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "debit"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- credit: INCF remaining ---
+SYS EQS ACTION "credit"
+IF LAST_N == 1 THEN
+  NOTE "action credit"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "credit bad slot"
+    FAIL "credit bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "credit bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET amt = DEBIT_N
+    IF amt < 0 THEN
+      LET amt = 0 - amt
+    END
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        INCF q0 remaining amt
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        INCF q1 remaining amt
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        INCF q2 remaining amt
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "credit miss"
+      FAIL "credit miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "credit miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "credit ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "credit"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- floor: MAXF/FLOORF remaining to FLIM lim (default 0) ---
+SYS EQS ACTION "floor"
+IF LAST_N == 1 THEN
+  NOTE "action floor"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "floor bad slot"
+    FAIL "floor bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "floor bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        MAXF q0 remaining FLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        FLOORF q1 remaining FLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        ATLEASTF q2 remaining FLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MAXF_CHANGED
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "floor miss"
+      FAIL "floor miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "floor miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "floor ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "floor"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- cap: MINF/CAPF burst to CLIM lim ---
+SYS EQS ACTION "cap"
+IF LAST_N == 1 THEN
+  NOTE "action cap"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "cap bad slot"
+    FAIL "cap bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "cap bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        # if ARG2 provided as burst set first
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q0 burst LAST_N
+          END
+        END
+        MINF q0 burst CLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MINF_CHANGED
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q1 burst LAST_N
+          END
+        END
+        CAPF q1 burst CLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MINF_CHANGED
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q2 burst LAST_N
+          END
+        END
+        ATMOSTF q2 burst CLIM
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = MINF_CHANGED
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "cap miss"
+      FAIL "cap miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "cap miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "cap ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "cap"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- bound: BOUNDF score LO HI ---
+SYS EQS ACTION "bound"
+IF LAST_N == 1 THEN
+  NOTE "action bound"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "bound bad slot"
+    FAIL "bound bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "bound bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q0 score LAST_N
+          END
+        END
+        BOUNDF q0 score LO HI
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q1 score LAST_N
+          END
+        END
+        BOUNDF q1 score LO HI
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SYS BLANK A2
+        IF LAST_N == 0 THEN
+          SYS NUM A2
+          IF OK == 1 THEN
+            SETF q2 score LAST_N
+          END
+        END
+        LIMITF q2 score LO HI
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "bound miss"
+      FAIL "bound miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "bound miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "bound ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "bound"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- setrem ---
+SYS EQS ACTION "setrem"
+IF LAST_N == 1 THEN
+  NOTE "action setrem"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setrem bad slot"
+    FAIL "setrem bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setrem bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        SETF q0 remaining REM
+        LET o_ok = 1
+        LET ret_n = REM
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SETF q1 remaining REM
+        LET o_ok = 1
+        LET ret_n = REM
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SETF q2 remaining REM
+        LET o_ok = 1
+        LET ret_n = REM
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setrem miss"
+      FAIL "setrem miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setrem miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setrem ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setrem"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- setburst ---
+SYS EQS ACTION "setburst"
+IF LAST_N == 1 THEN
+  NOTE "action setburst"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setburst bad slot"
+    FAIL "setburst bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setburst bad slot"
+    END
+  ELSE
+    LET use_b = BURST
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET use_b = A2_N
+    END
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        SETF q0 burst use_b
+        LET o_ok = 1
+        LET ret_n = use_b
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SETF q1 burst use_b
+        LET o_ok = 1
+        LET ret_n = use_b
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SETF q2 burst use_b
+        LET o_ok = 1
+        LET ret_n = use_b
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setburst miss"
+      FAIL "setburst miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setburst miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setburst ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setburst"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- setscore ---
+SYS EQS ACTION "setscore"
+IF LAST_N == 1 THEN
+  NOTE "action setscore"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setscore bad slot"
+    FAIL "setscore bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setscore bad slot"
+    END
+  ELSE
+    LET use_s = SCORE
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET use_s = A2_N
+    END
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        SETF q0 score use_s
+        LET o_ok = 1
+        LET ret_n = use_s
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SETF q1 score use_s
+        LET o_ok = 1
+        LET ret_n = use_s
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SETF q2 score use_s
+        LET o_ok = 1
+        LET ret_n = use_s
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setscore miss"
+      FAIL "setscore miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setscore miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setscore ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setscore"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: remaining >= NEED ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET rem_now = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        GETF q0 remaining
+        LET rem_now = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        GETF q1 remaining
+        LET rem_now = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        GETF q2 remaining
+        LET rem_now = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      IF rem_now < NEED THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        LET ret_n = rem_now
+        SYS STR rem_now
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR rem_now
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR NEED
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        LET ret_n = rem_now
+        SYS STR rem_now
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR rem_now
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR NEED
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe: soft miss paths ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  # soft unknown object
+  TRYMAXF nosuch remaining 0
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYMAXF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYMINF nosuch burst 10
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYMINF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYBOUNDF nosuch score 0 100
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYBOUNDF should soft-fail"
+  END
+  CLEAR_ERR
+  # soft string field if q0 exists
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    TRYMAXF q0 tag 0
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe string MAXF should soft-fail"
+    END
+    CLEAR_ERR
+    MINF SOFT q0 tag 1
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe string MINF should soft-fail"
+    END
+    CLEAR_ERR
+    # floor still works after soft
+    MAXF q0 remaining 0
+    IF OK == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe MAXF after soft broken"
+    END
+    LET ret_n = LAST_N
+    CLEAR_ERR
+  END
+  # soft miss field
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    MAXF SOFT q0 nosuch 0
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe MAXF missing field should soft"
+    END
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        DUMPOBJ q0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_q0 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        DUMPOBJ q1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_q1 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        DUMPOBJ q2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_q2 val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    DELETEOBJ q0
+    CLEAR_ERR
+  END
+  HASOBJ q1
+  IF LAST_N == 1 THEN
+    DELETEOBJ q1
+    CLEAR_ERR
+  END
+  HASOBJ q2
+  IF LAST_N == 1 THEN
+    DELETEOBJ q2
+    CLEAR_ERR
+  END
+  SYS WRITE d_q0 ""
+  SYS WRITE d_q1 ""
+  SYS WRITE d_q2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "debit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "credit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "floor"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "cap"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "bound"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setrem"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setburst"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setscore"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "quota_floor_cap_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

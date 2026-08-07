@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 146,
-  "program": "programs/realworld/ticket_pad_share_board.cubalc",
-  "theme": "LPADF + DIVF/MODF + ABSF ticket plate ID share shard polarity",
-  "version": "1.15.402-usability",
+  "iter": 147,
+  "program": "programs/realworld/quota_floor_cap_board.cubalc",
+  "theme": "MAXF/MINF/CAPF/FLOORF + BOUNDF API quota floor remaining burst cap score",
+  "version": "1.15.405-usability",
   "pass": true,
-  "prior_note": "iter 145 BEFOREF+NUMF peel; this iter stresses DIVF (55cdd35) ABSF (d1d1bf1) LPADF (dfce759)",
+  "prior_note": "iter 146 LPADF+DIVF/MODF+ABSF; this iter stresses MAXF/MINF (proof 953) first realworld MAXF board + BOUNDF dual",
   "tests": [
     {
-      "name": "open_tickets",
-      "cmd": "open t0 serial 7 used 25; t1 serial 17",
+      "name": "open_quotas",
+      "cmd": "open q0 rem=100; q1 rem=50 burst=200 score=150",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "lpad",
-      "cmd": "LPADF id 6 0 \u2192 000007; trunc pad 3 \u2192 007",
+      "name": "debit_floor",
+      "cmd": "debit 30→70; debit 100→MAXF 0; META changed=1",
       "ok": true,
-      "note": "LPADF"
+      "note": "MAXF"
     },
     {
-      "name": "share",
-      "cmd": "TIMESF 100 DIVF total \u2192 share 25%",
+      "name": "floor_action",
+      "cmd": "setrem -5; floor →0 CHANGED=1; already-under CHANGED=0",
       "ok": true,
-      "note": "DIVF"
+      "note": "FLOORF/ATLEASTF"
     },
     {
-      "name": "shard",
-      "cmd": "MODF serial 8 \u2192 7; t1 \u2192 1",
+      "name": "cap_burst",
+      "cmd": "setburst 200 CAP=50 →50; under-cap CHANGED=0",
       "ok": true,
-      "note": "MODF"
+      "note": "MINF/CAPF"
     },
     {
-      "name": "polarity",
-      "cmd": "ABSF |used-total|=75; SIGNF -1; NEGF flip",
+      "name": "bound_score",
+      "cmd": "score 150→100; score -20→0 via BOUNDF/LIMITF",
       "ok": true,
-      "note": "ABSF/SIGNF"
+      "note": "BOUNDF"
     },
     {
       "name": "gate",
-      "cmd": "share>=10 admit; >=50 deny REQUIRE\u21922",
+      "cmd": "rem>=10 admit; >=50 deny REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRY* soft; DIVF SOFT /0 \u2192 DIVF_OK=0 field unchanged",
+      "cmd": "TRYMAXF/TRYMINF/TRYBOUNDF soft; string field soft; MAXF after soft ok",
       "ok": true,
       "note": "probe"
     },
@@ -60,89 +60,81 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|divf",
-      "title": "Bare DIVF/MODF by zero hard-fails process",
-      "detail": "Must DIVF SOFT / TRYDIVF for zero divisor. Proof documents SOFT path; bare DIVF aborts agent run (probe first used bare DIVF 0).",
-      "repro": "DIVF c e 0 hard halt; DIVF SOFT c e 0 \u2192 DIVF_OK=0"
+      "area": "oop|minf|maxf",
+      "title": "Limit var names FLOOR and CAP hard-fail MAXF/MINF",
+      "detail": "DEFAULT FLOOR=0 then MAXF obj field FLOOR → err 'MAXF object field limit' (halted). CAP same for MINF. Collision with FLOORF/CAPF form tokens. Must use FLIM/CLIM/PADW-style non-reserved names.",
+      "repro": "DEFAULT FLOOR=0; MAXF c energy FLOOR → MAXF object field limit"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "oop|padf",
-      "title": "LPADF oversize input truncates to width",
-      "detail": "hello LPADF 3 \u2192 hel; not leave-as-is. Agents may destroy long plate IDs when re-padding.",
-      "repro": "proof 952 LPADF hello 3"
+      "severity": "high",
+      "area": "oop|minf|maxf",
+      "title": "MAXF=floor MINF=cap naming inversion",
+      "detail": "MAXF does max(field,lim)=floor; MINF does min(field,lim)=cap. Agents reading name alone invert remaining vs burst math. Aliases FLOORF/CAPF/ATLEASTF/ATMOSTF clearer but primary tokens mislead.",
+      "repro": "proof 953 MINF cap; MAXF floor"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|divf",
-      "title": "Integer-only share \u2014 no fixed-point percent",
-      "detail": "25/100*100 via TIMESF+DIVF; 1/3 \u2192 0. No rounding mode.",
-      "repro": "share floor only"
+      "area": "oop|minf|maxf",
+      "title": "Bare unknown-object MAXF not always hard-exit",
+      "detail": "TRY* documented soft; bare MAXF nosuch may halt mid-run with empty last_err in -q (exit_code 0 halted false) vs agent EXIT paths. Soft policy inconsistent with DIVF bare hard-fail.",
+      "repro": "MAXF nosuch n 0 under HOLD_FLASH only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|padf",
-      "title": "LPADF promotes numeric to string (permanent)",
-      "detail": "Same poison class as CATF; code field becomes string after pad.",
-      "repro": "proof 952 LPADF code 3 0 then CATF"
+      "area": "host|arg",
+      "title": "Single ARG2 NUM cannot multi-seed rem+burst+score",
+      "detail": "Capturing ARG2 into REM and BURST and SCORE poisons open (all=100). Must action-scope A2_N or use CUBALC_FS_BURST/SCORE ENV only.",
+      "repro": "open ARG2=100 without ENV → burst/score polluted if multi-assign"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "host|arg",
-      "title": "ARG NUM must capture immediately for open serial",
-      "detail": "SYS BLANK then NUM loses ARG2; SER capture at ARG parse required.",
-      "repro": "open fixed SER=ARG2"
+      "area": "host|write",
+      "title": "WRITE VAL omit trailing NL",
+      "detail": "od -c META ends without \\n after last field (dump\\nq0).",
+      "repro": "od -c META.txt after dump"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|signf",
-      "title": "SIGNF mutates field to -1/0/1 destroying residual magnitude",
-      "detail": "Must copy residual before SIGNF if both needed.",
-      "repro": "sign overwrites residual with -1"
+      "area": "host|num",
+      "title": "REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE miss exit 0 even on gate deny.",
+      "repro": "REQUIRE=abc gate soft"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c cleared without \\n",
-      "repro": "od -c VAL.txt"
-    },
-    {
-      "id": "W8",
-      "severity": "low",
-      "area": "host|num",
-      "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc gate soft"
+      "area": "oop|boundf",
+      "title": "BOUNDF CHANGED shared with one-sided flags",
+      "detail": "Agents must read BOUNDF_CHANGED vs MINF_CHANGED/MAXF_CHANGED carefully after mixed floor/cap/bound sequences; LAST_N alone is final value not which op.",
+      "repro": "bound after cap; check *_CHANGED"
     }
   ],
   "workarounds": [
-    "Always DIVF SOFT when divisor may be 0",
-    "PADW not WIDTH/N for LPADF length var",
-    "Capture SER at ARG2 NUM; don't re-NUM after BLANK",
-    "Copy residual before SIGNF if magnitude needed",
-    "Fixed t0/t1/t2; TRY* soft probes"
+    "Never name limit vars FLOOR or CAP — use FLIM/CLIM",
+    "Prefer FLOORF/CAPF/ATLEASTF/ATMOSTF aliases for intent",
+    "Always TRYMAXF/TRYMINF or * SOFT for miss paths",
+    "ARG2 → A2_N only; ENV for secondary seeds",
+    "Fixed q0/q1/q2; dump rehydrate; REQUIRE numeric only"
   ],
   "language_gaps": [
-    "Default soft div0 policy or dedicated DIVF0",
-    "LPADF leave-long option (no trunc)",
-    "Fixed-point / rounded percent",
-    "Non-destructive SIGNF (return only)",
-    "WRITE NL; strict NUM REQUIRE"
+    "Reserve or soft-error reserved limit names FLOOR/CAP in MAXF/MINF arg parse",
+    "Primary tokens FLOORF/CAPF as canonical (not MAXF=floor)",
+    "Consistent bare-miss hard policy across DIVF/MAXF",
+    "WRITE NL option; strict NUM REQUIRE",
+    "Non-destructive bound/floor returning without mutate"
   ],
   "issues_faced": [
-    "LPADF 000007; share 25; MODF shard 7 and 1",
-    "ABSF 75 SIGNF -1; DIVF 0 hard until SOFT",
-    "ARG2 serial 0 until SER capture at parse",
-    "gate share admit/deny; pad trunc 007",
+    "FLOOR/CAP as DEFAULT names hard-failed MAXF/MINF — renamed FLIM/CLIM",
+    "ARG2 multi-assign set burst=score=rem on open — scoped to A2_N",
+    "MAXF floor remaining 0 after over-debit; MINF cap burst 200→50",
+    "BOUNDF score 150→100 and -20→0; gate admit/deny REQUIRE",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "14f149d19d2c5eb079fd2c7fc35eba901c7a92fa",
-  "ts": "2026-08-07T16:30:23Z"
+  "commit": "",
+  "ts": "2026-08-07T16:57:08Z"
 }
