@@ -1,0 +1,87 @@
+# SUMWHERE / AVGWHERE — filtered fleet sum/mean on field match
+# Usability: no GETFWHERE + SYS SUM/AVG glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# sum energy where age==1 → 10+30=40
+SUMWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT LAST_N == 40
+ASSERT SUMWHERE_N == 2
+ASSERT SUMWHERE_SUM == 40
+ASSERT SUMWHERE_SKIP == 0
+
+# WHERE sugar
+SUMWHERE Cell energy WHERE age 0
+ASSERT LAST_N == 60
+ASSERT SUMWHERE_N == 2
+
+# OF sugar
+SUMWHERE OF Cell energy age 1
+ASSERT LAST_N == 40
+
+# aliases
+TOTALWHERE Cell energy age 1
+ASSERT LAST_N == 40
+SUMFWHERE Cell energy age 0
+ASSERT LAST_N == 60
+WHERESUM Cell energy age 1
+ASSERT LAST_N == 40
+SUMIF Cell energy age 0
+ASSERT LAST_N == 60
+
+# average
+AVGWHERE Cell energy age 1
+ASSERT LAST_N == 20
+ASSERT AVGWHERE_N == 2
+ASSERT AVGWHERE_SUM == 40
+MEANWHERE Cell energy age 0
+ASSERT LAST_N == 30
+AVGFWHERE Cell energy age 1
+ASSERT LAST_N == 20
+WHEREAVG Cell energy age 0
+ASSERT LAST_N == 30
+
+# string match
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 5
+NEW Ticket t3 "open" 4
+SUMWHERE Ticket retries status "open"
+ASSERT LAST_N == 6
+ASSERT SUMWHERE_N == 2
+AVGWHERE Ticket retries status "open"
+ASSERT LAST_N == 3
+SUMWHERE Ticket retries status "closed"
+ASSERT LAST_N == 5
+ASSERT SUMWHERE_N == 1
+
+# no match → 0
+SUMWHERE Ticket retries status "missing"
+ASSERT LAST_N == 0
+ASSERT SUMWHERE_N == 0
+
+# empty sample AVG → 0
+AVGWHERE Ticket retries status "gone"
+ASSERT LAST_N == 0
+
+PRINT "proof908_oop_sumwhere" 1
+ASSERT OK == 1

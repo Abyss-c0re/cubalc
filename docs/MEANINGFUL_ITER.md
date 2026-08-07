@@ -394,6 +394,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 364. ~~**`SETFWHERE` / `WHERESETF` / `PUTWHERE`**~~ **done** (set field on objs matching field==value · no EACH+GETF+IF+SETF).
 365. ~~**`INCFWHERE` / `ADDWHERE` / `DECFWHERE`**~~ **done** (bump numeric field on field==value objs · selective counters).
 366. ~~**`GETFWHERE` / `COLLECTWHERE` / `PLUCKWHERE`**~~ **done** (bag of field values from field==value objs · filtered GETFALL).
+367. ~~**`SUMWHERE` / `AVGWHERE` / `SUMIF`**~~ **done** (sum/mean numeric field on field==value objs · no GETFWHERE+SUM).
 
 ## Tick protocol
 

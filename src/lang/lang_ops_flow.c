@@ -3416,6 +3416,202 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SUMWHERE|TOTALWHERE|SUMFWHERE|AVGWHERE|MEANWHERE [Class] sumfield matchfield matchvalue
+   * — sum or integer mean of numeric sumfield where matchfield == matchvalue.
+   * WHERE sugar: SUMWHERE Cell energy WHERE age 1.
+   * LAST_N = result; SUMWHERE_N = sample count; soft empty → 0.
+   * Usability: filtered SUMF without GETFWHERE+SYS SUM glue. */
+  if (kw(&L->cur, "SUMWHERE") || kw(&L->cur, "TOTALWHERE") ||
+      kw(&L->cur, "SUMFWHERE") || kw(&L->cur, "WHERESUM") ||
+      kw(&L->cur, "SUMIF") || kw(&L->cur, "FIELDSUMWHERE") ||
+      kw(&L->cur, "AVGWHERE") || kw(&L->cur, "MEANWHERE") ||
+      kw(&L->cur, "AVGFWHERE") || kw(&L->cur, "WHEREAVG") ||
+      kw(&L->cur, "AVGIF") || kw(&L->cur, "MEANIF")) {
+    char filt[48], sfield[48], mfield[48], tok1[48], op[24];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, want_avg = 0, i, n = 0, n_skip = 0;
+    long m_nval = 0, sum = 0, outv = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "AVGWHERE") == 0 || strcmp(op, "MEANWHERE") == 0 ||
+        strcmp(op, "AVGFWHERE") == 0 || strcmp(op, "WHEREAVG") == 0 ||
+        strcmp(op, "AVGIF") == 0 || strcmp(op, "MEANIF") == 0)
+      want_avg = 1;
+    lex_next(L);
+    filt[0] = 0;
+    sfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SUMWHERE OF Class sumfield matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(sfield, sizeof sfield, "%s", vv->sval);
+          else
+            snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "WHERE")))
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SUMWHERE [Class] sumfield matchfield matchvalue");
+      return -1;
+    }
+    if (!sfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SUMWHERE [Class] sumfield matchfield matchvalue");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "SUMWHERE [Class] sumfield matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int sfi, mfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      sfi = oop_field_idx(cd, sfield);
+      if (mfi < 0 || sfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[sfi]) { n_skip++; continue; } /* sum numeric only */
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      sum += ob->fnum[sfi];
+      n++;
+    }
+    if (want_avg)
+      outv = (n > 0) ? (sum / n) : 0;
+    else
+      outv = sum;
+    var_set_num(vm, "LAST_N", outv);
+    vm->last_n = outv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", outv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "SUMWHERE_N", n);
+    var_set_num(vm, "AVGWHERE_N", n);
+    var_set_num(vm, "TOTALWHERE_N", n);
+    var_set_num(vm, "SUMFWHERE_N", n);
+    var_set_num(vm, "WHERESUM_N", n);
+    var_set_num(vm, "SUMWHERE_SKIP", n_skip);
+    var_set_num(vm, "SUMWHERE_SUM", sum);
+    var_set_num(vm, "AVGWHERE_SUM", sum);
+    var_set_str(vm, "FIELD", sfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* MEDIANF|P50F|MIDF|MEDIANFALL [Class] field
    * — integer median of numeric field over live objects (optional class).
    * Sort ascending; odd → middle; even → lower mid (matches SYS MEDIAN).
