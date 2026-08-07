@@ -1,0 +1,86 @@
+# FREQF / HISTF — fleet field value frequency histogram
+# Usability: status/energy rollups without GETFALL+SYS FREQ or EACH+KVINC
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+
+# numeric energy histogram (first-seen order)
+FREQF Cell energy
+ASSERT OK == 1
+ASSERT FREQF_N == 3
+ASSERT LAST_N == 3
+ASSERT FREQF_TOTAL == 4
+ASSERT FREQF_SKIP == 0
+SYS LOOKUPN LAST "10"
+ASSERT LAST_N == 2
+SYS LOOKUPN FREQF "20"
+ASSERT LAST_N == 1
+SYS LOOKUPN HISTF "30"
+ASSERT LAST_N == 1
+
+# HISTF / COUNTF aliases
+HISTF Cell energy
+ASSERT HISTF_N == 3
+ASSERT HISTF_TOTAL == 4
+COUNTF Cell energy
+ASSERT COUNTF_N == 3
+
+# OF sugar
+FREQF OF Cell energy
+ASSERT FREQF_N == 3
+
+# bare field across classes that share name
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 5
+NEW Counter k3 7
+FREQF n
+ASSERT FREQF_N == 2
+ASSERT FREQF_TOTAL == 3
+SYS LOOKUPN FREQF "5"
+ASSERT LAST_N == 2
+SYS LOOKUPN FREQF "7"
+ASSERT LAST_N == 1
+
+# class filter ignores other classes' fields of same name
+FREQFALL Counter n
+ASSERT FREQFALL_N == 2
+ASSERT FREQF_TOTAL == 3
+
+# string field status rollup
+CLASS Ticket
+  FIELD status "new"
+  METHOD init s
+    SETF THIS status s
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "open"
+NEW Ticket t3 "closed"
+NEW Ticket t4 "open"
+FREQF Ticket status
+ASSERT FREQF_N == 2
+ASSERT FREQF_TOTAL == 4
+SYS LOOKUPN FREQF "open"
+ASSERT LAST_N == 3
+SYS LOOKUPN FREQF "closed"
+ASSERT LAST_N == 1
+
+# chain into TOPKEY (FREQF bag survives LOOKUPN clobber of LAST)
+SYS TOPKEY FREQF
+SYS EQS LAST "open"
+ASSERT LAST_N == 1 "dominant status"
+
+PRINT "proof900_oop_freqf" 1
+ASSERT OK == 1

@@ -2608,6 +2608,152 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* FREQF|HISTF|COUNTF|FREQFALL [Class] field
+   * — frequency histogram of field values over live objects (num or str).
+   * LAST = "val:count" bag (first-seen order, sep ":"); LAST_N = distinct keys.
+   * FREQF_TOTAL = sample count; soft empty → empty bag / 0.
+   * Usability: fleet status rollups without GETFALL+SYS FREQ / EACH+KVINC. */
+  if (kw(&L->cur, "FREQF") || kw(&L->cur, "HISTF") ||
+      kw(&L->cur, "COUNTF") || kw(&L->cur, "FREQFALL") ||
+      kw(&L->cur, "HISTFALL") || kw(&L->cur, "FIELDFREQ") ||
+      kw(&L->cur, "OBJSFREQ") || kw(&L->cur, "FREQFIELD") ||
+      kw(&L->cur, "HISTFIELD") || kw(&L->cur, "VALUEFREQ") ||
+      kw(&L->cur, "ROLLUPF")) {
+    char filt[48], fname[48], tok1[48];
+    char keys[64][128];
+    long counts[64];
+    char out[CUBALC_HOST_STR_MAX];
+    int has_filt = 0, i, k, nk = 0, n_skip = 0, total = 0;
+    size_t olen = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    out[0] = 0;
+    memset(counts, 0, sizeof counts);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "FREQF OF Class field"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "FREQF [Class] field"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "FREQF [Class] field"); return -1;
+      }
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      char field[128];
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi])
+        snprintf(field, sizeof field, "%s", ob->fstr[fi]);
+      else
+        snprintf(field, sizeof field, "%ld", ob->fnum[fi]);
+      total++;
+      for (k = 0; k < nk; k++) {
+        if (strcmp(keys[k], field) == 0) {
+          counts[k]++;
+          break;
+        }
+      }
+      if (k == nk && nk < 64) {
+        snprintf(keys[nk], sizeof keys[0], "%s", field);
+        counts[nk] = 1;
+        nk++;
+      }
+    }
+    for (k = 0; k < nk; k++) {
+      char line[160];
+      int n;
+      n = snprintf(line, sizeof line, "%s:%ld", keys[k], counts[k]);
+      if (n < 0) n = 0;
+      if ((size_t)n >= sizeof line) n = (int)sizeof line - 1;
+      if (k > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+      if (olen + (size_t)n < sizeof out) {
+        memcpy(out + olen, line, (size_t)n);
+        olen += (size_t)n;
+      } else if (olen < sizeof out - 1) {
+        size_t t = sizeof out - 1 - olen;
+        memcpy(out + olen, line, t);
+        olen += t;
+      }
+      out[olen] = 0;
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "FREQF", out);
+    var_set_str(vm, "HISTF", out);
+    var_set_str(vm, "FREQFALL", out);
+    var_set_str(vm, "FREQ", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = nk;
+    var_set_num(vm, "LAST_N", nk);
+    var_set_num(vm, "FREQF_N", nk);
+    var_set_num(vm, "HISTF_N", nk);
+    var_set_num(vm, "COUNTF_N", nk);
+    var_set_num(vm, "FREQFALL_N", nk);
+    var_set_num(vm, "FREQF_TOTAL", total);
+    var_set_num(vm, "HISTF_TOTAL", total);
+    var_set_num(vm, "FREQF_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREGE|WHEREGT|WHERELE|WHERELT [Class] field value
    * — bag of live object names where numeric field meets threshold.
    * Soft always; string/missing fields skipped. LAST_N = count.
