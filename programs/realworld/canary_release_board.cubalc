@@ -1,0 +1,1139 @@
+# canary_release_board.cubalc — CLONEOBJ/RENAMEOBJ blue→canary→green promote
+#
+# Real use: release agents clone a live blue Rel into canary, shift weight,
+# arm traffic, then RENAMEOBJ canary→green (promote) without re-NEW field glue:
+#   CLONEOBJ / COPYOBJ — shallow field copy to new slot
+#   RENAMEOBJ / MOVEOBJ — promote name in place
+#   DUMPOBJ plate rehydrate for multi-run ARG dispatch
+#   GETF OR / IF str== / SEND set_weight
+# Distinct from svc_config (static configs) and canary_cohort (non-OOP):
+# this board is *release slot clone + rename promote*.
+#
+# Slots (fixed idents — GETF/SEND need literals): blue canary green retired
+#
+# Plate under STATE:
+#   dump/blue dump/canary dump/green dump/retired
+#   OBJS.txt VAL.txt META.txt CANARY_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CR_ACTION):
+#   list      — LISTOBJS Rel
+#   open      — NEW blue ARG1=ver weight=100 (or CUBALC_CR_VER)
+#   canary    — CLONEOBJ blue canary; set_weight ARG1 (default 10)
+#   arm       — SEND slot arm (ARG1 blue|canary|green)
+#   promote   — RENAMEOBJ canary green (delete green first if present)
+#   retire    — RENAMEOBJ blue retired
+#   weight    — GETF slot weight
+#   ver       — GETF slot ver
+#   dump      — DUMPOBJ slot → plate
+#   gate      — live==1 and weight>0 admit
+#   delete    — DELETEOBJ slot
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cr_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=1.2.0
+#   CUBALC_ARG0=canary CUBALC_ARG1=10
+#   CUBALC_ARG0=arm CUBALC_ARG1=canary
+#   CUBALC_ARG0=promote
+#   CUBALC_ARG0=gate CUBALC_ARG1=green CUBALC_CR_REQUIRE=1
+#
+# Env: CUBALC_CR_REQUIRE=1 CUBALC_CR_VER=1.0.0 CUBALC_CR_WEIGHT=10
+#
+# Edges:
+#   CLONEOBJ onto existing name hard-fails (no soft last_err) — delete first
+#   RENAMEOBJ onto existing: delete dst first
+#   LET <fieldname> after CLASS hard-fails (LET ver with FIELD ver)
+#   GETF/SEND need literal idents (string-var object names still fail)
+#   Shallow clone independent fields; CLONE skips init
+#   WRITE NL; REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Rel
+  FIELD ver ""
+  FIELD weight 0
+  FIELD live 0
+  METHOD init v w
+    SETF THIS ver v
+    SETF THIS weight w
+    SETF THIS live 0
+  END
+  METHOD arm
+    SETF THIS live 1
+    RET 1
+  END
+  METHOD disarm
+    SETF THIS live 0
+    RET 0
+  END
+  METHOD set_weight w
+    SETF THIS weight w
+    RET w
+  END
+END
+
+NOTE "canary_release_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_VER = "0.0.1"
+DEFAULT DEF_WEIGHT = 10
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CR_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CR_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CR_VER" OR ""
+IF LAST_N > 0 THEN
+  LET DEF_VER = LAST
+END
+SYS ENV "CUBALC_CR_WEIGHT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DEF_WEIGHT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "CANARY_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "blue"
+LET d_blue = LAST
+SYS JOIN dump_dir "canary"
+LET d_canary = LAST
+SYS JOIN dump_dir "green"
+LET d_green = LAST
+SYS JOIN dump_dir "retired"
+LET d_retired = LAST
+
+# slot flags from NAME
+LET is_blue = 0
+LET is_canary = 0
+LET is_green = 0
+LET is_retired = 0
+SYS EQS NAME "blue"
+IF LAST_N == 1 THEN
+  LET is_blue = 1
+END
+SYS EQS NAME "canary"
+IF LAST_N == 1 THEN
+  LET is_canary = 1
+END
+SYS EQS NAME "green"
+IF LAST_N == 1 THEN
+  LET is_green = 1
+END
+SYS EQS NAME "retired"
+IF LAST_N == 1 THEN
+  LET is_retired = 1
+END
+LET slot_ok = is_blue + is_canary + is_green + is_retired
+
+# --- rehydrate from dump ---
+SYS READ OR d_blue OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "ver:"
+IF LAST_N == 1 THEN
+  HASOBJ blue
+  IF LAST_N == 1 THEN
+    DELETEOBJ blue
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "ver"
+  LET rv = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "live"
+  LET rl = LAST_N
+  CLEAR_ERR
+  NEW Rel blue rv rw
+  IF rl == 1 THEN
+    SEND blue arm
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_canary OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "ver:"
+IF LAST_N == 1 THEN
+  HASOBJ canary
+  IF LAST_N == 1 THEN
+    DELETEOBJ canary
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "ver"
+  LET rv = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "live"
+  LET rl = LAST_N
+  CLEAR_ERR
+  NEW Rel canary rv rw
+  IF rl == 1 THEN
+    SEND canary arm
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_green OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "ver:"
+IF LAST_N == 1 THEN
+  HASOBJ green
+  IF LAST_N == 1 THEN
+    DELETEOBJ green
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "ver"
+  LET rv = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "live"
+  LET rl = LAST_N
+  CLEAR_ERR
+  NEW Rel green rv rw
+  IF rl == 1 THEN
+    SEND green arm
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_retired OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "ver:"
+IF LAST_N == 1 THEN
+  HASOBJ retired
+  IF LAST_N == 1 THEN
+    DELETEOBJ retired
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "ver"
+  LET rv = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "live"
+  LET rl = LAST_N
+  CLEAR_ERR
+  NEW Rel retired rv rw
+  IF rl == 1 THEN
+    SEND retired arm
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET nobjs = 0
+LET weight_n = 0
+LET live_n = 0
+
+# helper: persist one slot dump
+# (inlined per action)
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Rel
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open blue ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  # NOTE: cannot LET ver — shadows FIELD ver and hard-fails after CLASS
+  LET rel_ver = DEF_VER
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rel_ver = NAME
+  END
+  HASOBJ blue
+  IF LAST_N == 1 THEN
+    DELETEOBJ blue
+    CLEAR_ERR
+  END
+  NEW Rel blue rel_ver 100
+  DUMPOBJ blue
+  LET snap = LAST
+  SYS WRITE d_blue snap
+  CLEAR_ERR
+  LISTOBJS Rel
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "open ok"
+  LET val = rel_ver
+  LET val_ch = 1
+  LET meta = "open"
+  SYS PUSH meta rel_ver
+  LET meta = LAST
+  SYS PUSH meta "100"
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- canary: clone blue + set weight ---
+SYS EQS ACTION "canary"
+IF LAST_N == 1 THEN
+  NOTE "action canary"
+  HASOBJ blue
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "canary no blue"
+    FAIL "canary no blue"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "canary no blue"
+    END
+  ELSE
+    LET w = DEF_WEIGHT
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET ntmp = LAST_N
+        SYS STR ntmp
+        SYS EQS LAST NAME
+        IF LAST_N == 1 THEN
+          LET w = ntmp
+        END
+      END
+      CLEAR_ERR
+    END
+    HASOBJ canary
+    IF LAST_N == 1 THEN
+      DELETEOBJ canary
+      CLEAR_ERR
+    END
+    CLONEOBJ blue canary
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "canary clone fail"
+      FAIL "canary clone fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "canary clone fail"
+      END
+    ELSE
+      SEND canary set_weight w
+      # blue keeps full weight; canary gets slice
+      DUMPOBJ canary
+      LET snap = LAST
+      SYS WRITE d_canary snap
+      CLEAR_ERR
+      DUMPOBJ blue
+      LET snap = LAST
+      SYS WRITE d_blue snap
+      CLEAR_ERR
+      GETF canary weight
+      LET weight_n = LAST_N
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "canary ok"
+      LET meta = "canary"
+      SYS STR w
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      LISTOBJS Rel
+      SYS WRITE objs_path LAST
+      CLEAR_ERR
+    END
+  END
+  PRINT_JSON weight_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- arm ---
+SYS EQS ACTION "arm"
+IF LAST_N == 1 THEN
+  NOTE "action arm"
+  # default canary if NAME blank
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = "canary"
+    LET is_canary = 1
+    LET slot_ok = 1
+  END
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "arm bad slot"
+    FAIL "arm bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "arm bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_blue == 1 THEN
+      HASOBJ blue
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND blue arm
+        DUMPOBJ blue
+        LET snap = LAST
+        SYS WRITE d_blue snap
+        CLEAR_ERR
+      END
+    END
+    IF is_canary == 1 THEN
+      HASOBJ canary
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND canary arm
+        DUMPOBJ canary
+        LET snap = LAST
+        SYS WRITE d_canary snap
+        CLEAR_ERR
+      END
+    END
+    IF is_green == 1 THEN
+      HASOBJ green
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND green arm
+        DUMPOBJ green
+        LET snap = LAST
+        SYS WRITE d_green snap
+        CLEAR_ERR
+      END
+    END
+    IF is_retired == 1 THEN
+      HASOBJ retired
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND retired arm
+        DUMPOBJ retired
+        LET snap = LAST
+        SYS WRITE d_retired snap
+        CLEAR_ERR
+      END
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "arm missing"
+      FAIL "arm missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "arm missing"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "arm ok"
+      LET val = "live"
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- promote: canary → green ---
+SYS EQS ACTION "promote"
+IF LAST_N == 1 THEN
+  NOTE "action promote"
+  HASOBJ canary
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "promote no canary"
+    FAIL "promote no canary"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "promote no canary"
+    END
+  ELSE
+    HASOBJ green
+    IF LAST_N == 1 THEN
+      DELETEOBJ green
+      CLEAR_ERR
+    END
+    RENAMEOBJ canary green
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "promote rename fail"
+      FAIL "promote rename fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "promote rename fail"
+      END
+    ELSE
+      # remove canary plate; write green
+      SYS RM d_canary
+      CLEAR_ERR
+      DUMPOBJ green
+      LET snap = LAST
+      SYS WRITE d_green snap
+      CLEAR_ERR
+      # optional: cut blue weight after promote
+      HASOBJ blue
+      IF LAST_N == 1 THEN
+        SEND blue set_weight 0
+        SEND blue disarm
+        DUMPOBJ blue
+        LET snap = LAST
+        SYS WRITE d_blue snap
+        CLEAR_ERR
+      END
+      LISTOBJS Rel
+      SYS WRITE objs_path LAST
+      CLEAR_ERR
+      GETF green ver
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "promote ok"
+      LET meta = "promote"
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- retire blue → retired ---
+SYS EQS ACTION "retire"
+IF LAST_N == 1 THEN
+  NOTE "action retire"
+  HASOBJ blue
+  IF LAST_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "retire no blue"
+    FAIL "retire no blue"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "retire no blue"
+    END
+  ELSE
+    HASOBJ retired
+    IF LAST_N == 1 THEN
+      DELETEOBJ retired
+      CLEAR_ERR
+    END
+    RENAMEOBJ blue retired
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "retire fail"
+      FAIL "retire fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "retire fail"
+      END
+    ELSE
+      SYS RM d_blue
+      CLEAR_ERR
+      SEND retired disarm
+      SEND retired set_weight 0
+      DUMPOBJ retired
+      LET snap = LAST
+      SYS WRITE d_retired snap
+      CLEAR_ERR
+      LISTOBJS Rel
+      SYS WRITE objs_path LAST
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "retire ok"
+      LET val = "retired"
+      LET val_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- weight ---
+SYS EQS ACTION "weight"
+IF LAST_N == 1 THEN
+  NOTE "action weight"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "weight bad slot"
+    FAIL "weight bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "weight bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_blue == 1 THEN
+      HASOBJ blue
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF blue weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_canary == 1 THEN
+      HASOBJ canary
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF canary weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_green == 1 THEN
+      HASOBJ green
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF green weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_retired == 1 THEN
+      HASOBJ retired
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF retired weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "weight missing"
+      FAIL "weight missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "weight missing"
+      END
+    ELSE
+      SYS STR weight_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "weight ok"
+    END
+  END
+  PRINT_JSON weight_n
+  CLEAR_ERR
+END
+
+# --- ver ---
+SYS EQS ACTION "ver"
+IF LAST_N == 1 THEN
+  NOTE "action ver"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "ver bad slot"
+    FAIL "ver bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ver bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_blue == 1 THEN
+      HASOBJ blue
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF blue ver
+        LET val = LAST
+      END
+    END
+    IF is_canary == 1 THEN
+      HASOBJ canary
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF canary ver
+        LET val = LAST
+      END
+    END
+    IF is_green == 1 THEN
+      HASOBJ green
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF green ver
+        LET val = LAST
+      END
+    END
+    IF is_retired == 1 THEN
+      HASOBJ retired
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF retired ver
+        LET val = LAST
+      END
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "ver missing"
+      FAIL "ver missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ver missing"
+      END
+    ELSE
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "ver ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET okd = 0
+    LET snap = ""
+    IF is_blue == 1 THEN
+      DUMPOBJ blue
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_blue snap
+        CLEAR_ERR
+      END
+    END
+    IF is_canary == 1 THEN
+      DUMPOBJ canary
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_canary snap
+        CLEAR_ERR
+      END
+    END
+    IF is_green == 1 THEN
+      DUMPOBJ green
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_green snap
+        CLEAR_ERR
+      END
+    END
+    IF is_retired == 1 THEN
+      DUMPOBJ retired
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_retired snap
+        CLEAR_ERR
+      END
+    END
+    IF okd == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET val = snap
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "dump ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: live && weight > 0 ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET alive = 0
+    LET live_n = 0
+    LET weight_n = 0
+    IF is_blue == 1 THEN
+      HASOBJ blue
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF blue live
+        LET live_n = LAST_N
+        GETF blue weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_canary == 1 THEN
+      HASOBJ canary
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF canary live
+        LET live_n = LAST_N
+        GETF canary weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_green == 1 THEN
+      HASOBJ green
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF green live
+        LET live_n = LAST_N
+        GETF green weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF is_retired == 1 THEN
+      HASOBJ retired
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF retired live
+        LET live_n = LAST_N
+        GETF retired weight
+        LET weight_n = LAST_N
+      END
+    END
+    IF alive == 0 THEN
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate missing"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate missing"
+      END
+    ELSE
+      IF live_n == 1 THEN
+        IF weight_n > 0 THEN
+          LET gate_n = 1
+          LET hit = 1
+          LET note_msg = "gate admit"
+          LET val = "admit"
+          LET val_ch = 1
+        ELSE
+          LET gate_n = 0
+          LET miss = 1
+          LET note_msg = "gate zero weight"
+          LET val = "deny"
+          LET val_ch = 1
+          FAIL "gate zero weight"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate zero weight"
+          END
+        END
+      ELSE
+        LET gate_n = 0
+        LET miss = 1
+        LET note_msg = "gate not live"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate not live"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate not live"
+        END
+      END
+      LET meta = "gate"
+      SYS STR live_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR weight_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON gate_n live_n weight_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- delete ---
+SYS EQS ACTION "delete"
+IF LAST_N == 1 THEN
+  NOTE "action delete"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "delete bad slot"
+    FAIL "delete bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delete bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_blue == 1 THEN
+      HASOBJ blue
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ blue
+      END
+      SYS RM d_blue
+      CLEAR_ERR
+    END
+    IF is_canary == 1 THEN
+      HASOBJ canary
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ canary
+      END
+      SYS RM d_canary
+      CLEAR_ERR
+    END
+    IF is_green == 1 THEN
+      HASOBJ green
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ green
+      END
+      SYS RM d_green
+      CLEAR_ERR
+    END
+    IF is_retired == 1 THEN
+      HASOBJ retired
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ retired
+      END
+      SYS RM d_retired
+      CLEAR_ERR
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "delete miss"
+      FAIL "delete miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "delete miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "delete ok"
+      LET val = "deleted"
+      LET val_ch = 1
+    END
+  END
+  LISTOBJS Rel
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ blue
+  IF LAST_N == 1 THEN
+    DELETEOBJ blue
+  END
+  CLEAR_ERR
+  HASOBJ canary
+  IF LAST_N == 1 THEN
+    DELETEOBJ canary
+  END
+  CLEAR_ERR
+  HASOBJ green
+  IF LAST_N == 1 THEN
+    DELETEOBJ green
+  END
+  CLEAR_ERR
+  HASOBJ retired
+  IF LAST_N == 1 THEN
+    DELETEOBJ retired
+  END
+  CLEAR_ERR
+  SYS RM d_blue
+  SYS RM d_canary
+  SYS RM d_green
+  SYS RM d_retired
+  CLEAR_ERR
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "cleared"
+  LET val = ""
+  LET val_ch = 1
+  LET meta = ""
+  LET meta_ch = 1
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "canary"
+LET k = k + LAST_N
+SYS EQS ACTION "arm"
+LET k = k + LAST_N
+SYS EQS ACTION "promote"
+LET k = k + LAST_N
+SYS EQS ACTION "retire"
+LET k = k + LAST_N
+SYS EQS ACTION "weight"
+LET k = k + LAST_N
+SYS EQS ACTION "ver"
+LET k = k + LAST_N
+SYS EQS ACTION "dump"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "delete"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET elapsed = MS - t0
+LISTOBJS Rel
+LET nobjs = NOBJS
+
+LET report = "schema=cubalc.canary_release_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "nobjs"
+LET report = LAST
+SYS STR nobjs
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+CLEAR_ERR
+
+STATUS
+PRINT "canary_release_board" ACTION hit miss nobjs gate_n note_msg elapsed
