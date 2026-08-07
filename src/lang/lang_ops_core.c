@@ -25814,7 +25814,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"STATUS", "STATUS — cubalc.status.v1 health plate (ok/last_err/version/time)"},
       {"IDENTITY", "IDENTITY — cubalc.identity.v1 plate (user@host:pid + vars)"},
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
-      {"LET", "LET name = expr|string"},
+      {"LET", "LET name [=] expr|string — = optional before value"},
       {"DEFAULT", "DEFAULT name = expr|str — set only if unset (INCLUDE-safe)"},
       {"DEFINED", "DEFINED name — LAST_N 1 if var exists, 0 if missing"},
       {"TYPEOF", "TYPEOF name — LAST undef|num|str · LAST_N 0|1|2"},
@@ -27720,11 +27720,26 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   if (kw(&L->cur,"LET")){
+    int aln = L->cur.line;
     lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"LET"); return -1; }
+    if (L->cur.kind!=TK_IDENT){
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "LET needs name [=] value line %d — LET x = 1", aln);
+      fail(vm, ebuf); return -1;
+    }
     char name[48]; snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
-    if (L->cur.kind!=TK_EQ){ fail(vm,"LET ="); return -1; }
-    lex_next(L);
+    /* '=' optional when next token is a value — LET x 1 same as LET x = 1 */
+    if (L->cur.kind==TK_EQ){
+      lex_next(L);
+    } else if (!(L->cur.kind==TK_NUM || L->cur.kind==TK_STR ||
+                 L->cur.kind==TK_MINUS || L->cur.kind==TK_LPAREN ||
+                 L->cur.kind==TK_IDENT)){
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "LET '%s' needs value line %d — LET %s = 1", name, aln, name);
+      fail(vm, ebuf); return -1;
+    }
     if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
           strcmp(L->cur.text,"LAST")==0 ||
           (var_get(vm,L->cur.text,0) && var_get(vm,L->cur.text,0)->is_str)))){

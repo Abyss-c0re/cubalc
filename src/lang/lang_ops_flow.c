@@ -19164,12 +19164,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
-  /* UNLESS cond THEN ... [ELSE ...] END — inverted IF */
+  /* UNLESS cond [THEN] ... [ELSE ...] END — inverted IF; THEN optional */
   if (kw(&L->cur,"UNLESS")){
+    int aln = L->cur.line;
     lex_next(L);
     long cond = parse_expr(vm, L);
-    if (!kw(&L->cur,"THEN")){ fail(vm,"UNLESS expr THEN"); return -1; }
-    lex_next(L); skip_nl(L);
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")){ lex_next(L); skip_nl(L); }
     Lex body_start=*L;
     int depth=1;
     while (L->cur.kind!=TK_EOF && depth>0){
@@ -19187,7 +19188,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
       lex_next(L);
     }
-    if (depth>1){ fail(vm,"UNLESS without END"); return -1; }
+    if (depth>1){
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "UNLESS without END line %d — close with END", aln);
+      fail(vm, ebuf); return -1;
+    }
     if (!cond){
       Lex body=body_start;
       if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
@@ -19223,7 +19229,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     if (kw(&L->cur,"END")){ lex_next(L); bump(vm); return 1; }
-    fail(vm,"UNLESS chain broken"); return -1;
+    {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf,
+               "UNLESS chain broken line %d — expected ELSE/END", aln);
+      fail(vm, ebuf); return -1;
+    }
   }
   /* digit-1 control: FOREVER / LOOPINF / INFINITE ... END — unbounded until BREAK */
   if (kw(&L->cur,"FOREVER")||kw(&L->cur,"LOOPINF")||kw(&L->cur,"INFINITE")||
@@ -19397,11 +19408,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
   if (kw(&L->cur,"IF")){
     lex_next(L);
-    /* chain: IF c THEN ... ELIF c THEN ... ELSE ... END */
+    /* chain: IF c [THEN] ... ELIF c [THEN] ... ELSE ... END
+     * THEN optional — agents write newline IF bodies without glue. */
     for(;;){
+      int aln = L->cur.line;
       long cond=parse_expr(vm,L);
-      if (!kw(&L->cur,"THEN")){ fail(vm,"IF expr THEN"); return -1; }
-      lex_next(L); skip_nl(L);
+      skip_nl(L);
+      if (kw(&L->cur,"THEN")){ lex_next(L); skip_nl(L); }
+      /* if next is ELSE/ELIF/END with no body, still valid empty arm */
+      if (L->cur.kind==TK_EOF){
+        char ebuf[160];
+        snprintf(ebuf, sizeof ebuf,
+                 "IF without END line %d — IF cond [THEN] … END", aln);
+        fail(vm, ebuf); return -1;
+      }
       Lex body_start=*L;
       int depth=1;
       while (L->cur.kind!=TK_EOF && depth>0){
@@ -19417,7 +19437,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
         lex_next(L);
       }
-      if (depth>1){ fail(vm,"IF without END"); return -1; }
+      if (depth>1){
+        char ebuf[160];
+        snprintf(ebuf, sizeof ebuf,
+                 "IF without END line %d — close with END (or ELSE/ELIF)", aln);
+        fail(vm, ebuf); return -1;
+      }
       if (cond){
         Lex body=body_start;
         if (exec_stmts_until(vm,&body,"END","ELSE")<0) return -1;
@@ -19464,7 +19489,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         bump(vm); return 1;
       }
       if (kw(&L->cur,"END")){ lex_next(L); bump(vm); return 1; }
-      fail(vm,"IF chain broken"); return -1;
+      {
+        char ebuf[160];
+        snprintf(ebuf, sizeof ebuf,
+                 "IF chain broken line %d — expected ELSE/ELIF/END", aln);
+        fail(vm, ebuf); return -1;
+      }
     }
   }
   if (kw(&L->cur,"END")||kw(&L->cur,"ELSE")||kw(&L->cur,"ELIF")||kw(&L->cur,"ELSEIF")||kw(&L->cur,"THEN")){

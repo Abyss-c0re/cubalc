@@ -1,0 +1,62 @@
+# Optional THEN (IF/UNLESS/ELIF) and optional = (LET) — agent glue reduction
+# Write programs without mandatory THEN/= while classic form still works
+
+HOLD_FLASH 1
+
+# LET without =
+LET a 10
+ASSERT a == 10
+LET b = 20
+ASSERT b == 20
+
+# IF without THEN
+LET r 0
+IF 1
+  LET r 1
+END
+ASSERT r == 1
+
+# IF with THEN still works
+IF 0 THEN
+  LET r 9
+ELSE
+  LET r 2
+END
+ASSERT r == 2
+
+# ELIF without THEN
+LET s 0
+IF 0
+  LET s 1
+ELIF 1
+  LET s 2
+ELSE
+  LET s 3
+END
+ASSERT s == 2
+
+# UNLESS without THEN (cond false → body runs)
+LET u 0
+UNLESS 0
+  LET u 1
+END
+ASSERT u == 1
+
+# UNLESS with THEN
+UNLESS 1 THEN
+  LET u 9
+ELSE
+  LET u 2
+END
+ASSERT u == 2
+
+# nested IF no THEN
+LET n 0
+IF 1
+  IF 1
+    LET n 5
+  END
+END
+ASSERT n == 5
+
+PRINT "optional_then_let ok"

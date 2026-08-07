@@ -460,6 +460,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 430. ~~**SYS/INCLUDE name did-you-mean**~~ **done** (unknown SYS op → closest host form · INCLUDE lib typo → programs/lib stem · no catalog soup).
 431. ~~**ASSERT/EXPECT got/expected**~~ **done** (cmp fail shows `3 == 1 is false` · ASSERT_GOT/EXPECTED/OP knobs · soft EXPECT too).
 432. ~~**CALL/SEND arity check**~~ **done** (under-arity → needs N got M · params list · ARITY_NEED/GOT · soft TRY* · clears unbound formals).
+433. ~~**optional THEN / LET =**~~ **done** (IF/UNLESS/ELIF body without THEN · LET name value without = · clearer LET syntax errs with line).
 
 ## Tick protocol
 
