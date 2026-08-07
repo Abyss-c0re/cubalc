@@ -1225,6 +1225,86 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* RENAMEOBJ|MOVEOBJ|RENOBJ old [AS|TO] new — rename live object slot in place.
+   * Soft miss old OK=0. Live destination → fatal redefine. Dead destination
+   * name cleared so pool recycle stays unique. Updates THIS if receiver.
+   * Usability: promote temp/proto names after CLONE without re-NEW. */
+  if (kw(&L->cur, "RENAMEOBJ") || kw(&L->cur, "MOVEOBJ") ||
+      kw(&L->cur, "RENOBJ") || kw(&L->cur, "OBJRENAME") ||
+      kw(&L->cur, "RENAME_OBJ") || kw(&L->cur, "MVOBJ") ||
+      kw(&L->cur, "OBJMOVE") || kw(&L->cur, "ALIASOBJ")) {
+    char oname[48], nname[48], oldn[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int i;
+    lex_next(L);
+    if (oop_read_name(vm, L, oname, sizeof oname, "RENAMEOBJ old") < 0)
+      return -1;
+    if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
+      lex_next(L);
+    if (oop_read_name(vm, L, nname, sizeof nname, "RENAMEOBJ new") < 0)
+      return -1;
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "RENAMEOBJ_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "RENAMEOBJ: unknown object");
+      var_set_str(vm, "ERR", "RENAMEOBJ: unknown object");
+      bump(vm);
+      return 1;
+    }
+    /* no-op same name */
+    if (strcmp(oname, nname) == 0) {
+      var_set_str(vm, "LAST", nname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "RENAMEOBJ_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    /* destination live already? */
+    if (oop_find_obj(vm, nname)) {
+      snprintf(vm->err, sizeof vm->err, "RENAMEOBJ destination live %s", nname);
+      fail(vm, vm->err);
+      return -1;
+    }
+    /* clear dead slots that hold destination name (pool uniqueness) */
+    for (i = 0; i < vm->n_objs; i++) {
+      if (&vm->objs[i] == ob) continue;
+      if (!vm->objs[i].live && strcmp(vm->objs[i].name, nname) == 0)
+        vm->objs[i].name[0] = 0;
+    }
+    snprintf(oldn, sizeof oldn, "%s", ob->name);
+    snprintf(ob->name, sizeof ob->name, "%s", nname);
+    if (strcmp(vm->this_obj, oldn) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", nname);
+      var_set_str(vm, "THIS", nname);
+      var_set_str(vm, "SELF", nname);
+    }
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, nname, cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", nname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nname);
+    var_set_str(vm, "OBJECT", nname);
+    var_set_str(vm, "RENAMEOBJ", nname);
+    var_set_str(vm, "RENAME_FROM", oldn);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "RENAMEOBJ_N", 1);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF. */
   if (kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASF") ||
       kw(&L->cur, "FIELD?") || kw(&L->cur, "HASFILD") ||

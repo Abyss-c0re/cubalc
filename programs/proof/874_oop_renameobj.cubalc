@@ -1,0 +1,74 @@
+# RENAMEOBJ / MOVEOBJ — rename live object slot in place
+# Usability: promote temp/proto names after CLONE without re-NEW + SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell tmp 1 9 0
+SETF tmp age 4
+
+RENAMEOBJ tmp cell_a
+ASSERT OK == 1
+ASSERT RENAMEOBJ_N == 1
+ASSERT LAST == "cell_a"
+ASSERT RENAME_FROM == "tmp"
+
+HASOBJ tmp
+ASSERT LAST_N == 0 "old name gone"
+HASOBJ cell_a
+ASSERT LAST_N == 1
+GETF cell_a energy
+ASSERT LAST_N == 9 "fields intact"
+GETF cell_a age
+ASSERT LAST_N == 4
+
+# AS / TO sugar
+RENAMEOBJ cell_a AS hero
+HASOBJ hero
+ASSERT LAST_N == 1
+HASOBJ cell_a
+ASSERT LAST_N == 0
+GETF hero energy
+ASSERT LAST_N == 9
+
+# MOVEOBJ alias
+MOVEOBJ hero TO champ
+HASOBJ champ
+ASSERT LAST_N == 1
+GETF champ age
+ASSERT LAST_N == 4
+
+# no-op same name
+RENAMEOBJ champ champ
+ASSERT OK == 1
+HASOBJ champ
+ASSERT LAST_N == 1
+
+# soft miss
+RENAMEOBJ missing_zz ghost
+ASSERT OK == 0
+HASOBJ ghost
+ASSERT LAST_N == 0
+
+# CLONE then RENAME pipeline
+CLONEOBJ champ proto
+RENAMEOBJ proto AS spare
+HASOBJ spare
+ASSERT LAST_N == 1
+GETF spare energy
+ASSERT LAST_N == 9
+# champ still live
+HASOBJ champ
+ASSERT LAST_N == 1
+
+# LISTOBJS sees new name only
+LISTOBJS Cell
+SYS HASLINE LAST "champ"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "tmp"
+ASSERT LAST_N == 0
+SYS HASLINE LAST "spare"
+ASSERT LAST_N == 1
+
+PRINT "oop_renameobj ok"

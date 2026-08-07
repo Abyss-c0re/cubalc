@@ -24871,6 +24871,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"DELETEOBJ", "DELETEOBJ|FREEOBJ name — free object slot · NEW reuses name (not cube DESTROY)"},
       {"CLONEOBJ", "CLONEOBJ|COPYOBJ src dst — shallow field copy same class · no init re-run"},
       {"COPYOBJ", "COPYOBJ alias of CLONEOBJ"},
+      {"RENAMEOBJ", "RENAMEOBJ|MOVEOBJ old [AS|TO] new — rename live slot in place · soft miss"},
+      {"MOVEOBJ", "MOVEOBJ alias of RENAMEOBJ"},
       {"HASFIELD", "HASFIELD obj|Class field — soft 0|1 before GETF"},
       {"LISTFIELDS", "LISTFIELDS Class|obj — field name bag · NFIELDS"},
       {"DUMPOBJ", "DUMPOBJ|INSPECT obj [JSON] — field:value bag (or cubalc.obj.v1) · soft miss"},

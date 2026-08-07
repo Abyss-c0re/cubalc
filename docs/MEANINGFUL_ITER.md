@@ -360,6 +360,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 330. ~~**SETF/NEW string-from-var**~~ **done** (string formals + dynamic NEW name · ticket_object W1–W3).
 331. ~~**ASSERT/IF string `==` / `!=`**~~ **done** (content compare for LAST/str vars · no SYS EQS glue).
 332. ~~**`CLONEOBJ` / `COPYOBJ`**~~ **done** (shallow object field copy · template/pool without SETF walk).
+333. ~~**`RENAMEOBJ` / `MOVEOBJ`**~~ **done** (rename live object slot in place · promote temp names after CLONE).
 
 ## Tick protocol
 
