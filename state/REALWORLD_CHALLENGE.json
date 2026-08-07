@@ -15,31 +15,31 @@
     },
     {
       "name": "debit_floor",
-      "cmd": "debit 30→70; debit 100→MAXF 0; META changed=1",
+      "cmd": "debit 30\u219270; debit 100\u2192MAXF 0; META changed=1",
       "ok": true,
       "note": "MAXF"
     },
     {
       "name": "floor_action",
-      "cmd": "setrem -5; floor →0 CHANGED=1; already-under CHANGED=0",
+      "cmd": "setrem -5; floor \u21920 CHANGED=1; already-under CHANGED=0",
       "ok": true,
       "note": "FLOORF/ATLEASTF"
     },
     {
       "name": "cap_burst",
-      "cmd": "setburst 200 CAP=50 →50; under-cap CHANGED=0",
+      "cmd": "setburst 200 CAP=50 \u219250; under-cap CHANGED=0",
       "ok": true,
       "note": "MINF/CAPF"
     },
     {
       "name": "bound_score",
-      "cmd": "score 150→100; score -20→0 via BOUNDF/LIMITF",
+      "cmd": "score 150\u2192100; score -20\u21920 via BOUNDF/LIMITF",
       "ok": true,
       "note": "BOUNDF"
     },
     {
       "name": "gate",
-      "cmd": "rem>=10 admit; >=50 deny REQUIRE→2",
+      "cmd": "rem>=10 admit; >=50 deny REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -62,8 +62,8 @@
       "severity": "high",
       "area": "oop|minf|maxf",
       "title": "Limit var names FLOOR and CAP hard-fail MAXF/MINF",
-      "detail": "DEFAULT FLOOR=0 then MAXF obj field FLOOR → err 'MAXF object field limit' (halted). CAP same for MINF. Collision with FLOORF/CAPF form tokens. Must use FLIM/CLIM/PADW-style non-reserved names.",
-      "repro": "DEFAULT FLOOR=0; MAXF c energy FLOOR → MAXF object field limit"
+      "detail": "DEFAULT FLOOR=0 then MAXF obj field FLOOR \u2192 err 'MAXF object field limit' (halted). CAP same for MINF. Collision with FLOORF/CAPF form tokens. Must use FLIM/CLIM/PADW-style non-reserved names.",
+      "repro": "DEFAULT FLOOR=0; MAXF c energy FLOOR \u2192 MAXF object field limit"
     },
     {
       "id": "W2",
@@ -87,7 +87,7 @@
       "area": "host|arg",
       "title": "Single ARG2 NUM cannot multi-seed rem+burst+score",
       "detail": "Capturing ARG2 into REM and BURST and SCORE poisons open (all=100). Must action-scope A2_N or use CUBALC_FS_BURST/SCORE ENV only.",
-      "repro": "open ARG2=100 without ENV → burst/score polluted if multi-assign"
+      "repro": "open ARG2=100 without ENV \u2192 burst/score polluted if multi-assign"
     },
     {
       "id": "W5",
@@ -115,10 +115,10 @@
     }
   ],
   "workarounds": [
-    "Never name limit vars FLOOR or CAP — use FLIM/CLIM",
+    "Never name limit vars FLOOR or CAP \u2014 use FLIM/CLIM",
     "Prefer FLOORF/CAPF/ATLEASTF/ATMOSTF aliases for intent",
     "Always TRYMAXF/TRYMINF or * SOFT for miss paths",
-    "ARG2 → A2_N only; ENV for secondary seeds",
+    "ARG2 \u2192 A2_N only; ENV for secondary seeds",
     "Fixed q0/q1/q2; dump rehydrate; REQUIRE numeric only"
   ],
   "language_gaps": [
@@ -129,12 +129,12 @@
     "Non-destructive bound/floor returning without mutate"
   ],
   "issues_faced": [
-    "FLOOR/CAP as DEFAULT names hard-failed MAXF/MINF — renamed FLIM/CLIM",
-    "ARG2 multi-assign set burst=score=rem on open — scoped to A2_N",
-    "MAXF floor remaining 0 after over-debit; MINF cap burst 200→50",
-    "BOUNDF score 150→100 and -20→0; gate admit/deny REQUIRE",
+    "FLOOR/CAP as DEFAULT names hard-failed MAXF/MINF \u2014 renamed FLIM/CLIM",
+    "ARG2 multi-assign set burst=score=rem on open \u2014 scoped to A2_N",
+    "MAXF floor remaining 0 after over-debit; MINF cap burst 200\u219250",
+    "BOUNDF score 150\u2192100 and -20\u21920; gate admit/deny REQUIRE",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "75cbd348de3e31aa53e80086d1bc88bfb0baa6d7",
   "ts": "2026-08-07T16:57:08Z"
 }
