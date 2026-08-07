@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 374,
-  "version": "1.15.401-usability",
-  "item": "ABSF/NEGF/SIGNF field polarity",
-  "item_id": 410,
-  "title": "ABSF|NEGF|SIGNF — abs/negate/signum on one numeric field",
-  "commit": "d1d1bf1546480b43f9701dd8e9a3d5b19d0c0b4f",
-  "summary": "Unary polarity ops without GETF+SYS IABS/SIGN+SETF. Soft miss. proof 951 45/45.",
+  "iter": 375,
+  "version": "1.15.402-usability",
+  "item": "LPADF/RPADF pad string fields",
+  "item_id": 411,
+  "title": "LPADF|RPADF — left/right pad one field to width for plate IDs",
+  "commit": "dfce759323e68b06a78f3cfef75c71fd8bc35c85",
+  "summary": "Pad/truncate field without GETF+SYS LPAD/RPAD+SETF. Promotes num. proof 952 36/36.",
   "proofs": [
-    "951_oop_absf",
-    "asserts 45/45",
-    "950 still green"
+    "952_oop_padf",
+    "asserts 36/36",
+    "951 still green"
   ],
-  "when": "2026-08-07T16:15:38Z",
+  "when": "2026-08-07T16:24:34Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d1d1bf1546480b43f9701dd8e9a3d5b19d0c0b4f",
-  "note": "ABSF_N/NEGF_N/SIGNF_N; pairs INCF/DIVF after delta math"
+  "sha": "dfce759323e68b06a78f3cfef75c71fd8bc35c85",
+  "note": "LPADF_N/RPADF_N/PADF_W; pairs STRF/CATF/LEFTF"
 }
