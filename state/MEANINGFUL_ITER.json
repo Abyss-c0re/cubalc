@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 370,
-  "version": "1.15.397-usability",
-  "item": "LEFTF/RIGHTF/SLICEF/TRUNCF field string slices",
-  "item_id": 406,
-  "title": "LEFTF|RIGHTF|SLICEF|TRUNCF — in-place field string slice/clip",
-  "commit": "7b1581770941f5b350d2a2bd1eda31362917e10d",
-  "summary": "In-place field peel/clip without GETF+LEFT/MID+SETF. proof 947 35/35.",
+  "iter": 371,
+  "version": "1.15.398-usability",
+  "item": "BEFOREF/AFTERF/BETWEENF delimiter field peels",
+  "item_id": 407,
+  "title": "BEFOREF|AFTERF|BETWEENF — delimiter field peels",
+  "commit": "03cc22301ef8ab333216babab688b7361ba1dd62",
+  "summary": "Delimiter peel without GETF+SYS BEFORE/AFTER/BETWEEN+SETF. proof 948 37/37.",
   "proofs": [
-    "947_oop_leftf",
-    "asserts 35/35",
-    "946 still green"
+    "948_oop_beforef",
+    "asserts 37/37",
+    "947 still green"
   ],
-  "when": "2026-08-07T15:35:01Z",
+  "when": "2026-08-07T15:44:37Z",
   "agent": "meaningful_iter_10m",
-  "sha": "7b1581770941f5b350d2a2bd1eda31362917e10d",
-  "note": "MIDSTRF not fleet MIDF; STRCLIPF not fleet CLIPF; pairs FINDF"
+  "sha": "03cc22301ef8ab333216babab688b7361ba1dd62",
+  "note": "LAST_N=found; miss BEFORE keeps whole, AFTER empty; BETWEEN empty on miss"
 }
