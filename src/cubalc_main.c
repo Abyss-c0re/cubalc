@@ -2044,6 +2044,7 @@ int main(int argc, char **argv) {
       {"oop_copyf", "programs/proof/903_oop_copyf.cubalc", "COPYF/COPYFALL copy field to field across live objects"},
       {"oop_swapf", "programs/proof/904_oop_swapf.cubalc", "SWAPF/SWAPFALL exchange two fields on live objects"},
       {"oop_setfwhere", "programs/proof/905_oop_setfwhere.cubalc", "SETFWHERE conditional field write on matching live objects"},
+      {"oop_incfwhere", "programs/proof/906_oop_incfwhere.cubalc", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5955,6 +5956,7 @@ int main(int argc, char **argv) {
       {"programs/proof/903_oop_copyf.cubalc", "oop_copyf", "COPYF/COPYFALL copy field to field across live objects"},
       {"programs/proof/904_oop_swapf.cubalc", "oop_swapf", "SWAPF/SWAPFALL exchange two fields on live objects"},
       {"programs/proof/905_oop_setfwhere.cubalc", "oop_setfwhere", "SETFWHERE conditional field write on matching live objects"},
+      {"programs/proof/906_oop_incfwhere.cubalc", "oop_incfwhere", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6258,6 +6260,7 @@ int main(int argc, char **argv) {
       {"programs/proof/903_oop_copyf.cubalc", "oop_copyf", "COPYF/COPYFALL copy field to field across live objects"},
       {"programs/proof/904_oop_swapf.cubalc", "oop_swapf", "SWAPF/SWAPFALL exchange two fields on live objects"},
       {"programs/proof/905_oop_setfwhere.cubalc", "oop_setfwhere", "SETFWHERE conditional field write on matching live objects"},
+      {"programs/proof/906_oop_incfwhere.cubalc", "oop_incfwhere", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

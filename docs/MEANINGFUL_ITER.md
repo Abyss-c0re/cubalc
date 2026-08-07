@@ -392,6 +392,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 362. ~~**`COPYF` / `COPYFALL` / `SNAPSHOTF`**~~ **done** (copy src→dst field on live objs · snapshot before tick without EACH+GETF+SETF).
 363. ~~**`SWAPF` / `SWAPFALL` / `EXCHANGEF`**~~ **done** (exchange two fields on live objs · dual buffers without temp+EACH).
 364. ~~**`SETFWHERE` / `WHERESETF` / `PUTWHERE`**~~ **done** (set field on objs matching field==value · no EACH+GETF+IF+SETF).
+365. ~~**`INCFWHERE` / `ADDWHERE` / `DECFWHERE`**~~ **done** (bump numeric field on field==value objs · selective counters).
 
 ## Tick protocol
 

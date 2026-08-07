@@ -1,0 +1,122 @@
+# INCFWHERE / DECFWHERE — bump numeric field on matching live objects
+# Usability: selective counters without EACH+GETF+IF+arith+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 10 0
+# ages start 0; bump age on energy==10
+INCFWHERE Cell energy 10 age
+ASSERT OK == 1
+ASSERT INCFWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT INCFWHERE_DELTA == 1
+ASSERT INCFWHERE_SKIP == 0
+GETF a age
+ASSERT LAST_N == 1
+GETF b age
+ASSERT LAST_N == 0
+GETF c age
+ASSERT LAST_N == 1
+
+# explicit delta
+INCFWHERE Cell energy 10 age 3
+ASSERT INCFWHERE_N == 2
+ASSERT INCFWHERE_DELTA == 3
+GETF a age
+ASSERT LAST_N == 4
+GETF c age
+ASSERT LAST_N == 4
+GETF b age
+ASSERT LAST_N == 0
+
+# BY sugar
+INCFWHERE Cell energy 20 age BY 5
+ASSERT INCFWHERE_N == 1
+GETF b age
+ASSERT LAST_N == 5
+
+# OF sugar
+INCFWHERE OF Cell energy 10 age 1
+ASSERT INCFWHERE_N == 2
+GETF a age
+ASSERT LAST_N == 5
+
+# DECFWHERE default -1
+DECFWHERE Cell energy 10 age
+ASSERT DECFWHERE_N == 2
+ASSERT INCFWHERE_DELTA == -1
+GETF a age
+ASSERT LAST_N == 4
+GETF c age
+ASSERT LAST_N == 4
+
+# DECFWHERE with positive delta → subtract
+DECFWHERE Cell energy 10 age 2
+ASSERT INCFWHERE_DELTA == -2
+GETF a age
+ASSERT LAST_N == 2
+
+# aliases
+ADDWHERE Cell energy 20 age 1
+ASSERT ADDWHERE_N == 1
+GETF b age
+ASSERT LAST_N == 6
+BUMPWHERE Cell energy 20 age
+ASSERT BUMPWHERE_N == 1
+GETF b age
+ASSERT LAST_N == 7
+WHEREINC Cell energy 20 age
+ASSERT WHEREINC_N == 1
+GETF b age
+ASSERT LAST_N == 8
+
+# string match → bump numeric
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s
+    SETF THIS status s
+    SETF THIS retries 0
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "closed"
+NEW Ticket t3 "open"
+INCFWHERE Ticket status "open" retries
+ASSERT INCFWHERE_N == 2
+GETF t1 retries
+ASSERT LAST_N == 1
+GETF t2 retries
+ASSERT LAST_N == 0
+GETF t3 retries
+ASSERT LAST_N == 1
+INCFWHERE Ticket status "open" retries 2
+ASSERT INCFWHERE_N == 2
+GETF t1 retries
+ASSERT LAST_N == 3
+GETF t3 retries
+ASSERT LAST_N == 3
+
+# same-field: only if energy==10 then energy += 1
+SETF a energy 10
+SETF b energy 20
+SETF c energy 10
+INCFWHERE Cell energy 10 energy 1
+ASSERT INCFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 11
+GETF b energy
+ASSERT LAST_N == 20
+GETF c energy
+ASSERT LAST_N == 11
+
+# no match
+INCFWHERE Ticket status "missing" retries 9
+ASSERT INCFWHERE_N == 0
+
+PRINT "proof906_oop_incfwhere" 1
+ASSERT OK == 1

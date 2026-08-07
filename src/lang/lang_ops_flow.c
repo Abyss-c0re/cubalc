@@ -1836,6 +1836,222 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* INCFWHERE|ADDWHERE|BUMPWHERE|DECFWHERE [Class] matchfield matchvalue targetfield [delta]
+   * — add delta (default +1; DECFWHERE default −1) to numeric targetfield on objs
+   * where matchfield == matchvalue. Soft skip missing/string target.
+   * BY sugar before delta. LAST_N = update count.
+   * Usability: selective counter/retry bump without EACH+GETF+IF+arith+SETF. */
+  if (kw(&L->cur, "INCFWHERE") || kw(&L->cur, "ADDWHERE") ||
+      kw(&L->cur, "BUMPWHERE") || kw(&L->cur, "DECFWHERE") ||
+      kw(&L->cur, "SUBWHERE") || kw(&L->cur, "INCALLWHERE") ||
+      kw(&L->cur, "ADDFIELDWHERE") || kw(&L->cur, "WHEREINC") ||
+      kw(&L->cur, "WHEREADD") || kw(&L->cur, "WHEREBUMP") ||
+      kw(&L->cur, "WHEREDEC") || kw(&L->cur, "DECWHERE")) {
+    char filt[48], mfield[48], tfield[48], tok1[48], op[24];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, i, n = 0, n_skip = 0, dec_mode = 0;
+    long m_nval = 0, delta = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DECFWHERE") == 0 || strcmp(op, "SUBWHERE") == 0 ||
+        strcmp(op, "WHEREDEC") == 0 || strcmp(op, "DECWHERE") == 0) {
+      dec_mode = 1;
+      delta = -1;
+    }
+    lex_next(L);
+    filt[0] = 0;
+    mfield[0] = 0;
+    tfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "INCFWHERE OF Class matchfield matchvalue target [delta]");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(mfield, sizeof mfield, "%s", vv->sval);
+          else
+            snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(mfield, sizeof mfield, "%s", vv->sval);
+        else
+          snprintf(mfield, sizeof mfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "INCFWHERE [Class] matchfield matchvalue target [delta]");
+      return -1;
+    }
+    if (!mfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(mfield, sizeof mfield, "%s", vv->sval);
+        else
+          snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "INCFWHERE [Class] matchfield matchvalue target [delta]");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    /* match value */
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "BY") && !kw(&L->cur, "SET") &&
+               !kw(&L->cur, "ADD") && !kw(&L->cur, "INC")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    if (kw(&L->cur, "SET") || kw(&L->cur, "ADD") || kw(&L->cur, "INC") ||
+        kw(&L->cur, "ON") || kw(&L->cur, "FIELD"))
+      lex_next(L);
+    /* target field */
+    if (L->cur.kind == TK_STR) {
+      snprintf(tfield, sizeof tfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "BY")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(tfield, sizeof tfield, "%s", vv->sval);
+      else
+        snprintf(tfield, sizeof tfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "INCFWHERE [Class] matchfield matchvalue target [delta]");
+      return -1;
+    }
+    if (kw(&L->cur, "BY") || kw(&L->cur, "DELTA") || kw(&L->cur, "PLUS"))
+      lex_next(L);
+    /* optional delta */
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+         !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+         !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+         !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+         !kw(&L->cur, "CLASS") && !kw(&L->cur, "GETF") &&
+         !kw(&L->cur, "SETF") && !kw(&L->cur, "INCFWHERE") &&
+         !kw(&L->cur, "SETFWHERE") && !kw(&L->cur, "COPYF"))) {
+      long d = parse_expr(vm, L);
+      if (dec_mode && d > 0)
+        delta = -d;
+      else if (dec_mode && d < 0)
+        delta = d; /* already negative */
+      else
+        delta = d;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int mfi, tfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      tfi = oop_field_idx(cd, tfield);
+      if (mfi < 0 || tfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[tfi]) { n_skip++; continue; } /* target numeric only */
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      ob->fnum[tfi] += delta;
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "INCFWHERE_N", n);
+    var_set_num(vm, "ADDWHERE_N", n);
+    var_set_num(vm, "BUMPWHERE_N", n);
+    var_set_num(vm, "DECFWHERE_N", n);
+    var_set_num(vm, "WHEREINC_N", n);
+    var_set_num(vm, "INCFWHERE_SKIP", n_skip);
+    var_set_num(vm, "INCFWHERE_DELTA", delta);
+    var_set_str(vm, "FIELD", tfield);
+    var_set_str(vm, "SRC", mfield);
+    var_set_str(vm, "DST", tfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* COPYF|COPYFALL|COPYFIELD|MAPCOPYF [Class] src dst
    * — copy src field → dst field on every live object (optional class).
    * Preserves num/str kind per object. Soft skip if either field missing.
