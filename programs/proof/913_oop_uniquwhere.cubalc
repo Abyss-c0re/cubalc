@@ -1,0 +1,142 @@
+# UNIQUWHERE / DISTINCTWHERE — filtered unique field values on match
+# Usability: no GETFWHERE+UNIQ glue · "what values exist in subset?"
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+NEW Cell e 1 20 0
+NEW Cell f 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+SETF f age 1
+
+# energy where age==1 → 10,20,20,40 → unique 10 20 40
+UNIQUWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT UNIQUWHERE_N == 3
+ASSERT LAST_N == 3
+ASSERT UNIQUWHERE_TOTAL == 4
+ASSERT UNIQUWHERE_SKIP == 0
+SYS HASLINE UNIQUWHERE "10"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "20"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "40"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "30"
+ASSERT LAST_N == 0 "age=0 value must not leak"
+
+# first-seen order among age=1: a=10, c=20, e=20, f=40
+SYS NTH 0 UNIQUWHERE
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS NTH 1 UNIQUWHERE
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+SYS NTH 2 UNIQUWHERE
+SYS EQS LAST "40"
+ASSERT LAST_N == 1
+
+# age==0 → 10,30
+UNIQUWHERE Cell energy age 0
+ASSERT UNIQUWHERE_N == 2
+ASSERT UNIQUWHERE_TOTAL == 2
+SYS HASLINE UNIQUWHERE "10"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "30"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "20"
+ASSERT LAST_N == 0
+
+# WHERE sugar
+UNIQUWHERE Cell energy WHERE age 1
+ASSERT UNIQUWHERE_N == 3
+ASSERT UNIQUWHERE_TOTAL == 4
+
+# OF sugar
+UNIQUWHERE OF Cell energy age 1
+ASSERT LAST_N == 3
+
+# aliases
+DISTINCTWHERE Cell energy age 1
+ASSERT DISTINCTWHERE_N == 3
+ASSERT DISTINCTWHERE_TOTAL == 4
+UNIQUEFWHERE Cell energy age 0
+ASSERT UNIQUEFWHERE_N == 2
+WHEREUNIQ Cell energy age 1
+ASSERT WHEREUNIQ_N == 3
+UNIQWHERE Cell energy age 0
+ASSERT UNIQUWHERE_N == 2
+UNIQUEWHERE Cell energy age 1
+ASSERT LAST_N == 3
+UNIQUIF Cell energy age 1
+ASSERT UNIQUWHERE_TOTAL == 4
+DISTINCTIF Cell energy age 0
+ASSERT DISTINCTWHERE_N == 2
+
+# string match · severities among open only
+CLASS Ticket
+  FIELD status "new"
+  FIELD severity "low"
+  METHOD init s sev
+    SETF THIS status s
+    SETF THIS severity sev
+  END
+END
+NEW Ticket t1 "open" "high"
+NEW Ticket t2 "closed" "low"
+NEW Ticket t3 "open" "high"
+NEW Ticket t4 "open" "med"
+NEW Ticket t5 "closed" "crit"
+NEW Ticket t6 "open" "low"
+UNIQUWHERE Ticket severity status "open"
+ASSERT OK == 1
+ASSERT UNIQUWHERE_N == 3
+ASSERT UNIQUWHERE_TOTAL == 4
+SYS HASLINE UNIQUWHERE "high"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "med"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "low"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "crit"
+ASSERT LAST_N == 0 "closed-only severity"
+
+# first-seen open order: high, med, low
+SYS NTH 0 UNIQUWHERE
+SYS EQS LAST "high"
+ASSERT LAST_N == 1
+SYS NTH 1 UNIQUWHERE
+SYS EQS LAST "med"
+ASSERT LAST_N == 1
+SYS NTH 2 UNIQUWHERE
+SYS EQS LAST "low"
+ASSERT LAST_N == 1
+
+UNIQUWHERE Ticket severity status "closed"
+ASSERT UNIQUWHERE_N == 2
+ASSERT UNIQUWHERE_TOTAL == 2
+SYS HASLINE UNIQUWHERE "low"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUWHERE "crit"
+ASSERT LAST_N == 1
+
+# no match → empty
+UNIQUWHERE Ticket severity status "missing"
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT UNIQUWHERE_N == 0
+ASSERT UNIQUWHERE_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof913_oop_uniquwhere" 1
+ASSERT OK == 1

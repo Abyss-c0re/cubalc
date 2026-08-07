@@ -399,6 +399,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 369. ~~**`MEDIANWHERE` / `P50WHERE` / `MEDIANIF`**~~ **done** (median numeric field on field==value objs · no GETFWHERE+MEDIAN).
 370. ~~**`FREQWHERE` / `HISTWHERE` / `FREQIF`**~~ **done** (field histogram on field==value objs · no GETFWHERE+FREQ).
 371. ~~**`MODEWHERE` / `DOMINANTWHERE` / `MODEIF`**~~ **done** (most frequent field on field==value objs · no FREQWHERE+TOPKEY).
+372. ~~**`UNIQUWHERE` / `DISTINCTWHERE` / `UNIQUIF`**~~ **done** (unique field values on field==value objs · no GETFWHERE+UNIQ).
 
 ## Tick protocol
 
