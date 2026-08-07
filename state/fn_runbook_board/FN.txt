@@ -1,0 +1,3 @@
+name:score
+n_params:2
+params:base,weight

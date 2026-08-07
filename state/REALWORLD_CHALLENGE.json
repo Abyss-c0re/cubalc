@@ -1,77 +1,77 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 137,
-  "program": "programs/realworld/schema_contract_board.cubalc",
-  "theme": "CLASSINFO/METHODINFO mesh-handler schema + arity contract gate",
-  "version": "1.15.380-usability",
+  "iter": 138,
+  "program": "programs/realworld/fn_runbook_board.cubalc",
+  "theme": "LISTFNS/HASFN/FNINFO/TRYCALL pipeline runbook dispatch",
+  "version": "1.15.382-usability",
   "pass": true,
-  "prior_note": "iter 136 lottery PICKOBJ/DRAWNOBJ/SHUFFLEOBJS; this iter stresses CLASSINFO+METHODINFO (0383490/8a09c2d) for SEND prep",
+  "prior_note": "iter 137 CLASSINFO/METHODINFO OOP contract; this iter stresses FN catalog + soft CALL (7dfa8d5/57e396f/3baad9c)",
   "tests": [
     {
-      "name": "open_pool",
-      "cmd": "open h0/h1 east/west",
+      "name": "list_catalog",
+      "cmd": "LISTFNS → admit score escalate ping NFNS=4",
       "ok": true,
-      "note": "NEW+DUMPOBJ rehydrate"
+      "note": "LISTFNS"
     },
     {
-      "name": "schema_bag",
-      "cmd": "CLASSINFO Handler \u2192 n_fields:4 n_methods:4 live:2",
+      "name": "has_step",
+      "cmd": "HASFN score hit; ghost soft; REQUIRE→2",
       "ok": true,
-      "note": "CLASSINFO"
+      "note": "HASFN"
     },
     {
-      "name": "schema_json",
-      "cmd": "CLASSINFO JSON \u2192 cubalc.class.v1",
+      "name": "fninfo",
+      "cmd": "score n_params:2 base,weight; ping 0; miss soft",
       "ok": true,
-      "note": "CLASSINFO JSON"
+      "note": "FNINFO"
     },
     {
-      "name": "method_arity",
-      "cmd": "METHODINFO process n_params:1 payload; retry 0",
+      "name": "fninfo_json",
+      "cmd": "FNINFO JSON admit → cubalc.fn.v1",
       "ok": true,
-      "note": "METHODINFO"
+      "note": "FNINFO JSON"
     },
     {
-      "name": "method_json",
-      "cmd": "METHODINFO JSON process cubalc.method.v1",
+      "name": "gate_cat",
+      "cmd": "MINN=3 admit; MINN=99 deny REQUIRE→2",
       "ok": true,
-      "note": "METHODINFO JSON"
-    },
-    {
-      "name": "gate_class",
-      "cmd": "MINF/MINM/MINL admit; MINL=99 deny; REQUIRE\u21922",
-      "ok": true,
-      "note": "gate_class"
+      "note": "gate_cat"
     },
     {
       "name": "gate_arity",
-      "cmd": "EXPECT=1 process admit; EXPECT=2 deny; miss REQUIRE\u21922",
+      "cmd": "EXPECT=2 score admit; EXPECT=0 deny; zzz REQUIRE→2",
       "ok": true,
       "note": "gate_arity"
     },
     {
-      "name": "hasm_via_methodinfo",
-      "cmd": "dynamic MNAME via METHODINFO OK (HASMETHOD no var)",
+      "name": "trycall",
+      "cmd": "score 10*3=30; ping; escalate 5→6; ghost soft REQUIRE→2",
       "ok": true,
-      "note": "hasm"
+      "note": "TRYCALL"
     },
     {
-      "name": "send_prep",
-      "cmd": "arity check + SEND process \u2192 status done",
+      "name": "call_hard",
+      "cmd": "CALL ping → 1 after HASFN gate",
       "ok": true,
-      "note": "send_prep"
+      "note": "CALL"
+    },
+    {
+      "name": "admit",
+      "cmd": "HASFN+arity admit; arity deny; nofn REQUIRE→2",
+      "ok": true,
+      "note": "admit"
+    },
+    {
+      "name": "journal_bag",
+      "cmd": "try journal + pin + setmatch first-only",
+      "ok": true,
+      "note": "journal"
     },
     {
       "name": "probe_soft",
-      "cmd": "CLASSINFO NoSuch + METHODINFO nosuch soft OK=0",
+      "cmd": "HASFN/FNINFO/TRYCALL unknown all soft zero",
       "ok": true,
       "note": "probe"
-    },
-    {
-      "name": "edges",
-      "cmd": "open bad REQUIRE\u21922; unknown soft; REQUIRE=abc softens",
-      "ok": true,
-      "note": "edges"
     },
     {
       "name": "selftest",
@@ -84,89 +84,89 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|methodinfo|keyword",
-      "title": "METH optional keyword steals var METHODINFO Handler METH",
-      "detail": "METHODINFO accepts optional METH/METHOD/OF before method name. A string var named METH is consumed as keyword; next token missing \u2192 hard parse fail METHODINFO [JSON] Class|obj method (not soft miss).",
-      "repro": "LET METH=\"process\"; METHODINFO Handler METH \u2192 fail parse"
+      "area": "fn|catalog",
+      "title": "FN catalog is process-local — no plate rehydrate of FNs",
+      "detail": "LISTFNS/HASFN/FNINFO only see FNs defined in the current process. Multi-run ARG agents re-declare FNs each fire; cannot load FN catalog from STATE plate. Clear cannot un-define FNs.",
+      "repro": "clear leaves LISTFNS still 4; second process without FN bodies empty catalog"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "oop|hasmethod",
-      "title": "HASMETHOD method name is raw token \u2014 no string-var resolve",
-      "detail": "Unlike METHODINFO which looks up string vars for method name, HASMETHOD uses the ident text literally. LET m=\"process\"; HASMETHOD Handler m looks for method \"m\" \u2192 0. Dynamic ARG-driven has-method must use METHODINFO OK or string literals.",
-      "repro": "LET m2=\"process\"; HASMETHOD Handler m2 \u2192 LAST_N=0"
+      "severity": "med",
+      "area": "fn|trycall",
+      "title": "TRYCALL arity mismatch behavior unclear vs soft miss",
+      "detail": "Unknown FN is soft. Wrong-arity CALL may still hard-fail depending on body; agents must FNINFO gate before TRYCALL with correct arg count. No automatic arity check on TRYCALL.",
+      "repro": "TRYCALL score with 0 args — agent must pre-gate NPARAMS"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|classinfo",
-      "title": "No schema hash / version field for contract drift",
-      "detail": "CLASSINFO exposes name/n_fields/n_methods/live/fields/methods but no stable digest. Agents cannot pin expected schema fingerprint across deploys without manual bag compare.",
-      "repro": "gate_class only min counts not field-set equality"
+      "area": "fn|dispatch",
+      "title": "No FNWHERE / tagged catalog — flat name bag only",
+      "detail": "LISTFNS returns all FNs. Cannot filter by prefix/tag (runbook vs util). Agents substring-filter bags manually; false friends risk.",
+      "repro": "LISTFNS includes admit+score+escalate+ping mixed"
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "oop|methodinfo",
-      "title": "Arity only \u2014 no required/optional/default params",
-      "detail": "NPARAMS is declared formals count. Cannot express defaults or rest args; SEND still hard-fails wrong arity at call time after gate.",
-      "repro": "METHODINFO process \u2192 n_params:1 only"
+      "severity": "low",
+      "area": "fn|hasfn",
+      "title": "HASFN resolves string vars (contrast HASMETHOD)",
+      "detail": "Positive: HASFN STEP works with string var. Documents inconsistency with HASMETHOD which does not resolve vars — agent mental model split across OOP vs FN surfaces.",
+      "repro": "HASFN STEP with STEP=score → 1; HASMETHOD Handler MNAME fails"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|classinfo",
-      "title": "CLASSINFO unknown soft OK=0 LAST blank",
-      "detail": "Same soft pattern as METHODINFO; agents must check OK before reading NFIELDS.",
-      "repro": "CLASSINFO NoSuch \u2192 OK=0 N=0"
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact line only",
+      "detail": "Journal setmatch replaces first matching line; duplicates need loop.",
+      "repro": "setmatch score:30 → score:99 leaves one"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "VAL/META/SCHEMA last line often no trailing $ under cat -A.",
-      "repro": "od -c VAL.txt deny without \\n"
+      "title": "WRITE VAL omit trailing NL",
+      "detail": "od -c VAL cleared without \\n.",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "REQUIRE=abc leaves NEED_HIT=0; miss paths exit 0.",
-      "repro": "CUBALC_FS_REQUIRE=abc method nosuch \u2192 exit 0"
+      "title": "REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE leaves NEED_HIT=0; miss exits 0.",
+      "repro": "CUBALC_FS_REQUIRE=abc has ghost → exit 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "oop|methodinfo|class",
-      "title": "Class arg is token not var; only method name resolves vars",
-      "detail": "METHODINFO Handler MNAME resolves MNAME string; class side uses ident text (LAST special-cased). Cannot pass class name via arbitrary string var easily.",
-      "repro": "METHODINFO LAST MNAME after setting LAST"
+      "area": "fn|call",
+      "title": "Bare CALL unknown is fatal — TRYCALL required for optional hooks",
+      "detail": "Agents must remember soft form; HASFN gate + CALL still races if FN deleted mid-script (not possible now but twin of SEND).",
+      "repro": "CALL ghost would hard-fail; TRYCALL ghost soft"
     }
   ],
   "workarounds": [
-    "Never name method-name var METH; use MNAME/mname",
-    "Dynamic has-method: METHODINFO Class MNAME; IF OK \u2014 not HASMETHOD Class MNAME",
-    "Gate on NFIELDS/NMETHODS/LIVE mins + METHODINFO_N == EXPECT for SEND prep",
-    "Soft unknown: probe CLASSINFO/METHODINFO OK=0; REQUIRE EXIT in action bodies",
-    "Rehydrate dump/* each process; objects memory-local"
+    "Declare runbook FNs at top of every multi-run agent program",
+    "HASFN + FNINFO NPARAMS gate before TRYCALL with matching arg count",
+    "Use TRYCALL not CALL for optional hooks",
+    "REQUIRE EXIT in action bodies; soft unknown wall",
+    "Journal via PUSH + SETMATCH for step audit trail"
   ],
   "language_gaps": [
-    "HASMETHOD should resolve string vars like METHODINFO",
-    "METH keyword should not steal bare method-name position when var is string",
-    "CLASSINFO schema hash / field-set equality gate",
-    "Optional/default param metadata on METHODINFO",
-    "Strict NUM REQUIRE; WRITE trailing NL option"
+    "Persistent / plate-loadable FN catalog",
+    "TRYCALL auto arity check vs FNINFO",
+    "LISTFNS prefix/tag filter",
+    "UNDEFINE FN / clear catalog",
+    "Align HASMETHOD string-var resolve with HASFN; WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "METHODINFO Handler METH hard-failed parse \u2014 METH optional keyword",
-    "HASMETHOD Handler m2 with m2=\"process\" returns 0 \u2014 raw token only",
-    "CLASSINFO bag+JSON and METHODINFO bag+JSON worked once MNAME used",
-    "gate_class live+field mins; gate_arity expect match; send_prep status done",
-    "selftest 355/355 green; no language fix this iter (document only)"
+    "LISTFNS 4 steps; FNINFO score 2 params; JSON cubalc.fn.v1",
+    "TRYCALL score 10*3=30 journaled; ghost soft REQUIRE→2",
+    "HASFN resolves STEP var (unlike HASMETHOD) — document asymmetry",
+    "FN catalog cannot rehydrate from STATE; clear only wipes plates",
+    "selftest 355/355 green; proofs 930-932 exist; no language fix this iter"
   ],
-  "commit": "2143dba91edcf5bd754da41bd0f6c8e20f171cac",
-  "ts": "2026-08-07T12:45:57Z"
+  "commit": "",
+  "ts": "2026-08-07T13:08:53Z"
 }

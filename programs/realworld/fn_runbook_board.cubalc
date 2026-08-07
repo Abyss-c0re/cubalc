@@ -1,0 +1,1002 @@
+# fn_runbook_board.cubalc — LISTFNS/HASFN/FNINFO/TRYCALL pipeline dispatch
+#
+# Real use: ops agents discover a registered runbook FN catalog, check
+# step presence + arity before soft CALL, gate on catalog size, and
+# soft-miss unknown hooks without fatal CALL (twin of TRYSEND for FNs).
+#
+# Surfaces forced (1.15.380–382):
+#   LISTFNS / FUNCTIONS / FNLIST / LISTFUNCS
+#   HASFN / HASFUNC / FNEXISTS / ISFN / CANCALLFN
+#   FNINFO / DUMPFN / DESCRIBEFN / FUNCINFO / FNARITY [JSON]
+#   TRYCALL / CALL SOFT / CALLSOFT / SOFTCALL / TRYFN
+#   FN · CALL · bag journal · WRITE/READ plates · soft+REQUIRE
+#
+# Distinct from schema_contract (CLASSINFO/METHODINFO OOP) and
+# ordered_runbook (string plates): this board is *FN catalog + soft CALL*.
+#
+# Plate under STATE:
+#   CATALOG.txt FN.txt VAL.txt META.txt JOURNAL.txt RUNBOOK_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTFNS → CATALOG plate
+#   has        — HASFN ARG1=step
+#   info       — FNINFO ARG1 → FN plate
+#   infoj      — FNINFO JSON ARG1
+#   gate_cat   — NFNS >= MINN (REQUIRE deny)
+#   gate_arity — FNINFO_N == EXPECT for step
+#   try        — TRYCALL step [N1 N2] soft
+#   call_hard  — hard CALL (known step only; for contrast)
+#   admit      — HASFN + arity match (REQUIRE deny)
+#   journal / jcount / pin / setmatch
+#   probe / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_fnrb_$$
+#   CUBALC_ARG0=list
+#   CUBALC_ARG0=has CUBALC_ARG1=score
+#   CUBALC_ARG0=info CUBALC_ARG1=score
+#   CUBALC_FS_MINN=3 CUBALC_ARG0=gate_cat
+#   CUBALC_FS_EXPECT=2 CUBALC_ARG0=gate_arity CUBALC_ARG1=score
+#   CUBALC_ARG0=try CUBALC_ARG1=score CUBALC_ARG2=10 CUBALC_FS_N2=20
+#   CUBALC_FS_REQUIRE=1 CUBALC_ARG0=try CUBALC_ARG1=ghost
+#
+# Env: CUBALC_FS_REQUIRE NAME STEP EXPECT MINN N1 N2 ACTION
+#
+# Edges:
+#   HASFN *does* resolve string vars (unlike HASMETHOD)
+#   TRYCALL unknown soft OK=0 CALLED=0; bare CALL fatal
+#   FNINFO unknown soft; FN keyword sugar steals if mis-ordered
+#   LISTFNS empty before any FN; catalog is process-local (no plate rehydrate of FNs)
+#   WRITE NL; NUM softens REQUIRE/EXPECT
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+# --- runbook pipeline FNs (process-local catalog) ---
+FN admit threshold score
+  IF score < threshold THEN
+    RET 0
+  END
+  RET 1
+END
+
+FN score base weight
+  LET s = base * weight
+  RET s
+END
+
+FN escalate level
+  LET e = level + 1
+  RET e
+END
+
+FN ping
+  RET 1
+END
+
+NOTE "fn_runbook_board: start"
+DEFAULT ACTION = "list"
+DEFAULT STEP = "score"
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT EXPECT = 2
+DEFAULT MINN = 3
+DEFAULT N1 = 10
+DEFAULT N2 = 2
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET STEP = LAST
+ELSE
+  SYS ENV "CUBALC_FS_STEP" OR ""
+  IF LAST_N > 0 THEN
+    LET STEP = LAST
+  ELSE
+    SYS ENV "CUBALC_FS_NAME" OR ""
+    IF LAST_N > 0 THEN
+      LET STEP = LAST
+    END
+  END
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  # for try/call_hard numeric first arg when ARG2 is number
+  SYS NUM
+  IF OK == 1 THEN
+    LET N1 = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_EXPECT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET EXPECT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINN = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_N1" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET N1 = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_N2" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET N2 = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "CATALOG.txt"
+LET catalog_path = LAST
+SYS JOIN state_dir "FN.txt"
+LET fn_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "RUNBOOK_REPORT.txt"
+LET report_path = LAST
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nfns = 0
+LET nparams = 0
+LET has_n = 0
+LET called = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "fn_runbook_board"
+
+# --- list / catalog ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTFNS
+  LET val = LAST
+  LET nfns = NFNS
+  SYS WRITE catalog_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nfns
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nfns
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "catalog"
+IF LAST_N == 1 THEN
+  NOTE "action catalog"
+  LISTFNS
+  LET val = LAST
+  LET nfns = NFNS
+  SYS WRITE catalog_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "catalog ok"
+  LET val_ch = 1
+  LET meta = "catalog"
+  SYS STR nfns
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nfns
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  HASFN STEP
+  LET has_n = HASFN_N
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "has ok"
+    LET val = "1"
+  ELSE
+    LET miss = 1
+    LET note_msg = "has miss"
+    LET val = "0"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "has"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- info (FNINFO bag) ---
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  NOTE "action info"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  FNINFO STEP
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "info miss"
+    LET nparams = 0
+    FAIL "info miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "info miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nparams = NPARAMS
+    SYS WRITE fn_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "info ok"
+    LET val_ch = 1
+    LET meta = "info"
+    SYS PUSH meta STEP
+    LET meta = LAST
+    SYS STR nparams
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nparams
+  CLEAR_ERR
+END
+
+# --- infoj ---
+SYS EQS ACTION "infoj"
+IF LAST_N == 1 THEN
+  NOTE "action infoj"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  FNINFO JSON STEP
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "infoj miss"
+    FAIL "infoj miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "infoj miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nparams = NPARAMS
+    SYS WRITE fn_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "infoj ok"
+    LET val_ch = 1
+    LET meta = "infoj"
+    SYS PUSH meta STEP
+    LET meta = LAST
+    SYS STR nparams
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nparams
+  CLEAR_ERR
+END
+
+# --- gate_cat: catalog size ---
+SYS EQS ACTION "gate_cat"
+IF LAST_N == 1 THEN
+  NOTE "action gate_cat"
+  LISTFNS
+  LET nfns = NFNS
+  LET val = LAST
+  SYS WRITE catalog_path val
+  CLEAR_ERR
+  IF nfns < MINN THEN
+    LET miss = 1
+    LET note_msg = "gate_cat deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate_cat deny"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_cat deny"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "gate_cat ok"
+    LET val = "admit"
+    LET val_ch = 1
+  END
+  LET meta = "gate_cat"
+  SYS STR nfns
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MINN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate_arity ---
+SYS EQS ACTION "gate_arity"
+IF LAST_N == 1 THEN
+  NOTE "action gate_arity"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  FNINFO STEP
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate_arity miss"
+    LET nparams = 0
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate_arity miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_arity miss"
+    END
+  ELSE
+    LET nparams = NPARAMS
+    LET val_bag = LAST
+    SYS WRITE fn_path val_bag
+    CLEAR_ERR
+    IF nparams == EXPECT THEN
+      LET hit = 1
+      LET note_msg = "gate_arity ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate_arity deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate_arity deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate_arity deny"
+      END
+    END
+  END
+  LET meta = "gate_arity"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS STR nparams
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR EXPECT
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nparams
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- try: TRYCALL soft ---
+SYS EQS ACTION "try"
+IF LAST_N == 1 THEN
+  NOTE "action try"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  # dispatch known arities with N1/N2
+  LET called = 0
+  LET ret_n = 0
+  SYS EQS STEP "score"
+  IF LAST_N == 1 THEN
+    TRYCALL STEP N1 N2
+    LET called = CALLED
+    LET ret_n = LAST_N
+  END
+  SYS EQS STEP "admit"
+  IF LAST_N == 1 THEN
+    TRYCALL STEP N1 N2
+    LET called = CALLED
+    LET ret_n = LAST_N
+  END
+  SYS EQS STEP "escalate"
+  IF LAST_N == 1 THEN
+    TRYCALL STEP N1
+    LET called = CALLED
+    LET ret_n = LAST_N
+  END
+  SYS EQS STEP "ping"
+  IF LAST_N == 1 THEN
+    TRYCALL STEP
+    LET called = CALLED
+    LET ret_n = LAST_N
+  END
+  # unknown or unlisted step: still soft TRYCALL
+  IF called == 0 THEN
+    HASFN STEP
+    IF HASFN_N == 0 THEN
+      TRYCALL STEP N1 N2
+      LET called = CALLED
+      LET ret_n = LAST_N
+    END
+  END
+  CLEAR_ERR
+  IF called == 1 THEN
+    LET hit = 1
+    LET note_msg = "try ok"
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    # journal step:ret
+    LET jline = "STEP:RET"
+    SYS REPLACEALL jline "STEP" STEP
+    LET jline = LAST
+    SYS STR ret_n
+    SYS REPLACEALL jline "RET" LAST
+    LET jline = LAST
+    SYS PUSH jbag jline
+    LET jbag = LAST
+    LET j_changed = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "try miss"
+    LET val = "miss"
+    LET val_ch = 1
+    FAIL "try miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "try miss"
+    END
+  END
+  LET meta = "try"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS STR called
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON called
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- call_hard: hard CALL (known only) ---
+SYS EQS ACTION "call_hard"
+IF LAST_N == 1 THEN
+  NOTE "action call_hard"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "ping"
+  END
+  HASFN STEP
+  IF HASFN_N == 0 THEN
+    LET miss = 1
+    LET note_msg = "call_hard miss"
+    FAIL "call_hard miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "call_hard miss"
+    END
+  ELSE
+    SYS EQS STEP "ping"
+    IF LAST_N == 1 THEN
+      CALL ping
+      LET ret_n = LAST_N
+      LET hit = 1
+      LET note_msg = "call_hard ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+    SYS EQS STEP "score"
+    IF LAST_N == 1 THEN
+      CALL score N1 N2
+      LET ret_n = LAST_N
+      LET hit = 1
+      LET note_msg = "call_hard ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+    SYS EQS STEP "escalate"
+    IF LAST_N == 1 THEN
+      CALL escalate N1
+      LET ret_n = LAST_N
+      LET hit = 1
+      LET note_msg = "call_hard ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+    SYS EQS STEP "admit"
+    IF LAST_N == 1 THEN
+      CALL admit N1 N2
+      LET ret_n = LAST_N
+      LET hit = 1
+      LET note_msg = "call_hard ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+    END
+  END
+  LET meta = "call_hard"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: HASFN + arity == EXPECT ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  HASFN STEP
+  LET has_n = HASFN_N
+  IF has_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "admit nofn"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "admit nofn"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit nofn"
+    END
+  ELSE
+    FNINFO STEP
+    LET nparams = NPARAMS
+    CLEAR_ERR
+    IF nparams == EXPECT THEN
+      LET hit = 1
+      LET note_msg = "admit ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "admit arity"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "admit arity"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "admit arity"
+      END
+    END
+  END
+  LET meta = "admit"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nparams
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR EXPECT
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  LET val = jbag
+  LET hit = 1
+  LET note_msg = "journal ok"
+  LET val_ch = 1
+  LET meta = "journal"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "jcount"
+IF LAST_N == 1 THEN
+  NOTE "action jcount"
+  # needle = STEP (ARG1); count matching journal lines
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET STEP = "score"
+  END
+  SYS COUNTLINE jbag STEP
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "jcount ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "jcount"
+  SYS PUSH meta STEP
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag STEP
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = STEP
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta STEP
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  # STEP = old line needle; A2 = replacement (or ENV)
+  SYS BLANK STEP
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag STEP
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag STEP A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta STEP
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  HASFN nosuch_fn_xyz
+  LET h0 = HASFN_N
+  CLEAR_ERR
+  FNINFO nosuch_fn_xyz
+  LET f_ok = OK
+  LET f_n = FNINFO_N
+  CLEAR_ERR
+  TRYCALL nosuch_fn_xyz 1 2
+  LET c0 = CALLED
+  LET t_ok = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR h0
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR f_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR f_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR c0
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR t_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF h0 != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe hasfn not soft"
+  END
+  IF f_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe fninfo not soft"
+  END
+  IF c0 != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe trycall not soft"
+  END
+  PRINT_JSON h0
+  PRINT_JSON f_ok
+  PRINT_JSON c0
+  CLEAR_ERR
+END
+
+# --- clear journal/plates (FNs stay — process-local, cannot un-define) ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET jbag = ""
+  LET j_changed = 1
+  SYS WRITE catalog_path ""
+  SYS WRITE fn_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "catalog"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "infoj"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_cat"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_arity"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "try"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "call_hard"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "jcount"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nfns
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nparams
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR called
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "fn_runbook_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
