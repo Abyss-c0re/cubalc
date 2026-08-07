@@ -605,6 +605,86 @@ static int cubalc_parse_optional_timeout_ms(VM *vm, Lex *L, long *timeout_ms,
   return 0;
 }
 
+/* Parse UTC ISO stamp → Unix epoch (PARSEISO rules). 0 ok, -1 fail. */
+static int cubalc_parse_iso_epoch(const char *src, long *epoch_out, const char **err_out) {
+  const char *p;
+  int y = 0, mo = 0, d = 0, H = 0, M = 0, S = 0, nscan;
+  long era, yoe, doy, doe, days, epoch;
+  if (err_out) *err_out = NULL;
+  if (epoch_out) *epoch_out = 0;
+  p = src ? src : "";
+  while (*p == ' ' || *p == '\t') p++;
+  if (!*p) {
+    if (err_out) *err_out = "PARSEISO: empty";
+    return -1;
+  }
+  nscan = sscanf(p, "%d-%d-%d", &y, &mo, &d);
+  if (nscan != 3 || y < 1970 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) {
+    if (err_out) *err_out = "PARSEISO: bad date";
+    return -1;
+  }
+  {
+    const char *t = p;
+    while (*t && *t != 'T' && *t != ' ' && *t != 't') t++;
+    if (*t == 'T' || *t == 't' || *t == ' ') {
+      t++;
+      while (*t == ' ' || *t == '\t') t++;
+      if (*t) {
+        int hs = 0, ms = 0, ss = 0;
+        int nt = sscanf(t, "%d:%d:%d", &hs, &ms, &ss);
+        if (nt < 2) {
+          if (err_out) *err_out = "PARSEISO: bad time";
+          return -1;
+        }
+        if (nt == 2) ss = 0;
+        if (hs < 0 || hs > 23 || ms < 0 || ms > 59 || ss < 0 || ss > 60) {
+          if (err_out) *err_out = "PARSEISO: bad time";
+          return -1;
+        }
+        H = hs; M = ms; S = ss;
+        if (S == 60) S = 59;
+      }
+    }
+  }
+  {
+    long Y = (long)y;
+    long mp = (long)mo;
+    long dy = (long)d;
+    Y -= mp <= 2;
+    era = (Y >= 0 ? Y : Y - 399) / 400;
+    yoe = Y - era * 400;
+    doy = (153 * (mp + (mp > 2 ? -3 : 9)) + 2) / 5 + dy - 1;
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    days = era * 146097 + doe - 719468;
+  }
+  epoch = days * 86400L + (long)H * 3600L + (long)M * 60L + (long)S;
+  if (epoch < 0) epoch = 0;
+  if (epoch_out) *epoch_out = epoch;
+  return 0;
+}
+
+/* Format epoch seconds as UTC ISO "YYYY-MM-DDTHH:MM:SSZ". */
+static void cubalc_format_epoch_iso(long n, char *iso, size_t cap) {
+  time_t t;
+  struct tm tm_utc;
+  if (!iso || cap < 2) return;
+  if (n < 0) n = 0;
+  t = (time_t)n;
+#if defined(CUBALC_OS_WINDOWS)
+  {
+    struct tm *tp = gmtime(&t);
+    if (tp) tm_utc = *tp;
+    else memset(&tm_utc, 0, sizeof tm_utc);
+  }
+#else
+  if (!gmtime_r(&t, &tm_utc))
+    memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+  snprintf(iso, cap, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+           tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+           tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+}
+
 /* Recursive find-style walk: list full paths whose basename matches pat.
  * Always recurses into directories (even if name does not match). Depth cap 40. */
 static void cubalc_sys_walk_rec(const char *dir, const char *pat,
@@ -15871,6 +15951,183 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ADDISO|SHIFTISO|ISOADD|PLUSISO [iso] [secs|"duration"]
+     * — parse ISO stamp, add seconds (or PARSEMS duration → floor ms/1000),
+     * re-format as UTC ISO. LAST = new stamp; LAST_N / ADDISO_N / TIME = new epoch.
+     * One arg number/duration: offset only, ISO from prior LAST (DATE chain).
+     * One arg ISO string: add 0 (normalize). Soft-fail bad ISO/duration.
+     * Usability: schedule plates without PARSEISO + ADDTIME + FROMTIME glue. */
+    if (kw(&L->cur,"ADDISO") || kw(&L->cur,"SHIFTISO") || kw(&L->cur,"ISOADD") ||
+        kw(&L->cur,"PLUSISO") || kw(&L->cur,"ISO_ADD") || kw(&L->cur,"ADDDATE") ||
+        kw(&L->cur,"SHIFTDATE") || kw(&L->cur,"DATEADD") || kw(&L->cur,"MOVEISO") ||
+        kw(&L->cur,"OFFSETISO") || kw(&L->cur,"ISOOFFSET")){
+      char iso_in[128], iso_out[40], tok[256];
+      long epoch = 0, secs = 0, ms = 0, out_ep = 0;
+      int has_iso = 0, has_off = 0;
+      const char *err = NULL, *derr = NULL;
+      lex_next(L);
+      iso_in[0] = 0;
+      tok[0] = 0;
+      /* number-only first arg → offset; ISO from prior LAST string */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+        secs = parse_expr(vm, L);
+        has_off = 1;
+        snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+        has_iso = iso_in[0] ? 1 : 0;
+      } else if (L->cur.kind == TK_STR ||
+                 (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                  !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        int got = 0;
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          got = (resolve_str_arg(vm, L, tok, sizeof tok) == 0);
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str)
+            got = (resolve_str_arg(vm, L, tok, sizeof tok) == 0);
+          else {
+            /* numeric ident → offset, ISO from LAST */
+            secs = parse_expr(vm, L);
+            has_off = 1;
+            snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+            has_iso = iso_in[0] ? 1 : 0;
+            got = 0;
+          }
+        }
+        if (got) {
+          /* Prefer ISO parse; if fail, treat as duration offset on prior LAST */
+          if (cubalc_parse_iso_epoch(tok, &epoch, &err) == 0) {
+            snprintf(iso_in, sizeof iso_in, "%s", tok);
+            has_iso = 1;
+            /* optional second offset */
+            if (L->cur.kind == TK_STR) {
+              if (resolve_str_arg(vm, L, tok, sizeof tok) == 0) {
+                if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) != 0) {
+                  var_set_str(vm, "LAST", "");
+                  vm->last_str[0] = 0;
+                  vm->last_n = 0;
+                  var_set_num(vm, "LAST_N", 0);
+                  var_set_num(vm, "OK", 0);
+                  var_set_str(vm, "LAST_ERR", derr ? derr : "ADDISO: bad duration");
+                  var_set_str(vm, "ERR", derr ? derr : "ADDISO: bad duration");
+                  bump(vm); return 1;
+                }
+                secs = ms / 1000L;
+                has_off = 1;
+              }
+            } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") &&
+                       !kw(&L->cur,"LET") && !kw(&L->cur,"SYS") &&
+                       !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+              Var *sv2 = (strcmp(L->cur.text, "LAST") == 0) ? NULL :
+                         var_get(vm, L->cur.text, 0);
+              if (strcmp(L->cur.text, "LAST") == 0 || (sv2 && sv2->is_str)) {
+                if (resolve_str_arg(vm, L, tok, sizeof tok) == 0) {
+                  if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) != 0) {
+                    var_set_str(vm, "LAST", "");
+                    vm->last_str[0] = 0;
+                    vm->last_n = 0;
+                    var_set_num(vm, "LAST_N", 0);
+                    var_set_num(vm, "OK", 0);
+                    var_set_str(vm, "LAST_ERR", derr ? derr : "ADDISO: bad duration");
+                    var_set_str(vm, "ERR", derr ? derr : "ADDISO: bad duration");
+                    bump(vm); return 1;
+                  }
+                  secs = ms / 1000L;
+                  has_off = 1;
+                }
+              } else {
+                secs = parse_expr(vm, L);
+                has_off = 1;
+              }
+            } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+                       L->cur.kind == TK_MINUS) {
+              secs = parse_expr(vm, L);
+              has_off = 1;
+            }
+          } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                     L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+                     (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") &&
+                      !kw(&L->cur,"LET") && !kw(&L->cur,"SYS") &&
+                      !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+            /* first token was meant as ISO but failed; consume offset junk then soft-fail */
+            if (L->cur.kind == TK_STR ||
+                (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "LAST") == 0 ||
+                  (var_get(vm, L->cur.text, 0) && var_get(vm, L->cur.text, 0)->is_str)))) {
+              char skip[256];
+              (void)resolve_str_arg(vm, L, skip, sizeof skip);
+            } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                       L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT) {
+              (void)parse_expr(vm, L);
+            }
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso");
+            var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso");
+            bump(vm); return 1;
+          } else if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) == 0) {
+            secs = ms / 1000L;
+            has_off = 1;
+            snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+            has_iso = iso_in[0] ? 1 : 0;
+          } else {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso/duration");
+            var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso/duration");
+            bump(vm); return 1;
+          }
+        }
+      }
+      if (!has_iso || !iso_in[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "ADDISO: empty iso");
+        var_set_str(vm, "ERR", "ADDISO: empty iso");
+        bump(vm); return 1;
+      }
+      if (cubalc_parse_iso_epoch(iso_in, &epoch, &err) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso");
+        var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso");
+        bump(vm); return 1;
+      }
+      if (!has_off) secs = 0;
+      if (secs >= 0) {
+        if (epoch > LONG_MAX - secs) out_ep = LONG_MAX;
+        else out_ep = epoch + secs;
+      } else {
+        if (epoch < -secs) out_ep = 0;
+        else out_ep = epoch + secs;
+      }
+      cubalc_format_epoch_iso(out_ep, iso_out, sizeof iso_out);
+      var_set_str(vm, "LAST", iso_out);
+      var_set_str(vm, "ADDISO", iso_out);
+      var_set_str(vm, "SHIFTISO", iso_out);
+      var_set_str(vm, "ISO", iso_out);
+      var_set_str(vm, "FROMTIME", iso_out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso_out);
+      vm->last_n = out_ep;
+      var_set_num(vm, "LAST_N", out_ep);
+      var_set_num(vm, "ADDISO_N", out_ep);
+      var_set_num(vm, "SHIFTISO_N", out_ep);
+      var_set_num(vm, "ADDISO_SECS", secs);
+      var_set_num(vm, "TIME", out_ep);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TIMEDIFF|ELAPSED|DELTA|DIFFTIME [a] [b]
      * — epoch-second difference for plate age/deadline math.
      * Two args: LAST_N = a - b (signed). One arg: LAST_N = now - a.
@@ -24926,6 +25183,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PARSEISO", "SYS PARSEISO|TOEPOCH|FROMISO [str] — ISO stamp → epoch · dual of FROMTIME"},
       {"SYS TOEPOCH", "SYS TOEPOCH [str] — alias of SYS PARSEISO"},
       {"SYS FROMISO", "SYS FROMISO [str] — alias of SYS PARSEISO"},
+      {"SYS ADDISO", "SYS ADDISO|SHIFTISO [iso] [secs|\"1h\"] — shift ISO stamp · no PARSEISO+ADDTIME+FROMTIME"},
+      {"SYS SHIFTISO", "SYS SHIFTISO [iso] [offset] — alias of SYS ADDISO"},
       {"SYS TIMEDIFF", "SYS TIMEDIFF|ELAPSED a [b] — epoch delta seconds · a-b or now-a"},
       {"SYS ELAPSED", "SYS ELAPSED a [b] — alias of SYS TIMEDIFF"},
       {"SYS DELTA", "SYS DELTA a [b] — alias of SYS TIMEDIFF"},
