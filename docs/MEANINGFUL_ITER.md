@@ -361,6 +361,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 331. ~~**ASSERT/IF string `==` / `!=`**~~ **done** (content compare for LAST/str vars · no SYS EQS glue).
 332. ~~**`CLONEOBJ` / `COPYOBJ`**~~ **done** (shallow object field copy · template/pool without SETF walk).
 333. ~~**`RENAMEOBJ` / `MOVEOBJ`**~~ **done** (rename live object slot in place · promote temp names after CLONE).
+334. ~~**`TRYSETF` / `SETF SOFT`**~~ **done** (soft field write · mirrors TRYGETF · string field names).
 
 ## Tick protocol
 

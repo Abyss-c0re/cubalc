@@ -765,31 +765,106 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* SETF obj field value */
+  /* SETF obj field value
+   * TRYSETF|SETFSOFT|SETF SOFT — soft miss OK=0 (no fatal) for unknown obj/field.
+   * Bare SETF still fatal (strict). Field may be IDENT, "string", or string-var.
+   * Usability: agent writes after HASFIELD without dual IF; mirrors TRYGETF. */
   if (kw(&L->cur, "SETF") || kw(&L->cur, "SETFIELD") || kw(&L->cur, "FIELDSET") ||
-      kw(&L->cur, "PUTF") || kw(&L->cur, "WRITEF")) {
-    char oname[48], fname[48];
+      kw(&L->cur, "PUTF") || kw(&L->cur, "WRITEF") || kw(&L->cur, "TRYSETF") ||
+      kw(&L->cur, "SETFSOFT") || kw(&L->cur, "SOFTSETF") ||
+      kw(&L->cur, "TRYSETFIELD")) {
+    char oname[48], fname[48], op[24];
     ObjInst *ob;
     ClassDef *cd;
     int fi;
+    int soft = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYSETF") == 0 || strcmp(op, "SETFSOFT") == 0 ||
+        strcmp(op, "SOFTSETF") == 0 || strcmp(op, "TRYSETFIELD") == 0)
+      soft = 1;
     lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
       fail(vm, "SETF object"); return -1;
     }
-    if (L->cur.kind != TK_IDENT) { fail(vm, "SETF field"); return -1; }
-    snprintf(fname, sizeof fname, "%s", L->cur.text);
-    lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "SETF field"); return -1;
+    }
     if (L->cur.kind == TK_EQ) lex_next(L);
     ob = oop_find_obj(vm, oname);
     if (!ob) {
-      snprintf(vm->err, sizeof vm->err, "SETF unknown object %s", oname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SETF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      /* consume value so parse stays aligned */
+      if (L->cur.kind == TK_STR) lex_next(L);
+      else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0)
+        lex_next(L);
+      else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT)
+        (void)parse_expr(vm, L);
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SETF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SETF: unknown object");
+      var_set_str(vm, "ERR", "SETF: unknown object");
+      bump(vm);
+      return 1;
     }
     cd = &vm->classes[ob->class_idx];
     fi = oop_field_idx(cd, fname);
+    if (fi < 0 && strcmp(fname, "LAST") == 0 && vm->last_str[0]) {
+      char alt[48];
+      char *nl;
+      snprintf(alt, sizeof alt, "%s", vm->last_str);
+      nl = strchr(alt, '\n');
+      if (nl) *nl = 0;
+      fi = oop_field_idx(cd, alt);
+      if (fi >= 0) snprintf(fname, sizeof fname, "%s", alt);
+    }
     if (fi < 0) {
-      snprintf(vm->err, sizeof vm->err, "SETF unknown FIELD %s", fname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SETF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      if (L->cur.kind == TK_STR) lex_next(L);
+      else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0)
+        lex_next(L);
+      else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT)
+        (void)parse_expr(vm, L);
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SETF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SETF: unknown field");
+      var_set_str(vm, "ERR", "SETF: unknown field");
+      bump(vm);
+      return 1;
     }
     if (L->cur.kind == TK_STR) {
       snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", L->cur.text);
@@ -822,6 +897,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "LAST_N", v);
       vm->last_n = v;
     }
+    var_set_num(vm, "SETF_N", 1);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

@@ -1,0 +1,56 @@
+# TRYSETF / SETF SOFT — soft object field writes for agents
+# Usability: write after HASFIELD without fatal; string field names like GETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell c 1 5 0
+
+# hard path still works
+SETF c energy 20
+ASSERT OK == 1
+ASSERT SETF_N == 1
+GETF c energy
+ASSERT LAST_N == 20
+
+# string field name
+SETF c "age" 7
+GETF c age
+ASSERT LAST_N == 7
+
+# string-var field name
+LET f = "ready"
+SETF c f 1
+GETF c ready
+ASSERT LAST_N == 1
+
+# TRYSETF soft miss field
+TRYSETF c no_field_zz 99
+ASSERT OK == 0
+ASSERT SETF_N == 0
+GETF c energy
+ASSERT LAST_N == 20 "unchanged after soft miss"
+
+# SETF SOFT keyword
+SETF SOFT c ghost_field 1
+ASSERT OK == 0
+
+# soft miss object
+TRYSETF missing_zz energy 3
+ASSERT OK == 0
+
+# SETFSOFT alias success
+SETFSOFT c energy 42
+ASSERT OK == 1
+GETF c energy
+ASSERT LAST_N == 42
+
+# SETFSOFT string value
+SETFSOFT c "alive" 0
+GETF c alive
+ASSERT LAST_N == 0
+
+# bare SETF still fatal-style not tested (would halt); soft is the win
+
+PRINT "oop_trysetf ok"

@@ -2013,6 +2013,7 @@ int main(int argc, char **argv) {
       {"assert_str_eq", "programs/proof/872_assert_str_eq.cubalc", "ASSERT/IF string ==/!= content compare"},
       {"oop_cloneobj", "programs/proof/873_oop_cloneobj.cubalc", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"oop_renameobj", "programs/proof/874_oop_renameobj.cubalc", "RENAMEOBJ/MOVEOBJ rename live object slot"},
+      {"oop_trysetf", "programs/proof/875_oop_trysetf.cubalc", "TRYSETF/SETF SOFT soft field writes"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5892,6 +5893,7 @@ int main(int argc, char **argv) {
       {"programs/proof/872_assert_str_eq.cubalc", "assert_str_eq", "ASSERT/IF string ==/!= content compare"},
       {"programs/proof/873_oop_cloneobj.cubalc", "oop_cloneobj", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"programs/proof/874_oop_renameobj.cubalc", "oop_renameobj", "RENAMEOBJ/MOVEOBJ rename live object slot"},
+      {"programs/proof/875_oop_trysetf.cubalc", "oop_trysetf", "TRYSETF/SETF SOFT soft field writes"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6164,6 +6166,7 @@ int main(int argc, char **argv) {
       {"programs/proof/872_assert_str_eq.cubalc", "assert_str_eq", "ASSERT/IF string ==/!= content compare"},
       {"programs/proof/873_oop_cloneobj.cubalc", "oop_cloneobj", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"programs/proof/874_oop_renameobj.cubalc", "oop_renameobj", "RENAMEOBJ/MOVEOBJ rename live object slot"},
+      {"programs/proof/875_oop_trysetf.cubalc", "oop_trysetf", "TRYSETF/SETF SOFT soft field writes"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
