@@ -9981,6 +9981,96 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* PICKOBJ|RANDOBJ|SAMPLEOBJ [Class]
+   * — random live object name (optional class filter). Soft empty → "" / -1.
+   * LAST=name; LAST_N/PICKOBJ_I = 0-based index among candidates; PICKOBJ_TOTAL=pool.
+   * Uses vm->rng (SEED / CUBALC_SEED). Usability: peer/work sample without LISTOBJS+SYS PICK. */
+  if (kw(&L->cur, "PICKOBJ") || kw(&L->cur, "RANDOBJ") ||
+      kw(&L->cur, "SAMPLEOBJ") || kw(&L->cur, "ANYOBJ") ||
+      kw(&L->cur, "DRAWOBJ") || kw(&L->cur, "LOTTOBJ") ||
+      kw(&L->cur, "CHOICEOBJ") || kw(&L->cur, "RANDINST") ||
+      kw(&L->cur, "PICKINST") || kw(&L->cur, "SAMPLEINST")) {
+    char filt[48], bag_names[CUBALC_MAX_OBJS][48];
+    int has_filt = 0, i, n = 0, idx = -1;
+    uint32_t x;
+    lex_next(L);
+    filt[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "FROM")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "PICKOBJ OF Class"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+               !kw(&L->cur, "CUBE") && oop_find_class(vm, L->cur.text)) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      /* string class name even if not yet defined → empty pool */
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      snprintf(bag_names[n], sizeof bag_names[n], "%s", ob->name);
+      n++;
+    }
+    if (n <= 0) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "PICKOBJ", "");
+      var_set_str(vm, "RANDOBJ", "");
+      var_set_str(vm, "OBJECT", "");
+      vm->last_str[0] = 0;
+      vm->last_n = -1;
+      var_set_num(vm, "LAST_N", -1);
+      var_set_num(vm, "PICKOBJ_I", -1);
+      var_set_num(vm, "PICKOBJ_N", -1);
+      var_set_num(vm, "PICKOBJ_TOTAL", 0);
+      var_set_num(vm, "PICKOBJ_HIT", 0);
+      if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    x = vm->rng;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    idx = (int)(x % (uint32_t)n);
+    var_set_str(vm, "LAST", bag_names[idx]);
+    var_set_str(vm, "PICKOBJ", bag_names[idx]);
+    var_set_str(vm, "RANDOBJ", bag_names[idx]);
+    var_set_str(vm, "SAMPLEOBJ", bag_names[idx]);
+    var_set_str(vm, "OBJECT", bag_names[idx]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag_names[idx]);
+    vm->last_n = idx;
+    var_set_num(vm, "LAST_N", idx);
+    var_set_num(vm, "PICKOBJ_I", idx);
+    var_set_num(vm, "PICKOBJ_N", idx);
+    var_set_num(vm, "PICKOBJ_TOTAL", n);
+    var_set_num(vm, "PICKOBJ_HIT", 1);
+    var_set_num(vm, "NOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* HASMETHOD obj|Class method — LAST_N 1|0 soft probe before SEND.
    * First arg object (live) or ClassName. Usability: agent IF without fatal. */
   if (kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETH") ||

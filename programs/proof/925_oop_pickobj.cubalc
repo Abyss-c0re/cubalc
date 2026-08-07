@@ -1,0 +1,122 @@
+# PICKOBJ / RANDOBJ — random live object sample
+# Usability: no LISTOBJS + SYS PICK glue for peer/work lottery
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# fixed seed for deterministic selftest
+SEED 42
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+# single pick must be one of a|b|c
+PICKOBJ Cell
+ASSERT OK == 1
+ASSERT PICKOBJ_HIT == 1
+ASSERT PICKOBJ_TOTAL == 3
+ASSERT PICKOBJ_I >= 0
+ASSERT PICKOBJ_I < 3
+ASSERT LAST_N == PICKOBJ_I
+SYS HASLINE "a\nb\nc" LAST
+ASSERT LAST_N == 1
+SYS EQS OBJECT LAST
+ASSERT LAST_N == 1
+
+# OF sugar
+SEED 1
+PICKOBJ OF Cell
+ASSERT PICKOBJ_HIT == 1
+ASSERT PICKOBJ_TOTAL == 3
+SYS HASLINE "a\nb\nc" PICKOBJ
+ASSERT LAST_N == 1
+
+# aliases with same seed yield same pick
+SEED 99
+RANDOBJ Cell
+LET p1 = RANDOBJ
+SEED 99
+SAMPLEOBJ Cell
+SYS EQS LAST p1
+ASSERT LAST_N == 1 "same seed → same sample"
+SEED 99
+ANYOBJ Cell
+SYS EQS LAST p1
+ASSERT LAST_N == 1
+
+# all three names reachable over many draws (seeded walk)
+SEED 7
+LET seen_a = 0
+LET seen_b = 0
+LET seen_c = 0
+LET t = 0
+WHILE t < 40
+  PICKOBJ Cell
+  SYS EQS LAST "a"
+  IF LAST_N == 1 THEN
+    LET seen_a = 1
+  END
+  SYS EQS LAST "b"
+  IF LAST_N == 1 THEN
+    LET seen_b = 1
+  END
+  SYS EQS LAST "c"
+  IF LAST_N == 1 THEN
+    LET seen_c = 1
+  END
+  LET t = t + 1
+END
+ASSERT seen_a == 1
+ASSERT seen_b == 1
+ASSERT seen_c == 1
+
+# class filter ignores other types
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 1
+NEW Ticket t2 "open" 2
+SEED 3
+PICKOBJ Ticket
+ASSERT PICKOBJ_TOTAL == 2
+SYS HASLINE "t1\nt2" LAST
+ASSERT LAST_N == 1
+SYS HASLINE "a\nb\nc" LAST
+ASSERT LAST_N == 0 "cell not chosen under Ticket filter"
+
+# unfiltered pool includes both classes
+SEED 11
+PICKOBJ
+ASSERT PICKOBJ_TOTAL == 5
+ASSERT PICKOBJ_HIT == 1
+
+# empty class soft
+CLASS Empty
+  FIELD x 0
+END
+PICKOBJ Empty
+ASSERT OK == 1
+ASSERT PICKOBJ_HIT == 0
+ASSERT PICKOBJ_TOTAL == 0
+ASSERT LAST_N == -1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS EQS OBJECT ""
+ASSERT LAST_N == 1
+
+# after free all tickets, Ticket pool empty
+DELETEOBJ t1
+DELETEOBJ t2
+PICKOBJ Ticket
+ASSERT PICKOBJ_HIT == 0
+ASSERT PICKOBJ_TOTAL == 0
+
+PRINT "proof925_oop_pickobj" 1
+ASSERT OK == 1
