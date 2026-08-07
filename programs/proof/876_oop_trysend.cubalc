@@ -1,0 +1,66 @@
+# TRYSEND / SEND SOFT — soft method dispatch for agents
+# Usability: call after HASMETHOD without fatal; string method names
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell c 1 4 0
+
+# hard SEND still works
+SEND c tick
+ASSERT OK == 1
+ASSERT SEND_N == 1
+
+# string method name
+SEND c "tick"
+ASSERT OK == 1
+
+# string-var method
+LET m = "tick"
+SEND c m
+ASSERT OK == 1
+
+# TRYSEND soft miss method
+TRYSEND c no_method_zz
+ASSERT OK == 0
+ASSERT SEND_N == 0
+ASSERT TRYSEND_N == 0
+
+# SEND SOFT keyword
+SEND SOFT c ghost_meth
+ASSERT OK == 0
+
+# soft miss object
+TRYSEND missing_zz tick
+ASSERT OK == 0
+
+# SENDSOFT alias success
+SENDSOFT c tick
+ASSERT OK == 1
+ASSERT TRYSEND_N == 1
+
+# args still bind on soft hit
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+  METHOD add d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+    RET v
+  END
+END
+NEW Counter k 10
+TRYSEND k add 5
+ASSERT OK == 1
+GETF k n
+ASSERT LAST_N == 15
+TRYSEND k missing 1
+ASSERT OK == 0
+GETF k n
+ASSERT LAST_N == 15 "args drained, state intact"
+
+PRINT "oop_trysend ok"

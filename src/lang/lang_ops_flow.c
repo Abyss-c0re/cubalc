@@ -551,34 +551,106 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* SEND obj method [args] */
+  /* SEND obj method [args]
+   * TRYSEND|SENDSOFT|SEND SOFT — soft miss OK=0 for unknown obj/method.
+   * Method may be IDENT, "string", or string-var (LISTMETHODS walk).
+   * Bare SEND still fatal. Usability: agent dispatch after HASMETHOD. */
   if (kw(&L->cur, "SEND") || kw(&L->cur, "CALLMETHOD") || kw(&L->cur, "INVOKE") ||
-      kw(&L->cur, "DOMETHOD") || kw(&L->cur, "MSG") || kw(&L->cur, "EMIT")) {
-    char oname[48], mname[48];
+      kw(&L->cur, "DOMETHOD") || kw(&L->cur, "MSG") || kw(&L->cur, "EMIT") ||
+      kw(&L->cur, "TRYSEND") || kw(&L->cur, "SENDSOFT") ||
+      kw(&L->cur, "SOFTSEND") || kw(&L->cur, "TRYCALLMETHOD") ||
+      kw(&L->cur, "TRYINVOKE")) {
+    char oname[48], mname[48], op[24];
     ObjInst *ob;
     ClassDef *cd;
     MethodDef *md;
+    int soft = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYSEND") == 0 || strcmp(op, "SENDSOFT") == 0 ||
+        strcmp(op, "SOFTSEND") == 0 || strcmp(op, "TRYCALLMETHOD") == 0 ||
+        strcmp(op, "TRYINVOKE") == 0)
+      soft = 1;
     lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
       fail(vm, "SEND object"); return -1;
     }
-    if (L->cur.kind != TK_IDENT) { fail(vm, "SEND method"); return -1; }
-    snprintf(mname, sizeof mname, "%s", L->cur.text);
-    lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", id);
+    } else {
+      fail(vm, "SEND method"); return -1;
+    }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
-      snprintf(vm->err, sizeof vm->err, "SEND unknown object %s", oname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SEND unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      /* drain optional args so next form stays aligned */
+      while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+             L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+        if (L->cur.kind == TK_STR) lex_next(L);
+        else (void)parse_expr(vm, L);
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SEND_N", 0);
+      var_set_num(vm, "TRYSEND_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SEND: unknown object");
+      var_set_str(vm, "ERR", "SEND: unknown object");
+      bump(vm);
+      return 1;
     }
     cd = &vm->classes[ob->class_idx];
     md = oop_find_method(cd, mname);
     if (!md) {
-      snprintf(vm->err, sizeof vm->err, "SEND unknown METHOD %s.%s", cd->name,
-               mname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SEND unknown METHOD %s.%s", cd->name,
+                 mname);
+        fail(vm, vm->err); return -1;
+      }
+      while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+             L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+        if (L->cur.kind == TK_STR) lex_next(L);
+        else (void)parse_expr(vm, L);
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SEND_N", 0);
+      var_set_num(vm, "TRYSEND_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SEND: unknown method");
+      var_set_str(vm, "ERR", "SEND: unknown method");
+      bump(vm);
+      return 1;
     }
     oop_bind_args(vm, L, md->params, md->n_params);
     if (oop_run_method(vm, ob, md) < 0) return -1;
+    var_set_num(vm, "SEND_N", 1);
+    var_set_num(vm, "TRYSEND_N", 1);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
