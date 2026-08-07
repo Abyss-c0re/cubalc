@@ -1,215 +1,214 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 118,
-  "program": "programs/realworld/replica_fleet_board.cubalc",
-  "theme": "GETFALL/SETFALL/WHEREOBJ/FINDOBJ replica fleet lag harvest + bulk mode stamp + bag journal",
-  "version": "1.15.332-usability",
+  "iter": 119,
+  "program": "programs/realworld/job_gc_board.cubalc",
+  "theme": "DELETEWHERE/SENDWHERE job GC + selective ack/requeue/stale + plate dump hygiene + bag journal",
+  "version": "1.15.335-usability",
   "pass": true,
-  "prior_note": "iter 117 conn_pool DELETEALL; this iter stresses GETFALL/SETFALL/WHEREOBJ (c070629/e615cd0/3cd773c)",
+  "prior_note": "iter 118 replica_fleet GETFALL/WHEREOBJ; this iter stresses DELETEWHERE+SENDWHERE (fdc95e4/8974fe7)",
   "tests": [
     {
-      "name": "open_r0_r1_r2_primary",
-      "cmd": "open lag 10/20/30; setrole r0 primary",
+      "name": "open_done_failed_running",
+      "cmd": "open j0 done j1 failed j2 running",
       "ok": true,
-      "note": "NEW+SETF"
+      "note": "NEW"
     },
     {
-      "name": "harvest_sum_avg",
-      "cmd": "GETFALL lag \u2192 n:3 sum:60 avg:20",
+      "name": "sendwhere_ack",
+      "cmd": "SENDWHERE state done ack → N=1; acked:1",
       "ok": true,
-      "note": "GETFALL+SUM/AVG"
+      "note": "SENDWHERE"
     },
     {
-      "name": "harvest_kv",
-      "cmd": "GETFALL AS KV r0:10 r1:20 r2:30",
+      "name": "sendwhere_requeue",
+      "cmd": "SENDWHERE failed requeue → j1 queued tries:1",
       "ok": true,
-      "note": "AS KV"
+      "note": "requeue"
     },
     {
-      "name": "find_role_primary",
-      "cmd": "FINDOBJ role primary \u2192 r0",
+      "name": "mark_stale",
+      "cmd": "SENDWHERE running stale_out → j2 stale",
       "ok": true,
-      "note": "FINDOBJ"
+      "note": "poison"
     },
     {
-      "name": "get_last_lag",
-      "cmd": "FINDOBJ primary; GETF LAST lag \u2192 10",
-      "ok": true,
-      "note": "LAST as obj"
-    },
-    {
-      "name": "find_lag_exact",
-      "cmd": "FINDOBJ lag 20 \u2192 r1; lag 99 soft/REQUIRE",
-      "ok": true,
-      "note": "exact only"
-    },
-    {
-      "name": "stamp_where",
-      "cmd": "SETFALL mode drain N=3; WHEREOBJ drain \u2192 r0 r1 r2",
-      "ok": true,
-      "note": "SETFALL+WHERE"
-    },
-    {
-      "name": "gate_admit_deny",
-      "cmd": "avg<=50 admit; MAX=5 soft deny; REQUIRE\u21922",
+      "name": "gate_stale_require",
+      "cmd": "gate soft deny; REQUIRE→rc2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "zero_harvest",
-      "cmd": "SETFALL lag 0 \u2192 sum:0 avg:0",
+      "name": "deletewhere_gc_stale",
+      "cmd": "DELETEWHERE stale N=1 FREED=j2 dump RM",
       "ok": true,
-      "note": "bulk zero"
+      "note": "DELETEWHERE"
+    },
+    {
+      "name": "gate_admit_after_gc",
+      "cmd": "gate admit no stale",
+      "ok": true,
+      "note": "admit"
+    },
+    {
+      "name": "gc_done",
+      "cmd": "DELETEWHERE done N=1 list j1 only",
+      "ok": true,
+      "note": "gc_done"
+    },
+    {
+      "name": "harvest_tries",
+      "cmd": "GETFALL tries n:1 sum:1",
+      "ok": true,
+      "note": "GETFALL"
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "COUNTLINE exact; SETMATCH first 2\u21921; pin",
+      "cmd": "exact false friend; SETMATCH 2→1; pin",
       "ok": true,
       "note": "journal"
     },
     {
       "name": "probe_soft_skip",
-      "cmd": "TRYSEND soft; GETFALL miss field SKIP=3",
+      "cmd": "TRYSEND soft; SENDWHERE miss method SKIP; empty DELETEWHERE 0",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "empty_fleet",
-      "cmd": "clear; harvest n:0; stamp N=0; gate REQUIRE rc2",
+      "name": "empty_gc_ack",
+      "cmd": "gc_stale N=0; ack N=0 soft",
       "ok": true,
       "note": "empty"
     },
     {
+      "name": "reuse_name_after_free",
+      "cmd": "gc_stale j0; NEW j0 queued reuses slot",
+      "ok": true,
+      "note": "reuse"
+    },
+    {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE\u21922",
+      "cmd": "open xx soft/REQUIRE→2",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "num_require_softens",
-      "cmd": "REQUIRE=abc gate soft rc0",
+      "cmd": "REQUIRE=abc gate → soft",
       "ok": true,
       "note": "NUM"
     },
     {
       "name": "write_no_nl",
-      "cmd": "cat -A dump/VAL last line no NL",
+      "cmd": "cat -A dump/report last no NL",
       "ok": true,
       "note": "NL"
-    },
-    {
-      "name": "footer_push_predeclare",
-      "cmd": "late LET+PUSH after FINDOBJ under -s failed; predeclare fleet_rep",
-      "ok": true,
-      "note": "W1 workaround"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "308/308 pass"
+      "note": "311/311 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|push|strict",
-      "title": "Late LET bag + SYS PUSH after FINDOBJ under -s \u2192 unknown form",
-      "detail": "Footer LET rpt=...; SYS PUSH rpt run_date failed only on gate path (after FINDOBJ) under -s with err unknown form 'rpt'. Same PUSH works earlier (meta) and without -s. Predeclaring fleet_rep before actions works around. Parser/runtime hazard for agents building bags late.",
-      "repro": "FINDOBJ then near EOF LET rpt; SYS PUSH rpt x under -s"
+      "area": "oop|persist",
+      "title": "DELETEWHERE is process-local — plate dumps rehydrate freed jobs",
+      "detail": "GC must RM dump/jN for each name in DELETEWHERE bag or next ARG run restores objects. No cascade free→plate. Same class as DELETEALL trap.",
+      "repro": "DELETEWHERE state stale without RM dump; next list rehydrates"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|where",
-      "title": "WHEREOBJ/FINDOBJ equality only \u2014 no lag>N range query",
-      "detail": "Cannot select replicas with lag greater than threshold. Agents need exact lag values or EACH+IF. find_lag 15 misses 10/20/30 fleet.",
-      "repro": "WHEREOBJ Replica lag 15 on {10,20,30} \u2192 empty"
+      "title": "DELETEWHERE/SENDWHERE equality only — no multi-state or range GC",
+      "detail": "Cannot DELETEWHERE state in {done,failed} or tries>3. Agents run multiple gc_state or EACH.",
+      "repro": "need two DELETEWHERE for done+failed cleanup"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "oop|setfall",
-      "title": "SETFALL has no WHERE filter \u2014 stamps entire class",
-      "detail": "Drain stamp sets mode=drain on primary too. No SETFALL Replica mode drain WHERE role replica. Agents must EACH or per-slot SETF.",
-      "repro": "stamp drain \u2192 WHEREOBJ drain includes primary r0"
+      "severity": "med",
+      "area": "oop|sendwhere",
+      "title": "SENDWHERE miss method soft skip — no hard fail mode",
+      "detail": "SENDWHERE Job state queued no_meth_zz → N=0 SKIP>0 OK=1. Typo methods silent under -s without agent checks.",
+      "repro": "SENDWHERE … typo_method → soft"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|where",
-      "title": "WHEREOBJ returns name bag but SEND/SETF on bag names needs EACH or LAST",
-      "detail": "Cannot SEND names_bag use. FINDOBJ LAST works for GETF LAST; full bag needs EACH LINE + dynamic name (awkward).",
-      "repro": "WHEREOBJ mode drain; cannot bulk SEND bag"
+      "area": "oop|name",
+      "title": "Fixed slot EQS + dump RM wall for freed names",
+      "detail": "Cannot loop DELETEWHERE bag names to RM dumps without per-slot HASLINE j0|j1|j2. Dynamic path from free name still awkward.",
+      "repro": "HASLINE fbag j0; RM d_j0 ×3"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|persist",
-      "title": "Process-local objects force DUMPOBJ plate rehydrate every ARG run",
-      "detail": "Multi-action host scripts dump after every mutation. No native object plate persistence.",
-      "repro": "open then separate process harvest without dump \u2192 empty"
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact only",
+      "detail": "Two j0:ack → one SETMATCH leaves 1.",
+      "repro": "count drops by 1"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two r0:lag \u2192 one SETMATCH leaves 1.",
-      "repro": "count after SETMATCH drops by 1"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "cat -A last line no $.",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "cat -A shows last line without $.",
-      "repro": "od -c VAL.txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens to 0",
+      "detail": "CUBALC_JG_REQUIRE=abc → soft gate.",
+      "repro": "REQUIRE=abc"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE env softens to 0",
-      "detail": "CUBALC_RF_REQUIRE=abc \u2192 gate deny soft rc0.",
-      "repro": "REQUIRE=abc empty gate \u2192 rc0"
+      "area": "host|join",
+      "title": "SYS JOIN path-only — harvest uses REPLACEALL template",
+      "detail": "n:N sum:S not JOIN.",
+      "repro": "SYS JOIN n: count → n:/1"
     },
     {
       "id": "W9",
       "severity": "low",
-      "area": "host|join",
-      "title": "SYS JOIN path-only \u2014 harvest label uses REPLACEALL template",
-      "detail": "n:N sum:S avg:A via REPLACEALL not JOIN.",
-      "repro": "SYS JOIN \"n:\" n \u2192 n:/3"
+      "area": "oop|gc",
+      "title": "No atomic DELETEWHERE + plate unlink + journal event",
+      "detail": "Agents co-author free + RM + journal; partial failure leaves inconsistent plate.",
+      "repro": "crash between DELETEWHERE and RM"
     }
   ],
   "workarounds": [
-    "Predeclare report bag vars at boot before OOP queries under -s",
-    "Exact lag buckets or EACH for range filters \u2014 not WHEREOBJ >",
-    "Per-slot setmode when primary must stay live during stamp",
-    "GETF LAST after FINDOBJ; DUMPOBJ after every mutation",
-    "REPLACEALL templates for labels; CLEAR_ERR after soft ops",
-    "Loop SETMATCH; COUNTLINE exact tokens"
+    "Always RM dump slots listed in DELETEWHERE bag after GC",
+    "Multiple DELETEWHERE/SENDWHERE passes for multi-state policies",
+    "Check SENDWHERE_N and SENDWHERE_SKIP after selective dispatch",
+    "Literal j0|j1|j2 HASLINE for dump hygiene",
+    "Predeclare board_rep bag; CLEAR_ERR after soft ops",
+    "COUNTLINE exact tokens; loop SETMATCH"
   ],
   "language_gaps": [
-    "WHEREOBJ range / inequality (lag > N)",
-    "SETFALL filtered by field predicate",
-    "Stable late bag LET+PUSH under -s after OOP query",
-    "Native multi-run object persistence",
-    "SETMATCH ALL",
-    "WRITE trailing NL option",
-    "Strict NUM on REQUIRE flags",
+    "DELETEWHERE/SENDWHERE multi-value OR and inequality",
+    "DELETEWHERE cascade to plate files",
+    "Strict SENDWHERE (fail on missing method)",
+    "Dynamic path from free-name bag without slot wall",
+    "Atomic GC transaction (memory+plate+journal)",
+    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE",
     "String concat (not path JOIN)"
   ],
   "issues_faced": [
-    "GETFALL sum:60 avg:20 and AS KV worked cleanly",
-    "SETFALL stamp+WHEREOBJ drain all 3 including primary (W3)",
-    "gate footer LET+SYS PUSH failed under -s after FINDOBJ \u2014 predeclare fleet_rep fixed",
-    "TRYGETF with string name after FINDOBJ succeeded (soft_var=0) \u2014 string-var names improved?",
-    "empty GETFALL/SETFALL soft N=0; GETFALL_SKIP on miss field",
-    "selftest 308/308 green; no language fix this iter"
+    "SENDWHERE ack/requeue/mark_stale selective dispatch worked",
+    "DELETEWHERE gc_stale freed j2 kept j0/j1; dump RM hygiene ok",
+    "empty DELETEWHERE/SENDWHERE soft N=0",
+    "NEW reuses freed j0 name after gc",
+    "SETMATCH first-only 2→1; COUNTLINE false friend j0→0",
+    "selftest 311/311 green (transient 4-fail was mid-rebuild race); no language fix this iter"
   ],
-  "commit": "256ce6959a830906f5c934624c453fe4c8e6ed9b",
-  "ts": "2026-08-07T04:53:07Z"
+  "commit": "",
+  "ts": "2026-08-07T05:15:00Z"
 }
