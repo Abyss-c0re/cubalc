@@ -1,51 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 143,
-  "program": "programs/realworld/payload_field_gate_board.cubalc",
-  "theme": "LENF + HASINF/STARTSF/ENDSF read-only payload field gates",
-  "version": "1.15.394-usability",
+  "iter": 144,
+  "program": "programs/realworld/session_token_scrub_board.cubalc",
+  "theme": "CLEARF/EQF/LEFTF/TRUNCF session token redact and status gate",
+  "version": "1.15.397-usability",
   "pass": true,
-  "prior_note": "iter 142 CATFALL/REPLACEF/TRIMF mutators; this iter stresses LENF (679ba76) + HASINF (35c373b) non-mutating probes",
+  "prior_note": "iter 143 LENF/HASINF read-only gates; this iter stresses CLEARF (f198b15) EQF/FINDF (d02ae74) LEFTF/TRUNCF (7b15817)",
   "tests": [
     {
-      "name": "open_payloads",
-      "cmd": "open a0 /tmp/out.json note timeout; a1 /var blank note",
+      "name": "open_sessions",
+      "cmd": "open s0/s1 with full tokens status active",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "lenf",
-      "cmd": "LENF note \u2192 22 for timeout string",
+      "name": "eq_gate",
+      "cmd": "EQF status active admit; revoked miss",
       "ok": true,
-      "note": "LENF"
+      "note": "EQF"
     },
     {
-      "name": "blankf",
-      "cmd": "BLANKF whitespace note \u2192 1",
+      "name": "redact",
+      "cmd": "LEFTF token 8 → tok_abcd",
       "ok": true,
-      "note": "BLANKF"
+      "note": "LEFTF"
     },
     {
-      "name": "hasinf",
-      "cmd": "timeout hit; missing soft; REQUIRE\u21922; HASIFI ERROR",
+      "name": "find_peel",
+      "cmd": "FINDF : idx 4; SLICEF peel → login:ok",
       "ok": true,
-      "note": "HASINF"
+      "note": "FINDF+SLICEF"
     },
     {
-      "name": "path_affix",
-      "cmd": "STARTSF /tmp; ENDSF .json admit/deny",
+      "name": "clear_reset",
+      "cmd": "CLEARF token + revoked; RESETF status active",
       "ok": true,
-      "note": "STARTSF/ENDSF"
+      "note": "CLEARF/RESETF"
     },
     {
-      "name": "admit",
-      "cmd": "compound gate admit\u2192status admitted; a1 deny",
+      "name": "default",
+      "cmd": "DEFAULTF fill when empty N=1; skip when set N=0",
       "ok": true,
-      "note": "admit"
+      "note": "DEFAULTF"
+    },
+    {
+      "name": "trunc",
+      "cmd": "TRUNCF token 4 → anon",
+      "ok": true,
+      "note": "TRUNCF"
     },
     {
       "name": "probe",
-      "cmd": "TRY* soft; empty needle HASINF hit=1",
+      "cmd": "TRYLEFTF/TRYCLEARF soft; FINDF empty → 0",
       "ok": true,
       "note": "probe"
     },
@@ -60,50 +66,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "lang|note",
-      "title": "NOTE command clobbers variable named NOTE",
-      "detail": "NOTE \"action open\" overwrites LET/DEFAULT NOTE used for payload body \u2014 dump showed note:action open. Agents must not name vars NOTE (use MSG).",
-      "repro": "DEFAULT NOTE=...; NOTE \"action open\"; open uses NOTE \u2192 action open"
+      "area": "oop|leftf|keyword",
+      "title": "LEFTF/TRUNCF glue steals N/WIDTH/TO/LEN/BY vars",
+      "detail": "Optional glue before length expr: TO|OF|LEN|WIDTH|N|BY. LEFTF s token N or LEFTF s token WIDTH consumes the var name as glue then fails LEFTF object field n. Must use non-glue names (KLEN).",
+      "repro": "LEFTF s0 token N → parse fail; LEFTF s0 token WIDTH → parse fail; KLEN works"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "host|env",
-      "title": "Empty ENV string treated as missing (LAST_N=0)",
-      "detail": "CUBALC_FS_NOTE=\"\" does not override DEFAULT MSG; cannot clear default via empty env without sentinel.",
-      "repro": "FS_NOTE=\"\" open a2 still default note"
+      "area": "oop|leftf",
+      "title": "LEFTF/TRUNCF promote numeric fields to string",
+      "detail": "Same poison class as CATF; digit peel leaves string field.",
+      "repro": "proof 947 LEFTF retries 3 → string 123"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|hasinf",
-      "title": "HASINF empty needle always matches",
-      "detail": "HASINF note \"\" \u2192 1 even for non-empty fields. Agents must reject blank needles before probe.",
-      "repro": "probe empty_hit=1"
+      "area": "oop|clearf",
+      "title": "CLEARF has no selective secret policy / audit trail",
+      "detail": "Wipe is silent; agents must journal separately. No CLEARF WHERE fleet wipe.",
+      "repro": "clear per-slot only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|probe",
-      "title": "No fleet LENWHERE/HASINWHERE \u2014 per-object only",
-      "detail": "Fleet admit still loops slots; WHERE family is numeric/status match not substring/len probes.",
-      "repro": "admit per a0/a1/a2 branches"
+      "area": "oop|findf",
+      "title": "FINDF empty needle → index 0 always",
+      "detail": "Same empty-needle class as HASINF; peel with empty NEEDLE peels whole string from 0+1.",
+      "repro": "FINDF label \"\" → 0"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|lenf",
-      "title": "LENF on numeric field returns decimal digit length",
-      "detail": "retries 42 \u2192 LENF_N=2 not magnitude; easy misread for quotas.",
-      "repro": "proof 943 LENF retries"
+      "area": "oop|eqf",
+      "title": "EQF case-sensitive by default — need EQFI for status Open/open",
+      "detail": "Easy gate miss if mixed case from intake.",
+      "repro": "EQF status open vs Open"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|probe",
-      "title": "Probe sets LAST to field text \u2014 EQS clobbers LAST_N",
-      "detail": "Capture LENF_N/HASINF_N immediately before string EQS.",
-      "repro": "LENF then EQS LAST loses length in LAST_N"
+      "area": "oop|defaultf",
+      "title": "DEFAULTF treats blank whitespace as empty",
+      "detail": "Fill triggers on \"   \"; may surprise if intentional pad.",
+      "repro": "proof 945 DEFAULTF blank note"
     },
     {
       "id": "W7",
@@ -119,30 +125,29 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc has missing \u2192 exit 0"
+      "repro": "REQUIRE=abc gate deny soft path"
     }
   ],
   "workarounds": [
-    "Never name a var NOTE; use MSG/BODY",
-    "Use sentinel for empty override (e.g. - for blank note) not empty ENV",
-    "Reject empty NEEDLE before HASINF",
-    "Capture *_N before EQS/HAS on LAST",
-    "Fixed a0/a1/a2 slots; TRY* for soft probes"
+    "Never name LEFTF/TRUNCF length vars N/WIDTH/TO/LEN; use KLEN",
+    "Capture FINDF_N before EQS; reject empty NEEDLE for peel",
+    "EQFI for case-insensitive status gates",
+    "DEFAULTF only after intentional CLEARF",
+    "Fixed s0/s1/s2; TRY* soft probes"
   ],
   "language_gaps": [
-    "NOTE command must not bind/overwrite user var NOTE",
-    "ENV empty vs missing distinction",
-    "HASINF empty-needle policy option (strict)",
-    "LENWHERE/HASINWHERE fleet probes",
+    "LEFTF length glue must not steal string/num vars named N/WIDTH",
+    "CLEARFALL secret fleet wipe + audit flag",
+    "Strict empty-needle policy for FINDF",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NOTE var clobbered by NOTE cmd \u2014 renamed MSG",
-    "LENF 22; BLANKF whitespace 1; HASINF/HASIFI/STARTSF/ENDSF",
-    "admit compound path+len+needle \u2192 admitted; blank a1 deny",
-    "empty ENV cannot clear default MSG",
+    "LEFTF token N and WIDTH both parse-failed on glue keywords",
+    "Renamed KLEN; redact tok_abcd; FINDF : peel login:ok",
+    "CLEARF wipe+revoked; RESETF active; DEFAULTF fill/skip",
+    "TRUNCF 4 → anon; gate active admit/deny",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "8bfb575e2031e6564a3c1db1a1fee77f796126d8",
-  "ts": "2026-08-07T15:14:39Z"
+  "commit": "",
+  "ts": "2026-08-07T15:39:47Z"
 }
