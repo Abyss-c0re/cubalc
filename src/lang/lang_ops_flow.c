@@ -10723,6 +10723,220 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LPADF|PADLEFTF|PADF obj field width [padchar]
+   * RPADF|PADRIGHTF obj field width [padchar]
+   * TRYLPADF|LPADF SOFT / TRYRPADF — soft miss OK=0 sticky LAST_ERR.
+   * Pad (or truncate) one string field to width; promotes num→decimal first.
+   * Default pad char space. Width capped to field buffer − 1.
+   * Usability: fixed-width plate IDs/columns without GETF+SYS LPAD/RPAD+SETF
+   * (METHOD/THIS; pairs STRF/CATF/LEFTF). */
+  if (kw(&L->cur, "LPADF") || kw(&L->cur, "PADLEFTF") ||
+      kw(&L->cur, "PADF") || kw(&L->cur, "STRPADF") ||
+      kw(&L->cur, "LPADFIELD") || kw(&L->cur, "PADOBJ") ||
+      kw(&L->cur, "RPADF") || kw(&L->cur, "PADRIGHTF") ||
+      kw(&L->cur, "RPADFIELD") || kw(&L->cur, "RPADOBJ") ||
+      kw(&L->cur, "TRYLPADF") || kw(&L->cur, "LPADFSOFT") ||
+      kw(&L->cur, "SOFTLPADF") || kw(&L->cur, "TRYPADF") ||
+      kw(&L->cur, "TRYRPADF") || kw(&L->cur, "RPADFSOFT") ||
+      kw(&L->cur, "SOFTRPADF") || kw(&L->cur, "TRYPADLEFTF") ||
+      kw(&L->cur, "TRYPADRIGHTF")) {
+    char oname[48], fname[48], op[24], src[128], out[128], padbuf[16];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_left = 1;
+    long width = 0;
+    char padc = ' ';
+    size_t sn, need, o, take;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "RPADF") == 0 || strcmp(op, "PADRIGHTF") == 0 ||
+        strcmp(op, "RPADFIELD") == 0 || strcmp(op, "RPADOBJ") == 0 ||
+        strcmp(op, "TRYRPADF") == 0 || strcmp(op, "RPADFSOFT") == 0 ||
+        strcmp(op, "SOFTRPADF") == 0 || strcmp(op, "TRYPADRIGHTF") == 0)
+      is_left = 0;
+    if (strcmp(op, "TRYLPADF") == 0 || strcmp(op, "LPADFSOFT") == 0 ||
+        strcmp(op, "SOFTLPADF") == 0 || strcmp(op, "TRYPADF") == 0 ||
+        strcmp(op, "TRYRPADF") == 0 || strcmp(op, "RPADFSOFT") == 0 ||
+        strcmp(op, "SOFTRPADF") == 0 || strcmp(op, "TRYPADLEFTF") == 0 ||
+        strcmp(op, "TRYPADRIGHTF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, is_left ? "LPADF object field width [pad]"
+                       : "RPADF object field width [pad]");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, is_left ? "LPADF field" : "RPADF field"); return -1;
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "WIDTH") || kw(&L->cur, "W") ||
+        kw(&L->cur, "LEN") || kw(&L->cur, "SIZE"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        width = parse_expr(vm, L);
+      } else {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          width = dv->val;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          width = vm->last_n;
+          lex_next(L);
+        } else {
+          fail(vm, is_left ? "LPADF object field width [pad]"
+                           : "RPADF object field width [pad]");
+          return -1;
+        }
+      }
+    } else {
+      fail(vm, is_left ? "LPADF object field width [pad]"
+                       : "RPADF object field width [pad]");
+      return -1;
+    }
+    if (width < 0) width = 0;
+    if (width > 127) width = 127;
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "PAD") || kw(&L->cur, "CHAR") ||
+        kw(&L->cur, "USING"))
+      lex_next(L);
+    padc = ' ';
+    if (L->cur.kind == TK_STR) {
+      if (L->cur.text[0]) padc = L->cur.text[0];
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      if (vm->last_str[0]) padc = vm->last_str[0];
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str && sv->sval[0]) {
+        padc = sv->sval[0];
+        lex_next(L);
+      } else if (sv && !sv->is_str) {
+        /* numeric pad char as decimal digit of ones place — uncommon; skip */
+      }
+    }
+    (void)padbuf;
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag = is_left ? "LPADF" : "RPADF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LPADF_N", 0);
+      var_set_num(vm, "RPADF_N", 0);
+      var_set_num(vm, "PADF_W", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag = is_left ? "LPADF" : "RPADF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LPADF_N", 0);
+      var_set_num(vm, "RPADF_N", 0);
+      var_set_num(vm, "PADF_W", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    /* promote numeric to decimal text */
+    if (ob->fis_str[fi])
+      snprintf(src, sizeof src, "%s", ob->fstr[fi]);
+    else
+      snprintf(src, sizeof src, "%ld", ob->fnum[fi]);
+    sn = strlen(src);
+    if ((long)sn >= width) {
+      take = (size_t)width;
+      if (take >= sizeof out) take = sizeof out - 1;
+      memcpy(out, src, take);
+      out[take] = 0;
+    } else {
+      need = (size_t)width - sn;
+      if (is_left) {
+        o = 0;
+        for (; o < need && o + 1 < sizeof out; o++) out[o] = padc;
+        take = sn;
+        if (o + take >= sizeof out) take = sizeof out - 1 - o;
+        memcpy(out + o, src, take);
+        o += take;
+        out[o] = 0;
+      } else {
+        take = sn;
+        if (take >= sizeof out) take = sizeof out - 1;
+        memcpy(out, src, take);
+        o = take;
+        for (; need > 0 && o + 1 < sizeof out; need--, o++) out[o] = padc;
+        out[o] = 0;
+      }
+    }
+    snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = (long)strlen(out);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "LPADF_N", is_left ? 1 : 0);
+    var_set_num(vm, "RPADF_N", is_left ? 0 : 1);
+    var_set_num(vm, "PADF_N", 1);
+    var_set_num(vm, "PADF_W", width);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* CATF|APPENDF|STRCATF|PREPENDF obj field string
    * TRYCATF|CATF SOFT — soft miss OK=0.
    * Append (or PREPENDF prefix) text onto a string field; promotes num→str.

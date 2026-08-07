@@ -1,0 +1,154 @@
+# LPADF / RPADF — pad string field to fixed width for agents
+# Usability: plate IDs/columns without GETF+SYS LPAD/RPAD+SETF · METHOD/THIS
+# Promotes num; pairs STRF/CATF/LEFTF
+
+HOLD_FLASH 1
+
+CLASS Tag
+  FIELD id "7"
+  FIELD code 42
+  FIELD label "ab"
+  METHOD init
+  END
+  METHOD padid
+    LPADF THIS id 4 "0"
+  END
+  METHOD padlab
+    RPADF THIS label 6
+  END
+END
+
+NEW Tag t
+
+# left-pad zeros
+LPADF t id 4 "0"
+ASSERT OK == 1
+ASSERT LPADF_N == 1
+ASSERT PADF_W == 4
+ASSERT LAST_N == 4
+SYS EQS LAST "0007"
+ASSERT LAST_N == 1
+SYS EQS FIELD "id"
+ASSERT LAST_N == 1
+GETF t id
+SYS EQS LAST "0007"
+ASSERT LAST_N == 1
+
+# already long enough → truncate to width
+SETF t id "hello"
+LPADF t id 3
+SYS EQS LAST "hel"
+ASSERT LAST_N == 1
+
+# right-pad spaces (default)
+SETF t label "xy"
+RPADF t label 5
+ASSERT OK == 1
+ASSERT RPADF_N == 1
+ASSERT PADF_W == 5
+SYS EQS LAST "xy   "
+ASSERT LAST_N == 1
+GETF t label
+SYS EQS LAST "xy   "
+ASSERT LAST_N == 1
+
+# right-pad custom char
+SETF t label "z"
+RPADF t label 4 "*"
+SYS EQS LAST "z***"
+ASSERT LAST_N == 1
+
+# promote numeric field
+SETF t code 9
+LPADF t code 3 "0"
+SYS EQS LAST "009"
+ASSERT LAST_N == 1
+# field is string now
+CATF t code "-x"
+GETF t code
+SYS EQS LAST "009-x"
+ASSERT LAST_N == 1
+
+# aliases
+SETF t id "1"
+PADLEFTF t id 3 "0"
+SYS EQS LAST "001"
+ASSERT LAST_N == 1
+SETF t id "2"
+PADF t id 3 "0"
+SYS EQS LAST "002"
+ASSERT LAST_N == 1
+SETF t label "a"
+PADRIGHTF t label 3 "-"
+SYS EQS LAST "a--"
+ASSERT LAST_N == 1
+
+# TO / WIDTH glue
+SETF t id "5"
+LPADF t id TO 4 "0"
+SYS EQS LAST "0005"
+ASSERT LAST_N == 1
+SETF t id "6"
+LPADF t id WIDTH 2 "0"
+SYS EQS LAST "06"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t id "3"
+SEND t padid
+GETF t id
+SYS EQS LAST "0003"
+ASSERT LAST_N == 1
+
+SETF t label "ok"
+SEND t padlab
+GETF t label
+SYS EQS LAST "ok    "
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYLPADF nosuch id 3
+ASSERT OK == 0
+ASSERT LPADF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYRPADF nosuch label 3
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+LPADF SOFT t nosuch 3
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF t id "8"
+LPADF t id 2 "0"
+ASSERT OK == 1
+SYS EQS LAST "08"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF t id "9"
+LPADF t "id" 3 "0"
+SYS EQS LAST "009"
+ASSERT LAST_N == 1
+
+# zero width → empty
+SETF t id "abc"
+LPADF t id 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# HELP
+HELP LPADF
+SYS HAS LAST "LPADF"
+ASSERT LAST_N == 1
+HELP RPADF
+SYS HAS LAST "RPADF"
+ASSERT LAST_N == 1
+
+PRINT "oop_padf ok"
