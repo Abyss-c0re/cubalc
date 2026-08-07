@@ -15,19 +15,19 @@
     },
     {
       "name": "lenf",
-      "cmd": "LENF note → 22 for timeout string",
+      "cmd": "LENF note \u2192 22 for timeout string",
       "ok": true,
       "note": "LENF"
     },
     {
       "name": "blankf",
-      "cmd": "BLANKF whitespace note → 1",
+      "cmd": "BLANKF whitespace note \u2192 1",
       "ok": true,
       "note": "BLANKF"
     },
     {
       "name": "hasinf",
-      "cmd": "timeout hit; missing soft; REQUIRE→2; HASIFI ERROR",
+      "cmd": "timeout hit; missing soft; REQUIRE\u21922; HASIFI ERROR",
       "ok": true,
       "note": "HASINF"
     },
@@ -39,7 +39,7 @@
     },
     {
       "name": "admit",
-      "cmd": "compound gate admit→status admitted; a1 deny",
+      "cmd": "compound gate admit\u2192status admitted; a1 deny",
       "ok": true,
       "note": "admit"
     },
@@ -62,8 +62,8 @@
       "severity": "high",
       "area": "lang|note",
       "title": "NOTE command clobbers variable named NOTE",
-      "detail": "NOTE \"action open\" overwrites LET/DEFAULT NOTE used for payload body — dump showed note:action open. Agents must not name vars NOTE (use MSG).",
-      "repro": "DEFAULT NOTE=...; NOTE \"action open\"; open uses NOTE → action open"
+      "detail": "NOTE \"action open\" overwrites LET/DEFAULT NOTE used for payload body \u2014 dump showed note:action open. Agents must not name vars NOTE (use MSG).",
+      "repro": "DEFAULT NOTE=...; NOTE \"action open\"; open uses NOTE \u2192 action open"
     },
     {
       "id": "W2",
@@ -78,14 +78,14 @@
       "severity": "med",
       "area": "oop|hasinf",
       "title": "HASINF empty needle always matches",
-      "detail": "HASINF note \"\" → 1 even for non-empty fields. Agents must reject blank needles before probe.",
+      "detail": "HASINF note \"\" \u2192 1 even for non-empty fields. Agents must reject blank needles before probe.",
       "repro": "probe empty_hit=1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|probe",
-      "title": "No fleet LENWHERE/HASINWHERE — per-object only",
+      "title": "No fleet LENWHERE/HASINWHERE \u2014 per-object only",
       "detail": "Fleet admit still loops slots; WHERE family is numeric/status match not substring/len probes.",
       "repro": "admit per a0/a1/a2 branches"
     },
@@ -94,14 +94,14 @@
       "severity": "low",
       "area": "oop|lenf",
       "title": "LENF on numeric field returns decimal digit length",
-      "detail": "retries 42 → LENF_N=2 not magnitude; easy misread for quotas.",
+      "detail": "retries 42 \u2192 LENF_N=2 not magnitude; easy misread for quotas.",
       "repro": "proof 943 LENF retries"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "oop|probe",
-      "title": "Probe sets LAST to field text — EQS clobbers LAST_N",
+      "title": "Probe sets LAST to field text \u2014 EQS clobbers LAST_N",
       "detail": "Capture LENF_N/HASINF_N immediately before string EQS.",
       "repro": "LENF then EQS LAST loses length in LAST_N"
     },
@@ -119,7 +119,7 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc has missing → exit 0"
+      "repro": "REQUIRE=abc has missing \u2192 exit 0"
     }
   ],
   "workarounds": [
@@ -137,12 +137,12 @@
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NOTE var clobbered by NOTE cmd — renamed MSG",
+    "NOTE var clobbered by NOTE cmd \u2014 renamed MSG",
     "LENF 22; BLANKF whitespace 1; HASINF/HASIFI/STARTSF/ENDSF",
-    "admit compound path+len+needle → admitted; blank a1 deny",
+    "admit compound path+len+needle \u2192 admitted; blank a1 deny",
     "empty ENV cannot clear default MSG",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "8bfb575e2031e6564a3c1db1a1fee77f796126d8",
   "ts": "2026-08-07T15:14:39Z"
 }
