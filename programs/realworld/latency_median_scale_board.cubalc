@@ -1,0 +1,1135 @@
+# latency_median_scale_board.cubalc — MEDIANF + MULFALL latency SLO scale
+#
+# Real use: agents track a small probe fleet (p0..p2) with lat_ms samples.
+# Robust mid via MEDIANF (resists outlier vs AVGF), bulk scale via MULFALL
+# (double under incident, zero on reset) without EACH+GETF+arith+SETF.
+#
+# Surfaces forced (1.15.348–349):
+#   MEDIANF / P50F / MIDF     — integer median (even → lower mid)
+#   MULFALL / SCALEFALL / MULF — bulk multiply by factor
+#   SUMF / AVGF               — contrast mean vs median
+#   COUNTWHEREGE / HASWHEREGE — hot probe pressure
+#   DUMPOBJ plate rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from latency_slo (SUMF+WHEREGE only), retry_budget (CLAMP/BETWEEN),
+# queue_depth_band (depth bands): this board is *median SLO + scale*.
+#
+# Slots: p0 p1 p2
+#
+# Plate under STATE:
+#   dump/p0 dump/p1 dump/p2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt SLO_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_LM_ACTION):
+#   list       — LISTOBJS Probe
+#   open       — NEW Probe ARG1=pN [lat=ARG2]
+#   setlat     — SETF lat_ms ARG2
+#   median     — MEDIANF lat_ms
+#   avg        — AVGF lat_ms
+#   sum        — SUMF lat_ms
+#   scale      — MULFALL lat_ms FACTOR (ARG1 or CUBALC_LM_FACTOR default 2)
+#   zero       — MULFALL lat_ms 0
+#   count_hot  — COUNTWHEREGE lat_ms THR
+#   has_hot    — HASWHEREGE lat_ms THR
+#   admit      — MEDIANF <= MAX (ENV CUBALC_LM_MAX); REQUIRE→2
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lm_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=p0 CUBALC_ARG2=10
+#   CUBALC_ARG0=median
+#   CUBALC_ARG0=scale CUBALC_ARG1=2
+#   CUBALC_ARG0=admit CUBALC_LM_MAX=50 CUBALC_LM_REQUIRE=1
+#
+# Env: CUBALC_LM_REQUIRE NAME MAX FACTOR THR ACTION
+#
+# Edges:
+#   MEDIANF even n → lower mid; outlier leaves median stable while AVGF drifts
+#   MULFALL integer product only (no float scale)
+#   IF LAST_N after MEDIANF for admit (stored LET IF flaked historically)
+#   unknown wall soft only; REQUIRE EXIT in action bodies
+#   WRITE NL; SETMATCH first-only; NUM REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Probe
+  FIELD id ""
+  FIELD lat_ms 0
+  METHOD init i lat
+    SETF THIS id i
+    SETF THIS lat_ms lat
+  END
+END
+
+NOTE "latency_median_scale_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT MAX_MED = 100
+DEFAULT FACTOR = 2
+DEFAULT THR = 100
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LM_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LM_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LM_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LM_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LM_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_MED = LAST_N
+  END
+END
+SYS ENV "CUBALC_LM_FACTOR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FACTOR = LAST_N
+  END
+END
+SYS ENV "CUBALC_LM_THR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THR = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "SLO_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "p0"
+LET d_p0 = LAST
+SYS JOIN dump_dir "p1"
+LET d_p1 = LAST
+SYS JOIN dump_dir "p2"
+LET d_p2 = LAST
+
+LET slot = -1
+SYS EQS NAME "p0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "p1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "p2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "p0"
+END
+IF slot == 1 THEN
+  LET sn = "p1"
+END
+IF slot == 2 THEN
+  LET sn = "p2"
+END
+
+# rehydrate p0
+SYS READ OR d_p0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DELETEOBJ p0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  CLEAR_ERR
+  NEW Probe p0 rid rlat
+  TRYSETF p0 lat_ms rlat
+  CLEAR_ERR
+END
+# rehydrate p1
+SYS READ OR d_p1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DELETEOBJ p1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  CLEAR_ERR
+  NEW Probe p1 rid rlat
+  TRYSETF p1 lat_ms rlat
+  CLEAR_ERR
+END
+# rehydrate p2
+SYS READ OR d_p2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DELETEOBJ p2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  CLEAR_ERR
+  NEW Probe p2 rid rlat
+  TRYSETF p2 lat_ms rlat
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET med_n = 0
+LET avg_n = 0
+LET thr_n = 0
+LET fac_n = 1
+LET board_rep = "latency_median_scale_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Probe
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET lat = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lat = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        DELETEOBJ p0
+        CLEAR_ERR
+      END
+      NEW Probe p0 sn lat
+      DUMPOBJ p0
+      SYS WRITE d_p0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        DELETEOBJ p1
+        CLEAR_ERR
+      END
+      NEW Probe p1 sn lat
+      DUMPOBJ p1
+      SYS WRITE d_p1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        DELETEOBJ p2
+        CLEAR_ERR
+      END
+      NEW Probe p2 sn lat
+      DUMPOBJ p2
+      SYS WRITE d_p2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Probe
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR lat
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setlat ---
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  NOTE "action setlat"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setlat bad slot"
+    FAIL "setlat bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setlat bad slot"
+    END
+  ELSE
+    LET lat = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lat = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        SETF p0 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p0
+        SYS WRITE d_p0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        SETF p1 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p1
+        SYS WRITE d_p1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        SETF p2 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p2
+        SYS WRITE d_p2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setlat no obj"
+      FAIL "setlat no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setlat no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setlat ok"
+      SYS STR lat
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setlat"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- median MEDIANF ---
+SYS EQS ACTION "median"
+IF LAST_N == 1 THEN
+  NOTE "action median"
+  MEDIANF Probe lat_ms
+  LET med_n = LAST_N
+  LET ret_n = MEDIANF_N
+  LET hit = 1
+  LET note_msg = "median ok"
+  SYS STR med_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "median"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON med_n
+  CLEAR_ERR
+END
+
+# --- avg ---
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  NOTE "action avg"
+  AVGF Probe lat_ms
+  LET avg_n = LAST_N
+  LET hit = 1
+  LET note_msg = "avg ok"
+  SYS STR avg_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "avg"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON avg_n
+  CLEAR_ERR
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SUMF Probe lat_ms
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "sum ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "sum"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- scale MULFALL ---
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  NOTE "action scale"
+  LET fac_n = FACTOR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET fac_n = LAST_N
+    END
+  END
+  MULFALL Probe lat_ms fac_n
+  LET ret_n = LAST_N
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DUMPOBJ p0
+    SYS WRITE d_p0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DUMPOBJ p1
+    SYS WRITE d_p1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DUMPOBJ p2
+    SYS WRITE d_p2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:scale"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "scale ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "scale"
+  SYS STR fac_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- zero MULFALL 0 ---
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  NOTE "action zero"
+  MULFALL Probe lat_ms 0
+  LET ret_n = LAST_N
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DUMPOBJ p0
+    SYS WRITE d_p0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DUMPOBJ p1
+    SYS WRITE d_p1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DUMPOBJ p2
+    SYS WRITE d_p2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:zero"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "zero ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "zero"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_hot ---
+SYS EQS ACTION "count_hot"
+IF LAST_N == 1 THEN
+  NOTE "action count_hot"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  COUNTWHEREGE Probe lat_ms thr_n
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_hot ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_hot"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- has_hot ---
+SYS EQS ACTION "has_hot"
+IF LAST_N == 1 THEN
+  NOTE "action has_hot"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  HASWHEREGE Probe lat_ms thr_n
+  LET ret_n = LAST_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_hot ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_hot"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: MEDIANF <= MAX_MED ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET thr_n = MAX_MED
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  MEDIANF Probe lat_ms
+  LET med_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  # compare via LAST_N path: re-MEDIAN then check thr
+  # IF med_n <= thr_n on stored LET flaked historically — use subtraction shuttle
+  LET over = med_n - thr_n
+  IF over < 1 THEN
+    LET val = "admit"
+    LET miss = 0
+    LET hit = 1
+    LET note_msg = "admit ok"
+  END
+  # empty fleet MEDIANF=0 should admit under positive thr
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS STR med_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny median over max"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny median over max"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    TRYSEND p0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF p0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  MEDIANF Probe lat_ms
+  LET med_n = LAST_N
+  CLEAR_ERR
+  MULFALL Probe lat_ms 1
+  LET ret_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR med_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DUMPOBJ p0
+    SYS WRITE d_p0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DUMPOBJ p1
+    SYS WRITE d_p1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DUMPOBJ p2
+    SYS WRITE d_p2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Probe
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Probe
+  CLEAR_ERR
+  SYS RM d_p0
+  CLEAR_ERR
+  SYS RM d_p1
+  CLEAR_ERR
+  SYS RM d_p2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown soft only
+SYS EQS ACTION "list"
+LET is_known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "median"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_hot"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_hot"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "latency_median_scale_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

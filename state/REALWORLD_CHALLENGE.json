@@ -1,125 +1,125 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 124,
-  "program": "programs/realworld/retry_budget_band_board.cubalc",
-  "theme": "CLAMPFALL + SENDBETWEEN + DELETEBETWEEN retry budget band clamp/ping/purge + admit + bag journal",
-  "version": "1.15.347-usability",
+  "iter": 125,
+  "program": "programs/realworld/latency_median_scale_board.cubalc",
+  "theme": "MEDIANF + MULFALL latency median SLO + bulk scale + AVGF outlier contrast + admit + bag journal",
+  "version": "1.15.349-usability",
   "pass": true,
-  "prior_note": "iter 123 queue_depth WHEREBETWEEN/HAS; this iter stresses CLAMPFALL+SENDBETWEEN+DELETEBETWEEN (6e5faee/3fccde2/404cf7c)",
+  "prior_note": "iter 124 retry_budget CLAMP/BETWEEN; this iter stresses MEDIANF+MULFALL (9fccd8c/dc3eca3)",
   "tests": [
     {
-      "name": "open_tries",
-      "cmd": "open t0=12 t1=3 t2=-2",
+      "name": "open_lats",
+      "cmd": "open 10/20/30",
       "ok": true,
-      "note": "NEW neg ok"
+      "note": "NEW"
     },
     {
-      "name": "clampfall",
-      "cmd": "CLAMPFALL 0..10 CHANGED=2; t0=10 t2=0",
+      "name": "median_odd",
+      "cmd": "MEDIANF → 20",
       "ok": true,
-      "note": "CLAMPFALL"
+      "note": "MEDIANF"
     },
     {
-      "name": "sendbetween_ping",
-      "cmd": "SENDBETWEEN 1..5 bump N=1; t1 3\u21924; t0 out",
+      "name": "avg_sum",
+      "cmd": "AVGF 20 SUMF 60",
       "ok": true,
-      "note": "SENDBETWEEN"
+      "note": "AVGF/SUMF"
     },
     {
-      "name": "count_has_sticky",
-      "cmd": "COUNTBETWEEN 8..10=1; HASBETWEEN first t0",
+      "name": "outlier_robust",
+      "cmd": "p2=1000; median still 20; avg 343",
       "ok": true,
-      "note": "band tally"
+      "note": "robust mid"
     },
     {
-      "name": "admit_deny_require",
-      "cmd": "sticky non-empty deny; REQUIRE rc2",
+      "name": "admit_median_max",
+      "cmd": "median20 max50 admit; max15 REQUIRE rc2",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "deletebetween_purge",
-      "cmd": "DELETEBETWEEN 8..10 freed t0; dump RM",
+      "name": "mulfall_scale",
+      "cmd": "MULFALL *2 → 20/40/60; median 40 sum 120",
       "ok": true,
-      "note": "DELETEBETWEEN"
+      "note": "MULFALL"
     },
     {
-      "name": "admit_after_purge",
-      "cmd": "admit REQUIRE rc0",
+      "name": "count_has_hot",
+      "cmd": "COUNTWHEREGE ≥50=1; HASWHEREGE p2",
       "ok": true,
-      "note": "admit ok"
+      "note": "hot"
     },
     {
-      "name": "clamp_noop",
-      "cmd": "CLAMPFALL CHANGED=0",
+      "name": "mulfall_zero",
+      "cmd": "MULFALL 0; sum/median 0",
       "ok": true,
-      "note": "stable"
+      "note": "zero"
     },
     {
-      "name": "empty_band_ops",
-      "cmd": "purge/ping empty N=0 soft",
+      "name": "median_1_2_4",
+      "cmd": "MEDIANF → 2",
+      "ok": true,
+      "note": "odd mid"
+    },
+    {
+      "name": "empty_fleet",
+      "cmd": "median 0; scale N=0; admit REQUIRE ok",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2\u21921",
+      "cmd": "exact false friend; SETMATCH 2→1",
       "ok": true,
       "note": "journal"
-    },
-    {
-      "name": "probe_soft",
-      "cmd": "TRYSEND soft; empty BETWEEN 0",
-      "ok": true,
-      "note": "soft"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "323/323 pass"
+      "note": "325/325 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|persist",
-      "title": "DELETEBETWEEN process-local \u2014 dumps rehydrate purged tickets",
-      "detail": "Must RM dump/tN for names in DELETEBETWEEN bag or next ARG run restores GC'd tickets.",
-      "repro": "purge without RM; next list rehydrates"
+      "area": "oop|medianf",
+      "title": "MEDIANF even-n lower mid only — no mean-of-two / float P50",
+      "detail": "Even count uses lower mid (SYS MEDIAN convention). Agents cannot get average of two central samples without custom bag sort.",
+      "repro": "4 samples 1,2,3,4 → MEDIANF 2 not 2.5"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|name",
-      "title": "Freed-name dump hygiene needs fixed HASLINE t0|t1|t2 wall",
-      "detail": "Cannot loop DELETEBETWEEN bag to RM dumps without EQS wall.",
-      "repro": "HASLINE fbag t0; RM d_t0 \u00d73"
+      "area": "oop|mulfall",
+      "title": "MULFALL integer factor only — no fractional decay",
+      "detail": "Cannot scale lat_ms by 0.5 for half-life without integer tricks (×5/10). Factor 0 zeros all.",
+      "repro": "MULFALL Probe lat_ms 0.5 → not float"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|clampfall",
-      "title": "CLAMPFALL has no WHERE filter \u2014 clamps entire class",
-      "detail": "Cannot clamp only out-of-band tickets; always all live Ticket rows.",
-      "repro": "CLAMPFALL Ticket tries 0 10 on full fleet"
+      "area": "oop|mulfall",
+      "title": "MULFALL unfiltered — scales entire class",
+      "detail": "Cannot scale only hot probes; need SENDBETWEEN/WHEREGE + per-object or accept fleet-wide scale.",
+      "repro": "scale *2 hits all live Probes"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|if",
-      "title": "IF LAST_N immediately after COUNT required (stored LET IF flaky)",
-      "detail": "Carried from queue_depth_band; admit uses IF LAST_N == 0 after COUNTBETWEEN.",
-      "repro": "see queue_depth W1"
+      "title": "admit uses med_n - thr_n compare; stored LET IF still risky",
+      "detail": "Worked with over = med_n - thr_n; IF over < 1. Direct IF med_n <= thr_n may still flake after OOP query.",
+      "repro": "queue_depth W1 class"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two t1:try \u2192 one SETMATCH leaves 1.",
-      "repro": "count drops by 1"
+      "area": "oop|avgf",
+      "title": "AVGF integer truncates mean",
+      "detail": "10+20+1000 → 343 not 343.33.",
+      "repro": "AVGF on outlier set"
     },
     {
       "id": "W6",
@@ -134,39 +134,39 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_RB_REQUIRE=abc \u2192 soft.",
+      "detail": "CUBALC_LM_REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "oop|sendbetween",
-      "title": "SENDBETWEEN miss method soft skip",
-      "detail": "Typo methods soft under -s without N checks.",
-      "repro": "SENDBETWEEN \u2026 no_meth \u2192 N=0"
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact only",
+      "detail": "Two p0:lat → one SETMATCH leaves 1.",
+      "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "RM dumps listed in DELETEBETWEEN bag after purge",
-    "Literal SYS PUSH jbag after DELETE*",
-    "IF LAST_N right after COUNTBETWEEN for admit",
-    "REQUIRE EXIT only inside action bodies; soft unknown wall",
-    "CLAMPFALL then SENDBETWEEN for budget hygiene"
+    "Use MEDIANF for SLO mid when outliers expected; AVGF for capacity sum/n",
+    "Integer scale factors only; zero via MULFALL 0",
+    "Fleet-wide MULFALL then per-slot setlat for exceptions",
+    "med_n - thr_n + IF over < 1 for admit",
+    "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "DELETEBETWEEN cascade to plate files",
-    "CLAMPFALL/SENDBETWEEN WHERE predicate filter",
-    "Dynamic path from free-name bag",
-    "Reliable IF on stored LET after OOP COUNT",
+    "Float / fixed-point MEDIANF and MULFALL",
+    "Even-n mean-of-two medians option",
+    "MULFALL WHERE / filtered scale",
+    "Reliable IF on stored LET after OOP query",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "CLAMPFALL 12\u219210 and -2\u21920 CHANGED=2; in-range noop CHANGED=0",
-    "SENDBETWEEN 1..5 bumped only t1; t0@10 out of band",
-    "DELETEBETWEEN 8..10 freed t0; admit REQUIRE green after purge",
-    "empty DELETEBETWEEN/SENDBETWEEN soft N=0",
-    "selftest 323/323 green; no language fix this iter"
+    "MEDIANF 20 stable with p2=1000 while AVGF 343",
+    "MULFALL *2 and *0 fleet scale + dump rehydrate",
+    "admit REQUIRE deny/admit paths green",
+    "empty MEDIANF/MULFALL soft 0; empty admit ok",
+    "selftest 325/325 green; no language fix this iter"
   ],
-  "commit": "9369a2d1092c64e47bcd8900ccc9848a9cb7b4f0",
-  "ts": "2026-08-07T07:20:08Z"
+  "commit": "",
+  "ts": "2026-08-07T07:42:00Z"
 }
