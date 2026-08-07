@@ -1,3 +1,14 @@
+## Meaningful — GETF OR/TRYGETF + OOP string formals — 2026-08-07
+
+### Feat
+- `GETF obj field OR fallback` — soft default like SYS ENV/LOOKUP (`GETF_OR`)
+- `TRYGETF` / `GETF SOFT` / `GETFSOFT` — soft miss OK=0 sticky LAST_ERR
+- Field name may be `"string"` or string-var (LISTFIELDS walk)
+- SETF stores string-var / LAST by value (not strlen)
+- METHOD formals bind string vars by value; NEW/SPAWN dynamic slot names
+- Proofs: `871_oop_getf_or.cubalc`, `870_oop_string_fields.cubalc`
+- Version: `1.15.321-usability`
+
 ## Meaningful — COP life engine cell division demo — 2026-08-07
 
 ### Demo

@@ -356,6 +356,8 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 326. ~~**`LISTCLASSES` / `LISTOBJS` / `HASMETHOD`**~~ **done** (OOP agent discovery · LISTMETHODS · soft probes).
 327. ~~**`HASOBJ` / `DELETEOBJ` / `HASFIELD`**~~ **done** (object lifecycle + field probes · NEW reuses free slots · not cube DESTROY).
 328. ~~**`DUMPOBJ` / `INSPECT`**~~ **done** (object field:value bag / cubalc.obj.v1 JSON · agent snapshot without EACH+GETF).
+329. ~~**`GETF … OR` / `TRYGETF`**~~ **done** (soft field read + default like ENV/LOOKUP · string field name · no HASFIELD glue).
+330. ~~**SETF/NEW string-from-var**~~ **done** (string formals + dynamic NEW name · ticket_object W1–W3).
 
 ## Tick protocol
 

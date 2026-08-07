@@ -6,6 +6,7 @@
 #include "lang/cubalc_lang_internal.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static ClassDef *oop_find_class(VM *vm, const char *name){
   int i;
@@ -74,6 +75,27 @@ static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
       if (ai < n_params && params[ai][0])
         var_set_str(vm, params[ai], L->cur.text);
       lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      /* String formals: bind string vars / LAST by value (not strlen via parse_expr). */
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        var_set_str(vm, an, vm->last_str);
+        if (ai < n_params && params[ai][0])
+          var_set_str(vm, params[ai], vm->last_str);
+        lex_next(L);
+      } else {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && sv->is_str) {
+          var_set_str(vm, an, sv->sval);
+          if (ai < n_params && params[ai][0])
+            var_set_str(vm, params[ai], sv->sval);
+          lex_next(L);
+        } else {
+          long v = parse_expr(vm, L);
+          var_set_num(vm, an, v);
+          if (ai < n_params && params[ai][0])
+            var_set_num(vm, params[ai], v);
+        }
+      }
     } else {
       if (oop_stmt_kw(L)) break;
       {
@@ -87,6 +109,48 @@ static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
   }
   var_set_num(vm, "NARGS", ai);
   return ai;
+}
+/* Resolve instance name: bare token, string literal, or string-var value.
+ * NEW sets var(name)=Class as string — so bare re-NEW of a free slot must NOT
+ * expand that pollution. Prefer literal when an obj slot (live or dead) already
+ * uses this exact name (pool recycle). Else expand string-var for dynamic slots
+ * (LET slot="dyn1"; NEW Cell slot). */
+static int oop_read_name(VM *vm, Lex *L, char *out, size_t outn, const char *why){
+  if (L->cur.kind == TK_STR) {
+    if (!L->cur.text[0]) { fail(vm, why); return -1; }
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 0;
+  }
+  if (L->cur.kind != TK_IDENT) { fail(vm, why); return -1; }
+  if (strcmp(L->cur.text, "LAST") == 0) {
+    if (!vm->last_str[0]) { fail(vm, why); return -1; }
+    snprintf(out, outn, "%s", vm->last_str);
+    lex_next(L);
+    return 0;
+  }
+  {
+    int i;
+    for (i = 0; i < vm->n_objs; i++) {
+      if (strcmp(vm->objs[i].name, L->cur.text) == 0) {
+        snprintf(out, outn, "%s", L->cur.text);
+        lex_next(L);
+        return 0;
+      }
+    }
+  }
+  {
+    Var *sv = var_get(vm, L->cur.text, 0);
+    if (sv && sv->is_str && sv->sval[0]) {
+      snprintf(out, outn, "%s", sv->sval);
+      lex_next(L);
+      return 0;
+    }
+  }
+  /* bare identifier = literal object name token */
+  snprintf(out, outn, "%s", L->cur.text);
+  lex_next(L);
+  return 0;
 }
 static int oop_run_method(VM *vm, ObjInst *ob, MethodDef *md){
   ClassDef *cd;
@@ -314,16 +378,16 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* NEW ClassName instance [ctor args…] */
+  /* NEW ClassName instance [ctor args…]
+   * instance may be bare token, "str", or string-var value (dynamic slot names). */
   if (kw(&L->cur, "NEW") || kw(&L->cur, "MAKE") || kw(&L->cur, "CREATE")) {
     char cname[48], oname[48];
     lex_next(L);
     if (L->cur.kind != TK_IDENT) { fail(vm, "NEW ClassName"); return -1; }
     snprintf(cname, sizeof cname, "%s", L->cur.text);
     lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail(vm, "NEW instance name"); return -1; }
-    snprintf(oname, sizeof oname, "%s", L->cur.text);
-    lex_next(L);
+    if (oop_read_name(vm, L, oname, sizeof oname, "NEW instance name") < 0)
+      return -1;
     if (oop_new_instance(vm, cname, oname, -1, L, 1) < 0) return -1;
     var_set_num(vm, "OK", 1);
     if (vm->trace) fprintf(vm->trace, "# NEW %s %s\n", cname, oname);
@@ -342,9 +406,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (L->cur.kind != TK_IDENT) { fail(vm, "SPAWN ClassName"); return -1; }
     snprintf(cname, sizeof cname, "%s", L->cur.text);
     lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail(vm, "SPAWN name"); return -1; }
-    snprintf(oname, sizeof oname, "%s", L->cur.text);
-    lex_next(L);
+    if (oop_read_name(vm, L, oname, sizeof oname, "SPAWN name") < 0)
+      return -1;
     ci = oop_find_class_idx(vm, cname);
     if (ci < 0) {
       snprintf(vm->err, sizeof vm->err, "SPAWN unknown CLASS %s", cname);
@@ -521,30 +584,166 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
-  /* GETF obj field */
+  /* GETF obj field [OR|DEFAULT fallback]
+   * TRYGETF|GETFSOFT|GETF SOFT — soft miss OK=0 (no fatal) without fallback.
+   * GETF … OR val — like SYS ENV/LOOKUP: miss → LAST=fallback, OK=1, GETF_OR=1.
+   * Bare GETF still fatal on unknown object/field (strict).
+   * Field may be IDENT or "string" (dynamic LISTFIELDS walk).
+   * Usability: agent probes without HASFIELD+IF glue. */
   if (kw(&L->cur, "GETF") || kw(&L->cur, "GETFIELD") || kw(&L->cur, "FIELDGET") ||
-      kw(&L->cur, "READF")) {
-    char oname[48], fname[48];
+      kw(&L->cur, "READF") || kw(&L->cur, "TRYGETF") || kw(&L->cur, "GETFSOFT") ||
+      kw(&L->cur, "SOFTGETF") || kw(&L->cur, "TRYGETFIELD")) {
+    char oname[48], fname[48], fb[256];
+    char op[24];
     ObjInst *ob;
     ClassDef *cd;
     int fi;
+    int soft = 0;      /* soft miss without fatal */
+    int have_fb = 0;   /* OR fallback present */
+    int used_or = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYGETF") == 0 || strcmp(op, "GETFSOFT") == 0 ||
+        strcmp(op, "SOFTGETF") == 0 || strcmp(op, "TRYGETFIELD") == 0)
+      soft = 1;
     lex_next(L);
+    /* optional SOFT keyword: GETF SOFT obj field */
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
       fail(vm, "GETF object"); return -1;
     }
-    if (L->cur.kind != TK_IDENT) { fail(vm, "GETF field"); return -1; }
-    snprintf(fname, sizeof fname, "%s", L->cur.text);
-    lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      /* IDENT field name; if named LAST and no such field, use last_str
+       * (LISTFIELDS / EACH LINE walk). If IDENT is a string var, use sval. */
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0]) {
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      } else {
+        snprintf(fname, sizeof fname, "%s", id);
+      }
+    } else {
+      fail(vm, "GETF field"); return -1;
+    }
+    /* optional OR|DEFAULT|ELSE|FALLBACK value */
+    fb[0] = 0;
+    if (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+        kw(&L->cur, "FALLBACK")) {
+      soft = 1; /* OR implies soft miss */
+      lex_next(L);
+      if (L->cur.kind == TK_STR) {
+        snprintf(fb, sizeof fb, "%s", L->cur.text);
+        lex_next(L);
+        have_fb = 1;
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                 L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT) {
+        long v = parse_expr(vm, L);
+        snprintf(fb, sizeof fb, "%ld", v);
+        have_fb = 1;
+      } else {
+        fail(vm, "GETF field OR fallback"); return -1;
+      }
+    }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
-      snprintf(vm->err, sizeof vm->err, "GETF unknown object %s", oname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "GETF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      if (have_fb) {
+        var_set_str(vm, "LAST", fb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+        {
+          char *end = NULL;
+          long vn = strtol(fb, &end, 10);
+          if (end && *end == 0 && fb[0]) {
+            var_set_num(vm, "LAST_N", vn);
+            vm->last_n = vn;
+          } else {
+            var_set_num(vm, "LAST_N", (long)strlen(fb));
+            vm->last_n = (long)strlen(fb);
+          }
+        }
+        used_or = 1;
+        var_set_num(vm, "OK", 1);
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "GETF: unknown object");
+        var_set_str(vm, "ERR", "GETF: unknown object");
+      }
+      var_set_num(vm, "GETF_N", 0);
+      var_set_num(vm, "GETF_OR", used_or);
+      bump(vm);
+      return 1;
     }
     cd = &vm->classes[ob->class_idx];
     fi = oop_field_idx(cd, fname);
+    /* If field named LAST missing but last_str holds a field name, try that
+     * (dynamic walk after LISTFIELDS + EACH LINE without SETF glue). */
+    if (fi < 0 && strcmp(fname, "LAST") == 0 && vm->last_str[0]) {
+      char alt[48];
+      snprintf(alt, sizeof alt, "%s", vm->last_str);
+      /* last_str may be multi-line; take first line only */
+      {
+        char *nl = strchr(alt, '\n');
+        if (nl) *nl = 0;
+      }
+      fi = oop_field_idx(cd, alt);
+      if (fi >= 0)
+        snprintf(fname, sizeof fname, "%s", alt);
+    }
     if (fi < 0) {
-      snprintf(vm->err, sizeof vm->err, "GETF unknown FIELD %s", fname);
-      fail(vm, vm->err); return -1;
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "GETF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      if (have_fb) {
+        var_set_str(vm, "LAST", fb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", fb);
+        {
+          char *end = NULL;
+          long vn = strtol(fb, &end, 10);
+          if (end && *end == 0 && fb[0]) {
+            var_set_num(vm, "LAST_N", vn);
+            vm->last_n = vn;
+          } else {
+            var_set_num(vm, "LAST_N", (long)strlen(fb));
+            vm->last_n = (long)strlen(fb);
+          }
+        }
+        used_or = 1;
+        var_set_num(vm, "OK", 1);
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "GETF: unknown field");
+        var_set_str(vm, "ERR", "GETF: unknown field");
+      }
+      var_set_num(vm, "GETF_N", 0);
+      var_set_num(vm, "GETF_OR", used_or);
+      bump(vm);
+      return 1;
     }
     if (ob->fis_str[fi]) {
       var_set_str(vm, "LAST", ob->fstr[fi]);
@@ -559,6 +758,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_str(vm, "LAST", nb);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
     }
+    var_set_num(vm, "GETF_N", 1);
+    var_set_num(vm, "GETF_OR", 0);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
@@ -595,6 +796,25 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       ob->fis_str[fi] = 1;
       var_set_str(vm, "LAST", L->cur.text);
       lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", vm->last_str);
+      ob->fis_str[fi] = 1;
+      var_set_str(vm, "LAST", vm->last_str);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", sv->sval);
+        ob->fis_str[fi] = 1;
+        var_set_str(vm, "LAST", sv->sval);
+        lex_next(L);
+      } else {
+        long v = parse_expr(vm, L);
+        ob->fnum[fi] = v;
+        ob->fis_str[fi] = 0;
+        var_set_num(vm, "LAST_N", v);
+        vm->last_n = v;
+      }
     } else {
       long v = parse_expr(vm, L);
       ob->fnum[fi] = v;

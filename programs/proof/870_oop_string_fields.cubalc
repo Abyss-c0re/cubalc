@@ -1,0 +1,47 @@
+# Proof 870 — SETF/NEW string-from-var + string formals (ticket_object W1–W3)
+# Usability: method formals and dynamic slot names without strlen coerce
+
+HOLD_FLASH 1
+REQUIRE VERSION "1.15"
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD id ""
+  METHOD init sid
+    SETF THIS id sid
+    SETF THIS status "open"
+  END
+  METHOD set_status st
+    SETF THIS status st
+  END
+END
+
+# W2/W3: string var into SETF and ctor formal
+LET st = "open"
+LET tid = "ticket-1"
+NEW Ticket t0 tid
+GETF t0 id
+ASSERT OK == 1
+SYS EQS LAST "ticket-1"
+ASSERT LAST_N == 1 "ctor string formal"
+GETF t0 status
+SYS EQS LAST "open"
+ASSERT LAST_N == 1 "init status literal"
+
+LET st2 = "closed"
+SEND t0 set_status st2
+GETF t0 status
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1 "SETF string-from-var via formal"
+
+# W1: dynamic NEW name from string var
+LET slot = "dyn1"
+NEW Ticket slot "dyn-id"
+HASOBJ dyn1
+ASSERT LAST_N == 1 "NEW name from string var"
+GETF dyn1 id
+SYS EQS LAST "dyn-id"
+ASSERT LAST_N == 1
+
+PRINT "proof870_oop_strings" 1
+ASSERT OK == 1

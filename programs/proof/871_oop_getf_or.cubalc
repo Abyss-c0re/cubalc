@@ -1,0 +1,72 @@
+# GETF … OR / TRYGETF — soft object field reads for agents
+# Usability: defaults like SYS ENV/LOOKUP; no fatal on miss; string field names
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell c 1 8 0
+
+# hit ignores OR
+GETF c energy OR 0
+ASSERT OK == 1
+ASSERT LAST_N == 8
+ASSERT GETF_N == 1
+ASSERT GETF_OR == 0
+
+# string field name
+GETF c "alive"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# missing field + OR numeric default
+GETF c no_field_zz OR 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT GETF_N == 0
+ASSERT GETF_OR == 1
+
+# missing field + OR string default
+GETF c no_field_zz OR "none"
+ASSERT OK == 1
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+ASSERT GETF_OR == 1
+
+# DEFAULT alias
+GETF c ghost DEFAULT 7
+ASSERT OK == 1
+ASSERT LAST_N == 7
+ASSERT GETF_OR == 1
+
+# TRYGETF soft miss without fallback
+TRYGETF c ghost
+ASSERT OK == 0
+ASSERT LAST_N == 0
+ASSERT GETF_N == 0
+
+# GETF SOFT keyword
+GETF SOFT c ghost
+ASSERT OK == 0
+
+# missing object + OR
+GETF missing_zz energy OR -1
+ASSERT OK == 1
+ASSERT LAST_N == -1
+ASSERT GETF_OR == 1
+
+# missing object soft bare
+TRYGETF missing_zz energy
+ASSERT OK == 0
+
+# dynamic field name via string var
+LET f = "energy"
+GETF c f
+ASSERT OK == 1
+ASSERT LAST_N == 8
+
+# GETFSOFT alias
+GETFSOFT c ready
+ASSERT OK == 1
+
+PRINT "oop_getf_or ok"
