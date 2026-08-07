@@ -473,6 +473,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 443. ~~**`REQUIRE RESTARGS`**~~ **done** (fail-fast min non-flag positionals · LAST=bag · flags do not inflate count · USAGE tip).
 444. ~~**`HASRESTARGS / HASPOS`**~~ **done** (soft 0|1 min non-flag count · twin REQUIRE RESTARGS / HASARGC · RESTARGS_N have).
 445. ~~**`LISTFLAGS / FLAGS`**~~ **done** (bag of flag names no dashes · LAST_N=count · discover --flags without EACH ARGS).
+446. ~~**`NTHPOS / POSN`**~~ **done** (0-based non-flag positional peel · OR fallback · no RESTARGS+NTH · index avoids parse_expr OR).
 
 ## Tick protocol
 

@@ -26121,6 +26121,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
       {"LISTFLAGS", "LISTFLAGS|FLAGS — bag of flag names (no dashes) from CUBALC_ARGn · LAST_N=count"},
       {"FLAGS", "FLAGS alias of LISTFLAGS — discover --flags without EACH ARGS"},
+      {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
+      {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -28543,6 +28545,99 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# listflags n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional.
+   * LAST = field · LAST_N 1 if present (0 if miss/used fallback) · NTHPOS_N=index.
+   * Index parsed without parse_expr (OR would be boolean). Usability: first file
+   * without RESTARGS + SYS NTH glue. */
+  if (kw(&L->cur,"NTHPOS") || kw(&L->cur,"POSN") || kw(&L->cur,"POSAT") ||
+      kw(&L->cur,"ARGPOS") || kw(&L->cur,"NTHREST") || kw(&L->cur,"POSITH") ||
+      kw(&L->cur,"GETPOS")){
+    long idx = 0, have, at = 0, hit = 0;
+    char bag[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], fb[512];
+    const char *p, *start;
+    int have_fb = 0;
+    lex_next(L);
+    field[0] = 0;
+    fb[0] = 0;
+    /* do NOT use parse_expr — it swallows OR as boolean */
+    if (L->cur.kind == TK_NUM) {
+      idx = L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = -L->cur.num;
+        lex_next(L);
+      } else {
+        fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+        return -1;
+      }
+    } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"OR") && !kw(&L->cur,"DEFAULT") &&
+               !kw(&L->cur,"ELSE") && !kw(&L->cur,"FALLBACK")) {
+      if (strcmp(L->cur.text, "LAST_N") == 0)
+        idx = vm->last_n;
+      else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx = vv->val;
+        else if (vv && vv->is_str) idx = strtol(vv->sval, NULL, 10);
+        else {
+          fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+          return -1;
+        }
+      }
+      lex_next(L);
+    } else if (L->cur.kind == TK_LPAREN) {
+      idx = parse_expr(vm, L);
+    } else {
+      fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+      return -1;
+    }
+    if (idx < 0) idx = 0;
+    if (idx > 31) idx = 31;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "NTHPOS n OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    p = bag;
+    while (*p) {
+      start = p;
+      while (*p && *p != '\n') p++;
+      if (at == idx) {
+        size_t fl = (size_t)(p - start);
+        if (fl >= sizeof field) fl = sizeof field - 1;
+        memcpy(field, start, fl);
+        field[fl] = 0;
+        hit = 1;
+        break;
+      }
+      at++;
+      if (*p == '\n') p++;
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "NTHPOS", field);
+    var_set_str(vm, "POS", field);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "NTHPOS_N", idx);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", (hit || have_fb) ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# nthpos %ld hit=%ld → %s\n", idx, hit, field);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.
