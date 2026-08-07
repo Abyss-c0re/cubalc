@@ -1,0 +1,114 @@
+# CATF / APPENDF / PREPENDF — single-object string field concat for agents
+# Usability: status/note logs without GETF+CAT+SETF · METHOD/THIS · dual of INCF
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD note ""
+  FIELD retries 0
+  METHOD init s
+    SETF THIS status s
+  END
+  METHOD tag t
+    CATF THIS note t
+  END
+END
+
+NEW Ticket t "open"
+
+# append
+CATF t note "a"
+ASSERT OK == 1
+ASSERT CATF_N == 1
+ASSERT APPENDF_N == 1
+ASSERT PREPENDF_N == 0
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS EQS FIELD "note"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "t"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+CATF t note "b"
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+
+# aliases
+APPENDF t note "c"
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+STRCATF t note "!"
+SYS EQS LAST "abc!"
+ASSERT LAST_N == 1
+
+# prepend
+PREPENDF t note "["
+SYS EQS LAST "[abc!"
+ASSERT LAST_N == 1
+ASSERT PREPENDF_N == 1
+PREFIXF t note "{"
+SYS EQS LAST "{[abc!"
+ASSERT LAST_N == 1
+
+# WITH glue + string field status
+CATF t status WITH ":ok"
+SYS EQS LAST "open:ok"
+ASSERT LAST_N == 1
+
+# promote numeric field to string via CATF
+CATF t retries "x"
+SYS EQS LAST "0x"
+ASSERT LAST_N == 1
+GETF t retries
+SYS EQS LAST "0x"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t note "log:"
+SEND t tag "hit"
+GETF t note
+SYS EQS LAST "log:hit"
+ASSERT LAST_N == 1
+
+# dynamic / LAST piece
+LET s = "Z"
+CATF t note s
+SYS EQS LAST "log:hitZ"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYCATF nosuch note "x"
+ASSERT OK == 0
+ASSERT CATF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+CATF SOFT t nosuch "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF t note "ok"
+CATF t note "!"
+ASSERT OK == 1
+SYS EQS LAST "ok!"
+ASSERT LAST_N == 1
+
+# string field name
+CATF t "note" "?"
+SYS EQS LAST "ok!?"
+ASSERT LAST_N == 1
+
+# HELP
+HELP CATF
+ASSERT OK == 1
+SYS HAS LAST "CATF"
+ASSERT LAST_N == 1
+
+NOTE "939_oop_catf ok"

@@ -10307,6 +10307,177 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CATF|APPENDF|STRCATF|PREPENDF obj field string
+   * TRYCATF|CATF SOFT — soft miss OK=0.
+   * Append (or PREPENDF prefix) text onto a string field; promotes num→str.
+   * Usability: status/note logs without GETF+CAT+SETF (METHOD/THIS; dual of INCF). */
+  if (kw(&L->cur, "CATF") || kw(&L->cur, "APPENDF") ||
+      kw(&L->cur, "STRCATF") || kw(&L->cur, "ADDSUF") ||
+      kw(&L->cur, "SUFFIXF") || kw(&L->cur, "CONCATF") ||
+      kw(&L->cur, "PREPENDF") || kw(&L->cur, "PREFIXF") ||
+      kw(&L->cur, "ADDPREF") || kw(&L->cur, "TRYCATF") ||
+      kw(&L->cur, "CATFSOFT") || kw(&L->cur, "SOFTCATF") ||
+      kw(&L->cur, "TRYAPPENDF") || kw(&L->cur, "TRYPREPENDF") ||
+      kw(&L->cur, "STRADDF")) {
+    char oname[48], fname[48], piece[256], op[24], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_pre = 0;
+    size_t pl, ol;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "PREPENDF") == 0 || strcmp(op, "PREFIXF") == 0 ||
+        strcmp(op, "ADDPREF") == 0 || strcmp(op, "TRYPREPENDF") == 0)
+      is_pre = 1;
+    if (strcmp(op, "TRYCATF") == 0 || strcmp(op, "CATFSOFT") == 0 ||
+        strcmp(op, "SOFTCATF") == 0 || strcmp(op, "TRYAPPENDF") == 0 ||
+        strcmp(op, "TRYPREPENDF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "CATF object field string"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "CATF field"); return -1;
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "PLUS") || kw(&L->cur, "AND") ||
+        kw(&L->cur, "APPEND") || kw(&L->cur, "PREPEND"))
+      lex_next(L);
+    piece[0] = 0;
+    if (L->cur.kind == TK_STR) {
+      snprintf(piece, sizeof piece, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(piece, sizeof piece, "%s", vm->last_str);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(piece, sizeof piece, "%s", sv->sval);
+        lex_next(L);
+      } else if (sv && !sv->is_str) {
+        snprintf(piece, sizeof piece, "%ld", sv->val);
+        lex_next(L);
+      } else {
+        fail(vm, "CATF object field string"); return -1;
+      }
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      long v = parse_expr(vm, L);
+      snprintf(piece, sizeof piece, "%ld", v);
+    } else {
+      fail(vm, "CATF object field string"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "CATF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CATF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CATF: unknown object");
+      var_set_str(vm, "ERR", "CATF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "CATF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CATF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CATF: unknown field");
+      var_set_str(vm, "ERR", "CATF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    /* base text: string field or decimal of numeric */
+    if (ob->fis_str[fi])
+      snprintf(out, sizeof out, "%s", ob->fstr[fi]);
+    else
+      snprintf(out, sizeof out, "%ld", ob->fnum[fi]);
+    pl = strlen(piece);
+    ol = strlen(out);
+    if (is_pre) {
+      /* piece + out into fstr */
+      if (pl + ol >= sizeof ob->fstr[fi]) {
+        /* truncate piece to fit */
+        if (pl >= sizeof ob->fstr[fi]) pl = sizeof ob->fstr[fi] - 1;
+        if (pl + ol >= sizeof ob->fstr[fi]) ol = sizeof ob->fstr[fi] - 1 - pl;
+      }
+      {
+        char tmp[sizeof ob->fstr[0]];
+        size_t i;
+        for (i = 0; i < pl; i++) tmp[i] = piece[i];
+        for (i = 0; i < ol && pl + i + 1 < sizeof tmp; i++)
+          tmp[pl + i] = out[i];
+        tmp[pl + ol < sizeof tmp ? pl + ol : sizeof tmp - 1] = 0;
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", tmp);
+      }
+    } else {
+      if (ol + pl >= sizeof ob->fstr[fi]) {
+        if (ol >= sizeof ob->fstr[fi]) ol = sizeof ob->fstr[fi] - 1;
+        if (ol + pl >= sizeof ob->fstr[fi]) pl = sizeof ob->fstr[fi] - 1 - ol;
+      }
+      {
+        size_t i;
+        for (i = 0; i < ol && i + 1 < sizeof ob->fstr[fi]; i++)
+          ob->fstr[fi][i] = out[i];
+        for (i = 0; i < pl && ol + i + 1 < sizeof ob->fstr[fi]; i++)
+          ob->fstr[fi][ol + i] = piece[i];
+        ob->fstr[fi][ol + pl < sizeof ob->fstr[fi] ? ol + pl
+                                                   : sizeof ob->fstr[fi] - 1] = 0;
+      }
+    }
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", ob->fstr[fi]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+    vm->last_n = (long)strlen(ob->fstr[fi]);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "CATF_N", 1);
+    var_set_num(vm, "APPENDF_N", is_pre ? 0 : 1);
+    var_set_num(vm, "PREPENDF_N", is_pre ? 1 : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

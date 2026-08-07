@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 361,
-  "version": "1.15.388-usability",
-  "item": "TIMESF/SCALEOBJ single-object numeric field multiply",
-  "item_id": 397,
-  "title": "TIMESF|SCALEOBJ|MULOBJ \u2014 single-object numeric field multiply",
-  "commit": "fe36380ecb8ccd50109983347745d0131837b0f5",
-  "summary": "Multiply one numeric field by factor. METHOD/THIS ready. proof 938 27/27.",
+  "iter": 362,
+  "version": "1.15.389-usability",
+  "item": "CATF/APPENDF/PREPENDF string field concat",
+  "item_id": 398,
+  "title": "CATF|APPENDF|PREPENDF \u2014 single-object string field concat",
+  "commit": "d41cd9937fe63f0fa523bd5acf50da2a36d83585",
+  "summary": "Append/prepend string field without GETF+CAT+SETF. proof 939 29/29.",
   "proofs": [
-    "938_oop_timesf",
-    "asserts 27/27",
-    "937 still green"
+    "939_oop_catf",
+    "asserts 29/29",
+    "938 still green"
   ],
-  "when": "2026-08-07T14:04:53Z",
+  "when": "2026-08-07T14:14:38Z",
   "agent": "meaningful_iter_10m",
-  "sha": "fe36380ecb8ccd50109983347745d0131837b0f5",
-  "note": "restored thrash first; MULF stays fleet; completes INCF/BOUNDF/TIMESF single-obj triad"
+  "sha": "d41cd9937fe63f0fa523bd5acf50da2a36d83585",
+  "note": "string dual of INCF; completes single-obj field mutators with INCF/BOUNDF/TIMESF"
 }
