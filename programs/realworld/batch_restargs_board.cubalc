@@ -1,0 +1,852 @@
+# batch_restargs_board.cubalc — LISTFLAGS + HASRESTARGS + REQUIRE RESTARGS batch intake
+#
+# Real use: batch/ingest agents gate on non-flag file positionals (not ARGC),
+# inventory which --flags were passed, and admit paths into a job plate:
+#   LISTFLAGS / FLAGS       — bag of flag names (no dashes)
+#   HASRESTARGS / HASPOS    — soft min non-flag positionals
+#   REQUIRE RESTARGS / POS  — fail-fast min files (flags do not count)
+#   RESTARGS                — file bag (may still include action token)
+#   HASLINE / COUNTLINE     — exact batch-row registry
+#
+# Distinct from cli_flag_intake (HASFLAG soft admit) and deploy_cli_contract
+# (REQUIRE FLAG hard): this board is *restargs-count gates + flag inventory*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_br_$$
+#   ./out/cubalc run programs/realworld/batch_restargs_board.cubalc \
+#     admit -- --job=ingest a.bin b.bin
+#   # flags-only → HASRESTARGS soft miss (after action peel)
+#
+# Plate under STATE:
+#   BATCH.txt      — job:path rows (exact)
+#   FLAGS.txt      — last LISTFLAGS bag
+#   PATHS.txt      — last file bag (action peeled)
+#   VAL.txt META.txt BR_REPORT.txt
+#
+# Actions (ARG0 — never name action "run"; or CUBALC_BR_ACTION):
+#   list       — batch depth (default)
+#   flags      — LISTFLAGS → FLAGS/VAL
+#   rest       — RESTARGS peel action → PATHS
+#   hasrest    — HASRESTARGS MIN (on raw rest; also report peeled file_n)
+#   require    — soft HASRESTARGS then optional REQUIRE RESTARGS wall
+#   admit      — --job= + peeled files → batch rows (HASREST soft/REQUIRE wall)
+#   has        — HASLINE exact row
+#   count      — COUNTLINE exact
+#   gate       — need HASFLAG job + peeled file_n >= MIN
+#   soft       — flags-only soft miss path
+#   clear
+#
+# Env: CUBALC_BR_ACTION CUBALC_BR_NAME CUBALC_BR_REQUIRE CUBALC_BR_MIN
+#
+# Edges:
+#   action token counts as RESTARGS positional (ARG0=admit inflates count)
+#   peel action via DROP 1 when first RESTARGS field EQS ACTION
+#   HASRESTARGS min wants literal (branch 1/2/3/4); var MIN unreliable
+#   REQUIRE RESTARGS miss → exit_code 0 often
+#   host strips --flags without `… -- --flags`; strips token run
+#   LISTFLAGS names only (no values); HASLINE exact; WRITE NL; NUM soft
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "batch_restargs_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT BFILE = "BATCH.txt"
+DEFAULT FFILE = "FLAGS.txt"
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "BR_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT JOB = "default"
+DEFAULT USAGE_LINE = "batch_restargs -- admit -- --job=J file [file...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SYS ARGC
+LET argc_n = LAST_N
+SYS ARGS
+LET args_bag = LAST
+CLEAR_ERR
+
+# ACTION from non-flag ARG0 or ENV (avoid token run)
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    LET ACTION = a0
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_BR_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_BR_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ENV "CUBALC_BR_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_BR_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# numeric ARG1 for hasrest/require/gate only if not a flag
+SYS EQS ACTION "hasrest"
+LET _hm = LAST_N
+SYS EQS ACTION "require"
+LET _rm = LAST_N
+SYS EQS ACTION "gate"
+LET _gm = LAST_N
+LET _use = _hm + _rm + _gm
+IF _use > 0 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      SYS ARG 1 OR ""
+      SYS NUM
+      IF OK == 1 THEN
+        LET MIN = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+END
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+
+HASFLAG job
+IF LAST_N == 1 THEN
+  GETFLAG job OR "default"
+  LET JOB = LAST
+END
+CLEAR_ERR
+
+# LISTFLAGS inventory early
+LISTFLAGS
+LET flags_bag = LAST
+SYS LINES flags_bag
+LET flag_n = LAST_N
+CLEAR_ERR
+
+# RESTARGS raw + peel action token for file bag
+RESTARGS
+LET rest_raw = LAST
+SYS LINES rest_raw
+LET rest_raw_n = LAST_N
+CLEAR_ERR
+LET rest_bag = rest_raw
+LET rest_n = rest_raw_n
+SYS NTH 0 rest_raw
+LET first = LAST
+CLEAR_ERR
+SYS EQS first ACTION
+IF LAST_N == 1 THEN
+  SYS DROP 1 rest_raw
+  LET rest_bag = LAST
+  SYS LINES rest_bag
+  LET rest_n = LAST_N
+END
+CLEAR_ERR
+LET paths = rest_bag
+LET path_n = rest_n
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir BFILE
+LET batch_path = LAST
+SYS JOIN state_dir FFILE
+LET flags_path = LAST
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR batch_path OR ""
+LET batch = LAST
+CLEAR_ERR
+SYS READ OR flags_path OR ""
+LET flags_prev = LAST
+CLEAR_ERR
+SYS READ OR paths_path OR ""
+LET paths_prev = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET batch_ch = 0
+LET flags_ch = 0
+LET paths_ch = 0
+LET note_msg = "ok"
+LET batch_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+LET hasrest_n = 0
+
+SYS LINES batch
+LET batch_n = LAST_N
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = batch
+  LET val_ch = 1
+  LET meta = "batch"
+  SYS STR batch_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "flags"
+  LET meta = LAST
+  SYS STR flag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "rest"
+  LET meta = LAST
+  SYS STR rest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON batch_n flag_n rest_n argc_n
+  CLEAR_ERR
+END
+
+# --- flags LISTFLAGS ---
+SYS EQS ACTION "flags"
+IF LAST_N == 1 THEN
+  NOTE "action flags"
+  LISTFLAGS
+  LET flags_bag = LAST
+  SYS LINES flags_bag
+  LET flag_n = LAST_N
+  LET flags_ch = 1
+  LET val = flags_bag
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "flags ok"
+  LET meta = "flag_n"
+  SYS STR flag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON flag_n
+  CLEAR_ERR
+END
+
+# --- rest dump peeled ---
+SYS EQS ACTION "rest"
+IF LAST_N == 1 THEN
+  NOTE "action rest"
+  LET paths = rest_bag
+  LET paths_ch = 1
+  LET val = rest_bag
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "rest ok"
+  LET meta = "raw"
+  SYS STR rest_raw_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "peeled"
+  LET meta = LAST
+  SYS STR rest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF rest_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "rest empty"
+    FAIL "rest empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rest empty"
+    END
+  END
+  PRINT_JSON rest_raw_n rest_n
+  CLEAR_ERR
+END
+
+# --- hasrest soft probe ---
+SYS EQS ACTION "hasrest"
+IF LAST_N == 1 THEN
+  NOTE "action hasrest"
+  # raw HASRESTARGS (includes action token) — document inflation
+  LET hasrest_n = 0
+  IF MIN == 1 THEN
+    HASRESTARGS 1
+    LET hasrest_n = LAST_N
+  END
+  IF MIN == 2 THEN
+    HASRESTARGS 2
+    LET hasrest_n = LAST_N
+  END
+  IF MIN == 3 THEN
+    HASRESTARGS 3
+    LET hasrest_n = LAST_N
+  END
+  IF MIN == 4 THEN
+    HASRESTARGS 4
+    LET hasrest_n = LAST_N
+  END
+  IF MIN == 0 THEN
+    HASRESTARGS
+    LET hasrest_n = LAST_N
+  END
+  IF MIN > 4 THEN
+    # fallback: peeled file count vs MIN
+    IF rest_n >= MIN THEN
+      LET hasrest_n = 1
+    ELSE
+      LET hasrest_n = 0
+    END
+  END
+  LET val_ch = 1
+  SYS STR hasrest_n
+  LET val = LAST
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "raw_rest"
+  LET meta = LAST
+  SYS STR rest_raw_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "peeled"
+  LET meta = LAST
+  SYS STR rest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF hasrest_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "hasrest ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasrest short"
+    FAIL "hasrest short"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasrest short"
+    END
+  END
+  PRINT_JSON hasrest_n rest_raw_n rest_n MIN
+  CLEAR_ERR
+END
+
+# --- require RESTARGS wall ---
+SYS EQS ACTION "require"
+IF LAST_N == 1 THEN
+  NOTE "action require"
+  USAGE USAGE_LINE
+  # soft check on peeled files first (honest file gate)
+  IF rest_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "require ok"
+    # also exercise hard form when already satisfied (literal mins)
+    IF MIN == 1 THEN
+      REQUIRE RESTARGS 1
+    END
+    IF MIN == 2 THEN
+      REQUIRE RESTARGS 2
+    END
+    IF MIN == 3 THEN
+      REQUIRE RESTARGS 3
+    END
+    CLEAR_ERR
+    LET val = rest_bag
+    LET val_ch = 1
+    LET paths = rest_bag
+    LET paths_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "require short"
+    FAIL "require short"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      # hard REQUIRE uses RAW restargs count (action inflates!)
+      IF MIN == 1 THEN
+        REQUIRE RESTARGS 1
+      END
+      IF MIN == 2 THEN
+        REQUIRE RESTARGS 2
+      END
+      IF MIN == 3 THEN
+        REQUIRE RESTARGS 3
+      END
+      IF MIN > 3 THEN
+        EXIT 2 "require short peeled"
+      END
+    END
+  END
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "peeled"
+  LET meta = LAST
+  SYS STR rest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "raw"
+  LET meta = LAST
+  SYS STR rest_raw_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON rest_n rest_raw_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- admit ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  USAGE USAGE_LINE
+  LET paths = rest_bag
+  LET paths_ch = 1
+  LET path_n = rest_n
+  LISTFLAGS
+  LET flags_bag = LAST
+  LET flags_ch = 1
+  SYS LINES flags_bag
+  LET flag_n = LAST_N
+  IF path_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "admit no files"
+    FAIL "admit no files"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      # peeled empty but raw may be 1 (action only) — REQUIRE RESTARGS 1 may PASS!
+      # use EXIT for honest file wall
+      EXIT 2 "admit no files"
+    END
+  ELSE
+    HASFLAG job
+    IF LAST_N == 0 THEN
+      LET JOB = "default"
+    ELSE
+      GETFLAG job OR "default"
+      LET JOB = LAST
+    END
+    CLEAR_ERR
+    EACH LINE AS p IN paths
+      SYS BLANK p
+      IF LAST_N == 0 THEN
+        SYS CAT JOB ":"
+        LET row = LAST
+        SYS CAT row p
+        LET row = LAST
+        SYS HASLINE batch row
+        IF LAST_N == 0 THEN
+          SYS PUSH batch row
+          LET batch = LAST
+          LET admit_n = admit_n + 1
+        END
+      END
+    END
+    LET batch_ch = 1
+    SYS LINES batch
+    LET batch_n = LAST_N
+    LET hit = 1
+    LET note_msg = "admit ok"
+    LET val = batch
+    LET val_ch = 1
+    LET meta = "job"
+    SYS PUSH meta JOB
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "flags"
+    LET meta = LAST
+    SYS STR flag_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n batch_n path_n JOB flag_n
+  CLEAR_ERR
+END
+
+# --- has exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE batch NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE batch NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate: job flag + peeled files ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  HASFLAG job
+  LET has_job = LAST_N
+  LET path_n = rest_n
+  LET meta = "job"
+  SYS STR has_job
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "paths"
+  LET meta = LAST
+  SYS STR path_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "min"
+  LET meta = LAST
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR has_job
+  LET val = LAST
+  LET val_ch = 1
+  IF has_job == 1 THEN
+    IF path_n >= MIN THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate paths short"
+      FAIL "gate paths short"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate paths short"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate no job"
+    FAIL "gate no job"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no job"
+    END
+  END
+  PRINT_JSON has_job path_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft: flags-only / no peeled files ---
+SYS EQS ACTION "soft"
+IF LAST_N == 1 THEN
+  NOTE "action soft"
+  LISTFLAGS
+  LET flags_bag = LAST
+  LET flags_ch = 1
+  IF rest_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft no files ok"
+    FAIL "soft no files"
+    CLEAR_ERR
+    LET val = flags_bag
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "miss"
+    LET meta = LAST
+    SYS PUSH meta "raw_rest"
+    LET meta = LAST
+    SYS STR rest_raw_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft no files wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has files"
+    LET val = rest_bag
+    LET val_ch = 1
+  END
+  PRINT_JSON rest_n rest_raw_n miss hit
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET batch = ""
+  LET paths = ""
+  LET flags_bag = ""
+  LET val = ""
+  LET meta = ""
+  LET batch_ch = 1
+  LET paths_ch = 1
+  LET flags_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET batch_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "flags"
+LET k = k + LAST_N
+SYS EQS ACTION "rest"
+LET k = k + LAST_N
+SYS EQS ACTION "hasrest"
+LET k = k + LAST_N
+SYS EQS ACTION "require"
+LET k = k + LAST_N
+SYS EQS ACTION "admit"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "soft"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF batch_ch > 0 THEN
+  SYS WRITE batch_path batch
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "batch write failed"
+  END
+  CLEAR_ERR
+END
+IF flags_ch > 0 THEN
+  SYS WRITE flags_path flags_bag
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "flags write failed"
+  END
+  CLEAR_ERR
+END
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.batch_restargs_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "job"
+LET report = LAST
+SYS PUSH report JOB
+LET report = LAST
+SYS PUSH report "batch_n"
+LET report = LAST
+SYS STR batch_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "path_n"
+LET report = LAST
+SYS STR path_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "flag_n"
+LET report = LAST
+SYS STR flag_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "rest_raw_n"
+LET report = LAST
+SYS STR rest_raw_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "batch_restargs_board" ACTION hit miss batch_n path_n flag_n JOB note_msg elapsed
+NOTE "batch_restargs_board: done"

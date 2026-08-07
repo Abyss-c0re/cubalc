@@ -1,53 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 159,
-  "program": "programs/realworld/deploy_cli_contract_board.cubalc",
-  "theme": "USAGE + REQUIRE FLAG deploy CLI contract (hard flag gate + sticky usage tip)",
-  "version": "1.15.434-usability",
+  "iter": 160,
+  "program": "programs/realworld/batch_restargs_board.cubalc",
+  "theme": "LISTFLAGS + HASRESTARGS + REQUIRE RESTARGS batch file intake (restargs-count gates)",
+  "version": "1.15.436-usability",
   "pass": true,
-  "prior_note": "iter 158 soft HASFLAG intake; this iter first realworld USAGE+REQUIRE FLAG (982-983)",
+  "prior_note": "iter 159 USAGE+REQUIRE FLAG; this iter first realworld LISTFLAGS/HASRESTARGS/REQUIRE RESTARGS (984-986)",
   "tests": [
     {
-      "name": "show_usage",
-      "cmd": "show sticky USAGE contract line",
+      "name": "listflags",
+      "cmd": "flags -- --job --verbose \u2192 bag job/verbose",
       "ok": true,
-      "note": "USAGE"
+      "note": "LISTFLAGS"
     },
     {
-      "name": "deploy",
-      "cmd": "deploy -- --mode=canary --out=web a.bin b.bin",
+      "name": "admit",
+      "cmd": "admit -- --job=ingest a.bin b.bin \u2192 job:path rows",
       "ok": true,
-      "note": "REQUIRE FLAG+RESTARGS"
+      "note": "admit"
     },
     {
-      "name": "contract_hard",
-      "cmd": "REQUIRE FLAG mode miss includes usage tip; exit_code 0",
+      "name": "hasrest_peel",
+      "cmd": "raw vs peeled rest counts; action inflation",
       "ok": true,
-      "note": "REQUIRE FLAG"
+      "note": "HASRESTARGS"
     },
     {
-      "name": "contract_ok",
-      "cmd": "REQUIRE FLAG mode+out values",
+      "name": "require_short",
+      "cmd": "peeled short soft fail; raw REQUIRE false friend",
       "ok": true,
-      "note": "contract"
+      "note": "REQUIRE RESTARGS"
     },
     {
-      "name": "has_count",
-      "cmd": "HASLINE exact; substring false friend",
+      "name": "admit_wall",
+      "cmd": "admit no files EXIT 2",
       "ok": true,
-      "note": "exact"
+      "note": "wall"
     },
     {
-      "name": "soft_wall",
-      "cmd": "soft miss EXIT 2 require wall shell rc 2",
+      "name": "has_gate_soft",
+      "cmd": "HASLINE exact; gate job+paths; soft no files",
       "ok": true,
-      "note": "soft"
-    },
-    {
-      "name": "run_token",
-      "cmd": "host strips positional token run",
-      "ok": true,
-      "note": "host run"
+      "note": "gate"
     },
     {
       "name": "selftest",
@@ -200,30 +194,60 @@
       "title": "SYS NUM can accept non-numeric ARG1 tokens in gate MIN override paths",
       "detail": "When ARG1 is a --flag form after host eats bare --, gate must not treat it as MIN. Guard with SYS STARTS ARG1 dash before NUM.",
       "repro": "gate -- --mode=x f1 without dash guard may corrupt MIN"
+    },
+    {
+      "id": "W19",
+      "severity": "high",
+      "area": "lang|restargs",
+      "title": "HASRESTARGS/REQUIRE RESTARGS count action + numeric ARG tokens as files",
+      "detail": "RESTARGS is all non-flag positionals. With ARG0=hasrest ARG1=2, raw rest_n=2 and HASRESTARGS 2 passes with zero files. Agents must DROP action (and non-path args) before file gates; raw REQUIRE RESTARGS is a false friend for file intake.",
+      "repro": "hasrest 2 (no files) \u2192 HASRESTARGS 2 hit; peeled file_n may be 1 (the 2)"
+    },
+    {
+      "id": "W20",
+      "severity": "high",
+      "area": "lang|require_restargs",
+      "title": "REQUIRE RESTARGS min can pass on action-only CLIs",
+      "detail": "admit -- --job=x with no files: peeled empty, but raw RESTARGS often includes action token so REQUIRE RESTARGS 1 succeeds. Honest file walls need peeled LINES + EXIT n, not bare REQUIRE RESTARGS.",
+      "repro": "require 2 -- --job=x with REQUIRE_HIT may not hard-fail if raw count inflated"
+    },
+    {
+      "id": "W21",
+      "severity": "low",
+      "area": "lang|listflags",
+      "title": "LISTFLAGS returns names only (no values) \u2014 good inventory, not config",
+      "detail": "LISTFLAGS bag is mode/verbose/job without values. Pair with GETFLAG for values. Files never listed. Confirmed useful for flag inventory plates.",
+      "repro": "LISTFLAGS with --job=ingest --verbose=1 a.bin \u2192 job\\nverbose"
+    },
+    {
+      "id": "W22",
+      "severity": "med",
+      "area": "lang|hasrestargs",
+      "title": "HASRESTARGS min wants literal (same class as HASARGC/HASFLAG)",
+      "detail": "Board branches HASRESTARGS 1/2/3/4; variable MIN unreliable for the form itself.",
+      "repro": "LET m 2; HASRESTARGS m vs HASRESTARGS 2"
     }
   ],
   "workarounds": [
-    "Never name action run; use deploy/apply or ENV ACTION",
-    "cubalc run prog.cubalc deploy -- --mode=M --out=T files",
-    "Soft HASFLAG then EXIT 2 for shell rc; REQUIRE FLAG alone is plate-only",
-    "USAGE with ASCII only; set before REQUIRE FLAG",
-    "Gate MIN via --min=N or ENV, not flag-shaped ARG1",
-    "HASFLAG/REQUIRE FLAG literals only"
+    "Peel ARG0 action from RESTARGS before file min gates",
+    "Do not put numeric mins as bare ARG1 if they pollute RESTARGS; use --min=N",
+    "Honest file wall: SYS LINES peeled >= MIN then EXIT 2; not raw REQUIRE RESTARGS alone",
+    "LISTFLAGS for inventory; GETFLAG for values",
+    "cubalc run prog.cubalc admit -- --job=J files... (host -- separator)",
+    "Never name action run"
   ],
   "language_gaps": [
-    "Do not strip program arg token run (or document reserved tokens)",
-    "REQUIRE FLAG/ARGC miss should set non-zero process exit_code",
-    "SYS NUM must reject --flag-shaped strings",
-    "Document USAGE + REQUIRE FLAG agent CLI cookbook"
+    "RESTARGS mode that skips known action/subcommand token",
+    "REQUIRE FILES alias: only path-like or post--- positionals",
+    "HASRESTARGS/REQUIRE RESTARGS accept variable min",
+    "Document action-token inflation in RESTARGS cookbook"
   ],
   "issues_faced": [
-    "Action name run silently dropped by host \u2014 renamed to deploy",
-    "Unicode ellipsis in USAGE mangled plates \u2014 switched to ASCII ...",
-    "REQUIRE FLAG miss exit_code 0 \u2014 soft path + EXIT 2 for walls",
-    "Gate ARG1 NUM on --mode corrupted MIN \u2014 dash guard",
-    "deploy/contract/usage/has green; selftest 355/355",
-    "no language fix this iter; W15-W18 for MEANINGFUL_ITER"
+    "Action+ARG1 min inflate HASRESTARGS \u2014 peel + --min= preferred",
+    "REQUIRE RESTARGS false friend on action-only \u2014 EXIT 2 on peeled empty",
+    "LISTFLAGS clean name bag; admit job:path green",
+    "selftest 355/355; no language fix this iter"
   ],
-  "commit": "ff1de5418b7dd0e209b315d530b87d07cc353315",
-  "ts": "2026-08-07T21:55:17Z"
+  "commit": "pending",
+  "ts": "2026-08-07T22:19:03Z"
 }
