@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 357,
-  "version": "1.15.384-usability",
-  "item": "REQUIRE FN/CLASS/METHOD language-plane fail-fast gates",
-  "item_id": 393,
-  "title": "REQUIRE FN|CLASS|METHOD \u2014 fail-fast after INCLUDE",
-  "commit": "076b73382b5892045777b50b751a005bc9149373",
-  "summary": "Fail-fast FN/CLASS/METHOD gates for agent boot. proof 934 31/31.",
+  "iter": 358,
+  "version": "1.15.385-usability",
+  "item": "OBJINFO/DESCRIBEOBJ live object plate",
+  "item_id": 394,
+  "title": "OBJINFO|DESCRIBEOBJ \u2014 live name/class/methods+fields plate",
+  "commit": "4329104942082d766a42bb6a7fa885220cbb10cd",
+  "summary": "Live object plate for agents. Twin DUMPOBJ+CLASSINFO. proof 935 37/37.",
   "proofs": [
-    "934_require_fn_class_method",
-    "asserts 31/31",
-    "933 still green",
-    "miss smoke"
+    "935_oop_objinfo",
+    "asserts 37/37",
+    "934 still green"
   ],
-  "when": "2026-08-07T13:25:12Z",
+  "when": "2026-08-07T13:37:36Z",
   "agent": "meaningful_iter_10m",
-  "sha": "076b73382b5892045777b50b751a005bc9149373",
-  "note": "extends REQUIRE VERSION/LIB/ENV/PATH/BIN to language symbols"
+  "sha": "4329104942082d766a42bb6a7fa885220cbb10cd",
+  "note": "uses oop_resolve_obj_name to avoid NEW class-string pollution"
 }

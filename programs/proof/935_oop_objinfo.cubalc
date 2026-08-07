@@ -1,0 +1,104 @@
+# OBJINFO / DESCRIBEOBJ — live object plate for agents
+# Usability: class + methods + field values without DUMPOBJ+CLASSINFO+LISTMETHODS glue
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s
+    SETF THIS status s
+  END
+  METHOD bump
+    SETF THIS retries 1
+  END
+END
+
+NEW Ticket t "open"
+SEND t bump
+
+# bag plate
+OBJINFO t
+ASSERT OK == 1
+ASSERT OBJINFO_N == 2
+ASSERT NFIELDS == 2
+ASSERT NMETHODS == 2
+ASSERT LAST_N == 2
+SYS EQS OBJECT "t"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+SYS HAS LAST "name:t"
+ASSERT LAST_N == 1
+SYS HAS LAST "class:Ticket"
+ASSERT LAST_N == 1
+SYS HAS LAST "n_fields:2"
+ASSERT LAST_N == 1
+SYS HAS LAST "n_methods:2"
+ASSERT LAST_N == 1
+SYS HAS LAST "methods:"
+ASSERT LAST_N == 1
+SYS HAS METHODS "init"
+ASSERT LAST_N == 1
+SYS HAS METHODS "bump"
+ASSERT LAST_N == 1
+SYS HAS LAST "status:open"
+ASSERT LAST_N == 1
+SYS HAS LAST "retries:1"
+ASSERT LAST_N == 1
+
+# JSON plate
+OBJINFO JSON t
+ASSERT OK == 1
+SYS HAS LAST "cubalc.objinfo.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"name\":\"t\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"class\":\"Ticket\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"n_methods\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"methods\":["
+ASSERT LAST_N == 1
+SYS HAS LAST "\"fields\":{"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"status\":\"open\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"retries\":1"
+ASSERT LAST_N == 1
+
+# aliases
+DESCRIBEOBJ t
+ASSERT OK == 1
+SYS HAS LAST "class:Ticket"
+ASSERT LAST_N == 1
+OBJMETA JSON t
+SYS HAS LAST "cubalc.objinfo.v1"
+ASSERT LAST_N == 1
+SUMMARYOBJ t
+ASSERT NMETHODS == 2
+
+# string / dynamic name
+OBJINFO "t"
+ASSERT OK == 1
+LET o = "t"
+OBJINFO o
+SYS EQS OBJECT "t"
+ASSERT LAST_N == 1
+
+# soft miss
+OBJINFO nosuch
+ASSERT OK == 0
+ASSERT OBJINFO_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "unknown"
+ASSERT LAST_N == 1
+
+# HELP
+HELP OBJINFO
+ASSERT OK == 1
+SYS HAS LAST "OBJINFO"
+ASSERT LAST_N == 1
+
+NOTE "935_oop_objinfo ok"
