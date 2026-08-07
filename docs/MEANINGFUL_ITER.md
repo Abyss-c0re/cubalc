@@ -444,6 +444,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 414. ~~**`SPLITF` / `FIELDSF`**~~ **done** (split field on sep → newline bag · no GETF+SYS SPLIT · path/CSV EACH LINE · no mutate · METHOD/THIS).
 415. ~~**`JOINF` / `JOINLINESF`**~~ **done** (join newline bag into field with sep · inverse SPLITF · no GETF+SYS JOINLINES+SETF · METHOD/THIS).
 416. ~~**`STRIPPREFIXF` / `STRIPSUFFIXF`**~~ **done** (drop leading/trailing affix on one field · path roots / extensions · no GETF+STARTS+SLICEF · METHOD/THIS).
+417. ~~**`WORDSF` / `TOKENIZEF`**~~ **done** (whitespace tokenize field → bag · no GETF+SYS WORDS · free-text EACH LINE · no mutate · METHOD/THIS).
 
 ## Tick protocol
 

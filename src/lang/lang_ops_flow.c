@@ -13317,6 +13317,137 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* WORDSF|TOKENIZEF|FIELDSWF obj field — whitespace tokenize field → bag.
+   * TRYWORDSF|WORDSF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * Collapses runs of space/tab/CR/LF; trims ends. No mutate on field.
+   * LAST = newline bag; LAST_N/WORDSF_N = token count.
+   * Usability: free-text notes → EACH LINE without GETF+SYS WORDS
+   * (METHOD/THIS; pairs SPLITF for fixed-sep and JOINF rebuild). */
+  if (kw(&L->cur, "WORDSF") || kw(&L->cur, "TOKENIZEF") ||
+      kw(&L->cur, "FIELDSWF") || kw(&L->cur, "WSSPLITF") ||
+      kw(&L->cur, "SPLITWSF") || kw(&L->cur, "WORDLISTF") ||
+      kw(&L->cur, "TOKENSF") || kw(&L->cur, "FIELDWORDS") ||
+      kw(&L->cur, "TRYWORDSF") || kw(&L->cur, "WORDSFSOFT") ||
+      kw(&L->cur, "SOFTWORDSF") || kw(&L->cur, "TRYTOKENIZEF")) {
+    char oname[48], fname[48], op[24], hay[256], out[512];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0;
+    const char *p;
+    size_t olen = 0;
+    long ntok = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYWORDSF") == 0 || strcmp(op, "WORDSFSOFT") == 0 ||
+        strcmp(op, "SOFTWORDSF") == 0 || strcmp(op, "TRYTOKENIZEF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "WORDSF object field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "WORDSF field"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "WORDSF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "WORDSF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WORDSF: unknown object");
+      var_set_str(vm, "ERR", "WORDSF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "WORDSF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "WORDSF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "WORDSF: unknown field");
+      var_set_str(vm, "ERR", "WORDSF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    out[0] = 0;
+    olen = 0;
+    ntok = 0;
+    p = hay;
+    while (*p) {
+      while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+      if (!*p) break;
+      {
+        const char *start = p;
+        size_t flen;
+        while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
+        flen = (size_t)(p - start);
+        if (ntok > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, start, flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, start, take);
+          olen += take;
+        }
+        out[olen] = 0;
+        ntok++;
+      }
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "WORDSF", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = ntok;
+    var_set_num(vm, "LAST_N", ntok);
+    var_set_num(vm, "WORDSF_N", ntok);
+    var_set_num(vm, "TOKENIZEF_N", ntok);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

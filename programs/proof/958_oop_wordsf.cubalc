@@ -1,0 +1,114 @@
+# WORDSF / TOKENIZEF — whitespace tokenize field → bag for agents
+# Usability: free-text notes → EACH LINE without GETF+SYS WORDS
+# No mutate; pairs SPLITF (fixed sep) and JOINF rebuild
+
+HOLD_FLASH 1
+
+CLASS Note
+  FIELD body "  hello   world\tfoo  "
+  FIELD empty "   "
+  FIELD code 42
+  METHOD init
+  END
+  METHOD tokens
+    WORDSF THIS body
+  END
+END
+
+NEW Note n
+
+# basic tokenize
+WORDSF n body
+ASSERT OK == 1
+ASSERT WORDSF_N == 3
+ASSERT LAST_N == 3
+SYS EQS LAST "hello\nworld\nfoo"
+ASSERT LAST_N == 1
+SYS EQS FIELD "body"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "n"
+ASSERT LAST_N == 1
+# field unchanged
+GETF n body
+SYS EQS LAST "  hello   world\tfoo  "
+ASSERT LAST_N == 1
+
+# HEAD of bag
+WORDSF n body
+SYS HEAD
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# whitespace-only → 0 tokens
+WORDSF n empty
+ASSERT LAST_N == 0
+ASSERT WORDSF_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single word
+SETF n body "solo"
+WORDSF n body
+ASSERT LAST_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# newlines collapsed as ws
+SETF n body "a\nb  c"
+WORDSF n body
+ASSERT LAST_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# aliases
+SETF n body "x y"
+TOKENIZEF n body
+ASSERT LAST_N == 2
+FIELDSWF n body
+ASSERT LAST_N == 2
+TOKENSF n body
+ASSERT LAST_N == 2
+
+# numeric promote
+WORDSF n code
+ASSERT LAST_N == 1
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF n body "one two three"
+SEND n tokens
+ASSERT LAST_N == 3
+SYS EQS LAST "one\ntwo\nthree"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYWORDSF nosuch body
+ASSERT OK == 0
+ASSERT WORDSF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+WORDSF SOFT n nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+SETF n body "ok yes"
+WORDSF n body
+ASSERT OK == 1
+ASSERT LAST_N == 2
+
+# dynamic field name
+SETF n body "p q"
+WORDSF n "body"
+ASSERT LAST_N == 2
+
+# HELP
+HELP WORDSF
+SYS HAS LAST "WORDSF"
+ASSERT LAST_N == 1
+
+PRINT "oop_wordsf ok"
