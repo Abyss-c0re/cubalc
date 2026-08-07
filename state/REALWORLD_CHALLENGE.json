@@ -27,7 +27,7 @@
     },
     {
       "name": "bump_decf",
-      "cmd": "INCF +1 +2 → 3; DECF 1 → 2",
+      "cmd": "INCF +1 +2 \u2192 3; DECF 1 \u2192 2",
       "ok": true,
       "note": "INCF/DECF"
     },
@@ -39,7 +39,7 @@
     },
     {
       "name": "gate",
-      "cmd": "retries>=MAXB deny REQUIRE→2; recover admit",
+      "cmd": "retries>=MAXB deny REQUIRE\u21922; recover admit",
       "ok": true,
       "note": "gate"
     },
@@ -67,9 +67,9 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|rehydrate",
-      "title": "Objects memory-only — multi-run must plate rehydrate every field",
+      "title": "Objects memory-only \u2014 multi-run must plate rehydrate every field",
       "detail": "DUMPOBJ+READ+NEW+TRYSETF required per process. Missed status LOOKUP reset status to init default. No bulk rehydrate from DUMPOBJ bag.",
-      "repro": "omit TRYSETF status → status open after fail plate"
+      "repro": "omit TRYSETF status \u2192 status open after fail plate"
     },
     {
       "id": "W2",
@@ -83,15 +83,15 @@
       "id": "W3",
       "severity": "med",
       "area": "oop|boundf",
-      "title": "BOUNDF clamp silent — no soft overflow signal beyond CHANGED",
+      "title": "BOUNDF clamp silent \u2014 no soft overflow signal beyond CHANGED",
       "detail": "Agents must read BOUNDF_CHANGED; LAST is post-clamp value only. Easy to miss exhaustion without gate on MAXB.",
-      "repro": "INCF 10 then BOUNDF 0 5 → LAST 5 CHANGED 1"
+      "repro": "INCF 10 then BOUNDF 0 5 \u2192 LAST 5 CHANGED 1"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|slot",
-      "title": "Fixed ident slots only — no dynamic object names from ARG",
+      "title": "Fixed ident slots only \u2014 no dynamic object names from ARG",
       "detail": "NEW Job NAME uses ident token; board hardcodes j0/j1/j2 branches. Same long-standing OOP gap.",
       "repro": "slot switch IF slot == 0/1/2"
     },
@@ -99,7 +99,7 @@
       "id": "W5",
       "severity": "low",
       "area": "oop|tryincf",
-      "title": "Hard INCF unknown object fatal — TRYINCF required for probe",
+      "title": "Hard INCF unknown object fatal \u2014 TRYINCF required for probe",
       "detail": "Soft path is TRYINCF / INCF SOFT; agents must remember.",
       "repro": "TRYINCF nosuch retries OK=0"
     },
@@ -108,7 +108,7 @@
       "severity": "low",
       "area": "oop|string",
       "title": "INCF/BOUNDF on string field soft miss",
-      "detail": "TRYINCF j0 status → string err; good but no auto-coerce.",
+      "detail": "TRYINCF j0 status \u2192 string err; good but no auto-coerce.",
       "repro": "probe s_ok=0"
     },
     {
@@ -124,8 +124,8 @@
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE → exit 0 on miss",
-      "repro": "REQUIRE=abc bump j2 → exit 0"
+      "detail": "Non-numeric REQUIRE \u2192 exit 0 on miss",
+      "repro": "REQUIRE=abc bump j2 \u2192 exit 0"
     }
   ],
   "workarounds": [
@@ -144,11 +144,11 @@
   ],
   "issues_faced": [
     "OBJINFO bag+JSON; INCF delta var works; BOUNDF clamps overshoot",
-    "status rehydrate missing first pass — fixed LOOKUP status",
+    "status rehydrate missing first pass \u2014 fixed LOOKUP status",
     "gate exhaust at MAXB; recover DECF admits",
     "probe soft all zero including TRYINCF string field",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "fe02b62dde6540d841336a7a9b413850231e565e",
   "ts": "2026-08-07T13:59:30Z"
 }
