@@ -1,187 +1,174 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 128,
-  "program": "programs/realworld/job_retry_where_board.cubalc",
-  "theme": "SETFWHERE/INCFWHERE/GETFWHERE job status ladder + retry bump + collect bag + admit",
-  "version": "1.15.357-usability",
+  "iter": 129,
+  "program": "programs/realworld/zone_load_where_board.cubalc",
+  "theme": "SUMWHERE/AVGWHERE/MINWHERE/MAXWHERE zone-filtered load/cost rollup + budget admit",
+  "version": "1.15.359-usability",
   "pass": true,
-  "prior_note": "iter 127 canary_rev_swap COPYF/SWAPF; this iter stresses SETFWHERE+INCFWHERE+GETFWHERE (0416eb8/3fe6e4b/2843984)",
+  "prior_note": "iter 128 job_retry_where SETFWHERE/INCFWHERE/GETFWHERE; this iter stresses SUMWHERE+AVGWHERE+MINWHERE+MAXWHERE (f8621f5/c35f7d1)",
   "tests": [
     {
-      "name": "open_jobs",
-      "cmd": "open j0/j1/j2 pending",
+      "name": "open_shards",
+      "cmd": "open h0/h1 us-east h2 us-west",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "start_setfwhere",
-      "cmd": "SETFWHERE pending\u2192running N=3",
+      "name": "set_load_cost",
+      "cmd": "setload 40/20/90 setcost 30/25/50",
       "ok": true,
-      "note": "SETFWHERE"
+      "note": "LOOKUPN rehydrate"
     },
     {
-      "name": "fail_ladder",
-      "cmd": "INCFWHERE running retries+1; SETFWHERE running\u2192retry",
+      "name": "sum_load",
+      "cmd": "SUMWHERE load zone us-east → 60 N=2",
       "ok": true,
-      "note": "INCFWHERE+SETFWHERE"
+      "note": "SUMWHERE"
     },
     {
-      "name": "collect_retries",
-      "cmd": "GETFWHERE retries status retry \u2192 1,1,1",
+      "name": "avg_load",
+      "cmd": "AVGWHERE → 30 N=2",
       "ok": true,
-      "note": "GETFWHERE"
+      "note": "AVGWHERE"
     },
     {
-      "name": "collect_kv",
-      "cmd": "GETFWHERE AS KV j0:1 j1:1 j2:1",
+      "name": "min_max_load",
+      "cmd": "MINWHERE 20 MAXWHERE 40",
       "ok": true,
-      "note": "AS KV"
+      "note": "MIN/MAXWHERE"
     },
     {
-      "name": "escalate_requeue_succeed",
-      "cmd": "retry\u2192dead\u2192pending\u2192running\u2192ok N=3",
-      "ok": true,
-      "note": "ladder"
-    },
-    {
-      "name": "admit_ok",
-      "cmd": "LISTOBJS+NOBJS; admit ok REQUIRE",
+      "name": "sum_cost_admit",
+      "cmd": "cost sum 55; budget 100 admit; budget 50 deny EXIT 2",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "admit_deny",
-      "cmd": "want retry while ok \u2192 EXIT 2",
-      "ok": true,
-      "note": "REQUIRE deny"
-    },
-    {
-      "name": "empty_start_fail",
-      "cmd": "clear; start/fail REQUIRE none",
-      "ok": true,
-      "note": "empty"
-    },
-    {
       "name": "substring_false_friend",
-      "cmd": "pending vs pend exact 1 each",
+      "cmd": "zone us count/sum 0 vs us-east 2",
       "ok": true,
       "note": "exact"
     },
     {
-      "name": "fail_none_running",
-      "cmd": "only retry jobs; fail REQUIRE none (no bump old retry)",
+      "name": "empty_zone_zero",
+      "cmd": "nozone sum/avg/min → 0; admit budget 10 → admit",
       "ok": true,
-      "note": "order"
+      "note": "empty"
     },
     {
-      "name": "setmatch_first",
-      "cmd": "two j0:fail \u2192 SETMATCH leaves 1",
+      "name": "zero_vs_empty_N",
+      "cmd": "load 0 still SUMWHERE_N=2 vs empty N=0",
       "ok": true,
-      "note": "journal"
+      "note": "N meta"
     },
     {
       "name": "probe_soft",
-      "cmd": "no-match N=0; missing field SKIP; TRYSEND soft",
+      "cmd": "TRYSEND soft; empty sum/avg 0",
       "ok": true,
       "note": "soft"
+    },
+    {
+      "name": "setmatch_first",
+      "cmd": "two h0:scale → SETMATCH leaves 1",
+      "ok": true,
+      "note": "journal"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "333/333 pass"
+      "note": "335/335 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|where",
-      "title": "WHERE match is equality only \u2014 no retries>=N / compound predicates",
-      "detail": "Cannot escalate only jobs with retries>=3 via SETFWHERE. Agents must GETFWHERE+EACH or WHEREGE-style siblings if any; SETFWHERE status retry\u2192dead kills all retries regardless of count.",
-      "repro": "SETFWHERE Job status retry status dead hits retries=1 and retries=99"
+      "area": "oop|sumwhere|empty",
+      "title": "Empty WHERE and true-zero both yield LAST_N=0",
+      "detail": "SUM/AVG/MIN/MAX on no match return 0. Agents cannot tell missing zone from all-zero loads without also checking SUMWHERE_N / MINWHERE_N.",
+      "repro": "sum nozone → 0 N=0; sum us-east with loads 0 → 0 N=2"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|incfwhere",
-      "title": "INCFWHERE after status rewrite double-bumps cohort",
-      "detail": "If fail does SETFWHERE running\u2192retry then INCFWHERE status retry, every already-retry job also increments. Bump-then-rewrite order is mandatory and undocumented as footgun.",
-      "repro": "old retry=2; new fail path; wrong order \u2192 old becomes 3"
+      "area": "oop|admit",
+      "title": "Budget admit on empty zone always succeeds for BUDGET≥0",
+      "detail": "sum=0 ≤ budget admits ghost zones; no built-in require N>0. Must gate SUMWHERE_N separately.",
+      "repro": "admit nozone budget 10 → admit N=0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|requeue",
-      "title": "No multi-field WHERE update \u2014 requeue cannot zero retries",
-      "detail": "SETFWHERE dead\u2192pending leaves retries sticky. Need second SETFWHERE or SETFALL retries 0 (unscoped) or per-slot SETF.",
-      "repro": "escalate; requeue; retries still 1"
+      "area": "oop|minwhere",
+      "title": "MINWHERE/MAXWHERE return value only — no argmin object id",
+      "detail": "Cannot pick least-loaded shard in zone without GETFWHERE+scan or MAXOBJ-style sibling. Value alone is not actionable for schedule-to.",
+      "repro": "MINWHERE load zone us-east → 20 not h1"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|nobjs",
-      "title": "NOBJS stale until LISTOBJS",
-      "detail": "Same as iter 127: admit-all needs LISTOBJS before NOBJS or silent deny.",
-      "repro": "bare NOBJS after rehydrate \u2192 0"
+      "area": "oop|where",
+      "title": "Zone match equality only — no prefix/glob",
+      "detail": "us vs us-east is exact false friend (good for safety) but multi-zone rollups need repeated SUMWHERE or FREQF-style groupby (missing).",
+      "repro": "count_zn us → 0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|getfwhere",
-      "title": "GETFWHERE bag is values only unless AS KV",
-      "detail": "Default collect loses object identity; AS KV uses object name not FIELD id. Agents needing id:retries must AS KV or GETFALL id separately.",
-      "repro": "GETFWHERE retries status retry \u2192 1\\n1; AS KV \u2192 j0:1"
+      "area": "oop|avgwhere",
+      "title": "AVGWHERE integer mean — truncates",
+      "detail": "Proof uses even sums; fractional means floor. Capacity ratios may under-read without float path.",
+      "repro": "loads 1+2 avg → likely 1 not 1.5"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|skip",
-      "title": "Missing set field soft SKIP; no-match N=0 looks like success unless checked",
-      "detail": "SETFWHERE_N==0 and SETFWHERE_SKIP must be agent-checked; OK path still continues.",
-      "repro": "probe missing status N=0; bad field SKIP=3"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "cat -A last line no $.",
+      "repro": "od -c VAL.txt dump/h0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "cat -A last line no $.",
-      "repro": "od -c VAL.txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE/BUDGET softens",
+      "detail": "CUBALC_FS_REQUIRE=abc → soft; BUDGET garbage keeps default.",
+      "repro": "REQUIRE=abc"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "bag|setmatch|num",
-      "title": "SETMATCH first-only; non-numeric REQUIRE softens",
-      "detail": "Two j0:fail \u2192 one SETMATCH; REQUIRE=abc \u2192 soft.",
-      "repro": "count drops by 1; REQUIRE=abc"
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact only",
+      "detail": "Two h0:scale → one SETMATCH leaves 1.",
+      "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Bump retries with INCFWHERE while still on old status, then SETFWHERE rewrite",
-    "LISTOBJS before NOBJS for admit-all",
-    "GETFWHERE AS KV for name:value inventory",
-    "Per-slot SETF retries 0 after requeue if reset needed",
-    "Gate N==0 with REQUIRE for empty WHERE transitions",
+    "Always read SUMWHERE_N/MINWHERE_N with the value",
+    "Admit: require N>0 AND sum<=budget",
+    "Argmin: GETFWHERE load zone AS KV then scan min",
+    "Per-zone repeated SUMWHERE for multi-zone budget",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "WHERE compound / threshold (retries>=N AND status==retry)",
-    "Multi-field SETFWHERE (status+retries atomic)",
-    "INCFWHERE with status transition in one op",
-    "NOBJS auto-refresh on NEW/DELETE/rehydrate",
-    "GETFWHERE keyed by arbitrary field (id) not only object name",
+    "Empty-sample soft miss / distinct from zero value",
+    "ARGMINWHERE / ARGMAXWHERE object identity",
+    "Group-by zone sum bag (one-shot multi-zone)",
+    "Float AVGWHERE or fixed-point means",
+    "WHERE prefix/glob for zone families",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SETFWHERE start N=3; fail bump+rewrite retries=1 status=retry",
-    "GETFWHERE bag 1,1,1; AS KV j0:1 j1:1 j2:1",
-    "full ladder escalate/requeue/start/succeed/admit ok",
-    "empty start/fail REQUIRE EXIT 2; substring pend vs pending exact",
-    "fail with only retry jobs does not bump old retry (order ok)",
-    "selftest 333/333 green; no language fix this iter"
+    "SUMWHERE us-east load 60; AVG 30; MIN 20; MAX 40; cost 55",
+    "admit budget 100 ok; 50 REQUIRE deny",
+    "empty zone sum 0 admits under budget — documented W2",
+    "us substring false friend count 0",
+    "zero load still N=2 distinguishes via SUMWHERE_N",
+    "selftest 335/335 green; no language fix this iter"
   ],
-  "commit": "95ed8ae1c4abfc5bdb5e3cbeac262cf64abec0fb",
-  "ts": "2026-08-07T08:59:21Z"
+  "commit": "",
+  "ts": "2026-08-07T09:23:40Z"
 }

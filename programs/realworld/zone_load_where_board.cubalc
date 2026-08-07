@@ -1,0 +1,1302 @@
+# zone_load_where_board.cubalc — SUMWHERE/AVGWHERE/MINWHERE/MAXWHERE zone load
+#
+# Real use: capacity agents track Shard fleet (h0..h2) with zone string +
+# numeric load/cost. Roll up per-zone sum/avg/min/max without GETFWHERE +
+# SYS SUM/AVG/MIN/MAX glue, then admit when zone cost sum ≤ budget.
+#
+# Surfaces forced (1.15.358–359):
+#   SUMWHERE / TOTALWHERE / SUMIF / AVGWHERE / MEANWHERE
+#   MINWHERE / MAXWHERE / MINIF / MAXIF
+#   COUNTWHERE · DUMPOBJ rehydrate LOOKUP/LOOKUPN · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from latency_median (MEDIANF fleet-wide), cost_unit (unit plate),
+# shard_load_pick (pick min host), job_retry_where (status ladder): this board
+# is *filtered numeric rollup by zone string + budget admit*.
+#
+# Slots: h0 h1 h2
+#
+# Plate under STATE:
+#   dump/h0 dump/h1 dump/h2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt STATS.txt ZONE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Shard
+#   open       — NEW Shard ARG1=hN [zone=ARG2 default default]
+#   setzone    — SETF zone ARG2
+#   setload    — SETF load ARG2 (numeric)
+#   setcost    — SETF cost ARG2 (numeric)
+#   sum_load   — SUMWHERE load WHERE zone ARG1
+#   avg_load   — AVGWHERE load WHERE zone ARG1
+#   min_load   — MINWHERE load WHERE zone ARG1
+#   max_load   — MAXWHERE load WHERE zone ARG1
+#   sum_cost   — SUMWHERE cost WHERE zone ARG1
+#   count_zn   — COUNTWHERE zone ARG1
+#   admit      — SUMWHERE cost zone WANT ≤ BUDGET; REQUIRE→2 if over
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_zlw_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=h0 CUBALC_ARG2=us-east
+#   CUBALC_ARG0=setload CUBALC_ARG1=h0 CUBALC_ARG2=40
+#   CUBALC_ARG0=sum_load CUBALC_ARG1=us-east
+#   CUBALC_ARG0=admit CUBALC_FS_WANT=us-east CUBALC_FS_BUDGET=100 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT BUDGET ACTION
+#
+# Edges:
+#   no-match SUM/AVG/MIN/MAX → 0 (cannot distinguish empty vs zero load)
+#   AVG empty sample → 0 (not soft miss / NaN)
+#   zone match equality only — substring false friends (us vs us-east)
+#   NOBJS stale until LISTOBJS; LOOKUPN for numeric rehydrate
+#   WRITE NL; NUM REQUIRE/BUDGET softens; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Shard
+  FIELD id ""
+  FIELD zone "default"
+  FIELD load 0
+  FIELD cost 0
+  METHOD init i z
+    SETF THIS id i
+    SETF THIS zone z
+    SETF THIS load 0
+    SETF THIS cost 0
+  END
+END
+
+NOTE "zone_load_where_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "default"
+DEFAULT BUDGET = 100
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BUDGET = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "STATS.txt"
+LET stats_path = LAST
+SYS JOIN state_dir "ZONE_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "h0"
+LET d_h0 = LAST
+SYS JOIN dump_dir "h1"
+LET d_h1 = LAST
+SYS JOIN dump_dir "h2"
+LET d_h2 = LAST
+
+LET slot = -1
+SYS EQS NAME "h0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "h1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "h2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "h0"
+END
+IF slot == 1 THEN
+  LET sn = "h1"
+END
+IF slot == 2 THEN
+  LET sn = "h2"
+END
+
+# rehydrate h0
+SYS READ OR d_h0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    DELETEOBJ h0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "cost"
+  LET rct = LAST_N
+  CLEAR_ERR
+  NEW Shard h0 rid rzn
+  TRYSETF h0 zone rzn
+  TRYSETF h0 load rld
+  TRYSETF h0 cost rct
+  CLEAR_ERR
+END
+# rehydrate h1
+SYS READ OR d_h1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h1
+  IF LAST_N == 1 THEN
+    DELETEOBJ h1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "cost"
+  LET rct = LAST_N
+  CLEAR_ERR
+  NEW Shard h1 rid rzn
+  TRYSETF h1 zone rzn
+  TRYSETF h1 load rld
+  TRYSETF h1 cost rct
+  CLEAR_ERR
+END
+# rehydrate h2
+SYS READ OR d_h2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h2
+  IF LAST_N == 1 THEN
+    DELETEOBJ h2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "cost"
+  LET rct = LAST_N
+  CLEAR_ERR
+  NEW Shard h2 rid rzn
+  TRYSETF h2 zone rzn
+  TRYSETF h2 load rld
+  TRYSETF h2 cost rct
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "zone_load_where_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Shard
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET zn0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET zn0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        DELETEOBJ h0
+        CLEAR_ERR
+      END
+      NEW Shard h0 sn zn0
+      DUMPOBJ h0
+      SYS WRITE d_h0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        DELETEOBJ h1
+        CLEAR_ERR
+      END
+      NEW Shard h1 sn zn0
+      DUMPOBJ h1
+      SYS WRITE d_h1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        DELETEOBJ h2
+        CLEAR_ERR
+      END
+      NEW Shard h2 sn zn0
+      DUMPOBJ h2
+      SYS WRITE d_h2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Shard
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta zn0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setzone ---
+SYS EQS ACTION "setzone"
+IF LAST_N == 1 THEN
+  NOTE "action setzone"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setzone bad slot"
+    FAIL "setzone bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setzone bad slot"
+    END
+  ELSE
+    LET zn0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET zn0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        SETF h0 zone zn0
+        LET ok_set = 1
+        DUMPOBJ h0
+        SYS WRITE d_h0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        SETF h1 zone zn0
+        LET ok_set = 1
+        DUMPOBJ h1
+        SYS WRITE d_h1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        SETF h2 zone zn0
+        LET ok_set = 1
+        DUMPOBJ h2
+        SYS WRITE d_h2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setzone no obj"
+      FAIL "setzone no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setzone no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setzone ok"
+      LET val = zn0
+      LET val_ch = 1
+      LET meta = "setzone"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta zn0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setload ---
+SYS EQS ACTION "setload"
+IF LAST_N == 1 THEN
+  NOTE "action setload"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setload bad slot"
+    FAIL "setload bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setload bad slot"
+    END
+  ELSE
+    LET n0 = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET n0 = LAST_N
+      END
+      CLEAR_ERR
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        SETF h0 load n0
+        LET ok_set = 1
+        DUMPOBJ h0
+        SYS WRITE d_h0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        SETF h1 load n0
+        LET ok_set = 1
+        DUMPOBJ h1
+        SYS WRITE d_h1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        SETF h2 load n0
+        LET ok_set = 1
+        DUMPOBJ h2
+        SYS WRITE d_h2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setload no obj"
+      FAIL "setload no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setload no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setload ok"
+      SYS STR n0
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setload"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setcost ---
+SYS EQS ACTION "setcost"
+IF LAST_N == 1 THEN
+  NOTE "action setcost"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setcost bad slot"
+    FAIL "setcost bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setcost bad slot"
+    END
+  ELSE
+    LET n0 = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET n0 = LAST_N
+      END
+      CLEAR_ERR
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        SETF h0 cost n0
+        LET ok_set = 1
+        DUMPOBJ h0
+        SYS WRITE d_h0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        SETF h1 cost n0
+        LET ok_set = 1
+        DUMPOBJ h1
+        SYS WRITE d_h1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        SETF h2 cost n0
+        LET ok_set = 1
+        DUMPOBJ h2
+        SYS WRITE d_h2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setcost no obj"
+      FAIL "setcost no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setcost no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setcost ok"
+      SYS STR n0
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setcost"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sum_load ---
+SYS EQS ACTION "sum_load"
+IF LAST_N == 1 THEN
+  NOTE "action sum_load"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  SUMWHERE Shard load zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = SUMWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE stats_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "sum_load ok"
+  LET val_ch = 1
+  LET meta = "sum_load"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- avg_load ---
+SYS EQS ACTION "avg_load"
+IF LAST_N == 1 THEN
+  NOTE "action avg_load"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  AVGWHERE Shard load zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = AVGWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE stats_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "avg_load ok"
+  LET val_ch = 1
+  LET meta = "avg_load"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- min_load ---
+SYS EQS ACTION "min_load"
+IF LAST_N == 1 THEN
+  NOTE "action min_load"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  MINWHERE Shard load zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = MINWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE stats_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "min_load ok"
+  LET val_ch = 1
+  LET meta = "min_load"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- max_load ---
+SYS EQS ACTION "max_load"
+IF LAST_N == 1 THEN
+  NOTE "action max_load"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  MAXWHERE Shard load zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = MAXWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE stats_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "max_load ok"
+  LET val_ch = 1
+  LET meta = "max_load"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- sum_cost ---
+SYS EQS ACTION "sum_cost"
+IF LAST_N == 1 THEN
+  NOTE "action sum_cost"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  SUMWHERE Shard cost zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = SUMWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE stats_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "sum_cost ok"
+  LET val_ch = 1
+  LET meta = "sum_cost"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_zn ---
+SYS EQS ACTION "count_zn"
+IF LAST_N == 1 THEN
+  NOTE "action count_zn"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  COUNTWHERE Shard zone zn0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_zn ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_zn"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: SUMWHERE cost zone ≤ BUDGET ---
+# empty zone: sum=0 always admits under positive budget — document as weakness
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET zn0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET zn0 = NAME
+  END
+  SUMWHERE Shard cost zone zn0
+  LET ret_n = LAST_N
+  LET n_hit = SUMWHERE_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF ret_n <= BUDGET THEN
+    LET val = "admit"
+    LET miss = 0
+    LET hit = 1
+    LET note_msg = "admit ok"
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta zn0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR BUDGET
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny cost over budget"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny cost over budget"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    TRYSEND h0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF h0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  SUMWHERE Shard load zone "no_such_zone"
+  LET empty_sum = LAST_N
+  CLEAR_ERR
+  AVGWHERE Shard load zone "no_such_zone"
+  LET empty_avg = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_sum
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_avg
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        DUMPOBJ h0
+        LET val = LAST
+        SYS WRITE d_h0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        DUMPOBJ h1
+        LET val = LAST
+        SYS WRITE d_h1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        DUMPOBJ h2
+        LET val = LAST
+        SYS WRITE d_h2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    DELETEOBJ h0
+    CLEAR_ERR
+  END
+  HASOBJ h1
+  IF LAST_N == 1 THEN
+    DELETEOBJ h1
+    CLEAR_ERR
+  END
+  HASOBJ h2
+  IF LAST_N == 1 THEN
+    DELETEOBJ h2
+    CLEAR_ERR
+  END
+  SYS WRITE d_h0 ""
+  SYS WRITE d_h1 ""
+  SYS WRITE d_h2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE stats_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setzone"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setload"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setcost"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum_load"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "avg_load"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "min_load"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "max_load"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum_cost"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_zn"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "zone_load_where_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
