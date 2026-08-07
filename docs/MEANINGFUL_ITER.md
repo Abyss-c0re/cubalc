@@ -396,6 +396,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 366. ~~**`GETFWHERE` / `COLLECTWHERE` / `PLUCKWHERE`**~~ **done** (bag of field values from field==value objs · filtered GETFALL).
 367. ~~**`SUMWHERE` / `AVGWHERE` / `SUMIF`**~~ **done** (sum/mean numeric field on field==value objs · no GETFWHERE+SUM).
 368. ~~**`MINWHERE` / `MAXWHERE` / `MINIF`**~~ **done** (min/max numeric field on field==value objs · no GETFWHERE+MIN/MAX).
+369. ~~**`MEDIANWHERE` / `P50WHERE` / `MEDIANIF`**~~ **done** (median numeric field on field==value objs · no GETFWHERE+MEDIAN).
 
 ## Tick protocol
 

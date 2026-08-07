@@ -1,0 +1,94 @@
+# MEDIANWHERE / P50WHERE — filtered fleet median on field match
+# Usability: no GETFWHERE + SYS MEDIAN glue · robust mid vs AVGWHERE outliers
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+NEW Cell e 1 1000 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+
+# energy where age==1 → 10,30,1000 → sorted → median 30
+MEDIANWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT LAST_N == 30
+ASSERT MEDIANWHERE_N == 3
+ASSERT MEDIANWHERE_VAL == 30
+ASSERT MEDIANWHERE == 30
+
+# age==0 → 20,40 → even → lower mid 20
+MEDIANWHERE Cell energy age 0
+ASSERT LAST_N == 20
+ASSERT MEDIANWHERE_N == 2
+
+# WHERE sugar
+MEDIANWHERE Cell energy WHERE age 1
+ASSERT LAST_N == 30
+
+# OF sugar
+MEDIANWHERE OF Cell energy age 1
+ASSERT LAST_N == 30
+
+# aliases
+P50WHERE Cell energy age 1
+ASSERT LAST_N == 30
+MIDWHERE Cell energy age 0
+ASSERT LAST_N == 20
+MEDIANFWHERE Cell energy age 1
+ASSERT LAST_N == 30
+WHEREMEDIAN Cell energy age 0
+ASSERT LAST_N == 20
+MEDIANIF Cell energy age 1
+ASSERT LAST_N == 30
+P50IF Cell energy age 0
+ASSERT LAST_N == 20
+MIDIF Cell energy age 1
+ASSERT LAST_N == 30
+
+# string match · open retries 2,7,5 → sorted 2,5,7 → median 5
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 9
+NEW Ticket t3 "open" 7
+NEW Ticket t4 "open" 5
+MEDIANWHERE Ticket retries status "open"
+ASSERT LAST_N == 5
+ASSERT MEDIANWHERE_N == 3
+MEDIANWHERE Ticket retries status "closed"
+ASSERT LAST_N == 9
+ASSERT MEDIANWHERE_N == 1
+
+# no match → 0
+MEDIANWHERE Ticket retries status "missing"
+ASSERT LAST_N == 0
+ASSERT MEDIANWHERE_N == 0
+
+# even four opens: add one more open → 2,5,7,11 → lower mid 5
+NEW Ticket t5 "open" 11
+MEDIANWHERE Ticket retries status "open"
+ASSERT LAST_N == 5
+ASSERT MEDIANWHERE_N == 4
+
+# robust vs mean on age==1: AVGWHERE would be dragged by 1000
+AVGWHERE Cell energy age 1
+ASSERT LAST_N == 346 "mean dragged by outlier"
+MEDIANWHERE Cell energy age 1
+ASSERT LAST_N == 30 "median stable"
+
+PRINT "proof910_oop_medianwhere" 1
+ASSERT OK == 1
