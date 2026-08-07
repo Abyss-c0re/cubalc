@@ -1,0 +1,109 @@
+# DELETEWHERE / FREEWHERE — free live objects matching field equality
+# Usability: WHEREOBJ + DELETEALL one-shot · no EACH+GETF+IF+DELETEOBJ
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 10 0
+NEW Cell d 1 0 0
+NEW Cell e 1 30 0
+
+CLASS Marker
+  FIELD tag 0
+  FIELD label ""
+  METHOD init t lab
+    SETF THIS tag t
+    SETF THIS label lab
+  END
+END
+NEW Marker m1 1 "keep"
+NEW Marker m2 0 "drop"
+NEW Marker m3 1 "also"
+
+# free Cells with energy 0 (dead pool slots)
+DELETEWHERE Cell energy 0
+ASSERT OK == 1
+ASSERT DELETEWHERE_N == 2
+ASSERT LAST_N == 2
+SYS HASLINE DELETEWHERE "b"
+ASSERT LAST_N == 1
+SYS HASLINE DELETEWHERE "d"
+ASSERT LAST_N == 1
+HASOBJ b
+ASSERT LAST_N == 0
+HASOBJ d
+ASSERT LAST_N == 0
+HASOBJ a
+ASSERT LAST_N == 1 "survivors kept"
+HASOBJ e
+ASSERT LAST_N == 1
+
+LISTOBJS Cell
+ASSERT LAST_N == 3 "a c e"
+
+# FREEWHERE alias + string field
+FREEWHERE Marker label "drop"
+ASSERT FREEWHERE_N == 1
+HASOBJ m2
+ASSERT LAST_N == 0
+HASOBJ m1
+ASSERT LAST_N == 1
+
+# OF sugar
+DELETEWHERE OF Marker tag 1
+ASSERT DELETEWHERE_N == 2
+HASOBJ m1
+ASSERT LAST_N == 0
+HASOBJ m3
+ASSERT LAST_N == 0
+
+# empty match soft
+DELETEWHERE Cell energy 999
+ASSERT OK == 1
+ASSERT DELETEWHERE_N == 0
+HASOBJ a
+ASSERT LAST_N == 1
+
+# free remaining energy-10 cells
+DELETEWHERE Cell energy 10
+ASSERT DELETEWHERE_N == 2
+HASOBJ a
+ASSERT LAST_N == 0
+HASOBJ c
+ASSERT LAST_N == 0
+HASOBJ e
+ASSERT LAST_N == 1
+
+# bare field: only classes that own the field
+SETF e energy 0
+NEW Marker z 0 "z"
+DELETEWHERE energy 0
+ASSERT DELETEWHERE_N == 1 "Cell e only · Marker has no energy"
+HASOBJ e
+ASSERT LAST_N == 0
+HASOBJ z
+ASSERT LAST_N == 1 "Marker kept (tag≠energy)"
+DELETEWHERE tag 0
+ASSERT DELETEWHERE_N == 1
+HASOBJ z
+ASSERT LAST_N == 0
+
+# NEW reuses freed names
+NEW Cell a 1 8 0
+HASOBJ a
+ASSERT LAST_N == 1
+GETF a energy
+ASSERT LAST_N == 8
+
+# PURGEWHERE alias
+NEW Cell x 1 1 0
+NEW Cell y 1 1 0
+PURGEWHERE Cell energy 1
+ASSERT PURGEWHERE_N == 2
+HASOBJ x
+ASSERT LAST_N == 0
+
+PRINT "oop_deletewhere ok"
