@@ -1,0 +1,1064 @@
+# lottery_sample_board.cubalc — PICKOBJ/DRAWNOBJ/SHUFFLEOBJS peer lottery
+#
+# Real use: agents assign canary probes or work tokens by lottery among a
+# Worker pool — single random peer, multi-draw without replacement, or
+# shuffled round-robin order — without LISTOBJS+SYS PICK/DRAWN/SHUFFLE glue.
+#
+# Surfaces forced (1.15.376–377):
+#   PICKOBJ / RANDOBJ / SAMPLEOBJ / ANYOBJ
+#   DRAWNOBJ / SAMPLEKOBJ / PICKNOBJ
+#   SHUFFLEOBJS / SHUFOBJS / PERMUTEOBJS
+#   SEED · COUNTWHERE · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from ready_pick_where (min-load pick), topn_drain (ranked top-N),
+# rank_window (kth rank): this board is *seeded random sample / shuffle*.
+#
+# Slots: w0 w1 w2
+#
+# Plate under STATE:
+#   dump/w0 dump/w1 dump/w2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt SAMPLE.txt LOTTERY_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Worker
+#   open       — NEW Worker ARG1=wN [zone=ARG2]
+#   setzone    — SETF zone ARG2
+#   seed       — SEED ARG1/ENV (deterministic lottery)
+#   pick       — PICKOBJ Worker → name
+#   draw       — DRAWNOBJ Worker K → SAMPLE plate
+#   shuffle    — SHUFFLEOBJS Worker → SAMPLE plate
+#   count      — COUNTWHERE / journal count
+#   admit      — live NOBJS ≥ K (pool large enough); REQUIRE→2 if not
+#   journal / jcount / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_lot_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=w0 CUBALC_ARG2=east
+#   CUBALC_FS_SEED=42 CUBALC_ARG0=seed
+#   CUBALC_ARG0=pick
+#   CUBALC_FS_K=2 CUBALC_ARG0=draw
+#   CUBALC_ARG0=admit CUBALC_FS_K=2 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME SEED K ACTION
+#
+# Edges:
+#   no status WHERE filter — class pool only (drain objects still pickable)
+#   empty class HIT=0; K=0 empty draw; K>pool clamps to all
+#   same SEED → same pick/draw; SEED required for reproducible tests
+#   SHUFFLEOBJS without class includes all types if mixed
+#   WRITE NL; NUM softens; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Worker
+  FIELD id ""
+  FIELD zone "default"
+  METHOD init i z
+    SETF THIS id i
+    SETF THIS zone z
+  END
+END
+
+NOTE "lottery_sample_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT K = 2
+DEFAULT SEEDN = 42
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_K" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET K = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_SEED" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET SEEDN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "SAMPLE.txt"
+LET sample_path = LAST
+SYS JOIN state_dir "LOTTERY_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "w0"
+LET d_w0 = LAST
+SYS JOIN dump_dir "w1"
+LET d_w1 = LAST
+SYS JOIN dump_dir "w2"
+LET d_w2 = LAST
+
+LET slot = -1
+SYS EQS NAME "w0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "w1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "w2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "w0"
+END
+IF slot == 1 THEN
+  LET sn = "w1"
+END
+IF slot == 2 THEN
+  LET sn = "w2"
+END
+
+# rehydrate w0
+SYS READ OR d_w0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Worker w0 rid rzn
+  TRYSETF w0 zone rzn
+  CLEAR_ERR
+END
+# rehydrate w1
+SYS READ OR d_w1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Worker w1 rid rzn
+  TRYSETF w1 zone rzn
+  CLEAR_ERR
+END
+# rehydrate w2
+SYS READ OR d_w2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Worker w2 rid rzn
+  TRYSETF w2 zone rzn
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "lottery_sample_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Worker
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET zn0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET zn0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DELETEOBJ w0
+        CLEAR_ERR
+      END
+      NEW Worker w0 sn zn0
+      DUMPOBJ w0
+      SYS WRITE d_w0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DELETEOBJ w1
+        CLEAR_ERR
+      END
+      NEW Worker w1 sn zn0
+      DUMPOBJ w1
+      SYS WRITE d_w1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DELETEOBJ w2
+        CLEAR_ERR
+      END
+      NEW Worker w2 sn zn0
+      DUMPOBJ w2
+      SYS WRITE d_w2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Worker
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta zn0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setzone ---
+SYS EQS ACTION "setzone"
+IF LAST_N == 1 THEN
+  NOTE "action setzone"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setzone bad slot"
+    FAIL "setzone bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setzone bad slot"
+    END
+  ELSE
+    LET zn0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET zn0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        SETF w0 zone zn0
+        LET ok_set = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        SETF w1 zone zn0
+        LET ok_set = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        SETF w2 zone zn0
+        LET ok_set = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setzone no obj"
+      FAIL "setzone no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setzone no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setzone ok"
+      LET val = zn0
+      LET val_ch = 1
+      LET meta = "setzone"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta zn0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- seed ---
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  NOTE "action seed"
+  LET sn0 = SEEDN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET sn0 = LAST_N
+    END
+    CLEAR_ERR
+  END
+  SEED sn0
+  LET hit = 1
+  LET note_msg = "seed ok"
+  SYS STR sn0
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "seed"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON sn0
+  CLEAR_ERR
+END
+
+# --- pick PICKOBJ ---
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  NOTE "action pick"
+  PICKOBJ Worker
+  LET pick = LAST
+  LET hit_n = PICKOBJ_HIT
+  LET tot_n = PICKOBJ_TOTAL
+  LET idx = PICKOBJ_I
+  CLEAR_ERR
+  IF hit_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "pick empty"
+    FAIL "pick empty"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pick empty"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "pick ok"
+    LET val = pick
+    LET val_ch = 1
+    LET meta = "pick"
+    SYS PUSH meta pick
+    LET meta = LAST
+    SYS STR idx
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR tot_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- draw DRAWNOBJ ---
+SYS EQS ACTION "draw"
+IF LAST_N == 1 THEN
+  NOTE "action draw"
+  LET kn = K
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET kn = LAST_N
+    END
+    CLEAR_ERR
+  END
+  DRAWNOBJ Worker kn
+  LET sbag = LAST
+  LET ret_n = DRAWNOBJ_N
+  LET tot_n = DRAWNOBJ_TOTAL
+  LET req_n = DRAWNOBJ_REQ
+  SYS WRITE sample_path sbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "draw ok"
+  LET val = sbag
+  LET val_ch = 1
+  LET meta = "draw"
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR tot_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR req_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- shuffle ---
+SYS EQS ACTION "shuffle"
+IF LAST_N == 1 THEN
+  NOTE "action shuffle"
+  SHUFFLEOBJS Worker
+  LET sbag = LAST
+  LET ret_n = SHUFFLEOBJS_N
+  SYS WRITE sample_path sbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "shuffle ok"
+  LET val = sbag
+  LET val_ch = 1
+  LET meta = "shuffle"
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: pool size ≥ K ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET kn = K
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET kn = LAST_N
+    END
+    CLEAR_ERR
+  END
+  LISTOBJS Worker
+  LET nobjs = NOBJS
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF nobjs >= kn THEN
+    IF kn > 0 THEN
+      LET val = "admit"
+      LET miss = 0
+      LET hit = 1
+      LET note_msg = "admit ok"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS STR kn
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny pool too small"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny pool too small"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- jcount journal ---
+SYS EQS ACTION "jcount"
+IF LAST_N == 1 THEN
+  NOTE "action jcount"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "jcount needs needle"
+    FAIL "jcount needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "jcount needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "jcount ok"
+    LET meta = "jcount"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    TRYSEND w0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF w0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  DRAWNOBJ Worker 0
+  LET empty_d = DRAWNOBJ_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_d
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DUMPOBJ w0
+        LET val = LAST
+        SYS WRITE d_w0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DUMPOBJ w1
+        LET val = LAST
+        SYS WRITE d_w1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DUMPOBJ w2
+        LET val = LAST
+        SYS WRITE d_w2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS WRITE d_w0 ""
+  SYS WRITE d_w1 ""
+  SYS WRITE d_w2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE sample_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setzone"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "seed"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pick"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "draw"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "shuffle"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "jcount"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "pick ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "draw ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "shuffle ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "seed ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "lottery_sample_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

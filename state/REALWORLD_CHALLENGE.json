@@ -1,113 +1,101 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 135,
-  "program": "programs/realworld/rank_window_board.cubalc",
-  "theme": "NTHBYFWHERE/SLICEBYF filtered kth runner-up + fleet ranked page window + admit",
-  "version": "1.15.375-usability",
+  "iter": 136,
+  "program": "programs/realworld/lottery_sample_board.cubalc",
+  "theme": "PICKOBJ/DRAWNOBJ/SHUFFLEOBJS seeded peer lottery + pool-size admit",
+  "version": "1.15.377-usability",
   "pass": true,
-  "prior_note": "iter 134 topn_drain TOPNBYFWHERE+NTHBYF (no NTHBYFWHERE); this iter stresses NTHBYFWHERE+SLICEBYF (c39b35e/1cb86b4)",
+  "prior_note": "iter 135 rank_window NTHBYFWHERE+SLICEBYF; this iter stresses PICKOBJ+DRAWNOBJ+SHUFFLEOBJS (8730a6d/8c78cbf/01ce0ef)",
   "tests": [
     {
-      "name": "open_loads",
-      "cmd": "n0/n1 ready 40/10; n2 drain 99",
+      "name": "open_pool",
+      "cmd": "open w0/w1/w2 east/west/central",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "nthbyfwhere",
-      "cmd": "DESC 0\u2192n0:40; 1\u2192n1:10 (drain excluded)",
+      "name": "seed_pick_repro",
+      "cmd": "SEED 42; PICKOBJ twice → same w0",
       "ok": true,
-      "note": "NTHBYFWHERE"
+      "note": "PICKOBJ"
     },
     {
-      "name": "runner_up_coldest",
-      "cmd": "runner_up n1:10; coldest ASC n1:10",
+      "name": "drawn_unique",
+      "cmd": "DRAWNOBJ K=2 → unique names; K=99 N=3; K=0 empty",
       "ok": true,
-      "note": "kth"
+      "note": "DRAWNOBJ"
     },
     {
-      "name": "slicebyf",
-      "cmd": "SLICE start1 count2 DESC \u2192 n0 n1 (skip n2); start0 \u2192 n2 n0",
+      "name": "shuffle",
+      "cmd": "SHUFFLEOBJS → permuted bag not insert order",
       "ok": true,
-      "note": "SLICEBYF"
+      "note": "SHUFFLEOBJS"
     },
     {
-      "name": "slice_oob",
-      "cmd": "start 99 \u2192 N=0 TOTAL=3",
-      "ok": true,
-      "note": "empty window"
-    },
-    {
-      "name": "admit_runner",
-      "cmd": "runner load 10 \u226450 admit; \u22645 deny",
+      "name": "admit_pool",
+      "cmd": "NOBJS≥2 admit; ≥4 deny REQUIRE",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "single_ready",
-      "cmd": "one ready \u2192 runner_up miss REQUIRE; coldest ok",
-      "ok": true,
-      "note": "need 2+"
-    },
-    {
-      "name": "empty_ready",
-      "cmd": "coldest empty REQUIRE; admit deny",
+      "name": "empty_pool",
+      "cmd": "clear; pick REQUIRE empty; admit K=1 deny",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "nth_oor",
-      "cmd": "nth_ready 5 REQUIRE EXIT 2",
+      "name": "setmatch_first",
+      "cmd": "two w0:assign → SETMATCH leaves 1",
       "ok": true,
-      "note": "HIT=0"
+      "note": "journal"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "351/351 pass"
+      "note": "353/353 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "med",
-      "area": "oop|slicebyf",
-      "title": "No SLICEBYFWHERE \u2014 ranked windows cannot filter by status",
-      "detail": "SLICEBYF is fleet-wide only. Skip-hottest page includes drain nodes. Filtered page needs SORTBYFWHERE+manual drop/take or TOPN+glue.",
-      "repro": "SLICE start1 DESC includes n0 after skipping drain n2, but start0 is n2"
+      "severity": "high",
+      "area": "oop|pickobj",
+      "title": "No PICKWHERE/DRAWWHERE — cannot lottery by status/zone",
+      "detail": "Class filter only. Drain/unhealthy objects in class remain pickable. Agents must separate classes or post-filter bags.",
+      "repro": "PICKOBJ Worker among ready+drain with no status match"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|nthbyfwhere",
-      "title": "OOB NTHBYFWHERE is soft HIT=0 not distinct error code",
-      "detail": "Agents must check NTHBYFWHERE_HIT; LAST blank; TOTAL still set. Easy to confuse with empty match set.",
-      "repro": "index 99 \u2192 HIT=0 TOTAL=3"
+      "area": "oop|seed",
+      "title": "SEED is process-local — multi-run ARG agents must re-seed every fire",
+      "detail": "Plate rehydrate does not restore RNG; omit seed action → nondeterministic pick across processes.",
+      "repro": "pick without seed across two cubalc invocations"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|slicebyf",
-      "title": "Slice bag is names only \u2014 no load values",
-      "detail": "Page plate needs GETF per name for loads.",
-      "repro": "SLICE.txt = n0\\nn1"
+      "area": "oop|drawnobj",
+      "title": "K>pool silent clamp to all; K=0 empty without soft-miss policy",
+      "detail": "REQ records request; N=min(K,TOTAL). K=0 → empty bag TOTAL still set.",
+      "repro": "draw 99 N=3 REQ=99; draw 0 N=0 TOTAL=3"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|runner",
-      "title": "Runner-up needs \u22652 matches \u2014 no soft primary-only path",
-      "detail": "Single ready node makes runner_up miss; agents must fall back to nth 0.",
-      "repro": "one ready \u2192 runner_up HIT=0"
+      "area": "oop|shuffleobjs",
+      "title": "Bare SHUFFLEOBJS includes all classes if unfiltered",
+      "detail": "Must pass Class or multi-type bags mix Workers+Tickets.",
+      "repro": "proof 927 unfiltered N includes tickets"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|arg_order",
-      "title": "NTHBYFWHERE arg order field I matchfield matchval",
-      "detail": "Easy misorder vs status-first mental model.",
-      "repro": "NTHBYFWHERE Node load 1 status ready DESC"
+      "area": "oop|pickobj",
+      "title": "Empty PICKOBJ HIT=0 soft; LAST blank",
+      "detail": "No hard error; agents must check PICKOBJ_HIT.",
+      "repro": "clear; pick → HIT=0"
     },
     {
       "id": "W6",
@@ -115,14 +103,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c SLICE.txt"
+      "repro": "od -c SAMPLE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE/NTH/START softens",
-      "detail": "REQUIRE=abc \u2192 soft.",
+      "title": "Non-numeric REQUIRE/SEED/K softens",
+      "detail": "REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -130,31 +118,31 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:fail \u2192 one SETMATCH leaves 1.",
+      "detail": "Two w0:assign → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Filtered page: SORTBYFWHERE + SYS DROP/TAKE if no SLICEBYFWHERE",
-    "Check NTHBYFWHERE_HIT and TOTAL for OOB vs empty",
-    "Runner-up miss \u2192 fall back NTH 0 as primary",
-    "SLICEBYF intentionally fleet-wide for global operator pages",
+    "Only NEW ready workers into lottery class; or post-filter SAMPLE bag",
+    "SEED every process before pick/draw for repro",
+    "Check DRAWNOBJ_N vs REQ and TOTAL for clamp/empty",
+    "Always SHUFFLEOBJS Worker not bare SHUFFLEOBJS",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "SLICEBYFWHERE filtered ranked window",
-    "SLICE/NTH AS KV name:value",
-    "Distinct OOB vs empty-match status codes",
-    "WHERE multi-status OR",
+    "PICKWHERE/DRAWWHERE/SHUFFLEWHERE status or field match",
+    "Persistent plate SEED / RNG state",
+    "Weighted lottery by field",
+    "Hard error option for empty pick",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NTHBYFWHERE ready DESC 0\u2192n0:40 1\u2192n1:10; drain excluded",
-    "SLICE start1 \u2192 n0 n1 skip drain hottest; start0 \u2192 n2 n0",
-    "runner_up admit load\u226450 ok; \u22645 deny; single ready runner miss",
-    "OOB nth HIT=0 REQUIRE; empty ready coldest REQUIRE",
-    "selftest 351/351 green; no language fix this iter"
+    "SEED 42 pick → w0 reproducible across runs",
+    "DRAWNOBJ 2 unique; 99 clamps to 3; 0 empty TOTAL=3",
+    "SHUFFLEOBJS permuted w2 w1 w0; admit K=2 ok K=4 deny",
+    "empty pool pick REQUIRE; no status filter for lottery",
+    "selftest 353/353 green; no language fix this iter"
   ],
-  "commit": "5ef015339d87eaa4c7a034947d949af13f078c92",
-  "ts": "2026-08-07T11:54:45Z"
+  "commit": "",
+  "ts": "2026-08-07T12:19:22Z"
 }
