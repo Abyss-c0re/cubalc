@@ -55,18 +55,20 @@ Whatever you name — a sensor, a scrap phone, a peer, a thought — you treat i
 | **energy** | 0..1 charge flowing on wires |
 | **ports** | LEGO studs — faces that plug |
 
-**Cube-Oriented Programming (COP)** is not class inheritance theater.  
-You **compose** reusable cubes by **plugging** ports when matrices are compatible.
+**Cube-Oriented Programming (COP)** is more advanced than C++ inheritance theater.  
+You **compose** reusable cubes by **plugging** ports when matrices are compatible,
+step the world with **TICK + FLOW**, and keep the **State Matrix** as SoT.
+See `docs/COP_ENGINE.md` (CLASS/METHOD first, then ENTITY/SPAWN for engines).
 
 ```
-CLASSICAL OOP          CUBALC COP
-─────────────          ──────────
-class                  cube unit (reusable)
-object                 cube instance (visible stud)
-method                 impulse / flow / talk
-interface              port (matrix gate)
-message                binary CBLC frame
-database               CubeChain
+C++ / classical OOP    CUBALC COP (upgrade)
+───────────────────    ────────────────────
+class + vtable         CLASS/METHOD + SEND (no ABI vptr law)
+object heap bag        cube unit + optional fields; matrix is truth
+inheritance trees      compose with PLUG / NEST (compatibility gate)
+frame loop in host C++ TICK (methods) + FLOW (energy law) in-language
+ECS bolted on later    ENTITY / SPAWN / SCENE first-class
+message = call         message = SEND or binary SMX2 frame
 ```
 
 ### Exercise 1.1 — See the creed

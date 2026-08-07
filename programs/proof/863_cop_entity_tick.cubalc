@@ -1,0 +1,61 @@
+# Proof 863 — COP engine plane: ENTITY / SPAWN / TICK / FLOW
+# Game-engine path: compose units, tick methods, energy flow (beyond C++ vtables)
+
+REQUIRE VERSION "1.15"
+
+CLASS Entity
+  FIELD hp 100
+  FIELD dmg 0
+  ROLE body
+  METHOD init h
+    SETF THIS hp h
+    SETF THIS dmg 0
+  END
+  METHOD tick
+    GETF THIS hp
+    # idle tick keeps hp sticky
+    RET LAST_N
+  END
+  METHOD hurt n
+    GETF THIS hp
+    LET h = LAST_N - n
+    IF h < 0 THEN
+      LET h = 0
+    END
+    SETF THIS hp h
+    GETF THIS dmg
+    LET d = LAST_N + n
+    SETF THIS dmg d
+    RET h
+  END
+END
+
+SCENE arena
+ENTITY hero OF Entity 50
+ENTITY mob OF Entity 30
+PLUG hero mob
+
+ISOF hero Entity
+ASSERT LAST_N == 1
+SEND hero hurt 7
+ASSERT LAST_N == 43 "hero hp after hurt"
+SEND mob hurt 5
+ASSERT LAST_N == 25
+
+# World step: method tick on all entities + board FLOW
+TICK 2
+ASSERT TICK_N == 2 "two entities with tick"
+
+SPAWN Entity boss ROLE host PROTON 1 200
+GETF boss hp
+ASSERT LAST_N == 200 "SPAWN init"
+SEND boss hurt 50
+ASSERT LAST_N == 150
+
+# COP: cubes still matrix units
+ASSERT CUBES >= 3
+IMPULSE hero 1
+FLOW 1
+
+PRINT "proof863_cop_engine" CUBES TICK_N 150
+ASSERT OK == 1

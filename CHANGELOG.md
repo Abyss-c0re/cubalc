@@ -1,3 +1,14 @@
+## Meaningful — OOP + COP engine plane (beyond C++) — 2026-08-07
+
+### Language
+- **OOP:** `CLASS` / `FIELD` / `METHOD` / `NEW` / `SEND` / `GETF` / `SETF` / `ISOF` / `CLASSNAME`
+- **FN** named formals: `FN add a b` · `CALL add 1 2` (still ARG0…)
+- **COP / game engine:** `CUBE OF Class` · `ENTITY` · `SPAWN` · `SCENE` · `TICK` (+ optional `FLOW n`)
+- `TICK` reserved for world-step (METHOD tick/update/frame); board energy stays `FLOW`
+- Docs: `docs/COP_ENGINE.md` — composition over inheritance, matrix SoT, flow law
+- Proofs: `862_oop_class_method` · `863_cop_entity_tick`
+- Version: `1.15.315-usability`
+
 ## Meaningful — HOLD_FLASH not a program preamble — 2026-08-06
 
 ### Usability

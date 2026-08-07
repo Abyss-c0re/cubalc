@@ -1,0 +1,61 @@
+# Proof 862 — OOP: CLASS / FIELD / METHOD / NEW / SEND / GETF / SETF / ISOF
+# CubalC proper objects — foundation for COP beyond C++ inheritance
+
+REQUIRE VERSION "1.15"
+
+# Reusable functions with named formals
+FN add a b
+  RET a + b
+END
+CALL add 20 22
+ASSERT LAST_N == 42 "named FN formals"
+
+CLASS Counter
+  FIELD count 0
+  ROLE body
+  METHOD init n
+    SETF THIS count n
+  END
+  METHOD inc
+    GETF THIS count
+    LET c = LAST_N + 1
+    SETF THIS count c
+    RET c
+  END
+  METHOD get
+    GETF THIS count
+    RET LAST_N
+  END
+  METHOD add n
+    GETF THIS count
+    LET c = LAST_N + n
+    SETF THIS count c
+    RET c
+  END
+END
+
+NEW Counter c 10
+ISOF c Counter
+ASSERT LAST_N == 1 "ISOF Counter"
+CLASSNAME c
+ASSERT OK == 1
+
+SEND c get
+ASSERT LAST_N == 10 "init count"
+SEND c inc
+ASSERT LAST_N == 11
+SEND c add 4
+ASSERT LAST_N == 15
+
+# CALL obj method sugar
+CALL c get
+ASSERT LAST_N == 15
+
+GETF c count
+ASSERT LAST_N == 15
+SETF c count 100
+SEND c get
+ASSERT LAST_N == 100
+
+PRINT "proof862_oop" 42 100
+ASSERT OK == 1

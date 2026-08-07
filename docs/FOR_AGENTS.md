@@ -14,6 +14,8 @@ SYS READ|WRITE|ENV|HTTP|CHAT|JOIN|JSON|SPAWN|…
 Prefer tools via SYS over describing steps to the user.
 Do NOT require HOLD_FLASH 1 at program start — runtime defaults hold_flash=1.
 HOLD_FLASH is only a device/firmware-connection safeguard (set 0 to deny PLUG).
+Prefer COP over C++-style inheritance: CLASS/METHOD + CUBE OF/ENTITY, compose with PLUG, step with TICK+FLOW.
+Reusable logic: FN name a b … END / CALL; objects: NEW / SEND / GETF / SETF.
 ```
 
 ## Evaluation loop

@@ -32,9 +32,55 @@ typedef struct { char name[48]; long val; char sval[512]; int is_str; } Var;
 
 typedef struct {
   char name[48];
+  char params[8][32]; /* optional named formals (also ARG0..) */
+  int n_params;
   const char *body;
   size_t len;
 } FnDef;
+
+/* ---- OOP + COP engine plane (beyond C++ class inheritance) ----
+ * CLASS/FIELD/METHOD/NEW/SEND compose *reusable cubes* and plain objects.
+ * Game engines: ENTITY/SPAWN/TICK/SCENE ride the same plane; FLOW is law. */
+#define CUBALC_MAX_FNS      48
+#define CUBALC_MAX_CLASSES  24
+#define CUBALC_MAX_METHODS  24
+#define CUBALC_MAX_FIELDS   24
+#define CUBALC_MAX_OBJS     64
+
+typedef struct {
+  char name[32];
+  long def_num;
+  char def_str[96];
+  int is_str;
+  int has_def;
+} FieldDef;
+
+typedef struct {
+  char name[32];
+  char params[8][32];
+  int n_params;
+  const char *body;
+  size_t len;
+} MethodDef;
+
+typedef struct {
+  char name[48];
+  FieldDef fields[CUBALC_MAX_FIELDS];
+  int n_fields;
+  MethodDef methods[CUBALC_MAX_METHODS];
+  int n_methods;
+  char role[24]; /* COP default cube role when CUBE/ENTITY OF class */
+} ClassDef;
+
+typedef struct {
+  char name[48];
+  int class_idx;
+  long fnum[CUBALC_MAX_FIELDS];
+  char fstr[CUBALC_MAX_FIELDS][128];
+  int fis_str[CUBALC_MAX_FIELDS];
+  int live;
+  int cube_idx; /* -1 pure object; else bound cube slot */
+} ObjInst;
 
 #define CUBALC_CELL_N   64
 #define CUBALC_STACK_N  32
@@ -42,8 +88,14 @@ typedef struct {
   cubalc_chain ch;
   Var vars[128];
   int n_vars;
-  FnDef fns[32];
+  FnDef fns[CUBALC_MAX_FNS];
   int n_fns;
+  ClassDef classes[CUBALC_MAX_CLASSES];
+  int n_classes;
+  ObjInst objs[CUBALC_MAX_OBJS];
+  int n_objs;
+  char this_obj[48];   /* current method receiver (THIS/SELF) */
+  char scene[48];      /* optional game SCENE name tag */
   cubalc_run_result *res;
   FILE *trace;
   int hold_flash;

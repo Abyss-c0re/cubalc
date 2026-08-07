@@ -1,59 +1,710 @@
-/* CubalC lang — lang_ops_flow.c (COP/flow · pure C · cube is SoT) */
+/* CubalC lang — lang_ops_flow.c (COP/flow · pure C · cube is SoT)
+ * OOP plane: CLASS/FIELD/METHOD/NEW/SEND/GETF/SETF/ISOF
+ * Engine plane: SCENE/ENTITY/SPAWN/TICK — game loop rides FLOW
+ * Advanced vs C++: composition by PLUG, State Matrix SoT, flow-before-compile
+ */
 #include "lang/cubalc_lang_internal.h"
+#include <string.h>
+#include <stdio.h>
+
+static ClassDef *oop_find_class(VM *vm, const char *name){
+  int i;
+  for (i = 0; i < vm->n_classes; i++)
+    if (strcmp(vm->classes[i].name, name) == 0) return &vm->classes[i];
+  return NULL;
+}
+static int oop_find_class_idx(VM *vm, const char *name){
+  int i;
+  for (i = 0; i < vm->n_classes; i++)
+    if (strcmp(vm->classes[i].name, name) == 0) return i;
+  return -1;
+}
+static ObjInst *oop_find_obj(VM *vm, const char *name){
+  int i;
+  for (i = 0; i < vm->n_objs; i++)
+    if (vm->objs[i].live && strcmp(vm->objs[i].name, name) == 0)
+      return &vm->objs[i];
+  return NULL;
+}
+static int oop_field_idx(ClassDef *cd, const char *fname){
+  int i;
+  for (i = 0; i < cd->n_fields; i++)
+    if (strcmp(cd->fields[i].name, fname) == 0) return i;
+  return -1;
+}
+static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
+  int i;
+  for (i = 0; i < cd->n_methods; i++)
+    if (strcmp(cd->methods[i].name, mname) == 0) return &cd->methods[i];
+  return NULL;
+}
+static int oop_resolve_obj_name(VM *vm, Lex *L, char *out, size_t outn){
+  if (L->cur.kind != TK_IDENT) return -1;
+  if (strcasecmp(L->cur.text, "THIS") == 0 || strcasecmp(L->cur.text, "SELF") == 0) {
+    if (!vm->this_obj[0]) return -1;
+    snprintf(out, outn, "%s", vm->this_obj);
+    lex_next(L);
+    return 0;
+  }
+  snprintf(out, outn, "%s", L->cur.text);
+  lex_next(L);
+  return 0;
+}
+static int oop_stmt_kw(Lex *L){
+  return L->cur.kind == TK_IDENT &&
+         (kw(&L->cur, "END") || kw(&L->cur, "LET") || kw(&L->cur, "ASSERT") ||
+          kw(&L->cur, "PRINT") || kw(&L->cur, "IF") || kw(&L->cur, "FOR") ||
+          kw(&L->cur, "WHILE") || kw(&L->cur, "CALL") || kw(&L->cur, "SEND") ||
+          kw(&L->cur, "RET") || kw(&L->cur, "RETURN") || kw(&L->cur, "CUBE") ||
+          kw(&L->cur, "SYS") || kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") ||
+          kw(&L->cur, "GETF") || kw(&L->cur, "SETF") || kw(&L->cur, "METHOD") ||
+          kw(&L->cur, "FIELD") || kw(&L->cur, "ENTITY") || kw(&L->cur, "SPAWN") ||
+          kw(&L->cur, "TICK") || kw(&L->cur, "SCENE") || kw(&L->cur, "FLOW") ||
+          kw(&L->cur, "PLUG") || kw(&L->cur, "TYPE"));
+}
+static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
+  int ai = 0;
+  while (ai < 8 &&
+         (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN)) {
+    char an[16];
+    snprintf(an, sizeof an, "ARG%d", ai);
+    if (L->cur.kind == TK_STR) {
+      var_set_str(vm, an, L->cur.text);
+      if (ai < n_params && params[ai][0])
+        var_set_str(vm, params[ai], L->cur.text);
+      lex_next(L);
+    } else {
+      if (oop_stmt_kw(L)) break;
+      {
+        long v = parse_expr(vm, L);
+        var_set_num(vm, an, v);
+        if (ai < n_params && params[ai][0])
+          var_set_num(vm, params[ai], v);
+      }
+    }
+    ai++;
+  }
+  var_set_num(vm, "NARGS", ai);
+  return ai;
+}
+static int oop_run_method(VM *vm, ObjInst *ob, MethodDef *md){
+  ClassDef *cd;
+  char save_this[48];
+  if (!ob || !md || ob->class_idx < 0 || ob->class_idx >= vm->n_classes)
+    return -1;
+  cd = &vm->classes[ob->class_idx];
+  snprintf(save_this, sizeof save_this, "%s", vm->this_obj);
+  snprintf(vm->this_obj, sizeof vm->this_obj, "%s", ob->name);
+  var_set_str(vm, "THIS", ob->name);
+  var_set_str(vm, "SELF", ob->name);
+  var_set_str(vm, "CLASS", cd->name);
+  var_set_num(vm, "CALLED", 1);
+  vm->return_fn = 0;
+  {
+    Lex fl;
+    lex_init(&fl, md->body, md->len);
+    if (exec_stmts_until(vm, &fl, "END", NULL) < 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", save_this);
+      return -1;
+    }
+  }
+  vm->return_fn = 0;
+  snprintf(vm->this_obj, sizeof vm->this_obj, "%s", save_this);
+  if (save_this[0]) {
+    var_set_str(vm, "THIS", save_this);
+    var_set_str(vm, "SELF", save_this);
+  }
+  return 0;
+}
+static int oop_new_instance(VM *vm, const char *cname, const char *oname,
+                            int cube_idx, Lex *L, int bind_ctor){
+  int ci = oop_find_class_idx(vm, cname);
+  ClassDef *cd;
+  ObjInst *ob;
+  int fi;
+  MethodDef *initm;
+  if (ci < 0) {
+    snprintf(vm->err, sizeof vm->err, "unknown CLASS %s", cname);
+    fail(vm, vm->err);
+    return -1;
+  }
+  if (oop_find_obj(vm, oname)) {
+    snprintf(vm->err, sizeof vm->err, "object redefine %s", oname);
+    fail(vm, vm->err);
+    return -1;
+  }
+  if (vm->n_objs >= CUBALC_MAX_OBJS) {
+    fail(vm, "too many objects");
+    return -1;
+  }
+  cd = &vm->classes[ci];
+  ob = &vm->objs[vm->n_objs++];
+  memset(ob, 0, sizeof *ob);
+  snprintf(ob->name, sizeof ob->name, "%s", oname);
+  ob->class_idx = ci;
+  ob->live = 1;
+  ob->cube_idx = cube_idx;
+  for (fi = 0; fi < cd->n_fields; fi++) {
+    FieldDef *fd = &cd->fields[fi];
+    if (fd->has_def && fd->is_str) {
+      snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", fd->def_str);
+      ob->fis_str[fi] = 1;
+    } else {
+      ob->fnum[fi] = fd->has_def ? fd->def_num : 0;
+      ob->fis_str[fi] = 0;
+    }
+  }
+  var_set_str(vm, oname, cname);
+  var_set_str(vm, "OBJECT", oname);
+  var_set_str(vm, "CLASS", cname);
+  if (!bind_ctor || !L) return 0;
+  initm = oop_find_method(cd, "init");
+  if (!initm) initm = oop_find_method(cd, "construct");
+  if (!initm) initm = oop_find_method(cd, "spawn");
+  if (!initm) initm = oop_find_method(cd, "new");
+  if (initm) {
+    oop_bind_args(vm, L, initm->params, initm->n_params);
+    if (oop_run_method(vm, ob, initm) < 0) return -1;
+  } else {
+    while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+           L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+           (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_STR) lex_next(L);
+      else (void)parse_expr(vm, L);
+    }
+  }
+  return 0;
+}
 
 int cubalc_lang_ops_flow(VM *vm, Lex *L){
-  /* plane ops_flow: L30475-31479 */
+  /* ---- OOP: CLASS / TYPE … FIELD … METHOD … END ---- */
+  if (kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "CLASS name"); return -1; }
+    char cname[48];
+    snprintf(cname, sizeof cname, "%s", L->cur.text);
+    lex_next(L);
+    skip_nl(L);
+    if (vm->n_classes >= CUBALC_MAX_CLASSES) {
+      fail(vm, "too many CLASS"); return -1;
+    }
+    if (oop_find_class(vm, cname)) {
+      snprintf(vm->err, sizeof vm->err, "CLASS redefine %s", cname);
+      fail(vm, vm->err); return -1;
+    }
+    {
+      ClassDef *cd = &vm->classes[vm->n_classes++];
+      memset(cd, 0, sizeof *cd);
+      snprintf(cd->name, sizeof cd->name, "%s", cname);
+      snprintf(cd->role, sizeof cd->role, "body");
+      for (;;) {
+        skip_nl(L);
+        if (L->cur.kind == TK_EOF) { fail(vm, "CLASS without END"); return -1; }
+        if (kw(&L->cur, "END")) { lex_next(L); break; }
+        if (kw(&L->cur, "FIELD") || kw(&L->cur, "VAR") || kw(&L->cur, "PROP") ||
+            kw(&L->cur, "MEMBER") || kw(&L->cur, "COMPONENT") ||
+            kw(&L->cur, "ATTR")) {
+          lex_next(L);
+          if (L->cur.kind != TK_IDENT) { fail(vm, "FIELD name"); return -1; }
+          if (cd->n_fields >= CUBALC_MAX_FIELDS) {
+            fail(vm, "too many FIELD"); return -1;
+          }
+          {
+            FieldDef *fd = &cd->fields[cd->n_fields++];
+            memset(fd, 0, sizeof *fd);
+            snprintf(fd->name, sizeof fd->name, "%s", L->cur.text);
+            lex_next(L);
+            if (L->cur.kind == TK_EQ) lex_next(L);
+            if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                L->cur.kind == TK_LPAREN) {
+              fd->def_num = parse_expr(vm, L);
+              fd->has_def = 1;
+              fd->is_str = 0;
+            } else if (L->cur.kind == TK_STR) {
+              snprintf(fd->def_str, sizeof fd->def_str, "%s", L->cur.text);
+              fd->is_str = 1;
+              fd->has_def = 1;
+              lex_next(L);
+            } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "FIELD") &&
+                       !kw(&L->cur, "METHOD") && !kw(&L->cur, "END") &&
+                       !kw(&L->cur, "ROLE") && !kw(&L->cur, "COMPONENT") &&
+                       !kw(&L->cur, "ATTR")) {
+              long v = parse_expr(vm, L);
+              fd->def_num = v;
+              fd->has_def = 1;
+              fd->is_str = 0;
+            }
+          }
+          continue;
+        }
+        if (kw(&L->cur, "ROLE")) {
+          lex_next(L);
+          if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+            snprintf(cd->role, sizeof cd->role, "%s", L->cur.text);
+            lex_next(L);
+          }
+          continue;
+        }
+        if (kw(&L->cur, "METHOD") || kw(&L->cur, "FN") || kw(&L->cur, "FUNC") ||
+            kw(&L->cur, "DEF") || kw(&L->cur, "UPDATE") || kw(&L->cur, "HANDLER")) {
+          lex_next(L);
+          if (L->cur.kind != TK_IDENT) { fail(vm, "METHOD name"); return -1; }
+          if (cd->n_methods >= CUBALC_MAX_METHODS) {
+            fail(vm, "too many METHOD"); return -1;
+          }
+          {
+            MethodDef *md = &cd->methods[cd->n_methods++];
+            size_t b0, b1;
+            int depth = 1;
+            memset(md, 0, sizeof *md);
+            snprintf(md->name, sizeof md->name, "%s", L->cur.text);
+            lex_next(L);
+            while (md->n_params < 8 && L->cur.kind == TK_IDENT &&
+                   !kw(&L->cur, "END") && !kw(&L->cur, "THEN")) {
+              snprintf(md->params[md->n_params], sizeof md->params[0], "%s",
+                       L->cur.text);
+              md->n_params++;
+              lex_next(L);
+            }
+            skip_nl(L);
+            b0 = L->tok_off;
+            while (L->cur.kind != TK_EOF) {
+              if (block_scan_step(L, &depth, 0)) break;
+            }
+            if (depth != 0) { fail(vm, "METHOD without END"); return -1; }
+            b1 = L->tok_off;
+            if (b1 < b0) b1 = b0;
+            md->body = L->s + b0;
+            md->len = b1 - b0;
+            if (kw(&L->cur, "END")) lex_next(L);
+          }
+          continue;
+        }
+        snprintf(vm->err, sizeof vm->err, "CLASS %s unknown form '%s'", cname,
+                 L->cur.text[0] ? L->cur.text : "?");
+        fail(vm, vm->err);
+        return -1;
+      }
+      var_set_str(vm, "CLASS", cname);
+      var_set_num(vm, "NFIELDS", cd->n_fields);
+      var_set_num(vm, "NMETHODS", cd->n_methods);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# CLASS %s fields=%d methods=%d\n", cname,
+                cd->n_fields, cd->n_methods);
+    }
+    bump(vm);
+    return 1;
+  }
+
+  /* NEW ClassName instance [ctor args…] */
+  if (kw(&L->cur, "NEW") || kw(&L->cur, "MAKE") || kw(&L->cur, "CREATE")) {
+    char cname[48], oname[48];
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "NEW ClassName"); return -1; }
+    snprintf(cname, sizeof cname, "%s", L->cur.text);
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "NEW instance name"); return -1; }
+    snprintf(oname, sizeof oname, "%s", L->cur.text);
+    lex_next(L);
+    if (oop_new_instance(vm, cname, oname, -1, L, 1) < 0) return -1;
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# NEW %s %s\n", cname, oname);
+    bump(vm);
+    return 1;
+  }
+
+  /* SPAWN ClassName name [args] — game: NEW + optional cube place */
+  if (kw(&L->cur, "SPAWN") || kw(&L->cur, "SPAWNENTITY") ||
+      kw(&L->cur, "SPAWN_UNIT")) {
+    char cname[48], oname[48];
+    ClassDef *cd;
+    int ci, proton = 1;
+    char role[48];
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SPAWN ClassName"); return -1; }
+    snprintf(cname, sizeof cname, "%s", L->cur.text);
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SPAWN name"); return -1; }
+    snprintf(oname, sizeof oname, "%s", L->cur.text);
+    lex_next(L);
+    ci = oop_find_class_idx(vm, cname);
+    if (ci < 0) {
+      snprintf(vm->err, sizeof vm->err, "SPAWN unknown CLASS %s", cname);
+      fail(vm, vm->err); return -1;
+    }
+    cd = &vm->classes[ci];
+    snprintf(role, sizeof role, "%s", cd->role[0] ? cd->role : "body");
+    while (L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur, "ROLE")) {
+        lex_next(L);
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(role, sizeof role, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else if (kw(&L->cur, "PROTON")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM) {
+          proton = L->cur.num ? 1 : 0;
+          lex_next(L);
+        }
+      } else break;
+    }
+    place_cube(vm, oname, role, proton);
+    if (oop_new_instance(vm, cname, oname, find_cube(vm, oname), L, 1) < 0)
+      return -1;
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "ENTITY", oname);
+    bump(vm);
+    return 1;
+  }
+
+  /* ENTITY name OF Class — alias CUBE OF for game engines (also handled in core) */
+  if (kw(&L->cur, "ENTITY") || kw(&L->cur, "ACTOR") || kw(&L->cur, "UNIT")) {
+    char id[48], of_class[48], role[48];
+    int proton = 1;
+    ClassDef *cd;
+    int ci;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) { fail(vm, "ENTITY id"); return -1; }
+    snprintf(id, sizeof id, "%s", L->cur.text);
+    lex_next(L);
+    of_class[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AS") || kw(&L->cur, "CLASS") ||
+        kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "ENTITY OF Class"); return -1; }
+      snprintf(of_class, sizeof of_class, "%s", L->cur.text);
+      lex_next(L);
+    }
+    snprintf(role, sizeof role, "%s", id);
+    while (L->cur.kind == TK_IDENT) {
+      if (kw(&L->cur, "ROLE")) {
+        lex_next(L);
+        if (L->cur.kind == TK_IDENT) {
+          snprintf(role, sizeof role, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else if (kw(&L->cur, "PROTON")) {
+        lex_next(L);
+        if (L->cur.kind == TK_NUM) {
+          proton = L->cur.num ? 1 : 0;
+          lex_next(L);
+        }
+      } else break;
+    }
+    if (!of_class[0]) { fail(vm, "ENTITY needs OF ClassName"); return -1; }
+    ci = oop_find_class_idx(vm, of_class);
+    if (ci < 0) {
+      snprintf(vm->err, sizeof vm->err, "ENTITY OF unknown CLASS %s", of_class);
+      fail(vm, vm->err); return -1;
+    }
+    cd = &vm->classes[ci];
+    if (strcmp(role, id) == 0 && cd->role[0])
+      snprintf(role, sizeof role, "%s", cd->role);
+    place_cube(vm, id, role, proton);
+    if (oop_new_instance(vm, of_class, id, find_cube(vm, id), L, 1) < 0)
+      return -1;
+    var_set_str(vm, "ENTITY", id);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SCENE name — tag current scene for engine plates */
+  if (kw(&L->cur, "SCENE") || kw(&L->cur, "LEVEL") || kw(&L->cur, "WORLD")) {
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(vm->scene, sizeof vm->scene, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      vm->scene[0] = 0;
+    }
+    var_set_str(vm, "SCENE", vm->scene);
+    var_set_str(vm, "LAST", vm->scene);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* TICK [n] — SEND tick/update to every live object, then optional FLOW n */
+  if (kw(&L->cur, "TICK") || kw(&L->cur, "UPDATE") || kw(&L->cur, "FRAME") ||
+      kw(&L->cur, "STEPWORLD")) {
+    long nflow = 0;
+    int i, ntick = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+        L->cur.kind == TK_MINUS ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+         strcmp(L->cur.text, "LAST") != 0)) {
+      /* only parse if looks numeric */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS)
+        nflow = parse_expr(vm, L);
+      else {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && !v->is_str) {
+          nflow = parse_expr(vm, L);
+        }
+      }
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      MethodDef *md;
+      if (!ob->live) continue;
+      cd = &vm->classes[ob->class_idx];
+      md = oop_find_method(cd, "tick");
+      if (!md) md = oop_find_method(cd, "update");
+      if (!md) md = oop_find_method(cd, "frame");
+      if (!md) continue;
+      var_set_num(vm, "NARGS", 0);
+      if (oop_run_method(vm, ob, md) < 0) return -1;
+      ntick++;
+    }
+    if (nflow > 0) do_flow(vm, (int)nflow);
+    var_set_num(vm, "TICK_N", ntick);
+    var_set_num(vm, "LAST_N", ntick);
+    vm->last_n = ntick;
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SEND obj method [args] */
+  if (kw(&L->cur, "SEND") || kw(&L->cur, "CALLMETHOD") || kw(&L->cur, "INVOKE") ||
+      kw(&L->cur, "DOMETHOD") || kw(&L->cur, "MSG") || kw(&L->cur, "EMIT")) {
+    char oname[48], mname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    MethodDef *md;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "SEND object"); return -1;
+    }
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SEND method"); return -1; }
+    snprintf(mname, sizeof mname, "%s", L->cur.text);
+    lex_next(L);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      snprintf(vm->err, sizeof vm->err, "SEND unknown object %s", oname);
+      fail(vm, vm->err); return -1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    md = oop_find_method(cd, mname);
+    if (!md) {
+      snprintf(vm->err, sizeof vm->err, "SEND unknown METHOD %s.%s", cd->name,
+               mname);
+      fail(vm, vm->err); return -1;
+    }
+    oop_bind_args(vm, L, md->params, md->n_params);
+    if (oop_run_method(vm, ob, md) < 0) return -1;
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* GETF obj field */
+  if (kw(&L->cur, "GETF") || kw(&L->cur, "GETFIELD") || kw(&L->cur, "FIELDGET") ||
+      kw(&L->cur, "READF")) {
+    char oname[48], fname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "GETF object"); return -1;
+    }
+    if (L->cur.kind != TK_IDENT) { fail(vm, "GETF field"); return -1; }
+    snprintf(fname, sizeof fname, "%s", L->cur.text);
+    lex_next(L);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      snprintf(vm->err, sizeof vm->err, "GETF unknown object %s", oname);
+      fail(vm, vm->err); return -1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      snprintf(vm->err, sizeof vm->err, "GETF unknown FIELD %s", fname);
+      fail(vm, vm->err); return -1;
+    }
+    if (ob->fis_str[fi]) {
+      var_set_str(vm, "LAST", ob->fstr[fi]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+      var_set_num(vm, "LAST_N", (long)strlen(ob->fstr[fi]));
+      vm->last_n = (long)strlen(ob->fstr[fi]);
+    } else {
+      char nb[32];
+      var_set_num(vm, "LAST_N", ob->fnum[fi]);
+      vm->last_n = ob->fnum[fi];
+      snprintf(nb, sizeof nb, "%ld", ob->fnum[fi]);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SETF obj field value */
+  if (kw(&L->cur, "SETF") || kw(&L->cur, "SETFIELD") || kw(&L->cur, "FIELDSET") ||
+      kw(&L->cur, "PUTF") || kw(&L->cur, "WRITEF")) {
+    char oname[48], fname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "SETF object"); return -1;
+    }
+    if (L->cur.kind != TK_IDENT) { fail(vm, "SETF field"); return -1; }
+    snprintf(fname, sizeof fname, "%s", L->cur.text);
+    lex_next(L);
+    if (L->cur.kind == TK_EQ) lex_next(L);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      snprintf(vm->err, sizeof vm->err, "SETF unknown object %s", oname);
+      fail(vm, vm->err); return -1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      snprintf(vm->err, sizeof vm->err, "SETF unknown FIELD %s", fname);
+      fail(vm, vm->err); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", L->cur.text);
+      ob->fis_str[fi] = 1;
+      var_set_str(vm, "LAST", L->cur.text);
+      lex_next(L);
+    } else {
+      long v = parse_expr(vm, L);
+      ob->fnum[fi] = v;
+      ob->fis_str[fi] = 0;
+      var_set_num(vm, "LAST_N", v);
+      vm->last_n = v;
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* ISOF obj ClassName */
+  if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
+      kw(&L->cur, "INSTANCEOF")) {
+    char oname[48], cname[48];
+    ObjInst *ob;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "ISOF object"); return -1;
+    }
+    if (L->cur.kind != TK_IDENT) { fail(vm, "ISOF ClassName"); return -1; }
+    snprintf(cname, sizeof cname, "%s", L->cur.text);
+    lex_next(L);
+    ob = oop_find_obj(vm, oname);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      hit = (strcmp(vm->classes[ob->class_idx].name, cname) == 0) ? 1 : 0;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* CLASSNAME obj */
+  if (kw(&L->cur, "CLASSNAME") || kw(&L->cur, "TYPEOF_OBJ") ||
+      kw(&L->cur, "OBJCLASS")) {
+    char oname[48];
+    ObjInst *ob;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "CLASSNAME object"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      var_set_num(vm, "OK", 0);
+      bump(vm); return 1;
+    }
+    {
+      ClassDef *cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, "LAST", cd->name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cd->name);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* plane ops_flow */
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")){
+    char fname[48];
+    char params[8][32];
+    int n_params = 0;
+    size_t b0, b1, blen;
+    int depth = 1;
+    FnDef *fn;
     lex_next(L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"FN name"); return -1; }
-    char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    memset(params, 0, sizeof params);
+    while (n_params < 8 && L->cur.kind == TK_IDENT &&
+           !kw(&L->cur, "END") && !kw(&L->cur, "THEN")) {
+      snprintf(params[n_params], sizeof params[0], "%s", L->cur.text);
+      n_params++;
+      lex_next(L);
+    }
     skip_nl(L);
-    /* capture body from first body token start until matching END */
-    size_t b0 = L->tok_off;
-    int depth=1;
+    b0 = L->tok_off;
     while (L->cur.kind!=TK_EOF){
       if (block_scan_step(L, &depth, 0)) break;
     }
     if (depth!=0){ fail(vm,"FN without END"); return -1; }
-    /* L parked on END; body ends at END's tok_off */
-    size_t b1 = L->tok_off;
+    b1 = L->tok_off;
     if (b1 < b0) b1 = b0;
-    size_t blen = b1 - b0;
-    if (vm->n_fns >= 32){ fail(vm,"too many FN"); return -1; }
-    FnDef *fn = &vm->fns[vm->n_fns++];
+    blen = b1 - b0;
+    if (vm->n_fns >= CUBALC_MAX_FNS){ fail(vm,"too many FN"); return -1; }
+    fn = &vm->fns[vm->n_fns++];
+    memset(fn, 0, sizeof *fn);
     snprintf(fn->name, sizeof fn->name, "%s", fname);
     fn->body = L->s + b0;
     fn->len = blen;
+    fn->n_params = n_params;
+    {
+      int pi;
+      for (pi = 0; pi < n_params; pi++)
+        snprintf(fn->params[pi], sizeof fn->params[0], "%s", params[pi]);
+    }
     if (kw(&L->cur,"END")) lex_next(L);
-    if (vm->trace) fprintf(vm->trace, "# FN %s len=%zu\n", fname, blen);
+    if (vm->trace) fprintf(vm->trace, "# FN %s params=%d len=%zu\n", fname, n_params, blen);
     bump(vm); return 1;
   }
   if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")||
       kw(&L->cur,"CALLIF")||kw(&L->cur,"CALLNZ")||kw(&L->cur,"CALLZ")||
       kw(&L->cur,"CALLWHEN")||kw(&L->cur,"CALLUNLESS")){
-    /* CALL name [args…]
-       CALLIF|CALLNZ cond name [args…] — call if cond != 0
-       CALLZ cond name [args…] — call if cond == 0
-       CALLUNLESS cond name — call if cond == 0 (alias CALLZ) */
     char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    char fname[48];
+    int mode = 0;
+    long cond = 1;
+    int do_call = 1;
+    FnDef *fn=NULL;
+    int i;
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
-    int mode = 0; /* 0=always, 1=if nz, 2=if z */
     if (strcmp(op,"CALLIF")==0 || strcmp(op,"CALLNZ")==0 || strcmp(op,"CALLWHEN")==0) mode = 1;
     else if (strcmp(op,"CALLZ")==0 || strcmp(op,"CALLUNLESS")==0) mode = 2;
-    long cond = 1;
-    if (mode){
-      cond = parse_expr(vm, L);
-    }
+    if (mode) cond = parse_expr(vm, L);
     if (L->cur.kind!=TK_IDENT){ fail(vm,"CALL name"); return -1; }
-    char fname[48]; snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
-    int do_call = 1;
+    snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
     if (mode == 1) do_call = (cond != 0);
     else if (mode == 2) do_call = (cond == 0);
     if (!do_call){
-      /* still consume optional args so lexer stays aligned */
       int ai=0;
       while (ai<8 && (L->cur.kind==TK_NUM||L->cur.kind==TK_IDENT||L->cur.kind==TK_STR||L->cur.kind==TK_MINUS||L->cur.kind==TK_LPAREN)){
+        if (oop_stmt_kw(L)) break;
         if (L->cur.kind==TK_STR){ lex_next(L); }
         else { (void)parse_expr(vm,L); }
         ai++;
@@ -62,27 +713,31 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm,"OK",1);
       bump(vm); return 1;
     }
-    FnDef *fn=NULL;
-    for (int i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
-    if (!fn){ snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname); fail(vm,vm->err); return -1; }
-    /* optional args: CALL name a b c → ARG0 ARG1 */
-    int ai=0;
-    while (ai<8 && (L->cur.kind==TK_NUM||L->cur.kind==TK_IDENT||L->cur.kind==TK_STR||L->cur.kind==TK_MINUS||L->cur.kind==TK_LPAREN)){
-      if (L->cur.kind==TK_STR){
-        char an[16]; snprintf(an,sizeof an,"ARG%d",ai);
-        var_set_str(vm, an, L->cur.text); lex_next(L);
-      } else {
-        long v=parse_expr(vm,L);
-        char an[16]; snprintf(an,sizeof an,"ARG%d",ai);
-        var_set_num(vm, an, v);
+    /* CALL obj method — OOP sugar when first name is a live object */
+    {
+      ObjInst *ob = oop_find_obj(vm, fname);
+      if (ob && L->cur.kind == TK_IDENT) {
+        ClassDef *cd = &vm->classes[ob->class_idx];
+        MethodDef *md = oop_find_method(cd, L->cur.text);
+        if (md) {
+          lex_next(L);
+          oop_bind_args(vm, L, md->params, md->n_params);
+          if (oop_run_method(vm, ob, md) < 0) return -1;
+          var_set_num(vm, "OK", 1);
+          bump(vm);
+          return 1;
+        }
       }
-      ai++;
     }
-    var_set_num(vm, "NARGS", ai);
+    for (i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
+    if (!fn){ snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname); fail(vm,vm->err); return -1; }
+    oop_bind_args(vm, L, fn->params, fn->n_params);
     var_set_num(vm, "CALLED", 1);
     vm->return_fn = 0;
-    Lex fl; lex_init(&fl, fn->body, fn->len);
-    if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
+    {
+      Lex fl; lex_init(&fl, fn->body, fn->len);
+      if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
+    }
     vm->return_fn = 0;
     bump(vm); return 1;
   }

@@ -457,6 +457,7 @@ static int cubalc_walk_match(const char *pat, const char *name) {
 /* Parse human duration → milliseconds (SYS PARSEMS rules).
  * Single: "250"/"250ms"/"5s"/"2m"/"1h"/"1d"/"1w".
  * Compound: "1h30m", "2m 15s", "1s250ms" (spaces ok). Bare number = ms.
+ * Optional leading + or - (whole duration sign). Rejects strtoull wrap on "-".
  * Returns 0 on success; -1 on empty/bad. Optional segs_out / err_out. */
 static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out,
                                     const char **err_out) {
@@ -464,7 +465,7 @@ static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out
   char *end = NULL;
   char unit[16];
   unsigned long long total = 0, n = 0, mul = 1, add = 0;
-  int ui = 0, segs = 0, bad = 0;
+  int ui = 0, segs = 0, bad = 0, sign = 1;
   const char *err = NULL;
   if (ms_out) *ms_out = 0;
   if (segs_out) *segs_out = 0;
@@ -472,6 +473,19 @@ static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out
   p = src ? src : "";
   while (*p == ' ' || *p == '\t') p++;
   if (!*p) {
+    err = "PARSEMS: empty";
+    bad = 1;
+  }
+  /* leading sign applies to whole duration (ADDISO "-30s"); avoid strtoull wrap */
+  if (!bad && *p == '+') {
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+  } else if (!bad && *p == '-') {
+    sign = -1;
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+  }
+  if (!bad && !*p) {
     err = "PARSEMS: empty";
     bad = 1;
   }
@@ -546,7 +560,17 @@ static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out
     return -1;
   }
   if (total > (unsigned long long)LONG_MAX) total = (unsigned long long)LONG_MAX;
-  if (ms_out) *ms_out = (long)total;
+  if (ms_out) {
+    if (sign < 0) {
+      /* clamp -LONG_MAX..0 (avoid LONG_MIN edge) */
+      if (total >= (unsigned long long)LONG_MAX)
+        *ms_out = -LONG_MAX;
+      else
+        *ms_out = -(long)total;
+    } else {
+      *ms_out = (long)total;
+    }
+  }
   if (segs_out) *segs_out = segs;
   return 0;
 }
@@ -24729,8 +24753,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int p=1; if (L->cur.kind==TK_NUM){ p=L->cur.num?1:0; lex_next(L); }
     cubalc_chain_impulse(&vm->ch,id,(uint8_t)p); bump(vm); return 1;
   }
-  /* FLOW [DIR|IO] n — free-flow energy; DIR respects OUT→IN only (pluggable I/O) */
-  if (kw(&L->cur,"FLOW")||kw(&L->cur,"TICK")){
+  /* FLOW [DIR|IO] n — free-flow energy; DIR respects OUT→IN only (pluggable I/O).
+   * TICK is reserved for COP engine world-step (METHOD tick on objects) in ops_flow. */
+  if (kw(&L->cur,"FLOW")||kw(&L->cur,"ENERGY_TICK")||kw(&L->cur,"BOARD_TICK")){
     lex_next(L);
     int directed = 0;
     if (kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTED")||kw(&L->cur,"IO")||kw(&L->cur,"OUT")){
@@ -24757,7 +24782,18 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   if (kw(&L->cur,"HELP")||kw(&L->cur,"MAN")||kw(&L->cur,"DOC")){
     static const struct { const char *name; const char *hint; } help[] = {
       {"HOLD_FLASH", "HOLD_FLASH 0|1 — device/firmware safeguard; default 1 (omit preamble)"},
-      {"CUBE", "CUBE name ROLE host|body PROTON 0|1"},
+      {"CUBE", "CUBE name [OF Class] ROLE host|body PROTON 0|1 — COP unit"},
+      {"CLASS", "CLASS Name · FIELD · METHOD … END — OOP type (COP upgrade)"},
+      {"NEW", "NEW Class instance [args] — construct object (calls init)"},
+      {"SEND", "SEND obj method [args] — message / method call (THIS set)"},
+      {"GETF", "GETF obj field — read FIELD → LAST/LAST_N"},
+      {"SETF", "SETF obj field value — write FIELD"},
+      {"ENTITY", "ENTITY name OF Class — game unit = CUBE OF + object"},
+      {"SPAWN", "SPAWN Class name [ROLE] [PROTON] [args] — engine spawn"},
+      {"TICK", "TICK [n] — SEND tick/update/frame to all objects + optional FLOW n"},
+      {"SCENE", "SCENE name — tag current engine scene/level"},
+      {"FN", "FN name [params] … END — reusable function · CALL / RET"},
+      {"CALL", "CALL name|obj method [args] — FN or object method"},
       {"PLUG", "PLUG a b — wire cubes (denied only if HOLD_FLASH 0; default 1)"},
       {"IMPULSE", "IMPULSE cube [0|1] — pulse proton"},
       {"FLOW", "FLOW n — board ticks"},
