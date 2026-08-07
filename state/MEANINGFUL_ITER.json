@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 384,
-  "version": "1.15.411-usability",
-  "item": "PUSHF/POPF/POPHEADF bag queue on fields",
-  "item_id": 420,
-  "title": "PUSHF|POPF|POPHEADF|UNSHIFTF — bag queue on object fields",
-  "commit": "e0a7e076d7f4c2936c0b5708da95e981b59c4317",
-  "summary": "Worklist LIFO/FIFO without GETF+SYS PUSH/POP+SETF. Soft miss. proof 961 57/57.",
+  "iter": 385,
+  "version": "1.15.412-usability",
+  "item": "GREPF/GREPVF bag line filter on fields",
+  "item_id": 421,
+  "title": "GREPF|GREPVF|GREPFI — filter bag lines in object field",
+  "commit": "2ef01483df096c1395b156751961b81d35b9e7cf",
+  "summary": "Field bag grep without GETF+SYS GREP+SETF. Soft miss. proof 962 47/47.",
   "proofs": [
-    "961_oop_pushf",
-    "asserts 57/57",
-    "960 still green"
+    "962_oop_grepf",
+    "asserts 47/47",
+    "961 still green"
   ],
-  "when": "2026-08-07T17:55:24Z",
+  "when": "2026-08-07T18:06:51Z",
   "agent": "meaningful_iter_10m",
-  "sha": "e0a7e076d7f4c2936c0b5708da95e981b59c4317",
-  "note": "PUSHF_N/POPF_HIT/POPHEADF; not string PREPENDF"
+  "sha": "2ef01483df096c1395b156751961b81d35b9e7cf",
+  "note": "Restored thrash wipe first; GREPF_N/HIT/TOTAL"
 }
