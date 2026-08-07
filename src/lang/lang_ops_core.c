@@ -15924,21 +15924,22 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
      * — epoch + seconds for lease/deadline plates (dual of TIMEDIFF subtract).
      * Two args: LAST_N = a + b. One arg: LAST_N = prior LAST_N + a.
      * Zero args: LAST_N unchanged (no-op add 0). LAST = decimal epoch.
-     * SYS DEADLINE|EXPIRESAT|UNTIL [secs]
+     * Offset args may be PARSEMS duration strings ("5m","30s","1h30m") → floor ms/1000.
+     * SYS DEADLINE|EXPIRESAT|UNTIL [secs|"duration"]
      * — wall now + secs → LAST_N epoch (lease expiry stamp).
-     * Zero args: now + prior LAST_N. Usability: leases without shell date -d.
-     * Pair with TIMEDIFF / PARSEMS(/1000) / FROMTIME for plate SLAs. */
+     * Zero args: now + prior LAST_N. Usability: leases without PARSEMS+MS2SEC glue.
+     * Soft-fail bad duration (OK=0). Pair with EXPIRED/REMAINING/FROMTIME. */
     if (kw(&L->cur,"ADDTIME") || kw(&L->cur,"ADDEPOCH") || kw(&L->cur,"PLUSSECS") ||
         kw(&L->cur,"EPOCHADD") || kw(&L->cur,"TIMEADD") || kw(&L->cur,"ADDSECS") ||
         kw(&L->cur,"PLUSTIME") ||
         kw(&L->cur,"DEADLINE") || kw(&L->cur,"EXPIRESAT") || kw(&L->cur,"UNTIL") ||
         kw(&L->cur,"EXPIREAT") || kw(&L->cur,"LEASEEND") || kw(&L->cur,"DUEAT") ||
         kw(&L->cur,"NOWPLUS")){
-      char op[24];
+      char op[24], src[256], buf[40];
       int is_deadline = 0;
-      long a = 0, b = 0, outn = 0, now;
+      long a = 0, b = 0, outn = 0, now, ms = 0;
       int has_a = 0, has_b = 0;
-      char buf[40];
+      const char *derr = NULL;
       snprintf(op, sizeof op, "%s", L->cur.text);
       for (char *p = op; *p; p++)
         if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
@@ -15947,18 +15948,128 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
                      strcmp(op, "LEASEEND") == 0 || strcmp(op, "DUEAT") == 0 ||
                      strcmp(op, "NOWPLUS") == 0);
       lex_next(L);
-      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
-          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
-           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+      /* arg a: number secs or duration string → floor(ms/1000) secs */
+      src[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+          if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+            var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+            bump(vm); return 1;
+          }
+          a = ms / 1000L;
+          has_a = 1;
+        }
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                 !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+            if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+              var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+              bump(vm); return 1;
+            }
+            a = ms / 1000L;
+            has_a = 1;
+          }
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+              if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                var_set_str(vm, "LAST", "");
+                vm->last_str[0] = 0;
+                vm->last_n = 0;
+                var_set_num(vm, "LAST_N", 0);
+                var_set_num(vm, "OK", 0);
+                var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+                var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+                bump(vm); return 1;
+              }
+              a = ms / 1000L;
+              has_a = 1;
+            }
+          } else {
+            a = parse_expr(vm, L);
+            has_a = 1;
+          }
+        }
+      } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
         a = parse_expr(vm, L);
         has_a = 1;
       }
-      if (!is_deadline &&
-          (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
-           (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
-            !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")))){
-        b = parse_expr(vm, L);
-        has_b = 1;
+      /* ADDTIME second arg: same number|duration rules */
+      if (!is_deadline) {
+        src[0] = 0;
+        derr = NULL;
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+            if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+              var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+              bump(vm); return 1;
+            }
+            b = ms / 1000L;
+            has_b = 1;
+          }
+        } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                   !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+          if (strcmp(L->cur.text, "LAST") == 0) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+              if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                var_set_str(vm, "LAST", "");
+                vm->last_str[0] = 0;
+                vm->last_n = 0;
+                var_set_num(vm, "LAST_N", 0);
+                var_set_num(vm, "OK", 0);
+                var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+                var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+                bump(vm); return 1;
+              }
+              b = ms / 1000L;
+              has_b = 1;
+            }
+          } else {
+            Var *sv = var_get(vm, L->cur.text, 0);
+            if (sv && sv->is_str) {
+              if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+                if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                  var_set_str(vm, "LAST", "");
+                  vm->last_str[0] = 0;
+                  vm->last_n = 0;
+                  var_set_num(vm, "LAST_N", 0);
+                  var_set_num(vm, "OK", 0);
+                  var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+                  var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+                  bump(vm); return 1;
+                }
+                b = ms / 1000L;
+                has_b = 1;
+              }
+            } else {
+              b = parse_expr(vm, L);
+              has_b = 1;
+            }
+          }
+        } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
+          b = parse_expr(vm, L);
+          has_b = 1;
+        }
       }
       now = (long)time(NULL);
       if (is_deadline) {
@@ -15966,6 +16077,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           outn = now + a;
         else
           outn = now + vm->last_n;
+        /* surface offset used for plates (seconds) */
+        var_set_num(vm, "DEADLINE_SECS", has_a ? a : vm->last_n);
+        var_set_num(vm, "LEASE_SECS", has_a ? a : vm->last_n);
       } else {
         if (has_a && has_b)
           outn = a + b;
@@ -24815,9 +24929,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TIMEDIFF", "SYS TIMEDIFF|ELAPSED a [b] — epoch delta seconds · a-b or now-a"},
       {"SYS ELAPSED", "SYS ELAPSED a [b] — alias of SYS TIMEDIFF"},
       {"SYS DELTA", "SYS DELTA a [b] — alias of SYS TIMEDIFF"},
-      {"SYS ADDTIME", "SYS ADDTIME|ADDEPOCH a [b] — epoch + seconds · dual of TIMEDIFF"},
-      {"SYS DEADLINE", "SYS DEADLINE|EXPIRESAT [secs] — now + secs → lease expiry epoch"},
-      {"SYS EXPIRESAT", "SYS EXPIRESAT [secs] — alias of SYS DEADLINE"},
+      {"SYS ADDTIME", "SYS ADDTIME|ADDEPOCH a [b] — epoch + secs or duration (\"5m\") · dual TIMEDIFF"},
+      {"SYS DEADLINE", "SYS DEADLINE|EXPIRESAT [secs|\"5m\"|\"30s\"] — now + lease → expiry epoch"},
+      {"SYS EXPIRESAT", "SYS EXPIRESAT [secs|duration] — alias of SYS DEADLINE"},
       {"SYS EXPIRED", "SYS EXPIRED|ISEXPIRED [epoch] — LAST_N 1 if now>=epoch · lease due"},
       {"SYS REMAINING", "SYS REMAINING|TTL [epoch] — max(0,epoch-now) secs left · lease TTL"},
       {"SYS TTL", "SYS TTL [epoch] — alias of SYS REMAINING"},
