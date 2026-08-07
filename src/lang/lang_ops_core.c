@@ -1233,6 +1233,79 @@ static long cubalc_collect_listflags(char *out, size_t outn) {
   return count;
 }
 
+/* Collect CLI flags as name=value bag for agent plates.
+ * --mode=fast → mode=fast; bare --verbose → verbose=1 (does NOT consume next
+ * token — keeps files after bool flags for RESTARGS/FLAGMAP coexistence).
+ * Prefer --name=value for non-bool values (GETFLAG still supports space form).
+ * Usability: FLAGMAP + SYS LOOKUP sep "=" without EACH GETFLAG. */
+static long cubalc_collect_flagmap(char *out, size_t outn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k;
+  size_t o = 0;
+  long count = 0;
+  int end_flags = 0;
+  if (out && outn) out[0] = 0;
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a, *p, *eq;
+    char name[96], val[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+    size_t llen, room;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || !a[0]) continue;
+    if (end_flags) break;
+    if (!(a[0] == '-' && a[1] != 0))
+      continue;
+    if (a[1] == '-' && a[2] == 0) {
+      end_flags = 1;
+      continue;
+    }
+    p = a + 1;
+    if (*p == '-') p++;
+    eq = strchr(p, '=');
+    if (eq) {
+      size_t nlen = (size_t)(eq - p);
+      if (nlen >= sizeof name) nlen = sizeof name - 1;
+      memcpy(name, p, nlen);
+      name[nlen] = 0;
+      snprintf(val, sizeof val, "%s", eq + 1);
+    } else {
+      /* bare --name → bool "1"; do not steal following positionals */
+      snprintf(name, sizeof name, "%s", p);
+      snprintf(val, sizeof val, "1");
+    }
+    if (!name[0]) continue;
+    snprintf(line, sizeof line, "%s=%s", name, val);
+    llen = strlen(line);
+    if (out && outn > 1) {
+      if (count > 0 && o + 1 < outn)
+        out[o++] = '\n';
+      room = outn - o - 1;
+      if (llen > room) llen = room;
+      if (llen > 0) {
+        memcpy(out + o, line, llen);
+        o += llen;
+      }
+      out[o] = 0;
+    }
+    count++;
+  }
+  return count;
+}
+
 /* Append sticky USAGE var to REQUIRE fail messages (room-limited).
  * Usability: agents set USAGE once; ARG/ARGC/FLAG fails show the contract. */
 static void cubalc_append_usage_tip(VM *vm, char *msg, size_t n) {
@@ -26121,6 +26194,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
       {"LISTFLAGS", "LISTFLAGS|FLAGS — bag of flag names (no dashes) from CUBALC_ARGn · LAST_N=count"},
       {"FLAGS", "FLAGS alias of LISTFLAGS — discover --flags without EACH ARGS"},
+      {"FLAGMAP", "FLAGMAP|FLAGKV — bag of name=value for every --flag · LOOKUP without GETFLAG each"},
+      {"FLAGKV", "FLAGKV alias of FLAGMAP"},
       {"NTHPOS", "NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional"},
       {"POSN", "POSN alias of NTHPOS — first/second file without RESTARGS+NTH"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
@@ -28545,6 +28620,28 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# listflags n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* FLAGMAP|FLAGKV — newline bag of name=value for every CLI flag.
+   * LAST = bag · LAST_N / FLAGMAP_N = count · OK=1.
+   * Usability: SYS LOOKUP LAST "mode" without GETFLAG per key / EACH. */
+  if (kw(&L->cur,"FLAGMAP") || kw(&L->cur,"FLAGKV") || kw(&L->cur,"FLAGPAIRS") ||
+      kw(&L->cur,"OPTMAP") || kw(&L->cur,"CLI_FLAGMAP") || kw(&L->cur,"FLAGS_KV") ||
+      kw(&L->cur,"KVFLAGS")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_flagmap(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAGMAP", bag);
+    var_set_str(vm, "FLAGKV", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "FLAGMAP_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# flagmap n=%ld\n", n);
     bump(vm); return 1;
   }
   /* NTHPOS|POSN index [OR fallback] — peel 0-based non-flag positional.

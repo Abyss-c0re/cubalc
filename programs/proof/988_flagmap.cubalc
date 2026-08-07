@@ -1,0 +1,58 @@
+# FLAGMAP / FLAGKV — name=value bag for every CLI flag (LOOKUP-ready)
+# Bare --flag → value "1" (does not consume following files). Prefer --name=val.
+
+HOLD_FLASH 1
+
+# empty
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV SET CUBALC_ARGC "0"
+FLAGMAP
+ASSERT LAST_N == 0
+
+# --mode=fast + bare --verbose + file
+SYS ENV SET CUBALC_ARG0 "--mode=fast"
+SYS ENV SET CUBALC_ARG1 "--verbose"
+SYS ENV SET CUBALC_ARG2 "a.txt"
+SYS ENV SET CUBALC_ARGC "3"
+FLAGMAP
+ASSERT LAST_N == 2
+SYS LOOKUP LAST "mode" "="
+ASSERT LAST == "fast"
+FLAGMAP
+SYS LOOKUP LAST "verbose" "="
+ASSERT LAST == "1"
+
+# --name=value form (preferred for non-bool)
+SYS ENV SET CUBALC_ARG0 "--out=hi.txt"
+SYS ENV SET CUBALC_ARG1 "-n=3"
+SYS ENV SET CUBALC_ARGC "2"
+FLAGKV
+ASSERT LAST_N == 2
+SYS LOOKUP LAST "out" "="
+ASSERT LAST == "hi.txt"
+FLAGKV
+SYS LOOKUP LAST "n" "="
+ASSERT LAST == "3"
+
+# bare -- ends; after not mapped
+SYS ENV SET CUBALC_ARG0 "--dry=1"
+SYS ENV SET CUBALC_ARG1 "--"
+SYS ENV SET CUBALC_ARG2 "--fake=x"
+SYS ENV SET CUBALC_ARGC "3"
+FLAGMAP
+ASSERT LAST_N == 1
+SYS LOOKUP LAST "dry" "="
+ASSERT LAST == "1"
+
+# pairs with LISTFLAGS count
+SYS ENV SET CUBALC_ARG0 "--a=1"
+SYS ENV SET CUBALC_ARG1 "--b=2"
+SYS ENV SET CUBALC_ARGC "2"
+LISTFLAGS
+ASSERT LAST_N == 2
+FLAGMAP
+ASSERT LAST_N == 2
+
+PRINT "flagmap ok"
