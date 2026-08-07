@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 395,
-  "version": "1.15.422-usability",
-  "item": "ASSERT/EXPECT got/expected",
-  "item_id": 431,
-  "title": "ASSERT/EXPECT cmp fail shows got/expected + ASSERT_GOT knobs",
-  "commit": "b5a93a4eec813113c871bcbc42aa26e2f616d124",
-  "summary": "Comparison fails report 3 == 1 is false; ASSERT_GOT/EXPECTED/OP. proof 972 20/20.",
+  "iter": 396,
+  "version": "1.15.423-usability",
+  "item": "CALL/SEND arity check",
+  "item_id": 432,
+  "title": "CALL/SEND/NEW under-arity → needs N got M + ARITY knobs",
+  "commit": "10fca573e2c774608719b367b9f24c6528efe55e",
+  "summary": "Under-arity errors with params list; soft TRY*; clear unbound formals. proof 973 18/18.",
   "proofs": [
-    "972_assert_got_expected",
-    "asserts 20/20",
-    "smoke 3==1 is false · string · why · falsey"
+    "973_call_send_arity",
+    "asserts 18/18",
+    "smoke CALL needs 2 · SEND needs 1 · NEW init needs 1"
   ],
-  "when": "2026-08-07T19:57:11Z",
+  "when": "2026-08-07T20:07:09Z",
   "agent": "meaningful_iter_10m",
-  "sha": "b5a93a4eec813113c871bcbc42aa26e2f616d124",
-  "note": "parse_cmp records last_cmp_*; assert_fail_msg formats"
+  "sha": "10fca573e2c774608719b367b9f24c6528efe55e",
+  "note": "thrash restored before implement; oop_arity_gate"
 }
