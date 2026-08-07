@@ -1,0 +1,86 @@
+# SENDWHERE / INVOKEWHERE — call method on objs matching field equality
+# Usability: WHEREOBJ + SENDALL one-shot · no EACH+GETF+IF+SEND
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 4 0
+NEW Cell b 1 0 0
+NEW Cell c 1 4 0
+NEW Cell d 1 0 0
+
+CLASS Counter
+  FIELD n 0
+  FIELD tag 0
+  METHOD init x t
+    SETF THIS n x
+    SETF THIS tag t
+  END
+  METHOD add d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+  END
+  METHOD bump
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+  END
+END
+NEW Counter k1 0 1
+NEW Counter k2 10 2
+NEW Counter k3 0 1
+
+# tick only cells with energy 4 (alive-ish)
+SENDWHERE Cell energy 4 tick
+ASSERT OK == 1
+ASSERT SENDWHERE_N == 2
+ASSERT LAST_N == 2
+GETF a energy
+ASSERT LAST_N >= 4
+GETF b energy
+ASSERT LAST_N == 0 "energy-0 cells not ticked"
+
+# INVOKEWHERE alias + method with args
+INVOKEWHERE Counter tag 1 add 5
+ASSERT INVOKEWHERE_N == 2
+GETF k1 n
+ASSERT LAST_N == 5
+GETF k3 n
+ASSERT LAST_N == 5
+GETF k2 n
+ASSERT LAST_N == 10 "tag 2 not called"
+
+# OF sugar + no-arg method
+SENDWHERE OF Counter tag 2 bump
+ASSERT SENDWHERE_N == 1
+GETF k2 n
+ASSERT LAST_N == 11
+
+# string method name
+SENDWHERE Counter tag 1 "bump"
+ASSERT SENDWHERE_N == 2
+GETF k1 n
+ASSERT LAST_N == 6
+
+# missing method soft skip (stable field, not energy after tick)
+SENDWHERE Counter tag 1 no_meth_zz
+ASSERT OK == 1
+ASSERT SENDWHERE_N == 0
+ASSERT SENDWHERE_SKIP == 2
+
+# empty match soft
+SENDWHERE Cell energy 999 tick
+ASSERT OK == 1
+ASSERT SENDWHERE_N == 0
+
+# bare field (no class) — Counters with n==6 after bumps
+SENDWHERE n 6 bump
+ASSERT SENDWHERE_N == 2 "k1 k3"
+GETF k1 n
+ASSERT LAST_N == 7
+GETF k3 n
+ASSERT LAST_N == 7
+
+PRINT "oop_sendwhere ok"
