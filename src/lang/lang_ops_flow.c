@@ -11076,6 +11076,125 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* FNINFO|DUMPFN|DESCRIBEFN [JSON] name
+   * — FN arity/params plate for agent CALL prep (twin of METHODINFO for SEND).
+   * Default bag: name/n_params/params. JSON → cubalc.fn.v1.
+   * Soft OK=0 if FN missing. Sets NPARAMS/ARITY/FNINFO_N, PARAMS, FN. */
+  if (kw(&L->cur, "FNINFO") || kw(&L->cur, "DUMPFN") ||
+      kw(&L->cur, "DESCRIBEFN") || kw(&L->cur, "FUNCINFO") ||
+      kw(&L->cur, "INSPECTFN") || kw(&L->cur, "FNMETA") ||
+      kw(&L->cur, "FNDEF") || kw(&L->cur, "FNSCHEMA") ||
+      kw(&L->cur, "FUNCTIONINFO") || kw(&L->cur, "FNARITY") ||
+      kw(&L->cur, "DESCRIBEFUNC") || kw(&L->cur, "DUMPFUNC")) {
+    char fname[48], bag[2048], pbag[512];
+    FnDef *fn = NULL;
+    size_t o = 0, po = 0;
+    int i, as_json = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional FN|FUNC keyword before name */
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF") || kw(&L->cur, "NAME"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "FNINFO [JSON] name"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_fns; i++) {
+      if (strcmp(vm->fns[i].name, fname) == 0) {
+        fn = &vm->fns[i];
+        break;
+      }
+    }
+    bag[0] = 0;
+    pbag[0] = 0;
+    if (!fn) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NPARAMS", 0);
+      var_set_num(vm, "FNINFO_N", 0);
+      var_set_num(vm, "ARITY", 0);
+      var_set_str(vm, "FNINFO", "");
+      var_set_str(vm, "PARAMS", "");
+      var_set_str(vm, "FN", fname);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "FNINFO: unknown FN");
+      var_set_str(vm, "ERR", "FNINFO: unknown FN");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < fn->n_params; i++) {
+      size_t ln = strlen(fn->params[i]);
+      if (i > 0 && po + 1 < sizeof pbag) pbag[po++] = ',';
+      if (po + ln < sizeof pbag) {
+        memcpy(pbag + po, fn->params[i], ln);
+        po += ln;
+      }
+      pbag[po] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.fn.v1\",\"name\":\"%s\","
+          "\"n_params\":%d,\"params\":[",
+          fn->name, fn->n_params);
+      for (i = 0; i < fn->n_params && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"", fn->params[i]);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nn_params:%d\nparams:%s",
+          fn->name, fn->n_params, pbag);
+      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FNINFO", bag);
+    var_set_str(vm, "DUMPFN", bag);
+    var_set_str(vm, "DESCRIBEFN", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = fn->n_params;
+    var_set_num(vm, "LAST_N", fn->n_params);
+    var_set_num(vm, "NPARAMS", fn->n_params);
+    var_set_num(vm, "FNINFO_N", fn->n_params);
+    var_set_num(vm, "ARITY", fn->n_params);
+    var_set_str(vm, "FN", fn->name);
+    var_set_str(vm, "PARAMS", pbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* DUMPOBJ|INSPECT|OBJDUMP|DUMPF obj — field:value bag of live object state.
    * Complements LISTFIELDS (names only): one-shot snapshot for agents without
    * EACH+GETF. LAST = newline bag field:val (LOOKUP/KVGET ready); LAST_N =

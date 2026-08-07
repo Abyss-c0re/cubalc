@@ -1,0 +1,125 @@
+# FNINFO / DUMPFN — FN arity/params plate for agent CALL prep
+# Usability: twin of METHODINFO · no guess of formals before CALL
+
+HOLD_FLASH 1
+
+FN add a b
+  LET s = a + b
+  RET s
+END
+
+FN greet name
+  RET name
+END
+
+FN ping
+  RET 1
+END
+
+# multi-param
+FNINFO add
+ASSERT OK == 1
+ASSERT FNINFO_N == 2
+ASSERT NPARAMS == 2
+ASSERT ARITY == 2
+ASSERT LAST_N == 2
+SYS EQS FN "add"
+ASSERT LAST_N == 1
+SYS HAS LAST "name:add"
+ASSERT LAST_N == 1
+SYS HAS LAST "n_params:2"
+ASSERT LAST_N == 1
+SYS HAS LAST "params:"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "a"
+ASSERT LAST_N == 1
+SYS HAS PARAMS "b"
+ASSERT LAST_N == 1
+
+# one param
+FNINFO greet
+ASSERT OK == 1
+ASSERT NPARAMS == 1
+ASSERT ARITY == 1
+SYS EQS PARAMS "name"
+ASSERT LAST_N == 1
+
+# zero params
+FNINFO ping
+ASSERT OK == 1
+ASSERT NPARAMS == 0
+ASSERT ARITY == 0
+SYS EQS PARAMS ""
+ASSERT LAST_N == 1
+SYS HAS LAST "n_params:0"
+ASSERT LAST_N == 1
+
+# JSON plate
+FNINFO JSON add
+ASSERT OK == 1
+SYS HAS LAST "cubalc.fn.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"name\":\"add\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"n_params\":2"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"params\":["
+ASSERT LAST_N == 1
+SYS HAS LAST "\"a\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"b\""
+ASSERT LAST_N == 1
+
+# FN keyword sugar
+FNINFO FN greet
+ASSERT NPARAMS == 1
+
+# string name
+FNINFO "ping"
+ASSERT OK == 1
+ASSERT ARITY == 0
+
+# dynamic name var
+LET f = "add"
+FNINFO f
+ASSERT OK == 1
+ASSERT NPARAMS == 2
+SYS EQS FN "add"
+ASSERT LAST_N == 1
+
+# aliases
+DUMPFN ping
+ASSERT OK == 1
+ASSERT ARITY == 0
+DESCRIBEFN JSON greet
+SYS HAS LAST "cubalc.fn.v1"
+ASSERT LAST_N == 1
+FUNCINFO add
+ASSERT NPARAMS == 2
+FNARITY greet
+ASSERT FNINFO_N == 1
+INSPECTFN ping
+ASSERT ARITY == 0
+
+# CALL still works after inspect
+CALL add 3 4
+ASSERT LAST_N == 7
+
+# unknown soft miss
+FNINFO nosuch
+ASSERT OK == 0
+ASSERT NPARAMS == 0
+ASSERT FNINFO_N == 0
+ASSERT ARITY == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "unknown"
+ASSERT LAST_N == 1
+
+# HELP discoverable
+HELP FNINFO
+ASSERT OK == 1
+SYS HAS LAST "FNINFO"
+ASSERT LAST_N == 1
+
+NOTE "930_fn_fninfo ok"

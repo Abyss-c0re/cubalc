@@ -416,6 +416,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 386. ~~**`SHUFFLEOBJS` / `SHUFOBJS` / `PERMUTEOBJS`**~~ **done** (shuffle live object names · no LISTOBJS+SYS SHUFFLE glue).
 387. ~~**`CLASSINFO` / `DUMPCLASS` / `DESCRIBECLASS`**~~ **done** (class schema plate fields/methods/live · no LISTFIELDS+LISTMETHODS+count glue).
 388. ~~**`METHODINFO` / `DUMPMETHOD` / `DESCRIBEMETHOD`**~~ **done** (method arity/params plate · no HASMETHOD-only guess for SEND).
+389. ~~**`FNINFO` / `DUMPFN` / `DESCRIBEFN`**~~ **done** (FN arity/params plate · no guess of formals for CALL · twin of METHODINFO).
 
 ## Tick protocol
 
