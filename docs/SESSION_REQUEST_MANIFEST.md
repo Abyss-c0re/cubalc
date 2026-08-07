@@ -70,7 +70,7 @@ Status legend: **DONE** · **PARTIAL** · **OPEN** · **ACTIVE** · **SUPERSEDED
 | `TICK` vs board `FLOW` | Core treated `TICK` as `FLOW` alias | Split: **`TICK`** = world methods; **`FLOW`** = energy |
 | products/cubalc sync | Standing order B4 not kept current | **Still open** — lab ahead of products snapshot |
 | Life-sim / streaming research | Research requested; no permanent bridge docs | **PARTIAL** — optional follow-up docs |
-| Maturity deep-research | User launched mid-session | **ACTIVE** workflow |
+| Maturity deep-research | Analyzed stale 1.5.0-flow tree | **DONE** — see `docs/MATURITY.md` (corrected vs tip) |
 
 ---
 
@@ -93,9 +93,9 @@ realworld:   programs/realworld/ (100+ boards)
 
 ## E. Recommended next actions (from open rows)
 
-1. **Absorb maturity deep-research** when `deep-research-10` completes — file gaps into MEANINGFUL_ITER backlog.
-3. **Optional bridge docs:** Life Simulator gaps + real-time streaming posture (honest limits + SYS/SMX paths).
-4. **Engine roadmap:** multi-CLASS components, NEST scene graphs, deterministic TICK budgets (listed in COP_ENGINE.md).
+1. **P0 from maturity** (`docs/MATURITY.md`): keep version story frozen; use `make prove` → selftest plate.
+2. **Optional bridge docs:** real-time streaming posture (honest limits + SYS/SMX paths).
+3. **Engine roadmap:** multi-CLASS components, NEST scene graphs, deterministic TICK budgets; dynamic SPAWN names.
 
 ---
 
