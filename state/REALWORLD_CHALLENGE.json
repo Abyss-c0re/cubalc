@@ -1,75 +1,75 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 129,
-  "program": "programs/realworld/zone_load_where_board.cubalc",
-  "theme": "SUMWHERE/AVGWHERE/MINWHERE/MAXWHERE zone-filtered load/cost rollup + budget admit",
-  "version": "1.15.359-usability",
+  "iter": 130,
+  "program": "programs/realworld/env_slo_where_board.cubalc",
+  "theme": "MEDIANWHERE/FREQWHERE/MODEWHERE env cohort SLO + plate-shuttle dual-gate admit",
+  "version": "1.15.363-usability",
   "pass": true,
-  "prior_note": "iter 128 job_retry_where SETFWHERE/INCFWHERE/GETFWHERE; this iter stresses SUMWHERE+AVGWHERE+MINWHERE+MAXWHERE (f8621f5/c35f7d1)",
+  "prior_note": "iter 129 zone_load SUM/AVG/MIN/MAXWHERE; this iter stresses MEDIANWHERE+FREQWHERE+MODEWHERE (71fcc10/cdf88f2/a2718dc)",
   "tests": [
     {
-      "name": "open_shards",
-      "cmd": "open h0/h1 us-east h2 us-west",
+      "name": "open_probes",
+      "cmd": "open p0/p1 canary p2 prod",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "set_load_cost",
-      "cmd": "setload 40/20/90 setcost 30/25/50",
+      "name": "p50_medianwhere",
+      "cmd": "MEDIANWHERE latency env canary → 40 (even lower mid)",
       "ok": true,
-      "note": "LOOKUPN rehydrate"
+      "note": "MEDIANWHERE"
     },
     {
-      "name": "sum_load",
-      "cmd": "SUMWHERE load zone us-east \u2192 60 N=2",
+      "name": "hist_freqwhere",
+      "cmd": "FREQWHERE status canary → ok:2",
       "ok": true,
-      "note": "SUMWHERE"
+      "note": "FREQWHERE"
     },
     {
-      "name": "avg_load",
-      "cmd": "AVGWHERE \u2192 30 N=2",
+      "name": "mode_modewhere",
+      "cmd": "MODEWHERE status canary → ok",
       "ok": true,
-      "note": "AVGWHERE"
+      "note": "MODEWHERE"
     },
     {
-      "name": "min_max_load",
-      "cmd": "MINWHERE 20 MAXWHERE 40",
-      "ok": true,
-      "note": "MIN/MAXWHERE"
-    },
-    {
-      "name": "sum_cost_admit",
-      "cmd": "cost sum 55; budget 100 admit; budget 50 deny EXIT 2",
+      "name": "admit_dual_gate",
+      "cmd": "p50 plate + FREQ majority ok budget 100 admit",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "substring_false_friend",
-      "cmd": "zone us count/sum 0 vs us-east 2",
+      "name": "admit_budget_deny",
+      "cmd": "budget 30 with p50 40 → EXIT 2",
       "ok": true,
-      "note": "exact"
+      "note": "REQUIRE"
     },
     {
-      "name": "empty_zone_zero",
-      "cmd": "nozone sum/avg/min \u2192 0; admit budget 10 \u2192 admit",
+      "name": "admit_mode_deny",
+      "cmd": "want fail while ok majority → EXIT 2",
+      "ok": true,
+      "note": "mode gate"
+    },
+    {
+      "name": "empty_env",
+      "cmd": "p50 0; mode blank; n_hit 0",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "zero_vs_empty_N",
-      "cmd": "load 0 still SUMWHERE_N=2 vs empty N=0",
+      "name": "outlier_median",
+      "cmd": "40,50,1000 → p50 50 stable",
       "ok": true,
-      "note": "N meta"
+      "note": "robust"
     },
     {
-      "name": "probe_soft",
-      "cmd": "TRYSEND soft; empty sum/avg 0",
+      "name": "substring_false_friend",
+      "cmd": "env can count 0 vs canary 2",
       "ok": true,
-      "note": "soft"
+      "note": "exact"
     },
     {
       "name": "setmatch_first",
-      "cmd": "two h0:scale \u2192 SETMATCH leaves 1",
+      "cmd": "two p0:sample → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -77,49 +77,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "335/335 pass"
+      "note": "339/339 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|sumwhere|empty",
-      "title": "Empty WHERE and true-zero both yield LAST_N=0",
-      "detail": "SUM/AVG/MIN/MAX on no match return 0. Agents cannot tell missing zone from all-zero loads without also checking SUMWHERE_N / MINWHERE_N.",
-      "repro": "sum nozone \u2192 0 N=0; sum us-east with loads 0 \u2192 0 N=2"
+      "area": "oop|where|clobber",
+      "title": "Chained *WHERE ops clobber each other's result specials",
+      "detail": "MEDIANWHERE then FREQWHERE → FREQWHERE_TOTAL=0; reverse → median LAST_N=0. Dual-gate admit cannot compute p50+hist in one action without plate shuttle or re-query isolation.",
+      "repro": "MEDIANWHERE; FREQWHERE → TOTAL 0; FREQWHERE; MEDIANWHERE → p50 0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|admit",
-      "title": "Budget admit on empty zone always succeeds for BUDGET\u22650",
-      "detail": "sum=0 \u2264 budget admits ghost zones; no built-in require N>0. Must gate SUMWHERE_N separately.",
-      "repro": "admit nozone budget 10 \u2192 admit N=0"
+      "area": "bag|let",
+      "title": "LET bag = LAST loses bag type for TOPKEY/LOOKUPN",
+      "detail": "SYS TOPKEY hbag after LET hbag=LAST from FREQWHERE → unknown form 'hbag'. Must TOPKEY FREQWHERE special directly.",
+      "repro": "FREQWHERE; LET h=LAST; SYS TOPKEY h → unknown form"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|minwhere",
-      "title": "MINWHERE/MAXWHERE return value only \u2014 no argmin object id",
-      "detail": "Cannot pick least-loaded shard in zone without GETFWHERE+scan or MAXOBJ-style sibling. Value alone is not actionable for schedule-to.",
-      "repro": "MINWHERE load zone us-east \u2192 20 not h1"
+      "area": "sys|eqs",
+      "title": "SYS EQS on LET-captured mode strings flaky in ARG boards",
+      "detail": "LET mode_s=LAST after MODEWHERE then SYS EQS mode_s want_st → unknown form or false-neg in multi-action agent board; works in short proofs. Prefer LOOKUPN FREQWHERE want_st counts.",
+      "repro": "MODEWHERE; LET m=LAST; SYS EQS m want → unknown form m"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|where",
-      "title": "Zone match equality only \u2014 no prefix/glob",
-      "detail": "us vs us-east is exact false friend (good for safety) but multi-zone rollups need repeated SUMWHERE or FREQF-style groupby (missing).",
-      "repro": "count_zn us \u2192 0"
+      "area": "oop|modewhere",
+      "title": "MODEWHERE ties → first-seen; empty → blank not soft miss",
+      "detail": "ok+fail tie → first-seen ok. Empty env mode blank; admit must check N/TOTAL.",
+      "repro": "mode canary with ok/fail; mode missing → blank"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|avgwhere",
-      "title": "AVGWHERE integer mean \u2014 truncates",
-      "detail": "Proof uses even sums; fractional means floor. Capacity ratios may under-read without float path.",
-      "repro": "loads 1+2 avg \u2192 likely 1 not 1.5"
+      "area": "oop|medianwhere",
+      "title": "Empty MEDIANWHERE → 0 indistinguishable from true zero latency",
+      "detail": "Need MEDIANWHERE_N; even-N uses lower mid.",
+      "repro": "p50 missing → 0 N=0"
     },
     {
       "id": "W6",
@@ -127,14 +127,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c VAL.txt dump/h0"
+      "repro": "od -c P50.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE/BUDGET softens",
-      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft; BUDGET garbage keeps default.",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,33 +142,33 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two h0:scale \u2192 one SETMATCH leaves 1.",
+      "detail": "Two p0:sample → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Always read SUMWHERE_N/MINWHERE_N with the value",
-    "Admit: require N>0 AND sum<=budget",
-    "Argmin: GETFWHERE load zone AS KV then scan min",
-    "Per-zone repeated SUMWHERE for multi-zone budget",
+    "Plate-shuttle p50 (P50.txt) then FREQWHERE admit — never chain *WHERE specials",
+    "TOPKEY/LOOKUPN FREQWHERE special not LET bag",
+    "Majority via LOOKUPN count vs FREQWHERE_TOTAL not SYS EQS mode string",
+    "Always check *_N / TOTAL for empty env",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "Empty-sample soft miss / distinct from zero value",
-    "ARGMINWHERE / ARGMAXWHERE object identity",
-    "Group-by zone sum bag (one-shot multi-zone)",
-    "Float AVGWHERE or fixed-point means",
-    "WHERE prefix/glob for zone families",
+    "Isolated result registers per *WHERE op (no clobber)",
+    "LET bag preserves TOPKEY/LOOKUPN bag type",
+    "Reliable SYS EQS for LET string captures after MODEWHERE",
+    "MODEWHERE multi-mode / tie bag",
+    "Empty sample soft miss vs zero value",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SUMWHERE us-east load 60; AVG 30; MIN 20; MAX 40; cost 55",
-    "admit budget 100 ok; 50 REQUIRE deny",
-    "empty zone sum 0 admits under budget \u2014 documented W2",
-    "us substring false friend count 0",
-    "zero load still N=2 distinguishes via SUMWHERE_N",
-    "selftest 335/335 green; no language fix this iter"
+    "MEDIANWHERE canary 40; FREQWHERE ok:2; MODEWHERE ok",
+    "Chained WHERE clobber forced P50.txt shuttle for dual-gate admit",
+    "SYS TOPKEY LET bag unknown form; SYS EQS mode_s unknown form",
+    "admit after p50: budget 100 ok; 30 deny; want fail deny",
+    "outlier 40/50/1000 → p50 50; empty env p50 0 mode blank",
+    "selftest 339/339 green; no language fix this iter"
   ],
-  "commit": "a2504d89d67d888280e188a0f65cabe15c6096da",
-  "ts": "2026-08-07T09:23:40Z"
+  "commit": "",
+  "ts": "2026-08-07T09:59:38Z"
 }

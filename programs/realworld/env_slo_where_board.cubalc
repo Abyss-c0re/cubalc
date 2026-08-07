@@ -1,0 +1,1295 @@
+# env_slo_where_board.cubalc — MEDIANWHERE/FREQWHERE/MODEWHERE env cohort SLO
+#
+# Real use: SRE agents track Probe fleet (p0..p2) with env (prod|canary) +
+# numeric latency + string status. Per-env median latency and status hist/mode
+# without GETFWHERE + MEDIAN/FREQ/TOPKEY glue; admit when mode is WANT and
+# median latency ≤ BUDGET.
+#
+# Surfaces forced (1.15.360–362):
+#   MEDIANWHERE / P50WHERE / MIDWHERE
+#   FREQWHERE / HISTWHERE / FREQIF
+#   MODEWHERE / DOMINANTWHERE / MODEIF
+#   COUNTWHERE · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from fleet_status_hist (unfiltered FREQF/MODEF), latency_median
+# (fleet MEDIANF), zone_load_where (SUM/AVG/MIN/MAX load): this board is
+# *env-filtered median + status hist/mode + dual-gate admit*.
+#
+# Slots: p0 p1 p2
+#
+# Plate under STATE:
+#   dump/p0 dump/p1 dump/p2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt HIST.txt SLO_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Probe
+#   open       — NEW Probe ARG1=pN [env=ARG2 default prod]
+#   setenv     — SETF env ARG2
+#   setlat     — SETF latency ARG2
+#   setstatus  — SETF status ARG2
+#   p50        — MEDIANWHERE latency WHERE env ARG1
+#   hist       — FREQWHERE status WHERE env ARG1 → HIST plate
+#   mode       — MODEWHERE status WHERE env ARG1
+#   count_env  — COUNTWHERE env ARG1
+#   admit      — FREQWHERE majority WANT + P50.txt ≤ BUDGET (run p50 first)
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_esw_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=p0 CUBALC_ARG2=canary
+#   CUBALC_ARG0=setlat CUBALC_ARG1=p0 CUBALC_ARG2=40
+#   CUBALC_ARG0=p50 CUBALC_ARG1=canary
+#   CUBALC_ARG0=mode CUBALC_ARG1=canary
+#   CUBALC_ARG0=admit CUBALC_FS_WANT=ok CUBALC_FS_ENV=canary CUBALC_FS_BUDGET=100 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT BUDGET ENV ACTION
+#
+# Edges:
+#   empty env → median 0 / mode blank / hist N=0 (zero vs empty)
+#   MODEWHERE ties → first-seen; no multi-mode bag
+#   FREQWHERE bag LOOKUPN for counts; TOPKEY dual of MODEWHERE
+#   even-N median lower mid; outlier-stable vs AVGWHERE
+#   env equality only; WRITE NL; NUM softens; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Probe
+  FIELD id ""
+  FIELD env "prod"
+  FIELD latency 0
+  FIELD status "ok"
+  METHOD init i e
+    SETF THIS id i
+    SETF THIS env e
+    SETF THIS latency 0
+    SETF THIS status "ok"
+  END
+END
+
+NOTE "env_slo_where_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "ok"
+DEFAULT BUDGET = 100
+DEFAULT ENVF = "prod"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BUDGET = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_ENV" OR ""
+IF LAST_N > 0 THEN
+  LET ENVF = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "HIST.txt"
+LET hist_path = LAST
+SYS JOIN state_dir "P50.txt"
+LET p50_path = LAST
+SYS JOIN state_dir "SLO_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "p0"
+LET d_p0 = LAST
+SYS JOIN dump_dir "p1"
+LET d_p1 = LAST
+SYS JOIN dump_dir "p2"
+LET d_p2 = LAST
+
+LET slot = -1
+SYS EQS NAME "p0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "p1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "p2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "p0"
+END
+IF slot == 1 THEN
+  LET sn = "p1"
+END
+IF slot == 2 THEN
+  LET sn = "p2"
+END
+
+# rehydrate p0
+SYS READ OR d_p0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DELETEOBJ p0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "env"
+  LET renv = LAST
+  SYS LOOKUPN snap "latency"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Probe p0 rid renv
+  TRYSETF p0 env renv
+  TRYSETF p0 latency rlat
+  TRYSETF p0 status rst
+  CLEAR_ERR
+END
+# rehydrate p1
+SYS READ OR d_p1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DELETEOBJ p1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "env"
+  LET renv = LAST
+  SYS LOOKUPN snap "latency"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Probe p1 rid renv
+  TRYSETF p1 env renv
+  TRYSETF p1 latency rlat
+  TRYSETF p1 status rst
+  CLEAR_ERR
+END
+# rehydrate p2
+SYS READ OR d_p2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DELETEOBJ p2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "env"
+  LET renv = LAST
+  SYS LOOKUPN snap "latency"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Probe p2 rid renv
+  TRYSETF p2 env renv
+  TRYSETF p2 latency rlat
+  TRYSETF p2 status rst
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "env_slo_where_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Probe
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET en0 = "prod"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET en0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        DELETEOBJ p0
+        CLEAR_ERR
+      END
+      NEW Probe p0 sn en0
+      DUMPOBJ p0
+      SYS WRITE d_p0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        DELETEOBJ p1
+        CLEAR_ERR
+      END
+      NEW Probe p1 sn en0
+      DUMPOBJ p1
+      SYS WRITE d_p1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        DELETEOBJ p2
+        CLEAR_ERR
+      END
+      NEW Probe p2 sn en0
+      DUMPOBJ p2
+      SYS WRITE d_p2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Probe
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta en0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setenv ---
+SYS EQS ACTION "setenv"
+IF LAST_N == 1 THEN
+  NOTE "action setenv"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setenv bad slot"
+    FAIL "setenv bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setenv bad slot"
+    END
+  ELSE
+    LET en0 = "prod"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET en0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        SETF p0 env en0
+        LET ok_set = 1
+        DUMPOBJ p0
+        SYS WRITE d_p0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        SETF p1 env en0
+        LET ok_set = 1
+        DUMPOBJ p1
+        SYS WRITE d_p1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        SETF p2 env en0
+        LET ok_set = 1
+        DUMPOBJ p2
+        SYS WRITE d_p2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setenv no obj"
+      FAIL "setenv no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setenv no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setenv ok"
+      LET val = en0
+      LET val_ch = 1
+      LET meta = "setenv"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta en0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setlat ---
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  NOTE "action setlat"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setlat bad slot"
+    FAIL "setlat bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setlat bad slot"
+    END
+  ELSE
+    LET n0 = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET n0 = LAST_N
+      END
+      CLEAR_ERR
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        SETF p0 latency n0
+        LET ok_set = 1
+        DUMPOBJ p0
+        SYS WRITE d_p0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        SETF p1 latency n0
+        LET ok_set = 1
+        DUMPOBJ p1
+        SYS WRITE d_p1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        SETF p2 latency n0
+        LET ok_set = 1
+        DUMPOBJ p2
+        SYS WRITE d_p2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setlat no obj"
+      FAIL "setlat no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setlat no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setlat ok"
+      SYS STR n0
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setlat"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setstatus ---
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  NOTE "action setstatus"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setstatus bad slot"
+    FAIL "setstatus bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setstatus bad slot"
+    END
+  ELSE
+    LET st0 = "ok"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET st0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        SETF p0 status st0
+        LET ok_set = 1
+        DUMPOBJ p0
+        SYS WRITE d_p0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        SETF p1 status st0
+        LET ok_set = 1
+        DUMPOBJ p1
+        SYS WRITE d_p1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        SETF p2 status st0
+        LET ok_set = 1
+        DUMPOBJ p2
+        SYS WRITE d_p2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setstatus no obj"
+      FAIL "setstatus no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setstatus no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setstatus ok"
+      LET val = st0
+      LET val_ch = 1
+      LET meta = "setstatus"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta st0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- p50 MEDIANWHERE ---
+SYS EQS ACTION "p50"
+IF LAST_N == 1 THEN
+  NOTE "action p50"
+  LET en0 = ENVF
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET en0 = NAME
+  END
+  MEDIANWHERE Probe latency env en0
+  LET ret_n = LAST_N
+  LET n_hit = MEDIANWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  SYS WRITE p50_path val
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "p50 ok"
+  LET val_ch = 1
+  LET meta = "p50"
+  SYS PUSH meta en0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- hist FREQWHERE status ---
+SYS EQS ACTION "hist"
+IF LAST_N == 1 THEN
+  NOTE "action hist"
+  LET en0 = ENVF
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET en0 = NAME
+  END
+  FREQWHERE Probe status env en0
+  LET hbag = LAST
+  LET ret_n = FREQWHERE_N
+  LET tot_n = FREQWHERE_TOTAL
+  SYS WRITE hist_path hbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "hist ok"
+  LET val = hbag
+  LET val_ch = 1
+  LET meta = "hist"
+  SYS PUSH meta en0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR tot_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- mode MODEWHERE status ---
+SYS EQS ACTION "mode"
+IF LAST_N == 1 THEN
+  NOTE "action mode"
+  LET en0 = ENVF
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET en0 = NAME
+  END
+  MODEWHERE Probe status env en0
+  LET mode_s = LAST
+  LET mode_c = MODEWHERE_COUNT
+  LET tot_n = MODEWHERE_TOTAL
+  LET dist_n = MODEWHERE_DISTINCT
+  LET hit = 1
+  LET note_msg = "mode ok"
+  LET val = mode_s
+  LET val_ch = 1
+  LET meta = "mode"
+  SYS PUSH meta en0
+  LET meta = LAST
+  SYS PUSH meta mode_s
+  LET meta = LAST
+  SYS STR mode_c
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR tot_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR dist_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON mode_s
+  CLEAR_ERR
+END
+
+# --- count_env ---
+SYS EQS ACTION "count_env"
+IF LAST_N == 1 THEN
+  NOTE "action count_env"
+  LET en0 = ENVF
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET en0 = NAME
+  END
+  COUNTWHERE Probe env en0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_env ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_env"
+  SYS PUSH meta en0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: mode EQS WANT and p50 ≤ BUDGET for ENVF ---
+# empty env: mode blank fails EQS; p50=0 may pass budget alone
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET en0 = ENVF
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET en0 = NAME
+  END
+  LET want_st = WANT
+  # Dual *WHERE specials clobber in one action — p50 from P50.txt plate
+  # (written by p50 action); mode from FREQWHERE LOOKUPN majority only.
+  COUNTWHERE Probe env en0
+  LET n_hit = LAST_N
+  LET p50n = 0
+  SYS READ OR p50_path OR "0"
+  SYS NUM
+  IF OK == 1 THEN
+    LET p50n = LAST_N
+  END
+  CLEAR_ERR
+  FREQWHERE Probe status env en0
+  SYS LOOKUPN FREQWHERE want_st
+  LET want_c = LAST_N
+  LET tot_f = FREQWHERE_TOTAL
+  LET mode_ok = 0
+  IF want_c > 0 THEN
+    IF want_c == tot_f THEN
+      LET mode_ok = 1
+    END
+  END
+  LET want2 = want_c + want_c
+  IF want_c > 0 THEN
+    IF want2 > tot_f THEN
+      LET mode_ok = 1
+    END
+  END
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF mode_ok > 0 THEN
+    IF n_hit > 0 THEN
+      IF p50n <= BUDGET THEN
+        LET val = "admit"
+        LET miss = 0
+        LET hit = 1
+        LET note_msg = "admit ok"
+      END
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta en0
+  LET meta = LAST
+  SYS PUSH meta want_st
+  LET meta = LAST
+  SYS STR want_c
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR tot_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR p50n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR BUDGET
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny mode or p50 gate"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny mode or p50 gate"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    TRYSEND p0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF p0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  MEDIANWHERE Probe latency env "no_such_env"
+  LET empty_p50 = LAST_N
+  CLEAR_ERR
+  MODEWHERE Probe status env "no_such_env"
+  LET empty_mode = LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_p50
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta empty_mode
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        DUMPOBJ p0
+        LET val = LAST
+        SYS WRITE d_p0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        DUMPOBJ p1
+        LET val = LAST
+        SYS WRITE d_p1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        DUMPOBJ p2
+        LET val = LAST
+        SYS WRITE d_p2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DELETEOBJ p0
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DELETEOBJ p1
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DELETEOBJ p2
+    CLEAR_ERR
+  END
+  SYS WRITE d_p0 ""
+  SYS WRITE d_p1 ""
+  SYS WRITE d_p2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE hist_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setenv"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "p50"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "hist"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "mode"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_env"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "p50 ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "hist ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "mode ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "env_slo_where_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
