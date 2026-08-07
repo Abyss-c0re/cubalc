@@ -337,6 +337,6 @@
     "quiet=false dual HIT/truth documented",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "pending",
+  "commit": "872895e44044787cd263ffa28a9fd6e9623ec7c9",
   "ts": "2026-08-07T23:34:25Z"
 }
