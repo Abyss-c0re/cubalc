@@ -1,0 +1,106 @@
+# INCFALL / ADDFALL / DECFALL — bulk numeric field bump on live objects
+# Usability: fleet counter/age without EACH OBJ + GETF + arith + SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+CLASS Counter
+  FIELD n 0
+  FIELD label ""
+  METHOD init x
+    SETF THIS n x
+    SETF THIS label "c"
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 15
+
+# default +1 on class field
+INCFALL Cell energy
+ASSERT OK == 1
+ASSERT INCFALL_N == 3
+ASSERT LAST_N == 3
+ASSERT INCFALL_DELTA == 1
+GETF a energy
+ASSERT LAST_N == 11
+GETF b energy
+ASSERT LAST_N == 21
+GETF c energy
+ASSERT LAST_N == 31
+
+# explicit delta
+ADDFALL Cell energy 9
+ASSERT ADDFALL_N == 3
+GETFALL Cell energy
+SYS SUM
+ASSERT LAST_N == 90 "11+9 + 21+9 + 31+9"
+
+# OF sugar + BY keyword
+INCFALL OF Cell energy BY 1
+ASSERT INCFALL_N == 3
+GETF a energy
+ASSERT LAST_N == 21
+
+# DECFALL default -1
+DECFALL Cell energy
+ASSERT DECFALL_N == 3
+ASSERT INCFALL_DELTA == -1
+GETF a energy
+ASSERT LAST_N == 20
+
+# DECFALL with amount
+DECFALL Cell energy 5
+ASSERT DECFALL_N == 3
+GETF a energy
+ASSERT LAST_N == 15
+
+# other class only
+INCFALL Counter n 10
+ASSERT INCFALL_N == 2
+GETF k1 n
+ASSERT LAST_N == 15
+GETF k2 n
+ASSERT LAST_N == 25
+GETF a energy
+ASSERT LAST_N == 15 "cells untouched"
+
+# bare field across classes with that field
+INCFALL n -3
+ASSERT INCFALL_N == 2
+GETF k1 n
+ASSERT LAST_N == 12
+
+# string field soft skip
+INCFALL Counter label 1
+ASSERT OK == 1
+ASSERT INCFALL_N == 0
+ASSERT INCFALL_SKIP == 2
+
+# missing field soft skip
+INCFALL Cell no_such_zz
+ASSERT OK == 1
+ASSERT INCFALL_N == 0
+ASSERT INCFALL_SKIP == 3
+
+# empty pool soft
+DELETEALL Cell
+INCFALL Cell energy 1
+ASSERT OK == 1
+ASSERT INCFALL_N == 0
+
+# BUMPALL alias
+NEW Cell p 1 0 0
+NEW Cell q 1 0 0
+BUMPALL Cell energy 4
+ASSERT INCFALL_N == 2
+GETF p energy
+ASSERT LAST_N == 4
+GETF q energy
+ASSERT LAST_N == 4
+
+PRINT "oop_incfall ok"

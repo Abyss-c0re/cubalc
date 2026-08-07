@@ -1230,6 +1230,154 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* INCFALL|ADDFALL|DECFALL [Class] field [delta]
+   * — add delta (default +1; DECFALL default −1) to numeric field on every live obj.
+   * Soft always; missing or string fields skipped (INCFALL_SKIP). LAST_N = update count.
+   * Usability: fleet counter/age bump without EACH OBJ + GETF + arith + SETF glue. */
+  if (kw(&L->cur, "INCFALL") || kw(&L->cur, "ADDFALL") ||
+      kw(&L->cur, "DECFALL") || kw(&L->cur, "SUBFALL") ||
+      kw(&L->cur, "INCALL") || kw(&L->cur, "ADDFIELDALL") ||
+      kw(&L->cur, "BUMPALL") || kw(&L->cur, "INCFIELDALL")) {
+    char filt[48], fname[48], tok1[48], op[24];
+    int has_filt = 0, i, n = 0, n_skip = 0, dec_mode = 0, have_delta = 0;
+    long delta = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DECFALL") == 0 || strcmp(op, "SUBFALL") == 0) {
+      dec_mode = 1;
+      delta = -1;
+    }
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "INCFALL OF Class field [delta]"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+          !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+          !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+        /* Class field [delta] — next is field if not a bare numeric-only line */
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "INCFALL [Class] field [delta]"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "INCFALL [Class] field [delta]"); return -1;
+      }
+    }
+    /* optional delta: BY n | = n | bare expr (not stmt kw).
+     * DECFALL/SUBFALL: magnitude is subtracted (DECFALL f 5 → −5). */
+    if (kw(&L->cur, "BY") || kw(&L->cur, "PLUS") || kw(&L->cur, "DELTA")) {
+      lex_next(L);
+      delta = parse_expr(vm, L);
+      have_delta = 1;
+    } else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      delta = parse_expr(vm, L);
+      have_delta = 1;
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN ||
+               (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+                !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+                !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+                !kw(&L->cur, "GETF") && !kw(&L->cur, "SETF") &&
+                !kw(&L->cur, "INCFALL") && !kw(&L->cur, "ADDFALL") &&
+                !kw(&L->cur, "DECFALL") && !kw(&L->cur, "CLASS") &&
+                !kw(&L->cur, "WHEREOBJ") && !kw(&L->cur, "SENDWHERE") &&
+                !kw(&L->cur, "DELETEWHERE") && !kw(&L->cur, "SETFALL") &&
+                !kw(&L->cur, "GETFALL") && !kw(&L->cur, "SENDALL") &&
+                !kw(&L->cur, "LISTOBJS") && !kw(&L->cur, "HASOBJ"))) {
+      delta = parse_expr(vm, L);
+      have_delta = 1;
+    }
+    if (dec_mode && have_delta) {
+      if (delta < 0) delta = -delta; /* normalize then flip */
+      delta = -delta;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; } /* numeric only */
+      ob->fnum[fi] += delta;
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "INCFALL_N", n);
+    var_set_num(vm, "ADDFALL_N", n);
+    var_set_num(vm, "DECFALL_N", n);
+    var_set_num(vm, "INCFALL_SKIP", n_skip);
+    var_set_num(vm, "INCFALL_DELTA", delta);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0])
+      var_set_str(vm, "CLASS", filt);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREOBJ|FILTEROBJS|KEEPOBJS [Class] field value
    * FINDOBJ|FIRSTOBJ — first match only (LAST=name, LAST_N 0|1).
    * Soft always. Equality on num or string fields.

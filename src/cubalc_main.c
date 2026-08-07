@@ -2023,6 +2023,7 @@ int main(int argc, char **argv) {
       {"oop_whereobj", "programs/proof/882_oop_whereobj.cubalc", "WHEREOBJ/FINDOBJ select live objects by field equality"},
       {"oop_deletewhere", "programs/proof/883_oop_deletewhere.cubalc", "DELETEWHERE/FREEWHERE free live objects by field equality"},
       {"oop_sendwhere", "programs/proof/884_oop_sendwhere.cubalc", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
+      {"oop_incfall", "programs/proof/885_oop_incfall.cubalc", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5913,6 +5914,7 @@ int main(int argc, char **argv) {
       {"programs/proof/882_oop_whereobj.cubalc", "oop_whereobj", "WHEREOBJ/FINDOBJ select live objects by field equality"},
       {"programs/proof/883_oop_deletewhere.cubalc", "oop_deletewhere", "DELETEWHERE/FREEWHERE free live objects by field equality"},
       {"programs/proof/884_oop_sendwhere.cubalc", "oop_sendwhere", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
+      {"programs/proof/885_oop_incfall.cubalc", "oop_incfall", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6195,6 +6197,7 @@ int main(int argc, char **argv) {
       {"programs/proof/882_oop_whereobj.cubalc", "oop_whereobj", "WHEREOBJ/FINDOBJ select live objects by field equality"},
       {"programs/proof/883_oop_deletewhere.cubalc", "oop_deletewhere", "DELETEWHERE/FREEWHERE free live objects by field equality"},
       {"programs/proof/884_oop_sendwhere.cubalc", "oop_sendwhere", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
+      {"programs/proof/885_oop_incfall.cubalc", "oop_incfall", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
