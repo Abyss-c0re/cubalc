@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 149,
-  "program": "programs/realworld/alert_field_peel_board.cubalc",
-  "theme": "WORDSF + CUTF/COLUMNF alert line token and CSV column peel",
-  "version": "1.15.409-usability",
+  "iter": 150,
+  "program": "programs/realworld/work_queue_bag_board.cubalc",
+  "theme": "PUSHF/POPF/POPHEADF + GREPF/LINEF worker job bag queue",
+  "version": "1.15.412-usability",
   "pass": true,
-  "prior_note": "iter 148 SPLITF/JOINF route segs; this iter first realworld WORDSF (958) + CUTF (959)",
+  "prior_note": "iter 149 WORDSF+CUTF alert peel; this iter first realworld PUSHF/POPF (961) + LINEF (960) + GREPF (962)",
   "tests": [
     {
-      "name": "open_alerts",
-      "cmd": "open a0 CSV; a0 multi-word via FS_RAW; a1 ws-only",
+      "name": "push_depth",
+      "cmd": "push deploy-a/error-b/deploy-c; depth 3; bag side-file",
       "ok": true,
-      "note": "NEW"
+      "note": "PUSHF"
     },
     {
-      "name": "words",
-      "cmd": "WORDSF level=error host=\u2026 \u2192 3 tokens; CSV no-space \u2192 1; ws \u2192 0",
+      "name": "claim_fifo",
+      "cmd": "POPHEADF → deploy-a; bag remains error-b/deploy-c",
       "ok": true,
-      "note": "WORDSF"
+      "note": "POPHEADF"
     },
     {
-      "name": "cut",
-      "cmd": "CUTF CIDX=1 \u2192 web-01 mutates raw; keep intact; OOR HIT=0",
+      "name": "pop_lifo",
+      "cmd": "POPF → deploy-c; bag error-b",
       "ok": true,
-      "note": "CUTF"
+      "note": "POPF"
     },
     {
-      "name": "peel",
-      "cmd": "non-destructive level=error host=web-01 via keep copies",
+      "name": "filter",
+      "cmd": "GREPF error → error-disk+error-mem N=2; keep snapshot full",
       "ok": true,
-      "note": "peel"
+      "note": "GREPF"
     },
     {
-      "name": "col",
-      "cmd": "COLUMNF COLI=2 \u2192 web-01 (1-based)",
+      "name": "dropmatch",
+      "cmd": "GREPVF DROP → keep-a+keep-b",
       "ok": true,
-      "note": "COLUMNF"
+      "note": "GREPVF"
     },
     {
-      "name": "gate",
-      "cmd": "ntok>=2 admit; MINTOK=10 REQUIRE\u21922",
+      "name": "peek_unshift_gate",
+      "cmd": "LINEF peek; UNSHIFTF front; gate admit/deny REQUIRE",
       "ok": true,
-      "note": "gate"
+      "note": "LINEF/UNSHIFT"
     },
     {
       "name": "probe",
-      "cmd": "TRYWORDSF/TRYCUTF soft; OOR leave field",
+      "cmd": "TRYPUSHF/TRYPOPF/TRYGREPF soft; empty HIT=0",
       "ok": true,
       "note": "probe"
     },
@@ -60,50 +60,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|cutf",
-      "title": "CUTF mutates source field to column text",
-      "detail": "CUTF/COLUMNF replace the field with the peeled column (not non-destructive extract). Agents must copy to keep/level/host first. Silent data loss if keep omitted.",
-      "repro": "CUTF a raw \",\" 1 \u2192 raw becomes web-01 only"
+      "area": "oop|pushf",
+      "title": "PUSHF arg var ITEM silently pushes \"1\"",
+      "detail": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM → bag becomes \"1\" not deploy-a. Form-token collision (ITEM reserved). Must use JOB/WORKITEM. Same class as COL/SEP/FLOOR/CAP/NEEDLE.",
+      "repro": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM → bag 1"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|cutf",
-      "title": "Index var COL silently forces CUTF_I=0",
-      "detail": "DEFAULT COL=2; CUTF x raw \",\" COL peels column 0 (a) with CUTF_I=0. Form-token collision with COLUMNF/COLF. Must use CIDX/COLI. Same class as SEP/FLOOR/CAP.",
-      "repro": "DEFAULT COL=2; CUTF x raw \",\" COL \u2192 LAST a CUTF_I 0"
+      "area": "oop|dumpobj|plate",
+      "title": "DUMPOBJ multiline field breaks plate LOOKUP",
+      "detail": "Bag with newlines written as raw lines; LOOKUP bag returns only first line. Cross-run rehydrate loses queue body. Workaround: dump/wN.bag side files for bag/keep.",
+      "repro": "DUMPOBJ after PUSHF a\\nb\\nc; LOOKUP bag → a only"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|arg",
-      "title": "Multi-word ARG2 needs quotes or CUBALC_FS_RAW",
-      "detail": "CUBALC_ARG2=level=error host=web splits at shell; only first token reaches agent. Prefer CUBALC_FS_RAW for free-text alerts.",
-      "repro": "unquoted ARG2 multi-word \u2192 single token"
+      "severity": "high",
+      "area": "oop|grepf",
+      "title": "GREPF needle var NEEDLE mis-filters",
+      "detail": "DEFAULT NEEDLE=\"error\"; GREPF q bag NEEDLE → GREPF_N=1 wrong (literal/token collision). Rename to WANT. Silent wrong triage.",
+      "repro": "GREPF bag NEEDLE with NEEDLE=error → N=1 not 2"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|cutf",
-      "title": "No single-object COPYF for keep backup",
-      "detail": "COPYF is fleet class\u2192field copy (COPYF Class src dst). Per-object backup needs GETF+SETF. Agents lack one-shot SNAPSHOTF on one object.",
-      "repro": "COPYF a0 raw keep fails pattern; fleet only"
+      "area": "oop|grepf|linef",
+      "title": "GREPF/LINEF mutate field (destructive filter/peel)",
+      "detail": "GREPF no-match empties bag (data loss). LINEF replaces bag with one line. Must snapshot keep before filter/peek-on-copy.",
+      "repro": "GREPF zzz → bag empty; keep holds prior if snapshotted"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|wordsf",
-      "title": "WORDSF ignores commas (CSV is one token)",
-      "detail": "error,web-01,timeout \u2192 ntok=1. Must CUTF for CSV; WORDSF only whitespace. Easy false friend when choosing tokenizer.",
-      "repro": "WORDSF CSV line N=1"
+      "area": "host|json",
+      "title": "PRINT_JSON bag hides newlines",
+      "detail": "JSON string of multiline bag collapses visually; agents must WRITE bag file or SYS EQS.",
+      "repro": "PRINT_JSON bag after PUSHF three jobs"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n after dump\\na0.",
-      "repro": "od -c META.txt"
+      "detail": "od -c META ends without \\n.",
+      "repro": "od -c META.txt after dump"
     },
     {
       "id": "W7",
@@ -111,30 +111,30 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINTOK=99 gate soft"
+      "repro": "REQUIRE=abc MINQ=99 gate soft"
     }
   ],
   "workarounds": [
-    "Always keep field + GETF/SETF before destructive CUTF",
-    "Never name index COL \u2014 use CIDX (0-based) or COLI (1-based COLUMNF)",
-    "CUBALC_FS_RAW for multi-word alert text",
-    "WORDSF for free text; CUTF for CSV \u2014 do not mix assumptions",
-    "Fixed a0/a1/a2; TRY* soft; numeric REQUIRE only"
+    "Never name PUSHF payload ITEM — use JOB",
+    "Never name GREPF needle NEEDLE — use WANT",
+    "Persist bag/keep to dump/wN.bag side files; do not trust DUMPOBJ multiline",
+    "Snapshot keep before GREPF/LINEF; empty POP HIT=0",
+    "Fixed w0/w1/w2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Non-destructive CUTF return-only (or CUTF INTO field)",
-    "Reserve COL/SEP/FLOOR/CAP in form numeric/sep arg slots",
-    "Single-object COPYF/SNAPSHOTF obj src dst",
-    "Native multi-word ARG shuttle without shell quotes",
-    "WRITE NL; strict NUM REQUIRE"
+    "Reserve ITEM/NEEDLE/COL/SEP in form arg slots or soft-error",
+    "DUMPOBJ escape multiline field values (quoted plate)",
+    "Non-destructive GREPF/LINEF INTO dst field",
+    "Single-object field SNAPSHOTF for bag keep",
+    "WRITE NL; strict NUM REQUIRE; PRINT_JSON escape \\n"
   ],
   "issues_faced": [
-    "CUTF CIDX=1 mutates raw\u2192web-01; peel via keep restores",
-    "COL index var silent I=0 footgun documented",
-    "WORDSF 3 tokens from FS_RAW free text; CSV ntok=1",
-    "ws-only ntok=0; OOR HIT=0 field unchanged",
+    "ITEM→JOB and NEEDLE→WANT renames required for correct ops",
+    "DUMPOBJ multiline forced dump/wN.bag side-file rehydrate",
+    "PUSHF 3 jobs depth 3; claim FIFO deploy-a; pop LIFO deploy-c",
+    "GREPF error N=2; GREPVF DROP keeps 2; no-match empties bag",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "9faadc3b49b44f378ca23cbf4cea3b90cc3b491a",
-  "ts": "2026-08-07T17:44:48Z"
+  "commit": "",
+  "ts": "2026-08-07T18:12:22Z"
 }

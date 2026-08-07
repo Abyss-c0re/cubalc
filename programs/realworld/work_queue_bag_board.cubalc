@@ -1,0 +1,1706 @@
+# work_queue_bag_board.cubalc — PUSHF/POPF/POPHEADF + GREPF/LINEF work queue
+#
+# Real use: dispatch agents maintain per-worker job bags (FIFO claim via
+# POPHEADF, LIFO undo via POPF, PUSHF enqueue, GREPF triage errors,
+# LINEF peek Nth). No GETF+SYS PUSH/POP/GREP+SETF glue.
+#
+# Surfaces forced (1.15.410–412 / proof 960–962):
+#   PUSHF / UNSHIFTF / BAGPUSHF · TRYPUSHF
+#   POPF / POPHEADF / DEQUEUEF · TRYPOPF · empty HIT=0
+#   GREPF / GREPVF / GREPFI / FILTERF · TRYGREPF · mutates bag
+#   LINEF / LINENOF · TRYLINEF · OOR HIT=0
+#   keep snapshot for GREPF · DUMPOBJ rehydrate · soft+REQUIRE
+#
+# Distinct from work_claim_board (lease claim), job_retry_where (WHERE),
+# incident_log_board (GREPFILES files): this is *object-field bag queue*.
+#
+# Slots: w0 w1 w2
+#
+# Plate under STATE:
+#   dump/w0 dump/w1 dump/w2
+#   dump/w0.bag dump/w0.keep (multiline bag — DUMPOBJ unsafe)
+#   BAG.txt VAL.txt META.txt OBJS.txt QUEUE_REPORT.txt
+#
+# Actions:
+#   list | open | push | unshift | claim | pop | peek | filter | dropmatch
+#   depth | gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_wqb_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=w0
+#   CUBALC_FS_ITEM=job-a CUBALC_ARG0=push CUBALC_ARG1=w0
+#   CUBALC_ARG0=claim CUBALC_ARG1=w0
+#   CUBALC_FS_NEEDLE=error CUBALC_ARG0=filter CUBALC_ARG1=w0
+#   CUBALC_FS_MINQ=1 CUBALC_ARG0=gate CUBALC_ARG1=w0
+#
+# Env: CUBALC_FS_REQUIRE NAME ITEM NEEDLE LIDX MINQ ACTION
+#
+# Edges:
+#   PUSHF arg name ITEM collides (pushes "1") — use JOB
+#   DUMPOBJ multiline bag breaks plate LOOKUP — use *.bag side files
+#   GREPF/LINEF/POP* mutate bag field (destructive filter/peel)
+#   empty POP HIT=0; GREPF no-match → empty bag (data loss)
+#   PRINT_JSON bag may hide newlines; WRITE SEGS/BAG preserves
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS WorkerQ
+  FIELD id ""
+  FIELD bag ""
+  FIELD keep ""
+  FIELD claim ""
+  FIELD depth 0
+  FIELD tag "wq"
+  METHOD init i
+    SETF THIS id i
+    SETF THIS bag ""
+    SETF THIS keep ""
+    SETF THIS claim ""
+    SETF THIS depth 0
+    SETF THIS tag "wq"
+  END
+  METHOD enqueue x
+    PUSHF THIS bag x
+  END
+  METHOD take
+    POPHEADF THIS bag
+  END
+END
+
+REQUIRE CLASS WorkerQ
+REQUIRE METHOD WorkerQ init
+
+NOTE "work_queue_bag_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT A2_N = 0
+DEFAULT NEED_HIT = 0
+DEFAULT JOB = "job"
+DEFAULT WANT = "error"
+DEFAULT LIDX = 0
+DEFAULT MINQ = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET JOB = LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET A2_N = LAST_N
+    LET LIDX = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET JOB = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_ITEM" OR ""
+IF LAST_N > 0 THEN
+  LET JOB = LAST
+END
+SYS ENV "CUBALC_FS_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_LIDX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LIDX = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINQ" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINQ = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "BAG.txt"
+LET bag_path = LAST
+SYS JOIN state_dir "QUEUE_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "w0"
+LET d_w0 = LAST
+SYS JOIN dump_dir "w1"
+LET d_w1 = LAST
+SYS JOIN dump_dir "w2"
+LET d_w2 = LAST
+SYS JOIN dump_dir "w0.bag"
+LET b_w0 = LAST
+SYS JOIN dump_dir "w1.bag"
+LET b_w1 = LAST
+SYS JOIN dump_dir "w2.bag"
+LET b_w2 = LAST
+SYS JOIN dump_dir "w0.keep"
+LET k_w0 = LAST
+SYS JOIN dump_dir "w1.keep"
+LET k_w1 = LAST
+SYS JOIN dump_dir "w2.keep"
+LET k_w2 = LAST
+
+LET slot = -1
+SYS EQS NAME "w0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "w1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "w2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "w0"
+END
+IF slot == 1 THEN
+  LET sn = "w1"
+END
+IF slot == 2 THEN
+  LET sn = "w2"
+END
+
+# rehydrate helper pattern per slot
+SYS READ OR d_w0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "bag"
+  LET rb = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "claim"
+  LET rc = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW WorkerQ w0 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF w0 id rid
+  END
+  TRYSETF w0 bag rb
+  TRYSETF w0 keep rk
+  TRYSETF w0 claim rc
+  TRYSETF w0 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF w0 tag rtag
+  END
+  # multiline bag/keep live outside DUMPOBJ plate (newline breaks LOOKUP)
+  SYS READ OR b_w0 OR ""
+  TRYSETF w0 bag LAST
+  SYS READ OR k_w0 OR ""
+  TRYSETF w0 keep LAST
+  CLEAR_ERR
+END
+SYS READ OR d_w1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "bag"
+  LET rb = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "claim"
+  LET rc = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW WorkerQ w1 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF w1 id rid
+  END
+  TRYSETF w1 bag rb
+  TRYSETF w1 keep rk
+  TRYSETF w1 claim rc
+  TRYSETF w1 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF w1 tag rtag
+  END
+  SYS READ OR b_w1 OR ""
+  TRYSETF w1 bag LAST
+  SYS READ OR k_w1 OR ""
+  TRYSETF w1 keep LAST
+  CLEAR_ERR
+END
+SYS READ OR d_w2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "bag"
+  LET rb = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "claim"
+  LET rc = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW WorkerQ w2 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF w2 id rid
+  END
+  TRYSETF w2 bag rb
+  TRYSETF w2 keep rk
+  TRYSETF w2 claim rc
+  TRYSETF w2 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF w2 tag rtag
+  END
+  SYS READ OR b_w2 OR ""
+  TRYSETF w2 bag LAST
+  SYS READ OR k_w2 OR ""
+  TRYSETF w2 keep LAST
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "work_queue_bag_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS WorkerQ
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DELETEOBJ w0
+        CLEAR_ERR
+      END
+      NEW WorkerQ w0 sn
+      DUMPOBJ w0
+      SYS WRITE d_w0 LAST
+      GETF w0 bag
+      SYS WRITE b_w0 LAST
+      GETF w0 keep
+      SYS WRITE k_w0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DELETEOBJ w1
+        CLEAR_ERR
+      END
+      NEW WorkerQ w1 sn
+      DUMPOBJ w1
+      SYS WRITE d_w1 LAST
+      GETF w1 bag
+      SYS WRITE b_w1 LAST
+      GETF w1 keep
+      SYS WRITE k_w1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DELETEOBJ w2
+        CLEAR_ERR
+      END
+      NEW WorkerQ w2 sn
+      DUMPOBJ w2
+      SYS WRITE d_w2 LAST
+      GETF w2 bag
+      SYS WRITE b_w2 LAST
+      GETF w2 keep
+      SYS WRITE k_w2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS WorkerQ
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- push: PUSHF bag JOB ---
+SYS EQS ACTION "push"
+IF LAST_N == 1 THEN
+  NOTE "action push"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "push bad slot"
+    FAIL "push bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "push bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        PUSHF w0 bag JOB
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        GETF w0 bag
+        SETF w0 keep LAST
+        SETF w0 depth ret_n
+        SYS WRITE bag_path val
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        BAGPUSHF w1 bag JOB
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        GETF w1 bag
+        SETF w1 keep LAST
+        SETF w1 depth ret_n
+        SYS WRITE bag_path val
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        LINEPUSHF w2 bag JOB
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        GETF w2 bag
+        SETF w2 keep LAST
+        SETF w2 depth ret_n
+        SYS WRITE bag_path val
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "push miss"
+      FAIL "push miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "push miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "push ok"
+      LET val_ch = 1
+      LET meta = "push"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta JOB
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- unshift: front insert ---
+SYS EQS ACTION "unshift"
+IF LAST_N == 1 THEN
+  NOTE "action unshift"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "unshift bad slot"
+    FAIL "unshift bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "unshift bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        UNSHIFTF w0 bag JOB
+        LET o_ok = OK
+        LET ret_n = UNSHIFTF_N
+        LET val = LAST
+        GETF w0 bag
+        SETF w0 keep LAST
+        SETF w0 depth ret_n
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        PUSHFRONTF w1 bag JOB
+        LET o_ok = OK
+        LET ret_n = UNSHIFTF_N
+        LET val = LAST
+        GETF w1 bag
+        SETF w1 keep LAST
+        SETF w1 depth ret_n
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        BAGPREPENDF w2 bag JOB
+        LET o_ok = OK
+        LET ret_n = UNSHIFTF_N
+        LET val = LAST
+        GETF w2 bag
+        SETF w2 keep LAST
+        SETF w2 depth ret_n
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "unshift miss"
+      FAIL "unshift miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "unshift miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "unshift ok"
+      LET val_ch = 1
+      LET meta = "unshift"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta JOB
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- claim: FIFO POPHEADF ---
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  NOTE "action claim"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "claim bad slot"
+    FAIL "claim bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "claim bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        POPHEADF w0 bag
+        LET o_ok = OK
+        LET changed = POPHEADF_HIT
+        LET val = LAST
+        LET ret_n = POPHEADF_N
+        SETF w0 claim val
+        SETF w0 depth ret_n
+        GETF w0 bag
+        SETF w0 keep LAST
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DEQUEUEF w1 bag
+        LET o_ok = OK
+        LET changed = POPHEADF_HIT
+        LET val = LAST
+        LET ret_n = POPHEADF_N
+        SETF w1 claim val
+        SETF w1 depth ret_n
+        GETF w1 bag
+        SETF w1 keep LAST
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        HEADPOPF w2 bag
+        LET o_ok = OK
+        LET changed = POPHEADF_HIT
+        LET val = LAST
+        LET ret_n = POPHEADF_N
+        SETF w2 claim val
+        SETF w2 depth ret_n
+        GETF w2 bag
+        SETF w2 keep LAST
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "claim miss"
+      FAIL "claim miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "claim miss"
+      END
+    ELSE
+      IF changed == 0 THEN
+        LET miss = 1
+        LET note_msg = "claim empty"
+        FAIL "claim empty"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "claim empty"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "claim ok"
+        LET val_ch = 1
+        LET meta = "claim"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        SYS STR ret_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pop: LIFO POPF ---
+SYS EQS ACTION "pop"
+IF LAST_N == 1 THEN
+  NOTE "action pop"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "pop bad slot"
+    FAIL "pop bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pop bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        POPF w0 bag
+        LET o_ok = OK
+        LET changed = POPF_HIT
+        LET val = LAST
+        LET ret_n = POPF_N
+        SETF w0 claim val
+        SETF w0 depth ret_n
+        GETF w0 bag
+        SETF w0 keep LAST
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        BAGPOPF w1 bag
+        LET o_ok = OK
+        LET changed = POPF_HIT
+        LET val = LAST
+        LET ret_n = POPF_N
+        SETF w1 claim val
+        SETF w1 depth ret_n
+        GETF w1 bag
+        SETF w1 keep LAST
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        POPF w2 bag
+        LET o_ok = OK
+        LET changed = POPF_HIT
+        LET val = LAST
+        LET ret_n = POPF_N
+        SETF w2 claim val
+        SETF w2 depth ret_n
+        GETF w2 bag
+        SETF w2 keep LAST
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "pop miss"
+      FAIL "pop miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pop miss"
+      END
+    ELSE
+      IF changed == 0 THEN
+        LET miss = 1
+        LET note_msg = "pop empty"
+        FAIL "pop empty"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "pop empty"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "pop ok"
+        LET val_ch = 1
+        LET meta = "pop"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        SYS STR ret_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- peek: LINEF on keep or bag without permanently losing if OOR ---
+# LINEF mutates field — peek uses keep copy into claim only via temp
+SYS EQS ACTION "peek"
+IF LAST_N == 1 THEN
+  NOTE "action peek"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "peek bad slot"
+    FAIL "peek bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "peek bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        GETF w0 bag
+        SETF w0 keep LAST
+        # destructive LINEF on keep so bag intact
+        LINEF w0 keep LIDX
+        LET o_ok = OK
+        LET changed = LINEF_HIT
+        LET val = LAST
+        # restore keep full bag
+        GETF w0 bag
+        SETF w0 keep LAST
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        GETF w1 bag
+        SETF w1 keep LAST
+        # LINENOF is 1-based — map LIDX 0 → line 1
+        LET li = LIDX + 1
+        IF li < 1 THEN
+          LET li = 1
+        END
+        LINENOF w1 keep li
+        LET o_ok = OK
+        LET changed = LINENOF_HIT
+        LET val = LAST
+        GETF w1 bag
+        SETF w1 keep LAST
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        GETF w2 bag
+        SETF w2 keep LAST
+        NTHLINEF w2 keep LIDX
+        LET o_ok = OK
+        LET changed = LINEF_HIT
+        LET val = LAST
+        GETF w2 bag
+        SETF w2 keep LAST
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "peek miss"
+      FAIL "peek miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "peek miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "peek ok"
+      LET val_ch = 1
+      LET meta = "peek"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- filter: GREPF bag WANT (destructive; snapshot keep first) ---
+SYS EQS ACTION "filter"
+IF LAST_N == 1 THEN
+  NOTE "action filter"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "filter bad slot"
+    FAIL "filter bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "filter bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        GETF w0 bag
+        SETF w0 keep LAST
+        GREPF w0 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPF_N
+        LET changed = GREPF_HIT
+        LET val = LAST
+        SETF w0 depth ret_n
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        SYS WRITE bag_path val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        GETF w1 bag
+        SETF w1 keep LAST
+        FILTERF w1 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPF_N
+        LET changed = GREPF_HIT
+        LET val = LAST
+        SETF w1 depth ret_n
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        SYS WRITE bag_path val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        GETF w2 bag
+        SETF w2 keep LAST
+        GREPFI w2 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPF_N
+        LET changed = GREPF_HIT
+        LET val = LAST
+        SETF w2 depth ret_n
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        SYS WRITE bag_path val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "filter miss"
+      FAIL "filter miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "filter miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "filter ok"
+      LET val_ch = 1
+      LET meta = "filter"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- dropmatch: GREPVF remove matches ---
+SYS EQS ACTION "dropmatch"
+IF LAST_N == 1 THEN
+  NOTE "action dropmatch"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dropmatch bad slot"
+    FAIL "dropmatch bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dropmatch bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        GETF w0 bag
+        SETF w0 keep LAST
+        GREPVF w0 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPVF_N
+        LET val = LAST
+        SETF w0 depth ret_n
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        GETF w1 bag
+        SETF w1 keep LAST
+        DROPMATCHF w1 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPVF_N
+        LET val = LAST
+        SETF w1 depth ret_n
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        GETF w2 bag
+        SETF w2 keep LAST
+        GREPVFI w2 bag WANT
+        LET o_ok = OK
+        LET ret_n = GREPVF_N
+        LET val = LAST
+        SETF w2 depth ret_n
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dropmatch miss"
+      FAIL "dropmatch miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dropmatch miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dropmatch ok"
+      LET val_ch = 1
+      LET meta = "dropmatch"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- depth: count lines in bag ---
+SYS EQS ACTION "depth"
+IF LAST_N == 1 THEN
+  NOTE "action depth"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "depth bad slot"
+    FAIL "depth bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "depth bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        GETF w0 bag
+        SYS LINES LAST
+        LET ret_n = LAST_N
+        SETF w0 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        GETF w1 bag
+        SYS LINES LAST
+        LET ret_n = LAST_N
+        SETF w1 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        GETF w2 bag
+        SYS LINES LAST
+        LET ret_n = LAST_N
+        SETF w2 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "depth miss"
+      FAIL "depth miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "depth miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "depth ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "depth"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: depth >= MINQ ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET dnow = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        GETF w0 bag
+        SYS LINES LAST
+        LET dnow = LAST_N
+        SETF w0 depth dnow
+        LET o_ok = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        GETF w1 bag
+        SYS LINES LAST
+        LET dnow = LAST_N
+        SETF w1 depth dnow
+        LET o_ok = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        GETF w2 bag
+        SYS LINES LAST
+        LET dnow = LAST_N
+        SETF w2 depth dnow
+        LET o_ok = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = dnow
+      IF dnow < MINQ THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINQ
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINQ
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  TRYPUSHF nosuch bag "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYPUSHF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYPOPF nosuch bag
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYPOPF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYGREPF nosuch bag "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYGREPF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYLINEF nosuch bag 0
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYLINEF should soft-fail"
+  END
+  CLEAR_ERR
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    # empty claim soft HIT=0
+    GETF w0 bag
+    LET save_b = LAST
+    SETF w0 bag ""
+    POPHEADF w0 bag
+    IF POPHEADF_HIT != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe empty POPHEAD should HIT=0"
+    END
+    SETF w0 bag save_b
+    CLEAR_ERR
+    PUSHF SOFT w0 nosuch "z"
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe PUSHF missing field should soft"
+    END
+    CLEAR_ERR
+    PUSHF w0 bag "probe-item"
+    IF OK == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe PUSHF after soft broken"
+    END
+    LET ret_n = PUSHF_N
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DUMPOBJ w0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_w0 val
+        GETF w0 bag
+        SYS WRITE b_w0 LAST
+        GETF w0 keep
+        SYS WRITE k_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DUMPOBJ w1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_w1 val
+        GETF w1 bag
+        SYS WRITE b_w1 LAST
+        GETF w1 keep
+        SYS WRITE k_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DUMPOBJ w2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_w2 val
+        GETF w2 bag
+        SYS WRITE b_w2 LAST
+        GETF w2 keep
+        SYS WRITE k_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS WRITE d_w0 ""
+  SYS WRITE d_w1 ""
+  SYS WRITE d_w2 ""
+  SYS WRITE b_w0 ""
+  SYS WRITE b_w1 ""
+  SYS WRITE b_w2 ""
+  SYS WRITE k_w0 ""
+  SYS WRITE k_w1 ""
+  SYS WRITE k_w2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE bag_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "push"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "unshift"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pop"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "peek"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "filter"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dropmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "depth"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "work_queue_bag_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
