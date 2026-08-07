@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 381,
-  "version": "1.15.408-usability",
-  "item": "WORDSF tokenize field to bag",
-  "item_id": 417,
-  "title": "WORDSF|TOKENIZEF — whitespace tokenize field → newline bag",
-  "commit": "d51fbd99db0943a9c6fff3005ef85dcdeddb77e8",
-  "summary": "Free-text bag without GETF+SYS WORDS. Soft miss. proof 958 31/31.",
+  "iter": 382,
+  "version": "1.15.409-usability",
+  "item": "CUTF/COLUMNF Nth column peel into field",
+  "item_id": 418,
+  "title": "CUTF|COLUMNF — Nth sep column peel into field",
+  "commit": "2f73313f5f2a6763e6011ef2d2070bf72a99eaac",
+  "summary": "CSV/path column without GETF+SYS CUT+SETF. Soft miss. proof 959 38/38.",
   "proofs": [
-    "958_oop_wordsf",
-    "asserts 31/31",
-    "957 still green"
+    "959_oop_cutf",
+    "asserts 38/38",
+    "958 still green"
   ],
-  "when": "2026-08-07T17:24:56Z",
+  "when": "2026-08-07T17:35:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d51fbd99db0943a9c6fff3005ef85dcdeddb77e8",
-  "note": "WORDSF_N tokens; no mutate; pairs SPLITF/JOINF"
+  "sha": "2f73313f5f2a6763e6011ef2d2070bf72a99eaac",
+  "note": "CUTF_HIT/CUTF_I; 0-based CUTF / 1-based COLUMNF"
 }
