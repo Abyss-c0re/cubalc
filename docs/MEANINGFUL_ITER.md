@@ -419,6 +419,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 389. ~~**`FNINFO` / `DUMPFN` / `DESCRIBEFN`**~~ **done** (FN arity/params plate · no guess of formals for CALL · twin of METHODINFO).
 390. ~~**`LISTFNS` / `HASFN`**~~ **done** (FN catalog bag + soft probe · twin of LISTMETHODS/HASMETHOD · no CALL guess).
 391. ~~**`TRYCALL` / `CALL SOFT`**~~ **done** (soft FN dispatch · OK=0 sticky LAST_ERR · twin of TRYSEND).
+392. ~~**`FIELDINFO` / `DUMPFIELD` / `DESCRIBEFIELD`**~~ **done** (field kind/default plate · no HASFIELD-only guess for SETF/NEW).
 
 ## Tick protocol
 

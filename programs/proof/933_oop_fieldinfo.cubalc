@@ -1,0 +1,128 @@
+# FIELDINFO / DUMPFIELD — field kind/default plate for agent SETF/NEW prep
+# Usability: twin of METHODINFO · no HASFIELD-only guess of type/default
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  FIELD note
+  METHOD init s
+    SETF THIS status s
+  END
+END
+
+NEW Ticket t "open"
+
+# string field with default
+FIELDINFO Ticket status
+ASSERT OK == 1
+ASSERT FIELDINFO_N == 1
+ASSERT HAS_DEF == 1
+ASSERT IS_STR == 1
+ASSERT LAST_N == 1
+SYS EQS FIELD "status"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+SYS EQS KIND "str"
+ASSERT LAST_N == 1
+SYS EQS DEFAULT "new"
+ASSERT LAST_N == 1
+SYS HAS LAST "name:status"
+ASSERT LAST_N == 1
+SYS HAS LAST "kind:str"
+ASSERT LAST_N == 1
+SYS HAS LAST "has_def:1"
+ASSERT LAST_N == 1
+
+# numeric field with default
+FIELDINFO Ticket retries
+ASSERT OK == 1
+ASSERT IS_STR == 0
+ASSERT HAS_DEF == 1
+SYS EQS KIND "num"
+ASSERT LAST_N == 1
+SYS EQS DEFAULT "0"
+ASSERT LAST_N == 1
+
+# field without explicit default
+FIELDINFO Ticket note
+ASSERT OK == 1
+ASSERT HAS_DEF == 0
+ASSERT LAST_N == 0
+SYS EQS KIND "num"
+ASSERT LAST_N == 1
+
+# JSON plate
+FIELDINFO JSON Ticket status
+ASSERT OK == 1
+SYS HAS LAST "cubalc.field.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"name\":\"status\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"kind\":\"str\""
+ASSERT LAST_N == 1
+SYS HAS LAST "\"has_def\":1"
+ASSERT LAST_N == 1
+
+# from live object — includes value
+FIELDINFO t status
+ASSERT OK == 1
+SYS HAS LAST "value:"
+ASSERT LAST_N == 1
+SYS EQS VALUE "open"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+
+FIELDINFO t retries
+SYS EQS VALUE "0"
+ASSERT LAST_N == 1
+
+# FIELD keyword sugar
+FIELDINFO Ticket FIELD retries
+ASSERT HAS_DEF == 1
+
+# string field name
+FIELDINFO Ticket "status"
+ASSERT IS_STR == 1
+
+# dynamic field name var
+LET f = "retries"
+FIELDINFO Ticket f
+ASSERT OK == 1
+SYS EQS FIELD "retries"
+ASSERT LAST_N == 1
+
+# aliases
+DUMPFIELD Ticket status
+ASSERT OK == 1
+DESCRIBEFIELD JSON t retries
+SYS HAS LAST "cubalc.field.v1"
+ASSERT LAST_N == 1
+PROPINFO Ticket note
+ASSERT HAS_DEF == 0
+
+# soft miss field
+FIELDINFO Ticket nosuch
+ASSERT OK == 0
+ASSERT FIELDINFO_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft miss class
+FIELDINFO NoClass status
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown class"
+ASSERT LAST_N == 1
+
+# HELP
+HELP FIELDINFO
+ASSERT OK == 1
+SYS HAS LAST "FIELDINFO"
+ASSERT LAST_N == 1
+
+NOTE "933_oop_fieldinfo ok"

@@ -10788,6 +10788,189 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* FIELDINFO|DUMPFIELD|DESCRIBEFIELD [JSON] Class|obj field
+   * — field kind/default plate for agent SETF/NEW prep (twin of METHODINFO).
+   * Default bag: name/class/kind/has_def/default[/value if live obj].
+   * JSON → cubalc.field.v1. Soft OK=0 if class or field missing. */
+  if (kw(&L->cur, "FIELDINFO") || kw(&L->cur, "DUMPFIELD") ||
+      kw(&L->cur, "DESCRIBEFIELD") || kw(&L->cur, "FIELDDEF") ||
+      kw(&L->cur, "INSPECTFIELD") || kw(&L->cur, "FIELDMETA") ||
+      kw(&L->cur, "FIELDSCHEMA") || kw(&L->cur, "PROPINFO") ||
+      kw(&L->cur, "ATTRINFO") || kw(&L->cur, "MEMBERINFO")) {
+    char a[48], fname[48], bag[2048], defbuf[160], valbuf[160];
+    ClassDef *cd = NULL;
+    FieldDef *fd = NULL;
+    ObjInst *ob = NULL;
+    int fi = -1, as_json = 0, has_live = 0;
+    const char *kind;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "FIELDINFO [JSON] Class|obj field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional FIELD|PROP keyword (not NAME — conflicts with field id) */
+    if (kw(&L->cur, "FIELD") || kw(&L->cur, "PROP") || kw(&L->cur, "ATTR") ||
+        kw(&L->cur, "MEMBER") || kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "FIELDINFO [JSON] Class|obj field"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      fi = oop_field_idx(cd, fname);
+      if (fi >= 0) fd = &cd->fields[fi];
+    }
+    bag[0] = 0;
+    defbuf[0] = 0;
+    valbuf[0] = 0;
+    if (!cd || !fd) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "FIELDINFO_N", 0);
+      var_set_num(vm, "HAS_DEF", 0);
+      var_set_num(vm, "IS_STR", 0);
+      var_set_str(vm, "FIELDINFO", "");
+      var_set_str(vm, "KIND", "");
+      var_set_str(vm, "DEFAULT", "");
+      var_set_str(vm, "FIELD", fname);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  !cd ? "FIELDINFO: unknown class/obj"
+                      : "FIELDINFO: unknown field");
+      var_set_str(vm, "ERR",
+                  !cd ? "FIELDINFO: unknown class/obj"
+                      : "FIELDINFO: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (fd->is_str) kind = "str";
+    else if (fd->has_def) kind = "num";
+    else kind = "num"; /* unset defaults act as numeric 0 on NEW */
+    if (fd->has_def) {
+      if (fd->is_str)
+        snprintf(defbuf, sizeof defbuf, "%s", fd->def_str);
+      else
+        snprintf(defbuf, sizeof defbuf, "%ld", fd->def_num);
+    }
+    if (ob && fi >= 0 && fi < CUBALC_MAX_FIELDS) {
+      has_live = 1;
+      if (ob->fis_str[fi])
+        snprintf(valbuf, sizeof valbuf, "%s", ob->fstr[fi]);
+      else
+        snprintf(valbuf, sizeof valbuf, "%ld", ob->fnum[fi]);
+    }
+    if (as_json) {
+      if (has_live) {
+        if (ob->fis_str[fi])
+          snprintf(bag, sizeof bag,
+                   "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                   "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                   "\"is_str\":%d,\"default\":\"%s\",\"value\":\"%s\"}",
+                   cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                   fd->is_str ? 1 : 0, defbuf, valbuf);
+        else
+          snprintf(bag, sizeof bag,
+                   "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                   "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                   "\"is_str\":%d,\"default\":%s,\"value\":%s}",
+                   cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                   fd->is_str ? 1 : 0,
+                   fd->has_def ? defbuf : "null",
+                   valbuf);
+      } else if (fd->is_str) {
+        snprintf(bag, sizeof bag,
+                 "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                 "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                 "\"is_str\":1,\"default\":\"%s\"}",
+                 cd->name, fd->name, kind, fd->has_def ? 1 : 0, defbuf);
+      } else {
+        snprintf(bag, sizeof bag,
+                 "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                 "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                 "\"is_str\":0,\"default\":%s}",
+                 cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                 fd->has_def ? defbuf : "null");
+      }
+    } else {
+      if (has_live)
+        snprintf(bag, sizeof bag,
+                 "name:%s\nclass:%s\nkind:%s\nhas_def:%d\nis_str:%d\n"
+                 "default:%s\nvalue:%s",
+                 fd->name, cd->name, kind, fd->has_def ? 1 : 0,
+                 fd->is_str ? 1 : 0, defbuf, valbuf);
+      else
+        snprintf(bag, sizeof bag,
+                 "name:%s\nclass:%s\nkind:%s\nhas_def:%d\nis_str:%d\n"
+                 "default:%s",
+                 fd->name, cd->name, kind, fd->has_def ? 1 : 0,
+                 fd->is_str ? 1 : 0, defbuf);
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FIELDINFO", bag);
+    var_set_str(vm, "DUMPFIELD", bag);
+    var_set_str(vm, "DESCRIBEFIELD", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = fd->has_def ? 1 : 0;
+    var_set_num(vm, "LAST_N", fd->has_def ? 1 : 0);
+    var_set_num(vm, "FIELDINFO_N", 1);
+    var_set_num(vm, "HAS_DEF", fd->has_def ? 1 : 0);
+    var_set_num(vm, "IS_STR", fd->is_str ? 1 : 0);
+    var_set_str(vm, "FIELD", fd->name);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "KIND", kind);
+    var_set_str(vm, "DEFAULT", defbuf);
+    if (has_live) var_set_str(vm, "VALUE", valbuf);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* CLASSINFO|DUMPCLASS|DESCRIBECLASS [JSON] Class|obj
    * — one-shot class schema plate for agents (fields + methods + live count).
    * Default: key:value bag (LOOKUP-ready). JSON|ASJSON → cubalc.class.v1.
