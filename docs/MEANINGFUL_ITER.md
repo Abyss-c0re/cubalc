@@ -350,6 +350,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 320. ~~**`SYS DEADLINE` duration**~~ **done** (`DEADLINE "5m"`/`"30s"` · ADDTIME offset · no PARSEMS+MS2SEC glue).
 321. ~~**`SYS ADDISO` / `SHIFTISO`**~~ **done** (ISO + secs|duration → new ISO · no PARSEISO+ADDTIME+FROMTIME glue).
 322. ~~**`SYS DIFFISO` / `ISOAGE`**~~ **done** (ISO − ISO / now−ISO secs · dual ADDISO · no PARSEISO+TIMEDIFF glue).
+323. ~~**OOP/COP plane**~~ **done** (`CLASS`/`METHOD`/`NEW`/`SEND` · `ENTITY`/`SPAWN`/`TICK` · reusable cubes beyond FN).
 
 ## Tick protocol
 

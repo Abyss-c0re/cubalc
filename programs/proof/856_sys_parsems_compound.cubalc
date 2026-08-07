@@ -67,4 +67,20 @@ ASSERT OK == 0
 SYS PARSEMS "1h30"
 ASSERT OK == 0
 
+# signed duration (leading - / +) — avoid strtoull wrap on "-"
+SYS PARSEMS "-30s"
+ASSERT OK == 1
+ASSERT LAST_N == -30000
+SYS PARSEMS "+1m30s"
+ASSERT OK == 1
+ASSERT LAST_N == 90000
+SYS PARSEMS "-"
+ASSERT OK == 0
+# ADDISO string offset uses PARSEMS floor secs
+SYS ADDISO "2020-01-01T01:00:00Z" "-30s"
+ASSERT OK == 1
+SYS EQS LAST "2020-01-01T00:59:30Z"
+ASSERT LAST_N == 1
+ASSERT ADDISO_SECS == -30
+
 PRINT "sys_parsems_compound ok"
