@@ -21,31 +21,31 @@
     },
     {
       "name": "wherege_hot",
-      "cmd": "WHEREGE >=100 → p1",
+      "cmd": "WHEREGE >=100 \u2192 p1",
       "ok": true,
       "note": "WHEREGE"
     },
     {
       "name": "wheregt_above",
-      "cmd": "WHEREGT >100 → p1",
+      "cmd": "WHEREGT >100 \u2192 p1",
       "ok": true,
       "note": "WHEREGT"
     },
     {
       "name": "wherele_cold",
-      "cmd": "WHERELE <=80 → p0 p2",
+      "cmd": "WHERELE <=80 \u2192 p0 p2",
       "ok": true,
       "note": "WHERELE"
     },
     {
       "name": "wherelt_below",
-      "cmd": "WHERELT <50 → p0",
+      "cmd": "WHERELT <50 \u2192 p0",
       "ok": true,
       "note": "WHERELT"
     },
     {
       "name": "gate_hot_deny",
-      "cmd": "avg ok but hot>0 → deny; REQUIRE rc2",
+      "cmd": "avg ok but hot>0 \u2192 deny; REQUIRE rc2",
       "ok": true,
       "note": "gate"
     },
@@ -63,13 +63,13 @@
     },
     {
       "name": "int_avg_trunc",
-      "cmd": "AVGF 10+20+21 → 17 not 17.0",
+      "cmd": "AVGF 10+20+21 \u2192 17 not 17.0",
       "ok": true,
       "note": "int mean"
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2→1; pin",
+      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
       "ok": true,
       "note": "journal"
     },
@@ -87,7 +87,7 @@
     },
     {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE→2",
+      "cmd": "open xx soft/REQUIRE\u21922",
       "ok": true,
       "note": "miss"
     },
@@ -123,9 +123,9 @@
       "id": "W2",
       "severity": "high",
       "area": "oop|avgf",
-      "title": "AVGF is integer mean only — truncates remainder",
-      "detail": "10+20+21 → 17 not 17.0. SLO agents cannot express fractional ms means without scaling.",
-      "repro": "AVGF Probe lat_ms on 10,20,21 → 17"
+      "title": "AVGF is integer mean only \u2014 truncates remainder",
+      "detail": "10+20+21 \u2192 17 not 17.0. SLO agents cannot express fractional ms means without scaling.",
+      "repro": "AVGF Probe lat_ms on 10,20,21 \u2192 17"
     },
     {
       "id": "W3",
@@ -148,7 +148,7 @@
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:lat → one SETMATCH leaves 1.",
+      "detail": "Two p0:lat \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -164,7 +164,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_LS_REQUIRE=abc → soft.",
+      "detail": "CUBALC_LS_REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -179,9 +179,9 @@
       "id": "W9",
       "severity": "low",
       "area": "host|join",
-      "title": "No string concat — labels use STR/PUSH bags",
+      "title": "No string concat \u2014 labels use STR/PUSH bags",
       "detail": "JOIN inserts /.",
-      "repro": "SYS JOIN avg: n → avg:/80"
+      "repro": "SYS JOIN avg: n \u2192 avg:/80"
     }
   ],
   "workarounds": [
@@ -203,10 +203,10 @@
     "SUMF 240 AVGF 80 clean without GETFALL glue",
     "WHEREGE/LE/GT/LT threshold bags correct incl boundary 80 in WHERELE",
     "gate deny when hot present even if avg under MAX",
-    "AVGF trunc 10+20+21→17 documented W2",
+    "AVGF trunc 10+20+21\u219217 documented W2",
     "empty SUMF/AVGF 0 soft; empty hot N=0",
     "selftest 315/315 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T06:05:00Z"
+  "commit": "e19449b803e0fff575ffbdc04a22144b0f39d426",
+  "ts": "2026-08-07T06:04:49Z"
 }
