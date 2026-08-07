@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 389,
-  "version": "1.15.416-usability",
-  "item": "ENSUREBAGLINE idempotent bag membership on fields",
-  "item_id": 425,
-  "title": "ENSUREBAGLINE|BAGENSURE — append exact bag line if missing",
-  "commit": "784c5d7068f7ccf70b686a9ece8fc81eb86374d7",
-  "summary": "Idempotent flags/work sets without HAS+PUSH IF. Soft miss. proof 966 42/42.",
+  "iter": 390,
+  "version": "1.15.417-usability",
+  "item": "EACH PROP OF obj|Class schema field walk",
+  "item_id": 426,
+  "title": "EACH PROP|ATTR|OBJFIELD OF obj|Class — walk schema field names",
+  "commit": "517c65143891087febcd0c17696ac6281a7fc14e",
+  "summary": "Schema field walk without LISTFIELDS+EACH LINE. Not bag EACH FIELD. proof 967 32/32.",
   "proofs": [
-    "966_oop_ensurebagline",
-    "asserts 42/42",
-    "964 still green"
+    "967_each_prop",
+    "asserts 32/32",
+    "965 still green"
   ],
-  "when": "2026-08-07T18:45:29Z",
+  "when": "2026-08-07T18:55:18Z",
   "agent": "meaningful_iter_10m",
-  "sha": "784c5d7068f7ccf70b686a9ece8fc81eb86374d7",
-  "note": "ENSUREBAGLINE_NEW/N; not file ENSURELINE"
+  "sha": "517c65143891087febcd0c17696ac6281a7fc14e",
+  "note": "PROP_N/FIELD; EACH FIELD remains LINE synonym"
 }
