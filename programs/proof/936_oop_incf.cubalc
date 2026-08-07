@@ -1,0 +1,108 @@
+# INCF / DECF — single-object numeric field bump for agents
+# Usability: counter/retry without GETF+arith+SETF · works in METHOD bodies
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  FIELD energy 10
+  METHOD init s
+    SETF THIS status s
+  END
+  METHOD bump
+    INCF THIS retries
+  END
+  METHOD drain n
+    DECF THIS energy n
+  END
+END
+
+NEW Ticket t "open"
+
+# default +1
+INCF t retries
+ASSERT OK == 1
+ASSERT INCF_N == 1
+ASSERT LAST_N == 1
+ASSERT INCF_DELTA == 1
+SYS EQS FIELD "retries"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "t"
+ASSERT LAST_N == 1
+GETF t retries
+ASSERT LAST_N == 1
+
+# explicit delta
+INCF t retries 3
+ASSERT LAST_N == 4
+ASSERT INCF_DELTA == 3
+
+# aliases
+ADDF t retries 2
+ASSERT LAST_N == 6
+BUMPF t retries
+ASSERT LAST_N == 7
+
+# DECF default −1
+DECF t retries
+ASSERT OK == 1
+ASSERT LAST_N == 6
+ASSERT INCF_DELTA == -1
+
+# DECF with positive amount → subtract
+DECF t retries 2
+ASSERT LAST_N == 4
+
+# SUBF alias
+SUBF t energy 3
+ASSERT LAST_N == 7
+GETF t energy
+ASSERT LAST_N == 7
+
+# METHOD body uses INCF THIS
+SEND t bump
+GETF t retries
+ASSERT LAST_N == 5
+
+# METHOD DECF THIS with arg
+SEND t drain 2
+GETF t energy
+ASSERT LAST_N == 5
+
+# soft miss object
+TRYINCF nosuch retries
+ASSERT OK == 0
+ASSERT INCF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+INCF SOFT t nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYINCF t status
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# after soft, still works
+INCF t retries
+ASSERT OK == 1
+GETF t retries
+ASSERT LAST_N == 6
+
+# string field name
+INCF t "retries" 1
+ASSERT LAST_N == 7
+
+# HELP
+HELP INCF
+ASSERT OK == 1
+SYS HAS LAST "INCF"
+ASSERT LAST_N == 1
+
+NOTE "936_oop_incf ok"

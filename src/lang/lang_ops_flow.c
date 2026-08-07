@@ -9850,6 +9850,169 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* INCF|ADDF|BUMPF|DECF|SUBF obj field [delta]
+   * TRYINCF|INCF SOFT — soft miss OK=0.
+   * Default delta: +1 for INCF/ADDF/BUMPF, −1 for DECF/SUBF.
+   * Numeric fields only; string field soft-skips or fatal if bare.
+   * Usability: counter/retry bump without GETF+arith+SETF (fills gap vs
+   * INCFALL/INCFWHERE; enables METHOD bodies like INCF THIS retries). */
+  if (kw(&L->cur, "INCF") || kw(&L->cur, "ADDF") || kw(&L->cur, "BUMPF") ||
+      kw(&L->cur, "INCFIELD") || kw(&L->cur, "ADDFIELD") ||
+      kw(&L->cur, "DECF") || kw(&L->cur, "SUBF") || kw(&L->cur, "DECFIELD") ||
+      kw(&L->cur, "TRYINCF") || kw(&L->cur, "INCFSOFT") ||
+      kw(&L->cur, "SOFTINCF") || kw(&L->cur, "TRYDECF") ||
+      kw(&L->cur, "DECFSOFT") || kw(&L->cur, "BUMP") ||
+      kw(&L->cur, "ADDTO") || kw(&L->cur, "SUBFROM")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_dec = 0;
+    long delta, nv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DECF") == 0 || strcmp(op, "SUBF") == 0 ||
+        strcmp(op, "DECFIELD") == 0 || strcmp(op, "TRYDECF") == 0 ||
+        strcmp(op, "DECFSOFT") == 0 || strcmp(op, "SUBFROM") == 0)
+      is_dec = 1;
+    if (strcmp(op, "TRYINCF") == 0 || strcmp(op, "INCFSOFT") == 0 ||
+        strcmp(op, "SOFTINCF") == 0 || strcmp(op, "TRYDECF") == 0 ||
+        strcmp(op, "DECFSOFT") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, is_dec ? "DECF object field [delta]" : "INCF object field [delta]");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, is_dec ? "DECF field" : "INCF field");
+      return -1;
+    }
+    /* optional delta (default ±1) */
+    delta = is_dec ? -1L : 1L;
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+         strcmp(L->cur.text, "END") != 0)) {
+      /* only parse if it looks like a value; avoid eating next form */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        delta = parse_expr(vm, L);
+        if (is_dec && delta > 0) delta = -delta; /* DECF 3 → −3 */
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        /* numeric var or LAST as delta; skip if looks like next form */
+        if (dv && !dv->is_str) {
+          delta = dv->val;
+          if (is_dec && delta > 0) delta = -delta;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          delta = vm->last_n;
+          if (is_dec && delta > 0) delta = -delta;
+          lex_next(L);
+        }
+        /* else leave default; do not consume */
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s",
+                 is_dec ? "DECF" : "INCF", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "INCF_N", 0);
+      var_set_num(vm, "DECF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_dec ? "DECF: unknown object" : "INCF: unknown object");
+      var_set_str(vm, "ERR",
+                  is_dec ? "DECF: unknown object" : "INCF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s",
+                 is_dec ? "DECF" : "INCF", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "INCF_N", 0);
+      var_set_num(vm, "DECF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_dec ? "DECF: unknown field" : "INCF: unknown field");
+      var_set_str(vm, "ERR",
+                  is_dec ? "DECF: unknown field" : "INCF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s field %s is string",
+                 is_dec ? "DECF" : "INCF", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "INCF_N", 0);
+      var_set_num(vm, "DECF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_dec ? "DECF: string field" : "INCF: string field");
+      var_set_str(vm, "ERR",
+                  is_dec ? "DECF: string field" : "INCF: string field");
+      bump(vm);
+      return 1;
+    }
+    nv = ob->fnum[fi] + delta;
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    var_set_num(vm, "INCF_N", 1);
+    var_set_num(vm, "DECF_N", is_dec ? 1 : 0);
+    var_set_num(vm, "INCF_DELTA", delta);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 358,
-  "version": "1.15.385-usability",
-  "item": "OBJINFO/DESCRIBEOBJ live object plate",
-  "item_id": 394,
-  "title": "OBJINFO|DESCRIBEOBJ \u2014 live name/class/methods+fields plate",
-  "commit": "1938a170e2053114240dc114c96c0a28de09644b",
-  "summary": "Live object plate for agents. Twin DUMPOBJ+CLASSINFO. proof 935 37/37.",
+  "iter": 359,
+  "version": "1.15.386-usability",
+  "item": "INCF/DECF single-object numeric field bump",
+  "item_id": 395,
+  "title": "INCF|DECF|ADDF|BUMPF \u2014 single-object numeric field bump",
+  "commit": "0b957bcfc2d349d68ac467a194510cc2be232202",
+  "summary": "Single-obj field \u00b1delta without GETF+SETF. METHOD/THIS ready. proof 936 31/31.",
   "proofs": [
-    "935_oop_objinfo",
-    "asserts 37/37",
-    "934 still green"
+    "936_oop_incf",
+    "asserts 31/31",
+    "935 still green"
   ],
-  "when": "2026-08-07T13:37:36Z",
+  "when": "2026-08-07T13:44:19Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1938a170e2053114240dc114c96c0a28de09644b",
-  "note": "uses oop_resolve_obj_name to avoid NEW class-string pollution"
+  "sha": "0b957bcfc2d349d68ac467a194510cc2be232202",
+  "note": "fills gap between SETF and INCFALL/INCFWHERE"
 }
