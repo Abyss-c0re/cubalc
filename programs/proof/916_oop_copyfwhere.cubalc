@@ -1,0 +1,126 @@
+# COPYFWHERE / SNAPSHOTWHERE — selective field→field copy on match
+# Usability: subset snapshot without EACH+GETF+IF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# Cell: energy + age; snapshot energy→age only for age==1 cohort
+# Need a spare numeric field — use age as dest, then check energy source
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# copy energy→age only where age==1 (a,c). b,d keep age 0
+# wait: matching on age before copy — after copy age becomes energy for matches
+COPYFWHERE Cell energy age age 1
+ASSERT OK == 1
+ASSERT COPYFWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT COPYFWHERE_SKIP == 0
+GETF a age
+ASSERT LAST_N == 10
+GETF c age
+ASSERT LAST_N == 30
+GETF b age
+ASSERT LAST_N == 0 "non-match untouched"
+GETF d age
+ASSERT LAST_N == 0
+# energy still source values
+GETF a energy
+ASSERT LAST_N == 10
+GETF c energy
+ASSERT LAST_N == 30
+
+# restore ages and use TO + WHERE sugar
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF a energy 11
+SETF b energy 22
+SETF c energy 33
+SETF d energy 44
+COPYFWHERE Cell energy TO age WHERE age 0
+ASSERT COPYFWHERE_N == 2
+GETF b age
+ASSERT LAST_N == 22
+GETF d age
+ASSERT LAST_N == 44
+GETF a age
+ASSERT LAST_N == 1 "age=1 not copied"
+GETF c age
+ASSERT LAST_N == 1
+
+# OF sugar
+SETF a age 1
+SETF c age 1
+SETF a energy 5
+SETF c energy 7
+COPYFWHERE OF Cell energy age age 1
+ASSERT COPYFWHERE_N == 2
+GETF a age
+ASSERT LAST_N == 5
+GETF c age
+ASSERT LAST_N == 7
+
+# aliases (restore age match each time — dest overwrites age)
+SETF a age 1
+SETF c age 1
+SETF a energy 9
+SETF c energy 8
+SNAPSHOTWHERE Cell energy age age 1
+ASSERT SNAPSHOTWHERE_N == 2
+GETF a age
+ASSERT LAST_N == 9
+SETF a age 1
+SETF c age 1
+SETF a energy 9
+SETF c energy 8
+BACKUPWHERE Cell energy age age 1
+ASSERT BACKUPWHERE_N == 2
+SETF a age 1
+SETF c age 1
+SETF a energy 9
+SETF c energy 8
+COPYIF Cell energy age age 1
+ASSERT COPYFWHERE_N == 2
+
+# string field copy among open tickets: status → note (use severity as dest)
+CLASS Ticket
+  FIELD status "new"
+  FIELD note "none"
+  METHOD init s n
+    SETF THIS status s
+    SETF THIS note n
+  END
+END
+NEW Ticket t1 "open" "x"
+NEW Ticket t2 "closed" "y"
+NEW Ticket t3 "open" "z"
+COPYFWHERE Ticket status TO note WHERE status "open"
+ASSERT OK == 1
+ASSERT COPYFWHERE_N == 2
+GETF t1 note
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+GETF t3 note
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+GETF t2 note
+SYS EQS LAST "y"
+ASSERT LAST_N == 1 "closed note untouched"
+
+# no match
+COPYFWHERE Ticket status note status "missing"
+ASSERT OK == 1
+ASSERT COPYFWHERE_N == 0
+ASSERT LAST_N == 0
+
+PRINT "proof916_oop_copyfwhere" 1
+ASSERT OK == 1

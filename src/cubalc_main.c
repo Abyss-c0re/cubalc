@@ -2054,6 +2054,7 @@ int main(int argc, char **argv) {
       {"oop_uniquwhere", "programs/proof/913_oop_uniquwhere.cubalc", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
       {"oop_clampwhere", "programs/proof/914_oop_clampwhere.cubalc", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"oop_mulwhere", "programs/proof/915_oop_mulwhere.cubalc", "MULWHERE/SCALEWHERE selective multiply field on match"},
+      {"oop_copyfwhere", "programs/proof/916_oop_copyfwhere.cubalc", "COPYFWHERE/SNAPSHOTWHERE selective field copy on match"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5975,6 +5976,7 @@ int main(int argc, char **argv) {
       {"programs/proof/913_oop_uniquwhere.cubalc", "oop_uniquwhere", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
       {"programs/proof/914_oop_clampwhere.cubalc", "oop_clampwhere", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"programs/proof/915_oop_mulwhere.cubalc", "oop_mulwhere", "MULWHERE/SCALEWHERE selective multiply field on match"},
+      {"programs/proof/916_oop_copyfwhere.cubalc", "oop_copyfwhere", "COPYFWHERE/SNAPSHOTWHERE selective field copy on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6288,6 +6290,7 @@ int main(int argc, char **argv) {
       {"programs/proof/913_oop_uniquwhere.cubalc", "oop_uniquwhere", "UNIQUWHERE/DISTINCTWHERE filtered unique field values on match"},
       {"programs/proof/914_oop_clampwhere.cubalc", "oop_clampwhere", "CLAMPWHERE/CLIPWHERE selective clamp field on match"},
       {"programs/proof/915_oop_mulwhere.cubalc", "oop_mulwhere", "MULWHERE/SCALEWHERE selective multiply field on match"},
+      {"programs/proof/916_oop_copyfwhere.cubalc", "oop_copyfwhere", "COPYFWHERE/SNAPSHOTWHERE selective field copy on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

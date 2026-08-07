@@ -3442,6 +3442,211 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COPYFWHERE|SNAPSHOTWHERE|BACKUPWHERE [Class] src [TO] dst matchfield matchvalue
+   * — copy src→dst field where matchfield == matchvalue.
+   * WHERE sugar: COPYFWHERE Cell energy TO prev WHERE age 1.
+   * LAST_N = copy count; soft empty → 0.
+   * Usability: selective snapshot without EACH+GETF+IF+SETF. */
+  if (kw(&L->cur, "COPYFWHERE") || kw(&L->cur, "SNAPSHOTWHERE") ||
+      kw(&L->cur, "BACKUPWHERE") || kw(&L->cur, "WHERECOPYF") ||
+      kw(&L->cur, "COPYIF") || kw(&L->cur, "SNAPSHOTIF") ||
+      kw(&L->cur, "BACKUPIF") || kw(&L->cur, "DUPWHERE") ||
+      kw(&L->cur, "CLONEWHERE") || kw(&L->cur, "FIELDCOPYWHERE")) {
+    char filt[48], srcf[48], dstf[48], mfield[48], tok1[48];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, i, n = 0, n_skip = 0;
+    long m_nval = 0;
+    lex_next(L);
+    filt[0] = 0;
+    srcf[0] = 0;
+    dstf[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "COPYFWHERE OF Class src dst matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "TO") && !kw(&L->cur, "INTO") && !kw(&L->cur, "AS") &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !oop_stmt_kw(L)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(srcf, sizeof srcf, "%s", vv->sval);
+          else
+            snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "TO") || kw(&L->cur, "WHERE")))
+          snprintf(srcf, sizeof srcf, "%s", vv->sval);
+        else
+          snprintf(srcf, sizeof srcf, "%s", tok1);
+      }
+    } else {
+      fail(vm, "COPYFWHERE [Class] src dst matchfield matchvalue");
+      return -1;
+    }
+    if (!srcf[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "TO") && !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(srcf, sizeof srcf, "%s", vv->sval);
+        else
+          snprintf(srcf, sizeof srcf, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "COPYFWHERE [Class] src dst matchfield matchvalue");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "INTO") || kw(&L->cur, "AS") ||
+        kw(&L->cur, "->") || (L->cur.kind == TK_EQ))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(dstf, sizeof dstf, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(dstf, sizeof dstf, "%s", vv->sval);
+      else
+        snprintf(dstf, sizeof dstf, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "COPYFWHERE [Class] src dst matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "COPYFWHERE [Class] src dst matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int si, di, mfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      si = oop_field_idx(cd, srcf);
+      di = oop_field_idx(cd, dstf);
+      if (mfi < 0 || si < 0 || di < 0) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      if (ob->fis_str[si]) {
+        snprintf(ob->fstr[di], sizeof ob->fstr[di], "%s", ob->fstr[si]);
+        ob->fis_str[di] = 1;
+      } else {
+        ob->fnum[di] = ob->fnum[si];
+        ob->fis_str[di] = 0;
+      }
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "COPYFWHERE_N", n);
+    var_set_num(vm, "SNAPSHOTWHERE_N", n);
+    var_set_num(vm, "BACKUPWHERE_N", n);
+    var_set_num(vm, "WHERECOPYF_N", n);
+    var_set_num(vm, "COPYFWHERE_SKIP", n_skip);
+    var_set_str(vm, "FIELD", srcf);
+    var_set_str(vm, "SRC", srcf);
+    var_set_str(vm, "DST", dstf);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* MAXOBJ|HIGHEST|ARGMAXF [Class] field
    * MINOBJ|LOWEST|ARGMINF [Class] field
    * — name of first live object with max/min numeric field (optional class).
