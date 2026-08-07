@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 401,
-  "version": "1.15.428-usability",
-  "item": "incomplete form tips + line",
-  "item_id": 437,
-  "title": "fail_at tips for NEW/SEND/GETF/CALL/… + DEFAULT optional =",
-  "commit": "9ac443c442b4dcca974a9d32109df9290638ed6e",
-  "summary": "Incomplete forms get example+line; DEFAULT optional =. proof 978 6/6.",
+  "iter": 402,
+  "version": "1.15.429-usability",
+  "item": "HASARG/HASARGC soft probes",
+  "item_id": 438,
+  "title": "HASARG n · HASARGC [min] soft 0|1 CLI probes",
+  "commit": "c6c9be21a4e5420c7f94b8fbc02883b2a5ccbd3d",
+  "summary": "Soft arg presence probes twin REQUIRE ARG; thrash restore. proof 979 13/13.",
   "proofs": [
-    "978_incomplete_form_tips",
-    "asserts 6/6",
-    "smoke NEW/SEND/GETF/SETF/CALL/INCLUDE tips"
+    "979_hasarg",
+    "asserts 13/13",
+    "smoke HASARGC 2 -- a b"
   ],
-  "when": "2026-08-07T20:59:24Z",
+  "when": "2026-08-07T21:07:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "9ac443c442b4dcca974a9d32109df9290638ed6e",
-  "note": "cubalc_lang_fail_at; plate-safe SETF tip"
+  "sha": "c6c9be21a4e5420c7f94b8fbc02883b2a5ccbd3d",
+  "note": "thrash restore before implement; EVOLVE_PAUSED"
 }
