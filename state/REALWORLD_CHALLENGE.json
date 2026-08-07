@@ -15,7 +15,7 @@
     },
     {
       "name": "nthbyfwhere",
-      "cmd": "DESC 0→n0:40; 1→n1:10 (drain excluded)",
+      "cmd": "DESC 0\u2192n0:40; 1\u2192n1:10 (drain excluded)",
       "ok": true,
       "note": "NTHBYFWHERE"
     },
@@ -27,25 +27,25 @@
     },
     {
       "name": "slicebyf",
-      "cmd": "SLICE start1 count2 DESC → n0 n1 (skip n2); start0 → n2 n0",
+      "cmd": "SLICE start1 count2 DESC \u2192 n0 n1 (skip n2); start0 \u2192 n2 n0",
       "ok": true,
       "note": "SLICEBYF"
     },
     {
       "name": "slice_oob",
-      "cmd": "start 99 → N=0 TOTAL=3",
+      "cmd": "start 99 \u2192 N=0 TOTAL=3",
       "ok": true,
       "note": "empty window"
     },
     {
       "name": "admit_runner",
-      "cmd": "runner load 10 ≤50 admit; ≤5 deny",
+      "cmd": "runner load 10 \u226450 admit; \u22645 deny",
       "ok": true,
       "note": "admit"
     },
     {
       "name": "single_ready",
-      "cmd": "one ready → runner_up miss REQUIRE; coldest ok",
+      "cmd": "one ready \u2192 runner_up miss REQUIRE; coldest ok",
       "ok": true,
       "note": "need 2+"
     },
@@ -73,7 +73,7 @@
       "id": "W1",
       "severity": "med",
       "area": "oop|slicebyf",
-      "title": "No SLICEBYFWHERE — ranked windows cannot filter by status",
+      "title": "No SLICEBYFWHERE \u2014 ranked windows cannot filter by status",
       "detail": "SLICEBYF is fleet-wide only. Skip-hottest page includes drain nodes. Filtered page needs SORTBYFWHERE+manual drop/take or TOPN+glue.",
       "repro": "SLICE start1 DESC includes n0 after skipping drain n2, but start0 is n2"
     },
@@ -83,13 +83,13 @@
       "area": "oop|nthbyfwhere",
       "title": "OOB NTHBYFWHERE is soft HIT=0 not distinct error code",
       "detail": "Agents must check NTHBYFWHERE_HIT; LAST blank; TOTAL still set. Easy to confuse with empty match set.",
-      "repro": "index 99 → HIT=0 TOTAL=3"
+      "repro": "index 99 \u2192 HIT=0 TOTAL=3"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|slicebyf",
-      "title": "Slice bag is names only — no load values",
+      "title": "Slice bag is names only \u2014 no load values",
       "detail": "Page plate needs GETF per name for loads.",
       "repro": "SLICE.txt = n0\\nn1"
     },
@@ -97,9 +97,9 @@
       "id": "W4",
       "severity": "med",
       "area": "oop|runner",
-      "title": "Runner-up needs ≥2 matches — no soft primary-only path",
+      "title": "Runner-up needs \u22652 matches \u2014 no soft primary-only path",
       "detail": "Single ready node makes runner_up miss; agents must fall back to nth 0.",
-      "repro": "one ready → runner_up HIT=0"
+      "repro": "one ready \u2192 runner_up HIT=0"
     },
     {
       "id": "W5",
@@ -122,7 +122,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/NTH/START softens",
-      "detail": "REQUIRE=abc → soft.",
+      "detail": "REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -130,14 +130,14 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:fail → one SETMATCH leaves 1.",
+      "detail": "Two n0:fail \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
     "Filtered page: SORTBYFWHERE + SYS DROP/TAKE if no SLICEBYFWHERE",
     "Check NTHBYFWHERE_HIT and TOTAL for OOB vs empty",
-    "Runner-up miss → fall back NTH 0 as primary",
+    "Runner-up miss \u2192 fall back NTH 0 as primary",
     "SLICEBYF intentionally fleet-wide for global operator pages",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
@@ -149,12 +149,12 @@
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NTHBYFWHERE ready DESC 0→n0:40 1→n1:10; drain excluded",
-    "SLICE start1 → n0 n1 skip drain hottest; start0 → n2 n0",
-    "runner_up admit load≤50 ok; ≤5 deny; single ready runner miss",
+    "NTHBYFWHERE ready DESC 0\u2192n0:40 1\u2192n1:10; drain excluded",
+    "SLICE start1 \u2192 n0 n1 skip drain hottest; start0 \u2192 n2 n0",
+    "runner_up admit load\u226450 ok; \u22645 deny; single ready runner miss",
     "OOB nth HIT=0 REQUIRE; empty ready coldest REQUIRE",
     "selftest 351/351 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "5ef015339d87eaa4c7a034947d949af13f078c92",
   "ts": "2026-08-07T11:54:45Z"
 }
