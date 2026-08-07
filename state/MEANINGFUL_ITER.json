@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 403,
-  "version": "1.15.430-usability",
-  "item": "HASFLAG/GETFLAG soft CLI flag probes",
-  "item_id": 439,
-  "title": "HASFLAG name \u00b7 GETFLAG name [OR fb] soft --flag probes",
-  "commit": "5c50a5f40c9c57b1975784c55963b9dee601dcfa",
-  "summary": "Soft --name / --name=val / --name val probes; twin HASARG for flags. proof 980 15/15.",
+  "iter": 404,
+  "version": "1.15.431-usability",
+  "item": "RESTARGS/POSITIONALS non-flag bag",
+  "item_id": 440,
+  "title": "RESTARGS \u00b7 POSITIONALS bag of non-flag CUBALC_ARGn",
+  "commit": "1db4d0e590ef3fdeaae26c030c958700edd98684",
+  "summary": "Non-flag positionals after --flags; bare -- ends flags. proof 981 16/16.",
   "proofs": [
-    "980_hasflag",
-    "asserts 15/15",
-    "smoke HASFLAG verbose -- --verbose --out=hi.txt"
+    "981_restargs",
+    "asserts 16/16",
+    "smoke RESTARGS -- --mode=fast a.txt b.txt"
   ],
-  "when": "2026-08-07T21:19:55Z",
+  "when": "2026-08-07T21:27:45Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5c50a5f40c9c57b1975784c55963b9dee601dcfa",
+  "sha": "1db4d0e590ef3fdeaae26c030c958700edd98684",
   "note": "no thrash; EVOLVE_PAUSED"
 }
