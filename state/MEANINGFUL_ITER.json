@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 404,
-  "version": "1.15.431-usability",
-  "item": "RESTARGS/POSITIONALS non-flag bag",
-  "item_id": 440,
-  "title": "RESTARGS \u00b7 POSITIONALS bag of non-flag CUBALC_ARGn",
-  "commit": "1db4d0e590ef3fdeaae26c030c958700edd98684",
-  "summary": "Non-flag positionals after --flags; bare -- ends flags. proof 981 16/16.",
+  "iter": 405,
+  "version": "1.15.432-usability",
+  "item": "REQUIRE FLAG fail-fast CLI flag",
+  "item_id": 441,
+  "title": "REQUIRE FLAG|OPT name \u2014 fail if --name missing \u00b7 LAST=value",
+  "commit": "08bf2677a9a261b3e0b84121eaef397f32998c38",
+  "summary": "Fail-fast --flag contract twin HASFLAG; LAST=value. proof 982 12/12 + miss tip.",
   "proofs": [
-    "981_restargs",
-    "asserts 16/16",
-    "smoke RESTARGS -- --mode=fast a.txt b.txt"
+    "982_require_flag",
+    "asserts 12/12",
+    "smoke REQUIRE FLAG out -- --out=hi.txt --verbose",
+    "fail REQUIRE FLAG needme tip"
   ],
-  "when": "2026-08-07T21:27:45Z",
+  "when": "2026-08-07T21:34:24Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1db4d0e590ef3fdeaae26c030c958700edd98684",
+  "sha": "08bf2677a9a261b3e0b84121eaef397f32998c38",
   "note": "no thrash; EVOLVE_PAUSED"
 }
