@@ -1,41 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 156,
-  "program": "programs/realworld/runbook_say_log_board.cubalc",
-  "theme": "multi-arg SAY/PRINT + optional THEN/LET runbook step journal",
-  "version": "1.15.426-usability",
+  "iter": 157,
+  "program": "programs/realworld/seal_batch_args_board.cubalc",
+  "theme": "SYS ARGS/ARGC + REQUIRE ARG + CRC32FILE multi-artifact seal batch under LOCKFILE",
+  "version": "1.15.428-usability",
   "pass": true,
-  "prior_note": "iter 155 SEND arity dispatch; this iter first realworld multi-arg SAY (975) + optional LET/IF (974)",
+  "prior_note": "iter 156 multi-arg SAY; this iter first realworld SYS ARGS/ARGC + REQUIRE ARG (976/977) with CRC32FILE batch seals",
   "tests": [
     {
-      "name": "say_join",
-      "cmd": "SAY step build running start \u2192 PRINT_N=4; LOG append",
+      "name": "batch_crc",
+      "cmd": "batch a.bin b.bin \u2192 SEALS path:crc; 123456789\u2192cbf43926",
       "ok": true,
-      "note": "SAY"
+      "note": "CRC32FILE+LOCK"
     },
     {
-      "name": "saycode",
-      "cmd": "PRINT step build ok code 0 with numeric part",
+      "name": "verify_has",
+      "cmd": "verify exact HASLINE; substring prefix false friend",
       "ok": true,
-      "note": "PRINT num"
+      "note": "HASLINE exact"
     },
     {
-      "name": "hasline",
-      "cmd": "exact full line present; substring run absent",
+      "name": "argc_args",
+      "cmd": "argc/args dump; DROP 1 paths bag",
       "ok": true,
-      "note": "HASLINE"
+      "note": "SYS ARGS"
     },
     {
-      "name": "gate",
-      "cmd": "MINLOG=2 admit; 99 REQUIRE\u21922",
+      "name": "requirearg",
+      "cmd": "REQUIRE ARG 0 present",
+      "ok": true,
+      "note": "REQUIRE ARG"
+    },
+    {
+      "name": "gate_soft_require",
+      "cmd": "gate MIN admit; REQUIRE=1 EXIT 2; soft miss wall",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "probe",
-      "cmd": "empty PRINT re-echo; SAY a b c; optional IF/LET",
+      "name": "hex_crc",
+      "cmd": "hex hello\u219268656c6c6f; crc classic vector",
       "ok": true,
-      "note": "probe"
+      "note": "HEX+CRC32"
     },
     {
       "name": "selftest",
@@ -92,28 +98,63 @@
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0.",
       "repro": "REQUIRE=abc MINLOG=99 gate soft"
+    },
+    {
+      "id": "W7",
+      "severity": "high",
+      "area": "host|require_arg",
+      "title": "REQUIRE ARGC hard-fail leaves process exit_code 0",
+      "detail": "REQUIRE ARGC N when short sets ok:false + asserts_fail and sticky err, but plate exit_code stays 0 and shell 0 is 0. Agents cannot rely on process status for CLI contract failures; only EXIT n propagates shell rc.",
+      "repro": "cubalc run -e 'SYS ENV SET CUBALC_ARGC 0; REQUIRE ARGC 1' \u2192 exit_code 0 shell 0"
+    },
+    {
+      "id": "W8",
+      "severity": "med",
+      "area": "host|args",
+      "title": "SYS ARGS LAST_N is not field count",
+      "detail": "After SYS ARGS, LAST is the bag string and LAST_N is often 1 (non-empty), not ARGC. Must SYS LINES bag or use SYS ARGC separately for path counts.",
+      "repro": "SYS ARGS; PRINT LAST_N  # not always == ARGC"
+    },
+    {
+      "id": "W9",
+      "severity": "med",
+      "area": "host|args_env",
+      "title": "export CUBALC_ARG* still dead; only SYS ENV SET or positional works",
+      "detail": "Reconfirmed W1: export CUBALC_ARG0=argc CUBALC_ARGC=1 before cubalc run leaves ARGC=0 and defaults ACTION=list. In-process SYS ENV SET CUBALC_ARG* works (proof 976). Host env contract remains broken for outer shells.",
+      "repro": "CUBALC_ARG0=argc cubalc run seal_batch\u2026 \u2192 list/argc0"
+    },
+    {
+      "id": "W10",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE multi-line bag often omits final NL on last field",
+      "detail": "cat -A PATHS.txt shows intermediate lines with $ but last path without trailing newline. Same class as W5 single-line VAL omit NL.",
+      "repro": "args p1 p2 p3; cat -A PATHS.txt"
     }
   ],
   "workarounds": [
-    "Use positional: cubalc run prog.cubalc open s0 (or CUBALC_FS_ACTION)",
-    "DEFAULT always with =; LET = LAST for knobs",
-    "Capture ARG before any SAY/PRINT",
-    "HASLINE exact full line only",
-    "Fixed s0/s1/s2; numeric REQUIRE only"
+    "Prefer positional: cubalc run prog.cubalc batch path1 path2",
+    "Or in-program SYS ENV SET CUBALC_ARG* before ARGC (not shell export)",
+    "SYS ARGC / SYS LINES for counts; do not trust LAST_N after ARGS alone",
+    "Use EXIT n for shell-visible failures; REQUIRE ARGC alone is plate-only",
+    "HASLINE exact path:fullcrc only; COUNTLINE same",
+    "LOCKFILE around SEALS append; classic CRC vector 123456789\u2192cbf43926"
   ],
   "language_gaps": [
-    "Restore CUBALC_ARG* env \u2192 SYS ARG contract",
-    "Optional = for DEFAULT parity with LET",
-    "Document LAST bind rules for optional LET",
-    "WRITE NL; strict NUM REQUIRE"
+    "Propagate REQUIRE ARGC/ARG failure to non-zero process exit_code",
+    "Restore shell export CUBALC_ARG* \u2192 SYS ARG/ARGC contract",
+    "SYS ARGS should set LAST_N = field count (or document ARGC-only)",
+    "WRITE always terminate bags with final NL",
+    "Document SYS DROP 1 ARGS batch peel pattern in cookbook"
   ],
   "issues_faced": [
-    "DEFAULT without = hard-fail; restored =",
-    "CUBALC_ARG0 env dead \u2014 switched tests to positional args",
-    "SAY join PRINT_N=4; saycode with num; LOG 2 lines",
-    "HASLINE exact vs substring; gate MINLOG",
+    "State plate missing at start \u2014 restored from f7a72df",
+    "Shell export CUBALC_ARG0 still ignored; switched to positional",
+    "SYS ARGS LAST_N not count \u2014 used SYS LINES + SYS ARGC",
+    "REQUIRE ARGC hard-fail exit_code 0 \u2014 used soft FAIL + EXIT 2 for gates",
+    "batch DROP 1 + EACH LINE + LOCKFILE CRC32FILE seal rows green",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "a53fbbb27eddff3bebff69e97c3552374cc4d989",
-  "ts": "2026-08-07T20:41:54Z"
+  "commit": "pending",
+  "ts": "2026-08-07T21:06:23Z"
 }

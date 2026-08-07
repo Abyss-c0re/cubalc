@@ -1,0 +1,1034 @@
+# seal_batch_args_board.cubalc — SYS ARGS/ARGC + REQUIRE ARG + CRC32FILE seal batch
+#
+# Real use: release/intake agents seal a CLI batch of artifact paths into a
+# CRC-32 registry under exclusive lock, without shell cksum|while|flock:
+#   SYS ARGC / SYS ARGS     — whole arg bag (no ARG 0/1/2 glue for batch)
+#   REQUIRE ARGC / REQUIRE ARG — fail-fast CLI contract (proof 977)
+#   SYS DROP 1 ARGS         — peel action token; remainder = paths
+#   CRC32FILE / CRC32       — IEEE CRC-32 hex stamps (interop cksum)
+#   LOCKFILE / UNLOCKFILE   — exclusive SEALS.txt append mutex
+#   HASLINE / COUNTLINE     — exact seal-row membership
+#   HEX                     — hex-encode seal id / stamp for plate fields
+#
+# Distinct from job_ticket_board (single CRC on ticket text),
+# artifact_fingerprint_board (HASHFILE+HEX+EQFILE, no ARGS batch),
+# critical_section_board (LOCKFILE alone): this board is *arg-bag multi-path
+# seal intake under lock*.
+#
+# Plate under STATE:
+#   SEALS.txt      — path:crc rows (exact field bag)
+#   PATHS.txt      — last path bag (batch remainder)
+#   VAL.txt        — last crc / hex / row
+#   META.txt       — hit/miss/bytes bag
+#   SB_REPORT.txt
+#
+# Actions (positional ARG0 or CUBALC_SB_ACTION):
+#   list       — seals depth + sample (default)
+#   argc       — report SYS ARGC
+#   args       — dump full SYS ARGS bag → VAL/PATHS
+#   require    — REQUIRE ARGC >= MIN (env CUBALC_SB_MIN / ARG1)
+#   requirearg — REQUIRE ARG 0 present (hard form)
+#   seal       — CRC32FILE path(ARG1) → lock-append path:crc
+#   batch      — DROP action from ARGS; seal each path under one lock
+#   verify     — recompute CRC32FILE; HASLINE path:crc exact
+#   has        — HASLINE exact row (ARG1)
+#   count      — COUNTLINE exact row (ARG1)
+#   hex        — HEX of ARG1 (or last VAL)
+#   crc        — CRC32 of ARG1 text (not file)
+#   soft       — CRC32FILE missing path (soft miss + optional REQUIRE wall)
+#   lock       — LOCKFILE SEALS [ms]
+#   unlock     — UNLOCKFILE SEALS
+#   gate       — admit if seals LINES >= MIN
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_sb_$$
+#   mkdir -p "$CUBALC_STATE/arts"
+#   printf '123456789' > "$CUBALC_STATE/arts/a.bin"
+#   printf 'payload'   > "$CUBALC_STATE/arts/b.bin"
+#   ./out/cubalc run programs/realworld/seal_batch_args_board.cubalc \
+#     batch "$CUBALC_STATE/arts/a.bin" "$CUBALC_STATE/arts/b.bin"
+#   ./out/cubalc run programs/realworld/seal_batch_args_board.cubalc \
+#     verify "$CUBALC_STATE/arts/a.bin"
+#   ./out/cubalc run programs/realworld/seal_batch_args_board.cubalc argc
+#
+# Env: CUBALC_SB_ACTION CUBALC_SB_NAME CUBALC_SB_A2
+#      CUBALC_SB_REQUIRE CUBALC_SB_MIN CUBALC_SB_MS
+#
+# Edges deliberately stressed:
+#   export CUBALC_ARG0 alone may not feed SYS ARG (host contract drift)
+#   REQUIRE ARGC hard-fails plate but process exit_code often stays 0
+#   HASLINE exact: path:cbf is NOT path:cbf43926 (substring false friend)
+#   CRC32FILE soft miss missing path; empty file → 00000000
+#   classic "123456789" → cbf43926 vector
+#   LOCKFILE second acquire timeout; unlock free N=0 soft
+#   WRITE trailing NL; NUM softens REQUIRE=abc; PRINT_JSON bags
+#   SYS DROP 1 ARGS leaves path bag; empty batch → soft miss
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "seal_batch_args_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT SFILE = "SEALS.txt"
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SB_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT LOCK_MS = 800
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+# --- capture whole arg bag early (before other host ops clobber) ---
+SYS ARGC
+LET argc_n = LAST_N
+SYS ARGS
+LET args_bag = LAST
+CLEAR_ERR
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SB_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# ARG1 numeric overrides MIN for require/gate when present
+SYS EQS ACTION "require"
+LET _is_req = LAST_N
+SYS EQS ACTION "gate"
+LET _is_gate = LAST_N
+LET _use_min = _is_req + _is_gate
+IF _use_min > 0 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    SYS NUM
+    IF OK == 1 THEN
+      LET MIN = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+SYS ENV "CUBALC_SB_MS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LOCK_MS = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir SFILE
+LET seals_path = LAST
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+# soft rehydrate seals bag
+SYS READ OR seals_path OR ""
+LET seals = LAST
+CLEAR_ERR
+SYS READ OR paths_path OR ""
+LET paths = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET seals_ch = 0
+LET paths_ch = 0
+LET note_msg = "ok"
+LET seal_n = 0
+LET path_n = 0
+LET sealed_ok = 0
+LET sealed_miss = 0
+LET lock_hit = 0
+LET lock_pid = 0
+LET crc_bytes = 0
+LET has_n = 0
+LET count_n = 0
+LET board_rep = "seal_batch_args_board"
+
+SYS LINES seals
+LET seal_n = LAST_N
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = seals
+  LET val_ch = 1
+  LET meta = "seals"
+  SYS STR seal_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "argc"
+  LET meta = LAST
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON seal_n argc_n
+  CLEAR_ERR
+END
+
+# --- argc ---
+SYS EQS ACTION "argc"
+IF LAST_N == 1 THEN
+  NOTE "action argc"
+  SYS ARGC
+  LET argc_n = LAST_N
+  LET hit = 1
+  LET note_msg = "argc ok"
+  SYS STR argc_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "argc"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON argc_n
+  CLEAR_ERR
+END
+
+# --- args dump ---
+SYS EQS ACTION "args"
+IF LAST_N == 1 THEN
+  NOTE "action args"
+  SYS ARGS
+  LET args_bag = LAST
+  LET argc_n = LAST_N
+  # LAST_N after ARGS is field count
+  SYS LINES args_bag
+  LET argc_n = LAST_N
+  LET paths = args_bag
+  LET paths_ch = 1
+  LET val = args_bag
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "args ok"
+  LET meta = "argc"
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON argc_n
+  CLEAR_ERR
+END
+
+# --- require ARGC (soft capture then hard REQUIRE when NEED) ---
+SYS EQS ACTION "require"
+IF LAST_N == 1 THEN
+  NOTE "action require"
+  SYS ARGC
+  LET argc_n = LAST_N
+  SYS STR argc_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "argc"
+  LET meta = LAST
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF argc_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "require ok"
+    # also exercise hard form when already satisfied
+    REQUIRE ARGC MIN
+    CLEAR_ERR
+  ELSE
+    LET miss = 1
+    LET note_msg = "require short"
+    FAIL "require ARGC short"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      # hard wall: REQUIRE ARGC will halt with asserts_fail
+      REQUIRE ARGC MIN
+    END
+  END
+  PRINT_JSON argc_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- requirearg: REQUIRE ARG 0 ---
+SYS EQS ACTION "requirearg"
+IF LAST_N == 1 THEN
+  NOTE "action requirearg"
+  SYS ARGC
+  LET argc_n = LAST_N
+  IF argc_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "requirearg empty"
+    FAIL "requirearg empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE ARG 0
+    END
+  ELSE
+    REQUIRE ARG 0
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "requirearg ok"
+    LET meta = "arg0"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON argc_n hit
+  CLEAR_ERR
+END
+
+# --- seal single path ---
+SYS EQS ACTION "seal"
+IF LAST_N == 1 THEN
+  NOTE "action seal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "seal needs path"
+    FAIL "seal needs path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "seal needs path"
+    END
+  ELSE
+    SYS CRC32FILE NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET sealed_miss = 1
+      LET note_msg = "seal miss"
+      FAIL "seal CRC32FILE miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "seal CRC32FILE miss"
+      END
+    ELSE
+      LET crc = LAST
+      LET crc_bytes = CRC32_BYTES
+      SYS CAT NAME ":"
+      LET row = LAST
+      SYS CAT row crc
+      LET row = LAST
+      SYS LOCKFILE seals_path LOCK_MS
+      LET lock_hit = LOCKFILE_HIT
+      LET lock_pid = LOCKFILE_PID
+      IF lock_hit == 0 THEN
+        LET miss = 1
+        LET note_msg = "seal lock miss"
+        FAIL "seal lock miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "seal lock miss"
+        END
+      ELSE
+        SYS HASLINE seals row
+        IF LAST_N == 0 THEN
+          SYS APPEND seals_path row
+          CLEAR_ERR
+          SYS READ OR seals_path OR ""
+          LET seals = LAST
+          CLEAR_ERR
+        END
+        SYS UNLOCKFILE seals_path
+        CLEAR_ERR
+        LET seals_ch = 1
+        LET val = row
+        LET val_ch = 1
+        LET hit = 1
+        LET sealed_ok = 1
+        LET note_msg = "seal ok"
+        LET meta = "crc"
+        SYS PUSH meta crc
+        LET meta = LAST
+        SYS PUSH meta "bytes"
+        LET meta = LAST
+        SYS STR crc_bytes
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "lock_pid"
+        LET meta = LAST
+        SYS STR lock_pid
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        SYS LINES seals
+        LET seal_n = LAST_N
+      END
+    END
+  END
+  PRINT_JSON sealed_ok sealed_miss seal_n lock_hit
+  CLEAR_ERR
+END
+
+# --- batch: remaining ARGS paths ---
+SYS EQS ACTION "batch"
+IF LAST_N == 1 THEN
+  NOTE "action batch"
+  SYS ARGS
+  LET args_bag = LAST
+  SYS DROP 1 args_bag
+  LET paths = LAST
+  SYS LINES paths
+  LET path_n = LAST_N
+  LET paths_ch = 1
+  IF path_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "batch empty paths"
+    FAIL "batch empty paths"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "batch empty paths"
+    END
+  ELSE
+    SYS LOCKFILE seals_path LOCK_MS
+    LET lock_hit = LOCKFILE_HIT
+    LET lock_pid = LOCKFILE_PID
+    IF lock_hit == 0 THEN
+      LET miss = 1
+      LET note_msg = "batch lock miss"
+      FAIL "batch lock miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "batch lock miss"
+      END
+    ELSE
+      EACH LINE AS p IN paths
+        SYS BLANK p
+        IF LAST_N == 0 THEN
+          SYS CRC32FILE p
+          IF OK == 0 THEN
+            LET sealed_miss = sealed_miss + 1
+            CLEAR_ERR
+          ELSE
+            LET crc = LAST
+            LET crc_bytes = CRC32_BYTES
+            SYS CAT p ":"
+            LET row = LAST
+            SYS CAT row crc
+            LET row = LAST
+            SYS HASLINE seals row
+            IF LAST_N == 0 THEN
+              SYS APPEND seals_path row
+              CLEAR_ERR
+              SYS READ OR seals_path OR ""
+              LET seals = LAST
+              CLEAR_ERR
+            END
+            LET sealed_ok = sealed_ok + 1
+            LET val = row
+            LET val_ch = 1
+          END
+        END
+      END
+      SYS UNLOCKFILE seals_path
+      CLEAR_ERR
+      LET seals_ch = 1
+      SYS LINES seals
+      LET seal_n = LAST_N
+      IF sealed_ok > 0 THEN
+        LET hit = 1
+        LET note_msg = "batch ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "batch all miss"
+        FAIL "batch all miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "batch all miss"
+        END
+      END
+      LET meta = "ok"
+      SYS STR sealed_ok
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "miss"
+      LET meta = LAST
+      SYS STR sealed_miss
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "paths"
+      LET meta = LAST
+      SYS STR path_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON sealed_ok sealed_miss path_n seal_n lock_hit
+  CLEAR_ERR
+END
+
+# --- verify path:crc ---
+SYS EQS ACTION "verify"
+IF LAST_N == 1 THEN
+  NOTE "action verify"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "verify needs path"
+    FAIL "verify needs path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "verify needs path"
+    END
+  ELSE
+    SYS CRC32FILE NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "verify file miss"
+      FAIL "verify file miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "verify file miss"
+      END
+    ELSE
+      LET crc = LAST
+      LET crc_bytes = CRC32_BYTES
+      SYS CAT NAME ":"
+      LET row = LAST
+      SYS CAT row crc
+      LET row = LAST
+      SYS HASLINE seals row
+      LET has_n = LAST_N
+      LET val = row
+      LET val_ch = 1
+      LET meta = "has"
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "crc"
+      LET meta = LAST
+      SYS PUSH meta crc
+      LET meta = LAST
+      LET meta_ch = 1
+      IF has_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "verify ok"
+      ELSE
+        LET miss = 1
+        LET note_msg = "verify absent"
+        FAIL "verify seal absent"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "verify seal absent"
+        END
+      END
+    END
+  END
+  PRINT_JSON has_n hit miss
+  CLEAR_ERR
+END
+
+# --- has exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE seals NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count exact ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE seals NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- hex encode ---
+SYS EQS ACTION "hex"
+IF LAST_N == 1 THEN
+  NOTE "action hex"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    # fall back to last val
+    SYS BLANK val
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "hex needs text"
+      FAIL "hex needs text"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hex needs text"
+      END
+    ELSE
+      SYS HEX val
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "hex fail"
+        FAIL "hex fail"
+        CLEAR_ERR
+      ELSE
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "hex ok"
+        LET meta = "hex_n"
+        SYS STR HEX_N
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  ELSE
+    SYS HEX NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "hex fail"
+      FAIL "hex fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hex fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "hex ok"
+      LET meta = "hex_n"
+      SYS STR HEX_N
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- crc string (classic vector) ---
+SYS EQS ACTION "crc"
+IF LAST_N == 1 THEN
+  NOTE "action crc"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "crc needs text"
+    FAIL "crc needs text"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "crc needs text"
+    END
+  ELSE
+    SYS CRC32 NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "crc fail"
+      FAIL "crc fail"
+      CLEAR_ERR
+    ELSE
+      LET val = LAST
+      LET crc_bytes = CRC32_BYTES
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "crc ok"
+      LET meta = "bytes"
+      SYS STR crc_bytes
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val crc_bytes
+  CLEAR_ERR
+END
+
+# --- soft CRC32FILE miss ---
+SYS EQS ACTION "soft"
+IF LAST_N == 1 THEN
+  NOTE "action soft"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = "/no/such/cubalc_seal_soft_miss_path"
+  END
+  SYS CRC32FILE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "soft miss ok"
+    FAIL "soft CRC32FILE miss"
+    CLEAR_ERR
+    LET hit = 0
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "miss"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft CRC32FILE require wall"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "soft unexpected hit"
+  END
+  PRINT_JSON miss hit
+  CLEAR_ERR
+END
+
+# --- lock ---
+SYS EQS ACTION "lock"
+IF LAST_N == 1 THEN
+  NOTE "action lock"
+  SYS LOCKFILE seals_path LOCK_MS
+  LET lock_hit = LOCKFILE_HIT
+  LET lock_pid = LOCKFILE_PID
+  IF lock_hit == 1 THEN
+    LET hit = 1
+    LET note_msg = "lock ok"
+    LET val = seals_path
+    LET val_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "lock miss"
+    FAIL "lock miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lock miss"
+    END
+  END
+  LET meta = "pid"
+  SYS STR lock_pid
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON lock_hit lock_pid
+  CLEAR_ERR
+END
+
+# --- unlock ---
+SYS EQS ACTION "unlock"
+IF LAST_N == 1 THEN
+  NOTE "action unlock"
+  SYS UNLOCKFILE seals_path
+  LET unlock_n = UNLOCKFILE_N
+  LET hit = 1
+  LET note_msg = "unlock ok"
+  LET meta = "unlock_n"
+  SYS STR unlock_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON unlock_n
+  CLEAR_ERR
+END
+
+# --- gate min seals ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS LINES seals
+  LET seal_n = LAST_N
+  SYS STR seal_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "seals"
+  LET meta = LAST
+  SYS STR seal_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF seal_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON seal_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET seals = ""
+  LET paths = ""
+  LET val = ""
+  LET meta = ""
+  LET seals_ch = 1
+  LET paths_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET seal_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+  # drop lock if held
+  SYS UNLOCKFILE seals_path
+  CLEAR_ERR
+END
+
+# unknown action?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "argc"
+LET k = k + LAST_N
+SYS EQS ACTION "args"
+LET k = k + LAST_N
+SYS EQS ACTION "require"
+LET k = k + LAST_N
+SYS EQS ACTION "requirearg"
+LET k = k + LAST_N
+SYS EQS ACTION "seal"
+LET k = k + LAST_N
+SYS EQS ACTION "batch"
+LET k = k + LAST_N
+SYS EQS ACTION "verify"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "hex"
+LET k = k + LAST_N
+SYS EQS ACTION "crc"
+LET k = k + LAST_N
+SYS EQS ACTION "soft"
+LET k = k + LAST_N
+SYS EQS ACTION "lock"
+LET k = k + LAST_N
+SYS EQS ACTION "unlock"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF seals_ch > 0 THEN
+  SYS WRITE seals_path seals
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "seals write failed"
+  END
+  CLEAR_ERR
+END
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.seal_batch_args_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "argc"
+LET report = LAST
+SYS STR argc_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "seal_n"
+LET report = LAST
+SYS STR seal_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sealed_ok"
+LET report = LAST
+SYS STR sealed_ok
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sealed_miss"
+LET report = LAST
+SYS STR sealed_miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lock_hit"
+LET report = LAST
+SYS STR lock_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "seal_batch_args_board" ACTION hit miss seal_n sealed_ok sealed_miss argc_n note_msg elapsed
+NOTE "seal_batch_args_board: done"
