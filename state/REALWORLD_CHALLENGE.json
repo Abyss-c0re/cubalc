@@ -1,71 +1,59 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 139,
-  "program": "programs/realworld/field_contract_board.cubalc",
-  "theme": "FIELDINFO + REQUIRE CLASS/METHOD field kind contract for SETF prep",
-  "version": "1.15.385-usability",
+  "iter": 140,
+  "program": "programs/realworld/retry_budget_obj_board.cubalc",
+  "theme": "OBJINFO + INCF/DECF + BOUNDF per-slot job retry budget",
+  "version": "1.15.387-usability",
   "pass": true,
-  "prior_note": "iter 138 FN catalog TRYCALL; this iter stresses FIELDINFO (e0434c5) + REQUIRE CLASS/METHOD (076b733)",
+  "prior_note": "iter 139 FIELDINFO/REQUIRE; this iter stresses OBJINFO (1938a17) + INCF (38f9764) + BOUNDF (9015023)",
   "tests": [
     {
-      "name": "boot_require",
-      "cmd": "REQUIRE CLASS Ticket + METHOD init/bump at load",
+      "name": "open_jobs",
+      "cmd": "open j0/j1 job-a/job-b budget=MAXB",
       "ok": true,
-      "note": "REQUIRE"
+      "note": "NEW"
     },
     {
-      "name": "open_pool",
-      "cmd": "open t0/t1 status open/triaged",
+      "name": "objinfo",
+      "cmd": "OBJINFO j0 class+methods+field values plate",
       "ok": true,
-      "note": "NEW+DUMPOBJ"
+      "note": "OBJINFO"
     },
     {
-      "name": "field_str",
-      "cmd": "FIELDINFO status kind:str has_def:1 default:new",
-      "ok": true,
-      "note": "FIELDINFO"
-    },
-    {
-      "name": "field_num",
-      "cmd": "retries kind:num; note kind:num has_def:0",
-      "ok": true,
-      "note": "defaults"
-    },
-    {
-      "name": "field_json",
-      "cmd": "FIELDINFO JSON \u2192 cubalc.field.v1",
+      "name": "objinfo_json",
+      "cmd": "OBJINFO JSON cubalc.objinfo.v1",
       "ok": true,
       "note": "JSON"
     },
     {
-      "name": "live_value",
-      "cmd": "FIELDINFO t0 status includes value:open",
+      "name": "bump_decf",
+      "cmd": "INCF +1 +2 → 3; DECF 1 → 2",
       "ok": true,
-      "note": "live"
+      "note": "INCF/DECF"
     },
     {
-      "name": "gate_kind",
-      "cmd": "EXPECT str status admit; retries deny REQUIRE\u21922",
+      "name": "fail_clamp",
+      "cmd": "fail bump+clamp; overshoot clamp to budget 3",
       "ok": true,
-      "note": "gate_kind"
+      "note": "BOUNDF"
     },
     {
-      "name": "gate_def",
-      "cmd": "status admit; bare note deny REQUIRE\u21922",
+      "name": "gate",
+      "cmd": "retries>=MAXB deny REQUIRE→2; recover admit",
       "ok": true,
-      "note": "gate_def"
-    },
-    {
-      "name": "setf_num",
-      "cmd": "setf retries 7 via N_A2 NUM shuttle",
-      "ok": true,
-      "note": "setf"
+      "note": "gate"
     },
     {
       "name": "probe_soft",
-      "cmd": "unknown field/class FIELDINFO soft OK=0",
+      "cmd": "OBJINFO/TRYINCF/TRYBOUNDF unknown soft; TRYINCF status soft",
       "ok": true,
       "note": "probe"
+    },
+    {
+      "name": "rehydrate_status",
+      "cmd": "status:retry persists across process after LOOKUP status",
+      "ok": true,
+      "note": "plate"
     },
     {
       "name": "selftest",
@@ -78,50 +66,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|field",
-      "title": "Bare FIELD note defaults to kind:num HAS_DEF=0",
-      "detail": "FIELD note without initializer is treated as numeric kind with no default \u2014 surprising for free-text notes. Agents SETF string into note may hit type friction; contract boards must gate_def + kind.",
-      "repro": "FIELDINFO Ticket note \u2192 kind:num has_def:0"
+      "area": "oop|rehydrate",
+      "title": "Objects memory-only — multi-run must plate rehydrate every field",
+      "detail": "DUMPOBJ+READ+NEW+TRYSETF required per process. Missed status LOOKUP reset status to init default. No bulk rehydrate from DUMPOBJ bag.",
+      "repro": "omit TRYSETF status → status open after fail plate"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "lang|require",
-      "title": "No REQUIRE FIELD language-plane gate",
-      "detail": "REQUIRE FN/CLASS/METHOD exist; REQUIRE FIELD Class name missing. Agents FIELDINFO+IF+FAIL or soft probe. Asymmetry with METHOD/FN fail-fast boot.",
-      "repro": "must FIELDINFO Ticket status; IF OK for field contract"
+      "area": "oop|incF",
+      "title": "No atomic INCF+BOUNDF compound",
+      "detail": "fail action is two ops; concurrent agents can race (no object lock). BOUNDF_CHANGED only on clamp half.",
+      "repro": "INCF then BOUNDF separate"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|num",
-      "title": "SYS NUM only on LAST \u2014 ARG2 must be NUMed immediately",
-      "detail": "After other ops, A2 string cannot be re-NUMed without shuttle. N_A2 capture at ARG parse required for SETF numeric; easy to silently keep default.",
-      "repro": "setf retries ARG2=7 without early NUM \u2192 stuck default"
+      "area": "oop|boundf",
+      "title": "BOUNDF clamp silent — no soft overflow signal beyond CHANGED",
+      "detail": "Agents must read BOUNDF_CHANGED; LAST is post-clamp value only. Easy to miss exhaustion without gate on MAXB.",
+      "repro": "INCF 10 then BOUNDF 0 5 → LAST 5 CHANGED 1"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "lang|require",
-      "title": "REQUIRE CLASS/METHOD is hard-fail only",
-      "detail": "Cannot soft-probe missing method with REQUIRE; use HASMETHOD/FIELDINFO for optional contracts. Boot REQUIRE is correct for hard deps.",
-      "repro": "REQUIRE METHOD Ticket nosuch aborts process"
+      "area": "oop|slot",
+      "title": "Fixed ident slots only — no dynamic object names from ARG",
+      "detail": "NEW Job NAME uses ident token; board hardcodes j0/j1/j2 branches. Same long-standing OOP gap.",
+      "repro": "slot switch IF slot == 0/1/2"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|fieldinfo",
-      "title": "Class FIELDINFO omits value:; live obj includes value:",
-      "detail": "Agents must branch plate parse on class vs object target.",
-      "repro": "FIELDINFO Ticket status vs FIELDINFO t0 status"
+      "area": "oop|tryincf",
+      "title": "Hard INCF unknown object fatal — TRYINCF required for probe",
+      "detail": "Soft path is TRYINCF / INCF SOFT; agents must remember.",
+      "repro": "TRYINCF nosuch retries OK=0"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|hasfield",
-      "title": "HASFIELD likely raw-token like HASMETHOD",
-      "detail": "Dynamic field names via FIELDINFO OK workaround (same gap as HASMETHOD string-var).",
-      "repro": "hasf uses FIELDINFO Ticket FNAME"
+      "area": "oop|string",
+      "title": "INCF/BOUNDF on string field soft miss",
+      "detail": "TRYINCF j0 status → string err; good but no auto-coerce.",
+      "repro": "probe s_ok=0"
     },
     {
       "id": "W7",
@@ -135,32 +123,32 @@
       "id": "W8",
       "severity": "low",
       "area": "host|num",
-      "title": "REQUIRE=abc softens NEED_HIT",
-      "detail": "Non-numeric REQUIRE leaves soft miss exit 0",
-      "repro": "CUBALC_FS_REQUIRE=abc field zzz \u2192 exit 0"
+      "title": "REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE → exit 0 on miss",
+      "repro": "REQUIRE=abc bump j2 → exit 0"
     }
   ],
   "workarounds": [
-    "Always init string fields with \"\" default not bare FIELD name",
-    "Capture SYS NUM immediately after ARG/ENV for numeric setf",
-    "REQUIRE CLASS/METHOD at top for hard boot; FIELDINFO for soft field contract",
-    "gate_kind + gate_def before SETF; live FIELDINFO for value plate",
-    "FIELDINFO FNAME for dynamic has-field (not HASFIELD var)"
+    "Rehydrate all DUMPOBJ fields (id,status,retries,budget) every process",
+    "fail = INCF + BOUNDF + explicit gate on retries < MAXB",
+    "TRYINCF/TRYBOUNDF for soft probes; hard INCF only after HASOBJ",
+    "Fixed j0/j1/j2 slots; REQUIRE CLASS Job at boot",
+    "REQUIRE EXIT in action bodies"
   ],
   "language_gaps": [
-    "Bare FIELD should default kind str or require initializer",
-    "REQUIRE FIELD Class name fail-fast",
-    "NUM of named var without LAST shuttle",
-    "Soft REQUIRE variant; HASFIELD string-var resolve",
-    "WRITE trailing NL; strict NUM REQUIRE env"
+    "Bulk object rehydrate from DUMPOBJ plate",
+    "Atomic INCFBOUND / budget transaction",
+    "Dynamic object names from string ARG",
+    "Hard vs soft INCF default policy flag",
+    "WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "FIELDINFO status str default new; note num has_def 0 surprise",
-    "REQUIRE CLASS/METHOD boot ok; soft probe via FIELDINFO only",
-    "SETF retries needed early N_A2 NUM shuttle (fixed in board)",
-    "gate_kind str vs num; gate_def bare note deny",
+    "OBJINFO bag+JSON; INCF delta var works; BOUNDF clamps overshoot",
+    "status rehydrate missing first pass — fixed LOOKUP status",
+    "gate exhaust at MAXB; recover DECF admits",
+    "probe soft all zero including TRYINCF string field",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "18a06b1f1c7a0553553980c8b0b24bb820144e1c",
-  "ts": "2026-08-07T13:34:28Z"
+  "commit": "",
+  "ts": "2026-08-07T13:59:30Z"
 }

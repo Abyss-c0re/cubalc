@@ -1,0 +1,9 @@
+name:j0
+class:Job
+n_fields:4
+n_methods:2
+methods:init,fail
+id:job-a
+status:retry
+retries:2
+budget:5

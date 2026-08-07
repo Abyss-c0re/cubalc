@@ -1,0 +1,4 @@
+id:job-a
+status:retry
+retries:2
+budget:5

@@ -1,0 +1,1345 @@
+# retry_budget_obj_board.cubalc — OBJINFO + INCF/DECF + BOUNDF job retry budget
+#
+# Real use: ops agents track per-slot Job retry counters — bump on failure,
+# clamp to max budget, inspect live object plate (class+methods+values)
+# without GETF+arith+SETF or DUMPOBJ+CLASSINFO glue.
+#
+# Surfaces forced (1.15.385–387):
+#   OBJINFO / DESCRIBEOBJ / OBJMETA / SUMMARYOBJ [JSON]
+#   INCF / DECF / ADDF / BUMPF / SUBF · TRYINCF · INCF SOFT
+#   BOUNDF / LIMITF / CLIPOBJ / CLAMPOBJ · TRYBOUNDF · BOUNDF SOFT
+#   NEW · GETF · SETF · DUMPOBJ · soft miss + REQUIRE wall
+#
+# Distinct from field_contract (FIELDINFO kind), retry_budget_band (WHERE
+# fleet), job_retry_where: this board is *single-object bump+clamp+OBJINFO*.
+#
+# Slots: j0 j1 j2
+#
+# Plate under STATE:
+#   dump/j0 dump/j1 dump/j2
+#   OBJ.txt VAL.txt META.txt OBJS.txt BUDGET_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Job
+#   open       — NEW Job ARG1=jN [name=ARG2]
+#   info       — OBJINFO ARG1 slot
+#   infoj      — OBJINFO JSON
+#   bump       — INCF retries by DELTA (default 1)
+#   unbump     — DECF retries by DELTA
+#   clamp      — BOUNDF retries LO HI (default 0 MAXB)
+#   fail       — bump + clamp + gate exhaust (retries>=MAXB)
+#   recover    — DECF 1 + clamp
+#   get        — GETF retries
+#   gate       — admit if retries < MAXB (REQUIRE deny if exhausted)
+#   probe      — soft TRYINCF/TRYBOUNDF/OBJINFO miss
+#   dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rbo_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=j0 CUBALC_ARG2=job-a
+#   CUBALC_ARG0=bump CUBALC_ARG1=j0 CUBALC_FS_DELTA=2
+#   CUBALC_FS_MAXB=5 CUBALC_ARG0=clamp CUBALC_ARG1=j0
+#   CUBALC_ARG0=fail CUBALC_ARG1=j0
+#   CUBALC_FS_REQUIRE=1 CUBALC_ARG0=gate CUBALC_ARG1=j0
+#
+# Env: CUBALC_FS_REQUIRE NAME DELTA MAXB LO HI ACTION
+#
+# Edges:
+#   INCF string field soft miss; BOUNDF string soft
+#   OBJINFO unknown soft; hard INCF unknown object fatal? use TRYINCF
+#   BOUNDF lo/hi auto-swap; CHANGED flag
+#   no atomic multi-field budget transaction
+#   WRITE NL; NUM softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Job
+  FIELD id ""
+  FIELD status "open"
+  FIELD retries 0
+  FIELD budget 5
+  METHOD init i
+    SETF THIS id i
+    SETF THIS status "open"
+    SETF THIS retries 0
+    SETF THIS budget 5
+  END
+  METHOD fail
+    INCF THIS retries
+    BOUNDF THIS retries 0 99
+    RET 1
+  END
+END
+
+REQUIRE CLASS Job
+REQUIRE METHOD Job init
+
+NOTE "retry_budget_obj_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT DELTA = 1
+DEFAULT MAXB = 5
+DEFAULT LO = 0
+DEFAULT HI = 5
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_DELTA" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DELTA = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MAXB" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAXB = LAST_N
+    LET HI = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "OBJ.txt"
+LET obj_path = LAST
+SYS JOIN state_dir "BUDGET_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "j0"
+LET d_j0 = LAST
+SYS JOIN dump_dir "j1"
+LET d_j1 = LAST
+SYS JOIN dump_dir "j2"
+LET d_j2 = LAST
+
+LET slot = -1
+SYS EQS NAME "j0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "j1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "j2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "j0"
+END
+IF slot == 1 THEN
+  LET sn = "j1"
+END
+IF slot == 2 THEN
+  LET sn = "j2"
+END
+
+# rehydrate
+SYS READ OR d_j0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DELETEOBJ j0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "budget"
+  LET rb = LAST_N
+  CLEAR_ERR
+  NEW Job j0 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF j0 status rst
+  END
+  TRYSETF j0 retries rr
+  IF rb > 0 THEN
+    TRYSETF j0 budget rb
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_j1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DELETEOBJ j1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "budget"
+  LET rb = LAST_N
+  CLEAR_ERR
+  NEW Job j1 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF j1 status rst
+  END
+  TRYSETF j1 retries rr
+  IF rb > 0 THEN
+    TRYSETF j1 budget rb
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_j2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DELETEOBJ j2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "budget"
+  LET rb = LAST_N
+  CLEAR_ERR
+  NEW Job j2 rid
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF j2 status rst
+  END
+  TRYSETF j2 retries rr
+  IF rb > 0 THEN
+    TRYSETF j2 budget rb
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET retries_n = 0
+LET changed = 0
+LET board_rep = "retry_budget_obj_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Job
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET id0 = sn
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET id0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DELETEOBJ j0
+        CLEAR_ERR
+      END
+      NEW Job j0 id0
+      SETF j0 budget MAXB
+      DUMPOBJ j0
+      SYS WRITE d_j0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DELETEOBJ j1
+        CLEAR_ERR
+      END
+      NEW Job j1 id0
+      SETF j1 budget MAXB
+      DUMPOBJ j1
+      SYS WRITE d_j1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DELETEOBJ j2
+        CLEAR_ERR
+      END
+      NEW Job j2 id0
+      SETF j2 budget MAXB
+      DUMPOBJ j2
+      SYS WRITE d_j2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Job
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta id0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# helper: persist slot dump
+# (inlined in each action)
+
+# --- info ---
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  NOTE "action info"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "info bad slot"
+    FAIL "info bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "info bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      OBJINFO j0
+      LET o_ok = OK
+    END
+    IF slot == 1 THEN
+      OBJINFO j1
+      LET o_ok = OK
+    END
+    IF slot == 2 THEN
+      OBJINFO j2
+      LET o_ok = OK
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "info miss"
+      FAIL "info miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "info miss"
+      END
+    ELSE
+      LET val = LAST
+      SYS WRITE obj_path val
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "info ok"
+      LET val_ch = 1
+      LET meta = "info"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR NFIELDS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR NMETHODS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- infoj ---
+SYS EQS ACTION "infoj"
+IF LAST_N == 1 THEN
+  NOTE "action infoj"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "infoj bad slot"
+    FAIL "infoj bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "infoj bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      OBJINFO JSON j0
+      LET o_ok = OK
+    END
+    IF slot == 1 THEN
+      OBJINFO JSON j1
+      LET o_ok = OK
+    END
+    IF slot == 2 THEN
+      OBJINFO JSON j2
+      LET o_ok = OK
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "infoj miss"
+      FAIL "infoj miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "infoj miss"
+      END
+    ELSE
+      LET val = LAST
+      SYS WRITE obj_path val
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "infoj ok"
+      LET val_ch = 1
+      LET meta = "infoj"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- bump INCF ---
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  NOTE "action bump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "bump bad slot"
+    FAIL "bump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "bump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        INCF j0 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        INCF j1 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        INCF j2 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "bump miss"
+      FAIL "bump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "bump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "bump ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "bump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR DELTA
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  CLEAR_ERR
+END
+
+# --- unbump DECF ---
+SYS EQS ACTION "unbump"
+IF LAST_N == 1 THEN
+  NOTE "action unbump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "unbump bad slot"
+    FAIL "unbump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "unbump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DECF j0 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DECF j1 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DECF j2 retries DELTA
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "unbump miss"
+      FAIL "unbump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "unbump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "unbump ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "unbump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  CLEAR_ERR
+END
+
+# --- clamp BOUNDF ---
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  NOTE "action clamp"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "clamp bad slot"
+    FAIL "clamp bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "clamp bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET hi_use = MAXB
+    IF HI > 0 THEN
+      LET hi_use = HI
+    END
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        BOUNDF j0 retries LO hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        BOUNDF j1 retries LO hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        BOUNDF j2 retries LO hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "clamp miss"
+      FAIL "clamp miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "clamp miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "clamp ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "clamp"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  PRINT_JSON changed
+  CLEAR_ERR
+END
+
+# --- fail: bump + clamp to budget ---
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  NOTE "action fail"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "fail bad slot"
+    FAIL "fail bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "fail bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        INCF j0 retries DELTA
+        GETF j0 budget
+        LET hi_use = LAST_N
+        IF hi_use < 1 THEN
+          LET hi_use = MAXB
+        END
+        BOUNDF j0 retries 0 hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        SETF j0 status "retry"
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        INCF j1 retries DELTA
+        GETF j1 budget
+        LET hi_use = LAST_N
+        IF hi_use < 1 THEN
+          LET hi_use = MAXB
+        END
+        BOUNDF j1 retries 0 hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        SETF j1 status "retry"
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        INCF j2 retries DELTA
+        GETF j2 budget
+        LET hi_use = LAST_N
+        IF hi_use < 1 THEN
+          LET hi_use = MAXB
+        END
+        BOUNDF j2 retries 0 hi_use
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        LET changed = BOUNDF_CHANGED
+        SETF j2 status "retry"
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "fail miss"
+      FAIL "fail miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "fail miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "fail ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "fail"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  CLEAR_ERR
+END
+
+# --- recover: DECF 1 + clamp low 0 ---
+SYS EQS ACTION "recover"
+IF LAST_N == 1 THEN
+  NOTE "action recover"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "recover bad slot"
+    FAIL "recover bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "recover bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DECF j0 retries 1
+        BOUNDF j0 retries 0 MAXB
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        SETF j0 status "open"
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DECF j1 retries 1
+        BOUNDF j1 retries 0 MAXB
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        SETF j1 status "open"
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DECF j2 retries 1
+        BOUNDF j2 retries 0 MAXB
+        LET o_ok = OK
+        LET retries_n = LAST_N
+        SETF j2 status "open"
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "recover miss"
+      FAIL "recover miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "recover miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "recover ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "recover"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  CLEAR_ERR
+END
+
+# --- get ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "get bad slot"
+    FAIL "get bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "get bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        GETF j0 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        GETF j1 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        GETF j2 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "get miss"
+      FAIL "get miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "get miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "get ok"
+      SYS STR retries_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "get"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR retries_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON retries_n
+  CLEAR_ERR
+END
+
+# --- gate: admit if retries < MAXB ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        GETF j0 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        GETF j1 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        GETF j2 retries
+        LET o_ok = 1
+        LET retries_n = LAST_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      IF retries_n < MAXB THEN
+        LET hit = 1
+        LET note_msg = "gate ok"
+        LET val = "admit"
+        LET val_ch = 1
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate exhaust"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate exhaust"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate exhaust"
+        END
+      END
+    END
+  END
+  LET meta = "gate"
+  SYS PUSH meta sn
+  LET meta = LAST
+  SYS STR retries_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MAXB
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  OBJINFO nosuch_job_xyz
+  LET o_ok = OK
+  CLEAR_ERR
+  TRYINCF nosuch_job_xyz retries
+  LET i_ok = OK
+  CLEAR_ERR
+  TRYBOUNDF nosuch_job_xyz retries 0 1
+  LET b_ok = OK
+  CLEAR_ERR
+  # string field soft if live job exists
+  LET s_ok = 1
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    TRYINCF j0 status
+    LET s_ok = OK
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR o_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR i_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR b_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR s_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF o_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe objinfo not soft"
+  END
+  IF i_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe tryincf not soft"
+  END
+  IF b_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe tryboundf not soft"
+  END
+  PRINT_JSON o_ok
+  PRINT_JSON i_ok
+  PRINT_JSON b_ok
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DUMPOBJ j0
+        LET val = LAST
+        SYS WRITE d_j0 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DUMPOBJ j1
+        LET val = LAST
+        SYS WRITE d_j1 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DUMPOBJ j2
+        LET val = LAST
+        SYS WRITE d_j2 val
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DELETEOBJ j0
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DELETEOBJ j1
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DELETEOBJ j2
+    CLEAR_ERR
+  END
+  SYS WRITE d_j0 ""
+  SYS WRITE d_j1 ""
+  SYS WRITE d_j2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE obj_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "info"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "infoj"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "bump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "unbump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "recover"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR retries_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "retry_budget_obj_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
