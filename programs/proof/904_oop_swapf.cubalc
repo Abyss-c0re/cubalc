@@ -1,0 +1,126 @@
+# SWAPF / SWAPFALL — exchange two fields on every live object
+# Usability: rotate dual buffers without temp field + EACH+GETF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+# ages start 0; put distinct ages then swap with energy
+SETF a age 1
+SETF b age 2
+SETF c age 3
+
+SWAPF Cell energy age
+ASSERT OK == 1
+ASSERT SWAPF_N == 3
+ASSERT LAST_N == 3
+ASSERT SWAPF_SKIP == 0
+GETF a energy
+ASSERT LAST_N == 1
+GETF a age
+ASSERT LAST_N == 10
+GETF b energy
+ASSERT LAST_N == 2
+GETF b age
+ASSERT LAST_N == 20
+GETF c energy
+ASSERT LAST_N == 3
+GETF c age
+ASSERT LAST_N == 30
+
+# swap back with WITH sugar
+SWAPF Cell energy WITH age
+GETF a energy
+ASSERT LAST_N == 10
+GETF a age
+ASSERT LAST_N == 1
+
+# OF sugar
+SWAPF OF Cell energy age
+GETF a energy
+ASSERT LAST_N == 1
+GETF a age
+ASSERT LAST_N == 10
+# restore
+SWAPF Cell energy age
+
+# aliases
+SWAPFALL Cell energy age
+ASSERT SWAPFALL_N == 3
+GETF a energy
+ASSERT LAST_N == 1
+EXCHANGEF Cell energy age
+GETF a energy
+ASSERT LAST_N == 10
+XCHGF Cell energy age
+GETF a energy
+ASSERT LAST_N == 1
+# restore energy
+SWAPF Cell energy age
+GETF a energy
+ASSERT LAST_N == 10
+
+# string fields
+CLASS Ticket
+  FIELD status "new"
+  FIELD prev ""
+  METHOD init s p
+    SETF THIS status s
+    SETF THIS prev p
+  END
+END
+NEW Ticket t1 "open" "was_new"
+NEW Ticket t2 "closed" "was_open"
+SWAPF Ticket status prev
+ASSERT SWAPF_N == 2
+GETF t1 status
+SYS EQS LAST "was_new"
+ASSERT LAST_N == 1
+GETF t1 prev
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+GETF t2 status
+SYS EQS LAST "was_open"
+ASSERT LAST_N == 1
+GETF t2 prev
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+
+# bare fields
+CLASS Counter
+  FIELD n 0
+  FIELD m 0
+  METHOD init x y
+    SETF THIS n x
+    SETF THIS m y
+  END
+END
+NEW Counter k1 9 4
+NEW Counter k2 15 8
+SWAPF n m
+ASSERT SWAPF_N == 2
+GETF k1 n
+ASSERT LAST_N == 4
+GETF k1 m
+ASSERT LAST_N == 9
+GETF k2 n
+ASSERT LAST_N == 8
+GETF k2 m
+ASSERT LAST_N == 15
+
+# class filter
+SWAPF Counter n m
+ASSERT SWAPF_N == 2
+GETF k1 n
+ASSERT LAST_N == 9
+
+# missing field soft skip
+SWAPF Ticket status age
+ASSERT SWAPF_N == 0
+ASSERT SWAPF_SKIP == 2
+
+PRINT "proof904_oop_swapf" 1
+ASSERT OK == 1

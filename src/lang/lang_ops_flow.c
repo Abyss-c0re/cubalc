@@ -1755,6 +1755,153 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SWAPF|SWAPFALL|SWAPFIELD|EXCHANGEF [Class] a b
+   * — exchange fields a and b on every live object (optional class).
+   * Preserves num/str kinds per field. Soft skip if either missing.
+   * WITH/AND sugar: SWAPF Cell energy WITH age.
+   * Usability: rotate dual buffers without third temp field + EACH+GETF+SETF. */
+  if (kw(&L->cur, "SWAPF") || kw(&L->cur, "SWAPFALL") ||
+      kw(&L->cur, "SWAPFIELD") || kw(&L->cur, "EXCHANGEF") ||
+      kw(&L->cur, "SWAPFIELDS") || kw(&L->cur, "XCHGF") ||
+      kw(&L->cur, "FLIPFIELDS") || kw(&L->cur, "FIELDSWAP") ||
+      kw(&L->cur, "SWAPF_ALL") || kw(&L->cur, "EXCHFALL")) {
+    char filt[48], af[48], bf[48], tok1[48];
+    int has_filt = 0, i, n = 0, n_skip = 0;
+    lex_next(L);
+    filt[0] = 0;
+    af[0] = 0;
+    bf[0] = 0;
+    tok1[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SWAPF OF Class a b"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WITH") && !kw(&L->cur, "AND") &&
+          !kw(&L->cur, "TO") && !oop_stmt_kw(L)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(af, sizeof af, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(af, sizeof af, "%s", vv->sval);
+          else
+            snprintf(af, sizeof af, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(af, sizeof af, "%s", vv->sval);
+        else
+          snprintf(af, sizeof af, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SWAPF [Class] a b"); return -1;
+    }
+    if (!af[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(af, sizeof af, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WITH") && !kw(&L->cur, "AND") &&
+                 !kw(&L->cur, "TO")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(af, sizeof af, "%s", vv->sval);
+        else
+          snprintf(af, sizeof af, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SWAPF [Class] a b"); return -1;
+      }
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "AND") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "AND") || kw(&L->cur, ",")) {
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(bf, sizeof bf, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(bf, sizeof bf, "%s", vv->sval);
+      else
+        snprintf(bf, sizeof bf, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "SWAPF [Class] a b"); return -1;
+    }
+    if (!af[0] || !bf[0]) {
+      fail(vm, "SWAPF [Class] a b"); return -1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int ia, ib;
+      long tnum;
+      char tstr[128];
+      int t_is_str;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      ia = oop_field_idx(cd, af);
+      ib = oop_field_idx(cd, bf);
+      if (ia < 0 || ib < 0) { n_skip++; continue; }
+      /* swap including kind bits */
+      t_is_str = ob->fis_str[ia];
+      tnum = ob->fnum[ia];
+      snprintf(tstr, sizeof tstr, "%s", ob->fstr[ia]);
+      if (ob->fis_str[ib]) {
+        snprintf(ob->fstr[ia], sizeof ob->fstr[ia], "%s", ob->fstr[ib]);
+        ob->fis_str[ia] = 1;
+      } else {
+        ob->fnum[ia] = ob->fnum[ib];
+        ob->fis_str[ia] = 0;
+      }
+      if (t_is_str) {
+        snprintf(ob->fstr[ib], sizeof ob->fstr[ib], "%s", tstr);
+        ob->fis_str[ib] = 1;
+      } else {
+        ob->fnum[ib] = tnum;
+        ob->fis_str[ib] = 0;
+      }
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "SWAPF_N", n);
+    var_set_num(vm, "SWAPFALL_N", n);
+    var_set_num(vm, "EXCHANGEF_N", n);
+    var_set_num(vm, "SWAPF_SKIP", n_skip);
+    var_set_str(vm, "FIELD", af);
+    var_set_str(vm, "SRC", af);
+    var_set_str(vm, "DST", bf);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* INCFALL|ADDFALL|DECFALL [Class] field [delta]
    * — add delta (default +1; DECFALL default −1) to numeric field on every live obj.
    * Soft always; missing or string fields skipped (INCFALL_SKIP). LAST_N = update count.

@@ -390,6 +390,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 360. ~~**`MODEF` / `TOPF` / `MODEFALL`**~~ **done** (most frequent fleet field value · dominant status without FREQF+TOPKEY).
 361. ~~**`UNIQUF` / `DISTINCTF` / `UNIQUEFALL`**~~ **done** (unique fleet field values bag · what statuses exist without FREQF+KEYS).
 362. ~~**`COPYF` / `COPYFALL` / `SNAPSHOTF`**~~ **done** (copy src→dst field on live objs · snapshot before tick without EACH+GETF+SETF).
+363. ~~**`SWAPF` / `SWAPFALL` / `EXCHANGEF`**~~ **done** (exchange two fields on live objs · dual buffers without temp+EACH).
 
 ## Tick protocol
 
