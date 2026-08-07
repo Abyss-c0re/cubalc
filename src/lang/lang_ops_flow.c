@@ -5581,6 +5581,240 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SLICEBYF|MIDBYF|WINDOWBYF [Class] field start count [ASC|DESC]
+   * — ranked name bag window [start, start+count) by numeric field (stable ties).
+   * Soft always; start OOB or count<=0 → empty. LAST bag; LAST_N returned count.
+   * SLICEBYF_TOTAL = ranked pool; SLICEBYF_START / SLICEBYF_REQ / SLICEBYF_DESC.
+   * Usability: page/skip ranked fleet without SORTBYF + DROP + TAKE glue. */
+  if (kw(&L->cur, "SLICEBYF") || kw(&L->cur, "MIDBYF") ||
+      kw(&L->cur, "WINDOWBYF") || kw(&L->cur, "RANKSLICE") ||
+      kw(&L->cur, "SLICEOBJS") || kw(&L->cur, "SKIPTAKEBYF") ||
+      kw(&L->cur, "PAGEBYF") || kw(&L->cur, "RANGEBYF") ||
+      kw(&L->cur, "SUBRANK") || kw(&L->cur, "SLICEFIELD")) {
+    char filt[48], fname[48], tok1[48], bag[4096];
+    int has_filt = 0, desc = 0, i, n = 0, n_skip = 0, out_n = 0;
+    long start_arg = 0, count_arg = 0;
+    int start = 0, take = 0, end = 0;
+    size_t o = 0;
+    typedef struct { char name[48]; long v; int idx; } SliceByFRow;
+    SliceByFRow rows[CUBALC_MAX_OBJS];
+    SliceByFRow key;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "SLICEBYF OF Class field start count [ASC|DESC]"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+          !kw(&L->cur, "UP") && !kw(&L->cur, "DOWN") &&
+          L->cur.kind != TK_NUM && L->cur.kind != TK_MINUS &&
+          L->cur.kind != TK_LPAREN) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+              !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC"))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SLICEBYF [Class] field start count [ASC|DESC]"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+                 L->cur.kind != TK_NUM) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SLICEBYF [Class] field start count [ASC|DESC]"); return -1;
+      }
+    }
+    /* optional FROM|START|OFFSET then start */
+    if (kw(&L->cur, "FROM") || kw(&L->cur, "START") || kw(&L->cur, "OFFSET") ||
+        kw(&L->cur, "SKIP") || kw(&L->cur, "DROP") || kw(&L->cur, "AT"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      start_arg = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      start_arg = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+               !kw(&L->cur, "FOR") && !kw(&L->cur, "COUNT") &&
+               !kw(&L->cur, "TAKE") && !kw(&L->cur, "LIMIT") &&
+               !kw(&L->cur, "LEN") && !kw(&L->cur, "SIZE") &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        start_arg = atol(sv->sval);
+      else
+        start_arg = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      start_arg = parse_expr(vm, L);
+    } else {
+      fail(vm, "SLICEBYF [Class] field start count [ASC|DESC]"); return -1;
+    }
+    /* optional FOR|COUNT|TAKE|LIMIT|LEN then count */
+    if (kw(&L->cur, "FOR") || kw(&L->cur, "COUNT") || kw(&L->cur, "TAKE") ||
+        kw(&L->cur, "LIMIT") || kw(&L->cur, "LEN") || kw(&L->cur, "SIZE"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      count_arg = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      count_arg = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+               !kw(&L->cur, "UP") && !kw(&L->cur, "DOWN") &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        count_arg = atol(sv->sval);
+      else
+        count_arg = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      count_arg = parse_expr(vm, L);
+    } else {
+      fail(vm, "SLICEBYF [Class] field start count [ASC|DESC]"); return -1;
+    }
+    if (kw(&L->cur, "DESC") || kw(&L->cur, "DOWN") || kw(&L->cur, "REV") ||
+        kw(&L->cur, "REVERSE") || kw(&L->cur, "HIGHFIRST") ||
+        kw(&L->cur, "TOP") || kw(&L->cur, "BEST")) {
+      desc = 1;
+      lex_next(L);
+    } else if (kw(&L->cur, "ASC") || kw(&L->cur, "UP") ||
+               kw(&L->cur, "LOWFIRST") || kw(&L->cur, "WORST") ||
+               kw(&L->cur, "BOTTOM")) {
+      desc = 0;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      snprintf(rows[n].name, sizeof rows[n].name, "%s", ob->name);
+      rows[n].v = ob->fnum[fi];
+      rows[n].idx = n;
+      n++;
+    }
+    {
+      int a, b;
+      for (a = 1; a < n; a++) {
+        key = rows[a];
+        b = a - 1;
+        while (b >= 0) {
+          int less;
+          if (desc)
+            less = (key.v > rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          else
+            less = (key.v < rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          if (!less) break;
+          rows[b + 1] = rows[b];
+          b--;
+        }
+        rows[b + 1] = key;
+      }
+    }
+    if (start_arg < 0) start_arg = 0;
+    if (count_arg < 0) count_arg = 0;
+    start = (int)start_arg;
+    take = (int)count_arg;
+    if (start > n) start = n;
+    end = start + take;
+    if (end > n) end = n;
+    if (end < start) end = start;
+    out_n = end - start;
+    for (i = start; i < end; i++) {
+      size_t ln = strlen(rows[i].name);
+      if (o > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "SLICEBYF", bag);
+    var_set_str(vm, "MIDBYF", bag);
+    var_set_str(vm, "WINDOWBYF", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = out_n;
+    var_set_num(vm, "LAST_N", out_n);
+    var_set_num(vm, "SLICEBYF_N", out_n);
+    var_set_num(vm, "MIDBYF_N", out_n);
+    var_set_num(vm, "WINDOWBYF_N", out_n);
+    var_set_num(vm, "SLICEBYF_TOTAL", n);
+    var_set_num(vm, "SLICEBYF_START", start_arg);
+    var_set_num(vm, "SLICEBYF_REQ", count_arg);
+    var_set_num(vm, "SLICEBYF_SKIP", n_skip);
+    var_set_num(vm, "SLICEBYF_DESC", desc);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* SUMF|SUMFALL|TOTALF [Class] field
    * AVGF|AVGFALL|MEANF [Class] field
    * — sum or integer mean of numeric field over live objects (optional class).

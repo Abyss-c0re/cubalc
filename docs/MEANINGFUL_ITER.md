@@ -410,6 +410,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 380. ~~**`TOPNBYFWHERE` / `HEADWHERE` / `TAKEWHERE`**~~ **done** (top-n matching objs by field · no WHERE+TOPNBYF or SORTBYFWHERE+TAKE).
 381. ~~**`NTHBYF` / `ATBYF` / `INDEXBYF`**~~ **done** (0-based rank pick live obj by field · no SORTBYF+NTH glue).
 382. ~~**`NTHBYFWHERE` / `ATWHERE` / `INDEXWHERE`**~~ **done** (0-based rank pick among matches · no WHERE+NTHBYF or SORTBYFWHERE+NTH).
+383. ~~**`SLICEBYF` / `MIDBYF` / `WINDOWBYF`**~~ **done** (ranked name window [start,count) · no SORTBYF+DROP+TAKE glue).
 
 ## Tick protocol
 

@@ -1,0 +1,158 @@
+# SLICEBYF / MIDBYF — ranked object name window [start, start+count)
+# Usability: no SORTBYF + DROP + TAKE glue for page/skip
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 30 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 10 0
+NEW Cell e 1 50 0
+NEW Cell f 1 5 0
+
+# ASC: f5 b10 d10 c20 a30 e50
+# window start=1 count=3 → b d c
+SLICEBYF Cell energy 1 3 ASC
+ASSERT OK == 1
+ASSERT SLICEBYF_N == 3
+ASSERT LAST_N == 3
+ASSERT SLICEBYF_TOTAL == 6
+ASSERT SLICEBYF_START == 1
+ASSERT SLICEBYF_REQ == 3
+ASSERT SLICEBYF_DESC == 0
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+SYS NTH 2 SLICEBYF
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+SYS HASLINE SLICEBYF "f"
+ASSERT LAST_N == 0 "skipped first ASC"
+
+# DESC: e a c b d f — start=1 count=2 → a c (skip best)
+SLICEBYF Cell energy 1 2 DESC
+ASSERT SLICEBYF_DESC == 1
+ASSERT SLICEBYF_N == 2
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+SYS HASLINE SLICEBYF "e"
+ASSERT LAST_N == 0
+
+# start=0 count=2 DESC = top2 (TOPNBYF equivalent)
+SLICEBYF Cell energy 0 2 DESC
+ASSERT SLICEBYF_N == 2
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# count past end clips
+SLICEBYF Cell energy 4 99 ASC
+ASSERT SLICEBYF_N == 2
+ASSERT SLICEBYF_REQ == 99
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# empty: start past end
+SLICEBYF Cell energy 99 3 DESC
+ASSERT OK == 1
+ASSERT SLICEBYF_N == 0
+ASSERT SLICEBYF_TOTAL == 6
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty: count 0
+SLICEBYF Cell energy 0 0 DESC
+ASSERT SLICEBYF_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# OF + FROM/FOR sugar
+SLICEBYF OF Cell energy FROM 2 FOR 2 ASC
+# ASC: f b d c a e → from2 for2 = d c
+ASSERT SLICEBYF_N == 2
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# aliases
+MIDBYF Cell energy 0 1 DESC
+ASSERT MIDBYF_N == 1
+SYS NTH 0 MIDBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+WINDOWBYF Cell energy 5 1 ASC
+ASSERT WINDOWBYF_N == 1
+SYS NTH 0 WINDOWBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+PAGEBYF Cell energy 3 2 DESC
+ASSERT SLICEBYF_N == 2
+
+# var start/count
+LET off = 1
+LET lim = 2
+SLICEBYF Cell energy off lim DESC
+ASSERT SLICEBYF_START == 1
+ASSERT SLICEBYF_REQ == 2
+ASSERT SLICEBYF_N == 2
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# Ticket class filter
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 7
+NEW Ticket t2 "closed" 1
+NEW Ticket t3 "open" 2
+# DESC retries: t1=7 t3=2 t2=1 — slice 1,2 → t3 t2
+SLICEBYF Ticket retries 1 2 DESC
+ASSERT SLICEBYF_TOTAL == 3
+ASSERT SLICEBYF_N == 2
+SYS NTH 0 SLICEBYF
+SYS EQS LAST "t3"
+ASSERT LAST_N == 1
+SYS NTH 1 SLICEBYF
+SYS EQS LAST "t2"
+ASSERT LAST_N == 1
+SYS HASLINE SLICEBYF "t1"
+ASSERT LAST_N == 0
+SYS HASLINE SLICEBYF "a"
+ASSERT LAST_N == 0 "cells excluded"
+
+# empty class
+CLASS Empty
+  FIELD x 0
+END
+SLICEBYF Empty x 0 3 DESC
+ASSERT OK == 1
+ASSERT SLICEBYF_N == 0
+ASSERT SLICEBYF_TOTAL == 0
+
+PRINT "proof924_oop_slicebyf" 1
+ASSERT OK == 1
