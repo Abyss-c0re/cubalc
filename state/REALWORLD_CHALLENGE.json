@@ -15,13 +15,13 @@
     },
     {
       "name": "topn_hot_desc",
-      "cmd": "TOPNBYFWHERE K=2 ready DESC → n0 n1 (drain excluded)",
+      "cmd": "TOPNBYFWHERE K=2 ready DESC \u2192 n0 n1 (drain excluded)",
       "ok": true,
       "note": "TOPNBYFWHERE"
     },
     {
       "name": "topn_cold_asc",
-      "cmd": "ASC → n1 n0",
+      "cmd": "ASC \u2192 n1 n0",
       "ok": true,
       "note": "ASC"
     },
@@ -33,13 +33,13 @@
     },
     {
       "name": "nth_fleet",
-      "cmd": "NTHBYF 0 DESC → n2:99; 1 → n0:40; 9 OOR REQUIRE",
+      "cmd": "NTHBYF 0 DESC \u2192 n2:99; 1 \u2192 n0:40; 9 OOR REQUIRE",
       "ok": true,
       "note": "NTHBYF"
     },
     {
       "name": "admit_pressure",
-      "cmd": "max ready 40 ≥30 admit; ≥50 deny",
+      "cmd": "max ready 40 \u226530 admit; \u226550 deny",
       "ok": true,
       "note": "admit"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two n0:drain → SETMATCH leaves 1",
+      "cmd": "two n0:drain \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -73,7 +73,7 @@
       "id": "W1",
       "severity": "med",
       "area": "oop|nthbyf",
-      "title": "No NTHBYFWHERE — kth pick cannot filter by status",
+      "title": "No NTHBYFWHERE \u2014 kth pick cannot filter by status",
       "detail": "NTHBYF is fleet-wide only. Filtered runner-up needs TOPNBYFWHERE K=i+1 then SYS NTH i, or SORTBYFWHERE+NTH glue.",
       "repro": "NTHBYFWHERE unknown form; nth_fleet 0 returns drain n2 not hottest ready"
     },
@@ -81,7 +81,7 @@
       "id": "W2",
       "severity": "med",
       "area": "oop|topnbyfwhere",
-      "title": "TOPN bag is names only — no paired load values",
+      "title": "TOPN bag is names only \u2014 no paired load values",
       "detail": "Drain list is object names; agents must GETF each or GETFWHERE for loads.",
       "repro": "TOPN.txt = n0\\nn1 not n0:40"
     },
@@ -122,7 +122,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/K softens",
-      "detail": "REQUIRE=abc → soft; bad K keeps default.",
+      "detail": "REQUIRE=abc \u2192 soft; bad K keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -130,7 +130,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:drain → one SETMATCH leaves 1.",
+      "detail": "Two n0:drain \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -149,12 +149,12 @@
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "TOPNBYFWHERE ready DESC K=2 → n0 n1; drain n2:99 excluded",
-    "NTHBYF 0 DESC → n2:99 fleet-wide; K=99 clamps N=2; K=0 empty",
-    "admit max ready 40 ≥30 ok; ≥50 deny; empty ready deny",
-    "NTHBYFWHERE does not exist — documented W1",
+    "TOPNBYFWHERE ready DESC K=2 \u2192 n0 n1; drain n2:99 excluded",
+    "NTHBYF 0 DESC \u2192 n2:99 fleet-wide; K=99 clamps N=2; K=0 empty",
+    "admit max ready 40 \u226530 ok; \u226550 deny; empty ready deny",
+    "NTHBYFWHERE does not exist \u2014 documented W1",
     "selftest 348/348 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "663617b3871d4ce1cbae761f5f97f25419e1c30c",
   "ts": "2026-08-07T11:30:29Z"
 }
