@@ -1,0 +1,43 @@
+# PRINT multi-arg string content — agents log without CAT/strlen footgun
+# SAY/ECHO aliases; empty PRINT re-echoes LAST; LAST/PRINT_N knobs
+
+HOLD_FLASH 1
+
+LET s "world"
+PRINT "hi" s
+SYS EQS LAST "hi world"
+ASSERT LAST_N == 1
+ASSERT PRINT_N == 2
+
+LET n 3
+PRINT "x=" n "ok"
+SYS EQS LAST "x= 3 ok"
+ASSERT LAST_N == 1
+ASSERT PRINT_N == 3
+
+# two string vars
+LET a "A"
+LET b "B"
+PRINT a b
+SYS EQS LAST "A B"
+ASSERT LAST_N == 1
+
+# empty PRINT re-echoes LAST
+PRINT
+SYS EQS LAST "A B"
+ASSERT LAST_N == 1
+ASSERT PRINT_N == 0
+
+# SAY alias
+SAY 1 2 3
+SYS EQS LAST "1 2 3"
+ASSERT LAST_N == 1
+
+# ECHO alias + LAST as part
+ECHO "got" LAST
+SYS EQS LAST "got 1 2 3"
+ASSERT LAST_N == 1
+
+PRINT "print_str_parts ok"
+SYS HAS LAST "print_str_parts ok"
+ASSERT LAST_N == 1

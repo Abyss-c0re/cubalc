@@ -461,6 +461,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 431. ~~**ASSERT/EXPECT got/expected**~~ **done** (cmp fail shows `3 == 1 is false` · ASSERT_GOT/EXPECTED/OP knobs · soft EXPECT too).
 432. ~~**CALL/SEND arity check**~~ **done** (under-arity → needs N got M · params list · ARITY_NEED/GOT · soft TRY* · clears unbound formals).
 433. ~~**optional THEN / LET =**~~ **done** (IF/UNLESS/ELIF body without THEN · LET name value without = · clearer LET syntax errs with line).
+434. ~~**PRINT multi-arg strings**~~ **done** (PRINT/SAY/ECHO space-join str+num · string vars by content not strlen · LAST/PRINT_N · empty PRINT re-echoes LAST).
 
 ## Tick protocol
 

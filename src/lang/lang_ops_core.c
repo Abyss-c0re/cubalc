@@ -25807,7 +25807,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
       {"REQUIRE METHOD", "REQUIRE METHOD Class method — fail if method missing on class"},
       {"SYS WHICHBIN", "SYS WHICHBIN|PATHWHICH name — PATH-only soft resolve → LAST/OK"},
-      {"PRINT", "PRINT str|expr…"},
+      {"PRINT", "PRINT|SAY|ECHO parts… — space-join str+num · LAST=line"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
       {"DUMP", "DUMP — alias of PRINT_JSON"},
       {"VARS", "VARS — dump all program vars as cubalc.vars.v1 JSON"},
@@ -26534,19 +26534,84 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
     bump(vm); return 1;
   }
-  if (kw(&L->cur,"PRINT")){
+  /* PRINT|SAY|ECHO [parts…] — space-join strings and numbers; LAST=line.
+   * Usability: string vars print content (not strlen); multi-arg without CAT glue. */
+  if (kw(&L->cur,"PRINT") || kw(&L->cur,"SAY") || kw(&L->cur,"ECHO")){
     lex_next(L);
-    char line[256]; size_t o=0; line[0]=0;
-    if (L->cur.kind==TK_STR){ snprintf(line,sizeof line,"%s",L->cur.text); o=strlen(line); lex_next(L); }
-    while (L->cur.kind!=TK_NL && L->cur.kind!=TK_EOF && L->cur.kind!=TK_LBRACK){
-      if (L->cur.kind==TK_IDENT && (kw(&L->cur,"ASSERT")||kw(&L->cur,"LET")||kw(&L->cur,"CUBE")||
-            kw(&L->cur,"PRINT")||kw(&L->cur,"PRINT_JSON")||kw(&L->cur,"DUMP")||kw(&L->cur,"PRINTJSON"))) break;
-      long v=parse_expr(vm,L);
-      int n=snprintf(line+o,sizeof line-o,"%s%ld",o?" ":"",v); if(n>0)o+=(size_t)n;
-      if (o>=sizeof line) break;
+    char line[CUBALC_HOST_STR_MAX];
+    size_t o = 0;
+    int nparts = 0;
+    line[0] = 0;
+    while (L->cur.kind != TK_NL && L->cur.kind != TK_EOF && L->cur.kind != TK_LBRACK){
+      char part[CUBALC_HOST_STR_MAX];
+      size_t pl;
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"CUBE") ||
+           kw(&L->cur,"PRINT") || kw(&L->cur,"SAY") || kw(&L->cur,"ECHO") ||
+           kw(&L->cur,"PRINT_JSON") || kw(&L->cur,"DUMP") || kw(&L->cur,"PRINTJSON") ||
+           kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+           kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") ||
+           kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"FN") ||
+           kw(&L->cur,"CALL") || kw(&L->cur,"SEND") || kw(&L->cur,"CLASS") ||
+           kw(&L->cur,"NEW") || kw(&L->cur,"INCLUDE") || kw(&L->cur,"EXPECT") ||
+           kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") || kw(&L->cur,"NOTE") ||
+           kw(&L->cur,"EXIT") || kw(&L->cur,"RET") || kw(&L->cur,"RETURN")))
+        break;
+      part[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(part, sizeof part, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(part, sizeof part, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && sv->is_str) {
+          snprintf(part, sizeof part, "%s", sv->sval);
+          lex_next(L);
+        } else {
+          long v = parse_expr(vm, L);
+          snprintf(part, sizeof part, "%ld", v);
+        }
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                 L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(part, sizeof part, "%ld", v);
+      } else {
+        break;
+      }
+      if (nparts && o + 1 < sizeof line) {
+        line[o++] = ' ';
+        line[o] = 0;
+      }
+      pl = strlen(part);
+      if (o + pl >= sizeof line) {
+        if (o + 1 < sizeof line) {
+          pl = sizeof line - o - 1;
+          memcpy(line + o, part, pl);
+          o += pl;
+          line[o] = 0;
+        }
+        break;
+      }
+      memcpy(line + o, part, pl + 1);
+      o += pl;
+      nparts++;
     }
-    if (vm->trace) fprintf(vm->trace,"%s\n",line);
-    if (vm->res) snprintf(vm->res->last_print,sizeof vm->res->last_print,"%s",line);
+    /* empty PRINT → echo LAST (agent log mirror) */
+    if (nparts == 0) {
+      snprintf(line, sizeof line, "%s", vm->last_str);
+      o = strlen(line);
+    }
+    var_set_str(vm, "LAST", line);
+    var_set_str(vm, "PRINT", line);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", line);
+    vm->last_n = (long)o;
+    var_set_num(vm, "LAST_N", vm->last_n);
+    var_set_num(vm, "PRINT_N", (long)nparts);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "%s\n", line);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", line);
     bump(vm); return 1;
   }
   /* PRINT_JSON / DUMP [ident…] — one stable JSON line for agents
