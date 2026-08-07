@@ -9,37 +9,37 @@
   "tests": [
     {
       "name": "catalog",
-      "cmd": "EACH METHOD → PUSHF bag init/ping/health/deploy N=4",
+      "cmd": "EACH METHOD \u2192 PUSHF bag init/ping/health/deploy N=4",
       "ok": true,
       "note": "EACH METHOD"
     },
     {
       "name": "has_require",
-      "cmd": "walk has ping; require deploy ok; missing REQUIRE→2",
+      "cmd": "walk has ping; require deploy ok; missing REQUIRE\u21922",
       "ok": true,
       "note": "require"
     },
     {
       "name": "normalize",
-      "cmd": "TRIMF+LOWERF '  Ready  ' → ready; s1 UPPERF → READY",
+      "cmd": "TRIMF+LOWERF '  Ready  ' \u2192 ready; s1 UPPERF \u2192 READY",
       "ok": true,
       "note": "TRIMF"
     },
     {
       "name": "gate",
-      "cmd": "NMETHODS>=3 admit; MINN=99 REQUIRE→2",
+      "cmd": "NMETHODS>=3 admit; MINN=99 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "HASMETHOD var→0; literal deploy→1; walk finds; BREAK at 2",
+      "cmd": "HASMETHOD var\u21920; literal deploy\u21921; walk finds; BREAK at 2",
       "ok": true,
       "note": "probe"
     },
     {
       "name": "class_catalog",
-      "cmd": "catalog no-slot → class methods N=4",
+      "cmd": "catalog no-slot \u2192 class methods N=4",
       "ok": true,
       "note": "class"
     },
@@ -56,8 +56,8 @@
       "severity": "high",
       "area": "oop|hasmethod",
       "title": "HASMETHOD only accepts literal method names",
-      "detail": "HASMETHOD s0 m with m=\"deploy\" → LAST_N=0 always. HASMETHOD s0 deploy works. Agents cannot gate on ENV/ARG method without EACH METHOD+EQS walk. SEND prep with dynamic names needs dual path.",
-      "repro": "LET m=\"deploy\"; HASMETHOD s m → 0; HASMETHOD s deploy → 1"
+      "detail": "HASMETHOD s0 m with m=\"deploy\" \u2192 LAST_N=0 always. HASMETHOD s0 deploy works. Agents cannot gate on ENV/ARG method without EACH METHOD+EQS walk. SEND prep with dynamic names needs dual path.",
+      "repro": "LET m=\"deploy\"; HASMETHOD s m \u2192 0; HASMETHOD s deploy \u2192 1"
     },
     {
       "id": "W2",
@@ -65,7 +65,7 @@
       "area": "host|str",
       "title": "SYS CAT bag \"\\\\n\" does not build newline bags reliably",
       "detail": "PRINT_JSON of CAT-built method list collapses to initpinghealthdeploy. PUSHF into field bag is the working multi-line builder.",
-      "repro": "SYS CAT bag \"\\n\"; SYS CAT bag m → no line split"
+      "repro": "SYS CAT bag \"\\n\"; SYS CAT bag m \u2192 no line split"
     },
     {
       "id": "W3",
@@ -81,7 +81,7 @@
       "area": "oop|each",
       "title": "INCF local LET still fails in walks",
       "detail": "Must LET c = c + 1 inside EACH METHOD. Same as fleet_allowlist iter.",
-      "repro": "INCF c → INCF field"
+      "repro": "INCF c \u2192 INCF field"
     },
     {
       "id": "W5",
@@ -116,11 +116,11 @@
   ],
   "issues_faced": [
     "catalog 4 methods via EACH+PUSHF; size 4",
-    "HASMETHOD var always miss — walked EQS for require/has",
-    "TRIMF+LOWERF Ready→ready; UPPERF READY",
+    "HASMETHOD var always miss \u2014 walked EQS for require/has",
+    "TRIMF+LOWERF Ready\u2192ready; UPPERF READY",
     "probe documents literal-only HASMETHOD + BREAK",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "84df3b5b1f271de0d19e238cb5e1f19222b568d9",
   "ts": "2026-08-07T19:24:26Z"
 }
