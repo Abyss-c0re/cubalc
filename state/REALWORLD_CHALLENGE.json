@@ -9,7 +9,7 @@
   "tests": [
     {
       "name": "say_join",
-      "cmd": "SAY step build running start → PRINT_N=4; LOG append",
+      "cmd": "SAY step build running start \u2192 PRINT_N=4; LOG append",
       "ok": true,
       "note": "SAY"
     },
@@ -27,7 +27,7 @@
     },
     {
       "name": "gate",
-      "cmd": "MINLOG=2 admit; 99 REQUIRE→2",
+      "cmd": "MINLOG=2 admit; 99 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -51,14 +51,14 @@
       "area": "host|arg",
       "title": "CUBALC_ARG0 env no longer reaches SYS ARG in 1.15.426",
       "detail": "export CUBALC_ARG0=open leaves SYS ARG 0 and SYS ENV CUBALC_ARG0 empty; python sees the env var. Positional `cubalc run file open s0` works. Breaks all prior host contracts that used CUBALC_ARG* alone.",
-      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 → empty; cubalc run prog open works"
+      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 \u2192 empty; cubalc run prog open works"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "lang|default",
       "title": "DEFAULT still requires = (optional = is LET-only)",
-      "detail": "DEFAULT ACTION \"list\" → err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
+      "detail": "DEFAULT ACTION \"list\" \u2192 err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
       "repro": "DEFAULT ACTION \"list\" hard-fail"
     },
     {
@@ -102,18 +102,18 @@
     "Fixed s0/s1/s2; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Restore CUBALC_ARG* env → SYS ARG contract",
+    "Restore CUBALC_ARG* env \u2192 SYS ARG contract",
     "Optional = for DEFAULT parity with LET",
     "Document LAST bind rules for optional LET",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
     "DEFAULT without = hard-fail; restored =",
-    "CUBALC_ARG0 env dead — switched tests to positional args",
+    "CUBALC_ARG0 env dead \u2014 switched tests to positional args",
     "SAY join PRINT_N=4; saycode with num; LOG 2 lines",
     "HASLINE exact vs substring; gate MINLOG",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "a53fbbb27eddff3bebff69e97c3552374cc4d989",
   "ts": "2026-08-07T20:41:54Z"
 }
