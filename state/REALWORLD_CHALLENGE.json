@@ -15,7 +15,7 @@
     },
     {
       "name": "snap_copyf",
-      "cmd": "COPYF rev→prev N=3 SKIP=0",
+      "cmd": "COPYF rev\u2192prev N=3 SKIP=0",
       "ok": true,
       "note": "COPYF"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "admit_deny_wrong_rev",
-      "cmd": "want v1.0 while on v2.0 → EXIT 2",
+      "cmd": "want v1.0 while on v2.0 \u2192 EXIT 2",
       "ok": true,
       "note": "REQUIRE deny"
     },
     {
       "name": "rollback_swapf",
-      "cmd": "SWAPF rev↔prev → rev v1.0 prev v2.0; admit v1.0",
+      "cmd": "SWAPF rev\u2194prev \u2192 rev v1.0 prev v2.0; admit v1.0",
       "ok": true,
       "note": "SWAPF"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two s0:promote → SETMATCH drops to 1",
+      "cmd": "two s0:promote \u2192 SETMATCH drops to 1",
       "ok": true,
       "note": "journal"
     },
@@ -93,13 +93,13 @@
       "area": "oop|nobjs",
       "title": "NOBJS stale/0 until LISTOBJS (or peer fleet scan)",
       "detail": "After NEW/rehydrate, bare NOBJS stays 0 while COUNTWHERE correctly sees live objs. Admit-all patterns silently deny (0==count fails) unless LISTOBJS refreshes NOBJS first.",
-      "repro": "NEW 3 slots; LET n=NOBJS → 0; LISTOBJS; NOBJS→3"
+      "repro": "NEW 3 slots; LET n=NOBJS \u2192 0; LISTOBJS; NOBJS\u21923"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "oop|copyf|swapf",
-      "title": "COPYF/SWAPF are fleet-class only — no single-object form",
+      "title": "COPYF/SWAPF are fleet-class only \u2014 no single-object form",
       "detail": "Cannot snapshot/rollback one canary slot without EACH+GETF+SETF or temporary class filter. Ops always walk all live objs of class (or bare field name).",
       "repro": "want s0 only snap; COPYF Slot hits s0+s1+s2"
     },
@@ -107,7 +107,7 @@
       "id": "W3",
       "severity": "med",
       "area": "oop|setfall",
-      "title": "SETFALL stamps entire class — no WHERE rev predicate",
+      "title": "SETFALL stamps entire class \u2014 no WHERE rev predicate",
       "detail": "Cannot promote only slots still on old rev; partial canary needs per-slot setrev. SETFWHERE exists in 1.15.355 proof 905 but not used here yet.",
       "repro": "SETFALL Slot rev v2 hits all"
     },
@@ -116,14 +116,14 @@
       "severity": "med",
       "area": "oop|swapf",
       "title": "SWAPF with empty prev injects blank rev",
-      "detail": "Rollback without prior snap swaps '' into rev — silent data loss, not soft miss. Agents must gate on prev non-blank or require snap.",
-      "repro": "open; no snap; rollback → rev empty"
+      "detail": "Rollback without prior snap swaps '' into rev \u2014 silent data loss, not soft miss. Agents must gate on prev non-blank or require snap.",
+      "repro": "open; no snap; rollback \u2192 rev empty"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "oop|copyf",
-      "title": "Missing dst field soft-skips (N=0 SKIP=n) — easy to miss",
+      "title": "Missing dst field soft-skips (N=0 SKIP=n) \u2014 easy to miss",
       "detail": "COPYF Slot rev no_such_field OK=1-ish path with SKIP=n; agents must check COPYF_N/SKIP not just OK.",
       "repro": "probe COPYF rev no_such_field SKIP=3"
     },
@@ -140,7 +140,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_FS_REQUIRE=abc → soft wall only.",
+      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft wall only.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -148,7 +148,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two s0:promote → one SETMATCH leaves 1.",
+      "detail": "Two s0:promote \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -175,6 +175,6 @@
     "empty snap/rollback N=0 soft; admit REQUIRE deny",
     "selftest 331/331 green; no language fix this iter (SETFWHERE already in tree)"
   ],
-  "commit": "",
+  "commit": "2661ad05d44e4a97327fa99f366179ed34f0ffcd",
   "ts": "2026-08-07T08:36:11Z"
 }
