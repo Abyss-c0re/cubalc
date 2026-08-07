@@ -1,0 +1,166 @@
+# GREPF / GREPVF / GREPFI — filter bag lines in object field for agents
+# Usability: log/work triage without GETF+SYS GREP+SETF
+# Mutates field; GREPF_N kept · GREPF_HIT matches · GREPF_TOTAL source lines
+
+HOLD_FLASH 1
+
+CLASS Log
+  FIELD lines "INFO ok\nERR disk\nWARN slow\nERR mem\nINFO done"
+  FIELD code 9
+  METHOD init
+  END
+  METHOD errs
+    GREPF THIS lines "ERR"
+  END
+END
+
+NEW Log L
+
+# keep ERR lines
+GREPF L lines "ERR"
+ASSERT OK == 1
+ASSERT GREPF_N == 2
+ASSERT LAST_N == 2
+ASSERT GREPF_HIT == 2
+ASSERT GREPF_TOTAL == 5
+SYS EQS LAST "ERR disk\nERR mem"
+ASSERT LAST_N == 1
+GETF L lines
+SYS EQS LAST "ERR disk\nERR mem"
+ASSERT LAST_N == 1
+SYS EQS FIELD "lines"
+ASSERT LAST_N == 1
+
+# FILTERF alias
+SETF L lines "a\nbx\nc\nbz"
+FILTERF L lines "b"
+ASSERT GREPF_N == 2
+SYS EQS LAST "bx\nbz"
+ASSERT LAST_N == 1
+
+# invert GREPVF — drop matches
+SETF L lines "keep\nDROP me\nkeep2\nDROP2"
+GREPVF L lines "DROP"
+ASSERT GREPVF_N == 2
+SYS EQS LAST "keep\nkeep2"
+ASSERT LAST_N == 1
+GETF L lines
+SYS EQS LAST "keep\nkeep2"
+ASSERT LAST_N == 1
+
+# DROPMATCHF alias
+SETF L lines "x\ny\nz"
+DROPMATCHF L lines "y"
+SYS EQS LAST "x\nz"
+ASSERT LAST_N == 1
+
+# case-insensitive GREPFI
+SETF L lines "Error one\ninfo\nERROR two\nok"
+GREPFI L lines "error"
+ASSERT GREPF_N == 2
+ASSERT GREPF_HIT == 2
+SYS EQS LAST "Error one\nERROR two"
+ASSERT LAST_N == 1
+
+# GREPVFI invert+icase
+SETF L lines "Error\nok\nERROR\nfine"
+GREPVFI L lines "error"
+ASSERT GREPF_N == 2
+SYS EQS LAST "ok\nfine"
+ASSERT LAST_N == 1
+
+# empty needle keeps all
+SETF L lines "a\nb"
+GREPF L lines ""
+ASSERT GREPF_N == 2
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# empty needle + invert drops all
+SETF L lines "a\nb"
+GREPVF L lines ""
+ASSERT GREPF_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# no matches → empty field
+SETF L lines "alpha\nbeta"
+GREPF L lines "zzz"
+ASSERT GREPF_N == 0
+ASSERT GREPF_HIT == 0
+ASSERT GREPF_TOTAL == 2
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETF L lines
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single line field
+SETF L lines "only ERR here"
+GREPF L lines "ERR"
+ASSERT GREPF_N == 1
+SYS EQS LAST "only ERR here"
+ASSERT LAST_N == 1
+
+# num promote
+GREPF L code "9"
+ASSERT GREPF_N == 1
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# CONTAINS glue
+SETF L lines "p1\nq2\np3"
+GREPF L lines CONTAINS "p"
+ASSERT GREPF_N == 2
+SYS EQS LAST "p1\np3"
+ASSERT LAST_N == 1
+
+# METHOD / THIS
+SETF L lines "INFO\nERR a\nWARN\nERR b"
+SEND L errs
+GETF L lines
+SYS EQS LAST "ERR a\nERR b"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYGREPF nosuch lines "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+GREPF SOFT L nosuch "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# recover
+SETF L lines "ok\nyes"
+GREPF L lines "y"
+ASSERT OK == 1
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF L lines "d\ne\nd2"
+GREPF L "lines" "d"
+SYS EQS LAST "d\nd2"
+ASSERT LAST_N == 1
+
+# ICASE keyword after GREPF
+SETF L lines "Ab\ncd\nAB"
+GREPF I L lines "ab"
+ASSERT GREPF_N == 2
+SYS EQS LAST "Ab\nAB"
+ASSERT LAST_N == 1
+
+# HELP
+HELP GREPF
+SYS HAS LAST "GREPF"
+ASSERT LAST_N == 1
+HELP GREPVF
+SYS HAS LAST "GREPVF"
+ASSERT LAST_N == 1
+HELP GREPFI
+SYS HAS LAST "GREPFI"
+ASSERT LAST_N == 1
+
+PRINT "oop_grepf ok"

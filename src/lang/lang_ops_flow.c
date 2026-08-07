@@ -14227,6 +14227,225 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* GREPF|FILTERF|KEEPF obj field needle — keep bag lines containing needle (mutate).
+   * GREPVF|VGREPF|DROPMATCHF — invert (drop matching lines).
+   * GREPFI|FILTERFI|IGREPF — case-insensitive keep; GREPVFI invert+icase.
+   * TRYGREPF|GREPF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * LAST = filtered bag; LAST_N/GREPF_N = kept count; GREPF_HIT = unfiltered match count;
+   * GREPF_TOTAL = source line count. Empty needle → keep all (or drop all if invert).
+   * Promotes num→str. Complements HASINF (probe) / PUSHF (queue) for log triage.
+   * Usability: filter multi-line field bags without GETF+SYS GREP+SETF
+   * (METHOD/THIS). Not SYS GREPFILE (path content). */
+  if (kw(&L->cur, "GREPF") || kw(&L->cur, "FILTERF") ||
+      kw(&L->cur, "KEEPF") || kw(&L->cur, "MATCHLINESF") ||
+      kw(&L->cur, "BAGGREPF") || kw(&L->cur, "FIELDGREP") ||
+      kw(&L->cur, "GREPVF") || kw(&L->cur, "VGREPF") ||
+      kw(&L->cur, "DROPMATCHF") || kw(&L->cur, "FILTERVF") ||
+      kw(&L->cur, "GREPFI") || kw(&L->cur, "FILTERFI") ||
+      kw(&L->cur, "IGREPF") || kw(&L->cur, "KEEPFI") ||
+      kw(&L->cur, "GREPVFI") || kw(&L->cur, "VGREPFI") ||
+      kw(&L->cur, "IFILTERVF") || kw(&L->cur, "DROPMATCHFI") ||
+      kw(&L->cur, "TRYGREPF") || kw(&L->cur, "GREPFSOFT") ||
+      kw(&L->cur, "SOFTGREPF") || kw(&L->cur, "TRYFILTERF") ||
+      kw(&L->cur, "TRYGREPVF") || kw(&L->cur, "TRYGREPFI")) {
+    char oname[48], fname[48], op[24], hay[256], needle[128], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, invert = 0, icase = 0;
+    long kept = 0, hits = 0, total = 0;
+    const char *p, *start;
+    size_t olen = 0, flen, nn;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "GREPVF") == 0 || strcmp(op, "VGREPF") == 0 ||
+        strcmp(op, "DROPMATCHF") == 0 || strcmp(op, "FILTERVF") == 0 ||
+        strcmp(op, "GREPVFI") == 0 || strcmp(op, "VGREPFI") == 0 ||
+        strcmp(op, "IFILTERVF") == 0 || strcmp(op, "DROPMATCHFI") == 0 ||
+        strcmp(op, "TRYGREPVF") == 0)
+      invert = 1;
+    if (strcmp(op, "GREPFI") == 0 || strcmp(op, "FILTERFI") == 0 ||
+        strcmp(op, "IGREPF") == 0 || strcmp(op, "KEEPFI") == 0 ||
+        strcmp(op, "GREPVFI") == 0 || strcmp(op, "VGREPFI") == 0 ||
+        strcmp(op, "IFILTERVF") == 0 || strcmp(op, "DROPMATCHFI") == 0 ||
+        strcmp(op, "TRYGREPFI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYGREPF") == 0 || strcmp(op, "GREPFSOFT") == 0 ||
+        strcmp(op, "SOFTGREPF") == 0 || strcmp(op, "TRYFILTERF") == 0 ||
+        strcmp(op, "TRYGREPVF") == 0 || strcmp(op, "TRYGREPFI") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                   kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                   kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    if (!invert && (kw(&L->cur, "V") || kw(&L->cur, "INVERT") ||
+                    kw(&L->cur, "NOT") || kw(&L->cur, "DROP"))) {
+      invert = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "GREPF object field needle"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "GREPF field"); return -1;
+    }
+    if (kw(&L->cur, "FOR") || kw(&L->cur, "MATCH") || kw(&L->cur, "NEEDLE") ||
+        kw(&L->cur, "WITH") || kw(&L->cur, "CONTAINS"))
+      lex_next(L);
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+      snprintf(needle, sizeof needle, "%s", vm->last_str);
+    nn = strlen(needle);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "GREPF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "GREPF_N", 0);
+      var_set_num(vm, "GREPF_HIT", 0);
+      var_set_num(vm, "GREPF_TOTAL", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GREPF: unknown object");
+      var_set_str(vm, "ERR", "GREPF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "GREPF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "GREPF_N", 0);
+      var_set_num(vm, "GREPF_HIT", 0);
+      var_set_num(vm, "GREPF_TOTAL", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GREPF: unknown field");
+      var_set_str(vm, "ERR", "GREPF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    out[0] = 0;
+    olen = 0;
+    kept = 0;
+    hits = 0;
+    total = 0;
+    if (hay[0]) {
+      p = hay;
+      while (*p) {
+        int hit;
+        char field[256];
+        size_t take;
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        total++;
+        take = flen;
+        if (take >= sizeof field) take = sizeof field - 1;
+        memcpy(field, start, take);
+        field[take] = 0;
+        if (nn == 0) {
+          hit = 1;
+        } else if (!icase) {
+          hit = (strstr(field, needle) != NULL) ? 1 : 0;
+        } else {
+          size_t fi2, j;
+          hit = 0;
+          for (fi2 = 0; field[fi2] && !hit; fi2++) {
+            for (j = 0; j < nn; j++) {
+              char a = field[fi2 + j], b = needle[j];
+              if (!a) break;
+              if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+              if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+              if (a != b) break;
+            }
+            if (j == nn) hit = 1;
+          }
+        }
+        if (hit) hits++;
+        if (invert) hit = !hit;
+        if (hit) {
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, start, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+        }
+        if (*p == '\n') p++;
+      }
+    }
+    out[olen] = 0;
+    {
+      size_t cap = sizeof ob->fstr[fi];
+      if (olen >= cap) {
+        memcpy(ob->fstr[fi], out, cap - 1);
+        ob->fstr[fi][cap - 1] = 0;
+      } else {
+        memcpy(ob->fstr[fi], out, olen + 1);
+      }
+    }
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", ob->fstr[fi]);
+    var_set_str(vm, "GREPF", ob->fstr[fi]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+    vm->last_n = kept;
+    var_set_num(vm, "LAST_N", kept);
+    var_set_num(vm, "GREPF_N", kept);
+    var_set_num(vm, "FILTERF_N", kept);
+    var_set_num(vm, "GREPF_HIT", hits);
+    var_set_num(vm, "GREPF_TOTAL", total);
+    var_set_num(vm, "GREPVF_N", kept);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).
