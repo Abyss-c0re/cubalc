@@ -155,6 +155,6 @@
     "batch DROP 1 + EACH LINE + LOCKFILE CRC32FILE seal rows green",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "pending",
+  "commit": "5b763e27ba47a88eace898a70600a3cdae4581bf",
   "ts": "2026-08-07T21:06:23Z"
 }
