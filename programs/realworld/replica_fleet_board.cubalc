@@ -1,0 +1,1440 @@
+# replica_fleet_board.cubalc — GETFALL/SETFALL/WHEREOBJ/FINDOBJ fleet ops
+#
+# Real use: agents track a small DB/API replica fleet (r0..r2) with lag, role,
+# and mode. Harvest lag for SLO without EACH+GETF+PUSH; bulk stamp mode for
+# drain windows; query by field equality (WHEREOBJ/FINDOBJ) without glue.
+#
+# Surfaces forced (1.15.330–332):
+#   GETFALL / COLLECTF [AS KV]   — bulk field collect + SUM/AVG
+#   SETFALL / MAPSETF            — bulk field stamp
+#   WHEREOBJ / FILTEROBJS        — select names by field equality
+#   FINDOBJ / FIRSTOBJ           — first match; GETF LAST works
+#   DUMPOBJ plate rehydrate      — multi-run ARG dispatch
+#   bag journal COUNTLINE/SETMATCH/MOVELINE
+#   TRYSEND soft + REQUIRE miss
+#
+# Distinct from conn_pool_drain (DELETEALL), worker_fleet (claim/tick EACH),
+# circuit_breaker (trip/half): this board is *fleet field harvest + query + stamp*.
+#
+# Slots (fixed idents): r0 r1 r2
+#
+# Plate under STATE:
+#   dump/r0 dump/r1 dump/r2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt FLEET_REPORT.txt HARVEST.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RF_ACTION):
+#   list       — LISTOBJS Replica
+#   open       — NEW Replica ARG1=rN [lag=ARG2]
+#   setlag     — SETF lag ARG2 on slot
+#   setrole    — SETF role ARG2 (primary|replica|standby)
+#   setmode    — SETF mode ARG2 (live|drain|hold)
+#   harvest    — GETFALL Replica lag → SUM AVG → VAL
+#   harvest_kv — GETFALL AS KV → HARVEST plate
+#   stamp      — SETFALL Replica mode ARG1 (default drain)
+#   zero       — SETFALL Replica lag 0
+#   where      — WHEREOBJ Replica mode ARG1 (default drain)
+#   find_role  — FINDOBJ Replica role ARG1 (default primary)
+#   find_lag   — FINDOBJ Replica lag ARG1 (exact N)
+#   get_last   — FINDOBJ primary then GETF LAST lag (LAST as obj name)
+#   journal    — PUSH slot:event
+#   count      — COUNTLINE exact
+#   pin        — MOVELINE first exact to front
+#   setmatch   — SETMATCH old→new first
+#   probe      — soft TRYSEND/TRYSETF
+#   dump       — DUMPOBJ live
+#   gate       — avg lag <= MAX (default 50) AND primary present
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rf_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=r0 CUBALC_ARG2=5
+#   CUBALC_ARG0=setrole CUBALC_ARG1=r0 CUBALC_ARG2=primary
+#   CUBALC_ARG0=harvest
+#   CUBALC_ARG0=stamp CUBALC_ARG1=drain
+#   CUBALC_ARG0=where CUBALC_ARG1=drain
+#   CUBALC_ARG0=gate CUBALC_RF_MAX=50 CUBALC_RF_REQUIRE=1
+#
+# Env: CUBALC_RF_REQUIRE CUBALC_RF_NAME CUBALC_RF_MAX CUBALC_RF_ACTION
+#
+# Edges:
+#   WHEREOBJ equality only — no lag>N range; agents exact-match or EACH
+#   FINDOBJ → GETF LAST ok; LET n=LAST; GETF n still awkward/fails
+#   GETFALL miss field soft skip GETFALL_SKIP; empty pool N=0
+#   SETFALL stamps all class members (no WHERE-filtered SETFALL)
+#   string-var object names outside LAST; DUMPOBJ plate rehydrate
+#   SETMATCH first-only; COUNTLINE exact; WRITE NL; REQUIRE NUM softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Replica
+  FIELD id ""
+  FIELD lag 0
+  FIELD role "replica"
+  FIELD mode "live"
+  METHOD init i lg
+    SETF THIS id i
+    SETF THIS lag lg
+    SETF THIS role "replica"
+    SETF THIS mode "live"
+  END
+  METHOD bump
+    GETF THIS lag
+    LET L = LAST_N + 1
+    SETF THIS lag L
+    RET L
+  END
+END
+
+NOTE "replica_fleet_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MAX_AVG = 50
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RF_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_AVG = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "HARVEST.txt"
+LET harvest_path = LAST
+SYS JOIN state_dir "FLEET_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "r0"
+LET d_r0 = LAST
+SYS JOIN dump_dir "r1"
+LET d_r1 = LAST
+SYS JOIN dump_dir "r2"
+LET d_r2 = LAST
+
+# slot resolve: r0=0 r1=1 r2=2
+LET slot = -1
+SYS EQS NAME "r0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "r1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "r2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "r0"
+END
+IF slot == 1 THEN
+  LET sn = "r1"
+END
+IF slot == 2 THEN
+  LET sn = "r2"
+END
+
+# rehydrate r0
+SYS READ OR d_r0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lag"
+  LET rlg = LAST_N
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUP snap "mode"
+  LET rmode = LAST
+  CLEAR_ERR
+  NEW Replica r0 rid rlg
+  TRYSETF r0 role rrole
+  CLEAR_ERR
+  TRYSETF r0 mode rmode
+  CLEAR_ERR
+  TRYSETF r0 lag rlg
+  CLEAR_ERR
+END
+# rehydrate r1
+SYS READ OR d_r1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lag"
+  LET rlg = LAST_N
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUP snap "mode"
+  LET rmode = LAST
+  CLEAR_ERR
+  NEW Replica r1 rid rlg
+  TRYSETF r1 role rrole
+  CLEAR_ERR
+  TRYSETF r1 mode rmode
+  CLEAR_ERR
+  TRYSETF r1 lag rlg
+  CLEAR_ERR
+END
+# rehydrate r2
+SYS READ OR d_r2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lag"
+  LET rlg = LAST_N
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUP snap "mode"
+  LET rmode = LAST
+  CLEAR_ERR
+  NEW Replica r2 rid rlg
+  TRYSETF r2 role rrole
+  CLEAR_ERR
+  TRYSETF r2 mode rmode
+  CLEAR_ERR
+  TRYSETF r2 lag rlg
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET sum_lag = 0
+LET avg_lag = 0
+LET harvest_n = 0
+LET where_n = 0
+LET skip_n = 0
+# predeclare report bag early — late LET+PUSH after FINDOBJ under -s flaked
+LET fleet_rep = "replica_fleet_board"
+
+# helper: dump live slots to plate
+# (inlined per action — no functions)
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Replica
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET lg = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lg = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DELETEOBJ r0
+        CLEAR_ERR
+      END
+      NEW Replica r0 sn lg
+      DUMPOBJ r0
+      SYS WRITE d_r0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DELETEOBJ r1
+        CLEAR_ERR
+      END
+      NEW Replica r1 sn lg
+      DUMPOBJ r1
+      SYS WRITE d_r1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DELETEOBJ r2
+        CLEAR_ERR
+      END
+      NEW Replica r2 sn lg
+      DUMPOBJ r2
+      SYS WRITE d_r2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Replica
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR lg
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setlag ---
+SYS EQS ACTION "setlag"
+IF LAST_N == 1 THEN
+  NOTE "action setlag"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setlag bad slot"
+    FAIL "setlag bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setlag bad slot"
+    END
+  ELSE
+    LET lg = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lg = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 lag lg
+        LET ok_set = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 lag lg
+        LET ok_set = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 lag lg
+        LET ok_set = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setlag no obj"
+      FAIL "setlag no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setlag no obj"
+      END
+    ELSE
+      LET jev = "SLOT:lag"
+      SYS REPLACEALL jev "SLOT" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "setlag ok"
+      SYS STR lg
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setlag"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setrole ---
+SYS EQS ACTION "setrole"
+IF LAST_N == 1 THEN
+  NOTE "action setrole"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setrole bad slot"
+    FAIL "setrole bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setrole bad slot"
+    END
+  ELSE
+    LET rr = "replica"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET rr = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 role rr
+        LET ok_set = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 role rr
+        LET ok_set = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 role rr
+        LET ok_set = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setrole no obj"
+      FAIL "setrole no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setrole no obj"
+      END
+    ELSE
+      LET jev = "SLOT:role"
+      SYS REPLACEALL jev "SLOT" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "setrole ok"
+      LET val = rr
+      LET val_ch = 1
+      LET meta = "setrole"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta rr
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmode ---
+SYS EQS ACTION "setmode"
+IF LAST_N == 1 THEN
+  NOTE "action setmode"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setmode bad slot"
+    FAIL "setmode bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setmode bad slot"
+    END
+  ELSE
+    LET mm = "live"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET mm = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 mode mm
+        LET ok_set = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 mode mm
+        LET ok_set = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 mode mm
+        LET ok_set = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setmode no obj"
+      FAIL "setmode no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setmode no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setmode ok"
+      LET val = mm
+      LET val_ch = 1
+      LET meta = "setmode"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta mm
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- harvest GETFALL lag ---
+SYS EQS ACTION "harvest"
+IF LAST_N == 1 THEN
+  NOTE "action harvest"
+  GETFALL Replica lag
+  LET hbag = LAST
+  LET harvest_n = GETFALL_N
+  LET skip_n = GETFALL_SKIP
+  IF harvest_n == 0 THEN
+    LET sum_lag = 0
+    LET avg_lag = 0
+  ELSE
+    SYS SUM hbag
+    LET sum_lag = LAST_N
+    SYS AVG hbag
+    LET avg_lag = LAST_N
+  END
+  SYS WRITE harvest_path hbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "harvest ok"
+  # template — JOIN inserts /
+  LET val = "n:N sum:S avg:A"
+  SYS STR harvest_n
+  SYS REPLACEALL val "N" LAST
+  LET val = LAST
+  SYS STR sum_lag
+  SYS REPLACEALL val "S" LAST
+  LET val = LAST
+  SYS STR avg_lag
+  SYS REPLACEALL val "A" LAST
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "harvest"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR skip_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- harvest_kv ---
+SYS EQS ACTION "harvest_kv"
+IF LAST_N == 1 THEN
+  NOTE "action harvest_kv"
+  GETFALL Replica lag AS KV
+  LET hbag = LAST
+  LET harvest_n = GETFALL_N
+  SYS WRITE harvest_path hbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "harvest_kv ok"
+  LET val = hbag
+  LET val_ch = 1
+  LET meta = "harvest_kv"
+  SYS STR harvest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON harvest_n
+  CLEAR_ERR
+END
+
+# --- stamp SETFALL mode ---
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  NOTE "action stamp"
+  LET mm = "drain"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET mm = NAME
+  END
+  SETFALL Replica mode mm
+  LET ret_n = SETFALL_N
+  LET skip_n = SETFALL_SKIP
+  # persist dumps
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  LET jev = "fleet:stamp"
+  SYS PUSH jbag jev
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "stamp ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "stamp"
+  SYS PUSH meta mm
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- zero SETFALL lag 0 ---
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  NOTE "action zero"
+  SETFALL Replica lag 0
+  LET ret_n = SETFALL_N
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "zero ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "zero"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- where WHEREOBJ mode ---
+SYS EQS ACTION "where"
+IF LAST_N == 1 THEN
+  NOTE "action where"
+  LET mm = "drain"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET mm = NAME
+  END
+  WHEREOBJ Replica mode mm
+  LET wbag = LAST
+  LET where_n = WHEREOBJ_N
+  LET hit = 1
+  LET note_msg = "where ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "where"
+  SYS PUSH meta mm
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON where_n
+  CLEAR_ERR
+END
+
+# --- find_role FINDOBJ ---
+SYS EQS ACTION "find_role"
+IF LAST_N == 1 THEN
+  NOTE "action find_role"
+  LET rr = "primary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rr = NAME
+  END
+  FINDOBJ Replica role rr
+  LET found = LAST
+  LET ret_n = FINDOBJ_N
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "find_role miss"
+    FAIL "find_role miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "find_role miss"
+    END
+    LET val = ""
+    LET val_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "find_role ok"
+    LET val = found
+    LET val_ch = 1
+  END
+  LET meta = "find_role"
+  SYS PUSH meta rr
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- find_lag exact ---
+SYS EQS ACTION "find_lag"
+IF LAST_N == 1 THEN
+  NOTE "action find_lag"
+  LET lg = 0
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lg = LAST_N
+    END
+  END
+  FINDOBJ Replica lag lg
+  LET found = LAST
+  LET ret_n = FINDOBJ_N
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "find_lag miss"
+    FAIL "find_lag miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "find_lag miss"
+    END
+    LET val = ""
+    LET val_ch = 1
+  ELSE
+    LET hit = 1
+    LET note_msg = "find_lag ok"
+    LET val = found
+    LET val_ch = 1
+  END
+  LET meta = "find_lag"
+  SYS STR lg
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- get_last: FINDOBJ primary + GETF LAST lag ---
+SYS EQS ACTION "get_last"
+IF LAST_N == 1 THEN
+  NOTE "action get_last"
+  FINDOBJ Replica role "primary"
+  LET ret_n = FINDOBJ_N
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "get_last no primary"
+    FAIL "get_last no primary"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get_last no primary"
+    END
+    LET val = ""
+    LET val_ch = 1
+  ELSE
+    # LAST is special object name after FINDOBJ
+    GETF LAST lag
+    LET lg = LAST_N
+    LET hit = 1
+    LET note_msg = "get_last ok"
+    SYS STR lg
+    LET val = LAST
+    LET val_ch = 1
+    # contrast: string var may fail — capture for meta
+    FINDOBJ Replica role "primary"
+    LET pname = LAST
+    LET soft_var = 0
+    TRYGETF pname lag OR -1
+    IF OK == 0 THEN
+      LET soft_var = 1
+    END
+    CLEAR_ERR
+    LET meta = "get_last"
+    SYS PUSH meta pname
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS STR soft_var
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  LET soft_o = 0
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    TRYSEND r0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF r0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    TRYSEND ghost_rep tick
+    IF OK == 0 THEN
+      LET soft_o = 1
+    END
+    CLEAR_ERR
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  # empty GETFALL miss field
+  GETFALL Replica no_such_field_zz
+  LET skip_n = GETFALL_SKIP
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_o
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR skip_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Replica
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- gate: avg lag <= MAX_AVG AND primary present ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  GETFALL Replica lag
+  LET hbag = LAST
+  LET harvest_n = GETFALL_N
+  IF harvest_n == 0 THEN
+    LET avg_lag = 0
+    LET sum_lag = 0
+  ELSE
+    SYS SUM hbag
+    LET sum_lag = LAST_N
+    SYS AVG hbag
+    LET avg_lag = LAST_N
+  END
+  FINDOBJ Replica role "primary"
+  LET has_p = FINDOBJ_N
+  LET admit = 0
+  IF has_p == 1 THEN
+    IF avg_lag <= MAX_AVG THEN
+      LET admit = 1
+    END
+  END
+  IF admit == 1 THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+    LET val = "admit"
+    LET val_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate deny fleet lag or no primary"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny fleet lag or no primary"
+    END
+  END
+  LET meta = "gate"
+  SYS STR avg_lag
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MAX_AVG
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR has_p
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Replica
+  CLEAR_ERR
+  SYS RM d_r0
+  CLEAR_ERR
+  SYS RM d_r1
+  CLEAR_ERR
+  SYS RM d_r2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM harvest_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown action
+SYS EQS ACTION "list"
+LET known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setlag"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setrole"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setmode"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "harvest"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "harvest_kv"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "stamp"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "zero"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "where"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "find_role"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "find_lag"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "get_last"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+IF known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 "unknown action"
+  END
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+# fleet_rep predeclared at start (late LET+SYS PUSH bag after FINDOBJ/-s was flaky)
+SYS PUSH fleet_rep run_date
+LET fleet_rep = LAST
+SYS PUSH fleet_rep ACTION
+LET fleet_rep = LAST
+SYS PUSH fleet_rep note_msg
+LET fleet_rep = LAST
+SYS STR hit
+SYS PUSH fleet_rep LAST
+LET fleet_rep = LAST
+SYS STR miss
+SYS PUSH fleet_rep LAST
+LET fleet_rep = LAST
+SYS STR dt
+SYS PUSH fleet_rep LAST
+LET fleet_rep = LAST
+SYS WRITE report_path fleet_rep
+CLEAR_ERR
+
+NOTE "replica_fleet_board: done"
+IF miss > 0 THEN
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 note_msg
+  END
+END
+EXIT 0 note_msg
