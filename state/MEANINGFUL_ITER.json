@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 380,
-  "version": "1.15.407-usability",
-  "item": "STRIPPREFIXF/STRIPSUFFIXF field affix drop",
-  "item_id": 416,
-  "title": "STRIPPREFIXF|STRIPSUFFIXF — drop leading/trailing affix on one field",
-  "commit": "62f5c89a869b9067f2e4e9fc49348e7a22cf8a00",
-  "summary": "Path roots/extensions without GETF+STARTS+SLICEF. Soft miss. proof 957 37/37.",
+  "iter": 381,
+  "version": "1.15.408-usability",
+  "item": "WORDSF tokenize field to bag",
+  "item_id": 417,
+  "title": "WORDSF|TOKENIZEF — whitespace tokenize field → newline bag",
+  "commit": "d51fbd99db0943a9c6fff3005ef85dcdeddb77e8",
+  "summary": "Free-text bag without GETF+SYS WORDS. Soft miss. proof 958 31/31.",
   "proofs": [
-    "957_oop_strippf",
-    "asserts 37/37",
-    "956 still green"
+    "958_oop_wordsf",
+    "asserts 31/31",
+    "957 still green"
   ],
-  "when": "2026-08-07T17:15:24Z",
+  "when": "2026-08-07T17:24:56Z",
   "agent": "meaningful_iter_10m",
-  "sha": "62f5c89a869b9067f2e4e9fc49348e7a22cf8a00",
-  "note": "STRIPPREFIXF_HIT/STRIPSUFFIXF_HIT; pairs STARTSF/ENDSF"
+  "sha": "d51fbd99db0943a9c6fff3005ef85dcdeddb77e8",
+  "note": "WORDSF_N tokens; no mutate; pairs SPLITF/JOINF"
 }
