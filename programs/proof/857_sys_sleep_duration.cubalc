@@ -1,0 +1,67 @@
+# SYS SLEEP human duration string — PARSEMS-compatible backoff without glue
+# Usability: SYS SLEEP "250ms" / "1s" / "1s500ms" (cap 60s) · str var / LAST
+# Keep sleeps short so selftest stays snappy.
+
+HOLD_FLASH 1
+
+# explicit ms unit
+SYS SLEEP "20ms"
+ASSERT OK == 1
+ASSERT LAST_N == 20 "slept 20ms from string"
+ASSERT SLEEP_MS == 20
+
+# seconds unit (sub-second via 0s + ms to avoid 1s wall wait)
+SYS SLEEP "0s25ms"
+ASSERT OK == 1
+ASSERT LAST_N == 25 "0s25ms → 25ms"
+
+# compound multi-unit
+SYS SLEEP "0s 15ms"
+ASSERT OK == 1
+ASSERT LAST_N == 15
+
+# PARSEMS-equivalent compound that still stays short
+SYS PARSEMS "1s250ms"
+ASSERT LAST_N == 1250
+# do not sleep 1250ms in proof — just prove SLEEP accepts same grammar via short form
+SYS SLEEP "1ms250ms"
+# 1ms250ms is invalid? Actually 1ms + 250ms = 251ms — valid compound
+ASSERT OK == 1
+ASSERT LAST_N == 251 "1ms250ms compound"
+
+# string var
+LET DUR = "40ms"
+SYS SLEEP DUR
+ASSERT OK == 1
+ASSERT LAST_N == 40
+
+# round-trip: HUMANMS label → SLEEP (string holds duration)
+SYS HUMANMS 50
+LET LAB = LAST
+SYS EQS LAB "50ms"
+ASSERT LAST_N == 1 "HUMANMS 50 → 50ms"
+SYS SLEEP LAB
+ASSERT OK == 1
+ASSERT LAST_N == 50
+
+# numeric path still works
+SYS SLEEP 15
+ASSERT OK == 1
+ASSERT LAST_N == 15
+
+# aliases accept duration
+SYS MSLEEP "10ms"
+ASSERT LAST_N == 10
+SYS DELAY "10ms"
+ASSERT LAST_N == 10
+
+# soft-fail bad duration (no sleep)
+SYS SLEEP "nope"
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# empty soft-fail
+SYS SLEEP ""
+ASSERT OK == 0
+
+PRINT "sys_sleep_duration ok"

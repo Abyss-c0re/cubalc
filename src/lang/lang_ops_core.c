@@ -454,6 +454,103 @@ static int cubalc_walk_match(const char *pat, const char *name) {
 #endif
 }
 
+/* Parse human duration → milliseconds (SYS PARSEMS rules).
+ * Single: "250"/"250ms"/"5s"/"2m"/"1h"/"1d"/"1w".
+ * Compound: "1h30m", "2m 15s", "1s250ms" (spaces ok). Bare number = ms.
+ * Returns 0 on success; -1 on empty/bad. Optional segs_out / err_out. */
+static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out,
+                                    const char **err_out) {
+  const char *p;
+  char *end = NULL;
+  char unit[16];
+  unsigned long long total = 0, n = 0, mul = 1, add = 0;
+  int ui = 0, segs = 0, bad = 0;
+  const char *err = NULL;
+  if (ms_out) *ms_out = 0;
+  if (segs_out) *segs_out = 0;
+  if (err_out) *err_out = NULL;
+  p = src ? src : "";
+  while (*p == ' ' || *p == '\t') p++;
+  if (!*p) {
+    err = "PARSEMS: empty";
+    bad = 1;
+  }
+  while (!bad && *p) {
+    while (*p == ' ' || *p == '\t') p++;
+    if (!*p) break;
+    n = strtoull(p, &end, 10);
+    if (end == p) {
+      err = "PARSEMS: bad number";
+      bad = 1;
+      break;
+    }
+    p = end;
+    while (*p == ' ' || *p == '\t') p++;
+    ui = 0;
+    while (ui < (int)sizeof(unit) - 1 &&
+           ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z'))) {
+      char c = *p++;
+      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+      unit[ui++] = c;
+    }
+    unit[ui] = 0;
+    if (unit[0] == 0 || strcmp(unit, "ms") == 0 || strcmp(unit, "msec") == 0 ||
+        strcmp(unit, "msecs") == 0 || strcmp(unit, "millisecond") == 0 ||
+        strcmp(unit, "milliseconds") == 0) {
+      mul = 1;
+    } else if (strcmp(unit, "s") == 0 || strcmp(unit, "sec") == 0 ||
+               strcmp(unit, "secs") == 0 || strcmp(unit, "second") == 0 ||
+               strcmp(unit, "seconds") == 0) {
+      mul = 1000ULL;
+    } else if (strcmp(unit, "m") == 0 || strcmp(unit, "min") == 0 ||
+               strcmp(unit, "mins") == 0 || strcmp(unit, "minute") == 0 ||
+               strcmp(unit, "minutes") == 0) {
+      mul = 60ULL * 1000ULL;
+    } else if (strcmp(unit, "h") == 0 || strcmp(unit, "hr") == 0 ||
+               strcmp(unit, "hrs") == 0 || strcmp(unit, "hour") == 0 ||
+               strcmp(unit, "hours") == 0) {
+      mul = 60ULL * 60ULL * 1000ULL;
+    } else if (strcmp(unit, "d") == 0 || strcmp(unit, "day") == 0 ||
+               strcmp(unit, "days") == 0) {
+      mul = 24ULL * 60ULL * 60ULL * 1000ULL;
+    } else if (strcmp(unit, "w") == 0 || strcmp(unit, "wk") == 0 ||
+               strcmp(unit, "week") == 0 || strcmp(unit, "weeks") == 0) {
+      mul = 7ULL * 24ULL * 60ULL * 60ULL * 1000ULL;
+    } else {
+      err = "PARSEMS: bad unit";
+      bad = 1;
+      break;
+    }
+    /* bare unit-less number only allowed as sole segment (whole string ms) */
+    if (unit[0] == 0 && (segs > 0 || *p != 0)) {
+      err = "PARSEMS: bare number only alone";
+      bad = 1;
+      break;
+    }
+    if (mul > 1 && n > (unsigned long long)LONG_MAX / mul)
+      add = (unsigned long long)LONG_MAX;
+    else
+      add = n * mul;
+    if (total > (unsigned long long)LONG_MAX - add)
+      total = (unsigned long long)LONG_MAX;
+    else
+      total += add;
+    segs++;
+  }
+  if (!bad && segs == 0) {
+    err = "PARSEMS: empty";
+    bad = 1;
+  }
+  if (bad) {
+    if (err_out) *err_out = err ? err : "PARSEMS: fail";
+    return -1;
+  }
+  if (total > (unsigned long long)LONG_MAX) total = (unsigned long long)LONG_MAX;
+  if (ms_out) *ms_out = (long)total;
+  if (segs_out) *segs_out = segs;
+  return 0;
+}
+
 /* Recursive find-style walk: list full paths whose basename matches pat.
  * Always recurses into directories (even if name does not match). Depth cap 40. */
 static void cubalc_sys_walk_rec(const char *dir, const char *pat,
@@ -13008,90 +13105,15 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"PARSEDUR") || kw(&L->cur,"DURMS") || kw(&L->cur,"MSDUR") ||
         kw(&L->cur,"PARSE_MS") || kw(&L->cur,"TO_MS") || kw(&L->cur,"ASMS") ||
         kw(&L->cur,"HUMANMS_PARSE") || kw(&L->cur,"PARSE_DURATION")){
-      char src[256], out[48], unit[16];
-      const char *p;
-      char *end = NULL;
-      unsigned long long total = 0, n = 0, mul = 1, add = 0;
-      int ui = 0, segs = 0, bad = 0;
+      char src[256], out[48];
+      long total = 0;
+      int segs = 0;
       const char *err = NULL;
       lex_next(L);
       src[0] = 0;
       if (resolve_str_arg(vm, L, src, sizeof src) != 0)
         snprintf(src, sizeof src, "%s", vm->last_str);
-      p = src;
-      while (*p == ' ' || *p == '\t') p++;
-      if (!*p) {
-        err = "PARSEMS: empty";
-        bad = 1;
-      }
-      while (!bad && *p) {
-        while (*p == ' ' || *p == '\t') p++;
-        if (!*p) break;
-        n = strtoull(p, &end, 10);
-        if (end == p) {
-          err = "PARSEMS: bad number";
-          bad = 1;
-          break;
-        }
-        p = end;
-        while (*p == ' ' || *p == '\t') p++;
-        ui = 0;
-        while (ui < (int)sizeof(unit) - 1 &&
-               ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z'))) {
-          char c = *p++;
-          if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-          unit[ui++] = c;
-        }
-        unit[ui] = 0;
-        if (unit[0] == 0 || strcmp(unit, "ms") == 0 || strcmp(unit, "msec") == 0 ||
-            strcmp(unit, "msecs") == 0 || strcmp(unit, "millisecond") == 0 ||
-            strcmp(unit, "milliseconds") == 0) {
-          mul = 1;
-        } else if (strcmp(unit, "s") == 0 || strcmp(unit, "sec") == 0 ||
-                   strcmp(unit, "secs") == 0 || strcmp(unit, "second") == 0 ||
-                   strcmp(unit, "seconds") == 0) {
-          mul = 1000ULL;
-        } else if (strcmp(unit, "m") == 0 || strcmp(unit, "min") == 0 ||
-                   strcmp(unit, "mins") == 0 || strcmp(unit, "minute") == 0 ||
-                   strcmp(unit, "minutes") == 0) {
-          mul = 60ULL * 1000ULL;
-        } else if (strcmp(unit, "h") == 0 || strcmp(unit, "hr") == 0 ||
-                   strcmp(unit, "hrs") == 0 || strcmp(unit, "hour") == 0 ||
-                   strcmp(unit, "hours") == 0) {
-          mul = 60ULL * 60ULL * 1000ULL;
-        } else if (strcmp(unit, "d") == 0 || strcmp(unit, "day") == 0 ||
-                   strcmp(unit, "days") == 0) {
-          mul = 24ULL * 60ULL * 60ULL * 1000ULL;
-        } else if (strcmp(unit, "w") == 0 || strcmp(unit, "wk") == 0 ||
-                   strcmp(unit, "week") == 0 || strcmp(unit, "weeks") == 0) {
-          mul = 7ULL * 24ULL * 60ULL * 60ULL * 1000ULL;
-        } else {
-          err = "PARSEMS: bad unit";
-          bad = 1;
-          break;
-        }
-        /* bare unit-less number only allowed as sole segment (whole string ms) */
-        if (unit[0] == 0 && (segs > 0 || *p != 0)) {
-          /* trailing digits without unit after a unit segment → junk */
-          err = "PARSEMS: bare number only alone";
-          bad = 1;
-          break;
-        }
-        if (mul > 1 && n > (unsigned long long)LONG_MAX / mul)
-          add = (unsigned long long)LONG_MAX;
-        else
-          add = n * mul;
-        if (total > (unsigned long long)LONG_MAX - add)
-          total = (unsigned long long)LONG_MAX;
-        else
-          total += add;
-        segs++;
-      }
-      if (!bad && segs == 0) {
-        err = "PARSEMS: empty";
-        bad = 1;
-      }
-      if (bad) {
+      if (cubalc_parse_duration_ms(src, &total, &segs, &err) != 0) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
@@ -13102,14 +13124,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         var_set_str(vm, "ERR", err ? err : "PARSEMS: fail");
         bump(vm); return 1;
       }
-      if (total > (unsigned long long)LONG_MAX) total = (unsigned long long)LONG_MAX;
-      snprintf(out, sizeof out, "%llu", total);
+      snprintf(out, sizeof out, "%ld", total);
       var_set_str(vm, "LAST", out);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
-      vm->last_n = (long)total;
-      var_set_num(vm, "LAST_N", (long)total);
-      var_set_num(vm, "PARSEMS_N", (long)total);
-      var_set_num(vm, "DURATION_N", (long)total);
+      vm->last_n = total;
+      var_set_num(vm, "LAST_N", total);
+      var_set_num(vm, "PARSEMS_N", total);
+      var_set_num(vm, "DURATION_N", total);
       var_set_num(vm, "PARSEMS_SEGS", (long)segs);
       var_set_str(vm, "PARSEMS", out);
       var_set_str(vm, "DURATION", out);
@@ -14414,21 +14435,57 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
-    /* SYS SLEEP|MSLEEP|DELAY [MS] n — pause n milliseconds (cap 60s).
-     * Usability: agent poll/backoff without shell sleep; pairs with SYS MS. */
+    /* SYS SLEEP|MSLEEP|DELAY [MS] n|"duration"
+     * — pause n milliseconds (cap 60s). Numeric still works (ms).
+     * String/LAST/str-var: PARSEMS human duration ("250ms","1s","1s500ms").
+     * Soft-fail bad duration (OK=0, no sleep). Usability: backoff without
+     * SYS PARSEMS + SLEEP glue; pairs with SYS MS / HUMANMS. */
     if (kw(&L->cur,"SLEEP") || kw(&L->cur,"MSLEEP") || kw(&L->cur,"DELAY") ||
         kw(&L->cur,"PAUSE") || kw(&L->cur,"WAIT_MS")){
       long ms = 0;
-      char buf[40];
+      char buf[40], src[256];
+      int from_dur = 0;
+      const char *derr = NULL;
       lex_next(L);
       /* optional unit keyword MS|MILLIS before or after value is ignored as unit */
       if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
         lex_next(L);
-      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
-          L->cur.kind==TK_MINUS)
+      src[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+          from_dur = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        /* String vars / LAST hold duration text; numeric idents use parse_expr. */
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+            from_dur = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+              from_dur = 1;
+          } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                     L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
+            ms = parse_expr(vm, L);
+          }
+        }
+      } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN ||
+                 L->cur.kind==TK_MINUS) {
         ms = parse_expr(vm, L);
-      else
-        ms = 0;
+      }
+      if (from_dur) {
+        if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "SLEEP_MS", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", derr ? derr : "SLEEP: bad duration");
+          var_set_str(vm, "ERR", derr ? derr : "SLEEP: bad duration");
+          bump(vm); return 1;
+        }
+      }
       if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
         lex_next(L);
       if (ms < 0) ms = 0;
@@ -24622,7 +24679,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EACH", "EACH CUBE|CELL|LINE … END — iterate cubes, cells, or text lines"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},
       {"SYS MS", "SYS MS|MILLIS|TIME_MS — wall milliseconds → LAST_N/MS"},
-      {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
+      {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n|\"1s\"|\"250ms\" — pause ms or PARSEMS duration (cap 60s)"},
       {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
       {"SYS ENTROPY", "SYS ENTROPY|URANDOM [n] — n random bytes as hex · nonces/tokens"},
       {"SYS PARSEMS", "SYS PARSEMS|DURATION [str] — 5s/1h30m compound → ms · dual HUMANMS"},
