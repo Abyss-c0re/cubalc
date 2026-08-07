@@ -1,0 +1,1404 @@
+# payload_field_gate_board.cubalc — LENF + HASINF/STARTSF/ENDSF intake gates
+#
+# Real use: ops agents admit Artifact payloads only when path prefix/suffix,
+# note length bounds, and required tag substrings hold — without GETF+SYS
+# LEN/HAS/STARTS glue and without mutating fields.
+#
+# Surfaces forced (1.15.393–394):
+#   LENF / EMPTYF / BLANKF / NONEMPTYF · TRYLENF · LENF SOFT
+#   HASINF / HASIFI / CONTAINSF · STARTSF / STARTSIF · ENDSF / ENDSIF
+#   TRYHASINF / TRYSTARTSF / TRYENDSF
+#   DUMPOBJ rehydrate · soft miss + REQUIRE wall
+#
+# Distinct from payload_size_gate (bytes plate) and fleet_label_scrub
+# (mutators): this board is *read-only field probes for IF gates*.
+#
+# Slots: a0 a1 a2
+#
+# Plate under STATE:
+#   dump/a0 dump/a1 dump/a2
+#   VAL.txt META.txt OBJS.txt GATE_REPORT.txt
+#
+# Actions:
+#   list | open | len | empty | blank | has | hasi | starts | ends
+#   admit | probe | get | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_pfg_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=a0 CUBALC_ARG2=/tmp/out.json
+#   CUBALC_FS_NEEDLE=timeout CUBALC_ARG0=has CUBALC_ARG1=a0
+#   CUBALC_FS_MINL=3 CUBALC_FS_MAXL=200 CUBALC_ARG0=admit CUBALC_ARG1=a0
+#   CUBALC_FS_REQUIRE=1 CUBALC_ARG0=admit CUBALC_ARG1=a1
+#
+# Env: CUBALC_FS_REQUIRE NAME NEEDLE MINL MAXL PREFIX SUFFIX MSG ACTION
+#
+# Edges:
+#   HASINF empty needle always matches
+#   LENF on num → decimal digit length
+#   probes set LAST to field text (EQS after LENF clobbers LAST_N)
+#   no LENWHERE fleet probe — per-object only
+#   WRITE NL; NUM softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Artifact
+  FIELD id ""
+  FIELD path ""
+  FIELD note ""
+  FIELD status "new"
+  METHOD init i p n
+    SETF THIS id i
+    SETF THIS path p
+    SETF THIS note n
+    SETF THIS status "new"
+  END
+END
+
+REQUIRE CLASS Artifact
+REQUIRE METHOD Artifact init
+
+NOTE "payload_field_gate_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT NEEDLE = "ok"
+DEFAULT MINL = 1
+DEFAULT MAXL = 256
+DEFAULT PREFIX = "/tmp"
+DEFAULT SUFFIX = ".json"
+DEFAULT MSG = "error: timeout on peer"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_NEEDLE" OR ""
+IF LAST_N > 0 THEN
+  LET NEEDLE = LAST
+END
+SYS ENV "CUBALC_FS_MINL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINL = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MAXL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAXL = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_PREFIX" OR ""
+IF LAST_N > 0 THEN
+  LET PREFIX = LAST
+END
+SYS ENV "CUBALC_FS_SUFFIX" OR ""
+IF LAST_N > 0 THEN
+  LET SUFFIX = LAST
+END
+SYS ENV "CUBALC_FS_NOTE" OR ""
+IF LAST_N > 0 THEN
+  LET MSG = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "GATE_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "a0"
+LET d_a0 = LAST
+SYS JOIN dump_dir "a1"
+LET d_a1 = LAST
+SYS JOIN dump_dir "a2"
+LET d_a2 = LAST
+
+LET slot = -1
+SYS EQS NAME "a0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "a1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "a2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "a0"
+END
+IF slot == 1 THEN
+  LET sn = "a1"
+END
+IF slot == 2 THEN
+  LET sn = "a2"
+END
+
+# rehydrate
+SYS READ OR d_a0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    DELETEOBJ a0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rpa = LAST
+  SYS LOOKUP snap "note"
+  LET rno = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Artifact a0 rid rpa rno
+  SYS BLANK rpa
+  IF LAST_N == 0 THEN
+    TRYSETF a0 path rpa
+  END
+  SYS BLANK rno
+  IF LAST_N == 0 THEN
+    TRYSETF a0 note rno
+  END
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF a0 status rst
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_a1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a1
+  IF LAST_N == 1 THEN
+    DELETEOBJ a1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rpa = LAST
+  SYS LOOKUP snap "note"
+  LET rno = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Artifact a1 rid rpa rno
+  SYS BLANK rpa
+  IF LAST_N == 0 THEN
+    TRYSETF a1 path rpa
+  END
+  SYS BLANK rno
+  IF LAST_N == 0 THEN
+    TRYSETF a1 note rno
+  END
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF a1 status rst
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_a2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a2
+  IF LAST_N == 1 THEN
+    DELETEOBJ a2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rpa = LAST
+  SYS LOOKUP snap "note"
+  LET rno = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Artifact a2 rid rpa rno
+  SYS BLANK rpa
+  IF LAST_N == 0 THEN
+    TRYSETF a2 path rpa
+  END
+  SYS BLANK rno
+  IF LAST_N == 0 THEN
+    TRYSETF a2 note rno
+  END
+  SYS BLANK rst
+  IF LAST_N == 0 THEN
+    TRYSETF a2 status rst
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET probe_n = 0
+LET board_rep = "payload_field_gate_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Artifact
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET p0 = "/tmp/out.json"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET p0 = A2
+    END
+    LET n0 = MSG
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        DELETEOBJ a0
+        CLEAR_ERR
+      END
+      NEW Artifact a0 sn p0 n0
+      DUMPOBJ a0
+      SYS WRITE d_a0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        DELETEOBJ a1
+        CLEAR_ERR
+      END
+      NEW Artifact a1 sn p0 n0
+      DUMPOBJ a1
+      SYS WRITE d_a1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        DELETEOBJ a2
+        CLEAR_ERR
+      END
+      NEW Artifact a2 sn p0 n0
+      DUMPOBJ a2
+      SYS WRITE d_a2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Artifact
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta p0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- len ---
+SYS EQS ACTION "len"
+IF LAST_N == 1 THEN
+  NOTE "action len"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "len bad slot"
+    FAIL "len bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "len bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        LENF a0 note
+        LET o_ok = OK
+        LET probe_n = LENF_N
+        LET val = LAST
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        LENF a1 note
+        LET o_ok = OK
+        LET probe_n = LENF_N
+        LET val = LAST
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        LENF a2 note
+        LET o_ok = OK
+        LET probe_n = LENF_N
+        LET val = LAST
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "len miss"
+      FAIL "len miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "len miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "len ok"
+      LET val_ch = 1
+      LET meta = "len"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+# --- empty / blank ---
+SYS EQS ACTION "empty"
+IF LAST_N == 1 THEN
+  NOTE "action empty"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "empty bad slot"
+    FAIL "empty bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "empty bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        EMPTYF a0 note
+        LET o_ok = 1
+        LET probe_n = EMPTYF_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        EMPTYF a1 note
+        LET o_ok = 1
+        LET probe_n = EMPTYF_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        EMPTYF a2 note
+        LET o_ok = 1
+        LET probe_n = EMPTYF_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "empty miss"
+      FAIL "empty miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "empty miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "empty ok"
+      SYS STR probe_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "empty"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "blank"
+IF LAST_N == 1 THEN
+  NOTE "action blank"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "blank bad slot"
+    FAIL "blank bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "blank bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        BLANKF a0 note
+        LET o_ok = 1
+        LET probe_n = BLANKF_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        BLANKF a1 note
+        LET o_ok = 1
+        LET probe_n = BLANKF_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        BLANKF a2 note
+        LET o_ok = 1
+        LET probe_n = BLANKF_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "blank miss"
+      FAIL "blank miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "blank miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "blank ok"
+      SYS STR probe_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "blank"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+# --- has / hasi ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "has bad slot"
+    FAIL "has bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "has bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        HASINF a0 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASINF_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        HASINF a1 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASINF_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        HASINF a2 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASINF_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "has miss obj"
+      FAIL "has miss obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "has miss obj"
+      END
+    ELSE
+      IF probe_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "has ok"
+        LET val = "1"
+      ELSE
+        LET miss = 1
+        LET note_msg = "has miss"
+        LET val = "0"
+        FAIL "has miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "has miss"
+        END
+      END
+      LET val_ch = 1
+      LET meta = "has"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta NEEDLE
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "hasi"
+IF LAST_N == 1 THEN
+  NOTE "action hasi"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "hasi bad slot"
+    FAIL "hasi bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "hasi bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        HASIFI a0 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASIFI_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        HASIFI a1 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASIFI_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        HASIFI a2 note NEEDLE
+        LET o_ok = OK
+        LET probe_n = HASIFI_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "hasi miss obj"
+      FAIL "hasi miss obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "hasi miss obj"
+      END
+    ELSE
+      IF probe_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "hasi ok"
+        LET val = "1"
+      ELSE
+        LET miss = 1
+        LET note_msg = "hasi miss"
+        LET val = "0"
+        FAIL "hasi miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "hasi miss"
+        END
+      END
+      LET val_ch = 1
+      LET meta = "hasi"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+# --- starts / ends ---
+SYS EQS ACTION "starts"
+IF LAST_N == 1 THEN
+  NOTE "action starts"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "starts bad slot"
+    FAIL "starts bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "starts bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        STARTSF a0 path PREFIX
+        LET o_ok = OK
+        LET probe_n = STARTSF_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        STARTSF a1 path PREFIX
+        LET o_ok = OK
+        LET probe_n = STARTSF_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        STARTSF a2 path PREFIX
+        LET o_ok = OK
+        LET probe_n = STARTSF_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "starts miss obj"
+      FAIL "starts miss obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "starts miss obj"
+      END
+    ELSE
+      IF probe_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "starts ok"
+        LET val = "1"
+      ELSE
+        LET miss = 1
+        LET note_msg = "starts miss"
+        LET val = "0"
+        FAIL "starts miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "starts miss"
+        END
+      END
+      LET val_ch = 1
+      LET meta = "starts"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta PREFIX
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+SYS EQS ACTION "ends"
+IF LAST_N == 1 THEN
+  NOTE "action ends"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "ends bad slot"
+    FAIL "ends bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "ends bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        ENDSF a0 path SUFFIX
+        LET o_ok = OK
+        LET probe_n = ENDSF_N
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        ENDSF a1 path SUFFIX
+        LET o_ok = OK
+        LET probe_n = ENDSF_N
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        ENDSF a2 path SUFFIX
+        LET o_ok = OK
+        LET probe_n = ENDSF_N
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "ends miss obj"
+      FAIL "ends miss obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "ends miss obj"
+      END
+    ELSE
+      IF probe_n == 1 THEN
+        LET hit = 1
+        LET note_msg = "ends ok"
+        LET val = "1"
+      ELSE
+        LET miss = 1
+        LET note_msg = "ends miss"
+        LET val = "0"
+        FAIL "ends miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "ends miss"
+        END
+      END
+      LET val_ch = 1
+      LET meta = "ends"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta SUFFIX
+      LET meta = LAST
+      SYS STR probe_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON probe_n
+  CLEAR_ERR
+END
+
+# --- admit: path prefix+suffix + note len in [MINL,MAXL] + HASINF needle ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "admit bad slot"
+    FAIL "admit bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET ok_all = 1
+    LET reason = "ok"
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        LET o_ok = 1
+        STARTSF a0 path PREFIX
+        IF STARTSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "prefix"
+        END
+        ENDSF a0 path SUFFIX
+        IF ENDSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "suffix"
+        END
+        LENF a0 note
+        LET probe_n = LENF_N
+        IF probe_n < MINL THEN
+          LET ok_all = 0
+          LET reason = "minl"
+        END
+        IF probe_n > MAXL THEN
+          LET ok_all = 0
+          LET reason = "maxl"
+        END
+        NONEMPTYF a0 note
+        IF NONEMPTYF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "empty"
+        END
+        HASINF a0 note NEEDLE
+        IF HASINF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "needle"
+        END
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        LET o_ok = 1
+        STARTSF a1 path PREFIX
+        IF STARTSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "prefix"
+        END
+        ENDSF a1 path SUFFIX
+        IF ENDSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "suffix"
+        END
+        LENF a1 note
+        LET probe_n = LENF_N
+        IF probe_n < MINL THEN
+          LET ok_all = 0
+          LET reason = "minl"
+        END
+        IF probe_n > MAXL THEN
+          LET ok_all = 0
+          LET reason = "maxl"
+        END
+        NONEMPTYF a1 note
+        IF NONEMPTYF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "empty"
+        END
+        HASINF a1 note NEEDLE
+        IF HASINF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "needle"
+        END
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        LET o_ok = 1
+        STARTSF a2 path PREFIX
+        IF STARTSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "prefix"
+        END
+        ENDSF a2 path SUFFIX
+        IF ENDSF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "suffix"
+        END
+        LENF a2 note
+        LET probe_n = LENF_N
+        IF probe_n < MINL THEN
+          LET ok_all = 0
+          LET reason = "minl"
+        END
+        IF probe_n > MAXL THEN
+          LET ok_all = 0
+          LET reason = "maxl"
+        END
+        NONEMPTYF a2 note
+        IF NONEMPTYF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "empty"
+        END
+        HASINF a2 note NEEDLE
+        IF HASINF_N == 0 THEN
+          LET ok_all = 0
+          LET reason = "needle"
+        END
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "admit miss"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "admit miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "admit miss"
+      END
+    ELSE
+      IF ok_all == 1 THEN
+        LET hit = 1
+        LET note_msg = "admit ok"
+        LET val = "admit"
+        LET val_ch = 1
+        IF slot == 0 THEN
+          SETF a0 status "admitted"
+          DUMPOBJ a0
+          SYS WRITE d_a0 LAST
+          CLEAR_ERR
+        END
+        IF slot == 1 THEN
+          SETF a1 status "admitted"
+          DUMPOBJ a1
+          SYS WRITE d_a1 LAST
+          CLEAR_ERR
+        END
+        IF slot == 2 THEN
+          SETF a2 status "admitted"
+          DUMPOBJ a2
+          SYS WRITE d_a2 LAST
+          CLEAR_ERR
+        END
+      ELSE
+        LET miss = 1
+        LET note_msg = "admit deny"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "admit deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "admit deny"
+        END
+      END
+    END
+  END
+  LET meta = "admit"
+  SYS PUSH meta sn
+  LET meta = LAST
+  SYS PUSH meta reason
+  LET meta = LAST
+  SYS STR probe_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- get path/note ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "get bad slot"
+    FAIL "get bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "get bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        GETF a0 path
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 path
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 path
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "get miss"
+      FAIL "get miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "get miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "get ok"
+      LET val_ch = 1
+      LET meta = "get"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  TRYLENF nosuch_art note
+  LET l_ok = OK
+  CLEAR_ERR
+  TRYHASINF nosuch_art note "x"
+  LET h_ok = OK
+  CLEAR_ERR
+  TRYSTARTSF nosuch_art path "/"
+  LET s_ok = OK
+  CLEAR_ERR
+  TRYENDSF nosuch_art path ".z"
+  LET e_ok = OK
+  CLEAR_ERR
+  # empty needle always hits if live
+  LET empty_hit = 0
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    HASINF a0 note ""
+    LET empty_hit = HASINF_N
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR l_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR h_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR s_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR e_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF l_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe len not soft"
+  END
+  IF h_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe has not soft"
+  END
+  PRINT_JSON l_ok
+  PRINT_JSON h_ok
+  PRINT_JSON empty_hit
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        DUMPOBJ a0
+        LET val = LAST
+        SYS WRITE d_a0 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        DUMPOBJ a1
+        LET val = LAST
+        SYS WRITE d_a1 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        DUMPOBJ a2
+        LET val = LAST
+        SYS WRITE d_a2 val
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    DELETEOBJ a0
+    CLEAR_ERR
+  END
+  HASOBJ a1
+  IF LAST_N == 1 THEN
+    DELETEOBJ a1
+    CLEAR_ERR
+  END
+  HASOBJ a2
+  IF LAST_N == 1 THEN
+    DELETEOBJ a2
+    CLEAR_ERR
+  END
+  SYS WRITE d_a0 ""
+  SYS WRITE d_a1 ""
+  SYS WRITE d_a2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "len"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "empty"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "blank"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "hasi"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "starts"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "ends"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR probe_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "payload_field_gate_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

@@ -1,57 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 142,
-  "program": "programs/realworld/fleet_label_scrub_board.cubalc",
-  "theme": "CATFALL + REPLACEF + TRIMF/UPPERF host fleet label scrub",
-  "version": "1.15.392-usability",
+  "iter": 143,
+  "program": "programs/realworld/payload_field_gate_board.cubalc",
+  "theme": "LENF + HASINF/STARTSF/ENDSF read-only payload field gates",
+  "version": "1.15.394-usability",
   "pass": true,
-  "prior_note": "iter 141 TIMESF+CATF single route; this iter stresses CATFALL (1bb700a) REPLACEF (d6777f8) TRIMF (324a2ce)",
+  "prior_note": "iter 142 CATFALL/REPLACEF/TRIMF mutators; this iter stresses LENF (679ba76) + HASINF (35c373b) non-mutating probes",
   "tests": [
     {
-      "name": "open_dirty",
-      "cmd": "open h0/h1/h2 with padded Ready/DRAFT status",
+      "name": "open_payloads",
+      "cmd": "open a0 /tmp/out.json note timeout; a1 /var blank note",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "scrub",
-      "cmd": "TRIMF+LOWERF \u2192 ready/draft",
+      "name": "lenf",
+      "cmd": "LENF note → 22 for timeout string",
       "ok": true,
-      "note": "TRIMF"
+      "note": "LENF"
     },
     {
-      "name": "rewrite",
-      "cmd": "REPLACEF ready\u2192live count 1; draft nomatch 0",
+      "name": "blankf",
+      "cmd": "BLANKF whitespace note → 1",
       "ok": true,
-      "note": "REPLACEF"
+      "note": "BLANKF"
     },
     {
-      "name": "case_env",
-      "cmd": "UPPERF/LOWERF env PROD/prod",
+      "name": "hasinf",
+      "cmd": "timeout hit; missing soft; REQUIRE→2; HASIFI ERROR",
       "ok": true,
-      "note": "UPPERF"
+      "note": "HASINF"
     },
     {
-      "name": "tagall",
-      "cmd": "CATFALL Host tags |canary N=3",
+      "name": "path_affix",
+      "cmd": "STARTSF /tmp; ENDSF .json admit/deny",
       "ok": true,
-      "note": "CATFALL"
+      "note": "STARTSF/ENDSF"
     },
     {
-      "name": "prefixall",
-      "cmd": "PREPENDFALL env: \u2192 env:prod",
+      "name": "admit",
+      "cmd": "compound gate admit→status admitted; a1 deny",
       "ok": true,
-      "note": "PREPENDFALL"
-    },
-    {
-      "name": "gate",
-      "cmd": "status==live admit; draft deny REQUIRE\u21922",
-      "ok": true,
-      "note": "gate"
+      "note": "admit"
     },
     {
       "name": "probe",
-      "cmd": "TRYTRIMF/TRYREPLACEF soft; CATFALL miss SKIP=3",
+      "cmd": "TRY* soft; empty needle HASINF hit=1",
       "ok": true,
       "note": "probe"
     },
@@ -66,50 +60,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|replacef|keyword",
-      "title": "REPLACEF TO/WITH/BY glue steals var named TO",
-      "detail": "REPLACEF obj field OLD TO parses TO as optional glue keyword then fails needing new (REPLACEF object field old new). Same class as METHODINFO METH steal. Must name vars NEWV not TO.",
-      "repro": "REPLACEF h0 status OLDV TO \u2192 parse fail; OLDV NEWV works"
+      "area": "lang|note",
+      "title": "NOTE command clobbers variable named NOTE",
+      "detail": "NOTE \"action open\" overwrites LET/DEFAULT NOTE used for payload body — dump showed note:action open. Agents must not name vars NOTE (use MSG).",
+      "repro": "DEFAULT NOTE=...; NOTE \"action open\"; open uses NOTE → action open"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|catfall",
-      "title": "Bare CATFALL field crosses all classes owning field",
-      "detail": "CATFALL note without Class tags Ticket+Log. Fleet ops must pass Class or multi-type pollution.",
-      "repro": "proof 940 CATFALL note |z N=5"
+      "area": "host|env",
+      "title": "Empty ENV string treated as missing (LAST_N=0)",
+      "detail": "CUBALC_FS_NOTE=\"\" does not override DEFAULT MSG; cannot clear default via empty env without sentinel.",
+      "repro": "FS_NOTE=\"\" open a2 still default note"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|stringf",
-      "title": "No fleet TRIMFALL/REPLACEFALL \u2014 only single-object normalize",
-      "detail": "CATFALL exists for concat but scrub still EACH/slot loops for TRIMF+LOWERF+REPLACEF. Asymmetric fleet surface.",
-      "repro": "scrub per-slot not CATFALL-class"
+      "area": "oop|hasinf",
+      "title": "HASINF empty needle always matches",
+      "detail": "HASINF note \"\" → 1 even for non-empty fields. Agents must reject blank needles before probe.",
+      "repro": "probe empty_hit=1"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|replacef",
-      "title": "EQS clobbers LAST_N after REPLACEF_COUNT",
-      "detail": "Proof notes EQS after REPLACEF loses count; agents must capture REPLACEF_COUNT immediately.",
-      "repro": "LET n=REPLACEF_COUNT before EQS"
+      "area": "oop|probe",
+      "title": "No fleet LENWHERE/HASINWHERE — per-object only",
+      "detail": "Fleet admit still loops slots; WHERE family is numeric/status match not substring/len probes.",
+      "repro": "admit per a0/a1/a2 branches"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|promote",
-      "title": "CATFALL/REPLACEF/UPPERF promote numeric fields to string",
-      "detail": "Same poison class as CATF; fleet-wide promotion risk.",
-      "repro": "CATFALL Ticket retries -r"
+      "area": "oop|lenf",
+      "title": "LENF on numeric field returns decimal digit length",
+      "detail": "retries 42 → LENF_N=2 not magnitude; easy misread for quotas.",
+      "repro": "proof 943 LENF retries"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|replacef",
-      "title": "Empty old needle is silent no-op",
-      "detail": "REPLACEF note \"\" X count 0; not an error.",
-      "repro": "proof empty old"
+      "area": "oop|probe",
+      "title": "Probe sets LAST to field text — EQS clobbers LAST_N",
+      "detail": "Capture LENF_N/HASINF_N immediately before string EQS.",
+      "repro": "LENF then EQS LAST loses length in LAST_N"
     },
     {
       "id": "W7",
@@ -125,29 +119,30 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc scrub bad \u2192 exit 0"
+      "repro": "REQUIRE=abc has missing → exit 0"
     }
   ],
   "workarounds": [
-    "Never name REPLACEF new-value var TO; use NEWV/NEWSTR",
-    "Always CATFALL Host tags not bare CATFALL tags",
-    "Capture REPLACEF_COUNT before any EQS/HAS",
-    "Per-slot TRIMF+LOWERF until TRIMFALL exists",
-    "TRY* for soft probes; REQUIRE EXIT in actions"
+    "Never name a var NOTE; use MSG/BODY",
+    "Use sentinel for empty override (e.g. - for blank note) not empty ENV",
+    "Reject empty NEEDLE before HASINF",
+    "Capture *_N before EQS/HAS on LAST",
+    "Fixed a0/a1/a2 slots; TRY* for soft probes"
   ],
   "language_gaps": [
-    "REPLACEF must not steal TO when it is a string var in new position",
-    "TRIMFALL/LOWERFALL/REPLACEFALL fleet normalize",
-    "Strict refuse CATFALL on numeric fields",
-    "WRITE trailing NL; strict NUM REQUIRE"
+    "NOTE command must not bind/overwrite user var NOTE",
+    "ENV empty vs missing distinction",
+    "HASINF empty-needle policy option (strict)",
+    "LENWHERE/HASINWHERE fleet probes",
+    "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "TRIMF+LOWERF Ready \u2192 ready; REPLACEF TO var hard-failed parse",
-    "Renamed TO\u2192NEWV; rewrite ready\u2192live count 1",
-    "CATFALL tags |canary N=3; PREPENDFALL env:",
-    "gate live admit; draft deny; CATFALL SKIP on missing field",
+    "NOTE var clobbered by NOTE cmd — renamed MSG",
+    "LENF 22; BLANKF whitespace 1; HASINF/HASIFI/STARTSF/ENDSF",
+    "admit compound path+len+needle → admitted; blank a1 deny",
+    "empty ENV cannot clear default MSG",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "b1f3ea459fa54730188c81348bb7d1ca6d61ea19",
-  "ts": "2026-08-07T14:49:27Z"
+  "commit": "",
+  "ts": "2026-08-07T15:14:39Z"
 }
