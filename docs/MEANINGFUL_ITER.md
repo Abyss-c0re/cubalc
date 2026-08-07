@@ -433,6 +433,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 403. ~~**`HASINF` / `STARTSF` / `ENDSF`**~~ **done** (field contains/prefix/suffix probes · no GETF+SYS HAS/STARTS/ENDS · IF guards · HASIFI/STARTSIF/ENDSIF).
 404. ~~**`CLEARF` / `RESETF` / `DEFAULTF`**~~ **done** (wipe field · restore CLASS default · set-if-empty · no GETF+IF+SETF · METHOD/THIS).
 405. ~~**`EQF` / `NEQF` / `EQFI` / `FINDF`**~~ **done** (exact field==value + first-index locate · no GETF+SYS EQS/FIND · IF guards · complements HASINF).
+406. ~~**`LEFTF` / `RIGHTF` / `SLICEF` / `TRUNCF`**~~ **done** (in-place field string slice/clip · no GETF+LEFT/MID+SETF · MIDSTRF not fleet MIDF · METHOD/THIS).
 
 ## Tick protocol
 

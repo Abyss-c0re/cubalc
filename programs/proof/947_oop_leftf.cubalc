@@ -1,0 +1,146 @@
+# LEFTF / RIGHTF / SLICEF / TRUNCF — in-place field string slices for agents
+# Usability: peel/clip note after FINDF without GETF+LEFT/MID+SETF
+# Note: MIDF/CLIPF remain fleet median/clamp; use MIDSTRF/STRCLIPF for strings
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD note "abcdefghij"
+  FIELD status "open-ok"
+  FIELD retries 12345
+  METHOD init
+  END
+  METHOD head3
+    LEFTF THIS note 3
+  END
+END
+
+NEW Ticket t
+
+# LEFTF
+LEFTF t note 4
+ASSERT OK == 1
+ASSERT LEFTF_N == 1
+ASSERT LAST_N == 4
+SYS EQS LAST "abcd"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "abcd"
+ASSERT LAST_N == 1
+
+# RIGHTF
+SETF t note "abcdefghij"
+RIGHTF t note 3
+ASSERT RIGHTF_N == 1
+SYS EQS LAST "hij"
+ASSERT LAST_N == 1
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "hij"
+ASSERT LAST_N == 1
+
+# SLICEF start count
+SETF t note "abcdefghij"
+SLICEF t note 2 4
+ASSERT SLICEF_N == 1
+SYS EQS LAST "cdef"
+ASSERT LAST_N == 1
+# aliases
+SETF t note "abcdefghij"
+SUBSTRF t note 3 3
+SYS EQS LAST "def"
+ASSERT LAST_N == 1
+SETF t note "abcdefghij"
+MIDSTRF t note 0 2
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+# to end when count omitted
+SETF t note "abcdefghij"
+SLICEF t note 6
+SYS EQS LAST "ghij"
+ASSERT LAST_N == 1
+
+# TRUNCF / STRCLIPF max width
+SETF t note "abcdefghij"
+TRUNCF t note 5
+ASSERT TRUNCF_N == 1
+SYS EQS LAST "abcde"
+ASSERT LAST_N == 1
+SETF t note "xy"
+TRUNCF t note 10
+SYS EQS LAST "xy"
+ASSERT LAST_N == 1
+SETF t note "abcdefghij"
+STRCLIPF t note 4
+SYS EQS LAST "abcd"
+ASSERT LAST_N == 1
+
+# oversize left clips to field
+SETF t note "hi"
+LEFTF t note 99
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+ASSERT LAST_N == 1
+
+# zero
+SETF t note "abc"
+LEFTF t note 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# promote numeric
+LEFTF t retries 3
+SYS EQS LAST "123"
+ASSERT LAST_N == 1
+GETF t retries
+SYS EQS LAST "123"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t note "xyzzy"
+SEND t head3
+GETF t note
+SYS EQS LAST "xyz"
+ASSERT LAST_N == 1
+
+# FINDF + SLICEF peel after locate
+SETF t note "err:timeout:done"
+FINDF t note ":"
+LET i = LAST_N + 1
+SLICEF t note i
+SYS EQS LAST "timeout:done"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYLEFTF nosuch note 1
+ASSERT OK == 0
+ASSERT LEFTF_N == 0
+SYS EQS LAST_ERR "LEFTF: unknown object"
+ASSERT LAST_N == 1
+LEFTF SOFT t nosuch 1
+ASSERT OK == 0
+TRYSLICEF nosuch note 0 1
+ASSERT OK == 0
+
+# dynamic field name + n
+SETF t note "abcdef"
+LET w = 3
+LEFTF t "note" w
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# HELP
+HELP LEFTF
+SYS HAS LAST "LEFTF"
+ASSERT LAST_N == 1
+HELP SLICEF
+SYS HAS LAST "SLICEF"
+ASSERT LAST_N == 1
+HELP TRUNCF
+SYS HAS LAST "TRUNCF"
+ASSERT LAST_N == 1
+HELP RIGHTF
+SYS HAS LAST "RIGHTF"
+ASSERT LAST_N == 1
+
+PRINT "oop_leftf ok"
