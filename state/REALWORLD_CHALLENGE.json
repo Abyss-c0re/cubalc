@@ -45,13 +45,13 @@
     },
     {
       "name": "mode_flip",
-      "cmd": "n0→busy; mode busy; admit ready deny",
+      "cmd": "n0\u2192busy; mode busy; admit ready deny",
       "ok": true,
       "note": "flip"
     },
     {
       "name": "mode_tie_first_seen",
-      "cmd": "fail+drain tie → mode fail first-seen",
+      "cmd": "fail+drain tie \u2192 mode fail first-seen",
       "ok": true,
       "note": "tie"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2→1",
+      "cmd": "exact false friend; SETMATCH 2\u21921",
       "ok": true,
       "note": "journal"
     },
@@ -85,16 +85,16 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|modef",
-      "title": "MODEF ties → first-seen only — no multi-mode bag",
-      "detail": "fail+drain equal count → mode fail (first opened). Agents cannot detect ties without FREQF and comparing counts.",
+      "title": "MODEF ties \u2192 first-seen only \u2014 no multi-mode bag",
+      "detail": "fail+drain equal count \u2192 mode fail (first opened). Agents cannot detect ties without FREQF and comparing counts.",
       "repro": "two statuses count=1 each; MODEF returns first-seen"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "oop|setfall",
-      "title": "SETFALL stamps entire class — no WHERE status filter",
-      "detail": "Cannot stamp only busy→ready without SENDBETWEEN-style or per-slot SETF.",
+      "title": "SETFALL stamps entire class \u2014 no WHERE status filter",
+      "detail": "Cannot stamp only busy\u2192ready without SENDBETWEEN-style or per-slot SETF.",
       "repro": "SETFALL Node status ready hits all"
     },
     {
@@ -109,15 +109,15 @@
       "id": "W4",
       "severity": "med",
       "area": "oop|empty",
-      "title": "Empty MODEF yields blank mode string — admit EQS want fails soft deny",
-      "detail": "Empty fleet MODEF LAST empty; admit want ready → deny (not soft admit). Empty FREQF N=0 TOTAL=0.",
-      "repro": "clear; mode; admit ready → deny"
+      "title": "Empty MODEF yields blank mode string \u2014 admit EQS want fails soft deny",
+      "detail": "Empty fleet MODEF LAST empty; admit want ready \u2192 deny (not soft admit). Empty FREQF N=0 TOTAL=0.",
+      "repro": "clear; mode; admit ready \u2192 deny"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "oop|freqf",
-      "title": "FREQF bag needs LOOKUPN for counts — no direct COUNTKEY on HIST plate",
+      "title": "FREQF bag needs LOOKUPN for counts \u2014 no direct COUNTKEY on HIST plate",
       "detail": "Agents re-read HIST and LOOKUPN key for per-status count; COUNTWHERE is dual for live objs only.",
       "repro": "SYS LOOKUPN FREQF open"
     },
@@ -134,7 +134,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_FS_REQUIRE=abc → soft.",
+      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,7 +142,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:st → one SETMATCH leaves 1.",
+      "detail": "Two n0:st \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -162,11 +162,11 @@
   ],
   "issues_faced": [
     "FREQF ready:2 busy:1; MODEF ready; UNIQUF ready/busy worked",
-    "MODEF tie fail/drain → first-seen fail",
+    "MODEF tie fail/drain \u2192 first-seen fail",
     "SETFALL stamp ready N=3; admit REQUIRE green",
     "empty MODEF blank; admit ready deny",
     "selftest 328/328 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T08:05:00Z"
+  "commit": "8015bc34254dc400fcd4b28c6faee19ad5234cae",
+  "ts": "2026-08-07T08:10:14Z"
 }
