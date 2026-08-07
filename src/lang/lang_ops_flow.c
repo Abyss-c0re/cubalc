@@ -14970,6 +14970,215 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* ENSUREBAGLINE|BAGENSURE|ADDIFMISSINGBAG obj field line
+   * — append exact bag line only if missing (idempotent set membership).
+   * ENSUREBAGLINEI — case-insensitive exact membership test.
+   * TRYENSUREBAGLINE|ENSUREBAGLINE SOFT — soft miss OK=0 sticky LAST_ERR.
+   * LAST = bag after; LAST_N/ENSUREBAGLINE_NEW = 1 if appended, 0 if already present;
+   * ENSUREBAGLINE_N = bag line count after. Complements HASBAGLINE/DROPBAGLINE/PUSHF.
+   * Not SYS ENSURELINE (file). Usability: flags/work sets without HAS+PUSH IF glue
+   * (METHOD/THIS). */
+  if (kw(&L->cur, "ENSUREBAGLINE") || kw(&L->cur, "BAGENSURE") ||
+      kw(&L->cur, "ADDIFMISSINGBAG") || kw(&L->cur, "ENSUREBAG") ||
+      kw(&L->cur, "BAGADDIF") || kw(&L->cur, "ENSURELINEBAG") ||
+      kw(&L->cur, "ENSUREBAGLINEI") || kw(&L->cur, "BAGENSUREI") ||
+      kw(&L->cur, "TRYENSUREBAGLINE") || kw(&L->cur, "ENSUREBAGLINESOFT") ||
+      kw(&L->cur, "SOFTENSUREBAGLINE")) {
+    char oname[48], fname[48], op[24], hay[256], needle[128], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, icase = 0;
+    long hit = 0, is_new = 0, nfields = 0;
+    const char *p, *start;
+    size_t nn, flen, blen, llen, o;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "ENSUREBAGLINEI") == 0 || strcmp(op, "BAGENSUREI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYENSUREBAGLINE") == 0 || strcmp(op, "ENSUREBAGLINESOFT") == 0 ||
+        strcmp(op, "SOFTENSUREBAGLINE") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                   kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                   kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "ENSUREBAGLINE object field line"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "ENSUREBAGLINE field"); return -1;
+    }
+    if (kw(&L->cur, "LINE") || kw(&L->cur, "ITEM") || kw(&L->cur, "VALUE") ||
+        kw(&L->cur, "WITH") || kw(&L->cur, "IS"))
+      lex_next(L);
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+      snprintf(needle, sizeof needle, "%s", vm->last_str);
+    nn = strlen(needle);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "ENSUREBAGLINE unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "ENSUREBAGLINE_NEW", 0);
+      var_set_num(vm, "ENSUREBAGLINE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "ENSUREBAGLINE: unknown object");
+      var_set_str(vm, "ERR", "ENSUREBAGLINE: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "ENSUREBAGLINE unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "ENSUREBAGLINE_NEW", 0);
+      var_set_num(vm, "ENSUREBAGLINE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "ENSUREBAGLINE: unknown field");
+      var_set_str(vm, "ERR", "ENSUREBAGLINE: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    hit = 0;
+    if (hay[0]) {
+      p = hay;
+      while (*p && !hit) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (flen == nn) {
+          if (!icase) {
+            if (nn == 0 || memcmp(start, needle, nn) == 0) hit = 1;
+          } else {
+            size_t i; int okm = 1;
+            for (i = 0; i < nn; i++) {
+              char a = start[i], b = needle[i];
+              if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+              if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+              if (a != b) { okm = 0; break; }
+            }
+            if (okm) hit = 1;
+          }
+        }
+        if (*p == '\n') p++;
+      }
+    }
+    out[0] = 0;
+    is_new = 0;
+    if (hit) {
+      snprintf(out, sizeof out, "%s", hay);
+    } else {
+      /* append like PUSHF */
+      is_new = 1;
+      blen = strlen(hay);
+      llen = nn;
+      o = 0;
+      if (blen == 0) {
+        if (llen < sizeof out) {
+          memcpy(out, needle, llen);
+          o = llen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, needle, o);
+        }
+        out[o] = 0;
+      } else {
+        if (blen < sizeof out) {
+          memcpy(out, hay, blen);
+          o = blen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, hay, o);
+        }
+        if (o + 1 < sizeof out) out[o++] = '\n';
+        if (o + llen < sizeof out) {
+          memcpy(out + o, needle, llen);
+          o += llen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, needle, take);
+          o += take;
+        }
+        out[o] = 0;
+      }
+    }
+    {
+      size_t cap = sizeof ob->fstr[fi];
+      size_t olen = strlen(out);
+      if (olen >= cap) {
+        memcpy(ob->fstr[fi], out, cap - 1);
+        ob->fstr[fi][cap - 1] = 0;
+      } else {
+        memcpy(ob->fstr[fi], out, olen + 1);
+      }
+    }
+    ob->fis_str[fi] = 1;
+    nfields = 0;
+    if (ob->fstr[fi][0]) {
+      p = ob->fstr[fi];
+      while (*p) {
+        while (*p && *p != '\n') p++;
+        nfields++;
+        if (*p == '\n') p++;
+      }
+    }
+    var_set_str(vm, "LAST", ob->fstr[fi]);
+    var_set_str(vm, "ENSUREBAGLINE", ob->fstr[fi]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+    vm->last_n = is_new;
+    var_set_num(vm, "LAST_N", is_new);
+    var_set_num(vm, "ENSUREBAGLINE_NEW", is_new);
+    var_set_num(vm, "ENSUREBAGLINE_N", nfields);
+    var_set_num(vm, "BAGENSURE_NEW", is_new);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

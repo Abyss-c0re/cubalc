@@ -1,0 +1,131 @@
+# ENSUREBAGLINE / BAGENSURE — idempotent bag membership add on fields
+# Usability: flags/work sets without HASBAGLINE+PUSHF IF glue
+# Not file-plane SYS ENSURELINE
+
+HOLD_FLASH 1
+
+CLASS Flags
+  FIELD tags ""
+  FIELD code 1
+  METHOD init
+  END
+  METHOD ready
+    ENSUREBAGLINE THIS tags "ready"
+  END
+END
+
+NEW Flags f
+
+# first ensure appends
+ENSUREBAGLINE f tags "ready"
+ASSERT OK == 1
+ASSERT ENSUREBAGLINE_NEW == 1
+ASSERT LAST_N == 1
+ASSERT ENSUREBAGLINE_N == 1
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETF f tags
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# second ensure is no-op
+ENSUREBAGLINE f tags "ready"
+ASSERT ENSUREBAGLINE_NEW == 0
+ASSERT LAST_N == 0
+ASSERT ENSUREBAGLINE_N == 1
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+GETF f tags
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+
+# another flag
+ENSUREBAGLINE f tags "warm"
+ASSERT ENSUREBAGLINE_NEW == 1
+ASSERT ENSUREBAGLINE_N == 2
+SYS EQS LAST "ready\nwarm"
+ASSERT LAST_N == 1
+ENSUREBAGLINE f tags "warm"
+ASSERT ENSUREBAGLINE_NEW == 0
+ASSERT ENSUREBAGLINE_N == 2
+
+# aliases
+SETF f tags "a"
+BAGENSURE f tags "b"
+ASSERT ENSUREBAGLINE_NEW == 1
+GETF f tags
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+ADDIFMISSINGBAG f tags "a"
+ASSERT ENSUREBAGLINE_NEW == 0
+ENSUREBAG f tags "c"
+ASSERT ENSUREBAGLINE_NEW == 1
+ENSURELINEBAG f tags "c"
+ASSERT ENSUREBAGLINE_NEW == 0
+
+# case-insensitive ensure
+SETF f tags "Error"
+ENSUREBAGLINEI f tags "error"
+ASSERT ENSUREBAGLINE_NEW == 0
+ASSERT ENSUREBAGLINE_N == 1
+SYS EQS LAST "Error"
+ASSERT LAST_N == 1
+ENSUREBAGLINE f tags "error"
+ASSERT ENSUREBAGLINE_NEW == 1
+GETF f tags
+SYS EQS LAST "Error\nerror"
+ASSERT LAST_N == 1
+
+# METHOD / THIS
+SETF f tags ""
+SEND f ready
+ASSERT ENSUREBAGLINE_NEW == 1
+GETF f tags
+SYS EQS LAST "ready"
+ASSERT LAST_N == 1
+SEND f ready
+ASSERT ENSUREBAGLINE_NEW == 0
+
+# soft miss
+TRYENSUREBAGLINE nosuch tags "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+ENSUREBAGLINE SOFT f nosuch "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# recover
+SETF f tags "ok"
+ENSUREBAGLINE f tags "yes"
+ASSERT OK == 1
+ASSERT ENSUREBAGLINE_NEW == 1
+GETF f tags
+SYS EQS LAST "ok\nyes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF f tags "d"
+ENSUREBAGLINE f "tags" "e"
+ASSERT ENSUREBAGLINE_NEW == 1
+GETF f tags
+SYS EQS LAST "d\ne"
+ASSERT LAST_N == 1
+
+# LINE glue
+SETF f tags ""
+ENSUREBAGLINE f tags LINE "item"
+ASSERT ENSUREBAGLINE_NEW == 1
+SYS EQS LAST "item"
+ASSERT LAST_N == 1
+
+# HELP
+HELP ENSUREBAGLINE
+SYS HAS LAST "ENSUREBAGLINE"
+ASSERT LAST_N == 1
+HELP BAGENSURE
+SYS HAS LAST "BAGENSURE"
+ASSERT LAST_N == 1
+
+PRINT "oop_ensurebagline ok"
