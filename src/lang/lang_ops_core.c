@@ -1156,6 +1156,83 @@ static long cubalc_collect_restargs(char *out, size_t outn) {
   return count;
 }
 
+/* Collect CLI flag names (no leading dashes) from CUBALC_ARGn → newline bag.
+ * --mode=fast / --verbose / -n 3 → "mode\nverbose\nn". Skips bare "--".
+ * Value tokens after bare --name are not listed. LAST_N = flag count.
+ * Usability: LISTFLAGS discovery without EACH ARGS + STARTS glue. */
+static long cubalc_collect_listflags(char *out, size_t outn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k;
+  size_t o = 0;
+  long count = 0;
+  int end_flags = 0;
+  if (out && outn) out[0] = 0;
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a, *p, *eq;
+    char name[96];
+    size_t nlen, room;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || !a[0]) continue;
+    if (end_flags) break;
+    if (!(a[0] == '-' && a[1] != 0))
+      continue; /* positional */
+    if (a[1] == '-' && a[2] == 0) {
+      end_flags = 1;
+      continue; /* bare -- */
+    }
+    p = a + 1;
+    if (*p == '-') p++;
+    eq = strchr(p, '=');
+    if (eq) {
+      nlen = (size_t)(eq - p);
+      if (nlen >= sizeof name) nlen = sizeof name - 1;
+      memcpy(name, p, nlen);
+      name[nlen] = 0;
+    } else {
+      snprintf(name, sizeof name, "%s", p);
+      /* consume value token for bare --name val (GETFLAG parity) */
+      if (k + 1 < argc) {
+        char env2[32];
+        const char *b;
+        snprintf(env2, sizeof env2, "CUBALC_ARG%d", k + 1);
+        b = getenv(env2);
+        if (b && b[0] && !(b[0] == '-' && b[1] != 0))
+          k++;
+      }
+    }
+    if (!name[0]) continue;
+    nlen = strlen(name);
+    if (out && outn > 1) {
+      if (count > 0 && o + 1 < outn)
+        out[o++] = '\n';
+      room = outn - o - 1;
+      if (nlen > room) nlen = room;
+      if (nlen > 0) {
+        memcpy(out + o, name, nlen);
+        o += nlen;
+      }
+      out[o] = 0;
+    }
+    count++;
+  }
+  return count;
+}
+
 /* Append sticky USAGE var to REQUIRE fail messages (room-limited).
  * Usability: agents set USAGE once; ARG/ARGC/FLAG fails show the contract. */
 static void cubalc_append_usage_tip(VM *vm, char *msg, size_t n) {
@@ -26042,6 +26119,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
       {"POSITIONALS", "POSITIONALS alias of RESTARGS — files after --flags"},
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
+      {"LISTFLAGS", "LISTFLAGS|FLAGS — bag of flag names (no dashes) from CUBALC_ARGn · LAST_N=count"},
+      {"FLAGS", "FLAGS alias of LISTFLAGS — discover --flags without EACH ARGS"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -28442,6 +28521,28 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "RESTARGS", bag);
     if (vm->trace)
       fprintf(vm->trace, "# hasrestargs >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm); return 1;
+  }
+  /* LISTFLAGS|FLAGS — newline bag of flag names (no dashes) from CUBALC_ARGn.
+   * LAST = bag · LAST_N / LISTFLAGS_N = count · OK=1.
+   * Usability: discover which --flags were passed without EACH+STARTS glue. */
+  if (kw(&L->cur,"LISTFLAGS") || kw(&L->cur,"FLAGS") || kw(&L->cur,"FLAGNAMES") ||
+      kw(&L->cur,"OPTFLAGS") || kw(&L->cur,"CLI_FLAGS") || kw(&L->cur,"ALLFLAGS") ||
+      kw(&L->cur,"FLAGLIST")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_listflags(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFLAGS", bag);
+    var_set_str(vm, "FLAGS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "LISTFLAGS_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# listflags n=%ld\n", n);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.
