@@ -12970,6 +12970,171 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* JOINF|JOINLINESF|PASTEF obj field sep [bag|LAST]
+   * TRYJOINF|JOINF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * Join newline bag with sep into field (inverse of SPLITF).
+   * Bag defaults to LAST. LAST = joined text; LAST_N/JOINF_N = part count.
+   * Empty bag → empty field; empty sep concatenates with no delimiter.
+   * Usability: rebuild path/CSV after bag edit without GETF+SYS JOINLINES+SETF
+   * (METHOD/THIS; pairs SPLITF). */
+  if (kw(&L->cur, "JOINF") || kw(&L->cur, "JOINLINESF") ||
+      kw(&L->cur, "PASTEF") || kw(&L->cur, "MERGEF") ||
+      kw(&L->cur, "IMPLADEF") || kw(&L->cur, "FIELDJOIN") ||
+      kw(&L->cur, "JOINFIELD") || kw(&L->cur, "BAGJOINF") ||
+      kw(&L->cur, "TRYJOINF") || kw(&L->cur, "JOINFSOFT") ||
+      kw(&L->cur, "SOFTJOINF") || kw(&L->cur, "TRYPASTEF") ||
+      kw(&L->cur, "TRYJOINLINESF")) {
+    char oname[48], fname[48], op[24], sep[64], bag[512], out[128];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0;
+    const char *p, *start;
+    size_t sepn, olen = 0, flen;
+    long nfields = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYJOINF") == 0 || strcmp(op, "JOINFSOFT") == 0 ||
+        strcmp(op, "SOFTJOINF") == 0 || strcmp(op, "TRYPASTEF") == 0 ||
+        strcmp(op, "TRYJOINLINESF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "JOINF object field sep [bag]"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "JOINF field"); return -1;
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "BY") || kw(&L->cur, "SEP") ||
+        kw(&L->cur, "ON") || kw(&L->cur, "USING"))
+      lex_next(L);
+    sep[0] = 0;
+    if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(sep, sizeof sep, "%ld", v);
+      } else {
+        fail(vm, "JOINF object field sep [bag]"); return -1;
+      }
+    }
+    if (kw(&L->cur, "FROM") || kw(&L->cur, "BAG") || kw(&L->cur, "LINES") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    bag[0] = 0;
+    if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+      snprintf(bag, sizeof bag, "%s", vm->last_str);
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "JOINF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "JOINF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "JOINF: unknown object");
+      var_set_str(vm, "ERR", "JOINF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "JOINF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "JOINF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "JOINF: unknown field");
+      var_set_str(vm, "ERR", "JOINF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    out[0] = 0;
+    olen = 0;
+    nfields = 0;
+    sepn = strlen(sep);
+    if (bag[0]) {
+      p = bag;
+      while (*p) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        /* trailing bare newline after last field: still count empty? match JOINLINES:
+         * if start==p at end after consuming newlines from previous, only break if
+         * we already finished content. JOINLINES skips final empty after trailing \n
+         * when start==p && *p==0 && start>src && start[-1]=='\n' */
+        if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+          break;
+        flen = (size_t)(p - start);
+        if (nfields > 0 && sepn > 0) {
+          if (olen + sepn < sizeof out) {
+            memcpy(out + olen, sep, sepn);
+            olen += sepn;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, sep, take);
+            olen += take;
+          }
+        }
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, start, flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, start, take);
+          olen += take;
+        }
+        out[olen] = 0;
+        nfields++;
+        if (*p == '\n') p++;
+      }
+    }
+    snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = nfields;
+    var_set_num(vm, "LAST_N", nfields);
+    var_set_num(vm, "JOINF_N", nfields);
+    var_set_num(vm, "JOINLINESF_N", nfields);
+    var_set_num(vm, "PASTEF_N", nfields);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

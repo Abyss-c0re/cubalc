@@ -442,6 +442,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 412. ~~**`MINF` / `MAXF`**~~ **done** (one-sided field min/max bound · cap/floor without full BOUNDF lo..hi · no GETF+IF+SETF · METHOD/THIS).
 413. ~~**`COUNTINF` / `COUNTINFI`**~~ **done** (count needle hits in one field · no GETF+loop · path/delimiter depth · complements HASINF/FINDF · METHOD/THIS).
 414. ~~**`SPLITF` / `FIELDSF`**~~ **done** (split field on sep → newline bag · no GETF+SYS SPLIT · path/CSV EACH LINE · no mutate · METHOD/THIS).
+415. ~~**`JOINF` / `JOINLINESF`**~~ **done** (join newline bag into field with sep · inverse SPLITF · no GETF+SYS JOINLINES+SETF · METHOD/THIS).
 
 ## Tick protocol
 

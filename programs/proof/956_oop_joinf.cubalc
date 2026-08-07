@@ -1,0 +1,123 @@
+# JOINF / JOINLINESF — join bag into field with sep for agents
+# Usability: rebuild path/CSV after bag edit without GETF+SYS JOINLINES+SETF
+# Inverse of SPLITF; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Doc
+  FIELD path ""
+  FIELD csv ""
+  FIELD tag "x"
+  METHOD init
+  END
+  METHOD rejoin
+    JOINF THIS path "/"
+  END
+END
+
+NEW Doc d
+
+# join explicit bag
+JOINF d path "/" "a\nb\nc"
+ASSERT OK == 1
+ASSERT JOINF_N == 3
+ASSERT LAST_N == 3
+SYS EQS LAST "a/b/c"
+ASSERT LAST_N == 1
+SYS EQS FIELD "path"
+ASSERT LAST_N == 1
+GETF d path
+SYS EQS LAST "a/b/c"
+ASSERT LAST_N == 1
+
+# CSV
+JOINF d csv "," "x\ny\nz"
+ASSERT JOINF_N == 3
+GETF d csv
+SYS EQS LAST "x,y,z"
+ASSERT LAST_N == 1
+
+# WITH glue + default LAST bag
+SYS SPLIT ":" "p:q:r"
+JOINF d path WITH "/"
+ASSERT LAST_N == 3
+GETF d path
+SYS EQS LAST "p/q/r"
+ASSERT LAST_N == 1
+
+# empty bag → empty field
+JOINF d path "/" ""
+ASSERT LAST_N == 0
+GETF d path
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# empty sep concatenates
+JOINF d path "" "a\nb"
+ASSERT LAST_N == 2
+GETF d path
+SYS EQS LAST "ab"
+ASSERT LAST_N == 1
+
+# round-trip SPLITF → JOINF
+SETF d path "u/v/w"
+SPLITF d path "/"
+JOINF d path "/"
+ASSERT LAST_N == 3
+GETF d path
+SYS EQS LAST "u/v/w"
+ASSERT LAST_N == 1
+
+# aliases
+PASTEF d path "-" "m\nn"
+GETF d path
+SYS EQS LAST "m-n"
+ASSERT LAST_N == 1
+JOINLINESF d path ":" "a\nb"
+GETF d path
+SYS EQS LAST "a:b"
+ASSERT LAST_N == 1
+MERGEF d path "/" "x\ny"
+GETF d path
+SYS EQS LAST "x/y"
+ASSERT LAST_N == 1
+
+# METHOD + THIS (bag in LAST)
+SYS SPLIT "/" "one/two"
+SEND d rejoin
+GETF d path
+SYS EQS LAST "one/two"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYJOINF nosuch path "/" "a"
+ASSERT OK == 0
+ASSERT JOINF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+JOINF SOFT d nosuch "/" "a"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+JOINF d path "/" "ok\nyes"
+ASSERT OK == 1
+GETF d path
+SYS EQS LAST "ok/yes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+JOINF d "path" "." "a\nb"
+GETF d path
+SYS EQS LAST "a.b"
+ASSERT LAST_N == 1
+
+# HELP
+HELP JOINF
+SYS HAS LAST "JOINF"
+ASSERT LAST_N == 1
+
+PRINT "oop_joinf ok"
