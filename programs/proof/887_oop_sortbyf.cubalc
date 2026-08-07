@@ -1,0 +1,105 @@
+# SORTBYF / SORTOBJS — bag of live object names ordered by numeric field
+# Usability: ranked fleet without GETFALL+ZIP+SORTN+KEYS glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 30 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 10 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 50
+NEW Counter k3 15
+
+# ASC default (low first); ties keep first-seen order (b before d)
+SORTBYF Cell energy
+ASSERT OK == 1
+ASSERT SORTBYF_N == 4
+ASSERT LAST_N == 4
+ASSERT SORTBYF_DESC == 0
+SYS NTH 0 SORTBYF
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SYS NTH 1 SORTBYF
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+SYS NTH 2 SORTBYF
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+SYS NTH 3 SORTBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# DESC high first
+SORTBYF Cell energy DESC
+ASSERT SORTBYF_DESC == 1
+SYS NTH 0 SORTBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS NTH 1 SORTBYF
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# SORTOBJS alias
+SORTOBJS Cell energy ASC
+ASSERT SORTOBJS_N == 4
+SYS NTH 0 SORTOBJS
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# OF sugar + Counter
+SORTBYF OF Counter n DESC
+ASSERT SORTBYF_N == 3
+SYS NTH 0 SORTBYF
+SYS EQS LAST "k2"
+ASSERT LAST_N == 1
+SYS NTH 2 SORTBYF
+SYS EQS LAST "k1"
+ASSERT LAST_N == 1
+
+# bare field
+SORTBYF n ASC
+ASSERT SORTBYF_N == 3
+SYS NTH 0 SORTBYF
+SYS EQS LAST "k1"
+ASSERT LAST_N == 1
+
+# string field name
+SORTBYF Cell "energy" DESC
+ASSERT SORTBYF_N == 4
+SYS NTH 0 SORTBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# chain: first = MINOBJ equivalent
+SORTBYF Cell energy ASC
+SYS NTH 0 SORTBYF
+GETF LAST energy
+ASSERT LAST_N == 10
+
+# empty soft
+DELETEALL Cell
+SORTBYF Cell energy
+ASSERT OK == 1
+ASSERT SORTBYF_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# RANKBYF alias
+NEW Cell x 1 7 0
+NEW Cell y 1 3 0
+RANKBYF Cell energy DESC
+SYS NTH 0 SORTBYF
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+PRINT "oop_sortbyf ok"

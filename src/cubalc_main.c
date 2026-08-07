@@ -2025,6 +2025,7 @@ int main(int argc, char **argv) {
       {"oop_sendwhere", "programs/proof/884_oop_sendwhere.cubalc", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
       {"oop_incfall", "programs/proof/885_oop_incfall.cubalc", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"oop_maxobj", "programs/proof/886_oop_maxobj.cubalc", "MAXOBJ/MINOBJ pick object by extreme field"},
+      {"oop_sortbyf", "programs/proof/887_oop_sortbyf.cubalc", "SORTBYF/SORTOBJS bag of names ordered by field"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5917,6 +5918,7 @@ int main(int argc, char **argv) {
       {"programs/proof/884_oop_sendwhere.cubalc", "oop_sendwhere", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
       {"programs/proof/885_oop_incfall.cubalc", "oop_incfall", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"programs/proof/886_oop_maxobj.cubalc", "oop_maxobj", "MAXOBJ/MINOBJ pick object by extreme field"},
+      {"programs/proof/887_oop_sortbyf.cubalc", "oop_sortbyf", "SORTBYF/SORTOBJS bag of names ordered by field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6201,6 +6203,7 @@ int main(int argc, char **argv) {
       {"programs/proof/884_oop_sendwhere.cubalc", "oop_sendwhere", "SENDWHERE/INVOKEWHERE method on field-matching objects"},
       {"programs/proof/885_oop_incfall.cubalc", "oop_incfall", "INCFALL/ADDFALL/DECFALL bulk numeric field bump"},
       {"programs/proof/886_oop_maxobj.cubalc", "oop_maxobj", "MAXOBJ/MINOBJ pick object by extreme field"},
+      {"programs/proof/887_oop_sortbyf.cubalc", "oop_sortbyf", "SORTBYF/SORTOBJS bag of names ordered by field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

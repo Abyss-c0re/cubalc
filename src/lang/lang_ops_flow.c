@@ -1521,6 +1521,156 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SORTBYF|SORTOBJS|ORDERBYF [Class] field [ASC|DESC]
+   * — bag of live object names ordered by numeric field (stable first-seen on ties).
+   * Soft always; string/missing fields skipped. LAST_N = count. Default ASC.
+   * Usability: ranked fleet without GETFALL+ZIP+SORTN+KEYS glue. */
+  if (kw(&L->cur, "SORTBYF") || kw(&L->cur, "SORTOBJS") ||
+      kw(&L->cur, "ORDERBYF") || kw(&L->cur, "RANKBYF") ||
+      kw(&L->cur, "ORDEROBJS") || kw(&L->cur, "SORTBYFIELD") ||
+      kw(&L->cur, "OBJSSORT") || kw(&L->cur, "RANKOBJS")) {
+    char filt[48], fname[48], tok1[48], bag[4096];
+    int has_filt = 0, desc = 0, i, n = 0, n_skip = 0;
+    size_t o = 0;
+    typedef struct { char name[48]; long v; int idx; } SortByFRow;
+    SortByFRow rows[CUBALC_MAX_OBJS];
+    SortByFRow key;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "SORTBYF OF Class field [ASC|DESC]"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+          !kw(&L->cur, "UP") && !kw(&L->cur, "DOWN")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SORTBYF [Class] field [ASC|DESC]"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SORTBYF [Class] field [ASC|DESC]"); return -1;
+      }
+    }
+    if (kw(&L->cur, "DESC") || kw(&L->cur, "DOWN") || kw(&L->cur, "REV") ||
+        kw(&L->cur, "REVERSE") || kw(&L->cur, "HIGHFIRST")) {
+      desc = 1;
+      lex_next(L);
+    } else if (kw(&L->cur, "ASC") || kw(&L->cur, "UP") ||
+               kw(&L->cur, "LOWFIRST")) {
+      desc = 0;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      snprintf(rows[n].name, sizeof rows[n].name, "%s", ob->name);
+      rows[n].v = ob->fnum[fi];
+      rows[n].idx = n;
+      n++;
+    }
+    /* stable-ish insertion sort (n<=64) */
+    {
+      int a, b;
+      for (a = 1; a < n; a++) {
+        key = rows[a];
+        b = a - 1;
+        while (b >= 0) {
+          int less;
+          if (desc)
+            less = (key.v > rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          else
+            less = (key.v < rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          if (!less) break;
+          rows[b + 1] = rows[b];
+          b--;
+        }
+        rows[b + 1] = key;
+      }
+    }
+    for (i = 0; i < n; i++) {
+      size_t ln = strlen(rows[i].name);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "SORTBYF", bag);
+    var_set_str(vm, "SORTOBJS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "SORTBYF_N", n);
+    var_set_num(vm, "SORTOBJS_N", n);
+    var_set_num(vm, "SORTBYF_SKIP", n_skip);
+    var_set_num(vm, "SORTBYF_DESC", desc);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREOBJ|FILTEROBJS|KEEPOBJS [Class] field value
    * FINDOBJ|FIRSTOBJ — first match only (LAST=name, LAST_N 0|1).
    * Soft always. Equality on num or string fields.
