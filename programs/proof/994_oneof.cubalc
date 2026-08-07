@@ -1,0 +1,58 @@
+# ONEOF / REQUIRE ONEOF — allowed-value gates for CLI actions
+
+HOLD_FLASH 1
+
+# soft hit
+LET act "seal"
+ONEOF act "list", "ls", "seal" OR "parse"
+ASSERT LAST_N == 1
+SYS EQS MATCH_ARM "seal"
+ASSERT LAST_N == 1
+
+# soft miss
+ONEOF "nope" "list", "seal"
+ASSERT LAST_N == 0
+SYS EMPTY MATCH_ARM
+ASSERT LAST_N == 1
+
+# bare idents as allowed tokens
+ONEOF "ls" list, ls, l
+ASSERT LAST_N == 1
+
+# OR and pipe
+ONEOF "h" "help" OR "h" | "?"
+ASSERT LAST_N == 1
+
+# ONEOFI case-insensitive
+ONEOFI "List" "list", "ls"
+ASSERT LAST_N == 1
+ONEOF "List" "list", "ls"
+ASSERT LAST_N == 0
+
+# LAST subject after GETFLAG pattern
+LET LAST "parse"
+ONEOF LAST "list" OR "parse" OR "seal"
+ASSERT LAST_N == 1
+
+# INLIST alias
+INLIST "a" "a", "b"
+ASSERT LAST_N == 1
+
+# REQUIRE ONEOF success
+LET cmd "seal"
+REQUIRE ONEOF cmd "list", "seal", "help"
+ASSERT LAST_N == 1
+SYS EQS LAST "seal"
+ASSERT LAST_N == 1
+
+# REQUIRE ONEOFI
+REQUIRE ONEOFI "HELP" help, h, "?"
+ASSERT OK == 1
+
+# multi with commas
+ONEOF "usage" "help", "usage", "h"
+ASSERT LAST_N == 1
+SYS EQS WHEN_HIT "usage"
+ASSERT LAST_N == 1
+
+PRINT "oneof ok"

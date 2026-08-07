@@ -480,6 +480,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 450. ~~**`CASEI` / `MATCHI`**~~ **done** (case-insensitive string CASE · CASE ICASE · CLI mixed-case GETFLAG · multi-alias kept).
 451. ~~**`BOOLFLAG` / `TRUTHY` / `FALSY`**~~ **done** (CLI flag truthy LAST_N · false/0/off · IF without GETFLAG+EQS · OR default).
 452. ~~**`GETFLAGN` / `FLAGN`**~~ **done** (CLI flag as int LAST_N · OR default · ports/retries without GETFLAG+NUM).
+453. ~~**`ONEOF` / `REQUIRE ONEOF`**~~ **done** (soft/fatal membership in multi-alias set · ONEOFI icase · GETFLAG action gate).
 
 ## Tick protocol
 

@@ -1101,6 +1101,76 @@ static int cubalc_str_truthy(const char *s) {
   return 1; /* other non-empty → truthy */
 }
 
+/* Parse one string atom for ONEOF lists: "s" | LAST | string-var.
+ * Returns 1 and advances on success. */
+static int cubalc_read_str_atom(VM *vm, Lex *L, char *out, size_t outn) {
+  if (L->cur.kind == TK_STR) {
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind == TK_IDENT) {
+    if (strcmp(L->cur.text, "LAST") == 0) {
+      Var *lv = var_get(vm, "LAST", 0);
+      if (lv && lv->is_str)
+        snprintf(out, outn, "%s", lv->sval);
+      else
+        snprintf(out, outn, "%s", vm->last_str);
+      lex_next(L);
+      return 1;
+    }
+    {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(out, outn, "%s", sv->sval);
+        lex_next(L);
+        return 1;
+      }
+    }
+    /* bare ident as literal token text (allowed set members like list without quotes) */
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind == TK_NUM) {
+    snprintf(out, outn, "%ld", (long)L->cur.num);
+    lex_next(L);
+    return 1;
+  }
+  return 0;
+}
+
+/* Match subject against multi-alias list (comma / OR / |). At least one atom.
+ * On match sets hit_out. Returns 1 match · 0 no match · -1 parse error. */
+static int cubalc_match_oneof_list(VM *vm, Lex *L, const char *subject, int icase,
+                                   char *hit_out, size_t hit_n) {
+  char atom[512];
+  int matched = 0;
+  int any = 0;
+  if (hit_out && hit_n) hit_out[0] = 0;
+  for (;;) {
+    atom[0] = 0;
+    if (!cubalc_read_str_atom(vm, L, atom, sizeof atom)) {
+      if (!any) return -1;
+      break;
+    }
+    any = 1;
+    if (subject) {
+      int eq = icase ? (strcasecmp(subject, atom) == 0) : (strcmp(subject, atom) == 0);
+      if (eq) {
+        matched = 1;
+        if (hit_out && hit_n && !hit_out[0])
+          snprintf(hit_out, hit_n, "%s", atom);
+      }
+    }
+    if (L->cur.kind == TK_COMMA) { lex_next(L); continue; }
+    if (L->cur.kind == TK_PIPE) { lex_next(L); continue; }
+    if (kw(&L->cur, "OR")) { lex_next(L); continue; }
+    break;
+  }
+  return matched ? 1 : 0;
+}
+
 /* Collect non-flag positionals from CUBALC_ARGn → newline bag.
  * Skips --flag / -flag / --flag=val; bare --flag val skips value too
  * (same rule as GETFLAG). Bare "-" kept. Bare "--" ends flag scan.
@@ -26196,7 +26266,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF — fail-fast gates"},
+      {"REQUIRE ONEOF", "REQUIRE ONEOF|ONEOFI subject a [,|OR||] b — fail if value not in allowed set · USAGE tip"},
+      {"ONEOF", "ONEOF|INLIST subject a [,|OR||] b — soft 0|1 membership · ONEOFI icase · MATCH_ARM hit"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name — fail if --name missing · LAST=value (HASFLAG twin)"},
@@ -28273,9 +28345,64 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE ONEOF|ONEOFI|INLIST subject a [,|OR||] b …
+     * Fail-fast if subject string not in allowed multi-alias set.
+     * Usability: gate GETFLAG/SUBCMD action without CASE+DEFAULT FAIL soup. */
+    if (kw(&L->cur,"ONEOF") || kw(&L->cur,"ONEOFI") || kw(&L->cur,"INLIST") ||
+        kw(&L->cur,"INLISTI") || kw(&L->cur,"AMONG") || kw(&L->cur,"CHOICE") ||
+        kw(&L->cur,"ANYOF") || kw(&L->cur,"ENUM")){
+      char subj[512], hit[512];
+      int icase = 0, m;
+      int is_i = kw(&L->cur,"ONEOFI") || kw(&L->cur,"INLISTI");
+      lex_next(L);
+      icase = is_i;
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") || kw(&L->cur,"IGNORECASE") ||
+                     kw(&L->cur,"CI"))){
+        /* REQUIRE ONEOF ICASE subject … — avoid bare I var clash: only ICASE forms */
+        if (kw(&L->cur,"ICASE") || kw(&L->cur,"IGNORECASE") || kw(&L->cur,"CI")) {
+          icase = 1;
+          lex_next(L);
+        }
+      }
+      subj[0] = 0;
+      hit[0] = 0;
+      if (!cubalc_read_str_atom(vm, L, subj, sizeof subj)) {
+        fail_at(vm, L, "REQUIRE ONEOF subject a, b — REQUIRE ONEOF LAST \"list\", \"seal\"");
+        return -1;
+      }
+      m = cubalc_match_oneof_list(vm, L, subj, icase, hit, sizeof hit);
+      if (m < 0) {
+        fail_at(vm, L, "REQUIRE ONEOF needs allowed values — ONEOF LAST \"a\", \"b\"");
+        return -1;
+      }
+      if (!m) {
+        char msg[200];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE ONEOF '%s' not in allowed set line %d — pick allowed action",
+                 subj, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", subj);
+      var_set_str(vm, "ONEOF", subj);
+      var_set_str(vm, "MATCH_ARM", hit);
+      var_set_str(vm, "WHEN_HIT", hit);
+      var_set_str(vm, "REQUIRE_ONEOF", subj);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", subj);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "ONEOF_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require oneof '%s' hit='%s' icase=%d\n", subj, hit, icase);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD|ONEOF …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||
@@ -28373,6 +28500,47 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
     if (vm->trace)
       fprintf(vm->trace, "# defined %s → %ld\n", name, n);
+    bump(vm); return 1;
+  }
+  /* ONEOF|INLIST|AMONG subject a [,|OR||] b — soft 0|1 membership.
+   * ONEOFI|INLISTI — case-insensitive. LAST_N=0|1 · MATCH_ARM synonym · keeps subject in ONEOF.
+   * Usability: validate GETFLAG/NTHPOS action without CASE DEFAULT glue. */
+  if (kw(&L->cur,"ONEOF") || kw(&L->cur,"ONEOFI") || kw(&L->cur,"INLIST") ||
+      kw(&L->cur,"INLISTI") || kw(&L->cur,"AMONG") || kw(&L->cur,"ANYOF") ||
+      kw(&L->cur,"ISONEOF") || kw(&L->cur,"CHOICEOF") || kw(&L->cur,"MEMBEROF")){
+    char subj[512], hit[512], buf[8];
+    int icase = 0, m;
+    int is_i = kw(&L->cur,"ONEOFI") || kw(&L->cur,"INLISTI");
+    lex_next(L);
+    icase = is_i;
+    if (!icase && (kw(&L->cur,"ICASE") || kw(&L->cur,"IGNORECASE") || kw(&L->cur,"CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    subj[0] = 0;
+    hit[0] = 0;
+    if (!cubalc_read_str_atom(vm, L, subj, sizeof subj)) {
+      fail_at(vm, L, "ONEOF subject a, b — ONEOF LAST \"list\", \"seal\"");
+      return -1;
+    }
+    m = cubalc_match_oneof_list(vm, L, subj, icase, hit, sizeof hit);
+    if (m < 0) {
+      fail_at(vm, L, "ONEOF needs allowed values after subject");
+      return -1;
+    }
+    var_set_num(vm, "LAST_N", m ? 1L : 0L);
+    vm->last_n = m ? 1L : 0L;
+    var_set_num(vm, "ONEOF_N", m ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "ONEOF", subj);
+    var_set_str(vm, "MATCH_ARM", m ? hit : "");
+    var_set_str(vm, "WHEN_HIT", m ? hit : "");
+    snprintf(buf, sizeof buf, "%d", m ? 1 : 0);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# oneof '%s' → %d hit='%s' icase=%d\n",
+              subj, m, hit, icase);
     bump(vm); return 1;
   }
   /* HASARG n|name — soft 0|1 if CUBALC_ARGn / named env non-empty.

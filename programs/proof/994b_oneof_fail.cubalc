@@ -1,0 +1,6 @@
+# REQUIRE ONEOF miss — expect fatal (run with expect fail in harness optional)
+HOLD_FLASH 1
+USAGE "tool [--action=list|seal]"
+LET act "explode"
+REQUIRE ONEOF act "list", "seal"
+PRINT "should not reach"
