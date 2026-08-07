@@ -5,7 +5,7 @@
   "item": "INCF/DECF single-object numeric field bump",
   "item_id": 395,
   "title": "INCF|DECF|ADDF|BUMPF \u2014 single-object numeric field bump",
-  "commit": "0b957bcfc2d349d68ac467a194510cc2be232202",
+  "commit": "38f9764e6d7491a9bad7390c6e3d7befdfc5dffb",
   "summary": "Single-obj field \u00b1delta without GETF+SETF. METHOD/THIS ready. proof 936 31/31.",
   "proofs": [
     "936_oop_incf",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T13:44:19Z",
   "agent": "meaningful_iter_10m",
-  "sha": "0b957bcfc2d349d68ac467a194510cc2be232202",
+  "sha": "38f9764e6d7491a9bad7390c6e3d7befdfc5dffb",
   "note": "fills gap between SETF and INCFALL/INCFWHERE"
 }
