@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 150,
-  "program": "programs/realworld/work_queue_bag_board.cubalc",
-  "theme": "PUSHF/POPF/POPHEADF + GREPF/LINEF worker job bag queue",
-  "version": "1.15.412-usability",
+  "iter": 151,
+  "program": "programs/realworld/oncall_roster_hygiene_board.cubalc",
+  "theme": "SORTBAGF/UNIQBAGF + LINESF/HASBAGLINE/DROPBAGLINE oncall roster hygiene",
+  "version": "1.15.414-usability",
   "pass": true,
-  "prior_note": "iter 149 WORDSF+CUTF alert peel; this iter first realworld PUSHF/POPF (961) + LINEF (960) + GREPF (962)",
+  "prior_note": "iter 150 PUSHF/GREPF work queue; this iter first realworld SORTBAGF (963) + LINESF/HASBAGLINE/DROPBAGLINE (964)",
   "tests": [
     {
-      "name": "push_depth",
-      "cmd": "push deploy-a/error-b/deploy-c; depth 3; bag side-file",
+      "name": "add_size",
+      "cmd": "add carol/alice/bob/alice/dave; size 5; bag side-file",
       "ok": true,
-      "note": "PUSHF"
+      "note": "PUSHF+LINESF"
     },
     {
-      "name": "claim_fifo",
-      "cmd": "POPHEADF \u2192 deploy-a; bag remains error-b/deploy-c",
+      "name": "sort_uniq",
+      "cmd": "SORTBAGF lex; UNIQBAGF adjacent → alice bob carol dave N=4",
       "ok": true,
-      "note": "POPHEADF"
+      "note": "SORTBAGF/UNIQBAGF"
     },
     {
-      "name": "pop_lifo",
-      "cmd": "POPF \u2192 deploy-c; bag error-b",
+      "name": "unique",
+      "cmd": "UNIQUEBAGF first-seen z,a,z,b,a → z a b",
       "ok": true,
-      "note": "POPF"
+      "note": "UNIQUEBAGF"
     },
     {
-      "name": "filter",
-      "cmd": "GREPF error \u2192 error-disk+error-mem N=2; keep snapshot full",
+      "name": "has",
+      "cmd": "HASBAGLINE bob present; zoe absent REQUIRE→2; icase alice",
       "ok": true,
-      "note": "GREPF"
+      "note": "HASBAGLINE"
     },
     {
-      "name": "dropmatch",
-      "cmd": "GREPVF DROP \u2192 keep-a+keep-b",
+      "name": "ack",
+      "cmd": "DROPBAGLINE bob HIT=1; second bob absent",
       "ok": true,
-      "note": "GREPVF"
+      "note": "DROPBAGLINE"
     },
     {
-      "name": "peek_unshift_gate",
-      "cmd": "LINEF peek; UNSHIFTF front; gate admit/deny REQUIRE",
+      "name": "gate",
+      "cmd": "n>=2 admit; MINN=99 REQUIRE→2",
       "ok": true,
-      "note": "LINEF/UNSHIFT"
+      "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYPUSHF/TRYPOPF/TRYGREPF soft; empty HIT=0",
+      "cmd": "substring a≠alpha; adjacent uniq keeps non-adj dups; TRY* soft",
       "ok": true,
       "note": "probe"
     },
@@ -59,51 +59,51 @@
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "oop|pushf",
-      "title": "PUSHF arg var ITEM silently pushes \"1\"",
-      "detail": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM \u2192 bag becomes \"1\" not deploy-a. Form-token collision (ITEM reserved). Must use JOB/WORKITEM. Same class as COL/SEP/FLOOR/CAP/NEEDLE.",
-      "repro": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM \u2192 bag 1"
+      "severity": "med",
+      "area": "oop|uniqbagf",
+      "title": "UNIQBAGF is adjacent-only (not full dedupe)",
+      "detail": "Without prior SORTBAGF, a\\nb\\na\\nb stays 4 lines. Agents expecting set-semantics must SORT then UNIQ or use UNIQUEBAGF (first-seen, order-preserving). Easy roster bug.",
+      "repro": "UNIQBAGF a\\nb\\na\\nb → still 4 lines"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "oop|dumpobj|plate",
-      "title": "DUMPOBJ multiline field breaks plate LOOKUP",
-      "detail": "Bag with newlines written as raw lines; LOOKUP bag returns only first line. Cross-run rehydrate loses queue body. Workaround: dump/wN.bag side files for bag/keep.",
-      "repro": "DUMPOBJ after PUSHF a\\nb\\nc; LOOKUP bag \u2192 a only"
+      "severity": "med",
+      "area": "oop|hasbagline",
+      "title": "HASBAGLINE exact-only vs GREPF substring",
+      "detail": "HASBAGLINE members \"a\" on beta/alpha → 0. Correct for roster IDs but false friend if agents used GREPF mental model. No fuzzy/prefix membership.",
+      "repro": "HASBAGLINE beta\\nalpha \"a\" → N=0"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "oop|grepf",
-      "title": "GREPF needle var NEEDLE mis-filters",
-      "detail": "DEFAULT NEEDLE=\"error\"; GREPF q bag NEEDLE \u2192 GREPF_N=1 wrong (literal/token collision). Rename to WANT. Silent wrong triage.",
-      "repro": "GREPF bag NEEDLE with NEEDLE=error \u2192 N=1 not 2"
+      "severity": "med",
+      "area": "oop|dumpobj|plate",
+      "title": "DUMPOBJ multiline members still plate-unsafe",
+      "detail": "Same as work_queue_bag: must dump/rN.bag side files. LOOKUP members from DUMPOBJ only first line.",
+      "repro": "DUMPOBJ after multi add; LOOKUP members truncates"
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "oop|grepf|linef",
-      "title": "GREPF/LINEF mutate field (destructive filter/peel)",
-      "detail": "GREPF no-match empties bag (data loss). LINEF replaces bag with one line. Must snapshot keep before filter/peek-on-copy.",
-      "repro": "GREPF zzz \u2192 bag empty; keep holds prior if snapshotted"
+      "severity": "low",
+      "area": "oop|dropbagline",
+      "title": "DROPBAGLINE removes first match only",
+      "detail": "Duplicate on-call entries need repeated ack. No DROPALLBAGLINE. Documented; probe covers.",
+      "repro": "two bob lines need two DROPBAGLINE"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "host|json",
-      "title": "PRINT_JSON bag hides newlines",
-      "detail": "JSON string of multiline bag collapses visually; agents must WRITE bag file or SYS EQS.",
-      "repro": "PRINT_JSON bag after PUSHF three jobs"
+      "area": "oop|sortbagf",
+      "title": "Lex sort only — no numeric/natural roster order",
+      "detail": "host10 before host2. No SORTBAGF NUM mode for pager IDs.",
+      "repro": "sort host10\\nhost2 → host10 first"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n.",
-      "repro": "od -c META.txt after dump"
+      "detail": "od -c META ends without \\n after dump\\nr0.",
+      "repro": "od -c META.txt"
     },
     {
       "id": "W7",
@@ -111,30 +111,30 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINQ=99 gate soft"
+      "repro": "REQUIRE=abc MINN=99 gate soft"
     }
   ],
   "workarounds": [
-    "Never name PUSHF payload ITEM \u2014 use JOB",
-    "Never name GREPF needle NEEDLE \u2014 use WANT",
-    "Persist bag/keep to dump/wN.bag side files; do not trust DUMPOBJ multiline",
-    "Snapshot keep before GREPF/LINEF; empty POP HIT=0",
-    "Fixed w0/w1/w2; TRY* soft; numeric REQUIRE only"
+    "SORTBAGF then UNIQBAGF for full set dedupe; or UNIQUEBAGF for first-seen",
+    "HASBAGLINE for exact IDs only; GREPF if substring triage needed",
+    "dump/rN.bag side files for multiline members",
+    "Loop DROPBAGLINE for multi-ack; LINESF for headcount gate",
+    "Fixed r0/r1/r2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Reserve ITEM/NEEDLE/COL/SEP in form arg slots or soft-error",
-    "DUMPOBJ escape multiline field values (quoted plate)",
-    "Non-destructive GREPF/LINEF INTO dst field",
-    "Single-object field SNAPSHOTF for bag keep",
-    "WRITE NL; strict NUM REQUIRE; PRINT_JSON escape \\n"
+    "UNIQBAGF full-set mode flag (or default document louder)",
+    "DUMPOBJ escape multiline fields",
+    "SORTBAGF natural/numeric order",
+    "DROPALLBAGLINE / multi-ack",
+    "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "ITEM\u2192JOB and NEEDLE\u2192WANT renames required for correct ops",
-    "DUMPOBJ multiline forced dump/wN.bag side-file rehydrate",
-    "PUSHF 3 jobs depth 3; claim FIFO deploy-a; pop LIFO deploy-c",
-    "GREPF error N=2; GREPVF DROP keeps 2; no-match empties bag",
+    "add 5 members size 5; sort+uniq → 4 unique",
+    "HASBAGLINE bob/zoe; HASBAGLINEI alice for Alice",
+    "UNIQUEBAGF first-seen z a b; DROPBAGLINE first bob",
+    "probe substring false friend + adjacent uniq; bag side-files",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "76f201fe954708c65f10c1f66d365d27ddf80d2f",
-  "ts": "2026-08-07T18:12:22Z"
+  "commit": "",
+  "ts": "2026-08-07T18:34:38Z"
 }

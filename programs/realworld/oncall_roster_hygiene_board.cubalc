@@ -1,0 +1,1413 @@
+# oncall_roster_hygiene_board.cubalc — SORTBAGF/UNIQBAGF + LINESF/HASBAGLINE/DROPBAGLINE
+#
+# Real use: on-call agents maintain per-team roster bags (add members,
+# sort+dedupe hygiene, exact membership probe, ack/drop first hit, gate
+# on min headcount) without GETF+SYS SORT/UNIQ/HASLINE/REMOVELINE glue.
+#
+# Surfaces forced (1.15.413–414 / proof 963–964):
+#   SORTBAGF / SORTF / SORTLINESF · TRYSORTBAGF
+#   UNIQBAGF / UNIQUEBAGF / DEDUPBAGF · adjacent vs first-seen
+#   LINESF (non-mutate count) · TRYLINESF
+#   HASBAGLINE / HASBAGLINEI exact · not substring
+#   DROPBAGLINE / ACKBAGLINE first-hit ack · DROP miss HIT=0
+#   PUSHF add · dump/rN.bag side files (DUMPOBJ multiline unsafe)
+#   soft miss + REQUIRE wall
+#
+# Distinct from work_queue_bag (PUSHF/POP/GREPF jobs), exact_roster
+# (SETMATCH host bags), oncall_page_wheel (rotate): this is *field-bag
+# sort/uniq/has/drop hygiene for roster slots*.
+#
+# Slots: r0 r1 r2
+#
+# Plate under STATE:
+#   dump/r0 dump/r1 dump/r2
+#   dump/r0.bag dump/r1.bag dump/r2.bag
+#   VAL.txt META.txt OBJS.txt ROSTER_REPORT.txt
+#
+# Actions:
+#   list | open | add | sort | uniq | unique | has | ack | size | gate
+#   probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_orh_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=r0
+#   CUBALC_FS_WHO=alice CUBALC_ARG0=add CUBALC_ARG1=r0
+#   CUBALC_ARG0=sort CUBALC_ARG1=r0
+#   CUBALC_ARG0=uniq CUBALC_ARG1=r0
+#   CUBALC_FS_WHO=bob CUBALC_ARG0=has CUBALC_ARG1=r0
+#   CUBALC_FS_MINN=2 CUBALC_ARG0=gate CUBALC_ARG1=r0
+#
+# Env: CUBALC_FS_REQUIRE NAME WHO MINN ACTION
+#
+# Edges:
+#   HASBAGLINE exact only (not substring false friend)
+#   UNIQBAGF adjacent-only; UNIQUEBAGF first-seen full dedupe
+#   DROPBAGLINE first match only; DUMPOBJ multiline breaks LOOKUP
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Roster
+  FIELD id ""
+  FIELD members ""
+  FIELD n 0
+  FIELD tag "oncall"
+  METHOD init i
+    SETF THIS id i
+    SETF THIS members ""
+    SETF THIS n 0
+    SETF THIS tag "oncall"
+  END
+  METHOD tidy
+    SORTBAGF THIS members
+    UNIQBAGF THIS members
+  END
+END
+
+REQUIRE CLASS Roster
+REQUIRE METHOD Roster init
+
+NOTE "oncall_roster_hygiene_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WHO = "alice"
+DEFAULT MINN = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET WHO = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET WHO = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WHO" OR ""
+IF LAST_N > 0 THEN
+  LET WHO = LAST
+END
+SYS ENV "CUBALC_FS_MINN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINN = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "ROSTER_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "r0"
+LET d_r0 = LAST
+SYS JOIN dump_dir "r1"
+LET d_r1 = LAST
+SYS JOIN dump_dir "r2"
+LET d_r2 = LAST
+SYS JOIN dump_dir "r0.bag"
+LET b_r0 = LAST
+SYS JOIN dump_dir "r1.bag"
+LET b_r1 = LAST
+SYS JOIN dump_dir "r2.bag"
+LET b_r2 = LAST
+
+LET slot = -1
+SYS EQS NAME "r0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "r1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "r2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "r0"
+END
+IF slot == 1 THEN
+  LET sn = "r1"
+END
+IF slot == 2 THEN
+  LET sn = "r2"
+END
+
+# rehydrate r0
+SYS READ OR d_r0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Roster r0 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r0 id rid
+  END
+  TRYSETF r0 n rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r0 tag rtag
+  END
+  SYS READ OR b_r0 OR ""
+  TRYSETF r0 members LAST
+  CLEAR_ERR
+END
+SYS READ OR d_r1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Roster r1 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r1 id rid
+  END
+  TRYSETF r1 n rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r1 tag rtag
+  END
+  SYS READ OR b_r1 OR ""
+  TRYSETF r1 members LAST
+  CLEAR_ERR
+END
+SYS READ OR d_r2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "n"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Roster r2 rid
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r2 id rid
+  END
+  TRYSETF r2 n rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r2 tag rtag
+  END
+  SYS READ OR b_r2 OR ""
+  TRYSETF r2 members LAST
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "oncall_roster_hygiene_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Roster
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DELETEOBJ r0
+        CLEAR_ERR
+      END
+      NEW Roster r0 sn
+      DUMPOBJ r0
+      SYS WRITE d_r0 LAST
+      GETF r0 members
+      SYS WRITE b_r0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DELETEOBJ r1
+        CLEAR_ERR
+      END
+      NEW Roster r1 sn
+      DUMPOBJ r1
+      SYS WRITE d_r1 LAST
+      GETF r1 members
+      SYS WRITE b_r1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DELETEOBJ r2
+        CLEAR_ERR
+      END
+      NEW Roster r2 sn
+      DUMPOBJ r2
+      SYS WRITE d_r2 LAST
+      GETF r2 members
+      SYS WRITE b_r2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Roster
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- add: PUSHF members WHO ---
+SYS EQS ACTION "add"
+IF LAST_N == 1 THEN
+  NOTE "action add"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "add bad slot"
+    FAIL "add bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "add bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        PUSHF r0 members WHO
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        LINESF r0 members
+        SETF r0 n LAST_N
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        PUSHF r1 members WHO
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        LINESF r1 members
+        SETF r1 n LAST_N
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        PUSHF r2 members WHO
+        LET o_ok = OK
+        LET ret_n = PUSHF_N
+        LET val = LAST
+        LINESF r2 members
+        SETF r2 n LAST_N
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "add miss"
+      FAIL "add miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "add miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "add ok"
+      LET val_ch = 1
+      LET meta = "add"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta WHO
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- sort ---
+SYS EQS ACTION "sort"
+IF LAST_N == 1 THEN
+  NOTE "action sort"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "sort bad slot"
+    FAIL "sort bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "sort bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SORTBAGF r0 members
+        LET o_ok = OK
+        LET ret_n = SORTBAGF_N
+        LET val = LAST
+        SETF r0 n ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SORTF r1 members
+        LET o_ok = OK
+        LET ret_n = SORTBAGF_N
+        LET val = LAST
+        SETF r1 n ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SORTLINESF r2 members
+        LET o_ok = OK
+        LET ret_n = SORTBAGF_N
+        LET val = LAST
+        SETF r2 n ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "sort miss"
+      FAIL "sort miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "sort miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "sort ok"
+      LET val_ch = 1
+      LET meta = "sort"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- uniq: adjacent UNIQBAGF (sort first recommended) ---
+SYS EQS ACTION "uniq"
+IF LAST_N == 1 THEN
+  NOTE "action uniq"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "uniq bad slot"
+    FAIL "uniq bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "uniq bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        UNIQBAGF r0 members
+        LET o_ok = OK
+        LET ret_n = UNIQBAGF_N
+        LET val = LAST
+        SETF r0 n ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DEDUPBAGF r1 members
+        LET o_ok = OK
+        LET ret_n = UNIQBAGF_N
+        LET val = LAST
+        SETF r1 n ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        UNIQBAGF r2 members
+        LET o_ok = OK
+        LET ret_n = UNIQBAGF_N
+        LET val = LAST
+        SETF r2 n ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "uniq miss"
+      FAIL "uniq miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "uniq miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "uniq ok"
+      LET val_ch = 1
+      LET meta = "uniq"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- unique: first-seen UNIQUEBAGF ---
+SYS EQS ACTION "unique"
+IF LAST_N == 1 THEN
+  NOTE "action unique"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "unique bad slot"
+    FAIL "unique bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "unique bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        UNIQUEBAGF r0 members
+        LET o_ok = OK
+        LET ret_n = UNIQUEBAGF_N
+        LET val = LAST
+        SETF r0 n ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DEDUPALLF r1 members
+        LET o_ok = OK
+        LET ret_n = UNIQUEBAGF_N
+        LET val = LAST
+        SETF r1 n ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        UNIQUEBAGF r2 members
+        LET o_ok = OK
+        LET ret_n = UNIQUEBAGF_N
+        LET val = LAST
+        SETF r2 n ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "unique miss"
+      FAIL "unique miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "unique miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "unique ok"
+      LET val_ch = 1
+      LET meta = "unique"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- has: HASBAGLINE exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "has bad slot"
+    FAIL "has bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "has bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        HASBAGLINE r0 members WHO
+        LET o_ok = OK
+        LET ret_n = HASBAGLINE_N
+        LET changed = LAST_N
+        LET val = LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        BAGHASLINE r1 members WHO
+        LET o_ok = OK
+        LET ret_n = HASBAGLINE_N
+        LET changed = LAST_N
+        LET val = LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        HASBAGLINEI r2 members WHO
+        LET o_ok = OK
+        LET ret_n = HASBAGLINE_N
+        LET changed = LAST_N
+        LET val = LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    ELSE
+      IF ret_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "has absent"
+        LET val = WHO
+        LET val_ch = 1
+        LET meta = "has absent"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta WHO
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "has absent"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "has absent"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "has present"
+        LET val_ch = 1
+        LET meta = "has present"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta WHO
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- ack: DROPBAGLINE first exact ---
+SYS EQS ACTION "ack"
+IF LAST_N == 1 THEN
+  NOTE "action ack"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "ack bad slot"
+    FAIL "ack bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "ack bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DROPBAGLINE r0 members WHO
+        LET o_ok = OK
+        LET changed = DROPBAGLINE_HIT
+        LET val = LAST
+        LINESF r0 members
+        LET ret_n = LAST_N
+        SETF r0 n ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        ACKBAGLINE r1 members WHO
+        LET o_ok = OK
+        LET changed = DROPBAGLINE_HIT
+        LET val = LAST
+        LINESF r1 members
+        LET ret_n = LAST_N
+        SETF r1 n ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        BAGDROPLINE r2 members WHO
+        LET o_ok = OK
+        LET changed = DROPBAGLINE_HIT
+        LET val = LAST
+        LINESF r2 members
+        LET ret_n = LAST_N
+        SETF r2 n ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "ack miss"
+      FAIL "ack miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "ack miss"
+      END
+    ELSE
+      IF changed == 0 THEN
+        LET miss = 1
+        LET note_msg = "ack absent"
+        FAIL "ack absent"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "ack absent"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "ack ok"
+        LET val_ch = 1
+        LET meta = "ack"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS PUSH meta WHO
+        LET meta = LAST
+        SYS STR ret_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- size: LINESF ---
+SYS EQS ACTION "size"
+IF LAST_N == 1 THEN
+  NOTE "action size"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "size bad slot"
+    FAIL "size bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "size bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        LINESF r0 members
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF r0 n ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        LINESF r1 members
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF r1 n ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        LINESF r2 members
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        SETF r2 n ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "size miss"
+      FAIL "size miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "size miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "size ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "size"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: n >= MINN ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET dnow = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        LINESF r0 members
+        LET dnow = LAST_N
+        SETF r0 n dnow
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        LINESF r1 members
+        LET dnow = LAST_N
+        SETF r1 n dnow
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        LINESF r2 members
+        LET dnow = LAST_N
+        SETF r2 n dnow
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = dnow
+      IF dnow < MINN THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINN
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINN
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  TRYSORTBAGF nosuch members
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYSORTBAGF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYLINESF nosuch members
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYLINESF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYHASBAGLINE nosuch members "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYHASBAGLINE should soft-fail"
+  END
+  CLEAR_ERR
+  TRYDROPBAGLINE nosuch members "x"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYDROPBAGLINE should soft-fail"
+  END
+  CLEAR_ERR
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    # substring false friend
+    GETF r0 members
+    LET save_m = LAST
+    SETF r0 members "beta\nalpha"
+    HASBAGLINE r0 members "a"
+    IF HASBAGLINE_N != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe substring should not match"
+    END
+    HASBAGLINE r0 members "alpha"
+    IF HASBAGLINE_N != 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe exact alpha should match"
+    END
+    SETF r0 members save_m
+    CLEAR_ERR
+    # adjacent uniq keeps non-adjacent dups
+    SETF r0 members "a\nb\na\nb"
+    UNIQBAGF r0 members
+    LINESF r0 members
+    IF LAST_N != 4 THEN
+      LET p_ok = 0
+      LET note_msg = "probe adjacent uniq should keep non-adj dups"
+    END
+    SETF r0 members save_m
+    CLEAR_ERR
+    SORTBAGF SOFT r0 nosuch
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe SORTBAGF missing field should soft"
+    END
+    CLEAR_ERR
+    LINESF r0 members
+    IF OK == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe LINESF after soft broken"
+    END
+    LET ret_n = LAST_N
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DUMPOBJ r0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r0 val
+        GETF r0 members
+        SYS WRITE b_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DUMPOBJ r1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r1 val
+        GETF r1 members
+        SYS WRITE b_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DUMPOBJ r2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r2 val
+        GETF r2 members
+        SYS WRITE b_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS WRITE d_r0 ""
+  SYS WRITE d_r1 ""
+  SYS WRITE d_r2 ""
+  SYS WRITE b_r0 ""
+  SYS WRITE b_r1 ""
+  SYS WRITE b_r2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "add"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sort"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "uniq"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "unique"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "ack"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "size"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "oncall_roster_hygiene_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
