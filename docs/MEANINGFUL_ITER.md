@@ -456,6 +456,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 426. ~~**`EACH PROP` / `ATTR` / `OBJFIELD OF obj|Class`**~~ **done** (walk schema field names · no LISTFIELDS+EACH LINE glue · not bag EACH FIELD · METHOD/THIS).
 427. ~~**`EACH METHOD` / `MSG` / `HANDLER OF obj|Class`**~~ **done** (walk schema method names · no LISTMETHODS+EACH LINE glue · SEND prep · METHOD/THIS · twin EACH PROP).
 428. ~~**unknown form did-you-mean**~~ **done** (typo recovery via edit/prefix · HELP/cubalc forms tip · CLI forms catalog gains core OOP CLASS/NEW/SEND/GETF/SETF).
+429. ~~**OOP/FN name did-you-mean**~~ **done** (SEND/GETF/SETF/NEW/CALL typo → closest class/obj/method/field/FN · soft LAST_ERR + fatal).
 
 ## Tick protocol
 

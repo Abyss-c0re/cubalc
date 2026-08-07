@@ -1,0 +1,73 @@
+# OOP/FN name did-you-mean — agent typo recovery after form_suggest
+# Soft TRYSEND/TRYGETF/TRYSETF/TRYCALL LAST_ERR carries "did you mean X?"
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "open"
+  FIELD score 10
+  METHOD bump
+    INCF THIS score
+  END
+  METHOD close
+    SETF THIS status "closed"
+  END
+END
+NEW Ticket t1
+NEW Ticket t2
+
+# method typo: bumpp → bump
+TRYSEND t1 bumpp
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "bump"
+ASSERT LAST_N == 1
+
+# field typo: statu → status
+TRYGETF t1 statu
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "status"
+ASSERT LAST_N == 1
+
+# field typo on write: scor → score
+TRYSETF t1 scor 99
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "score"
+ASSERT LAST_N == 1
+
+# object typo: t11 → t1 (or t2)
+TRYSEND t11 bump
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "t1"
+ASSERT LAST_N == 1
+
+# FN typo
+FN greett
+  RET 1
+END
+TRYCALL grett
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "greett"
+ASSERT LAST_N == 1
+
+# known paths still work
+SEND t1 bump
+GETF t1 score
+ASSERT LAST_N == 11
+SETF t1 status "ok"
+GETF t1 status
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+CALL greett
+ASSERT OK == 1
+
+PRINT "oop_name_suggest ok"

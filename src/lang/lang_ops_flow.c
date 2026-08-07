@@ -39,6 +39,138 @@ static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
     if (strcmp(cd->methods[i].name, mname) == 0) return &cd->methods[i];
   return NULL;
 }
+
+/* --- name did-you-mean: agent typo recovery for OOP/FN plane --- */
+static void oop_fold(char *dst, size_t n, const char *src){
+  size_t i;
+  for (i = 0; i + 1 < n && src[i]; i++) {
+    char c = src[i];
+    if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+    dst[i] = c;
+  }
+  dst[i] = 0;
+}
+/* Tiny Levenshtein (capped) — same idea as form_suggest in lang_parse.c */
+static int oop_edit_dist(const char *a, const char *b){
+  int na = (int)strlen(a), nb = (int)strlen(b);
+  int i, j, prev, cur, *row, stack[64];
+  if (na > 48) na = 48;
+  if (nb > 48) nb = 48;
+  if (na + 1 > 64) return 99;
+  row = stack;
+  for (j = 0; j <= nb; j++) row[j] = j;
+  for (i = 1; i <= na; i++) {
+    prev = row[0];
+    row[0] = i;
+    for (j = 1; j <= nb; j++) {
+      cur = row[j];
+      if (a[i - 1] == b[j - 1])
+        row[j] = prev;
+      else {
+        int ins = row[j - 1] + 1;
+        int del = row[j] + 1;
+        int sub = prev + 1;
+        int m = ins < del ? ins : del;
+        row[j] = m < sub ? m : sub;
+      }
+      prev = cur;
+    }
+  }
+  return row[nb];
+}
+/* Prefer case-insensitive exact, then prefix (len≥3), then edit dist ≤2. */
+static void oop_suggest_from(const char *typo, char *out, size_t outn,
+                             const char **names, int n){
+  char want[64], cand[64];
+  int i, best_d = 99, d;
+  const char *best = NULL;
+  out[0] = 0;
+  if (!typo || !typo[0] || outn < 2 || n <= 0) return;
+  oop_fold(want, sizeof want, typo);
+  if (!want[0]) return;
+  for (i = 0; i < n; i++) {
+    if (!names[i] || !names[i][0]) continue;
+    oop_fold(cand, sizeof cand, names[i]);
+    if (strcmp(want, cand) == 0) {
+      snprintf(out, outn, "%s", names[i]);
+      return;
+    }
+  }
+  if (strlen(want) >= 3) {
+    for (i = 0; i < n; i++) {
+      size_t cl;
+      if (!names[i] || !names[i][0]) continue;
+      oop_fold(cand, sizeof cand, names[i]);
+      cl = strlen(cand);
+      if (strncmp(want, cand, strlen(want)) == 0 ||
+          (cl >= 3 && strncmp(cand, want, cl) == 0)) {
+        if (!best || cl < strlen(best))
+          best = names[i];
+      }
+    }
+    if (best) {
+      snprintf(out, outn, "%s", best);
+      return;
+    }
+  }
+  for (i = 0; i < n; i++) {
+    if (!names[i] || !names[i][0]) continue;
+    oop_fold(cand, sizeof cand, names[i]);
+    d = oop_edit_dist(want, cand);
+    if (d < best_d) {
+      best_d = d;
+      best = names[i];
+    }
+  }
+  if (best && best_d <= 2)
+    snprintf(out, outn, "%s", best);
+}
+static void oop_suggest_class(VM *vm, const char *typo, char *out, size_t outn){
+  const char *names[CUBALC_MAX_CLASSES];
+  int i, n = 0;
+  for (i = 0; i < vm->n_classes && n < CUBALC_MAX_CLASSES; i++)
+    names[n++] = vm->classes[i].name;
+  oop_suggest_from(typo, out, outn, names, n);
+}
+static void oop_suggest_obj(VM *vm, const char *typo, char *out, size_t outn){
+  const char *names[CUBALC_MAX_OBJS];
+  int i, n = 0;
+  for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++)
+    if (vm->objs[i].live)
+      names[n++] = vm->objs[i].name;
+  oop_suggest_from(typo, out, outn, names, n);
+}
+static void oop_suggest_method(ClassDef *cd, const char *typo, char *out, size_t outn){
+  const char *names[CUBALC_MAX_METHODS];
+  int i, n = 0;
+  if (!cd) { out[0] = 0; return; }
+  for (i = 0; i < cd->n_methods && n < CUBALC_MAX_METHODS; i++)
+    names[n++] = cd->methods[i].name;
+  oop_suggest_from(typo, out, outn, names, n);
+}
+static void oop_suggest_field(ClassDef *cd, const char *typo, char *out, size_t outn){
+  const char *names[CUBALC_MAX_FIELDS];
+  int i, n = 0;
+  if (!cd) { out[0] = 0; return; }
+  for (i = 0; i < cd->n_fields && n < CUBALC_MAX_FIELDS; i++)
+    names[n++] = cd->fields[i].name;
+  oop_suggest_from(typo, out, outn, names, n);
+}
+static void oop_suggest_fn(VM *vm, const char *typo, char *out, size_t outn){
+  const char *names[CUBALC_MAX_FNS];
+  int i, n = 0;
+  for (i = 0; i < vm->n_fns && n < CUBALC_MAX_FNS; i++)
+    names[n++] = vm->fns[i].name;
+  oop_suggest_from(typo, out, outn, names, n);
+}
+/* Build base[+ " — did you mean X?"] into buf (never pass vm->err as msg+dst). */
+static void oop_err_suggest(char *buf, size_t n, const char *base, const char *sug){
+  if (sug && sug[0])
+    snprintf(buf, n, "%s — did you mean %s?", base, sug);
+  else
+    snprintf(buf, n, "%s", base);
+}
+
 static int oop_resolve_obj_name(VM *vm, Lex *L, char *out, size_t outn){
   if (L->cur.kind == TK_STR) {
     if (!L->cur.text[0]) return -1;
@@ -212,8 +344,11 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
   int fi, i, reuse = -1;
   MethodDef *initm;
   if (ci < 0) {
-    snprintf(vm->err, sizeof vm->err, "unknown CLASS %s", cname);
-    fail(vm, vm->err);
+    char sug[48], ebuf[160], base[96];
+    oop_suggest_class(vm, cname, sug, sizeof sug);
+    snprintf(base, sizeof base, "unknown CLASS %s", cname);
+    oop_err_suggest(ebuf, sizeof ebuf, base, sug);
+    fail(vm, ebuf);
     return -1;
   }
   if (oop_find_obj(vm, oname)) {
@@ -433,8 +568,11 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       return -1;
     ci = oop_find_class_idx(vm, cname);
     if (ci < 0) {
-      snprintf(vm->err, sizeof vm->err, "SPAWN unknown CLASS %s", cname);
-      fail(vm, vm->err); return -1;
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_class(vm, cname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SPAWN unknown CLASS %s", cname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
+      fail(vm, ebuf); return -1;
     }
     cd = &vm->classes[ci];
     snprintf(role, sizeof role, "%s", cd->role[0] ? cd->role : "body");
@@ -499,8 +637,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (!of_class[0]) { fail(vm, "ENTITY needs OF ClassName"); return -1; }
     ci = oop_find_class_idx(vm, of_class);
     if (ci < 0) {
-      snprintf(vm->err, sizeof vm->err, "ENTITY OF unknown CLASS %s", of_class);
-      fail(vm, vm->err); return -1;
+      {
+        char sug[48], ebuf[160], base[96];
+        oop_suggest_class(vm, of_class, sug, sizeof sug);
+        snprintf(base, sizeof base, "ENTITY OF unknown CLASS %s", of_class);
+        oop_err_suggest(ebuf, sizeof ebuf, base, sug);
+        fail(vm, ebuf); return -1;
+      }
     }
     cd = &vm->classes[ci];
     if (strcmp(role, id) == 0 && cd->role[0])
@@ -625,9 +768,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_obj(vm, oname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SEND unknown object %s", oname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "SEND unknown object %s", oname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       /* drain optional args so next form stays aligned */
       while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
@@ -641,18 +787,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "SEND_N", 0);
       var_set_num(vm, "TRYSEND_N", 0);
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "SEND: unknown object");
-      var_set_str(vm, "ERR", "SEND: unknown object");
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
       bump(vm);
       return 1;
     }
     cd = &vm->classes[ob->class_idx];
     md = oop_find_method(cd, mname);
     if (!md) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_method(cd, mname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SEND unknown METHOD %s.%s", cd->name, mname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "SEND unknown METHOD %s.%s", cd->name,
-                 mname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
              L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
@@ -665,8 +813,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "SEND_N", 0);
       var_set_num(vm, "TRYSEND_N", 0);
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "SEND: unknown method");
-      var_set_str(vm, "ERR", "SEND: unknown method");
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
       bump(vm);
       return 1;
     }
@@ -9607,9 +9755,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_obj(vm, oname, sug, sizeof sug);
+      snprintf(base, sizeof base, "GETF unknown object %s", oname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "GETF unknown object %s", oname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       if (have_fb) {
         var_set_str(vm, "LAST", fb);
@@ -9633,8 +9784,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "GETF: unknown object");
-        var_set_str(vm, "ERR", "GETF: unknown object");
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
       }
       var_set_num(vm, "GETF_N", 0);
       var_set_num(vm, "GETF_OR", used_or);
@@ -9658,9 +9809,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         snprintf(fname, sizeof fname, "%s", alt);
     }
     if (fi < 0) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_field(cd, fname, sug, sizeof sug);
+      snprintf(base, sizeof base, "GETF unknown FIELD %s", fname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "GETF unknown FIELD %s", fname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       if (have_fb) {
         var_set_str(vm, "LAST", fb);
@@ -9684,8 +9838,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "GETF: unknown field");
-        var_set_str(vm, "ERR", "GETF: unknown field");
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
       }
       var_set_num(vm, "GETF_N", 0);
       var_set_num(vm, "GETF_OR", used_or);
@@ -9762,9 +9916,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (L->cur.kind == TK_EQ) lex_next(L);
     ob = oop_find_obj(vm, oname);
     if (!ob) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_obj(vm, oname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SETF unknown object %s", oname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "SETF unknown object %s", oname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       /* consume value so parse stays aligned */
       if (L->cur.kind == TK_STR) lex_next(L);
@@ -9777,8 +9934,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       vm->last_n = 0;
       var_set_num(vm, "SETF_N", 0);
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "SETF: unknown object");
-      var_set_str(vm, "ERR", "SETF: unknown object");
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
       bump(vm);
       return 1;
     }
@@ -9794,9 +9951,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (fi >= 0) snprintf(fname, sizeof fname, "%s", alt);
     }
     if (fi < 0) {
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_field(cd, fname, sug, sizeof sug);
+      snprintf(base, sizeof base, "SETF unknown FIELD %s", fname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (!soft) {
-        snprintf(vm->err, sizeof vm->err, "SETF unknown FIELD %s", fname);
-        fail(vm, vm->err); return -1;
+        fail(vm, ebuf); return -1;
       }
       if (L->cur.kind == TK_STR) lex_next(L);
       else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0)
@@ -9808,8 +9968,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       vm->last_n = 0;
       var_set_num(vm, "SETF_N", 0);
       var_set_num(vm, "OK", 0);
-      var_set_str(vm, "LAST_ERR", "SETF: unknown field");
-      var_set_str(vm, "ERR", "SETF: unknown field");
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
       bump(vm);
       return 1;
     }
@@ -17799,6 +17959,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     }
     for (i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
     if (!fn){
+      char sug[48], ebuf[160], base[96];
+      oop_suggest_fn(vm, fname, sug, sizeof sug);
+      snprintf(base, sizeof base, "CALL unknown FN %s", fname);
+      oop_err_suggest(ebuf, sizeof ebuf, base, sug);
       if (soft) {
         while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
                L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
@@ -17811,14 +17975,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         var_set_num(vm, "LAST_N", 0);
         vm->last_n = 0;
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "CALL: unknown FN");
-        var_set_str(vm, "ERR", "CALL: unknown FN");
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
         var_set_str(vm, "FN", fname);
         bump(vm);
         return 1;
       }
-      snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname);
-      fail(vm,vm->err); return -1;
+      fail(vm, ebuf); return -1;
     }
     oop_bind_args(vm, L, fn->params, fn->n_params);
     var_set_num(vm, "CALLED", 1);
