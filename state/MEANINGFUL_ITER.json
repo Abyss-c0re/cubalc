@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 391,
-  "version": "1.15.418-usability",
-  "item": "EACH METHOD OF obj|Class schema method walk",
-  "item_id": 427,
-  "title": "EACH METHOD|MSG|HANDLER OF obj|Class — walk schema method names",
-  "commit": "fb77cc3fb0b671c27be9dfcf3075157db01203d7",
-  "summary": "Method schema walk without LISTMETHODS+EACH LINE; block_scan METHOD fix. proof 968 42/42.",
+  "iter": 392,
+  "version": "1.15.419-usability",
+  "item": "unknown form did-you-mean + OOP forms catalog",
+  "item_id": 428,
+  "title": "unknown form did-you-mean · CLI forms CLASS/NEW/SEND/GETF",
+  "commit": "0f77b13afb34530de5e17cbfc915a52d058f98dd",
+  "summary": "Typo recovery did-you-mean; forms catalog core OOP. proof 969 8/8 + SEEND smoke.",
   "proofs": [
-    "968_each_method",
-    "asserts 42/42",
-    "967 still green",
-    "862 still green"
+    "969_form_suggest",
+    "asserts 8/8",
+    "smoke SEEND→SEND GETFX→GETF ASSRET→ASSERT"
   ],
-  "when": "2026-08-07T19:08:32Z",
+  "when": "2026-08-07T19:20:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "fb77cc3fb0b671c27be9dfcf3075157db01203d7",
-  "note": "Restored thrash first; forms CLI updated for EACH PROP/METHOD"
+  "sha": "0f77b13afb34530de5e17cbfc915a52d058f98dd",
+  "note": "fail() must not snprintf(vm->err, vm->err); fixed overlap"
 }
