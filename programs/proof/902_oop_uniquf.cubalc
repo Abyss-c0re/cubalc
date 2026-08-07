@@ -1,0 +1,98 @@
+# UNIQUF / DISTINCTF — unique fleet field values as bag
+# Usability: "what statuses exist?" without FREQF+KEYS or EACH+HASLINE
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+
+UNIQUF Cell energy
+ASSERT OK == 1
+ASSERT UNIQUF_N == 3
+ASSERT LAST_N == 3
+ASSERT UNIQUF_TOTAL == 4
+ASSERT UNIQUF_SKIP == 0
+SYS HASLINE LAST "10"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "20"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "30"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "99"
+ASSERT LAST_N == 0
+
+# first-seen order: 10 then 20 then 30 (NTH index bag)
+SYS NTH 0 UNIQUF
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS NTH 1 UNIQUF
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+SYS NTH 2 UNIQUF
+SYS EQS LAST "30"
+ASSERT LAST_N == 1
+
+# aliases
+DISTINCTF Cell energy
+ASSERT DISTINCTF_N == 3
+ASSERT DISTINCTF_TOTAL == 4
+UNIQUEFALL Cell energy
+ASSERT UNIQUEFALL_N == 3
+UNIQF Cell energy
+ASSERT UNIQF_N == 3
+
+# OF sugar
+UNIQUF OF Cell energy
+ASSERT LAST_N == 3
+
+# string statuses
+CLASS Ticket
+  FIELD status "new"
+  METHOD init s
+    SETF THIS status s
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "open"
+NEW Ticket t3 "closed"
+NEW Ticket t4 "pending"
+NEW Ticket t5 "open"
+UNIQUF Ticket status
+ASSERT LAST_N == 3
+ASSERT UNIQUF_TOTAL == 5
+SYS HASLINE LAST "open"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "closed"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "pending"
+ASSERT LAST_N == 1
+
+# bare field
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 5
+NEW Counter k3 7
+UNIQUF n
+ASSERT LAST_N == 2
+ASSERT UNIQUF_TOTAL == 3
+SYS HASLINE LAST "5"
+ASSERT LAST_N == 1
+SYS HASLINE UNIQUF "7"
+ASSERT LAST_N == 1
+
+# class filter
+UNIQUF Counter n
+ASSERT LAST_N == 2
+ASSERT UNIQUF_TOTAL == 3
+
+PRINT "proof902_oop_uniquf" 1
+ASSERT OK == 1

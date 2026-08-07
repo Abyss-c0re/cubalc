@@ -2905,6 +2905,142 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* UNIQUF|DISTINCTF|UNIQUEFALL|UNIQF [Class] field
+   * — unique field values over live objects as newline bag (first-seen order).
+   * LAST = bag; LAST_N = distinct count; UNIQUF_TOTAL = samples.
+   * Num or str fields. Soft empty → "" / 0.
+   * Usability: "what statuses exist?" without FREQF+KEYS or EACH+HASLINE. */
+  if (kw(&L->cur, "UNIQUF") || kw(&L->cur, "DISTINCTF") ||
+      kw(&L->cur, "UNIQUEFALL") || kw(&L->cur, "UNIQF") ||
+      kw(&L->cur, "UNIQUEF") || kw(&L->cur, "FIELDUNIQ") ||
+      kw(&L->cur, "OBJSUNIQ") || kw(&L->cur, "DISTINCTFALL") ||
+      kw(&L->cur, "UNIQVALUES") || kw(&L->cur, "UNIQUEVALUES")) {
+    char filt[48], fname[48], tok1[48];
+    char keys[64][128];
+    char out[CUBALC_HOST_STR_MAX];
+    int has_filt = 0, i, k, nk = 0, n_skip = 0, total = 0;
+    size_t olen = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    out[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "UNIQUF OF Class field"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "UNIQUF [Class] field"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "UNIQUF [Class] field"); return -1;
+      }
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      char field[128];
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi])
+        snprintf(field, sizeof field, "%s", ob->fstr[fi]);
+      else
+        snprintf(field, sizeof field, "%ld", ob->fnum[fi]);
+      total++;
+      for (k = 0; k < nk; k++) {
+        if (strcmp(keys[k], field) == 0)
+          break;
+      }
+      if (k == nk && nk < 64) {
+        snprintf(keys[nk], sizeof keys[0], "%s", field);
+        nk++;
+      }
+    }
+    for (k = 0; k < nk; k++) {
+      size_t ln = strlen(keys[k]);
+      if (k > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+      if (olen + ln < sizeof out) {
+        memcpy(out + olen, keys[k], ln);
+        olen += ln;
+      } else if (olen < sizeof out - 1) {
+        size_t t = sizeof out - 1 - olen;
+        memcpy(out + olen, keys[k], t);
+        olen += t;
+      }
+      out[olen] = 0;
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "UNIQUF", out);
+    var_set_str(vm, "DISTINCTF", out);
+    var_set_str(vm, "UNIQUEFALL", out);
+    var_set_str(vm, "UNIQF", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = nk;
+    var_set_num(vm, "LAST_N", nk);
+    var_set_num(vm, "UNIQUF_N", nk);
+    var_set_num(vm, "DISTINCTF_N", nk);
+    var_set_num(vm, "UNIQUEFALL_N", nk);
+    var_set_num(vm, "UNIQF_N", nk);
+    var_set_num(vm, "UNIQUF_TOTAL", total);
+    var_set_num(vm, "DISTINCTF_TOTAL", total);
+    var_set_num(vm, "UNIQUF_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREGE|WHEREGT|WHERELE|WHERELT [Class] field value
    * — bag of live object names where numeric field meets threshold.
    * Soft always; string/missing fields skipped. LAST_N = count.
