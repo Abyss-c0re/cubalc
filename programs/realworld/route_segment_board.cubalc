@@ -1,0 +1,1525 @@
+# route_segment_board.cubalc — SPLITF/JOINF/STRIPPREFIXF API route segment board
+#
+# Real use: gateway/mesh agents register service paths (svc/api/v1/health),
+# split into segments, strip mount root, rejoin canonical route, gate on
+# min segment depth — without GETF+SYS SPLIT/JOIN/STARTS glue.
+#
+# Surfaces forced (1.15.406–407 / proof 955–957):
+#   SPLITF / FIELDSF / PARTSF · TRYSPLITF · SPLITF SOFT
+#   JOINF / PASTEF / MERGEF / JOINLINESF · TRYJOINF · WITH bag
+#   STRIPPREFIXF / STRIPSUFFIXF / DROPPREFIXF · TRYSTRIP*
+#   COUNTINF depth · SYS HEAD/TAIL/NTH bag · DUMPOBJ rehydrate
+#   soft miss + REQUIRE wall
+#
+# Distinct from path_root_board (COMMONPREFIX bags), build_pathglob
+# (PATHGLOB inventory), release_relpath_smoke (manual ABS): this board is
+# *single-object field SPLITF/JOINF/STRIP for route registry slots*.
+#
+# Slots: r0 r1 r2
+#
+# Plate under STATE:
+#   dump/r0 dump/r1 dump/r2
+#   SEGS.txt VAL.txt META.txt OBJS.txt ROUTE_REPORT.txt
+#
+# Actions:
+#   list | open | setpath | split | strip | join | leaf | root
+#   depth | suffix | gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rsb_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=r0 CUBALC_ARG2=svc/api/v1/health
+#   CUBALC_ARG0=split CUBALC_ARG1=r0
+#   CUBALC_FS_ROOTPFX=svc/ CUBALC_ARG0=strip CUBALC_ARG1=r0
+#   CUBALC_ARG0=join CUBALC_ARG1=r0
+#   CUBALC_FS_MINDEPTH=3 CUBALC_ARG0=gate CUBALC_ARG1=r0
+#
+# Env: CUBALC_FS_REQUIRE NAME DELIM ROOTPFX SUFFIX MINDEPTH PATHSEGS ACTION
+#
+# Edges:
+#   SEP as limit/sep var hard-fails SPLITF — use DELIM
+#   LET bag = LAST may lose NL visibility; WRITE SEGS immediately
+#   leading/trailing / keep empty segments
+#   empty sep → 1 field whole string
+#   STRIP miss HIT=0 no-op; num promote strip
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Route
+  FIELD id ""
+  FIELD path ""
+  FIELD route ""
+  FIELD rootseg ""
+  FIELD leaf ""
+  FIELD depth 0
+  FIELD tag "mesh"
+  METHOD init i p
+    SETF THIS id i
+    SETF THIS path p
+    SETF THIS route ""
+    SETF THIS rootseg ""
+    SETF THIS leaf ""
+    SETF THIS depth 0
+    SETF THIS tag "mesh"
+  END
+  METHOD parts
+    SPLITF THIS path "/"
+  END
+  METHOD unroot pfx
+    STRIPPREFIXF THIS path pfx
+  END
+END
+
+REQUIRE CLASS Route
+REQUIRE METHOD Route init
+
+NOTE "route_segment_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT A2_N = 0
+DEFAULT NEED_HIT = 0
+DEFAULT DELIM = "/"
+DEFAULT ROOTPFX = ""
+DEFAULT SUFFIX = ""
+DEFAULT MINDEPTH = 2
+DEFAULT PATHIN = "svc/api/v1/health"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET PATHIN = LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET A2_N = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET PATHIN = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_DELIM" OR ""
+IF LAST_N > 0 THEN
+  LET DELIM = LAST
+END
+SYS ENV "CUBALC_FS_ROOTPFX" OR ""
+IF LAST_N > 0 THEN
+  LET ROOTPFX = LAST
+END
+SYS ENV "CUBALC_FS_SUFFIX" OR ""
+IF LAST_N > 0 THEN
+  LET SUFFIX = LAST
+END
+SYS ENV "CUBALC_FS_MINDEPTH" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINDEPTH = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET PATHIN = LAST
+END
+SYS ENV "CUBALC_FS_PATHSEGS" OR ""
+IF LAST_N > 0 THEN
+  LET PATHSEGS = LAST
+ELSE
+  DEFAULT PATHSEGS = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SEGS.txt"
+LET segs_path = LAST
+SYS JOIN state_dir "ROUTE_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "r0"
+LET d_r0 = LAST
+SYS JOIN dump_dir "r1"
+LET d_r1 = LAST
+SYS JOIN dump_dir "r2"
+LET d_r2 = LAST
+
+LET slot = -1
+SYS EQS NAME "r0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "r1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "r2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "r0"
+END
+IF slot == 1 THEN
+  LET sn = "r1"
+END
+IF slot == 2 THEN
+  LET sn = "r2"
+END
+
+# rehydrate
+SYS READ OR d_r0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rp = LAST
+  SYS LOOKUP snap "route"
+  LET rr = LAST
+  SYS LOOKUP snap "rootseg"
+  LET rrs = LAST
+  SYS LOOKUP snap "leaf"
+  LET rl = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Route r0 rid rp
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r0 id rid
+  END
+  TRYSETF r0 path rp
+  TRYSETF r0 route rr
+  TRYSETF r0 rootseg rrs
+  TRYSETF r0 leaf rl
+  TRYSETF r0 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r0 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_r1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rp = LAST
+  SYS LOOKUP snap "route"
+  LET rr = LAST
+  SYS LOOKUP snap "rootseg"
+  LET rrs = LAST
+  SYS LOOKUP snap "leaf"
+  LET rl = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Route r1 rid rp
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r1 id rid
+  END
+  TRYSETF r1 path rp
+  TRYSETF r1 route rr
+  TRYSETF r1 rootseg rrs
+  TRYSETF r1 leaf rl
+  TRYSETF r1 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r1 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_r2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "path"
+  LET rp = LAST
+  SYS LOOKUP snap "route"
+  LET rr = LAST
+  SYS LOOKUP snap "rootseg"
+  LET rrs = LAST
+  SYS LOOKUP snap "leaf"
+  LET rl = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Route r2 rid rp
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF r2 id rid
+  END
+  TRYSETF r2 path rp
+  TRYSETF r2 route rr
+  TRYSETF r2 rootseg rrs
+  TRYSETF r2 leaf rl
+  TRYSETF r2 depth rd
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF r2 tag rtag
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "route_segment_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Route
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DELETEOBJ r0
+        CLEAR_ERR
+      END
+      NEW Route r0 sn PATHIN
+      DUMPOBJ r0
+      SYS WRITE d_r0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DELETEOBJ r1
+        CLEAR_ERR
+      END
+      NEW Route r1 sn PATHIN
+      DUMPOBJ r1
+      SYS WRITE d_r1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DELETEOBJ r2
+        CLEAR_ERR
+      END
+      NEW Route r2 sn PATHIN
+      DUMPOBJ r2
+      SYS WRITE d_r2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Route
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = PATHIN
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta PATHIN
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setpath ---
+SYS EQS ACTION "setpath"
+IF LAST_N == 1 THEN
+  NOTE "action setpath"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setpath bad slot"
+    FAIL "setpath bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setpath bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 path PATHIN
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 path PATHIN
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 path PATHIN
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setpath miss"
+      FAIL "setpath miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setpath miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setpath ok"
+      LET val = PATHIN
+      LET val_ch = 1
+      LET meta = "setpath"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta PATHIN
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- split: SPLITF → SEGS plate + root/leaf/depth ---
+SYS EQS ACTION "split"
+IF LAST_N == 1 THEN
+  NOTE "action split"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "split bad slot"
+    FAIL "split bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "split bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET segs = ""
+    LET rseg = ""
+    LET lseg = ""
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SPLITF r0 path DELIM
+        LET o_ok = OK
+        LET segs = LAST
+        LET ret_n = LAST_N
+        SYS WRITE segs_path segs
+        CLEAR_ERR
+        SYS HEAD segs
+        LET rseg = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r0 rootseg rseg
+        SETF r0 leaf lseg
+        SETF r0 depth ret_n
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        FIELDSF r1 path DELIM
+        LET o_ok = OK
+        LET segs = LAST
+        LET ret_n = LAST_N
+        SYS WRITE segs_path segs
+        CLEAR_ERR
+        SYS HEAD segs
+        LET rseg = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r1 rootseg rseg
+        SETF r1 leaf lseg
+        SETF r1 depth ret_n
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        PARTSF r2 path DELIM
+        LET o_ok = OK
+        LET segs = LAST
+        LET ret_n = LAST_N
+        SYS WRITE segs_path segs
+        CLEAR_ERR
+        SYS HEAD segs
+        LET rseg = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r2 rootseg rseg
+        SETF r2 leaf lseg
+        SETF r2 depth ret_n
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "split miss"
+      FAIL "split miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "split miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "split ok"
+      LET val = segs
+      LET val_ch = 1
+      LET meta = "split"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta rseg
+      LET meta = LAST
+      SYS PUSH meta lseg
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- strip: STRIPPREFIXF path ROOTPFX ---
+SYS EQS ACTION "strip"
+IF LAST_N == 1 THEN
+  NOTE "action strip"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "strip bad slot"
+    FAIL "strip bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "strip bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET pfx = ROOTPFX
+    SYS BLANK pfx
+    IF LAST_N == 1 THEN
+      LET pfx = "svc/"
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        STRIPPREFIXF r0 path pfx
+        LET o_ok = OK
+        LET changed = STRIPPREFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DROPPREFIXF r1 path pfx
+        LET o_ok = OK
+        LET changed = STRIPPREFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        UNPREFIXF r2 path pfx
+        LET o_ok = OK
+        LET changed = STRIPPREFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "strip miss"
+      FAIL "strip miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "strip miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "strip ok"
+      LET val_ch = 1
+      LET meta = "strip"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- suffix: STRIPSUFFIXF leaf/path ---
+SYS EQS ACTION "suffix"
+IF LAST_N == 1 THEN
+  NOTE "action suffix"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "suffix bad slot"
+    FAIL "suffix bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "suffix bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET sfx = SUFFIX
+    SYS BLANK sfx
+    IF LAST_N == 1 THEN
+      LET sfx = ".json"
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        STRIPSUFFIXF r0 leaf sfx
+        LET o_ok = OK
+        LET changed = STRIPSUFFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DROPSUFFIXF r1 leaf sfx
+        LET o_ok = OK
+        LET changed = STRIPSUFFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        UNSUFFIXF r2 leaf sfx
+        LET o_ok = OK
+        LET changed = STRIPSUFFIXF_HIT
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "suffix miss"
+      FAIL "suffix miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "suffix miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "suffix ok"
+      LET val_ch = 1
+      LET meta = "suffix"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- join: JOINF route from SEGS plate or PATHSEGS or re-SPLITF ---
+SYS EQS ACTION "join"
+IF LAST_N == 1 THEN
+  NOTE "action join"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "join bad slot"
+    FAIL "join bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "join bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    # prefer PATHSEGS env, else SEGS plate, else re-split path
+    LET jbag = ""
+    SYS BLANK PATHSEGS
+    IF LAST_N == 0 THEN
+      LET jbag = PATHSEGS
+    ELSE
+      SYS READ OR segs_path OR ""
+      LET jbag = LAST
+      CLEAR_ERR
+      SYS BLANK jbag
+      IF LAST_N == 1 THEN
+        # empty segs — rebuild from current path
+        IF slot == 0 THEN
+          HASOBJ r0
+          IF LAST_N == 1 THEN
+            SPLITF r0 path DELIM
+            LET jbag = LAST
+          END
+        END
+        IF slot == 1 THEN
+          HASOBJ r1
+          IF LAST_N == 1 THEN
+            SPLITF r1 path DELIM
+            LET jbag = LAST
+          END
+        END
+        IF slot == 2 THEN
+          HASOBJ r2
+          IF LAST_N == 1 THEN
+            SPLITF r2 path DELIM
+            LET jbag = LAST
+          END
+        END
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        JOINF r0 route DELIM jbag
+        LET o_ok = OK
+        LET ret_n = JOINF_N
+        LET val = LAST
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        PASTEF r1 route DELIM jbag
+        LET o_ok = OK
+        LET ret_n = JOINF_N
+        LET val = LAST
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        MERGEF r2 route DELIM jbag
+        LET o_ok = OK
+        LET ret_n = JOINF_N
+        LET val = LAST
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "join miss"
+      FAIL "join miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "join miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "join ok"
+      LET val_ch = 1
+      LET meta = "join"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- leaf: report leaf field (after split) ---
+SYS EQS ACTION "leaf"
+IF LAST_N == 1 THEN
+  NOTE "action leaf"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "leaf bad slot"
+    FAIL "leaf bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "leaf bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        # refresh from path
+        SPLITF r0 path DELIM
+        LET segs = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r0 leaf lseg
+        LET val = lseg
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SPLITF r1 path DELIM
+        LET segs = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r1 leaf lseg
+        LET val = lseg
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SPLITF r2 path DELIM
+        LET segs = LAST
+        SYS TAIL segs
+        LET lseg = LAST
+        SETF r2 leaf lseg
+        LET val = lseg
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "leaf miss"
+      FAIL "leaf miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "leaf miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "leaf ok"
+      LET val_ch = 1
+      LET meta = "leaf"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- root: HEAD segment ---
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  NOTE "action root"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "root bad slot"
+    FAIL "root bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "root bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SPLITF r0 path DELIM
+        LET segs = LAST
+        SYS HEAD segs
+        LET rseg = LAST
+        SETF r0 rootseg rseg
+        LET val = rseg
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SPLITF r1 path DELIM
+        LET segs = LAST
+        SYS HEAD segs
+        LET rseg = LAST
+        SETF r1 rootseg rseg
+        LET val = rseg
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SPLITF r2 path DELIM
+        LET segs = LAST
+        SYS HEAD segs
+        LET rseg = LAST
+        SETF r2 rootseg rseg
+        LET val = rseg
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "root miss"
+      FAIL "root miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "root miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "root ok"
+      LET val_ch = 1
+      LET meta = "root"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- depth: SPLITF_N or COUNTINF ---
+SYS EQS ACTION "depth"
+IF LAST_N == 1 THEN
+  NOTE "action depth"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "depth bad slot"
+    FAIL "depth bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "depth bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SPLITF r0 path DELIM
+        LET ret_n = LAST_N
+        SETF r0 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SPLITF r1 path DELIM
+        LET ret_n = LAST_N
+        SETF r1 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        # COUNTINF needle tally as alternate depth signal
+        COUNTINF r2 path DELIM
+        LET ret_n = LAST_N
+        # segments ≈ slashes+1 for non-empty non-leading
+        SPLITF r2 path DELIM
+        LET ret_n = LAST_N
+        SETF r2 depth ret_n
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "depth miss"
+      FAIL "depth miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "depth miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "depth ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "depth"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: depth >= MINDEPTH ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET dnow = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SPLITF r0 path DELIM
+        LET dnow = LAST_N
+        SETF r0 depth dnow
+        LET o_ok = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SPLITF r1 path DELIM
+        LET dnow = LAST_N
+        SETF r1 depth dnow
+        LET o_ok = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SPLITF r2 path DELIM
+        LET dnow = LAST_N
+        SETF r2 depth dnow
+        LET o_ok = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = dnow
+      IF dnow < MINDEPTH THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINDEPTH
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        SYS STR dnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR dnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINDEPTH
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe soft misses ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  TRYSPLITF nosuch path "/"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYSPLITF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYJOINF nosuch route "/" "a\nb"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYJOINF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYSTRIPPREFIXF nosuch path "x/"
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYSTRIPPREFIXF should soft-fail"
+  END
+  CLEAR_ERR
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    SPLITF SOFT r0 nosuch "/"
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe SPLITF missing field should soft"
+    END
+    CLEAR_ERR
+    # empty path → 0 segs soft ok
+    GETF r0 path
+    LET save_p = LAST
+    SETF r0 path ""
+    SPLITF r0 path DELIM
+    IF LAST_N != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe empty path should N=0"
+    END
+    SETF r0 path save_p
+    CLEAR_ERR
+    # still works
+    SPLITF r0 path DELIM
+    IF OK == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe SPLITF after soft broken"
+    END
+    LET ret_n = LAST_N
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DUMPOBJ r0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r0 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DUMPOBJ r1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r1 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DUMPOBJ r2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_r2 val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS WRITE d_r0 ""
+  SYS WRITE d_r1 ""
+  SYS WRITE d_r2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE segs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setpath"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "split"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "strip"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "suffix"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "join"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "leaf"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "root"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "depth"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "route_segment_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

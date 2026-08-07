@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 147,
-  "program": "programs/realworld/quota_floor_cap_board.cubalc",
-  "theme": "MAXF/MINF/CAPF/FLOORF + BOUNDF API quota floor remaining burst cap score",
-  "version": "1.15.405-usability",
+  "iter": 148,
+  "program": "programs/realworld/route_segment_board.cubalc",
+  "theme": "SPLITF/JOINF/STRIPPREFIXF + COUNTINF API route segment registry",
+  "version": "1.15.407-usability",
   "pass": true,
-  "prior_note": "iter 146 LPADF+DIVF/MODF+ABSF; this iter stresses MAXF/MINF (proof 953) first realworld MAXF board + BOUNDF dual",
+  "prior_note": "iter 147 MAXF/MINF quota floor; this iter first realworld SPLITF+JOINF (proof 955–956) + STRIPPREFIXF (957)",
   "tests": [
     {
-      "name": "open_quotas",
-      "cmd": "open q0 rem=100; q1 rem=50 burst=200 score=150",
+      "name": "open_routes",
+      "cmd": "open r0 svc/api/v1/health; r1 mesh/prod/app.json; r2 /a/b/",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "debit_floor",
-      "cmd": "debit 30\u219270; debit 100\u2192MAXF 0; META changed=1",
+      "name": "split",
+      "cmd": "SPLITF → SEGS 4; rootseg=svc leaf=health depth=4",
       "ok": true,
-      "note": "MAXF"
+      "note": "SPLITF"
     },
     {
-      "name": "floor_action",
-      "cmd": "setrem -5; floor \u21920 CHANGED=1; already-under CHANGED=0",
+      "name": "strip",
+      "cmd": "STRIPPREFIXF svc/ → api/v1/health HIT=1; miss other/x HIT=0",
       "ok": true,
-      "note": "FLOORF/ATLEASTF"
+      "note": "STRIPPREFIXF"
     },
     {
-      "name": "cap_burst",
-      "cmd": "setburst 200 CAP=50 \u219250; under-cap CHANGED=0",
+      "name": "join",
+      "cmd": "JOINF route from SEGS → svc/api/v1/health N=4",
       "ok": true,
-      "note": "MINF/CAPF"
+      "note": "JOINF"
     },
     {
-      "name": "bound_score",
-      "cmd": "score 150\u2192100; score -20\u21920 via BOUNDF/LIMITF",
+      "name": "suffix",
+      "cmd": "STRIPSUFFIXF leaf .json → app",
       "ok": true,
-      "note": "BOUNDF"
+      "note": "STRIPSUFFIXF"
     },
     {
       "name": "gate",
-      "cmd": "rem>=10 admit; >=50 deny REQUIRE\u21922",
+      "cmd": "depth>=2 admit; MINDEPTH=10 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYMAXF/TRYMINF/TRYBOUNDF soft; string field soft; MAXF after soft ok",
+      "cmd": "TRYSPLITF/TRYJOINF/TRYSTRIP soft; empty path N=0",
       "ok": true,
       "note": "probe"
     },
@@ -60,81 +60,81 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|minf|maxf",
-      "title": "Limit var names FLOOR and CAP hard-fail MAXF/MINF",
-      "detail": "DEFAULT FLOOR=0 then MAXF obj field FLOOR \u2192 err 'MAXF object field limit' (halted). CAP same for MINF. Collision with FLOORF/CAPF form tokens. Must use FLIM/CLIM/PADW-style non-reserved names.",
-      "repro": "DEFAULT FLOOR=0; MAXF c energy FLOOR \u2192 MAXF object field limit"
+      "area": "oop|splitf",
+      "title": "Sep var name SEP hard-fails SPLITF",
+      "detail": "DEFAULT SEP=\"/\" then SPLITF obj field SEP → err 'SPLITF object field sep' (halted). Same class as FLOOR/CAP collision for MAXF/MINF. Must use DELIM/S/DIV.",
+      "repro": "DEFAULT SEP=\"/\"; SPLITF r path SEP → SPLITF object field sep"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "oop|minf|maxf",
-      "title": "MAXF=floor MINF=cap naming inversion",
-      "detail": "MAXF does max(field,lim)=floor; MINF does min(field,lim)=cap. Agents reading name alone invert remaining vs burst math. Aliases FLOORF/CAPF/ATLEASTF/ATMOSTF clearer but primary tokens mislead.",
-      "repro": "proof 953 MINF cap; MAXF floor"
+      "severity": "med",
+      "area": "oop|splitf|joinf",
+      "title": "SEGS plate stale after strip without re-split",
+      "detail": "JOIN reads SEGS.txt written by prior SPLITF; strip mutates path but not SEGS. Join rebuilt pre-strip route while path was post-strip. Agents must invalidate or re-split after path mutators.",
+      "repro": "split; strip svc/; join → route still full pre-strip bag"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|minf|maxf",
-      "title": "Bare unknown-object MAXF not always hard-exit",
-      "detail": "TRY* documented soft; bare MAXF nosuch may halt mid-run with empty last_err in -q (exit_code 0 halted false) vs agent EXIT paths. Soft policy inconsistent with DIVF bare hard-fail.",
-      "repro": "MAXF nosuch n 0 under HOLD_FLASH only"
+      "area": "host|bag",
+      "title": "SYS TAIL may not surface trailing empty segment",
+      "detail": "path /a/b/ SPLITF N=4 with leading empty; META leaf showed b not empty. Trailing empty segment vs trailing WRITE NL ambiguous for TAIL.",
+      "repro": "split /a/b/; SYS TAIL segs"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|arg",
-      "title": "Single ARG2 NUM cannot multi-seed rem+burst+score",
-      "detail": "Capturing ARG2 into REM and BURST and SCORE poisons open (all=100). Must action-scope A2_N or use CUBALC_FS_BURST/SCORE ENV only.",
-      "repro": "open ARG2=100 without ENV \u2192 burst/score polluted if multi-assign"
+      "title": "Empty ARG2 cannot clear PATHIN (falls to default)",
+      "detail": "CUBALC_ARG2= with empty string → LAST_N=0 branch; open/setpath keeps DEFAULT PATHIN. Need ENV CUBALC_FS_PATH blank handling or sentinel.",
+      "repro": "setpath ARG2= empty leaves default path"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n after last field (dump\\nq0).",
-      "repro": "od -c META.txt after dump"
+      "area": "oop|splitf",
+      "title": "SPLITF non-mutating but JOINF mutates — asymmetric pair",
+      "detail": "SPLITF leaves field intact (bag in LAST only); JOINF writes field. Agents expecting split to replace path must SETF manually. Documented in proof but easy to misread as in-place split.",
+      "repro": "SPLITF path still a/b/c after"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|num",
-      "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE miss exit 0 even on gate deny.",
-      "repro": "REQUIRE=abc gate soft"
+      "area": "host|write",
+      "title": "WRITE VAL omit trailing NL",
+      "detail": "od -c META ends without \\n (dump\\nr0).",
+      "repro": "od -c META.txt after dump"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "oop|boundf",
-      "title": "BOUNDF CHANGED shared with one-sided flags",
-      "detail": "Agents must read BOUNDF_CHANGED vs MINF_CHANGED/MAXF_CHANGED carefully after mixed floor/cap/bound sequences; LAST_N alone is final value not which op.",
-      "repro": "bound after cap; check *_CHANGED"
+      "area": "host|num",
+      "title": "REQUIRE=abc softens",
+      "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
+      "repro": "REQUIRE=abc MINDEPTH=99 gate soft"
     }
   ],
   "workarounds": [
-    "Never name limit vars FLOOR or CAP \u2014 use FLIM/CLIM",
-    "Prefer FLOORF/CAPF/ATLEASTF/ATMOSTF aliases for intent",
-    "Always TRYMAXF/TRYMINF or * SOFT for miss paths",
-    "ARG2 \u2192 A2_N only; ENV for secondary seeds",
-    "Fixed q0/q1/q2; dump rehydrate; REQUIRE numeric only"
+    "Never name sep var SEP — use DELIM",
+    "Re-SPLITF or clear SEGS after strip/setpath before join",
+    "Prefer SPLITF_N for depth over COUNTINF slashes",
+    "Use FIELDSF/PARTSF aliases on secondary slots",
+    "Fixed r0/r1/r2; TRY* soft probes; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Reserve or soft-error reserved limit names FLOOR/CAP in MAXF/MINF arg parse",
-    "Primary tokens FLOORF/CAPF as canonical (not MAXF=floor)",
-    "Consistent bare-miss hard policy across DIVF/MAXF",
-    "WRITE NL option; strict NUM REQUIRE",
-    "Non-destructive bound/floor returning without mutate"
+    "Reserve or soft-error SEP (and FLOOR/CAP class) in form arg slots",
+    "SPLITF optional mutate-in-place mode",
+    "Canonical bag TAIL that keeps trailing empties",
+    "Empty ARG OR default distinction (clear vs omit)",
+    "WRITE NL; strict NUM REQUIRE; plate invalidation hooks"
   ],
   "issues_faced": [
-    "FLOOR/CAP as DEFAULT names hard-failed MAXF/MINF \u2014 renamed FLIM/CLIM",
-    "ARG2 multi-assign set burst=score=rem on open \u2014 scoped to A2_N",
-    "MAXF floor remaining 0 after over-debit; MINF cap burst 200\u219250",
-    "BOUNDF score 150\u2192100 and -20\u21920; gate admit/deny REQUIRE",
+    "SEP var hard-fail — renamed DELIM",
+    "SPLITF 4 segs root svc leaf health; strip → api/v1/health",
+    "JOINF from stale SEGS after strip (documented)",
+    "suffix .json leaf app; /a/b/ leading empty N=4",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "75cbd348de3e31aa53e80086d1bc88bfb0baa6d7",
-  "ts": "2026-08-07T16:57:08Z"
+  "commit": "",
+  "ts": "2026-08-07T17:20:53Z"
 }
