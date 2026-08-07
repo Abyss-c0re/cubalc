@@ -945,6 +945,212 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SENDWHEREGE|SENDWHERELE|SENDWHEREGT|SENDWHERELT [Class] field value method [args]
+   * INVOKEWHEREGE|CALLWHEREGE|SENDATLEAST|SENDABOVE|SENDBELOW aliases.
+   * — call method on every live object whose numeric field meets threshold.
+   * Soft always; missing method / string fields → SENDWHEREGE_SKIP.
+   * Usability: WHEREGE + SENDALL one-shot · tick high-energy cells / drain low
+   * counters without EACH+GETF+IF+SEND. Completes threshold triad with
+   * WHEREGE + DELETEWHEREGE. */
+  if (kw(&L->cur, "SENDWHEREGE") || kw(&L->cur, "SENDWHEREGTE") ||
+      kw(&L->cur, "INVOKEWHEREGE") || kw(&L->cur, "CALLWHEREGE") ||
+      kw(&L->cur, "SENDATLEAST") || kw(&L->cur, "MAPSENDWHEREGE") ||
+      kw(&L->cur, "SENDWHEREGT") || kw(&L->cur, "INVOKEWHEREGT") ||
+      kw(&L->cur, "CALLWHEREGT") || kw(&L->cur, "SENDABOVE") ||
+      kw(&L->cur, "INVOKEABOVE") ||
+      kw(&L->cur, "SENDWHERELE") || kw(&L->cur, "SENDWHERELTE") ||
+      kw(&L->cur, "INVOKEWHERELE") || kw(&L->cur, "CALLWHERELE") ||
+      kw(&L->cur, "SENDATMOST") ||
+      kw(&L->cur, "SENDWHERELT") || kw(&L->cur, "INVOKEWHERELT") ||
+      kw(&L->cur, "CALLWHERELT") || kw(&L->cur, "SENDBELOW") ||
+      kw(&L->cur, "INVOKEBELOW") ||
+      kw(&L->cur, "THRESHSEND") || kw(&L->cur, "SENDTHRESH")) {
+    char filt[48], fname[48], tok1[48], mname[48], op[32];
+    int has_filt = 0, mode = 0, i, n = 0, n_skip = 0, advanced = 0;
+    long thresh = 0;
+    Lex args_start;
+    /* mode: 0=GE 1=GT 2=LE 3=LT */
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "SENDWHEREGT") == 0 || strcmp(op, "INVOKEWHEREGT") == 0 ||
+        strcmp(op, "CALLWHEREGT") == 0 || strcmp(op, "SENDABOVE") == 0 ||
+        strcmp(op, "INVOKEABOVE") == 0)
+      mode = 1;
+    else if (strcmp(op, "SENDWHERELE") == 0 || strcmp(op, "SENDWHERELTE") == 0 ||
+             strcmp(op, "INVOKEWHERELE") == 0 || strcmp(op, "CALLWHERELE") == 0 ||
+             strcmp(op, "SENDATMOST") == 0)
+      mode = 2;
+    else if (strcmp(op, "SENDWHERELT") == 0 || strcmp(op, "INVOKEWHERELT") == 0 ||
+             strcmp(op, "CALLWHERELT") == 0 || strcmp(op, "SENDBELOW") == 0 ||
+             strcmp(op, "INVOKEBELOW") == 0)
+      mode = 3;
+    else
+      mode = 0; /* GE / ATLEAST / THRESHSEND */
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    mname[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SENDWHEREGE OF Class field value method"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SENDWHEREGE [Class] field value method"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SENDWHEREGE [Class] field value method"); return -1;
+      }
+    }
+    if (kw(&L->cur, "GE") || kw(&L->cur, "GTE") || kw(&L->cur, "GT") ||
+        kw(&L->cur, "LE") || kw(&L->cur, "LTE") || kw(&L->cur, "LT") ||
+        kw(&L->cur, "MIN") || kw(&L->cur, "MAX"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      thresh = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      thresh = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        thresh = atol(sv->sval);
+      else
+        thresh = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else {
+      thresh = parse_expr(vm, L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "SENDWHEREGE [Class] field value method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    }
+    args_start = *L;
+    for (i = 0; i < vm->n_objs && !vm->fatal && !vm->halt; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      MethodDef *md;
+      Lex bl;
+      int fi, hit = 0;
+      long v;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      v = ob->fnum[fi];
+      if (mode == 0) hit = (v >= thresh);
+      else if (mode == 1) hit = (v > thresh);
+      else if (mode == 2) hit = (v <= thresh);
+      else hit = (v < thresh);
+      if (!hit) continue;
+      md = oop_find_method(cd, mname);
+      if (!md) { n_skip++; continue; }
+      bl = args_start;
+      oop_bind_args(vm, &bl, md->params, md->n_params);
+      *L = bl;
+      advanced = 1;
+      if (oop_run_method(vm, ob, md) < 0) return -1;
+      n++;
+    }
+    if (!advanced) {
+      Lex bl = args_start;
+      char dummy[8][32];
+      memset(dummy, 0, sizeof dummy);
+      oop_bind_args(vm, &bl, dummy, 0);
+      *L = bl;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "SENDWHEREGE_N", n);
+    var_set_num(vm, "SENDWHERELE_N", n);
+    var_set_num(vm, "SENDWHEREGT_N", n);
+    var_set_num(vm, "SENDWHERELT_N", n);
+    var_set_num(vm, "INVOKEWHEREGE_N", n);
+    var_set_num(vm, "SENDATLEAST_N", n);
+    var_set_num(vm, "SENDATMOST_N", n);
+    var_set_num(vm, "SENDABOVE_N", n);
+    var_set_num(vm, "SENDBELOW_N", n);
+    var_set_num(vm, "SENDWHEREGE_SKIP", n_skip);
+    var_set_num(vm, "SENDWHEREGE_THRESH", thresh);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "METHOD", mname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* GETFALL|COLLECTF|MAPGETF [Class] field [AS KV|WITH NAMES]
    * — collect field values from every live object (optional class filter).
    * Soft always; objects missing the field are skipped (GETFALL_SKIP).

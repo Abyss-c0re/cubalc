@@ -1,0 +1,121 @@
+# SENDWHEREGE / SENDWHERELE / SENDBELOW — method on threshold-matched objs
+# Usability: WHEREGE + SENDALL one-shot · no EACH+GETF+IF+SEND
+# Completes threshold triad with WHEREGE + DELETEWHEREGE
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+
+CLASS Counter
+  FIELD n 0
+  FIELD tag 0
+  METHOD init x t
+    SETF THIS n x
+    SETF THIS tag t
+  END
+  METHOD add d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+  END
+  METHOD bump
+    GETF THIS n
+    LET v = LAST_N + 1
+    SETF THIS n v
+  END
+END
+NEW Counter k1 3 1
+NEW Counter k2 50 2
+NEW Counter k3 15 1
+NEW Counter k4 0 0
+
+# tick only cells with energy >= 10 (a,c)
+SENDWHEREGE Cell energy 10 tick
+ASSERT OK == 1
+ASSERT SENDWHEREGE_N == 2
+ASSERT LAST_N == 2
+ASSERT SENDWHEREGE_THRESH == 10
+GETF a energy
+ASSERT LAST_N >= 10
+GETF c energy
+ASSERT LAST_N >= 30
+GETF b energy
+ASSERT LAST_N == 0 "low energy not ticked"
+GETF d energy
+ASSERT LAST_N == 5
+
+# SENDATLEAST alias — energy >= 20 → c only
+SENDATLEAST Cell energy 20 tick
+ASSERT SENDWHEREGE_N == 1
+GETF c energy
+ASSERT LAST_N >= 31
+
+# SENDBELOW: bump counters with n < 10 (k1=3, k4=0)
+SENDBELOW Counter n 10 bump
+ASSERT SENDBELOW_N == 2
+GETF k1 n
+ASSERT LAST_N == 4
+GETF k4 n
+ASSERT LAST_N == 1
+GETF k2 n
+ASSERT LAST_N == 50 "high not bumped"
+GETF k3 n
+ASSERT LAST_N == 15
+
+# INVOKEWHEREGE + method args: add 5 where n >= 15 (k2 k3)
+INVOKEWHEREGE Counter n 15 add 5
+ASSERT INVOKEWHEREGE_N == 2
+GETF k2 n
+ASSERT LAST_N == 55
+GETF k3 n
+ASSERT LAST_N == 20
+GETF k1 n
+ASSERT LAST_N == 4 "below thresh not called"
+
+# OF sugar + SENDABOVE (n > 20) → k2 only
+SENDABOVE OF Counter n 20 bump
+ASSERT SENDABOVE_N == 1
+GETF k2 n
+ASSERT LAST_N == 56
+GETF k3 n
+ASSERT LAST_N == 20
+
+# string method name
+SENDWHEREGE Counter n 50 "bump"
+ASSERT SENDWHEREGE_N == 1
+GETF k2 n
+ASSERT LAST_N == 57
+
+# missing method soft skip
+SENDWHEREGE Counter n 0 no_meth_zz
+ASSERT OK == 1
+ASSERT SENDWHEREGE_N == 0
+ASSERT SENDWHEREGE_SKIP == 4
+
+# empty match soft
+SENDWHEREGE Cell energy 999 tick
+ASSERT OK == 1
+ASSERT SENDWHEREGE_N == 0
+
+# SENDWHERELE: bump n <= 4 → k1=4, k4=1
+SENDWHERELE Counter n 4 bump
+ASSERT SENDWHERELE_N == 2
+GETF k1 n
+ASSERT LAST_N == 5
+GETF k4 n
+ASSERT LAST_N == 2
+
+# bare field (no class) — Counters with n >= 20
+SENDWHEREGE n 20 bump
+ASSERT SENDWHEREGE_N == 2 "k2 k3"
+GETF k2 n
+ASSERT LAST_N == 58
+GETF k3 n
+ASSERT LAST_N == 21
+
+PRINT "oop_sendwherege ok"
