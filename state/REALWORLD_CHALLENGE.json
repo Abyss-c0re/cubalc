@@ -1,148 +1,172 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 136,
-  "program": "programs/realworld/lottery_sample_board.cubalc",
-  "theme": "PICKOBJ/DRAWNOBJ/SHUFFLEOBJS seeded peer lottery + pool-size admit",
-  "version": "1.15.377-usability",
+  "iter": 137,
+  "program": "programs/realworld/schema_contract_board.cubalc",
+  "theme": "CLASSINFO/METHODINFO mesh-handler schema + arity contract gate",
+  "version": "1.15.380-usability",
   "pass": true,
-  "prior_note": "iter 135 rank_window NTHBYFWHERE+SLICEBYF; this iter stresses PICKOBJ+DRAWNOBJ+SHUFFLEOBJS (8730a6d/8c78cbf/01ce0ef)",
+  "prior_note": "iter 136 lottery PICKOBJ/DRAWNOBJ/SHUFFLEOBJS; this iter stresses CLASSINFO+METHODINFO (0383490/8a09c2d) for SEND prep",
   "tests": [
     {
       "name": "open_pool",
-      "cmd": "open w0/w1/w2 east/west/central",
+      "cmd": "open h0/h1 east/west",
       "ok": true,
-      "note": "NEW+DUMPOBJ"
+      "note": "NEW+DUMPOBJ rehydrate"
     },
     {
-      "name": "seed_pick_repro",
-      "cmd": "SEED 42; PICKOBJ twice \u2192 same w0",
+      "name": "schema_bag",
+      "cmd": "CLASSINFO Handler → n_fields:4 n_methods:4 live:2",
       "ok": true,
-      "note": "PICKOBJ"
+      "note": "CLASSINFO"
     },
     {
-      "name": "drawn_unique",
-      "cmd": "DRAWNOBJ K=2 \u2192 unique names; K=99 N=3; K=0 empty",
+      "name": "schema_json",
+      "cmd": "CLASSINFO JSON → cubalc.class.v1",
       "ok": true,
-      "note": "DRAWNOBJ"
+      "note": "CLASSINFO JSON"
     },
     {
-      "name": "shuffle",
-      "cmd": "SHUFFLEOBJS \u2192 permuted bag not insert order",
+      "name": "method_arity",
+      "cmd": "METHODINFO process n_params:1 payload; retry 0",
       "ok": true,
-      "note": "SHUFFLEOBJS"
+      "note": "METHODINFO"
     },
     {
-      "name": "admit_pool",
-      "cmd": "NOBJS\u22652 admit; \u22654 deny REQUIRE",
+      "name": "method_json",
+      "cmd": "METHODINFO JSON process cubalc.method.v1",
       "ok": true,
-      "note": "admit"
+      "note": "METHODINFO JSON"
     },
     {
-      "name": "empty_pool",
-      "cmd": "clear; pick REQUIRE empty; admit K=1 deny",
+      "name": "gate_class",
+      "cmd": "MINF/MINM/MINL admit; MINL=99 deny; REQUIRE→2",
       "ok": true,
-      "note": "empty"
+      "note": "gate_class"
     },
     {
-      "name": "setmatch_first",
-      "cmd": "two w0:assign \u2192 SETMATCH leaves 1",
+      "name": "gate_arity",
+      "cmd": "EXPECT=1 process admit; EXPECT=2 deny; miss REQUIRE→2",
       "ok": true,
-      "note": "journal"
+      "note": "gate_arity"
+    },
+    {
+      "name": "hasm_via_methodinfo",
+      "cmd": "dynamic MNAME via METHODINFO OK (HASMETHOD no var)",
+      "ok": true,
+      "note": "hasm"
+    },
+    {
+      "name": "send_prep",
+      "cmd": "arity check + SEND process → status done",
+      "ok": true,
+      "note": "send_prep"
+    },
+    {
+      "name": "probe_soft",
+      "cmd": "CLASSINFO NoSuch + METHODINFO nosuch soft OK=0",
+      "ok": true,
+      "note": "probe"
+    },
+    {
+      "name": "edges",
+      "cmd": "open bad REQUIRE→2; unknown soft; REQUIRE=abc softens",
+      "ok": true,
+      "note": "edges"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "353/353 pass"
+      "note": "355/355 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|pickobj",
-      "title": "No PICKWHERE/DRAWWHERE \u2014 cannot lottery by status/zone",
-      "detail": "Class filter only. Drain/unhealthy objects in class remain pickable. Agents must separate classes or post-filter bags.",
-      "repro": "PICKOBJ Worker among ready+drain with no status match"
+      "area": "oop|methodinfo|keyword",
+      "title": "METH optional keyword steals var METHODINFO Handler METH",
+      "detail": "METHODINFO accepts optional METH/METHOD/OF before method name. A string var named METH is consumed as keyword; next token missing → hard parse fail METHODINFO [JSON] Class|obj method (not soft miss).",
+      "repro": "LET METH=\"process\"; METHODINFO Handler METH → fail parse"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "oop|seed",
-      "title": "SEED is process-local \u2014 multi-run ARG agents must re-seed every fire",
-      "detail": "Plate rehydrate does not restore RNG; omit seed action \u2192 nondeterministic pick across processes.",
-      "repro": "pick without seed across two cubalc invocations"
+      "severity": "high",
+      "area": "oop|hasmethod",
+      "title": "HASMETHOD method name is raw token — no string-var resolve",
+      "detail": "Unlike METHODINFO which looks up string vars for method name, HASMETHOD uses the ident text literally. LET m=\"process\"; HASMETHOD Handler m looks for method \"m\" → 0. Dynamic ARG-driven has-method must use METHODINFO OK or string literals.",
+      "repro": "LET m2=\"process\"; HASMETHOD Handler m2 → LAST_N=0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|drawnobj",
-      "title": "K>pool silent clamp to all; K=0 empty without soft-miss policy",
-      "detail": "REQ records request; N=min(K,TOTAL). K=0 \u2192 empty bag TOTAL still set.",
-      "repro": "draw 99 N=3 REQ=99; draw 0 N=0 TOTAL=3"
+      "area": "oop|classinfo",
+      "title": "No schema hash / version field for contract drift",
+      "detail": "CLASSINFO exposes name/n_fields/n_methods/live/fields/methods but no stable digest. Agents cannot pin expected schema fingerprint across deploys without manual bag compare.",
+      "repro": "gate_class only min counts not field-set equality"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|shuffleobjs",
-      "title": "Bare SHUFFLEOBJS includes all classes if unfiltered",
-      "detail": "Must pass Class or multi-type bags mix Workers+Tickets.",
-      "repro": "proof 927 unfiltered N includes tickets"
+      "area": "oop|methodinfo",
+      "title": "Arity only — no required/optional/default params",
+      "detail": "NPARAMS is declared formals count. Cannot express defaults or rest args; SEND still hard-fails wrong arity at call time after gate.",
+      "repro": "METHODINFO process → n_params:1 only"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|pickobj",
-      "title": "Empty PICKOBJ HIT=0 soft; LAST blank",
-      "detail": "No hard error; agents must check PICKOBJ_HIT.",
-      "repro": "clear; pick \u2192 HIT=0"
+      "area": "oop|classinfo",
+      "title": "CLASSINFO unknown soft OK=0 LAST blank",
+      "detail": "Same soft pattern as METHODINFO; agents must check OK before reading NFIELDS.",
+      "repro": "CLASSINFO NoSuch → OK=0 N=0"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "cat -A last line no $.",
-      "repro": "od -c SAMPLE.txt"
+      "detail": "VAL/META/SCHEMA last line often no trailing $ under cat -A.",
+      "repro": "od -c VAL.txt deny without \\n"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE/SEED/K softens",
-      "detail": "REQUIRE=abc \u2192 soft.",
-      "repro": "REQUIRE=abc"
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "REQUIRE=abc leaves NEED_HIT=0; miss paths exit 0.",
+      "repro": "CUBALC_FS_REQUIRE=abc method nosuch → exit 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two w0:assign \u2192 one SETMATCH leaves 1.",
-      "repro": "count drops by 1"
+      "area": "oop|methodinfo|class",
+      "title": "Class arg is token not var; only method name resolves vars",
+      "detail": "METHODINFO Handler MNAME resolves MNAME string; class side uses ident text (LAST special-cased). Cannot pass class name via arbitrary string var easily.",
+      "repro": "METHODINFO LAST MNAME after setting LAST"
     }
   ],
   "workarounds": [
-    "Only NEW ready workers into lottery class; or post-filter SAMPLE bag",
-    "SEED every process before pick/draw for repro",
-    "Check DRAWNOBJ_N vs REQ and TOTAL for clamp/empty",
-    "Always SHUFFLEOBJS Worker not bare SHUFFLEOBJS",
-    "REQUIRE EXIT in action bodies; soft unknown wall"
+    "Never name method-name var METH; use MNAME/mname",
+    "Dynamic has-method: METHODINFO Class MNAME; IF OK — not HASMETHOD Class MNAME",
+    "Gate on NFIELDS/NMETHODS/LIVE mins + METHODINFO_N == EXPECT for SEND prep",
+    "Soft unknown: probe CLASSINFO/METHODINFO OK=0; REQUIRE EXIT in action bodies",
+    "Rehydrate dump/* each process; objects memory-local"
   ],
   "language_gaps": [
-    "PICKWHERE/DRAWWHERE/SHUFFLEWHERE status or field match",
-    "Persistent plate SEED / RNG state",
-    "Weighted lottery by field",
-    "Hard error option for empty pick",
-    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
+    "HASMETHOD should resolve string vars like METHODINFO",
+    "METH keyword should not steal bare method-name position when var is string",
+    "CLASSINFO schema hash / field-set equality gate",
+    "Optional/default param metadata on METHODINFO",
+    "Strict NUM REQUIRE; WRITE trailing NL option"
   ],
   "issues_faced": [
-    "SEED 42 pick \u2192 w0 reproducible across runs",
-    "DRAWNOBJ 2 unique; 99 clamps to 3; 0 empty TOTAL=3",
-    "SHUFFLEOBJS permuted w2 w1 w0; admit K=2 ok K=4 deny",
-    "empty pool pick REQUIRE; no status filter for lottery",
-    "selftest 353/353 green; no language fix this iter"
+    "METHODINFO Handler METH hard-failed parse — METH optional keyword",
+    "HASMETHOD Handler m2 with m2=\"process\" returns 0 — raw token only",
+    "CLASSINFO bag+JSON and METHODINFO bag+JSON worked once MNAME used",
+    "gate_class live+field mins; gate_arity expect match; send_prep status done",
+    "selftest 355/355 green; no language fix this iter (document only)"
   ],
-  "commit": "3648b9a34ac3a74c11c6a87a501f6f4337520c67",
-  "ts": "2026-08-07T12:19:22Z"
+  "commit": "",
+  "ts": "2026-08-07T12:45:57Z"
 }

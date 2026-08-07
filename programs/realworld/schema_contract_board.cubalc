@@ -1,0 +1,1190 @@
+# schema_contract_board.cubalc — CLASSINFO/METHODINFO mesh-handler contract gate
+#
+# Real use: ops agents verify a Handler class schema (fields/methods/live)
+# and method arity/params before SEND prep — mesh/runbook contract check
+# without LISTFIELDS + LISTMETHODS + HASMETHOD glue and without guessing formals.
+#
+# Surfaces forced (1.15.378–379):
+#   CLASSINFO / DUMPCLASS / DESCRIBECLASS [JSON]
+#   METHODINFO / DUMPMETHOD / DESCRIBEMETHOD / METHINFO / PARAMINFO [JSON]
+#   HASMETHOD · LISTCLASSES · LISTMETHODS · LISTFIELDS · LISTOBJS
+#   NEW · SEND · DUMPOBJ · bag SETMATCH · WRITE/READ plates
+#   soft miss + REQUIRE hard wall
+#
+# Distinct from ticket_object (HASMETHOD/LIST*) and svc_config (DUMPOBJ handoff):
+# this board is *one-shot schema + arity contract for SEND prep*.
+#
+# Slots: h0 h1 h2  (Handler instances for live count / SEND smoke)
+#
+# Plate under STATE:
+#   dump/h0 dump/h1 dump/h2
+#   SCHEMA.txt METHOD.txt VAL.txt META.txt OBJS.txt CONTRACT_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Handler
+#   open       — NEW Handler ARG1=hN [zone=ARG2]
+#   schema     — CLASSINFO Handler → SCHEMA plate (bag)
+#   schemaj    — CLASSINFO JSON Handler
+#   method     — METHODINFO Handler ARG1=meth → METHOD plate
+#   methodj    — METHODINFO JSON Handler ARG1
+#   gate_class — NFIELDS>=MINF and NMETHODS>=MINM and LIVE>=MINL (REQUIRE deny)
+#   gate_arity — METHODINFO_N == EXPECT (REQUIRE deny on mismatch/miss)
+#   hasm       — HASMETHOD Handler ARG1
+#   fields / methods / classes
+#   send_prep  — METHODINFO + SEND process if arity==1
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_schema_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=h0 CUBALC_ARG2=east
+#   CUBALC_ARG0=schema
+#   CUBALC_ARG0=method CUBALC_ARG1=process
+#   CUBALC_FS_MINF=3 CUBALC_FS_MINM=4 CUBALC_ARG0=gate_class
+#   CUBALC_FS_EXPECT=1 CUBALC_ARG0=gate_arity CUBALC_ARG1=process
+#   CUBALC_FS_REQUIRE=1 CUBALC_ARG0=gate_arity CUBALC_ARG1=nosuch
+#
+# Env: CUBALC_FS_REQUIRE NAME EXPECT MINF MINM MINL ACTION
+#
+# Edges:
+#   CLASSINFO unknown soft OK=0 N=0 LIVE=0 LAST blank
+#   METHODINFO unknown method/class soft; no hard form
+#   CLASSINFO from live obj name resolves class; live count is class-wide
+#   no "required params" vs defaults — only declared formals
+#   no schema version / hash plate field for drift detect
+#   WRITE metas omit trailing NL; NUM softens REQUIRE/EXPECT
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Handler
+  FIELD id ""
+  FIELD zone "default"
+  FIELD status "idle"
+  FIELD retries 0
+  METHOD init i z
+    SETF THIS id i
+    SETF THIS zone z
+    SETF THIS status "idle"
+    SETF THIS retries 0
+  END
+  METHOD process payload
+    SETF THIS status "busy"
+    GETF THIS retries
+    LET r = LAST_N
+    SETF THIS status "done"
+    RET r
+  END
+  METHOD retry
+    GETF THIS retries
+    LET r = LAST_N + 1
+    SETF THIS retries r
+    SETF THIS status "retry"
+    RET r
+  END
+  METHOD abort
+    SETF THIS status "aborted"
+    RET 1
+  END
+END
+
+NOTE "schema_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT EXPECT = 1
+DEFAULT MINF = 3
+DEFAULT MINM = 3
+DEFAULT MINL = 0
+# NOTE: do not name a var METH — METHODINFO treats bare METH as optional
+# keyword sugar (METHODINFO Handler METH → parse fail needing method after).
+# HASMETHOD does NOT resolve string vars (ident is literal method name).
+DEFAULT MNAME = "process"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_EXPECT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET EXPECT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINF" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINF = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINM" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINM = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINL = LAST_N
+  END
+END
+# method name: ARG1 when action is method*/hasm/gate_arity/send_prep, else ENV
+SYS ENV "CUBALC_FS_METH" OR ""
+IF LAST_N > 0 THEN
+  LET MNAME = LAST
+END
+SYS ENV "CUBALC_FS_MNAME" OR ""
+IF LAST_N > 0 THEN
+  LET MNAME = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SCHEMA.txt"
+LET schema_path = LAST
+SYS JOIN state_dir "METHOD.txt"
+LET method_path = LAST
+SYS JOIN state_dir "CONTRACT_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "h0"
+LET d_h0 = LAST
+SYS JOIN dump_dir "h1"
+LET d_h1 = LAST
+SYS JOIN dump_dir "h2"
+LET d_h2 = LAST
+
+LET slot = -1
+SYS EQS NAME "h0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "h1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "h2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "h0"
+END
+IF slot == 1 THEN
+  LET sn = "h1"
+END
+IF slot == 2 THEN
+  LET sn = "h2"
+END
+
+# For method actions, ARG1 is method name not slot
+SYS EQS ACTION "method"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET MNAME = NAME
+  END
+END
+SYS EQS ACTION "methodj"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET MNAME = NAME
+  END
+END
+SYS EQS ACTION "hasm"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET MNAME = NAME
+  END
+END
+SYS EQS ACTION "gate_arity"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET MNAME = NAME
+  END
+END
+SYS EQS ACTION "send_prep"
+IF LAST_N == 1 THEN
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET MNAME = NAME
+  END
+  # optional: still allow NAME=h0 for target; if hN keep MNAME default
+  SYS EQS NAME "h0"
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+    LET slot = 0
+    LET sn = "h0"
+  END
+  SYS EQS NAME "h1"
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+    LET slot = 1
+    LET sn = "h1"
+  END
+  SYS EQS NAME "h2"
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+    LET slot = 2
+    LET sn = "h2"
+  END
+END
+
+# rehydrate h0
+SYS READ OR d_h0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    DELETEOBJ h0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Handler h0 rid rzn
+  TRYSETF h0 zone rzn
+  CLEAR_ERR
+END
+# rehydrate h1
+SYS READ OR d_h1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h1
+  IF LAST_N == 1 THEN
+    DELETEOBJ h1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Handler h1 rid rzn
+  TRYSETF h1 zone rzn
+  CLEAR_ERR
+END
+# rehydrate h2
+SYS READ OR d_h2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ h2
+  IF LAST_N == 1 THEN
+    DELETEOBJ h2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "zone"
+  LET rzn = LAST
+  CLEAR_ERR
+  NEW Handler h2 rid rzn
+  TRYSETF h2 zone rzn
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET nfields = 0
+LET nmethods = 0
+LET nlive = 0
+LET nparams = 0
+LET board_rep = "schema_contract_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Handler
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET zn0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET zn0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        DELETEOBJ h0
+        CLEAR_ERR
+      END
+      NEW Handler h0 sn zn0
+      DUMPOBJ h0
+      SYS WRITE d_h0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ h1
+      IF LAST_N == 1 THEN
+        DELETEOBJ h1
+        CLEAR_ERR
+      END
+      NEW Handler h1 sn zn0
+      DUMPOBJ h1
+      SYS WRITE d_h1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ h2
+      IF LAST_N == 1 THEN
+        DELETEOBJ h2
+        CLEAR_ERR
+      END
+      NEW Handler h2 sn zn0
+      DUMPOBJ h2
+      SYS WRITE d_h2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Handler
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta zn0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- schema (CLASSINFO bag) ---
+SYS EQS ACTION "schema"
+IF LAST_N == 1 THEN
+  NOTE "action schema"
+  CLASSINFO Handler
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "schema miss"
+    FAIL "schema miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "schema miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nfields = NFIELDS
+    LET nmethods = NMETHODS
+    LET nlive = CLASSINFO_LIVE
+    SYS WRITE schema_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "schema ok"
+    LET val_ch = 1
+    LET meta = "schema"
+    SYS STR nfields
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nmethods
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nlive
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nfields
+  PRINT_JSON nmethods
+  PRINT_JSON nlive
+  CLEAR_ERR
+END
+
+# --- schemaj (CLASSINFO JSON) ---
+SYS EQS ACTION "schemaj"
+IF LAST_N == 1 THEN
+  NOTE "action schemaj"
+  CLASSINFO JSON Handler
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "schemaj miss"
+    FAIL "schemaj miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "schemaj miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nfields = NFIELDS
+    LET nmethods = NMETHODS
+    LET nlive = CLASSINFO_LIVE
+    SYS WRITE schema_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "schemaj ok"
+    LET val_ch = 1
+    LET meta = "schemaj"
+    SYS STR nfields
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nlive
+  CLEAR_ERR
+END
+
+# --- method (METHODINFO bag) ---
+SYS EQS ACTION "method"
+IF LAST_N == 1 THEN
+  NOTE "action method"
+  SYS BLANK MNAME
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+  END
+  METHODINFO Handler MNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "method miss"
+    LET nparams = 0
+    FAIL "method miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "method miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nparams = NPARAMS
+    SYS WRITE method_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "method ok"
+    LET val_ch = 1
+    LET meta = "method"
+    SYS PUSH meta MNAME
+    LET meta = LAST
+    SYS STR nparams
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nparams
+  CLEAR_ERR
+END
+
+# --- methodj ---
+SYS EQS ACTION "methodj"
+IF LAST_N == 1 THEN
+  NOTE "action methodj"
+  SYS BLANK MNAME
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+  END
+  METHODINFO JSON Handler MNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "methodj miss"
+    FAIL "methodj miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "methodj miss"
+    END
+  ELSE
+    LET val = LAST
+    LET nparams = NPARAMS
+    SYS WRITE method_path val
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "methodj ok"
+    LET val_ch = 1
+    LET meta = "methodj"
+    SYS PUSH meta MNAME
+    LET meta = LAST
+    SYS STR nparams
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON nparams
+  CLEAR_ERR
+END
+
+# --- gate_class: MIN fields/methods/live ---
+SYS EQS ACTION "gate_class"
+IF LAST_N == 1 THEN
+  NOTE "action gate_class"
+  CLASSINFO Handler
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate_class no class"
+    FAIL "gate_class no class"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_class no class"
+    END
+  ELSE
+    LET nfields = NFIELDS
+    LET nmethods = NMETHODS
+    LET nlive = CLASSINFO_LIVE
+    LET ok_gate = 1
+    IF nfields < MINF THEN
+      LET ok_gate = 0
+    END
+    IF nmethods < MINM THEN
+      LET ok_gate = 0
+    END
+    IF nlive < MINL THEN
+      LET ok_gate = 0
+    END
+    IF ok_gate == 1 THEN
+      LET hit = 1
+      LET note_msg = "gate_class ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate_class deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate_class deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate_class deny"
+      END
+    END
+    LET meta = "gate_class"
+    SYS STR nfields
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nmethods
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR nlive
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR MINF
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR MINM
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR MINL
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    SYS WRITE schema_path LAST
+    CLEAR_ERR
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate_arity: METHODINFO_N == EXPECT ---
+SYS EQS ACTION "gate_arity"
+IF LAST_N == 1 THEN
+  NOTE "action gate_arity"
+  SYS BLANK MNAME
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+  END
+  METHODINFO Handler MNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate_arity miss"
+    LET nparams = 0
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate_arity miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate_arity miss"
+    END
+  ELSE
+    LET nparams = NPARAMS
+    LET val_bag = LAST
+    SYS WRITE method_path val_bag
+    CLEAR_ERR
+    IF nparams == EXPECT THEN
+      LET hit = 1
+      LET note_msg = "gate_arity ok"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate_arity deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate_arity deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate_arity deny"
+      END
+    END
+  END
+  LET meta = "gate_arity"
+  SYS PUSH meta MNAME
+  LET meta = LAST
+  SYS STR nparams
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR EXPECT
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nparams
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- hasm ---
+# HASMETHOD takes raw method token (no string-var resolve). For ARG-driven
+# method names use METHODINFO OK as soft presence probe instead.
+SYS EQS ACTION "hasm"
+IF LAST_N == 1 THEN
+  NOTE "action hasm"
+  SYS BLANK MNAME
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+  END
+  METHODINFO Handler MNAME
+  LET has_n = 0
+  IF OK == 1 THEN
+    LET has_n = 1
+  END
+  CLEAR_ERR
+  # also smoke literal HASMETHOD for fixed process (documents gap)
+  HASMETHOD Handler process
+  LET has_lit = LAST_N
+  CLEAR_ERR
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "hasm ok"
+    LET val = "1"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasm miss"
+    LET val = "0"
+    FAIL "hasm miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "hasm miss"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "hasm"
+  SYS PUSH meta MNAME
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR has_lit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- fields ---
+SYS EQS ACTION "fields"
+IF LAST_N == 1 THEN
+  NOTE "action fields"
+  LISTFIELDS Handler
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "fields ok"
+  LET val_ch = 1
+  LET meta = "fields"
+  LET meta_ch = 1
+  SYS WRITE schema_path val
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- methods ---
+SYS EQS ACTION "methods"
+IF LAST_N == 1 THEN
+  NOTE "action methods"
+  LISTMETHODS Handler
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "methods ok"
+  LET val_ch = 1
+  LET meta = "methods"
+  LET meta_ch = 1
+  SYS WRITE method_path val
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- classes ---
+SYS EQS ACTION "classes"
+IF LAST_N == 1 THEN
+  NOTE "action classes"
+  LISTCLASSES
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "classes ok"
+  LET val_ch = 1
+  LET meta = "classes"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- send_prep: METHODINFO process then SEND on h0 (or slot) ---
+SYS EQS ACTION "send_prep"
+IF LAST_N == 1 THEN
+  NOTE "action send_prep"
+  SYS BLANK MNAME
+  IF LAST_N == 1 THEN
+    LET MNAME = "process"
+  END
+  METHODINFO Handler MNAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "send_prep method miss"
+    FAIL "send_prep method miss"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "send_prep method miss"
+    END
+  ELSE
+    LET nparams = NPARAMS
+    # process expects 1 formal; retry/abort expect 0
+    LET need_p = 1
+    SYS EQS MNAME "retry"
+    IF LAST_N == 1 THEN
+      LET need_p = 0
+    END
+    SYS EQS MNAME "abort"
+    IF LAST_N == 1 THEN
+      LET need_p = 0
+    END
+    SYS EQS MNAME "init"
+    IF LAST_N == 1 THEN
+      LET need_p = 2
+    END
+    IF nparams != need_p THEN
+      LET miss = 1
+      LET note_msg = "send_prep arity deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "send_prep arity deny"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "send_prep arity deny"
+      END
+    ELSE
+      # prefer h0; fall back h1 h2
+      LET sent = 0
+      HASOBJ h0
+      IF LAST_N == 1 THEN
+        SYS EQS MNAME "process"
+        IF LAST_N == 1 THEN
+          SEND h0 process "tok"
+          LET sent = 1
+        END
+        SYS EQS MNAME "retry"
+        IF LAST_N == 1 THEN
+          SEND h0 retry
+          LET sent = 1
+        END
+        SYS EQS MNAME "abort"
+        IF LAST_N == 1 THEN
+          SEND h0 abort
+          LET sent = 1
+        END
+        IF sent == 1 THEN
+          DUMPOBJ h0
+          SYS WRITE d_h0 LAST
+          CLEAR_ERR
+        END
+      END
+      IF sent == 0 THEN
+        HASOBJ h1
+        IF LAST_N == 1 THEN
+          SYS EQS MNAME "process"
+          IF LAST_N == 1 THEN
+            SEND h1 process "tok"
+            LET sent = 1
+          END
+          SYS EQS MNAME "retry"
+          IF LAST_N == 1 THEN
+            SEND h1 retry
+            LET sent = 1
+          END
+          IF sent == 1 THEN
+            DUMPOBJ h1
+            SYS WRITE d_h1 LAST
+            CLEAR_ERR
+          END
+        END
+      END
+      IF sent == 0 THEN
+        LET miss = 1
+        LET note_msg = "send_prep no live"
+        FAIL "send_prep no live"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "send_prep no live"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "send_prep ok"
+        LET val = "sent"
+        LET val_ch = 1
+      END
+    END
+  END
+  LET meta = "send_prep"
+  SYS PUSH meta MNAME
+  LET meta = LAST
+  SYS STR nparams
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe: soft miss CLASSINFO + METHODINFO ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  CLASSINFO NoSuchHandlerClass
+  LET c_ok = OK
+  LET c_n = CLASSINFO_N
+  CLEAR_ERR
+  METHODINFO Handler nosuch_meth_xyz
+  LET m_ok = OK
+  LET m_n = METHODINFO_N
+  CLEAR_ERR
+  METHODINFO NoClass init
+  LET mc_ok = OK
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR c_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR c_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR m_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR m_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR mc_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  # all should be soft zero
+  IF c_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe class not soft"
+  END
+  IF m_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe method not soft"
+  END
+  PRINT_JSON c_ok
+  PRINT_JSON m_ok
+  CLEAR_ERR
+END
+
+# --- dump: CLASSINFO from live obj if present ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    CLASSINFO h0
+    IF OK == 1 THEN
+      LET val = LAST
+      LET nlive = CLASSINFO_LIVE
+      LET nfields = NFIELDS
+      SYS WRITE schema_path val
+      CLEAR_ERR
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS STR nlive
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    ELSE
+      LET miss = 1
+      LET note_msg = "dump classinfo fail"
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "dump no h0"
+    FAIL "dump no h0"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump no h0"
+    END
+  END
+  PRINT_JSON nlive
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ h0
+  IF LAST_N == 1 THEN
+    DELETEOBJ h0
+    CLEAR_ERR
+  END
+  HASOBJ h1
+  IF LAST_N == 1 THEN
+    DELETEOBJ h1
+    CLEAR_ERR
+  END
+  HASOBJ h2
+  IF LAST_N == 1 THEN
+    DELETEOBJ h2
+    CLEAR_ERR
+  END
+  SYS WRITE d_h0 ""
+  SYS WRITE d_h1 ""
+  SYS WRITE d_h2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE schema_path ""
+  SYS WRITE method_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "schema"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "schemaj"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "method"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "methodj"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_class"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate_arity"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "hasm"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "fields"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "methods"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "classes"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "send_prep"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nfields
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nmethods
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nlive
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR nparams
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "schema_contract_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
