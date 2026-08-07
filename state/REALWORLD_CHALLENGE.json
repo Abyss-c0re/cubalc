@@ -15,7 +15,7 @@
     },
     {
       "name": "median_odd",
-      "cmd": "MEDIANF → 20",
+      "cmd": "MEDIANF \u2192 20",
       "ok": true,
       "note": "MEDIANF"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "mulfall_scale",
-      "cmd": "MULFALL *2 → 20/40/60; median 40 sum 120",
+      "cmd": "MULFALL *2 \u2192 20/40/60; median 40 sum 120",
       "ok": true,
       "note": "MULFALL"
     },
     {
       "name": "count_has_hot",
-      "cmd": "COUNTWHEREGE ≥50=1; HASWHEREGE p2",
+      "cmd": "COUNTWHEREGE \u226550=1; HASWHEREGE p2",
       "ok": true,
       "note": "hot"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "median_1_2_4",
-      "cmd": "MEDIANF → 2",
+      "cmd": "MEDIANF \u2192 2",
       "ok": true,
       "note": "odd mid"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2→1",
+      "cmd": "exact false friend; SETMATCH 2\u21921",
       "ok": true,
       "note": "journal"
     },
@@ -85,23 +85,23 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|medianf",
-      "title": "MEDIANF even-n lower mid only — no mean-of-two / float P50",
+      "title": "MEDIANF even-n lower mid only \u2014 no mean-of-two / float P50",
       "detail": "Even count uses lower mid (SYS MEDIAN convention). Agents cannot get average of two central samples without custom bag sort.",
-      "repro": "4 samples 1,2,3,4 → MEDIANF 2 not 2.5"
+      "repro": "4 samples 1,2,3,4 \u2192 MEDIANF 2 not 2.5"
     },
     {
       "id": "W2",
       "severity": "med",
       "area": "oop|mulfall",
-      "title": "MULFALL integer factor only — no fractional decay",
-      "detail": "Cannot scale lat_ms by 0.5 for half-life without integer tricks (×5/10). Factor 0 zeros all.",
-      "repro": "MULFALL Probe lat_ms 0.5 → not float"
+      "title": "MULFALL integer factor only \u2014 no fractional decay",
+      "detail": "Cannot scale lat_ms by 0.5 for half-life without integer tricks (\u00d75/10). Factor 0 zeros all.",
+      "repro": "MULFALL Probe lat_ms 0.5 \u2192 not float"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|mulfall",
-      "title": "MULFALL unfiltered — scales entire class",
+      "title": "MULFALL unfiltered \u2014 scales entire class",
       "detail": "Cannot scale only hot probes; need SENDBETWEEN/WHEREGE + per-object or accept fleet-wide scale.",
       "repro": "scale *2 hits all live Probes"
     },
@@ -118,7 +118,7 @@
       "severity": "med",
       "area": "oop|avgf",
       "title": "AVGF integer truncates mean",
-      "detail": "10+20+1000 → 343 not 343.33.",
+      "detail": "10+20+1000 \u2192 343 not 343.33.",
       "repro": "AVGF on outlier set"
     },
     {
@@ -134,7 +134,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_LM_REQUIRE=abc → soft.",
+      "detail": "CUBALC_LM_REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,7 +142,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:lat → one SETMATCH leaves 1.",
+      "detail": "Two p0:lat \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -167,6 +167,6 @@
     "empty MEDIANF/MULFALL soft 0; empty admit ok",
     "selftest 325/325 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T07:42:00Z"
+  "commit": "a3934eb3eea0de11fe3cda0bc668de72eeffde1b",
+  "ts": "2026-08-07T07:44:56Z"
 }
