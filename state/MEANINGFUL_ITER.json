@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 402,
-  "version": "1.15.429-usability",
-  "item": "HASARG/HASARGC soft probes",
-  "item_id": 438,
-  "title": "HASARG n · HASARGC [min] soft 0|1 CLI probes",
-  "commit": "c6c9be21a4e5420c7f94b8fbc02883b2a5ccbd3d",
-  "summary": "Soft arg presence probes twin REQUIRE ARG; thrash restore. proof 979 13/13.",
+  "iter": 403,
+  "version": "1.15.430-usability",
+  "item": "HASFLAG/GETFLAG soft CLI flag probes",
+  "item_id": 439,
+  "title": "HASFLAG name \u00b7 GETFLAG name [OR fb] soft --flag probes",
+  "commit": "5c50a5f40c9c57b1975784c55963b9dee601dcfa",
+  "summary": "Soft --name / --name=val / --name val probes; twin HASARG for flags. proof 980 15/15.",
   "proofs": [
-    "979_hasarg",
-    "asserts 13/13",
-    "smoke HASARGC 2 -- a b"
+    "980_hasflag",
+    "asserts 15/15",
+    "smoke HASFLAG verbose -- --verbose --out=hi.txt"
   ],
-  "when": "2026-08-07T21:07:15Z",
+  "when": "2026-08-07T21:19:55Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c6c9be21a4e5420c7f94b8fbc02883b2a5ccbd3d",
-  "note": "thrash restore before implement; EVOLVE_PAUSED"
+  "sha": "5c50a5f40c9c57b1975784c55963b9dee601dcfa",
+  "note": "no thrash; EVOLVE_PAUSED"
 }
