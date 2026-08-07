@@ -15,25 +15,25 @@
     },
     {
       "name": "seed_pick_repro",
-      "cmd": "SEED 42; PICKOBJ twice → same w0",
+      "cmd": "SEED 42; PICKOBJ twice \u2192 same w0",
       "ok": true,
       "note": "PICKOBJ"
     },
     {
       "name": "drawn_unique",
-      "cmd": "DRAWNOBJ K=2 → unique names; K=99 N=3; K=0 empty",
+      "cmd": "DRAWNOBJ K=2 \u2192 unique names; K=99 N=3; K=0 empty",
       "ok": true,
       "note": "DRAWNOBJ"
     },
     {
       "name": "shuffle",
-      "cmd": "SHUFFLEOBJS → permuted bag not insert order",
+      "cmd": "SHUFFLEOBJS \u2192 permuted bag not insert order",
       "ok": true,
       "note": "SHUFFLEOBJS"
     },
     {
       "name": "admit_pool",
-      "cmd": "NOBJS≥2 admit; ≥4 deny REQUIRE",
+      "cmd": "NOBJS\u22652 admit; \u22654 deny REQUIRE",
       "ok": true,
       "note": "admit"
     },
@@ -45,7 +45,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two w0:assign → SETMATCH leaves 1",
+      "cmd": "two w0:assign \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -61,7 +61,7 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|pickobj",
-      "title": "No PICKWHERE/DRAWWHERE — cannot lottery by status/zone",
+      "title": "No PICKWHERE/DRAWWHERE \u2014 cannot lottery by status/zone",
       "detail": "Class filter only. Drain/unhealthy objects in class remain pickable. Agents must separate classes or post-filter bags.",
       "repro": "PICKOBJ Worker among ready+drain with no status match"
     },
@@ -69,8 +69,8 @@
       "id": "W2",
       "severity": "med",
       "area": "oop|seed",
-      "title": "SEED is process-local — multi-run ARG agents must re-seed every fire",
-      "detail": "Plate rehydrate does not restore RNG; omit seed action → nondeterministic pick across processes.",
+      "title": "SEED is process-local \u2014 multi-run ARG agents must re-seed every fire",
+      "detail": "Plate rehydrate does not restore RNG; omit seed action \u2192 nondeterministic pick across processes.",
       "repro": "pick without seed across two cubalc invocations"
     },
     {
@@ -78,7 +78,7 @@
       "severity": "med",
       "area": "oop|drawnobj",
       "title": "K>pool silent clamp to all; K=0 empty without soft-miss policy",
-      "detail": "REQ records request; N=min(K,TOTAL). K=0 → empty bag TOTAL still set.",
+      "detail": "REQ records request; N=min(K,TOTAL). K=0 \u2192 empty bag TOTAL still set.",
       "repro": "draw 99 N=3 REQ=99; draw 0 N=0 TOTAL=3"
     },
     {
@@ -95,7 +95,7 @@
       "area": "oop|pickobj",
       "title": "Empty PICKOBJ HIT=0 soft; LAST blank",
       "detail": "No hard error; agents must check PICKOBJ_HIT.",
-      "repro": "clear; pick → HIT=0"
+      "repro": "clear; pick \u2192 HIT=0"
     },
     {
       "id": "W6",
@@ -110,7 +110,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/SEED/K softens",
-      "detail": "REQUIRE=abc → soft.",
+      "detail": "REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -118,7 +118,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two w0:assign → one SETMATCH leaves 1.",
+      "detail": "Two w0:assign \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -137,12 +137,12 @@
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SEED 42 pick → w0 reproducible across runs",
+    "SEED 42 pick \u2192 w0 reproducible across runs",
     "DRAWNOBJ 2 unique; 99 clamps to 3; 0 empty TOTAL=3",
     "SHUFFLEOBJS permuted w2 w1 w0; admit K=2 ok K=4 deny",
     "empty pool pick REQUIRE; no status filter for lottery",
     "selftest 353/353 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "3648b9a34ac3a74c11c6a87a501f6f4337520c67",
   "ts": "2026-08-07T12:19:22Z"
 }
