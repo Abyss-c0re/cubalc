@@ -1,0 +1,95 @@
+# MULFALL / SCALEFALL — bulk multiply numeric fields by factor
+# Usability: scale scores/energy (double, zero, decay) without EACH+GETF+*+SETF
+# Complements INCFALL (add) with product update
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Counter k1 5
+NEW Counter k2 15
+
+# double Cell energy
+MULFALL Cell energy 2
+ASSERT OK == 1
+ASSERT MULFALL_N == 3
+ASSERT LAST_N == 3
+ASSERT MULFALL_FACTOR == 2
+GETF a energy
+ASSERT LAST_N == 20
+GETF b energy
+ASSERT LAST_N == 40
+GETF c energy
+ASSERT LAST_N == 60
+
+# SCALEFALL alias + BY sugar
+SCALEFALL Cell energy BY 0
+ASSERT SCALEFALL_N == 3
+ASSERT MULFALL_FACTOR == 0
+GETF a energy
+ASSERT LAST_N == 0
+GETF b energy
+ASSERT LAST_N == 0
+GETF c energy
+ASSERT LAST_N == 0
+
+# restore and OF sugar
+SETF a energy 3
+SETF b energy 4
+SETF c energy 5
+MULFALL OF Cell energy 3
+ASSERT MULFALL_N == 3
+GETF a energy
+ASSERT LAST_N == 9
+GETF b energy
+ASSERT LAST_N == 12
+GETF c energy
+ASSERT LAST_N == 15
+
+# bare field + Counters
+MULFALL n 2
+ASSERT MULFALL_N == 2 "k1 k2 only"
+GETF k1 n
+ASSERT LAST_N == 10
+GETF k2 n
+ASSERT LAST_N == 30
+
+# TIMESFALL alias
+TIMESFALL Counter n 1
+ASSERT TIMESFALL_N == 2
+GETF k1 n
+ASSERT LAST_N == 10 "identity"
+
+# factor from var
+LET f = 4
+MULFALL Counter n f
+ASSERT MULFALL_FACTOR == 4
+GETF k1 n
+ASSERT LAST_N == 40
+GETF k2 n
+ASSERT LAST_N == 120
+
+# empty soft
+DELETEALL Counter
+MULFALL Counter n 2
+ASSERT OK == 1
+ASSERT MULFALL_N == 0
+
+# MULF alias
+SETF a energy 7
+MULF Cell energy 2
+ASSERT MULF_N == 3
+GETF a energy
+ASSERT LAST_N == 14
+
+PRINT "oop_mulfall ok"

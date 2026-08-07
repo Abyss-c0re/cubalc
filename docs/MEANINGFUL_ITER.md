@@ -385,6 +385,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 355. ~~**`SENDBETWEEN` / `SENDBAND` / `INVOKEBETWEEN`**~~ **done** (method on closed-range matched objs · completes BETWEEN triad).
 356. ~~**`CLAMPFALL` / `CLAMPF` / `CLIPFALL`**~~ **done** (bulk clamp numeric field to [lo,hi] · bound energy/retries without EACH+SETF).
 357. ~~**`MEDIANF` / `P50F` / `MIDF`**~~ **done** (integer median of fleet field · robust mid vs AVGF · no GETFALL+SYS MEDIAN).
+358. ~~**`MULFALL` / `SCALEFALL` / `MULF`**~~ **done** (bulk multiply numeric field by factor · scale/zero/double without EACH+SETF).
 
 ## Tick protocol
 
