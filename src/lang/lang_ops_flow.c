@@ -11625,6 +11625,203 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* EQF|NEQF|EQFI obj field value
+   * FINDF|FINDFI obj field needle — index of first needle or -1.
+   * TRYEQF|EQF SOFT — soft miss OK=0.
+   * Exact equality / inequality / locate without GETF+SYS EQS/FIND.
+   * LAST = field text; LAST_N = 0|1 (EQ*) or index|-1 (FIND*).
+   * Usability: IF status=="open" / locate error offset (METHOD/THIS;
+   * complements HASINF contains probes). */
+  if (kw(&L->cur, "EQF") || kw(&L->cur, "EQFIELD") ||
+      kw(&L->cur, "FIELDEQ") || kw(&L->cur, "SAMEF") ||
+      kw(&L->cur, "NEQF") || kw(&L->cur, "NEFIELD") ||
+      kw(&L->cur, "FIELDNE") || kw(&L->cur, "DIFFF") ||
+      kw(&L->cur, "EQFI") || kw(&L->cur, "IEQF") ||
+      kw(&L->cur, "FIELDEQI") || kw(&L->cur, "SAMEFI") ||
+      kw(&L->cur, "FINDF") || kw(&L->cur, "INDEXF") ||
+      kw(&L->cur, "FIELDFIND") || kw(&L->cur, "STRINDF") ||
+      kw(&L->cur, "FINDFI") || kw(&L->cur, "IFINDF") ||
+      kw(&L->cur, "INDEXFI") || kw(&L->cur, "FIELDFINDI") ||
+      kw(&L->cur, "TRYEQF") || kw(&L->cur, "EQFSOFT") ||
+      kw(&L->cur, "SOFTEQF") || kw(&L->cur, "TRYNEQF") ||
+      kw(&L->cur, "TRYFINDF") || kw(&L->cur, "TRYFINDFI")) {
+    char oname[48], fname[48], op[24], hay[256], rhs[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=eq, 1=ne, 2=find */
+    int icase = 0;
+    long hit = 0;
+    size_t hn, nn, i, j;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "NEQF") == 0 || strcmp(op, "NEFIELD") == 0 ||
+        strcmp(op, "FIELDNE") == 0 || strcmp(op, "DIFFF") == 0 ||
+        strcmp(op, "TRYNEQF") == 0)
+      mode = 1;
+    else if (strcmp(op, "FINDF") == 0 || strcmp(op, "INDEXF") == 0 ||
+             strcmp(op, "FIELDFIND") == 0 || strcmp(op, "STRINDF") == 0 ||
+             strcmp(op, "FINDFI") == 0 || strcmp(op, "IFINDF") == 0 ||
+             strcmp(op, "INDEXFI") == 0 || strcmp(op, "FIELDFINDI") == 0 ||
+             strcmp(op, "TRYFINDF") == 0 || strcmp(op, "TRYFINDFI") == 0)
+      mode = 2;
+    else
+      mode = 0; /* EQF */
+    if (strcmp(op, "EQFI") == 0 || strcmp(op, "IEQF") == 0 ||
+        strcmp(op, "FIELDEQI") == 0 || strcmp(op, "SAMEFI") == 0 ||
+        strcmp(op, "FINDFI") == 0 || strcmp(op, "IFINDF") == 0 ||
+        strcmp(op, "INDEXFI") == 0 || strcmp(op, "FIELDFINDI") == 0 ||
+        strcmp(op, "TRYFINDFI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYEQF") == 0 || strcmp(op, "EQFSOFT") == 0 ||
+        strcmp(op, "SOFTEQF") == 0 || strcmp(op, "TRYNEQF") == 0 ||
+        strcmp(op, "TRYFINDF") == 0 || strcmp(op, "TRYFINDFI") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                   kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                   kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "EQF object field value"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "EQF field"); return -1;
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "TO") || kw(&L->cur, "AS") ||
+        kw(&L->cur, "EQ") || kw(&L->cur, "IS") || L->cur.kind == TK_EQ ||
+        L->cur.kind == TK_EQEQ) {
+      if (L->cur.kind == TK_EQ || L->cur.kind == TK_EQEQ) lex_next(L);
+      else lex_next(L);
+    }
+    rhs[0] = 0;
+    if (resolve_str_arg(vm, L, rhs, sizeof rhs) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(rhs, sizeof rhs, "%ld", v);
+      } else {
+        fail(vm, "EQF object field value"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "EQF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", (mode == 2) ? -1 : 0);
+      vm->last_n = (mode == 2) ? -1 : 0;
+      var_set_num(vm, "EQF_N", 0);
+      var_set_num(vm, "FINDF_N", -1);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "EQF: unknown object");
+      var_set_str(vm, "ERR", "EQF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "EQF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", (mode == 2) ? -1 : 0);
+      vm->last_n = (mode == 2) ? -1 : 0;
+      var_set_num(vm, "EQF_N", 0);
+      var_set_num(vm, "FINDF_N", -1);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "EQF: unknown field");
+      var_set_str(vm, "ERR", "EQF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    hn = strlen(hay);
+    nn = strlen(rhs);
+    if (mode == 2) {
+      /* FINDF → first index or -1 */
+      hit = -1;
+      if (nn == 0) {
+        hit = 0;
+      } else if (!icase) {
+        const char *p = strstr(hay, rhs);
+        if (p) hit = (long)(p - hay);
+      } else {
+        for (i = 0; i + nn <= hn; i++) {
+          int ok = 1;
+          for (j = 0; j < nn; j++) {
+            char ca = hay[i + j], cb = rhs[j];
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { ok = 0; break; }
+          }
+          if (ok) { hit = (long)i; break; }
+        }
+      }
+    } else {
+      /* EQ / NE */
+      if (!icase) {
+        hit = (strcmp(hay, rhs) == 0) ? 1 : 0;
+      } else {
+        hit = 1;
+        for (i = 0; ; i++) {
+          char ca = hay[i], cb = rhs[i];
+          if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+          if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+          if (ca != cb) { hit = 0; break; }
+          if (!hay[i]) break;
+        }
+      }
+      if (mode == 1) hit = hit ? 0 : 1;
+    }
+    var_set_str(vm, "LAST", hay);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hay);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "EQF_N", (mode == 0) ? hit : 0);
+    var_set_num(vm, "NEQF_N", (mode == 1) ? hit : 0);
+    var_set_num(vm, "EQFI_N", (mode == 0 && icase) ? hit : 0);
+    var_set_num(vm, "FINDF_N", (mode == 2) ? hit : -1);
+    var_set_num(vm, "FINDF_I", (mode == 2) ? hit : -1);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

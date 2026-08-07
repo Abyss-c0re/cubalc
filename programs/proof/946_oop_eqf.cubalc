@@ -1,0 +1,133 @@
+# EQF / NEQF / EQFI / FINDF — field equality and locate probes for agents
+# Usability: IF status=="open" / find offset without GETF+SYS EQS/FIND
+# Complements HASINF (contains); no mutate; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "Open"
+  FIELD note "error: timeout at peer"
+  FIELD retries 7
+  METHOD init
+  END
+  METHOD is_open
+    EQFI THIS status "open"
+  END
+END
+
+NEW Ticket t
+
+# exact equality
+EQF t status "Open"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EQF_N == 1
+SYS EQS LAST "Open"
+ASSERT LAST_N == 1
+EQF t status "closed"
+ASSERT LAST_N == 0
+ASSERT EQF_N == 0
+# unchanged
+GETF t status
+SYS EQS LAST "Open"
+ASSERT LAST_N == 1
+
+# NEQF
+NEQF t status "closed"
+ASSERT LAST_N == 1
+ASSERT NEQF_N == 1
+NEQF t status "Open"
+ASSERT LAST_N == 0
+
+# case-insensitive
+EQFI t status "open"
+ASSERT LAST_N == 1
+ASSERT EQFI_N == 1
+EQF I t status "OPEN"
+ASSERT LAST_N == 1
+EQF t status "open"
+ASSERT LAST_N == 0
+
+# WITH / == glue
+EQF t status WITH "Open"
+ASSERT LAST_N == 1
+EQF t status == "Open"
+ASSERT LAST_N == 1
+
+# numeric as text
+EQF t retries 7
+ASSERT LAST_N == 1
+EQF t retries "7"
+ASSERT LAST_N == 1
+NEQF t retries 0
+ASSERT LAST_N == 1
+
+# FINDF — first index
+FINDF t note "timeout"
+ASSERT LAST_N == 7
+ASSERT FINDF_N == 7
+ASSERT FINDF_I == 7
+SYS EQS LAST "error: timeout at peer"
+ASSERT LAST_N == 1
+FINDF t note "missing"
+ASSERT LAST_N == -1
+ASSERT FINDF_N == -1
+
+# FINDFI case-insensitive
+FINDFI t note "ERROR"
+ASSERT LAST_N == 0
+FINDF I t note "TIMEOUT"
+ASSERT LAST_N == 7
+FINDF t note "ERROR"
+ASSERT LAST_N == -1
+
+# empty needle → index 0
+FINDF t note ""
+ASSERT LAST_N == 0
+
+# aliases
+SAMEF t status "Open"
+ASSERT LAST_N == 1
+INDEXF t note "peer"
+ASSERT LAST_N == 18
+
+# METHOD + THIS
+SEND t is_open
+ASSERT LAST_N == 1
+
+# dynamic value
+LET s = "Open"
+EQF t status s
+ASSERT LAST_N == 1
+LET n = "timeout"
+FINDF t note n
+ASSERT LAST_N == 7
+
+# soft miss
+TRYEQF nosuch status "x"
+ASSERT OK == 0
+ASSERT EQF_N == 0
+SYS EQS LAST_ERR "EQF: unknown object"
+ASSERT LAST_N == 1
+EQF SOFT t nosuch "x"
+ASSERT OK == 0
+TRYFINDF nosuch note "a"
+ASSERT OK == 0
+ASSERT LAST_N == -1
+
+# dynamic field name
+EQF t "status" "Open"
+ASSERT LAST_N == 1
+
+# HELP
+HELP EQF
+SYS HAS LAST "EQF"
+ASSERT LAST_N == 1
+HELP FINDF
+SYS HAS LAST "FINDF"
+ASSERT LAST_N == 1
+HELP NEQF
+SYS HAS LAST "NEQF"
+ASSERT LAST_N == 1
+
+PRINT "oop_eqf ok"
