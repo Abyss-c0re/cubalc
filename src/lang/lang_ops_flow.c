@@ -11399,6 +11399,232 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CLEARF|ZEROF|RESETF|DEFAULTF obj field [value]
+   * TRYCLEARF|CLEARF SOFT — soft miss OK=0.
+   * CLEARF — wipe to "" (str class/cur) or 0 (num).
+   * RESETF — restore CLASS field default (NEW init value).
+   * DEFAULTF field value — set only if empty/blank (str) or 0 (num).
+   * LAST = result; LAST_N = 1 if wrote, 0 if DEFAULTF skipped.
+   * Usability: clean/reset/fill-if-missing without GETF+IF+SETF (METHOD/THIS). */
+  if (kw(&L->cur, "CLEARF") || kw(&L->cur, "ZEROF") ||
+      kw(&L->cur, "WIPEF") || kw(&L->cur, "EMPTYSETF") ||
+      kw(&L->cur, "CLEAREIELD") || kw(&L->cur, "CLEARFIELD") ||
+      kw(&L->cur, "RESETF") || kw(&L->cur, "RESTOREF") ||
+      kw(&L->cur, "DEFAULTF") || kw(&L->cur, "DEFAULTFIELD") ||
+      kw(&L->cur, "FILLF") || kw(&L->cur, "IFNULLF") ||
+      kw(&L->cur, "TRYCLEARF") || kw(&L->cur, "CLEARFSOFT") ||
+      kw(&L->cur, "SOFTCLEARF") || kw(&L->cur, "TRYRESETF") ||
+      kw(&L->cur, "TRYDEFAULTF")) {
+    char oname[48], fname[48], op[24], sval[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    FieldDef *fd;
+    int fi, soft = 0, mode = 0; /* 0=clear, 1=reset, 2=default */
+    int wrote = 0, want_str = 0;
+    long nval = 0;
+    const char *p;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "RESETF") == 0 || strcmp(op, "RESTOREF") == 0 ||
+        strcmp(op, "TRYRESETF") == 0)
+      mode = 1;
+    else if (strcmp(op, "DEFAULTF") == 0 || strcmp(op, "DEFAULTFIELD") == 0 ||
+             strcmp(op, "FILLF") == 0 || strcmp(op, "IFNULLF") == 0 ||
+             strcmp(op, "TRYDEFAULTF") == 0)
+      mode = 2;
+    else
+      mode = 0; /* CLEARF */
+    if (strcmp(op, "TRYCLEARF") == 0 || strcmp(op, "CLEARFSOFT") == 0 ||
+        strcmp(op, "SOFTCLEARF") == 0 || strcmp(op, "TRYRESETF") == 0 ||
+        strcmp(op, "TRYDEFAULTF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "CLEARF object field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "CLEARF field"); return -1;
+    }
+    sval[0] = 0;
+    want_str = 0;
+    nval = 0;
+    if (mode == 2) {
+      /* DEFAULTF requires value */
+      if (kw(&L->cur, "WITH") || kw(&L->cur, "TO") || kw(&L->cur, "AS") ||
+          kw(&L->cur, "BY") || kw(&L->cur, "=") || L->cur.kind == TK_EQ) {
+        if (L->cur.kind == TK_EQ) lex_next(L);
+        else lex_next(L);
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(sval, sizeof sval, "%s", L->cur.text);
+        want_str = 1;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(sval, sizeof sval, "%s", vm->last_str);
+        want_str = 1;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && sv->is_str) {
+          snprintf(sval, sizeof sval, "%s", sv->sval);
+          want_str = 1;
+          lex_next(L);
+        } else {
+          nval = parse_expr(vm, L);
+          want_str = 0;
+        }
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                 L->cur.kind == TK_LPAREN) {
+        nval = parse_expr(vm, L);
+        want_str = 0;
+      } else {
+        fail(vm, "DEFAULTF object field value"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "CLEARF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLEARF_N", 0);
+      var_set_num(vm, "RESETF_N", 0);
+      var_set_num(vm, "DEFAULTF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLEARF: unknown object");
+      var_set_str(vm, "ERR", "CLEARF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "CLEARF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLEARF_N", 0);
+      var_set_num(vm, "RESETF_N", 0);
+      var_set_num(vm, "DEFAULTF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLEARF: unknown field");
+      var_set_str(vm, "ERR", "CLEARF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    fd = &cd->fields[fi];
+    wrote = 0;
+    if (mode == 1) {
+      /* RESETF → class default */
+      if (fd->has_def && fd->is_str) {
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", fd->def_str);
+        ob->fis_str[fi] = 1;
+      } else if (fd->has_def) {
+        ob->fnum[fi] = fd->def_num;
+        ob->fis_str[fi] = 0;
+      } else if (fd->is_str) {
+        ob->fstr[fi][0] = 0;
+        ob->fis_str[fi] = 1;
+      } else {
+        ob->fnum[fi] = 0;
+        ob->fis_str[fi] = 0;
+      }
+      wrote = 1;
+    } else if (mode == 2) {
+      /* DEFAULTF — only if empty/blank or zero */
+      int is_empty = 0;
+      if (ob->fis_str[fi]) {
+        p = ob->fstr[fi];
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+        is_empty = (*p == 0);
+      } else {
+        is_empty = (ob->fnum[fi] == 0);
+      }
+      if (is_empty) {
+        if (want_str) {
+          snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", sval);
+          ob->fis_str[fi] = 1;
+        } else {
+          ob->fnum[fi] = nval;
+          ob->fis_str[fi] = 0;
+        }
+        wrote = 1;
+      }
+    } else {
+      /* CLEARF — wipe */
+      if (fd->is_str || ob->fis_str[fi]) {
+        ob->fstr[fi][0] = 0;
+        ob->fis_str[fi] = 1;
+      } else {
+        ob->fnum[fi] = 0;
+        ob->fis_str[fi] = 0;
+      }
+      wrote = 1;
+    }
+    if (ob->fis_str[fi]) {
+      var_set_str(vm, "LAST", ob->fstr[fi]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+      vm->last_n = wrote ? 1 : 0;
+      if (mode != 2)
+        vm->last_n = (long)strlen(ob->fstr[fi]);
+    } else {
+      char nb[24];
+      snprintf(nb, sizeof nb, "%ld", ob->fnum[fi]);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      vm->last_n = (mode == 2) ? (wrote ? 1 : 0) : ob->fnum[fi];
+    }
+    /* DEFAULTF: LAST_N always 0|1 applied; CLEARF length/value; RESETF too */
+    if (mode == 2)
+      var_set_num(vm, "LAST_N", wrote ? 1 : 0);
+    else if (ob->fis_str[fi])
+      var_set_num(vm, "LAST_N", (long)strlen(ob->fstr[fi]));
+    else
+      var_set_num(vm, "LAST_N", ob->fnum[fi]);
+    vm->last_n = (mode == 2) ? (wrote ? 1 : 0)
+                             : (ob->fis_str[fi] ? (long)strlen(ob->fstr[fi])
+                                                : ob->fnum[fi]);
+    var_set_num(vm, "CLEARF_N", (mode == 0 && wrote) ? 1 : 0);
+    var_set_num(vm, "RESETF_N", (mode == 1 && wrote) ? 1 : 0);
+    var_set_num(vm, "DEFAULTF_N", (mode == 2) ? (wrote ? 1 : 0) : 0);
+    var_set_num(vm, "DEFAULTF_APPLIED", (mode == 2 && wrote) ? 1 : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

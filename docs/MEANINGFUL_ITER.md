@@ -431,6 +431,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 401. ~~**`TRIMF` / `UPPERF` / `LOWERF`**~~ **done** (single-object string field normalize · no GETF+TRIM/UPPER/LOWER+SETF · METHOD/THIS · pairs REPLACEF/CATF).
 402. ~~**`LENF` / `EMPTYF` / `BLANKF` / `NONEMPTYF`**~~ **done** (field probes · no GETF+SYS LEN/EMPTY · IF guards · no mutate · METHOD/THIS).
 403. ~~**`HASINF` / `STARTSF` / `ENDSF`**~~ **done** (field contains/prefix/suffix probes · no GETF+SYS HAS/STARTS/ENDS · IF guards · HASIFI/STARTSIF/ENDSIF).
+404. ~~**`CLEARF` / `RESETF` / `DEFAULTF`**~~ **done** (wipe field · restore CLASS default · set-if-empty · no GETF+IF+SETF · METHOD/THIS).
 
 ## Tick protocol
 

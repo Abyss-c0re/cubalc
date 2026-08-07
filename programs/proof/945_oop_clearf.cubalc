@@ -1,0 +1,142 @@
+# CLEARF / RESETF / DEFAULTF — field wipe/reset/fill-if-missing for agents
+# Usability: clean/reset/default without GETF+IF+SETF; METHOD/THIS
+# Complements probes (LENF/EMPTYF/HASINF) with mutators
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "new"
+  FIELD note ""
+  FIELD retries 0
+  FIELD tag "seed"
+  METHOD init
+  END
+  METHOD wipe_note
+    CLEARF THIS note
+  END
+END
+
+NEW Ticket t
+
+# seed note then clear
+SETF t note "dirty"
+CLEARF t note
+ASSERT OK == 1
+ASSERT CLEARF_N == 1
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# clear numeric
+SETF t retries 9
+CLEARF t retries
+ASSERT CLEARF_N == 1
+ASSERT LAST_N == 0
+GETF t retries
+ASSERT LAST_N == 0
+
+# ZEROF / WIPEF aliases
+SETF t retries 3
+ZEROF t retries
+ASSERT LAST_N == 0
+SETF t note "x"
+WIPEF t note
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# RESETF restores CLASS default
+SETF t status "closed"
+SETF t tag "mut"
+RESETF t status
+ASSERT RESETF_N == 1
+SYS EQS LAST "new"
+ASSERT LAST_N == 1
+GETF t status
+SYS EQS LAST "new"
+ASSERT LAST_N == 1
+RESETF t tag
+SYS EQS LAST "seed"
+ASSERT LAST_N == 1
+RESETF t retries
+ASSERT LAST_N == 0
+
+# DEFAULTF — only if empty/blank/zero
+CLEARF t note
+DEFAULTF t note "pending"
+ASSERT DEFAULTF_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "pending"
+ASSERT LAST_N == 1
+# already set — skip
+DEFAULTF t note "other"
+ASSERT DEFAULTF_N == 0
+ASSERT LAST_N == 0
+GETF t note
+SYS EQS LAST "pending"
+ASSERT LAST_N == 1
+
+# blank counts as empty for DEFAULTF
+SETF t note "   "
+DEFAULTF t note "ok"
+ASSERT DEFAULTF_N == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# numeric default if zero
+CLEARF t retries
+DEFAULTF t retries 5
+ASSERT DEFAULTF_N == 1
+GETF t retries
+ASSERT LAST_N == 5
+DEFAULTF t retries 99
+ASSERT DEFAULTF_N == 0
+GETF t retries
+ASSERT LAST_N == 5
+
+# FILLF alias
+CLEARF t note
+FILLF t note WITH "fill"
+SYS EQS LAST "fill"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t note "z"
+SEND t wipe_note
+GETF t note
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# soft miss
+TRYCLEARF nosuch note
+ASSERT OK == 0
+ASSERT CLEARF_N == 0
+SYS EQS LAST_ERR "CLEARF: unknown object"
+ASSERT LAST_N == 1
+CLEARF SOFT t nosuch
+ASSERT OK == 0
+TRYDEFAULTF nosuch note "x"
+ASSERT OK == 0
+TRYRESETF nosuch status
+ASSERT OK == 0
+
+# dynamic field name
+SETF t note "a"
+CLEARF t "note"
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# HELP
+HELP CLEARF
+SYS HAS LAST "CLEARF"
+ASSERT LAST_N == 1
+HELP RESETF
+SYS HAS LAST "RESETF"
+ASSERT LAST_N == 1
+HELP DEFAULTF
+SYS HAS LAST "DEFAULTF"
+ASSERT LAST_N == 1
+
+PRINT "oop_clearf ok"
