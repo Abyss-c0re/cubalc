@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 367,
-  "version": "1.15.394-usability",
-  "item": "HASINF/STARTSF/ENDSF field membership probes",
-  "item_id": 403,
-  "title": "HASINF|STARTSF|ENDSF — field contains/prefix/suffix probes",
-  "commit": "35c373bd6ec3b3bc7b581585fd6f1bb86a69a7c8",
-  "summary": "Field membership IF without GETF+SYS HAS/STARTS/ENDS. proof 944 39/39.",
+  "iter": 368,
+  "version": "1.15.395-usability",
+  "item": "CLEARF/RESETF/DEFAULTF field wipe reset fill-if-missing",
+  "item_id": 404,
+  "title": "CLEARF|RESETF|DEFAULTF — wipe, restore default, set-if-empty",
+  "commit": "f198b15af8a344812151602668f654fa9880e9a0",
+  "summary": "Field wipe/reset/default without GETF+IF+SETF. proof 945 39/39.",
   "proofs": [
-    "944_oop_hasinf",
+    "945_oop_clearf",
     "asserts 39/39",
-    "943 still green"
+    "944 still green"
   ],
-  "when": "2026-08-07T15:05:19Z",
+  "when": "2026-08-07T15:15:07Z",
   "agent": "meaningful_iter_10m",
-  "sha": "35c373bd6ec3b3bc7b581585fd6f1bb86a69a7c8",
-  "note": "restored thrash first; HASIFI/STARTSIF/ENDSIF; soft TRYHASINF; no mutate"
+  "sha": "f198b15af8a344812151602668f654fa9880e9a0",
+  "note": "RESETF uses CLASS FieldDef; DEFAULTF treats blank as empty; soft TRYCLEARF"
 }
