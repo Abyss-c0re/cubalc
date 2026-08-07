@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 378,
-  "version": "1.15.405-usability",
-  "item": "SPLITF field-to-bag path/CSV",
-  "item_id": 414,
-  "title": "SPLITF|FIELDSF — split field on sep → newline bag",
-  "commit": "f5936fbf91a26254219d9af74dad2b66ae9be59a",
-  "summary": "Path/CSV bag without GETF+SYS SPLIT. Soft miss. proof 955 40/40.",
+  "iter": 379,
+  "version": "1.15.406-usability",
+  "item": "JOINF bag-to-field inverse SPLITF",
+  "item_id": 415,
+  "title": "JOINF|JOINLINESF — join newline bag into field with sep",
+  "commit": "5425fc618f5c8ce4ffca9a4bc668f9abd790cc43",
+  "summary": "Rebuild path/CSV without GETF+SYS JOINLINES+SETF. Soft miss. proof 956 29/29.",
   "proofs": [
-    "955_oop_splitf",
-    "asserts 40/40",
-    "954 still green"
+    "956_oop_joinf",
+    "asserts 29/29",
+    "955 still green"
   ],
-  "when": "2026-08-07T16:55:22Z",
+  "when": "2026-08-07T17:08:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "f5936fbf91a26254219d9af74dad2b66ae9be59a",
-  "note": "SPLITF_N bag; no mutate; pairs COUNTINF/EACH LINE"
+  "sha": "5425fc618f5c8ce4ffca9a4bc668f9abd790cc43",
+  "note": "JOINF_N parts; inverse SPLITF; bag defaults LAST"
 }
