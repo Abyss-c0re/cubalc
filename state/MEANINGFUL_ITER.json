@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 362,
-  "version": "1.15.389-usability",
-  "item": "CATF/APPENDF/PREPENDF string field concat",
-  "item_id": 398,
-  "title": "CATF|APPENDF|PREPENDF \u2014 single-object string field concat",
-  "commit": "552cc0ab50836370b74081d0a4bd669adccfb50a",
-  "summary": "Append/prepend string field without GETF+CAT+SETF. proof 939 29/29.",
+  "iter": 363,
+  "version": "1.15.390-usability",
+  "item": "CATFALL/APPENDFALL/PREPENDFALL fleet string field concat",
+  "item_id": 399,
+  "title": "CATFALL|APPENDFALL|PREPENDFALL — fleet string field concat",
+  "commit": "1bb700acab3cab307454ddccaab7fbbf0ceb6cbc",
+  "summary": "Fleet tag notes/status without EACH+GETF+CAT+SETF. proof 940 37/37.",
   "proofs": [
-    "939_oop_catf",
-    "asserts 29/29",
-    "938 still green"
+    "940_oop_catfall",
+    "asserts 37/37",
+    "939 still green",
+    "885 still green"
   ],
-  "when": "2026-08-07T14:14:38Z",
+  "when": "2026-08-07T14:25:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "552cc0ab50836370b74081d0a4bd669adccfb50a",
-  "note": "string dual of INCF; completes single-obj field mutators with INCF/BOUNDF/TIMESF"
+  "sha": "1bb700acab3cab307454ddccaab7fbbf0ceb6cbc",
+  "note": "string dual of INCFALL; fleet dual of CATF; soft CATFALL_SKIP on miss"
 }
