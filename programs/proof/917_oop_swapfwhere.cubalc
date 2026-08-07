@@ -1,0 +1,127 @@
+# SWAPFWHERE / EXCHANGEWHERE — selective field exchange on match
+# Usability: dual-buffer rotate on subset without EACH+GETF+IF+temp
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+# Use a third field via age as match and a spare buffer:
+# energy and age swap only when ready==1 (store ready in a Counter-like flag)
+# Cell only has energy+age — match on age and swap energy with age carefully.
+# Setup: mark ready cohort with a second class field using status via Ticket-like Cell.
+# Simpler: match age==1, swap energy WITH age for those only.
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# after swap on age==1: a energy=1 age=10; c energy=1 age=30
+# b,d untouched energy 20/40 age 0
+SWAPFWHERE Cell energy age age 1
+ASSERT OK == 1
+ASSERT SWAPFWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT SWAPFWHERE_SKIP == 0
+GETF a energy
+ASSERT LAST_N == 1
+GETF a age
+ASSERT LAST_N == 10
+GETF c energy
+ASSERT LAST_N == 1
+GETF c age
+ASSERT LAST_N == 30
+GETF b energy
+ASSERT LAST_N == 20
+GETF b age
+ASSERT LAST_N == 0
+GETF d energy
+ASSERT LAST_N == 40
+GETF d age
+ASSERT LAST_N == 0
+
+# swap back with WITH + WHERE sugar (match age 10 and 30 — different values)
+# restore cohort markers: set ready via re-using match on energy==1
+SWAPFWHERE Cell energy WITH age WHERE energy 1
+ASSERT SWAPFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 10
+GETF a age
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 30
+GETF c age
+ASSERT LAST_N == 1
+
+# OF sugar
+SWAPFWHERE OF Cell energy age age 1
+ASSERT SWAPFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 1
+GETF a age
+ASSERT LAST_N == 10
+# restore
+SWAPFWHERE Cell energy age energy 1
+ASSERT SWAPFWHERE_N == 2
+
+# aliases
+SWAPFWHERE Cell energy age age 1
+EXCHANGEWHERE Cell energy age energy 1
+ASSERT EXCHANGEWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 10
+FLIPWHERE Cell energy age age 1
+ASSERT SWAPFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 1
+XCHGIF Cell energy age energy 1
+ASSERT SWAPFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 10
+# leave energy restored for string tests
+
+# string fields
+CLASS Ticket
+  FIELD status "new"
+  FIELD note "none"
+  FIELD ready 0
+  METHOD init s n r
+    SETF THIS status s
+    SETF THIS note n
+    SETF THIS ready r
+  END
+END
+NEW Ticket t1 "open" "alpha" 1
+NEW Ticket t2 "closed" "beta" 0
+NEW Ticket t3 "open" "gamma" 1
+SWAPFWHERE Ticket status WITH note WHERE ready 1
+ASSERT OK == 1
+ASSERT SWAPFWHERE_N == 2
+GETF t1 status
+SYS EQS LAST "alpha"
+ASSERT LAST_N == 1
+GETF t1 note
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+GETF t3 status
+SYS EQS LAST "gamma"
+ASSERT LAST_N == 1
+GETF t2 status
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1 "non-match untouched"
+GETF t2 note
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+
+# no match
+SWAPFWHERE Ticket status note ready 99
+ASSERT OK == 1
+ASSERT SWAPFWHERE_N == 0
+ASSERT LAST_N == 0
+
+PRINT "proof917_oop_swapfwhere" 1
+ASSERT OK == 1
