@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 398,
-  "version": "1.15.425-usability",
-  "item": "PRINT multi-arg strings",
-  "item_id": 434,
-  "title": "PRINT/SAY/ECHO space-join str+num · LAST · no strlen footgun",
-  "commit": "d8df7b7bb0afe8e48f1d48516169f5fbe2865046",
-  "summary": "PRINT joins string content multi-arg; SAY/ECHO; empty re-echoes LAST. proof 975 10/10.",
+  "iter": 399,
+  "version": "1.15.426-usability",
+  "item": "SYS ARGC/ARGS + run args",
+  "item_id": 435,
+  "title": "ARGC count · ARGS bag · cubalc run args → CUBALC_ARGn",
+  "commit": "2f218a0b72ab28bdf39da971931f6d960881d9ea",
+  "summary": "Program arg bag/count; run wires trailing/-- to CUBALC_ARG*. proof 976 10/10.",
   "proofs": [
-    "975_print_str_parts",
+    "976_sys_args_argc",
     "asserts 10/10",
-    "smoke hi world · x= 3 ok · SAY 1 2 3"
+    "smoke run -e … -- p q"
   ],
-  "when": "2026-08-07T20:27:06Z",
+  "when": "2026-08-07T20:39:29Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d8df7b7bb0afe8e48f1d48516169f5fbe2865046",
-  "note": "fixes PRINT string-var printing length"
+  "sha": "2f218a0b72ab28bdf39da971931f6d960881d9ea",
+  "note": "-e trailing bare tokens are args not source path"
 }
