@@ -1,45 +1,39 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 160,
-  "program": "programs/realworld/batch_restargs_board.cubalc",
-  "theme": "LISTFLAGS + HASRESTARGS + REQUIRE RESTARGS batch file intake (restargs-count gates)",
-  "version": "1.15.436-usability",
+  "iter": 161,
+  "program": "programs/realworld/route_flagmap_board.cubalc",
+  "theme": "FLAGMAP + NTHPOS route/hop registry (kv flags + positional hop peel)",
+  "version": "1.15.439-usability",
   "pass": true,
-  "prior_note": "iter 159 USAGE+REQUIRE FLAG; this iter first realworld LISTFLAGS/HASRESTARGS/REQUIRE RESTARGS (984-986)",
+  "prior_note": "iter 160 RESTARGS count gates; this iter first realworld FLAGMAP/NTHPOS (987-988)",
   "tests": [
     {
-      "name": "listflags",
-      "cmd": "flags -- --job --verbose \u2192 bag job/verbose",
+      "name": "register",
+      "cmd": "register -- --src=edge --dst=core --ttl=30 hopA hopB",
       "ok": true,
-      "note": "LISTFLAGS"
+      "note": "FLAGMAP+hops"
     },
     {
-      "name": "admit",
-      "cmd": "admit -- --job=ingest a.bin b.bin \u2192 job:path rows",
+      "name": "map",
+      "cmd": "FLAGMAP src=a verbose=1 bag",
       "ok": true,
-      "note": "admit"
+      "note": "FLAGMAP"
     },
     {
-      "name": "hasrest_peel",
-      "cmd": "raw vs peeled rest counts; action inflation",
+      "name": "nth_hops",
+      "cmd": "NTHPOS 0=action; hops peel hop0",
       "ok": true,
-      "note": "HASRESTARGS"
+      "note": "NTHPOS"
     },
     {
-      "name": "require_short",
-      "cmd": "peeled short soft fail; raw REQUIRE false friend",
+      "name": "has",
+      "cmd": "HASLINE exact row; substring miss",
       "ok": true,
-      "note": "REQUIRE RESTARGS"
+      "note": "exact"
     },
     {
-      "name": "admit_wall",
-      "cmd": "admit no files EXIT 2",
-      "ok": true,
-      "note": "wall"
-    },
-    {
-      "name": "has_gate_soft",
-      "cmd": "HASLINE exact; gate job+paths; soft no files",
+      "name": "gate_soft",
+      "cmd": "gate src+dst+hops; soft NTHPOS OOR EXIT 2",
       "ok": true,
       "note": "gate"
     },
@@ -226,28 +220,60 @@
       "title": "HASRESTARGS min wants literal (same class as HASARGC/HASFLAG)",
       "detail": "Board branches HASRESTARGS 1/2/3/4; variable MIN unreliable for the form itself.",
       "repro": "LET m 2; HASRESTARGS m vs HASRESTARGS 2"
+    },
+    {
+      "id": "W23",
+      "severity": "high",
+      "area": "lang|nthpos",
+      "title": "NTHPOS 0 is the action token when action is positional ARG0",
+      "detail": "With register -- --src=x hopA, NTHPOS 0=register and NTHPOS 1=hopA. Agents must peel action or use NTHPOS 1 for first hop. Same class as RESTARGS inflation (W19).",
+      "repro": "nth 0 with hops \u2192 val is action name not first hop"
+    },
+    {
+      "id": "W24",
+      "severity": "med",
+      "area": "lang|syntax",
+      "title": "Bare > in CAT/strings is a comparison/parse hazard",
+      "detail": "Route rows use => not bare >. Prefer multi-char separators in bag keys to avoid operator collision.",
+      "repro": "SYS CAT SRC \">\" may parse as comparison in some contexts"
+    },
+    {
+      "id": "W25",
+      "severity": "high",
+      "area": "lang|flow",
+      "title": "Post-action k = k + LAST_N unknown-action tally can spuriously fail",
+      "detail": "After a heavy register path (FLAGMAP+EACH+PUSH), classic LET k = LAST_N; LET k = k + LAST_N dispatch tally returned k=0 despite SYS EQS ACTION hit. Workaround: LET known=1 inside each action body.",
+      "repro": "register succeeds then FAIL unknown action with k-sum pattern"
+    },
+    {
+      "id": "W26",
+      "severity": "low",
+      "area": "lang|flagmap",
+      "title": "FLAGMAP bare --flag value is 1 and does not consume following hops",
+      "detail": "Positive: --verbose hopA leaves hopA in RESTARGS; FLAGMAP verbose=1. Prefer --name=val for non-bools. LOOKUP fmap key = works.",
+      "repro": "FLAGMAP with --verbose hopA \u2192 verbose=1; hops keep hopA"
     }
   ],
   "workarounds": [
-    "Peel ARG0 action from RESTARGS before file min gates",
-    "Do not put numeric mins as bare ARG1 if they pollute RESTARGS; use --min=N",
-    "Honest file wall: SYS LINES peeled >= MIN then EXIT 2; not raw REQUIRE RESTARGS alone",
-    "LISTFLAGS for inventory; GETFLAG for values",
-    "cubalc run prog.cubalc admit -- --job=J files... (host -- separator)",
-    "Never name action run"
+    "NTHPOS 1 for first hop when ARG0 is action; or DROP action from RESTARGS",
+    "FLAGMAP + SYS LOOKUP bag key = for --src/--dst",
+    "Latch known=1 per action instead of end k-sum EQS tally",
+    "Route sep => not bare >; --flag=val for non-bools",
+    "cubalc run prog.cubalc register -- --src=A --dst=B hops...",
+    "Reuse established bag vars (meta) for final report PUSH"
   ],
   "language_gaps": [
-    "RESTARGS mode that skips known action/subcommand token",
-    "REQUIRE FILES alias: only path-like or post--- positionals",
-    "HASRESTARGS/REQUIRE RESTARGS accept variable min",
-    "Document action-token inflation in RESTARGS cookbook"
+    "NTHPOS skip-action or NTHFILE-only alias",
+    "Document LET k = k + LAST_N fragility after complex blocks",
+    "Stable SYS PUSH on freshly LET bags late in long programs",
+    "Cookbook: FLAGMAP LOOKUP + NTHPOS hop peel"
   ],
   "issues_faced": [
-    "Action+ARG1 min inflate HASRESTARGS \u2014 peel + --min= preferred",
-    "REQUIRE RESTARGS false friend on action-only \u2014 EXIT 2 on peeled empty",
-    "LISTFLAGS clean name bag; admit job:path green",
+    "k-sum unknown-action after register \u2014 switched to known latch",
+    "SYS PUSH report/brep late-program form miss \u2014 reused meta bag",
+    "NTHPOS 0=action; first hop is 1; FLAGMAP LOOKUP green",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "8e81337c6863293273df26ad94bd5f3c64159ef2",
-  "ts": "2026-08-07T22:19:03Z"
+  "commit": "pending",
+  "ts": "2026-08-07T22:50:00Z"
 }

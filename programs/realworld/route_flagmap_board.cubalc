@@ -1,0 +1,894 @@
+# route_flagmap_board.cubalc — FLAGMAP + NTHPOS route/hop registry
+#
+# Real use: mesh/traffic agents register routes from CLI without getopt glue:
+#   FLAGMAP / FLAGKV   — name=value bag for every --flag (LOOKUP-ready)
+#   NTHPOS / POSN      — 0-based non-flag positional peel (with OR default)
+#   RESTARGS           — full hop bag (action may inflate index 0)
+#   HASLINE/COUNTLINE  — exact route-row registry
+#
+# Distinct from batch_restargs (count gates) and route_segment (SPLITF paths):
+# this board is *flag kv map + nth hop peel + route plate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rf_$$
+#   ./out/cubalc run programs/realworld/route_flagmap_board.cubalc \
+#     register -- --src=edge --dst=core --ttl=30 hopA hopB
+#   # NTHPOS 0 is often the action token; first hop is NTHPOS 1
+#
+# Plate under STATE:
+#   ROUTES.txt     — src=>dst:hop1,hop2 rows (exact)
+#   FLAGMAP.txt    — last FLAGMAP bag
+#   HOPS.txt       — peeled hop bag
+#   VAL.txt META.txt RF_REPORT.txt
+#
+# Actions (ARG0 — not "run"; or CUBALC_RF_ACTION):
+#   list      — routes depth (default)
+#   map       — FLAGMAP → plate
+#   nth       — NTHPOS index (ARG1 0..3) OR default A2
+#   hops      — RESTARGS peel action → HOPS
+#   reg       — LOOKUP src/dst from FLAGMAP; hops → append route row
+#   has       — HASLINE exact
+#   count     — COUNTLINE exact
+#   gate      — need src+dst in map + hop_n >= MIN
+#   soft      — NTHPOS OOR soft + optional EXIT wall
+#   clear
+#
+# Env: CUBALC_RF_ACTION CUBALC_RF_NAME CUBALC_RF_A2
+#      CUBALC_RF_REQUIRE CUBALC_RF_MIN
+#
+# Edges:
+#   NTHPOS 0 = action token when action is positional ARG0
+#   bare --flag → FLAGMAP value "1" (does not consume following hops)
+#   NTHPOS OR default on miss; literal indices only for NTHPOS form
+#   host -- separator for long opts; WRITE NL; NUM soft; substring HASLINE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "route_flagmap_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT RFILE = "ROUTES.txt"
+DEFAULT MFILE_FLAGS = "FLAGMAP.txt"
+DEFAULT HFILE = "HOPS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "RF_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT SRC = ""
+DEFAULT DST = ""
+DEFAULT TTL = "0"
+DEFAULT USAGE_LINE = "route_flagmap -- register -- --src=A --dst=B [--ttl=N] hop [hop...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SYS ARGC
+LET argc_n = LAST_N
+CLEAR_ERR
+
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    LET ACTION = a0
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_RF_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RF_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# numeric ARG1 for nth/gate/soft only if not flag-shaped
+SYS EQS ACTION "nth"
+LET _n = LAST_N
+SYS EQS ACTION "gate"
+LET _g = LAST_N
+SYS EQS ACTION "soft"
+LET _s = LAST_N
+LET _u = _n + _g + _s
+IF _u > 0 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      SYS ARG 1 OR ""
+      SYS NUM
+      IF OK == 1 THEN
+        LET MIN = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+END
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# FLAGMAP early + LOOKUP src/dst/ttl
+FLAGMAP
+LET fmap = LAST
+SYS LINES fmap
+LET fmap_n = LAST_N
+CLEAR_ERR
+SYS LOOKUP fmap "src" "="
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET SRC = LAST
+  END
+END
+CLEAR_ERR
+SYS LOOKUP fmap "dst" "="
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET DST = LAST
+  END
+END
+CLEAR_ERR
+SYS LOOKUP fmap "ttl" "="
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET TTL = LAST
+  END
+END
+CLEAR_ERR
+
+# RESTARGS peel action → hops
+RESTARGS
+LET rest_raw = LAST
+SYS LINES rest_raw
+LET rest_raw_n = LAST_N
+CLEAR_ERR
+LET hops = rest_raw
+LET hop_n = rest_raw_n
+SYS NTH 0 rest_raw
+LET first = LAST
+CLEAR_ERR
+SYS EQS first ACTION
+IF LAST_N == 1 THEN
+  SYS DROP 1 rest_raw
+  LET hops = LAST
+  SYS LINES hops
+  LET hop_n = LAST_N
+END
+CLEAR_ERR
+
+# NTHPOS first hop after action: index 1 when action present, else 0
+LET hop0 = ""
+NTHPOS 0
+LET pos0 = LAST
+LET pos0_hit = LAST_N
+CLEAR_ERR
+NTHPOS 1
+LET pos1 = LAST
+LET pos1_hit = LAST_N
+CLEAR_ERR
+SYS EQS pos0 ACTION
+IF LAST_N == 1 THEN
+  IF pos1_hit == 1 THEN
+    LET hop0 = pos1
+  END
+ELSE
+  IF pos0_hit == 1 THEN
+    LET hop0 = pos0
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir RFILE
+LET routes_path = LAST
+SYS JOIN state_dir MFILE_FLAGS
+LET fmap_path = LAST
+SYS JOIN state_dir HFILE
+LET hops_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR routes_path OR ""
+LET routes = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET routes_ch = 0
+LET fmap_ch = 0
+LET hops_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET route_n = 0
+LET has_n = 0
+LET count_n = 0
+LET nth_hit = 0
+
+SYS LINES routes
+LET route_n = LAST_N
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET known = 1
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = routes
+  LET val_ch = 1
+  LET meta = "routes"
+  SYS STR route_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "fmap"
+  LET meta = LAST
+  SYS STR fmap_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "hops"
+  LET meta = LAST
+  SYS STR hop_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON route_n fmap_n hop_n
+  CLEAR_ERR
+END
+
+# --- map FLAGMAP ---
+SYS EQS ACTION "map"
+IF LAST_N == 1 THEN
+  NOTE "action map"
+  LET known = 1
+  FLAGMAP
+  LET fmap = LAST
+  SYS LINES fmap
+  LET fmap_n = LAST_N
+  LET fmap_ch = 1
+  LET val = fmap
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "map ok"
+  LET meta = "fmap_n"
+  SYS STR fmap_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "src"
+  LET meta = LAST
+  SYS PUSH meta SRC
+  LET meta = LAST
+  SYS PUSH meta "dst"
+  LET meta = LAST
+  SYS PUSH meta DST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF fmap_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "map empty"
+    FAIL "map empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "map empty"
+    END
+  END
+  PRINT_JSON fmap_n SRC DST TTL
+  CLEAR_ERR
+END
+
+# --- nth NTHPOS literal indices ---
+SYS EQS ACTION "nth"
+IF LAST_N == 1 THEN
+  NOTE "action nth"
+  LET known = 1
+  LET idx = 0
+  SYS ARG 1 OR "0"
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      SYS ARG 1 OR "0"
+      SYS NUM
+      IF OK == 1 THEN
+        LET idx = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 1 THEN
+    LET A2 = ""
+  END
+  LET nth_hit = 0
+  LET val = A2
+  IF idx == 0 THEN
+    NTHPOS 0 OR A2
+    LET nth_hit = LAST_N
+    LET val = LAST
+  END
+  IF idx == 1 THEN
+    NTHPOS 1 OR A2
+    LET nth_hit = LAST_N
+    LET val = LAST
+  END
+  IF idx == 2 THEN
+    NTHPOS 2 OR A2
+    LET nth_hit = LAST_N
+    LET val = LAST
+  END
+  IF idx == 3 THEN
+    NTHPOS 3 OR A2
+    LET nth_hit = LAST_N
+    LET val = LAST
+  END
+  IF idx > 3 THEN
+    # OOR beyond branched literals — soft miss via empty NTHPOS 9 OR
+    NTHPOS 9 OR A2
+    LET nth_hit = LAST_N
+    LET val = LAST
+  END
+  LET val_ch = 1
+  LET meta = "idx"
+  SYS STR idx
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "hit"
+  LET meta = LAST
+  SYS STR nth_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF nth_hit == 1 THEN
+    LET hit = 1
+    LET note_msg = "nth ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "nth miss default"
+    # soft: still hit if default non-empty
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET hit = 1
+      LET note_msg = "nth default"
+    ELSE
+      FAIL "nth miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "nth miss"
+      END
+    END
+  END
+  PRINT_JSON idx nth_hit val
+  CLEAR_ERR
+END
+
+# --- hops peel dump ---
+SYS EQS ACTION "hops"
+IF LAST_N == 1 THEN
+  NOTE "action hops"
+  LET known = 1
+  LET hops_ch = 1
+  LET val = hops
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "hops ok"
+  LET meta = "raw"
+  SYS STR rest_raw_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "peeled"
+  LET meta = LAST
+  SYS STR hop_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "hop0"
+  LET meta = LAST
+  SYS PUSH meta hop0
+  LET meta = LAST
+  LET meta_ch = 1
+  IF hop_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "hops empty"
+    FAIL "hops empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hops empty"
+    END
+  END
+  PRINT_JSON hop_n rest_raw_n hop0
+  CLEAR_ERR
+END
+
+# --- register: FLAGMAP src/dst + hops → route row ---
+SYS EQS ACTION "register"
+IF LAST_N == 1 THEN
+  NOTE "action register"
+  LET known = 1
+  USAGE USAGE_LINE
+  FLAGMAP
+  LET fmap = LAST
+  LET fmap_ch = 1
+  SYS LINES fmap
+  LET fmap_n = LAST_N
+  SYS LOOKUP fmap "src" "="
+  LET SRC = LAST
+  CLEAR_ERR
+  SYS LOOKUP fmap "dst" "="
+  LET DST = LAST
+  CLEAR_ERR
+  SYS LOOKUP fmap "ttl" "="
+  IF LAST_N > 0 THEN
+    SYS BLANK LAST
+    IF LAST_N == 0 THEN
+      LET TTL = LAST
+    END
+  END
+  CLEAR_ERR
+  SYS BLANK SRC
+  LET no_src = LAST_N
+  SYS BLANK DST
+  LET no_dst = LAST_N
+  LET hops_ch = 1
+  IF no_src == 1 THEN
+    LET miss = 1
+    LET note_msg = "register no src"
+    FAIL "register no src"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "register no src"
+    END
+  ELSE
+    IF no_dst == 1 THEN
+      LET miss = 1
+      LET note_msg = "register no dst"
+      FAIL "register no dst"
+      CLEAR_ERR
+      LET val = USAGE
+      LET val_ch = 1
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "register no dst"
+      END
+    ELSE
+      IF hop_n < 1 THEN
+        LET miss = 1
+        LET note_msg = "register no hops"
+        FAIL "register no hops"
+        CLEAR_ERR
+        LET val = USAGE
+        LET val_ch = 1
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "register no hops"
+        END
+      ELSE
+        # build hop join with commas
+        LET hopjoin = ""
+        LET hi = 0
+        EACH LINE AS h IN hops
+          SYS BLANK h
+          IF LAST_N == 0 THEN
+            IF hi == 0 THEN
+              LET hopjoin = h
+            ELSE
+              SYS CAT hopjoin ","
+              LET hopjoin = LAST
+              SYS CAT hopjoin h
+              LET hopjoin = LAST
+            END
+            LET hi = hi + 1
+          END
+        END
+        # use => not bare > (bare > is comparison op / parse hazard)
+        SYS CAT SRC "=>"
+        LET row = LAST
+        SYS CAT row DST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS CAT row hopjoin
+        LET row = LAST
+        SYS HASLINE routes row
+        IF LAST_N == 0 THEN
+          SYS PUSH routes row
+          LET routes = LAST
+        END
+        LET routes_ch = 1
+        SYS LINES routes
+        LET route_n = LAST_N
+        LET hit = 1
+        LET note_msg = "register ok"
+        LET val = row
+        LET val_ch = 1
+        LET meta = "src"
+        SYS PUSH meta SRC
+        LET meta = LAST
+        SYS PUSH meta "dst"
+        LET meta = LAST
+        SYS PUSH meta DST
+        LET meta = LAST
+        SYS PUSH meta "ttl"
+        LET meta = LAST
+        SYS PUSH meta TTL
+        LET meta = LAST
+        SYS PUSH meta "hops"
+        LET meta = LAST
+        SYS STR hop_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON hit miss SRC DST hop_n route_n
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  LET known = 1
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE routes NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  LET known = 1
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE routes NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  LET known = 1
+  SYS BLANK SRC
+  LET has_src = 1 - LAST_N
+  SYS BLANK DST
+  LET has_dst = 1 - LAST_N
+  LET meta = "src"
+  SYS STR has_src
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "dst"
+  LET meta = LAST
+  SYS STR has_dst
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "hops"
+  LET meta = LAST
+  SYS STR hop_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "min"
+  LET meta = LAST
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR has_src
+  LET val = LAST
+  LET val_ch = 1
+  IF has_src == 1 THEN
+    IF has_dst == 1 THEN
+      IF hop_n >= MIN THEN
+        LET hit = 1
+        LET note_msg = "gate admit"
+      ELSE
+        LET miss = 1
+        LET note_msg = "gate hops short"
+        FAIL "gate hops short"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate hops short"
+        END
+      END
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate no dst"
+      FAIL "gate no dst"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate no dst"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate no src"
+    FAIL "gate no src"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no src"
+    END
+  END
+  PRINT_JSON has_src has_dst hop_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft NTHPOS OOR ---
+SYS EQS ACTION "soft"
+IF LAST_N == 1 THEN
+  NOTE "action soft"
+  LET known = 1
+  NTHPOS 9 OR ""
+  LET nth_hit = LAST_N
+  LET val = LAST
+  LET val_ch = 1
+  IF nth_hit == 0 THEN
+    LET miss = 1
+    LET note_msg = "soft nth OOR ok"
+    FAIL "soft nth OOR"
+    CLEAR_ERR
+    LET meta = "soft"
+    SYS PUSH meta "oor"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft nth OOR wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft unexpected hit"
+  END
+  PRINT_JSON nth_hit miss
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET known = 1
+  LET routes = ""
+  LET hops = ""
+  LET fmap = ""
+  LET val = ""
+  LET meta = ""
+  LET routes_ch = 1
+  LET hops_ch = 1
+  LET fmap_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET route_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF routes_ch > 0 THEN
+  SYS WRITE routes_path routes
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "routes write failed"
+  END
+  CLEAR_ERR
+END
+IF fmap_ch > 0 THEN
+  SYS WRITE fmap_path fmap
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "fmap write failed"
+  END
+  CLEAR_ERR
+END
+IF hops_ch > 0 THEN
+  SYS WRITE hops_path hops
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "hops write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# reuse meta bag name (SYS PUSH is reliable on meta in this program)
+LET meta = "schema=cubalc.route_flagmap_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "src"
+LET meta = LAST
+SYS PUSH meta SRC
+LET meta = LAST
+SYS PUSH meta "dst"
+LET meta = LAST
+SYS PUSH meta DST
+LET meta = LAST
+SYS PUSH meta "route_n"
+LET meta = LAST
+SYS STR route_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "hop_n"
+LET meta = LAST
+SYS STR hop_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "route_flagmap_board" ACTION hit miss route_n hop_n SRC DST note_msg elapsed
+NOTE "route_flagmap_board: done"
