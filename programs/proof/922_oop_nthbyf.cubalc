@@ -1,0 +1,147 @@
+# NTHBYF / ATBYF — 0-based rank pick by numeric field
+# Usability: no SORTBYF + SYS NTH glue for runner-up / kth best
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 30 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 10 0
+NEW Cell e 1 50 0
+NEW Cell f 1 5 0
+
+# ASC order: f5 b10 d10 c20 a30 e50
+NTHBYF Cell energy 0 ASC
+ASSERT OK == 1
+ASSERT NTHBYF_HIT == 1
+ASSERT NTHBYF_TOTAL == 6
+ASSERT NTHBYF_I == 0
+ASSERT NTHBYF_DESC == 0
+ASSERT NTHBYF_VAL == 5
+ASSERT LAST_N == 5
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+SYS EQS NTHBYF "f"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "f"
+ASSERT LAST_N == 1
+
+NTHBYF Cell energy 1 ASC
+ASSERT NTHBYF_VAL == 10
+SYS EQS LAST "b"
+ASSERT LAST_N == 1 "ties: first-seen b before d"
+
+NTHBYF Cell energy 2 ASC
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+
+# DESC: e50 a30 c20 d10? wait ASC ties b before d so DESC:
+# e50 a30 c20 d10? values: e50 a30 c20 b10 d10 f5 — on ties first-seen lower idx wins for DESC equal keys with key.idx < rows[b].idx
+# b and d both 10, b idx before d → DESC still b before d when equal? less = key.v > rows[b].v || (eq && key.idx < rows[b].idx)
+# When sorting DESC, higher first; on equal 10, smaller idx comes first → b before d.
+# Order DESC: e a c b d f
+NTHBYF Cell energy 0 DESC
+ASSERT NTHBYF_DESC == 1
+ASSERT NTHBYF_VAL == 50
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+NTHBYF Cell energy 1 DESC
+ASSERT NTHBYF_VAL == 30
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+NTHBYF Cell energy 2 DESC
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# runner-up idiom
+NTHBYF Cell energy 1 DESC
+SYS EQS LAST "a"
+ASSERT LAST_N == 1 "second best"
+
+# OF sugar + AT keyword
+NTHBYF OF Cell energy AT 5 DESC
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+ASSERT NTHBYF_VAL == 5
+
+# aliases
+ATBYF Cell energy 0 ASC
+SYS EQS ATBYF "f"
+ASSERT LAST_N == 1
+INDEXBYF Cell energy 0 DESC
+SYS EQS INDEXBYF "e"
+ASSERT LAST_N == 1
+NTHOBJ Cell energy 3 DESC
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+OBJAT Cell energy 4 DESC
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+
+# var index
+LET i = 0
+NTHBYF Cell energy i DESC
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+ASSERT NTHBYF_I == 0
+
+# OOB soft empty
+NTHBYF Cell energy 99 DESC
+ASSERT OK == 1
+ASSERT NTHBYF_HIT == 0
+ASSERT NTHBYF_N == 0
+ASSERT LAST_N == 0
+ASSERT NTHBYF_TOTAL == 6
+ASSERT NTHBYF_I == 99
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+NTHBYF Cell energy -1 ASC
+ASSERT NTHBYF_HIT == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# class filter · Ticket only
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 7
+NEW Ticket t2 "closed" 1
+NEW Ticket t3 "open" 2
+# DESC retries: t1=7 t3=2 t2=1
+NTHBYF Ticket retries 0 DESC
+ASSERT NTHBYF_TOTAL == 3
+ASSERT NTHBYF_VAL == 7
+SYS EQS LAST "t1"
+ASSERT LAST_N == 1
+NTHBYF Ticket retries 1 DESC
+SYS EQS LAST "t3"
+ASSERT LAST_N == 1
+NTHBYF Ticket retries 2 DESC
+SYS EQS LAST "t2"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "t2"
+ASSERT LAST_N == 1
+
+# empty class soft
+CLASS Empty
+  FIELD x 0
+END
+NTHBYF Empty x 0 DESC
+ASSERT OK == 1
+ASSERT NTHBYF_HIT == 0
+ASSERT NTHBYF_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof922_oop_nthbyf" 1
+ASSERT OK == 1

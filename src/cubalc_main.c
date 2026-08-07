@@ -2060,6 +2060,7 @@ int main(int argc, char **argv) {
       {"oop_sortbyfwhere", "programs/proof/919_oop_sortbyfwhere.cubalc", "SORTBYFWHERE/ORDERWHERE rank matching objects by field"},
       {"oop_topnbyf", "programs/proof/920_oop_topnbyf.cubalc", "TOPNBYF/HEADBYF top-n object names by numeric field"},
       {"oop_topnbyfwhere", "programs/proof/921_oop_topnbyfwhere.cubalc", "TOPNBYFWHERE/HEADWHERE top-n matching objects by field"},
+      {"oop_nthbyf", "programs/proof/922_oop_nthbyf.cubalc", "NTHBYF/ATBYF 0-based rank pick object by numeric field"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5987,6 +5988,7 @@ int main(int argc, char **argv) {
       {"programs/proof/919_oop_sortbyfwhere.cubalc", "oop_sortbyfwhere", "SORTBYFWHERE/ORDERWHERE rank matching objects by field"},
       {"programs/proof/920_oop_topnbyf.cubalc", "oop_topnbyf", "TOPNBYF/HEADBYF top-n object names by numeric field"},
       {"programs/proof/921_oop_topnbyfwhere.cubalc", "oop_topnbyfwhere", "TOPNBYFWHERE/HEADWHERE top-n matching objects by field"},
+      {"programs/proof/922_oop_nthbyf.cubalc", "oop_nthbyf", "NTHBYF/ATBYF 0-based rank pick object by numeric field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6306,6 +6308,7 @@ int main(int argc, char **argv) {
       {"programs/proof/919_oop_sortbyfwhere.cubalc", "oop_sortbyfwhere", "SORTBYFWHERE/ORDERWHERE rank matching objects by field"},
       {"programs/proof/920_oop_topnbyf.cubalc", "oop_topnbyf", "TOPNBYF/HEADBYF top-n object names by numeric field"},
       {"programs/proof/921_oop_topnbyfwhere.cubalc", "oop_topnbyfwhere", "TOPNBYFWHERE/HEADWHERE top-n matching objects by field"},
+      {"programs/proof/922_oop_nthbyf.cubalc", "oop_nthbyf", "NTHBYF/ATBYF 0-based rank pick object by numeric field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
