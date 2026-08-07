@@ -1,75 +1,75 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 125,
-  "program": "programs/realworld/latency_median_scale_board.cubalc",
-  "theme": "MEDIANF + MULFALL latency median SLO + bulk scale + AVGF outlier contrast + admit + bag journal",
-  "version": "1.15.349-usability",
+  "iter": 126,
+  "program": "programs/realworld/fleet_status_hist_board.cubalc",
+  "theme": "FREQF/MODEF/UNIQUF fleet string-status histogram + dominant mode admit + SETFALL stamp + bag journal",
+  "version": "1.15.352-usability",
   "pass": true,
-  "prior_note": "iter 124 retry_budget CLAMP/BETWEEN; this iter stresses MEDIANF+MULFALL (9fccd8c/dc3eca3)",
+  "prior_note": "iter 125 latency_median MEDIANF/MULFALL; this iter stresses FREQF+MODEF+UNIQUF (b233590/b68f6c5/3e8c394)",
   "tests": [
     {
-      "name": "open_lats",
-      "cmd": "open 10/20/30",
+      "name": "open_status",
+      "cmd": "open n0/n1 ready n2 busy",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "median_odd",
-      "cmd": "MEDIANF \u2192 20",
+      "name": "freqf_hist",
+      "cmd": "FREQF ready:2 busy:1 N=2 TOTAL=3",
       "ok": true,
-      "note": "MEDIANF"
+      "note": "FREQF"
     },
     {
-      "name": "avg_sum",
-      "cmd": "AVGF 20 SUMF 60",
+      "name": "modef_dominant",
+      "cmd": "MODEF ready count=2 distinct=2",
       "ok": true,
-      "note": "AVGF/SUMF"
+      "note": "MODEF"
     },
     {
-      "name": "outlier_robust",
-      "cmd": "p2=1000; median still 20; avg 343",
+      "name": "uniquf_set",
+      "cmd": "UNIQUF ready then busy first-seen",
       "ok": true,
-      "note": "robust mid"
+      "note": "UNIQUF"
     },
     {
-      "name": "admit_median_max",
-      "cmd": "median20 max50 admit; max15 REQUIRE rc2",
+      "name": "countwhere_status",
+      "cmd": "COUNTWHERE ready=2 fail=0",
+      "ok": true,
+      "note": "COUNTWHERE"
+    },
+    {
+      "name": "admit_mode_want",
+      "cmd": "want ready admit; want busy REQUIRE rc2",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "mulfall_scale",
-      "cmd": "MULFALL *2 \u2192 20/40/60; median 40 sum 120",
+      "name": "mode_flip",
+      "cmd": "n0→busy; mode busy; admit ready deny",
       "ok": true,
-      "note": "MULFALL"
+      "note": "flip"
     },
     {
-      "name": "count_has_hot",
-      "cmd": "COUNTWHEREGE \u226550=1; HASWHEREGE p2",
+      "name": "mode_tie_first_seen",
+      "cmd": "fail+drain tie → mode fail first-seen",
       "ok": true,
-      "note": "hot"
+      "note": "tie"
     },
     {
-      "name": "mulfall_zero",
-      "cmd": "MULFALL 0; sum/median 0",
+      "name": "setfall_stamp",
+      "cmd": "SETFALL ready N=3; hist ready:3; admit REQUIRE ok",
       "ok": true,
-      "note": "zero"
-    },
-    {
-      "name": "median_1_2_4",
-      "cmd": "MEDIANF \u2192 2",
-      "ok": true,
-      "note": "odd mid"
+      "note": "SETFALL"
     },
     {
       "name": "empty_fleet",
-      "cmd": "median 0; scale N=0; admit REQUIRE ok",
+      "cmd": "hist N=0; mode empty; admit ready deny",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2\u21921",
+      "cmd": "exact false friend; SETMATCH 2→1",
       "ok": true,
       "note": "journal"
     },
@@ -77,49 +77,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "325/325 pass"
+      "note": "328/328 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|medianf",
-      "title": "MEDIANF even-n lower mid only \u2014 no mean-of-two / float P50",
-      "detail": "Even count uses lower mid (SYS MEDIAN convention). Agents cannot get average of two central samples without custom bag sort.",
-      "repro": "4 samples 1,2,3,4 \u2192 MEDIANF 2 not 2.5"
+      "area": "oop|modef",
+      "title": "MODEF ties → first-seen only — no multi-mode bag",
+      "detail": "fail+drain equal count → mode fail (first opened). Agents cannot detect ties without FREQF and comparing counts.",
+      "repro": "two statuses count=1 each; MODEF returns first-seen"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|mulfall",
-      "title": "MULFALL integer factor only \u2014 no fractional decay",
-      "detail": "Cannot scale lat_ms by 0.5 for half-life without integer tricks (\u00d75/10). Factor 0 zeros all.",
-      "repro": "MULFALL Probe lat_ms 0.5 \u2192 not float"
+      "area": "oop|setfall",
+      "title": "SETFALL stamps entire class — no WHERE status filter",
+      "detail": "Cannot stamp only busy→ready without SENDBETWEEN-style or per-slot SETF.",
+      "repro": "SETFALL Node status ready hits all"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|mulfall",
-      "title": "MULFALL unfiltered \u2014 scales entire class",
-      "detail": "Cannot scale only hot probes; need SENDBETWEEN/WHEREGE + per-object or accept fleet-wide scale.",
-      "repro": "scale *2 hits all live Probes"
+      "area": "oop|uniquf",
+      "title": "UNIQUF order is first-seen not sorted",
+      "detail": "Agents wanting alphabetical status inventory must SORT bag after UNIQUF.",
+      "repro": "UNIQUF ready then busy not alpha"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|if",
-      "title": "admit uses med_n - thr_n compare; stored LET IF still risky",
-      "detail": "Worked with over = med_n - thr_n; IF over < 1. Direct IF med_n <= thr_n may still flake after OOP query.",
-      "repro": "queue_depth W1 class"
+      "area": "oop|empty",
+      "title": "Empty MODEF yields blank mode string — admit EQS want fails soft deny",
+      "detail": "Empty fleet MODEF LAST empty; admit want ready → deny (not soft admit). Empty FREQF N=0 TOTAL=0.",
+      "repro": "clear; mode; admit ready → deny"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|avgf",
-      "title": "AVGF integer truncates mean",
-      "detail": "10+20+1000 \u2192 343 not 343.33.",
-      "repro": "AVGF on outlier set"
+      "area": "oop|freqf",
+      "title": "FREQF bag needs LOOKUPN for counts — no direct COUNTKEY on HIST plate",
+      "detail": "Agents re-read HIST and LOOKUPN key for per-status count; COUNTWHERE is dual for live objs only.",
+      "repro": "SYS LOOKUPN FREQF open"
     },
     {
       "id": "W6",
@@ -127,14 +127,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c dump"
+      "repro": "od -c HIST.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_LM_REQUIRE=abc \u2192 soft.",
+      "detail": "CUBALC_FS_REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,31 +142,31 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:lat \u2192 one SETMATCH leaves 1.",
+      "detail": "Two n0:st → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Use MEDIANF for SLO mid when outliers expected; AVGF for capacity sum/n",
-    "Integer scale factors only; zero via MULFALL 0",
-    "Fleet-wide MULFALL then per-slot setlat for exceptions",
-    "med_n - thr_n + IF over < 1 for admit",
+    "FREQF+LOOKUPN for per-status counts; MODEF for dominant",
+    "Detect ties via FREQF values equality not MODEF alone",
+    "SETFALL for full fleet stamp; per-slot setstatus for selective",
+    "SORT UNIQUF bag if alphabetical inventory needed",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "Float / fixed-point MEDIANF and MULFALL",
-    "Even-n mean-of-two medians option",
-    "MULFALL WHERE / filtered scale",
-    "Reliable IF on stored LET after OOP query",
+    "MODEF multi-mode / tie bag",
+    "SETFALL WHERE status predicate",
+    "UNIQUF sorted option",
+    "Empty-fleet MODEF policy (soft miss vs blank)",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "MEDIANF 20 stable with p2=1000 while AVGF 343",
-    "MULFALL *2 and *0 fleet scale + dump rehydrate",
-    "admit REQUIRE deny/admit paths green",
-    "empty MEDIANF/MULFALL soft 0; empty admit ok",
-    "selftest 325/325 green; no language fix this iter"
+    "FREQF ready:2 busy:1; MODEF ready; UNIQUF ready/busy worked",
+    "MODEF tie fail/drain → first-seen fail",
+    "SETFALL stamp ready N=3; admit REQUIRE green",
+    "empty MODEF blank; admit ready deny",
+    "selftest 328/328 green; no language fix this iter"
   ],
-  "commit": "a3934eb3eea0de11fe3cda0bc668de72eeffde1b",
-  "ts": "2026-08-07T07:44:56Z"
+  "commit": "",
+  "ts": "2026-08-07T08:05:00Z"
 }
