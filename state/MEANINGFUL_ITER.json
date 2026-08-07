@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 371,
-  "version": "1.15.398-usability",
-  "item": "BEFOREF/AFTERF/BETWEENF delimiter field peels",
-  "item_id": 407,
-  "title": "BEFOREF|AFTERF|BETWEENF — delimiter field peels",
-  "commit": "03cc22301ef8ab333216babab688b7361ba1dd62",
-  "summary": "Delimiter peel without GETF+SYS BEFORE/AFTER/BETWEEN+SETF. proof 948 37/37.",
+  "iter": 372,
+  "version": "1.15.399-usability",
+  "item": "NUMF/STRF field type coerce",
+  "item_id": 408,
+  "title": "NUMF|STRF — field type coerce for INCF/CATF",
+  "commit": "27717559ad4c2d984dbb7ee07300d69e9d9aef72",
+  "summary": "Field strtol/itoa in place without GETF+SYS NUM/STR+SETF. proof 949 34/34.",
   "proofs": [
-    "948_oop_beforef",
-    "asserts 37/37",
-    "947 still green"
+    "949_oop_numf",
+    "asserts 34/34",
+    "948 still green"
   ],
-  "when": "2026-08-07T15:44:37Z",
+  "when": "2026-08-07T15:55:02Z",
   "agent": "meaningful_iter_10m",
-  "sha": "03cc22301ef8ab333216babab688b7361ba1dd62",
-  "note": "LAST_N=found; miss BEFORE keeps whole, AFTER empty; BETWEEN empty on miss"
+  "sha": "27717559ad4c2d984dbb7ee07300d69e9d9aef72",
+  "note": "NUMF_OK parse flag; AFTERF then NUMF then INCF; STRF for CATF"
 }
