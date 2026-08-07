@@ -137,6 +137,7 @@ typedef struct {
 
 
 void cubalc_lang_fail(VM *vm, const char *msg);
+void cubalc_lang_fail_at(VM *vm, int line, const char *msg);
 void cubalc_lang_bump(VM *vm);
 int  cubalc_lang_kw(const Tok *t, const char *k);
 void cubalc_lang_lex_skip(Lex *L);
@@ -193,6 +194,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L);
 int cubalc_lang_ops_smx(VM *vm, Lex *L);
 
 #define fail(vm,msg)          cubalc_lang_fail((vm),(msg))
+#define fail_at(vm,L,msg)     cubalc_lang_fail_at((vm),(L)->cur.line,(msg))
 #define bump(vm)              cubalc_lang_bump((vm))
 #define kw(t,k)               cubalc_lang_kw((t),(k))
 #define lex_skip(L)           cubalc_lang_lex_skip((L))

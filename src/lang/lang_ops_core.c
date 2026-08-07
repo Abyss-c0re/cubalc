@@ -24929,7 +24929,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   }
   if (kw(&L->cur,"CUBE")){
     lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"CUBE id"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"CUBE needs id — CUBE body"); return -1; }
     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
     char role[48]; snprintf(role,sizeof role,"%s",id); int proton=1;
     char of_class[48]; of_class[0]=0;
@@ -24938,7 +24938,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (kw(&L->cur,"OF") || kw(&L->cur,"AS") || kw(&L->cur,"TYPE") ||
         kw(&L->cur,"CLASS")) {
       lex_next(L);
-      if (L->cur.kind != TK_IDENT) { fail(vm, "CUBE OF ClassName"); return -1; }
+      if (L->cur.kind != TK_IDENT) { fail_at(vm,L,"CUBE OF needs ClassName — CUBE u OF Ticket"); return -1; }
       snprintf(of_class, sizeof of_class, "%s", L->cur.text);
       lex_next(L);
     }
@@ -25005,9 +25005,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   if (kw(&L->cur,"PLUG")||kw(&L->cur,"WIRE")||kw(&L->cur,"IO_PLUG")){
     lex_next(L);
     if (kw(&L->cur,"RING")){ lex_next(L); do_ring(vm); bump(vm); return 1; }
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_a cube_b"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"PLUG needs two units — PLUG a b"); return -1; }
     char a[48]; snprintf(a,sizeof a,"%s",L->cur.text); lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"PLUG cube_b"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"PLUG needs second unit — PLUG a b"); return -1; }
     char b[48]; snprintf(b,sizeof b,"%s",L->cur.text); lex_next(L);
     do_plug(vm,a,b); bump(vm); return 1;
   }
@@ -27926,10 +27926,16 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     int exists;
     char name[48];
     lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"DEFAULT name = value"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"DEFAULT needs name [=] value — DEFAULT port 8080"); return -1; }
     snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
-    if (L->cur.kind!=TK_EQ){ fail(vm,"DEFAULT name = value"); return -1; }
-    lex_next(L);
+    /* '=' optional when next token is a value — same glue reduction as LET */
+    if (L->cur.kind==TK_EQ){
+      lex_next(L);
+    } else if (!(L->cur.kind==TK_NUM || L->cur.kind==TK_STR ||
+                 L->cur.kind==TK_MINUS || L->cur.kind==TK_LPAREN ||
+                 L->cur.kind==TK_IDENT)){
+      fail_at(vm,L,"DEFAULT needs value — DEFAULT port 8080"); return -1;
+    }
     exists = (var_get(vm, name, 0) != NULL);
     if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
           strcmp(L->cur.text,"LAST")==0 ||

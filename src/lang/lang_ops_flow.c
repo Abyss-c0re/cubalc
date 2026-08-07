@@ -471,7 +471,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   /* ---- OOP: CLASS / TYPE … FIELD … METHOD … END ---- */
   if (kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
     lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail(vm, "CLASS name"); return -1; }
+    if (L->cur.kind != TK_IDENT) { fail_at(vm, L, "CLASS needs name — CLASS Ticket … END"); return -1; }
     char cname[48];
     snprintf(cname, sizeof cname, "%s", L->cur.text);
     lex_next(L);
@@ -490,7 +490,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(cd->role, sizeof cd->role, "body");
       for (;;) {
         skip_nl(L);
-        if (L->cur.kind == TK_EOF) { fail(vm, "CLASS without END"); return -1; }
+        if (L->cur.kind == TK_EOF) { fail_at(vm, L, "CLASS without END — close with END"); return -1; }
         if (kw(&L->cur, "END")) { lex_next(L); break; }
         if (kw(&L->cur, "FIELD") || kw(&L->cur, "VAR") || kw(&L->cur, "PROP") ||
             kw(&L->cur, "MEMBER") || kw(&L->cur, "COMPONENT") ||
@@ -593,7 +593,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   if (kw(&L->cur, "NEW") || kw(&L->cur, "MAKE") || kw(&L->cur, "CREATE")) {
     char cname[48], oname[48];
     lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail(vm, "NEW ClassName"); return -1; }
+    if (L->cur.kind != TK_IDENT) { fail_at(vm, L, "NEW needs ClassName instance — NEW Ticket t"); return -1; }
     snprintf(cname, sizeof cname, "%s", L->cur.text);
     lex_next(L);
     if (oop_read_name(vm, L, oname, sizeof oname, "NEW instance name") < 0)
@@ -800,7 +800,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       lex_next(L);
     }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
-      fail(vm, "SEND object"); return -1;
+      fail_at(vm, L, "SEND needs object method [args] — SEND obj bump"); return -1;
     }
     if (L->cur.kind == TK_STR) {
       snprintf(mname, sizeof mname, "%s", L->cur.text);
@@ -816,7 +816,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       else
         snprintf(mname, sizeof mname, "%s", id);
     } else {
-      fail(vm, "SEND method"); return -1;
+      fail_at(vm, L, "SEND needs method name — SEND obj bump [args]"); return -1;
     }
     ob = oop_find_obj(vm, oname);
     if (!ob) {
@@ -9778,7 +9778,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       lex_next(L);
     }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
-      fail(vm, "GETF object"); return -1;
+      fail_at(vm, L, "GETF needs object field — GETF obj status"); return -1;
     }
     if (L->cur.kind == TK_STR) {
       snprintf(fname, sizeof fname, "%s", L->cur.text);
@@ -9797,7 +9797,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         snprintf(fname, sizeof fname, "%s", id);
       }
     } else {
-      fail(vm, "GETF field"); return -1;
+      fail_at(vm, L, "GETF needs field name — GETF obj status"); return -1;
     }
     /* optional OR|DEFAULT|ELSE|FALLBACK value */
     fb[0] = 0;
@@ -9960,7 +9960,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       lex_next(L);
     }
     if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
-      fail(vm, "SETF object"); return -1;
+      fail_at(vm, L, "SETF needs object field value — SETF obj status val"); return -1;
     }
     if (L->cur.kind == TK_STR) {
       snprintf(fname, sizeof fname, "%s", L->cur.text);
@@ -9976,7 +9976,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       else
         snprintf(fname, sizeof fname, "%s", id);
     } else {
-      fail(vm, "SETF field"); return -1;
+      fail_at(vm, L, "SETF needs field name — SETF obj status val"); return -1;
     }
     if (L->cur.kind == TK_EQ) lex_next(L);
     ob = oop_find_obj(vm, oname);
@@ -17894,7 +17894,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int depth = 1;
     FnDef *fn;
     lex_next(L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"FN name"); return -1; }
+    if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"FN needs name [params] … END — FN add a b"); return -1; }
     snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
     memset(params, 0, sizeof params);
     while (n_params < 8 && L->cur.kind == TK_IDENT &&
@@ -17908,7 +17908,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     while (L->cur.kind!=TK_EOF){
       if (block_scan_step(L, &depth, 0)) break;
     }
-    if (depth!=0){ fail(vm,"FN without END"); return -1; }
+    if (depth!=0){ fail_at(vm,L,"FN without END — close FN body with END"); return -1; }
     b1 = L->tok_off;
     if (b1 < b0) b1 = b0;
     blen = b1 - b0;
@@ -17974,7 +17974,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         snprintf(fname, sizeof fname, "%s", L->cur.text);
       lex_next(L);
     } else {
-      fail(vm, soft ? "TRYCALL name" : "CALL name"); return -1;
+      fail_at(vm, L, soft ? "TRYCALL needs FN name [args] — TRYCALL add 1 2" : "CALL needs FN name [args] — CALL add 1 2"); return -1;
     }
     if (mode == 1) do_call = (cond != 0);
     else if (mode == 2) do_call = (cond == 0);

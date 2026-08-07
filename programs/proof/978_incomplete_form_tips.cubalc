@@ -1,0 +1,36 @@
+# Incomplete-form tips — success path still works after fail_at rewrite
+# CLI smokes cover NEW/SEND/GETF/CALL tips with line N
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "open"
+  FIELD score 1
+  METHOD bump
+    INCF THIS score
+  END
+END
+NEW Ticket t
+GETF t status
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+SETF t status "closed"
+GETF t status
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+SEND t bump
+GETF t score
+ASSERT LAST_N == 2
+
+FN add a b
+  RET a + b
+END
+CALL add 2 3
+ASSERT LAST_N == 5
+
+DEFAULT port 8080
+ASSERT port == 8080
+INCLUDE hold_seed
+ASSERT OK == 1
+
+PRINT "incomplete_form_tips ok"

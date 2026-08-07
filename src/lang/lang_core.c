@@ -18,6 +18,15 @@ void cubalc_lang_fail(VM *vm, const char *msg) {
     snprintf(vm->res->err, sizeof vm->res->err, "%s", msg);
   }
 }
+void cubalc_lang_fail_at(VM *vm, int line, const char *msg) {
+  char ebuf[192];
+  if (!msg) msg = "fail";
+  if (line > 0 && !strstr(msg, "line "))
+    snprintf(ebuf, sizeof ebuf, "%s line %d", msg, line);
+  else
+    snprintf(ebuf, sizeof ebuf, "%s", msg);
+  cubalc_lang_fail(vm, ebuf);
+}
 void cubalc_lang_bump(VM *vm) { if (vm->res) vm->res->stmts++; }
 int cubalc_lang_kw(const Tok *t, const char *k) {
   return t->kind == TK_IDENT && strcasecmp(t->text, k) == 0;

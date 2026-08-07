@@ -5482,7 +5482,7 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       lex_next(L);
     }
     if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){
-      fail(vm,"INCLUDE [ONCE] [OR|SOFT] \"path.cubalc\"|libname"); return -1;
+      fail_at(vm,L,"INCLUDE needs path|libname — INCLUDE hold_seed"); return -1;
     }
     char path[768];
     char orig[512];
