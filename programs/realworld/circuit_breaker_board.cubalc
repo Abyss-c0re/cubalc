@@ -1,0 +1,1733 @@
+# circuit_breaker_board.cubalc — OOP circuit breakers + bag journal SETMATCH
+#
+# Real use: mesh/edge agents track per-dependency circuit breakers (api/db/cache),
+# trip on consecutive fails, half-open probe, then reset on success — without shell
+# state machines. Journal events land in a bag for COUNTLINE/SETMATCH audit:
+#   CLASS Breaker + NEW/SEND/GETF/SETF      — state machine per dependency
+#   TRYSEND / TRYSETF / TRYGETF              — soft method/field probes
+#   EACH OBJ Breaker                         — fleet rollup (closed/open counts)
+#   DUMPOBJ plate rehydrate                  — multi-run ARG dispatch
+#   bag journal + COUNTLINE exact            — fail multiplicity
+#   SETMATCH                                 — rewrite first exact event token
+#   MOVELINE / REMOVELINE                    — pin/drop journal rows
+# Distinct from worker_fleet (load/claim) and deploy_step (step bag only):
+# this board is *breaker state machine + event journal*.
+#
+# Slots (fixed idents — GETF outside EACH needs literals): api db cache
+#
+# Plate under STATE:
+#   dump/api dump/db dump/cache
+#   JOURNAL.txt  — event bag lines (dep:event)
+#   OBJS.txt VAL.txt META.txt BREAKER_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CB_ACTION):
+#   list      — LISTOBJS Breaker
+#   open      — NEW Breaker ARG1=api|db|cache thr=ARG2 (default 3)
+#   fail      — SEND fail on slot (trip when fails>=thr)
+#   ok        — SEND ok (half→closed; closed clears fails)
+#   trip      — force open
+#   half      — force half-open
+#   reset     — closed + zero counters
+#   admit     — SEND admit (1 if closed|half)
+#   status    — state string → VAL
+#   fails     — fails count → VAL
+#   rollup    — EACH: n_closed n_open n_half
+#   journal   — PUSH dep:event (ARG2 or fail)
+#   count     — COUNTLINE exact journal needle (ARG1)
+#   pin       — MOVELINE first exact journal row to front
+#   drop      — REMOVELINE exact journal row
+#   setmatch  — SETMATCH old=ARG1 new=ARG2 on journal
+#   probe     — soft TRYSEND/TRYSETF ghost demo
+#   dump      — DUMPOBJ all live
+#   gate      — admit on slot; REQUIRE→2 deny when open
+#   delete    — DELETEOBJ slot
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cb_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=api CUBALC_ARG2=3
+#   CUBALC_ARG0=fail CUBALC_ARG1=api   # × thr → open
+#   CUBALC_ARG0=half CUBALC_ARG1=api
+#   CUBALC_ARG0=ok CUBALC_ARG1=api
+#   CUBALC_ARG0=gate CUBALC_ARG1=api CUBALC_CB_REQUIRE=1
+#   CUBALC_ARG0=count CUBALC_ARG1=api:fail
+#
+# Env: CUBALC_CB_REQUIRE=1 CUBALC_CB_NAME=api CUBALC_CB_THR=3
+#
+# Edges:
+#   DUMPOBJ bind from EACH fails; sticky last_err after soft ops
+#   string-var object names fail GETF outside EACH
+#   SETMATCH/COUNTLINE exact (substring false friends)
+#   LET state shadow FIELD risk — use br_state vars
+#   WRITE NL; REQUIRE softens non-numeric; process-local rehydrate
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Breaker
+  FIELD id ""
+  FIELD state "closed"
+  FIELD fails 0
+  FIELD thr 3
+  FIELD successes 0
+  METHOD init i t
+    SETF THIS id i
+    SETF THIS state "closed"
+    SETF THIS fails 0
+    SETF THIS thr t
+    SETF THIS successes 0
+  END
+  METHOD fail
+    GETF THIS state
+    LET st = LAST
+    SYS EQS st "open"
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS fails
+    LET f = LAST_N + 1
+    SETF THIS fails f
+    GETF THIS thr
+    LET th = LAST_N
+    IF f >= th THEN
+      SETF THIS state "open"
+      SETF THIS successes 0
+      RET 2
+    END
+    RET 1
+  END
+  METHOD ok
+    GETF THIS state
+    LET st = LAST
+    SYS EQS st "open"
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    SYS EQS st "half"
+    IF LAST_N == 1 THEN
+      SETF THIS state "closed"
+      SETF THIS fails 0
+      GETF THIS successes
+      LET s = LAST_N + 1
+      SETF THIS successes s
+      RET 1
+    END
+    SETF THIS fails 0
+    GETF THIS successes
+    LET s = LAST_N + 1
+    SETF THIS successes s
+    RET 1
+  END
+  METHOD trip
+    SETF THIS state "open"
+    SETF THIS successes 0
+    RET 1
+  END
+  METHOD half
+    SETF THIS state "half"
+    RET 1
+  END
+  METHOD reset
+    SETF THIS state "closed"
+    SETF THIS fails 0
+    SETF THIS successes 0
+    RET 1
+  END
+  METHOD admit
+    GETF THIS state
+    LET st = LAST
+    SYS EQS st "closed"
+    IF LAST_N == 1 THEN
+      RET 1
+    END
+    SYS EQS st "half"
+    IF LAST_N == 1 THEN
+      RET 1
+    END
+    RET 0
+  END
+END
+
+NOTE "circuit_breaker_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_THR = 3
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CB_THR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DEF_THR = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "BREAKER_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "api"
+LET d_api = LAST
+SYS JOIN dump_dir "db"
+LET d_db = LAST
+SYS JOIN dump_dir "cache"
+LET d_cache = LAST
+
+# slot resolve: api=0 db=1 cache=2
+LET slot = -1
+SYS EQS NAME "api"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "db"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "cache"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "api"
+END
+IF slot == 1 THEN
+  LET sn = "db"
+END
+IF slot == 2 THEN
+  LET sn = "cache"
+END
+
+# rehydrate api
+SYS READ OR d_api OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    DELETEOBJ api
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "state"
+  LET rst = LAST
+  SYS LOOKUPN snap "fails"
+  LET rfl = LAST_N
+  SYS LOOKUPN snap "thr"
+  LET rth = LAST_N
+  SYS LOOKUPN snap "successes"
+  LET rsc = LAST_N
+  CLEAR_ERR
+  NEW Breaker api rid rth
+  TRYSETF api state rst
+  CLEAR_ERR
+  TRYSETF api fails rfl
+  CLEAR_ERR
+  TRYSETF api thr rth
+  CLEAR_ERR
+  TRYSETF api successes rsc
+  CLEAR_ERR
+END
+# rehydrate db
+SYS READ OR d_db OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ db
+  IF LAST_N == 1 THEN
+    DELETEOBJ db
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "state"
+  LET rst = LAST
+  SYS LOOKUPN snap "fails"
+  LET rfl = LAST_N
+  SYS LOOKUPN snap "thr"
+  LET rth = LAST_N
+  SYS LOOKUPN snap "successes"
+  LET rsc = LAST_N
+  CLEAR_ERR
+  NEW Breaker db rid rth
+  TRYSETF db state rst
+  CLEAR_ERR
+  TRYSETF db fails rfl
+  CLEAR_ERR
+  TRYSETF db thr rth
+  CLEAR_ERR
+  TRYSETF db successes rsc
+  CLEAR_ERR
+END
+# rehydrate cache
+SYS READ OR d_cache OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ cache
+  IF LAST_N == 1 THEN
+    DELETEOBJ cache
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "state"
+  LET rst = LAST
+  SYS LOOKUPN snap "fails"
+  LET rfl = LAST_N
+  SYS LOOKUPN snap "thr"
+  LET rth = LAST_N
+  SYS LOOKUPN snap "successes"
+  LET rsc = LAST_N
+  CLEAR_ERR
+  NEW Breaker cache rid rth
+  TRYSETF cache state rst
+  CLEAR_ERR
+  TRYSETF cache fails rfl
+  CLEAR_ERR
+  TRYSETF cache thr rth
+  CLEAR_ERR
+  TRYSETF cache successes rsc
+  CLEAR_ERR
+END
+
+# load journal bag
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET nobjs = 0
+LET n_closed = 0
+LET n_open = 0
+LET n_half = 0
+LET ret_n = 0
+LET j_changed = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Breaker
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET thr_n = DEF_THR
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET thr_n = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        DELETEOBJ api
+        CLEAR_ERR
+      END
+      NEW Breaker api sn thr_n
+      DUMPOBJ api
+      LET snap = LAST
+      SYS WRITE d_api snap
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        DELETEOBJ db
+        CLEAR_ERR
+      END
+      NEW Breaker db sn thr_n
+      DUMPOBJ db
+      LET snap = LAST
+      SYS WRITE d_db snap
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        DELETEOBJ cache
+        CLEAR_ERR
+      END
+      NEW Breaker cache sn thr_n
+      DUMPOBJ cache
+      LET snap = LAST
+      SYS WRITE d_cache snap
+      CLEAR_ERR
+    END
+    LISTOBJS Breaker
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR thr_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# helper dump one slot after mutation
+# --- fail ---
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  NOTE "action fail"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "fail bad slot"
+    FAIL "fail bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "fail bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api fail
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ api
+        SYS WRITE d_api LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db fail
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ db
+        SYS WRITE d_db LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache fail
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ cache
+        SYS WRITE d_cache LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "fail no obj"
+      FAIL "fail no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "fail no obj"
+      END
+    ELSE
+      # journal event
+      LET jev = "DEP:fail"
+      SYS REPLACEALL jev "DEP" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "fail ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "fail"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      # if tripped, journal trip
+      IF ret_n == 2 THEN
+        LET jev2 = "DEP:trip"
+        SYS REPLACEALL jev2 "DEP" sn
+        LET jev2 = LAST
+        SYS PUSH jbag jev2
+        LET jbag = LAST
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- ok ---
+SYS EQS ACTION "ok"
+IF LAST_N == 1 THEN
+  NOTE "action ok"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "ok bad slot"
+    FAIL "ok bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "ok bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api ok
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ api
+        SYS WRITE d_api LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db ok
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ db
+        SYS WRITE d_db LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache ok
+        LET ret_n = LAST_N
+        LET ok_send = 1
+        DUMPOBJ cache
+        SYS WRITE d_cache LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "ok no obj"
+      FAIL "ok no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "ok no obj"
+      END
+    ELSE
+      LET jev = "DEP:ok"
+      SYS REPLACEALL jev "DEP" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "ok ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "ok"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ret_n == 0 THEN
+        LET note_msg = "ok blocked open"
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- trip ---
+SYS EQS ACTION "trip"
+IF LAST_N == 1 THEN
+  NOTE "action trip"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "trip bad slot"
+    FAIL "trip bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "trip bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api trip
+        LET ok_send = 1
+        DUMPOBJ api
+        SYS WRITE d_api LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db trip
+        LET ok_send = 1
+        DUMPOBJ db
+        SYS WRITE d_db LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache trip
+        LET ok_send = 1
+        DUMPOBJ cache
+        SYS WRITE d_cache LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "trip no obj"
+      FAIL "trip no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "trip no obj"
+      END
+    ELSE
+      LET jev = "DEP:trip"
+      SYS REPLACEALL jev "DEP" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "trip ok"
+      LET val = "open"
+      LET val_ch = 1
+      LET meta = "trip"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- half ---
+SYS EQS ACTION "half"
+IF LAST_N == 1 THEN
+  NOTE "action half"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "half bad slot"
+    FAIL "half bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "half bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api half
+        LET ok_send = 1
+        DUMPOBJ api
+        SYS WRITE d_api LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db half
+        LET ok_send = 1
+        DUMPOBJ db
+        SYS WRITE d_db LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache half
+        LET ok_send = 1
+        DUMPOBJ cache
+        SYS WRITE d_cache LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "half no obj"
+      FAIL "half no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "half no obj"
+      END
+    ELSE
+      LET jev = "DEP:half"
+      SYS REPLACEALL jev "DEP" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "half ok"
+      LET val = "half"
+      LET val_ch = 1
+      LET meta = "half"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- reset ---
+SYS EQS ACTION "reset"
+IF LAST_N == 1 THEN
+  NOTE "action reset"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "reset bad slot"
+    FAIL "reset bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "reset bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api reset
+        LET ok_send = 1
+        DUMPOBJ api
+        SYS WRITE d_api LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db reset
+        LET ok_send = 1
+        DUMPOBJ db
+        SYS WRITE d_db LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache reset
+        LET ok_send = 1
+        DUMPOBJ cache
+        SYS WRITE d_cache LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "reset no obj"
+      FAIL "reset no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "reset no obj"
+      END
+    ELSE
+      LET jev = "DEP:reset"
+      SYS REPLACEALL jev "DEP" sn
+      LET jev = LAST
+      SYS PUSH jbag jev
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "reset ok"
+      LET val = "closed"
+      LET val_ch = 1
+      LET meta = "reset"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- admit ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "admit bad slot"
+    FAIL "admit bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "admit no obj"
+      FAIL "admit no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "admit no obj"
+      END
+    ELSE
+      LET hit = 1
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "admit"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+      IF ret_n == 1 THEN
+        LET note_msg = "admit yes"
+      ELSE
+        LET note_msg = "admit no"
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- status ---
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  NOTE "action status"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "status bad slot"
+    FAIL "status bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "status bad slot"
+    END
+  ELSE
+    LET got = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        GETF api state
+        LET val = LAST
+        LET got = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        GETF db state
+        LET val = LAST
+        LET got = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        GETF cache state
+        LET val = LAST
+        LET got = 1
+      END
+    END
+    IF got == 0 THEN
+      LET miss = 1
+      LET note_msg = "status no obj"
+      FAIL "status no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "status no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET val_ch = 1
+      LET note_msg = "status ok"
+      LET meta = "status"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- fails ---
+SYS EQS ACTION "fails"
+IF LAST_N == 1 THEN
+  NOTE "action fails"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "fails bad slot"
+    FAIL "fails bad slot"
+    CLEAR_ERR
+  ELSE
+    LET got = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        GETF api fails
+        LET ret_n = LAST_N
+        LET got = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        GETF db fails
+        LET ret_n = LAST_N
+        LET got = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        GETF cache fails
+        LET ret_n = LAST_N
+        LET got = 1
+      END
+    END
+    IF got == 0 THEN
+      LET miss = 1
+      LET note_msg = "fails no obj"
+      FAIL "fails no obj"
+      CLEAR_ERR
+    ELSE
+      LET hit = 1
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET note_msg = "fails ok"
+      LET meta = "fails"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- rollup EACH ---
+SYS EQS ACTION "rollup"
+IF LAST_N == 1 THEN
+  NOTE "action rollup"
+  LET n_closed = 0
+  LET n_open = 0
+  LET n_half = 0
+  EACH OBJ Breaker AS o
+    GETF o state
+    LET st = LAST
+    SYS EQS st "closed"
+    IF LAST_N == 1 THEN
+      LET n_closed = n_closed + 1
+    END
+    SYS EQS st "open"
+    IF LAST_N == 1 THEN
+      LET n_open = n_open + 1
+    END
+    SYS EQS st "half"
+    IF LAST_N == 1 THEN
+      LET n_half = n_half + 1
+    END
+  END
+  LISTOBJS Breaker
+  LET nobjs = NOBJS
+  LET hit = 1
+  LET note_msg = "rollup ok"
+  LET meta = "rollup"
+  SYS STR n_closed
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_open
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_half
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  # NOTE: SYS JOIN is path-join (inserts /) — not string concat
+  LET val = "c:C o:O h:H"
+  SYS STR n_closed
+  SYS REPLACEALL val "C" LAST
+  LET val = LAST
+  SYS STR n_open
+  SYS REPLACEALL val "O" LAST
+  LET val = LAST
+  SYS STR n_half
+  SYS REPLACEALL val "H" LAST
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- journal push ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs dep"
+    FAIL "journal needs dep"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "journal needs dep"
+    END
+  ELSE
+    LET ev = "fail"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count COUNTLINE exact ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin MOVELINE ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- drop REMOVELINE ---
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop needs row"
+    FAIL "drop needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop needs row"
+    END
+  ELSE
+    SYS HASLINE jbag NAME
+    IF LAST_N == 0 THEN
+      LET miss = 1
+      LET note_msg = "drop miss"
+      FAIL "drop miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drop miss"
+      END
+    ELSE
+      SYS REMOVELINE jbag NAME
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "drop ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "drop"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  LET soft_o = 0
+  # TRYSEND ghost method on live obj if present else ghost obj
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    TRYSEND api no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF api no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+    TRYGETF api no_such_field OR "miss"
+    LET val = LAST
+    CLEAR_ERR
+  ELSE
+    TRYSEND ghost_obj tick
+    IF OK == 0 THEN
+      LET soft_o = 1
+    END
+    CLEAR_ERR
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_o
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    DUMPOBJ api
+    SYS WRITE d_api LAST
+    CLEAR_ERR
+  END
+  HASOBJ db
+  IF LAST_N == 1 THEN
+    DUMPOBJ db
+    SYS WRITE d_db LAST
+    CLEAR_ERR
+  END
+  HASOBJ cache
+  IF LAST_N == 1 THEN
+    DUMPOBJ cache
+    SYS WRITE d_cache LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Breaker
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET ok_send = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        SEND api admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        SEND db admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        SEND cache admit
+        LET ret_n = LAST_N
+        LET ok_send = 1
+      END
+    END
+    IF ok_send == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate no obj"
+      FAIL "gate no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate no obj"
+      END
+    ELSE
+      IF ret_n == 1 THEN
+        LET hit = 1
+        LET gate_n = 1
+        LET note_msg = "gate admit"
+        LET val = "admit"
+        LET val_ch = 1
+      ELSE
+        LET miss = 1
+        LET gate_n = 0
+        LET note_msg = "gate deny"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate deny open circuit"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate deny open circuit"
+        END
+      END
+      LET meta = "gate"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- delete ---
+SYS EQS ACTION "delete"
+IF LAST_N == 1 THEN
+  NOTE "action delete"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "delete bad slot"
+    FAIL "delete bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delete bad slot"
+    END
+  ELSE
+    LET ok_del = 0
+    IF slot == 0 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        DELETEOBJ api
+        CLEAR_ERR
+        LET ok_del = 1
+      END
+      SYS RM d_api
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        DELETEOBJ db
+        CLEAR_ERR
+        LET ok_del = 1
+      END
+      SYS RM d_db
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ cache
+      IF LAST_N == 1 THEN
+        DELETEOBJ cache
+        CLEAR_ERR
+        LET ok_del = 1
+      END
+      SYS RM d_cache
+      CLEAR_ERR
+    END
+    IF ok_del == 0 THEN
+      LET miss = 1
+      LET note_msg = "delete miss"
+      FAIL "delete miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "delete miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "delete ok"
+      LET val = sn
+      LET val_ch = 1
+      LET meta = "delete"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    DELETEOBJ api
+    CLEAR_ERR
+  END
+  HASOBJ db
+  IF LAST_N == 1 THEN
+    DELETEOBJ db
+    CLEAR_ERR
+  END
+  HASOBJ cache
+  IF LAST_N == 1 THEN
+    DELETEOBJ cache
+    CLEAR_ERR
+  END
+  SYS RM d_api
+  CLEAR_ERR
+  SYS RM d_db
+  CLEAR_ERR
+  SYS RM d_cache
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown action soft miss
+SYS EQS ACTION "list"
+LET known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "ok"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "trip"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "half"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "reset"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "status"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "fails"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "rollup"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "delete"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+IF known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 "unknown action"
+  END
+END
+
+# persist journal
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+
+# VAL/META
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+# report
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+LET report = "circuit_breaker_board"
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS STR dt
+SYS PUSH report LAST
+LET report = LAST
+SYS WRITE report_path report
+CLEAR_ERR
+
+NOTE "circuit_breaker_board: done"
+IF miss > 0 THEN
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 note_msg
+  END
+END
+EXIT 0 note_msg

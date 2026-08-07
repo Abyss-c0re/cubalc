@@ -1,0 +1,202 @@
+{
+  "schema": "cubalc.realworld_challenge.v1",
+  "iter": 116,
+  "program": "programs/realworld/circuit_breaker_board.cubalc",
+  "theme": "OOP circuit breakers + bag journal SETMATCH/COUNTLINE + EACH rollup",
+  "version": "1.15.328-usability",
+  "pass": true,
+  "prior_note": "iter 115 worker_fleet_board committed 6607355 but plate was deleted in that commit; plate restored here at 116",
+  "tests": [
+    {
+      "name": "open_api_db_cache",
+      "cmd": "open api thr3; open db thr2; open cache",
+      "ok": true,
+      "note": "NEW+DUMPOBJ"
+    },
+    {
+      "name": "list_status_gate_closed",
+      "cmd": "list; status api=closed; gate admit",
+      "ok": true,
+      "note": "admit"
+    },
+    {
+      "name": "fail_trip",
+      "cmd": "fail\u00d73 thr3 \u2192 state open; fails=2 then trip",
+      "ok": true,
+      "note": "trip"
+    },
+    {
+      "name": "gate_open_soft_req",
+      "cmd": "gate soft rc0; REQUIRE\u21922",
+      "ok": true,
+      "note": "soft+hard"
+    },
+    {
+      "name": "ok_blocked_open",
+      "cmd": "ok while open \u2192 RET 0",
+      "ok": true,
+      "note": "blocked"
+    },
+    {
+      "name": "half_ok_closed",
+      "cmd": "half; gate admit; ok \u2192 closed",
+      "ok": true,
+      "note": "recover"
+    },
+    {
+      "name": "rollup_each",
+      "cmd": "EACH state counts c/o/h",
+      "ok": true,
+      "note": "rollup"
+    },
+    {
+      "name": "count_exact_false_friend",
+      "cmd": "COUNTLINE api:fail=3; needle api=0",
+      "ok": true,
+      "note": "exact"
+    },
+    {
+      "name": "setmatch_first",
+      "cmd": "SETMATCH first api:fail\u2192api:fail_ack only",
+      "ok": true,
+      "note": "first only"
+    },
+    {
+      "name": "pin_moveline",
+      "cmd": "MOVELINE api:trip to front",
+      "ok": true,
+      "note": "pin"
+    },
+    {
+      "name": "probe_soft",
+      "cmd": "TRYSEND/TRYSETF soft_m/f=1",
+      "ok": true,
+      "note": "soft"
+    },
+    {
+      "name": "bad_slot_require",
+      "cmd": "open ghost REQUIRE\u21922; status ghost soft",
+      "ok": true,
+      "note": "miss"
+    },
+    {
+      "name": "num_require_softens",
+      "cmd": "CUBALC_CB_REQUIRE=abc gate open \u2192 rc0",
+      "ok": true,
+      "note": "NUM"
+    },
+    {
+      "name": "write_no_nl",
+      "cmd": "cat -A VAL/JOURNAL dump",
+      "ok": true,
+      "note": "NL"
+    },
+    {
+      "name": "selftest",
+      "cmd": "./out/cubalc selftest",
+      "ok": true,
+      "note": "304/304 pass"
+    }
+  ],
+  "weaknesses": [
+    {
+      "id": "W1",
+      "severity": "high",
+      "area": "host|join",
+      "title": "SYS JOIN is path-join only (inserts /) \u2014 no string concat",
+      "detail": "Building rollup label via SYS JOIN val LAST produced c:/3/ o:/0/ not c:3 o:0. Agents must REPLACEALL/PUSH bag, not JOIN, for text assembly.",
+      "repro": "LET v=\"c:\"; SYS STR 3; SYS JOIN v LAST \u2192 c:/3"
+    },
+    {
+      "id": "W2",
+      "severity": "high",
+      "area": "oop|persist",
+      "title": "Process-local objects force DUMPOBJ plate rehydrate every ARG run",
+      "detail": "Multi-action host scripts must dump after every SEND mutation. No native object plate persistence.",
+      "repro": "open then separate process fail without dump \u2192 no obj"
+    },
+    {
+      "id": "W3",
+      "severity": "high",
+      "area": "oop|name",
+      "title": "Fixed slot EQS dispatch \u2014 string-var object names still fail GETF/SEND",
+      "detail": "api/db/cache forced as literal idents. Cannot loop slots from bag of names with GETF n state.",
+      "repro": "LET n=\"api\"; GETF n state \u2192 fail"
+    },
+    {
+      "id": "W4",
+      "severity": "med",
+      "area": "oop|each",
+      "title": "DUMPOBJ on EACH bind o fails (unknown object) while GETF/TRYSEND work",
+      "detail": "Same class of bug as worker_fleet. Fleet dump must use HASOBJ+DUMPOBJ literal slots after EACH.",
+      "repro": "EACH OBJ Breaker AS o; DUMPOBJ o \u2192 unknown object"
+    },
+    {
+      "id": "W5",
+      "severity": "med",
+      "area": "soft|err",
+      "title": "TRYSEND/TRYSETF sticky last_err needs CLEAR_ERR for -s",
+      "detail": "Soft probe leaves last_err; strict mode reports noise without CLEAR_ERR.",
+      "repro": "TRYSEND api no_such; without CLEAR_ERR under -s"
+    },
+    {
+      "id": "W6",
+      "severity": "med",
+      "area": "bag|setmatch",
+      "title": "SETMATCH replaces first exact only; no replace-all mode",
+      "detail": "Three api:fail rows \u2192 SETMATCH once leaves 2. Agents loop or accept first-only.",
+      "repro": "count after one SETMATCH drops by 1 only"
+    },
+    {
+      "id": "W7",
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "cat -A VAL/JOURNAL/dump shows $ only between bag lines, last line no NL.",
+      "repro": "od -c VAL.txt"
+    },
+    {
+      "id": "W8",
+      "severity": "low",
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE env softens to 0",
+      "detail": "CUBALC_CB_REQUIRE=abc \u2192 REQUIRE_HIT stays 0 \u2192 gate deny soft rc0.",
+      "repro": "REQUIRE=abc open circuit gate \u2192 rc0"
+    },
+    {
+      "id": "W9",
+      "severity": "low",
+      "area": "oop|slot",
+      "title": "No SENDALL used here but open circuit needs per-slot SEND wall of EQS",
+      "detail": "Even with SENDALL (1.15.328), state machines still need per-object admit checks; rollup EACH works but mutation dispatch remains N-way.",
+      "repro": "fail/ok/trip/half each have 3 HASOBJ branches"
+    }
+  ],
+  "workarounds": [
+    "REPLACEALL templates for text labels \u2014 never SYS JOIN for non-paths",
+    "DUMPOBJ after every mutation; READ dump at start of each run",
+    "Literal api|db|cache slots + EQS NAME dispatch",
+    "CLEAR_ERR after every soft TRYSEND/TRYSETF/TRYGETF",
+    "Loop SETMATCH or accept first-only journal rewrites",
+    "COUNTLINE exact tokens (api:fail not substring api)"
+  ],
+  "language_gaps": [
+    "String concat / strcat (not path JOIN)",
+    "Native multi-run object persistence",
+    "GETF/SEND with string-var object names",
+    "DUMPOBJ on EACH bind o",
+    "SETMATCH ALL / replace-all bag fields",
+    "WRITE trailing NL option",
+    "Strict NUM on REQUIRE flags (reject non-numeric)"
+  ],
+  "issues_faced": [
+    "rollup first used SYS JOIN \u2192 bogus c:/3/ labels; fixed with REPLACEALL",
+    "gate open soft correctly rc0; REQUIRE\u21922",
+    "SETMATCH first-only confirmed by count 3\u21922 after one rewrite",
+    "COUNTLINE false friend api\u21920 exactness good",
+    "selftest 304/304 green; no language fix this iter",
+    "restored REALWORLD_CHALLENGE.json after worker_fleet commit deleted plate"
+  ],
+  "commit": "",
+  "ts": "2026-08-07T04:07:37Z"
+}
