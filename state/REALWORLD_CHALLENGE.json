@@ -15,25 +15,25 @@
     },
     {
       "name": "claim_fifo",
-      "cmd": "POPHEADF → deploy-a; bag remains error-b/deploy-c",
+      "cmd": "POPHEADF \u2192 deploy-a; bag remains error-b/deploy-c",
       "ok": true,
       "note": "POPHEADF"
     },
     {
       "name": "pop_lifo",
-      "cmd": "POPF → deploy-c; bag error-b",
+      "cmd": "POPF \u2192 deploy-c; bag error-b",
       "ok": true,
       "note": "POPF"
     },
     {
       "name": "filter",
-      "cmd": "GREPF error → error-disk+error-mem N=2; keep snapshot full",
+      "cmd": "GREPF error \u2192 error-disk+error-mem N=2; keep snapshot full",
       "ok": true,
       "note": "GREPF"
     },
     {
       "name": "dropmatch",
-      "cmd": "GREPVF DROP → keep-a+keep-b",
+      "cmd": "GREPVF DROP \u2192 keep-a+keep-b",
       "ok": true,
       "note": "GREPVF"
     },
@@ -62,8 +62,8 @@
       "severity": "high",
       "area": "oop|pushf",
       "title": "PUSHF arg var ITEM silently pushes \"1\"",
-      "detail": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM → bag becomes \"1\" not deploy-a. Form-token collision (ITEM reserved). Must use JOB/WORKITEM. Same class as COL/SEP/FLOOR/CAP/NEEDLE.",
-      "repro": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM → bag 1"
+      "detail": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM \u2192 bag becomes \"1\" not deploy-a. Form-token collision (ITEM reserved). Must use JOB/WORKITEM. Same class as COL/SEP/FLOOR/CAP/NEEDLE.",
+      "repro": "DEFAULT ITEM=\"deploy-a\"; PUSHF q bag ITEM \u2192 bag 1"
     },
     {
       "id": "W2",
@@ -71,15 +71,15 @@
       "area": "oop|dumpobj|plate",
       "title": "DUMPOBJ multiline field breaks plate LOOKUP",
       "detail": "Bag with newlines written as raw lines; LOOKUP bag returns only first line. Cross-run rehydrate loses queue body. Workaround: dump/wN.bag side files for bag/keep.",
-      "repro": "DUMPOBJ after PUSHF a\\nb\\nc; LOOKUP bag → a only"
+      "repro": "DUMPOBJ after PUSHF a\\nb\\nc; LOOKUP bag \u2192 a only"
     },
     {
       "id": "W3",
       "severity": "high",
       "area": "oop|grepf",
       "title": "GREPF needle var NEEDLE mis-filters",
-      "detail": "DEFAULT NEEDLE=\"error\"; GREPF q bag NEEDLE → GREPF_N=1 wrong (literal/token collision). Rename to WANT. Silent wrong triage.",
-      "repro": "GREPF bag NEEDLE with NEEDLE=error → N=1 not 2"
+      "detail": "DEFAULT NEEDLE=\"error\"; GREPF q bag NEEDLE \u2192 GREPF_N=1 wrong (literal/token collision). Rename to WANT. Silent wrong triage.",
+      "repro": "GREPF bag NEEDLE with NEEDLE=error \u2192 N=1 not 2"
     },
     {
       "id": "W4",
@@ -87,7 +87,7 @@
       "area": "oop|grepf|linef",
       "title": "GREPF/LINEF mutate field (destructive filter/peel)",
       "detail": "GREPF no-match empties bag (data loss). LINEF replaces bag with one line. Must snapshot keep before filter/peek-on-copy.",
-      "repro": "GREPF zzz → bag empty; keep holds prior if snapshotted"
+      "repro": "GREPF zzz \u2192 bag empty; keep holds prior if snapshotted"
     },
     {
       "id": "W5",
@@ -115,8 +115,8 @@
     }
   ],
   "workarounds": [
-    "Never name PUSHF payload ITEM — use JOB",
-    "Never name GREPF needle NEEDLE — use WANT",
+    "Never name PUSHF payload ITEM \u2014 use JOB",
+    "Never name GREPF needle NEEDLE \u2014 use WANT",
     "Persist bag/keep to dump/wN.bag side files; do not trust DUMPOBJ multiline",
     "Snapshot keep before GREPF/LINEF; empty POP HIT=0",
     "Fixed w0/w1/w2; TRY* soft; numeric REQUIRE only"
@@ -129,12 +129,12 @@
     "WRITE NL; strict NUM REQUIRE; PRINT_JSON escape \\n"
   ],
   "issues_faced": [
-    "ITEM→JOB and NEEDLE→WANT renames required for correct ops",
+    "ITEM\u2192JOB and NEEDLE\u2192WANT renames required for correct ops",
     "DUMPOBJ multiline forced dump/wN.bag side-file rehydrate",
     "PUSHF 3 jobs depth 3; claim FIFO deploy-a; pop LIFO deploy-c",
     "GREPF error N=2; GREPVF DROP keeps 2; no-match empties bag",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "76f201fe954708c65f10c1f66d365d27ddf80d2f",
   "ts": "2026-08-07T18:12:22Z"
 }
