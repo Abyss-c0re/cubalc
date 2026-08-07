@@ -1,0 +1,143 @@
+# NTHBYFWHERE / ATWHERE — kth ranked match by numeric field
+# Usability: no WHERE+NTHBYF or SORTBYFWHERE+NTH glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 30 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 10 0
+NEW Cell e 1 50 0
+NEW Cell f 1 5 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+SETF f age 0
+
+# age==1 ASC energies: c20 a30 e50
+NTHBYFWHERE Cell energy 0 age 1 ASC
+ASSERT OK == 1
+ASSERT NTHBYFWHERE_HIT == 1
+ASSERT NTHBYFWHERE_TOTAL == 3
+ASSERT NTHBYFWHERE_I == 0
+ASSERT NTHBYFWHERE_DESC == 0
+ASSERT NTHBYFWHERE_VAL == 20
+ASSERT LAST_N == 20
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+
+NTHBYFWHERE Cell energy 1 age 1 ASC
+ASSERT NTHBYFWHERE_VAL == 30
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+NTHBYFWHERE Cell energy 2 age 1 ASC
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# DESC age1: e a c
+NTHBYFWHERE Cell energy 0 age 1 DESC
+ASSERT NTHBYFWHERE_DESC == 1
+ASSERT NTHBYFWHERE_VAL == 50
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+NTHBYFWHERE Cell energy 1 age 1 DESC
+ASSERT NTHBYFWHERE_VAL == 30
+SYS EQS LAST "a"
+ASSERT LAST_N == 1 "runner-up among age1"
+
+# WHERE sugar
+NTHBYFWHERE Cell energy 0 WHERE age 0 ASC
+ASSERT NTHBYFWHERE_TOTAL == 3
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+ASSERT NTHBYFWHERE_VAL == 5
+
+# OF + AT sugar
+NTHBYFWHERE OF Cell energy AT 1 WHERE age 0 ASC
+# age0 ASC: f5 b10 d10 → index1 = b
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+ASSERT NTHBYFWHERE_VAL == 10
+
+# aliases
+ATWHERE Cell energy 0 age 1 DESC
+SYS EQS ATWHERE "e"
+ASSERT LAST_N == 1
+INDEXWHERE Cell energy 2 age 1 ASC
+SYS EQS INDEXWHERE "e"
+ASSERT LAST_N == 1
+NTHWHERE Cell energy 1 age 0 ASC
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+KTHWHERE Cell energy 0 age 1 DESC
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# var index
+LET k = 1
+NTHBYFWHERE Cell energy k age 1 DESC
+ASSERT NTHBYFWHERE_I == 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# OOB soft
+NTHBYFWHERE Cell energy 99 age 1 DESC
+ASSERT OK == 1
+ASSERT NTHBYFWHERE_HIT == 0
+ASSERT NTHBYFWHERE_N == 0
+ASSERT LAST_N == 0
+ASSERT NTHBYFWHERE_TOTAL == 3
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+NTHBYFWHERE Cell energy -1 age 1 ASC
+ASSERT NTHBYFWHERE_HIT == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# string match tickets
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 7
+NEW Ticket t2 "closed" 9
+NEW Ticket t3 "open" 2
+NEW Ticket t4 "open" 5
+# open DESC retries: t1=7 t4=5 t3=2
+NTHBYFWHERE Ticket retries 0 status "open" DESC
+ASSERT NTHBYFWHERE_TOTAL == 3
+ASSERT NTHBYFWHERE_VAL == 7
+SYS EQS LAST "t1"
+ASSERT LAST_N == 1
+NTHBYFWHERE Ticket retries 1 status "open" DESC
+SYS EQS LAST "t4"
+ASSERT LAST_N == 1
+NTHBYFWHERE Ticket retries 2 status "open" DESC
+SYS EQS LAST "t3"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "t2"
+ASSERT LAST_N == 0 "LAST is name not bag"
+
+# no match soft empty
+NTHBYFWHERE Ticket retries 0 status "missing" DESC
+ASSERT OK == 1
+ASSERT NTHBYFWHERE_HIT == 0
+ASSERT NTHBYFWHERE_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof923_oop_nthbyfwhere" 1
+ASSERT OK == 1
