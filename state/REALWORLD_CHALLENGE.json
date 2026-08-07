@@ -1,59 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 133,
-  "program": "programs/realworld/ready_pick_where_board.cubalc",
-  "theme": "MINOBJWHERE/MAXOBJWHERE/SORTBYFWHERE status-filtered cold/hot pick + ranked place/drain bag",
-  "version": "1.15.369-usability",
+  "iter": 134,
+  "program": "programs/realworld/topn_drain_where_board.cubalc",
+  "theme": "TOPNBYFWHERE/NTHBYF ready top-N drain/place bags + fleet kth pick + pressure admit",
+  "version": "1.15.372-usability",
   "pass": true,
-  "prior_note": "iter 132 canary_weight_mul COPYFWHERE/MULWHERE/SWAPFWHERE; this iter stresses MINOBJWHERE+MAXOBJWHERE+SORTBYFWHERE (957e666/d384e7e)",
+  "prior_note": "iter 133 ready_pick MIN/MAXOBJWHERE+SORTBYFWHERE; this iter stresses TOPNBYFWHERE+NTHBYF (a1bd661/d83a89b)",
   "tests": [
     {
-      "name": "open_nodes",
-      "cmd": "open n0/n1 ready n2 drain; loads 30/10/5",
+      "name": "open_loads",
+      "cmd": "n0/n1 ready 40/10; n2 drain 99",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "pick_cold",
-      "cmd": "MINOBJWHERE ready \u2192 n1 load 10 (drain n2 excluded)",
+      "name": "topn_hot_desc",
+      "cmd": "TOPNBYFWHERE K=2 ready DESC → n0 n1 (drain excluded)",
       "ok": true,
-      "note": "MINOBJWHERE"
+      "note": "TOPNBYFWHERE"
     },
     {
-      "name": "pick_hot",
-      "cmd": "MAXOBJWHERE ready \u2192 n0 load 30",
+      "name": "topn_cold_asc",
+      "cmd": "ASC → n1 n0",
       "ok": true,
-      "note": "MAXOBJWHERE"
+      "note": "ASC"
     },
     {
-      "name": "rank_asc_desc",
-      "cmd": "ASC n1 n0; DESC n0 n1",
+      "name": "k_over_under",
+      "cmd": "K=99 N=2 REQ=99; K=0 N=0 TOTAL=2",
       "ok": true,
-      "note": "SORTBYFWHERE"
+      "note": "clamp/empty"
     },
     {
-      "name": "admit_budget",
-      "cmd": "cold 10 budget 20 admit; budget 5 deny",
+      "name": "nth_fleet",
+      "cmd": "NTHBYF 0 DESC → n2:99; 1 → n0:40; 9 OOR REQUIRE",
+      "ok": true,
+      "note": "NTHBYF"
+    },
+    {
+      "name": "admit_pressure",
+      "cmd": "max ready 40 ≥30 admit; ≥50 deny",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "exclude_drain",
-      "cmd": "drain n1; cold \u2192 n0 only",
-      "ok": true,
-      "note": "filter"
-    },
-    {
       "name": "empty_ready",
-      "cmd": "all drain; pick_cold REQUIRE EXIT 2; rank N=0",
+      "cmd": "all drain; topn N=0; admit REQUIRE deny",
       "ok": true,
       "note": "empty"
-    },
-    {
-      "name": "tie_first_seen",
-      "cmd": "loads 15/15; cold and hot both n0 first-seen",
-      "ok": true,
-      "note": "tie"
     },
     {
       "name": "substring_false_friend",
@@ -63,7 +57,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two n0:place \u2192 SETMATCH leaves 1",
+      "cmd": "two n0:drain → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -71,49 +65,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "345/345 pass"
+      "note": "348/348 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "oop|maxobjwhere|empty",
-      "title": "Empty MINOBJWHERE/MAXOBJWHERE can leave last_err hard path",
-      "detail": "No matching objects sets last_err (e.g. MAXOBJWHERE: no matching objects). Agents must COUNTWHERE gate before pick or risk soft-hard confusion. SORTBYFWHERE empty is quieter (N=0 bag).",
-      "repro": "MINOBJWHERE status missing without COUNTWHERE"
+      "severity": "med",
+      "area": "oop|nthbyf",
+      "title": "No NTHBYFWHERE — kth pick cannot filter by status",
+      "detail": "NTHBYF is fleet-wide only. Filtered runner-up needs TOPNBYFWHERE K=i+1 then SYS NTH i, or SORTBYFWHERE+NTH glue.",
+      "repro": "NTHBYFWHERE unknown form; nth_fleet 0 returns drain n2 not hottest ready"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|maxobjwhere|tie",
-      "title": "Ties \u2192 first-seen only \u2014 no multi-winner bag",
-      "detail": "Equal loads return single object name; cannot round-robin without extra state. SORTBYFWHERE keeps first-seen order on ties.",
-      "repro": "two ready load=15 \u2192 cold and hot both n0"
+      "area": "oop|topnbyfwhere",
+      "title": "TOPN bag is names only — no paired load values",
+      "detail": "Drain list is object names; agents must GETF each or GETFWHERE for loads.",
+      "repro": "TOPN.txt = n0\\nn1 not n0:40"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|sortbyfwhere",
-      "title": "SORTBYFWHERE bag is names only \u2014 no load values paired",
-      "detail": "Rank plate is object names; agents need GETF per name or GETFWHERE for load:value inventory.",
-      "repro": "RANK.txt = n1\\nn0 not n1:10"
+      "area": "oop|topnbyfwhere",
+      "title": "K>TOTAL silent clamp; K=0 empty with TOTAL still set",
+      "detail": "REQ records requested K but N=min(K,TOTAL). K=0 yields empty bag without soft miss flag beyond N=0.",
+      "repro": "K=99 N=2 REQ=99; K=0 N=0 TOTAL=2"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|where",
-      "title": "Status equality only \u2014 no ready|idle multi-status pick",
-      "detail": "Cannot MINOBJWHERE across ready OR idle without two picks + compare.",
-      "repro": "want cold among ready+idle"
+      "title": "Status equality only for TOPN filter",
+      "detail": "Cannot top-N across ready|idle multi-status without two queries.",
+      "repro": "want top2 among ready+idle"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|pick",
-      "title": "LAST after pick is name string; GETF LAST works only if name is live object",
-      "detail": "Proof uses GETF LAST energy after MAXOBJWHERE; multi-run rehydrate boards usually store name then GETF by slot literal.",
-      "repro": "GETF LAST after plate rehydrate next process"
+      "area": "oop|arg_order",
+      "title": "TOPNBYFWHERE arg order is field N matchfield matchval",
+      "detail": "Easy to misorder as status before N (silent wrong match).",
+      "repro": "TOPNBYFWHERE Node load 2 status ready DESC"
     },
     {
       "id": "W6",
@@ -121,14 +115,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c RANK.txt"
+      "repro": "od -c TOPN.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "REQUIRE=abc \u2192 soft.",
+      "title": "Non-numeric REQUIRE/K softens",
+      "detail": "REQUIRE=abc → soft; bad K keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -136,31 +130,31 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:place \u2192 one SETMATCH leaves 1.",
+      "detail": "Two n0:drain → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "COUNTWHERE before MINOBJWHERE/MAXOBJWHERE to avoid empty last_err",
-    "Tie-break with secondary field or explicit round-robin bag",
-    "Pair SORTBYFWHERE names with GETFWHERE loads if values needed",
-    "Dual pick+compare for multi-status cohorts",
+    "Filtered kth: TOPNBYFWHERE K=i+1 then SYS NTH i TOPNBYFWHERE",
+    "Pair TOPN names with GETFWHERE loads if values needed",
+    "Check TOPNBYFWHERE_N and TOTAL separately for K=0 vs empty cohort",
+    "NTHBYF when drain-inclusive global rank is intentional",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "Soft-empty MINOBJWHERE/MAXOBJWHERE without last_err",
-    "Multi-winner / random-among-ties pick",
-    "SORTBYFWHERE AS KV name:value",
-    "WHERE IN (ready,idle) multi-match",
+    "NTHBYFWHERE filtered kth object",
+    "TOPNBYFWHERE AS KV name:value",
+    "WHERE IN multi-status filter",
+    "Hard error or soft miss distinction for K=0",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "MINOBJWHERE ready \u2192 n1:10; MAXOBJWHERE \u2192 n0:30; drain n2 excluded",
-    "SORT ASC n1 n0; DESC n0 n1; admit cold\u226420 ok; \u22645 deny",
-    "empty ready pick_cold REQUIRE EXIT 2; rank N=0",
-    "tie load 15 \u2192 first-seen n0 for cold and hot",
-    "selftest 345/345 green; no language fix this iter"
+    "TOPNBYFWHERE ready DESC K=2 → n0 n1; drain n2:99 excluded",
+    "NTHBYF 0 DESC → n2:99 fleet-wide; K=99 clamps N=2; K=0 empty",
+    "admit max ready 40 ≥30 ok; ≥50 deny; empty ready deny",
+    "NTHBYFWHERE does not exist — documented W1",
+    "selftest 348/348 green; no language fix this iter"
   ],
-  "commit": "8f74e1065fc78eee72d49fd5e7f73ac347301624",
-  "ts": "2026-08-07T11:04:20Z"
+  "commit": "",
+  "ts": "2026-08-07T11:30:29Z"
 }
