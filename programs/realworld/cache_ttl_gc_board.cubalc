@@ -1,0 +1,1385 @@
+# cache_ttl_gc_board.cubalc — DELETEWHEREGE/SENDWHEREGE/COUNTWHEREGE cache TTL GC
+#
+# Real use: agents hold a small cache entry fleet (e0..e2) with age_s + hits.
+# Age everything, count stale without materializing bags, touch-old via
+# SENDWHEREGE, expire aged entries via DELETEWHEREGE — then RM plate dumps
+# for freed names so rehydrate does not undo GC.
+#
+# Surfaces forced (1.15.340–342):
+#   DELETEWHEREGE / DELETEWHERELE / FREEBELOW / FREEABOVE
+#   SENDWHEREGE / SENDBELOW / SENDATLEAST
+#   COUNTOBJ / COUNTWHERE / COUNTWHEREGE / COUNTBELOW
+#   INCFALL age_s · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss
+#
+# Distinct from job_gc (equality DELETEWHERE), latency_slo (WHEREGE select only),
+# conn_pool (DELETEALL class wipe): this board is *threshold free + send + tally*.
+#
+# Slots: e0 e1 e2
+#
+# Plate under STATE:
+#   dump/e0 dump/e1 dump/e2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt FREED.txt TTL_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_CT_ACTION):
+#   list       — LISTOBJS Entry
+#   open       — NEW Entry ARG1=eN [age=ARG2]
+#   setage     — SETF age_s ARG2
+#   sethits    — SETF hits ARG2
+#   age_all    — INCFALL age_s BY ARG1 (default 1)
+#   count      — COUNTOBJ Entry
+#   count_eq   — COUNTWHERE hits ARG1
+#   count_stale— COUNTWHEREGE age_s THR (ARG1 or CUBALC_CT_THR)
+#   count_fresh— COUNTBELOW age_s THR
+#   touch_old  — SENDWHEREGE age_s THR bump (hits++)
+#   bump_fresh — SENDBELOW age_s THR bump
+#   expire     — DELETEWHEREGE age_s THR + RM dumps for freed names
+#   expire_le  — DELETEWHERELE age_s THR + RM dumps
+#   journal / count_j / pin / setmatch
+#   probe / dump
+#   gate       — COUNTWHEREGE age THR == 0; REQUIRE→2 if stale
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ct_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=e0 CUBALC_ARG2=5
+#   CUBALC_ARG0=age_all CUBALC_ARG1=10
+#   CUBALC_ARG0=count_stale CUBALC_ARG1=10
+#   CUBALC_ARG0=expire CUBALC_ARG1=10
+#   CUBALC_ARG0=gate CUBALC_CT_THR=10 CUBALC_CT_REQUIRE=1
+#
+# Env: CUBALC_CT_REQUIRE CUBALC_CT_NAME CUBALC_CT_THR CUBALC_CT_ACTION
+#
+# Edges:
+#   DELETEWHEREGE process-local — must RM dumps for freed names or rehydrate undoes GC
+#   SENDWHEREGE miss method soft skip; empty threshold soft N=0
+#   COUNTOBJ tallies without bag — dual of WHEREGE materialize
+#   no SUMF on expired-before set; fixed slot dump hygiene wall
+#   WRITE NL; REQUIRE NUM softens; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Entry
+  FIELD id ""
+  FIELD age_s 0
+  FIELD hits 0
+  METHOD init i age
+    SETF THIS id i
+    SETF THIS age_s age
+    SETF THIS hits 0
+  END
+  METHOD bump
+    GETF THIS hits
+    LET h = LAST_N + 1
+    SETF THIS hits h
+    RET h
+  END
+END
+
+NOTE "cache_ttl_gc_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT THR = 60
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_CT_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CT_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CT_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CT_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CT_THR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THR = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "FREED.txt"
+LET freed_path = LAST
+SYS JOIN state_dir "TTL_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "e0"
+LET d_e0 = LAST
+SYS JOIN dump_dir "e1"
+LET d_e1 = LAST
+SYS JOIN dump_dir "e2"
+LET d_e2 = LAST
+
+LET slot = -1
+SYS EQS NAME "e0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "e1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "e2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "e0"
+END
+IF slot == 1 THEN
+  LET sn = "e1"
+END
+IF slot == 2 THEN
+  LET sn = "e2"
+END
+
+# rehydrate e0
+SYS READ OR d_e0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    DELETEOBJ e0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "age_s"
+  LET rage = LAST_N
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  CLEAR_ERR
+  NEW Entry e0 rid rage
+  TRYSETF e0 hits rh
+  CLEAR_ERR
+  TRYSETF e0 age_s rage
+  CLEAR_ERR
+END
+# rehydrate e1
+SYS READ OR d_e1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ e1
+  IF LAST_N == 1 THEN
+    DELETEOBJ e1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "age_s"
+  LET rage = LAST_N
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  CLEAR_ERR
+  NEW Entry e1 rid rage
+  TRYSETF e1 hits rh
+  CLEAR_ERR
+  TRYSETF e1 age_s rage
+  CLEAR_ERR
+END
+# rehydrate e2
+SYS READ OR d_e2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ e2
+  IF LAST_N == 1 THEN
+    DELETEOBJ e2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "age_s"
+  LET rage = LAST_N
+  SYS LOOKUPN snap "hits"
+  LET rh = LAST_N
+  CLEAR_ERR
+  NEW Entry e2 rid rage
+  TRYSETF e2 hits rh
+  CLEAR_ERR
+  TRYSETF e2 age_s rage
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET thr_n = 0
+LET freed_n = 0
+LET board_rep = "cache_ttl_gc_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Entry
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET age = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET age = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ e0
+      IF LAST_N == 1 THEN
+        DELETEOBJ e0
+        CLEAR_ERR
+      END
+      NEW Entry e0 sn age
+      DUMPOBJ e0
+      SYS WRITE d_e0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ e1
+      IF LAST_N == 1 THEN
+        DELETEOBJ e1
+        CLEAR_ERR
+      END
+      NEW Entry e1 sn age
+      DUMPOBJ e1
+      SYS WRITE d_e1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ e2
+      IF LAST_N == 1 THEN
+        DELETEOBJ e2
+        CLEAR_ERR
+      END
+      NEW Entry e2 sn age
+      DUMPOBJ e2
+      SYS WRITE d_e2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Entry
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR age
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setage ---
+SYS EQS ACTION "setage"
+IF LAST_N == 1 THEN
+  NOTE "action setage"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setage bad slot"
+    FAIL "setage bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setage bad slot"
+    END
+  ELSE
+    LET age = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET age = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ e0
+      IF LAST_N == 1 THEN
+        SETF e0 age_s age
+        LET ok_set = 1
+        DUMPOBJ e0
+        SYS WRITE d_e0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ e1
+      IF LAST_N == 1 THEN
+        SETF e1 age_s age
+        LET ok_set = 1
+        DUMPOBJ e1
+        SYS WRITE d_e1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ e2
+      IF LAST_N == 1 THEN
+        SETF e2 age_s age
+        LET ok_set = 1
+        DUMPOBJ e2
+        SYS WRITE d_e2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setage no obj"
+      FAIL "setage no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setage no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setage ok"
+      SYS STR age
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setage"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sethits ---
+SYS EQS ACTION "sethits"
+IF LAST_N == 1 THEN
+  NOTE "action sethits"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "sethits bad slot"
+    FAIL "sethits bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sethits bad slot"
+    END
+  ELSE
+    LET hn = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET hn = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ e0
+      IF LAST_N == 1 THEN
+        SETF e0 hits hn
+        LET ok_set = 1
+        DUMPOBJ e0
+        SYS WRITE d_e0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ e1
+      IF LAST_N == 1 THEN
+        SETF e1 hits hn
+        LET ok_set = 1
+        DUMPOBJ e1
+        SYS WRITE d_e1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ e2
+      IF LAST_N == 1 THEN
+        SETF e2 hits hn
+        LET ok_set = 1
+        DUMPOBJ e2
+        SYS WRITE d_e2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "sethits no obj"
+      FAIL "sethits no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sethits no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "sethits ok"
+      SYS STR hn
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "sethits"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- age_all INCFALL ---
+SYS EQS ACTION "age_all"
+IF LAST_N == 1 THEN
+  NOTE "action age_all"
+  LET delta_n = 1
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET delta_n = LAST_N
+    END
+  END
+  INCFALL Entry age_s delta_n
+  LET ret_n = INCFALL_N
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    DUMPOBJ e0
+    SYS WRITE d_e0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e1
+  IF LAST_N == 1 THEN
+    DUMPOBJ e1
+    SYS WRITE d_e1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e2
+  IF LAST_N == 1 THEN
+    DUMPOBJ e2
+    SYS WRITE d_e2 LAST
+    CLEAR_ERR
+  END
+  LET jev = "fleet:age"
+  SYS PUSH jbag jev
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "age_all ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "age_all"
+  SYS STR delta_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count COUNTOBJ ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  COUNTOBJ Entry
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_eq COUNTWHERE hits ---
+SYS EQS ACTION "count_eq"
+IF LAST_N == 1 THEN
+  NOTE "action count_eq"
+  LET want = 0
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET want = LAST_N
+    END
+  END
+  COUNTWHERE Entry hits want
+  LET ret_n = COUNTWHERE_N
+  LET hit = 1
+  LET note_msg = "count_eq ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_eq"
+  SYS STR want
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_stale COUNTWHEREGE age ---
+SYS EQS ACTION "count_stale"
+IF LAST_N == 1 THEN
+  NOTE "action count_stale"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  COUNTWHEREGE Entry age_s thr_n
+  LET ret_n = COUNTWHEREGE_N
+  LET hit = 1
+  LET note_msg = "count_stale ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_stale"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_fresh COUNTBELOW age ---
+SYS EQS ACTION "count_fresh"
+IF LAST_N == 1 THEN
+  NOTE "action count_fresh"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  COUNTBELOW Entry age_s thr_n
+  LET ret_n = COUNTBELOW_N
+  LET hit = 1
+  LET note_msg = "count_fresh ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_fresh"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- touch_old SENDWHEREGE bump ---
+SYS EQS ACTION "touch_old"
+IF LAST_N == 1 THEN
+  NOTE "action touch_old"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  SENDWHEREGE Entry age_s thr_n bump
+  LET ret_n = SENDWHEREGE_N
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    DUMPOBJ e0
+    SYS WRITE d_e0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e1
+  IF LAST_N == 1 THEN
+    DUMPOBJ e1
+    SYS WRITE d_e1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e2
+  IF LAST_N == 1 THEN
+    DUMPOBJ e2
+    SYS WRITE d_e2 LAST
+    CLEAR_ERR
+  END
+  LET jev = "fleet:touch_old"
+  SYS PUSH jbag jev
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "touch_old ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "touch_old"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- bump_fresh SENDBELOW ---
+SYS EQS ACTION "bump_fresh"
+IF LAST_N == 1 THEN
+  NOTE "action bump_fresh"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  SENDBELOW Entry age_s thr_n bump
+  LET ret_n = SENDBELOW_N
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    DUMPOBJ e0
+    SYS WRITE d_e0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e1
+  IF LAST_N == 1 THEN
+    DUMPOBJ e1
+    SYS WRITE d_e1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e2
+  IF LAST_N == 1 THEN
+    DUMPOBJ e2
+    SYS WRITE d_e2 LAST
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "bump_fresh ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "bump_fresh"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- expire DELETEWHEREGE + RM dumps ---
+SYS EQS ACTION "expire"
+IF LAST_N == 1 THEN
+  NOTE "action expire"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  DELETEWHEREGE Entry age_s thr_n
+  LET freed_n = DELETEWHEREGE_N
+  LET fbag = DELETEWHEREGE
+  SYS WRITE freed_path fbag
+  CLEAR_ERR
+  SYS HASLINE fbag "e0"
+  IF LAST_N == 1 THEN
+    SYS RM d_e0
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "e1"
+  IF LAST_N == 1 THEN
+    SYS RM d_e1
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "e2"
+  IF LAST_N == 1 THEN
+    SYS RM d_e2
+    CLEAR_ERR
+  END
+  LISTOBJS Entry
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  # after DELETEWHEREGE under -s, SYS PUSH jbag jev flaked as unknown form 'jev'
+  # (same class as late bag LET+PUSH after OOP query). Use literal line.
+  SYS PUSH jbag "fleet:expire"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "expire ok"
+  SYS STR freed_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "expire"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  # avoid PUSH meta fbag (multi-line bag) — write FREED plate already
+  LET meta_ch = 1
+  PRINT_JSON freed_n
+  CLEAR_ERR
+END
+
+# --- expire_le DELETEWHERELE ---
+SYS EQS ACTION "expire_le"
+IF LAST_N == 1 THEN
+  NOTE "action expire_le"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  DELETEWHERELE Entry age_s thr_n
+  LET freed_n = DELETEWHERELE_N
+  LET fbag = DELETEWHERELE
+  SYS WRITE freed_path fbag
+  CLEAR_ERR
+  SYS HASLINE fbag "e0"
+  IF LAST_N == 1 THEN
+    SYS RM d_e0
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "e1"
+  IF LAST_N == 1 THEN
+    SYS RM d_e1
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "e2"
+  IF LAST_N == 1 THEN
+    SYS RM d_e2
+    CLEAR_ERR
+  END
+  LISTOBJS Entry
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "expire_le ok"
+  SYS STR freed_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "expire_le"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON freed_n
+  CLEAR_ERR
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count_j journal COUNTLINE ---
+SYS EQS ACTION "count_j"
+IF LAST_N == 1 THEN
+  NOTE "action count_j"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count_j needs needle"
+    FAIL "count_j needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count_j needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count_j ok"
+    LET meta = "count_j"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    TRYSEND e0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF e0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  COUNTWHEREGE Entry age_s 999999
+  LET ret_n = COUNTWHEREGE_N
+  CLEAR_ERR
+  DELETEWHEREGE Entry age_s 999999
+  LET freed_n = DELETEWHEREGE_N
+  CLEAR_ERR
+  SENDWHEREGE Entry age_s 999999 bump
+  LET skip_n = SENDWHEREGE_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR freed_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR skip_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ e0
+  IF LAST_N == 1 THEN
+    DUMPOBJ e0
+    SYS WRITE d_e0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e1
+  IF LAST_N == 1 THEN
+    DUMPOBJ e1
+    SYS WRITE d_e1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ e2
+  IF LAST_N == 1 THEN
+    DUMPOBJ e2
+    SYS WRITE d_e2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Entry
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- gate: no stale ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  COUNTWHEREGE Entry age_s thr_n
+  LET ret_n = COUNTWHEREGE_N
+  COUNTOBJ Entry
+  LET nobjs = LAST_N
+  IF ret_n == 0 THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+    LET val = "admit"
+    LET val_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate deny stale cache entries"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny stale cache entries"
+    END
+  END
+  LET meta = "gate"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Entry
+  CLEAR_ERR
+  SYS RM d_e0
+  CLEAR_ERR
+  SYS RM d_e1
+  CLEAR_ERR
+  SYS RM d_e2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM freed_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown
+SYS EQS ACTION "list"
+LET known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setage"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "sethits"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "age_all"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count_eq"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count_stale"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count_fresh"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "touch_old"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "bump_fresh"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "expire"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "expire_le"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count_j"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+IF known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 "unknown action"
+  END
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "cache_ttl_gc_board: done"
+IF miss > 0 THEN
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 note_msg
+  END
+END
+EXIT 0 note_msg

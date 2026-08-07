@@ -1,154 +1,148 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 121,
-  "program": "programs/realworld/latency_slo_board.cubalc",
-  "theme": "SUMF/AVGF + WHEREGE/WHERELE/WHEREGT/WHERELT latency SLO gate + INCFALL drift + bag journal",
-  "version": "1.15.339-usability",
+  "iter": 122,
+  "program": "programs/realworld/cache_ttl_gc_board.cubalc",
+  "theme": "DELETEWHEREGE/SENDWHEREGE/COUNTWHEREGE cache TTL GC + SENDBELOW touch + plate dump hygiene + bag journal",
+  "version": "1.15.342-usability",
   "pass": true,
-  "prior_note": "iter 120 shard_load MAXOBJ/SORTBYF; this iter stresses SUMF/AVGF + threshold WHERE (b0a319a/add085f)",
+  "prior_note": "iter 121 latency_slo SUMF/WHEREGE; this iter stresses DELETEWHEREGE+SENDWHEREGE+COUNTOBJ (b4278e8/955e309/d9071d0)",
   "tests": [
     {
-      "name": "open_probes",
-      "cmd": "open p0=40 p1=120 p2=80",
+      "name": "open_ages",
+      "cmd": "open e0=5 e1=50 e2=100; sethits e0=3",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "sumf_avgf",
-      "cmd": "SUMF 240; AVGF 80",
+      "name": "countobj",
+      "cmd": "COUNTOBJ Entry → 3",
       "ok": true,
-      "note": "SUMF/AVGF"
+      "note": "COUNTOBJ"
     },
     {
-      "name": "wherege_hot",
-      "cmd": "WHEREGE >=100 \u2192 p1",
+      "name": "count_stale_ge",
+      "cmd": "COUNTWHEREGE age>=50 → 2",
       "ok": true,
-      "note": "WHEREGE"
+      "note": "COUNTWHEREGE"
     },
     {
-      "name": "wheregt_above",
-      "cmd": "WHEREGT >100 \u2192 p1",
+      "name": "count_fresh_below",
+      "cmd": "COUNTBELOW age<50 → 1",
       "ok": true,
-      "note": "WHEREGT"
+      "note": "COUNTBELOW"
     },
     {
-      "name": "wherele_cold",
-      "cmd": "WHERELE <=80 \u2192 p0 p2",
+      "name": "count_eq_hits",
+      "cmd": "COUNTWHERE hits 3 → 1",
       "ok": true,
-      "note": "WHERELE"
+      "note": "COUNTWHERE"
     },
     {
-      "name": "wherelt_below",
-      "cmd": "WHERELT <50 \u2192 p0",
+      "name": "sendwherege_touch",
+      "cmd": "SENDWHEREGE age>=50 bump N=2; e1/e2 hits=1",
       "ok": true,
-      "note": "WHERELT"
+      "note": "SENDWHEREGE"
     },
     {
-      "name": "gate_hot_deny",
-      "cmd": "avg ok but hot>0 \u2192 deny; REQUIRE rc2",
+      "name": "sendbelow_fresh",
+      "cmd": "SENDBELOW age<50 bump N=1; e0 hits=4",
+      "ok": true,
+      "note": "SENDBELOW"
+    },
+    {
+      "name": "gate_stale_require",
+      "cmd": "gate soft deny; REQUIRE rc2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "gate_admit_after_cool",
-      "cmd": "setlat p1=50; gate admit",
+      "name": "deletewherege_expire",
+      "cmd": "DELETEWHEREGE age>=50 freed=2 FREED e1 e2; dump RM",
+      "ok": true,
+      "note": "DELETEWHEREGE"
+    },
+    {
+      "name": "gate_admit_after_gc",
+      "cmd": "gate admit stale=0",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "incfall_drift",
-      "cmd": "INCFALL +10 sum 200",
+      "name": "incfall_age",
+      "cmd": "INCFALL age +10 e0→15",
       "ok": true,
       "note": "INCFALL"
     },
     {
-      "name": "int_avg_trunc",
-      "cmd": "AVGF 10+20+21 \u2192 17 not 17.0",
+      "name": "deletewherele",
+      "cmd": "DELETEWHERELE age<=3 freed e1 e2",
       "ok": true,
-      "note": "int mean"
+      "note": "DELETEWHERELE"
     },
     {
-      "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
+      "name": "journal_setmatch",
+      "cmd": "exact false friend; SETMATCH 2→1; pin",
       "ok": true,
       "note": "journal"
     },
     {
-      "name": "probe_empty_where",
-      "cmd": "soft TRYSEND; WHEREGE 999 empty 0",
+      "name": "probe_empty_threshold",
+      "cmd": "soft TRYSEND; COUNT/DELETE/SEND WHEREGE 999 → 0",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "empty_fleet",
-      "cmd": "SUMF/AVGF 0; hot N=0; gate admit empty",
+      "name": "push_after_deletewherege",
+      "cmd": "SYS PUSH jbag jev failed under -s; literal line works",
       "ok": true,
-      "note": "empty"
-    },
-    {
-      "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE\u21922",
-      "ok": true,
-      "note": "miss"
-    },
-    {
-      "name": "num_require_softens",
-      "cmd": "REQUIRE=abc soft",
-      "ok": true,
-      "note": "NUM"
-    },
-    {
-      "name": "write_no_nl",
-      "cmd": "cat -A dump last no NL",
-      "ok": true,
-      "note": "NL"
+      "note": "W1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "315/315 pass"
+      "note": "318/318 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|wherege",
-      "title": "No SUMF/AVGF on WHEREGE filtered subset",
-      "detail": "WHEREGE returns name bag only. Cannot SUMF lat_ms of hot probes without EACH+GETF or second pass. Agents gate on WHEREGE_N count + full-fleet AVGF separately.",
-      "repro": "WHEREGE lat 100; no SUMF WHEREGE bag"
+      "area": "host|push|strict",
+      "title": "SYS PUSH jbag jev after DELETEWHEREGE under -s → unknown form 'jev'",
+      "detail": "Expire path freed objects and wrote FREED plate then failed at SYS PUSH jbag jev under -s. Literal SYS PUSH jbag \"fleet:expire\" works. Same hazard class as late bag LET+PUSH after OOP query (replica_fleet W1).",
+      "repro": "DELETEWHEREGE Entry age_s 50; LET jev=...; SYS PUSH jbag jev under -s"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|avgf",
-      "title": "AVGF is integer mean only \u2014 truncates remainder",
-      "detail": "10+20+21 \u2192 17 not 17.0. SLO agents cannot express fractional ms means without scaling.",
-      "repro": "AVGF Probe lat_ms on 10,20,21 \u2192 17"
+      "area": "oop|persist",
+      "title": "DELETEWHEREGE process-local — plate dumps rehydrate expired entries",
+      "detail": "Must RM dump/eN for each name in DELETEWHEREGE bag or next ARG run restores GC'd entries.",
+      "repro": "expire without RM dump; next list rehydrates"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|wherege",
-      "title": "Threshold WHERE bag not SEND/SETF-able without NTH+LAST",
-      "detail": "HOT.txt is names; bulk cool hot probes needs EACH LINE or per-slot EQS wall.",
-      "repro": "WHEREGE; cannot SENDWHERE-from-bag"
+      "area": "oop|name",
+      "title": "Freed-name dump hygiene needs fixed HASLINE e0|e1|e2 wall",
+      "detail": "Cannot loop DELETEWHEREGE bag names to RM dumps dynamically without EQS wall.",
+      "repro": "HASLINE fbag e0; RM d_e0 ×3"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|persist",
-      "title": "Process-local objects force DUMPOBJ rehydrate every ARG run",
-      "detail": "Multi-action host scripts dump after mutation.",
-      "repro": "open then separate process sum without dump"
+      "area": "oop|sendwherege",
+      "title": "SENDWHEREGE miss method soft — no strict fail",
+      "detail": "Typo methods soft-skip under -s without agent SENDWHEREGE_N checks.",
+      "repro": "SENDWHEREGE … no_meth → N=0 OK=1"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:lat \u2192 one SETMATCH leaves 1.",
+      "detail": "Two e0:age → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -164,49 +158,41 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_LS_REQUIRE=abc \u2192 soft.",
+      "detail": "CUBALC_CT_REQUIRE=abc → soft gate.",
       "repro": "REQUIRE=abc"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "oop|incfall",
-      "title": "INCFALL drift unfiltered on entire class",
-      "detail": "Cannot drift only hot probes; WHEREGE then per-name bump still missing.",
-      "repro": "drift +10 all probes"
-    },
-    {
-      "id": "W9",
-      "severity": "low",
-      "area": "host|join",
-      "title": "No string concat \u2014 labels use STR/PUSH bags",
-      "detail": "JOIN inserts /.",
-      "repro": "SYS JOIN avg: n \u2192 avg:/80"
+      "area": "oop|gc",
+      "title": "No atomic DELETEWHEREGE + plate unlink + journal",
+      "detail": "Partial failure leaves inconsistent plate (W1 hit mid-expire).",
+      "repro": "crash between free and RM"
     }
   ],
   "workarounds": [
-    "Gate: AVGF full fleet + WHEREGE_N==0 instead of avg-of-hot",
-    "Scale lat_ms*1000 if fractional means required",
-    "EQS wall or EACH LINE for bulk action on HOT bag",
-    "DUMPOBJ after setlat/drift; predeclare board_rep",
-    "COUNTLINE exact; loop SETMATCH; CLEAR_ERR after soft"
+    "SYS PUSH jbag with string literal after DELETEWHEREGE under -s",
+    "Always RM dump slots listed in DELETEWHEREGE/LE bag",
+    "Literal e0|e1|e2 HASLINE for dump hygiene",
+    "Check SENDWHEREGE_N after selective touch",
+    "Predeclare board_rep; COUNTLINE exact; loop SETMATCH"
   ],
   "language_gaps": [
-    "SUMF/AVGF over name bag or WHERE predicate",
-    "Floating / fixed-point AVGF",
-    "SENDWHERE / INCFALL on WHEREGE result set",
-    "Native multi-run object persistence",
-    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE",
-    "String concat (not path JOIN)"
+    "Stable SYS PUSH var after DELETEWHEREGE under -s",
+    "DELETEWHEREGE cascade to plate files",
+    "Dynamic path from free-name bag",
+    "Strict SENDWHEREGE on missing method",
+    "Atomic GC transaction (memory+plate+journal)",
+    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SUMF 240 AVGF 80 clean without GETFALL glue",
-    "WHEREGE/LE/GT/LT threshold bags correct incl boundary 80 in WHERELE",
-    "gate deny when hot present even if avg under MAX",
-    "AVGF trunc 10+20+21\u219217 documented W2",
-    "empty SUMF/AVGF 0 soft; empty hot N=0",
-    "selftest 315/315 green; no language fix this iter"
+    "COUNTOBJ/COUNTWHEREGE/COUNTBELOW tallies without bag materialize",
+    "SENDWHEREGE touch old + SENDBELOW bump fresh selective",
+    "DELETEWHEREGE expire freed e1 e2 kept e0; plate RM ok",
+    "expire first failed SYS PUSH jbag jev under -s — fixed with literal",
+    "DELETEWHERELE <=3 freed 2; empty DELETEWHEREGE soft 0",
+    "selftest 318/318 green; no language fix this iter"
   ],
-  "commit": "e19449b803e0fff575ffbdc04a22144b0f39d426",
-  "ts": "2026-08-07T06:04:49Z"
+  "commit": "",
+  "ts": "2026-08-07T06:30:00Z"
 }
