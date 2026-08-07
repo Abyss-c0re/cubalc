@@ -15815,6 +15815,63 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS EXPIRED|ISEXPIRED|PAST|ISPAST [epoch|LAST_N]
+     * — LAST_N 1 if wall now >= epoch (lease due), else 0.
+     * SYS REMAINING|LEFTSECS|TTL|TIMELEFT [epoch|LAST_N]
+     * — LAST_N = max(0, epoch - now) seconds until due (0 if past).
+     * Default epoch = prior LAST_N (DEADLINE result).
+     * Usability: SLA/lease IF without TIMEDIFF + CMP glue. */
+    if (kw(&L->cur,"EXPIRED") || kw(&L->cur,"ISEXPIRED") || kw(&L->cur,"PAST") ||
+        kw(&L->cur,"ISPAST") || kw(&L->cur,"IS_EXPIRED") || kw(&L->cur,"DUE") ||
+        kw(&L->cur,"ISDUE") || kw(&L->cur,"OVERDUE") ||
+        kw(&L->cur,"REMAINING") || kw(&L->cur,"LEFTSECS") || kw(&L->cur,"TTL") ||
+        kw(&L->cur,"TIMELEFT") || kw(&L->cur,"SECSLEFT") || kw(&L->cur,"LEFT") ||
+        kw(&L->cur,"COUNTDOWN") || kw(&L->cur,"UNTILLEFT")){
+      char op[24];
+      int is_rem = 0;
+      long ep = 0, now, outn = 0;
+      int has = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      is_rem = (strcmp(op, "REMAINING") == 0 || strcmp(op, "LEFTSECS") == 0 ||
+                strcmp(op, "TTL") == 0 || strcmp(op, "TIMELEFT") == 0 ||
+                strcmp(op, "SECSLEFT") == 0 || strcmp(op, "LEFT") == 0 ||
+                strcmp(op, "COUNTDOWN") == 0 || strcmp(op, "UNTILLEFT") == 0);
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        ep = parse_expr(vm, L);
+        has = 1;
+      }
+      if (!has) ep = vm->last_n;
+      now = (long)time(NULL);
+      if (is_rem) {
+        outn = ep - now;
+        if (outn < 0) outn = 0;
+      } else {
+        outn = (now >= ep) ? 1 : 0;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      if (is_rem) {
+        var_set_num(vm, "REMAINING_N", outn);
+        var_set_num(vm, "TTL_N", outn);
+        var_set_str(vm, "REMAINING", buf);
+        var_set_str(vm, "TTL", buf);
+      } else {
+        var_set_num(vm, "EXPIRED_N", outn);
+        var_set_num(vm, "ISEXPIRED", outn);
+        var_set_num(vm, "PAST_N", outn);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
      * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
      * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
@@ -24582,6 +24639,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ADDTIME", "SYS ADDTIME|ADDEPOCH a [b] — epoch + seconds · dual of TIMEDIFF"},
       {"SYS DEADLINE", "SYS DEADLINE|EXPIRESAT [secs] — now + secs → lease expiry epoch"},
       {"SYS EXPIRESAT", "SYS EXPIRESAT [secs] — alias of SYS DEADLINE"},
+      {"SYS EXPIRED", "SYS EXPIRED|ISEXPIRED [epoch] — LAST_N 1 if now>=epoch · lease due"},
+      {"SYS REMAINING", "SYS REMAINING|TTL [epoch] — max(0,epoch-now) secs left · lease TTL"},
+      {"SYS TTL", "SYS TTL [epoch] — alias of SYS REMAINING"},
       {"SYS LOCAL", "SYS LOCAL|LOCALTIME — local wall stamp YYYY-MM-DDTHH:MM:SS → LAST"},
       {"SYS LOCALTIME", "SYS LOCALTIME alias of SYS LOCAL"},
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},

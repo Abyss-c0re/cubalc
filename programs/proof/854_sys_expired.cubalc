@@ -1,0 +1,75 @@
+# SYS EXPIRED / REMAINING — lease due probe and TTL seconds
+# Usability: after DEADLINE without TIMEDIFF + CMP glue
+
+HOLD_FLASH 1
+
+# past epoch is expired
+SYS EXPIRED 0
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT EXPIRED_N == 1
+ASSERT ISEXPIRED == 1
+
+SYS EXPIRED 946684800
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# future epoch not expired
+SYS TIME
+LET now_ep = LAST_N
+LET future = now_ep + 3600
+SYS EXPIRED future
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT EXPIRED_N == 0
+
+# aliases
+SYS ISEXPIRED 0
+ASSERT LAST_N == 1
+SYS PAST future
+ASSERT LAST_N == 0
+
+# REMAINING for past → 0
+SYS REMAINING 0
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT REMAINING_N == 0
+ASSERT TTL_N == 0
+
+# REMAINING for future ≈ 3600
+SYS REMAINING future
+ASSERT OK == 1
+ASSERT LAST_N >= 3590
+ASSERT LAST_N <= 3600
+ASSERT TTL_N == LAST_N
+
+# TTL alias
+SYS TTL future
+ASSERT OK == 1
+ASSERT LAST_N >= 3590
+ASSERT LAST_N <= 3600
+
+# default LAST_N as epoch (DEADLINE result)
+SYS DEADLINE 60
+LET due = LAST_N
+SYS EXPIRED due
+ASSERT LAST_N == 0
+SYS REMAINING due
+ASSERT LAST_N >= 50
+ASSERT LAST_N <= 60
+
+# zero-arg uses prior LAST_N
+SYS DEADLINE 45
+SYS REMAINING
+ASSERT LAST_N >= 35
+ASSERT LAST_N <= 45
+
+# exact now boundary: epoch = now is expired (>=)
+SYS TIME
+LET t = LAST_N
+SYS EXPIRED t
+ASSERT LAST_N == 1
+SYS REMAINING t
+ASSERT LAST_N == 0
+
+PRINT "sys_expired ok"

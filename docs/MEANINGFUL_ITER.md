@@ -342,6 +342,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 312. ~~**`SYS TIMEDIFF` / `ELAPSED`**~~ **done** (epoch second delta a−b or now−a · plate age/deadline math).
 313. ~~**`SYS ENVDEFAULT` / `ENSUREENV`**~~ **done** (setenv only if missing/empty · agent boot defaults).
 314. ~~**`SYS ADDTIME` / `DEADLINE`**~~ **done** (epoch + seconds / now+secs lease expiry · dual of TIMEDIFF).
+315. ~~**`SYS EXPIRED` / `REMAINING`**~~ **done** (lease due probe + TTL secs · IF without TIMEDIFF+CMP).
 
 ## Tick protocol
 
