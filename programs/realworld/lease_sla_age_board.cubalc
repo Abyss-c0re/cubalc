@@ -1,0 +1,937 @@
+# lease_sla_age_board.cubalc — PARSEISO lease stamp + TIMEDIFF age + SLA gate
+#
+# Real use: agents pin lease/heartbeat ISO stamps on plates, compute age vs
+# wall now with TIMEDIFF/ELAPSED (no shell date -d), and gate work when age
+# exceeds an SLA max duration (PARSEMS "5m"/"1h"):
+#   PARSEISO / TOEPOCH / FROMISO — ISO stamp → Unix epoch
+#   TIMEDIFF / ELAPSED / DELTA   — a-b or now-a second deltas
+#   FROMTIME / EPOCHISO          — epoch → UTC ISO (pin open)
+#   PARSEMS / HUMANMS            — SLA max + human age labels
+# Distinct from deadline_budget (forward remain), stale_plate_gc (file AGE),
+# and plate_time_triad (a/c/m): this board is *ISO stamp → age → SLA gate*.
+#
+# Plate under STATE:
+#   LEASE.txt   — ISO lease start / last pin
+#   SLA.txt     — max age ms (decimal)
+#   AGE.txt     — last age seconds (decimal)
+#   VAL.txt     — last label / iso / age
+#   META.txt
+#   LEASE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_LA_ACTION):
+#   list      — plate (default)
+#   open      — pin LEASE = FROMTIME TIME (now)
+#   pin       — PARSEISO ARG1 → write LEASE ISO (round-trip stamp)
+#   age       — PARSEISO LEASE; TIMEDIFF → AGE_s → VAL
+#   human     — HUMANMS age_s*1000
+#   sla       — PARSEMS ARG1 → SLA ms
+#   gate      — age_ms < sla_ms admit (REQUIRE optional hard)
+#   span      — TIMEDIFF PARSEISO(ARG2)-PARSEISO(ARG1) → VAL seconds (a→b)
+#   round     — FROMTIME epoch → PARSEISO → equality
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_la_$$
+#   CUBALC_ARG0=open ...
+#   CUBALC_ARG0=age ...
+#   CUBALC_ARG0=sla CUBALC_ARG1=5m ...
+#   CUBALC_ARG0=gate CUBALC_LA_REQUIRE=1 ...
+#   CUBALC_ARG0=pin CUBALC_ARG1=2000-01-01T00:00:00Z ...
+#   CUBALC_ARG0=span CUBALC_ARG1=... CUBALC_ARG2=...
+#
+# Env: CUBALC_LA_REQUIRE=1  CUBALC_LA_SLA=5m  CUBALC_LA_STAMP=ISO
+#
+# Edges:
+#   PARSEISO soft miss empty/junk (OK=0 sticky last_err)
+#   timezone offsets (+01:00 / -05:00) ignored — wall treated as UTC
+#   LOCAL stamp reparsed as UTC (skew by TZ hours)
+#   fractional seconds truncated to whole seconds
+#   TIMEDIFF negative when stamp in future (gate treats as fresh age 0?)
+#   HUMANMS multi-unit labels not PARSEMS-round-trippable
+#   WRITE metas omit trailing NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "lease_sla_age_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT LFILE = "LEASE.txt"
+DEFAULT SFILE = "SLA.txt"
+DEFAULT AFILE = "AGE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "LEASE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_SLA = "5m"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LA_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LA_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LA_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LA_SLA" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_SLA = LAST
+ELSE
+  LET ENV_SLA = ""
+END
+SYS ENV "CUBALC_LA_STAMP" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_STAMP = LAST
+ELSE
+  LET ENV_STAMP = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir LFILE
+LET lease_meta = LAST
+SYS JOIN state_dir SFILE
+LET sla_meta = LAST
+SYS JOIN state_dir AFILE
+LET age_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR lease_meta OR ""
+LET lease_s = LAST
+CLEAR_ERR
+SYS READ OR sla_meta OR ""
+LET sla_s = LAST
+CLEAR_ERR
+SYS READ OR age_meta OR ""
+LET age_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET sla_n = 0
+SYS BLANK sla_s
+IF LAST_N == 0 THEN
+  SYS NUM sla_s
+  IF OK == 1 THEN
+    LET sla_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET age_n = 0
+SYS BLANK age_s
+IF LAST_N == 0 THEN
+  SYS NUM age_s
+  IF OK == 1 THEN
+    LET age_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# ENV fill for sla/pin when ARG blank
+SYS BLANK ENV_SLA
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "sla"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_SLA
+    END
+  END
+END
+SYS BLANK ENV_STAMP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pin"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_STAMP
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET lease_ch = 0
+LET sla_ch = 0
+LET age_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET span_n = 0
+LET parse_n = 0
+LET epoch_n = 0
+LET round_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "lease" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON lease_s
+  PRINT_JSON sla_s
+  PRINT_JSON age_s
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- open: pin LEASE = now ISO ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  SYS TIME
+  LET epoch_n = LAST_N
+  SYS FROMTIME epoch_n
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "open fromtime fail"
+    FAIL "open fromtime fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open fromtime fail"
+    END
+  ELSE
+    LET lease_s = LAST
+    LET lease_ch = 1
+    LET val = lease_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET meta = "open"
+    SYS STR epoch_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "iso"
+    LET meta = LAST
+    SYS PUSH meta lease_s
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON epoch_n
+  PRINT_JSON lease_s
+  CLEAR_ERR
+END
+
+# --- pin: ARG1 ISO → validate PARSEISO → store round-trip FROMTIME ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin empty"
+    FAIL "pin empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin empty"
+    END
+  ELSE
+    SYS PARSEISO NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET parse_n = 0
+      LET note_msg = "pin parse fail"
+      FAIL "pin parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin parse fail"
+      END
+    ELSE
+      LET epoch_n = LAST_N
+      LET parse_n = epoch_n
+      # canonicalize via FROMTIME so plate stores Z form
+      SYS FROMTIME epoch_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "pin fromtime fail"
+        FAIL "pin fromtime fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "pin fromtime fail"
+        END
+      ELSE
+        LET lease_s = LAST
+        LET lease_ch = 1
+        LET val = lease_s
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "pin ok"
+        LET meta = "pin"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS PUSH meta "epoch"
+        LET meta = LAST
+        SYS STR epoch_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "iso"
+        LET meta = LAST
+        SYS PUSH meta lease_s
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON parse_n epoch_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- age: PARSEISO LEASE; TIMEDIFF → seconds ---
+SYS EQS ACTION "age"
+IF LAST_N == 1 THEN
+  NOTE "action age"
+  SYS BLANK lease_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "age no lease"
+    FAIL "age no lease"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "age no lease"
+    END
+  ELSE
+    SYS PARSEISO lease_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "age parse fail"
+      FAIL "age parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "age parse fail"
+      END
+    ELSE
+      LET epoch_n = LAST_N
+      SYS TIMEDIFF epoch_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "age timediff fail"
+        FAIL "age timediff fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "age timediff fail"
+        END
+      ELSE
+        LET age_n = LAST_N
+        SYS STR age_n
+        LET age_s = LAST
+        LET age_ch = 1
+        LET val = age_s
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "age ok"
+        LET meta = "age"
+        SYS PUSH meta "epoch"
+        LET meta = LAST
+        SYS STR epoch_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "age_s"
+        LET meta = LAST
+        SYS STR age_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON age_n epoch_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- human: HUMANMS of age seconds ---
+SYS EQS ACTION "human"
+IF LAST_N == 1 THEN
+  NOTE "action human"
+  # recompute age if lease present
+  SYS BLANK lease_s
+  IF LAST_N == 0 THEN
+    SYS PARSEISO lease_s
+    IF OK == 1 THEN
+      LET epoch_n = LAST_N
+      SYS TIMEDIFF epoch_n
+      IF OK == 1 THEN
+        LET age_n = LAST_N
+        SYS STR age_n
+        LET age_s = LAST
+        LET age_ch = 1
+      END
+    END
+    CLEAR_ERR
+  END
+  IF age_n < 0 THEN
+    # future lease: show 0ms label
+    LET age_ms = 0
+  ELSE
+    LET age_ms = age_n * 1000
+  END
+  IF age_n == 0 THEN
+    SYS BLANK lease_s
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "human no age"
+      FAIL "human no age"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "human no age"
+      END
+    ELSE
+      # age 0 is valid (just opened)
+      SYS HUMANMS 0
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "human ok"
+    END
+  ELSE
+    SYS HUMANMS age_ms
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "human fail"
+      FAIL "human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "human fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "human ok"
+      LET meta = "human"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS PUSH meta "age_s"
+      LET meta = LAST
+      SYS STR age_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON age_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sla: PARSEMS max age ---
+SYS EQS ACTION "sla"
+IF LAST_N == 1 THEN
+  NOTE "action sla"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_SLA
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET parse_n = 0
+    LET note_msg = "sla parse fail"
+    FAIL "sla parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sla parse fail"
+    END
+  ELSE
+    LET sla_n = LAST_N
+    LET parse_n = sla_n
+    SYS STR sla_n
+    LET sla_s = LAST
+    LET sla_ch = 1
+    LET val = NAME
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "sla ok"
+    LET meta = "sla"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR sla_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON parse_n sla_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: age_ms < sla_ms admit ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  # recompute age from lease
+  SYS BLANK lease_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gate no lease"
+    FAIL "gate no lease"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no lease"
+    END
+  ELSE
+    SYS PARSEISO lease_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate parse fail"
+      FAIL "gate parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate parse fail"
+      END
+    ELSE
+      LET epoch_n = LAST_N
+      SYS TIMEDIFF epoch_n
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "gate timediff fail"
+        FAIL "gate timediff fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate timediff fail"
+        END
+      ELSE
+        LET age_n = LAST_N
+        SYS STR age_n
+        LET age_s = LAST
+        LET age_ch = 1
+        IF sla_n <= 0 THEN
+          LET miss = 1
+          LET note_msg = "gate no sla"
+          FAIL "gate no sla"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate no sla"
+          END
+        ELSE
+          # future stamps: treat as age 0 (still within SLA)
+          LET age_ms = age_n * 1000
+          IF age_n < 0 THEN
+            LET age_ms = 0
+          END
+          IF age_ms < sla_n THEN
+            LET gate_n = 1
+            LET hit = 1
+            LET note_msg = "gate admit"
+            LET val = "admit"
+            LET val_ch = 1
+          ELSE
+            LET gate_n = 0
+            LET miss = 1
+            LET note_msg = "gate deny"
+            LET val = "deny"
+            LET val_ch = 1
+            FAIL "gate deny sla exceeded"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "gate deny sla exceeded"
+            END
+          END
+          LET meta = "gate"
+          SYS PUSH meta val
+          LET meta = LAST
+          SYS PUSH meta "age_s"
+          LET meta = LAST
+          SYS STR age_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          SYS PUSH meta "sla_ms"
+          LET meta = LAST
+          SYS STR sla_n
+          SYS PUSH meta LAST
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON gate_n age_n sla_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- span: TIMEDIFF between two ISO stamps ---
+SYS EQS ACTION "span"
+IF LAST_N == 1 THEN
+  NOTE "action span"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "span empty a"
+    FAIL "span empty a"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "span empty a"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "span empty b"
+      FAIL "span empty b"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "span empty b"
+      END
+    ELSE
+      SYS PARSEISO NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "span parse a"
+        FAIL "span parse a"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "span parse a"
+        END
+      ELSE
+        LET ep_a = LAST_N
+        SYS PARSEISO A2
+        IF OK == 0 THEN
+          LET miss = 1
+          LET note_msg = "span parse b"
+          FAIL "span parse b"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "span parse b"
+          END
+        ELSE
+          LET ep_b = LAST_N
+          # duration ARG1 → ARG2 = ep_b - ep_a
+          SYS TIMEDIFF ep_b ep_a
+          IF OK == 0 THEN
+            LET miss = 1
+            LET note_msg = "span timediff fail"
+            FAIL "span timediff fail"
+            CLEAR_ERR
+            IF REQUIRE_HIT > 0 THEN
+              EXIT 2 "span timediff fail"
+            END
+          ELSE
+            LET span_n = LAST_N
+            SYS STR span_n
+            LET val = LAST
+            LET val_ch = 1
+            LET hit = 1
+            LET note_msg = "span ok"
+            LET meta = "span"
+            SYS PUSH meta NAME
+            LET meta = LAST
+            SYS PUSH meta A2
+            LET meta = LAST
+            SYS PUSH meta "delta_s"
+            LET meta = LAST
+            SYS STR span_n
+            SYS PUSH meta LAST
+            LET meta = LAST
+            LET meta_ch = 1
+          END
+        END
+      END
+    END
+  END
+  PRINT_JSON span_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- round: FROMTIME → PARSEISO equality ---
+SYS EQS ACTION "round"
+IF LAST_N == 1 THEN
+  NOTE "action round"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    # default: wall now
+    SYS TIME
+    LET epoch_n = LAST_N
+  ELSE
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET epoch_n = LAST_N
+    ELSE
+      # treat NAME as ISO
+      SYS PARSEISO NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "round parse fail"
+        FAIL "round parse fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round parse fail"
+        END
+        LET epoch_n = -1
+      ELSE
+        LET epoch_n = LAST_N
+      END
+    END
+    CLEAR_ERR
+  END
+  IF epoch_n >= 0 THEN
+    SYS FROMTIME epoch_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "round fromtime fail"
+      FAIL "round fromtime fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "round fromtime fail"
+      END
+    ELSE
+      LET iso1 = LAST
+      SYS PARSEISO iso1
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "round parseiso fail"
+        FAIL "round parseiso fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round parseiso fail"
+        END
+      ELSE
+        LET ep2 = LAST_N
+        IF ep2 == epoch_n THEN
+          LET round_n = 1
+          LET hit = 1
+          LET note_msg = "round ok"
+        ELSE
+          LET round_n = 0
+          LET miss = 1
+          LET note_msg = "round mismatch"
+          FAIL "round mismatch"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "round mismatch"
+          END
+        END
+        LET val = iso1
+        LET val_ch = 1
+        LET meta = "round"
+        SYS STR epoch_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta iso1
+        LET meta = LAST
+        SYS STR ep2
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR round_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON round_n epoch_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET lease_s = ""
+  LET sla_s = ""
+  LET age_s = ""
+  LET val = ""
+  LET meta = ""
+  LET sla_n = 0
+  LET age_n = 0
+  LET lease_ch = 1
+  LET sla_ch = 1
+  LET age_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "age"
+LET k = k + LAST_N
+SYS EQS ACTION "human"
+LET k = k + LAST_N
+SYS EQS ACTION "sla"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "span"
+LET k = k + LAST_N
+SYS EQS ACTION "round"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF lease_ch > 0 THEN
+  SYS WRITE lease_meta lease_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "lease write failed"
+  END
+  CLEAR_ERR
+END
+IF sla_ch > 0 THEN
+  SYS WRITE sla_meta sla_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "sla write failed"
+  END
+  CLEAR_ERR
+END
+IF age_ch > 0 THEN
+  SYS WRITE age_meta age_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "age write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.lease_sla_age_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lease"
+LET report = LAST
+SYS PUSH report lease_s
+LET report = LAST
+SYS PUSH report "age_s"
+LET report = LAST
+SYS STR age_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "sla_ms"
+LET report = LAST
+SYS STR sla_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "span"
+LET report = LAST
+SYS STR span_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "round"
+LET report = LAST
+SYS STR round_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "lease_sla_age_board" ACTION hit miss age_n gate_n span_n note_msg elapsed

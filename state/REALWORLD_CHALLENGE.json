@@ -1,145 +1,165 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 105,
-  "program": "programs/realworld/deadline_budget_board.cubalc",
-  "theme": "deadline budget PARSEMS + HUMANMS + FROMTIME ISO remain gate",
-  "version": "1.15.302-usability",
+  "iter": 106,
+  "program": "programs/realworld/lease_sla_age_board.cubalc",
+  "theme": "lease SLA age PARSEISO + TIMEDIFF + PARSEMS gate",
+  "version": "1.15.305-usability",
   "pass": true,
   "tests": [
     {
-      "name": "budget_label",
-      "cmd": "PARSEMS 30s \u2192 30000; HUMANMS \u2192 30s",
+      "name": "open_pin_now",
+      "cmd": "open → LEASE FROMTIME TIME ISO Z",
       "ok": true,
-      "note": "parse"
+      "note": "pin now"
     },
     {
-      "name": "start_iso",
-      "cmd": "deadline epoch + FROMTIME ISO Z",
+      "name": "age_fresh",
+      "cmd": "age after open → 0s",
       "ok": true,
-      "note": "UTC stamp"
+      "note": "TIMEDIFF"
     },
     {
-      "name": "remain_gate",
-      "cmd": "remain~30s; gate admit while live",
+      "name": "human_0",
+      "cmd": "HUMANMS 0 → 0ms",
+      "ok": true,
+      "note": "label"
+    },
+    {
+      "name": "sla_5m",
+      "cmd": "PARSEMS 5m → 300000",
+      "ok": true,
+      "note": "sla ms"
+    },
+    {
+      "name": "gate_admit",
+      "cmd": "fresh lease age_ms < sla admit",
       "ok": true,
       "note": "live"
     },
     {
-      "name": "round_2m",
-      "cmd": "PARSEMS\u2194HUMANMS single-unit",
+      "name": "pin_y2k_age_deny",
+      "cmd": "pin 2000-01-01Z; gate soft deny + REQUIRE rc2",
       "ok": true,
-      "note": "2m"
+      "note": "stale"
     },
     {
-      "name": "round_multi",
-      "cmd": "HUMANMS 1250\u21921s250ms; PARSEMS fail trailing junk",
+      "name": "span_1h",
+      "cmd": "TIMEDIFF ARG2-ARG1 → 3600",
       "ok": true,
-      "note": "asymmetry"
+      "note": "duration"
     },
     {
-      "name": "expire",
-      "cmd": "1s budget sleep2 gate REQUIRE\u21922",
+      "name": "round_trip",
+      "cmd": "FROMTIME↔PARSEISO epoch equality",
       "ok": true,
-      "note": "expired"
+      "note": "Z form"
     },
     {
-      "name": "budget_bad",
-      "cmd": "PARSEMS xyz soft; 5x REQUIRE\u21922",
+      "name": "pin_soft_require",
+      "cmd": "not-a-date soft; REQUIRE→2",
       "ok": true,
-      "note": "parse fail"
+      "note": "parse miss"
+    },
+    {
+      "name": "offset_ignored",
+      "cmd": "+01:00 pin → …01:00Z; span vs Z midnight −3600 not 0",
+      "ok": true,
+      "note": "TZ bug"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "275/275 pass"
+      "note": "278/278 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|duration",
-      "title": "HUMANMS multi-unit labels are not PARSEMS-round-trippable",
-      "detail": "HUMANMS 1250 \u2192 1s250ms; PARSEMS fails trailing junk. HUMANMS 90000 \u2192 1m30s also fails. Only pure single-unit labels reparse. Agents that store human labels lose budgets.",
-      "repro": "HUMANMS 1250; PARSEMS LAST \u2192 OK=0 trailing junk"
+      "area": "host|parseiso",
+      "title": "PARSEISO ignores timezone offsets (+01:00 / -05:00)",
+      "detail": "Wall time treated as UTC. 2000-01-01T01:00:00+01:00 → epoch of 01:00Z (946688400) not 00:00Z. Offset-aware stamps silently wrong by hours; pin canonicalizes to wrong Z.",
+      "repro": "PARSEISO 2000-01-01T01:00:00+01:00 → 946688400; expect 946684800"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|time",
-      "title": "Remain math forced to whole-second TIME \u2014 sub-second budgets imprecise",
-      "detail": "No MS-based wall clock for deadlines. budget_ms/1000 floor drops sub-second. Agents needing 500ms budgets get 0s deadline delta.",
-      "repro": "budget 500ms; start add_s=0"
+      "area": "host|parseiso|local",
+      "title": "LOCAL stamps reparsed as UTC — TZ skew",
+      "detail": "SYS LOCAL yields no Z; PARSEISO treats as UTC. On UTC+3 host LOCAL now is ~+10800s vs TIME. Agents that pin LOCAL and age via TIMEDIFF get wrong ages.",
+      "repro": "LOCAL; PARSEISO LAST vs TIME → delta = TZ hours"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|fromtime",
-      "title": "FROMTIME is UTC only \u2014 no local ISO dual",
-      "detail": "LOCAL exists separately; agents wanting local deadline stamps must hand-format. No FROMTIME LOCAL flag.",
-      "repro": "FROMTIME \u2192 always Z"
+      "area": "host|humanms",
+      "title": "HUMANMS multi-unit age labels not PARSEMS-round-trippable",
+      "detail": "Age of Y2K → 1387w6d14m28s via HUMANMS; PARSEMS cannot reparse compound labels. SLA configs must stay single-unit.",
+      "repro": "HUMANMS huge_ms; PARSEMS LAST → fail"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|parsems",
-      "title": "No compound input parse (1h30m) despite HUMANMS compound output",
-      "detail": "Asymmetry: format multi-unit, parse single-unit only. Config authors write 1h30m and get soft fail.",
-      "repro": "PARSEMS 1m30s \u2192 fail"
+      "area": "host|timediff",
+      "title": "TIMEDIFF whole-second only — sub-second lease SLA imprecise",
+      "detail": "Age resolution is 1s. Leases with 500ms SLA cannot distinguish. No MS-epoch TIMEDIFF dual.",
+      "repro": "open; age immediately → 0 even if 900ms elapsed"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|has",
-      "title": "HAS on duration labels unit false friends",
-      "detail": "HAS 5s s \u2192 1; HAS 1m30s m \u2192 1. Cannot classify unit with HAS.",
-      "repro": "HAS 30s s"
+      "area": "host|parseiso",
+      "title": "Fractional seconds truncated without flag",
+      "detail": "…T00:12:10.999Z and …T00:12:10Z same epoch. No PARSEISO_MS / subsecond retain.",
+      "repro": "PARSEISO with .999Z equals without"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|deadline",
-      "title": "No DEADLINE/REMAIN one-shot helpers",
-      "detail": "Agents hand TIME + budget/1000 + FROMTIME. Race window and unit bugs common.",
-      "repro": "need 4 ops for remain"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "LEASE/SLA/AGE cat -A glue; od shows no \\n.",
+      "repro": "od -c LEASE.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "BUDGET/DEADLINE glue in cat -A.",
-      "repro": "cat -A BUDGET.txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_LA_REQUIRE=abc → REQUIRE_HIT stays 0; hard paths soft-pass.",
+      "repro": "REQUIRE=abc pin bad → rc 0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_DB_REQUIRE=abc.",
-      "repro": "REQUIRE=abc budget bad \u2192 rc 0"
+      "area": "host|timediff",
+      "title": "No ABS/clamp helper for negative ages",
+      "detail": "Future stamps yield negative TIMEDIFF; agents hand-clamp for gate. No SYS ABS or AGECLAMP.",
+      "repro": "TIMEDIFF future → negative"
     }
   ],
   "workarounds": [
-    "Store budget as integer ms not human label",
-    "Round-trip only single-unit HUMANMS labels (5s, 2m, 1h)",
-    "Use whole-second budgets for TIME-based deadlines",
-    "Prefer UTC ISO stamps; LOCAL only for display",
-    "Digit-check REQUIRE"
+    "Always pin UTC Z via FROMTIME TIME; never store bare LOCAL",
+    "Reject or strip offsets before PARSEISO; require trailing Z",
+    "Store SLA as integer ms not multi-unit human labels",
+    "Whole-second SLAs only; ignore sub-second remain",
+    "Digit-check REQUIRE; CLEAR_ERR after soft PARSEISO"
   ],
   "language_gaps": [
-    "PARSEMS multi-unit compound (1h30m / 1s250ms)",
-    "Wall deadline helpers using MS not only TIME seconds",
-    "FROMTIME LOCAL / timezone flag",
-    "SYS REMAIN deadline_ms or DEADLINE_AT",
-    "WRITE trailing NL"
+    "PARSEISO timezone offset application (+hh:mm / -hh:mm)",
+    "PARSEISO LOCAL / timezone-aware dual of FROMTIME",
+    "MS-resolution TIMEDIFF or epoch_ms clock pair",
+    "PARSEMS multi-unit compound matching HUMANMS output",
+    "SYS ABS / age clamp helpers",
+    "WRITE trailing NL option"
   ],
   "issues_faced": [
-    "budget/label/start/remain/iso/gate/round-2m/expire green",
-    "multi-unit HUMANMS\u2192PARSEMS fail is core lesson",
-    "selftest 275/275; no language fix this iter"
+    "open/age/sla/gate/span/round/pin soft+REQUIRE all green",
+    "offset ignore is the core language challenge this iter",
+    "span polarity fixed to ARG2-ARG1 (duration a→b)",
+    "selftest 278/278; no language fix this iter"
   ],
-  "commit": "bcefd75d1d7f701fc84f0a8f55cb6a7fb34e0bc9",
-  "ts": "2026-08-06T23:49:13Z"
+  "commit": "",
+  "ts": "2026-08-07T00:14:47Z"
 }
