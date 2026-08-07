@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 385,
-  "version": "1.15.412-usability",
-  "item": "GREPF/GREPVF bag line filter on fields",
-  "item_id": 421,
-  "title": "GREPF|GREPVF|GREPFI — filter bag lines in object field",
-  "commit": "2ef01483df096c1395b156751961b81d35b9e7cf",
-  "summary": "Field bag grep without GETF+SYS GREP+SETF. Soft miss. proof 962 47/47.",
+  "iter": 386,
+  "version": "1.15.413-usability",
+  "item": "SORTBAGF/UNIQBAGF/UNIQUEBAGF bag hygiene on fields",
+  "item_id": 422,
+  "title": "SORTBAGF|UNIQBAGF|UNIQUEBAGF — sort/dedupe bag lines in field",
+  "commit": "dfd975567f2349c6896a9540ca8400bde900fc97",
+  "summary": "Worklist sort/dedupe without GETF+SYS SORT/UNIQ+SETF. Soft miss. proof 963 38/38.",
   "proofs": [
-    "962_oop_grepf",
-    "asserts 47/47",
-    "961 still green"
+    "963_oop_sortbagf",
+    "asserts 38/38",
+    "962 still green"
   ],
-  "when": "2026-08-07T18:06:51Z",
+  "when": "2026-08-07T18:19:18Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2ef01483df096c1395b156751961b81d35b9e7cf",
-  "note": "Restored thrash wipe first; GREPF_N/HIT/TOTAL"
+  "sha": "dfd975567f2349c6896a9540ca8400bde900fc97",
+  "note": "UNIQUEBAGF not fleet DISTINCTF; SORTF alias of SORTBAGF"
 }
