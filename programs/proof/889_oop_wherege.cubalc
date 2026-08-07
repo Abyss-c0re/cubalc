@@ -1,0 +1,92 @@
+# WHEREGE / WHERELE / WHEREGT / WHERELT — threshold select live objects
+# Usability: range queries beyond WHEREOBJ equality · no EACH+GETF+IF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 3
+NEW Counter k2 50
+NEW Counter k3 15
+
+# >= 20 → b c
+WHEREGE Cell energy 20
+ASSERT OK == 1
+ASSERT WHEREGE_N == 2
+ASSERT LAST_N == 2
+ASSERT WHEREGE_THRESH == 20
+SYS HASLINE WHEREGE "b"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREGE "c"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREGE "a"
+ASSERT LAST_N == 0
+
+# ATLEAST alias
+ATLEAST Cell energy 10
+ASSERT WHEREGE_N == 3 "a b c"
+
+# > 20 → c only
+WHEREGT Cell energy 20
+ASSERT WHEREGT_N == 1
+SYS HASLINE LAST "c"
+ASSERT LAST_N == 1
+
+# <= 10 → a d
+WHERELE Cell energy 10
+ASSERT WHERELE_N == 2
+SYS HASLINE WHERELE "a"
+ASSERT LAST_N == 1
+SYS HASLINE WHERELE "d"
+ASSERT LAST_N == 1
+
+# < 10 → d
+WHERELT Cell energy 10
+ASSERT WHERELT_N == 1
+SYS HASLINE LAST "d"
+ASSERT LAST_N == 1
+
+# OF sugar
+WHEREGE OF Counter n 15
+ASSERT WHEREGE_N == 2 "k2 k3"
+SYS HASLINE WHEREGE "k2"
+ASSERT LAST_N == 1
+SYS HASLINE WHEREGE "k3"
+ASSERT LAST_N == 1
+
+# bare field
+WHERELE n 10
+ASSERT WHERELE_N == 1
+SYS HASLINE LAST "k1"
+ASSERT LAST_N == 1
+
+# empty soft
+WHEREGE Cell energy 999
+ASSERT OK == 1
+ASSERT WHEREGE_N == 0
+
+# BELOW / ABOVE aliases
+BELOW Cell energy 10
+ASSERT WHERELT_N == 1
+ABOVE Cell energy 25
+ASSERT WHEREGT_N == 1
+SYS HASLINE LAST "c"
+ASSERT LAST_N == 1
+
+# chain: threshold then SUMF on survivors via GETFALL of bag is harder;
+# use WHEREGE then HASOBJ style count already proven
+WHEREGE Cell energy 20
+ASSERT WHEREGE_N == 2
+
+PRINT "oop_wherege ok"
