@@ -639,6 +639,198 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LISTCLASSES|CLASSES — newline bag of defined class names.
+   * LAST = bag; LAST_N / NCLASSES = count. Agent discovery after INCLUDE. */
+  if (kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "CLASSES") ||
+      kw(&L->cur, "CLASSLIST") || kw(&L->cur, "LISTCLASS")) {
+    char bag[2048];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_classes; i++) {
+      size_t ln = strlen(vm->classes[i].name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, vm->classes[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTCLASSES", bag);
+    var_set_str(vm, "CLASSES", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NCLASSES", n);
+    var_set_num(vm, "LISTCLASSES_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTOBJS|OBJECTS [ClassName] — live object names (optional class filter).
+   * LAST = newline bag; LAST_N / NOBJS = count. Optional: only that class. */
+  if (kw(&L->cur, "LISTOBJS") || kw(&L->cur, "OBJECTS") ||
+      kw(&L->cur, "OBJLIST") || kw(&L->cur, "LISTOBJECTS") ||
+      kw(&L->cur, "LISTINST")) {
+    char bag[2048], filt[48];
+    size_t o = 0;
+    int i, n = 0, has_filt = 0;
+    lex_next(L);
+    filt[0] = 0;
+    if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+        !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") && !kw(&L->cur, "SYS") &&
+        !kw(&L->cur, "PRINT") && !kw(&L->cur, "CUBE") && !kw(&L->cur, "END")) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    bag[0] = 0;
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      size_t ln;
+      if (!ob->live) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      ln = strlen(ob->name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, ob->name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOBJS", bag);
+    var_set_str(vm, "OBJECTS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NOBJS", n);
+    var_set_num(vm, "LISTOBJS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASMETHOD obj|Class method — LAST_N 1|0 soft probe before SEND.
+   * First arg object (live) or ClassName. Usability: agent IF without fatal. */
+  if (kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETH") ||
+      kw(&L->cur, "CANCALL") || kw(&L->cur, "RESPONDS") ||
+      kw(&L->cur, "RESPONDSTO") || kw(&L->cur, "METHOD?")) {
+    char a[48], mname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    MethodDef *md;
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASMETHOD obj|Class method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASMETHOD method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      md = oop_find_method(cd, mname);
+      if (md) hit = 1;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASMETHOD_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTMETHODS Class|obj — newline bag of method names on class/object.
+   * LAST_N / NMETHODS = count. Soft empty if unknown. */
+  if (kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "METHODS") ||
+      kw(&L->cur, "METHODLIST") || kw(&L->cur, "LISTMETH")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTMETHODS Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    if (cd) {
+      for (i = 0; i < cd->n_methods; i++) {
+        size_t ln = strlen(cd->methods[i].name);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, cd->methods[i].name, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTMETHODS", bag);
+    var_set_str(vm, "METHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NMETHODS", n);
+    var_set_num(vm, "LISTMETHODS_N", n);
+    var_set_num(vm, "OK", cd ? 1 : 0);
+    if (!cd) {
+      var_set_str(vm, "LAST_ERR", "LISTMETHODS: unknown class/obj");
+      var_set_str(vm, "ERR", "LISTMETHODS: unknown class/obj");
+    }
+    bump(vm);
+    return 1;
+  }
+
   /* plane ops_flow */
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")){
     char fname[48];

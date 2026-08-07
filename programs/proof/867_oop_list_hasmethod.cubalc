@@ -1,0 +1,75 @@
+# LISTCLASSES / LISTOBJS / HASMETHOD / LISTMETHODS — OOP agent introspection
+# Usability: discover classes/objects/methods after INCLUDE without hardcoding
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+LISTCLASSES
+ASSERT OK == 1
+ASSERT NCLASSES >= 1
+ASSERT LAST_N >= 1
+SYS HASLINE LAST "Cell"
+ASSERT LAST_N == 1 "Cell class listed"
+
+NEW Cell a 1 4 0
+NEW Cell b 1 2 1
+
+LISTOBJS
+ASSERT OK == 1
+ASSERT NOBJS >= 2
+SYS HASLINE LAST "a"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "b"
+ASSERT LAST_N == 1
+
+# filter by class
+LISTOBJS Cell
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+SYS HASLINE LAST "a"
+ASSERT LAST_N == 1
+
+HASMETHOD a tick
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASMETHOD_N == 1
+
+HASMETHOD a no_such_method_zz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# class-name form
+HASMETHOD Cell birth
+ASSERT LAST_N == 1
+
+HASMETHOD Cell nope
+ASSERT LAST_N == 0
+
+LISTMETHODS Cell
+ASSERT OK == 1
+ASSERT NMETHODS >= 3
+SYS HASLINE LAST "tick"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "init"
+ASSERT LAST_N == 1
+
+LISTMETHODS a
+ASSERT OK == 1
+SYS HASLINE LAST "after_div"
+ASSERT LAST_N == 1
+
+# soft miss unknown
+LISTMETHODS NoSuchClassZz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# aliases
+CLASSES
+ASSERT NCLASSES >= 1
+OBJECTS
+ASSERT NOBJS >= 2
+METHODS Cell
+ASSERT NMETHODS >= 1
+
+PRINT "oop_list_hasmethod ok"
