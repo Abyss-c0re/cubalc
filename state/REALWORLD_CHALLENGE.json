@@ -1,51 +1,57 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 141,
-  "program": "programs/realworld/route_scale_trail_board.cubalc",
-  "theme": "TIMESF weight scale + CATF/PREPENDF audit trail on Route",
-  "version": "1.15.389-usability",
+  "iter": 142,
+  "program": "programs/realworld/fleet_label_scrub_board.cubalc",
+  "theme": "CATFALL + REPLACEF + TRIMF/UPPERF host fleet label scrub",
+  "version": "1.15.392-usability",
   "pass": true,
-  "prior_note": "iter 140 OBJINFO+INCF+BOUNDF; this iter stresses TIMESF (fe36380) + CATF (552cc0a)",
+  "prior_note": "iter 141 TIMESF+CATF single route; this iter stresses CATFALL (1bb700a) REPLACEF (d6777f8) TRIMF (324a2ce)",
   "tests": [
     {
-      "name": "open_routes",
-      "cmd": "open r0/r1 api-east/west weight 100",
+      "name": "open_dirty",
+      "cmd": "open h0/h1/h2 with padded Ready/DRAFT status",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "scale",
-      "cmd": "TIMESF *2 \u2192 200; *3 \u2192 600",
+      "name": "scrub",
+      "cmd": "TRIMF+LOWERF → ready/draft",
       "ok": true,
-      "note": "TIMESF"
+      "note": "TRIMF"
     },
     {
-      "name": "tag_trail",
-      "cmd": "CATF trail |v1|v2; PREPENDF [",
+      "name": "rewrite",
+      "cmd": "REPLACEF ready→live count 1; draft nomatch 0",
       "ok": true,
-      "note": "CATF"
+      "note": "REPLACEF"
     },
     {
-      "name": "mark_status",
-      "cmd": "CATF status WITH :canary \u2192 up:canary",
+      "name": "case_env",
+      "cmd": "UPPERF/LOWERF env PROD/prod",
       "ok": true,
-      "note": "CATF WITH"
+      "note": "UPPERF"
     },
     {
-      "name": "decay_bound",
-      "cmd": "TIMESF*10 then BOUNDF HI 500",
+      "name": "tagall",
+      "cmd": "CATFALL Host tags |canary N=3",
       "ok": true,
-      "note": "decay"
+      "note": "CATFALL"
     },
     {
-      "name": "zero_gate",
-      "cmd": "TIMESF 0 drain; gate MINW deny REQUIRE\u21922",
+      "name": "prefixall",
+      "cmd": "PREPENDFALL env: → env:prod",
       "ok": true,
-      "note": "zero"
+      "note": "PREPENDFALL"
     },
     {
-      "name": "probe_soft",
-      "cmd": "TRYTIMESF/TRYCATF unknown soft; TRYTIMESF trail soft",
+      "name": "gate",
+      "cmd": "status==live admit; draft deny REQUIRE→2",
+      "ok": true,
+      "note": "gate"
+    },
+    {
+      "name": "probe",
+      "cmd": "TRYTRIMF/TRYREPLACEF soft; CATFALL miss SKIP=3",
       "ok": true,
       "note": "probe"
     },
@@ -60,50 +66,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "bag|push",
-      "title": "SYS PUSH is bag newline join \u2014 not string concat",
-      "detail": "Building trail pieces with SYS PUSH piece TAG inserts NL between tokens (|\\nv1). Agents must SYS CAT/STRCAT for string plane. Easy false friend after bag training.",
-      "repro": "SYS PUSH \"|\" \"v1\" \u2192 multi-line; SYS CAT \"|\" \"v1\" \u2192 |v1"
+      "area": "oop|replacef|keyword",
+      "title": "REPLACEF TO/WITH/BY glue steals var named TO",
+      "detail": "REPLACEF obj field OLD TO parses TO as optional glue keyword then fails needing new (REPLACEF object field old new). Same class as METHODINFO METH steal. Must name vars NEWV not TO.",
+      "repro": "REPLACEF h0 status OLDV TO → parse fail; OLDV NEWV works"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "oop|timesf",
-      "title": "TIMESF integer-only \u2014 no fractional half/decay",
-      "detail": "Cannot TIMESF weight 0.5 for canary half-step; agents SETF/DECF or scale by 0 then SETF. Integer domain only.",
-      "repro": "no factor 0.5; half traffic needs non-TIMESF path"
+      "severity": "med",
+      "area": "oop|catfall",
+      "title": "Bare CATFALL field crosses all classes owning field",
+      "detail": "CATFALL note without Class tags Ticket+Log. Fleet ops must pass Class or multi-type pollution.",
+      "repro": "proof 940 CATFALL note |z N=5"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|catf",
-      "title": "CATF promotes numeric field to string irreversibly",
-      "detail": "Proof CATF retries \"x\" \u2192 field becomes string \"0x\"; TIMESF/INCF then soft-fail. Audit mistakes can poison counters.",
-      "repro": "CATF t retries \"x\" then TIMESF fails string"
+      "area": "oop|stringf",
+      "title": "No fleet TRIMFALL/REPLACEFALL — only single-object normalize",
+      "detail": "CATFALL exists for concat but scrub still EACH/slot loops for TRIMF+LOWERF+REPLACEF. Asymmetric fleet surface.",
+      "repro": "scrub per-slot not CATFALL-class"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|timesf",
-      "title": "No compound TIMESF+BOUNDF / scale-with-cap op",
-      "detail": "decay action is two ops; overshoot then clamp like INCF+BOUNDF gap.",
-      "repro": "decay = TIMESF then BOUNDF"
+      "area": "oop|replacef",
+      "title": "EQS clobbers LAST_N after REPLACEF_COUNT",
+      "detail": "Proof notes EQS after REPLACEF loses count; agents must capture REPLACEF_COUNT immediately.",
+      "repro": "LET n=REPLACEF_COUNT before EQS"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "print|last",
-      "title": "PRINT LAST after SYS CAT may show length-ish plate noise",
-      "detail": "CAT works (EQS); PRINT LAST output can look numeric (LAST_N). Agents should prefer PRINT_JSON or GETF plates.",
-      "repro": "SYS CAT a b; PRINT LAST"
+      "area": "oop|promote",
+      "title": "CATFALL/REPLACEF/UPPERF promote numeric fields to string",
+      "detail": "Same poison class as CATF; fleet-wide promotion risk.",
+      "repro": "CATFALL Ticket retries -r"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|try",
-      "title": "Hard TIMESF/CATF unknown object fatal \u2014 TRY* required",
-      "detail": "Soft probe needs TRYTIMESF/TRYCATF.",
-      "repro": "TRYTIMESF nosuch weight 2 OK=0"
+      "area": "oop|replacef",
+      "title": "Empty old needle is silent no-op",
+      "detail": "REPLACEF note \"\" X count 0; not an error.",
+      "repro": "proof empty old"
     },
     {
       "id": "W7",
@@ -118,31 +124,30 @@
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE \u2192 miss exit 0",
-      "repro": "REQUIRE=abc scale r2 \u2192 exit 0"
+      "detail": "Non-numeric REQUIRE miss exit 0",
+      "repro": "REQUIRE=abc scrub bad → exit 0"
     }
   ],
   "workarounds": [
-    "SYS CAT for string pieces; never SYS PUSH for trail tags",
-    "Integer scale factors only; half-weight via SETF absolute",
-    "Never CATF onto numeric counters; keep trail on string field",
-    "decay = TIMESF + BOUNDF; TRY* for soft probes",
-    "Fixed r0/r1/r2 slots; rehydrate all DUMPOBJ fields"
+    "Never name REPLACEF new-value var TO; use NEWV/NEWSTR",
+    "Always CATFALL Host tags not bare CATFALL tags",
+    "Capture REPLACEF_COUNT before any EQS/HAS",
+    "Per-slot TRIMF+LOWERF until TRIMFALL exists",
+    "TRY* for soft probes; REQUIRE EXIT in actions"
   ],
   "language_gaps": [
-    "Fractional TIMESF or fixed-point scale",
-    "TIMESFBOUND compound",
-    "String-safe PUSH alias or clearer bag vs string docs",
-    "CATF refuse numeric fields option",
-    "WRITE NL; strict NUM REQUIRE"
+    "REPLACEF must not steal TO when it is a string var in new position",
+    "TRIMFALL/LOWERFALL/REPLACEFALL fleet normalize",
+    "Strict refuse CATFALL on numeric fields",
+    "WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "TIMESF *2/*3 works; zero drain status draining",
-    "First tag used SYS PUSH \u2192 NL trail; fixed to SYS CAT",
-    "CATF trail [|v1|v2; mark up:canary; decay clamps HI",
-    "gate MINW admit/deny; probe soft zeros",
+    "TRIMF+LOWERF Ready → ready; REPLACEF TO var hard-failed parse",
+    "Renamed TO→NEWV; rewrite ready→live count 1",
+    "CATFALL tags |canary N=3; PREPENDFALL env:",
+    "gate live admit; draft deny; CATFALL SKIP on missing field",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "35510d654e884c18550c65648c14d13cac253769",
-  "ts": "2026-08-07T14:24:38Z"
+  "commit": "",
+  "ts": "2026-08-07T14:49:27Z"
 }
