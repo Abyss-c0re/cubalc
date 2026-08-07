@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 387,
-  "version": "1.15.414-usability",
-  "item": "LINESF/HASBAGLINE/DROPBAGLINE bag count and ack",
-  "item_id": 423,
-  "title": "LINESF|HASBAGLINE|DROPBAGLINE — bag count/membership/ack on fields",
-  "commit": "815efd9aa132458e07f881a69e585c6255a93190",
-  "summary": "Work-queue IF/ack without GETF+SYS LINES/HASLINE/REMOVELINE+SETF. proof 964 53/53.",
+  "iter": 388,
+  "version": "1.15.415-usability",
+  "item": "EACH LINE OF obj field bag walk",
+  "item_id": 424,
+  "title": "EACH LINE OF obj field — walk bag-in-field without GETF",
+  "commit": "31ede82d1316991ebd713579b7a30c1b698417e6",
+  "summary": "Iterate multi-line object fields without GETF+EACH LINE glue. proof 965 28/28.",
   "proofs": [
-    "964_oop_hasbagline",
-    "asserts 53/53",
-    "963 still green"
+    "965_each_line_of_field",
+    "asserts 28/28",
+    "617 still green",
+    "964 still green"
   ],
-  "when": "2026-08-07T18:25:08Z",
+  "when": "2026-08-07T18:35:15Z",
   "agent": "meaningful_iter_10m",
-  "sha": "815efd9aa132458e07f881a69e585c6255a93190",
-  "note": "HASBAGLINEI/DROPBAGLINEI; not file HASLINEF"
+  "sha": "31ede82d1316991ebd713579b7a30c1b698417e6",
+  "note": "OF/IN/FROM obj field; plain str IN unchanged"
 }
