@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 364,
-  "version": "1.15.391-usability",
-  "item": "REPLACEF/GSUBF/SUBSTF string field replace",
-  "item_id": 400,
-  "title": "REPLACEF|GSUBF|SUBSTF — single-object string field replace",
-  "commit": "d6777f8f0e8ac3a81241683b9b96d226ae681332",
-  "summary": "In-place field rewrite without GETF+REPLACEALL+SETF. proof 941 31/31.",
+  "iter": 365,
+  "version": "1.15.392-usability",
+  "item": "TRIMF/UPPERF/LOWERF string field normalize",
+  "item_id": 401,
+  "title": "TRIMF|UPPERF|LOWERF — single-object string field normalize",
+  "commit": "324a2ceca5d2a55b984351be040ceb707cc97733",
+  "summary": "In-place trim/case field without GETF+TRIM/UPPER/LOWER+SETF. proof 942 31/31.",
   "proofs": [
-    "941_oop_replacef",
+    "942_oop_trimf",
     "asserts 31/31",
-    "939 still green",
-    "940 still green"
+    "941 still green",
+    "939 still green"
   ],
-  "when": "2026-08-07T14:35:07Z",
+  "when": "2026-08-07T14:44:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d6777f8f0e8ac3a81241683b9b96d226ae681332",
-  "note": "complements CATF; LAST_N=replace count; FIRST for once; soft TRYREPLACEF"
+  "sha": "324a2ceca5d2a55b984351be040ceb707cc97733",
+  "note": "pairs REPLACEF/CATF; LTRIMF/RTRIMF; soft TRYTRIMF"
 }
