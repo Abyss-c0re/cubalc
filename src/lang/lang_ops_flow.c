@@ -10788,6 +10788,150 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CLASSINFO|DUMPCLASS|DESCRIBECLASS [JSON] Class|obj
+   * — one-shot class schema plate for agents (fields + methods + live count).
+   * Default: key:value bag (LOOKUP-ready). JSON|ASJSON → cubalc.class.v1.
+   * Soft OK=0 if unknown. Usability: no LISTFIELDS+LISTMETHODS+COUNTOBJ glue. */
+  if (kw(&L->cur, "CLASSINFO") || kw(&L->cur, "DUMPCLASS") ||
+      kw(&L->cur, "DESCRIBECLASS") || kw(&L->cur, "CLASSSCHEMA") ||
+      kw(&L->cur, "INSPECTCLASS") || kw(&L->cur, "SCHEMACLASS") ||
+      kw(&L->cur, "CLASSMETA") || kw(&L->cur, "TYPEINFO") ||
+      kw(&L->cur, "DESCRIBE") || kw(&L->cur, "CLASSDEF")) {
+    char a[48], bag[4096], fbag[1024], mbag[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0, fo = 0, mo = 0;
+    int i, n_live = 0, as_json = 0;
+    /* DESCRIBE alone may be too broad — keep as alias */
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "CLASSINFO [JSON] Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    fbag[0] = 0;
+    mbag[0] = 0;
+    if (!cd) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NFIELDS", 0);
+      var_set_num(vm, "NMETHODS", 0);
+      var_set_num(vm, "CLASSINFO_N", 0);
+      var_set_num(vm, "CLASSINFO_LIVE", 0);
+      var_set_str(vm, "CLASSINFO", "");
+      var_set_str(vm, "DUMPCLASS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLASSINFO: unknown class/obj");
+      var_set_str(vm, "ERR", "CLASSINFO: unknown class/obj");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      if (vm->objs[i].live && vm->objs[i].class_idx >= 0 &&
+          vm->objs[i].class_idx < vm->n_classes &&
+          &vm->classes[vm->objs[i].class_idx] == cd)
+        n_live++;
+    }
+    /* field/method name bags (comma-joined for compact plate) */
+    for (i = 0; i < cd->n_fields; i++) {
+      size_t ln = strlen(cd->fields[i].name);
+      if (i > 0 && fo + 1 < sizeof fbag) fbag[fo++] = ',';
+      if (fo + ln < sizeof fbag) {
+        memcpy(fbag + fo, cd->fields[i].name, ln);
+        fo += ln;
+      }
+      fbag[fo] = 0;
+    }
+    for (i = 0; i < cd->n_methods; i++) {
+      size_t ln = strlen(cd->methods[i].name);
+      if (i > 0 && mo + 1 < sizeof mbag) mbag[mo++] = ',';
+      if (mo + ln < sizeof mbag) {
+        memcpy(mbag + mo, cd->methods[i].name, ln);
+        mo += ln;
+      }
+      mbag[mo] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.class.v1\",\"name\":\"%s\",\"role\":\"%s\","
+          "\"n_fields\":%d,\"n_methods\":%d,\"live\":%d,\"fields\":[",
+          cd->name, cd->role[0] ? cd->role : "", cd->n_fields, cd->n_methods,
+          n_live);
+      for (i = 0; i < cd->n_fields && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
+                              cd->fields[i].name);
+      }
+      if (o + 16 < sizeof bag)
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "],\"methods\":[");
+      for (i = 0; i < cd->n_methods && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
+                              cd->methods[i].name);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nrole:%s\nn_fields:%d\nn_methods:%d\nlive:%d\nfields:%s\n"
+          "methods:%s",
+          cd->name, cd->role[0] ? cd->role : "", cd->n_fields, cd->n_methods,
+          n_live, fbag, mbag);
+      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "CLASSINFO", bag);
+    var_set_str(vm, "DUMPCLASS", bag);
+    var_set_str(vm, "DESCRIBECLASS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = cd->n_fields;
+    var_set_num(vm, "LAST_N", cd->n_fields);
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "NMETHODS", cd->n_methods);
+    var_set_num(vm, "CLASSINFO_N", cd->n_fields);
+    var_set_num(vm, "CLASSINFO_LIVE", n_live);
+    var_set_num(vm, "CLASSINFO_METHODS", cd->n_methods);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "FIELDS", fbag);
+    var_set_str(vm, "METHODS", mbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* DUMPOBJ|INSPECT|OBJDUMP|DUMPF obj — field:value bag of live object state.
    * Complements LISTFIELDS (names only): one-shot snapshot for agents without
    * EACH+GETF. LAST = newline bag field:val (LOOKUP/KVGET ready); LAST_N =
