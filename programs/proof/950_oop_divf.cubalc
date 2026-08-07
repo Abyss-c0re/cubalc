@@ -1,0 +1,150 @@
+# DIVF / MODF — single-object numeric field divide/remainder for agents
+# Usability: share/wrap counters without GETF+/+%+SETF · METHOD/THIS
+# Completes INCF/TIMESF/NUMF arithmetic; pairs after peel+NUMF
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD energy 100
+  FIELD slot 0
+  FIELD tag "x"
+  METHOD init e
+    SETF THIS energy e
+  END
+  METHOD half
+    DIVF THIS energy 2
+  END
+  METHOD wrap n
+    MODF THIS slot n
+  END
+END
+
+NEW Cell c 100
+
+# integer divide
+DIVF c energy 4
+ASSERT OK == 1
+ASSERT DIVF_N == 1
+ASSERT DIVF_OK == 1
+ASSERT DIVF_RHS == 4
+ASSERT LAST_N == 25
+SYS EQS FIELD "energy"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 25
+
+# BY glue
+DIVF c energy BY 5
+ASSERT LAST_N == 5
+ASSERT DIVF_RHS == 5
+
+# aliases
+SETF c energy 48
+IDIVF c energy 3
+ASSERT LAST_N == 16
+QUOTF c energy 4
+ASSERT LAST_N == 4
+DIVOBJ c energy 2
+ASSERT LAST_N == 2
+
+# MODF wrap index
+SETF c slot 17
+MODF c slot 5
+ASSERT OK == 1
+ASSERT MODF_N == 1
+ASSERT MODF_OK == 1
+ASSERT MODF_RHS == 5
+ASSERT LAST_N == 2
+GETF c slot
+ASSERT LAST_N == 2
+
+# REMF alias
+SETF c slot 10
+REMF c slot 3
+ASSERT LAST_N == 1
+MODOBJ c slot 1
+ASSERT LAST_N == 0
+
+# METHOD + THIS
+SETF c energy 40
+SEND c half
+GETF c energy
+ASSERT LAST_N == 20
+
+SETF c slot 23
+SEND c wrap 7
+GETF c slot
+ASSERT LAST_N == 2
+
+# NUMF then DIVF pipeline (peel-style string → share)
+SETF c energy "120"
+NUMF c energy
+ASSERT LAST_N == 120
+DIVF c energy 10
+ASSERT LAST_N == 12
+
+# soft miss object
+TRYDIVF nosuch energy 2
+ASSERT OK == 0
+ASSERT DIVF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYMODF nosuch slot 3
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+DIVF SOFT c nosuch 2
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYDIVF c tag 2
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# soft by zero — field unchanged
+SETF c energy 42
+DIVF SOFT c energy 0
+ASSERT OK == 0
+ASSERT DIVF_OK == 0
+SYS HAS LAST_ERR "zero"
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 42
+
+SETF c slot 9
+MODF SOFT c slot 0
+ASSERT OK == 0
+ASSERT MODF_OK == 0
+SYS HAS LAST_ERR "zero"
+ASSERT LAST_N == 1
+GETF c slot
+ASSERT LAST_N == 9
+
+# after soft, still works
+SETF c energy 36
+DIVF c energy 6
+ASSERT OK == 1
+ASSERT LAST_N == 6
+
+# dynamic field name
+SETF c energy 15
+DIVF c "energy" 3
+ASSERT LAST_N == 5
+
+# HELP
+HELP DIVF
+SYS HAS LAST "DIVF"
+ASSERT LAST_N == 1
+HELP MODF
+SYS HAS LAST "MODF"
+ASSERT LAST_N == 1
+
+PRINT "oop_divf ok"

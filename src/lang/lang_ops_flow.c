@@ -10307,6 +10307,240 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* DIVF|IDIVF|QUOTF obj field divisor — integer divide one numeric field.
+   * MODF|REMF|MODULO obj field modulus — remainder one numeric field.
+   * TRYDIVF|DIVF SOFT / TRYMODF|MODF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * Divisor/modulus 0: hard fail, or soft OK=0 DIVF_OK/MODF_OK=0 field unchanged.
+   * Usability: share/wrap counters without GETF+/+SETF (METHOD/THIS; pairs
+   * INCF/TIMESF/NUMF after peel). Note: fleet DIVFALL not this form. */
+  if (kw(&L->cur, "DIVF") || kw(&L->cur, "IDIVF") ||
+      kw(&L->cur, "QUOTF") || kw(&L->cur, "DIVOBJ") ||
+      kw(&L->cur, "IDIVOBJ") || kw(&L->cur, "DIVFIELD") ||
+      kw(&L->cur, "QUOTFIELD") || kw(&L->cur, "INTDIVF") ||
+      kw(&L->cur, "MODF") || kw(&L->cur, "REMF") ||
+      kw(&L->cur, "MODULO") || kw(&L->cur, "MODOBJ") ||
+      kw(&L->cur, "REMOBJ") || kw(&L->cur, "MODFIELD") ||
+      kw(&L->cur, "REMFIELD") || kw(&L->cur, "MODULOF") ||
+      kw(&L->cur, "TRYDIVF") || kw(&L->cur, "DIVFSOFT") ||
+      kw(&L->cur, "SOFTDIVF") || kw(&L->cur, "TRYIDIVF") ||
+      kw(&L->cur, "TRYQUOTF") || kw(&L->cur, "TRYMODF") ||
+      kw(&L->cur, "MODFSOFT") || kw(&L->cur, "SOFTMODF") ||
+      kw(&L->cur, "TRYREMF") || kw(&L->cur, "TRYMODOBJ")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_mod = 0;
+    long rhs = 1, nv, cur;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "MODF") == 0 || strcmp(op, "REMF") == 0 ||
+        strcmp(op, "MODULO") == 0 || strcmp(op, "MODOBJ") == 0 ||
+        strcmp(op, "REMOBJ") == 0 || strcmp(op, "MODFIELD") == 0 ||
+        strcmp(op, "REMFIELD") == 0 || strcmp(op, "MODULOF") == 0 ||
+        strcmp(op, "TRYMODF") == 0 || strcmp(op, "MODFSOFT") == 0 ||
+        strcmp(op, "SOFTMODF") == 0 || strcmp(op, "TRYREMF") == 0 ||
+        strcmp(op, "TRYMODOBJ") == 0)
+      is_mod = 1;
+    if (strcmp(op, "TRYDIVF") == 0 || strcmp(op, "DIVFSOFT") == 0 ||
+        strcmp(op, "SOFTDIVF") == 0 || strcmp(op, "TRYIDIVF") == 0 ||
+        strcmp(op, "TRYQUOTF") == 0 || strcmp(op, "TRYMODF") == 0 ||
+        strcmp(op, "MODFSOFT") == 0 || strcmp(op, "SOFTMODF") == 0 ||
+        strcmp(op, "TRYREMF") == 0 || strcmp(op, "TRYMODOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, is_mod ? "MODF object field modulus" : "DIVF object field divisor");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, is_mod ? "MODF field" : "DIVF field"); return -1;
+    }
+    if (kw(&L->cur, "BY") || kw(&L->cur, "DIV") || kw(&L->cur, "IDIV") ||
+        kw(&L->cur, "MOD") || kw(&L->cur, "REM") || kw(&L->cur, "/") ||
+        kw(&L->cur, "%"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        rhs = parse_expr(vm, L);
+      } else {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          rhs = dv->val;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          rhs = vm->last_n;
+          lex_next(L);
+        } else {
+          fail(vm, is_mod ? "MODF object field modulus" : "DIVF object field divisor");
+          return -1;
+        }
+      }
+    } else {
+      fail(vm, is_mod ? "MODF object field modulus" : "DIVF object field divisor");
+      return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s",
+                 is_mod ? "MODF" : "DIVF", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "DIVF_N", 0);
+      var_set_num(vm, "MODF_N", 0);
+      var_set_num(vm, "DIVF_OK", 0);
+      var_set_num(vm, "MODF_OK", 0);
+      var_set_num(vm, "DIVF_RHS", 0);
+      var_set_num(vm, "MODF_RHS", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_mod ? "MODF: unknown object" : "DIVF: unknown object");
+      var_set_str(vm, "ERR",
+                  is_mod ? "MODF: unknown object" : "DIVF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s",
+                 is_mod ? "MODF" : "DIVF", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "DIVF_N", 0);
+      var_set_num(vm, "MODF_N", 0);
+      var_set_num(vm, "DIVF_OK", 0);
+      var_set_num(vm, "MODF_OK", 0);
+      var_set_num(vm, "DIVF_RHS", 0);
+      var_set_num(vm, "MODF_RHS", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_mod ? "MODF: unknown field" : "DIVF: unknown field");
+      var_set_str(vm, "ERR",
+                  is_mod ? "MODF: unknown field" : "DIVF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s field %s is string",
+                 is_mod ? "MODF" : "DIVF", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "DIVF_N", 0);
+      var_set_num(vm, "MODF_N", 0);
+      var_set_num(vm, "DIVF_OK", 0);
+      var_set_num(vm, "MODF_OK", 0);
+      var_set_num(vm, "DIVF_RHS", 0);
+      var_set_num(vm, "MODF_RHS", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_mod ? "MODF: string field" : "DIVF: string field");
+      var_set_str(vm, "ERR",
+                  is_mod ? "MODF: string field" : "DIVF: string field");
+      bump(vm);
+      return 1;
+    }
+    if (rhs == 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s by zero", is_mod ? "MODF" : "DIVF");
+        fail(vm, vm->err); return -1;
+      }
+      cur = ob->fnum[fi];
+      {
+        char nb[32];
+        snprintf(nb, sizeof nb, "%ld", cur);
+        var_set_str(vm, "LAST", nb);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+      }
+      vm->last_n = cur;
+      var_set_num(vm, "LAST_N", cur);
+      var_set_num(vm, "DIVF_N", is_mod ? 0 : 0);
+      var_set_num(vm, "MODF_N", is_mod ? 0 : 0);
+      var_set_num(vm, "DIVF_OK", 0);
+      var_set_num(vm, "MODF_OK", 0);
+      var_set_num(vm, "DIVF_RHS", 0);
+      var_set_num(vm, "MODF_RHS", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  is_mod ? "MODF: by zero" : "DIVF: by zero");
+      var_set_str(vm, "ERR",
+                  is_mod ? "MODF: by zero" : "DIVF: by zero");
+      var_set_str(vm, "FIELD", fname);
+      var_set_str(vm, "OBJECT", oname);
+      bump(vm);
+      return 1;
+    }
+    cur = ob->fnum[fi];
+    if (is_mod)
+      nv = cur % rhs;
+    else
+      nv = cur / rhs;
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    if (is_mod) {
+      var_set_num(vm, "MODF_N", 1);
+      var_set_num(vm, "MODF_OK", 1);
+      var_set_num(vm, "MODF_RHS", rhs);
+      var_set_num(vm, "REMF_N", 1);
+      var_set_num(vm, "DIVF_N", 0);
+      var_set_num(vm, "DIVF_OK", 0);
+    } else {
+      var_set_num(vm, "DIVF_N", 1);
+      var_set_num(vm, "DIVF_OK", 1);
+      var_set_num(vm, "DIVF_RHS", rhs);
+      var_set_num(vm, "IDIVF_N", 1);
+      var_set_num(vm, "QUOTF_N", 1);
+      var_set_num(vm, "MODF_N", 0);
+      var_set_num(vm, "MODF_OK", 0);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* CATF|APPENDF|STRCATF|PREPENDF obj field string
    * TRYCATF|CATF SOFT — soft miss OK=0.
    * Append (or PREPENDF prefix) text onto a string field; promotes num→str.
