@@ -1,0 +1,937 @@
+# ttl_due_board.cubalc — DEADLINE/ADDTIME due + EXPIRED/REMAINING TTL gate
+#
+# Real use: agents claim work with a TTL (PARSEMS "30s"/"5m"), stamp absolute
+# due epoch via DEADLINE/ADDTIME (no shell date), probe EXPIRED/REMAINING, and
+# gate renew/complete without hand TIME+CMP glue:
+#   PARSEMS / DURATION     — human TTL → ms → floor seconds
+#   DEADLINE / EXPIRESAT   — now + secs → due epoch
+#   ADDTIME / ADDEPOCH     — base + secs (renew from existing due or now)
+#   EXPIRED / ISEXPIRED    — due <= now → 1
+#   REMAINING / TTL        — max(0, due - now) seconds
+#   FROMTIME / HUMANMS     — ISO due stamp + human remain label
+#   ENVDEFAULT / ENSUREENV — boot default CUBALC_TTL if unset
+# Distinct from deadline_budget (hand remain ms), lease_sla_age (PARSEISO age
+# backward), work_claim (queue claim): this board is *TTL → due → expired*.
+#
+# Plate under STATE:
+#   DUE.txt      — due epoch seconds
+#   TTL.txt      — last configured TTL seconds
+#   VAL.txt      — last label / iso / remain / expired
+#   META.txt
+#   TTL_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_TTL_ACTION):
+#   list      — plate (default)
+#   boot      — ENVDEFAULT TTL env; optional claim if still empty
+#   claim     — PARSEMS ARG1 (or ENV/default) → DEADLINE → DUE
+#   renew     — ADDTIME now TTL_s → DUE (or ARG1 override secs)
+#   extend    — ADDTIME existing DUE + TTL_s (push deadline out)
+#   remain    — REMAINING DUE → VAL seconds
+#   human     — HUMANMS remain*1000
+#   iso       — FROMTIME DUE → VAL
+#   expired   — EXPIRED DUE → VAL 0|1
+#   gate      — not expired admit (REQUIRE optional hard deny)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ttl_$$
+#   CUBALC_ARG0=claim CUBALC_ARG1=30s ...
+#   CUBALC_ARG0=remain ...
+#   CUBALC_ARG0=gate CUBALC_TTL_REQUIRE=1 ...
+#   CUBALC_ARG0=boot ...
+#
+# Env: CUBALC_TTL_REQUIRE=1  CUBALC_TTL=30s  CUBALC_TTL_ACTION=claim
+#
+# Edges:
+#   EXPIRED clobbers LAST_N (0/1) — must LET due before REMAINING chain
+#   EXPIRED empty/junk coerces → expired (no soft miss OK=0)
+#   NUM "2m" → OK=1 LAST_N=2 (partial) — need STR(NUM)==input pure check
+#   PARSEMS "60" = 60ms; "60s" = 60000ms — bare digits ambiguous
+#   PARSEMS 500ms → floor /1000 → DEADLINE 0 → instant expire
+#   DEADLINE accepts negative secs (past due)
+#   HUMANMS multi-unit not PARSEMS-round-trippable
+#   WRITE no trailing NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "ttl_due_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT DFILE = "DUE.txt"
+DEFAULT TFILE = "TTL.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "TTL_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_TTL = "30s"
+DEFAULT TTL_SECS = 30
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+# boot-time ENVDEFAULT for CUBALC_TTL (does not overwrite host)
+SYS ENVDEFAULT "CUBALC_TTL" DEF_TTL
+LET envdef_set = LAST_N
+CLEAR_ERR
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_TTL_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_TTL_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_TTL_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_TTL_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_TTL" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_TTL = LAST
+ELSE
+  LET ENV_TTL = DEF_TTL
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir DFILE
+LET due_meta = LAST
+SYS JOIN state_dir TFILE
+LET ttl_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR due_meta OR ""
+LET due_s = LAST
+CLEAR_ERR
+SYS READ OR ttl_meta OR ""
+LET ttl_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET due_n = 0
+SYS BLANK due_s
+IF LAST_N == 0 THEN
+  SYS NUM due_s
+  IF OK == 1 THEN
+    LET due_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET ttl_n = 0
+SYS BLANK ttl_s
+IF LAST_N == 0 THEN
+  SYS NUM ttl_s
+  IF OK == 1 THEN
+    LET ttl_n = LAST_N
+  END
+  CLEAR_ERR
+END
+IF ttl_n <= 0 THEN
+  LET ttl_n = TTL_SECS
+END
+
+# fill claim/renew NAME from ENV when blank
+SYS BLANK ENV_TTL
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "claim"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TTL
+    END
+  END
+END
+SYS BLANK ENV_TTL
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "boot"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TTL
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET due_ch = 0
+LET ttl_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET remain_n = 0
+LET expired_n = 0
+LET gate_n = 0
+LET parse_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "ttl" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON due_s
+  PRINT_JSON ttl_s
+  PRINT_JSON val
+  PRINT_JSON meta
+  PRINT_JSON envdef_set
+  LET note_msg = "list ok"
+END
+
+# --- boot: ensure env + optional auto-claim if no due ---
+SYS EQS ACTION "boot"
+IF LAST_N == 1 THEN
+  NOTE "action boot"
+  # ENVDEFAULT already ran; report whether plate needs claim
+  SYS BLANK due_s
+  IF LAST_N == 1 THEN
+    # no due yet → claim with NAME/ENV_TTL
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TTL
+    END
+    SYS PARSEMS NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "boot parse fail"
+      FAIL "boot parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "boot parse fail"
+      END
+    ELSE
+      LET ms = LAST_N
+      LET parse_n = ms
+      LET sec = ms / 1000
+      IF sec < 0 THEN
+        LET sec = 0
+      END
+      LET ttl_n = sec
+      SYS STR ttl_n
+      LET ttl_s = LAST
+      LET ttl_ch = 1
+      SYS DEADLINE sec
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "boot deadline fail"
+        FAIL "boot deadline fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "boot deadline fail"
+        END
+      ELSE
+        LET due_n = LAST_N
+        SYS STR due_n
+        LET due_s = LAST
+        LET due_ch = 1
+        SYS FROMTIME due_n
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "boot claim ok"
+        LET meta = "boot"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS PUSH meta "ttl_s"
+        LET meta = LAST
+        SYS STR ttl_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "due"
+        LET meta = LAST
+        SYS STR due_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "envdef"
+        LET meta = LAST
+        SYS STR envdef_set
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "boot already due"
+    LET val = due_s
+    LET val_ch = 1
+    LET meta = "boot"
+    SYS PUSH meta "keep"
+    LET meta = LAST
+    SYS PUSH meta due_s
+    LET meta = LAST
+    SYS STR envdef_set
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON due_n ttl_n envdef_set
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- claim: PARSEMS → DEADLINE ---
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  NOTE "action claim"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = ENV_TTL
+  END
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_TTL
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET parse_n = 0
+    LET note_msg = "claim parse fail"
+    FAIL "claim parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "claim parse fail"
+    END
+  ELSE
+    LET ms = LAST_N
+    LET parse_n = ms
+    LET sec = ms / 1000
+    IF sec < 0 THEN
+      LET sec = 0
+    END
+    LET ttl_n = sec
+    SYS STR ttl_n
+    LET ttl_s = LAST
+    LET ttl_ch = 1
+    SYS DEADLINE sec
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "claim deadline fail"
+      FAIL "claim deadline fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "claim deadline fail"
+      END
+    ELSE
+      LET due_n = LAST_N
+      SYS STR due_n
+      LET due_s = LAST
+      LET due_ch = 1
+      SYS FROMTIME due_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "claim ok"
+      LET meta = "claim"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      SYS PUSH meta "ms"
+      LET meta = LAST
+      SYS STR ms
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ttl_s"
+      LET meta = LAST
+      SYS STR ttl_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "due"
+      LET meta = LAST
+      SYS STR due_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON parse_n ttl_n due_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- renew: DEADLINE from now using stored/override TTL ---
+# Override parsing (NUM is sticky-partial on "2m"→2):
+#   pure digits (STR(NUM)==input) → seconds
+#   else PARSEMS label ("30s"/"2m") → ms/1000 floor
+# Caveat: PARSEMS bare "60" = 60ms → 0s after floor; prefer "60s" or bare 60.
+SYS EQS ACTION "renew"
+IF LAST_N == 1 THEN
+  NOTE "action renew"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET parsed = 0
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET ntmp = LAST_N
+      SYS STR ntmp
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET ttl_n = ntmp
+        LET parsed = 1
+      END
+    END
+    CLEAR_ERR
+    IF parsed == 0 THEN
+      SYS PARSEMS NAME
+      IF OK == 1 THEN
+        LET ttl_n = LAST_N / 1000
+        LET parsed = 1
+      END
+      CLEAR_ERR
+    END
+    IF parsed == 1 THEN
+      SYS STR ttl_n
+      LET ttl_s = LAST
+      LET ttl_ch = 1
+    END
+  END
+  IF ttl_n < 0 THEN
+    LET ttl_n = 0
+  END
+  SYS DEADLINE ttl_n
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "renew deadline fail"
+    FAIL "renew deadline fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "renew deadline fail"
+    END
+  ELSE
+    LET due_n = LAST_N
+    SYS STR due_n
+    LET due_s = LAST
+    LET due_ch = 1
+    SYS FROMTIME due_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "renew ok"
+    LET meta = "renew"
+    SYS STR ttl_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "due"
+    LET meta = LAST
+    SYS STR due_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON ttl_n due_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- extend: ADDTIME existing due + secs (ARG1 bare secs or duration) ---
+SYS EQS ACTION "extend"
+IF LAST_N == 1 THEN
+  NOTE "action extend"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "extend no due"
+    FAIL "extend no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "extend no due"
+    END
+  ELSE
+    LET add_s = ttl_n
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      LET parsed = 0
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET ntmp = LAST_N
+        SYS STR ntmp
+        SYS EQS LAST NAME
+        IF LAST_N == 1 THEN
+          LET add_s = ntmp
+          LET parsed = 1
+        END
+      END
+      CLEAR_ERR
+      IF parsed == 0 THEN
+        SYS PARSEMS NAME
+        IF OK == 1 THEN
+          LET add_s = LAST_N / 1000
+          LET parsed = 1
+        END
+        CLEAR_ERR
+      END
+    END
+    SYS ADDTIME due_n add_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "extend addtime fail"
+      FAIL "extend addtime fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "extend addtime fail"
+      END
+    ELSE
+      LET due_n = LAST_N
+      SYS STR due_n
+      LET due_s = LAST
+      LET due_ch = 1
+      SYS FROMTIME due_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "extend ok"
+      LET meta = "extend"
+      SYS STR add_s
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "due"
+      LET meta = LAST
+      SYS STR due_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON due_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- remain: REMAINING due ---
+SYS EQS ACTION "remain"
+IF LAST_N == 1 THEN
+  NOTE "action remain"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "remain no due"
+    FAIL "remain no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "remain no due"
+    END
+  ELSE
+    # save due — EXPIRED/REMAINING must not lose it via LAST_N footgun
+    LET due_save = due_n
+    SYS REMAINING due_save
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "remain fail"
+      FAIL "remain fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "remain fail"
+      END
+    ELSE
+      LET remain_n = LAST_N
+      SYS STR remain_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "remain ok"
+      LET meta = "remain"
+      SYS PUSH meta "due"
+      LET meta = LAST
+      SYS STR due_save
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "ttl"
+      LET meta = LAST
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON remain_n due_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- human: HUMANMS of remaining ---
+SYS EQS ACTION "human"
+IF LAST_N == 1 THEN
+  NOTE "action human"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "human no due"
+    FAIL "human no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "human no due"
+    END
+  ELSE
+    LET due_save = due_n
+    SYS REMAINING due_save
+    LET remain_n = LAST_N
+    CLEAR_ERR
+    LET rem_ms = remain_n * 1000
+    SYS HUMANMS rem_ms
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "human fail"
+      FAIL "human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "human fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "human ok"
+      LET meta = "human"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- iso: FROMTIME due ---
+SYS EQS ACTION "iso"
+IF LAST_N == 1 THEN
+  NOTE "action iso"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "iso no due"
+    FAIL "iso no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "iso no due"
+    END
+  ELSE
+    SYS FROMTIME due_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "iso fail"
+      FAIL "iso fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "iso fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "iso ok"
+      LET meta = "iso"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR due_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON due_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- expired: EXPIRED due ---
+SYS EQS ACTION "expired"
+IF LAST_N == 1 THEN
+  NOTE "action expired"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "expired no due"
+    FAIL "expired no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "expired no due"
+    END
+  ELSE
+    LET due_save = due_n
+    SYS EXPIRED due_save
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "expired fail"
+      FAIL "expired fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "expired fail"
+      END
+    ELSE
+      LET expired_n = LAST_N
+      SYS STR expired_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "expired ok"
+      # also sample remaining without losing due_save
+      SYS REMAINING due_save
+      LET remain_n = LAST_N
+      CLEAR_ERR
+      LET meta = "expired"
+      SYS STR expired_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "remain"
+      LET meta = LAST
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON expired_n remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: admit if not expired ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF due_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "gate no due"
+    FAIL "gate no due"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no due"
+    END
+  ELSE
+    LET due_save = due_n
+    SYS EXPIRED due_save
+    LET expired_n = LAST_N
+    CLEAR_ERR
+    SYS REMAINING due_save
+    LET remain_n = LAST_N
+    CLEAR_ERR
+    IF expired_n == 0 THEN
+      LET gate_n = 1
+      LET hit = 1
+      LET note_msg = "gate admit"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate deny expired"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny expired"
+      END
+    END
+    LET meta = "gate"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta "remain"
+    LET meta = LAST
+    SYS STR remain_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "expired"
+    LET meta = LAST
+    SYS STR expired_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n expired_n remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET due_s = ""
+  LET ttl_s = ""
+  LET val = ""
+  LET meta = ""
+  LET due_n = 0
+  LET ttl_n = 0
+  LET due_ch = 1
+  LET ttl_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "boot"
+LET k = k + LAST_N
+SYS EQS ACTION "claim"
+LET k = k + LAST_N
+SYS EQS ACTION "renew"
+LET k = k + LAST_N
+SYS EQS ACTION "extend"
+LET k = k + LAST_N
+SYS EQS ACTION "remain"
+LET k = k + LAST_N
+SYS EQS ACTION "human"
+LET k = k + LAST_N
+SYS EQS ACTION "iso"
+LET k = k + LAST_N
+SYS EQS ACTION "expired"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF due_ch > 0 THEN
+  SYS WRITE due_meta due_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "due write failed"
+  END
+  CLEAR_ERR
+END
+IF ttl_ch > 0 THEN
+  SYS WRITE ttl_meta ttl_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "ttl write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.ttl_due_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "due"
+LET report = LAST
+SYS STR due_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ttl_s"
+LET report = LAST
+SYS STR ttl_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "remain"
+LET report = LAST
+SYS STR remain_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "expired"
+LET report = LAST
+SYS STR expired_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "envdef"
+LET report = LAST
+SYS STR envdef_set
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "ttl_due_board" ACTION hit miss due_n remain_n expired_n gate_n note_msg elapsed

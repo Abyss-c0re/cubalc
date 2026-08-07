@@ -1,165 +1,159 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 106,
-  "program": "programs/realworld/lease_sla_age_board.cubalc",
-  "theme": "lease SLA age PARSEISO + TIMEDIFF + PARSEMS gate",
-  "version": "1.15.305-usability",
+  "iter": 107,
+  "program": "programs/realworld/ttl_due_board.cubalc",
+  "theme": "TTL due DEADLINE+EXPIRED+REMAINING + ENVDEFAULT boot",
+  "version": "1.15.307-usability",
   "pass": true,
   "tests": [
     {
-      "name": "open_pin_now",
-      "cmd": "open \u2192 LEASE FROMTIME TIME ISO Z",
+      "name": "claim_30s",
+      "cmd": "PARSEMS 30s \u2192 DEADLINE due ISO",
       "ok": true,
-      "note": "pin now"
+      "note": "claim"
     },
     {
-      "name": "age_fresh",
-      "cmd": "age after open \u2192 0s",
+      "name": "remain_human",
+      "cmd": "REMAINING ~30; HUMANMS 30s",
       "ok": true,
-      "note": "TIMEDIFF"
-    },
-    {
-      "name": "human_0",
-      "cmd": "HUMANMS 0 \u2192 0ms",
-      "ok": true,
-      "note": "label"
-    },
-    {
-      "name": "sla_5m",
-      "cmd": "PARSEMS 5m \u2192 300000",
-      "ok": true,
-      "note": "sla ms"
+      "note": "ttl"
     },
     {
       "name": "gate_admit",
-      "cmd": "fresh lease age_ms < sla admit",
+      "cmd": "EXPIRED 0 \u2192 gate admit",
       "ok": true,
       "note": "live"
     },
     {
-      "name": "pin_y2k_age_deny",
-      "cmd": "pin 2000-01-01Z; gate soft deny + REQUIRE rc2",
+      "name": "expire_1s",
+      "cmd": "claim 1s sleep2 EXPIRED1 remain0 gate deny REQUIRE2",
       "ok": true,
-      "note": "stale"
+      "note": "ttl out"
     },
     {
-      "name": "span_1h",
-      "cmd": "TIMEDIFF ARG2-ARG1 \u2192 3600",
+      "name": "renew_extend",
+      "cmd": "renew; extend bare60 +2m deltas",
       "ok": true,
-      "note": "duration"
+      "note": "addtime"
     },
     {
-      "name": "round_trip",
-      "cmd": "FROMTIME\u2194PARSEISO epoch equality",
+      "name": "boot_envdef",
+      "cmd": "ENVDEFAULT CUBALC_TTL; boot claim",
       "ok": true,
-      "note": "Z form"
+      "note": "envdef"
     },
     {
-      "name": "pin_soft_require",
-      "cmd": "not-a-date soft; REQUIRE\u21922",
+      "name": "subsec_floor",
+      "cmd": "claim 500ms \u2192 TTL0 instant expire",
       "ok": true,
-      "note": "parse miss"
+      "note": "floor"
     },
     {
-      "name": "offset_ignored",
-      "cmd": "+01:00 pin \u2192 \u202601:00Z; span vs Z midnight \u22123600 not 0",
+      "name": "claim_soft_req",
+      "cmd": "xyz soft; REQUIRE\u21922",
       "ok": true,
-      "note": "TZ bug"
+      "note": "parse"
+    },
+    {
+      "name": "num_partial",
+      "cmd": "NUM 2m \u21922 not fail; pure digit check",
+      "ok": true,
+      "note": "NUM"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "278/278 pass"
+      "note": "280/280 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parseiso",
-      "title": "PARSEISO ignores timezone offsets (+01:00 / -05:00)",
-      "detail": "Wall time treated as UTC. 2000-01-01T01:00:00+01:00 \u2192 epoch of 01:00Z (946688400) not 00:00Z. Offset-aware stamps silently wrong by hours; pin canonicalizes to wrong Z.",
-      "repro": "PARSEISO 2000-01-01T01:00:00+01:00 \u2192 946688400; expect 946684800"
+      "area": "host|num",
+      "title": "NUM partial-parses trailing junk (2m \u2192 2, OK=1)",
+      "detail": "SYS NUM on '2m' yields LAST_N=2 with OK=1 instead of soft fail. Agents treating NUM success as full parse silently mis-scale durations (2s not 120s). Must STR(NUM)==input pure-digit check.",
+      "repro": "LET x='2m'; SYS NUM x \u2192 OK=1 LAST_N=2"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|parseiso|local",
-      "title": "LOCAL stamps reparsed as UTC \u2014 TZ skew",
-      "detail": "SYS LOCAL yields no Z; PARSEISO treats as UTC. On UTC+3 host LOCAL now is ~+10800s vs TIME. Agents that pin LOCAL and age via TIMEDIFF get wrong ages.",
-      "repro": "LOCAL; PARSEISO LAST vs TIME \u2192 delta = TZ hours"
+      "area": "host|parsems",
+      "title": "PARSEMS bare digits are milliseconds not seconds",
+      "detail": "PARSEMS '60' \u2192 60ms; '60s' \u2192 60000. Combined with DEADLINE floor(/1000) bare 60 becomes 0s TTL. Config authors write 60 meaning seconds and get instant expire.",
+      "repro": "PARSEMS 60 \u2192 60; DEADLINE 60/1000 \u2192 0"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|humanms",
-      "title": "HUMANMS multi-unit age labels not PARSEMS-round-trippable",
-      "detail": "Age of Y2K \u2192 1387w6d14m28s via HUMANMS; PARSEMS cannot reparse compound labels. SLA configs must stay single-unit.",
-      "repro": "HUMANMS huge_ms; PARSEMS LAST \u2192 fail"
+      "severity": "high",
+      "area": "host|expired",
+      "title": "EXPIRED clobbers LAST_N \u2014 breaks REMAINING chain",
+      "detail": "SYS EXPIRED due leaves LAST_N=0|1. SYS REMAINING without saved due uses 0/1 as epoch \u2192 remain 0. Agents must LET due_save before probe pair.",
+      "repro": "DEADLINE 30; EXPIRED LAST_N; REMAINING \u2192 0 not ~30"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|timediff",
-      "title": "TIMEDIFF whole-second only \u2014 sub-second lease SLA imprecise",
-      "detail": "Age resolution is 1s. Leases with 500ms SLA cannot distinguish. No MS-epoch TIMEDIFF dual.",
-      "repro": "open; age immediately \u2192 0 even if 900ms elapsed"
+      "area": "host|expired",
+      "title": "EXPIRED/REMAINING empty or junk coerce to expired",
+      "detail": "Empty string / non-numeric via var \u2192 OK=1 expired=1 (epoch0), not soft miss. No validation path for bad due plates.",
+      "repro": "LET e=''; SYS EXPIRED e \u2192 1"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|parseiso",
-      "title": "Fractional seconds truncated without flag",
-      "detail": "\u2026T00:12:10.999Z and \u2026T00:12:10Z same epoch. No PARSEISO_MS / subsecond retain.",
-      "repro": "PARSEISO with .999Z equals without"
+      "area": "host|deadline",
+      "title": "Sub-second TTL floors to DEADLINE 0 \u2192 instant expire",
+      "detail": "PARSEMS 500ms /1000 = 0; DEADLINE 0 marks due=now; EXPIRED boundary (>=) true immediately.",
+      "repro": "claim 500ms; expired \u2192 1"
     },
     {
       "id": "W6",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "LEASE/SLA/AGE cat -A glue; od shows no \\n.",
-      "repro": "od -c LEASE.txt"
+      "severity": "med",
+      "area": "host|deadline",
+      "title": "DEADLINE accepts negative seconds (past due)",
+      "detail": "DEADLINE -10 stamps due in the past without soft fail. Silent claim already expired.",
+      "repro": "DEADLINE -10; EXPIRED \u2192 1"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_LA_REQUIRE=abc \u2192 REQUIRE_HIT stays 0; hard paths soft-pass.",
-      "repro": "REQUIRE=abc pin bad \u2192 rc 0"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "DUE/TTL od -c no newline.",
+      "repro": "od -c DUE.txt"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|timediff",
-      "title": "No ABS/clamp helper for negative ages",
-      "detail": "Future stamps yield negative TIMEDIFF; agents hand-clamp for gate. No SYS ABS or AGECLAMP.",
-      "repro": "TIMEDIFF future \u2192 negative"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_TTL_REQUIRE=abc \u2192 REQUIRE_HIT 0.",
+      "repro": "REQUIRE=abc claim bad \u2192 rc 0"
     }
   ],
   "workarounds": [
-    "Always pin UTC Z via FROMTIME TIME; never store bare LOCAL",
-    "Reject or strip offsets before PARSEISO; require trailing Z",
-    "Store SLA as integer ms not multi-unit human labels",
-    "Whole-second SLAs only; ignore sub-second remain",
-    "Digit-check REQUIRE; CLEAR_ERR after soft PARSEISO"
+    "Pure-digit check: STR(NUM x)==x before treating as seconds",
+    "Always use unit suffixes for PARSEMS (30s not 60)",
+    "LET due_save before EXPIRED/REMAINING pair",
+    "Reject TTL < 1s after floor; never DEADLINE 0 for claims",
+    "Digit-check REQUIRE; CLEAR_ERR after soft PARSEMS"
   ],
   "language_gaps": [
-    "PARSEISO timezone offset application (+hh:mm / -hh:mm)",
-    "PARSEISO LOCAL / timezone-aware dual of FROMTIME",
-    "MS-resolution TIMEDIFF or epoch_ms clock pair",
-    "PARSEMS multi-unit compound matching HUMANMS output",
-    "SYS ABS / age clamp helpers",
+    "NUM strict full-string parse (reject trailing junk)",
+    "PARSEMS bare-number unit policy (ms vs s flag)",
+    "EXPIRED/REMAINING that preserve input epoch in side slot",
+    "Soft fail on non-numeric EXPIRED args",
+    "DEADLINE_MS / sub-second due without floor",
     "WRITE trailing NL option"
   ],
   "issues_faced": [
-    "open/age/sla/gate/span/round/pin soft+REQUIRE all green",
-    "offset ignore is the core language challenge this iter",
-    "span polarity fixed to ARG2-ARG1 (duration a\u2192b)",
-    "selftest 278/278; no language fix this iter"
+    "claim/remain/human/iso/expired/gate/renew/extend/boot green",
+    "NUM 2m partial + PARSEMS bare-ms were core lessons; pure-digit workaround",
+    "EXPIRED LAST_N clobber forces due_save pattern",
+    "selftest 280/280; no language fix this iter"
   ],
-  "commit": "79a960074306f29beba4b0b119e161f665f78044",
-  "ts": "2026-08-07T00:14:47Z"
+  "commit": "",
+  "ts": "2026-08-07T00:41:13Z"
 }
