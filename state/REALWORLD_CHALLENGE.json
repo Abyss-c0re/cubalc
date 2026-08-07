@@ -132,6 +132,6 @@
     "SETF strlen + NEW name token are core OOP agent blockers",
     "selftest green; no language fix this iter (gaps documented)"
   ],
-  "commit": "",
+  "commit": "de3976c6d972b216b6de7484fcc6043a1d721b2d",
   "ts": "2026-08-07T02:50:47Z"
 }
