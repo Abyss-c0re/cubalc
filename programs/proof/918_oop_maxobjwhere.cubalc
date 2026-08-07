@@ -1,0 +1,137 @@
+# MAXOBJWHERE / MINOBJWHERE — pick extreme object among field matches
+# Usability: no WHEREOBJ bag + MAXOBJ / EACH+GETF glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 50 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+NEW Cell e 1 5 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+
+# max energy where age==1 → a10 c30 e5 → first max is c=30
+MAXOBJWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT MAXOBJWHERE_N == 1
+ASSERT MAXOBJWHERE_VAL == 30
+ASSERT MAXOBJWHERE_MATCH == 3
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+SYS EQS MAXOBJWHERE "c"
+ASSERT LAST_N == 1
+GETF LAST energy
+ASSERT LAST_N == 30
+
+# min energy where age==1 → e=5
+MINOBJWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT MINOBJWHERE_VAL == 5
+ASSERT MINOBJWHERE_MATCH == 3
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+GETF e energy
+ASSERT LAST_N == 5
+
+# age==0 max → b=50 (before d=40)
+MAXOBJWHERE Cell energy age 0
+ASSERT MAXOBJWHERE_VAL == 50
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+MINOBJWHERE Cell energy age 0
+ASSERT MINOBJWHERE_VAL == 40
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+
+# WHERE sugar
+MAXOBJWHERE Cell energy WHERE age 1
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+MINOBJWHERE Cell energy WHERE age 1
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# OF sugar
+MAXOBJWHERE OF Cell energy age 0
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# aliases
+BESTWHERE Cell energy age 1
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+WORSTWHERE Cell energy age 1
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+ARGMAXWHERE Cell energy age 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+TOPOBJWHERE Cell energy age 0
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+BOTOBJWHERE Cell energy age 0
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+MAXIFOBJ Cell energy age 1
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+MINIFOBJ Cell energy age 1
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+# HIGHESTWHERE is MAXWHERE (value extreme), not object pick
+HIGHESTWHERE Cell energy age 0
+ASSERT LAST_N == 50 "value max among age=0"
+
+
+# string match · open ticket with max retries
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 99
+NEW Ticket t3 "open" 7
+NEW Ticket t4 "open" 7
+MAXOBJWHERE Ticket retries status "open"
+ASSERT OK == 1
+ASSERT MAXOBJWHERE_VAL == 7
+ASSERT MAXOBJWHERE_MATCH == 3
+SYS EQS LAST "t3"
+ASSERT LAST_N == 1 "first max among opens"
+MINOBJWHERE Ticket retries status "open"
+ASSERT MINOBJWHERE_VAL == 2
+SYS EQS LAST "t1"
+ASSERT LAST_N == 1
+# closed max not considered
+MAXOBJWHERE Ticket retries status "closed"
+ASSERT MAXOBJWHERE_VAL == 99
+SYS EQS LAST "t2"
+ASSERT LAST_N == 1
+
+# no match → OK=0 soft
+MAXOBJWHERE Ticket retries status "missing"
+ASSERT OK == 0
+ASSERT MAXOBJWHERE_N == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+MINOBJWHERE Ticket retries status "missing"
+ASSERT OK == 0
+ASSERT MINOBJWHERE_N == 0
+
+CLEAR_ERR
+PASS
+PRINT "proof918_oop_maxobjwhere" 1
+ASSERT OK == 1

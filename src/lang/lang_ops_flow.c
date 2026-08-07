@@ -4010,6 +4010,229 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MAXOBJWHERE|MINOBJWHERE|BESTWHERE|WORSTWHERE [Class] valfield matchfield matchvalue
+   * — name of first live object with max/min numeric valfield among matchfield==matchvalue.
+   * WHERE sugar: MAXOBJWHERE Cell energy WHERE age 1.
+   * LAST=name, LAST_N=extreme value, OBJECT=name; soft empty → OK=0 LAST="".
+   * Usability: pick extreme in subset without WHEREOBJ+MAXOBJ or EACH+GETF glue. */
+  /* Note: HIGHESTWHERE/LOWESTWHERE are MAXWHERE/MINWHERE value extremes — not here. */
+  if (kw(&L->cur, "MAXOBJWHERE") || kw(&L->cur, "MINOBJWHERE") ||
+      kw(&L->cur, "BESTWHERE") || kw(&L->cur, "WORSTWHERE") ||
+      kw(&L->cur, "ARGMAXWHERE") || kw(&L->cur, "ARGMINWHERE") ||
+      kw(&L->cur, "TOPOBJWHERE") || kw(&L->cur, "BOTOBJWHERE") ||
+      kw(&L->cur, "MAXIFOBJ") || kw(&L->cur, "MINIFOBJ") ||
+      kw(&L->cur, "BESTOBJWHERE") || kw(&L->cur, "WORSTOBJWHERE")) {
+    char filt[48], vfield[48], mfield[48], tok1[48], op[24], best_name[48];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, want_min = 0, i, n = 0, n_skip = 0, found = 0;
+    long m_nval = 0, best = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "MINOBJWHERE") == 0 || strcmp(op, "WORSTWHERE") == 0 ||
+        strcmp(op, "ARGMINWHERE") == 0 || strcmp(op, "BOTOBJWHERE") == 0 ||
+        strcmp(op, "MINIFOBJ") == 0 || strcmp(op, "WORSTOBJWHERE") == 0)
+      want_min = 1;
+    lex_next(L);
+    filt[0] = 0;
+    vfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    best_name[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "MAXOBJWHERE OF Class valfield matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(vfield, sizeof vfield, "%s", vv->sval);
+          else
+            snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "WHERE")))
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "MAXOBJWHERE [Class] valfield matchfield matchvalue");
+      return -1;
+    }
+    if (!vfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "MAXOBJWHERE [Class] valfield matchfield matchvalue");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "MAXOBJWHERE [Class] valfield matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int vfi, mfi, hit = 0;
+      long v;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      vfi = oop_field_idx(cd, vfield);
+      if (mfi < 0 || vfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[vfi]) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      v = ob->fnum[vfi];
+      n++;
+      if (!found || (want_min ? (v < best) : (v > best))) {
+        best = v;
+        snprintf(best_name, sizeof best_name, "%s", ob->name);
+        found = 1;
+      }
+    }
+    if (!found) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_str(vm, "MAXOBJWHERE", "");
+      var_set_str(vm, "MINOBJWHERE", "");
+      var_set_str(vm, "OBJECT", "");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "MAXOBJWHERE_N", 0);
+      var_set_num(vm, "MINOBJWHERE_N", 0);
+      var_set_num(vm, "MAXOBJWHERE_VAL", 0);
+      var_set_num(vm, "MINOBJWHERE_VAL", 0);
+      var_set_num(vm, "MAXOBJWHERE_SKIP", n_skip);
+      var_set_num(vm, "MAXOBJWHERE_MATCH", 0);
+      var_set_str(vm, "FIELD", vfield);
+      var_set_str(vm, "SRC", mfield);
+      if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "MAXOBJWHERE: no matching objects");
+      var_set_str(vm, "ERR", "MAXOBJWHERE: no matching objects");
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", best_name);
+    var_set_str(vm, "MAXOBJWHERE", best_name);
+    var_set_str(vm, "MINOBJWHERE", best_name);
+    var_set_str(vm, "BESTWHERE", best_name);
+    var_set_str(vm, "OBJECT", best_name);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", best_name);
+    var_set_num(vm, "LAST_N", best);
+    vm->last_n = best;
+    var_set_num(vm, "MAXOBJWHERE_N", 1);
+    var_set_num(vm, "MINOBJWHERE_N", 1);
+    var_set_num(vm, "MAXOBJWHERE_VAL", best);
+    var_set_num(vm, "MINOBJWHERE_VAL", best);
+    var_set_num(vm, "MAXOBJWHERE_MATCH", n);
+    var_set_num(vm, "MINOBJWHERE_MATCH", n);
+    var_set_num(vm, "MAXOBJWHERE_SKIP", n_skip);
+    var_set_num(vm, "NOBJS", n);
+    var_set_str(vm, "FIELD", vfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* SORTBYF|SORTOBJS|ORDERBYF [Class] field [ASC|DESC]
    * — bag of live object names ordered by numeric field (stable first-seen on ties).
    * Soft always; string/missing fields skipped. LAST_N = count. Default ASC.
