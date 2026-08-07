@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 406,
-  "version": "1.15.433-usability",
-  "item": "USAGE sticky CLI contract tip",
-  "item_id": 442,
-  "title": "USAGE [text] sticky \u00b7 REQUIRE ARG/ARGC/FLAG append usage tip",
-  "commit": "c765aee723b25d067e7767ab8eba5aaffcfb3223",
-  "summary": "Sticky USAGE string; REQUIRE fails append \u00b7 usage: tip. proof 983 8/8.",
+  "iter": 407,
+  "version": "1.15.434-usability",
+  "item": "REQUIRE RESTARGS min positionals",
+  "item_id": 443,
+  "title": "REQUIRE RESTARGS|POS [min] fail-fast non-flag count \u00b7 LAST=bag",
+  "commit": "293d44e0591483f2bd7a4740cbd1de68054d071a",
+  "summary": "Min non-flag positionals gate (flags ignored); LAST bag + USAGE tip. proof 984 14/14.",
   "proofs": [
-    "983_usage",
-    "asserts 8/8",
-    "smoke REQUIRE FLAG in with USAGE tip",
-    "smoke REQUIRE ARGC 1 with USAGE tip"
+    "984_require_restargs",
+    "asserts 14/14",
+    "smoke REQUIRE RESTARGS 1 -- --mode=x in.txt",
+    "fail REQUIRE RESTARGS 1 with USAGE tip"
   ],
-  "when": "2026-08-07T21:47:03Z",
+  "when": "2026-08-07T21:54:29Z",
   "agent": "meaningful_iter_10m",
-  "sha": "c765aee723b25d067e7767ab8eba5aaffcfb3223",
+  "sha": "293d44e0591483f2bd7a4740cbd1de68054d071a",
   "note": "no thrash; EVOLVE_PAUSED"
 }
