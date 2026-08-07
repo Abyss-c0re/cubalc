@@ -1,159 +1,158 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 108,
-  "program": "programs/realworld/retry_backoff_board.cubalc",
-  "theme": "retry backoff compound PARSEMS + MS2SEC/SEC2MS + SLEEP ms bridge",
-  "version": "1.15.309-usability",
+  "iter": 109,
+  "program": "programs/realworld/artifact_wait_board.cubalc",
+  "theme": "artifact WAITFILE/WAITGONE human timeout + DEADLINE lease gate",
+  "version": "1.15.312-usability",
   "pass": true,
   "tests": [
     {
-      "name": "delay_1m30s",
-      "cmd": "PARSEMS 1m30s \u2192 90000",
+      "name": "arm_path",
+      "cmd": "arm ready.flag under STATE/drop",
+      "ok": true,
+      "note": "arm"
+    },
+    {
+      "name": "wait_miss",
+      "cmd": "WAITFILE 150ms miss; REQUIRE\u21922",
+      "ok": true,
+      "note": "timeout"
+    },
+    {
+      "name": "wait_hit",
+      "cmd": "touch then WAITFILE 500ms hit abs path",
+      "ok": true,
+      "note": "arrive"
+    },
+    {
+      "name": "gone_cycle",
+      "cmd": "WAITGONE present miss; rm then gone hit",
+      "ok": true,
+      "note": "consume"
+    },
+    {
+      "name": "lease_30s",
+      "cmd": "DEADLINE 30s remain~30 gate admit",
+      "ok": true,
+      "note": "lease"
+    },
+    {
+      "name": "lease_expire",
+      "cmd": "1s+sleep2 gate deny REQUIRE2",
+      "ok": true,
+      "note": "expired"
+    },
+    {
+      "name": "lease_compound",
+      "cmd": "DEADLINE 1h30m DEADLINE_SECS=5400",
       "ok": true,
       "note": "compound"
     },
     {
-      "name": "human_round",
-      "cmd": "HUMANMS\u2194PARSEMS 1h1m1s / 1s250ms",
+      "name": "bad_duration",
+      "cmd": "wait nope \u2192 hit0 ms0 (ambiguous)",
       "ok": true,
-      "note": "round-trip"
+      "note": "soft"
     },
     {
-      "name": "secs_floor_loss",
-      "cmd": "2s500ms MS2SEC\u21922 lost_ms=500",
-      "ok": true,
-      "note": "floor"
-    },
-    {
-      "name": "bridge",
-      "cmd": "PARSEMS\u2192MS2SEC\u2192SEC2MS sleep_use_ms original",
-      "ok": true,
-      "note": "bridge"
-    },
-    {
-      "name": "to_ms_90",
-      "cmd": "SEC2MS 90 \u2192 90000",
-      "ok": true,
-      "note": "s2ms"
-    },
-    {
-      "name": "sleep_100ms",
-      "cmd": "SLEEP 100 wall\u2248100 (ms unit)",
+      "name": "sleep_40ms",
+      "cmd": "SLEEP 40ms; reject 5s program cap",
       "ok": true,
       "note": "sleep"
-    },
-    {
-      "name": "gate_attempts",
-      "cmd": "max2 tick2 gate deny REQUIRE2",
-      "ok": true,
-      "note": "gate"
-    },
-    {
-      "name": "parse_soft",
-      "cmd": "1h30x soft; REQUIRE\u21922",
-      "ok": true,
-      "note": "miss"
-    },
-    {
-      "name": "num_partial",
-      "cmd": "max 3x pure-digit reject",
-      "ok": true,
-      "note": "NUM"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "282/282 pass"
+      "note": "285/285 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|sleep",
-      "title": "SLEEP unit is milliseconds \u2014 easy to confuse with wall seconds",
-      "detail": "SLEEP 2 pauses ~2ms not 2s. Agents bridging REMAINING seconds must SEC2MS first. Proof labels SLEEP_MS. Silent near-no-op if seconds assumed.",
-      "repro": "SLEEP 2; wall delta \u22482ms"
+      "area": "host|waitfile",
+      "title": "Bad WAITFILE duration indistinguishable from timeout miss",
+      "detail": "WAITFILE path 'nope' \u2192 OK=0 HIT=0 MS=0 same shape as missing file with zero elapsed. Agents cannot tell config error from absence without pre-PARSEMS.",
+      "repro": "WAITFILE existing 'nope' \u2192 hit0 ms0"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|ms2sec",
-      "title": "MS2SEC floors; SEC2MS(MS2SEC(x)) loses sub-second remainder",
-      "detail": "2s500ms \u2192 MS2SEC 2 \u2192 SEC2MS 2000 (lost 500ms). DEADLINE bridge drops fractional seconds; SLEEP must keep original PARSEMS ms.",
-      "repro": "PARSEMS 2s500ms; MS2SEC; SEC2MS \u2192 2000 not 2500"
+      "area": "host|deadline",
+      "title": "DEADLINE sub-second human durations floor to 0s (instant expire)",
+      "detail": "DEADLINE '500ms' \u2192 DEADLINE_SECS=0, due\u2248now, EXPIRED immediately. Sub-second wait leases unusable via duration form.",
+      "repro": "DEADLINE 500ms; EXPIRED \u2192 1"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|ms2sec",
-      "title": "MS2SEC 999\u21920 hides sub-second delays for second-scale APIs",
-      "detail": "Any delay <1s becomes 0 seconds for DEADLINE/SLEEP-if-misused. No CEILMS or ROUND_SECS.",
-      "repro": "MS2SEC 999 \u2192 0"
+      "severity": "high",
+      "area": "host|units",
+      "title": "Bare numeric unit asymmetry: DEADLINE secs vs SLEEP ms",
+      "detail": "DEADLINE 5 = +5 seconds; SLEEP 5 = 5 milliseconds. Same literal, 1000\u00d7 different semantics. Human-string form reduces but bare nums remain traps.",
+      "repro": "DEADLINE 5 vs SLEEP 5"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|parsems",
-      "title": "Bare digits still milliseconds after compound fix",
-      "detail": "PARSEMS 60 \u2192 60ms. Compound 1h30m fixed but bare-number unit policy unchanged.",
-      "repro": "PARSEMS 60 \u2192 60"
+      "area": "host|waitfile",
+      "title": "WAITFILE hit LAST is path string not 1 alone",
+      "detail": "OK and WAITFILE_HIT are reliable; LAST equals absolute path. Agents comparing LAST_N==1 after hit are wrong (path not numeric).",
+      "repro": "WAITFILE hit; LAST is path"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|num",
-      "title": "NUM still partial-parses trailing junk",
-      "detail": "max 3x \u2192 NUM OK LAST_N=3; agents need pure STR(NUM)==input check (board does).",
-      "repro": "NUM 3x \u2192 3"
+      "area": "host|expired",
+      "title": "EXPIRED still clobbers LAST_N before REMAINING",
+      "detail": "Must LET due_save; unchanged from prior iters.",
+      "repro": "EXPIRED due; REMAINING \u2192 uses 0/1"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|sleep",
-      "title": "No SLEEP_SEC alias \u2014 only MS unit",
-      "detail": "Must remember SEC2MS pipeline. Easy footgun for ops agents.",
-      "repro": "want SLEEP_SEC 2"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "PATH/TIMEOUT od -c no newline.",
+      "repro": "od -c PATH.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "od -c DELAY no newline.",
-      "repro": "od -c DELAY.txt"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_AW_REQUIRE=abc.",
+      "repro": "REQUIRE=abc wait miss \u2192 rc0"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_RB_REQUIRE=abc.",
-      "repro": "REQUIRE=abc delay bad \u2192 rc0"
+      "area": "host|waitfile",
+      "title": "No distinct err code for bad timeout vs miss",
+      "detail": "last_err may differ but HIT/MS collapse; need WAITFILE_ERR class.",
+      "repro": "compare last_err after nope vs missing"
     }
   ],
   "workarounds": [
-    "SLEEP always with PARSEMS ms or SEC2MS(seconds)",
-    "Keep original delay_ms for SLEEP; use MS2SEC only for DEADLINE",
-    "Reject delays that MS2SEC to 0 when second-scale needed",
-    "Pure-digit check for NUM; unit suffixes for PARSEMS",
-    "DRY mode for long backoff in tests"
+    "Pre-PARSEMS timeout labels before WAITFILE",
+    "Use whole-second DEADLINE leases only (\u22651s)",
+    "Prefer duration strings over bare numbers for SLEEP/DEADLINE",
+    "LET due_save before EXPIRED/REMAINING",
+    "Gate on WAITFILE_HIT not LAST_N"
   ],
   "language_gaps": [
-    "SLEEP_SEC / dual unit flag for SLEEP",
-    "MS2SEC_CEIL or fractional second retain",
-    "Round-trip MS2SEC/SEC2MS that preserves remainder",
-    "NUM strict full-string parse",
-    "PARSEMS bare-number seconds mode flag",
+    "WAITFILE distinct soft-fail for bad duration vs timeout",
+    "DEADLINE_MS / sub-second lease offsets",
+    "Unified bare-number unit policy or SLEEP_SEC / DEADLINE_MS flags",
+    "EXPIRED side-slot preserving due epoch",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "compound PARSEMS 1m30s/1h1m1s/1s250ms round-trip green",
-    "SLEEP is ms \u2014 core lesson for backoff agents",
-    "MS2SEC floor loss 500ms on 2s500ms documented in bridge META",
+    "arm/wait miss+hit/gone/lease/gate/sleep green",
+    "bad duration ambiguous with miss is core lesson",
+    "DEADLINE 500ms instant expire + DEADLINE/SLEEP unit asymmetry",
     "selftest green; no language fix this iter"
   ],
-  "commit": "6a4dc5a3852aa010f25fcb55f062b11203bb364a",
-  "ts": "2026-08-07T01:04:56Z"
+  "commit": "",
+  "ts": "2026-08-07T01:28:56Z"
 }

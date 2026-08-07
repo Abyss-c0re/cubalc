@@ -1,0 +1,843 @@
+# artifact_wait_board.cubalc — WAITFILE/WAITGONE human timeout + DEADLINE lease
+#
+# Real use: agents arm a drop-folder path, wait for artifact arrival with
+# human-duration timeouts ("150ms"/"2s"/"0s100ms") without PARSEMS glue, pair
+# with DEADLINE "30s" wait-window lease, optional WAITGONE after consume, and
+# short SLEEP "50ms" backoff labels:
+#   WAITFILE / WAITPATH / POLLFILE — poll until path exists (soft timeout)
+#   WAITGONE                       — poll until path removed
+#   DEADLINE / EXPIRESAT           — human duration → due epoch (lease window)
+#   EXPIRED / REMAINING            — window still open?
+#   SLEEP / DELAY                  — human duration ms pause
+# Distinct from drop_folder_scan (LIST), retry_backoff (SLEEP only), ttl_due
+# (claim TTL): this board is *drop path → wait duration → lease gate*.
+#
+# Plate under STATE:
+#   drop/        — artifact drop dir
+#   PATH.txt     — relative name under drop/ (or absolute if JOIN skip)
+#   TIMEOUT.txt  — last wait timeout label
+#   LEASE.txt    — due epoch seconds
+#   VAL.txt      — last hit / path / remain
+#   META.txt
+#   WAIT_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_AW_ACTION):
+#   list      — plate (default)
+#   arm       — set PATH ARG1 under drop/
+#   wait      — WAITFILE path TIMEOUT (ARG1 or stored/default)
+#   gone      — WAITGONE path TIMEOUT
+#   touch     — TOUCH armed path (test producer)
+#   rm        — RM armed path
+#   lease     — DEADLINE ARG1 human → LEASE
+#   remain    — REMAINING LEASE
+#   gate      — not EXPIRED admit (REQUIRE hard)
+#   sleep     — SLEEP human/short (capped)
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_aw_$$
+#   CUBALC_ARG0=arm CUBALC_ARG1=ready.flag ...
+#   CUBALC_ARG0=wait CUBALC_ARG1=200ms ...
+#   CUBALC_ARG0=lease CUBALC_ARG1=30s ...
+#   CUBALC_ARG0=gate CUBALC_AW_REQUIRE=1 ...
+#
+# Env: CUBALC_AW_REQUIRE=1  CUBALC_AW_TIMEOUT=200ms  CUBALC_AW_PATH=ready.flag
+#      CUBALC_AW_LEASE=30s
+#
+# Edges:
+#   WAITFILE miss soft OK=0 WAITFILE_HIT=0; sticky last_err after bad duration
+#   bad timeout "nope" soft (HIT=0) — same as missing file (ambiguous)
+#   WAITFILE hit LAST = absolute path string (not 1 alone as sole signal)
+#   DEADLINE bare number = seconds; SLEEP bare number = ms (unit asymmetry)
+#   DEADLINE "500ms" floors to 0s lease? (MS2SEC floor inside)
+#   EXPIRED clobbers LAST_N — save due before REMAINING
+#   WRITE no NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "artifact_wait_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT PFILE = "PATH.txt"
+DEFAULT TFILE = "TIMEOUT.txt"
+DEFAULT LFILE = "LEASE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "WAIT_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_TIMEOUT = "200ms"
+DEFAULT DEF_LEASE = "30s"
+DEFAULT DEF_PATH = "ready.flag"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_AW_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_AW_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_AW_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_AW_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_AW_TIMEOUT" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_TIMEOUT = LAST
+ELSE
+  LET ENV_TIMEOUT = ""
+END
+SYS ENV "CUBALC_AW_PATH" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_PATH = LAST
+ELSE
+  LET ENV_PATH = ""
+END
+SYS ENV "CUBALC_AW_LEASE" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_LEASE = LAST
+ELSE
+  LET ENV_LEASE = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "drop"
+LET drop_dir = LAST
+SYS MKDIR drop_dir
+CLEAR_ERR
+SYS JOIN state_dir PFILE
+LET path_meta = LAST
+SYS JOIN state_dir TFILE
+LET timeout_meta = LAST
+SYS JOIN state_dir LFILE
+LET lease_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR path_meta OR ""
+LET path_s = LAST
+CLEAR_ERR
+SYS READ OR timeout_meta OR ""
+LET timeout_s = LAST
+CLEAR_ERR
+SYS READ OR lease_meta OR ""
+LET lease_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET lease_n = 0
+SYS BLANK lease_s
+IF LAST_N == 0 THEN
+  SYS NUM lease_s
+  IF OK == 1 THEN
+    LET lease_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# ENV fill blanks
+SYS BLANK ENV_PATH
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "arm"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_PATH
+    END
+  END
+END
+SYS BLANK ENV_TIMEOUT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "wait"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TIMEOUT
+    END
+  END
+END
+SYS BLANK ENV_TIMEOUT
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "gone"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_TIMEOUT
+    END
+  END
+END
+SYS BLANK ENV_LEASE
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "lease"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_LEASE
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET path_ch = 0
+LET timeout_ch = 0
+LET lease_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET wait_hit = 0
+LET wait_ms = 0
+LET remain_n = 0
+LET expired_n = 0
+LET gate_n = 0
+LET slept_n = 0
+
+# resolve abs path from path_s
+LET abs_path = ""
+SYS BLANK path_s
+IF LAST_N == 0 THEN
+  SYS JOIN drop_dir path_s
+  LET abs_path = LAST
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "await" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON path_s
+  PRINT_JSON timeout_s
+  PRINT_JSON lease_s
+  PRINT_JSON val
+  PRINT_JSON abs_path
+  LET note_msg = "list ok"
+END
+
+# --- arm: set relative path under drop/ ---
+SYS EQS ACTION "arm"
+IF LAST_N == 1 THEN
+  NOTE "action arm"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_PATH
+  END
+  LET path_s = NAME
+  LET path_ch = 1
+  SYS JOIN drop_dir path_s
+  LET abs_path = LAST
+  LET val = abs_path
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "arm ok"
+  LET meta = "arm"
+  SYS PUSH meta path_s
+  LET meta = LAST
+  SYS PUSH meta abs_path
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON path_s
+  PRINT_JSON abs_path
+  CLEAR_ERR
+END
+
+# --- wait: WAITFILE human timeout ---
+SYS EQS ACTION "wait"
+IF LAST_N == 1 THEN
+  NOTE "action wait"
+  SYS BLANK abs_path
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "wait no path"
+    FAIL "wait no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "wait no path"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      SYS BLANK timeout_s
+      IF LAST_N == 1 THEN
+        LET NAME = DEF_TIMEOUT
+      ELSE
+        LET NAME = timeout_s
+      END
+    END
+    LET timeout_s = NAME
+    LET timeout_ch = 1
+    SYS WAITFILE abs_path NAME
+    LET wait_hit = WAITFILE_HIT
+    LET wait_ms = WAITFILE_MS
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "wait miss"
+      FAIL "wait miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "wait miss"
+      END
+      LET val = "miss"
+      LET val_ch = 1
+    ELSE
+      LET hit = 1
+      LET note_msg = "wait hit"
+      LET val = LAST
+      LET val_ch = 1
+    END
+    LET meta = "wait"
+    SYS PUSH meta path_s
+    LET meta = LAST
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "hit"
+    LET meta = LAST
+    SYS STR wait_hit
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR wait_ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON wait_hit wait_ms
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gone: WAITGONE ---
+SYS EQS ACTION "gone"
+IF LAST_N == 1 THEN
+  NOTE "action gone"
+  SYS BLANK abs_path
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "gone no path"
+    FAIL "gone no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gone no path"
+    END
+  ELSE
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      SYS BLANK timeout_s
+      IF LAST_N == 1 THEN
+        LET NAME = DEF_TIMEOUT
+      ELSE
+        LET NAME = timeout_s
+      END
+    END
+    LET timeout_s = NAME
+    LET timeout_ch = 1
+    SYS WAITGONE abs_path NAME
+    LET wait_hit = WAITGONE_HIT
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "gone miss"
+      FAIL "gone miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gone miss"
+      END
+      LET val = "present"
+      LET val_ch = 1
+    ELSE
+      LET hit = 1
+      LET note_msg = "gone hit"
+      LET val = "gone"
+      LET val_ch = 1
+    END
+    LET meta = "gone"
+    SYS PUSH meta path_s
+    LET meta = LAST
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS STR wait_hit
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON wait_hit
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- touch: produce artifact ---
+SYS EQS ACTION "touch"
+IF LAST_N == 1 THEN
+  NOTE "action touch"
+  SYS BLANK abs_path
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "touch no path"
+    FAIL "touch no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "touch no path"
+    END
+  ELSE
+    SYS TOUCH abs_path
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "touch fail"
+      FAIL "touch fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "touch fail"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "touch ok"
+      LET val = abs_path
+      LET val_ch = 1
+      LET meta = "touch"
+      SYS PUSH meta abs_path
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON abs_path
+  CLEAR_ERR
+END
+
+# --- rm: remove artifact ---
+SYS EQS ACTION "rm"
+IF LAST_N == 1 THEN
+  NOTE "action rm"
+  SYS BLANK abs_path
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "rm no path"
+    FAIL "rm no path"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "rm no path"
+    END
+  ELSE
+    SYS RM abs_path
+    # soft ok even if missing
+    LET hit = 1
+    LET note_msg = "rm ok"
+    LET val = "rm"
+    LET val_ch = 1
+    CLEAR_ERR
+  END
+  PRINT_JSON abs_path
+  CLEAR_ERR
+END
+
+# --- lease: DEADLINE human duration ---
+SYS EQS ACTION "lease"
+IF LAST_N == 1 THEN
+  NOTE "action lease"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_LEASE
+  END
+  SYS DEADLINE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "lease parse fail"
+    FAIL "lease parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lease parse fail"
+    END
+  ELSE
+    LET lease_n = LAST_N
+    SYS STR lease_n
+    LET lease_s = LAST
+    LET lease_ch = 1
+    SYS FROMTIME lease_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "lease ok"
+    LET meta = "lease"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "due"
+    LET meta = LAST
+    SYS STR lease_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "secs"
+    LET meta = LAST
+    SYS STR DEADLINE_SECS
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON lease_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- remain ---
+SYS EQS ACTION "remain"
+IF LAST_N == 1 THEN
+  NOTE "action remain"
+  IF lease_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "remain no lease"
+    FAIL "remain no lease"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "remain no lease"
+    END
+  ELSE
+    LET due_save = lease_n
+    SYS REMAINING due_save
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "remain fail"
+      FAIL "remain fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "remain fail"
+      END
+    ELSE
+      LET remain_n = LAST_N
+      SYS STR remain_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "remain ok"
+      LET meta = "remain"
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON remain_n lease_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: lease not expired ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF lease_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "gate no lease"
+    FAIL "gate no lease"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no lease"
+    END
+  ELSE
+    LET due_save = lease_n
+    SYS EXPIRED due_save
+    LET expired_n = LAST_N
+    CLEAR_ERR
+    SYS REMAINING due_save
+    LET remain_n = LAST_N
+    CLEAR_ERR
+    IF expired_n == 0 THEN
+      LET gate_n = 1
+      LET hit = 1
+      LET note_msg = "gate admit"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate deny lease expired"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny lease expired"
+      END
+    END
+    LET meta = "gate"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS STR remain_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR expired_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n expired_n remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sleep: human duration short ---
+SYS EQS ACTION "sleep"
+IF LAST_N == 1 THEN
+  NOTE "action sleep"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = "50ms"
+  END
+  # refuse long sleeps in challenge unless pure short
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "sleep parse fail"
+    FAIL "sleep parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "sleep parse fail"
+    END
+  ELSE
+    LET want = LAST_N
+    IF want > 2000 THEN
+      LET miss = 1
+      LET note_msg = "sleep too long"
+      FAIL "sleep too long"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sleep too long"
+      END
+    ELSE
+      SYS SLEEP NAME
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "sleep fail"
+        FAIL "sleep fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "sleep fail"
+        END
+      ELSE
+        LET slept_n = LAST_N
+        LET hit = 1
+        LET note_msg = "sleep ok"
+        SYS STR slept_n
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "sleep"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS STR slept_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON slept_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET path_s = ""
+  LET timeout_s = ""
+  LET lease_s = ""
+  LET val = ""
+  LET meta = ""
+  LET lease_n = 0
+  LET abs_path = ""
+  LET path_ch = 1
+  LET timeout_ch = 1
+  LET lease_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "arm"
+LET k = k + LAST_N
+SYS EQS ACTION "wait"
+LET k = k + LAST_N
+SYS EQS ACTION "gone"
+LET k = k + LAST_N
+SYS EQS ACTION "touch"
+LET k = k + LAST_N
+SYS EQS ACTION "rm"
+LET k = k + LAST_N
+SYS EQS ACTION "lease"
+LET k = k + LAST_N
+SYS EQS ACTION "remain"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "sleep"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF path_ch > 0 THEN
+  SYS WRITE path_meta path_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "path write failed"
+  END
+  CLEAR_ERR
+END
+IF timeout_ch > 0 THEN
+  SYS WRITE timeout_meta timeout_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "timeout write failed"
+  END
+  CLEAR_ERR
+END
+IF lease_ch > 0 THEN
+  SYS WRITE lease_meta lease_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "lease write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.artifact_wait_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "path"
+LET report = LAST
+SYS PUSH report path_s
+LET report = LAST
+SYS PUSH report "timeout"
+LET report = LAST
+SYS PUSH report timeout_s
+LET report = LAST
+SYS PUSH report "wait_hit"
+LET report = LAST
+SYS STR wait_hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "wait_ms"
+LET report = LAST
+SYS STR wait_ms
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "lease"
+LET report = LAST
+SYS STR lease_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "remain"
+LET report = LAST
+SYS STR remain_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "artifact_wait_board" ACTION hit miss wait_hit wait_ms lease_n gate_n note_msg elapsed
