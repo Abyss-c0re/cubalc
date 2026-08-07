@@ -1,0 +1,54 @@
+# ASSERT/EXPECT got/expected — agent-readable comparison failures
+# Soft EXPECT carries "3 == 1 is false" and ASSERT_GOT / ASSERT_EXPECTED
+
+HOLD_FLASH 1
+
+LET x = 3
+EXPECT x == 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "3 == 1 is false"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "EXPECT failed"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_GOT "3"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_EXPECTED "1"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_OP "=="
+ASSERT LAST_N == 1
+
+# string compare
+LET s = "hi"
+EXPECT s == "bye"
+ASSERT OK == 0
+SYS HAS LAST_ERR "is false"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "hi"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "bye"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_GOT "hi"
+ASSERT LAST_N == 1
+SYS EQS ASSERT_EXPECTED "bye"
+ASSERT LAST_N == 1
+
+# with why message
+EXPECT x == 1 "need one"
+SYS HAS LAST_ERR "need one"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "3 == 1 is false"
+ASSERT LAST_N == 1
+
+# falsey bare value
+EXPECT 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "falsey"
+ASSERT LAST_N == 1
+
+# still-passing ASSERT
+ASSERT x == 3
+ASSERT s == "hi"
+EXPECT x == 3
+ASSERT OK == 1
+
+PRINT "assert_got_expected ok"

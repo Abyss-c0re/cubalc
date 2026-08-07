@@ -3457,7 +3457,12 @@ static int try_str_operand(VM *vm, Lex *L, char *out, size_t outn){
 }
 static long parse_cmp(VM *vm, Lex *L){
   /* Content string equality: "a" == "b", LAST == x, s == t (is_str).
-   * Numeric path kept for lengths / numbers (s.val == strlen when used alone). */
+   * Numeric path kept for lengths / numbers (s.val == strlen when used alone).
+   * Records last_cmp_* for ASSERT/EXPECT agent-readable got/expected. */
+  vm->last_cmp_kind = 0;
+  vm->last_cmp_op[0] = 0;
+  vm->last_cmp_left[0] = 0;
+  vm->last_cmp_right[0] = 0;
   {
     Lex save = *L;
     char left[512], right[512];
@@ -3467,19 +3472,77 @@ static long parse_cmp(VM *vm, Lex *L){
         lex_next(L);
         if (try_str_operand(vm, L, right, sizeof right)) {
           int eq = (strcmp(left, right) == 0);
-          return ne ? !eq : eq;
+          long r = ne ? !eq : eq;
+          vm->last_cmp_kind = 2;
+          snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, "%s", ne ? "!=" : "==");
+          snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%s", left);
+          snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%s", right);
+          return r;
         }
       }
       *L = save; /* not string-cmp form — fall through to numeric */
     }
   }
   long v=parse_add(vm,L);
-  if (L->cur.kind==TK_EQEQ){ lex_next(L); return v==parse_add(vm,L); }
-  if (L->cur.kind==TK_NE){ lex_next(L); return v!=parse_add(vm,L); }
-  if (L->cur.kind==TK_LT){ lex_next(L); return v<parse_add(vm,L); }
-  if (L->cur.kind==TK_LE){ lex_next(L); return v<=parse_add(vm,L); }
-  if (L->cur.kind==TK_GT){ lex_next(L); return v>parse_add(vm,L); }
-  if (L->cur.kind==TK_GE){ lex_next(L); return v>=parse_add(vm,L); }
+  if (L->cur.kind==TK_EQEQ){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, "==");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v==r;
+  }
+  if (L->cur.kind==TK_NE){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, "!=");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v!=r;
+  }
+  if (L->cur.kind==TK_LT){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, "<");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v<r;
+  }
+  if (L->cur.kind==TK_LE){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, "<=");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v<=r;
+  }
+  if (L->cur.kind==TK_GT){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, ">");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v>r;
+  }
+  if (L->cur.kind==TK_GE){
+    lex_next(L);
+    long r = parse_add(vm,L);
+    vm->last_cmp_kind = 1;
+    snprintf(vm->last_cmp_op, sizeof vm->last_cmp_op, ">=");
+    snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+    snprintf(vm->last_cmp_right, sizeof vm->last_cmp_right, "%ld", r);
+    return v>=r;
+  }
+  /* bare truthiness — record value for ASSERT got N (falsey) */
+  vm->last_cmp_kind = 3;
+  snprintf(vm->last_cmp_left, sizeof vm->last_cmp_left, "%ld", v);
+  vm->last_cmp_op[0] = 0;
+  vm->last_cmp_right[0] = 0;
   return v;
 }
 long cubalc_lang_parse_expr(VM *vm, Lex *L){

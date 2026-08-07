@@ -113,6 +113,11 @@ typedef struct {
   char last_str[CUBALC_HOST_STR_MAX];
   int last_code;
   long last_n;
+  /* ASSERT/EXPECT diagnostics from last comparison in parse_cmp */
+  int last_cmp_kind;   /* 0 none · 1 numeric · 2 string · 3 bare value */
+  char last_cmp_op[4]; /* == != < <= > >= */
+  char last_cmp_left[96];
+  char last_cmp_right[96];
   char include_base[512];
   /* INCLUDE ONCE — resolved paths already loaded this run (max 24). */
   char included[24][160];

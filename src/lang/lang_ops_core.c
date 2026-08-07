@@ -1018,6 +1018,42 @@ static void sys_suggest_op(const char *typo, char *out, size_t outn){
     snprintf(out, outn, "%s", best_name);
 }
 
+
+/* Format ASSERT/EXPECT failure with got/expected from last parse_cmp. */
+static void assert_fail_msg(VM *vm, char *msg, size_t n, const char *tag, int aln,
+                            const char *why){
+  char body[140];
+  body[0] = 0;
+  if (vm->last_cmp_kind == 1 || vm->last_cmp_kind == 2) {
+    if (vm->last_cmp_kind == 2)
+      snprintf(body, sizeof body, "\"%s\" %s \"%s\" is false",
+               vm->last_cmp_left, vm->last_cmp_op, vm->last_cmp_right);
+    else
+      snprintf(body, sizeof body, "%s %s %s is false",
+               vm->last_cmp_left, vm->last_cmp_op, vm->last_cmp_right);
+  } else if (vm->last_cmp_kind == 3) {
+    snprintf(body, sizeof body, "got %s (falsey)", vm->last_cmp_left);
+  }
+  if (body[0] && why && why[0])
+    snprintf(msg, n, "%s failed line %d: %s — %s", tag, aln, body, why);
+  else if (body[0])
+    snprintf(msg, n, "%s failed line %d: %s", tag, aln, body);
+  else if (why && why[0])
+    snprintf(msg, n, "%s failed line %d: %s", tag, aln, why);
+  else
+    snprintf(msg, n, "%s failed line %d", tag, aln);
+  /* agent plate knobs */
+  if (vm->last_cmp_kind == 1 || vm->last_cmp_kind == 2) {
+    var_set_str(vm, "ASSERT_GOT", vm->last_cmp_left);
+    var_set_str(vm, "ASSERT_EXPECTED", vm->last_cmp_right);
+    var_set_str(vm, "ASSERT_OP", vm->last_cmp_op);
+  } else if (vm->last_cmp_kind == 3) {
+    var_set_str(vm, "ASSERT_GOT", vm->last_cmp_left);
+    var_set_str(vm, "ASSERT_EXPECTED", "truthy");
+    var_set_str(vm, "ASSERT_OP", "");
+  }
+}
+
 int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* plane ops_core: L3495-4641 */
   skip_nl(L);
@@ -25757,8 +25793,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SETDIGIT", "SETDIGIT cube 0..9"},
       {"FOLDBITS", "FOLDBITS cube bits — fold 01 stream into matrix"},
       {"DECIDE", "DECIDE [cube] — matrix → algocube digit 0..9"},
-      {"ASSERT", "ASSERT expr [\"why\"] — fail with line+reason · string ==/!= content compare"},
-      {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
+      {"ASSERT", "ASSERT expr [\"why\"] — fail with got/expected · string ==/!= content compare"},
+      {"EXPECT", "EXPECT expr [\"why\"] — soft check with got/expected · OK/LAST_ERR"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
@@ -26823,7 +26859,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# identity %s\n", note);
     bump(vm); return 1;
   }
-  /* ASSERT expr ["why"] — optional message for agent/human-readable failures */
+  /* ASSERT expr ["why"] — optional message; fail shows got/expected from cmp. */
   if (kw(&L->cur,"ASSERT")){
     int aln = L->cur.line;
     lex_next(L);
@@ -26838,11 +26874,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (vm->trace) fprintf(vm->trace,"# ok\n");
     } else {
       if (vm->res) vm->res->asserts_fail++;
-      char msg[160];
-      if (why[0])
-        snprintf(msg, sizeof msg, "ASSERT failed line %d: %s", aln, why);
-      else
-        snprintf(msg, sizeof msg, "ASSERT failed line %d", aln);
+      char msg[192];
+      assert_fail_msg(vm, msg, sizeof msg, "ASSERT", aln, why);
       fail(vm, msg);
       return -1;
     }
@@ -26867,11 +26900,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "EXPECT_OK", 1);
       if (vm->trace) fprintf(vm->trace, "# expect ok\n");
     } else {
-      char msg[160];
-      if (why[0])
-        snprintf(msg, sizeof msg, "EXPECT failed line %d: %s", aln, why);
-      else
-        snprintf(msg, sizeof msg, "EXPECT failed line %d", aln);
+      char msg[192];
+      assert_fail_msg(vm, msg, sizeof msg, "EXPECT", aln, why);
       /* sticky agent-readable — not fatal, not asserts_fail */
       var_set_str(vm, "ERR", msg);
       var_set_str(vm, "LAST_ERR", msg);
