@@ -1,0 +1,1258 @@
+# worker_fleet_board.cubalc — EACH OBJ fleet + TRYSEND/TRYSETF soft dispatch
+#
+# Real use: agents manage a worker fleet (w0..w5), claim work, tick all via
+# EACH OBJ (no LISTOBJS+line glue), and soft-probe methods/fields without
+# hard halt on missing names:
+#   EACH OBJ Class AS o / FOREACH OBJ — walk live objects
+#   TRYSEND / SEND SOFT / SENDSOFT — soft method call
+#   TRYSETF / SETF SOFT — soft field write
+#   DUMPOBJ plate rehydrate for multi-run
+# Distinct from canary_release (clone/rename) and ticket_object (HASOBJ only):
+# this board is *fleet walk + soft SEND/SETF*.
+#
+# Slots: fixed idents w0..w5 (GETF outside EACH still needs literals)
+#
+# Plate under STATE:
+#   dump/w0..w5 — DUMPOBJ bags
+#   OBJS.txt VAL.txt META.txt FLEET_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_WF_ACTION):
+#   list      — LISTOBJS Worker
+#   open      — NEW Worker ARG1=wN (or 0..5)
+#   claim     — TRYSEND slot claim (or pick first ready via EACH)
+#   tick      — EACH OBJ Worker TRYSEND tick
+#   ready     — count ready via EACH
+#   load      — sum load via EACH
+#   probe     — TRYSEND/TRYSETF ghost soft miss demo
+#   dump      — DUMPOBJ all live workers
+#   gate      — ready_count >= ARG1 (default 1) admit
+#   delete    — DELETEOBJ slot
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_wf_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=w0
+#   CUBALC_ARG0=claim CUBALC_ARG1=w0
+#   CUBALC_ARG0=tick
+#   CUBALC_ARG0=ready
+#   CUBALC_ARG0=gate CUBALC_ARG1=1 CUBALC_WF_REQUIRE=1
+#
+# Env: CUBALC_WF_REQUIRE=1 CUBALC_WF_NAME=w0 CUBALC_WF_MIN=1
+#
+# Edges:
+#   TRYSEND/TRYSETF leave sticky last_err — CLEAR_ERR for -s
+#   EACH AS o works with GETF/TRYSEND/HASOBJ but DUMPOBJ o fails (unknown object)
+#   Outside EACH, string-var object names still fail for GETF
+#   open must free existing slot first
+#   WRITE NL; REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Worker
+  FIELD id ""
+  FIELD load 0
+  FIELD ready 1
+  FIELD jobs 0
+  METHOD init i
+    SETF THIS id i
+    SETF THIS load 0
+    SETF THIS ready 1
+    SETF THIS jobs 0
+  END
+  METHOD tick
+    GETF THIS load
+    LET L = LAST_N
+    IF L > 0 THEN
+      LET L = L - 1
+      SETF THIS load L
+    END
+    GETF THIS load
+    IF LAST_N == 0 THEN
+      SETF THIS ready 1
+    ELSE
+      SETF THIS ready 0
+    END
+    RET 1
+  END
+  METHOD claim
+    GETF THIS ready
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS load
+    LET L = LAST_N + 3
+    SETF THIS load L
+    SETF THIS ready 0
+    GETF THIS jobs
+    LET j = LAST_N + 1
+    SETF THIS jobs j
+    RET j
+  END
+END
+
+NOTE "worker_fleet_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN_READY = 1
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_WF_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_WF_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_WF_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_WF_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_WF_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN_READY = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "FLEET_REPORT.txt"
+LET report_path = LAST
+
+# slot resolve 0..5
+LET slot = -1
+SYS EQS NAME "w0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "w1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "w2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+SYS EQS NAME "w3"
+IF LAST_N == 1 THEN
+  LET slot = 3
+END
+SYS EQS NAME "w4"
+IF LAST_N == 1 THEN
+  LET slot = 4
+END
+SYS EQS NAME "w5"
+IF LAST_N == 1 THEN
+  LET slot = 5
+END
+IF slot < 0 THEN
+  SYS NUM NAME
+  IF OK == 1 THEN
+    LET ntmp = LAST_N
+    SYS STR ntmp
+    SYS EQS LAST NAME
+    IF LAST_N == 1 THEN
+      IF ntmp >= 0 THEN
+        IF ntmp <= 5 THEN
+          LET slot = ntmp
+        END
+      END
+    END
+  END
+  CLEAR_ERR
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "w0"
+END
+IF slot == 1 THEN
+  LET sn = "w1"
+END
+IF slot == 2 THEN
+  LET sn = "w2"
+END
+IF slot == 3 THEN
+  LET sn = "w3"
+END
+IF slot == 4 THEN
+  LET sn = "w4"
+END
+IF slot == 5 THEN
+  LET sn = "w5"
+END
+
+SYS JOIN dump_dir "w0"
+LET d0 = LAST
+SYS JOIN dump_dir "w1"
+LET d1 = LAST
+SYS JOIN dump_dir "w2"
+LET d2 = LAST
+SYS JOIN dump_dir "w3"
+LET d3 = LAST
+SYS JOIN dump_dir "w4"
+LET d4 = LAST
+SYS JOIN dump_dir "w5"
+LET d5 = LAST
+
+# rehydrate helpers — one block per slot
+SYS READ OR d0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w0 rid
+  TRYSETF w0 load rld
+  CLEAR_ERR
+  TRYSETF w0 ready rdy
+  CLEAR_ERR
+  TRYSETF w0 jobs rjb
+  CLEAR_ERR
+END
+SYS READ OR d1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w1 rid
+  TRYSETF w1 load rld
+  CLEAR_ERR
+  TRYSETF w1 ready rdy
+  CLEAR_ERR
+  TRYSETF w1 jobs rjb
+  CLEAR_ERR
+END
+SYS READ OR d2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w2 rid
+  TRYSETF w2 load rld
+  CLEAR_ERR
+  TRYSETF w2 ready rdy
+  CLEAR_ERR
+  TRYSETF w2 jobs rjb
+  CLEAR_ERR
+END
+SYS READ OR d3 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w3
+  IF LAST_N == 1 THEN
+    DELETEOBJ w3
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w3 rid
+  TRYSETF w3 load rld
+  CLEAR_ERR
+  TRYSETF w3 ready rdy
+  CLEAR_ERR
+  TRYSETF w3 jobs rjb
+  CLEAR_ERR
+END
+SYS READ OR d4 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w4
+  IF LAST_N == 1 THEN
+    DELETEOBJ w4
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w4 rid
+  TRYSETF w4 load rld
+  CLEAR_ERR
+  TRYSETF w4 ready rdy
+  CLEAR_ERR
+  TRYSETF w4 jobs rjb
+  CLEAR_ERR
+END
+SYS READ OR d5 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w5
+  IF LAST_N == 1 THEN
+    DELETEOBJ w5
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "load"
+  LET rld = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  SYS LOOKUPN snap "jobs"
+  LET rjb = LAST_N
+  CLEAR_ERR
+  NEW Worker w5 rid
+  TRYSETF w5 load rld
+  CLEAR_ERR
+  TRYSETF w5 ready rdy
+  CLEAR_ERR
+  TRYSETF w5 jobs rjb
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET nobjs = 0
+LET n_ready = 0
+LET n_load = 0
+LET claim_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Worker
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DELETEOBJ w0
+        CLEAR_ERR
+      END
+      NEW Worker w0 sn
+      DUMPOBJ w0
+      LET snap = LAST
+      SYS WRITE d0 snap
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DELETEOBJ w1
+        CLEAR_ERR
+      END
+      NEW Worker w1 sn
+      DUMPOBJ w1
+      LET snap = LAST
+      SYS WRITE d1 snap
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DELETEOBJ w2
+        CLEAR_ERR
+      END
+      NEW Worker w2 sn
+      DUMPOBJ w2
+      LET snap = LAST
+      SYS WRITE d2 snap
+      CLEAR_ERR
+    END
+    IF slot == 3 THEN
+      HASOBJ w3
+      IF LAST_N == 1 THEN
+        DELETEOBJ w3
+        CLEAR_ERR
+      END
+      NEW Worker w3 sn
+      DUMPOBJ w3
+      LET snap = LAST
+      SYS WRITE d3 snap
+      CLEAR_ERR
+    END
+    IF slot == 4 THEN
+      HASOBJ w4
+      IF LAST_N == 1 THEN
+        DELETEOBJ w4
+        CLEAR_ERR
+      END
+      NEW Worker w4 sn
+      DUMPOBJ w4
+      LET snap = LAST
+      SYS WRITE d4 snap
+      CLEAR_ERR
+    END
+    IF slot == 5 THEN
+      HASOBJ w5
+      IF LAST_N == 1 THEN
+        DELETEOBJ w5
+        CLEAR_ERR
+      END
+      NEW Worker w5 sn
+      DUMPOBJ w5
+      LET snap = LAST
+      SYS WRITE d5 snap
+      CLEAR_ERR
+    END
+    LISTOBJS Worker
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- claim ---
+SYS EQS ACTION "claim"
+IF LAST_N == 1 THEN
+  NOTE "action claim"
+  IF slot < 0 THEN
+    # pick first ready via EACH
+    LET claim_n = 0
+    LET picked = ""
+    EACH OBJ Worker AS o
+      GETF o ready
+      IF LAST_N == 1 THEN
+        IF claim_n == 0 THEN
+          TRYSEND o claim
+          IF OK == 1 THEN
+            LET claim_n = LAST_N
+            LET picked = o
+          END
+          CLEAR_ERR
+        END
+      END
+    END
+    IF claim_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "claim none ready"
+      FAIL "claim none ready"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "claim none ready"
+      END
+    ELSE
+      # re-dump literals (DUMPOBJ fails on EACH bind o — lang gap)
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DUMPOBJ w0
+        LET snap = LAST
+        SYS WRITE d0 snap
+        CLEAR_ERR
+      END
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DUMPOBJ w1
+        LET snap = LAST
+        SYS WRITE d1 snap
+        CLEAR_ERR
+      END
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DUMPOBJ w2
+        LET snap = LAST
+        SYS WRITE d2 snap
+        CLEAR_ERR
+      END
+      HASOBJ w3
+      IF LAST_N == 1 THEN
+        DUMPOBJ w3
+        LET snap = LAST
+        SYS WRITE d3 snap
+        CLEAR_ERR
+      END
+      HASOBJ w4
+      IF LAST_N == 1 THEN
+        DUMPOBJ w4
+        LET snap = LAST
+        SYS WRITE d4 snap
+        CLEAR_ERR
+      END
+      HASOBJ w5
+      IF LAST_N == 1 THEN
+        DUMPOBJ w5
+        LET snap = LAST
+        SYS WRITE d5 snap
+        CLEAR_ERR
+      END
+      LET hit = 1
+      LET note_msg = "claim ok"
+      SYS STR claim_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "claim"
+      SYS PUSH meta picked
+      LET meta = LAST
+      SYS STR claim_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  ELSE
+    LET okc = 0
+    IF slot == 0 THEN
+      TRYSEND w0 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w0
+        LET snap = LAST
+        SYS WRITE d0 snap
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      TRYSEND w1 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w1
+        LET snap = LAST
+        SYS WRITE d1 snap
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      TRYSEND w2 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w2
+        LET snap = LAST
+        SYS WRITE d2 snap
+        CLEAR_ERR
+      END
+    END
+    IF slot == 3 THEN
+      TRYSEND w3 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w3
+        LET snap = LAST
+        SYS WRITE d3 snap
+        CLEAR_ERR
+      END
+    END
+    IF slot == 4 THEN
+      TRYSEND w4 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w4
+        LET snap = LAST
+        SYS WRITE d4 snap
+        CLEAR_ERR
+      END
+    END
+    IF slot == 5 THEN
+      TRYSEND w5 claim
+      LET okc = OK
+      LET claim_n = LAST_N
+      CLEAR_ERR
+      IF okc == 1 THEN
+        DUMPOBJ w5
+        LET snap = LAST
+        SYS WRITE d5 snap
+        CLEAR_ERR
+      END
+    END
+    IF okc == 0 THEN
+      LET miss = 1
+      LET note_msg = "claim fail"
+      FAIL "claim fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "claim fail"
+      END
+    ELSE
+      IF claim_n == 0 THEN
+        LET miss = 1
+        LET note_msg = "claim busy"
+        FAIL "claim busy"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "claim busy"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "claim ok"
+        SYS STR claim_n
+        LET val = LAST
+        LET val_ch = 1
+      END
+    END
+  END
+  PRINT_JSON claim_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- tick all ---
+SYS EQS ACTION "tick"
+IF LAST_N == 1 THEN
+  NOTE "action tick"
+  LET n_tick = 0
+  EACH OBJ Worker AS o
+    TRYSEND o tick
+    IF OK == 1 THEN
+      LET n_tick = n_tick + 1
+    END
+    CLEAR_ERR
+  END
+  # dump via literals (DUMPOBJ o fails in EACH)
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DUMPOBJ w0
+    LET snap = LAST
+    SYS WRITE d0 snap
+    CLEAR_ERR
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DUMPOBJ w1
+    LET snap = LAST
+    SYS WRITE d1 snap
+    CLEAR_ERR
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DUMPOBJ w2
+    LET snap = LAST
+    SYS WRITE d2 snap
+    CLEAR_ERR
+  END
+  HASOBJ w3
+  IF LAST_N == 1 THEN
+    DUMPOBJ w3
+    LET snap = LAST
+    SYS WRITE d3 snap
+    CLEAR_ERR
+  END
+  HASOBJ w4
+  IF LAST_N == 1 THEN
+    DUMPOBJ w4
+    LET snap = LAST
+    SYS WRITE d4 snap
+    CLEAR_ERR
+  END
+  HASOBJ w5
+  IF LAST_N == 1 THEN
+    DUMPOBJ w5
+    LET snap = LAST
+    SYS WRITE d5 snap
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "tick ok"
+  SYS STR n_tick
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "tick"
+  SYS STR n_tick
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON n_tick
+  CLEAR_ERR
+END
+
+# --- ready count ---
+SYS EQS ACTION "ready"
+IF LAST_N == 1 THEN
+  NOTE "action ready"
+  LET n_ready = 0
+  EACH OBJ Worker AS o
+    GETF o ready
+    IF LAST_N == 1 THEN
+      LET n_ready = n_ready + 1
+    END
+  END
+  LET hit = 1
+  LET note_msg = "ready ok"
+  SYS STR n_ready
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "ready"
+  SYS STR EACH_N
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_ready
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON n_ready EACH_N
+  CLEAR_ERR
+END
+
+# --- load sum ---
+SYS EQS ACTION "load"
+IF LAST_N == 1 THEN
+  NOTE "action load"
+  LET n_load = 0
+  EACH OBJ Worker AS o
+    GETF o load
+    LET n_load = n_load + LAST_N
+  END
+  LET hit = 1
+  LET note_msg = "load ok"
+  SYS STR n_load
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "load"
+  SYS STR n_load
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON n_load
+  CLEAR_ERR
+END
+
+# --- probe soft miss ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  # ensure at least w0 if empty for object-miss demo
+  LISTOBJS Worker
+  LET nobjs = NOBJS
+  LET soft_m = 0
+  LET soft_f = 0
+  LET soft_o = 0
+  IF nobjs > 0 THEN
+    EACH OBJ Worker AS o
+      IF soft_m == 0 THEN
+        TRYSEND o no_such_method_zz
+        IF OK == 0 THEN
+          LET soft_m = 1
+        END
+        CLEAR_ERR
+        TRYSETF o no_such_field_zz 1
+        IF OK == 0 THEN
+          LET soft_f = 1
+        END
+        CLEAR_ERR
+      END
+    END
+  END
+  TRYSEND missing_worker_zz tick
+  IF OK == 0 THEN
+    LET soft_o = 1
+  END
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_o
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR soft_m
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON soft_m soft_f soft_o
+  CLEAR_ERR
+END
+
+# --- dump all ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  LET n_dump = 0
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DUMPOBJ w0
+    LET snap = LAST
+    SYS WRITE d0 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DUMPOBJ w1
+    LET snap = LAST
+    SYS WRITE d1 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DUMPOBJ w2
+    LET snap = LAST
+    SYS WRITE d2 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  HASOBJ w3
+  IF LAST_N == 1 THEN
+    DUMPOBJ w3
+    LET snap = LAST
+    SYS WRITE d3 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  HASOBJ w4
+  IF LAST_N == 1 THEN
+    DUMPOBJ w4
+    LET snap = LAST
+    SYS WRITE d4 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  HASOBJ w5
+  IF LAST_N == 1 THEN
+    DUMPOBJ w5
+    LET snap = LAST
+    SYS WRITE d5 snap
+    CLEAR_ERR
+    LET n_dump = n_dump + 1
+  END
+  LISTOBJS Worker
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR n_dump
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON n_dump
+  CLEAR_ERR
+END
+
+# --- gate ready >= min ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  LET need = MIN_READY
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET ntmp = LAST_N
+      SYS STR ntmp
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET need = ntmp
+      END
+    END
+    CLEAR_ERR
+  END
+  LET n_ready = 0
+  EACH OBJ Worker AS o
+    GETF o ready
+    IF LAST_N == 1 THEN
+      LET n_ready = n_ready + 1
+    END
+  END
+  IF n_ready >= need THEN
+    LET gate_n = 1
+    LET hit = 1
+    LET note_msg = "gate admit"
+    LET val = "admit"
+    LET val_ch = 1
+  ELSE
+    LET gate_n = 0
+    LET miss = 1
+    LET note_msg = "gate deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate deny ready short"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny ready short"
+    END
+  END
+  LET meta = "gate"
+  SYS STR n_ready
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR need
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON gate_n n_ready need
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- delete ---
+SYS EQS ACTION "delete"
+IF LAST_N == 1 THEN
+  NOTE "action delete"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "delete bad slot"
+    FAIL "delete bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delete bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w0
+      END
+      SYS RM d0
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w1
+      END
+      SYS RM d1
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w2
+      END
+      SYS RM d2
+      CLEAR_ERR
+    END
+    IF slot == 3 THEN
+      HASOBJ w3
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w3
+      END
+      SYS RM d3
+      CLEAR_ERR
+    END
+    IF slot == 4 THEN
+      HASOBJ w4
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w4
+      END
+      SYS RM d4
+      CLEAR_ERR
+    END
+    IF slot == 5 THEN
+      HASOBJ w5
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ w5
+      END
+      SYS RM d5
+      CLEAR_ERR
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "delete miss"
+      FAIL "delete miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "delete miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "delete ok"
+      LET val = "deleted"
+      LET val_ch = 1
+    END
+  END
+  LISTOBJS Worker
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  # DELETEOBJ o in EACH may be unreliable; use literals
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+  END
+  CLEAR_ERR
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+  END
+  CLEAR_ERR
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+  END
+  CLEAR_ERR
+  HASOBJ w3
+  IF LAST_N == 1 THEN
+    DELETEOBJ w3
+  END
+  CLEAR_ERR
+  HASOBJ w4
+  IF LAST_N == 1 THEN
+    DELETEOBJ w4
+  END
+  CLEAR_ERR
+  HASOBJ w5
+  IF LAST_N == 1 THEN
+    DELETEOBJ w5
+  END
+  CLEAR_ERR
+  SYS RM d0
+  SYS RM d1
+  SYS RM d2
+  SYS RM d3
+  SYS RM d4
+  SYS RM d5
+  CLEAR_ERR
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "cleared"
+  LET val = ""
+  LET val_ch = 1
+  LET meta = ""
+  LET meta_ch = 1
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "claim"
+LET k = k + LAST_N
+SYS EQS ACTION "tick"
+LET k = k + LAST_N
+SYS EQS ACTION "ready"
+LET k = k + LAST_N
+SYS EQS ACTION "load"
+LET k = k + LAST_N
+SYS EQS ACTION "probe"
+LET k = k + LAST_N
+SYS EQS ACTION "dump"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "delete"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET elapsed = MS - t0ms
+LISTOBJS Worker
+LET nobjs = NOBJS
+
+LET report = "schema=cubalc.worker_fleet_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "nobjs"
+LET report = LAST
+SYS STR nobjs
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "ready"
+LET report = LAST
+SYS STR n_ready
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+CLEAR_ERR
+
+STATUS
+PRINT "worker_fleet_board" ACTION hit miss nobjs n_ready gate_n note_msg elapsed
