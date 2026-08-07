@@ -5,7 +5,7 @@
   "item": "FNINFO/DUMPFN FN arity and params plate",
   "item_id": 389,
   "title": "FNINFO|DUMPFN|DESCRIBEFN \u2014 FN arity/params plate for CALL prep",
-  "commit": "5aba9dfeefe76df4fbf4ab4d9da2b69a29ab28e3",
+  "commit": "7dfa8d52a7bad10c57357f45deec8be78073ca39",
   "summary": "FN arity+params bag/JSON for CALL prep. Twin of METHODINFO. proof 930 48/48.",
   "proofs": [
     "930_fn_fninfo",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T12:45:08Z",
   "agent": "meaningful_iter_10m",
-  "sha": "5aba9dfeefe76df4fbf4ab4d9da2b69a29ab28e3",
+  "sha": "7dfa8d52a7bad10c57357f45deec8be78073ca39",
   "note": "pairs with METHODINFO for agent discovery of CALL formals"
 }
