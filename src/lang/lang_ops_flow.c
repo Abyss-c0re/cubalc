@@ -12820,6 +12820,156 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SPLITF|FIELDSF|CUTSEPF obj field sep — split field on sep → newline bag.
+   * TRYSPLITF|SPLITF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * No mutate on field. LAST = bag; LAST_N/SPLITF_N = part count.
+   * Empty sep → whole field as one part; empty field → 0 parts.
+   * Usability: path/CSV walk with EACH LINE without GETF+SYS SPLIT
+   * (METHOD/THIS; pairs COUNTINF depth + BEFOREF peels). */
+  if (kw(&L->cur, "SPLITF") || kw(&L->cur, "FIELDSF") ||
+      kw(&L->cur, "CUTSEPF") || kw(&L->cur, "FIELDSPLIT") ||
+      kw(&L->cur, "SPLITFIELD") || kw(&L->cur, "PARTSF") ||
+      kw(&L->cur, "SEPF") || kw(&L->cur, "STRSPLITF") ||
+      kw(&L->cur, "TRYSPLITF") || kw(&L->cur, "SPLITFSOFT") ||
+      kw(&L->cur, "SOFTSPLITF") || kw(&L->cur, "TRYFIELDSF")) {
+    char oname[48], fname[48], op[24], hay[256], sep[64], out[512];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0;
+    const char *p, *hitp;
+    size_t sepn, olen = 0, flen;
+    long nfields = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYSPLITF") == 0 || strcmp(op, "SPLITFSOFT") == 0 ||
+        strcmp(op, "SOFTSPLITF") == 0 || strcmp(op, "TRYFIELDSF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "SPLITF object field sep"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "SPLITF field"); return -1;
+    }
+    if (kw(&L->cur, "BY") || kw(&L->cur, "ON") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "SEP") || kw(&L->cur, "AT"))
+      lex_next(L);
+    sep[0] = 0;
+    if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(sep, sizeof sep, "%ld", v);
+      } else {
+        fail(vm, "SPLITF object field sep"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SPLITF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SPLITF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SPLITF: unknown object");
+      var_set_str(vm, "ERR", "SPLITF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "SPLITF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SPLITF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SPLITF: unknown field");
+      var_set_str(vm, "ERR", "SPLITF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    out[0] = 0;
+    olen = 0;
+    nfields = 0;
+    sepn = strlen(sep);
+    if (!hay[0]) {
+      /* empty → zero parts */
+    } else if (sepn == 0) {
+      snprintf(out, sizeof out, "%s", hay);
+      nfields = 1;
+      olen = strlen(out);
+    } else {
+      p = hay;
+      for (;;) {
+        hitp = strstr(p, sep);
+        if (hitp) flen = (size_t)(hitp - p);
+        else flen = strlen(p);
+        if (nfields > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, p, flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, p, take);
+          olen += take;
+        }
+        out[olen] = 0;
+        nfields++;
+        if (!hitp) break;
+        p = hitp + sepn;
+      }
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "SPLITF", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = nfields;
+    var_set_num(vm, "LAST_N", nfields);
+    var_set_num(vm, "SPLITF_N", nfields);
+    var_set_num(vm, "FIELDSF_N", nfields);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

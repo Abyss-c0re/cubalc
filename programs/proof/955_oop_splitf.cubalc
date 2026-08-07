@@ -1,0 +1,144 @@
+# SPLITF / FIELDSF — split field on sep → newline bag for agents
+# Usability: path/CSV walk without GETF+SYS SPLIT · METHOD/THIS
+# No mutate; pairs COUNTINF depth + EACH LINE
+
+HOLD_FLASH 1
+
+CLASS Doc
+  FIELD path "a/b/c"
+  FIELD csv "x,y,z"
+  FIELD code 12
+  METHOD init
+  END
+  METHOD parts
+    SPLITF THIS path "/"
+  END
+END
+
+NEW Doc d
+
+# path split
+SPLITF d path "/"
+ASSERT OK == 1
+ASSERT SPLITF_N == 3
+ASSERT LAST_N == 3
+SYS EQS FIELD "path"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "d"
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SPLITF d path "/"
+SYS NTH 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SPLITF d path "/"
+SYS TAIL
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+# field unchanged
+GETF d path
+SYS EQS LAST "a/b/c"
+ASSERT LAST_N == 1
+
+# CSV
+SPLITF d csv ","
+ASSERT LAST_N == 3
+SYS EQS LAST "x\ny\nz"
+ASSERT LAST_N == 1
+SYS NTH 1
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# BY glue
+SPLITF d csv BY ","
+ASSERT LAST_N == 3
+
+# empty sep → one field
+SPLITF d path ""
+ASSERT LAST_N == 1
+SYS EQS LAST "a/b/c"
+ASSERT LAST_N == 1
+
+# empty field → 0
+SETF d path ""
+SPLITF d path "/"
+ASSERT LAST_N == 0
+ASSERT SPLITF_N == 0
+
+# trailing/leading empties kept
+SETF d path "/a/"
+SPLITF d path "/"
+ASSERT LAST_N == 3
+SYS EQS LAST "\na\n"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SPLITF d path "/"
+SYS NTH 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# aliases
+SETF d csv "p:q"
+FIELDSF d csv ":"
+ASSERT LAST_N == 2
+SYS EQS LAST "p\nq"
+ASSERT LAST_N == 1
+SETF d csv "m-n"
+PARTSF d csv "-"
+ASSERT LAST_N == 2
+CUTSEPF d csv "-"
+ASSERT LAST_N == 2
+
+# numeric promote
+SETF d code 101
+SPLITF d code "0"
+ASSERT LAST_N == 2
+SYS EQS LAST "1\n1"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF d path "root/leaf"
+SEND d parts
+ASSERT LAST_N == 2
+SYS EQS LAST "root\nleaf"
+ASSERT LAST_N == 1
+SYS HEAD
+SYS EQS LAST "root"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYSPLITF nosuch path "/"
+ASSERT OK == 0
+ASSERT SPLITF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+SPLITF SOFT d nosuch "/"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+SETF d path "u/v"
+SPLITF d path "/"
+ASSERT OK == 1
+ASSERT LAST_N == 2
+
+# dynamic field name
+SETF d path "x/y/z"
+SPLITF d "path" "/"
+ASSERT LAST_N == 3
+
+# HELP
+HELP SPLITF
+SYS HAS LAST "SPLITF"
+ASSERT LAST_N == 1
+
+PRINT "oop_splitf ok"
