@@ -393,6 +393,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 363. ~~**`SWAPF` / `SWAPFALL` / `EXCHANGEF`**~~ **done** (exchange two fields on live objs · dual buffers without temp+EACH).
 364. ~~**`SETFWHERE` / `WHERESETF` / `PUTWHERE`**~~ **done** (set field on objs matching field==value · no EACH+GETF+IF+SETF).
 365. ~~**`INCFWHERE` / `ADDWHERE` / `DECFWHERE`**~~ **done** (bump numeric field on field==value objs · selective counters).
+366. ~~**`GETFWHERE` / `COLLECTWHERE` / `PLUCKWHERE`**~~ **done** (bag of field values from field==value objs · filtered GETFALL).
 
 ## Tick protocol
 

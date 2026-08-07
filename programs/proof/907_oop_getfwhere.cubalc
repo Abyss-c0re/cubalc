@@ -1,0 +1,101 @@
+# GETFWHERE — collect field values from matching live objects
+# Usability: filtered GETFALL without WHEREOBJ bag + EACH+GETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 10 0
+NEW Cell d 1 30 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# bag of energy where age==1
+GETFWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT GETFWHERE_N == 2
+ASSERT LAST_N == 2
+SYS HASLINE LAST "10"
+ASSERT LAST_N == 1
+SYS LINES GETFWHERE
+ASSERT LAST_N == 2
+# both are 10
+SYS NTH 0 GETFWHERE
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+SYS NTH 1 GETFWHERE
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+
+# WHERE sugar
+GETFWHERE Cell energy WHERE age 0
+ASSERT GETFWHERE_N == 2
+SYS HASLINE LAST "20"
+ASSERT LAST_N == 1
+SYS HASLINE GETFWHERE "30"
+ASSERT LAST_N == 1
+
+# OF sugar
+GETFWHERE OF Cell energy age 1
+ASSERT LAST_N == 2
+
+# aliases
+COLLECTWHERE Cell energy age 1
+ASSERT COLLECTWHERE_N == 2
+PLUCKWHERE Cell energy age 0
+ASSERT PLUCKWHERE_N == 2
+GETWHERE Cell energy age 1
+ASSERT GETWHERE_N == 2
+
+# AS KV name:value
+GETFWHERE Cell energy age 1 AS KV
+ASSERT GETFWHERE_N == 2
+SYS HASLINE LAST "a:10"
+ASSERT LAST_N == 1
+SYS HASLINE GETFWHERE "c:10"
+ASSERT LAST_N == 1
+
+# string match collect
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 5
+NEW Ticket t3 "open" 3
+GETFWHERE Ticket retries status "open"
+ASSERT GETFWHERE_N == 2
+SYS HASLINE LAST "2"
+ASSERT LAST_N == 1
+SYS HASLINE GETFWHERE "3"
+ASSERT LAST_N == 1
+SYS HASLINE GETFWHERE "5"
+ASSERT LAST_N == 0
+
+# collect status strings where retries==2
+GETFWHERE Ticket status retries 2
+ASSERT GETFWHERE_N == 1
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+
+# no match empty
+GETFWHERE Ticket retries status "missing"
+ASSERT GETFWHERE_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+# chain to SUM
+GETFWHERE Ticket retries status "open"
+SYS SUM LAST
+ASSERT LAST_N == 5
+
+PRINT "proof907_oop_getfwhere" 1
+ASSERT OK == 1
