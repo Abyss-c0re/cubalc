@@ -1,0 +1,126 @@
+# HASINF / STARTSF / ENDSF — field membership probes for agent IF guards
+# Usability: contains/prefix/suffix without GETF+SYS HAS/STARTS/ENDS; no mutate
+# Complements LENF/EMPTYF; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "Open-ok"
+  FIELD note "error: timeout on peer"
+  FIELD path "/tmp/plate.json"
+  FIELD retries 42
+  METHOD init
+  END
+  METHOD bad
+    HASIFI THIS note "ERROR"
+  END
+END
+
+NEW Ticket t
+
+# contains
+HASINF t note "timeout"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASINF_N == 1
+SYS EQS LAST "error: timeout on peer"
+ASSERT LAST_N == 1
+# unchanged
+GETF t note
+SYS EQS LAST "error: timeout on peer"
+ASSERT LAST_N == 1
+
+HASINF t note "missing"
+ASSERT LAST_N == 0
+ASSERT HASINF_N == 0
+
+# aliases
+CONTAINSF t note "peer"
+ASSERT LAST_N == 1
+INSTRF t note "error"
+ASSERT LAST_N == 1
+
+# case-insensitive
+HASIFI t note "ERROR"
+ASSERT LAST_N == 1
+ASSERT HASIFI_N == 1
+HASINF I t note "TIMEOUT"
+ASSERT LAST_N == 1
+HASINF t note "ERROR"
+ASSERT LAST_N == 0 "case-sensitive miss"
+
+# STARTSF / ENDSF
+STARTSF t path "/tmp"
+ASSERT LAST_N == 1
+ASSERT STARTSF_N == 1
+STARTSF t path "/var"
+ASSERT LAST_N == 0
+ENDSF t path ".json"
+ASSERT LAST_N == 1
+ASSERT ENDSF_N == 1
+ENDSF t path ".txt"
+ASSERT LAST_N == 0
+
+# case-insensitive prefix/suffix
+STARTSIF t status "open"
+ASSERT LAST_N == 1
+STARTSF t status "open"
+ASSERT LAST_N == 0
+ENDSIF t status "OK"
+ASSERT LAST_N == 1
+ENDSF t status "OK"
+ASSERT LAST_N == 0
+
+# METHOD + THIS
+SEND t bad
+ASSERT LAST_N == 1
+
+# numeric field as text
+HASINF t retries "4"
+ASSERT LAST_N == 1
+ENDSF t retries "2"
+ASSERT LAST_N == 1
+
+# empty needle matches
+HASINF t note ""
+ASSERT LAST_N == 1
+
+# dynamic needle from var
+LET n = "timeout"
+HASINF t note n
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYHASINF nosuch note "x"
+ASSERT OK == 0
+ASSERT HASINF_N == 0
+SYS EQS LAST_ERR "HASINF: unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+HASINF SOFT t nosuch "x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "field"
+ASSERT LAST_N == 1
+
+TRYSTARTSF nosuch path "/"
+ASSERT OK == 0
+TRYENDSF nosuch path ".z"
+ASSERT OK == 0
+
+# dynamic field name
+HASINF t "note" "peer"
+ASSERT LAST_N == 1
+
+# HELP
+HELP HASINF
+SYS HAS LAST "HASINF"
+ASSERT LAST_N == 1
+HELP STARTSF
+SYS HAS LAST "STARTSF"
+ASSERT LAST_N == 1
+HELP ENDSF
+SYS HAS LAST "ENDSF"
+ASSERT LAST_N == 1
+
+PRINT "oop_hasinf ok"

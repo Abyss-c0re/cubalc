@@ -11187,6 +11187,218 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASINF|CONTAINSF|STARTSF|ENDSF obj field needle
+   * HASIFI|STARTSIF|ENDSIF — case-insensitive.
+   * TRYHASINF|HASINF SOFT — soft miss OK=0.
+   * Field membership probes (no mutate). LAST=field text; LAST_N 0|1.
+   * Usability: IF on status/note without GETF+SYS HAS/STARTS/ENDS
+   * (METHOD/THIS; complements LENF/EMPTYF probes). */
+  if (kw(&L->cur, "HASINF") || kw(&L->cur, "CONTAINSF") ||
+      kw(&L->cur, "FIELDHAS") || kw(&L->cur, "HASFIELDSTR") ||
+      kw(&L->cur, "INSTRF") || kw(&L->cur, "INCLUDESF") ||
+      kw(&L->cur, "HASIFI") || kw(&L->cur, "CONTAINSFI") ||
+      kw(&L->cur, "IHASINF") || kw(&L->cur, "FIELDHASI") ||
+      kw(&L->cur, "STARTSF") || kw(&L->cur, "PREFIXFHAS") ||
+      kw(&L->cur, "FIELDSTARTS") || kw(&L->cur, "STARTSWITHF") ||
+      kw(&L->cur, "STARTSIF") || kw(&L->cur, "ISTARTSF") ||
+      kw(&L->cur, "PREFIXFI") ||
+      kw(&L->cur, "ENDSF") || kw(&L->cur, "SUFFIXFHAS") ||
+      kw(&L->cur, "FIELDENDS") || kw(&L->cur, "ENDSWITHF") ||
+      kw(&L->cur, "ENDSIF") || kw(&L->cur, "IENDSF") ||
+      kw(&L->cur, "SUFFIXFI") ||
+      kw(&L->cur, "TRYHASINF") || kw(&L->cur, "HASINFSOFT") ||
+      kw(&L->cur, "SOFTHASINF") || kw(&L->cur, "TRYSTARTSF") ||
+      kw(&L->cur, "TRYENDSF") || kw(&L->cur, "TRYHASIFI")) {
+    char oname[48], fname[48], op[24], hay[256], needle[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=has, 1=starts, 2=ends */
+    int icase = 0;
+    long hit = 0;
+    size_t hn, nn;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "STARTSF") == 0 || strcmp(op, "PREFIXFHAS") == 0 ||
+        strcmp(op, "FIELDSTARTS") == 0 || strcmp(op, "STARTSWITHF") == 0 ||
+        strcmp(op, "STARTSIF") == 0 || strcmp(op, "ISTARTSF") == 0 ||
+        strcmp(op, "PREFIXFI") == 0 || strcmp(op, "TRYSTARTSF") == 0)
+      mode = 1;
+    else if (strcmp(op, "ENDSF") == 0 || strcmp(op, "SUFFIXFHAS") == 0 ||
+             strcmp(op, "FIELDENDS") == 0 || strcmp(op, "ENDSWITHF") == 0 ||
+             strcmp(op, "ENDSIF") == 0 || strcmp(op, "IENDSF") == 0 ||
+             strcmp(op, "SUFFIXFI") == 0 || strcmp(op, "TRYENDSF") == 0)
+      mode = 2;
+    else
+      mode = 0; /* HAS */
+    if (strcmp(op, "HASIFI") == 0 || strcmp(op, "CONTAINSFI") == 0 ||
+        strcmp(op, "IHASINF") == 0 || strcmp(op, "FIELDHASI") == 0 ||
+        strcmp(op, "STARTSIF") == 0 || strcmp(op, "ISTARTSF") == 0 ||
+        strcmp(op, "PREFIXFI") == 0 || strcmp(op, "ENDSIF") == 0 ||
+        strcmp(op, "IENDSF") == 0 || strcmp(op, "SUFFIXFI") == 0 ||
+        strcmp(op, "TRYHASIFI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYHASINF") == 0 || strcmp(op, "HASINFSOFT") == 0 ||
+        strcmp(op, "SOFTHASINF") == 0 || strcmp(op, "TRYSTARTSF") == 0 ||
+        strcmp(op, "TRYENDSF") == 0 || strcmp(op, "TRYHASIFI") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                   kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                   kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "HASINF object field needle"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "HASINF field"); return -1;
+    }
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", v);
+      } else {
+        fail(vm, "HASINF object field needle"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "HASINF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HASINF_N", 0);
+      var_set_num(vm, "STARTSF_N", 0);
+      var_set_num(vm, "ENDSF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASINF: unknown object");
+      var_set_str(vm, "ERR", "HASINF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "HASINF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HASINF_N", 0);
+      var_set_num(vm, "STARTSF_N", 0);
+      var_set_num(vm, "ENDSF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASINF: unknown field");
+      var_set_str(vm, "ERR", "HASINF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    hn = strlen(hay);
+    nn = strlen(needle);
+    hit = 0;
+    if (nn == 0) {
+      hit = 1; /* empty needle matches (like SYS HAS) */
+    } else if (mode == 0) {
+      /* contains */
+      if (!icase) {
+        hit = (strstr(hay, needle) != NULL) ? 1 : 0;
+      } else {
+        size_t i, j;
+        for (i = 0; i + nn <= hn; i++) {
+          int ok = 1;
+          for (j = 0; j < nn; j++) {
+            char ca = hay[i + j], cb = needle[j];
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { ok = 0; break; }
+          }
+          if (ok) { hit = 1; break; }
+        }
+      }
+    } else if (mode == 1) {
+      /* starts */
+      if (nn <= hn) {
+        if (!icase) {
+          hit = (strncmp(hay, needle, nn) == 0) ? 1 : 0;
+        } else {
+          size_t j;
+          hit = 1;
+          for (j = 0; j < nn; j++) {
+            char ca = hay[j], cb = needle[j];
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { hit = 0; break; }
+          }
+        }
+      }
+    } else {
+      /* ends */
+      if (nn <= hn) {
+        if (!icase) {
+          hit = (strcmp(hay + (hn - nn), needle) == 0) ? 1 : 0;
+        } else {
+          size_t j, base = hn - nn;
+          hit = 1;
+          for (j = 0; j < nn; j++) {
+            char ca = hay[base + j], cb = needle[j];
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { hit = 0; break; }
+          }
+        }
+      }
+    }
+    var_set_str(vm, "LAST", hay);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hay);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "HASINF_N", (mode == 0) ? hit : 0);
+    var_set_num(vm, "STARTSF_N", (mode == 1) ? hit : 0);
+    var_set_num(vm, "ENDSF_N", (mode == 2) ? hit : 0);
+    var_set_num(vm, "HASIFI_N", (mode == 0 && icase) ? hit : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {
