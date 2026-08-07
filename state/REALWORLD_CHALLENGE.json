@@ -1,41 +1,47 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 163,
-  "program": "programs/realworld/maint_boolflag_board.cubalc",
-  "theme": "CASEI + BOOLFLAG maintenance window gates (mixed-case CLI + truthy --force/--dry-run)",
-  "version": "1.15.443-usability",
+  "iter": 164,
+  "program": "programs/realworld/shard_subcmd_board.cubalc",
+  "theme": "SUBCMD + RESTPOS + GETFLAGN + ONEOF shard fleet CLI",
+  "version": "1.15.445-usability",
   "pass": true,
-  "prior_note": "iter 162 CASE multi-alias queue; this iter first realworld CASEI+BOOLFLAG/TRUTHY (991-992)",
+  "prior_note": "iter 163 CASEI+BOOLFLAG maint; this iter first realworld SUBCMD/RESTPOS/GETFLAGN/ONEOF (993-995)",
   "tests": [
     {
-      "name": "Open_CASEI",
-      "cmd": "Open -- --window=night \u2192 open arm",
+      "name": "scale",
+      "cmd": "scale -- --replicas=5 --weight=80 nodeA nodeB",
+      "ok": true,
+      "note": "GETFLAGN+RESTPOS"
+    },
+    {
+      "name": "Scale_CASEI",
+      "cmd": "Scale mixed-case via CASEI+ONEOFI",
       "ok": true,
       "note": "CASEI"
     },
     {
-      "name": "drain_force",
-      "cmd": "drain needs --force; dry-run skip write; force replaces status",
+      "name": "drain_pin",
+      "cmd": "drain node; pin MOVELINE to front",
       "ok": true,
-      "note": "BOOLFLAG"
+      "note": "ops"
     },
     {
-      "name": "probe",
-      "cmd": "quiet=false: BOOLFLAG 0 HASFLAG 1; dry-run=no truth 0 hit 1",
-      "ok": true,
-      "note": "truth"
-    },
-    {
-      "name": "hold_close",
-      "cmd": "Pause\u2192hold; close status row",
-      "ok": true,
-      "note": "status"
-    },
-    {
-      "name": "has_soft",
-      "cmd": "HASLINE exact; soft empty EXIT 2",
+      "name": "has_gate",
+      "cmd": "HASLINE/prefix has; gate min",
       "ok": true,
       "note": "exact"
+    },
+    {
+      "name": "oneof_miss",
+      "cmd": "boom EXIT 2 soft; REQUIRE ONEOF exit_code 0",
+      "ok": true,
+      "note": "ONEOF"
+    },
+    {
+      "name": "getflagn",
+      "cmd": "non-numeric HIT1 N0; count=0 valid hit",
+      "ok": true,
+      "note": "GETFLAGN"
     },
     {
       "name": "selftest",
@@ -316,27 +322,59 @@
       "title": "BOOLFLAG truth table: true/yes/on/1 vs false/no/off/0 (case variants)",
       "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force \u2192 true. OR default when missing. Document for ops runbooks.",
       "repro": "BOOLFLAG force with --force=ON \u2192 1"
+    },
+    {
+      "id": "W35",
+      "severity": "high",
+      "area": "host|oneof",
+      "title": "REQUIRE ONEOF miss leaves process exit_code 0",
+      "detail": "Same class as REQUIRE ARGC/FLAG: ok:false asserts_fail + usage tip, shell $? often 0. Soft ONEOF + EXIT 2 is reliable for agent shell status.",
+      "repro": "CUBALC_SS_REQUIRE=1 cubalc run prog boom \u2192 exit_code 0"
+    },
+    {
+      "id": "W36",
+      "severity": "med",
+      "area": "lang|getflagn",
+      "title": "GETFLAGN non-numeric: HIT=1 LAST_N=0 sticky LAST_ERR",
+      "detail": "--mode=fast with GETFLAGN mode OR 5 \u2192 HIT 1, LAST_N 0 (default not applied on bad parse), LAST_ERR set. Agents must CLEAR_ERR and treat HIT&&N carefully; missing uses OR default with HIT 0.",
+      "repro": "GETFLAGN mode OR 5 with --mode=fast"
+    },
+    {
+      "id": "W37",
+      "severity": "low",
+      "area": "lang|restpos",
+      "title": "RESTPOS multi-line bag: SYS EQS RESTPOS single token is false friend",
+      "detail": "SYS EQS RESTPOS nodeA fails when bag is nodeA\\nnodeB; use HASLINE targets or NTH 0.",
+      "repro": "SUBCMD scale nodeA nodeB; SYS EQS RESTPOS nodeA \u2192 0"
+    },
+    {
+      "id": "W38",
+      "severity": "low",
+      "area": "lang|getflagn",
+      "title": "GETFLAGN --count=0 is valid hit with LAST_N 0",
+      "detail": "Positive: zero is not missing; HIT=1 distinguishes from OR default. Bare --retries \u2192 1.",
+      "repro": "GETFLAGN count OR 9 with --count=0 \u2192 n=0 hit=1"
     }
   ],
   "workarounds": [
-    "CASEI ACTION \u2192 LET op only; bodies after CASE",
-    "BOOLFLAG for enable; HASFLAG only for presence",
-    "SYS GREP needle bag (needle first)",
-    "Drain: require --force unless --dry-run truthy",
-    "cubalc run prog.cubalc Open -- --window=N --force",
-    "note_msg; known latch; never action run"
+    "SUBCMD OR list; LET targets = RESTPOS; GETFLAGN replicas OR 3",
+    "ONEOF soft + CASEI LET op; EXIT 2 for shell status (not REQUIRE ONEOF alone)",
+    "ONEOFI for mixed-case allow-list",
+    "HASLINE bag not EQS for multi-target RESTPOS",
+    "CLEAR_ERR after GETFLAGN non-numeric; check GETFLAGN_HIT",
+    "cubalc run prog.cubalc scale -- --replicas=N nodes..."
   ],
   "language_gaps": [
-    "GREP forms hint bag-first ergonomics or dual order",
-    "Cookbook: CASEI + BOOLFLAG maint/ops CLI",
-    "Document BOOLFLAG_HIT vs truth dual"
+    "REQUIRE ONEOF non-zero process exit_code",
+    "GETFLAGN bad value should soft to OR default or clear HIT",
+    "Cookbook: SUBCMD+RESTPOS+GETFLAGN fleet CLI"
   ],
   "issues_faced": [
-    "GREP bag-first left stale night:open \u2014 fixed needle-first",
-    "CASEI Open/DRAIN/Pause green; BOOLFLAG force/dry-run gates green",
-    "quiet=false dual HIT/truth documented",
+    "SUBCMD+RESTPOS+GETFLAGN peel green; Scale CASEI+ONEOFI",
+    "REQUIRE ONEOF exit_code 0 \u2014 EXIT 2 path without REQUIRE_HIT",
+    "GETFLAGN non-numeric HIT/ERR dual documented",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "872895e44044787cd263ffa28a9fd6e9623ec7c9",
-  "ts": "2026-08-07T23:34:25Z"
+  "commit": "pending",
+  "ts": "2026-08-07T23:59:39Z"
 }

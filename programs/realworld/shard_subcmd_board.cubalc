@@ -1,0 +1,686 @@
+# shard_subcmd_board.cubalc — SUBCMD + RESTPOS + GETFLAGN + ONEOF shard fleet
+#
+# Real use: fleet/shard agents peel subcommand + remaining node targets and
+# integer flags without ARG 0/1/2 glue or shell getopt:
+#   SUBCMD / COMMAND / FIRSTPOS — first positional (OR default)
+#   RESTPOS / TAILPOS           — remaining non-flag targets bag
+#   GETFLAGN / FLAGN / FLAGNUM  — --replicas=N --weight=N as ints
+#   ONEOF / REQUIRE ONEOF / ONEOFI — allowed subcommand set
+#   CASEI → LET op only         — mixed-case Scale/DRAIN (arms stay simple)
+#
+# Distinct from worker_fleet_board (OOP fleet) and maint_boolflag (BOOLFLAG):
+# this board is *subcmd peel + int flags + allow-list gate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ss_$$
+#   ./out/cubalc run programs/realworld/shard_subcmd_board.cubalc \
+#     scale -- --replicas=5 --weight=80 nodeA nodeB
+#   ./out/cubalc run ... list
+#   ./out/cubalc run ... drain -- nodeA
+#
+# Plate under STATE:
+#   SHARDS.txt     — node:replicas:weight:status rows (exact)
+#   VAL.txt META.txt SS_REPORT.txt
+#
+# Subcommands (SUBCMD first positional — never "run"):
+#   list|ls     — depth + bag
+#   scale       — upsert RESTPOS nodes with replicas/weight status=live
+#   drain       — set status=drained for targets
+#   pin         — MOVELINE first target row to front
+#   has|count|gate|soft|clear
+#
+# Env: CUBALC_SS_ACTION CUBALC_SS_NAME CUBALC_SS_REQUIRE CUBALC_SS_MIN
+#      (ACTION env only if SUBCMD miss)
+#
+# Edges:
+#   SUBCMD peels first non-flag; flags before/after ok with --name=val
+#   GETFLAGN bare --retries → 1; missing OR default; non-numeric soft 0 + LAST_ERR
+#   ONEOF soft 0|1; REQUIRE ONEOF hard (exit_code often 0 — use EXIT wall)
+#   ONEOFI for mixed-case allow; CASE still case-sensitive
+#   RESTPOS is multi-line bag; SYS EQS RESTPOS single-line false friend
+#   CASEI arms only LET op=; note_msg; known latch; WRITE NL; exact HASLINE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "shard_subcmd_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT SFILE = "SHARDS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "SS_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT REPLICAS = 3
+DEFAULT WEIGHT = 100
+DEFAULT USAGE_LINE = "shard_subcmd -- scale|drain|list|pin -- [--replicas=N] [--weight=N] node [node...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+# --- peel subcommand + targets + int flags early ---
+SUBCMD OR "list"
+LET ACTION = LAST
+LET sub_hit = SUBCMD_HIT
+CLEAR_ERR
+# env override only when no subcmd hit
+IF sub_hit == 0 THEN
+  SYS ENV "CUBALC_SS_ACTION" OR ""
+  IF LAST_N > 0 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+LET targets = RESTPOS
+SYS LINES targets
+LET target_n = LAST_N
+CLEAR_ERR
+
+GETFLAGN replicas OR 3
+LET REPLICAS = LAST_N
+LET rep_hit = GETFLAGN_HIT
+CLEAR_ERR
+GETFLAGN weight OR 100
+LET WEIGHT = LAST_N
+LET w_hit = GETFLAGN_HIT
+CLEAR_ERR
+GETFLAGN min OR 0
+IF GETFLAGN_HIT == 1 THEN
+  LET MIN = LAST_N
+END
+CLEAR_ERR
+
+SYS ENV "CUBALC_SS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SS_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+SYS ENV "CUBALC_SS_NAME" OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+END
+# NAME from first target if empty
+SYS BLANK NAME
+IF LAST_N == 1 THEN
+  SYS NTH 0 targets
+  IF LAST_N > 0 THEN
+    LET NAME = LAST
+  END
+  CLEAR_ERR
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir SFILE
+LET shards_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR shards_path OR ""
+LET shards = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET shards_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET shard_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+LET op = "unknown"
+LET oneof_ok = 0
+
+SYS LINES shards
+LET shard_n = LAST_N
+
+# soft allow-list
+ONEOF ACTION "scale", "drain", "list", "ls", "pin", "has", "count", "gate", "soft", "clear"
+LET oneof_ok = LAST_N
+CLEAR_ERR
+# case-insensitive allow for Scale/DRAIN
+IF oneof_ok == 0 THEN
+  ONEOFI ACTION "scale", "drain", "list", "ls", "pin", "has", "count", "gate", "soft", "clear"
+  LET oneof_ok = LAST_N
+  CLEAR_ERR
+END
+
+# CASEI → simple op
+CASEI ACTION
+  WHEN "list", "ls" THEN
+    LET op = "list"
+  WHEN "scale" THEN
+    LET op = "scale"
+  WHEN "drain" THEN
+    LET op = "drain"
+  WHEN "pin" THEN
+    LET op = "pin"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+# hard REQUIRE ONEOF when wall set and not unknown
+SYS EQS op "unknown"
+IF LAST_N == 1 THEN
+  LET miss = 1
+  LET note_msg = "unknown subcmd"
+  FAIL "unknown subcmd"
+  CLEAR_ERR
+  IF REQUIRE_HIT > 0 THEN
+    REQUIRE ONEOF ACTION "scale", "drain", "list", "ls", "pin", "has", "count", "gate", "soft", "clear"
+  END
+  EXIT 2 "unknown subcmd"
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = shards
+  LET val_ch = 1
+  LET meta = "shards"
+  SYS STR shard_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "sub"
+  LET meta = LAST
+  SYS PUSH meta ACTION
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON shard_n target_n REPLICAS WEIGHT
+  CLEAR_ERR
+END
+
+# --- scale: upsert nodes ---
+SYS EQS op "scale"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action scale"
+  IF target_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "scale needs nodes"
+    FAIL "scale needs nodes"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "scale needs nodes"
+    END
+  ELSE
+    EACH LINE AS node IN targets
+      SYS BLANK node
+      IF LAST_N == 0 THEN
+        # drop prior rows for this node (GREP needle bag)
+        SYS GREP node shards
+        LET hits = LAST
+        CLEAR_ERR
+        EACH LINE AS old IN hits
+          SYS REMOVELINE shards old
+          LET shards = LAST
+          CLEAR_ERR
+        END
+        SYS CAT node ":"
+        LET row = LAST
+        SYS STR REPLICAS
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":"
+        LET row = LAST
+        SYS STR WEIGHT
+        SYS CAT row LAST
+        LET row = LAST
+        SYS CAT row ":live"
+        LET row = LAST
+        SYS PUSH shards row
+        LET shards = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET shards_ch = 1
+    SYS LINES shards
+    LET shard_n = LAST_N
+    LET hit = 1
+    LET note_msg = "scale ok"
+    LET val = shards
+    LET val_ch = 1
+    LET meta = "replicas"
+    SYS STR REPLICAS
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "weight"
+    LET meta = LAST
+    SYS STR WEIGHT
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n shard_n REPLICAS WEIGHT
+  CLEAR_ERR
+END
+
+# --- drain ---
+SYS EQS op "drain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drain"
+  IF target_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "drain needs nodes"
+    FAIL "drain needs nodes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drain needs nodes"
+    END
+  ELSE
+    EACH LINE AS node IN targets
+      SYS BLANK node
+      IF LAST_N == 0 THEN
+        SYS GREP node shards
+        LET hits = LAST
+        CLEAR_ERR
+        EACH LINE AS old IN hits
+          SYS REMOVELINE shards old
+          LET shards = LAST
+          CLEAR_ERR
+        END
+        SYS CAT node ":0:0:drained"
+        LET row = LAST
+        SYS PUSH shards row
+        LET shards = LAST
+        LET admit_n = admit_n + 1
+      END
+    END
+    LET shards_ch = 1
+    SYS LINES shards
+    LET shard_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drain ok"
+    LET val = shards
+    LET val_ch = 1
+    LET meta = "drain"
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n shard_n
+  CLEAR_ERR
+END
+
+# --- pin first target row to front ---
+SYS EQS op "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs node"
+    FAIL "pin needs node"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs node"
+    END
+  ELSE
+    SYS GREP NAME shards
+    LET hits = LAST
+    SYS NTH 0 hits
+    LET row = LAST
+    CLEAR_ERR
+    SYS BLANK row
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS FINDLINE shards row
+      LET idx = LAST_N
+      SYS MOVELINE shards idx 0
+      LET shards = LAST
+      LET shards_ch = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = row
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS STR idx
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON hit miss
+  CLEAR_ERR
+END
+
+# --- has exact ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE shards NAME
+    LET has_n = LAST_N
+    # also allow node-prefix has via GREP count
+    IF has_n == 0 THEN
+      SYS GREP NAME shards
+      SYS LINES LAST
+      LET has_n = LAST_N
+      IF has_n > 1 THEN
+        LET has_n = 1
+      END
+      CLEAR_ERR
+    END
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count exact ---
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE shards NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES shards
+  LET shard_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "shards"
+  LET meta = LAST
+  SYS STR shard_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR shard_n
+  LET val = LAST
+  LET val_ch = 1
+  IF shard_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON shard_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft empty ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES shards
+  LET shard_n = LAST_N
+  IF shard_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has shards"
+    LET val = shards
+    LET val_ch = 1
+  END
+  PRINT_JSON shard_n miss hit
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET shards = ""
+  LET val = ""
+  LET meta = ""
+  LET shards_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET shard_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF shards_ch > 0 THEN
+  SYS WRITE shards_path shards
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "shards write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET meta = "schema=cubalc.shard_subcmd_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "oneof"
+LET meta = LAST
+SYS STR oneof_ok
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "replicas"
+LET meta = LAST
+SYS STR REPLICAS
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "weight"
+LET meta = LAST
+SYS STR WEIGHT
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "target_n"
+LET meta = LAST
+SYS STR target_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "shard_n"
+LET meta = LAST
+SYS STR shard_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "shard_subcmd_board" ACTION op hit miss REPLICAS WEIGHT target_n note_msg elapsed
+NOTE "shard_subcmd_board: done"
