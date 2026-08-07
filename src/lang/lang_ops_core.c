@@ -16128,6 +16128,108 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS DIFFISO|ISODIFF|SUBISO|ISOAGE [a] [b]
+     * — signed second delta between ISO stamps (dual of ADDISO shift).
+     * Two args: LAST_N = epoch(a) - epoch(b). One arg: now - epoch(a) (ISO age).
+     * Zero args: soft empty. LAST = decimal secs; DIFFISO_N mirrors.
+     * Soft-fail bad ISO. Usability: plate age/SLA without PARSEISO+TIMEDIFF. */
+    if (kw(&L->cur,"DIFFISO") || kw(&L->cur,"ISODIFF") || kw(&L->cur,"SUBISO") ||
+        kw(&L->cur,"ISOAGE") || kw(&L->cur,"AGEISO") || kw(&L->cur,"ISO_DIFF") ||
+        kw(&L->cur,"DIFFDATE") || kw(&L->cur,"DATEDIFF") || kw(&L->cur,"ISODELTA") ||
+        kw(&L->cur,"DELTAISO") || kw(&L->cur,"BETWEENISO")){
+      char a_s[128], b_s[128];
+      long ea = 0, eb = 0, outn = 0, now;
+      int has_a = 0, has_b = 0;
+      const char *err = NULL;
+      char buf[40];
+      lex_next(L);
+      a_s[0] = 0; b_s[0] = 0;
+      /* arg a: ISO string / LAST / str-var */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, a_s, sizeof a_s) == 0)
+            has_a = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, a_s, sizeof a_s) == 0)
+              has_a = 1;
+          }
+        }
+      }
+      /* arg b optional */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, b_s, sizeof b_s) == 0)
+            has_b = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, b_s, sizeof b_s) == 0)
+              has_b = 1;
+          }
+        }
+      }
+      if (!has_a || !a_s[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DIFFISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "DIFFISO: empty");
+        var_set_str(vm, "ERR", "DIFFISO: empty");
+        bump(vm); return 1;
+      }
+      if (cubalc_parse_iso_epoch(a_s, &ea, &err) != 0) {
+        /* if second arg was present but first bad — already consumed b_s */
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DIFFISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", err ? err : "DIFFISO: bad iso a");
+        var_set_str(vm, "ERR", err ? err : "DIFFISO: bad iso a");
+        bump(vm); return 1;
+      }
+      now = (long)time(NULL);
+      if (has_b) {
+        if (!b_s[0] || cubalc_parse_iso_epoch(b_s, &eb, &err) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "DIFFISO_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", err ? err : "DIFFISO: bad iso b");
+          var_set_str(vm, "ERR", err ? err : "DIFFISO: bad iso b");
+          bump(vm); return 1;
+        }
+        outn = ea - eb;
+      } else {
+        /* one arg: age of stamp vs wall now (dual of TIMEDIFF one-arg) */
+        outn = now - ea;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "DIFFISO", buf);
+      var_set_str(vm, "ISODIFF", buf);
+      var_set_str(vm, "ISOAGE", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "DIFFISO_N", outn);
+      var_set_num(vm, "ISODIFF_N", outn);
+      var_set_num(vm, "ISOAGE_N", outn);
+      var_set_num(vm, "TIMEDIFF_N", outn);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS TIMEDIFF|ELAPSED|DELTA|DIFFTIME [a] [b]
      * — epoch-second difference for plate age/deadline math.
      * Two args: LAST_N = a - b (signed). One arg: LAST_N = now - a.
@@ -24484,12 +24586,74 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (L->cur.kind!=TK_IDENT){ fail(vm,"CUBE id"); return -1; }
     char id[48]; snprintf(id,sizeof id,"%s",L->cur.text); lex_next(L);
     char role[48]; snprintf(role,sizeof role,"%s",id); int proton=1;
+    char of_class[48]; of_class[0]=0;
+    /* COP: CUBE name OF ClassName [ROLE …] [PROTON …]
+     * Instantiates OOP class fields on the cube unit (reusable cube type). */
+    if (kw(&L->cur,"OF") || kw(&L->cur,"AS") || kw(&L->cur,"TYPE") ||
+        kw(&L->cur,"CLASS")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "CUBE OF ClassName"); return -1; }
+      snprintf(of_class, sizeof of_class, "%s", L->cur.text);
+      lex_next(L);
+    }
     while (L->cur.kind==TK_IDENT){
       if (kw(&L->cur,"ROLE")){ lex_next(L); if (L->cur.kind==TK_IDENT){ snprintf(role,sizeof role,"%s",L->cur.text); lex_next(L);} }
       else if (kw(&L->cur,"PROTON")){ lex_next(L); if (L->cur.kind==TK_NUM){ proton=L->cur.num?1:0; lex_next(L);} }
       else break;
     }
-    place_cube(vm,id,role,proton); bump(vm); return 1;
+    /* Prefer class default role when OF and ROLE not explicitly set to custom */
+    if (of_class[0]) {
+      int ci;
+      for (ci = 0; ci < vm->n_classes; ci++) {
+        if (strcmp(vm->classes[ci].name, of_class) == 0) {
+          if (strcmp(role, id) == 0 && vm->classes[ci].role[0])
+            snprintf(role, sizeof role, "%s", vm->classes[ci].role);
+          break;
+        }
+      }
+      if (ci >= vm->n_classes) {
+        snprintf(vm->err, sizeof vm->err, "CUBE OF unknown CLASS %s", of_class);
+        fail(vm, vm->err); return -1;
+      }
+    }
+    place_cube(vm,id,role,proton);
+    /* Bind OOP instance to cube id (same name) for SEND/GETF/SETF */
+    if (of_class[0]) {
+      int ci = -1, fi;
+      ClassDef *cd;
+      ObjInst *ob;
+      for (ci = 0; ci < vm->n_classes; ci++)
+        if (strcmp(vm->classes[ci].name, of_class) == 0) break;
+      cd = &vm->classes[ci];
+      /* re-NEW or attach */
+      for (fi = 0; fi < vm->n_objs; fi++) {
+        if (vm->objs[fi].live && strcmp(vm->objs[fi].name, id) == 0) {
+          snprintf(vm->err, sizeof vm->err, "CUBE OF object name clash %s", id);
+          fail(vm, vm->err); return -1;
+        }
+      }
+      if (vm->n_objs >= CUBALC_MAX_OBJS) { fail(vm, "too many objects"); return -1; }
+      ob = &vm->objs[vm->n_objs++];
+      memset(ob, 0, sizeof *ob);
+      snprintf(ob->name, sizeof ob->name, "%s", id);
+      ob->class_idx = ci;
+      ob->live = 1;
+      ob->cube_idx = find_cube(vm, id);
+      for (fi = 0; fi < cd->n_fields; fi++) {
+        FieldDef *fd = &cd->fields[fi];
+        if (fd->has_def && fd->is_str) {
+          snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", fd->def_str);
+          ob->fis_str[fi] = 1;
+        } else {
+          ob->fnum[fi] = fd->has_def ? fd->def_num : 0;
+          ob->fis_str[fi] = 0;
+        }
+      }
+      var_set_str(vm, id, of_class);
+      var_set_str(vm, "CLASS", of_class);
+      var_set_str(vm, "OBJECT", id);
+    }
+    bump(vm); return 1;
   }
   /* PLUG — only cubes; pluggable I/O wire (matrix-compatible) */
   if (kw(&L->cur,"PLUG")||kw(&L->cur,"WIRE")||kw(&L->cur,"IO_PLUG")){
@@ -25185,6 +25349,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS FROMISO", "SYS FROMISO [str] — alias of SYS PARSEISO"},
       {"SYS ADDISO", "SYS ADDISO|SHIFTISO [iso] [secs|\"1h\"] — shift ISO stamp · no PARSEISO+ADDTIME+FROMTIME"},
       {"SYS SHIFTISO", "SYS SHIFTISO [iso] [offset] — alias of SYS ADDISO"},
+      {"SYS DIFFISO", "SYS DIFFISO|ISODIFF|ISOAGE [a] [b] — ISO delta secs · dual ADDISO · no PARSEISO+TIMEDIFF"},
+      {"SYS ISODIFF", "SYS ISODIFF [a] [b] — alias of SYS DIFFISO"},
+      {"SYS ISOAGE", "SYS ISOAGE [iso] — now − ISO epoch · plate stamp age"},
       {"SYS TIMEDIFF", "SYS TIMEDIFF|ELAPSED a [b] — epoch delta seconds · a-b or now-a"},
       {"SYS ELAPSED", "SYS ELAPSED a [b] — alias of SYS TIMEDIFF"},
       {"SYS DELTA", "SYS DELTA a [b] — alias of SYS TIMEDIFF"},

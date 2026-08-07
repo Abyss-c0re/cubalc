@@ -2001,6 +2001,7 @@ int main(int argc, char **argv) {
       {"sys_waitfile_duration", "programs/proof/858_sys_waitfile_duration.cubalc", "SYS WAITFILE timeout human duration string"},
       {"sys_deadline_duration", "programs/proof/859_sys_deadline_duration.cubalc", "SYS DEADLINE/ADDTIME human duration lease offsets"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
+      {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
     int i, n = (int)(sizeof tests / sizeof tests[0]);
     int n_pass = 0, n_fail = 0, n_miss = 0, aok = 0, afail = 0;
@@ -3995,6 +3996,8 @@ int main(int argc, char **argv) {
        "SYS DEADLINE/ADDTIME human duration lease offsets"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso",
        "SYS ADDISO shift ISO stamp by secs or duration"},
+      {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso",
+       "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms",
        "SYS MS wall milliseconds for agent timing"},
       {"programs/proof/592_note.cubalc", "note",
@@ -5864,6 +5867,7 @@ int main(int argc, char **argv) {
       {"programs/proof/858_sys_waitfile_duration.cubalc", "sys_waitfile_duration", "SYS WAITFILE timeout human duration string"},
       {"programs/proof/859_sys_deadline_duration.cubalc", "sys_deadline_duration", "SYS DEADLINE/ADDTIME human duration lease offsets"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
+      {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
       {"programs/proof/592_note.cubalc", "note", "NOTE agent breadcrumb"},
       {"programs/proof/593_exit.cubalc", "exit", "EXIT early halt with code"},
@@ -6122,6 +6126,7 @@ int main(int argc, char **argv) {
       {"programs/proof/858_sys_waitfile_duration.cubalc", "sys_waitfile_duration", "SYS WAITFILE timeout human duration string"},
       {"programs/proof/859_sys_deadline_duration.cubalc", "sys_deadline_duration", "SYS DEADLINE/ADDTIME human duration lease offsets"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
+      {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
       {"programs/p2p/peer_dial.cubalc", "p2p", "SMX DIAL soft-fail"},
       {"programs/protect/core_protect.cubalc", "protect", "Core protect board"},

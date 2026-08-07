@@ -1,0 +1,76 @@
+# SYS DIFFISO / ISODIFF / ISOAGE — ISO stamp second deltas
+# Usability: plate age/SLA without PARSEISO + TIMEDIFF glue (dual of ADDISO)
+
+HOLD_FLASH 1
+
+LET a = "2020-01-01T00:00:00Z"
+LET b = "2020-01-01T01:00:00Z"
+LET c = "2020-01-02T00:00:00Z"
+
+# two-arg: a - b (earlier - later = negative)
+SYS DIFFISO a b
+ASSERT OK == 1
+ASSERT LAST_N == -3600
+ASSERT DIFFISO_N == -3600
+
+# later - earlier
+SYS DIFFISO b a
+ASSERT OK == 1
+ASSERT LAST_N == 3600
+ASSERT ISODIFF_N == 3600
+
+# full day
+SYS DIFFISO c a
+ASSERT OK == 1
+ASSERT LAST_N == 86400
+
+# same stamp → 0
+SYS DIFFISO a a
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# inline strings
+SYS DIFFISO "2020-01-01T00:00:30Z" "2020-01-01T00:00:00Z"
+ASSERT OK == 1
+ASSERT LAST_N == 30
+
+# round-trip with ADDISO
+SYS ADDISO a "1h"
+LET later = LAST
+SYS DIFFISO later a
+ASSERT OK == 1
+ASSERT LAST_N == 3600
+
+# one-arg ISOAGE: now - stamp (2020 is in the past → large positive)
+SYS ISOAGE a
+ASSERT OK == 1
+ASSERT LAST_N > 100000000
+ASSERT ISOAGE_N == LAST_N
+
+# future stamp → negative age
+SYS DATE
+SYS ADDISO "1h"
+LET fut = LAST
+SYS DIFFISO fut
+ASSERT OK == 1
+ASSERT LAST_N < 0
+ASSERT LAST_N > -3700
+
+# aliases
+SYS ISODIFF c a
+ASSERT LAST_N == 86400
+SYS SUBISO b a
+ASSERT LAST_N == 3600
+
+# soft-fail
+SYS DIFFISO "not-iso" a
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+SYS DIFFISO a "also-bad"
+ASSERT OK == 0
+
+SYS DIFFISO ""
+ASSERT OK == 0
+
+PRINT "sys_diffiso ok"
