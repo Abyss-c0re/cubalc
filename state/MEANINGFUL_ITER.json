@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 372,
-  "version": "1.15.399-usability",
-  "item": "NUMF/STRF field type coerce",
-  "item_id": 408,
-  "title": "NUMF|STRF — field type coerce for INCF/CATF",
-  "commit": "27717559ad4c2d984dbb7ee07300d69e9d9aef72",
-  "summary": "Field strtol/itoa in place without GETF+SYS NUM/STR+SETF. proof 949 34/34.",
+  "iter": 373,
+  "version": "1.15.400-usability",
+  "item": "DIVF/MODF field integer divide and remainder",
+  "item_id": 409,
+  "title": "DIVF|MODF — single-object field divide/remainder for METHOD share/wrap",
+  "commit": "55cdd355c04c20c584c07638f1e608a1ce4a38a8",
+  "summary": "Integer divide/remainder on one field without GETF+/+%+SETF. Soft miss + by-zero. proof 950 47/47.",
   "proofs": [
-    "949_oop_numf",
-    "asserts 34/34",
-    "948 still green"
+    "950_oop_divf",
+    "asserts 47/47",
+    "938/949 still green"
   ],
-  "when": "2026-08-07T15:55:02Z",
+  "when": "2026-08-07T16:05:00Z",
   "agent": "meaningful_iter_10m",
-  "sha": "27717559ad4c2d984dbb7ee07300d69e9d9aef72",
-  "note": "NUMF_OK parse flag; AFTERF then NUMF then INCF; STRF for CATF"
+  "sha": "55cdd355c04c20c584c07638f1e608a1ce4a38a8",
+  "note": "DIVF_OK/MODF_OK; pairs INCF/TIMESF/NUMF after peel"
 }
