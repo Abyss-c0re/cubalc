@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 376,
-  "version": "1.15.403-usability",
-  "item": "MINF/MAXF one-sided field floor and cap",
-  "item_id": 412,
-  "title": "MINF|MAXF — one-sided min/max bound on one numeric field",
-  "commit": "83700f85dabfd2e447685690ebc772f1730586d4",
-  "summary": "Cap or floor one field without full BOUNDF. Soft miss. proof 953 40/40.",
+  "iter": 377,
+  "version": "1.15.404-usability",
+  "item": "COUNTINF field needle tally",
+  "item_id": 413,
+  "title": "COUNTINF|COUNTINFI — count needle hits in one field",
+  "commit": "4bba691889d97e568d5f874669e125b55922f0a2",
+  "summary": "Path/delimiter depth without GETF+loop. Soft miss. proof 954 33/33.",
   "proofs": [
-    "953_oop_minf",
-    "asserts 40/40",
-    "952/886 still green"
+    "954_oop_countinf",
+    "asserts 33/33",
+    "953/944 still green"
   ],
-  "when": "2026-08-07T16:35:10Z",
+  "when": "2026-08-07T16:44:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "83700f85dabfd2e447685690ebc772f1730586d4",
-  "note": "MINF_CHANGED/MAXF_LIM; not fleet MAXOBJ/MINOBJ"
+  "sha": "4bba691889d97e568d5f874669e125b55922f0a2",
+  "note": "COUNTINF_N/COUNTINF_I; not fleet COUNTF hist"
 }
