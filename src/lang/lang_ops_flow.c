@@ -2369,6 +2369,373 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COUNTOBJ|NOBJS|COUNTOBJS [Class]
+   * — count live objects (optional class filter). LAST_N = count; LAST = decimal.
+   * Usability: fleet size without LISTOBJS bag materialize. */
+  if (kw(&L->cur, "COUNTOBJ") || kw(&L->cur, "COUNTOBJS") ||
+      kw(&L->cur, "NUMOBJS") || kw(&L->cur, "OBJCOUNT") ||
+      kw(&L->cur, "COUNTINST") || kw(&L->cur, "NINST") ||
+      kw(&L->cur, "NOBJS")) {
+    /* NOBJS as stmt = count-only; LISTOBJS also sets NOBJS after listing. */
+    char filt[48];
+    int has_filt = 0, i, n = 0;
+    lex_next(L);
+    filt[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "COUNTOBJ [Class]"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "SYS") && !kw(&L->cur, "PRINT") &&
+               !kw(&L->cur, "CUBE") && !kw(&L->cur, "END") &&
+               !kw(&L->cur, "NEW") && !kw(&L->cur, "CLASS")) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      n++;
+    }
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "COUNTOBJ", n);
+    var_set_num(vm, "COUNTOBJ_N", n);
+    var_set_num(vm, "NOBJS", n);
+    var_set_num(vm, "NUMOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* COUNTWHERE [Class] field value
+   * — count live objs with field==value (num or string). Soft; LAST_N=count.
+   * Usability: fleet tally without WHEREOBJ bag · IF/gates for pool size. */
+  if (kw(&L->cur, "COUNTWHERE") || kw(&L->cur, "COUNTMATCH") ||
+      kw(&L->cur, "COUNTEQ") || kw(&L->cur, "NWHERE") ||
+      kw(&L->cur, "HOWMANY") || kw(&L->cur, "TALLYWHERE")) {
+    char filt[48], fname[48], tok1[48], sval[512];
+    int has_filt = 0, is_str = 0, i, n = 0, n_skip = 0;
+    long nval = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    sval[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "COUNTWHERE OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "COUNTWHERE [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "COUNTWHERE [Class] field value"); return -1;
+      }
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(sval, sizeof sval, "%s", L->cur.text);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(sval, sizeof sval, "%s", vm->last_str);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(sval, sizeof sval, "%s", sv->sval);
+        is_str = 1;
+        lex_next(L);
+      } else {
+        nval = parse_expr(vm, L);
+        is_str = 0;
+      }
+    } else {
+      nval = parse_expr(vm, L);
+      is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) {
+        if (is_str)
+          hit = (strcmp(ob->fstr[fi], sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", nval);
+          hit = (strcmp(ob->fstr[fi], nb) == 0);
+        }
+      } else {
+        if (is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[fi]);
+          hit = (strcmp(nb, sval) == 0);
+        } else {
+          hit = (ob->fnum[fi] == nval);
+        }
+      }
+      if (hit) n++;
+    }
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "COUNTWHERE", n);
+    var_set_num(vm, "COUNTWHERE_N", n);
+    var_set_num(vm, "COUNTMATCH_N", n);
+    var_set_num(vm, "HOWMANY_N", n);
+    var_set_num(vm, "COUNTWHERE_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* COUNTWHEREGE|COUNTWHERELE|COUNTWHEREGT|COUNTWHERELT [Class] field value
+   * COUNTATLEAST|COUNTATMOST|COUNTABOVE|COUNTBELOW aliases.
+   * — count live objs whose numeric field meets threshold. Soft; LAST_N=count.
+   * Usability: SLO / capacity gates without WHEREGE bag materialize. */
+  if (kw(&L->cur, "COUNTWHEREGE") || kw(&L->cur, "COUNTWHEREGTE") ||
+      kw(&L->cur, "COUNTATLEAST") || kw(&L->cur, "NGE") ||
+      kw(&L->cur, "COUNTWHEREGT") || kw(&L->cur, "COUNTABOVE") ||
+      kw(&L->cur, "NGT") ||
+      kw(&L->cur, "COUNTWHERELE") || kw(&L->cur, "COUNTWHERELTE") ||
+      kw(&L->cur, "COUNTATMOST") || kw(&L->cur, "NLE") ||
+      kw(&L->cur, "COUNTWHERELT") || kw(&L->cur, "COUNTBELOW") ||
+      kw(&L->cur, "NLT") ||
+      kw(&L->cur, "THRESHCOUNT") || kw(&L->cur, "COUNTTHRESH")) {
+    char filt[48], fname[48], tok1[48], op[32];
+    int has_filt = 0, mode = 0, i, n = 0, n_skip = 0;
+    long thresh = 0;
+    /* mode: 0=GE 1=GT 2=LE 3=LT */
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "COUNTWHEREGT") == 0 || strcmp(op, "COUNTABOVE") == 0 ||
+        strcmp(op, "NGT") == 0)
+      mode = 1;
+    else if (strcmp(op, "COUNTWHERELE") == 0 ||
+             strcmp(op, "COUNTWHERELTE") == 0 ||
+             strcmp(op, "COUNTATMOST") == 0 || strcmp(op, "NLE") == 0)
+      mode = 2;
+    else if (strcmp(op, "COUNTWHERELT") == 0 || strcmp(op, "COUNTBELOW") == 0 ||
+             strcmp(op, "NLT") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "COUNTWHEREGE OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "COUNTWHEREGE [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "COUNTWHEREGE [Class] field value"); return -1;
+      }
+    }
+    if (kw(&L->cur, "GE") || kw(&L->cur, "GTE") || kw(&L->cur, "GT") ||
+        kw(&L->cur, "LE") || kw(&L->cur, "LTE") || kw(&L->cur, "LT") ||
+        kw(&L->cur, "MIN") || kw(&L->cur, "MAX"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      thresh = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      thresh = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        thresh = atol(sv->sval);
+      else
+        thresh = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else {
+      thresh = parse_expr(vm, L);
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi, hit = 0;
+      long v;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      v = ob->fnum[fi];
+      if (mode == 0) hit = (v >= thresh);
+      else if (mode == 1) hit = (v > thresh);
+      else if (mode == 2) hit = (v <= thresh);
+      else hit = (v < thresh);
+      if (hit) n++;
+    }
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "COUNTWHEREGE", n);
+    var_set_num(vm, "COUNTWHEREGE_N", n);
+    var_set_num(vm, "COUNTWHERELE_N", n);
+    var_set_num(vm, "COUNTWHEREGT_N", n);
+    var_set_num(vm, "COUNTWHERELT_N", n);
+    var_set_num(vm, "COUNTATLEAST_N", n);
+    var_set_num(vm, "COUNTATMOST_N", n);
+    var_set_num(vm, "COUNTABOVE_N", n);
+    var_set_num(vm, "COUNTBELOW_N", n);
+    var_set_num(vm, "COUNTWHEREGE_SKIP", n_skip);
+    var_set_num(vm, "COUNTWHEREGE_THRESH", thresh);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* DELETEWHERE|FREEWHERE|PURGEWHERE [Class] field value
    * — free every live object whose field equals value (optional class).
    * Soft always; LAST_N/DELETEWHERE_N = count freed. Optional bag of names freed.

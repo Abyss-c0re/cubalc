@@ -378,6 +378,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 348. ~~**`WHEREGE` / `WHERELE` / `WHEREGT` / `WHERELT`**~~ **done** (threshold select live objs · bag · no EACH+GETF+IF).
 349. ~~**`DELETEWHEREGE` / `DELETEWHERELE` / `DELETEWHEREGT` / `DELETEWHERELT`**~~ **done** (threshold free live objs · FREEBELOW/FREEABOVE · no EACH+GETF+IF+DELETEOBJ).
 350. ~~**`SENDWHEREGE` / `SENDWHERELE` / `SENDWHEREGT` / `SENDWHERELT`**~~ **done** (method on threshold-matched objs · SENDBELOW/SENDABOVE · no EACH+GETF+IF+SEND).
+351. ~~**`COUNTOBJ` / `COUNTWHERE` / `COUNTWHEREGE`…`**~~ **done** (fleet tallies · equality + threshold · no WHERE bag materialize).
 
 ## Tick protocol
 

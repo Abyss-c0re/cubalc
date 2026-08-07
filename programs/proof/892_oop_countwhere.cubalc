@@ -1,0 +1,113 @@
+# COUNTOBJ / COUNTWHERE / COUNTWHEREGE — fleet tallies without bags
+# Usability: LAST_N counts without WHEREOBJ/WHEREGE bag materialize
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+NEW Cell e 1 0 0
+
+CLASS Counter
+  FIELD n 0
+  FIELD tag 0
+  METHOD init x t
+    SETF THIS n x
+    SETF THIS tag t
+  END
+END
+NEW Counter k1 3 1
+NEW Counter k2 50 2
+NEW Counter k3 15 1
+NEW Counter k4 0 0
+
+# COUNTOBJ total + class
+COUNTOBJ
+ASSERT OK == 1
+ASSERT LAST_N == 9
+ASSERT COUNTOBJ_N == 9
+ASSERT NOBJS == 9
+
+COUNTOBJ Cell
+ASSERT LAST_N == 5
+ASSERT COUNTOBJ_N == 5
+
+COUNTOBJ OF Counter
+ASSERT LAST_N == 4
+
+NUMOBJS Cell
+ASSERT LAST_N == 5
+
+# COUNTWHERE equality
+COUNTWHERE Cell energy 0
+ASSERT OK == 1
+ASSERT COUNTWHERE_N == 2 "b e"
+ASSERT LAST_N == 2
+
+COUNTWHERE Cell energy 10
+ASSERT COUNTWHERE_N == 1
+
+# HOWMANY alias + string field
+HOWMANY Counter tag 1
+ASSERT HOWMANY_N == 2 "k1 k3"
+
+# OF sugar
+COUNTWHERE OF Counter tag 2
+ASSERT COUNTWHERE_N == 1
+
+# bare field
+COUNTWHERE energy 0
+ASSERT COUNTWHERE_N == 2 "Cell only · Counter has no energy"
+COUNTWHERE n 0
+ASSERT COUNTWHERE_N == 1 "k4"
+
+# empty soft
+COUNTWHERE Cell energy 999
+ASSERT OK == 1
+ASSERT COUNTWHERE_N == 0
+
+# COUNTWHEREGE threshold
+COUNTWHEREGE Cell energy 10
+ASSERT OK == 1
+ASSERT COUNTWHEREGE_N == 2 "a c"
+ASSERT LAST_N == 2
+ASSERT COUNTWHEREGE_THRESH == 10
+
+COUNTATLEAST Cell energy 10
+ASSERT COUNTATLEAST_N == 2
+
+COUNTABOVE Cell energy 10
+ASSERT COUNTABOVE_N == 1 "c only"
+
+COUNTWHERELE Cell energy 5
+ASSERT COUNTWHERELE_N == 3 "b d e"
+
+COUNTBELOW Cell energy 5
+ASSERT COUNTBELOW_N == 2 "b e"
+
+COUNTWHEREGE Counter n 15
+ASSERT COUNTWHEREGE_N == 2 "k2 k3"
+
+COUNTATMOST OF Counter n 3
+ASSERT COUNTATMOST_N == 2 "k1 k4"
+
+# bare threshold field
+COUNTWHEREGE n 10
+ASSERT COUNTWHEREGE_N == 2 "k2 k3 · Counter only"
+
+# empty threshold soft
+COUNTWHEREGE Cell energy 999
+ASSERT OK == 1
+ASSERT COUNTWHEREGE_N == 0
+
+# gate style: free dead then recount
+DELETEWHERELE Cell energy 0
+COUNTOBJ Cell
+ASSERT LAST_N == 3 "a c d remain"
+COUNTWHEREGE Cell energy 10
+ASSERT COUNTWHEREGE_N == 2
+
+PRINT "oop_countwhere ok"
