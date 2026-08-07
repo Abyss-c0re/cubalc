@@ -26129,7 +26129,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS ENDSI", "SYS ENDSI|IENDS|ENDS I hay suf — case-insensitive suffix · LAST_N"},
       {"SYS FINDI", "SYS FINDI|INDEXI|FIND I hay needle — case-insensitive index → LAST_N (-1 miss)"},
       {"SYS INDEXI", "SYS INDEXI hay needle — alias of SYS FINDI"},
-      {"EACH LINE", "EACH LINE [as name] [IN str] … END — walk newline fields (LIST/GREP)"},
+      {"EACH LINE", "EACH LINE [as name] [IN str|obj field] … END — walk newline fields (LIST/GREP/bag field)"},
       {"EACH OBJ", "EACH OBJ [Class] [AS name] … END — walk live OOP objects · EACH_N"},
       {"EACH", "EACH CUBE|CELL|LINE|OBJ … END — iterate cubes, cells, lines, or objects"},
       {"SYS TIME", "SYS TIME|NOW|EPOCH — wall seconds → LAST_N/TIME"},

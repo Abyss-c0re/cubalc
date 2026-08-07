@@ -1,0 +1,127 @@
+# EACH LINE OF obj field — walk bag-in-field without GETF first
+# Usability: METHOD/THIS work queues without GETF + EACH LINE glue
+
+HOLD_FLASH 1
+
+CLASS Q
+  FIELD work "alpha\nbeta\ngamma"
+  FIELD empty ""
+  FIELD code 3
+  METHOD init
+  END
+  METHOD count
+    LET n = 0
+    EACH LINE AS x OF THIS work
+      LET n = n + 1
+    END
+  END
+END
+
+NEW Q q
+
+# OF obj field
+LET n = 0
+LET joined = ""
+EACH LINE AS name OF q work
+  LET n = n + 1
+  IF n == 1 THEN
+    LET joined = name
+  ELSE
+    SYS CAT joined ","
+    LET joined = LAST
+    SYS CAT joined name
+    LET joined = LAST
+  END
+  ASSERT LINE_N == n
+  ASSERT IT == n - 1
+END
+ASSERT n == 3
+ASSERT EACH_N == 3
+ASSERT LAST_N == 3
+SYS EQS joined "alpha,beta,gamma"
+ASSERT LAST_N == 1
+
+# field unchanged by walk
+GETF q work
+SYS EQS LAST "alpha\nbeta\ngamma"
+ASSERT LAST_N == 1
+
+# IN synonym for OF with obj field
+LET c = 0
+EACH LINE IN q work
+  LET c = c + 1
+END
+ASSERT c == 3
+ASSERT EACH_N == 3
+
+# THIS in METHOD
+SETF q work "a\nb"
+SEND q count
+# n is local to method body scope? check EACH_N after SEND
+ASSERT EACH_N == 2
+
+# empty field → zero iterations
+EACH LINE AS z OF q empty
+  ASSERT 0 == 1
+END
+ASSERT EACH_N == 0
+
+# num field promote → one line
+LET nc = 0
+EACH LINE AS t OF q code
+  LET nc = nc + 1
+  SYS EQS t "3"
+  ASSERT LAST_N == 1
+END
+ASSERT nc == 1
+ASSERT EACH_N == 1
+
+# still supports plain string IN (regression)
+LET ns = 0
+EACH LINE AS s IN "x\ny"
+  LET ns = ns + 1
+END
+ASSERT ns == 2
+ASSERT EACH_N == 2
+
+# string var bag still works
+LET bag = "p\nq\nr"
+LET np = 0
+EACH LINE AS w IN bag
+  LET np = np + 1
+END
+ASSERT np == 3
+
+# BREAK on field walk
+LET b = 0
+SETF q work "1\n2\n3\n4"
+EACH LINE AS w OF q work
+  LET b = b + 1
+  IF b == 2 THEN
+    BREAK
+  END
+END
+ASSERT b == 2
+ASSERT EACH_N == 2
+
+# FROM synonym
+LET f = 0
+SETF q work "m\nn"
+EACH LINE FROM q work
+  LET f = f + 1
+END
+ASSERT f == 2
+
+# dynamic field name via string
+SETF q work "u\nv"
+EACH LINE AS item OF q "work"
+  ASSERT LINE_N >= 1
+END
+ASSERT EACH_N == 2
+
+# HELP
+HELP EACH
+SYS HAS LAST "EACH"
+ASSERT LAST_N == 1
+
+PRINT "each_line_of_field ok"

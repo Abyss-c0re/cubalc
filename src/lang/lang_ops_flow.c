@@ -17964,9 +17964,10 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
     }
     if (is_line){
-      /* EACH LINE [AS name] [IN|OF|FROM str] ... END
+      /* EACH LINE [AS name] [IN|OF|FROM str|obj field] ... END
        * Binds each newline field to name (default LINE); IT=0-based, LINE_N=1-based.
        * Source defaults to LAST/last_str — chain after SYS LIST / SYS GREP.
+       * OF obj field: walk bag-in-field without GETF first (METHOD/THIS).
        * Snapshot source before loop so body may clobber LAST. */
       char lname[48];
       char src[CUBALC_HOST_STR_MAX];
@@ -17984,9 +17985,56 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
       src[0] = 0;
       if (kw(&L->cur,"IN")||kw(&L->cur,"OF")||kw(&L->cur,"FROM")||kw(&L->cur,"OVER")){
+        Lex save;
+        char oname[48], fname[48];
+        int got_field = 0;
         lex_next(L);
-        if (resolve_str_arg(vm, L, src, sizeof src) != 0)
-          snprintf(src, sizeof src, "%s", vm->last_str);
+        /* Try OF obj field / IN obj field when first name is a live object. */
+        save = *L;
+        oname[0] = 0;
+        fname[0] = 0;
+        if (oop_resolve_obj_name(vm, L, oname, sizeof oname) == 0 && oname[0]) {
+          ObjInst *ob = oop_find_obj(vm, oname);
+          if (ob && (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+              !oop_stmt_kw(L) &&
+              !kw(&L->cur, "END") && !kw(&L->cur, "ASSERT") &&
+              !kw(&L->cur, "LET") && !kw(&L->cur, "PRINT") &&
+              !kw(&L->cur, "SYS") && !kw(&L->cur, "IF") &&
+              !kw(&L->cur, "EACH") && !kw(&L->cur, "FOR")) {
+            ClassDef *cd;
+            int fi;
+            if (L->cur.kind == TK_STR) {
+              snprintf(fname, sizeof fname, "%s", L->cur.text);
+              lex_next(L);
+            } else {
+              char id[48];
+              Var *vv;
+              snprintf(id, sizeof id, "%s", L->cur.text);
+              lex_next(L);
+              vv = var_get(vm, id, 0);
+              if (vv && vv->is_str && vv->sval[0])
+                snprintf(fname, sizeof fname, "%s", vv->sval);
+              else
+                snprintf(fname, sizeof fname, "%s", id);
+            }
+            if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+              cd = &vm->classes[ob->class_idx];
+              fi = oop_field_idx(cd, fname);
+              if (fi >= 0) {
+                if (ob->fis_str[fi])
+                  snprintf(src, sizeof src, "%s", ob->fstr[fi]);
+                else
+                  snprintf(src, sizeof src, "%ld", ob->fnum[fi]);
+                got_field = 1;
+              }
+            }
+          }
+        }
+        if (!got_field) {
+          *L = save;
+          if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+            snprintf(src, sizeof src, "%s", vm->last_str);
+        }
       } else {
         /* Prefer last_str (full host buffer after LIST/GREP); fallback LAST var. */
         if (vm->last_str[0])
