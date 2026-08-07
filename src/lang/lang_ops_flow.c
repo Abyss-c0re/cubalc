@@ -14446,6 +14446,248 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SORTBAGF|SORTLINESF|BAGSORTF|SORTF obj field — lex-sort newline bag in field (mutate).
+   * UNIQBAGF|DEDUPBAGF|ADJUNIQF obj field — drop adjacent duplicates (like SYS UNIQ).
+   * UNIQUEBAGF|DEDUPALLF|UALLF obj field — first-seen full unique (order-preserving).
+   * TRYSORTBAGF|SORTBAGF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * LAST = bag after; LAST_N/SORTBAGF_N = field count. Cap 48 lines × 128.
+   * Not fleet UNIQUF/DISTINCTF/UNIQF (unique field *values* across objects).
+   * Usability: worklist hygiene after PUSHF/GREPF without GETF+SYS SORT/UNIQ+SETF
+   * (METHOD/THIS). */
+  if (kw(&L->cur, "SORTBAGF") || kw(&L->cur, "SORTLINESF") ||
+      kw(&L->cur, "BAGSORTF") || kw(&L->cur, "LINESORTF") ||
+      kw(&L->cur, "SORTF") ||
+      kw(&L->cur, "UNIQBAGF") || kw(&L->cur, "DEDUPBAGF") ||
+      kw(&L->cur, "ADJUNIQF") || kw(&L->cur, "UNIQADJF") ||
+      kw(&L->cur, "ADJACENTUNIQF") ||
+      kw(&L->cur, "UNIQUEBAGF") || kw(&L->cur, "DEDUPALLF") ||
+      kw(&L->cur, "UALLF") || kw(&L->cur, "BAGUNIQUEF") ||
+      kw(&L->cur, "TRYSORTBAGF") || kw(&L->cur, "SORTBAGFSOFT") ||
+      kw(&L->cur, "SOFTSORTBAGF") || kw(&L->cur, "TRYUNIQBAGF") ||
+      kw(&L->cur, "TRYUNIQUEBAGF") || kw(&L->cur, "TRYSORTF")) {
+    char oname[48], fname[48], op[24], hay[256], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=sort, 1=adj uniq, 2=distinct */
+    enum { SB_MAX = 48, SB_FLEN = 128 };
+    char fields[SB_MAX][SB_FLEN];
+    int order[SB_MAX];
+    int n = 0, i;
+    long kept = 0;
+    const char *p, *start;
+    size_t olen = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "UNIQBAGF") == 0 || strcmp(op, "DEDUPBAGF") == 0 ||
+        strcmp(op, "ADJUNIQF") == 0 || strcmp(op, "UNIQADJF") == 0 ||
+        strcmp(op, "ADJACENTUNIQF") == 0 || strcmp(op, "TRYUNIQBAGF") == 0)
+      mode = 1;
+    else if (strcmp(op, "UNIQUEBAGF") == 0 || strcmp(op, "DEDUPALLF") == 0 ||
+             strcmp(op, "UALLF") == 0 || strcmp(op, "BAGUNIQUEF") == 0 ||
+             strcmp(op, "TRYUNIQUEBAGF") == 0)
+      mode = 2;
+    else
+      mode = 0;
+    if (strcmp(op, "TRYSORTBAGF") == 0 || strcmp(op, "SORTBAGFSOFT") == 0 ||
+        strcmp(op, "SOFTSORTBAGF") == 0 || strcmp(op, "TRYUNIQBAGF") == 0 ||
+        strcmp(op, "TRYUNIQUEBAGF") == 0 || strcmp(op, "TRYSORTF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    {
+      const char *usage =
+          (mode == 1) ? "UNIQBAGF object field"
+        : (mode == 2) ? "UNIQUEBAGF object field"
+                      : "SORTBAGF object field";
+      if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+        fail(vm, usage); return -1;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        char id[48];
+        Var *vv;
+        snprintf(id, sizeof id, "%s", L->cur.text);
+        lex_next(L);
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", id);
+      } else {
+        fail(vm, mode == 1 ? "UNIQBAGF field"
+             : mode == 2 ? "UNIQUEBAGF field" : "SORTBAGF field");
+        return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag =
+          (mode == 1) ? "UNIQBAGF" : (mode == 2) ? "UNIQUEBAGF" : "SORTBAGF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SORTBAGF_N", 0);
+      var_set_num(vm, "UNIQBAGF_N", 0);
+      var_set_num(vm, "UNIQUEBAGF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag =
+          (mode == 1) ? "UNIQBAGF" : (mode == 2) ? "UNIQUEBAGF" : "SORTBAGF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SORTBAGF_N", 0);
+      var_set_num(vm, "UNIQBAGF_N", 0);
+      var_set_num(vm, "UNIQUEBAGF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    n = 0;
+    if (hay[0]) {
+      p = hay;
+      while (*p && n < SB_MAX) {
+        start = p;
+        while (*p && *p != '\n') p++;
+        {
+          size_t flen = (size_t)(p - start);
+          if (flen >= SB_FLEN) flen = SB_FLEN - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          order[n] = n;
+          n++;
+        }
+        if (*p == '\n') p++;
+      }
+    }
+    out[0] = 0;
+    olen = 0;
+    kept = 0;
+    if (mode == 0 && n > 1) {
+      for (i = 1; i < n; i++) {
+        int key = order[i], j = i - 1;
+        while (j >= 0 && strcmp(fields[order[j]], fields[key]) > 0) {
+          order[j + 1] = order[j];
+          j--;
+        }
+        order[j + 1] = key;
+      }
+    }
+    if (mode == 2) {
+      /* first-seen distinct */
+      for (i = 0; i < n; i++) {
+        int seen = 0, j;
+        for (j = 0; j < i && !seen; j++) {
+          if (strcmp(fields[i], fields[j]) == 0) seen = 1;
+        }
+        if (seen) continue;
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[i]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[i], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[i], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+    } else {
+      /* sort (mode 0) or adjacent uniq (mode 1, walk original order) */
+      for (i = 0; i < n; i++) {
+        int idx = (mode == 0) ? order[i] : i;
+        if (mode == 1 && i > 0 && strcmp(fields[i], fields[i - 1]) == 0)
+          continue;
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+    }
+    out[olen] = 0;
+    {
+      size_t cap = sizeof ob->fstr[fi];
+      if (olen >= cap) {
+        memcpy(ob->fstr[fi], out, cap - 1);
+        ob->fstr[fi][cap - 1] = 0;
+      } else {
+        memcpy(ob->fstr[fi], out, olen + 1);
+      }
+    }
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", ob->fstr[fi]);
+    var_set_str(vm, mode == 1 ? "UNIQBAGF" : mode == 2 ? "UNIQUEBAGF" : "SORTBAGF",
+                ob->fstr[fi]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+    vm->last_n = kept;
+    var_set_num(vm, "LAST_N", kept);
+    var_set_num(vm, "SORTBAGF_N", kept);
+    var_set_num(vm, "SORTF_N", kept);
+    var_set_num(vm, "UNIQBAGF_N", kept);
+    var_set_num(vm, "UNIQUEBAGF_N", kept);
+    var_set_num(vm, "DEDUPALLF_N", kept);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

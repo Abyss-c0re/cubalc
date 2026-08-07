@@ -1,0 +1,150 @@
+# SORTBAGF / UNIQBAGF / UNIQUEBAGF — bag sort/dedupe on object fields
+# Usability: worklist hygiene without GETF+SYS SORT/UNIQ+SETF
+# Not fleet UNIQUF/DISTINCTF/UNIQF (unique field values across objects)
+
+HOLD_FLASH 1
+
+CLASS Bag
+  FIELD work "c\na\nb\na"
+  FIELD code 2
+  METHOD init
+  END
+  METHOD tidy
+    SORTBAGF THIS work
+  END
+END
+
+NEW Bag b
+
+# lex sort
+SORTBAGF b work
+ASSERT OK == 1
+ASSERT SORTBAGF_N == 4
+ASSERT LAST_N == 4
+SYS EQS LAST "a\na\nb\nc"
+ASSERT LAST_N == 1
+GETF b work
+SYS EQS LAST "a\na\nb\nc"
+ASSERT LAST_N == 1
+SYS EQS FIELD "work"
+ASSERT LAST_N == 1
+
+# adjacent uniq after sort → full unique
+UNIQBAGF b work
+ASSERT UNIQBAGF_N == 3
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+GETF b work
+SYS EQS LAST "a\nb\nc"
+ASSERT LAST_N == 1
+
+# UNIQUEBAGF first-seen order (no sort)
+SETF b work "z\na\nz\nb\na"
+UNIQUEBAGF b work
+ASSERT UNIQUEBAGF_N == 3
+SYS EQS LAST "z\na\nb"
+ASSERT LAST_N == 1
+GETF b work
+SYS EQS LAST "z\na\nb"
+ASSERT LAST_N == 1
+
+# adjacent uniq without sort keeps non-adjacent dups
+SETF b work "a\nb\na\nb"
+UNIQBAGF b work
+ASSERT UNIQBAGF_N == 4
+SYS EQS LAST "a\nb\na\nb"
+ASSERT LAST_N == 1
+
+# SORTF alias
+SETF b work "m\nk\nl"
+SORTF b work
+SYS EQS LAST "k\nl\nm"
+ASSERT LAST_N == 1
+
+# other aliases
+SETF b work "y\nx"
+SORTLINESF b work
+SYS EQS LAST "x\ny"
+ASSERT LAST_N == 1
+SETF b work "2\n1"
+BAGSORTF b work
+SYS EQS LAST "1\n2"
+ASSERT LAST_N == 1
+SETF b work "a\na\nb"
+DEDUPBAGF b work
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+SETF b work "q\nr\nq"
+UNIQUEBAGF b work
+SYS EQS LAST "q\nr"
+ASSERT LAST_N == 1
+SETF b work "i\nj\ni"
+DEDUPALLF b work
+SYS EQS LAST "i\nj"
+ASSERT LAST_N == 1
+
+# empty bag
+SETF b work ""
+SORTBAGF b work
+ASSERT SORTBAGF_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# single line
+SETF b work "solo"
+SORTBAGF b work
+ASSERT SORTBAGF_N == 1
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+
+# num promote
+SORTBAGF b code
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+# METHOD / THIS
+SETF b work "c\na"
+SEND b tidy
+GETF b work
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYSORTBAGF nosuch work
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+SORTBAGF SOFT b nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+TRYUNIQBAGF nosuch work
+ASSERT OK == 0
+TRYUNIQUEBAGF nosuch work
+ASSERT OK == 0
+
+# recover
+SETF b work "b\na"
+SORTBAGF b work
+ASSERT OK == 1
+SYS EQS LAST "a\nb"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF b work "d\nc"
+SORTBAGF b "work"
+SYS EQS LAST "c\nd"
+ASSERT LAST_N == 1
+
+# HELP
+HELP SORTBAGF
+SYS HAS LAST "SORTBAGF"
+ASSERT LAST_N == 1
+HELP UNIQBAGF
+SYS HAS LAST "UNIQBAGF"
+ASSERT LAST_N == 1
+HELP UNIQUEBAGF
+SYS HAS LAST "UNIQUEBAGF"
+ASSERT LAST_N == 1
+
+PRINT "oop_sortbagf ok"

@@ -449,6 +449,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 419. ~~**`LINEF` / `LINENOF`**~~ **done** (Nth newline bag line peel into field · 0-based LINEF / 1-based LINENOF · no GETF+SYS NTH+SETF · METHOD/THIS · pairs SPLITF/WORDSF).
 420. ~~**`PUSHF` / `POPF` / `POPHEADF` / `UNSHIFTF`**~~ **done** (bag queue on field · LIFO/FIFO worklist without GETF+SYS PUSH/POP+SETF · METHOD/THIS · not string PREPENDF).
 421. ~~**`GREPF` / `GREPVF` / `GREPFI`**~~ **done** (filter bag lines in field by needle · invert/icase · no GETF+SYS GREP+SETF · METHOD/THIS · log triage).
+422. ~~**`SORTBAGF` / `UNIQBAGF` / `UNIQUEBAGF`**~~ **done** (lex sort + adjacent/full bag dedupe on field · worklist hygiene · not fleet UNIQUF/DISTINCTF · METHOD/THIS).
 
 ## Tick protocol
 
