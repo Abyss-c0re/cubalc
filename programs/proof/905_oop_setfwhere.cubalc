@@ -1,0 +1,100 @@
+# SETFWHERE — conditional field write on matching live objects
+# Usability: WHEREOBJ + SETF without EACH+GETF+IF+SETF glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 10 0
+# mark age=1 on cells with energy==10
+SETFWHERE Cell energy 10 age 1
+ASSERT OK == 1
+ASSERT SETFWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT SETFWHERE_SKIP == 0
+GETF a age
+ASSERT LAST_N == 1
+GETF b age
+ASSERT LAST_N == 0
+GETF c age
+ASSERT LAST_N == 1
+# energy unchanged
+GETF a energy
+ASSERT LAST_N == 10
+GETF b energy
+ASSERT LAST_N == 20
+
+# SET sugar + rewrite same field
+SETFWHERE Cell energy 10 SET energy 99
+ASSERT SETFWHERE_N == 2
+GETF a energy
+ASSERT LAST_N == 99
+GETF c energy
+ASSERT LAST_N == 99
+GETF b energy
+ASSERT LAST_N == 20
+
+# OF sugar
+SETFWHERE OF Cell energy 20 age 7
+ASSERT SETFWHERE_N == 1
+GETF b age
+ASSERT LAST_N == 7
+
+# aliases
+SETFWHERE Cell energy 99 age 3
+WHERESETF Cell energy 99 age 4
+ASSERT WHERESETF_N == 2
+GETF a age
+ASSERT LAST_N == 4
+PUTWHERE Cell energy 20 age 8
+ASSERT PUTWHERE_N == 1
+GETF b age
+ASSERT LAST_N == 8
+
+# string status rewrite
+CLASS Ticket
+  FIELD status "new"
+  FIELD reviewed 0
+  METHOD init s
+    SETF THIS status s
+    SETF THIS reviewed 0
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "closed"
+NEW Ticket t3 "open"
+SETFWHERE Ticket status "open" reviewed 1
+ASSERT SETFWHERE_N == 2
+GETF t1 reviewed
+ASSERT LAST_N == 1
+GETF t2 reviewed
+ASSERT LAST_N == 0
+GETF t3 reviewed
+ASSERT LAST_N == 1
+
+# same-field status rename
+SETFWHERE Ticket status "open" status "done"
+ASSERT SETFWHERE_N == 2
+GETF t1 status
+SYS EQS LAST "done"
+ASSERT LAST_N == 1
+GETF t2 status
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+GETF t3 status
+SYS EQS LAST "done"
+ASSERT LAST_N == 1
+
+# no match → 0
+SETFWHERE Ticket status "missing" reviewed 9
+ASSERT SETFWHERE_N == 0
+
+# missing set field soft skip
+SETFWHERE Ticket status "closed" energy 1
+ASSERT SETFWHERE_N == 0
+ASSERT SETFWHERE_SKIP >= 1
+
+PRINT "proof905_oop_setfwhere" 1
+ASSERT OK == 1
