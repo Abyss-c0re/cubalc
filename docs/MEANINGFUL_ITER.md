@@ -346,6 +346,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 316. ~~**`SYS MS2SEC` / `SEC2MS`**~~ **done** (ms↔seconds bridge · PARSEMS→DEADLINE / TTL→SLEEP).
 317. ~~**`SYS PARSEMS` compound**~~ **done** (1h30m/2m15s multi-unit · HUMANMS round-trip).
 318. ~~**`SYS SLEEP` duration string**~~ **done** (`SLEEP "1s"`/`"250ms"`/`"1s500ms"` · no PARSEMS glue).
+319. ~~**`SYS WAITFILE` duration timeout**~~ **done** (`WAITFILE path "2s"` · WAITGONE/WAITMATCH/WAITCHANGED · no PARSEMS glue).
 
 ## Tick protocol
 

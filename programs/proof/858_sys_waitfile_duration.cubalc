@@ -1,0 +1,71 @@
+# SYS WAITFILE timeout human duration — PARSEMS string without glue
+# Usability: WAITFILE path "120ms" / "0s100ms" / str-var · dual of SLEEP duration
+
+HOLD_FLASH 1
+
+SYS TMP
+LET td = LAST
+SYS JOIN td "waitfile_dur_mi"
+LET fix = LAST
+SYS MKDIR fix
+SYS JOIN fix "flag.ready"
+LET f = LAST
+SYS RM f
+
+# missing + short duration timeout → soft fail
+SYS WAITFILE f "100ms"
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+ASSERT LAST_N == 0
+ASSERT WAITFILE_MS >= 80
+
+# compound / space form
+SYS WAITFILE f "0s 80ms"
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+
+# string var timeout
+LET TO = "90ms"
+SYS WAITFILE f TO
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+
+# create then duration wait hits immediately
+SYS TOUCH f
+SYS WAITFILE f "500ms"
+ASSERT OK == 1
+ASSERT WAITFILE_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST f
+ASSERT LAST_N == 1
+
+# alias with duration
+SYS WAITPATH f "200ms"
+ASSERT WAITFILE_HIT == 1
+ASSERT OK == 1
+
+SYS POLLFILE f "200ms"
+ASSERT WAITFILE_HIT == 1
+
+# numeric ms path still works
+SYS WAITFILE f 300
+ASSERT OK == 1
+ASSERT WAITFILE_HIT == 1
+
+# WAITGONE duration — present file times out
+SYS WAITGONE f "80ms"
+ASSERT OK == 0
+ASSERT WAITGONE_HIT == 0
+
+# remove then gone with duration
+SYS RM f
+SYS WAITGONE f "200ms"
+ASSERT OK == 1
+ASSERT WAITGONE_HIT == 1
+
+# bad duration soft-fail
+SYS WAITFILE f "nope"
+ASSERT OK == 0
+ASSERT WAITFILE_HIT == 0
+
+PRINT "sys_waitfile_duration ok"

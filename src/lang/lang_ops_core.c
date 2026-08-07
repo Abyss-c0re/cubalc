@@ -551,6 +551,60 @@ static int cubalc_parse_duration_ms(const char *src, long *ms_out, int *segs_out
   return 0;
 }
 
+/* Optional timeout after path (WAITFILE/WAITGONE/WAITMATCH/…):
+ * number expr = ms; string / LAST / str-var = PARSEMS duration ("2s","250ms").
+ * Leaves *timeout_ms unchanged when no arg present.
+ * Returns 0 ok; -1 on bad duration (*err_out set). Optional MS/TIMEOUT keyword. */
+static int cubalc_parse_optional_timeout_ms(VM *vm, Lex *L, long *timeout_ms,
+                                            const char **err_out) {
+  char src[256];
+  int from_dur = 0;
+  long t = 0;
+  const char *derr = NULL;
+  if (err_out) *err_out = NULL;
+  if (!timeout_ms || !L) return -1;
+  if (kw(&L->cur, "MS") || kw(&L->cur, "MILLIS") || kw(&L->cur, "MILLISECONDS") ||
+      kw(&L->cur, "TIMEOUT") || kw(&L->cur, "FOR"))
+    lex_next(L);
+  src[0] = 0;
+  if (L->cur.kind == TK_STR) {
+    if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+      return 0;
+    from_dur = 1;
+  } else if (L->cur.kind == TK_IDENT) {
+    if (strcmp(L->cur.text, "LAST") == 0) {
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        return 0;
+      from_dur = 1;
+    } else {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+          return 0;
+        from_dur = 1;
+      } else {
+        t = parse_expr(vm, L);
+      }
+    }
+  } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN) {
+    t = parse_expr(vm, L);
+  } else {
+    return 0; /* no timeout argument */
+  }
+  if (from_dur) {
+    if (cubalc_parse_duration_ms(src, &t, NULL, &derr) != 0) {
+      if (err_out) *err_out = derr ? derr : "timeout: bad duration";
+      return -1;
+    }
+  }
+  if (kw(&L->cur, "MS") || kw(&L->cur, "MILLIS") || kw(&L->cur, "MILLISECONDS") ||
+      kw(&L->cur, "TIMEOUT"))
+    lex_next(L);
+  *timeout_ms = t;
+  return 0;
+}
+
 /* Recursive find-style walk: list full paths whose basename matches pat.
  * Always recurses into directories (even if name does not match). Depth cap 40. */
 static void cubalc_sys_walk_rec(const char *dir, const char *pat,
@@ -4241,12 +4295,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
-    /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms]
+    /* SYS WAITFILE|WAITPATH|POLLFILE path [timeout_ms|"duration"]
      * — poll until path exists (agent plate/peer handoff).
      * Default timeout 30000 ms; cap 120s. Poll every 50 ms.
+     * Timeout: number ms, or PARSEMS string ("2s","250ms","1s500ms").
      * LAST = path; LAST_N / WAITFILE_HIT = 1 hit | 0 timeout;
-     * WAITFILE_MS = elapsed. Soft timeout / empty path → OK=0.
-     * Usability: wait for peer/flag/plate without EXIST+SLEEP loop. */
+     * WAITFILE_MS = elapsed. Soft timeout / empty path / bad duration → OK=0.
+     * Usability: peer/flag wait without EXIST+SLEEP or PARSEMS glue. */
     if (kw(&L->cur,"WAITFILE") || kw(&L->cur,"WAITPATH") ||
         kw(&L->cur,"POLLFILE") || kw(&L->cur,"AWAITFILE") ||
         kw(&L->cur,"WAITFORFILE") || kw(&L->cur,"FILEWAIT") ||
@@ -4254,25 +4309,27 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"UNTILFILE") || kw(&L->cur,"WAITON")){
       char path[512], a[CUBALC_HOST_STR_MAX];
       long timeout_ms = 30000, elapsed = 0, hit = 0;
+      const char *toerr = NULL;
       struct timespec t0, t1, sl;
       lex_next(L);
       path[0] = 0; a[0] = 0;
       if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
-        fail(vm, "SYS WAITFILE path [timeout_ms]");
+        fail(vm, "SYS WAITFILE path [timeout_ms|duration]");
         return -1;
       }
       snprintf(path, sizeof path, "%s", a);
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-          L->cur.kind == TK_IDENT) {
-        long t = parse_expr(vm, L);
-        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
-          lex_next(L);
-        timeout_ms = t;
-      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
-        lex_next(L);
-        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-            L->cur.kind == TK_IDENT)
-          timeout_ms = parse_expr(vm, L);
+      if (cubalc_parse_optional_timeout_ms(vm, L, &timeout_ms, &toerr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITFILE_HIT", 0);
+        var_set_num(vm, "WAITFILE_N", 0);
+        var_set_num(vm, "WAITFILE_MS", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", toerr ? toerr : "WAITFILE: bad timeout");
+        var_set_str(vm, "ERR", toerr ? toerr : "WAITFILE: bad timeout");
+        bump(vm); return 1;
       }
       if (timeout_ms < 0) timeout_ms = 0;
       if (timeout_ms > 120000) timeout_ms = 120000;
@@ -4340,13 +4397,13 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_str(vm, "ERR", "WAITFILE: timeout");
       bump(vm); return 1;
     }
-    /* SYS WAITGONE|WAITMISSING|WAITDELETE path [timeout_ms]
+    /* SYS WAITGONE|WAITMISSING|WAITDELETE path [timeout_ms|"duration"]
      * — poll until path does NOT exist (dual of WAITFILE).
      * Default timeout 30000 ms; cap 120s. Poll every 50 ms.
+     * Timeout: number ms or PARSEMS string (same as WAITFILE).
      * LAST = path; LAST_N / WAITGONE_HIT = 1 gone | 0 timeout;
-     * WAITGONE_MS = elapsed. Soft timeout / empty path → OK=0.
-     * Already missing → immediate hit. Usability: wait for unlock,
-     * peer cleanup, or temp handoff removal without EXIST+SLEEP loop. */
+     * WAITGONE_MS = elapsed. Soft timeout / empty path / bad duration → OK=0.
+     * Already missing → immediate hit. Usability: unlock/cleanup handoff. */
     if (kw(&L->cur,"WAITGONE") || kw(&L->cur,"WAITMISSING") ||
         kw(&L->cur,"WAITDELETE") || kw(&L->cur,"WAITRM") ||
         kw(&L->cur,"POLLGONE") || kw(&L->cur,"AWAITGONE") ||
@@ -4355,25 +4412,27 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         kw(&L->cur,"POLLMISSING") || kw(&L->cur,"WAITCLEAR")){
       char path[512], a[CUBALC_HOST_STR_MAX];
       long timeout_ms = 30000, elapsed = 0, hit = 0;
+      const char *toerr = NULL;
       struct timespec t0, t1, sl;
       lex_next(L);
       path[0] = 0; a[0] = 0;
       if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
-        fail(vm, "SYS WAITGONE path [timeout_ms]");
+        fail(vm, "SYS WAITGONE path [timeout_ms|duration]");
         return -1;
       }
       snprintf(path, sizeof path, "%s", a);
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-          L->cur.kind == TK_IDENT) {
-        long t = parse_expr(vm, L);
-        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
-          lex_next(L);
-        timeout_ms = t;
-      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
-        lex_next(L);
-        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-            L->cur.kind == TK_IDENT)
-          timeout_ms = parse_expr(vm, L);
+      if (cubalc_parse_optional_timeout_ms(vm, L, &timeout_ms, &toerr) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WAITGONE_HIT", 0);
+        var_set_num(vm, "WAITGONE_N", 0);
+        var_set_num(vm, "WAITGONE_MS", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", toerr ? toerr : "WAITGONE: bad timeout");
+        var_set_str(vm, "ERR", toerr ? toerr : "WAITGONE: bad timeout");
+        bump(vm); return 1;
       }
       if (timeout_ms < 0) timeout_ms = 0;
       if (timeout_ms > 120000) timeout_ms = 120000;
@@ -4652,17 +4711,24 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           base_exists = 1;
         }
       }
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-          L->cur.kind == TK_IDENT) {
-        long t = parse_expr(vm, L);
-        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
-          lex_next(L);
-        timeout_ms = t;
-      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
-        lex_next(L);
-        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-            L->cur.kind == TK_IDENT)
-          timeout_ms = parse_expr(vm, L);
+      {
+        const char *toerr = NULL;
+        if (cubalc_parse_optional_timeout_ms(vm, L, &timeout_ms, &toerr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "WAITCHANGED_HIT", 0);
+          var_set_num(vm, "WAITCHANGED_N", 0);
+          var_set_num(vm, "WAITCHANGED_MS", 0);
+          var_set_num(vm, "WAITCHANGED_SIZE", 0);
+          var_set_num(vm, "WAITCHANGED_MTIME", 0);
+          var_set_num(vm, "WAITCHANGED_FROM", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", toerr ? toerr : "WAITCHANGED: bad timeout");
+          var_set_str(vm, "ERR", toerr ? toerr : "WAITCHANGED: bad timeout");
+          bump(vm); return 1;
+        }
       }
       if (timeout_ms < 0) timeout_ms = 0;
       if (timeout_ms > 120000) timeout_ms = 120000;
@@ -4817,17 +4883,21 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         }
       }
       nlen = strlen(needle);
-      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-          L->cur.kind == TK_IDENT) {
-        long t = parse_expr(vm, L);
-        if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
-          lex_next(L);
-        timeout_ms = t;
-      } else if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS")) {
-        lex_next(L);
-        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
-            L->cur.kind == TK_IDENT)
-          timeout_ms = parse_expr(vm, L);
+      {
+        const char *toerr = NULL;
+        if (cubalc_parse_optional_timeout_ms(vm, L, &timeout_ms, &toerr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "WAITMATCH_HIT", 0);
+          var_set_num(vm, "WAITMATCH_N", 0);
+          var_set_num(vm, "WAITMATCH_MS", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", toerr ? toerr : "WAITMATCH: bad timeout");
+          var_set_str(vm, "ERR", toerr ? toerr : "WAITMATCH: bad timeout");
+          bump(vm); return 1;
+        }
       }
       if (timeout_ms < 0) timeout_ms = 0;
       if (timeout_ms > 120000) timeout_ms = 120000;
