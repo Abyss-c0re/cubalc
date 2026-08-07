@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 382,
-  "version": "1.15.409-usability",
-  "item": "CUTF/COLUMNF Nth column peel into field",
-  "item_id": 418,
-  "title": "CUTF|COLUMNF — Nth sep column peel into field",
-  "commit": "2f73313f5f2a6763e6011ef2d2070bf72a99eaac",
-  "summary": "CSV/path column without GETF+SYS CUT+SETF. Soft miss. proof 959 38/38.",
+  "iter": 383,
+  "version": "1.15.410-usability",
+  "item": "LINEF/LINENOF Nth bag line peel into field",
+  "item_id": 419,
+  "title": "LINEF|LINENOF — Nth newline bag line peel into field",
+  "commit": "141a22af6183fad1b890211d5300af13ffd6b8f1",
+  "summary": "Bag line peel without GETF+SYS NTH+SETF. Soft miss. proof 960 45/45.",
   "proofs": [
-    "959_oop_cutf",
-    "asserts 38/38",
-    "958 still green"
+    "960_oop_linef",
+    "asserts 45/45",
+    "959 still green"
   ],
-  "when": "2026-08-07T17:35:00Z",
+  "when": "2026-08-07T17:46:18Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2f73313f5f2a6763e6011ef2d2070bf72a99eaac",
-  "note": "CUTF_HIT/CUTF_I; 0-based CUTF / 1-based COLUMNF"
+  "sha": "141a22af6183fad1b890211d5300af13ffd6b8f1",
+  "note": "LINEF_HIT/LINEF_I; 0-based LINEF / 1-based LINENOF|ROWF"
 }
