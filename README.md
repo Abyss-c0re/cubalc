@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Version** | `1.14.0-p2p` |
+| **Version** | `1.15.316-usability (see CUBALC_LANG_VERSION)` |
 | **Paradigm** | COP/flow (place · plug · pulse · flow · compile) |
 | **Runtime** | Pure **C11** · multiplatform (Linux / macOS / Windows-MinGW) |
 | **Talk** | SMX2 / CBLC binary frames — **HTTP never required** |

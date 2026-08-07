@@ -33,7 +33,7 @@ Status legend: **DONE** · **PARTIAL** · **OPEN** · **ACTIVE** · **SUPERSEDED
 | A11 | Reusable functions; COP should remind OOP but more advanced; OOP first then COP | **DONE** | `FN` named formals; `CLASS/METHOD/NEW/SEND`; COP upgrade `ENTITY/SPAWN/TICK`; `50c38f7` |
 | A12 | Language shall be more advanced than C++ | **DONE** | Design: composition/PLUG, matrix SoT, TICK+FLOW; `docs/COP_ENGINE.md` |
 | A13 | Adapted for modern game engine; must allow the flow | **DONE** | `ENTITY/SPAWN/SCENE/TICK` + `FLOW` law; proof `863_cop_entity_tick` |
-| A14 | `/deep-research` maturity of this language; what can be improved? | **ACTIVE** | Workflow `deep-research-10` (host-side) — results when complete |
+| A14 | `/deep-research` maturity of this language; what can be improved? | **DONE** | Workflow complete (Partial vs old 1.5 snapshot); corrected in `docs/MATURITY.md` |
 | A15 | Manifest all session requests including interrupted ones; check Grok Build history | **DONE** | This document |
 
 ---

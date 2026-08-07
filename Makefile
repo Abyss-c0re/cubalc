@@ -135,3 +135,8 @@ science: all
 
 universal-iter: all
 	@bash scripts/universal_iter.sh
+
+# Language proof plate (live curated suite)
+prove: all
+	./out/cubalc selftest > state/LANGUAGE_PROOF.json
+	@echo "wrote state/LANGUAGE_PROOF.json"
