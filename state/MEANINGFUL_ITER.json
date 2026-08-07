@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 354,
-  "version": "1.15.381-usability",
-  "item": "LISTFNS/HASFN FN catalog discovery",
-  "item_id": 390,
-  "title": "LISTFNS|HASFN \u2014 FN name bag + soft probe before CALL",
-  "commit": "57e396f6dd21b83bd2749012c586de57593081d2",
-  "summary": "FN catalog bag + HASFN soft 0|1. Completes FNINFO triad. proof 931 45/45.",
+  "iter": 355,
+  "version": "1.15.382-usability",
+  "item": "TRYCALL/CALL SOFT soft FN dispatch",
+  "item_id": 391,
+  "title": "TRYCALL|CALL SOFT \u2014 soft FN miss OK=0 sticky LAST_ERR",
+  "commit": "16abad95b2183c88cf48500f81f322f360c8fc50",
+  "summary": "Soft CALL for agents after HASFN. Twin of TRYSEND. proof 932 30/30.",
   "proofs": [
-    "931_fn_listfns_hasfn",
-    "asserts 45/45",
-    "930 still green"
+    "932_fn_trycall",
+    "asserts 30/30",
+    "931 still green"
   ],
-  "when": "2026-08-07T12:56:32Z",
+  "when": "2026-08-07T13:05:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "57e396f6dd21b83bd2749012c586de57593081d2",
-  "note": "pairs with FNINFO for agent CALL discovery"
+  "sha": "16abad95b2183c88cf48500f81f322f360c8fc50",
+  "note": "restored thrash then shipped; completes FN soft triad with HASFN/LISTFNS/FNINFO"
 }

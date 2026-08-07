@@ -11470,23 +11470,54 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (vm->trace) fprintf(vm->trace, "# FN %s params=%d len=%zu\n", fname, n_params, blen);
     bump(vm); return 1;
   }
+  /* CALL name [args] · TRYCALL|CALLSOFT|CALL SOFT — soft miss OK=0.
+   * Complements HASFN/FNINFO. Bare CALL still fatal on unknown FN.
+   * Usability: agent optional hooks after LISTFNS without fatal CALL. */
   if (kw(&L->cur,"CALL")||kw(&L->cur,"RUNFN")||kw(&L->cur,"DO")||
       kw(&L->cur,"CALLIF")||kw(&L->cur,"CALLNZ")||kw(&L->cur,"CALLZ")||
-      kw(&L->cur,"CALLWHEN")||kw(&L->cur,"CALLUNLESS")){
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+      kw(&L->cur,"CALLWHEN")||kw(&L->cur,"CALLUNLESS")||
+      kw(&L->cur,"TRYCALL")||kw(&L->cur,"CALLSOFT")||kw(&L->cur,"SOFTCALL")||
+      kw(&L->cur,"TRYFN")||kw(&L->cur,"TRYRUNFN")||
+      kw(&L->cur,"TRYCALLFN")||kw(&L->cur,"CALLTRY")){
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
     char fname[48];
     int mode = 0;
     long cond = 1;
     int do_call = 1;
+    int soft = 0;
     FnDef *fn=NULL;
     int i;
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    if (strcmp(op,"TRYCALL")==0 || strcmp(op,"CALLSOFT")==0 ||
+        strcmp(op,"SOFTCALL")==0 || strcmp(op,"TRYFN")==0 ||
+        strcmp(op,"TRYRUNFN")==0 || strcmp(op,"TRYCALLFN")==0 ||
+        strcmp(op,"CALLTRY")==0)
+      soft = 1;
     lex_next(L);
+    /* CALL SOFT|TRY|OPT name — two-token soft form (like SEND SOFT) */
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
     if (strcmp(op,"CALLIF")==0 || strcmp(op,"CALLNZ")==0 || strcmp(op,"CALLWHEN")==0) mode = 1;
     else if (strcmp(op,"CALLZ")==0 || strcmp(op,"CALLUNLESS")==0) mode = 2;
     if (mode) cond = parse_expr(vm, L);
-    if (L->cur.kind!=TK_IDENT){ fail(vm,"CALL name"); return -1; }
-    snprintf(fname,sizeof fname,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, soft ? "TRYCALL name" : "CALL name"); return -1;
+    }
     if (mode == 1) do_call = (cond != 0);
     else if (mode == 2) do_call = (cond == 0);
     if (!do_call){
@@ -11498,35 +11529,75 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         ai++;
       }
       var_set_num(vm,"CALLED",0);
+      var_set_num(vm,"TRYCALL_N",0);
       var_set_num(vm,"OK",1);
       bump(vm); return 1;
     }
-    /* CALL obj method — OOP sugar when first name is a live object */
+    /* CALL obj method — OOP sugar when first name is a live object.
+     * Peek method name without consuming unless method exists (so FN args stay). */
     {
       ObjInst *ob = oop_find_obj(vm, fname);
-      if (ob && L->cur.kind == TK_IDENT) {
+      if (ob && (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR)) {
         ClassDef *cd = &vm->classes[ob->class_idx];
-        MethodDef *md = oop_find_method(cd, L->cur.text);
+        char mname[48];
+        MethodDef *md;
+        if (L->cur.kind == TK_STR)
+          snprintf(mname, sizeof mname, "%s", L->cur.text);
+        else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(mname, sizeof mname, "%s", vv->sval);
+          else
+            snprintf(mname, sizeof mname, "%s", L->cur.text);
+        }
+        md = oop_find_method(cd, mname);
         if (md) {
           lex_next(L);
           oop_bind_args(vm, L, md->params, md->n_params);
           if (oop_run_method(vm, ob, md) < 0) return -1;
+          var_set_num(vm, "CALLED", 1);
+          var_set_num(vm, "TRYCALL_N", 1);
           var_set_num(vm, "OK", 1);
           bump(vm);
           return 1;
         }
+        /* no method — fall through to FN lookup; leave token for args */
       }
     }
     for (i=0;i<vm->n_fns;i++) if (strcmp(vm->fns[i].name,fname)==0){ fn=&vm->fns[i]; break; }
-    if (!fn){ snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname); fail(vm,vm->err); return -1; }
+    if (!fn){
+      if (soft) {
+        while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
+               L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+               (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+          if (L->cur.kind == TK_STR) lex_next(L);
+          else (void)parse_expr(vm, L);
+        }
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "TRYCALL_N", 0);
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "CALL: unknown FN");
+        var_set_str(vm, "ERR", "CALL: unknown FN");
+        var_set_str(vm, "FN", fname);
+        bump(vm);
+        return 1;
+      }
+      snprintf(vm->err,sizeof vm->err,"CALL unknown FN %s", fname);
+      fail(vm,vm->err); return -1;
+    }
     oop_bind_args(vm, L, fn->params, fn->n_params);
     var_set_num(vm, "CALLED", 1);
+    var_set_num(vm, "TRYCALL_N", 1);
+    var_set_str(vm, "FN", fn->name);
     vm->return_fn = 0;
     {
       Lex fl; lex_init(&fl, fn->body, fn->len);
       if (exec_stmts_until(vm, &fl, "END", NULL)<0) return -1;
     }
     vm->return_fn = 0;
+    var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
   /* RET [expr] — early return from FN (digit-4 control flow)

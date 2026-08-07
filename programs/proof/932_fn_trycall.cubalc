@@ -1,0 +1,87 @@
+# TRYCALL / CALL SOFT — soft FN dispatch for agents
+# Usability: optional hooks after HASFN without fatal CALL (twin of TRYSEND)
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 42
+END
+
+# hard CALL still works
+CALL add 2 3
+ASSERT LAST_N == 5
+
+# soft hit
+TRYCALL add 10 20
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT TRYCALL_N == 1
+ASSERT LAST_N == 30
+
+# CALL SOFT two-token form
+CALL SOFT ping
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT LAST_N == 42
+
+# aliases
+CALLSOFT add 1 1
+ASSERT LAST_N == 2
+SOFTCALL ping
+ASSERT LAST_N == 42
+TRYFN add 7 8
+ASSERT LAST_N == 15
+
+# string name
+TRYCALL "add" 4 5
+ASSERT OK == 1
+ASSERT LAST_N == 9
+
+# dynamic name var
+LET f = "ping"
+TRYCALL f
+ASSERT OK == 1
+ASSERT CALLED == 1
+ASSERT LAST_N == 42
+
+# soft miss — no fatal
+TRYCALL nosuch 1 2 3
+ASSERT OK == 0
+ASSERT CALLED == 0
+ASSERT TRYCALL_N == 0
+SYS HAS LAST_ERR "unknown"
+ASSERT LAST_N == 1
+SYS EQS FN "nosuch"
+ASSERT LAST_N == 1
+
+# CALL SOFT miss
+CALL SOFT missing
+ASSERT OK == 0
+ASSERT CALLED == 0
+
+# after soft miss, hard CALL still works
+CALL add 100 1
+ASSERT LAST_N == 101
+
+# HASFN gate + TRYCALL
+HASFN add
+ASSERT HASFN_N == 1
+TRYCALL add 9 1
+ASSERT LAST_N == 10
+
+HASFN ghost
+ASSERT HASFN_N == 0
+TRYCALL ghost
+ASSERT OK == 0
+
+# HELP
+HELP TRYCALL
+ASSERT OK == 1
+SYS HAS LAST "TRYCALL"
+ASSERT LAST_N == 1
+
+NOTE "932_fn_trycall ok"
