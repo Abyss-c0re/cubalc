@@ -274,6 +274,6 @@
     "NTHPOS 0=action; first hop is 1; FLAGMAP LOOKUP green",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "pending",
+  "commit": "01f077f0ef49f0223a3e27d86f4db56a26297ec2",
   "ts": "2026-08-07T22:50:00Z"
 }
