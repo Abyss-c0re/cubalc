@@ -1,99 +1,105 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 120,
-  "program": "programs/realworld/shard_load_pick_board.cubalc",
-  "theme": "INCFALL/DECFALL + MAXOBJ/MINOBJ + SORTBYF shard load pick/rank + place/shed + bag journal",
-  "version": "1.15.337-usability",
+  "iter": 121,
+  "program": "programs/realworld/latency_slo_board.cubalc",
+  "theme": "SUMF/AVGF + WHEREGE/WHERELE/WHEREGT/WHERELT latency SLO gate + INCFALL drift + bag journal",
+  "version": "1.15.339-usability",
   "pass": true,
-  "prior_note": "iter 119 job_gc DELETEWHERE/SENDWHERE; this iter stresses INCFALL+MAXOBJ+SORTBYF (defe82d/3e34ce3/SORTBYF)",
+  "prior_note": "iter 120 shard_load MAXOBJ/SORTBYF; this iter stresses SUMF/AVGF + threshold WHERE (b0a319a/add085f)",
   "tests": [
     {
-      "name": "open_s0_s1_s2",
-      "cmd": "open loads 10/30/20",
+      "name": "open_probes",
+      "cmd": "open p0=40 p1=120 p2=80",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "hottest_coldest",
-      "cmd": "MAXOBJ s1/30; MINOBJ s0/10",
+      "name": "sumf_avgf",
+      "cmd": "SUMF 240; AVGF 80",
       "ok": true,
-      "note": "MAX/MIN"
+      "note": "SUMF/AVGF"
     },
     {
-      "name": "rank_desc",
-      "cmd": "SORTBYF DESC s1 s2 s0",
+      "name": "wherege_hot",
+      "cmd": "WHEREGE >=100 → p1",
       "ok": true,
-      "note": "SORTBYF"
+      "note": "WHEREGE"
     },
     {
-      "name": "tick_incfall",
-      "cmd": "INCFALL +5 N=3; harvest sum:75 avg:25",
+      "name": "wheregt_above",
+      "cmd": "WHEREGT >100 → p1",
       "ok": true,
-      "note": "INCFALL"
+      "note": "WHEREGT"
     },
     {
-      "name": "place_coldest",
-      "cmd": "MINOBJ + SEND bump \u2192 s0 load 16",
+      "name": "wherele_cold",
+      "cmd": "WHERELE <=80 → p0 p2",
       "ok": true,
-      "note": "place"
+      "note": "WHERELE"
     },
     {
-      "name": "shed_hottest",
-      "cmd": "MAXOBJ s1 load-1 \u2192 34",
+      "name": "wherelt_below",
+      "cmd": "WHERELT <50 → p0",
       "ok": true,
-      "note": "shed"
+      "note": "WHERELT"
     },
     {
-      "name": "cool_decfall",
-      "cmd": "DECFALL 2; sum:69 avg:23",
-      "ok": true,
-      "note": "DECFALL"
-    },
-    {
-      "name": "gate_admit_deny",
-      "cmd": "MAX<=50 admit; MAX=5 soft/REQUIRE rc2",
+      "name": "gate_hot_deny",
+      "cmd": "avg ok but hot>0 → deny; REQUIRE rc2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "tie_first_seen",
-      "cmd": "s0=s2=99 MAXOBJ \u2192 s0 first",
+      "name": "gate_admit_after_cool",
+      "cmd": "setlat p1=50; gate admit",
       "ok": true,
-      "note": "tie"
+      "note": "admit"
+    },
+    {
+      "name": "incfall_drift",
+      "cmd": "INCFALL +10 sum 200",
+      "ok": true,
+      "note": "INCFALL"
+    },
+    {
+      "name": "int_avg_trunc",
+      "cmd": "AVGF 10+20+21 → 17 not 17.0",
+      "ok": true,
+      "note": "int mean"
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
+      "cmd": "exact false friend; SETMATCH 2→1; pin",
       "ok": true,
       "note": "journal"
     },
     {
-      "name": "probe_soft_skip",
-      "cmd": "TRYSEND soft; INCFALL miss SKIP=3",
+      "name": "probe_empty_where",
+      "cmd": "soft TRYSEND; WHEREGE 999 empty 0",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "empty_hottest_tick",
-      "cmd": "hottest REQUIRE rc2; tick N=0; rank N=0",
+      "name": "empty_fleet",
+      "cmd": "SUMF/AVGF 0; hot N=0; gate admit empty",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE\u21922",
+      "cmd": "open xx soft/REQUIRE→2",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "num_require_softens",
-      "cmd": "REQUIRE=abc hottest empty soft",
+      "cmd": "REQUIRE=abc soft",
       "ok": true,
       "note": "NUM"
     },
     {
       "name": "write_no_nl",
-      "cmd": "cat -A dump/report last no NL",
+      "cmd": "cat -A dump last no NL",
       "ok": true,
       "note": "NL"
     },
@@ -101,60 +107,52 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "313/313 pass"
+      "note": "315/315 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|last",
-      "title": "GETF LAST clobbers object name in LAST \u2014 SETF LAST after GETF fails",
-      "detail": "After MAXOBJ/MINOBJ, GETF LAST load replaces LAST with field value so SETF LAST load no longer targets the object. Agents must SEND LAST meth before GETF, re-MAXOBJ, or EQS wall. Shed re-MAXOBJ workaround documented.",
-      "repro": "MAXOBJ; GETF LAST load; SETF LAST load x \u2192 wrong target"
+      "area": "oop|wherege",
+      "title": "No SUMF/AVGF on WHEREGE filtered subset",
+      "detail": "WHEREGE returns name bag only. Cannot SUMF lat_ms of hot probes without EACH+GETF or second pass. Agents gate on WHEREGE_N count + full-fleet AVGF separately.",
+      "repro": "WHEREGE lat 100; no SUMF WHEREGE bag"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|maxobj",
-      "title": "MAXOBJ/MINOBJ return first tie only \u2014 no multi-max bag",
-      "detail": "s0=s2=99 \u2192 hottest s0 only. Cannot list all ties without EACH. Ops shed may starve second max.",
-      "repro": "two shards load 99; MAXOBJ \u2192 first-seen"
+      "area": "oop|avgf",
+      "title": "AVGF is integer mean only — truncates remainder",
+      "detail": "10+20+21 → 17 not 17.0. SLO agents cannot express fractional ms means without scaling.",
+      "repro": "AVGF Probe lat_ms on 10,20,21 → 17"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|incfall",
-      "title": "INCFALL/DECFALL unfiltered \u2014 bumps entire class",
-      "detail": "No INCFALL Shard load WHERE region a. Bulk tick hits all shards; selective bump needs EACH or per-slot.",
-      "repro": "tick +5 on all live Shards"
+      "area": "oop|wherege",
+      "title": "Threshold WHERE bag not SEND/SETF-able without NTH+LAST",
+      "detail": "HOT.txt is names; bulk cool hot probes needs EACH LINE or per-slot EQS wall.",
+      "repro": "WHEREGE; cannot SENDWHERE-from-bag"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|sortbyf",
-      "title": "SORTBYF returns name bag not live handles \u2014 SEND on rank needs NTH+LAST dance",
-      "detail": "RANK plate is strings; cannot SEND rank_bag[0] without NTH 0 then SEND LAST if LAST still works.",
-      "repro": "SORTBYF; cannot bulk SEND ranked"
+      "area": "oop|persist",
+      "title": "Process-local objects force DUMPOBJ rehydrate every ARG run",
+      "detail": "Multi-action host scripts dump after mutation.",
+      "repro": "open then separate process sum without dump"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|persist",
-      "title": "Process-local objects force DUMPOBJ rehydrate every ARG run",
-      "detail": "place/shed dump all slots after mutation; no native persistence.",
-      "repro": "place then new process harvest without dump"
-    },
-    {
-      "id": "W6",
-      "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two s0:load \u2192 one SETMATCH leaves 1.",
+      "detail": "Two p0:lat → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
-      "id": "W7",
+      "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
@@ -162,48 +160,53 @@
       "repro": "od -c VAL.txt"
     },
     {
-      "id": "W8",
+      "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_SL_REQUIRE=abc \u2192 soft empty hottest.",
+      "detail": "CUBALC_LS_REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
+    },
+    {
+      "id": "W8",
+      "severity": "low",
+      "area": "oop|incfall",
+      "title": "INCFALL drift unfiltered on entire class",
+      "detail": "Cannot drift only hot probes; WHEREGE then per-name bump still missing.",
+      "repro": "drift +10 all probes"
     },
     {
       "id": "W9",
       "severity": "low",
       "area": "host|join",
-      "title": "SYS JOIN path-only \u2014 harvest REPLACEALL template",
-      "detail": "n:N sum:S avg:A not JOIN.",
-      "repro": "SYS JOIN n: 3 \u2192 n:/3"
+      "title": "No string concat — labels use STR/PUSH bags",
+      "detail": "JOIN inserts /.",
+      "repro": "SYS JOIN avg: n → avg:/80"
     }
   ],
   "workarounds": [
-    "SEND LAST bump immediately after MINOBJ before any GETF",
-    "Re-MAXOBJ or EQS wall after GETF when mutating extreme pick",
-    "Accept first-tie MAXOBJ or EACH for multi-max",
-    "DUMPOBJ all slots after place/shed; predeclare board_rep",
-    "NTH 0 SORTBYF then SEND LAST for top rank",
+    "Gate: AVGF full fleet + WHEREGE_N==0 instead of avg-of-hot",
+    "Scale lat_ms*1000 if fractional means required",
+    "EQS wall or EACH LINE for bulk action on HOT bag",
+    "DUMPOBJ after setlat/drift; predeclare board_rep",
     "COUNTLINE exact; loop SETMATCH; CLEAR_ERR after soft"
   ],
   "language_gaps": [
-    "SETF/SEND preserving object name across GETF (sticky THIS/OBJ)",
-    "MAXOBJS bag of all ties",
-    "INCFALL WHERE field predicate",
-    "SORTBYF then SENDALL on ranked subset",
+    "SUMF/AVGF over name bag or WHERE predicate",
+    "Floating / fixed-point AVGF",
+    "SENDWHERE / INCFALL on WHEREGE result set",
     "Native multi-run object persistence",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE",
     "String concat (not path JOIN)"
   ],
   "issues_faced": [
-    "INCFALL+5 harvest sum:75; DECFALL 2 sum:69 worked",
-    "MAXOBJ/MINOBJ/SORTBYF DESC ranking clean",
-    "place SEND LAST bump after MINOBJ \u2014 GETF would clobber LAST (W1)",
-    "shed needs re-MAXOBJ before SETF after GETF load",
-    "tie s0=s2=99 \u2192 first-seen s0",
-    "empty MAXOBJ soft N=0 OK=0; INCFALL empty N=0",
-    "selftest 313/313 green; no language fix this iter"
+    "SUMF 240 AVGF 80 clean without GETFALL glue",
+    "WHEREGE/LE/GT/LT threshold bags correct incl boundary 80 in WHERELE",
+    "gate deny when hot present even if avg under MAX",
+    "AVGF trunc 10+20+21→17 documented W2",
+    "empty SUMF/AVGF 0 soft; empty hot N=0",
+    "selftest 315/315 green; no language fix this iter"
   ],
-  "commit": "b0f8070180045ca8f6ddda30add4a1f8da46e650",
-  "ts": "2026-08-07T05:41:57Z"
+  "commit": "",
+  "ts": "2026-08-07T06:05:00Z"
 }

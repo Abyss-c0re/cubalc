@@ -1,0 +1,1168 @@
+# latency_slo_board.cubalc — SUMF/AVGF + WHEREGE/WHERELE latency SLO
+#
+# Real use: agents track a small probe fleet (p0..p2) with lat_ms samples.
+# Roll up fleet latency without GETFALL+SYS SUM glue; select hot/cold paths
+# with threshold queries (not equality-only WHEREOBJ).
+#
+# Surfaces forced (1.15.338–339):
+#   SUMF / AVGF / MEANF          — fleet field sum/mean
+#   WHEREGE / WHERELE / WHEREGT / WHERELT / ATLEAST / BELOW
+#   INCFALL                      — bulk latency drift
+#   DUMPOBJ plate rehydrate
+#   bag journal COUNTLINE/SETMATCH/MOVELINE
+#   TRYSEND soft + REQUIRE miss
+#
+# Distinct from shard_load_pick (MAXOBJ/SORTBYF), replica_fleet (GETFALL lag),
+# probe_latency_board (if any bag-only): this board is *SUMF + threshold WHERE*.
+#
+# Slots: p0 p1 p2
+#
+# Plate under STATE:
+#   dump/p0 dump/p1 dump/p2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt HOT.txt COLD.txt SLO_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_LS_ACTION):
+#   list      — LISTOBJS Probe
+#   open      — NEW Probe ARG1=pN [lat=ARG2]
+#   setlat    — SETF lat_ms ARG2 on slot
+#   sum       — SUMF Probe lat_ms
+#   avg       — AVGF Probe lat_ms
+#   hot       — WHEREGE lat_ms THR (ARG1 or CUBALC_LS_THR default 100)
+#   cold      — WHERELE lat_ms THR
+#   above     — WHEREGT lat_ms THR
+#   below     — WHERELT lat_ms THR
+#   drift     — INCFALL lat_ms BY ARG1 (default 1)
+#   journal / count / pin / setmatch
+#   probe     — soft TRYSEND; empty SUMF
+#   dump
+#   gate      — AVGF <= MAX and WHEREGE_N==0 for THR; REQUIRE→2
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ls_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=p0 CUBALC_ARG2=40
+#   CUBALC_ARG0=hot CUBALC_ARG1=50
+#   CUBALC_ARG0=avg
+#   CUBALC_ARG0=gate CUBALC_LS_MAX=80 CUBALC_LS_THR=100 CUBALC_LS_REQUIRE=1
+#
+# Env: CUBALC_LS_REQUIRE CUBALC_LS_NAME CUBALC_LS_MAX CUBALC_LS_THR CUBALC_LS_ACTION
+#
+# Edges:
+#   AVGF integer mean only (no float)
+#   WHEREGE returns name bag — no SUMF on filtered subset (must EACH or full SUMF)
+#   threshold args need NUM shuttle; empty WHERE soft N=0
+#   process-local rehydrate; WRITE NL; REQUIRE NUM softens; JOIN path-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Probe
+  FIELD id ""
+  FIELD lat_ms 0
+  FIELD path "/"
+  METHOD init i lat
+    SETF THIS id i
+    SETF THIS lat_ms lat
+    SETF THIS path "/"
+  END
+  METHOD bump
+    GETF THIS lat_ms
+    LET L = LAST_N + 1
+    SETF THIS lat_ms L
+    RET L
+  END
+END
+
+NOTE "latency_slo_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MAX_AVG = 100
+DEFAULT THR = 100
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_LS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_LS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_LS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_LS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_LS_MAX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MAX_AVG = LAST_N
+  END
+END
+SYS ENV "CUBALC_LS_THR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET THR = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "HOT.txt"
+LET hot_path = LAST
+SYS JOIN state_dir "COLD.txt"
+LET cold_path = LAST
+SYS JOIN state_dir "SLO_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "p0"
+LET d_p0 = LAST
+SYS JOIN dump_dir "p1"
+LET d_p1 = LAST
+SYS JOIN dump_dir "p2"
+LET d_p2 = LAST
+
+LET slot = -1
+SYS EQS NAME "p0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "p1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "p2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "p0"
+END
+IF slot == 1 THEN
+  LET sn = "p1"
+END
+IF slot == 2 THEN
+  LET sn = "p2"
+END
+
+# rehydrate p0
+SYS READ OR d_p0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DELETEOBJ p0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "path"
+  LET rpath = LAST
+  CLEAR_ERR
+  NEW Probe p0 rid rlat
+  TRYSETF p0 path rpath
+  CLEAR_ERR
+  TRYSETF p0 lat_ms rlat
+  CLEAR_ERR
+END
+# rehydrate p1
+SYS READ OR d_p1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DELETEOBJ p1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "path"
+  LET rpath = LAST
+  CLEAR_ERR
+  NEW Probe p1 rid rlat
+  TRYSETF p1 path rpath
+  CLEAR_ERR
+  TRYSETF p1 lat_ms rlat
+  CLEAR_ERR
+END
+# rehydrate p2
+SYS READ OR d_p2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DELETEOBJ p2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "lat_ms"
+  LET rlat = LAST_N
+  SYS LOOKUP snap "path"
+  LET rpath = LAST
+  CLEAR_ERR
+  NEW Probe p2 rid rlat
+  TRYSETF p2 path rpath
+  CLEAR_ERR
+  TRYSETF p2 lat_ms rlat
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET sum_n = 0
+LET avg_n = 0
+LET thr_n = 0
+LET where_n = 0
+LET board_rep = "latency_slo_board"
+
+# resolve thr from ARG1 when action uses threshold
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Probe
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET lat = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lat = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        DELETEOBJ p0
+        CLEAR_ERR
+      END
+      NEW Probe p0 sn lat
+      DUMPOBJ p0
+      SYS WRITE d_p0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        DELETEOBJ p1
+        CLEAR_ERR
+      END
+      NEW Probe p1 sn lat
+      DUMPOBJ p1
+      SYS WRITE d_p1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        DELETEOBJ p2
+        CLEAR_ERR
+      END
+      NEW Probe p2 sn lat
+      DUMPOBJ p2
+      SYS WRITE d_p2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Probe
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR lat
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setlat ---
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  NOTE "action setlat"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setlat bad slot"
+    FAIL "setlat bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setlat bad slot"
+    END
+  ELSE
+    LET lat = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET lat = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ p0
+      IF LAST_N == 1 THEN
+        SETF p0 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p0
+        SYS WRITE d_p0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ p1
+      IF LAST_N == 1 THEN
+        SETF p1 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p1
+        SYS WRITE d_p1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ p2
+      IF LAST_N == 1 THEN
+        SETF p2 lat_ms lat
+        LET ok_set = 1
+        DUMPOBJ p2
+        SYS WRITE d_p2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setlat no obj"
+      FAIL "setlat no obj"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setlat no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setlat ok"
+      SYS STR lat
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setlat"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sum SUMF ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SUMF Probe lat_ms
+  LET sum_n = LAST_N
+  LET ret_n = SUMF_N
+  LET hit = 1
+  LET note_msg = "sum ok"
+  SYS STR sum_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "sum"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON sum_n
+  CLEAR_ERR
+END
+
+# --- avg AVGF ---
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  NOTE "action avg"
+  AVGF Probe lat_ms
+  LET avg_n = LAST_N
+  LET ret_n = AVGF_N
+  LET hit = 1
+  LET note_msg = "avg ok"
+  SYS STR avg_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "avg"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON avg_n
+  CLEAR_ERR
+END
+
+# --- hot WHEREGE ---
+SYS EQS ACTION "hot"
+IF LAST_N == 1 THEN
+  NOTE "action hot"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  WHEREGE Probe lat_ms thr_n
+  LET wbag = LAST
+  LET where_n = WHEREGE_N
+  SYS WRITE hot_path wbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "hot ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "hot"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON where_n
+  CLEAR_ERR
+END
+
+# --- cold WHERELE ---
+SYS EQS ACTION "cold"
+IF LAST_N == 1 THEN
+  NOTE "action cold"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  WHERELE Probe lat_ms thr_n
+  LET wbag = LAST
+  LET where_n = WHERELE_N
+  SYS WRITE cold_path wbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "cold ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "cold"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON where_n
+  CLEAR_ERR
+END
+
+# --- above WHEREGT ---
+SYS EQS ACTION "above"
+IF LAST_N == 1 THEN
+  NOTE "action above"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  WHEREGT Probe lat_ms thr_n
+  LET wbag = LAST
+  LET where_n = WHEREGT_N
+  SYS WRITE hot_path wbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "above ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "above"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON where_n
+  CLEAR_ERR
+END
+
+# --- below WHERELT ---
+SYS EQS ACTION "below"
+IF LAST_N == 1 THEN
+  NOTE "action below"
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  WHERELT Probe lat_ms thr_n
+  LET wbag = LAST
+  LET where_n = WHERELT_N
+  SYS WRITE cold_path wbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "below ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "below"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON where_n
+  CLEAR_ERR
+END
+
+# --- drift INCFALL ---
+SYS EQS ACTION "drift"
+IF LAST_N == 1 THEN
+  NOTE "action drift"
+  LET delta_n = 1
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET delta_n = LAST_N
+    END
+  END
+  INCFALL Probe lat_ms delta_n
+  LET ret_n = INCFALL_N
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DUMPOBJ p0
+    SYS WRITE d_p0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DUMPOBJ p1
+    SYS WRITE d_p1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DUMPOBJ p2
+    SYS WRITE d_p2 LAST
+    CLEAR_ERR
+  END
+  LET jev = "fleet:drift"
+  SYS PUSH jbag jev
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "drift ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "drift"
+  SYS STR delta_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    TRYSEND p0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF p0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  WHEREGE Probe lat_ms 999999
+  LET where_n = WHEREGE_N
+  CLEAR_ERR
+  SUMF Probe lat_ms
+  LET sum_n = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR sum_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ p0
+  IF LAST_N == 1 THEN
+    DUMPOBJ p0
+    SYS WRITE d_p0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p1
+  IF LAST_N == 1 THEN
+    DUMPOBJ p1
+    SYS WRITE d_p1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ p2
+  IF LAST_N == 1 THEN
+    DUMPOBJ p2
+    SYS WRITE d_p2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Probe
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- gate: AVGF <= MAX_AVG AND WHEREGE thr hot count == 0 ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  AVGF Probe lat_ms
+  LET avg_n = LAST_N
+  LET thr_n = THR
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  WHEREGE Probe lat_ms thr_n
+  LET where_n = WHEREGE_N
+  LET admit = 0
+  IF avg_n <= MAX_AVG THEN
+    IF where_n == 0 THEN
+      LET admit = 1
+    END
+  END
+  IF admit == 1 THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+    LET val = "admit"
+    LET val_ch = 1
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate deny slo avg or hot probes"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny slo avg or hot probes"
+    END
+  END
+  LET meta = "gate"
+  SYS STR avg_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MAX_AVG
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR where_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Probe
+  CLEAR_ERR
+  SYS RM d_p0
+  CLEAR_ERR
+  SYS RM d_p1
+  CLEAR_ERR
+  SYS RM d_p2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM hot_path
+  CLEAR_ERR
+  SYS RM cold_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown
+SYS EQS ACTION "list"
+LET known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setlat"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "hot"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "cold"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "above"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "below"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "drift"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+END
+IF known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 "unknown action"
+  END
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "latency_slo_board: done"
+IF miss > 0 THEN
+  IF REQUIRE_HIT > 0 THEN
+    EXIT 2 note_msg
+  END
+END
+EXIT 0 note_msg
