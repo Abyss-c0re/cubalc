@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 400,
-  "version": "1.15.427-usability",
-  "item": "REQUIRE ARG/ARGC",
-  "item_id": 436,
-  "title": "REQUIRE ARG n|name · ARGC [min] fail-fast CLI contract",
-  "commit": "bcca6eb185c865aa5681e265b65e01d86cae0bdd",
-  "summary": "Fail-fast program arg gates with line tips; pairs SYS ARGS. proof 977 11/11.",
+  "iter": 401,
+  "version": "1.15.428-usability",
+  "item": "incomplete form tips + line",
+  "item_id": 437,
+  "title": "fail_at tips for NEW/SEND/GETF/CALL/… + DEFAULT optional =",
+  "commit": "9ac443c442b4dcca974a9d32109df9290638ed6e",
+  "summary": "Incomplete forms get example+line; DEFAULT optional =. proof 978 6/6.",
   "proofs": [
-    "977_require_arg",
-    "asserts 11/11",
-    "smoke REQUIRE ARG missing · ARGC got N"
+    "978_incomplete_form_tips",
+    "asserts 6/6",
+    "smoke NEW/SEND/GETF/SETF/CALL/INCLUDE tips"
   ],
-  "when": "2026-08-07T20:46:32Z",
+  "when": "2026-08-07T20:59:24Z",
   "agent": "meaningful_iter_10m",
-  "sha": "bcca6eb185c865aa5681e265b65e01d86cae0bdd",
-  "note": "completes run-args usability loop with fail-fast"
+  "sha": "9ac443c442b4dcca974a9d32109df9290638ed6e",
+  "note": "cubalc_lang_fail_at; plate-safe SETF tip"
 }
