@@ -265,6 +265,53 @@ static int oop_bind_args(VM *vm, Lex *L, char params[][32], int n_params){
   var_set_num(vm, "NARGS", ai);
   return ai;
 }
+
+/* Under-arity gate for CALL/SEND/NEW — agent-readable needs N got M.
+ * Returns 0 ok, 1 soft miss (do not run body), -1 fatal. Clears unbound formals. */
+static int oop_arity_gate(VM *vm, const char *tag, const char *name,
+                          char params[][32], int n_params, int got, int soft){
+  int i;
+  char ebuf[192], plist[96];
+  int o = 0;
+  var_set_num(vm, "ARITY_NEED", n_params);
+  var_set_num(vm, "ARITY_GOT", got);
+  var_set_num(vm, "NARGS", got);
+  /* clear unbound formals so stale values do not leak into FN/METHOD */
+  for (i = got; i < n_params; i++) {
+    if (params[i][0])
+      var_set_num(vm, params[i], 0);
+  }
+  if (got >= n_params || n_params <= 0)
+    return 0;
+  plist[0] = 0;
+  for (i = 0; i < n_params && o + 34 < (int)sizeof plist; i++) {
+    int ln;
+    if (i) {
+      if (o + 1 < (int)sizeof plist) { plist[o++] = ' '; plist[o] = 0; }
+    }
+    ln = snprintf(plist + o, sizeof plist - (size_t)o, "%s",
+                  params[i][0] ? params[i] : "?");
+    if (ln > 0) o += ln;
+  }
+  snprintf(ebuf, sizeof ebuf,
+           "%s %s needs %d arg%s, got %d (params: %s)",
+           tag, name && name[0] ? name : "?",
+           n_params, n_params == 1 ? "" : "s", got,
+           plist[0] ? plist : "-");
+  if (soft) {
+    var_set_str(vm, "LAST_ERR", ebuf);
+    var_set_str(vm, "ERR", ebuf);
+    var_set_str(vm, "LAST", ebuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ebuf);
+    vm->last_n = 0;
+    var_set_num(vm, "LAST_N", 0);
+    var_set_num(vm, "OK", 0);
+    return 1;
+  }
+  fail(vm, ebuf);
+  return -1;
+}
+
 /* Resolve instance name: bare token, string literal, or string-var value.
  * NEW sets var(name)=Class as string — so bare re-NEW of a free slot must NOT
  * expand that pollution. Prefer literal when an obj slot (live or dead) already
@@ -402,7 +449,12 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
   if (!initm) initm = oop_find_method(cd, "spawn");
   if (!initm) initm = oop_find_method(cd, "new");
   if (initm) {
-    oop_bind_args(vm, L, initm->params, initm->n_params);
+    int got = oop_bind_args(vm, L, initm->params, initm->n_params);
+    char qname[96];
+    int ag;
+    snprintf(qname, sizeof qname, "%s.%s", cname, initm->name);
+    ag = oop_arity_gate(vm, "NEW", qname, initm->params, initm->n_params, got, 0);
+    if (ag < 0) return -1;
     if (oop_run_method(vm, ob, initm) < 0) return -1;
   } else {
     while (L->cur.kind == TK_NUM || L->cur.kind == TK_STR ||
@@ -818,7 +870,20 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       bump(vm);
       return 1;
     }
-    oop_bind_args(vm, L, md->params, md->n_params);
+    {
+      int got = oop_bind_args(vm, L, md->params, md->n_params);
+      char qname[96];
+      int ag;
+      snprintf(qname, sizeof qname, "%s.%s", cd->name, md->name);
+      ag = oop_arity_gate(vm, "SEND", qname, md->params, md->n_params, got, soft);
+      if (ag < 0) return -1;
+      if (ag > 0) {
+        var_set_num(vm, "SEND_N", 0);
+        var_set_num(vm, "TRYSEND_N", 0);
+        bump(vm);
+        return 1;
+      }
+    }
     if (oop_run_method(vm, ob, md) < 0) return -1;
     var_set_num(vm, "SEND_N", 1);
     var_set_num(vm, "TRYSEND_N", 1);
@@ -17945,8 +18010,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         }
         md = oop_find_method(cd, mname);
         if (md) {
+          int got, ag;
+          char qname[96];
           lex_next(L);
-          oop_bind_args(vm, L, md->params, md->n_params);
+          got = oop_bind_args(vm, L, md->params, md->n_params);
+          snprintf(qname, sizeof qname, "%s.%s", cd->name, md->name);
+          ag = oop_arity_gate(vm, "CALL", qname, md->params, md->n_params, got, soft);
+          if (ag < 0) return -1;
+          if (ag > 0) {
+            var_set_num(vm, "CALLED", 0);
+            var_set_num(vm, "TRYCALL_N", 0);
+            bump(vm);
+            return 1;
+          }
           if (oop_run_method(vm, ob, md) < 0) return -1;
           var_set_num(vm, "CALLED", 1);
           var_set_num(vm, "TRYCALL_N", 1);
@@ -17983,7 +18059,18 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       }
       fail(vm, ebuf); return -1;
     }
-    oop_bind_args(vm, L, fn->params, fn->n_params);
+    {
+      int got = oop_bind_args(vm, L, fn->params, fn->n_params);
+      int ag = oop_arity_gate(vm, "CALL", fn->name, fn->params, fn->n_params, got, soft);
+      if (ag < 0) return -1;
+      if (ag > 0) {
+        var_set_num(vm, "CALLED", 0);
+        var_set_num(vm, "TRYCALL_N", 0);
+        var_set_str(vm, "FN", fn->name);
+        bump(vm);
+        return 1;
+      }
+    }
     var_set_num(vm, "CALLED", 1);
     var_set_num(vm, "TRYCALL_N", 1);
     var_set_str(vm, "FN", fn->name);

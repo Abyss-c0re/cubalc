@@ -1,0 +1,63 @@
+# CALL/SEND under-arity — agent-readable needs N got M
+# Soft TRYCALL/TRYSEND LAST_ERR; ARITY_NEED/ARITY_GOT knobs; unbound formals cleared
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+# under-arity soft
+TRYCALL add 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "needs 2"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "got 1"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "params: a b"
+ASSERT LAST_N == 1
+ASSERT ARITY_NEED == 2
+ASSERT ARITY_GOT == 1
+ASSERT CALLED == 0
+
+# correct CALL
+CALL add 2 3
+ASSERT LAST_N == 5
+ASSERT OK == 1
+ASSERT ARITY_GOT == 2
+
+# zero-arg FN still ok
+FN ping
+  RET 7
+END
+CALL ping
+ASSERT LAST_N == 7
+
+CLASS Counter
+  FIELD n 0
+  METHOD bump by
+    INCF THIS n by
+  END
+  METHOD init seed
+    SETF THIS n seed
+  END
+END
+
+NEW Counter c 10
+GETF c n
+ASSERT LAST_N == 10
+
+TRYSEND c bump
+ASSERT OK == 0
+SYS HAS LAST_ERR "needs 1"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "got 0"
+ASSERT LAST_N == 1
+ASSERT ARITY_NEED == 1
+ASSERT ARITY_GOT == 0
+
+SEND c bump 5
+GETF c n
+ASSERT LAST_N == 15
+
+PRINT "call_send_arity ok"
