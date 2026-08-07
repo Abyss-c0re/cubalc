@@ -1,20 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 388,
-  "version": "1.15.415-usability",
-  "item": "EACH LINE OF obj field bag walk",
-  "item_id": 424,
-  "title": "EACH LINE OF obj field — walk bag-in-field without GETF",
-  "commit": "31ede82d1316991ebd713579b7a30c1b698417e6",
-  "summary": "Iterate multi-line object fields without GETF+EACH LINE glue. proof 965 28/28.",
+  "iter": 389,
+  "version": "1.15.416-usability",
+  "item": "ENSUREBAGLINE idempotent bag membership on fields",
+  "item_id": 425,
+  "title": "ENSUREBAGLINE|BAGENSURE — append exact bag line if missing",
+  "commit": "784c5d7068f7ccf70b686a9ece8fc81eb86374d7",
+  "summary": "Idempotent flags/work sets without HAS+PUSH IF. Soft miss. proof 966 42/42.",
   "proofs": [
-    "965_each_line_of_field",
-    "asserts 28/28",
-    "617 still green",
+    "966_oop_ensurebagline",
+    "asserts 42/42",
     "964 still green"
   ],
-  "when": "2026-08-07T18:35:15Z",
+  "when": "2026-08-07T18:45:29Z",
   "agent": "meaningful_iter_10m",
-  "sha": "31ede82d1316991ebd713579b7a30c1b698417e6",
-  "note": "OF/IN/FROM obj field; plain str IN unchanged"
+  "sha": "784c5d7068f7ccf70b686a9ece8fc81eb86374d7",
+  "note": "ENSUREBAGLINE_NEW/N; not file ENSURELINE"
 }
