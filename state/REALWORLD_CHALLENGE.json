@@ -129,6 +129,6 @@
     "string formals+IF str== work; name-var refs remain blocker",
     "selftest 298/298; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "0da0032791b2a781a624f9a85e52dae08f073c3c",
   "ts": "2026-08-07T03:13:17Z"
 }
