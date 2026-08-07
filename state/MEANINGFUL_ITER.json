@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 390,
-  "version": "1.15.417-usability",
-  "item": "EACH PROP OF obj|Class schema field walk",
-  "item_id": 426,
-  "title": "EACH PROP|ATTR|OBJFIELD OF obj|Class — walk schema field names",
-  "commit": "517c65143891087febcd0c17696ac6281a7fc14e",
-  "summary": "Schema field walk without LISTFIELDS+EACH LINE. Not bag EACH FIELD. proof 967 32/32.",
+  "iter": 391,
+  "version": "1.15.418-usability",
+  "item": "EACH METHOD OF obj|Class schema method walk",
+  "item_id": 427,
+  "title": "EACH METHOD|MSG|HANDLER OF obj|Class — walk schema method names",
+  "commit": "fb77cc3fb0b671c27be9dfcf3075157db01203d7",
+  "summary": "Method schema walk without LISTMETHODS+EACH LINE; block_scan METHOD fix. proof 968 42/42.",
   "proofs": [
-    "967_each_prop",
-    "asserts 32/32",
-    "965 still green"
+    "968_each_method",
+    "asserts 42/42",
+    "967 still green",
+    "862 still green"
   ],
-  "when": "2026-08-07T18:55:18Z",
+  "when": "2026-08-07T19:08:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "517c65143891087febcd0c17696ac6281a7fc14e",
-  "note": "PROP_N/FIELD; EACH FIELD remains LINE synonym"
+  "sha": "fb77cc3fb0b671c27be9dfcf3075157db01203d7",
+  "note": "Restored thrash first; forms CLI updated for EACH PROP/METHOD"
 }
