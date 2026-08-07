@@ -1,0 +1,134 @@
+# EACH METHOD / MSG / HANDLER — walk schema method names without LISTMETHODS+EACH LINE
+# Twin of EACH PROP; SEND prep for agents
+# Also verifies METHOD body may contain EACH METHOD (block_scan must not treat METHOD as block)
+
+HOLD_FLASH 1
+
+CLASS Svc
+  FIELD id "1"
+  METHOD init
+  END
+  METHOD ping
+    LET pinged = 1
+  END
+  METHOD pong
+    LET ponged = 1
+  END
+  METHOD status
+    LET st = "ok"
+  END
+  METHOD list_msgs
+    LET bag = ""
+    LET n = 0
+    EACH METHOD OF THIS AS m
+      LET n = n + 1
+      IF n == 1 THEN
+        LET bag = m
+      ELSE
+        SYS CAT bag ","
+        LET bag = LAST
+        SYS CAT bag m
+        LET bag = LAST
+      END
+    END
+  END
+END
+
+NEW Svc s
+
+# OF live object — init + ping + pong + status + list_msgs = 5
+LET n = 0
+LET joined = ""
+EACH METHOD OF s AS m
+  LET n = n + 1
+  IF n == 1 THEN
+    LET joined = m
+  ELSE
+    SYS CAT joined ","
+    LET joined = LAST
+    SYS CAT joined m
+    LET joined = LAST
+  END
+  ASSERT METHOD_N == n
+  ASSERT IT == n - 1
+  SYS EQS METHOD m
+  ASSERT LAST_N == 1
+END
+ASSERT n == 5
+ASSERT EACH_N == 5
+ASSERT LAST_N == 5
+ASSERT NMETHODS == 5
+SYS HAS joined "ping"
+ASSERT LAST_N == 1
+SYS HAS joined "pong"
+ASSERT LAST_N == 1
+SYS HAS joined "status"
+ASSERT LAST_N == 1
+SYS HAS joined "init"
+ASSERT LAST_N == 1
+SYS HAS joined "list_msgs"
+ASSERT LAST_N == 1
+
+# SEND via dynamic method name
+LET hit = 0
+EACH MSG OF s AS name
+  IF name == "ping" THEN
+    SEND s name
+    LET hit = hit + 1
+  END
+END
+ASSERT hit == 1
+ASSERT pinged == 1
+
+# OF class name
+LET cn = 0
+EACH METHOD OF Svc AS m
+  LET cn = cn + 1
+END
+ASSERT cn == 5
+ASSERT EACH_N == 5
+
+# aliases
+LET an = 0
+EACH HANDLER OF s AS h
+  LET an = an + 1
+END
+ASSERT an == 5
+LET bn = 0
+EACH OBJMETHOD OF s
+  LET bn = bn + 1
+  SYS EQS METHOD METHOD
+  ASSERT LAST_N == 1
+END
+ASSERT bn == 5
+
+# THIS in METHOD (nested EACH METHOD)
+SEND s list_msgs
+ASSERT EACH_N == 5
+
+# BREAK early
+LET b = 0
+EACH METHOD OF s AS m
+  LET b = b + 1
+  IF b == 2 THEN
+    BREAK
+  END
+END
+ASSERT b == 2
+ASSERT EACH_N == 2
+
+# unknown soft empty
+EACH METHOD OF nosuch AS z
+  ASSERT 0 == 1
+END
+ASSERT EACH_N == 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown"
+ASSERT LAST_N == 1
+
+# HELP
+HELP EACH
+SYS HAS LAST "EACH"
+ASSERT LAST_N == 1
+
+PRINT "each_method ok"

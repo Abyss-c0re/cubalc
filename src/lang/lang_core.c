@@ -1302,8 +1302,11 @@ int cubalc_lang_block_scan_step(Lex *L, int *depth, int allow_until){
     return 0;
   }
   if (allow_until && *depth==1 && kw(&L->cur,"UNTIL")) return 1;
+  /* Note: METHOD is NOT a body block opener here — CLASS/METHOD bodies are
+   * scanned with their own depth at CLASS parse. Treating METHOD as a block
+   * would break EACH METHOD … END inside METHOD bodies (double depth). */
   if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||kw(&L->cur,"DEF")||
-      kw(&L->cur,"CLASS")||kw(&L->cur,"TYPE")||kw(&L->cur,"METHOD")||
+      kw(&L->cur,"CLASS")||kw(&L->cur,"TYPE")||
       kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||
       kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")||
       kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||kw(&L->cur,"FOREACHCELL")||
