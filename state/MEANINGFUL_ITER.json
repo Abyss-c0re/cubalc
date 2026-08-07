@@ -5,7 +5,7 @@
   "item": "OBJINFO/DESCRIBEOBJ live object plate",
   "item_id": 394,
   "title": "OBJINFO|DESCRIBEOBJ \u2014 live name/class/methods+fields plate",
-  "commit": "4329104942082d766a42bb6a7fa885220cbb10cd",
+  "commit": "1938a170e2053114240dc114c96c0a28de09644b",
   "summary": "Live object plate for agents. Twin DUMPOBJ+CLASSINFO. proof 935 37/37.",
   "proofs": [
     "935_oop_objinfo",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T13:37:36Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4329104942082d766a42bb6a7fa885220cbb10cd",
+  "sha": "1938a170e2053114240dc114c96c0a28de09644b",
   "note": "uses oop_resolve_obj_name to avoid NEW class-string pollution"
 }
