@@ -18069,23 +18069,141 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* EACH CUBE as name ... END  |  EACH CELL [as name] [FROM lo TO hi] ... END
-   * EACH LINE [as name] [IN str|LAST] ... END — walk newline fields (LIST/GREP).
+   * EACH LINE [as name] [IN str|LAST|obj field] ... END — walk newline bags.
+   * EACH PROP|ATTR|OBJFIELD OF obj|Class [AS name] ... END — walk schema field names.
    * EACH OBJ [Class] [AS name] ... END — walk live OOP objects (optional class filter).
+   * Note: EACH FIELD/FIELDS stays a LINE synonym (bag walk), not schema props.
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
     lex_next(L);
     int is_cell = (kw(&L->cur,"CELL")||kw(&L->cur,"CELLS")||kw(&L->cur,"SLOT")||kw(&L->cur,"SLOTS"));
     int is_cube = (kw(&L->cur,"CUBE")||kw(&L->cur,"CUBES"));
+    int is_prop = (kw(&L->cur,"PROP")||kw(&L->cur,"PROPS")||kw(&L->cur,"ATTR")||
+                   kw(&L->cur,"ATTRS")||kw(&L->cur,"MEMBER")||kw(&L->cur,"MEMBERS")||
+                   kw(&L->cur,"OBJFIELD")||kw(&L->cur,"OBJFIELDS")||
+                   kw(&L->cur,"SCHEMAFIELD")||kw(&L->cur,"SCHEMAFIELDS")||
+                   kw(&L->cur,"CLASSFIELD")||kw(&L->cur,"CLASSFIELDS"));
     int is_line = (kw(&L->cur,"LINE")||kw(&L->cur,"LINES")||kw(&L->cur,"FIELD")||
                    kw(&L->cur,"FIELDS")||kw(&L->cur,"ROW")||kw(&L->cur,"ROWS")||
                    kw(&L->cur,"ENTRY")||kw(&L->cur,"ENTRIES"));
     int is_obj = (kw(&L->cur,"OBJ")||kw(&L->cur,"OBJS")||kw(&L->cur,"OBJECT")||
                   kw(&L->cur,"OBJECTS")||kw(&L->cur,"INST")||kw(&L->cur,"INSTANCE")||
                   kw(&L->cur,"INSTANCES")||kw(&L->cur,"OOP"));
-    if (!is_cell && !is_cube && !is_line && !is_obj){
-      fail(vm,"EACH CUBE|CELL|LINE|OBJ as name"); return -1;
+    if (!is_cell && !is_cube && !is_line && !is_obj && !is_prop){
+      fail(vm,"EACH CUBE|CELL|LINE|PROP|OBJ as name"); return -1;
     }
     lex_next(L);
+    if (is_prop){
+      /* EACH PROP|ATTR|OBJFIELD OF obj|Class [AS name] ... END
+       * Binds each CLASS field name to name (default PROP); IT=0-based; PROP_N=1-based.
+       * OF required: live object (uses its class) or CLASS name.
+       * Soft empty walk if unknown. Usability: no LISTFIELDS+EACH LINE glue for schema walk.
+       * Distinct from EACH FIELD (LINE synonym — bag lines). */
+      char bind[48], target[48];
+      ClassDef *cd = NULL;
+      ObjInst *ob = NULL;
+      int i, n = 0;
+      snprintf(bind, sizeof bind, "PROP");
+      target[0] = 0;
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH PROP as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "OF") &&
+                 !kw(&L->cur, "ON") && !kw(&L->cur, "IN") &&
+                 !kw(&L->cur, "FROM") && !kw(&L->cur, "END") &&
+                 strcmp(L->cur.text, "->") != 0) {
+        /* EACH PROP fname OF obj — bind name before OF */
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+      if (kw(&L->cur, "OF") || kw(&L->cur, "ON") || kw(&L->cur, "IN") ||
+          kw(&L->cur, "FROM") || kw(&L->cur, "FOR"))
+        lex_next(L);
+      /* target: THIS/SELF, live obj, or Class name */
+      if (strcasecmp(L->cur.text, "THIS") == 0 ||
+          strcasecmp(L->cur.text, "SELF") == 0) {
+        if (vm->this_obj[0])
+          snprintf(target, sizeof target, "%s", vm->this_obj);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR) {
+        snprintf(target, sizeof target, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        /* prefer live object, then class; expand string var if live obj */
+        Var *sv;
+        snprintf(target, sizeof target, "%s", L->cur.text);
+        lex_next(L);
+        sv = var_get(vm, target, 0);
+        if (sv && sv->is_str && sv->sval[0] && oop_find_obj(vm, sv->sval))
+          snprintf(target, sizeof target, "%s", sv->sval);
+      } else {
+        fail(vm, "EACH PROP OF obj|Class"); return -1;
+      }
+      if (target[0]) {
+        ob = oop_find_obj(vm, target);
+        if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+          cd = &vm->classes[ob->class_idx];
+        else
+          cd = oop_find_class(vm, target);
+      }
+      /* AS after OF: EACH PROP OF q AS f */
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH PROP as name"); return -1; }
+        snprintf(bind, sizeof bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH PROP without END"); return -1; }
+        if (cd) {
+          for (i = 0; i < cd->n_fields && !vm->fatal && !vm->halt; i++) {
+            const char *fname = cd->fields[i].name;
+            var_set_str(vm, bind, fname);
+            var_set_str(vm, "PROP", fname);
+            var_set_str(vm, "FIELD", fname);
+            var_set_str(vm, "ATTR", fname);
+            var_set_str(vm, "CLASS", cd->name);
+            if (ob) {
+              var_set_str(vm, "OBJECT", ob->name);
+              var_set_str(vm, "OBJ", ob->name);
+            }
+            var_set_num(vm, "IT", n);
+            var_set_num(vm, "IDX", n);
+            var_set_num(vm, "PROP_N", n + 1);
+            var_set_num(vm, "FIELD_N", n + 1);
+            var_set_num(vm, "OK", 1);
+            vm->break_loop = 0;
+            vm->continue_loop = 0;
+            {
+              Lex body = body_start;
+              if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+            }
+            if (vm->break_loop) { vm->break_loop = 0; n++; break; }
+            vm->continue_loop = 0;
+            n++;
+          }
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", n);
+        var_set_num(vm, "EACH_N", n);
+        var_set_num(vm, "NFIELDS", n);
+        var_set_num(vm, "OK", cd ? 1 : 0);
+        if (!cd) {
+          var_set_str(vm, "LAST_ERR", "EACH PROP: unknown obj/class");
+          var_set_str(vm, "ERR", "EACH PROP: unknown obj/class");
+        }
+        bump(vm);
+        return 1;
+      }
+    }
     if (is_obj){
       /* EACH OBJ [ClassName] [AS name] ... END
        * Binds each live object name to name (default OBJ); IT=0-based; OBJ_N=1-based.

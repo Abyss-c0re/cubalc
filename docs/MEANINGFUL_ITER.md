@@ -453,6 +453,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 423. ~~**`LINESF` / `HASBAGLINE` / `DROPBAGLINE`**~~ **done** (bag count + exact membership + ack-drop on field · work queue IF/ack · not file HASLINEF/REMOVELINEF · METHOD/THIS).
 424. ~~**`EACH LINE OF obj field`**~~ **done** (walk bag-in-field without GETF first · METHOD/THIS · pairs PUSHF/LINESF/HASBAGLINE).
 425. ~~**`ENSUREBAGLINE` / `BAGENSURE`**~~ **done** (idempotent append exact bag line if missing · flags/work sets · no HAS+PUSH IF · not file ENSURELINE · METHOD/THIS).
+426. ~~**`EACH PROP` / `ATTR` / `OBJFIELD OF obj|Class`**~~ **done** (walk schema field names · no LISTFIELDS+EACH LINE glue · not bag EACH FIELD · METHOD/THIS).
 
 ## Tick protocol
 

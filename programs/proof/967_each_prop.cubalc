@@ -1,0 +1,141 @@
+# EACH PROP / ATTR / OBJFIELD — walk schema field names without LISTFIELDS+EACH LINE
+# Distinct from EACH FIELD (LINE synonym — bag lines)
+
+HOLD_FLASH 1
+
+CLASS Row
+  FIELD a "1"
+  FIELD b "2"
+  FIELD c "3"
+  METHOD init
+  END
+  METHOD sum_names
+    LET s = ""
+    EACH PROP OF THIS AS f
+      IF s == "" THEN
+        LET s = f
+      ELSE
+        SYS CAT s ","
+        LET s = LAST
+        SYS CAT s f
+        LET s = LAST
+      END
+    END
+  END
+END
+
+NEW Row r
+
+# OF live object
+LET n = 0
+LET joined = ""
+EACH PROP OF r AS f
+  LET n = n + 1
+  IF n == 1 THEN
+    LET joined = f
+  ELSE
+    SYS CAT joined ","
+    LET joined = LAST
+    SYS CAT joined f
+    LET joined = LAST
+  END
+  ASSERT PROP_N == n
+  ASSERT IT == n - 1
+  SYS EQS FIELD f
+  ASSERT LAST_N == 1
+END
+ASSERT n == 3
+ASSERT EACH_N == 3
+ASSERT LAST_N == 3
+ASSERT NFIELDS == 3
+SYS EQS joined "a,b,c"
+ASSERT LAST_N == 1
+
+# collect values via GETF
+LET vals = ""
+LET i = 0
+EACH ATTR OF r AS fname
+  GETF r fname
+  LET v = LAST
+  LET i = i + 1
+  IF i == 1 THEN
+    LET vals = v
+  ELSE
+    SYS CAT vals ","
+    LET vals = LAST
+    SYS CAT vals v
+    LET vals = LAST
+  END
+END
+SYS EQS vals "1,2,3"
+ASSERT LAST_N == 1
+
+# OF class name (schema only)
+LET cn = 0
+EACH PROP OF Row AS p
+  LET cn = cn + 1
+END
+ASSERT cn == 3
+ASSERT EACH_N == 3
+
+# aliases
+LET an = 0
+EACH OBJFIELD OF r AS x
+  LET an = an + 1
+END
+ASSERT an == 3
+LET mn = 0
+EACH MEMBER OF r
+  LET mn = mn + 1
+  SYS EQS PROP PROP
+  ASSERT LAST_N == 1
+END
+ASSERT mn == 3
+
+# AS after OF
+LET k = 0
+EACH PROP OF r AS name
+  LET k = k + 1
+END
+ASSERT k == 3
+
+# THIS in METHOD
+SEND r sum_names
+# EACH_N from method
+ASSERT EACH_N == 3
+
+# BREAK early
+LET b = 0
+EACH PROP OF r AS f
+  LET b = b + 1
+  IF b == 2 THEN
+    BREAK
+  END
+END
+ASSERT b == 2
+ASSERT EACH_N == 2
+
+# unknown target soft empty
+EACH PROP OF nosuch AS z
+  ASSERT 0 == 1
+END
+ASSERT EACH_N == 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown"
+ASSERT LAST_N == 1
+
+# EACH FIELD still bag-line synonym (not schema)
+SETF r a "x\ny"
+LET ln = 0
+EACH FIELD AS line OF r a
+  LET ln = ln + 1
+END
+ASSERT ln == 2
+ASSERT EACH_N == 2
+
+# HELP
+HELP EACH
+SYS HAS LAST "EACH"
+ASSERT LAST_N == 1
+
+PRINT "each_prop ok"
