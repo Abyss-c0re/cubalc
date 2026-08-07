@@ -153,6 +153,6 @@
     "DEADLINE 500ms instant expire + DEADLINE/SLEEP unit asymmetry",
     "selftest green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "cc72cbb85dcb2ee970770ba7cad5f2db01a376a1",
   "ts": "2026-08-07T01:28:56Z"
 }
