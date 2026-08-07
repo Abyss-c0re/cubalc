@@ -26206,6 +26206,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
       {"GETFLAG", "GETFLAG name [OR fallback] — LAST = flag value (bare → \"1\")"},
       {"BOOLFLAG", "BOOLFLAG name [OR 0|1] — truthy flag → LAST_N · false/0/off/no → 0 · IF without EQS"},
+      {"GETFLAGN", "GETFLAGN|FLAGN name [OR n] — peel --name as int LAST_N · ports/retries without NUM glue"},
       {"TRUTHY", "TRUTHY str|var — soft 0|1 if 1/true/yes/on (or non-empty non-falsy)"},
       {"FALSY", "FALSY str|var — soft 0|1 if empty/0/false/no/off · dual of TRUTHY"},
       {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
@@ -28631,6 +28632,115 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->trace)
       fprintf(vm->trace, "# boolflag %s hit=%d truth=%d → %s\n",
               name, hit, truth, val);
+    bump(vm); return 1;
+  }
+  /* GETFLAGN|FLAGN|FLAGNUM name [OR|DEFAULT n]
+   * Peel CLI --name as integer into LAST_N. Bare --name → 1. Missing uses OR
+   * default (0 if no OR). Non-numeric value → soft 0 + sticky LAST_ERR.
+   * LAST = decimal string · GETFLAGN_HIT 0|1 · OK=1.
+   * Usability: ports/retries/timeouts without GETFLAG+NUM glue. */
+  if (kw(&L->cur,"GETFLAGN") || kw(&L->cur,"FLAGN") || kw(&L->cur,"FLAGNUM") ||
+      kw(&L->cur,"GETOPTN") || kw(&L->cur,"OPTN") || kw(&L->cur,"FLAG_INT") ||
+      kw(&L->cur,"INTFLAG") || kw(&L->cur,"GETFLAG_N")){
+    char name[96], val[CUBALC_HOST_STR_MAX], nbuf[32];
+    int hit, have_fb = 0, bad = 0;
+    long num = 0, fb = 0;
+    lex_next(L);
+    name[0] = 0;
+    val[0] = 0;
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "GETFLAGN needs name — GETFLAGN port OR 8080");
+      return -1;
+    }
+    while (name[0] == '-')
+      memmove(name, name + 1, strlen(name));
+    if (!name[0]) {
+      fail_at(vm, L, "GETFLAGN empty name");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      have_fb = 1;
+      if (L->cur.kind == TK_NUM) {
+        fb = L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_MINUS) {
+        fb = parse_expr(vm, L);
+      } else if (L->cur.kind == TK_STR) {
+        char *ep = NULL;
+        fb = strtol(L->cur.text, &ep, 10);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && !sv->is_str) {
+          fb = sv->val;
+          lex_next(L);
+        } else if (sv && sv->is_str) {
+          fb = strtol(sv->sval, NULL, 10);
+          lex_next(L);
+        } else {
+          fb = parse_expr(vm, L);
+        }
+      } else {
+        fb = parse_expr(vm, L);
+      }
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    if (hit) {
+      char *ep = NULL;
+      const char *p = val;
+      /* allow leading + */
+      if (p[0] == '+') p++;
+      num = strtol(p, &ep, 10);
+      if (p[0] == 0 || (ep && *ep != 0 && *ep != ' ' && *ep != '\t')) {
+        /* non-numeric: soft miss parse → 0 + sticky err; keep raw LAST */
+        bad = 1;
+        num = 0;
+        var_set_str(vm, "LAST_ERR", "GETFLAGN: non-numeric flag value");
+        var_set_str(vm, "ERR", "GETFLAGN: non-numeric flag value");
+      }
+    } else if (have_fb) {
+      num = fb;
+      snprintf(val, sizeof val, "%ld", num);
+    } else {
+      num = 0;
+      val[0] = 0;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", num);
+    if (!hit && have_fb)
+      snprintf(val, sizeof val, "%s", nbuf);
+    else if (hit && !bad && !val[0])
+      snprintf(val, sizeof val, "%s", nbuf);
+    var_set_num(vm, "LAST_N", num);
+    vm->last_n = num;
+    var_set_num(vm, "GETFLAGN_N", num);
+    var_set_num(vm, "FLAGN", num);
+    var_set_num(vm, "GETFLAGN_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAGN_OK", (hit && !bad) || (!hit && have_fb) ? 1L : (hit && bad ? 0L : (have_fb ? 1L : 0L)));
+    var_set_num(vm, "OK", 1); /* soft form — never fatal */
+    var_set_str(vm, "GETFLAGN", name);
+    var_set_str(vm, "LAST", hit || have_fb ? (bad ? val : nbuf) : "");
+    var_set_str(vm, "FLAG", hit || have_fb ? (bad ? val : nbuf) : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s",
+             hit || have_fb ? (bad ? val : nbuf) : "");
+    /* prefer numeric string when parse ok */
+    if (hit && !bad) {
+      var_set_str(vm, "LAST", nbuf);
+      var_set_str(vm, "FLAG", nbuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    } else if (!hit && have_fb) {
+      var_set_str(vm, "LAST", nbuf);
+      var_set_str(vm, "FLAG", nbuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagn %s hit=%d num=%ld bad=%d\n",
+              name, hit, num, bad);
     bump(vm); return 1;
   }
   /* TRUTHY str|var|LAST — soft 0|1 if string is truthy (1/true/yes/on or non-empty).
