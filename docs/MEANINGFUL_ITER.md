@@ -478,6 +478,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 448. ~~**`CASE string arms`**~~ **done** (CASE/MATCH/SWITCH string selector + WHEN "s" · CLI action dispatch · numeric TO range kept).
 449. ~~**`WHEN multi-alias`**~~ **done** (WHEN a, b OR c | d · CLI synonyms · MATCH_ARM/WHEN_HIT · numeric multi kept · TO range unchanged).
 450. ~~**`CASEI` / `MATCHI`**~~ **done** (case-insensitive string CASE · CASE ICASE · CLI mixed-case GETFLAG · multi-alias kept).
+451. ~~**`BOOLFLAG` / `TRUTHY` / `FALSY`**~~ **done** (CLI flag truthy LAST_N · false/0/off · IF without GETFLAG+EQS · OR default).
 
 ## Tick protocol
 

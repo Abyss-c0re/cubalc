@@ -1085,6 +1085,22 @@ static int cubalc_scan_cli_flag(const char *name, char *out, size_t outn) {
   return 0;
 }
 
+/* Truthy CLI / plate strings: 1 true yes y on t → 1;
+ * empty 0 false no n off f → 0; other non-empty → 1.
+ * Usability: BOOLFLAG / TRUTHY without EQS soup. */
+static int cubalc_str_truthy(const char *s) {
+  if (!s || !s[0]) return 0;
+  if (strcasecmp(s, "0") == 0 || strcasecmp(s, "false") == 0 ||
+      strcasecmp(s, "no") == 0 || strcasecmp(s, "n") == 0 ||
+      strcasecmp(s, "off") == 0 || strcasecmp(s, "f") == 0)
+    return 0;
+  if (strcasecmp(s, "1") == 0 || strcasecmp(s, "true") == 0 ||
+      strcasecmp(s, "yes") == 0 || strcasecmp(s, "y") == 0 ||
+      strcasecmp(s, "on") == 0 || strcasecmp(s, "t") == 0)
+    return 1;
+  return 1; /* other non-empty → truthy */
+}
+
 /* Collect non-flag positionals from CUBALC_ARGn → newline bag.
  * Skips --flag / -flag / --flag=val; bare --flag val skips value too
  * (same rule as GETFLAG). Bare "-" kept. Bare "--" ends flag scan.
@@ -26189,6 +26205,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
       {"GETFLAG", "GETFLAG name [OR fallback] — LAST = flag value (bare → \"1\")"},
+      {"BOOLFLAG", "BOOLFLAG name [OR 0|1] — truthy flag → LAST_N · false/0/off/no → 0 · IF without EQS"},
+      {"TRUTHY", "TRUTHY str|var — soft 0|1 if 1/true/yes/on (or non-empty non-falsy)"},
+      {"FALSY", "FALSY str|var — soft 0|1 if empty/0/false/no/off · dual of TRUTHY"},
       {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
       {"POSITIONALS", "POSITIONALS alias of RESTARGS — files after --flags"},
       {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
@@ -28541,6 +28560,147 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
     if (vm->trace)
       fprintf(vm->trace, "# getflag %s hit=%d → %s\n", name, hit, val);
+    bump(vm); return 1;
+  }
+  /* BOOLFLAG name [OR|DEFAULT 0|1]
+   * Soft truthy probe of CLI --name. LAST_N = 1 if present and truthy value
+   * (bare --name → "1"; --name=false/0/off/no → 0). Missing → 0, or OR default.
+   * LAST = raw value (or "0"/"1" from default). Complements HASFLAG (presence).
+   * Usability: IF BOOLFLAG dry without GETFLAG+EQS soup. */
+  if (kw(&L->cur,"BOOLFLAG") || kw(&L->cur,"FLAGBOOL") || kw(&L->cur,"ISFLAG") ||
+      kw(&L->cur,"FLAGTRUE") || kw(&L->cur,"BOOL_FLAG") || kw(&L->cur,"GETBOOL") ||
+      kw(&L->cur,"FLAG_BOOL")){
+    char name[96], val[CUBALC_HOST_STR_MAX];
+    int hit, have_fb = 0, fb_bool = 0, truth;
+    char buf[8];
+    lex_next(L);
+    name[0] = 0;
+    val[0] = 0;
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "BOOLFLAG needs name — BOOLFLAG verbose");
+      return -1;
+    }
+    while (name[0] == '-')
+      memmove(name, name + 1, strlen(name));
+    if (!name[0]) {
+      fail_at(vm, L, "BOOLFLAG empty name");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      have_fb = 1;
+      if (L->cur.kind == TK_NUM) {
+        fb_bool = L->cur.num ? 1 : 0;
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        char fb[64];
+        snprintf(fb, sizeof fb, "%s", L->cur.text);
+        lex_next(L);
+        fb_bool = cubalc_str_truthy(fb);
+      } else {
+        fb_bool = (int)parse_expr(vm, L) ? 1 : 0;
+      }
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    if (hit) {
+      truth = cubalc_str_truthy(val);
+    } else if (have_fb) {
+      truth = fb_bool;
+      snprintf(val, sizeof val, "%s", truth ? "1" : "0");
+    } else {
+      truth = 0;
+      val[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", truth ? 1L : 0L);
+    vm->last_n = truth ? 1L : 0L;
+    var_set_num(vm, "BOOLFLAG_N", truth ? 1L : 0L);
+    var_set_num(vm, "BOOL", truth ? 1L : 0L);
+    var_set_num(vm, "BOOLFLAG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "BOOLFLAG", name);
+    var_set_str(vm, "LAST", val[0] ? val : (truth ? "1" : "0"));
+    var_set_str(vm, "FLAG", val[0] ? val : (truth ? "1" : "0"));
+    snprintf(vm->last_str, sizeof vm->last_str, "%s",
+             val[0] ? val : (truth ? "1" : "0"));
+    snprintf(buf, sizeof buf, "%d", truth ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# boolflag %s hit=%d truth=%d → %s\n",
+              name, hit, truth, val);
+    bump(vm); return 1;
+  }
+  /* TRUTHY str|var|LAST — soft 0|1 if string is truthy (1/true/yes/on or non-empty).
+   * FALSY — dual (empty/0/false/no/off). Usability: IF after GETFLAG without EQS. */
+  if (kw(&L->cur,"TRUTHY") || kw(&L->cur,"ISTRUE") || kw(&L->cur,"ISYES") ||
+      kw(&L->cur,"IS_TRUE") || kw(&L->cur,"TRUTHY?") || kw(&L->cur,"BOOLVAL") ||
+      kw(&L->cur,"FALSY") || kw(&L->cur,"ISFALSE") || kw(&L->cur,"ISNO") ||
+      kw(&L->cur,"IS_FALSE") || kw(&L->cur,"FALSY?")){
+    char s[CUBALC_HOST_STR_MAX];
+    int want_false, truth, hit;
+    char buf[8];
+    int is_falsy_kw = kw(&L->cur,"FALSY") || kw(&L->cur,"ISFALSE") ||
+                      kw(&L->cur,"ISNO") || kw(&L->cur,"IS_FALSE") ||
+                      kw(&L->cur,"FALSY?");
+    lex_next(L);
+    s[0] = 0;
+    want_false = is_falsy_kw;
+    if (L->cur.kind == TK_STR) {
+      snprintf(s, sizeof s, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        Var *lv = var_get(vm, "LAST", 0);
+        if (lv && lv->is_str)
+          snprintf(s, sizeof s, "%s", lv->sval);
+        else
+          snprintf(s, sizeof s, "%s", vm->last_str);
+        lex_next(L);
+      } else {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && sv->is_str) {
+          snprintf(s, sizeof s, "%s", sv->sval);
+          lex_next(L);
+        } else if (sv) {
+          snprintf(s, sizeof s, "%ld", (long)sv->val);
+          lex_next(L);
+        } else {
+          /* bare number or expr */
+          long n = parse_expr(vm, L);
+          snprintf(s, sizeof s, "%ld", n);
+        }
+      }
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      long n = parse_expr(vm, L);
+      snprintf(s, sizeof s, "%ld", n);
+    } else {
+      /* TRUTHY with no arg → probe LAST */
+      Var *lv = var_get(vm, "LAST", 0);
+      if (lv && lv->is_str)
+        snprintf(s, sizeof s, "%s", lv->sval);
+      else if (vm->last_str[0])
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      else
+        snprintf(s, sizeof s, "%ld", (long)vm->last_n);
+    }
+    truth = cubalc_str_truthy(s);
+    hit = want_false ? (!truth ? 1 : 0) : (truth ? 1 : 0);
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "TRUTHY_N", truth ? 1L : 0L);
+    var_set_num(vm, "FALSY_N", truth ? 0L : 1L);
+    var_set_num(vm, "BOOL", truth ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%d", hit ? 1 : 0);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s '%s' → %d (truth=%d)\n",
+              want_false ? "falsy" : "truthy", s, hit, truth);
     bump(vm); return 1;
   }
   /* RESTARGS|POSITIONALS — newline bag of non-flag CUBALC_ARGn (positionals).
