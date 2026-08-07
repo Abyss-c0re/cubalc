@@ -15,7 +15,7 @@
     },
     {
       "name": "scale",
-      "cmd": "TIMESF *2 → 200; *3 → 600",
+      "cmd": "TIMESF *2 \u2192 200; *3 \u2192 600",
       "ok": true,
       "note": "TIMESF"
     },
@@ -27,7 +27,7 @@
     },
     {
       "name": "mark_status",
-      "cmd": "CATF status WITH :canary → up:canary",
+      "cmd": "CATF status WITH :canary \u2192 up:canary",
       "ok": true,
       "note": "CATF WITH"
     },
@@ -39,7 +39,7 @@
     },
     {
       "name": "zero_gate",
-      "cmd": "TIMESF 0 drain; gate MINW deny REQUIRE→2",
+      "cmd": "TIMESF 0 drain; gate MINW deny REQUIRE\u21922",
       "ok": true,
       "note": "zero"
     },
@@ -61,15 +61,15 @@
       "id": "W1",
       "severity": "high",
       "area": "bag|push",
-      "title": "SYS PUSH is bag newline join — not string concat",
+      "title": "SYS PUSH is bag newline join \u2014 not string concat",
       "detail": "Building trail pieces with SYS PUSH piece TAG inserts NL between tokens (|\\nv1). Agents must SYS CAT/STRCAT for string plane. Easy false friend after bag training.",
-      "repro": "SYS PUSH \"|\" \"v1\" → multi-line; SYS CAT \"|\" \"v1\" → |v1"
+      "repro": "SYS PUSH \"|\" \"v1\" \u2192 multi-line; SYS CAT \"|\" \"v1\" \u2192 |v1"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|timesf",
-      "title": "TIMESF integer-only — no fractional half/decay",
+      "title": "TIMESF integer-only \u2014 no fractional half/decay",
       "detail": "Cannot TIMESF weight 0.5 for canary half-step; agents SETF/DECF or scale by 0 then SETF. Integer domain only.",
       "repro": "no factor 0.5; half traffic needs non-TIMESF path"
     },
@@ -78,7 +78,7 @@
       "severity": "med",
       "area": "oop|catf",
       "title": "CATF promotes numeric field to string irreversibly",
-      "detail": "Proof CATF retries \"x\" → field becomes string \"0x\"; TIMESF/INCF then soft-fail. Audit mistakes can poison counters.",
+      "detail": "Proof CATF retries \"x\" \u2192 field becomes string \"0x\"; TIMESF/INCF then soft-fail. Audit mistakes can poison counters.",
       "repro": "CATF t retries \"x\" then TIMESF fails string"
     },
     {
@@ -101,7 +101,7 @@
       "id": "W6",
       "severity": "low",
       "area": "oop|try",
-      "title": "Hard TIMESF/CATF unknown object fatal — TRY* required",
+      "title": "Hard TIMESF/CATF unknown object fatal \u2014 TRY* required",
       "detail": "Soft probe needs TRYTIMESF/TRYCATF.",
       "repro": "TRYTIMESF nosuch weight 2 OK=0"
     },
@@ -118,8 +118,8 @@
       "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE → miss exit 0",
-      "repro": "REQUIRE=abc scale r2 → exit 0"
+      "detail": "Non-numeric REQUIRE \u2192 miss exit 0",
+      "repro": "REQUIRE=abc scale r2 \u2192 exit 0"
     }
   ],
   "workarounds": [
@@ -138,11 +138,11 @@
   ],
   "issues_faced": [
     "TIMESF *2/*3 works; zero drain status draining",
-    "First tag used SYS PUSH → NL trail; fixed to SYS CAT",
+    "First tag used SYS PUSH \u2192 NL trail; fixed to SYS CAT",
     "CATF trail [|v1|v2; mark up:canary; decay clamps HI",
     "gate MINW admit/deny; probe soft zeros",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "35510d654e884c18550c65648c14d13cac253769",
   "ts": "2026-08-07T14:24:38Z"
 }
