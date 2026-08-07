@@ -1,0 +1,130 @@
+# NUMF / STRF — field type coerce for agents
+# Usability: after peel, INCF/CATF without GETF+SYS NUM/STR+SETF
+# Complements BEFOREF/AFTERF and INCF/CATF; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD count "10"
+  FIELD label 7
+  FIELD junk "xx"
+  FIELD mixed "42x"
+  METHOD init
+  END
+  METHOD bump
+    NUMF THIS count
+    INCF THIS count
+  END
+END
+
+NEW Ticket t
+
+# NUMF string → number
+NUMF t count
+ASSERT OK == 1
+ASSERT NUMF_N == 1
+ASSERT NUMF_OK == 1
+ASSERT LAST_N == 10
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+# field is numeric now — INCF works
+INCF t count 5
+GETF t count
+ASSERT LAST_N == 15
+
+# already numeric stays
+SETF t label 3
+NUMF t label
+ASSERT NUMF_N == 1
+ASSERT LAST_N == 3
+INCF t label
+GETF t label
+ASSERT LAST_N == 4
+
+# non-numeric → 0, NUMF_OK=0
+NUMF t junk
+ASSERT LAST_N == 0
+ASSERT NUMF_OK == 0
+GETF t junk
+ASSERT LAST_N == 0
+
+# partial parse "42x" → 42
+SETF t mixed "42x"
+NUMF t mixed
+ASSERT LAST_N == 42
+ASSERT NUMF_OK == 1
+
+# STRF number → string
+SETF t label 99
+STRF t label
+ASSERT STRF_N == 1
+ASSERT LAST_N == 99
+SYS EQS LAST "99"
+ASSERT LAST_N == 1
+# now string — CATF works
+CATF t label "-ok"
+GETF t label
+SYS EQS LAST "99-ok"
+ASSERT LAST_N == 1
+
+# STRF already string with digits normalizes
+SETF t count "07"
+STRF t count
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+
+# aliases
+SETF t count "5"
+INTF t count
+ASSERT LAST_N == 5
+ATOIF t count
+ASSERT LAST_N == 5
+SETF t label 8
+ASSTRF t label
+SYS EQS LAST "8"
+ASSERT LAST_N == 1
+SETF t label 11
+ITOAF t label
+SYS EQS LAST "11"
+ASSERT LAST_N == 1
+
+# METHOD: peel-like string bump
+SETF t count "20"
+SEND t bump
+GETF t count
+ASSERT LAST_N == 21
+
+# AFTERF then NUMF pipeline
+SETF t count "n=33"
+AFTERF t count "="
+NUMF t count
+ASSERT LAST_N == 33
+INCF t count 2
+GETF t count
+ASSERT LAST_N == 35
+
+# soft miss
+TRYNUMF nosuch count
+ASSERT OK == 0
+ASSERT NUMF_N == 0
+SYS EQS LAST_ERR "NUMF: unknown object"
+ASSERT LAST_N == 1
+NUMF SOFT t nosuch
+ASSERT OK == 0
+TRYSTRF nosuch label
+ASSERT OK == 0
+
+# dynamic field name
+SETF t count "9"
+NUMF t "count"
+ASSERT LAST_N == 9
+
+# HELP
+HELP NUMF
+SYS HAS LAST "NUMF"
+ASSERT LAST_N == 1
+HELP STRF
+SYS HAS LAST "STRF"
+ASSERT LAST_N == 1
+
+PRINT "oop_numf ok"

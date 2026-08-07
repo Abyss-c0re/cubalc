@@ -435,6 +435,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 405. ~~**`EQF` / `NEQF` / `EQFI` / `FINDF`**~~ **done** (exact field==value + first-index locate · no GETF+SYS EQS/FIND · IF guards · complements HASINF).
 406. ~~**`LEFTF` / `RIGHTF` / `SLICEF` / `TRUNCF`**~~ **done** (in-place field string slice/clip · no GETF+LEFT/MID+SETF · MIDSTRF not fleet MIDF · METHOD/THIS).
 407. ~~**`BEFOREF` / `AFTERF` / `BETWEENF`**~~ **done** (delimiter field peels · no GETF+SYS BEFORE/AFTER/BETWEEN+SETF · kv/log · METHOD/THIS).
+408. ~~**`NUMF` / `STRF`**~~ **done** (field type coerce · strtol / itoa in place · INCF after peel · CATF after count · METHOD/THIS).
 
 ## Tick protocol
 
