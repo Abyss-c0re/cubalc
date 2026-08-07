@@ -9,25 +9,25 @@
   "tests": [
     {
       "name": "bump_send",
-      "cmd": "SEND bump 5 → n=5; bump 3 → n=8",
+      "cmd": "SEND bump 5 \u2192 n=5; bump 3 \u2192 n=8",
       "ok": true,
       "note": "SEND"
     },
     {
       "name": "setst_ping",
-      "cmd": "setst hot; ping → pong",
+      "cmd": "setst hot; ping \u2192 pong",
       "ok": true,
       "note": "methods"
     },
     {
       "name": "eq",
-      "cmd": "EQF hot true; cold REQUIRE→2; EQFI Hot/hot on s1",
+      "cmd": "EQF hot true; cold REQUIRE\u21922; EQFI Hot/hot on s1",
       "ok": true,
       "note": "EQF"
     },
     {
       "name": "gate",
-      "cmd": "n>=5 admit; MINN=99 REQUIRE→2",
+      "cmd": "n>=5 admit; MINN=99 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -50,8 +50,8 @@
       "severity": "med",
       "area": "oop|send",
       "title": "Over-arity SEND soft-accepts (extra args ignored)",
-      "detail": "TRYSEND s bump 1 2 → OK=1 ARITY_GOT=2 with no hard fail. Under-arity correctly soft-fails needs/got. Agents cannot detect extra-arg mistakes at call site.",
-      "repro": "TRYSEND s0 bump 1 2 → OK=1 got 2"
+      "detail": "TRYSEND s bump 1 2 \u2192 OK=1 ARITY_GOT=2 with no hard fail. Under-arity correctly soft-fails needs/got. Agents cannot detect extra-arg mistakes at call site.",
+      "repro": "TRYSEND s0 bump 1 2 \u2192 OK=1 got 2"
     },
     {
       "id": "W2",
@@ -67,7 +67,7 @@
       "area": "oop|eqf",
       "title": "EQF case-sensitive; need EQFI for status fold",
       "detail": "Hot vs hot miss on EQF; slot-local EQFI works. Ops status strings need explicit icase path.",
-      "repro": "EQF status hot on Hot → 0; EQFI → 1"
+      "repro": "EQF status hot on Hot \u2192 0; EQFI \u2192 1"
     },
     {
       "id": "W4",
@@ -99,11 +99,11 @@
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SEND bump 5+3 → n=8; setst hot; ping pong",
+    "SEND bump 5+3 \u2192 n=8; setst hot; ping pong",
     "TRYSEND under-arity needs1 got0 LAST_ERR; over OK=1",
     "EQF/EQFI status gate; counter MINN gate",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "36495bcdd9bb8113c1cb4a126360ea2fda7543df",
   "ts": "2026-08-07T20:16:24Z"
 }
