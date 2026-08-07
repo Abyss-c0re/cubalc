@@ -2019,6 +2019,7 @@ int main(int argc, char **argv) {
       {"oop_sendall", "programs/proof/878_oop_sendall.cubalc", "SENDALL/BROADCAST method on every live object"},
       {"oop_deleteall", "programs/proof/879_oop_deleteall.cubalc", "DELETEALL/FREEALL bulk free live objects"},
       {"oop_getfall", "programs/proof/880_oop_getfall.cubalc", "GETFALL/COLLECTF bulk field collect from live objects"},
+      {"oop_setfall", "programs/proof/881_oop_setfall.cubalc", "SETFALL/MAPSETF bulk field write on live objects"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5905,6 +5906,7 @@ int main(int argc, char **argv) {
       {"programs/proof/878_oop_sendall.cubalc", "oop_sendall", "SENDALL/BROADCAST method on every live object"},
       {"programs/proof/879_oop_deleteall.cubalc", "oop_deleteall", "DELETEALL/FREEALL bulk free live objects"},
       {"programs/proof/880_oop_getfall.cubalc", "oop_getfall", "GETFALL/COLLECTF bulk field collect from live objects"},
+      {"programs/proof/881_oop_setfall.cubalc", "oop_setfall", "SETFALL/MAPSETF bulk field write on live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6183,6 +6185,7 @@ int main(int argc, char **argv) {
       {"programs/proof/878_oop_sendall.cubalc", "oop_sendall", "SENDALL/BROADCAST method on every live object"},
       {"programs/proof/879_oop_deleteall.cubalc", "oop_deleteall", "DELETEALL/FREEALL bulk free live objects"},
       {"programs/proof/880_oop_getfall.cubalc", "oop_getfall", "GETFALL/COLLECTF bulk field collect from live objects"},
+      {"programs/proof/881_oop_setfall.cubalc", "oop_setfall", "SETFALL/MAPSETF bulk field write on live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

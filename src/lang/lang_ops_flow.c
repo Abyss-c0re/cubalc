@@ -909,6 +909,145 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SETFALL|MAPSETF|PUTFALL [Class] field value
+   * — write same field value on every live object (optional class filter).
+   * Soft always; objects missing the field are skipped (SETFALL_SKIP).
+   * LAST_N/SETFALL_N = write count. Value: string | LAST | string-var | expr.
+   * Usability: fleet field stamp without EACH OBJ + SETF glue (dual of GETFALL). */
+  if (kw(&L->cur, "SETFALL") || kw(&L->cur, "MAPSETF") ||
+      kw(&L->cur, "PUTFALL") || kw(&L->cur, "SETF_ALL") ||
+      kw(&L->cur, "WRITEFALL") || kw(&L->cur, "FIELDSETALL") ||
+      kw(&L->cur, "BULKSETF") || kw(&L->cur, "SETFIELDALL")) {
+    char filt[48], fname[48], tok1[48], sval[512];
+    int has_filt = 0, is_str = 0, i, n = 0, n_skip = 0;
+    long nval = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    sval[0] = 0;
+    /* OF|CLASS|TYPE Class field value */
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SETFALL OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      /* Class field value when tok1 is known CLASS and next looks like field */
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SETFALL [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SETFALL [Class] field value"); return -1;
+      }
+    }
+    if (L->cur.kind == TK_EQ) lex_next(L);
+    /* parse value once, apply to all matching objs */
+    if (L->cur.kind == TK_STR) {
+      snprintf(sval, sizeof sval, "%s", L->cur.text);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(sval, sizeof sval, "%s", vm->last_str);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(sval, sizeof sval, "%s", sv->sval);
+        is_str = 1;
+        lex_next(L);
+      } else {
+        nval = parse_expr(vm, L);
+        is_str = 0;
+      }
+    } else {
+      nval = parse_expr(vm, L);
+      is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (is_str) {
+        snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", sval);
+        ob->fis_str[fi] = 1;
+      } else {
+        ob->fnum[fi] = nval;
+        ob->fis_str[fi] = 0;
+      }
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "SETFALL_N", n);
+    var_set_num(vm, "MAPSETF_N", n);
+    var_set_num(vm, "PUTFALL_N", n);
+    var_set_num(vm, "SETFALL_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0])
+      var_set_str(vm, "CLASS", filt);
+    if (is_str) {
+      var_set_str(vm, "LAST", sval);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", sval);
+    } else {
+      char nb[24];
+      snprintf(nb, sizeof nb, "%ld", nval);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* GETF obj field [OR|DEFAULT fallback]
    * TRYGETF|GETFSOFT|GETF SOFT — soft miss OK=0 (no fatal) without fallback.
    * GETF … OR val — like SYS ENV/LOOKUP: miss → LAST=fallback, OK=1, GETF_OR=1.

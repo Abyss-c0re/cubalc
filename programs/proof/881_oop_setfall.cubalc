@@ -1,0 +1,100 @@
+# SETFALL / MAPSETF — write field on every live object (optional class)
+# Usability: fleet field stamp without EACH OBJ + SETF glue (dual of GETFALL)
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+CLASS Marker
+  FIELD tag 0
+  FIELD label ""
+  METHOD init t
+    SETF THIS tag t
+    SETF THIS label "m"
+  END
+END
+NEW Marker m1 1
+NEW Marker m2 2
+
+# class-filtered bulk set
+SETFALL Cell energy 5
+ASSERT OK == 1
+ASSERT SETFALL_N == 3
+ASSERT LAST_N == 3
+GETF a energy
+ASSERT LAST_N == 5
+GETF b energy
+ASSERT LAST_N == 5
+GETF c energy
+ASSERT LAST_N == 5
+
+# MAPSETF alias
+MAPSETF Cell energy 99
+ASSERT MAPSETF_N == 3
+GETFALL Cell energy
+SYS SUM
+ASSERT LAST_N == 297 "99*3"
+
+# OF sugar
+SETFALL OF Cell ready 1
+ASSERT SETFALL_N == 3
+GETF a ready
+ASSERT LAST_N == 1
+
+# bare field across classes that have it
+SETFALL tag 42
+ASSERT SETFALL_N == 2 "only Markers"
+GETF m1 tag
+ASSERT LAST_N == 42
+GETF m2 tag
+ASSERT LAST_N == 42
+
+# string value
+SETFALL Marker label "fleet"
+ASSERT SETFALL_N == 2
+GETF m1 label
+SYS EQS LAST "fleet"
+ASSERT LAST_N == 1
+GETF m2 label
+SYS EQS LAST "fleet"
+ASSERT LAST_N == 1
+
+# PUTFALL alias + string field name
+PUTFALL Cell "energy" 7
+ASSERT PUTFALL_N == 3
+GETFALL Cell energy
+SYS AVG
+ASSERT LAST_N == 7
+
+# missing field soft skip
+SETFALL Cell no_such_zz 1
+ASSERT OK == 1
+ASSERT SETFALL_N == 0
+ASSERT SETFALL_SKIP == 3
+
+# empty pool soft
+DELETEALL Cell
+SETFALL Cell energy 0
+ASSERT OK == 1
+ASSERT SETFALL_N == 0
+
+# does not touch other classes
+GETF m1 tag
+ASSERT LAST_N == 42 "markers kept after Cell wipe"
+
+# var value bind
+LET v = 3
+NEW Cell p 1 0 0
+NEW Cell q 1 0 0
+SETFALL Cell energy v
+ASSERT SETFALL_N == 2
+GETF p energy
+ASSERT LAST_N == 3
+GETF q energy
+ASSERT LAST_N == 3
+
+PRINT "oop_setfall ok"
