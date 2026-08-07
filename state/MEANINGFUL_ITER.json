@@ -1,20 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 405,
-  "version": "1.15.432-usability",
-  "item": "REQUIRE FLAG fail-fast CLI flag",
-  "item_id": 441,
-  "title": "REQUIRE FLAG|OPT name \u2014 fail if --name missing \u00b7 LAST=value",
-  "commit": "08bf2677a9a261b3e0b84121eaef397f32998c38",
-  "summary": "Fail-fast --flag contract twin HASFLAG; LAST=value. proof 982 12/12 + miss tip.",
+  "iter": 406,
+  "version": "1.15.433-usability",
+  "item": "USAGE sticky CLI contract tip",
+  "item_id": 442,
+  "title": "USAGE [text] sticky \u00b7 REQUIRE ARG/ARGC/FLAG append usage tip",
+  "commit": "c765aee723b25d067e7767ab8eba5aaffcfb3223",
+  "summary": "Sticky USAGE string; REQUIRE fails append \u00b7 usage: tip. proof 983 8/8.",
   "proofs": [
-    "982_require_flag",
-    "asserts 12/12",
-    "smoke REQUIRE FLAG out -- --out=hi.txt --verbose",
-    "fail REQUIRE FLAG needme tip"
+    "983_usage",
+    "asserts 8/8",
+    "smoke REQUIRE FLAG in with USAGE tip",
+    "smoke REQUIRE ARGC 1 with USAGE tip"
   ],
-  "when": "2026-08-07T21:34:24Z",
+  "when": "2026-08-07T21:47:03Z",
   "agent": "meaningful_iter_10m",
-  "sha": "08bf2677a9a261b3e0b84121eaef397f32998c38",
+  "sha": "c765aee723b25d067e7767ab8eba5aaffcfb3223",
   "note": "no thrash; EVOLVE_PAUSED"
 }
