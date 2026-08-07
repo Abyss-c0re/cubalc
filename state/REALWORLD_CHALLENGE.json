@@ -33,13 +33,13 @@
     },
     {
       "name": "place_coldest",
-      "cmd": "MINOBJ + SEND bump → s0 load 16",
+      "cmd": "MINOBJ + SEND bump \u2192 s0 load 16",
       "ok": true,
       "note": "place"
     },
     {
       "name": "shed_hottest",
-      "cmd": "MAXOBJ s1 load-1 → 34",
+      "cmd": "MAXOBJ s1 load-1 \u2192 34",
       "ok": true,
       "note": "shed"
     },
@@ -57,13 +57,13 @@
     },
     {
       "name": "tie_first_seen",
-      "cmd": "s0=s2=99 MAXOBJ → s0 first",
+      "cmd": "s0=s2=99 MAXOBJ \u2192 s0 first",
       "ok": true,
       "note": "tie"
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2→1; pin",
+      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
       "ok": true,
       "note": "journal"
     },
@@ -81,7 +81,7 @@
     },
     {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE→2",
+      "cmd": "open xx soft/REQUIRE\u21922",
       "ok": true,
       "note": "miss"
     },
@@ -109,23 +109,23 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|last",
-      "title": "GETF LAST clobbers object name in LAST — SETF LAST after GETF fails",
+      "title": "GETF LAST clobbers object name in LAST \u2014 SETF LAST after GETF fails",
       "detail": "After MAXOBJ/MINOBJ, GETF LAST load replaces LAST with field value so SETF LAST load no longer targets the object. Agents must SEND LAST meth before GETF, re-MAXOBJ, or EQS wall. Shed re-MAXOBJ workaround documented.",
-      "repro": "MAXOBJ; GETF LAST load; SETF LAST load x → wrong target"
+      "repro": "MAXOBJ; GETF LAST load; SETF LAST load x \u2192 wrong target"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|maxobj",
-      "title": "MAXOBJ/MINOBJ return first tie only — no multi-max bag",
-      "detail": "s0=s2=99 → hottest s0 only. Cannot list all ties without EACH. Ops shed may starve second max.",
-      "repro": "two shards load 99; MAXOBJ → first-seen"
+      "title": "MAXOBJ/MINOBJ return first tie only \u2014 no multi-max bag",
+      "detail": "s0=s2=99 \u2192 hottest s0 only. Cannot list all ties without EACH. Ops shed may starve second max.",
+      "repro": "two shards load 99; MAXOBJ \u2192 first-seen"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|incfall",
-      "title": "INCFALL/DECFALL unfiltered — bumps entire class",
+      "title": "INCFALL/DECFALL unfiltered \u2014 bumps entire class",
       "detail": "No INCFALL Shard load WHERE region a. Bulk tick hits all shards; selective bump needs EACH or per-slot.",
       "repro": "tick +5 on all live Shards"
     },
@@ -133,7 +133,7 @@
       "id": "W4",
       "severity": "med",
       "area": "oop|sortbyf",
-      "title": "SORTBYF returns name bag not live handles — SEND on rank needs NTH+LAST dance",
+      "title": "SORTBYF returns name bag not live handles \u2014 SEND on rank needs NTH+LAST dance",
       "detail": "RANK plate is strings; cannot SEND rank_bag[0] without NTH 0 then SEND LAST if LAST still works.",
       "repro": "SORTBYF; cannot bulk SEND ranked"
     },
@@ -150,7 +150,7 @@
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two s0:load → one SETMATCH leaves 1.",
+      "detail": "Two s0:load \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -166,16 +166,16 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_SL_REQUIRE=abc → soft empty hottest.",
+      "detail": "CUBALC_SL_REQUIRE=abc \u2192 soft empty hottest.",
       "repro": "REQUIRE=abc"
     },
     {
       "id": "W9",
       "severity": "low",
       "area": "host|join",
-      "title": "SYS JOIN path-only — harvest REPLACEALL template",
+      "title": "SYS JOIN path-only \u2014 harvest REPLACEALL template",
       "detail": "n:N sum:S avg:A not JOIN.",
-      "repro": "SYS JOIN n: 3 → n:/3"
+      "repro": "SYS JOIN n: 3 \u2192 n:/3"
     }
   ],
   "workarounds": [
@@ -198,12 +198,12 @@
   "issues_faced": [
     "INCFALL+5 harvest sum:75; DECFALL 2 sum:69 worked",
     "MAXOBJ/MINOBJ/SORTBYF DESC ranking clean",
-    "place SEND LAST bump after MINOBJ — GETF would clobber LAST (W1)",
+    "place SEND LAST bump after MINOBJ \u2014 GETF would clobber LAST (W1)",
     "shed needs re-MAXOBJ before SETF after GETF load",
-    "tie s0=s2=99 → first-seen s0",
+    "tie s0=s2=99 \u2192 first-seen s0",
     "empty MAXOBJ soft N=0 OK=0; INCFALL empty N=0",
     "selftest 313/313 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T05:42:00Z"
+  "commit": "b0f8070180045ca8f6ddda30add4a1f8da46e650",
+  "ts": "2026-08-07T05:41:57Z"
 }
