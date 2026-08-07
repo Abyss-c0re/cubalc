@@ -1,136 +1,137 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 111,
-  "program": "programs/realworld/human_age_sla_board.cubalc",
-  "theme": "HUMANSECS plate age labels + ISOAGE SLA gate",
-  "version": "1.15.317-usability",
+  "iter": 112,
+  "program": "programs/realworld/ticket_object_board.cubalc",
+  "theme": "OOP Ticket pool LISTOBJS/HASOBJ/DELETEOBJ + plate rehydrate",
+  "version": "1.15.320-usability",
   "pass": true,
   "tests": [
     {
-      "name": "pin_age_human",
-      "cmd": "pin DATE; age 0; HUMANSECS \u2192 0s",
+      "name": "open_t1",
+      "cmd": "NEW t1 prio3 plate pool/t1.txt",
       "ok": true,
-      "note": "fresh"
+      "note": "open"
     },
     {
-      "name": "max_remain_gate",
-      "cmd": "max 5m \u2192 300s; remain 5m; gate admit",
+      "name": "rehydrate_status",
+      "cmd": "multi-run status\u2192open after plate restore",
       "ok": true,
-      "note": "sla"
+      "note": "persist"
     },
     {
-      "name": "old_deny",
-      "cmd": "Y2K age human weeks; gate deny REQUIRE2",
+      "name": "prio_bump",
+      "cmd": "prio 3; bump\u21924",
       "ok": true,
-      "note": "stale"
+      "note": "method"
     },
     {
-      "name": "round_90",
-      "cmd": "HUMANSECS 90 \u2192 1m30s \u2192 MS2SEC 90",
+      "name": "gate_open_closed",
+      "cmd": "admit open; close deny REQUIRE2",
       "ok": true,
-      "note": "round"
+      "note": "gate"
     },
     {
-      "name": "round_label",
-      "cmd": "round 1h1m1s equality",
+      "name": "list_methods_fields",
+      "cmd": "LISTOBJS/METHODS/FIELDS/CLASSES",
       "ok": true,
-      "note": "compound"
+      "note": "introspect"
     },
     {
-      "name": "lease_90s",
-      "cmd": "DEADLINE 90s REMAINING HUMANSECS 1m30s",
+      "name": "has_miss",
+      "cmd": "t5 soft; REQUIRE\u21922",
       "ok": true,
-      "note": "lease"
+      "note": "soft"
     },
     {
-      "name": "max_soft",
-      "cmd": "nope soft; REQUIRE\u21922",
+      "name": "delete_clear",
+      "cmd": "delete t1; clear pool",
       "ok": true,
-      "note": "miss"
+      "note": "lifecycle"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "292/292 pass"
+      "note": "295/295 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|units",
-      "title": "HUMANSECS\u2194PARSEMS unit family mismatch (secs label vs ms value)",
-      "detail": "HUMANSECS 90 \u2192 '1m30s'; PARSEMS LAST \u2192 90000 (ms). Agents comparing PARSEMS result to ISOAGE seconds get 1000\u00d7 error unless MS2SEC. No PARSESECS dual.",
-      "repro": "HUMANSECS 90; PARSEMS LAST \u2192 90000 not 90"
+      "area": "oop|new",
+      "title": "NEW object name is token ident, not string value of variable",
+      "detail": "LET n='dyn'; NEW T n \u2192 object named 'n' not 'dyn'. Dynamic registries need fixed slot pools.",
+      "repro": "LET n='dyn'; NEW T n; LISTOBJS has n not dyn"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "host|humansecs",
-      "title": "Huge ages produce week-heavy labels (ops noise)",
-      "detail": "Y2K age \u2192 1387w6d\u2026 No HUMANSECS_MAXUNIT or day-cap for digests.",
-      "repro": "ISOAGE 2000-01-01; HUMANSECS"
+      "severity": "high",
+      "area": "oop|setf",
+      "title": "SETF string field from variable stores strlen not text",
+      "detail": "SETF obj status st where st='open' \u2192 field becomes 4. Only string *literals* work. Blocks generic rehydrate.",
+      "repro": "LET s='open'; SETF t status s; GETF \u2192 4"
     },
     {
       "id": "W3",
-      "severity": "med",
-      "area": "host|humansecs",
-      "title": "No dual that formats seconds and returns seconds in LAST_N",
-      "detail": "HUMANSECS sets HUMANSECS_N=input secs but LAST is string; PARSEMS of LAST is ms. Easy shuttle confusion with HUMANMS (ms in/out).",
-      "repro": "HUMANMS 90000 vs HUMANSECS 90 both '1m30s'"
+      "severity": "high",
+      "area": "oop|init",
+      "title": "NEW/METHOD string ctor args arrive as string length",
+      "detail": "NEW Ticket t 'ticket-1' 3; GETF id \u2192 8 (strlen). Must SETF literals after NEW.",
+      "repro": "NEW T t 'hello' ; GETF id \u2192 5"
     },
     {
       "id": "W4",
-      "severity": "med",
-      "area": "host|local",
-      "title": "LOCAL stamp ISOAGE still TZ-skewed",
-      "detail": "Inherited; pin DATE UTC only.",
-      "repro": "LOCAL; ISOAGE"
+      "severity": "high",
+      "area": "oop|persist",
+      "title": "Objects are process-local \u2014 no serialize; multi-run needs plate dual",
+      "detail": "ARG-dispatch agents lose all NEW state each process. Board rehydrates from pool/*.txt.",
+      "repro": "open in run1; has in run2 without plate \u2192 miss"
     },
     {
       "id": "W5",
-      "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "MAX/AGE od -c no newline.",
-      "repro": "od -c MAX.txt"
+      "severity": "med",
+      "area": "oop|delete",
+      "title": "DELETEOBJ unknown soft OK=0 sticky last_err",
+      "detail": "Need CLEAR_ERR after soft destroy miss for -s.",
+      "repro": "DELETEOBJ missing; last_err set"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_HA_REQUIRE=abc.",
-      "repro": "REQUIRE=abc max bad \u2192 rc0"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "VAL/pool lines may glue in cat -A on short files.",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|humansecs",
-      "title": "Zero-arg HUMANSECS uses prior LAST_N \u2014 silent if LAST is string path",
-      "detail": "Chain after path-producing ops needs explicit secs arg.",
-      "repro": "HUMANSECS after string LAST"
+      "area": "host|num",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "CUBALC_TO_REQUIRE=abc.",
+      "repro": "REQUIRE=abc has miss \u2192 rc0"
     }
   ],
   "workarounds": [
-    "Always MS2SEC after PARSEMS of HUMANSECS labels before comparing to age_s",
-    "Store max/age as integer seconds on plate, not only human labels",
-    "Pin UTC DATE/Z; avoid LOCAL",
-    "Prefer HUMANSECS for second clocks; HUMANMS only for ms budgets",
-    "Digit-check REQUIRE"
+    "Fixed slot pool t0..tN with EQS dispatch",
+    "SETF string fields only with literals; branch EQS for rehydrate",
+    "Numeric-only METHOD init args; SETF strings after NEW",
+    "Plate snapshot pool/*.txt per process for multi-run",
+    "CLEAR_ERR after DELETEOBJ soft miss"
   ],
   "language_gaps": [
-    "PARSESECS dual of HUMANSECS (label \u2192 seconds not ms)",
-    "HUMANSECS max unit / compact mode for multi-week ages",
-    "Documented unit family matrix (ms vs s clocks)",
+    "Dynamic NEW from string name",
+    "SETF/GETF true string-var path (not strlen)",
+    "METHOD string formal values not lengths",
+    "Object serialize/restore or plate-backed store",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "pin/age/human/max/remain/gate/round/lease green",
-    "ms-vs-secs PARSEMS pitfall is core lesson for HUMANSECS agents",
-    "selftest green; no language fix this iter"
+    "open/status/prio/bump/gate/close/list/methods/fields/delete green with plate rehydrate",
+    "SETF strlen + NEW name token are core OOP agent blockers",
+    "selftest green; no language fix this iter (gaps documented)"
   ],
-  "commit": "3af989c54f15626649d3fe525b9719f2f4274528",
-  "ts": "2026-08-07T02:18:55Z"
+  "commit": "",
+  "ts": "2026-08-07T02:50:47Z"
 }
