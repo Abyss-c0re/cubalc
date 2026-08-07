@@ -1019,6 +1019,72 @@ static void sys_suggest_op(const char *typo, char *out, size_t outn){
 }
 
 
+/* Scan CUBALC_ARG0.. for CLI flag `name` (no leading dashes in name).
+ * Matches: --name, -name, --name=value, -name=value, --name value.
+ * Returns 0 miss · 1 bare present (bool "1") · 2 value present (out filled).
+ * Usability: GETFLAG/HASFLAG without shell getopt glue. */
+static int cubalc_scan_cli_flag(const char *name, char *out, size_t outn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k;
+  size_t nlen;
+  if (!name || !name[0]) return 0;
+  /* strip accidental leading dashes from name */
+  while (name[0] == '-') name++;
+  if (!name[0]) return 0;
+  nlen = strlen(name);
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a, *p;
+    size_t al;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || a[0] != '-') continue;
+    p = a + 1;
+    if (*p == '-') p++;
+    if (!*p) continue; /* bare -- separator skip */
+    al = strlen(p);
+    if (al >= nlen && strncmp(p, name, nlen) == 0) {
+      if (p[nlen] == '=') {
+        if (out && outn)
+          snprintf(out, outn, "%s", p + nlen + 1);
+        return 2;
+      }
+      if (p[nlen] == 0) {
+        /* --name value (next non-flag) or bare bool */
+        if (k + 1 < argc) {
+          char env2[32];
+          const char *b;
+          snprintf(env2, sizeof env2, "CUBALC_ARG%d", k + 1);
+          b = getenv(env2);
+          if (b && b[0] && b[0] != '-') {
+            if (out && outn)
+              snprintf(out, outn, "%s", b);
+            return 2;
+          }
+        }
+        if (out && outn)
+          snprintf(out, outn, "1");
+        return 1;
+      }
+    }
+  }
+  if (out && outn) out[0] = 0;
+  return 0;
+}
+
 /* Format ASSERT/EXPECT failure with got/expected from last parse_cmp. */
 static void assert_fail_msg(VM *vm, char *msg, size_t n, const char *tag, int aln,
                             const char *why){
@@ -25874,6 +25940,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
+      {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
+      {"GETFLAG", "GETFLAG name [OR fallback] — LAST = flag value (bare → \"1\")"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -27942,6 +28010,101 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
     if (vm->trace)
       fprintf(vm->trace, "# hasargc >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm); return 1;
+  }
+  /* HASFLAG name — soft 0|1 if --name / -name / --name=… present in CUBALC_ARGn.
+   * GETFLAG name [OR|DEFAULT fallback] — LAST = value (or "1" for bare flag).
+   * Usability: CLI --key tools without shell getopt; twin of HASARG for flags. */
+  if (kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASOPT") || kw(&L->cur,"FLAG?") ||
+      kw(&L->cur,"HAS_FLAG") || kw(&L->cur,"OPTHAS") || kw(&L->cur,"DEFINEDFLAG")){
+    char name[96], val[CUBALC_HOST_STR_MAX];
+    int hit;
+    char buf[8];
+    lex_next(L);
+    name[0] = 0;
+    /* allow HASFLAG --verbose (lexer splits dashes) or HASFLAG "verbose" */
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "HASFLAG needs name — HASFLAG verbose");
+      return -1;
+    }
+    while (name[0] == '-') {
+      memmove(name, name + 1, strlen(name));
+    }
+    if (!name[0]) {
+      fail_at(vm, L, "HASFLAG empty name");
+      return -1;
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "HASFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "HASFLAG", name);
+    if (hit && val[0]) {
+      var_set_str(vm, "FLAG", val);
+      var_set_str(vm, "FLAG_VAL", val);
+    }
+    snprintf(buf, sizeof buf, "%ld", hit ? 1L : 0L);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflag %s → %d\n", name, hit ? 1 : 0);
+    bump(vm); return 1;
+  }
+  if (kw(&L->cur,"GETFLAG") || kw(&L->cur,"GETOPT") || kw(&L->cur,"FLAG") ||
+      kw(&L->cur,"OPTARG") || kw(&L->cur,"OPT_GET") || kw(&L->cur,"FLAGVAL")){
+    char name[96], val[CUBALC_HOST_STR_MAX], fb[512];
+    int hit, have_fb = 0;
+    lex_next(L);
+    name[0] = 0;
+    val[0] = 0;
+    fb[0] = 0;
+    /* allow GETFLAG --out OR "x" (lexer splits dashes) */
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "GETFLAG needs name — GETFLAG out OR \"a.txt\"");
+      return -1;
+    }
+    while (name[0] == '-') {
+      memmove(name, name + 1, strlen(name));
+    }
+    if (!name[0]) {
+      fail_at(vm, L, "GETFLAG empty name");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "GETFLAG name OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    if (!hit) {
+      if (have_fb)
+        snprintf(val, sizeof val, "%s", fb);
+      else
+        val[0] = 0;
+    }
+    var_set_str(vm, "LAST", val);
+    var_set_str(vm, "FLAG", val);
+    var_set_str(vm, "GETFLAG", name);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
+    if (vm->trace)
+      fprintf(vm->trace, "# getflag %s hit=%d → %s\n", name, hit, val);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.

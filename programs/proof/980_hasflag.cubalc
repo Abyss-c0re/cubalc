@@ -1,0 +1,75 @@
+# HASFLAG / GETFLAG — soft CLI --flag probes (getopt without shell)
+# Scans CUBALC_ARG0.. for --name, -name, --name=val, --name val
+
+HOLD_FLASH 1
+
+# clean slate
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV UNSET CUBALC_ARG1
+SYS ENV UNSET CUBALC_ARG2
+SYS ENV UNSET CUBALC_ARG3
+SYS ENV SET CUBALC_ARGC "0"
+
+HASFLAG verbose
+ASSERT LAST_N == 0
+GETFLAG out OR "default.txt"
+ASSERT LAST_N == 0
+SYS EQS LAST "default.txt"
+ASSERT LAST_N == 1
+
+# --verbose bare bool + --out=result.txt
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--out=result.txt"
+SYS ENV SET CUBALC_ARGC "2"
+
+HASFLAG verbose
+ASSERT LAST_N == 1
+HASFLAG out
+ASSERT LAST_N == 1
+HASFLAG missing
+ASSERT LAST_N == 0
+
+GETFLAG verbose
+ASSERT LAST_N == 1
+SYS EQS LAST "1"
+ASSERT LAST_N == 1
+
+GETFLAG out
+ASSERT LAST_N == 1
+SYS EQS LAST "result.txt"
+ASSERT LAST_N == 1
+
+# --name value form
+SYS ENV SET CUBALC_ARG0 "--mode"
+SYS ENV SET CUBALC_ARG1 "fast"
+SYS ENV SET CUBALC_ARG2 "-n"
+SYS ENV SET CUBALC_ARG3 "42"
+SYS ENV SET CUBALC_ARGC "4"
+
+GETFLAG mode
+SYS EQS LAST "fast"
+ASSERT LAST_N == 1
+GETFLAG n
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# leading dashes on name ok
+HASFLAG --verbose
+ASSERT LAST_N == 0
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARGC "1"
+HASFLAG --verbose
+ASSERT LAST_N == 1
+
+# branch without REQUIRE
+HASFLAG mode
+IF LAST_N == 1
+  LET style "flagged"
+ELSE
+  LET style "plain"
+END
+# mode not in current args
+SYS EQS style "plain"
+ASSERT LAST_N == 1
+
+PRINT "hasflag ok"
