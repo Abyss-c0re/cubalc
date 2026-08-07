@@ -1,69 +1,63 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 131,
-  "program": "programs/realworld/pool_rate_clamp_board.cubalc",
-  "theme": "CLAMPWHERE/UNIQUWHERE pool rate bound + unique pool inventory + MAXWHERE admit",
-  "version": "1.15.364-usability",
+  "iter": 132,
+  "program": "programs/realworld/canary_weight_mul_board.cubalc",
+  "theme": "COPYFWHERE/MULWHERE/SWAPFWHERE canary weight snap+scale+rollback + SUMWHERE admit",
+  "version": "1.15.367-usability",
   "pass": true,
-  "prior_note": "iter 130 env_slo MEDIAN/FREQ/MODEWHERE; this iter stresses CLAMPWHERE+UNIQUWHERE (a6afd70/0b8a65e)",
+  "prior_note": "iter 131 pool_rate_clamp CLAMPWHERE/UNIQUWHERE; this iter stresses COPYFWHERE+MULWHERE+SWAPFWHERE (288b963/a01fa39/917)",
   "tests": [
     {
-      "name": "open_workers",
-      "cmd": "open w0/w1 api w2 batch; hot/hot/idle",
+      "name": "open_roles",
+      "cmd": "open r0/r1 canary r2 stable; weights 10/20/100",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "clampwhere_hot",
-      "cmd": "rates 150/-5/200; CLAMPWHERE hot [0,100] \u2192 100/0; idle 200 unclamped",
+      "name": "copyfwhere_snap",
+      "cmd": "COPYFWHERE weight→prev role canary N=2",
       "ok": true,
-      "note": "CLAMPWHERE N=2 CHANGED=2"
+      "note": "COPYFWHERE"
     },
     {
-      "name": "uniquwhere_pools",
-      "cmd": "UNIQUWHERE pool status hot \u2192 api only",
+      "name": "mulwhere_scale",
+      "cmd": "MULWHERE BY 2 → 20/40; stable 100 unscaled",
       "ok": true,
-      "note": "UNIQUWHERE"
+      "note": "MULWHERE"
     },
     {
-      "name": "max_rate_admit",
-      "cmd": "MAXWHERE hot 100; budget 100 admit; budget 50 deny",
+      "name": "sum_admit",
+      "cmd": "sum canary 60; budget 50 deny; after rollback 30 admit",
       "ok": true,
-      "note": "admit"
+      "note": "SUMWHERE+admit"
     },
     {
-      "name": "already_in_range",
-      "cmd": "second clamp CHANGED=0",
+      "name": "swapfwhere_rollback",
+      "cmd": "SWAPFWHERE weight↔prev → 10/20 restored",
       "ok": true,
-      "note": "idempotent"
+      "note": "SWAPFWHERE"
     },
     {
-      "name": "lo_hi_autoswap",
-      "cmd": "LO=50 HI=20 \u2192 LO=20 HI=50; rate 10\u219220",
+      "name": "factor_zero_drain",
+      "cmd": "scale BY 0 → weights 0; rollback restores",
       "ok": true,
-      "note": "swap"
+      "note": "drain"
     },
     {
-      "name": "empty_status",
-      "cmd": "clamp/unique/max missing \u2192 0; admit REQUIRE deny",
+      "name": "empty_role",
+      "cmd": "snap/scale/sum missing N=0; admit REQUIRE deny",
       "ok": true,
       "note": "empty"
     },
     {
       "name": "substring_false_friend",
-      "cmd": "status ho count/unique 0",
+      "cmd": "role can count/sum 0 vs canary",
       "ok": true,
       "note": "exact"
     },
     {
-      "name": "probe_soft",
-      "cmd": "TRYSEND soft; empty clamp/unique N=0",
-      "ok": true,
-      "note": "soft"
-    },
-    {
       "name": "setmatch_first",
-      "cmd": "two w0:clamp \u2192 SETMATCH leaves 1",
+      "cmd": "two r0:scale → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -71,49 +65,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "340/340 pass"
+      "note": "343/343 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "med",
-      "area": "oop|clampwhere",
-      "title": "CLAMPWHERE equality match only \u2014 no rate>HI predicate without status",
-      "detail": "Cannot clamp only workers already over budget without a status/tag field. Agents must mark hot first or clamp entire class.",
-      "repro": "want clamp rate>100 only; need status=hot marker"
+      "area": "oop|mulwhere",
+      "title": "MULWHERE factor is integer only — no fractional scale",
+      "detail": "Cannot ramp canary by 1.5x without two-step or non-integer path. BY 0 drains; negative factors may surprise.",
+      "repro": "scale BY 1.5 not expressible cleanly"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|clampwhere",
-      "title": "No per-pool LO/HI \u2014 one bound for all matching status",
-      "detail": "api and batch hot workers share same clamp range; multi-pool budgets need multiple CLAMPWHERE or SETFWHERE glue.",
-      "repro": "hot api cap 100 batch cap 50 \u2014 one clamp hits both"
+      "area": "oop|copyfwhere",
+      "title": "COPYFWHERE/SWAPFWHERE equality match only — no weight>N cohort",
+      "detail": "Selective snap/rollback needs a role/tag field; cannot match on weight threshold alone.",
+      "repro": "want snap only weight>10 without role tag"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|uniquwhere",
-      "title": "UNIQUWHERE first-seen order not sorted; no count per unique",
-      "detail": "Pool inventory is unordered first-seen; frequency needs FREQWHERE separately (and *WHERE clobber risk from iter 130).",
-      "repro": "UNIQUWHERE returns bag without :count"
+      "area": "oop|swapfwhere",
+      "title": "Rollback without snap swaps zeros into weight",
+      "detail": "SWAPFWHERE with prev=0 drains canary if snap skipped. No refuse-if-blank for numeric prev.",
+      "repro": "open; no snap; rollback → weight 0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|maxwhere|empty",
-      "title": "Empty MAXWHERE \u2192 0 like true zero rate",
-      "detail": "Admit must COUNTWHERE N>0; empty status would admit under BUDGET\u22650 without gate.",
-      "repro": "max_rate missing \u2192 0 N=0"
+      "area": "oop|sumwhere|empty",
+      "title": "Empty SUMWHERE → 0; admit needs explicit N>0",
+      "detail": "Ghost role sum 0 would admit under any budget without COUNTWHERE gate.",
+      "repro": "admit missing budget 10 → deny only because N=0 gate"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|clampwhere",
-      "title": "LO>HI auto-swap is silent \u2014 no warn",
-      "detail": "LO=50 HI=20 becomes [20,50] via CLAMPWHERE_LO/HI; agent mis-order bounds without hard error.",
-      "repro": "META lo 20 hi 50 after LO=50 HI=20"
+      "area": "oop|mulwhere",
+      "title": "No atomic snap+scale single op",
+      "detail": "Race window between COPYFWHERE and MULWHERE across multi-process ARG dispatch (plate rehydrate helps but two runs).",
+      "repro": "snap then scale as separate CUBALC_ARG0 runs"
     },
     {
       "id": "W6",
@@ -127,8 +121,8 @@
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE/LO/HI softens",
-      "detail": "REQUIRE=abc \u2192 soft; bad LO keeps default.",
+      "title": "Non-numeric REQUIRE/FACTOR softens",
+      "detail": "REQUIRE=abc → soft; bad FACTOR keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -136,34 +130,31 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two w0:clamp \u2192 one SETMATCH leaves 1.",
+      "detail": "Two r0:scale → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Tag workers hot before CLAMPWHERE status match",
-    "Per-pool caps: multiple CLAMPWHERE with different status tags",
-    "FREQWHERE for pool:count; UNIQUWHERE for inventory only",
-    "COUNTWHERE N>0 before MAXWHERE admit",
-    "Read CLAMPWHERE_LO/HI after call to detect auto-swap",
+    "Always snap before scale for meaningful SWAPFWHERE rollback",
+    "Tag canary role for WHERE match; COUNTWHERE N>0 before admit",
+    "Integer factors only; multi-step for non-power-of-two ramps",
+    "Gate empty role via N>0 not sum alone",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "CLAMPWHERE with numeric predicate (rate>N) not only field==value",
-    "Per-group clamp bounds (pool\u2192[lo,hi] map)",
-    "UNIQUWHERE sorted + with counts option",
-    "Empty MAXWHERE soft miss vs zero",
-    "Warn on LO>HI auto-swap",
+    "Fractional MULWHERE / fixed-point scale",
+    "WHERE numeric predicate (weight>N)",
+    "Atomic SNAPSCALE / refuse-if-prev-zero SWAP",
+    "Empty SUMWHERE soft miss vs zero",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "CLAMPWHERE hot 150\u2192100 -5\u21920; idle 200 untouched CHANGED=2",
-    "UNIQUWHERE hot pools \u2192 api; idle \u2192 batch",
-    "MAXWHERE 100; admit budget 100 ok; 50 deny",
-    "second clamp CHANGED=0; LO>HI auto-swap 10\u219220",
-    "empty missing clamp N=0; admit REQUIRE deny",
-    "selftest 340/340 green; no language fix this iter"
+    "COPYFWHERE snap N=2; MULWHERE BY 2 → 20/40; stable 100 untouched",
+    "sum canary 60 budget 50 deny; rollback sum 30 budget 30 admit",
+    "scale BY 0 drain; rollback restores prev",
+    "empty missing N=0 admit REQUIRE deny; role can false friend 0",
+    "selftest 343/343 green; no language fix this iter"
   ],
-  "commit": "819ffdbdbf9388d125f7e043d25ade98dc313c53",
-  "ts": "2026-08-07T10:14:12Z"
+  "commit": "",
+  "ts": "2026-08-07T10:39:58Z"
 }

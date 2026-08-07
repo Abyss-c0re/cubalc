@@ -1,0 +1,1275 @@
+# canary_weight_mul_board.cubalc — COPYFWHERE/MULWHERE/SWAPFWHERE canary scale
+#
+# Real use: release agents snapshot canary traffic weights, scale them by a
+# factor (2x ramp / 0 drain), then rollback via selective swap without
+# EACH+GETF+IF+SETF. Stable cohort is untouched by role match.
+#
+# Surfaces forced (1.15.365–367):
+#   COPYFWHERE / SNAPSHOTWHERE / BACKUPWHERE — selective field snapshot
+#   MULWHERE / SCALEWHERE / TIMESWHERE       — selective multiply
+#   SWAPFWHERE / EXCHANGEWHERE / FLIPWHERE   — selective dual-buffer swap
+#   SUMWHERE · COUNTWHERE · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from canary_rev_swap (fleet-wide COPYF/SWAPF rev strings),
+# pool_rate_clamp (CLAMPWHERE), route_weight (bag weights), latency_median_scale
+# (MEDIANF+MULFALL): this board is *role-filtered weight snap/scale/rollback*.
+#
+# Slots: r0 r1 r2
+#
+# Plate under STATE:
+#   dump/r0 dump/r1 dump/r2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt WEIGHT_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Rel
+#   open       — NEW Rel ARG1=rN [role=ARG2 default stable]
+#   setrole    — SETF role ARG2
+#   setweight  — SETF weight ARG2
+#   snap       — COPYFWHERE weight→prev WHERE role ARG1(default canary)
+#   scale      — MULWHERE weight role ARG1 BY factor (ENV/ARG2)
+#   rollback   — SWAPFWHERE weight prev WHERE role ARG1
+#   sum_w      — SUMWHERE weight role ARG1
+#   count_role — COUNTWHERE role ARG1
+#   admit      — SUMWHERE canary weight ≤ BUDGET and N>0; REQUIRE→2 if not
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_cwm_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=r0 CUBALC_ARG2=canary
+#   CUBALC_ARG0=setweight CUBALC_ARG1=r0 CUBALC_ARG2=10
+#   CUBALC_ARG0=snap CUBALC_ARG1=canary
+#   CUBALC_ARG0=scale CUBALC_ARG1=canary CUBALC_ARG2=2
+#   CUBALC_ARG0=rollback CUBALC_ARG1=canary
+#   CUBALC_ARG0=admit CUBALC_FS_BUDGET=50 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT BUDGET FACTOR ACTION
+#
+# Edges:
+#   COPYFWHERE/MULWHERE/SWAPFWHERE equality match only
+#   no match → N=0 soft; factor 0 drains weights
+#   snap then scale required for meaningful rollback
+#   empty role SUMWHERE 0; admit needs N>0
+#   WRITE NL; NUM softens; SETMATCH first-only; substring false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Rel
+  FIELD id ""
+  FIELD role "stable"
+  FIELD weight 0
+  FIELD prev 0
+  METHOD init i r
+    SETF THIS id i
+    SETF THIS role r
+    SETF THIS weight 0
+    SETF THIS prev 0
+  END
+END
+
+NOTE "canary_weight_mul_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "canary"
+DEFAULT BUDGET = 100
+DEFAULT FACTOR = 2
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BUDGET = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_FACTOR" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET FACTOR = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "WEIGHT_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "r0"
+LET d_r0 = LAST
+SYS JOIN dump_dir "r1"
+LET d_r1 = LAST
+SYS JOIN dump_dir "r2"
+LET d_r2 = LAST
+
+LET slot = -1
+SYS EQS NAME "r0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "r1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "r2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "r0"
+END
+IF slot == 1 THEN
+  LET sn = "r1"
+END
+IF slot == 2 THEN
+  LET sn = "r2"
+END
+
+# rehydrate r0
+SYS READ OR d_r0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "prev"
+  LET rp = LAST_N
+  CLEAR_ERR
+  NEW Rel r0 rid rrole
+  TRYSETF r0 role rrole
+  TRYSETF r0 weight rw
+  TRYSETF r0 prev rp
+  CLEAR_ERR
+END
+# rehydrate r1
+SYS READ OR d_r1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "prev"
+  LET rp = LAST_N
+  CLEAR_ERR
+  NEW Rel r1 rid rrole
+  TRYSETF r1 role rrole
+  TRYSETF r1 weight rw
+  TRYSETF r1 prev rp
+  CLEAR_ERR
+END
+# rehydrate r2
+SYS READ OR d_r2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "role"
+  LET rrole = LAST
+  SYS LOOKUPN snap "weight"
+  LET rw = LAST_N
+  SYS LOOKUPN snap "prev"
+  LET rp = LAST_N
+  CLEAR_ERR
+  NEW Rel r2 rid rrole
+  TRYSETF r2 role rrole
+  TRYSETF r2 weight rw
+  TRYSETF r2 prev rp
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "canary_weight_mul_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Rel
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET rl0 = "stable"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET rl0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DELETEOBJ r0
+        CLEAR_ERR
+      END
+      NEW Rel r0 sn rl0
+      DUMPOBJ r0
+      SYS WRITE d_r0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DELETEOBJ r1
+        CLEAR_ERR
+      END
+      NEW Rel r1 sn rl0
+      DUMPOBJ r1
+      SYS WRITE d_r1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DELETEOBJ r2
+        CLEAR_ERR
+      END
+      NEW Rel r2 sn rl0
+      DUMPOBJ r2
+      SYS WRITE d_r2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Rel
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta rl0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setrole ---
+SYS EQS ACTION "setrole"
+IF LAST_N == 1 THEN
+  NOTE "action setrole"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setrole bad slot"
+    FAIL "setrole bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setrole bad slot"
+    END
+  ELSE
+    LET rl0 = "stable"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET rl0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 role rl0
+        LET ok_set = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 role rl0
+        LET ok_set = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 role rl0
+        LET ok_set = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setrole no obj"
+      FAIL "setrole no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setrole no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setrole ok"
+      LET val = rl0
+      LET val_ch = 1
+      LET meta = "setrole"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta rl0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setweight ---
+SYS EQS ACTION "setweight"
+IF LAST_N == 1 THEN
+  NOTE "action setweight"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setweight bad slot"
+    FAIL "setweight bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setweight bad slot"
+    END
+  ELSE
+    LET n0 = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET n0 = LAST_N
+      END
+      CLEAR_ERR
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        SETF r0 weight n0
+        LET ok_set = 1
+        DUMPOBJ r0
+        SYS WRITE d_r0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        SETF r1 weight n0
+        LET ok_set = 1
+        DUMPOBJ r1
+        SYS WRITE d_r1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        SETF r2 weight n0
+        LET ok_set = 1
+        DUMPOBJ r2
+        SYS WRITE d_r2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setweight no obj"
+      FAIL "setweight no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setweight no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setweight ok"
+      SYS STR n0
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setweight"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- snap COPYFWHERE weight → prev ---
+SYS EQS ACTION "snap"
+IF LAST_N == 1 THEN
+  NOTE "action snap"
+  LET rl0 = "canary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  COPYFWHERE Rel weight prev role rl0
+  LET ret_n = COPYFWHERE_N
+  LET sk = COPYFWHERE_SKIP
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:snap"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "snap ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "snap"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- scale MULWHERE weight BY factor ---
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  NOTE "action scale"
+  LET rl0 = "canary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  LET fac = FACTOR
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET fac = LAST_N
+    END
+    CLEAR_ERR
+  END
+  MULWHERE Rel weight role rl0 BY fac
+  LET ret_n = MULWHERE_N
+  LET fac_n = MULWHERE_FACTOR
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:scale"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "scale ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "scale"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS STR fac_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- rollback SWAPFWHERE weight ↔ prev ---
+SYS EQS ACTION "rollback"
+IF LAST_N == 1 THEN
+  NOTE "action rollback"
+  LET rl0 = "canary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  SWAPFWHERE Rel weight prev role rl0
+  LET ret_n = SWAPFWHERE_N
+  LET sk = SWAPFWHERE_SKIP
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DUMPOBJ r0
+    SYS WRITE d_r0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DUMPOBJ r1
+    SYS WRITE d_r1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DUMPOBJ r2
+    SYS WRITE d_r2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:rollback"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "rollback ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "rollback"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- sum_w ---
+SYS EQS ACTION "sum_w"
+IF LAST_N == 1 THEN
+  NOTE "action sum_w"
+  LET rl0 = "canary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  SUMWHERE Rel weight role rl0
+  LET ret_n = LAST_N
+  LET n_hit = SUMWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "sum_w ok"
+  LET val_ch = 1
+  LET meta = "sum_w"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_role ---
+SYS EQS ACTION "count_role"
+IF LAST_N == 1 THEN
+  NOTE "action count_role"
+  LET rl0 = "canary"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  COUNTWHERE Rel role rl0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_role ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_role"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: SUMWHERE weight role ≤ BUDGET and N>0 ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET rl0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rl0 = NAME
+  END
+  COUNTWHERE Rel role rl0
+  LET n_hit = LAST_N
+  SUMWHERE Rel weight role rl0
+  LET ret_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF n_hit > 0 THEN
+    IF ret_n <= BUDGET THEN
+      LET val = "admit"
+      LET miss = 0
+      LET hit = 1
+      LET note_msg = "admit ok"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta rl0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR BUDGET
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny weight over budget or empty"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny weight over budget or empty"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    TRYSEND r0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF r0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  COPYFWHERE Rel weight prev role "no_such"
+  LET empty_c = COPYFWHERE_N
+  CLEAR_ERR
+  MULWHERE Rel weight role "no_such" BY 2
+  LET empty_m = MULWHERE_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_c
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ r0
+      IF LAST_N == 1 THEN
+        DUMPOBJ r0
+        LET val = LAST
+        SYS WRITE d_r0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ r1
+      IF LAST_N == 1 THEN
+        DUMPOBJ r1
+        LET val = LAST
+        SYS WRITE d_r1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ r2
+      IF LAST_N == 1 THEN
+        DUMPOBJ r2
+        LET val = LAST
+        SYS WRITE d_r2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ r0
+  IF LAST_N == 1 THEN
+    DELETEOBJ r0
+    CLEAR_ERR
+  END
+  HASOBJ r1
+  IF LAST_N == 1 THEN
+    DELETEOBJ r1
+    CLEAR_ERR
+  END
+  HASOBJ r2
+  IF LAST_N == 1 THEN
+    DELETEOBJ r2
+    CLEAR_ERR
+  END
+  SYS WRITE d_r0 ""
+  SYS WRITE d_r1 ""
+  SYS WRITE d_r2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setrole"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setweight"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "snap"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "scale"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "rollback"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum_w"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_role"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "snap ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "scale ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "rollback ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "canary_weight_mul_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
