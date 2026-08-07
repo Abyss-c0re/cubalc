@@ -2033,6 +2033,7 @@ int main(int argc, char **argv) {
       {"oop_countwhere", "programs/proof/892_oop_countwhere.cubalc", "COUNTOBJ/COUNTWHERE/COUNTWHEREGE fleet tallies without bags"},
       {"oop_haswhere", "programs/proof/893_oop_haswhere.cubalc", "HASWHERE/HASWHEREGE soft existence probes for IF gates"},
       {"oop_wherebetween", "programs/proof/894_oop_wherebetween.cubalc", "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN closed-range fleet query"},
+      {"oop_deletebetween", "programs/proof/895_oop_deletebetween.cubalc", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5933,6 +5934,7 @@ int main(int argc, char **argv) {
       {"programs/proof/892_oop_countwhere.cubalc", "oop_countwhere", "COUNTOBJ/COUNTWHERE/COUNTWHEREGE fleet tallies without bags"},
       {"programs/proof/893_oop_haswhere.cubalc", "oop_haswhere", "HASWHERE/HASWHEREGE soft existence probes for IF gates"},
       {"programs/proof/894_oop_wherebetween.cubalc", "oop_wherebetween", "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN closed-range fleet query"},
+      {"programs/proof/895_oop_deletebetween.cubalc", "oop_deletebetween", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6225,6 +6227,7 @@ int main(int argc, char **argv) {
       {"programs/proof/892_oop_countwhere.cubalc", "oop_countwhere", "COUNTOBJ/COUNTWHERE/COUNTWHEREGE fleet tallies without bags"},
       {"programs/proof/893_oop_haswhere.cubalc", "oop_haswhere", "HASWHERE/HASWHEREGE soft existence probes for IF gates"},
       {"programs/proof/894_oop_wherebetween.cubalc", "oop_wherebetween", "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN closed-range fleet query"},
+      {"programs/proof/895_oop_deletebetween.cubalc", "oop_deletebetween", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
