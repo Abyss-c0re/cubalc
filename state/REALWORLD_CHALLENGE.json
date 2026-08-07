@@ -139,6 +139,6 @@
     "LOCAL/offset/500ms floor remain open",
     "selftest green"
   ],
-  "commit": "",
+  "commit": "198f5a9e2c2f0dc600a6fdd726e8bdfbb6363a33",
   "ts": "2026-08-07T01:57:34Z"
 }
