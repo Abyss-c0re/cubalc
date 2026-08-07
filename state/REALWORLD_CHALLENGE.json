@@ -15,13 +15,13 @@
     },
     {
       "name": "scrub",
-      "cmd": "TRIMF+LOWERF → ready/draft",
+      "cmd": "TRIMF+LOWERF \u2192 ready/draft",
       "ok": true,
       "note": "TRIMF"
     },
     {
       "name": "rewrite",
-      "cmd": "REPLACEF ready→live count 1; draft nomatch 0",
+      "cmd": "REPLACEF ready\u2192live count 1; draft nomatch 0",
       "ok": true,
       "note": "REPLACEF"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "prefixall",
-      "cmd": "PREPENDFALL env: → env:prod",
+      "cmd": "PREPENDFALL env: \u2192 env:prod",
       "ok": true,
       "note": "PREPENDFALL"
     },
     {
       "name": "gate",
-      "cmd": "status==live admit; draft deny REQUIRE→2",
+      "cmd": "status==live admit; draft deny REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
@@ -69,7 +69,7 @@
       "area": "oop|replacef|keyword",
       "title": "REPLACEF TO/WITH/BY glue steals var named TO",
       "detail": "REPLACEF obj field OLD TO parses TO as optional glue keyword then fails needing new (REPLACEF object field old new). Same class as METHODINFO METH steal. Must name vars NEWV not TO.",
-      "repro": "REPLACEF h0 status OLDV TO → parse fail; OLDV NEWV works"
+      "repro": "REPLACEF h0 status OLDV TO \u2192 parse fail; OLDV NEWV works"
     },
     {
       "id": "W2",
@@ -83,7 +83,7 @@
       "id": "W3",
       "severity": "med",
       "area": "oop|stringf",
-      "title": "No fleet TRIMFALL/REPLACEFALL — only single-object normalize",
+      "title": "No fleet TRIMFALL/REPLACEFALL \u2014 only single-object normalize",
       "detail": "CATFALL exists for concat but scrub still EACH/slot loops for TRIMF+LOWERF+REPLACEF. Asymmetric fleet surface.",
       "repro": "scrub per-slot not CATFALL-class"
     },
@@ -125,7 +125,7 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc scrub bad → exit 0"
+      "repro": "REQUIRE=abc scrub bad \u2192 exit 0"
     }
   ],
   "workarounds": [
@@ -142,12 +142,12 @@
     "WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "TRIMF+LOWERF Ready → ready; REPLACEF TO var hard-failed parse",
-    "Renamed TO→NEWV; rewrite ready→live count 1",
+    "TRIMF+LOWERF Ready \u2192 ready; REPLACEF TO var hard-failed parse",
+    "Renamed TO\u2192NEWV; rewrite ready\u2192live count 1",
     "CATFALL tags |canary N=3; PREPENDFALL env:",
     "gate live admit; draft deny; CATFALL SKIP on missing field",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "b1f3ea459fa54730188c81348bb7d1ca6d61ea19",
   "ts": "2026-08-07T14:49:27Z"
 }
