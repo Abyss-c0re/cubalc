@@ -465,6 +465,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 435. ~~**SYS ARGC / ARGS + run args**~~ **done** (ARGC count · ARGS newline bag · cubalc run file| -e … [--] args → CUBALC_ARGn/ARGC).
 436. ~~**REQUIRE ARG / ARGC**~~ **done** (fail-fast CLI contract · ARG n|name · ARGC [min] · line+tip · pairs SYS ARGS/run args).
 437. ~~**incomplete form tips + line**~~ **done** (NEW/SEND/GETF/SETF/CALL/CLASS/FN/CUBE/PLUG/INCLUDE/DEFAULT fail_at with example + line · DEFAULT optional =).
+438. ~~**HASARG / HASARGC**~~ **done** (soft 0|1 CLI arg probes · twin REQUIRE ARG/ARGC · HASARG_N · IF LAST_N branch).
 
 ## Tick protocol
 
