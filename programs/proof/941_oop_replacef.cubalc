@@ -1,0 +1,126 @@
+# REPLACEF / GSUBF / SUBSTF — single-object string field replace for agents
+# Usability: rewrite status/note/templates without GETF+REPLACEALL+SETF
+# Complements CATF (concat) with in-place surgery; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "open"
+  FIELD note "hello world hello"
+  FIELD retries 0
+  METHOD init s
+    SETF THIS status s
+  END
+  METHOD rebrand from_s to_s
+    REPLACEF THIS status from_s to_s
+  END
+END
+
+NEW Ticket t "open"
+
+# all-occurrence default
+REPLACEF t note "hello" "hi"
+ASSERT OK == 1
+ASSERT REPLACEF_N == 1
+ASSERT LAST_N == 2
+ASSERT REPLACEF_COUNT == 2
+SYS EQS LAST "hi world hi"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "hi world hi"
+ASSERT LAST_N == 1
+
+# aliases GSUBF / SUBSTF
+SETF t note "aa-bb-aa"
+GSUBF t note "aa" "XX"
+ASSERT GSUBF_N == 1
+ASSERT LAST_N == 2
+SYS EQS LAST "XX-bb-XX"
+ASSERT LAST_N == 1
+SUBSTF t note "bb" WITH "cc"
+SYS EQS LAST "XX-cc-XX"
+ASSERT LAST_N == 1
+
+# FIRST — one replacement only
+SETF t note "x-x-x"
+REPLACEF FIRST t note "x" "Y"
+ASSERT LAST_N == 1
+SYS EQS LAST "Y-x-x"
+ASSERT LAST_N == 1
+
+# status rewrite + WITH glue
+REPLACEF t status "open" WITH "closed"
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+ASSERT LAST_N == 1 "count was 1 but EQS clobbers — re-check via GETF"
+GETF t status
+SYS EQS LAST "closed"
+ASSERT LAST_N == 1
+
+# promote numeric field to string then replace
+REPLACEF t retries "0" "9"
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+GETF t retries
+SYS EQS LAST "9"
+ASSERT LAST_N == 1
+
+# template-style piece from vars
+SETF t note "user={{U}} host={{H}}"
+LET u = "ada"
+LET h = "cube1"
+REPLACEF t note "{{U}}" u
+REPLACEF t note "{{H}}" h
+GETF t note
+SYS EQS LAST "user=ada host=cube1"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t status "draft"
+SEND t rebrand "draft" "live"
+GETF t status
+SYS EQS LAST "live"
+ASSERT LAST_N == 1
+
+# empty old is no-op
+SETF t note "keep"
+REPLACEF t note "" "X"
+ASSERT LAST_N == 0
+SYS EQS LAST "keep"
+ASSERT LAST_N == 1
+
+# no match → count 0, field unchanged
+REPLACEF t note "zzz" "q"
+ASSERT LAST_N == 0
+GETF t note
+SYS EQS LAST "keep"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYREPLACEF nosuch note "a" "b"
+ASSERT OK == 0
+ASSERT REPLACEF_N == 0
+SYS EQS LAST_ERR "REPLACEF: unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+REPLACEF SOFT t nosuch "a" "b"
+ASSERT OK == 0
+SYS HAS LAST_ERR "field"
+ASSERT LAST_N == 1
+
+# dynamic field name string
+SETF t note "p:q"
+REPLACEF t "note" "p" "P"
+SYS EQS LAST "P:q"
+ASSERT LAST_N == 1
+
+# HELP discoverable
+HELP REPLACEF
+SYS HAS LAST "REPLACEF"
+ASSERT LAST_N == 1
+HELP GSUBF
+SYS HAS LAST "GSUBF"
+ASSERT LAST_N == 1
+
+PRINT "oop_replacef ok"

@@ -10665,6 +10665,201 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* REPLACEF|GSUBF|SUBSTF obj field old new
+   * TRYREPLACEF|REPLACEF SOFT — soft miss OK=0.
+   * REPLACEF FIRST — first occurrence only (default: all like GSUB).
+   * In-place string surgery on a field; promotes num→str.
+   * LAST = result; LAST_N = replace count. Empty old = no-op.
+   * Usability: rewrite status/note/templates without GETF+REPLACEALL+SETF
+   * (METHOD/THIS; complements CATF concat). */
+  if (kw(&L->cur, "REPLACEF") || kw(&L->cur, "GSUBF") ||
+      kw(&L->cur, "SUBSTF") || kw(&L->cur, "FIELDREPLACE") ||
+      kw(&L->cur, "REPF") || kw(&L->cur, "STRREPF") ||
+      kw(&L->cur, "SUBSTFIELD") || kw(&L->cur, "GSUBFIELD") ||
+      kw(&L->cur, "TRYREPLACEF") || kw(&L->cur, "REPLACEFSOFT") ||
+      kw(&L->cur, "SOFTREPLACEF") || kw(&L->cur, "TRYGSUBF") ||
+      kw(&L->cur, "TRYSUBSTF")) {
+    char oname[48], fname[48], olds[256], news[256], hay[256], out[256];
+    char op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, do_all = 1;
+    long did = 0;
+    size_t oldn, newn;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "TRYREPLACEF") == 0 || strcmp(op, "REPLACEFSOFT") == 0 ||
+        strcmp(op, "SOFTREPLACEF") == 0 || strcmp(op, "TRYGSUBF") == 0 ||
+        strcmp(op, "TRYSUBSTF") == 0)
+      soft = 1;
+    /* GSUBF always all; plain REPLACEF defaults all, FIRST optional */
+    if (strcmp(op, "GSUBF") == 0 || strcmp(op, "GSUBFIELD") == 0 ||
+        strcmp(op, "TRYGSUBF") == 0)
+      do_all = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (kw(&L->cur, "FIRST") || kw(&L->cur, "ONCE") || kw(&L->cur, "ONE")) {
+      do_all = 0;
+      lex_next(L);
+    } else if (kw(&L->cur, "ALL") || kw(&L->cur, "GLOBAL") ||
+               kw(&L->cur, "EVERY") || kw(&L->cur, "G")) {
+      do_all = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "REPLACEF object field old new"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "REPLACEF field"); return -1;
+    }
+    olds[0] = 0;
+    news[0] = 0;
+    if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(olds, sizeof olds, "%ld", v);
+      } else {
+        fail(vm, "REPLACEF object field old new"); return -1;
+      }
+    }
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "BY") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "AS") || kw(&L->cur, "INTO"))
+      lex_next(L);
+    if (resolve_str_arg(vm, L, news, sizeof news) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(news, sizeof news, "%ld", v);
+      } else {
+        fail(vm, "REPLACEF object field old new"); return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "REPLACEF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "REPLACEF_N", 0);
+      var_set_num(vm, "GSUBF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "REPLACEF: unknown object");
+      var_set_str(vm, "ERR", "REPLACEF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "REPLACEF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "REPLACEF_N", 0);
+      var_set_num(vm, "GSUBF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "REPLACEF: unknown field");
+      var_set_str(vm, "ERR", "REPLACEF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    oldn = strlen(olds);
+    newn = strlen(news);
+    did = 0;
+    if (olds[0] == 0) {
+      snprintf(out, sizeof out, "%s", hay);
+    } else {
+      const char *src = hay;
+      size_t o = 0;
+      out[0] = 0;
+      for (;;) {
+        const char *p = strstr(src, olds);
+        if (!p) {
+          size_t rest = strlen(src);
+          if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+          memcpy(out + o, src, rest);
+          o += rest;
+          out[o] = 0;
+          break;
+        }
+        {
+          size_t pre = (size_t)(p - src);
+          if (o + pre >= sizeof out) pre = sizeof out - 1 - o;
+          memcpy(out + o, src, pre);
+          o += pre;
+          if (o + newn < sizeof out) {
+            memcpy(out + o, news, newn);
+            o += newn;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, news, take);
+            o += take;
+          }
+          out[o] = 0;
+          did++;
+          src = p + oldn;
+          if (!do_all) {
+            size_t rest = strlen(src);
+            if (o + rest >= sizeof out) rest = sizeof out - 1 - o;
+            memcpy(out + o, src, rest);
+            o += rest;
+            out[o] = 0;
+            break;
+          }
+          if (o >= sizeof out - 1) break;
+        }
+      }
+    }
+    snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", ob->fstr[fi]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+    vm->last_n = did;
+    var_set_num(vm, "LAST_N", did);
+    var_set_num(vm, "REPLACEF_N", 1);
+    var_set_num(vm, "GSUBF_N", 1);
+    var_set_num(vm, "REPLACEF_COUNT", did);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {
