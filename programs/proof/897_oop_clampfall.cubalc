@@ -1,0 +1,95 @@
+# CLAMPFALL / CLAMPF — bulk clamp numeric fields into [lo, hi]
+# Usability: bound energy/retries/scores without EACH+GETF+IF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 150 0
+NEW Cell d 1 5 0
+NEW Cell e 1 0 0
+SETF e energy -20
+
+NEW Counter k1 3
+NEW Counter k2 99
+NEW Counter k3 50
+NEW Counter k4 0
+SETF k4 n -5
+
+# clamp Cell energy into [0, 100]
+CLAMPFALL Cell energy 0 100
+ASSERT OK == 1
+ASSERT CLAMPFALL_N == 5
+ASSERT LAST_N == 5
+ASSERT CLAMPFALL_CHANGED == 2 "c 150→100, e -20→0"
+ASSERT CLAMPFALL_LO == 0
+ASSERT CLAMPFALL_HI == 100
+GETF a energy
+ASSERT LAST_N == 10
+GETF b energy
+ASSERT LAST_N == 0
+GETF c energy
+ASSERT LAST_N == 100
+GETF d energy
+ASSERT LAST_N == 5
+GETF e energy
+ASSERT LAST_N == 0
+
+# already in range → changed 0
+CLAMPFALL Cell energy 0 100
+ASSERT CLAMPFALL_N == 5
+ASSERT CLAMPFALL_CHANGED == 0
+
+# TO sugar + auto-swap
+CLAMPF OF Counter n 80 TO 10
+ASSERT CLAMPF_N == 4
+ASSERT CLAMPFALL_LO == 10
+ASSERT CLAMPFALL_HI == 80
+ASSERT CLAMPFALL_CHANGED == 3 "k1 3→10, k2 99→80, k4 -5→10 · k3=50 stays"
+GETF k1 n
+ASSERT LAST_N == 10
+GETF k2 n
+ASSERT LAST_N == 80
+GETF k3 n
+ASSERT LAST_N == 50
+GETF k4 n
+ASSERT LAST_N == 10
+
+# bare field (a10 b0 c100 d5 e0 → all 5; d already 5)
+CLAMPFALL energy 5 5
+ASSERT CLAMPFALL_N == 5 "all Cells → energy 5"
+ASSERT CLAMPFALL_CHANGED == 4 "d already 5"
+GETF a energy
+ASSERT LAST_N == 5
+GETF c energy
+ASSERT LAST_N == 5
+
+# CLIPFALL alias
+CLIPFALL Counter n 0 100
+ASSERT CLIPFALL_N == 4
+ASSERT CLAMPFALL_CHANGED == 0 "already in 10..80"
+
+# BOUNDALL alias
+BOUNDALL Cell energy 0 10
+ASSERT BOUNDALL_N == 5
+ASSERT CLAMPFALL_CHANGED == 0 "all at 5"
+
+# OF sugar again
+SETF k2 n 200
+CLAMPFALL OF Counter n 0 60
+ASSERT CLAMPFALL_CHANGED == 1 "k2 200→60 only"
+GETF k2 n
+ASSERT LAST_N == 60
+GETF k3 n
+ASSERT LAST_N == 50
+
+PRINT "oop_clampfall ok"

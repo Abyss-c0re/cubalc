@@ -383,6 +383,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 353. ~~**`WHEREBETWEEN` / `COUNTBETWEEN` / `HASBETWEEN`**~~ **done** (closed lo..hi band select/count/probe · no dual WHEREGE+WHERELE glue).
 354. ~~**`DELETEBETWEEN` / `FREEBETWEEN` / `FREEBAND`**~~ **done** (free live objs in closed field range · band GC without dual threshold free).
 355. ~~**`SENDBETWEEN` / `SENDBAND` / `INVOKEBETWEEN`**~~ **done** (method on closed-range matched objs · completes BETWEEN triad).
+356. ~~**`CLAMPFALL` / `CLAMPF` / `CLIPFALL`**~~ **done** (bulk clamp numeric field to [lo,hi] · bound energy/retries without EACH+SETF).
 
 ## Tick protocol
 
