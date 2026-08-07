@@ -132,3 +132,7 @@ Law id `core_protect` · plate `state/CORE_PROTECT.json` · see `docs/CORE_PROTE
 - After each language law ship: **commit + push** (idle remote looks like a dead machine).
 - If worktree regresses (mass deletes): `git restore --source=HEAD` then rebuild; never push broken tree.
 - Product consumers: set `CUBALC_BIN` / `PATH` to `out/cubalc`.
+
+## Session request audit
+
+Standing orders and interrupted asks are tracked in [`docs/SESSION_REQUEST_MANIFEST.md`](docs/SESSION_REQUEST_MANIFEST.md) (from Grok Build CLI history).
