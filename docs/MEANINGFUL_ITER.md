@@ -366,6 +366,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 336. ~~**`EACH OBJ`**~~ **done** (walk live objects with optional class filter · no LISTOBJS+EACH LINE glue).
 337. ~~**`SENDALL` / `BROADCAST`**~~ **done** (method on every live object · optional class · fleet without EACH+SEND).
 338. ~~**`DELETEALL` / `FREEALL`**~~ **done** (bulk free live objects · optional class · pool wipe without EACH+DELETEOBJ).
+339. ~~**`GETFALL` / `COLLECTF`**~~ **done** (bulk field collect from live objs · optional class · AS KV · no EACH+GETF+PUSH).
 
 ## Tick protocol
 

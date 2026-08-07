@@ -1,0 +1,89 @@
+# GETFALL / COLLECTF — collect field from every live object (optional class)
+# Usability: fleet field harvest without EACH OBJ + GETF + PUSH glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+CLASS Marker
+  FIELD tag 0
+  METHOD init t
+    SETF THIS tag t
+  END
+END
+NEW Marker m1 7
+NEW Marker m2 9
+
+# class-filtered collect → bag for SUM/AVG
+GETFALL Cell energy
+ASSERT OK == 1
+ASSERT GETFALL_N == 3
+ASSERT LAST_N == 3
+SYS SUM
+ASSERT LAST_N == 60 "10+20+30"
+
+# COLLECTF alias
+COLLECTF Cell energy
+ASSERT COLLECTF_N == 3
+SYS AVG
+ASSERT LAST_N == 20
+
+# bare field across classes that have it
+GETFALL tag
+ASSERT GETFALL_N == 2
+SYS SUM
+ASSERT LAST_N == 16 "7+9"
+
+# MAPGETF alias + string field name
+MAPGETF Cell "energy"
+ASSERT MAPGETF_N == 3
+
+# OF sugar
+GETFALL OF Cell energy
+ASSERT GETFALL_N == 3
+
+# AS KV → name:value bag for LOOKUPN (quote keys; bare a is obj var)
+GETFALL Cell energy AS KV
+ASSERT GETFALL_N == 3
+SYS LOOKUPN GETFALL "a"
+ASSERT LAST_N == 10
+SYS LOOKUPN GETFALL "c"
+ASSERT LAST_N == 30
+
+# WITH NAMES alias
+GETFALL Marker tag WITH NAMES
+ASSERT GETFALL_N == 2
+SYS LOOKUPN GETFALL "m2"
+ASSERT LAST_N == 9
+
+# missing field soft skip
+GETFALL Cell no_such_field_zz
+ASSERT OK == 1
+ASSERT GETFALL_N == 0
+ASSERT GETFALL_SKIP == 3
+
+# empty pool soft
+DELETEALL Cell
+GETFALL Cell energy
+ASSERT OK == 1
+ASSERT GETFALL_N == 0
+
+# ZIP order matches LISTOBJS (same walk)
+NEW Cell x 1 5 0
+NEW Cell y 1 6 0
+LISTOBJS Cell
+LET names = LAST
+GETFALL Cell energy
+LET vals = LAST
+SYS ZIP names vals
+LET zipped = LAST
+SYS LOOKUPN zipped "x"
+ASSERT LAST_N == 5
+SYS LOOKUPN zipped "y"
+ASSERT LAST_N == 6
+
+PRINT "oop_getfall ok"

@@ -763,6 +763,152 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* GETFALL|COLLECTF|MAPGETF [Class] field [AS KV|WITH NAMES]
+   * — collect field values from every live object (optional class filter).
+   * Soft always; objects missing the field are skipped (GETFALL_SKIP).
+   * LAST = newline bag of values (or name:value with AS KV); LAST_N/GETFALL_N = count.
+   * Usability: fleet field harvest without EACH OBJ + GETF + PUSH glue (SUM/AVG/FREQ ready). */
+  if (kw(&L->cur, "GETFALL") || kw(&L->cur, "COLLECTF") ||
+      kw(&L->cur, "MAPGETF") || kw(&L->cur, "GETF_ALL") ||
+      kw(&L->cur, "FIELDALL") || kw(&L->cur, "COLLECTFIELD") ||
+      kw(&L->cur, "PLUCKALL") || kw(&L->cur, "MAPFIELD")) {
+    char filt[48], fname[48], tok1[48], bag[4096];
+    int has_filt = 0, as_kv = 0, i, n = 0, n_skip = 0;
+    size_t o = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    bag[0] = 0;
+    /* OF|CLASS|TYPE Class field */
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "GETFALL OF Class field"); return -1;
+      }
+      if (L->cur.kind == TK_STR)
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+      else
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      /* Class field when tok1 names a known CLASS and next is field */
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "AS") && !kw(&L->cur, "WITH") && !kw(&L->cur, "KV") &&
+          !kw(&L->cur, "NAMES") && !kw(&L->cur, "ASNAMES")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        /* bare field (or class-less); resolve string-var */
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] && L->cur.kind != TK_STR &&
+            !(L->cur.kind == TK_IDENT && oop_find_class(vm, tok1)))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else if (tok1[0] == 0) {
+          fail(vm, "GETFALL [Class] field"); return -1;
+        } else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "GETFALL [Class] field"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT &&
+                 !kw(&L->cur, "AS") && !kw(&L->cur, "WITH") &&
+                 !kw(&L->cur, "KV") && !kw(&L->cur, "NAMES")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "GETFALL [Class] field"); return -1;
+      }
+    }
+    /* optional AS KV | WITH NAMES | KV — name:value bag for LOOKUP */
+    if (kw(&L->cur, "AS") || kw(&L->cur, "WITH")) {
+      lex_next(L);
+      if (kw(&L->cur, "KV") || kw(&L->cur, "NAMES") || kw(&L->cur, "NAME") ||
+          kw(&L->cur, "PAIRS") || kw(&L->cur, "MAP") || kw(&L->cur, "OBJECTS")) {
+        as_kv = 1;
+        lex_next(L);
+      }
+    } else if (kw(&L->cur, "KV") || kw(&L->cur, "NAMES") ||
+               kw(&L->cur, "ASNAMES") || kw(&L->cur, "WITHNAMES") ||
+               kw(&L->cur, "PAIRS")) {
+      as_kv = 1;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      char line[256];
+      size_t ln;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (as_kv) {
+        if (ob->fis_str[fi])
+          snprintf(line, sizeof line, "%s:%s", ob->name, ob->fstr[fi]);
+        else
+          snprintf(line, sizeof line, "%s:%ld", ob->name, ob->fnum[fi]);
+      } else {
+        if (ob->fis_str[fi])
+          snprintf(line, sizeof line, "%s", ob->fstr[fi]);
+        else
+          snprintf(line, sizeof line, "%ld", ob->fnum[fi]);
+      }
+      ln = strlen(line);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, line, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "GETFALL", bag);
+    var_set_str(vm, "COLLECTF", bag);
+    var_set_str(vm, "MAPGETF", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "GETFALL_N", n);
+    var_set_num(vm, "COLLECTF_N", n);
+    var_set_num(vm, "MAPGETF_N", n);
+    var_set_num(vm, "GETFALL_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0])
+      var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* GETF obj field [OR|DEFAULT fallback]
    * TRYGETF|GETFSOFT|GETF SOFT — soft miss OK=0 (no fatal) without fallback.
    * GETF … OR val — like SYS ENV/LOOKUP: miss → LAST=fallback, OK=1, GETF_OR=1.
