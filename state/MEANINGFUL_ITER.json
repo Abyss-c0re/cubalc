@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 373,
-  "version": "1.15.400-usability",
-  "item": "DIVF/MODF field integer divide and remainder",
-  "item_id": 409,
-  "title": "DIVF|MODF — single-object field divide/remainder for METHOD share/wrap",
-  "commit": "55cdd355c04c20c584c07638f1e608a1ce4a38a8",
-  "summary": "Integer divide/remainder on one field without GETF+/+%+SETF. Soft miss + by-zero. proof 950 47/47.",
+  "iter": 374,
+  "version": "1.15.401-usability",
+  "item": "ABSF/NEGF/SIGNF field polarity",
+  "item_id": 410,
+  "title": "ABSF|NEGF|SIGNF — abs/negate/signum on one numeric field",
+  "commit": "d1d1bf1546480b43f9701dd8e9a3d5b19d0c0b4f",
+  "summary": "Unary polarity ops without GETF+SYS IABS/SIGN+SETF. Soft miss. proof 951 45/45.",
   "proofs": [
-    "950_oop_divf",
-    "asserts 47/47",
-    "938/949 still green"
+    "951_oop_absf",
+    "asserts 45/45",
+    "950 still green"
   ],
-  "when": "2026-08-07T16:05:00Z",
+  "when": "2026-08-07T16:15:38Z",
   "agent": "meaningful_iter_10m",
-  "sha": "55cdd355c04c20c584c07638f1e608a1ce4a38a8",
-  "note": "DIVF_OK/MODF_OK; pairs INCF/TIMESF/NUMF after peel"
+  "sha": "d1d1bf1546480b43f9701dd8e9a3d5b19d0c0b4f",
+  "note": "ABSF_N/NEGF_N/SIGNF_N; pairs INCF/DIVF after delta math"
 }
