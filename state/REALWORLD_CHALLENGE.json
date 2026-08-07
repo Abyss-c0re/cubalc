@@ -1,63 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 145,
-  "program": "programs/realworld/metric_label_peel_board.cubalc",
-  "theme": "BEFOREF/AFTERF/BETWEENF + NUMF/STRF metric label peel coerce",
-  "version": "1.15.399-usability",
+  "iter": 146,
+  "program": "programs/realworld/ticket_pad_share_board.cubalc",
+  "theme": "LPADF + DIVF/MODF + ABSF ticket plate ID share shard polarity",
+  "version": "1.15.402-usability",
   "pass": true,
-  "prior_note": "iter 144 CLEARF/EQF/LEFTF session tokens; this iter stresses BEFOREF (03cc223) + NUMF (2771755)",
+  "prior_note": "iter 145 BEFOREF+NUMF peel; this iter stresses DIVF (55cdd35) ABSF (d1d1bf1) LPADF (dfce759)",
   "tests": [
     {
-      "name": "open_labels",
-      "cmd": "open m0 web01:cpu=42; m1 svc[code=99]; m2 plain",
+      "name": "open_tickets",
+      "cmd": "open t0 serial 7 used 25; t1 serial 17",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "host_peel",
-      "cmd": "BEFOREF : \u2192 web01",
+      "name": "lpad",
+      "cmd": "LPADF id 6 0 → 000007; trunc pad 3 → 007",
       "ok": true,
-      "note": "BEFOREF"
+      "note": "LPADF"
     },
     {
-      "name": "name_peel",
-      "cmd": "AFTERF : + BEFOREF = \u2192 cpu",
+      "name": "share",
+      "cmd": "TIMESF 100 DIVF total → share 25%",
       "ok": true,
-      "note": "AFTERF"
+      "note": "DIVF"
     },
     {
-      "name": "val_num",
-      "cmd": "AFTERF = \u2192 42; NUMF \u2192 value 42 NUMF_OK=1",
+      "name": "shard",
+      "cmd": "MODF serial 8 → 7; t1 → 1",
       "ok": true,
-      "note": "NUMF"
+      "note": "MODF"
     },
     {
-      "name": "bump_emit",
-      "cmd": "INCF +3 \u2192 45; emit web01:cpu=45",
+      "name": "polarity",
+      "cmd": "ABSF |used-total|=75; SIGNF -1; NEGF flip",
       "ok": true,
-      "note": "INCF+CATF"
-    },
-    {
-      "name": "between",
-      "cmd": "BETWEENF [ ] \u2192 code=99",
-      "ok": true,
-      "note": "BETWEENF"
-    },
-    {
-      "name": "num_junk",
-      "cmd": "AFTER miss empty; NUMF junk \u2192 0 NUMF_OK=0",
-      "ok": true,
-      "note": "soft coerce"
+      "note": "ABSF/SIGNF"
     },
     {
       "name": "gate",
-      "cmd": "value>=MINV admit; high MINV deny REQUIRE\u21922",
+      "cmd": "share>=10 admit; >=50 deny REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYBEFOREF/TRYNUMF soft; empty needle BEFORE blanks",
+      "cmd": "TRY* soft; DIVF SOFT /0 → DIVF_OK=0 field unchanged",
       "ok": true,
       "note": "probe"
     },
@@ -72,50 +60,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|beforef",
-      "title": "BEFOREF/AFTERF only first delimiter occurrence",
-      "detail": "Path a/b/c peels first / only. Nested metrics host:ns:name need repeated AFTERF. No LAST-delimiter peel.",
-      "repro": "AFTERF path / \u2192 b/c.txt not c.txt"
+      "area": "oop|divf",
+      "title": "Bare DIVF/MODF by zero hard-fails process",
+      "detail": "Must DIVF SOFT / TRYDIVF for zero divisor. Proof documents SOFT path; bare DIVF aborts agent run (probe first used bare DIVF 0).",
+      "repro": "DIVF c e 0 hard halt; DIVF SOFT c e 0 → DIVF_OK=0"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|beforef",
-      "title": "BEFORE miss keeps whole; AFTER miss empties \u2014 asymmetric",
-      "detail": "Agents must check BEFOREF_N/AFTERF_N; silent whole-keep on BEFORE miss can look like success host=full_label.",
-      "repro": "BEFOREF nocolon \u2192 LAST_N=0 still whole string"
+      "area": "oop|padf",
+      "title": "LPADF oversize input truncates to width",
+      "detail": "hello LPADF 3 → hel; not leave-as-is. Agents may destroy long plate IDs when re-padding.",
+      "repro": "proof 952 LPADF hello 3"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|numf",
-      "title": "NUMF partial parse 42x\u219242 NUMF_OK=1",
-      "detail": "Looks successful while trailing junk discarded. No strict full-string numeric mode.",
-      "repro": "proof 949 mixed 42x"
+      "area": "oop|divf",
+      "title": "Integer-only share — no fixed-point percent",
+      "detail": "25/100*100 via TIMESF+DIVF; 1/3 → 0. No rounding mode.",
+      "repro": "share floor only"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|peel",
-      "title": "No multi-field peel macro \u2014 copy label to host/name/tag first",
-      "detail": "BEFOREF mutates in place; must GETF label + SETF scratch field before each peel or destroy source.",
-      "repro": "host action copies label to host then peels"
+      "area": "oop|padf",
+      "title": "LPADF promotes numeric to string (permanent)",
+      "detail": "Same poison class as CATF; code field becomes string after pad.",
+      "repro": "proof 952 LPADF code 3 0 then CATF"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|beforef",
-      "title": "Empty needle BEFORE\u2192empty AFTER\u2192whole",
-      "detail": "Dangerous with blank SEP env; can wipe field.",
-      "repro": "probe empty_before blanks field"
+      "area": "host|arg",
+      "title": "ARG NUM must capture immediately for open serial",
+      "detail": "SYS BLANK then NUM loses ARG2; SER capture at ARG parse required.",
+      "repro": "open fixed SER=ARG2"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "oop|strf",
-      "title": "STRF normalizes leading zeros 07\u21927",
-      "detail": "May break zero-padded metric ids if treated as numbers.",
-      "repro": "proof 949 STRF 07"
+      "area": "oop|signf",
+      "title": "SIGNF mutates field to -1/0/1 destroying residual magnitude",
+      "detail": "Must copy residual before SIGNF if both needed.",
+      "repro": "sign overwrites residual with -1"
     },
     {
       "id": "W7",
@@ -131,29 +119,30 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0",
-      "repro": "REQUIRE=abc gate soft path"
+      "repro": "REQUIRE=abc gate soft"
     }
   ],
   "workarounds": [
-    "Copy label to scratch fields before each BEFOREF/AFTERF",
-    "Check BEFOREF_N/AFTERF_N/NUMF_OK not only LAST",
-    "Reject empty SEP before peel",
-    "Partial NUMF: validate with ENDSF/EQF digits if strict",
-    "Fixed m0/m1/m2; TRY* soft probes"
+    "Always DIVF SOFT when divisor may be 0",
+    "PADW not WIDTH/N for LPADF length var",
+    "Capture SER at ARG2 NUM; don't re-NUM after BLANK",
+    "Copy residual before SIGNF if magnitude needed",
+    "Fixed t0/t1/t2; TRY* soft probes"
   ],
   "language_gaps": [
-    "Last-delimiter / split-all peel",
-    "Strict NUMF full-string only mode",
-    "Non-destructive peels (return without mutate)",
+    "Default soft div0 policy or dedicated DIVF0",
+    "LPADF leave-long option (no trunc)",
+    "Fixed-point / rounded percent",
+    "Non-destructive SIGNF (return only)",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "BEFOREF host web01; AFTERF name cpu; AFTERF val 42",
-    "NUMF\u219242 INCF+3\u219245 emit web01:cpu=45",
-    "BETWEENF code=99; junk AFTER empty NUMF_OK=0",
-    "Empty needle BEFORE blanks tag in probe",
+    "LPADF 000007; share 25; MODF shard 7 and 1",
+    "ABSF 75 SIGNF -1; DIVF 0 hard until SOFT",
+    "ARG2 serial 0 until SER capture at parse",
+    "gate share admit/deny; pad trunc 007",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "361c9b9a5521b5f34e128fbd907bc80cdd6eed62",
-  "ts": "2026-08-07T16:04:39Z"
+  "commit": "",
+  "ts": "2026-08-07T16:30:23Z"
 }

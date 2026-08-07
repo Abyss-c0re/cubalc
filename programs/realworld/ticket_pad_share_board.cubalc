@@ -1,0 +1,1394 @@
+# ticket_pad_share_board.cubalc — LPADF + DIVF/MODF + ABSF ticket plate math
+#
+# Real use: ops agents format zero-padded ticket serials for plates,
+# compute integer share (used/total), shard index (serial % N), and
+# residual polarity without GETF+arith/LPAD+SETF glue.
+#
+# Surfaces forced (1.15.400–402):
+#   LPADF / RPADF / PADLEFTF / PADRIGHTF · TRYLPADF
+#   DIVF / MODF / IDIVF / REMF · BY glue · TRYDIVF
+#   ABSF / NEGF / SIGNF · MAGF · TRYABSF
+#   STRF before pad · INCF · DUMPOBJ rehydrate
+#   soft miss + REQUIRE wall
+#
+# Distinct from metric_label_peel (delimiter peel) and session_token_scrub
+# (token LEFTF): this is *pad IDs + integer share/shard/polarity*.
+#
+# Slots: t0 t1 t2
+#
+# Plate under STATE:
+#   dump/t0 dump/t1 dump/t2
+#   VAL.txt META.txt OBJS.txt TICKET_REPORT.txt
+#
+# Actions:
+#   list | open | pad | rpad | share | shard | abs | sign | neg | gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_tps_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=t0 CUBALC_ARG2=7
+#   CUBALC_FS_PADW=6 CUBALC_ARG0=pad CUBALC_ARG1=t0
+#   CUBALC_FS_TOTAL=200 CUBALC_ARG0=share CUBALC_ARG1=t0
+#   CUBALC_FS_SHARDS=8 CUBALC_ARG0=shard CUBALC_ARG1=t0
+#   CUBALC_FS_MINSHARE=10 CUBALC_ARG0=gate CUBALC_ARG1=t0
+#
+# Env: CUBALC_FS_REQUIRE NAME PADW TOTAL SHARDS MINSHARE USED ACTION
+#
+# Edges:
+#   LPADF long string truncates to width (not keep)
+#   DIVF integer only; div0 soft?
+#   MODF wrap; pad promotes num→string
+#   avoid vars N/WIDTH/TO for pad width (use PADW)
+#   WRITE NL; NUM softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Ticket
+  FIELD id ""
+  FIELD serial 0
+  FIELD used 0
+  FIELD total 100
+  FIELD share 0
+  FIELD shard 0
+  FIELD residual 0
+  METHOD init i s
+    SETF THIS id i
+    SETF THIS serial s
+    SETF THIS used 0
+    SETF THIS total 100
+    SETF THIS share 0
+    SETF THIS shard 0
+    SETF THIS residual 0
+  END
+END
+
+REQUIRE CLASS Ticket
+REQUIRE METHOD Ticket init
+
+NOTE "ticket_pad_share_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT PADW = 6
+DEFAULT TOTAL = 100
+DEFAULT SHARDS = 8
+DEFAULT MINSHARE = 0
+DEFAULT USED = 25
+DEFAULT SER = 1
+DEFAULT PADCH = "0"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  # NUM while LAST still holds ARG2 (serial for open)
+  SYS NUM
+  IF OK == 1 THEN
+    LET SER = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_PADW" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET PADW = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_TOTAL" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET TOTAL = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_SHARDS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET SHARDS = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINSHARE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINSHARE = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_USED" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET USED = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_PADCH" OR ""
+IF LAST_N > 0 THEN
+  LET PADCH = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "TICKET_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "t0"
+LET d_t0 = LAST
+SYS JOIN dump_dir "t1"
+LET d_t1 = LAST
+SYS JOIN dump_dir "t2"
+LET d_t2 = LAST
+
+LET slot = -1
+SYS EQS NAME "t0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "t1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "t2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "t0"
+END
+IF slot == 1 THEN
+  LET sn = "t1"
+END
+IF slot == 2 THEN
+  LET sn = "t2"
+END
+
+# rehydrate
+SYS READ OR d_t0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DELETEOBJ t0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "serial"
+  LET rs = LAST_N
+  SYS LOOKUPN snap "used"
+  LET ru = LAST_N
+  SYS LOOKUPN snap "total"
+  LET rt = LAST_N
+  SYS LOOKUPN snap "share"
+  LET rsh = LAST_N
+  SYS LOOKUPN snap "shard"
+  LET rsd = LAST_N
+  SYS LOOKUPN snap "residual"
+  LET rr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t0 rid rs
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF t0 id rid
+  END
+  TRYSETF t0 serial rs
+  TRYSETF t0 used ru
+  IF rt > 0 THEN
+    TRYSETF t0 total rt
+  END
+  TRYSETF t0 share rsh
+  TRYSETF t0 shard rsd
+  TRYSETF t0 residual rr
+  CLEAR_ERR
+END
+SYS READ OR d_t1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DELETEOBJ t1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "serial"
+  LET rs = LAST_N
+  SYS LOOKUPN snap "used"
+  LET ru = LAST_N
+  SYS LOOKUPN snap "total"
+  LET rt = LAST_N
+  SYS LOOKUPN snap "share"
+  LET rsh = LAST_N
+  SYS LOOKUPN snap "shard"
+  LET rsd = LAST_N
+  SYS LOOKUPN snap "residual"
+  LET rr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t1 rid rs
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF t1 id rid
+  END
+  TRYSETF t1 serial rs
+  TRYSETF t1 used ru
+  IF rt > 0 THEN
+    TRYSETF t1 total rt
+  END
+  TRYSETF t1 share rsh
+  TRYSETF t1 shard rsd
+  TRYSETF t1 residual rr
+  CLEAR_ERR
+END
+SYS READ OR d_t2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DELETEOBJ t2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "serial"
+  LET rs = LAST_N
+  SYS LOOKUPN snap "used"
+  LET ru = LAST_N
+  SYS LOOKUPN snap "total"
+  LET rt = LAST_N
+  SYS LOOKUPN snap "share"
+  LET rsh = LAST_N
+  SYS LOOKUPN snap "shard"
+  LET rsd = LAST_N
+  SYS LOOKUPN snap "residual"
+  LET rr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t2 rid rs
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF t2 id rid
+  END
+  TRYSETF t2 serial rs
+  TRYSETF t2 used ru
+  IF rt > 0 THEN
+    TRYSETF t2 total rt
+  END
+  TRYSETF t2 share rsh
+  TRYSETF t2 shard rsd
+  TRYSETF t2 residual rr
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET board_rep = "ticket_pad_share_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Ticket
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        DELETEOBJ t0
+        CLEAR_ERR
+      END
+      NEW Ticket t0 sn SER
+      SETF t0 used USED
+      SETF t0 total TOTAL
+      DUMPOBJ t0
+      SYS WRITE d_t0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        DELETEOBJ t1
+        CLEAR_ERR
+      END
+      NEW Ticket t1 sn SER
+      SETF t1 used USED
+      SETF t1 total TOTAL
+      DUMPOBJ t1
+      SYS WRITE d_t1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        DELETEOBJ t2
+        CLEAR_ERR
+      END
+      NEW Ticket t2 sn SER
+      SETF t2 used USED
+      SETF t2 total TOTAL
+      DUMPOBJ t2
+      SYS WRITE d_t2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Ticket
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR SER
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pad: STRF serial then LPADF id ---
+SYS EQS ACTION "pad"
+IF LAST_N == 1 THEN
+  NOTE "action pad"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "pad bad slot"
+    FAIL "pad bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pad bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        GETF t0 serial
+        LET ser = LAST_N
+        SYS STR ser
+        SETF t0 id LAST
+        LPADF t0 id PADW PADCH
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        GETF t1 serial
+        LET ser = LAST_N
+        SYS STR ser
+        SETF t1 id LAST
+        LPADF t1 id PADW PADCH
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        GETF t2 serial
+        LET ser = LAST_N
+        SYS STR ser
+        SETF t2 id LAST
+        LPADF t2 id PADW PADCH
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "pad miss"
+      FAIL "pad miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pad miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "pad ok"
+      LET val_ch = 1
+      LET meta = "pad"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR PADW
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- rpad ---
+SYS EQS ACTION "rpad"
+IF LAST_N == 1 THEN
+  NOTE "action rpad"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "rpad bad slot"
+    FAIL "rpad bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "rpad bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET fill = " "
+    SYS BLANK PADCH
+    IF LAST_N == 0 THEN
+      LET fill = PADCH
+    END
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        RPADF t0 id PADW fill
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        RPADF t1 id PADW fill
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        RPADF t2 id PADW fill
+        LET o_ok = OK
+        LET val = LAST
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "rpad miss"
+      FAIL "rpad miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "rpad miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "rpad ok"
+      LET val_ch = 1
+      LET meta = "rpad"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- share: share = used * 100 / total via TIMESF? or DIVF on copy ---
+# use: set share=used; TIMESF share 100; DIVF share total
+SYS EQS ACTION "share"
+IF LAST_N == 1 THEN
+  NOTE "action share"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "share bad slot"
+    FAIL "share bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "share bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        IF TOTAL > 0 THEN
+          SETF t0 total TOTAL
+        END
+        GETF t0 used
+        LET u = LAST_N
+        SETF t0 share u
+        TIMESF t0 share 100
+        GETF t0 total
+        LET tot = LAST_N
+        DIVF t0 share tot
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        IF TOTAL > 0 THEN
+          SETF t1 total TOTAL
+        END
+        GETF t1 used
+        LET u = LAST_N
+        SETF t1 share u
+        TIMESF t1 share 100
+        GETF t1 total
+        LET tot = LAST_N
+        DIVF t1 share tot
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        IF TOTAL > 0 THEN
+          SETF t2 total TOTAL
+        END
+        GETF t2 used
+        LET u = LAST_N
+        SETF t2 share u
+        TIMESF t2 share 100
+        GETF t2 total
+        LET tot = LAST_N
+        DIVF t2 share tot
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "share miss"
+      FAIL "share miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "share miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "share ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "share"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- shard: serial % SHARDS ---
+SYS EQS ACTION "shard"
+IF LAST_N == 1 THEN
+  NOTE "action shard"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "shard bad slot"
+    FAIL "shard bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "shard bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF SHARDS < 1 THEN
+      LET SHARDS = 1
+    END
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        GETF t0 serial
+        LET ser = LAST_N
+        SETF t0 shard ser
+        MODF t0 shard SHARDS
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        GETF t1 serial
+        LET ser = LAST_N
+        SETF t1 shard ser
+        MODF t1 shard SHARDS
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        GETF t2 serial
+        LET ser = LAST_N
+        SETF t2 shard ser
+        MODF t2 shard SHARDS
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "shard miss"
+      FAIL "shard miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "shard miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "shard ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "shard"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR SHARDS
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- abs residual ---
+SYS EQS ACTION "abs"
+IF LAST_N == 1 THEN
+  NOTE "action abs"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "abs bad slot"
+    FAIL "abs bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "abs bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        # residual = used - total/2 style set from ENV USED delta if needed
+        GETF t0 used
+        LET u = LAST_N
+        GETF t0 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t0 residual res
+        ABSF t0 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        GETF t1 used
+        LET u = LAST_N
+        GETF t1 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t1 residual res
+        ABSF t1 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        GETF t2 used
+        LET u = LAST_N
+        GETF t2 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t2 residual res
+        ABSF t2 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "abs miss"
+      FAIL "abs miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "abs miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "abs ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "abs"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- sign ---
+SYS EQS ACTION "sign"
+IF LAST_N == 1 THEN
+  NOTE "action sign"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "sign bad slot"
+    FAIL "sign bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "sign bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        GETF t0 used
+        LET u = LAST_N
+        GETF t0 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t0 residual res
+        SIGNF t0 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        GETF t1 used
+        LET u = LAST_N
+        GETF t1 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t1 residual res
+        SIGNF t1 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        GETF t2 used
+        LET u = LAST_N
+        GETF t2 total
+        LET tot = LAST_N
+        LET res = u - tot
+        SETF t2 residual res
+        SIGNF t2 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "sign miss"
+      FAIL "sign miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "sign miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "sign ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "sign"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- neg residual ---
+SYS EQS ACTION "neg"
+IF LAST_N == 1 THEN
+  NOTE "action neg"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "neg bad slot"
+    FAIL "neg bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "neg bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        NEGF t0 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        NEGF t1 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        NEGF t2 residual
+        LET o_ok = OK
+        LET ret_n = LAST_N
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "neg miss"
+      FAIL "neg miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "neg miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "neg ok"
+      SYS STR ret_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "neg"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate share >= MINSHARE ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        GETF t0 share
+        LET ret_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        GETF t1 share
+        LET ret_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        GETF t2 share
+        LET ret_n = LAST_N
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      IF ret_n < MINSHARE THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate ok"
+        LET val = "admit"
+        LET val_ch = 1
+      END
+    END
+  END
+  LET meta = "gate"
+  SYS PUSH meta sn
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR MINSHARE
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  TRYDIVF nosuch_tix share 2
+  LET d_ok = OK
+  CLEAR_ERR
+  TRYMODF nosuch_tix shard 3
+  LET m_ok = OK
+  CLEAR_ERR
+  TRYLPADF nosuch_tix id 3 "0"
+  LET p_ok = OK
+  CLEAR_ERR
+  TRYABSF nosuch_tix residual
+  LET a_ok = OK
+  CLEAR_ERR
+  # div0 must be SOFT or hard-fails process
+  LET z_ok = 1
+  LET z_n = -1
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    GETF t0 share
+    LET s0v = LAST_N
+    SETF t0 share 10
+    DIVF SOFT t0 share 0
+    LET z_ok = DIVF_OK
+    LET z_n = LAST_N
+    SETF t0 share s0v
+    CLEAR_ERR
+  END
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "soft"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR d_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR m_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR p_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR a_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR z_ok
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR z_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF d_ok != 0 THEN
+    LET miss = 1
+    LET note_msg = "probe div not soft"
+  END
+  PRINT_JSON d_ok
+  PRINT_JSON p_ok
+  PRINT_JSON z_ok
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        DUMPOBJ t0
+        LET val = LAST
+        SYS WRITE d_t0 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        DUMPOBJ t1
+        LET val = LAST
+        SYS WRITE d_t1 val
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        DUMPOBJ t2
+        LET val = LAST
+        SYS WRITE d_t2 val
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DELETEOBJ t0
+    CLEAR_ERR
+  END
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DELETEOBJ t1
+    CLEAR_ERR
+  END
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DELETEOBJ t2
+    CLEAR_ERR
+  END
+  SYS WRITE d_t0 ""
+  SYS WRITE d_t1 ""
+  SYS WRITE d_t2 ""
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pad"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "rpad"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "share"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "shard"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "abs"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sign"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "neg"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "ticket_pad_share_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
