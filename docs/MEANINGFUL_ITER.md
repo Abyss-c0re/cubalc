@@ -354,6 +354,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 324. ~~**INCLUDE retains source**~~ **done** (FN/CLASS METHOD bodies from lib stay valid · life_cell + life_engine).
 325. ~~**`SYS HUMANSECS` / `HUMANAGE`**~~ **done** (secs → 5s/1m30s labels · AGE/REMAINING/DIFFISO without SEC2MS+HUMANMS).
 326. ~~**`LISTCLASSES` / `LISTOBJS` / `HASMETHOD`**~~ **done** (OOP agent discovery · LISTMETHODS · soft probes).
+327. ~~**`HASOBJ` / `DELETEOBJ` / `HASFIELD`**~~ **done** (object lifecycle + field probes · NEW reuses free slots · not cube DESTROY).
 
 ## Tick protocol
 

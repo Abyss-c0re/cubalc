@@ -1,0 +1,65 @@
+# HASOBJ / DELETEOBJ / HASFIELD / LISTFIELDS — object lifecycle + field probes
+# Note: DESTROY is cube DECONSTRUCT — use DELETEOBJ/FREEOBJ for OOP slots.
+# Usability: free-slot recycle for pools; soft probes before GETF/SEND
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell slot 1 4 0
+HASOBJ slot
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASOBJ_N == 1
+
+HASOBJ missing_zz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+LISTFIELDS Cell
+ASSERT OK == 1
+ASSERT NFIELDS >= 4
+SYS HASLINE LAST "energy"
+ASSERT LAST_N == 1
+SYS HASLINE LAST "alive"
+ASSERT LAST_N == 1
+
+HASFIELD slot energy
+ASSERT LAST_N == 1
+HASFIELD Cell ready
+ASSERT LAST_N == 1
+HASFIELD slot no_field_zz
+ASSERT LAST_N == 0
+
+# free slot; gone from LISTOBJS
+DELETEOBJ slot
+ASSERT OK == 1
+HASOBJ slot
+ASSERT LAST_N == 0
+LISTOBJS Cell
+SYS HASLINE LAST "slot"
+ASSERT LAST_N == 0 "freed not listed"
+
+# soft miss
+DELETEOBJ slot
+ASSERT OK == 0
+
+# NEW reuses same name (pool recycle)
+NEW Cell slot 1 8 0
+HASOBJ slot
+ASSERT LAST_N == 1
+GETF slot energy
+ASSERT LAST_N == 8 "re-init after recycle"
+
+# aliases
+LIVES slot
+ASSERT LAST_N == 1
+FREEOBJ slot
+ASSERT OK == 1
+HASOBJ slot
+ASSERT LAST_N == 0
+
+FIELDS Cell
+ASSERT NFIELDS >= 1
+
+PRINT "oop_destroy_hasobj ok"

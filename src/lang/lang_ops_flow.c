@@ -122,7 +122,7 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
   int ci = oop_find_class_idx(vm, cname);
   ClassDef *cd;
   ObjInst *ob;
-  int fi;
+  int fi, i, reuse = -1;
   MethodDef *initm;
   if (ci < 0) {
     snprintf(vm->err, sizeof vm->err, "unknown CLASS %s", cname);
@@ -134,12 +134,28 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
     fail(vm, vm->err);
     return -1;
   }
-  if (vm->n_objs >= CUBALC_MAX_OBJS) {
+  /* Reuse DESTROY'd slot with same name (life_engine free slots). */
+  for (i = 0; i < vm->n_objs; i++) {
+    if (!vm->objs[i].live && strcmp(vm->objs[i].name, oname) == 0) {
+      reuse = i;
+      break;
+    }
+  }
+  if (reuse < 0 && vm->n_objs >= CUBALC_MAX_OBJS) {
+    /* pack: reuse any dead slot */
+    for (i = 0; i < vm->n_objs; i++) {
+      if (!vm->objs[i].live) { reuse = i; break; }
+    }
+  }
+  if (reuse < 0 && vm->n_objs >= CUBALC_MAX_OBJS) {
     fail(vm, "too many objects");
     return -1;
   }
   cd = &vm->classes[ci];
-  ob = &vm->objs[vm->n_objs++];
+  if (reuse >= 0)
+    ob = &vm->objs[reuse];
+  else
+    ob = &vm->objs[vm->n_objs++];
   memset(ob, 0, sizeof *ob);
   snprintf(ob->name, sizeof ob->name, "%s", oname);
   ob->class_idx = ci;
@@ -826,6 +842,190 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     if (!cd) {
       var_set_str(vm, "LAST_ERR", "LISTMETHODS: unknown class/obj");
       var_set_str(vm, "ERR", "LISTMETHODS: unknown class/obj");
+    }
+    bump(vm);
+    return 1;
+  }
+
+  /* HASOBJ|LIVES|ISOBJ|ALIVEOBJ name — soft probe if live object exists.
+   * LAST_N 1|0. Usability: IF before SEND/GETF without fatal. */
+  if (kw(&L->cur, "HASOBJ") || kw(&L->cur, "LIVES") || kw(&L->cur, "ISOBJ") ||
+      kw(&L->cur, "ALIVEOBJ") || kw(&L->cur, "OBJ?") || kw(&L->cur, "HASOBJECT") ||
+      kw(&L->cur, "OBJEXISTS") || kw(&L->cur, "EXISTS_OBJ")) {
+    char oname[48];
+    ObjInst *ob;
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(oname, sizeof oname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(oname, sizeof oname, "%s", vm->last_str);
+        lex_next(L);
+      } else {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        lex_next(L);
+      }
+    } else {
+      fail(vm, "HASOBJ name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    hit = ob ? 1 : 0;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASOBJ_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* DELETEOBJ|FREEOBJ|DELOBJ|DISPOSE name — mark live object dead (free slot).
+   * Note: DESTROY is cube DECONSTRUCT (ops_cell) — not this form.
+   * Soft OK=0 if missing. NEW reuses same name. Usability: pool recycle. */
+  if (kw(&L->cur, "DELETEOBJ") || kw(&L->cur, "FREEOBJ") ||
+      kw(&L->cur, "DELOBJ") || kw(&L->cur, "RELEASE") ||
+      kw(&L->cur, "KILLOBJ") || kw(&L->cur, "DISPOSE") ||
+      kw(&L->cur, "UNOBJ") || kw(&L->cur, "OBJDEL") ||
+      kw(&L->cur, "DEL_OBJ") || kw(&L->cur, "FREESLOT")) {
+    char oname[48];
+    ObjInst *ob;
+    lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(oname, sizeof oname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(oname, sizeof oname, "%s", vm->last_str);
+        lex_next(L);
+      } else {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        lex_next(L);
+      }
+    } else {
+      fail(vm, "DELETEOBJ name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "DELETEOBJ: unknown object");
+      var_set_str(vm, "ERR", "DELETEOBJ: unknown object");
+      bump(vm);
+      return 1;
+    }
+    ob->live = 0;
+    /* clear this if receiver destroyed */
+    if (strcmp(vm->this_obj, oname) == 0)
+      vm->this_obj[0] = 0;
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "DELETEOBJ_N", 1);
+    var_set_num(vm, "FREEOBJ_N", 1);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF. */
+  if (kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASF") ||
+      kw(&L->cur, "FIELD?") || kw(&L->cur, "HASFILD") ||
+      kw(&L->cur, "HAS_FIELD")) {
+    char a[48], fname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASFIELD obj|Class field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASFIELD field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text); lex_next(L);
+    } else {
+      snprintf(fname, sizeof fname, "%s", L->cur.text); lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob) cd = &vm->classes[ob->class_idx];
+    else cd = oop_find_class(vm, a);
+    if (cd && oop_field_idx(cd, fname) >= 0) hit = 1;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASFIELD_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTFIELDS Class|obj — newline bag of field names. */
+  if (kw(&L->cur, "LISTFIELDS") || kw(&L->cur, "FIELDS") ||
+      kw(&L->cur, "FIELDLIST") || kw(&L->cur, "LISTF")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTFIELDS Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob) cd = &vm->classes[ob->class_idx];
+    else cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    if (cd) {
+      for (i = 0; i < cd->n_fields; i++) {
+        size_t ln = strlen(cd->fields[i].name);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, cd->fields[i].name, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFIELDS", bag);
+    var_set_str(vm, "FIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFIELDS", n);
+    var_set_num(vm, "LISTFIELDS_N", n);
+    var_set_num(vm, "OK", cd ? 1 : 0);
+    if (!cd) {
+      var_set_str(vm, "LAST_ERR", "LISTFIELDS: unknown class/obj");
+      var_set_str(vm, "ERR", "LISTFIELDS: unknown class/obj");
     }
     bump(vm);
     return 1;
