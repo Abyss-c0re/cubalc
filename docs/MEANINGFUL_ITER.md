@@ -469,6 +469,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 439. ~~**`HASFLAG / GETFLAG`**~~ **done** (soft CLI `--name` / `--name=val` / `--name val` probes · no shell getopt · OR fallback).
 440. ~~**`RESTARGS / POSITIONALS`**~~ **done** (non-flag CUBALC_ARGn bag · files after --flags · LAST_N=count · bare `--` ends flags).
 441. ~~**`REQUIRE FLAG`**~~ **done** (fail-fast `--name` contract · LAST=value · twin HASFLAG / REQUIRE ARG · tip pass --name).
+442. ~~**`USAGE`**~~ **done** (sticky CLI usage string · bare re-echo · REQUIRE ARG/ARGC/FLAG fails append `· usage:` tip).
 
 ## Tick protocol
 

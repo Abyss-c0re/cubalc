@@ -1,0 +1,39 @@
+# USAGE — sticky CLI contract; REQUIRE fails append · usage: tip
+
+HOLD_FLASH 1
+
+USAGE "tool -- --mode=X file [file…]"
+SYS EQS USAGE "tool -- --mode=X file [file…]"
+ASSERT LAST_N == 1
+SYS EQS LAST "tool -- --mode=X file [file…]"
+ASSERT LAST_N == 1
+
+# bare USAGE re-echoes
+LET noise "x"
+USAGE
+SYS EQS LAST "tool -- --mode=X file [file…]"
+ASSERT LAST_N == 1
+SYS EQS USAGE "tool -- --mode=X file [file…]"
+ASSERT LAST_N == 1
+
+# multi-part join
+USAGE "run" "me" "please"
+SYS EQS USAGE "run me please"
+ASSERT LAST_N == 1
+
+# does not clobber OK
+LET OK 1
+USAGE "keep ok"
+ASSERT OK == 1
+
+# REQUIRE FLAG miss includes usage tip (via nested smoke agent-side)
+# Soft path: sticky USAGE survives GETFLAG miss
+SYS ENV UNSET CUBALC_ARG0
+SYS ENV SET CUBALC_ARGC "0"
+USAGE "prog -- --in path"
+HASFLAG in
+ASSERT LAST_N == 0
+SYS EQS USAGE "prog -- --in path"
+ASSERT LAST_N == 1
+
+PRINT "usage ok"

@@ -1156,6 +1156,29 @@ static long cubalc_collect_restargs(char *out, size_t outn) {
   return count;
 }
 
+/* Append sticky USAGE var to REQUIRE fail messages (room-limited).
+ * Usability: agents set USAGE once; ARG/ARGC/FLAG fails show the contract. */
+static void cubalc_append_usage_tip(VM *vm, char *msg, size_t n) {
+  Var *u;
+  char tmp[220];
+  size_t ml, ul, room;
+  if (!vm || !msg || n < 24) return;
+  u = var_get(vm, "USAGE", 0);
+  if (!u || !u->is_str || !u->sval[0]) return;
+  ml = strlen(msg);
+  if (ml + 12 >= n) return;
+  room = n - ml - 1;
+  ul = strlen(u->sval);
+  if (ul + 10 <= room)
+    snprintf(tmp, sizeof tmp, "%s · usage: %s", msg, u->sval);
+  else {
+    size_t take = room > 12 ? room - 10 : 0;
+    if (take < 6) return;
+    snprintf(tmp, sizeof tmp, "%s · usage: %.*s…", msg, (int)take, u->sval);
+  }
+  snprintf(msg, n, "%s", tmp);
+}
+
 /* Format ASSERT/EXPECT failure with got/expected from last parse_cmp. */
 static void assert_fail_msg(VM *vm, char *msg, size_t n, const char *tag, int aln,
                             const char *why){
@@ -26003,6 +26026,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
       {"NOTE", "NOTE [\"text\"] — agent breadcrumb · LAST/NOTE · no OK/ERR change"},
+      {"USAGE", "USAGE [\"text\"] — sticky CLI usage · REQUIRE ARG/ARGC/FLAG fails append tip"},
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
@@ -27335,6 +27359,87 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
     bump(vm); return 1;
   }
+  /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
+   * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
+   * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
+   * Usability: one-line help without shell; twin of NOTE for CLI tools. */
+  if (kw(&L->cur,"USAGE")||kw(&L->cur,"USEAGE")||kw(&L->cur,"SYNOPSIS")||
+      kw(&L->cur,"CLI_USAGE")||kw(&L->cur,"HELP_USAGE")||kw(&L->cur,"PROG_USAGE")){
+    int aln = L->cur.line;
+    char msg[CUBALC_HOST_STR_MAX];
+    size_t olen = 0;
+    lex_next(L);
+    msg[0] = 0;
+    /* bare USAGE → re-echo sticky */
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT && (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") ||
+         kw(&L->cur,"PRINT") || kw(&L->cur,"SYS") || kw(&L->cur,"IF") ||
+         kw(&L->cur,"END") || kw(&L->cur,"REQUIRE") || kw(&L->cur,"EXIT") ||
+         kw(&L->cur,"HASARG") || kw(&L->cur,"HASFLAG") || kw(&L->cur,"RESTARGS") ||
+         kw(&L->cur,"NOTE") || kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") ||
+         kw(&L->cur,"INCLUDE") || kw(&L->cur,"HOLD_FLASH") || kw(&L->cur,"VERSION")))){
+      Var *u = var_get(vm, "USAGE", 0);
+      if (u && u->is_str)
+        snprintf(msg, sizeof msg, "%s", u->sval);
+      else
+        msg[0] = 0;
+    } else {
+      /* one or more string/ident/num parts → space-join like PRINT */
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT || L->cur.kind == TK_NUM ||
+             L->cur.kind == TK_MINUS) {
+        char part[512];
+        part[0] = 0;
+        if (L->cur.kind == TK_STR) {
+          snprintf(part, sizeof part, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS) {
+          long n = parse_expr(vm, L);
+          snprintf(part, sizeof part, "%ld", n);
+        } else if (L->cur.kind == TK_IDENT) {
+          if (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+              kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+              kw(&L->cur,"REQUIRE") || kw(&L->cur,"EXIT") || kw(&L->cur,"NOTE") ||
+              kw(&L->cur,"INCLUDE") || kw(&L->cur,"HOLD_FLASH"))
+            break;
+          if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(part, sizeof part, "%s", vm->last_str);
+          else if (strcmp(L->cur.text, "USAGE") == 0) {
+            Var *u = var_get(vm, "USAGE", 0);
+            if (u && u->is_str) snprintf(part, sizeof part, "%s", u->sval);
+            else part[0] = 0;
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str) snprintf(part, sizeof part, "%s", v->sval);
+            else if (v) snprintf(part, sizeof part, "%ld", v->val);
+            else snprintf(part, sizeof part, "%s", L->cur.text);
+          }
+          lex_next(L);
+        } else
+          break;
+        if (part[0] || L->cur.kind == TK_STR) {
+          size_t pl = strlen(part);
+          if (olen > 0 && olen + 1 < sizeof msg)
+            msg[olen++] = ' ';
+          if (olen + pl < sizeof msg) {
+            memcpy(msg + olen, part, pl);
+            olen += pl;
+          }
+          msg[olen] = 0;
+        }
+      }
+      if (!msg[0])
+        snprintf(msg, sizeof msg, "usage line %d", aln);
+      var_set_str(vm, "USAGE", msg);
+    }
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    /* preserve OK — like NOTE */
+    if (vm->trace) fprintf(vm->trace, "# usage: %s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    bump(vm); return 1;
+  }
   /* CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery.
    * PASS restores OK but leaves LAST_ERR (agents read plate last_err); this
    * intentionally clears so recovered paths show a clean plate. Does not set OK. */
@@ -27680,6 +27785,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(msg, sizeof msg,
                  "REQUIRE ARGC %ld got %ld line %d — cubalc run … -- args (SYS ARGS)",
                  need, have, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
         return -1;
@@ -27752,6 +27858,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
           snprintf(msg, sizeof msg,
                    "REQUIRE ARG '%s' missing line %d — set env or pass run arg",
                    key, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
         return -1;
@@ -27805,6 +27912,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         snprintf(msg, sizeof msg,
                  "REQUIRE FLAG '%s' missing line %d — pass --%s or --%s=val (HASFLAG)",
                  name, aln, name, name);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
         if (vm->res) vm->res->asserts_fail++;
         fail(vm, msg);
         return -1;
