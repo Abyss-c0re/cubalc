@@ -21,25 +21,25 @@
     },
     {
       "name": "wherebetween_band",
-      "cmd": "WHEREBETWEEN 5..50 → q0 q1",
+      "cmd": "WHEREBETWEEN 5..50 \u2192 q0 q1",
       "ok": true,
       "note": "WHEREBETWEEN"
     },
     {
       "name": "count_band",
-      "cmd": "COUNTBETWEEN 5..50 → 2",
+      "cmd": "COUNTBETWEEN 5..50 \u2192 2",
       "ok": true,
       "note": "COUNTBETWEEN"
     },
     {
       "name": "has_band",
-      "cmd": "HASBETWEEN → 1 first q0",
+      "cmd": "HASBETWEEN \u2192 1 first q0",
       "ok": true,
       "note": "HASBETWEEN"
     },
     {
       "name": "has_hot_eq",
-      "cmd": "HASWHEREGE ≥80 →1 q2; HASWHERE 50 →1 q1",
+      "cmd": "HASWHEREGE \u226580 \u21921 q2; HASWHERE 50 \u21921 q1",
       "ok": true,
       "note": "HASWHERE*"
     },
@@ -51,7 +51,7 @@
     },
     {
       "name": "slo_gate_hot_deny",
-      "cmd": "band ok but hot → deny; REQUIRE rc2",
+      "cmd": "band ok but hot \u2192 deny; REQUIRE rc2",
       "ok": true,
       "note": "deny"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "count_false_friend",
-      "cmd": "COUNTLINE q0 →0 exact",
+      "cmd": "COUNTLINE q0 \u21920 exact",
       "ok": true,
       "note": "journal"
     },
@@ -85,9 +85,9 @@
       "id": "W1",
       "severity": "high",
       "area": "host|if",
-      "title": "IF on stored LET counts flaky after COUNT/HAS — use LAST_N immediately",
+      "title": "IF on stored LET counts flaky after COUNT/HAS \u2014 use LAST_N immediately",
       "detail": "IF band_n > 0 / IF admit == 1 failed to take branch after COUNTBETWEEN even when SYS STR band_n printed 3. Nested IF and flat IF on LET vars both failed; IF LAST_N > 0 right after COUNTBETWEEN worked.",
-      "repro": "COUNTBETWEEN; LET band_n=LAST_N; IF band_n > 0 THEN LET admit=1 — admit stays 0 under -s"
+      "repro": "COUNTBETWEEN; LET band_n=LAST_N; IF band_n > 0 THEN LET admit=1 \u2014 admit stays 0 under -s"
     },
     {
       "id": "W2",
@@ -95,23 +95,23 @@
       "area": "host|eqs|require",
       "title": "Unknown-action EQS wall + REQUIRE EXIT can fire after successful action",
       "detail": "After slo_gate set val=admit, footer EQS ACTION/val wall still left is_known=0 and EXIT 2 unknown action when REQUIRE set. Hard REQUIRE exits must stay inside action bodies; unknown wall should be soft-only.",
-      "repro": "slo_gate admit with CUBALC_QD_REQUIRE=1 → EXIT unknown action"
+      "repro": "slo_gate admit with CUBALC_QD_REQUIRE=1 \u2192 EXIT unknown action"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|haswherege",
       "title": "HASWHEREGE_N can disagree with COUNTWHEREGE_N in same run",
-      "detail": "Gate meta showed COUNTWHEREGE hot_n=1 while HASWHEREGE_N=0 for depth≥80 with a live q2@100 after prior HASBETWEEN.",
-      "repro": "HASBETWEEN; HASWHEREGE; COUNTWHEREGE same thr — N mismatch"
+      "detail": "Gate meta showed COUNTWHEREGE hot_n=1 while HASWHEREGE_N=0 for depth\u226580 with a live q2@100 after prior HASBETWEEN.",
+      "repro": "HASBETWEEN; HASWHEREGE; COUNTWHEREGE same thr \u2014 N mismatch"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|has",
-      "title": "HAS* returns first match only — not multi-name bag",
+      "title": "HAS* returns first match only \u2014 not multi-name bag",
       "detail": "HASBETWEEN first q0 only; full set needs WHEREBETWEEN.",
-      "repro": "HASBETWEEN 5 50 → LAST q0 only"
+      "repro": "HASBETWEEN 5 50 \u2192 LAST q0 only"
     },
     {
       "id": "W5",
@@ -134,12 +134,12 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_QD_REQUIRE=abc → soft.",
+      "detail": "CUBALC_QD_REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     }
   ],
   "workarounds": [
-    "IF LAST_N immediately after COUNT* — do not trust stored LET for IF",
+    "IF LAST_N immediately after COUNT* \u2014 do not trust stored LET for IF",
     "REQUIRE EXIT only inside action deny paths; unknown wall soft-only",
     "Prefer COUNTWHEREGE for tallies; HAS* for first-name breadcrumb",
     "WHEREBETWEEN for full band bag; HASBETWEEN for 0|1 only",
@@ -155,11 +155,11 @@
   "issues_faced": [
     "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN band select worked; lo/hi swap ok",
     "HASWHERE/HASWHEREGE/HASBELOW soft probes worked for single-name",
-    "nested/stored IF on band_n/hot_n never set admit — LAST_N IF fixed",
-    "REQUIRE+unknown wall exited after successful admit — soft unknown wall fixed",
+    "nested/stored IF on band_n/hot_n never set admit \u2014 LAST_N IF fixed",
+    "REQUIRE+unknown wall exited after successful admit \u2014 soft unknown wall fixed",
     "HASWHEREGE_N vs COUNTWHEREGE_N mismatch documented",
     "selftest 322/322 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T06:55:00Z"
+  "commit": "e6d79b16cef7894d69da39aafadf6a6c7ea7a38c",
+  "ts": "2026-08-07T07:07:30Z"
 }
