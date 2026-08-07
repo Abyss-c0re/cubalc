@@ -374,6 +374,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 344. ~~**`INCFALL` / `ADDFALL` / `DECFALL`**~~ **done** (bulk numeric field bump · default ±1 · no EACH+GETF+arith+SETF).
 345. ~~**`MAXOBJ` / `MINOBJ`**~~ **done** (first live obj with max/min numeric field · no GETFALL+ARGMAX+NTH glue).
 346. ~~**`SORTBYF` / `SORTOBJS`**~~ **done** (bag of names ordered by numeric field ASC|DESC · no GETFALL+ZIP+SORTN glue).
+347. ~~**`SUMF` / `AVGF`**~~ **done** (sum/mean numeric field over live objs · no GETFALL+SYS SUM/AVG glue).
 
 ## Tick protocol
 

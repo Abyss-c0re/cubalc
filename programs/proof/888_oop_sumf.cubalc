@@ -1,0 +1,76 @@
+# SUMF / AVGF — sum and integer mean of numeric field over live objects
+# Usability: fleet health without GETFALL + SYS SUM/AVG glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 15
+
+# class sum
+SUMF Cell energy
+ASSERT OK == 1
+ASSERT LAST_N == 60
+ASSERT SUMF_N == 3
+ASSERT SUMF_SUM == 60
+
+# SUMFALL alias
+SUMFALL Cell energy
+ASSERT LAST_N == 60
+
+# average (integer)
+AVGF Cell energy
+ASSERT LAST_N == 20
+ASSERT AVGF_N == 3
+
+# MEANF / AVGFALL aliases
+MEANF Cell energy
+ASSERT LAST_N == 20
+AVGFALL Cell energy
+ASSERT LAST_N == 20
+
+# OF sugar
+SUMF OF Counter n
+ASSERT LAST_N == 20
+AVGF OF Counter n
+ASSERT LAST_N == 10
+
+# bare field
+SUMF n
+ASSERT LAST_N == 20
+
+# string field name
+SUMF Cell "energy"
+ASSERT LAST_N == 60
+
+# empty soft zero
+DELETEALL Cell
+SUMF Cell energy
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT SUMF_N == 0
+AVGF Cell energy
+ASSERT LAST_N == 0
+
+# repopulate + mismatch class untouched
+NEW Cell x 1 7 0
+NEW Cell y 1 3 0
+SUMF Cell energy
+ASSERT LAST_N == 10
+SUMF Counter n
+ASSERT LAST_N == 20 "counters still live"
+AVGF Cell energy
+ASSERT LAST_N == 5
+
+PRINT "oop_sumf ok"
