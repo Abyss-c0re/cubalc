@@ -1,51 +1,51 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 148,
-  "program": "programs/realworld/route_segment_board.cubalc",
-  "theme": "SPLITF/JOINF/STRIPPREFIXF + COUNTINF API route segment registry",
-  "version": "1.15.407-usability",
+  "iter": 149,
+  "program": "programs/realworld/alert_field_peel_board.cubalc",
+  "theme": "WORDSF + CUTF/COLUMNF alert line token and CSV column peel",
+  "version": "1.15.409-usability",
   "pass": true,
-  "prior_note": "iter 147 MAXF/MINF quota floor; this iter first realworld SPLITF+JOINF (proof 955\u2013956) + STRIPPREFIXF (957)",
+  "prior_note": "iter 148 SPLITF/JOINF route segs; this iter first realworld WORDSF (958) + CUTF (959)",
   "tests": [
     {
-      "name": "open_routes",
-      "cmd": "open r0 svc/api/v1/health; r1 mesh/prod/app.json; r2 /a/b/",
+      "name": "open_alerts",
+      "cmd": "open a0 CSV; a0 multi-word via FS_RAW; a1 ws-only",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "split",
-      "cmd": "SPLITF \u2192 SEGS 4; rootseg=svc leaf=health depth=4",
+      "name": "words",
+      "cmd": "WORDSF level=error host=… → 3 tokens; CSV no-space → 1; ws → 0",
       "ok": true,
-      "note": "SPLITF"
+      "note": "WORDSF"
     },
     {
-      "name": "strip",
-      "cmd": "STRIPPREFIXF svc/ \u2192 api/v1/health HIT=1; miss other/x HIT=0",
+      "name": "cut",
+      "cmd": "CUTF CIDX=1 → web-01 mutates raw; keep intact; OOR HIT=0",
       "ok": true,
-      "note": "STRIPPREFIXF"
+      "note": "CUTF"
     },
     {
-      "name": "join",
-      "cmd": "JOINF route from SEGS \u2192 svc/api/v1/health N=4",
+      "name": "peel",
+      "cmd": "non-destructive level=error host=web-01 via keep copies",
       "ok": true,
-      "note": "JOINF"
+      "note": "peel"
     },
     {
-      "name": "suffix",
-      "cmd": "STRIPSUFFIXF leaf .json \u2192 app",
+      "name": "col",
+      "cmd": "COLUMNF COLI=2 → web-01 (1-based)",
       "ok": true,
-      "note": "STRIPSUFFIXF"
+      "note": "COLUMNF"
     },
     {
       "name": "gate",
-      "cmd": "depth>=2 admit; MINDEPTH=10 REQUIRE\u21922",
+      "cmd": "ntok>=2 admit; MINTOK=10 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYSPLITF/TRYJOINF/TRYSTRIP soft; empty path N=0",
+      "cmd": "TRYWORDSF/TRYCUTF soft; OOR leave field",
       "ok": true,
       "note": "probe"
     },
@@ -60,50 +60,50 @@
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|splitf",
-      "title": "Sep var name SEP hard-fails SPLITF",
-      "detail": "DEFAULT SEP=\"/\" then SPLITF obj field SEP \u2192 err 'SPLITF object field sep' (halted). Same class as FLOOR/CAP collision for MAXF/MINF. Must use DELIM/S/DIV.",
-      "repro": "DEFAULT SEP=\"/\"; SPLITF r path SEP \u2192 SPLITF object field sep"
+      "area": "oop|cutf",
+      "title": "CUTF mutates source field to column text",
+      "detail": "CUTF/COLUMNF replace the field with the peeled column (not non-destructive extract). Agents must copy to keep/level/host first. Silent data loss if keep omitted.",
+      "repro": "CUTF a raw \",\" 1 → raw becomes web-01 only"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "oop|splitf|joinf",
-      "title": "SEGS plate stale after strip without re-split",
-      "detail": "JOIN reads SEGS.txt written by prior SPLITF; strip mutates path but not SEGS. Join rebuilt pre-strip route while path was post-strip. Agents must invalidate or re-split after path mutators.",
-      "repro": "split; strip svc/; join \u2192 route still full pre-strip bag"
+      "severity": "high",
+      "area": "oop|cutf",
+      "title": "Index var COL silently forces CUTF_I=0",
+      "detail": "DEFAULT COL=2; CUTF x raw \",\" COL peels column 0 (a) with CUTF_I=0. Form-token collision with COLUMNF/COLF. Must use CIDX/COLI. Same class as SEP/FLOOR/CAP.",
+      "repro": "DEFAULT COL=2; CUTF x raw \",\" COL → LAST a CUTF_I 0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|bag",
-      "title": "SYS TAIL may not surface trailing empty segment",
-      "detail": "path /a/b/ SPLITF N=4 with leading empty; META leaf showed b not empty. Trailing empty segment vs trailing WRITE NL ambiguous for TAIL.",
-      "repro": "split /a/b/; SYS TAIL segs"
+      "area": "host|arg",
+      "title": "Multi-word ARG2 needs quotes or CUBALC_FS_RAW",
+      "detail": "CUBALC_ARG2=level=error host=web splits at shell; only first token reaches agent. Prefer CUBALC_FS_RAW for free-text alerts.",
+      "repro": "unquoted ARG2 multi-word → single token"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|arg",
-      "title": "Empty ARG2 cannot clear PATHIN (falls to default)",
-      "detail": "CUBALC_ARG2= with empty string \u2192 LAST_N=0 branch; open/setpath keeps DEFAULT PATHIN. Need ENV CUBALC_FS_PATH blank handling or sentinel.",
-      "repro": "setpath ARG2= empty leaves default path"
+      "area": "oop|cutf",
+      "title": "No single-object COPYF for keep backup",
+      "detail": "COPYF is fleet class→field copy (COPYF Class src dst). Per-object backup needs GETF+SETF. Agents lack one-shot SNAPSHOTF on one object.",
+      "repro": "COPYF a0 raw keep fails pattern; fleet only"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|splitf",
-      "title": "SPLITF non-mutating but JOINF mutates \u2014 asymmetric pair",
-      "detail": "SPLITF leaves field intact (bag in LAST only); JOINF writes field. Agents expecting split to replace path must SETF manually. Documented in proof but easy to misread as in-place split.",
-      "repro": "SPLITF path still a/b/c after"
+      "area": "oop|wordsf",
+      "title": "WORDSF ignores commas (CSV is one token)",
+      "detail": "error,web-01,timeout → ntok=1. Must CUTF for CSV; WORDSF only whitespace. Easy false friend when choosing tokenizer.",
+      "repro": "WORDSF CSV line N=1"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n (dump\\nr0).",
-      "repro": "od -c META.txt after dump"
+      "detail": "od -c META ends without \\n after dump\\na0.",
+      "repro": "od -c META.txt"
     },
     {
       "id": "W7",
@@ -111,30 +111,30 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens",
       "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINDEPTH=99 gate soft"
+      "repro": "REQUIRE=abc MINTOK=99 gate soft"
     }
   ],
   "workarounds": [
-    "Never name sep var SEP \u2014 use DELIM",
-    "Re-SPLITF or clear SEGS after strip/setpath before join",
-    "Prefer SPLITF_N for depth over COUNTINF slashes",
-    "Use FIELDSF/PARTSF aliases on secondary slots",
-    "Fixed r0/r1/r2; TRY* soft probes; numeric REQUIRE only"
+    "Always keep field + GETF/SETF before destructive CUTF",
+    "Never name index COL — use CIDX (0-based) or COLI (1-based COLUMNF)",
+    "CUBALC_FS_RAW for multi-word alert text",
+    "WORDSF for free text; CUTF for CSV — do not mix assumptions",
+    "Fixed a0/a1/a2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Reserve or soft-error SEP (and FLOOR/CAP class) in form arg slots",
-    "SPLITF optional mutate-in-place mode",
-    "Canonical bag TAIL that keeps trailing empties",
-    "Empty ARG OR default distinction (clear vs omit)",
-    "WRITE NL; strict NUM REQUIRE; plate invalidation hooks"
+    "Non-destructive CUTF return-only (or CUTF INTO field)",
+    "Reserve COL/SEP/FLOOR/CAP in form numeric/sep arg slots",
+    "Single-object COPYF/SNAPSHOTF obj src dst",
+    "Native multi-word ARG shuttle without shell quotes",
+    "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SEP var hard-fail \u2014 renamed DELIM",
-    "SPLITF 4 segs root svc leaf health; strip \u2192 api/v1/health",
-    "JOINF from stale SEGS after strip (documented)",
-    "suffix .json leaf app; /a/b/ leading empty N=4",
+    "CUTF CIDX=1 mutates raw→web-01; peel via keep restores",
+    "COL index var silent I=0 footgun documented",
+    "WORDSF 3 tokens from FS_RAW free text; CSV ntok=1",
+    "ws-only ntok=0; OOR HIT=0 field unchanged",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "034b9493499ae4ca888d9b7633dea730e31dc471",
-  "ts": "2026-08-07T17:20:53Z"
+  "commit": "",
+  "ts": "2026-08-07T17:44:48Z"
 }

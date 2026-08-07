@@ -1,0 +1,1434 @@
+# alert_field_peel_board.cubalc — WORDSF + CUTF/COLUMNF alert line field peel
+#
+# Real use: intake agents parse free-text or CSV alert lines into level/host
+# columns without GETF+SYS WORDS/CUT+SETF glue. WORDSF tokenizes notes;
+# CUTF peels 0-based CSV column *into the field* (destructive); COLUMNF is
+# 1-based. Gate when token count ≥ MINTOK.
+#
+# Surfaces forced (1.15.408–409 / proof 958 WORDSF, 959 CUTF):
+#   WORDSF / TOKENIZEF / TOKENSF · TRYWORDSF · WORDSF SOFT
+#   CUTF / COLUMNF / COLF / NTHFIELDF · TRYCUTF · BY/AT glue
+#   keep-backup GETF/SETF before cut · DUMPOBJ rehydrate
+#   soft miss + REQUIRE wall
+#
+# Distinct from route_segment (SPLITF path), session_token_scrub (LEFTF),
+# metric_label_peel (BEFOREF): this board is *whitespace tokens + CSV column
+# peel for alert intake slots*.
+#
+# Slots: a0 a1 a2
+#
+# Plate under STATE:
+#   dump/a0 dump/a1 dump/a2
+#   WORDS.txt VAL.txt META.txt OBJS.txt ALERT_REPORT.txt
+#
+# Actions:
+#   list | open | setraw | words | cut | col | peel | level | host
+#   gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_afp_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=a0 CUBALC_ARG2=error,web-01,timeout
+#   CUBALC_ARG0=words CUBALC_ARG1=a0
+#   CUBALC_FS_CIDX=1 CUBALC_ARG0=cut CUBALC_ARG1=a0
+#   CUBALC_FS_COLI=2 CUBALC_ARG0=col CUBALC_ARG1=a0
+#   CUBALC_FS_MINTOK=2 CUBALC_ARG0=gate CUBALC_ARG1=a0
+#
+# Env: CUBALC_FS_REQUIRE NAME CIDX COLI DELIM MINTOK RAWIN ACTION
+#
+# Edges:
+#   CUTF *mutates* field to column text (not non-destructive)
+#   COL as index var → CUTF_I=0 (form collision); use CIDX/COLI
+#   OOR cut HIT=0 field unchanged
+#   WORDSF no mutate; empty/ws-only → 0 tokens
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Alert
+  FIELD id ""
+  FIELD raw ""
+  FIELD keep ""
+  FIELD level ""
+  FIELD host ""
+  FIELD ntok 0
+  FIELD tag "alert"
+  METHOD init i r
+    SETF THIS id i
+    SETF THIS raw r
+    SETF THIS keep r
+    SETF THIS level ""
+    SETF THIS host ""
+    SETF THIS ntok 0
+    SETF THIS tag "alert"
+  END
+  METHOD tokens
+    WORDSF THIS raw
+  END
+  METHOD col1
+    CUTF THIS raw "," 0
+  END
+END
+
+REQUIRE CLASS Alert
+REQUIRE METHOD Alert init
+
+NOTE "alert_field_peel_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT A2_N = 0
+DEFAULT NEED_HIT = 0
+DEFAULT CIDX = 0
+DEFAULT COLI = 1
+DEFAULT DELIM = ","
+DEFAULT MINTOK = 1
+DEFAULT RAWIN = "error,web-01,timeout"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+  LET RAWIN = LAST
+  SYS NUM
+  IF OK == 1 THEN
+    LET A2_N = LAST_N
+    LET CIDX = LAST_N
+    LET COLI = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0 THEN
+    LET A2 = LAST
+    LET RAWIN = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_CIDX" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET CIDX = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_COLI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET COLI = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_DELIM" OR ""
+IF LAST_N > 0 THEN
+  LET DELIM = LAST
+END
+SYS ENV "CUBALC_FS_MINTOK" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MINTOK = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_RAW" OR ""
+IF LAST_N > 0 THEN
+  LET RAWIN = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "WORDS.txt"
+LET words_path = LAST
+SYS JOIN state_dir "ALERT_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "a0"
+LET d_a0 = LAST
+SYS JOIN dump_dir "a1"
+LET d_a1 = LAST
+SYS JOIN dump_dir "a2"
+LET d_a2 = LAST
+
+LET slot = -1
+SYS EQS NAME "a0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "a1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "a2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "a0"
+END
+IF slot == 1 THEN
+  LET sn = "a1"
+END
+IF slot == 2 THEN
+  LET sn = "a2"
+END
+
+# rehydrate
+SYS READ OR d_a0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    DELETEOBJ a0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "raw"
+  LET rr = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "level"
+  LET rlv = LAST
+  SYS LOOKUP snap "host"
+  LET rh = LAST
+  SYS LOOKUPN snap "ntok"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Alert a0 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF a0 id rid
+  END
+  TRYSETF a0 raw rr
+  TRYSETF a0 keep rk
+  TRYSETF a0 level rlv
+  TRYSETF a0 host rh
+  TRYSETF a0 ntok rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF a0 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_a1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a1
+  IF LAST_N == 1 THEN
+    DELETEOBJ a1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "raw"
+  LET rr = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "level"
+  LET rlv = LAST
+  SYS LOOKUP snap "host"
+  LET rh = LAST
+  SYS LOOKUPN snap "ntok"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Alert a1 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF a1 id rid
+  END
+  TRYSETF a1 raw rr
+  TRYSETF a1 keep rk
+  TRYSETF a1 level rlv
+  TRYSETF a1 host rh
+  TRYSETF a1 ntok rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF a1 tag rtag
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_a2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ a2
+  IF LAST_N == 1 THEN
+    DELETEOBJ a2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "raw"
+  LET rr = LAST
+  SYS LOOKUP snap "keep"
+  LET rk = LAST
+  SYS LOOKUP snap "level"
+  LET rlv = LAST
+  SYS LOOKUP snap "host"
+  LET rh = LAST
+  SYS LOOKUPN snap "ntok"
+  LET rn = LAST_N
+  SYS LOOKUP snap "tag"
+  LET rtag = LAST
+  CLEAR_ERR
+  NEW Alert a2 rid rr
+  SYS BLANK rid
+  IF LAST_N == 0 THEN
+    TRYSETF a2 id rid
+  END
+  TRYSETF a2 raw rr
+  TRYSETF a2 keep rk
+  TRYSETF a2 level rlv
+  TRYSETF a2 host rh
+  TRYSETF a2 ntok rn
+  SYS BLANK rtag
+  IF LAST_N == 0 THEN
+    TRYSETF a2 tag rtag
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET changed = 0
+LET board_rep = "alert_field_peel_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Alert
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        DELETEOBJ a0
+        CLEAR_ERR
+      END
+      NEW Alert a0 sn RAWIN
+      DUMPOBJ a0
+      SYS WRITE d_a0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        DELETEOBJ a1
+        CLEAR_ERR
+      END
+      NEW Alert a1 sn RAWIN
+      DUMPOBJ a1
+      SYS WRITE d_a1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        DELETEOBJ a2
+        CLEAR_ERR
+      END
+      NEW Alert a2 sn RAWIN
+      DUMPOBJ a2
+      SYS WRITE d_a2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Alert
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = RAWIN
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta RAWIN
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setraw ---
+SYS EQS ACTION "setraw"
+IF LAST_N == 1 THEN
+  NOTE "action setraw"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setraw bad slot"
+    FAIL "setraw bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setraw bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        SETF a0 raw RAWIN
+        SETF a0 keep RAWIN
+        LET o_ok = 1
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        SETF a1 raw RAWIN
+        SETF a1 keep RAWIN
+        LET o_ok = 1
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        SETF a2 raw RAWIN
+        SETF a2 keep RAWIN
+        LET o_ok = 1
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "setraw miss"
+      FAIL "setraw miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setraw miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setraw ok"
+      LET val = RAWIN
+      LET val_ch = 1
+      LET meta = "setraw"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta RAWIN
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- words: WORDSF raw → WORDS plate + ntok ---
+SYS EQS ACTION "words"
+IF LAST_N == 1 THEN
+  NOTE "action words"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "words bad slot"
+    FAIL "words bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "words bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET wbag = ""
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        WORDSF a0 raw
+        LET o_ok = OK
+        LET wbag = LAST
+        LET ret_n = LAST_N
+        SETF a0 ntok ret_n
+        SYS WRITE words_path wbag
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        TOKENIZEF a1 raw
+        LET o_ok = OK
+        LET wbag = LAST
+        LET ret_n = LAST_N
+        SETF a1 ntok ret_n
+        SYS WRITE words_path wbag
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        TOKENSF a2 raw
+        LET o_ok = OK
+        LET wbag = LAST
+        LET ret_n = LAST_N
+        SETF a2 ntok ret_n
+        SYS WRITE words_path wbag
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "words miss"
+      FAIL "words miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "words miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "words ok"
+      LET val = wbag
+      LET val_ch = 1
+      LET meta = "words"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- cut: CUTF raw DELIM CIDX (destructive on raw; keep preserved) ---
+SYS EQS ACTION "cut"
+IF LAST_N == 1 THEN
+  NOTE "action cut"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "cut bad slot"
+    FAIL "cut bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "cut bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        # refresh keep if empty
+        GETF a0 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a0 raw
+          SETF a0 keep LAST
+        END
+        CUTF a0 raw DELIM CIDX
+        LET o_ok = OK
+        LET changed = CUTF_HIT
+        LET val = LAST
+        LET ret_n = CUTF_I
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a1 raw
+          SETF a1 keep LAST
+        END
+        CUTF a1 raw BY DELIM AT CIDX
+        LET o_ok = OK
+        LET changed = CUTF_HIT
+        LET val = LAST
+        LET ret_n = CUTF_I
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a2 raw
+          SETF a2 keep LAST
+        END
+        NTHFIELDF a2 raw DELIM CIDX
+        LET o_ok = OK
+        LET changed = CUTF_HIT
+        LET val = LAST
+        LET ret_n = CUTF_I
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "cut miss"
+      FAIL "cut miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "cut miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "cut ok"
+      LET val_ch = 1
+      LET meta = "cut"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR ret_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- col: COLUMNF 1-based on raw (destructive) ---
+SYS EQS ACTION "col"
+IF LAST_N == 1 THEN
+  NOTE "action col"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "col bad slot"
+    FAIL "col bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "col bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        GETF a0 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a0 raw
+          SETF a0 keep LAST
+        END
+        COLUMNF a0 raw DELIM COLI
+        LET o_ok = OK
+        LET changed = COLUMNF_HIT
+        LET val = LAST
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a1 raw
+          SETF a1 keep LAST
+        END
+        COLF a1 raw DELIM COLI
+        LET o_ok = OK
+        LET changed = COLUMNF_HIT
+        LET val = LAST
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a2 raw
+          SETF a2 keep LAST
+        END
+        COLUMNF a2 raw DELIM COLI
+        LET o_ok = OK
+        LET changed = COLUMNF_HIT
+        LET val = LAST
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "col miss"
+      FAIL "col miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "col miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "col ok"
+      LET val_ch = 1
+      LET meta = "col"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR changed
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- peel: non-destructive — cut from keep copies into level/host ---
+SYS EQS ACTION "peel"
+IF LAST_N == 1 THEN
+  NOTE "action peel"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "peel bad slot"
+    FAIL "peel bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "peel bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        GETF a0 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a0 raw
+          SETF a0 keep LAST
+        END
+        GETF a0 keep
+        SETF a0 level LAST
+        CUTF a0 level DELIM 0
+        GETF a0 keep
+        SETF a0 host LAST
+        CUTF a0 host DELIM 1
+        # restore raw from keep
+        GETF a0 keep
+        SETF a0 raw LAST
+        LET o_ok = 1
+        GETF a0 level
+        LET val = LAST
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a1 raw
+          SETF a1 keep LAST
+        END
+        GETF a1 keep
+        SETF a1 level LAST
+        CUTF a1 level DELIM 0
+        GETF a1 keep
+        SETF a1 host LAST
+        CUTF a1 host DELIM 1
+        GETF a1 keep
+        SETF a1 raw LAST
+        LET o_ok = 1
+        GETF a1 level
+        LET val = LAST
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 keep
+        SYS BLANK LAST
+        IF LAST_N == 1 THEN
+          GETF a2 raw
+          SETF a2 keep LAST
+        END
+        GETF a2 keep
+        SETF a2 level LAST
+        CUTF a2 level DELIM 0
+        GETF a2 keep
+        SETF a2 host LAST
+        CUTF a2 host DELIM 1
+        GETF a2 keep
+        SETF a2 raw LAST
+        LET o_ok = 1
+        GETF a2 level
+        LET val = LAST
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "peel miss"
+      FAIL "peel miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "peel miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "peel ok"
+      LET val_ch = 1
+      LET meta = "peel"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      IF slot == 0 THEN
+        GETF a0 host
+        SYS PUSH meta LAST
+        LET meta = LAST
+      END
+      IF slot == 1 THEN
+        GETF a1 host
+        SYS PUSH meta LAST
+        LET meta = LAST
+      END
+      IF slot == 2 THEN
+        GETF a2 host
+        SYS PUSH meta LAST
+        LET meta = LAST
+      END
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- level: report level field ---
+SYS EQS ACTION "level"
+IF LAST_N == 1 THEN
+  NOTE "action level"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "level bad slot"
+    FAIL "level bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "level bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        GETF a0 level
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 level
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 level
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "level miss"
+      FAIL "level miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "level miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "level ok"
+      LET val_ch = 1
+      LET meta = "level"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- host ---
+SYS EQS ACTION "host"
+IF LAST_N == 1 THEN
+  NOTE "action host"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "host bad slot"
+    FAIL "host bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "host bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        GETF a0 host
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        GETF a1 host
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        GETF a2 host
+        LET val = LAST
+        LET o_ok = 1
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "host miss"
+      FAIL "host miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "host miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "host ok"
+      LET val_ch = 1
+      LET meta = "host"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: ntok >= MINTOK (refresh words first) ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    LET tnow = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        WORDSF a0 raw
+        LET tnow = LAST_N
+        SETF a0 ntok tnow
+        LET o_ok = 1
+        DUMPOBJ a0
+        SYS WRITE d_a0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        WORDSF a1 raw
+        LET tnow = LAST_N
+        SETF a1 ntok tnow
+        LET o_ok = 1
+        DUMPOBJ a1
+        SYS WRITE d_a1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        WORDSF a2 raw
+        LET tnow = LAST_N
+        SETF a2 ntok tnow
+        LET o_ok = 1
+        DUMPOBJ a2
+        SYS WRITE d_a2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "gate miss"
+      FAIL "gate miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "gate miss"
+      END
+    ELSE
+      LET ret_n = tnow
+      IF tnow < MINTOK THEN
+        LET miss = 1
+        LET note_msg = "gate deny"
+        SYS STR tnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate deny"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR tnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINTOK
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+        FAIL "gate deny"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "gate deny"
+        END
+      ELSE
+        LET hit = 1
+        LET note_msg = "gate admit"
+        SYS STR tnow
+        LET val = LAST
+        LET val_ch = 1
+        LET meta = "gate admit"
+        SYS PUSH meta sn
+        LET meta = LAST
+        SYS STR tnow
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR MINTOK
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET p_ok = 1
+  TRYWORDSF nosuch raw
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYWORDSF should soft-fail"
+  END
+  CLEAR_ERR
+  TRYCUTF nosuch raw "," 0
+  IF OK == 1 THEN
+    LET p_ok = 0
+    LET note_msg = "probe TRYCUTF should soft-fail"
+  END
+  CLEAR_ERR
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    WORDSF SOFT a0 nosuch
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe WORDSF missing field should soft"
+    END
+    CLEAR_ERR
+    CUTF SOFT a0 nosuch "," 0
+    IF OK == 1 THEN
+      LET p_ok = 0
+      LET note_msg = "probe CUTF missing field should soft"
+    END
+    CLEAR_ERR
+    # OOR cut HIT=0
+    GETF a0 keep
+    SYS BLANK LAST
+    IF LAST_N == 0 THEN
+      GETF a0 keep
+      SETF a0 raw LAST
+    END
+    GETF a0 raw
+    LET save_r = LAST
+    CUTF a0 raw DELIM 99
+    IF CUTF_HIT != 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe OOR CUTF should HIT=0"
+    END
+    GETF a0 raw
+    SYS EQS LAST save_r
+    IF LAST_N == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe OOR should leave field"
+    END
+    CLEAR_ERR
+    # still works
+    WORDSF a0 raw
+    IF OK == 0 THEN
+      LET p_ok = 0
+      LET note_msg = "probe WORDSF after soft broken"
+    END
+    LET ret_n = LAST_N
+    CLEAR_ERR
+  END
+  IF p_ok == 1 THEN
+    LET hit = 1
+    LET note_msg = "probe ok"
+    LET val = "probe"
+    LET val_ch = 1
+    LET meta = "probe soft"
+    LET meta_ch = 1
+  ELSE
+    LET miss = 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok = 0
+    IF slot == 0 THEN
+      HASOBJ a0
+      IF LAST_N == 1 THEN
+        DUMPOBJ a0
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_a0 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ a1
+      IF LAST_N == 1 THEN
+        DUMPOBJ a1
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_a1 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ a2
+      IF LAST_N == 1 THEN
+        DUMPOBJ a2
+        LET val = LAST
+        LET o_ok = 1
+        SYS WRITE d_a2 val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ a0
+  IF LAST_N == 1 THEN
+    DELETEOBJ a0
+    CLEAR_ERR
+  END
+  HASOBJ a1
+  IF LAST_N == 1 THEN
+    DELETEOBJ a1
+    CLEAR_ERR
+  END
+  HASOBJ a2
+  IF LAST_N == 1 THEN
+    DELETEOBJ a2
+    CLEAR_ERR
+  END
+  SYS WRITE d_a0 ""
+  SYS WRITE d_a1 ""
+  SYS WRITE d_a2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE words_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setraw"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "words"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "cut"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "col"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "peel"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "level"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "host"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "alert_field_peel_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
