@@ -437,6 +437,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 407. ~~**`BEFOREF` / `AFTERF` / `BETWEENF`**~~ **done** (delimiter field peels · no GETF+SYS BEFORE/AFTER/BETWEEN+SETF · kv/log · METHOD/THIS).
 408. ~~**`NUMF` / `STRF`**~~ **done** (field type coerce · strtol / itoa in place · INCF after peel · CATF after count · METHOD/THIS).
 409. ~~**`DIVF` / `MODF`**~~ **done** (single-object integer divide / remainder · no GETF+`/`+SETF · share/wrap counters · METHOD/THIS · pairs INCF/TIMESF/NUMF).
+410. ~~**`ABSF` / `NEGF` / `SIGNF`**~~ **done** (single-object abs/negate/signum · no GETF+SYS IABS/SIGN+SETF · polarity after delta · METHOD/THIS).
 
 ## Tick protocol
 

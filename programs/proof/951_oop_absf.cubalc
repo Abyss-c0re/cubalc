@@ -1,0 +1,166 @@
+# ABSF / NEGF / SIGNF — unary numeric field polarity for agents
+# Usability: magnitude/flip/sign without GETF+SYS IABS/SIGN+SETF · METHOD/THIS
+# Completes INCF/TIMESF/DIVF arithmetic suite
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD delta -7
+  FIELD force 5
+  FIELD tag "x"
+  METHOD init d
+    SETF THIS delta d
+  END
+  METHOD absd
+    ABSF THIS delta
+  END
+  METHOD flip
+    NEGF THIS force
+  END
+  METHOD pol
+    SIGNF THIS delta
+  END
+END
+
+NEW Cell c -7
+
+# absolute value
+ABSF c delta
+ASSERT OK == 1
+ASSERT ABSF_N == 1
+ASSERT LAST_N == 7
+SYS EQS FIELD "delta"
+ASSERT LAST_N == 1
+SYS EQS OBJECT "c"
+ASSERT LAST_N == 1
+GETF c delta
+ASSERT LAST_N == 7
+
+# already non-negative stays
+SETF c delta 4
+ABSF c delta
+ASSERT LAST_N == 4
+
+# zero
+SETF c delta 0
+ABSF c delta
+ASSERT LAST_N == 0
+
+# aliases
+SETF c delta -12
+IABSF c delta
+ASSERT LAST_N == 12
+SETF c delta -3
+MAGF c delta
+ASSERT LAST_N == 3
+SETF c delta -9
+ABSOBJ c delta
+ASSERT LAST_N == 9
+
+# NEGF negate
+SETF c force 5
+NEGF c force
+ASSERT OK == 1
+ASSERT NEGF_N == 1
+ASSERT LAST_N == -5
+GETF c force
+ASSERT LAST_N == -5
+NEGF c force
+ASSERT LAST_N == 5
+
+# aliases
+SETF c force 8
+FLIPF c force
+ASSERT LAST_N == -8
+NEGATEF c force
+ASSERT LAST_N == 8
+
+# SIGNF polarity
+SETF c delta 15
+SIGNF c delta
+ASSERT OK == 1
+ASSERT SIGNF_N == 1
+ASSERT LAST_N == 1
+SETF c delta -20
+SIGNF c delta
+ASSERT LAST_N == -1
+SETF c delta 0
+SIGNF c delta
+ASSERT LAST_N == 0
+
+# aliases
+SETF c delta 9
+SGNF c delta
+ASSERT LAST_N == 1
+SETF c delta -2
+DIRF c delta
+ASSERT LAST_N == -1
+
+# METHOD + THIS
+SETF c delta -11
+SEND c absd
+GETF c delta
+ASSERT LAST_N == 11
+
+SETF c force 3
+SEND c flip
+GETF c force
+ASSERT LAST_N == -3
+
+SETF c delta -99
+SEND c pol
+GETF c delta
+ASSERT LAST_N == -1
+
+# soft miss object
+TRYABSF nosuch delta
+ASSERT OK == 0
+ASSERT ABSF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYNEGF nosuch force
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYSIGNF nosuch delta
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+ABSF SOFT c nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYABSF c tag
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF c delta -6
+ABSF c delta
+ASSERT OK == 1
+ASSERT LAST_N == 6
+
+# dynamic field name
+SETF c delta -4
+ABSF c "delta"
+ASSERT LAST_N == 4
+
+# HELP
+HELP ABSF
+SYS HAS LAST "ABSF"
+ASSERT LAST_N == 1
+HELP NEGF
+SYS HAS LAST "NEGF"
+ASSERT LAST_N == 1
+HELP SIGNF
+SYS HAS LAST "SIGNF"
+ASSERT LAST_N == 1
+
+PRINT "oop_absf ok"

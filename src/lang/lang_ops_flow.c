@@ -10541,6 +10541,188 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* ABSF|IABSF|ABSVALF obj field — absolute value of one numeric field.
+   * NEGF|NEGAF|FLIPF obj field — negate one numeric field.
+   * SIGNF|SGNF|SIGNUMF obj field — write signum −1|0|1 into field.
+   * TRYABSF|ABSF SOFT / TRYNEGF / TRYSIGNF — soft miss OK=0 sticky LAST_ERR.
+   * Usability: polarity/magnitude without GETF+SYS IABS/SIGN/NEG+SETF
+   * (METHOD/THIS; pairs INCF/DIVF after delta math). */
+  if (kw(&L->cur, "ABSF") || kw(&L->cur, "IABSF") ||
+      kw(&L->cur, "ABSVALF") || kw(&L->cur, "ABSOBJ") ||
+      kw(&L->cur, "ABSFIELD") || kw(&L->cur, "MAGF") ||
+      kw(&L->cur, "NEGF") || kw(&L->cur, "NEGAF") ||
+      kw(&L->cur, "NEGATEF") || kw(&L->cur, "FLIPF") ||
+      kw(&L->cur, "NEGOBJ") || kw(&L->cur, "NEGFIELD") ||
+      kw(&L->cur, "SIGNF") || kw(&L->cur, "SGNF") ||
+      kw(&L->cur, "SIGNUMF") || kw(&L->cur, "SIGNOBJ") ||
+      kw(&L->cur, "SIGNFIELD") || kw(&L->cur, "DIRF") ||
+      kw(&L->cur, "TRYABSF") || kw(&L->cur, "ABSFSOFT") ||
+      kw(&L->cur, "SOFTABSF") || kw(&L->cur, "TRYNEGF") ||
+      kw(&L->cur, "NEGFSOFT") || kw(&L->cur, "SOFTNEGF") ||
+      kw(&L->cur, "TRYSIGNF") || kw(&L->cur, "SIGNFSOFT") ||
+      kw(&L->cur, "SOFTSIGNF") || kw(&L->cur, "TRYSGNF")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=abs 1=neg 2=sign */
+    long cur, nv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "NEGF") == 0 || strcmp(op, "NEGAF") == 0 ||
+        strcmp(op, "NEGATEF") == 0 || strcmp(op, "FLIPF") == 0 ||
+        strcmp(op, "NEGOBJ") == 0 || strcmp(op, "NEGFIELD") == 0 ||
+        strcmp(op, "TRYNEGF") == 0 || strcmp(op, "NEGFSOFT") == 0 ||
+        strcmp(op, "SOFTNEGF") == 0)
+      mode = 1;
+    else if (strcmp(op, "SIGNF") == 0 || strcmp(op, "SGNF") == 0 ||
+             strcmp(op, "SIGNUMF") == 0 || strcmp(op, "SIGNOBJ") == 0 ||
+             strcmp(op, "SIGNFIELD") == 0 || strcmp(op, "DIRF") == 0 ||
+             strcmp(op, "TRYSIGNF") == 0 || strcmp(op, "SIGNFSOFT") == 0 ||
+             strcmp(op, "SOFTSIGNF") == 0 || strcmp(op, "TRYSGNF") == 0)
+      mode = 2;
+    if (strcmp(op, "TRYABSF") == 0 || strcmp(op, "ABSFSOFT") == 0 ||
+        strcmp(op, "SOFTABSF") == 0 || strcmp(op, "TRYNEGF") == 0 ||
+        strcmp(op, "NEGFSOFT") == 0 || strcmp(op, "SOFTNEGF") == 0 ||
+        strcmp(op, "TRYSIGNF") == 0 || strcmp(op, "SIGNFSOFT") == 0 ||
+        strcmp(op, "SOFTSIGNF") == 0 || strcmp(op, "TRYSGNF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, mode == 1 ? "NEGF object field"
+                         : (mode == 2 ? "SIGNF object field" : "ABSF object field"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, mode == 1 ? "NEGF field"
+                         : (mode == 2 ? "SIGNF field" : "ABSF field"));
+      return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag = mode == 1 ? "NEGF" : (mode == 2 ? "SIGNF" : "ABSF");
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "ABSF_N", 0);
+      var_set_num(vm, "NEGF_N", 0);
+      var_set_num(vm, "SIGNF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag = mode == 1 ? "NEGF" : (mode == 2 ? "SIGNF" : "ABSF");
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "ABSF_N", 0);
+      var_set_num(vm, "NEGF_N", 0);
+      var_set_num(vm, "SIGNF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      const char *tag = mode == 1 ? "NEGF" : (mode == 2 ? "SIGNF" : "ABSF");
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s field %s is string", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "ABSF_N", 0);
+      var_set_num(vm, "NEGF_N", 0);
+      var_set_num(vm, "SIGNF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: string field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cur = ob->fnum[fi];
+    if (mode == 1) {
+      /* negate; LONG_MIN stays LONG_MIN on two's complement overflow */
+      nv = -cur;
+    } else if (mode == 2) {
+      nv = (cur > 0) ? 1L : ((cur < 0) ? -1L : 0L);
+    } else {
+      nv = (cur < 0) ? -cur : cur;
+    }
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    var_set_num(vm, "ABSF_N", mode == 0 ? 1 : 0);
+    var_set_num(vm, "NEGF_N", mode == 1 ? 1 : 0);
+    var_set_num(vm, "SIGNF_N", mode == 2 ? 1 : 0);
+    if (mode == 0) {
+      var_set_num(vm, "IABSF_N", 1);
+      var_set_num(vm, "MAGF_N", 1);
+    } else if (mode == 1) {
+      var_set_num(vm, "FLIPF_N", 1);
+    } else {
+      var_set_num(vm, "SGNF_N", 1);
+      var_set_num(vm, "DIRF_N", 1);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* CATF|APPENDF|STRCATF|PREPENDF obj field string
    * TRYCATF|CATF SOFT — soft miss OK=0.
    * Append (or PREPENDF prefix) text onto a string field; promotes num→str.
