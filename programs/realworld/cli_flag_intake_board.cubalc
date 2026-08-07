@@ -1,0 +1,1039 @@
+# cli_flag_intake_board.cubalc — HASARG/HASFLAG/RESTARGS job CLI intake
+#
+# Real use: intake/ops agents parse a getopt-style CLI without shell getopt:
+#   HASARG / HASARGC     — soft index/min-count probes (REQUIRE ARG twin)
+#   HASFLAG / GETFLAG    — --name, -n, --name=val, --name val
+#   RESTARGS/POSITIONALS — non-flag path bag after flags
+#   COUNTLINE / HASLINE  — exact job-row registry
+# Agents admit files into a STATE job plate under --mode/--dry-run/--out.
+#
+# Distinct from toggle_flag_board (file line flip), feature_flag_board
+# (name:on bag), seal_batch_args_board (ARGS+CRC, no flags):
+# this board is *CLI flag peel + restargs intake*.
+#
+# Host invocation (important):
+#   cubalc run strips unknown --flags unless after `--`:
+#     ./out/cubalc run prog.cubalc parse -- --mode=seal --dry-run=1 a.bin b.bin
+#   Bare bool flags consume the next token as value:
+#     --verbose a.bin  →  verbose=a.bin, rest loses a.bin
+#   Prefer --verbose=1 or --verbose -- a.bin
+#
+# Plate under STATE:
+#   JOBS.txt       — admitted path rows (exact)
+#   PATHS.txt      — last RESTARGS file bag
+#   VAL.txt        — last mode/out/row
+#   META.txt       — hit/miss/flags bag
+#   CI_REPORT.txt
+#
+# Actions (ARG0 or --action= or CUBALC_CI_ACTION):
+#   list      — jobs depth (default)
+#   parse     — peel flags + restargs → plate (no admit)
+#   admit     — parse + append each file path to JOBS (skip if --dry-run)
+#   hasflag   — HASFLAG NAME (ARG1 or --name)
+#   getflag   — GETFLAG NAME OR A2
+#   hasarg    — HASARG index (ARG1 default 0)
+#   hasargc   — HASARGC min (ARG1 default 1)
+#   rest      — dump RESTARGS bag
+#   has       — HASLINE exact job row
+#   count     — COUNTLINE exact
+#   gate      — require HASFLAG mode + HASARGC MIN files
+#   soft      — missing flag soft + optional REQUIRE wall
+#   clear
+#
+# Env: CUBALC_CI_ACTION CUBALC_CI_NAME CUBALC_CI_A2
+#      CUBALC_CI_REQUIRE CUBALC_CI_MIN
+#
+# Edges:
+#   host strips --flags without `--` separator
+#   bare bool flag value-consumes following path
+#   RESTARGS keeps action token when action is positional
+#   GETFLAG OR default when miss; HASFLAG 0/1
+#   export CUBALC_ARG* dead; SYS ENV SET works
+#   WRITE NL; NUM soft REQUIRE=abc; PRINT_JSON; substring HASLINE false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "cli_flag_intake_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT JFILE = "JOBS.txt"
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "CI_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT MODE = "intake"
+DEFAULT OUT = "JOBS.txt"
+DEFAULT DRY = 0
+DEFAULT VERBOSE = 0
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+# --- capture arg bag early ---
+SYS ARGC
+LET argc_n = LAST_N
+SYS ARGS
+LET args_bag = LAST
+CLEAR_ERR
+
+# ACTION: GETFLAG action → ARG0 → ENV
+GETFLAG action OR ""
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+SYS EQS ACTION "list"
+# if still default list, try ARG0 when present and not a flag
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    # not a flag token
+    SYS EQS ACTION "list"
+    IF LAST_N == 1 THEN
+      LET ACTION = a0
+    END
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_CI_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_CI_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_CI_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_CI_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_CI_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# numeric ARG1 as MIN for hasargc only (gate uses --min= or ENV)
+SYS EQS ACTION "hasargc"
+IF LAST_N == 1 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    SYS NUM
+    IF OK == 1 THEN
+      LET MIN = LAST_N
+    END
+    CLEAR_ERR
+  END
+END
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# peel common intake flags (soft)
+HASFLAG mode
+IF LAST_N == 1 THEN
+  GETFLAG mode OR "intake"
+  LET MODE = LAST
+END
+CLEAR_ERR
+HASFLAG out
+IF LAST_N == 1 THEN
+  GETFLAG out OR "JOBS.txt"
+  LET OUT = LAST
+END
+CLEAR_ERR
+HASFLAG dry-run
+IF LAST_N == 1 THEN
+  LET DRY = 1
+  GETFLAG dry-run OR "1"
+  SYS EQS LAST "0"
+  IF LAST_N == 1 THEN
+    LET DRY = 0
+  END
+END
+CLEAR_ERR
+HASFLAG dry
+IF LAST_N == 1 THEN
+  LET DRY = 1
+END
+CLEAR_ERR
+HASFLAG verbose
+IF LAST_N == 1 THEN
+  LET VERBOSE = 1
+END
+CLEAR_ERR
+
+# RESTARGS → file bag; drop leading action token if present
+RESTARGS
+LET rest_bag = LAST
+SYS LINES rest_bag
+LET rest_n = LAST_N
+CLEAR_ERR
+SYS NTH 0 rest_bag
+LET first = LAST
+CLEAR_ERR
+SYS EQS first ACTION
+IF LAST_N == 1 THEN
+  SYS DROP 1 rest_bag
+  LET rest_bag = LAST
+  SYS LINES rest_bag
+  LET rest_n = LAST_N
+END
+CLEAR_ERR
+LET paths = rest_bag
+LET path_n = rest_n
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir JFILE
+LET jobs_path = LAST
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR jobs_path OR ""
+LET jobs = LAST
+CLEAR_ERR
+SYS READ OR paths_path OR ""
+LET paths_prev = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET jobs_ch = 0
+LET paths_ch = 0
+LET note_msg = "ok"
+LET job_n = 0
+LET admit_n = 0
+LET skip_n = 0
+LET has_n = 0
+LET count_n = 0
+LET flag_n = 0
+
+SYS LINES jobs
+LET job_n = LAST_N
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = jobs
+  LET val_ch = 1
+  LET meta = "jobs"
+  SYS STR job_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "argc"
+  LET meta = LAST
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "mode"
+  LET meta = LAST
+  SYS PUSH meta MODE
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON job_n argc_n MODE DRY
+  CLEAR_ERR
+END
+
+# --- parse flags + rest (no admit) ---
+SYS EQS ACTION "parse"
+IF LAST_N == 1 THEN
+  NOTE "action parse"
+  LET paths = rest_bag
+  LET paths_ch = 1
+  LET path_n = rest_n
+  LET hit = 1
+  LET note_msg = "parse ok"
+  LET val = MODE
+  LET val_ch = 1
+  LET meta = "mode"
+  SYS PUSH meta MODE
+  LET meta = LAST
+  SYS PUSH meta "out"
+  LET meta = LAST
+  SYS PUSH meta OUT
+  LET meta = LAST
+  SYS PUSH meta "dry"
+  LET meta = LAST
+  SYS STR DRY
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "verbose"
+  LET meta = LAST
+  SYS STR VERBOSE
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "paths"
+  LET meta = LAST
+  SYS STR path_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "argc"
+  LET meta = LAST
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF path_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "parse no paths"
+    FAIL "parse no paths"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "parse no paths"
+    END
+  END
+  PRINT_JSON MODE DRY path_n VERBOSE
+  CLEAR_ERR
+END
+
+# --- admit: parse + write JOBS unless dry-run ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET paths = rest_bag
+  LET paths_ch = 1
+  LET path_n = rest_n
+  IF path_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "admit empty"
+    FAIL "admit empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit empty"
+    END
+  ELSE
+    IF DRY > 0 THEN
+      LET skip_n = path_n
+      LET hit = 1
+      LET note_msg = "admit dry-run"
+      LET val = "dry-run"
+      LET val_ch = 1
+    ELSE
+      EACH LINE AS p IN paths
+        SYS BLANK p
+        IF LAST_N == 0 THEN
+          SYS HASLINE jobs p
+          IF LAST_N == 0 THEN
+            SYS PUSH jobs p
+            LET jobs = LAST
+            LET admit_n = admit_n + 1
+          ELSE
+            LET skip_n = skip_n + 1
+          END
+        END
+      END
+      LET jobs_ch = 1
+      SYS LINES jobs
+      LET job_n = LAST_N
+      LET hit = 1
+      LET note_msg = "admit ok"
+      LET val = jobs
+      LET val_ch = 1
+    END
+    LET meta = "mode"
+    SYS PUSH meta MODE
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "skip"
+    LET meta = LAST
+    SYS STR skip_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "dry"
+    LET meta = LAST
+    SYS STR DRY
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n skip_n job_n DRY MODE
+  CLEAR_ERR
+END
+
+# --- hasflag probe (literal names only — HASFLAG rejects var tokens) ---
+SYS EQS ACTION "hasflag"
+IF LAST_N == 1 THEN
+  NOTE "action hasflag"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "hasflag needs name"
+    FAIL "hasflag needs name"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasflag needs name"
+    END
+  ELSE
+    LET flag_n = 0
+    SYS EQS NAME "mode"
+    IF LAST_N == 1 THEN
+      HASFLAG mode
+      LET flag_n = LAST_N
+    END
+    SYS EQS NAME "out"
+    IF LAST_N == 1 THEN
+      HASFLAG out
+      LET flag_n = LAST_N
+    END
+    SYS EQS NAME "dry-run"
+    IF LAST_N == 1 THEN
+      HASFLAG dry-run
+      LET flag_n = LAST_N
+    END
+    SYS EQS NAME "dry"
+    IF LAST_N == 1 THEN
+      HASFLAG dry
+      LET flag_n = LAST_N
+    END
+    SYS EQS NAME "verbose"
+    IF LAST_N == 1 THEN
+      HASFLAG verbose
+      LET flag_n = LAST_N
+    END
+    SYS EQS NAME "action"
+    IF LAST_N == 1 THEN
+      HASFLAG action
+      LET flag_n = LAST_N
+    END
+    # unknown name → always miss (cannot HASFLAG $var)
+    LET has_n = flag_n
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "hasflag"
+    SYS STR flag_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF flag_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "hasflag ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "hasflag miss"
+      FAIL "hasflag miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "hasflag miss"
+      END
+    END
+  END
+  PRINT_JSON flag_n
+  CLEAR_ERR
+END
+
+# --- getflag (literal names only — GETFLAG rejects var tokens) ---
+SYS EQS ACTION "getflag"
+IF LAST_N == 1 THEN
+  NOTE "action getflag"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "getflag needs name"
+    FAIL "getflag needs name"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "getflag needs name"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET A2 = ""
+    END
+    LET flag_n = 0
+    LET val = A2
+    SYS EQS NAME "mode"
+    IF LAST_N == 1 THEN
+      GETFLAG mode OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    SYS EQS NAME "out"
+    IF LAST_N == 1 THEN
+      GETFLAG out OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    SYS EQS NAME "dry-run"
+    IF LAST_N == 1 THEN
+      GETFLAG dry-run OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    SYS EQS NAME "dry"
+    IF LAST_N == 1 THEN
+      GETFLAG dry OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    SYS EQS NAME "verbose"
+    IF LAST_N == 1 THEN
+      GETFLAG verbose OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    SYS EQS NAME "action"
+    IF LAST_N == 1 THEN
+      GETFLAG action OR A2
+      LET flag_n = LAST_N
+      LET val = LAST
+    END
+    LET val_ch = 1
+    LET meta = "getflag"
+    SYS STR flag_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta NAME
+    LET meta = LAST
+    LET meta_ch = 1
+    IF flag_n > 0 THEN
+      LET hit = 1
+      LET note_msg = "getflag ok"
+    ELSE
+      SYS BLANK A2
+      IF LAST_N == 0 THEN
+        LET hit = 1
+        LET note_msg = "getflag default"
+        LET val = A2
+      ELSE
+        LET miss = 1
+        LET note_msg = "getflag miss"
+        FAIL "getflag miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "getflag miss"
+        END
+      END
+    END
+  END
+  PRINT_JSON val flag_n
+  CLEAR_ERR
+END
+
+# --- hasarg (literal indices 0..3 only — HASARG rejects var index) ---
+SYS EQS ACTION "hasarg"
+IF LAST_N == 1 THEN
+  NOTE "action hasarg"
+  LET idx = 0
+  # ARG1 numeric in LAST via re-read
+  SYS ARG 1 OR "0"
+  IF LAST_N > 0 THEN
+    SYS NUM
+    IF OK == 1 THEN
+      LET idx = LAST_N
+    END
+    CLEAR_ERR
+  END
+  LET has_n = 0
+  IF idx == 0 THEN
+    HASARG 0
+    LET has_n = LAST_N
+  END
+  IF idx == 1 THEN
+    HASARG 1
+    LET has_n = LAST_N
+  END
+  IF idx == 2 THEN
+    HASARG 2
+    LET has_n = LAST_N
+  END
+  IF idx == 3 THEN
+    HASARG 3
+    LET has_n = LAST_N
+  END
+  LET val_ch = 1
+  SYS STR idx
+  LET val = LAST
+  LET meta = "hasarg"
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "hasarg ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasarg miss"
+    FAIL "hasarg miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasarg miss"
+    END
+  END
+  PRINT_JSON has_n idx
+  CLEAR_ERR
+END
+
+# --- hasargc (literal mins 1/2/3/4/9 via branch; default MIN) ---
+SYS EQS ACTION "hasargc"
+IF LAST_N == 1 THEN
+  NOTE "action hasargc"
+  LET has_n = 0
+  IF MIN == 1 THEN
+    HASARGC 1
+    LET has_n = LAST_N
+  END
+  IF MIN == 2 THEN
+    HASARGC 2
+    LET has_n = LAST_N
+  END
+  IF MIN == 3 THEN
+    HASARGC 3
+    LET has_n = LAST_N
+  END
+  IF MIN == 4 THEN
+    HASARGC 4
+    LET has_n = LAST_N
+  END
+  IF MIN == 9 THEN
+    HASARGC 9
+    LET has_n = LAST_N
+  END
+  IF MIN == 0 THEN
+    HASARGC
+    LET has_n = LAST_N
+  END
+  # fallback: compare ARGC manually when MIN not in {0,1,2,3,4,9}
+  IF MIN > 4 THEN
+    IF MIN != 9 THEN
+      SYS ARGC
+      IF LAST_N >= MIN THEN
+        LET has_n = 1
+      ELSE
+        LET has_n = 0
+      END
+    END
+  END
+  SYS ARGC
+  LET argc_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "argc"
+  LET meta = LAST
+  SYS STR argc_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "hasargc ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "hasargc short"
+    FAIL "hasargc short"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "hasargc short"
+    END
+  END
+  PRINT_JSON has_n argc_n MIN
+  CLEAR_ERR
+END
+
+# --- rest dump ---
+SYS EQS ACTION "rest"
+IF LAST_N == 1 THEN
+  NOTE "action rest"
+  RESTARGS
+  LET rest_bag = LAST
+  SYS LINES rest_bag
+  LET rest_n = LAST_N
+  # peel action token
+  SYS NTH 0 rest_bag
+  LET first = LAST
+  SYS EQS first ACTION
+  IF LAST_N == 1 THEN
+    SYS DROP 1 rest_bag
+    LET rest_bag = LAST
+    SYS LINES rest_bag
+    LET rest_n = LAST_N
+  END
+  LET paths = rest_bag
+  LET paths_ch = 1
+  LET val = rest_bag
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "rest ok"
+  LET meta = "rest_n"
+  SYS STR rest_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON rest_n
+  CLEAR_ERR
+END
+
+# --- has exact job ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE jobs NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count exact ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE jobs NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate: need --mode and enough rest paths ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  HASFLAG mode
+  LET flag_n = LAST_N
+  LET path_n = rest_n
+  LET meta = "has_mode"
+  SYS STR flag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "paths"
+  LET meta = LAST
+  SYS STR path_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "min"
+  LET meta = LAST
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR flag_n
+  LET val = LAST
+  LET val_ch = 1
+  IF flag_n == 1 THEN
+    IF path_n >= MIN THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate paths short"
+      FAIL "gate paths short"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate paths short"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate no mode"
+    FAIL "gate no mode"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no mode"
+    END
+  END
+  PRINT_JSON flag_n path_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft missing flag (literal probe — HASFLAG needs token) ---
+SYS EQS ACTION "soft"
+IF LAST_N == 1 THEN
+  NOTE "action soft"
+  HASFLAG no_such_cli_flag_zz
+  LET flag_n = LAST_N
+  IF flag_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "soft flag miss ok"
+    FAIL "soft flag miss"
+    CLEAR_ERR
+    LET val = "no_such_cli_flag_zz"
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "miss"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft flag require wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft unexpected hit"
+  END
+  PRINT_JSON flag_n miss
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET jobs = ""
+  LET paths = ""
+  LET val = ""
+  LET meta = ""
+  LET jobs_ch = 1
+  LET paths_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET job_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+# unknown?
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "parse"
+LET k = k + LAST_N
+SYS EQS ACTION "admit"
+LET k = k + LAST_N
+SYS EQS ACTION "hasflag"
+LET k = k + LAST_N
+SYS EQS ACTION "getflag"
+LET k = k + LAST_N
+SYS EQS ACTION "hasarg"
+LET k = k + LAST_N
+SYS EQS ACTION "hasargc"
+LET k = k + LAST_N
+SYS EQS ACTION "rest"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "soft"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF jobs_ch > 0 THEN
+  SYS WRITE jobs_path jobs
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "jobs write failed"
+  END
+  CLEAR_ERR
+END
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.cli_flag_intake_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mode"
+LET report = LAST
+SYS PUSH report MODE
+LET report = LAST
+SYS PUSH report "dry"
+LET report = LAST
+SYS STR DRY
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "path_n"
+LET report = LAST
+SYS STR path_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "job_n"
+LET report = LAST
+SYS STR job_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "admit_n"
+LET report = LAST
+SYS STR admit_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "cli_flag_intake_board" ACTION hit miss job_n path_n admit_n DRY MODE note_msg elapsed
+NOTE "cli_flag_intake_board: done"
