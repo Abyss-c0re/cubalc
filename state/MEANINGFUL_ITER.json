@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 399,
-  "version": "1.15.426-usability",
-  "item": "SYS ARGC/ARGS + run args",
-  "item_id": 435,
-  "title": "ARGC count · ARGS bag · cubalc run args → CUBALC_ARGn",
-  "commit": "2f218a0b72ab28bdf39da971931f6d960881d9ea",
-  "summary": "Program arg bag/count; run wires trailing/-- to CUBALC_ARG*. proof 976 10/10.",
+  "iter": 400,
+  "version": "1.15.427-usability",
+  "item": "REQUIRE ARG/ARGC",
+  "item_id": 436,
+  "title": "REQUIRE ARG n|name · ARGC [min] fail-fast CLI contract",
+  "commit": "bcca6eb185c865aa5681e265b65e01d86cae0bdd",
+  "summary": "Fail-fast program arg gates with line tips; pairs SYS ARGS. proof 977 11/11.",
   "proofs": [
-    "976_sys_args_argc",
-    "asserts 10/10",
-    "smoke run -e … -- p q"
+    "977_require_arg",
+    "asserts 11/11",
+    "smoke REQUIRE ARG missing · ARGC got N"
   ],
-  "when": "2026-08-07T20:39:29Z",
+  "when": "2026-08-07T20:46:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2f218a0b72ab28bdf39da971931f6d960881d9ea",
-  "note": "-e trailing bare tokens are args not source path"
+  "sha": "bcca6eb185c865aa5681e265b65e01d86cae0bdd",
+  "note": "completes run-args usability loop with fail-fast"
 }
