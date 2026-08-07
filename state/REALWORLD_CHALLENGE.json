@@ -1,51 +1,45 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 151,
-  "program": "programs/realworld/oncall_roster_hygiene_board.cubalc",
-  "theme": "SORTBAGF/UNIQBAGF + LINESF/HASBAGLINE/DROPBAGLINE oncall roster hygiene",
-  "version": "1.15.414-usability",
+  "iter": 152,
+  "program": "programs/realworld/fleet_allowlist_ensure_board.cubalc",
+  "theme": "ENSUREBAGLINE + EACH LINE OF field + EACH PROP fleet allowlist",
+  "version": "1.15.417-usability",
   "pass": true,
-  "prior_note": "iter 150 PUSHF/GREPF work queue; this iter first realworld SORTBAGF (963) + LINESF/HASBAGLINE/DROPBAGLINE (964)",
+  "prior_note": "iter 151 SORTBAGF/HASBAGLINE roster; this iter first realworld ENSUREBAGLINE (966) + EACH LINE OF (965) + EACH PROP (967)",
   "tests": [
     {
-      "name": "add_size",
-      "cmd": "add carol/alice/bob/alice/dave; size 5; bag side-file",
+      "name": "ensure_idempotent",
+      "cmd": "ensure api.prod NEW=1; again NEW=0 N=1; +web/db/staging N=4",
       "ok": true,
-      "note": "PUSHF+LINESF"
+      "note": "ENSUREBAGLINE"
     },
     {
-      "name": "sort_uniq",
-      "cmd": "SORTBAGF lex; UNIQBAGF adjacent \u2192 alice bob carol dave N=4",
+      "name": "walk_prefix",
+      "cmd": "EACH LINE OF allow PFX=api → pref=2 dig api.prod,api.staging",
       "ok": true,
-      "note": "SORTBAGF/UNIQBAGF"
+      "note": "EACH LINE OF"
     },
     {
-      "name": "unique",
-      "cmd": "UNIQUEBAGF first-seen z,a,z,b,a \u2192 z a b",
+      "name": "props",
+      "cmd": "EACH PROP OF a0 → 5 names; OF AllowList class → 5",
       "ok": true,
-      "note": "UNIQUEBAGF"
+      "note": "EACH PROP"
     },
     {
-      "name": "has",
-      "cmd": "HASBAGLINE bob present; zoe absent REQUIRE\u21922; icase alice",
+      "name": "icase_ensure",
+      "cmd": "ENSUREBAGLINEI Api.Prod then api.prod NEW=0",
       "ok": true,
-      "note": "HASBAGLINE"
+      "note": "ENSUREBAGLINEI"
     },
     {
-      "name": "ack",
-      "cmd": "DROPBAGLINE bob HIT=1; second bob absent",
-      "ok": true,
-      "note": "DROPBAGLINE"
-    },
-    {
-      "name": "gate",
-      "cmd": "n>=2 admit; MINN=99 REQUIRE\u21922",
+      "name": "has_gate",
+      "cmd": "has present; missing REQUIRE→2; MINN gate admit/deny",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "substring a\u2260alpha; adjacent uniq keeps non-adj dups; TRY* soft",
+      "cmd": "TRYENSURE soft; NEW 1/0; empty ensure NEW=1; empty EACH_N=0",
       "ok": true,
       "note": "probe"
     },
@@ -60,50 +54,50 @@
     {
       "id": "W1",
       "severity": "med",
-      "area": "oop|uniqbagf",
-      "title": "UNIQBAGF is adjacent-only (not full dedupe)",
-      "detail": "Without prior SORTBAGF, a\\nb\\na\\nb stays 4 lines. Agents expecting set-semantics must SORT then UNIQ or use UNIQUEBAGF (first-seen, order-preserving). Easy roster bug.",
-      "repro": "UNIQBAGF a\\nb\\na\\nb \u2192 still 4 lines"
+      "area": "oop|ensurebagline",
+      "title": "Empty-string ENSUREBAGLINE appends blank line (NEW=1)",
+      "detail": "ENSUREBAGLINE allow \"\" is treated as a real membership add. Agents with blank HOST/ENV can pollute allowlists with empty bag lines that LINESF counts.",
+      "repro": "ENSUREBAGLINE a allow \"\" → NEW=1 N increases"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|hasbagline",
-      "title": "HASBAGLINE exact-only vs GREPF substring",
-      "detail": "HASBAGLINE members \"a\" on beta/alpha \u2192 0. Correct for roster IDs but false friend if agents used GREPF mental model. No fuzzy/prefix membership.",
-      "repro": "HASBAGLINE beta\\nalpha \"a\" \u2192 N=0"
+      "area": "oop|ensurebagline",
+      "title": "Flag is ENSUREBAGLINE_NEW not _HIT",
+      "detail": "Agents reading ENSUREBAGLINE_HIT (pattern from DROP/CUTF) get 0 always. Must use _NEW for append-vs-exists. Easy false soft logic.",
+      "repro": "ENSUREBAGLINE_HIT stays 0; NEW is 1 then 0"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|dumpobj|plate",
-      "title": "DUMPOBJ multiline members still plate-unsafe",
-      "detail": "Same as work_queue_bag: must dump/rN.bag side files. LOOKUP members from DUMPOBJ only first line.",
-      "repro": "DUMPOBJ after multi add; LOOKUP members truncates"
+      "title": "DUMPOBJ multiline allow still plate-unsafe",
+      "detail": "Same class as roster/queue boards — dump/aN.bag side files required for rehydrate.",
+      "repro": "LOOKUP allow after DUMPOBJ truncates at first NL"
     },
     {
       "id": "W4",
       "severity": "low",
-      "area": "oop|dropbagline",
-      "title": "DROPBAGLINE removes first match only",
-      "detail": "Duplicate on-call entries need repeated ack. No DROPALLBAGLINE. Documented; probe covers.",
-      "repro": "two bob lines need two DROPBAGLINE"
+      "area": "oop|each",
+      "title": "INCF local counter fails — need LET n = n + 1",
+      "detail": "INCF c errors with INCF field when c is a LET var. Field INCF only. Walk loops verbose.",
+      "repro": "LET c=0; INCF c → err INCF field"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|sortbagf",
-      "title": "Lex sort only \u2014 no numeric/natural roster order",
-      "detail": "host10 before host2. No SORTBAGF NUM mode for pager IDs.",
-      "repro": "sort host10\\nhost2 \u2192 host10 first"
+      "area": "oop|ensurebagline",
+      "title": "Exact membership only (no DNS suffix match)",
+      "detail": "ensure api does not satisfy has api.prod; prefix walk needs EACH+STARTS. No ENSUREBAGLINE SUFFIX mode.",
+      "repro": "ensure api; has api.prod → absent"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n after dump\\nr0.",
-      "repro": "od -c META.txt"
+      "detail": "od -c META ends without \\n.",
+      "repro": "od -c META.txt after dump"
     },
     {
       "id": "W7",
@@ -115,26 +109,26 @@
     }
   ],
   "workarounds": [
-    "SORTBAGF then UNIQBAGF for full set dedupe; or UNIQUEBAGF for first-seen",
-    "HASBAGLINE for exact IDs only; GREPF if substring triage needed",
-    "dump/rN.bag side files for multiline members",
-    "Loop DROPBAGLINE for multi-ack; LINESF for headcount gate",
-    "Fixed r0/r1/r2; TRY* soft; numeric REQUIRE only"
+    "Reject blank HOST before ENSUREBAGLINE",
+    "Read ENSUREBAGLINE_NEW not _HIT",
+    "dump/aN.bag side files for allow bag",
+    "LET n = n + 1 in EACH walks (not INCF local)",
+    "Fixed a0/a1/a2; TRY* soft; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "UNIQBAGF full-set mode flag (or default document louder)",
+    "ENSUREBAGLINE reject empty / soft no-op on blank",
+    "Consistent _HIT vs _NEW naming across bag mutators",
     "DUMPOBJ escape multiline fields",
-    "SORTBAGF natural/numeric order",
-    "DROPALLBAGLINE / multi-ack",
+    "INCF on LET scalars or INC local form",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "add 5 members size 5; sort+uniq \u2192 4 unique",
-    "HASBAGLINE bob/zoe; HASBAGLINEI alice for Alice",
-    "UNIQUEBAGF first-seen z a b; DROPBAGLINE first bob",
-    "probe substring false friend + adjacent uniq; bag side-files",
+    "ensure NEW=1 then exists NEW=0; size 4 after multi-host",
+    "walk PFX=api pref=2 dig api.prod,api.staging",
+    "EACH PROP 5 fields; ENSUREBAGLINEI case fold",
+    "empty ENSURE NEW=1 documented; bag side-files",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "bc746d8e11c1a3ca77a547ad93aef2c6ecf72b1c",
-  "ts": "2026-08-07T18:34:38Z"
+  "commit": "",
+  "ts": "2026-08-07T18:59:28Z"
 }
