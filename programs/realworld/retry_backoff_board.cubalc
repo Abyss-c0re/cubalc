@@ -1,0 +1,990 @@
+# retry_backoff_board.cubalc — compound PARSEMS + MS2SEC/SEC2MS + SLEEP bridge
+#
+# Real use: agents configure retry/backoff delays as human compound durations
+# ("1m30s", "2s500ms"), round-trip HUMANMS, convert with MS2SEC for DEADLINE-
+# scale ops and SEC2MS for SLEEP (ms), then gate max attempts:
+#   PARSEMS compound   — 1h30m / 1s250ms multi-unit (dual of HUMANMS)
+#   HUMANMS / FMTMS    — ms → compound labels
+#   MS2SEC / TOSECS    — floor ms → whole seconds (DEADLINE bridge)
+#   SEC2MS / S2MS      — secs → ms (SLEEP bridge)
+#   SLEEP / MSLEEP     — pause milliseconds (not seconds!)
+# Distinct from ttl_due (DEADLINE/EXPIRED lease), deadline_budget (budget remain),
+# and rate_budget_ledger: this board is *compound delay → unit bridge → sleep*.
+#
+# Plate under STATE:
+#   DELAY.txt    — delay ms (decimal)
+#   ATTEMPT.txt  — attempt counter
+#   MAX.txt      — max attempts
+#   VAL.txt      — last label / secs / slept
+#   META.txt
+#   BACKOFF_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RB_ACTION):
+#   list      — plate (default)
+#   delay     — PARSEMS ARG1 → DELAY ms (compound ok)
+#   human     — HUMANMS DELAY → VAL
+#   round     — DELAY → HUMANMS → PARSEMS equality
+#   secs      — MS2SEC DELAY → VAL (floor whole seconds)
+#   to_ms     — SEC2MS of secs field / ARG1 → VAL
+#   sleep     — SLEEP delay_ms (or dry if CUBALC_RB_DRY=1)
+#   tick      — attempt++
+#   max       — set MAX attempts ARG1
+#   gate      — attempt < max admit (REQUIRE hard)
+#   bridge    — demo PARSEMS→MS2SEC→DEADLINE scale + SEC2MS sleep budget
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rb_$$
+#   CUBALC_ARG0=delay CUBALC_ARG1=1m30s ...
+#   CUBALC_ARG0=round ...
+#   CUBALC_ARG0=sleep CUBALC_RB_DRY=1 ...
+#   CUBALC_ARG0=gate CUBALC_RB_REQUIRE=1 ...
+#
+# Env: CUBALC_RB_REQUIRE=1  CUBALC_RB_DELAY=2s500ms  CUBALC_RB_DRY=1
+#
+# Edges:
+#   SLEEP unit is milliseconds (SLEEP 2 ≈ 2ms not 2s) — SEC2MS before long pause
+#   MS2SEC floors (999→0; 1500→1) — sub-second lost for DEADLINE scale
+#   SEC2MS(MS2SEC(x)) loses remainder (2s500ms → 2s → 2000ms not 2500)
+#   PARSEMS bare "60" = 60ms; compound "1h30m" now ok
+#   NUM "2m" partial still OK=1 LAST_N=2
+#   WRITE no NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "retry_backoff_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT DFILE = "DELAY.txt"
+DEFAULT AFILE = "ATTEMPT.txt"
+DEFAULT XFILE = "MAX.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "BACKOFF_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_DELAY = "1s"
+DEFAULT DRY = 0
+DEFAULT MAX_N = 3
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RB_DELAY" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_DELAY = LAST
+ELSE
+  LET ENV_DELAY = ""
+END
+SYS ENV "CUBALC_RB_DRY" OR ""
+SYS EQSI LAST "1"
+IF LAST_N == 1 THEN
+  LET DRY = 1
+END
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir DFILE
+LET delay_meta = LAST
+SYS JOIN state_dir AFILE
+LET attempt_meta = LAST
+SYS JOIN state_dir XFILE
+LET max_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR delay_meta OR ""
+LET delay_s = LAST
+CLEAR_ERR
+SYS READ OR attempt_meta OR ""
+LET attempt_s = LAST
+CLEAR_ERR
+SYS READ OR max_meta OR ""
+LET max_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET delay_n = 0
+SYS BLANK delay_s
+IF LAST_N == 0 THEN
+  SYS NUM delay_s
+  IF OK == 1 THEN
+    LET delay_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET attempt_n = 0
+SYS BLANK attempt_s
+IF LAST_N == 0 THEN
+  SYS NUM attempt_s
+  IF OK == 1 THEN
+    LET attempt_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET max_n = MAX_N
+SYS BLANK max_s
+IF LAST_N == 0 THEN
+  SYS NUM max_s
+  IF OK == 1 THEN
+    LET max_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_DELAY
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "delay"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_DELAY
+    END
+  END
+END
+SYS BLANK ENV_DELAY
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "round"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_DELAY
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET delay_ch = 0
+LET attempt_ch = 0
+LET max_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET secs_n = 0
+LET round_n = 0
+LET gate_n = 0
+LET slept_n = 0
+LET parse_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "backoff" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON delay_s
+  PRINT_JSON attempt_s
+  PRINT_JSON max_s
+  PRINT_JSON val
+  PRINT_JSON meta
+  LET note_msg = "list ok"
+END
+
+# --- delay: PARSEMS (compound ok) ---
+SYS EQS ACTION "delay"
+IF LAST_N == 1 THEN
+  NOTE "action delay"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_DELAY
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET parse_n = 0
+    LET note_msg = "delay parse fail"
+    FAIL "delay parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delay parse fail"
+    END
+  ELSE
+    LET delay_n = LAST_N
+    LET parse_n = delay_n
+    SYS STR delay_n
+    LET delay_s = LAST
+    LET delay_ch = 1
+    LET val = NAME
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "delay ok"
+    LET meta = "delay"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR delay_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON parse_n delay_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- human: HUMANMS delay ---
+SYS EQS ACTION "human"
+IF LAST_N == 1 THEN
+  NOTE "action human"
+  IF delay_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "human no delay"
+    FAIL "human no delay"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "human no delay"
+    END
+  ELSE
+    SYS HUMANMS delay_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "human fail"
+      FAIL "human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "human fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "human ok"
+      LET meta = "human"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR delay_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON delay_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- round: PARSEMS → HUMANMS → PARSEMS ---
+SYS EQS ACTION "round"
+IF LAST_N == 1 THEN
+  NOTE "action round"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    IF delay_n > 0 THEN
+      SYS STR delay_n
+      # use HUMANMS of stored delay as seed label path
+      SYS HUMANMS delay_n
+      LET NAME = LAST
+    ELSE
+      LET NAME = DEF_DELAY
+    END
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "round parse1 fail"
+    FAIL "round parse1 fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "round parse1 fail"
+    END
+  ELSE
+    LET ms1 = LAST_N
+    SYS HUMANMS ms1
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "round human fail"
+      FAIL "round human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "round human fail"
+      END
+    ELSE
+      LET lab = LAST
+      SYS PARSEMS lab
+      IF OK == 0 THEN
+        LET miss = 1
+        LET round_n = 0
+        LET note_msg = "round parse2 fail"
+        FAIL "round parse2 fail"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round parse2 fail"
+        END
+      ELSE
+        LET ms2 = LAST_N
+        IF ms1 == ms2 THEN
+          LET round_n = 1
+          LET hit = 1
+          LET note_msg = "round ok"
+        ELSE
+          LET round_n = 0
+          LET miss = 1
+          LET note_msg = "round mismatch"
+          FAIL "round mismatch"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "round mismatch"
+          END
+        END
+        LET delay_n = ms1
+        SYS STR delay_n
+        LET delay_s = LAST
+        LET delay_ch = 1
+        LET val = lab
+        LET val_ch = 1
+        LET meta = "round"
+        SYS PUSH meta NAME
+        LET meta = LAST
+        SYS PUSH meta "ms1"
+        LET meta = LAST
+        SYS STR ms1
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS PUSH meta "lab"
+        LET meta = LAST
+        SYS PUSH meta lab
+        LET meta = LAST
+        SYS PUSH meta "ms2"
+        LET meta = LAST
+        SYS STR ms2
+        SYS PUSH meta LAST
+        LET meta = LAST
+        SYS STR round_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON round_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- secs: MS2SEC floor ---
+SYS EQS ACTION "secs"
+IF LAST_N == 1 THEN
+  NOTE "action secs"
+  IF delay_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "secs no delay"
+    FAIL "secs no delay"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "secs no delay"
+    END
+  ELSE
+    SYS MS2SEC delay_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "secs fail"
+      FAIL "secs fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "secs fail"
+      END
+    ELSE
+      LET secs_n = LAST_N
+      SYS STR secs_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "secs ok"
+      LET meta = "secs"
+      SYS STR delay_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "floor_s"
+      LET meta = LAST
+      SYS STR secs_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      # show remainder loss if re-expanded
+      SYS SEC2MS secs_n
+      LET back = LAST_N
+      SYS PUSH meta "back_ms"
+      LET meta = LAST
+      SYS STR back
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET lost = delay_n - back
+      SYS PUSH meta "lost_ms"
+      LET meta = LAST
+      SYS STR lost
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON secs_n delay_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- to_ms: SEC2MS ---
+SYS EQS ACTION "to_ms"
+IF LAST_N == 1 THEN
+  NOTE "action to_ms"
+  LET sec_in = 0
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET ntmp = LAST_N
+      SYS STR ntmp
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET sec_in = ntmp
+      END
+    END
+    CLEAR_ERR
+  ELSE
+    # default: MS2SEC of current delay
+    IF delay_n > 0 THEN
+      SYS MS2SEC delay_n
+      LET sec_in = LAST_N
+      CLEAR_ERR
+    END
+  END
+  SYS SEC2MS sec_in
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "to_ms fail"
+    FAIL "to_ms fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "to_ms fail"
+    END
+  ELSE
+    LET out_ms = LAST_N
+    SYS STR out_ms
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "to_ms ok"
+    LET meta = "to_ms"
+    SYS STR sec_in
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR out_ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON sec_in
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sleep: SLEEP delay_ms (ms unit!) ---
+SYS EQS ACTION "sleep"
+IF LAST_N == 1 THEN
+  NOTE "action sleep"
+  LET sleep_ms = delay_n
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS PARSEMS NAME
+    IF OK == 1 THEN
+      LET sleep_ms = LAST_N
+    ELSE
+      CLEAR_ERR
+      SYS NUM NAME
+      IF OK == 1 THEN
+        LET ntmp = LAST_N
+        SYS STR ntmp
+        SYS EQS LAST NAME
+        IF LAST_N == 1 THEN
+          # bare digits = ms for SLEEP (language unit)
+          LET sleep_ms = ntmp
+        END
+      END
+    END
+    CLEAR_ERR
+  END
+  IF sleep_ms < 0 THEN
+    LET sleep_ms = 0
+  END
+  LET sleep_capped = 0
+  # safety cap 5000ms for agents (do not hang challenge)
+  IF sleep_ms > 5000 THEN
+    LET sleep_ms = 5000
+    LET sleep_capped = 1
+  END
+  IF DRY == 1 THEN
+    LET slept_n = 0
+    LET hit = 1
+    LET note_msg = "sleep dry"
+    IF sleep_capped == 1 THEN
+      LET note_msg = "sleep dry capped"
+    END
+    SYS STR sleep_ms
+    LET val = LAST
+    LET val_ch = 1
+    LET meta = "sleep"
+    SYS PUSH meta "dry"
+    LET meta = LAST
+    SYS STR sleep_ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  ELSE
+    SYS MS
+    LET ts0 = LAST_N
+    SYS SLEEP sleep_ms
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "sleep fail"
+      FAIL "sleep fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "sleep fail"
+      END
+    ELSE
+      LET slept_n = LAST_N
+      SYS MS
+      LET wall = LAST_N - ts0
+      LET hit = 1
+      LET note_msg = "sleep ok"
+      IF sleep_capped == 1 THEN
+        LET note_msg = "sleep ok capped"
+      END
+      SYS STR slept_n
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "sleep"
+      SYS STR slept_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "wall_ms"
+      LET meta = LAST
+      SYS STR wall
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON slept_n sleep_ms DRY
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- tick: attempt++ ---
+SYS EQS ACTION "tick"
+IF LAST_N == 1 THEN
+  NOTE "action tick"
+  LET attempt_n = attempt_n + 1
+  SYS STR attempt_n
+  LET attempt_s = LAST
+  LET attempt_ch = 1
+  LET val = attempt_s
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "tick ok"
+  LET meta = "tick"
+  SYS STR attempt_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON attempt_n
+  CLEAR_ERR
+END
+
+# --- max: set max attempts ---
+SYS EQS ACTION "max"
+IF LAST_N == 1 THEN
+  NOTE "action max"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "max empty"
+    FAIL "max empty"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "max empty"
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "max not num"
+      FAIL "max not num"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "max not num"
+      END
+    ELSE
+      LET ntmp = LAST_N
+      SYS STR ntmp
+      SYS EQS LAST NAME
+      IF LAST_N == 0 THEN
+        # partial NUM like "3x" — soft miss
+        LET miss = 1
+        LET note_msg = "max partial num"
+        FAIL "max partial num"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "max partial num"
+        END
+      ELSE
+        LET max_n = ntmp
+        SYS STR max_n
+        LET max_s = LAST
+        LET max_ch = 1
+        LET val = max_s
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "max ok"
+        LET meta = "max"
+        SYS STR max_n
+        SYS PUSH meta LAST
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON max_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: attempt < max ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF attempt_n < max_n THEN
+    LET gate_n = 1
+    LET hit = 1
+    LET note_msg = "gate admit"
+    LET val = "admit"
+    LET val_ch = 1
+  ELSE
+    LET gate_n = 0
+    LET miss = 1
+    LET note_msg = "gate deny"
+    LET val = "deny"
+    LET val_ch = 1
+    FAIL "gate deny max attempts"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny max attempts"
+    END
+  END
+  LET meta = "gate"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR attempt_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR max_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON gate_n attempt_n max_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- bridge: PARSEMS → MS2SEC → (demo) + SEC2MS SLEEP budget ---
+SYS EQS ACTION "bridge"
+IF LAST_N == 1 THEN
+  NOTE "action bridge"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    IF delay_n > 0 THEN
+      SYS STR delay_n
+      SYS HUMANMS delay_n
+      LET NAME = LAST
+    ELSE
+      LET NAME = "2s500ms"
+    END
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "bridge parse fail"
+    FAIL "bridge parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "bridge parse fail"
+    END
+  ELSE
+    LET delay_n = LAST_N
+    SYS STR delay_n
+    LET delay_s = LAST
+    LET delay_ch = 1
+    SYS MS2SEC delay_n
+    LET secs_n = LAST_N
+    SYS SEC2MS secs_n
+    LET back = LAST_N
+    LET lost = delay_n - back
+    # for SLEEP agents must use original delay_n ms, not SEC2MS(MS2SEC)
+    LET hit = 1
+    LET note_msg = "bridge ok"
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "bridge"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR delay_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "floor_s"
+    LET meta = LAST
+    SYS STR secs_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "back_ms"
+    LET meta = LAST
+    SYS STR back
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "lost_ms"
+    LET meta = LAST
+    SYS STR lost
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "sleep_use_ms"
+    LET meta = LAST
+    SYS STR delay_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON delay_n secs_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET delay_s = ""
+  LET attempt_s = ""
+  LET max_s = ""
+  LET val = ""
+  LET meta = ""
+  LET delay_n = 0
+  LET attempt_n = 0
+  LET max_n = MAX_N
+  LET delay_ch = 1
+  LET attempt_ch = 1
+  LET max_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "delay"
+LET k = k + LAST_N
+SYS EQS ACTION "human"
+LET k = k + LAST_N
+SYS EQS ACTION "round"
+LET k = k + LAST_N
+SYS EQS ACTION "secs"
+LET k = k + LAST_N
+SYS EQS ACTION "to_ms"
+LET k = k + LAST_N
+SYS EQS ACTION "sleep"
+LET k = k + LAST_N
+SYS EQS ACTION "tick"
+LET k = k + LAST_N
+SYS EQS ACTION "max"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "bridge"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF delay_ch > 0 THEN
+  SYS WRITE delay_meta delay_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "delay write failed"
+  END
+  CLEAR_ERR
+END
+IF attempt_ch > 0 THEN
+  SYS WRITE attempt_meta attempt_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "attempt write failed"
+  END
+  CLEAR_ERR
+END
+IF max_ch > 0 THEN
+  SYS WRITE max_meta max_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "max write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.retry_backoff_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "delay_ms"
+LET report = LAST
+SYS STR delay_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "secs"
+LET report = LAST
+SYS STR secs_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "attempt"
+LET report = LAST
+SYS STR attempt_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max"
+LET report = LAST
+SYS STR max_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "round"
+LET report = LAST
+SYS STR round_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "slept"
+LET report = LAST
+SYS STR slept_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "dry"
+LET report = LAST
+SYS STR DRY
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "retry_backoff_board" ACTION hit miss delay_n secs_n attempt_n gate_n note_msg elapsed

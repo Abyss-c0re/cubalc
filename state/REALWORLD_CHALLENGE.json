@@ -1,62 +1,62 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 107,
-  "program": "programs/realworld/ttl_due_board.cubalc",
-  "theme": "TTL due DEADLINE+EXPIRED+REMAINING + ENVDEFAULT boot",
-  "version": "1.15.307-usability",
+  "iter": 108,
+  "program": "programs/realworld/retry_backoff_board.cubalc",
+  "theme": "retry backoff compound PARSEMS + MS2SEC/SEC2MS + SLEEP ms bridge",
+  "version": "1.15.309-usability",
   "pass": true,
   "tests": [
     {
-      "name": "claim_30s",
-      "cmd": "PARSEMS 30s \u2192 DEADLINE due ISO",
+      "name": "delay_1m30s",
+      "cmd": "PARSEMS 1m30s \u2192 90000",
       "ok": true,
-      "note": "claim"
+      "note": "compound"
     },
     {
-      "name": "remain_human",
-      "cmd": "REMAINING ~30; HUMANMS 30s",
+      "name": "human_round",
+      "cmd": "HUMANMS\u2194PARSEMS 1h1m1s / 1s250ms",
       "ok": true,
-      "note": "ttl"
+      "note": "round-trip"
     },
     {
-      "name": "gate_admit",
-      "cmd": "EXPIRED 0 \u2192 gate admit",
-      "ok": true,
-      "note": "live"
-    },
-    {
-      "name": "expire_1s",
-      "cmd": "claim 1s sleep2 EXPIRED1 remain0 gate deny REQUIRE2",
-      "ok": true,
-      "note": "ttl out"
-    },
-    {
-      "name": "renew_extend",
-      "cmd": "renew; extend bare60 +2m deltas",
-      "ok": true,
-      "note": "addtime"
-    },
-    {
-      "name": "boot_envdef",
-      "cmd": "ENVDEFAULT CUBALC_TTL; boot claim",
-      "ok": true,
-      "note": "envdef"
-    },
-    {
-      "name": "subsec_floor",
-      "cmd": "claim 500ms \u2192 TTL0 instant expire",
+      "name": "secs_floor_loss",
+      "cmd": "2s500ms MS2SEC\u21922 lost_ms=500",
       "ok": true,
       "note": "floor"
     },
     {
-      "name": "claim_soft_req",
-      "cmd": "xyz soft; REQUIRE\u21922",
+      "name": "bridge",
+      "cmd": "PARSEMS\u2192MS2SEC\u2192SEC2MS sleep_use_ms original",
       "ok": true,
-      "note": "parse"
+      "note": "bridge"
+    },
+    {
+      "name": "to_ms_90",
+      "cmd": "SEC2MS 90 \u2192 90000",
+      "ok": true,
+      "note": "s2ms"
+    },
+    {
+      "name": "sleep_100ms",
+      "cmd": "SLEEP 100 wall\u2248100 (ms unit)",
+      "ok": true,
+      "note": "sleep"
+    },
+    {
+      "name": "gate_attempts",
+      "cmd": "max2 tick2 gate deny REQUIRE2",
+      "ok": true,
+      "note": "gate"
+    },
+    {
+      "name": "parse_soft",
+      "cmd": "1h30x soft; REQUIRE\u21922",
+      "ok": true,
+      "note": "miss"
     },
     {
       "name": "num_partial",
-      "cmd": "NUM 2m \u21922 not fail; pure digit check",
+      "cmd": "max 3x pure-digit reject",
       "ok": true,
       "note": "NUM"
     },
@@ -64,96 +64,96 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "280/280 pass"
+      "note": "282/282 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|num",
-      "title": "NUM partial-parses trailing junk (2m \u2192 2, OK=1)",
-      "detail": "SYS NUM on '2m' yields LAST_N=2 with OK=1 instead of soft fail. Agents treating NUM success as full parse silently mis-scale durations (2s not 120s). Must STR(NUM)==input pure-digit check.",
-      "repro": "LET x='2m'; SYS NUM x \u2192 OK=1 LAST_N=2"
+      "area": "host|sleep",
+      "title": "SLEEP unit is milliseconds \u2014 easy to confuse with wall seconds",
+      "detail": "SLEEP 2 pauses ~2ms not 2s. Agents bridging REMAINING seconds must SEC2MS first. Proof labels SLEEP_MS. Silent near-no-op if seconds assumed.",
+      "repro": "SLEEP 2; wall delta \u22482ms"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "host|parsems",
-      "title": "PARSEMS bare digits are milliseconds not seconds",
-      "detail": "PARSEMS '60' \u2192 60ms; '60s' \u2192 60000. Combined with DEADLINE floor(/1000) bare 60 becomes 0s TTL. Config authors write 60 meaning seconds and get instant expire.",
-      "repro": "PARSEMS 60 \u2192 60; DEADLINE 60/1000 \u2192 0"
+      "area": "host|ms2sec",
+      "title": "MS2SEC floors; SEC2MS(MS2SEC(x)) loses sub-second remainder",
+      "detail": "2s500ms \u2192 MS2SEC 2 \u2192 SEC2MS 2000 (lost 500ms). DEADLINE bridge drops fractional seconds; SLEEP must keep original PARSEMS ms.",
+      "repro": "PARSEMS 2s500ms; MS2SEC; SEC2MS \u2192 2000 not 2500"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "host|expired",
-      "title": "EXPIRED clobbers LAST_N \u2014 breaks REMAINING chain",
-      "detail": "SYS EXPIRED due leaves LAST_N=0|1. SYS REMAINING without saved due uses 0/1 as epoch \u2192 remain 0. Agents must LET due_save before probe pair.",
-      "repro": "DEADLINE 30; EXPIRED LAST_N; REMAINING \u2192 0 not ~30"
+      "severity": "med",
+      "area": "host|ms2sec",
+      "title": "MS2SEC 999\u21920 hides sub-second delays for second-scale APIs",
+      "detail": "Any delay <1s becomes 0 seconds for DEADLINE/SLEEP-if-misused. No CEILMS or ROUND_SECS.",
+      "repro": "MS2SEC 999 \u2192 0"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|expired",
-      "title": "EXPIRED/REMAINING empty or junk coerce to expired",
-      "detail": "Empty string / non-numeric via var \u2192 OK=1 expired=1 (epoch0), not soft miss. No validation path for bad due plates.",
-      "repro": "LET e=''; SYS EXPIRED e \u2192 1"
+      "area": "host|parsems",
+      "title": "Bare digits still milliseconds after compound fix",
+      "detail": "PARSEMS 60 \u2192 60ms. Compound 1h30m fixed but bare-number unit policy unchanged.",
+      "repro": "PARSEMS 60 \u2192 60"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "host|deadline",
-      "title": "Sub-second TTL floors to DEADLINE 0 \u2192 instant expire",
-      "detail": "PARSEMS 500ms /1000 = 0; DEADLINE 0 marks due=now; EXPIRED boundary (>=) true immediately.",
-      "repro": "claim 500ms; expired \u2192 1"
+      "area": "host|num",
+      "title": "NUM still partial-parses trailing junk",
+      "detail": "max 3x \u2192 NUM OK LAST_N=3; agents need pure STR(NUM)==input check (board does).",
+      "repro": "NUM 3x \u2192 3"
     },
     {
       "id": "W6",
-      "severity": "med",
-      "area": "host|deadline",
-      "title": "DEADLINE accepts negative seconds (past due)",
-      "detail": "DEADLINE -10 stamps due in the past without soft fail. Silent claim already expired.",
-      "repro": "DEADLINE -10; EXPIRED \u2192 1"
+      "severity": "low",
+      "area": "host|sleep",
+      "title": "No SLEEP_SEC alias \u2014 only MS unit",
+      "detail": "Must remember SEC2MS pipeline. Easy footgun for ops agents.",
+      "repro": "want SLEEP_SEC 2"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "DUE/TTL od -c no newline.",
-      "repro": "od -c DUE.txt"
+      "detail": "od -c DELAY no newline.",
+      "repro": "od -c DELAY.txt"
     },
     {
       "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_TTL_REQUIRE=abc \u2192 REQUIRE_HIT 0.",
-      "repro": "REQUIRE=abc claim bad \u2192 rc 0"
+      "detail": "CUBALC_RB_REQUIRE=abc.",
+      "repro": "REQUIRE=abc delay bad \u2192 rc0"
     }
   ],
   "workarounds": [
-    "Pure-digit check: STR(NUM x)==x before treating as seconds",
-    "Always use unit suffixes for PARSEMS (30s not 60)",
-    "LET due_save before EXPIRED/REMAINING pair",
-    "Reject TTL < 1s after floor; never DEADLINE 0 for claims",
-    "Digit-check REQUIRE; CLEAR_ERR after soft PARSEMS"
+    "SLEEP always with PARSEMS ms or SEC2MS(seconds)",
+    "Keep original delay_ms for SLEEP; use MS2SEC only for DEADLINE",
+    "Reject delays that MS2SEC to 0 when second-scale needed",
+    "Pure-digit check for NUM; unit suffixes for PARSEMS",
+    "DRY mode for long backoff in tests"
   ],
   "language_gaps": [
-    "NUM strict full-string parse (reject trailing junk)",
-    "PARSEMS bare-number unit policy (ms vs s flag)",
-    "EXPIRED/REMAINING that preserve input epoch in side slot",
-    "Soft fail on non-numeric EXPIRED args",
-    "DEADLINE_MS / sub-second due without floor",
-    "WRITE trailing NL option"
+    "SLEEP_SEC / dual unit flag for SLEEP",
+    "MS2SEC_CEIL or fractional second retain",
+    "Round-trip MS2SEC/SEC2MS that preserves remainder",
+    "NUM strict full-string parse",
+    "PARSEMS bare-number seconds mode flag",
+    "WRITE trailing NL"
   ],
   "issues_faced": [
-    "claim/remain/human/iso/expired/gate/renew/extend/boot green",
-    "NUM 2m partial + PARSEMS bare-ms were core lessons; pure-digit workaround",
-    "EXPIRED LAST_N clobber forces due_save pattern",
-    "selftest 280/280; no language fix this iter"
+    "compound PARSEMS 1m30s/1h1m1s/1s250ms round-trip green",
+    "SLEEP is ms \u2014 core lesson for backoff agents",
+    "MS2SEC floor loss 500ms on 2s500ms documented in bridge META",
+    "selftest green; no language fix this iter"
   ],
-  "commit": "2996a7cbed8bc4c8612fe5d2baf4ff170db323e1",
-  "ts": "2026-08-07T00:41:13Z"
+  "commit": "",
+  "ts": "2026-08-07T01:04:56Z"
 }
