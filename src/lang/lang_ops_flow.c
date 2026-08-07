@@ -39,6 +39,73 @@ static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
     if (strcmp(cd->methods[i].name, mname) == 0) return &cd->methods[i];
   return NULL;
 }
+/* WHEN multi-alias numeric atom: prim + * / % + - without AND/OR
+ * so `WHEN 4 OR 5 OR 6` is three arms, not (4||5||6). */
+static long case_when_num_atom(VM *vm, Lex *L){
+  long v = parse_prim(vm, L);
+  for (;;) {
+    if (L->cur.kind == TK_STAR) {
+      lex_next(L);
+      v *= parse_prim(vm, L);
+    } else if (L->cur.kind == TK_SLASH) {
+      long d;
+      lex_next(L);
+      d = parse_prim(vm, L);
+      v = d ? v / d : 0;
+    } else if (L->cur.kind == TK_PERCENT) {
+      long d;
+      lex_next(L);
+      d = parse_prim(vm, L);
+      v = d ? v % d : 0;
+    } else break;
+  }
+  for (;;) {
+    if (L->cur.kind == TK_PLUS) {
+      long t;
+      lex_next(L);
+      t = parse_prim(vm, L);
+      for (;;) {
+        if (L->cur.kind == TK_STAR) {
+          lex_next(L);
+          t *= parse_prim(vm, L);
+        } else if (L->cur.kind == TK_SLASH) {
+          long d;
+          lex_next(L);
+          d = parse_prim(vm, L);
+          t = d ? t / d : 0;
+        } else if (L->cur.kind == TK_PERCENT) {
+          long d;
+          lex_next(L);
+          d = parse_prim(vm, L);
+          t = d ? t % d : 0;
+        } else break;
+      }
+      v += t;
+    } else if (L->cur.kind == TK_MINUS) {
+      long t;
+      lex_next(L);
+      t = parse_prim(vm, L);
+      for (;;) {
+        if (L->cur.kind == TK_STAR) {
+          lex_next(L);
+          t *= parse_prim(vm, L);
+        } else if (L->cur.kind == TK_SLASH) {
+          long d;
+          lex_next(L);
+          d = parse_prim(vm, L);
+          t = d ? t / d : 0;
+        } else if (L->cur.kind == TK_PERCENT) {
+          long d;
+          lex_next(L);
+          d = parse_prim(vm, L);
+          t = d ? t % d : 0;
+        } else break;
+      }
+      v -= t;
+    } else break;
+  }
+  return v;
+}
 
 /* --- name did-you-mean: agent typo recovery for OOP/FN plane --- */
 static void oop_fold(char *dst, size_t n, const char *src){
@@ -18131,16 +18198,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
-  /* CASE expr|str ... WHEN n|"s" THEN ... [DEFAULT ...] END
+  /* CASE expr|str ... WHEN n|"s" [,|"OR"|] … THEN ... [DEFAULT ...] END
    * Numeric arms keep TO-range. String selector (literal / string var / LAST)
-   * matches WHEN string arms by content. Usability: CLI action dispatch after
-   * GETFLAG without nested IF EQS soup. */
+   * matches WHEN string arms by content. Multi-alias WHEN: comma / OR / |
+   * list of synonyms (CLI list|ls|l). MATCH_ARM = which alias hit.
+   * Usability: CLI action dispatch after GETFLAG without nested IF EQS soup. */
   if (kw(&L->cur,"CASE")||kw(&L->cur,"SWITCH")||kw(&L->cur,"MATCH")){
     long sel = 0;
     char sel_s[512];
+    char match_arm[512];
     int sel_is_str = 0;
     lex_next(L);
     sel_s[0] = 0;
+    match_arm[0] = 0;
     /* string selector: "…", LAST (str), or string var — before parse_expr */
     if (L->cur.kind == TK_STR) {
       snprintf(sel_s, sizeof sel_s, "%s", L->cur.text);
@@ -18179,16 +18249,18 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         long w = 0, w_hi = 0;
         char w_s[512];
         int is_range = 0, arm_is_str = 0;
+        int arm_hit = 0;
         lex_next(L);
         w_s[0] = 0;
         if (sel_is_str) {
-          /* string arm: literal or string var */
+          /* string arm: literal or string var (+ multi-alias below) */
           if (L->cur.kind == TK_STR) {
             snprintf(w_s, sizeof w_s, "%s", L->cur.text);
             lex_next(L);
             arm_is_str = 1;
           } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"TO") &&
-                     !kw(&L->cur,"THEN") && !kw(&L->cur,"THROUGH")) {
+                     !kw(&L->cur,"THEN") && !kw(&L->cur,"THROUGH") &&
+                     !kw(&L->cur,"OR")) {
             if (strcmp(L->cur.text, "LAST") == 0) {
               Var *lv = var_get(vm, "LAST", 0);
               if (lv && lv->is_str)
@@ -18213,15 +18285,98 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             w = parse_expr(vm, L);
             arm_is_str = 0;
           }
+          if (arm_is_str && strcmp(sel_s, w_s) == 0) {
+            arm_hit = 1;
+            snprintf(match_arm, sizeof match_arm, "%s", w_s);
+          }
+          /* Multi-alias: WHEN "list", "ls" OR "l" | "L" THEN */
+          for (;;) {
+            int more = 0;
+            if (L->cur.kind == TK_COMMA) { lex_next(L); more = 1; }
+            else if (L->cur.kind == TK_PIPE) { lex_next(L); more = 1; }
+            else if (kw(&L->cur, "OR")) {
+              lex_next(L);
+              more = 1;
+            }
+            if (!more) break;
+            skip_nl(L);
+            w_s[0] = 0;
+            arm_is_str = 0;
+            if (L->cur.kind == TK_STR) {
+              snprintf(w_s, sizeof w_s, "%s", L->cur.text);
+              lex_next(L);
+              arm_is_str = 1;
+            } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "THEN") &&
+                       !kw(&L->cur, "OR") && !kw(&L->cur, "WHEN") &&
+                       !kw(&L->cur, "DEFAULT") && !kw(&L->cur, "ELSE") &&
+                       !kw(&L->cur, "END")) {
+              if (strcmp(L->cur.text, "LAST") == 0) {
+                Var *lv = var_get(vm, "LAST", 0);
+                if (lv && lv->is_str)
+                  snprintf(w_s, sizeof w_s, "%s", lv->sval);
+                else
+                  snprintf(w_s, sizeof w_s, "%s", vm->last_str);
+                lex_next(L);
+                arm_is_str = 1;
+              } else {
+                Var *sv = var_get(vm, L->cur.text, 0);
+                if (sv && sv->is_str) {
+                  snprintf(w_s, sizeof w_s, "%s", sv->sval);
+                  lex_next(L);
+                  arm_is_str = 1;
+                } else {
+                  (void)parse_expr(vm, L); /* soft skip non-str */
+                  arm_is_str = 0;
+                }
+              }
+            } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+                       L->cur.kind == TK_MINUS || L->cur.kind == TK_PLUS) {
+              (void)parse_expr(vm, L);
+              arm_is_str = 0;
+            } else {
+              break; /* THEN / WHEN / END — stop alias list */
+            }
+            if (arm_is_str && strcmp(sel_s, w_s) == 0) {
+              arm_hit = 1;
+              if (!match_arm[0])
+                snprintf(match_arm, sizeof match_arm, "%s", w_s);
+            }
+          }
         } else {
-          w = parse_expr(vm, L);
+          /* atom parse — leaves OR for multi-alias (not logical OR expr) */
+          w = case_when_num_atom(vm, L);
           w_hi = w;
           /* WHEN lo TO hi THEN — inclusive range arm (digit-1 control_or_branch) */
           if (kw(&L->cur,"TO")||kw(&L->cur,"THROUGH")||kw(&L->cur,"THRU")||
               kw(&L->cur,"DOTDOT")||kw(&L->cur,"RANGE")){
             lex_next(L);
-            w_hi = parse_expr(vm, L);
+            w_hi = case_when_num_atom(vm, L);
             is_range = 1;
+            {
+              long lo = w, hi = w_hi;
+              if (hi < lo){ long t = lo; lo = hi; hi = t; }
+              arm_hit = (sel >= lo && sel <= hi);
+            }
+          } else {
+            arm_hit = (w == sel);
+            /* Multi-alias numeric: WHEN 1, 2 OR 3 THEN (not mixed with TO) */
+            for (;;) {
+              int more = 0;
+              if (L->cur.kind == TK_COMMA) { lex_next(L); more = 1; }
+              else if (L->cur.kind == TK_PIPE) { lex_next(L); more = 1; }
+              else if (kw(&L->cur, "OR")) {
+                lex_next(L);
+                more = 1;
+              }
+              if (!more) break;
+              skip_nl(L);
+              if (kw(&L->cur, "THEN") || kw(&L->cur, "WHEN") ||
+                  kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+                  kw(&L->cur, "END") || L->cur.kind == TK_EOF)
+                break;
+              w = case_when_num_atom(vm, L);
+              if (w == sel) arm_hit = 1;
+            }
           }
         }
         if (kw(&L->cur,"THEN")) lex_next(L);
@@ -18240,19 +18395,6 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           else if ((kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")) && depth==1) break;
           else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
           lex_next(L);
-        }
-        int arm_hit = 0;
-        if (sel_is_str) {
-          if (arm_is_str)
-            arm_hit = (strcmp(sel_s, w_s) == 0);
-          else
-            arm_hit = 0;
-        } else if (is_range){
-          long lo = w, hi = w_hi;
-          if (hi < lo){ long t = lo; lo = hi; hi = t; }
-          arm_hit = (sel >= lo && sel <= hi);
-        } else {
-          arm_hit = (w == sel);
         }
         if (!matched && !ran && arm_hit){
           matched = 1; ran = 1;
@@ -18281,6 +18423,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           if (kw(&L->cur,"END")) lex_next(L);
           break;
         }
+        /* non-hit: clear provisional MATCH_ARM from this arm */
+        if (!arm_hit) match_arm[0] = 0;
         continue;
       }
       if (kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")){
@@ -18298,6 +18442,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             if (r==0) break;
           }
           ran = 1;
+          match_arm[0] = 0; /* DEFAULT has no WHEN alias */
         }
         /* always advance outer L to matching END */
         {
@@ -18324,6 +18469,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "CASE", sel);
       var_set_num(vm, "MATCH", sel);
     }
+    /* which synonym matched (empty on DEFAULT / no arm) */
+    var_set_str(vm, "MATCH_ARM", match_arm);
+    var_set_str(vm, "WHEN_HIT", match_arm);
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

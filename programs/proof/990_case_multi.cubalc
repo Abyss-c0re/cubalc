@@ -1,0 +1,133 @@
+# WHEN multi-alias — comma / OR / | synonyms for CLI CASE dispatch
+# MATCH_ARM / WHEN_HIT = which synonym matched
+
+HOLD_FLASH 1
+
+# string multi: comma list
+LET act ""
+CASE "ls"
+  WHEN "list", "ls", "l" THEN
+    LET act "LIST"
+  WHEN "seal", "s" THEN
+    LET act "SEAL"
+  DEFAULT
+    LET act "?"
+END
+SYS EQS act "LIST"
+ASSERT LAST_N == 1
+ASSERT MATCHED == 1
+SYS EQS MATCH_ARM "ls"
+ASSERT LAST_N == 1
+
+# OR synonyms
+LET out ""
+CASE "s"
+  WHEN "list" OR "ls" OR "l" THEN
+    LET out "L"
+  WHEN "seal" OR "s" OR "commit" THEN
+    LET out "S"
+  DEFAULT
+    LET out "?"
+END
+SYS EQS out "S"
+ASSERT LAST_N == 1
+SYS EQS WHEN_HIT "s"
+ASSERT LAST_N == 1
+
+# pipe aliases (shell-style)
+LET p ""
+CASE "parse"
+  WHEN "admit" | "parse" | "p" THEN
+    LET p "P"
+  DEFAULT
+    LET p "?"
+END
+SYS EQS p "P"
+ASSERT LAST_N == 1
+
+# first synonym is selector (MATCH_ARM = that arm text)
+LET LAST "list"
+CASE LAST
+  WHEN "ls", "list", "l" THEN
+    LET mode "list"
+  DEFAULT
+    LET mode "other"
+END
+SYS EQS mode "list"
+ASSERT LAST_N == 1
+SYS EQS MATCH_ARM "list"
+ASSERT LAST_N == 1
+
+# numeric multi-alias
+LET n 0
+CASE 3
+  WHEN 1, 2, 3 THEN
+    LET n 30
+  WHEN 4 OR 5 THEN
+    LET n 45
+  DEFAULT
+    LET n 99
+END
+ASSERT n == 30
+
+# numeric OR second arm
+LET m 0
+CASE 5
+  WHEN 1, 2 THEN
+    LET m 12
+  WHEN 4 OR 5 OR 6 THEN
+    LET m 456
+  DEFAULT
+    LET m 0
+END
+ASSERT m == 456
+
+# range still works (not multi)
+LET r 0
+CASE 7
+  WHEN 1 TO 5 THEN
+    LET r 1
+  WHEN 6 TO 10 THEN
+    LET r 2
+  DEFAULT
+    LET r 0
+END
+ASSERT r == 2
+
+# DEFAULT clears MATCH_ARM
+LET d 0
+CASE "nope"
+  WHEN "a", "b" THEN
+    LET d 1
+  DEFAULT
+    LET d 2
+END
+ASSERT d == 2
+SYS EMPTY MATCH_ARM
+ASSERT LAST_N == 1
+
+# mixed commas and OR
+LET x ""
+CASE "help"
+  WHEN "h", "help" OR "?" | "usage" THEN
+    LET x "H"
+  DEFAULT
+    LET x "?"
+END
+SYS EQS x "H"
+ASSERT LAST_N == 1
+SYS EQS MATCH_ARM "help"
+ASSERT LAST_N == 1
+
+# var synonym in multi list
+LET syn "ls"
+LET g 0
+CASE "ls"
+  WHEN "list", syn, "l" THEN
+    LET g 1
+  DEFAULT
+    LET g 0
+END
+ASSERT g == 1
+
+PRINT "case_multi ok"
