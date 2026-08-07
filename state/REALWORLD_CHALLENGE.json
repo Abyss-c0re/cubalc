@@ -15,13 +15,13 @@
     },
     {
       "name": "copyfwhere_snap",
-      "cmd": "COPYFWHERE weight→prev role canary N=2",
+      "cmd": "COPYFWHERE weight\u2192prev role canary N=2",
       "ok": true,
       "note": "COPYFWHERE"
     },
     {
       "name": "mulwhere_scale",
-      "cmd": "MULWHERE BY 2 → 20/40; stable 100 unscaled",
+      "cmd": "MULWHERE BY 2 \u2192 20/40; stable 100 unscaled",
       "ok": true,
       "note": "MULWHERE"
     },
@@ -33,13 +33,13 @@
     },
     {
       "name": "swapfwhere_rollback",
-      "cmd": "SWAPFWHERE weight↔prev → 10/20 restored",
+      "cmd": "SWAPFWHERE weight\u2194prev \u2192 10/20 restored",
       "ok": true,
       "note": "SWAPFWHERE"
     },
     {
       "name": "factor_zero_drain",
-      "cmd": "scale BY 0 → weights 0; rollback restores",
+      "cmd": "scale BY 0 \u2192 weights 0; rollback restores",
       "ok": true,
       "note": "drain"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two r0:scale → SETMATCH leaves 1",
+      "cmd": "two r0:scale \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -73,7 +73,7 @@
       "id": "W1",
       "severity": "med",
       "area": "oop|mulwhere",
-      "title": "MULWHERE factor is integer only — no fractional scale",
+      "title": "MULWHERE factor is integer only \u2014 no fractional scale",
       "detail": "Cannot ramp canary by 1.5x without two-step or non-integer path. BY 0 drains; negative factors may surprise.",
       "repro": "scale BY 1.5 not expressible cleanly"
     },
@@ -81,7 +81,7 @@
       "id": "W2",
       "severity": "med",
       "area": "oop|copyfwhere",
-      "title": "COPYFWHERE/SWAPFWHERE equality match only — no weight>N cohort",
+      "title": "COPYFWHERE/SWAPFWHERE equality match only \u2014 no weight>N cohort",
       "detail": "Selective snap/rollback needs a role/tag field; cannot match on weight threshold alone.",
       "repro": "want snap only weight>10 without role tag"
     },
@@ -91,15 +91,15 @@
       "area": "oop|swapfwhere",
       "title": "Rollback without snap swaps zeros into weight",
       "detail": "SWAPFWHERE with prev=0 drains canary if snap skipped. No refuse-if-blank for numeric prev.",
-      "repro": "open; no snap; rollback → weight 0"
+      "repro": "open; no snap; rollback \u2192 weight 0"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|sumwhere|empty",
-      "title": "Empty SUMWHERE → 0; admit needs explicit N>0",
+      "title": "Empty SUMWHERE \u2192 0; admit needs explicit N>0",
       "detail": "Ghost role sum 0 would admit under any budget without COUNTWHERE gate.",
-      "repro": "admit missing budget 10 → deny only because N=0 gate"
+      "repro": "admit missing budget 10 \u2192 deny only because N=0 gate"
     },
     {
       "id": "W5",
@@ -122,7 +122,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/FACTOR softens",
-      "detail": "REQUIRE=abc → soft; bad FACTOR keeps default.",
+      "detail": "REQUIRE=abc \u2192 soft; bad FACTOR keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -130,7 +130,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two r0:scale → one SETMATCH leaves 1.",
+      "detail": "Two r0:scale \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -149,12 +149,12 @@
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "COPYFWHERE snap N=2; MULWHERE BY 2 → 20/40; stable 100 untouched",
+    "COPYFWHERE snap N=2; MULWHERE BY 2 \u2192 20/40; stable 100 untouched",
     "sum canary 60 budget 50 deny; rollback sum 30 budget 30 admit",
     "scale BY 0 drain; rollback restores prev",
     "empty missing N=0 admit REQUIRE deny; role can false friend 0",
     "selftest 343/343 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "ea2d1c196ab0f7758d6e4ab5e325892501b51b16",
   "ts": "2026-08-07T10:39:58Z"
 }
