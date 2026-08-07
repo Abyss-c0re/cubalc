@@ -15,19 +15,19 @@
     },
     {
       "name": "start_setfwhere",
-      "cmd": "SETFWHERE pending→running N=3",
+      "cmd": "SETFWHERE pending\u2192running N=3",
       "ok": true,
       "note": "SETFWHERE"
     },
     {
       "name": "fail_ladder",
-      "cmd": "INCFWHERE running retries+1; SETFWHERE running→retry",
+      "cmd": "INCFWHERE running retries+1; SETFWHERE running\u2192retry",
       "ok": true,
       "note": "INCFWHERE+SETFWHERE"
     },
     {
       "name": "collect_retries",
-      "cmd": "GETFWHERE retries status retry → 1,1,1",
+      "cmd": "GETFWHERE retries status retry \u2192 1,1,1",
       "ok": true,
       "note": "GETFWHERE"
     },
@@ -39,7 +39,7 @@
     },
     {
       "name": "escalate_requeue_succeed",
-      "cmd": "retry→dead→pending→running→ok N=3",
+      "cmd": "retry\u2192dead\u2192pending\u2192running\u2192ok N=3",
       "ok": true,
       "note": "ladder"
     },
@@ -51,7 +51,7 @@
     },
     {
       "name": "admit_deny",
-      "cmd": "want retry while ok → EXIT 2",
+      "cmd": "want retry while ok \u2192 EXIT 2",
       "ok": true,
       "note": "REQUIRE deny"
     },
@@ -75,7 +75,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two j0:fail → SETMATCH leaves 1",
+      "cmd": "two j0:fail \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -97,8 +97,8 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|where",
-      "title": "WHERE match is equality only — no retries>=N / compound predicates",
-      "detail": "Cannot escalate only jobs with retries>=3 via SETFWHERE. Agents must GETFWHERE+EACH or WHEREGE-style siblings if any; SETFWHERE status retry→dead kills all retries regardless of count.",
+      "title": "WHERE match is equality only \u2014 no retries>=N / compound predicates",
+      "detail": "Cannot escalate only jobs with retries>=3 via SETFWHERE. Agents must GETFWHERE+EACH or WHEREGE-style siblings if any; SETFWHERE status retry\u2192dead kills all retries regardless of count.",
       "repro": "SETFWHERE Job status retry status dead hits retries=1 and retries=99"
     },
     {
@@ -106,15 +106,15 @@
       "severity": "high",
       "area": "oop|incfwhere",
       "title": "INCFWHERE after status rewrite double-bumps cohort",
-      "detail": "If fail does SETFWHERE running→retry then INCFWHERE status retry, every already-retry job also increments. Bump-then-rewrite order is mandatory and undocumented as footgun.",
-      "repro": "old retry=2; new fail path; wrong order → old becomes 3"
+      "detail": "If fail does SETFWHERE running\u2192retry then INCFWHERE status retry, every already-retry job also increments. Bump-then-rewrite order is mandatory and undocumented as footgun.",
+      "repro": "old retry=2; new fail path; wrong order \u2192 old becomes 3"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|requeue",
-      "title": "No multi-field WHERE update — requeue cannot zero retries",
-      "detail": "SETFWHERE dead→pending leaves retries sticky. Need second SETFWHERE or SETFALL retries 0 (unscoped) or per-slot SETF.",
+      "title": "No multi-field WHERE update \u2014 requeue cannot zero retries",
+      "detail": "SETFWHERE dead\u2192pending leaves retries sticky. Need second SETFWHERE or SETFALL retries 0 (unscoped) or per-slot SETF.",
       "repro": "escalate; requeue; retries still 1"
     },
     {
@@ -123,7 +123,7 @@
       "area": "oop|nobjs",
       "title": "NOBJS stale until LISTOBJS",
       "detail": "Same as iter 127: admit-all needs LISTOBJS before NOBJS or silent deny.",
-      "repro": "bare NOBJS after rehydrate → 0"
+      "repro": "bare NOBJS after rehydrate \u2192 0"
     },
     {
       "id": "W5",
@@ -131,7 +131,7 @@
       "area": "oop|getfwhere",
       "title": "GETFWHERE bag is values only unless AS KV",
       "detail": "Default collect loses object identity; AS KV uses object name not FIELD id. Agents needing id:retries must AS KV or GETFALL id separately.",
-      "repro": "GETFWHERE retries status retry → 1\\n1; AS KV → j0:1"
+      "repro": "GETFWHERE retries status retry \u2192 1\\n1; AS KV \u2192 j0:1"
     },
     {
       "id": "W6",
@@ -154,7 +154,7 @@
       "severity": "low",
       "area": "bag|setmatch|num",
       "title": "SETMATCH first-only; non-numeric REQUIRE softens",
-      "detail": "Two j0:fail → one SETMATCH; REQUIRE=abc → soft.",
+      "detail": "Two j0:fail \u2192 one SETMATCH; REQUIRE=abc \u2192 soft.",
       "repro": "count drops by 1; REQUIRE=abc"
     }
   ],
@@ -182,6 +182,6 @@
     "fail with only retry jobs does not bump old retry (order ok)",
     "selftest 333/333 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "95ed8ae1c4abfc5bdb5e3cbeac262cf64abec0fb",
   "ts": "2026-08-07T08:59:21Z"
 }
