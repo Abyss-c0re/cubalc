@@ -1,0 +1,40 @@
+# INCLUDE retains source so CLASS/METHOD from programs/lib stay callable
+# Usability: OOP modules without "use after free" on FN/CLASS body pointers
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+ASSERT OK == 1
+
+# Class from lib is constructible
+NEW Cell c 1 4 0
+ASSERT OK == 1
+ISOF c Cell
+ASSERT LAST_N == 1
+
+# METHOD tick grows energy (alive cell)
+SEND c tick
+ASSERT OK == 1
+GETF c energy
+ASSERT LAST_N >= 4 "energy after tick"
+
+GETF c age
+ASSERT LAST_N >= 1 "aged"
+
+# multiple ticks still OK (body still valid)
+SEND c tick
+SEND c tick
+GETF c age
+ASSERT LAST_N >= 3
+
+# second instance from same included class
+NEW Cell d 1 2 1
+SEND d tick
+GETF d gen
+ASSERT LAST_N == 1
+
+# INCLUDE ONCE still skips reload
+INCLUDE ONCE life_cell
+ASSERT INCLUDE_SKIPPED == 1
+
+PRINT "include_class_lib ok"

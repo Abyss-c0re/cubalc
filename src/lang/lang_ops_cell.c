@@ -5328,6 +5328,8 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* INCLUDE "path"|name — practical modules (same VM / world)
+   * Source buffer is retained until run end so FN/CLASS METHOD bodies
+   * from lib files remain valid (pointers into the included text).
    * Resolve: absolute · include_base/rel · rel · programs/rel ·
    * programs/lib/<name>[.cubalc] short form · CUBALC_ROOT · fail with tried paths.
    * Usability: INCLUDE hold_seed  or  INCLUDE "hold_seed" → programs/lib/…
@@ -5491,7 +5493,12 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     Lex Li; lex_init(&Li, buf, nr);
     int rc = exec_stmts_until(vm, &Li, NULL, NULL);
     snprintf(vm->include_base,sizeof vm->include_base,"%s", save_base);
-    free(buf);
+    /* Keep INCLUDE source alive for FN/CLASS bodies (free in lang_run). */
+    if (vm->n_include_bufs < 24) {
+      vm->include_bufs[vm->n_include_bufs++] = buf;
+    } else {
+      free(buf);
+    }
     if (rc<0) return -1;
     bump(vm); return 1;
   }

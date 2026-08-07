@@ -117,6 +117,9 @@ typedef struct {
   /* INCLUDE ONCE — resolved paths already loaded this run (max 24). */
   char included[24][160];
   int n_included;
+  /* Retained INCLUDE source so FN/CLASS METHOD bodies stay valid all run. */
+  char *include_bufs[24];
+  int n_include_bufs;
   /* digit-1 data plane: integer cells + stack */
   long cells[CUBALC_CELL_N];
   long stack[CUBALC_STACK_N];

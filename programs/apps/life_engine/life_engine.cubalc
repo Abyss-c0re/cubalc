@@ -1,0 +1,457 @@
+# life_engine.cubalc — COP game engine demo: cell division + a bit of life
+#
+# Petri-dish population of Cell entities. Each TICK:
+#   1) living cells grow energy / age (METHOD tick)
+#   2) board FLOW carries medium energy metaphor
+#   3) mitosis: ready parents birth into free slots (halve energy)
+#
+# Run:
+#   ./out/cubalc run programs/apps/life_engine/life_engine.cubalc
+# Short / assert mode:
+#   ./out/cubalc run programs/proof/864_life_engine_division.cubalc
+#
+# Optional: CUBALC_LIFE_STEPS=n  (default 12)
+
+REQUIRE VERSION "1.15"
+INCLUDE agent_boot
+INCLUDE life_cell
+
+SCIENCE LOAD
+GENESIS "NEXUS_COORD v1 | from=life_engine | domain=cell_division | life=1 |"
+
+SCENE petri
+
+# Nutrient medium cube (not a Cell object — pure board energy source)
+CUBE medium ROLE host PROTON 1
+FOLDBITS medium "1111000011110000111100001111000011110000111100001111000011110000"
+
+# Population pool (pre-allocated slots — daughters activate free slots)
+# c0 = founder; c1..c7 = offspring slots
+ENTITY c0 OF Cell 1 4 0
+ENTITY c1 OF Cell 0 0 0
+ENTITY c2 OF Cell 0 0 0
+ENTITY c3 OF Cell 0 0 0
+ENTITY c4 OF Cell 0 0 0
+ENTITY c5 OF Cell 0 0 0
+ENTITY c6 OF Cell 0 0 0
+ENTITY c7 OF Cell 0 0 0
+
+# Medium plugs founder (shared environment)
+PLUG medium c0
+IMPULSE medium 1
+
+# --- helpers: birth into first free slot; return 1 if birthed ---
+# Unrolled for stable pure-CubalC (no dynamic names).
+
+DEFAULT STEPS = 12
+# optional host override: CUBALC_LIFE_STEPS=n
+SYS ENV CUBALC_LIFE_STEPS
+IF OK == 1 THEN
+  SYS NUM LAST
+  IF LAST_N > 0 THEN
+    IF LAST_N < 40 THEN
+      LET STEPS = LAST_N
+    END
+  END
+END
+
+LET step = 0
+LET births = 0
+LET deaths_note = 0
+LET max_pop = 1
+LET max_gen = 0
+
+PRINT STEPS
+
+WHILE step < STEPS
+  # World step: all Cell.tick + energy FLOW
+  TICK 1
+  IMPULSE medium 1
+  FLOW 1
+
+  # --- mitosis pass: each ready living parent tries one free slot ---
+  # parent c0
+  GETF c0 alive
+  LET al = LAST_N
+  GETF c0 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c0 energy
+      LET pe = LAST_N
+      GETF c0 gen
+      LET pg = LAST_N
+      LET half = pe / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      LET dg = pg + 1
+      LET done = 0
+      GETF c1 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c1 birth half dg
+          SEND c0 after_div
+          PLUG medium c1
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c2 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c2 birth half dg
+          SEND c0 after_div
+          PLUG medium c2
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c3 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c3 birth half dg
+          SEND c0 after_div
+          PLUG medium c3
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c4 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c4 birth half dg
+          SEND c0 after_div
+          PLUG medium c4
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+    END
+  END
+
+  # parent c1
+  GETF c1 alive
+  LET al = LAST_N
+  GETF c1 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c1 energy
+      LET pe = LAST_N
+      GETF c1 gen
+      LET pg = LAST_N
+      LET half = pe / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      LET dg = pg + 1
+      LET done = 0
+      GETF c2 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c2 birth half dg
+          SEND c1 after_div
+          PLUG medium c2
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c3 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c3 birth half dg
+          SEND c1 after_div
+          PLUG medium c3
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c4 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c4 birth half dg
+          SEND c1 after_div
+          PLUG medium c4
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c5 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c5 birth half dg
+          SEND c1 after_div
+          PLUG medium c5
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+    END
+  END
+
+  # parent c2
+  GETF c2 alive
+  LET al = LAST_N
+  GETF c2 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c2 energy
+      LET pe = LAST_N
+      GETF c2 gen
+      LET pg = LAST_N
+      LET half = pe / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      LET dg = pg + 1
+      LET done = 0
+      GETF c3 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c3 birth half dg
+          SEND c2 after_div
+          PLUG medium c3
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c4 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c4 birth half dg
+          SEND c2 after_div
+          PLUG medium c4
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c5 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c5 birth half dg
+          SEND c2 after_div
+          PLUG medium c5
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c6 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c6 birth half dg
+          SEND c2 after_div
+          PLUG medium c6
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+    END
+  END
+
+  # parent c3
+  GETF c3 alive
+  LET al = LAST_N
+  GETF c3 ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF c3 energy
+      LET pe = LAST_N
+      GETF c3 gen
+      LET pg = LAST_N
+      LET half = pe / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      LET dg = pg + 1
+      LET done = 0
+      GETF c4 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c4 birth half dg
+          SEND c3 after_div
+          PLUG medium c4
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c5 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c5 birth half dg
+          SEND c3 after_div
+          PLUG medium c5
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c6 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c6 birth half dg
+          SEND c3 after_div
+          PLUG medium c6
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+      GETF c7 alive
+      IF LAST_N == 0 THEN
+        IF done == 0 THEN
+          SEND c7 birth half dg
+          SEND c3 after_div
+          PLUG medium c7
+          LET births = births + 1
+          LET done = 1
+        END
+      END
+    END
+  END
+
+  # census
+  LET pop = 0
+  GETF c0 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c0 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c1 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c1 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c2 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c2 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c3 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c3 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c4 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c4 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c5 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c5 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c6 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c6 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  GETF c7 alive
+  IF LAST_N == 1 THEN
+    LET pop = pop + 1
+    GETF c7 gen
+    IF LAST_N > max_gen THEN
+      LET max_gen = LAST_N
+    END
+  END
+  IF pop > max_pop THEN
+    LET max_pop = pop
+  END
+
+  PRINT step pop births max_gen
+  LET step = step + 1
+END
+
+# final dish map: 1=alive 0=empty
+GETF c0 alive
+LET b0 = LAST_N
+GETF c1 alive
+LET b1 = LAST_N
+GETF c2 alive
+LET b2 = LAST_N
+GETF c3 alive
+LET b3 = LAST_N
+GETF c4 alive
+LET b4 = LAST_N
+GETF c5 alive
+LET b5 = LAST_N
+GETF c6 alive
+LET b6 = LAST_N
+GETF c7 alive
+LET b7 = LAST_N
+
+PRINT b0 b1 b2 b3 b4 b5 b6 b7
+PRINT births max_pop max_gen CUBES
+
+# Demo must show life: at least one mitosis and population growth
+ASSERT births >= 1 "cell division occurred"
+ASSERT max_pop >= 2 "population grew from founder"
+ASSERT max_gen >= 1 "daughter generation >= 1"
+ASSERT CUBES >= 9 "medium + 8 cell cubes"
+
+# plate for agents / UI (simple key=val line)
+SYS STATE
+SYS JOIN LAST "LIFE_ENGINE.txt"
+LET path = LAST
+# body built left-to-right via sticky LAST
+SYS STR births
+SYS CAT "births=" LAST
+LET body = LAST
+SYS STR max_pop
+SYS CAT " max_pop=" LAST
+SYS CAT body LAST
+LET body = LAST
+SYS STR max_gen
+SYS CAT " max_gen=" LAST
+SYS CAT body LAST
+LET body = LAST
+SYS STR b0
+LET d = LAST
+SYS STR b1
+SYS CAT d LAST
+LET d = LAST
+SYS STR b2
+SYS CAT d LAST
+LET d = LAST
+SYS STR b3
+SYS CAT d LAST
+LET d = LAST
+SYS STR b4
+SYS CAT d LAST
+LET d = LAST
+SYS STR b5
+SYS CAT d LAST
+LET d = LAST
+SYS STR b6
+SYS CAT d LAST
+LET d = LAST
+SYS STR b7
+SYS CAT d LAST
+LET d = LAST
+SYS CAT " dish=" d
+SYS CAT body LAST
+LET body = LAST
+SYS WRITE path body
+ASSERT OK == 1

@@ -130,6 +130,14 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     /* Cube Law: share state_matrix only · devices free · united visual faces */
     cubalc_chain_publish_united(&vm.ch);
   }
+  {
+    int ib;
+    for (ib = 0; ib < vm.n_include_bufs; ib++) {
+      free(vm.include_bufs[ib]);
+      vm.include_bufs[ib] = NULL;
+    }
+    vm.n_include_bufs = 0;
+  }
   /* Prefer EXIT code for process rc when halted with non-zero. */
   if (vm.halt && vm.exit_code != 0) {
     int ec = vm.exit_code;
