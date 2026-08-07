@@ -5,7 +5,7 @@
   "item": "LISTFNS/HASFN FN catalog discovery",
   "item_id": 390,
   "title": "LISTFNS|HASFN \u2014 FN name bag + soft probe before CALL",
-  "commit": "1bc6660a0c2be7875b6aa01a4ca669fd13f3c45c",
+  "commit": "57e396f6dd21b83bd2749012c586de57593081d2",
   "summary": "FN catalog bag + HASFN soft 0|1. Completes FNINFO triad. proof 931 45/45.",
   "proofs": [
     "931_fn_listfns_hasfn",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T12:56:32Z",
   "agent": "meaningful_iter_10m",
-  "sha": "1bc6660a0c2be7875b6aa01a4ca669fd13f3c45c",
+  "sha": "57e396f6dd21b83bd2749012c586de57593081d2",
   "note": "pairs with FNINFO for agent CALL discovery"
 }
