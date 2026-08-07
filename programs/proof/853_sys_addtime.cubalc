@@ -1,0 +1,76 @@
+# SYS ADDTIME / DEADLINE — epoch + seconds for lease/deadline plates
+# Usability: dual of TIMEDIFF; leases without shell date -d
+
+HOLD_FLASH 1
+
+# two-arg add
+SYS ADDTIME 1000 3600
+ASSERT OK == 1
+ASSERT LAST_N == 4600
+ASSERT ADDTIME_N == 4600
+
+SYS ADDTIME 946684800 86400
+ASSERT OK == 1
+ASSERT LAST_N == 946771200
+
+# one-arg: add to prior LAST_N
+SYS ADDTIME 1000 0
+# LAST_N = 1000
+SYS ADDTIME 500
+ASSERT OK == 1
+ASSERT LAST_N == 1500
+
+# aliases
+SYS ADDEPOCH 10 5
+ASSERT OK == 1
+ASSERT LAST_N == 15
+SYS PLUSSECS 7 3
+ASSERT OK == 1
+ASSERT LAST_N == 10
+
+# DEADLINE = now + secs
+SYS TIME
+LET t0 = LAST_N
+SYS DEADLINE 3600
+ASSERT OK == 1
+ASSERT LAST_N >= t0 + 3599
+ASSERT LAST_N <= t0 + 3601
+ASSERT DEADLINE_N == LAST_N
+
+# EXPIRESAT alias
+SYS TIME
+LET t1 = LAST_N
+SYS EXPIRESAT 10
+ASSERT OK == 1
+ASSERT LAST_N >= t1 + 9
+ASSERT LAST_N <= t1 + 11
+
+# DEADLINE from prior LAST_N as secs
+LET secs = 120
+# put secs into LAST_N via STR path: use ADDTIME 0 secs first? 
+# set LAST_N = 120
+SYS ADDTIME 0 120
+ASSERT LAST_N == 120
+SYS TIME
+LET before = LAST_N
+# DEADLINE with no args uses LAST_N as offset - but LAST_N was clobbered by TIME
+# so pass explicit
+SYS DEADLINE 120
+ASSERT LAST_N >= before + 119
+ASSERT LAST_N <= before + 121
+
+# round-trip: ADDTIME then TIMEDIFF
+SYS ADDTIME 1000000 500
+LET end = LAST_N
+SYS TIMEDIFF end 1000000
+ASSERT LAST_N == 500
+
+# lease style: now + 30 then TIMEDIFF age negative (not yet due)
+SYS DEADLINE 30
+LET due = LAST_N
+SYS TIMEDIFF due
+# now - due ≈ -30
+ASSERT LAST_N < 0
+ASSERT LAST_N > -60
+
+PRINT "sys_addtime ok"

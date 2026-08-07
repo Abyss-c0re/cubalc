@@ -15744,6 +15744,77 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS ADDTIME|ADDEPOCH|PLUSSECS [a] [b]
+     * — epoch + seconds for lease/deadline plates (dual of TIMEDIFF subtract).
+     * Two args: LAST_N = a + b. One arg: LAST_N = prior LAST_N + a.
+     * Zero args: LAST_N unchanged (no-op add 0). LAST = decimal epoch.
+     * SYS DEADLINE|EXPIRESAT|UNTIL [secs]
+     * — wall now + secs → LAST_N epoch (lease expiry stamp).
+     * Zero args: now + prior LAST_N. Usability: leases without shell date -d.
+     * Pair with TIMEDIFF / PARSEMS(/1000) / FROMTIME for plate SLAs. */
+    if (kw(&L->cur,"ADDTIME") || kw(&L->cur,"ADDEPOCH") || kw(&L->cur,"PLUSSECS") ||
+        kw(&L->cur,"EPOCHADD") || kw(&L->cur,"TIMEADD") || kw(&L->cur,"ADDSECS") ||
+        kw(&L->cur,"PLUSTIME") ||
+        kw(&L->cur,"DEADLINE") || kw(&L->cur,"EXPIRESAT") || kw(&L->cur,"UNTIL") ||
+        kw(&L->cur,"EXPIREAT") || kw(&L->cur,"LEASEEND") || kw(&L->cur,"DUEAT") ||
+        kw(&L->cur,"NOWPLUS")){
+      char op[24];
+      int is_deadline = 0;
+      long a = 0, b = 0, outn = 0, now;
+      int has_a = 0, has_b = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      is_deadline = (strcmp(op, "DEADLINE") == 0 || strcmp(op, "EXPIRESAT") == 0 ||
+                     strcmp(op, "UNTIL") == 0 || strcmp(op, "EXPIREAT") == 0 ||
+                     strcmp(op, "LEASEEND") == 0 || strcmp(op, "DUEAT") == 0 ||
+                     strcmp(op, "NOWPLUS") == 0);
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      if (!is_deadline &&
+          (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+           (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+            !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")))){
+        b = parse_expr(vm, L);
+        has_b = 1;
+      }
+      now = (long)time(NULL);
+      if (is_deadline) {
+        if (has_a)
+          outn = now + a;
+        else
+          outn = now + vm->last_n;
+      } else {
+        if (has_a && has_b)
+          outn = a + b;
+        else if (has_a)
+          outn = vm->last_n + a;
+        else
+          outn = vm->last_n;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "TIME", outn);
+      if (is_deadline) {
+        var_set_num(vm, "DEADLINE_N", outn);
+        var_set_str(vm, "DEADLINE", buf);
+        var_set_num(vm, "EXPIRESAT_N", outn);
+      } else {
+        var_set_num(vm, "ADDTIME_N", outn);
+        var_set_str(vm, "ADDTIME", buf);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
      * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
      * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
@@ -24508,6 +24579,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS TIMEDIFF", "SYS TIMEDIFF|ELAPSED a [b] — epoch delta seconds · a-b or now-a"},
       {"SYS ELAPSED", "SYS ELAPSED a [b] — alias of SYS TIMEDIFF"},
       {"SYS DELTA", "SYS DELTA a [b] — alias of SYS TIMEDIFF"},
+      {"SYS ADDTIME", "SYS ADDTIME|ADDEPOCH a [b] — epoch + seconds · dual of TIMEDIFF"},
+      {"SYS DEADLINE", "SYS DEADLINE|EXPIRESAT [secs] — now + secs → lease expiry epoch"},
+      {"SYS EXPIRESAT", "SYS EXPIRESAT [secs] — alias of SYS DEADLINE"},
       {"SYS LOCAL", "SYS LOCAL|LOCALTIME — local wall stamp YYYY-MM-DDTHH:MM:SS → LAST"},
       {"SYS LOCALTIME", "SYS LOCALTIME alias of SYS LOCAL"},
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},
