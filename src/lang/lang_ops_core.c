@@ -26041,6 +26041,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"GETFLAG", "GETFLAG name [OR fallback] — LAST = flag value (bare → \"1\")"},
       {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
       {"POSITIONALS", "POSITIONALS alias of RESTARGS — files after --flags"},
+      {"HASRESTARGS", "HASRESTARGS|HASPOS [min] — soft 0|1 if non-flag count >= min (default 1)"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -28403,6 +28404,44 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     snprintf(nbuf, sizeof nbuf, "%ld", n);
     if (vm->trace)
       fprintf(vm->trace, "# restargs n=%ld\n", n);
+    bump(vm); return 1;
+  }
+  /* HASRESTARGS [min] — soft 0|1 if non-flag positional count >= min (default 1).
+   * Sets RESTARGS_N / ARGC-style have count; does not clobber bag into LAST text
+   * (LAST is "0"|"1"). Twin of REQUIRE RESTARGS / HASARGC for files after flags.
+   * Usability: IF HASRESTARGS 1 without fatal REQUIRE. */
+  if (kw(&L->cur,"HASRESTARGS") || kw(&L->cur,"HASPOS") || kw(&L->cur,"HASPOSITIONALS") ||
+      kw(&L->cur,"RESTARGS?") || kw(&L->cur,"HAS_RESTARGS") || kw(&L->cur,"ENOUGHPOS") ||
+      kw(&L->cur,"HASFILES") || kw(&L->cur,"HAS_POS")){
+    long need = 1, have;
+    long hit;
+    char bag[CUBALC_HOST_STR_MAX];
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+         !kw(&L->cur,"IF") && !kw(&L->cur,"HASARG") && !kw(&L->cur,"HASFLAG") &&
+         !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"RESTARGS") && !kw(&L->cur,"USAGE"))){
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASRESTARGS_N", hit);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    /* stash bag for agents that want both probe + files without second RESTARGS */
+    if (have > 0)
+      var_set_str(vm, "RESTARGS", bag);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasrestargs >= %ld (have %ld) → %ld\n", need, have, hit);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.

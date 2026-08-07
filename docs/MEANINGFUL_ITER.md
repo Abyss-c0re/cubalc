@@ -471,6 +471,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 441. ~~**`REQUIRE FLAG`**~~ **done** (fail-fast `--name` contract · LAST=value · twin HASFLAG / REQUIRE ARG · tip pass --name).
 442. ~~**`USAGE`**~~ **done** (sticky CLI usage string · bare re-echo · REQUIRE ARG/ARGC/FLAG fails append `· usage:` tip).
 443. ~~**`REQUIRE RESTARGS`**~~ **done** (fail-fast min non-flag positionals · LAST=bag · flags do not inflate count · USAGE tip).
+444. ~~**`HASRESTARGS / HASPOS`**~~ **done** (soft 0|1 min non-flag count · twin REQUIRE RESTARGS / HASARGC · RESTARGS_N have).
 
 ## Tick protocol
 
