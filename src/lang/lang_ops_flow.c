@@ -2343,6 +2343,130 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MEDIANF|P50F|MIDF|MEDIANFALL [Class] field
+   * — integer median of numeric field over live objects (optional class).
+   * Sort ascending; odd → middle; even → lower mid (matches SYS MEDIAN).
+   * LAST_N = median; MEDIANF_N = sample count; soft empty → 0.
+   * Usability: robust fleet mid vs AVGF outliers without GETFALL+SYS MEDIAN. */
+  if (kw(&L->cur, "MEDIANF") || kw(&L->cur, "P50F") ||
+      kw(&L->cur, "MIDF") || kw(&L->cur, "MEDIANFALL") ||
+      kw(&L->cur, "FIELDMEDIAN") || kw(&L->cur, "OBJSMEDIAN") ||
+      kw(&L->cur, "MEDF") || kw(&L->cur, "MIDFALL")) {
+    char filt[48], fname[48], tok1[48];
+    long vals[CUBALC_MAX_OBJS];
+    int has_filt = 0, i, j, n = 0, n_skip = 0;
+    long outv = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "MEDIANF OF Class field"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "MEDIANF [Class] field"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "MEDIANF [Class] field"); return -1;
+      }
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      vals[n++] = ob->fnum[fi];
+    }
+    /* insertion sort ascending */
+    for (i = 1; i < n; i++) {
+      long key = vals[i];
+      j = i - 1;
+      while (j >= 0 && vals[j] > key) {
+        vals[j + 1] = vals[j];
+        j--;
+      }
+      vals[j + 1] = key;
+    }
+    if (n == 0)
+      outv = 0;
+    else if (n & 1)
+      outv = vals[n / 2];
+    else
+      outv = vals[n / 2 - 1]; /* lower mid for even — match SYS MEDIAN */
+    var_set_num(vm, "LAST_N", outv);
+    vm->last_n = outv;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", outv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "MEDIANF", outv);
+    var_set_num(vm, "MEDIANF_N", n);
+    var_set_num(vm, "P50F_N", n);
+    var_set_num(vm, "MIDF_N", n);
+    var_set_num(vm, "MEDIANFALL_N", n);
+    var_set_num(vm, "MEDIANF_SKIP", n_skip);
+    var_set_num(vm, "MEDIANF_VAL", outv);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREGE|WHEREGT|WHERELE|WHERELT [Class] field value
    * — bag of live object names where numeric field meets threshold.
    * Soft always; string/missing fields skipped. LAST_N = count.

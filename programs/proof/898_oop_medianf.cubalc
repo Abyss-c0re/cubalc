@@ -1,0 +1,84 @@
+# MEDIANF / P50F — integer median of numeric field over live objects
+# Usability: robust fleet mid vs AVGF outliers · no GETFALL+SYS MEDIAN glue
+# Even n → lower mid (matches SYS MEDIAN)
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+
+# odd count: 10 20 30 → median 20
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+
+MEDIANF Cell energy
+ASSERT OK == 1
+ASSERT LAST_N == 20
+ASSERT MEDIANF_N == 3
+ASSERT MEDIANF_VAL == 20
+ASSERT MEDIANF == 20
+
+# P50F / MIDF aliases
+P50F Cell energy
+ASSERT LAST_N == 20
+MIDF Cell energy
+ASSERT LAST_N == 20
+MEDIANFALL Cell energy
+ASSERT LAST_N == 20
+
+# with outlier — mean would shift, median stable
+NEW Cell d 1 1000 0
+# values 10 20 30 1000 → even → lower mid of sorted [10,20,30,1000] = 20
+MEDIANF Cell energy
+ASSERT LAST_N == 20
+ASSERT MEDIANF_N == 4
+AVGF Cell energy
+ASSERT LAST_N == 265 "mean dragged by outlier"
+
+# OF sugar + Counters: 5 15 25 → 15
+NEW Counter k1 5
+NEW Counter k2 15
+NEW Counter k3 25
+MEDIANF OF Counter n
+ASSERT LAST_N == 15
+ASSERT MEDIANF_N == 3
+
+# bare field
+MEDIANF n
+ASSERT LAST_N == 15
+
+# string field name
+MEDIANF Cell "energy"
+ASSERT LAST_N == 20
+
+# single sample
+DELETEALL Counter
+NEW Counter solo 42
+MEDIANF Counter n
+ASSERT LAST_N == 42
+ASSERT MEDIANF_N == 1
+
+# empty soft zero
+DELETEALL Counter
+MEDIANF Counter n
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT MEDIANF_N == 0
+
+# even: 1 2 3 4 → lower mid 2
+NEW Counter p1 1
+NEW Counter p2 2
+NEW Counter p3 3
+NEW Counter p4 4
+MEDIANF Counter n
+ASSERT LAST_N == 2
+ASSERT MEDIANF_N == 4
+
+PRINT "oop_medianf ok"

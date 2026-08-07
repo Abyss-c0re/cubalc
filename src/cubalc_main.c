@@ -2036,6 +2036,7 @@ int main(int argc, char **argv) {
       {"oop_deletebetween", "programs/proof/895_oop_deletebetween.cubalc", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"oop_sendbetween", "programs/proof/896_oop_sendbetween.cubalc", "SENDBETWEEN/SENDBAND method on closed-range matched objects"},
       {"oop_clampfall", "programs/proof/897_oop_clampfall.cubalc", "CLAMPFALL/CLAMPF bulk clamp numeric fields to [lo,hi]"},
+      {"oop_medianf", "programs/proof/898_oop_medianf.cubalc", "MEDIANF/P50F integer median of fleet numeric field"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5939,6 +5940,7 @@ int main(int argc, char **argv) {
       {"programs/proof/895_oop_deletebetween.cubalc", "oop_deletebetween", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"programs/proof/896_oop_sendbetween.cubalc", "oop_sendbetween", "SENDBETWEEN/SENDBAND method on closed-range matched objects"},
       {"programs/proof/897_oop_clampfall.cubalc", "oop_clampfall", "CLAMPFALL/CLAMPF bulk clamp numeric fields to [lo,hi]"},
+      {"programs/proof/898_oop_medianf.cubalc", "oop_medianf", "MEDIANF/P50F integer median of fleet numeric field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6234,6 +6236,7 @@ int main(int argc, char **argv) {
       {"programs/proof/895_oop_deletebetween.cubalc", "oop_deletebetween", "DELETEBETWEEN/FREEBAND free live objects in closed field range"},
       {"programs/proof/896_oop_sendbetween.cubalc", "oop_sendbetween", "SENDBETWEEN/SENDBAND method on closed-range matched objects"},
       {"programs/proof/897_oop_clampfall.cubalc", "oop_clampfall", "CLAMPFALL/CLAMPF bulk clamp numeric fields to [lo,hi]"},
+      {"programs/proof/898_oop_medianf.cubalc", "oop_medianf", "MEDIANF/P50F integer median of fleet numeric field"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
