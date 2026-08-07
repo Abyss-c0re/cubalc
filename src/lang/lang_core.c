@@ -3418,7 +3418,58 @@ static long parse_add(VM *vm, Lex *L){
   }
   return v;
 }
+/* String operand for == / != : literal, LAST (string), or is_str var.
+ * Returns 1 and advances lexer on success; 0 and leaves L unchanged. */
+static int try_str_operand(VM *vm, Lex *L, char *out, size_t outn){
+  if (L->cur.kind == TK_STR) {
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 1;
+  }
+  if (L->cur.kind != TK_IDENT) return 0;
+  if (strcmp(L->cur.text, "LAST") == 0) {
+    Var *lv = var_get(vm, "LAST", 0);
+    if (lv && lv->is_str) {
+      snprintf(out, outn, "%s", lv->sval);
+      lex_next(L);
+      return 1;
+    }
+    /* host mirror of sticky LAST string (GETF / SYS often set both) */
+    if (vm->last_str[0] || (lv && lv->is_str)) {
+      snprintf(out, outn, "%s", vm->last_str);
+      lex_next(L);
+      return 1;
+    }
+    return 0;
+  }
+  {
+    Var *sv = var_get(vm, L->cur.text, 0);
+    if (sv && sv->is_str) {
+      snprintf(out, outn, "%s", sv->sval);
+      lex_next(L);
+      return 1;
+    }
+  }
+  return 0;
+}
 static long parse_cmp(VM *vm, Lex *L){
+  /* Content string equality: "a" == "b", LAST == x, s == t (is_str).
+   * Numeric path kept for lengths / numbers (s.val == strlen when used alone). */
+  {
+    Lex save = *L;
+    char left[512], right[512];
+    if (try_str_operand(vm, L, left, sizeof left)) {
+      if (L->cur.kind == TK_EQEQ || L->cur.kind == TK_NE) {
+        int ne = (L->cur.kind == TK_NE);
+        lex_next(L);
+        if (try_str_operand(vm, L, right, sizeof right)) {
+          int eq = (strcmp(left, right) == 0);
+          return ne ? !eq : eq;
+        }
+      }
+      *L = save; /* not string-cmp form — fall through to numeric */
+    }
+  }
   long v=parse_add(vm,L);
   if (L->cur.kind==TK_EQEQ){ lex_next(L); return v==parse_add(vm,L); }
   if (L->cur.kind==TK_NE){ lex_next(L); return v!=parse_add(vm,L); }

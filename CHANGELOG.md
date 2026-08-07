@@ -1,3 +1,15 @@
+## Meaningful — string content == + life engine harden — 2026-08-07
+
+### Fix
+- `==` / `!=` on string operands (literals, `LAST`, is_str vars) compare **content**, not strlen
+- Numeric `==` unchanged for numbers
+- Proof `870_oop_string_fields` green (SETF/NEW string formals + ASSERT string eq)
+- life_engine: `SYS MKDIR` state dir before plate write
+
+### Demo
+- COP life engine (cell division / mitosis + growth) verified end-to-end
+- Version: `1.15.322-usability`
+
 ## Meaningful — GETF OR/TRYGETF + OOP string formals — 2026-08-07
 
 ### Feat

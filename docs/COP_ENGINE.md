@@ -91,10 +91,35 @@ FLOW 4              # energy / board law still holds
 - Matrix compatibility gates **PLUG**.
 - **HOLD_FLASH** is device/firmware safeguard only (default 1).
 
+## Demo: life engine (cell division)
+
+**Path:** `programs/apps/life_engine/life_engine.cubalc`  
+**Cell type:** `programs/lib/life_cell.cubalc` (`INCLUDE life_cell`)
+
+In-language game loop that demonstrates **biology as COP**:
+
+| Step | Form | Biology |
+|------|------|---------|
+| Scene + medium | `SCENE petri` · `CUBE medium` · `IMPULSE` / `FLOW` | extracellular nutrient |
+| Founder | `ENTITY c0 OF Cell 1 4 0` | seed cell |
+| Frame | `TICK 1` → live objects' `METHOD tick` | age, uptake, metabolism, ready |
+| Mitosis | `SEND daughter birth half gen` · parent `after_div` | cytokinesis / biomass split |
+| Pool | pre-allocated free slots (`alive=0`) | dish capacity |
+
+```bash
+./out/cubalc run programs/apps/life_engine/life_engine.cubalc
+CUBALC_LIFE_STEPS=8 ./out/cubalc run programs/apps/life_engine/life_engine.cubalc
+./out/cubalc run programs/proof/865_life_engine_division.cubalc
+```
+
+Plate: `$CUBALC_STATE/LIFE_ENGINE.txt` — births · max_pop · max_gen · dish bitmask.
+
 ## Proofs
 
 - `programs/proof/862_oop_class_method.cubalc`
 - `programs/proof/863_cop_entity_tick.cubalc`
+- `programs/proof/865_life_engine_division.cubalc` — mitosis + population growth
+- `programs/proof/870_oop_string_fields.cubalc` — SETF/NEW string formals
 - Existing: `programs/proof/21_fn_return_case.cubalc`
 
 ## Roadmap (still COP, not C++ clone)
@@ -103,4 +128,5 @@ FLOW 4              # energy / board law still holds
 - Inheritance optional via **compose** (no deep ISA trees by default)
 - Scene graphs as **NEST** + PLUG
 - Deterministic sim: MONOTONIC + TICK budgets
+- Dynamic SPAWN names for open-ended populations (life_engine uses fixed slots today)
 - Render/audio as host SYS adapters — language stays pure C core

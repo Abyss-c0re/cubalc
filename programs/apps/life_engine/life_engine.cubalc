@@ -413,7 +413,9 @@ ASSERT CUBES >= 9 "medium + 8 cell cubes"
 
 # plate for agents / UI (simple key=val line)
 SYS STATE
-SYS JOIN LAST "LIFE_ENGINE.txt"
+LET sdir = LAST
+SYS MKDIR sdir
+SYS JOIN sdir "LIFE_ENGINE.txt"
 LET path = LAST
 # body built left-to-right via sticky LAST
 SYS STR births
