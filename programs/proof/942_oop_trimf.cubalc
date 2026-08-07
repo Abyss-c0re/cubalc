@@ -1,0 +1,122 @@
+# TRIMF / UPPERF / LOWERF — single-object string field normalize for agents
+# Usability: clean status/note before IF without GETF+TRIM/UPPER/LOWER+SETF
+# Complements CATF (concat) and REPLACEF (surgery); METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "  Open  "
+  FIELD note "  hi  "
+  FIELD code "AbC"
+  FIELD retries 42
+  METHOD init
+  END
+  METHOD clean
+    TRIMF THIS status
+    LOWERF THIS status
+  END
+END
+
+NEW Ticket t
+
+# both-side trim
+TRIMF t note
+ASSERT OK == 1
+ASSERT TRIMF_N == 1
+ASSERT LAST_N == 2
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+
+# L / R modes
+SETF t note "  ab  "
+LTRIMF t note
+SYS EQS LAST "ab  "
+ASSERT LAST_N == 1
+ASSERT LTRIMF_N == 1
+SETF t note "  ab  "
+RTRIMF t note
+SYS EQS LAST "  ab"
+ASSERT LAST_N == 1
+ASSERT RTRIMF_N == 1
+SETF t note "  ab  "
+TRIMF L t note
+SYS EQS LAST "ab  "
+ASSERT LAST_N == 1
+SETF t note "  ab  "
+TRIMF R t note
+SYS EQS LAST "  ab"
+ASSERT LAST_N == 1
+
+# UPPER / LOWER
+UPPERF t code
+ASSERT UPPERF_N == 1
+SYS EQS LAST "ABC"
+ASSERT LAST_N == 1
+GETF t code
+SYS EQS LAST "ABC"
+ASSERT LAST_N == 1
+LOWERF t code
+ASSERT LOWERF_N == 1
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+UCASEF t code
+SYS EQS LAST "ABC"
+ASSERT LAST_N == 1
+LCASEF t code
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# status dirty → trim + lower via METHOD
+SEND t clean
+GETF t status
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+
+# promote numeric to string then upper (no change for digits)
+UPPERF t retries
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+GETF t retries
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# strip alias
+SETF t note " x "
+STRIPF t note
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYTRIMF nosuch note
+ASSERT OK == 0
+ASSERT TRIMF_N == 0
+SYS EQS LAST_ERR "TRIMF: unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+TRIMF SOFT t nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "field"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF t note "  z  "
+TRIMF t "note"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# HELP
+HELP TRIMF
+SYS HAS LAST "TRIMF"
+ASSERT LAST_N == 1
+HELP UPPERF
+SYS HAS LAST "UPPERF"
+ASSERT LAST_N == 1
+HELP LOWERF
+SYS HAS LAST "LOWERF"
+ASSERT LAST_N == 1
+
+PRINT "oop_trimf ok"

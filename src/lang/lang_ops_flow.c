@@ -10860,6 +10860,185 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* TRIMF|LTRIMF|RTRIMF|UPPERF|LOWERF obj field
+   * TRYTRIMF|TRIMF SOFT — soft miss OK=0.
+   * In-place normalize string field (whitespace trim / ASCII case);
+   * promotes num→str. LAST = result; LAST_N = length.
+   * Usability: clean status/note before IF without GETF+TRIM/UPPER/LOWER+SETF
+   * (METHOD/THIS; pairs REPLACEF/CATF). */
+  if (kw(&L->cur, "TRIMF") || kw(&L->cur, "STRIPF") ||
+      kw(&L->cur, "LTRIMF") || kw(&L->cur, "RTRIMF") ||
+      kw(&L->cur, "FIELDTRIM") || kw(&L->cur, "TRIMFIELD") ||
+      kw(&L->cur, "UPPERF") || kw(&L->cur, "UCASEF") ||
+      kw(&L->cur, "TOUPPERF") || kw(&L->cur, "FIELDUPPER") ||
+      kw(&L->cur, "LOWERF") || kw(&L->cur, "LCASEF") ||
+      kw(&L->cur, "TOLOWERF") || kw(&L->cur, "FIELDLOWER") ||
+      kw(&L->cur, "TRYTRIMF") || kw(&L->cur, "TRIMFSOFT") ||
+      kw(&L->cur, "SOFTTRIMF") || kw(&L->cur, "TRYUPPERF") ||
+      kw(&L->cur, "TRYLOWERF")) {
+    char oname[48], fname[48], op[24], hay[256], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=trim both, 1=ltrim, 2=rtrim, 3=upper, 4=lower */
+    char *a, *b;
+    size_t n;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "LTRIMF") == 0)
+      mode = 1;
+    else if (strcmp(op, "RTRIMF") == 0)
+      mode = 2;
+    else if (strcmp(op, "UPPERF") == 0 || strcmp(op, "UCASEF") == 0 ||
+             strcmp(op, "TOUPPERF") == 0 || strcmp(op, "FIELDUPPER") == 0 ||
+             strcmp(op, "TRYUPPERF") == 0)
+      mode = 3;
+    else if (strcmp(op, "LOWERF") == 0 || strcmp(op, "LCASEF") == 0 ||
+             strcmp(op, "TOLOWERF") == 0 || strcmp(op, "FIELDLOWER") == 0 ||
+             strcmp(op, "TRYLOWERF") == 0)
+      mode = 4;
+    else
+      mode = 0; /* TRIMF / STRIPF / FIELDTRIM */
+    if (strcmp(op, "TRYTRIMF") == 0 || strcmp(op, "TRIMFSOFT") == 0 ||
+        strcmp(op, "SOFTTRIMF") == 0 || strcmp(op, "TRYUPPERF") == 0 ||
+        strcmp(op, "TRYLOWERF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    /* TRIMF L|R|LEFT|RIGHT | TRIMF BOTH */
+    if (mode == 0) {
+      if (kw(&L->cur, "L") || kw(&L->cur, "LEFT") || kw(&L->cur, "LTRIM")) {
+        mode = 1;
+        lex_next(L);
+      } else if (kw(&L->cur, "R") || kw(&L->cur, "RIGHT") ||
+                 kw(&L->cur, "RTRIM")) {
+        mode = 2;
+        lex_next(L);
+      } else if (kw(&L->cur, "BOTH") || kw(&L->cur, "ALL") ||
+                 kw(&L->cur, "LR")) {
+        mode = 0;
+        lex_next(L);
+      }
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "TRIMF object field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "TRIMF field"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "TRIMF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "TRIMF_N", 0);
+      var_set_num(vm, "UPPERF_N", 0);
+      var_set_num(vm, "LOWERF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TRIMF: unknown object");
+      var_set_str(vm, "ERR", "TRIMF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "TRIMF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "TRIMF_N", 0);
+      var_set_num(vm, "UPPERF_N", 0);
+      var_set_num(vm, "LOWERF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TRIMF: unknown field");
+      var_set_str(vm, "ERR", "TRIMF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    if (mode == 3) {
+      /* UPPER */
+      {
+        char *p;
+        for (p = hay; *p; p++)
+          if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      }
+      snprintf(out, sizeof out, "%s", hay);
+    } else if (mode == 4) {
+      /* LOWER */
+      {
+        char *p;
+        for (p = hay; *p; p++)
+          if (*p >= 'A' && *p <= 'Z') *p = (char)(*p - 'A' + 'a');
+      }
+      snprintf(out, sizeof out, "%s", hay);
+    } else {
+      a = hay;
+      b = hay + strlen(hay);
+      if (mode == 0 || mode == 1)
+        while (*a == ' ' || *a == '\t' || *a == '\n' || *a == '\r') a++;
+      if (mode == 0 || mode == 2)
+        while (b > a &&
+               (b[-1] == ' ' || b[-1] == '\t' || b[-1] == '\n' ||
+                b[-1] == '\r'))
+          b--;
+      n = (size_t)(b - a);
+      if (n >= sizeof out) n = sizeof out - 1;
+      memcpy(out, a, n);
+      out[n] = 0;
+    }
+    snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+    ob->fis_str[fi] = 1;
+    n = strlen(out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = (long)n;
+    var_set_num(vm, "LAST_N", (long)n);
+    var_set_num(vm, "TRIMF_N", (mode <= 2) ? 1 : 0);
+    var_set_num(vm, "LTRIMF_N", (mode == 1) ? 1 : 0);
+    var_set_num(vm, "RTRIMF_N", (mode == 2) ? 1 : 0);
+    var_set_num(vm, "UPPERF_N", (mode == 3) ? 1 : 0);
+    var_set_num(vm, "LOWERF_N", (mode == 4) ? 1 : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {

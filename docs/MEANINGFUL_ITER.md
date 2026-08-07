@@ -428,6 +428,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 398. ~~**`CATF` / `APPENDF` / `PREPENDF`**~~ **done** (single-object string field concat · no GETF+CAT+SETF · METHOD/THIS · dual of INCF).
 399. ~~**`CATFALL` / `APPENDFALL` / `PREPENDFALL`**~~ **done** (fleet string field concat · no EACH+GETF+CAT+SETF · dual of INCFALL / fleet of CATF).
 400. ~~**`REPLACEF` / `GSUBF` / `SUBSTF`**~~ **done** (single-object string field replace · no GETF+REPLACEALL+SETF · METHOD/THIS · complements CATF).
+401. ~~**`TRIMF` / `UPPERF` / `LOWERF`**~~ **done** (single-object string field normalize · no GETF+TRIM/UPPER/LOWER+SETF · METHOD/THIS · pairs REPLACEF/CATF).
 
 ## Tick protocol
 
