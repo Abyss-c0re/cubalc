@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 375,
-  "version": "1.15.402-usability",
-  "item": "LPADF/RPADF pad string fields",
-  "item_id": 411,
-  "title": "LPADF|RPADF — left/right pad one field to width for plate IDs",
-  "commit": "dfce759323e68b06a78f3cfef75c71fd8bc35c85",
-  "summary": "Pad/truncate field without GETF+SYS LPAD/RPAD+SETF. Promotes num. proof 952 36/36.",
+  "iter": 376,
+  "version": "1.15.403-usability",
+  "item": "MINF/MAXF one-sided field floor and cap",
+  "item_id": 412,
+  "title": "MINF|MAXF — one-sided min/max bound on one numeric field",
+  "commit": "83700f85dabfd2e447685690ebc772f1730586d4",
+  "summary": "Cap or floor one field without full BOUNDF. Soft miss. proof 953 40/40.",
   "proofs": [
-    "952_oop_padf",
-    "asserts 36/36",
-    "951 still green"
+    "953_oop_minf",
+    "asserts 40/40",
+    "952/886 still green"
   ],
-  "when": "2026-08-07T16:24:34Z",
+  "when": "2026-08-07T16:35:10Z",
   "agent": "meaningful_iter_10m",
-  "sha": "dfce759323e68b06a78f3cfef75c71fd8bc35c85",
-  "note": "LPADF_N/RPADF_N/PADF_W; pairs STRF/CATF/LEFTF"
+  "sha": "83700f85dabfd2e447685690ebc772f1730586d4",
+  "note": "MINF_CHANGED/MAXF_LIM; not fleet MAXOBJ/MINOBJ"
 }
