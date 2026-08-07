@@ -1,41 +1,41 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 161,
-  "program": "programs/realworld/route_flagmap_board.cubalc",
-  "theme": "FLAGMAP + NTHPOS route/hop registry (kv flags + positional hop peel)",
-  "version": "1.15.439-usability",
+  "iter": 162,
+  "program": "programs/realworld/queue_case_dispatch_board.cubalc",
+  "theme": "CASE/WHEN multi-alias queue CLI dispatch (synonym arms + exact queue ops)",
+  "version": "1.15.440-usability",
   "pass": true,
-  "prior_note": "iter 160 RESTARGS count gates; this iter first realworld FLAGMAP/NTHPOS (987-988)",
+  "prior_note": "iter 161 FLAGMAP+NTHPOS; this iter first realworld CASE multi-alias (989-990)",
   "tests": [
     {
-      "name": "register",
-      "cmd": "register -- --src=edge --dst=core --ttl=30 hopA hopB",
+      "name": "ls_show",
+      "cmd": "ls/show synonym \u2192 list arm",
       "ok": true,
-      "note": "FLAGMAP+hops"
+      "note": "CASE multi"
     },
     {
-      "name": "map",
-      "cmd": "FLAGMAP src=a verbose=1 bag",
+      "name": "admit_enqueue",
+      "cmd": "admit/enqueue --job + items",
       "ok": true,
-      "note": "FLAGMAP"
+      "note": "admit"
     },
     {
-      "name": "nth_hops",
-      "cmd": "NTHPOS 0=action; hops peel hop0",
+      "name": "pop_top_del",
+      "cmd": "pop drain; top pin; del drop",
       "ok": true,
-      "note": "NTHPOS"
+      "note": "queue ops"
     },
     {
-      "name": "has",
-      "cmd": "HASLINE exact row; substring miss",
+      "name": "has_gate",
+      "cmd": "HASLINE exact; gate min depth",
       "ok": true,
       "note": "exact"
     },
     {
-      "name": "gate_soft",
-      "cmd": "gate src+dst+hops; soft NTHPOS OOR EXIT 2",
+      "name": "soft_unk",
+      "cmd": "soft empty EXIT 2; unknown EXIT 2",
       "ok": true,
-      "note": "gate"
+      "note": "walls"
     },
     {
       "name": "selftest",
@@ -252,28 +252,58 @@
       "title": "FLAGMAP bare --flag value is 1 and does not consume following hops",
       "detail": "Positive: --verbose hopA leaves hopA in RESTARGS; FLAGMAP verbose=1. Prefer --name=val for non-bools. LOOKUP fmap key = works.",
       "repro": "FLAGMAP with --verbose hopA \u2192 verbose=1; hops keep hopA"
+    },
+    {
+      "id": "W27",
+      "severity": "high",
+      "area": "lang|case",
+      "title": "Heavy multi-statement CASE arms can break WHEN framing",
+      "detail": "With large WHEN bodies (nested IF/EACH/PRINT_JSON), subsequent WHEN arms were executed as top-level forms (unknown form WHEN). Workaround: CASE only assigns LET op= synonym canonical; bodies live in SYS EQS op IF after CASE END.",
+      "repro": "CASE with 20+ stmt WHEN list then WHEN admit \u2192 fall into admit / WHEN drain form error"
+    },
+    {
+      "id": "W28",
+      "severity": "med",
+      "area": "lang|case",
+      "title": "MATCH_ARM not LET-assignable or SYS PUSH-able",
+      "detail": "LET hit_arm = MATCH_ARM does not create a usable var; SYS PUSH meta MATCH_ARM \u2192 unknown form. PRINT_JSON MATCH_ARM works; SYS EQS MATCH_ARM synonym works after CASE.",
+      "repro": "LET x = MATCH_ARM; SYS EQS x ..."
+    },
+    {
+      "id": "W29",
+      "severity": "low",
+      "area": "lang|names",
+      "title": "Variable name note collides with NOTE form",
+      "detail": "LET note / PRINT note can invoke NOTE. Use note_msg (established board convention).",
+      "repro": "PRINT note \u2192 NOTE form path"
+    },
+    {
+      "id": "W30",
+      "severity": "low",
+      "area": "lang|case",
+      "title": "CASE multi-alias comma/OR/| works for CLI synonyms when arms stay simple",
+      "detail": "Positive: list|ls|show, admit|add|enqueue, drain|pop|take, pin|top, drop|rm|del all map correctly with MATCHED=1.",
+      "repro": "CASE ACTION WHEN list, ls, show THEN LET op=list"
     }
   ],
   "workarounds": [
-    "NTHPOS 1 for first hop when ARG0 is action; or DROP action from RESTARGS",
-    "FLAGMAP + SYS LOOKUP bag key = for --src/--dst",
-    "Latch known=1 per action instead of end k-sum EQS tally",
-    "Route sep => not bare >; --flag=val for non-bools",
-    "cubalc run prog.cubalc register -- --src=A --dst=B hops...",
-    "Reuse established bag vars (meta) for final report PUSH"
+    "CASE ACTION \u2192 LET op only; bodies after CASE via SYS EQS op",
+    "WHEN multi: comma list for synonyms; need THEN",
+    "PRINT_JSON MATCHED/MATCH_ARM; do not LET/PUSH MATCH_ARM",
+    "Use note_msg not note; known latch; never action run",
+    "cubalc run prog.cubalc admit -- --job=J items..."
   ],
   "language_gaps": [
-    "NTHPOS skip-action or NTHFILE-only alias",
-    "Document LET k = k + LAST_N fragility after complex blocks",
-    "Stable SYS PUSH on freshly LET bags late in long programs",
-    "Cookbook: FLAGMAP LOOKUP + NTHPOS hop peel"
+    "Stable multi-statement CASE arms (or document single-stmt-only)",
+    "MATCH_ARM as first-class string for LET/PUSH",
+    "Cookbook: CASE synonym dispatch + queue ops"
   ],
   "issues_faced": [
-    "k-sum unknown-action after register \u2014 switched to known latch",
-    "SYS PUSH report/brep late-program form miss \u2014 reused meta bag",
-    "NTHPOS 0=action; first hop is 1; FLAGMAP LOOKUP green",
-    "selftest 355/355; no language fix this iter"
+    "Heavy CASE WHEN bodies broke subsequent WHEN \u2014 CASE\u2192op split",
+    "MATCH_ARM not assignable \u2014 PRINT_JSON only",
+    "note name collided with NOTE \u2014 note_msg",
+    "ls/admit/pop/pin/drop green; selftest 355/355"
   ],
-  "commit": "01f077f0ef49f0223a3e27d86f4db56a26297ec2",
-  "ts": "2026-08-07T22:50:00Z"
+  "commit": "pending",
+  "ts": "2026-08-07T23:13:04Z"
 }

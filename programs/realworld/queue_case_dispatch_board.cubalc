@@ -1,0 +1,729 @@
+# queue_case_dispatch_board.cubalc — CASE/WHEN multi-alias ops queue CLI
+#
+# Real use: queue/inbox agents dispatch CLI actions with synonym arms
+# without nested IF EQS ladders:
+#   CASE ACTION / WHEN "list","ls" / OR / | / DEFAULT
+#   MATCHED · MATCH_ARM / WHEN_HIT — which synonym hit
+#   FLAGMAP + LOOKUP --job=
+#   RESTARGS / NTHPOS — job tokens after flags
+#   HASLINE / COUNTLINE / MOVELINE / REMOVELINE — exact queue ops
+#
+# Distinct from priority_fifo_inbox (bag FIFO only) and route_flagmap
+# (FLAGMAP hops): this board is *CASE multi-alias dispatch + queue plate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_qc_$$
+#   ./out/cubalc run programs/realworld/queue_case_dispatch_board.cubalc \
+#     admit -- --job=ingest a.bin b.bin
+#   ./out/cubalc run ... ls
+#   ./out/cubalc run ... drain
+#
+# Plate under STATE:
+#   QUEUE.txt      — job rows (exact field bag)
+#   VAL.txt META.txt QC_REPORT.txt
+#
+# Actions (ARG0 synonyms via CASE — never "run"):
+#   list | ls | show     — depth + bag
+#   admit | add | enqueue — append peeled RESTARGS / NAME
+#   drain | pop | take   — pop head job
+#   pin | top            — MOVELINE first match to front
+#   drop | rm | del      — REMOVELINE exact
+#   has                  — HASLINE exact
+#   count                — COUNTLINE exact
+#   gate                 — soft depth >= MIN
+#   soft                 — empty-queue soft miss
+#   clear
+#
+# Env: CUBALC_QC_ACTION CUBALC_QC_NAME CUBALC_QC_REQUIRE CUBALC_QC_MIN
+#
+# Edges:
+#   CASE needs WHEN ... THEN; multi: comma / OR / |
+#   Keep CASE arms to simple LET op= (heavy arms can break WHEN framing)
+#   then IF bodies outside CASE
+#   MATCH_ARM = matched synonym text; DEFAULT clears MATCH_ARM
+#   note var name collides with NOTE form — use note_msg
+#   NTHPOS 0 may be action; peel RESTARGS action token for files
+#   known latch (not k-sum) after CASE; WRITE NL; NUM soft; exact HASLINE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "queue_case_dispatch_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT QFILE = "QUEUE.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "QC_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT JOB = "default"
+DEFAULT USAGE_LINE = "queue_case -- admit|ls|drain|pin|drop -- [--job=J] item [item...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SYS ARGC
+LET argc_n = LAST_N
+CLEAR_ERR
+
+# ACTION from non-flag ARG0 or ENV
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    LET ACTION = a0
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_QC_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_QC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ENV "CUBALC_QC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_QC_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# numeric ARG1 as MIN for gate only if not flag-shaped
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      SYS ARG 1 OR ""
+      SYS NUM
+      IF OK == 1 THEN
+        LET MIN = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+END
+# also when synonym used
+SYS EQS ACTION "ls"
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "show"
+END
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+
+FLAGMAP
+LET fmap = LAST
+CLEAR_ERR
+SYS LOOKUP fmap "job" "="
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET JOB = LAST
+  END
+END
+CLEAR_ERR
+
+# RESTARGS peel action → items
+RESTARGS
+LET rest_raw = LAST
+SYS LINES rest_raw
+LET rest_raw_n = LAST_N
+CLEAR_ERR
+LET items = rest_raw
+LET item_n = rest_raw_n
+SYS NTH 0 rest_raw
+LET first = LAST
+CLEAR_ERR
+SYS EQS first ACTION
+IF LAST_N == 1 THEN
+  SYS DROP 1 rest_raw
+  LET items = LAST
+  SYS LINES items
+  LET item_n = LAST_N
+END
+CLEAR_ERR
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir QFILE
+LET queue_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR queue_path OR ""
+LET queue = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET queue_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET queue_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+
+SYS LINES queue
+LET queue_n = LAST_N
+
+# --- CASE multi-alias → op, then IF bodies (keep CASE arms simple) ---
+LET op = "unknown"
+CASE ACTION
+  WHEN "list", "ls", "show" THEN
+    LET op = "list"
+  WHEN "admit", "add", "enqueue" THEN
+    LET op = "admit"
+  WHEN "drain", "pop", "take" THEN
+    LET op = "drain"
+  WHEN "pin", "top" THEN
+    LET op = "pin"
+  WHEN "drop", "rm", "del" THEN
+    LET op = "drop"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  DEFAULT
+    LET op = "unknown"
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = queue
+  LET val_ch = 1
+  LET meta = "queue"
+  SYS STR queue_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON queue_n MATCHED
+  CLEAR_ERR
+END
+
+# --- admit ---
+SYS EQS op "admit"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action admit"
+  IF item_n < 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 0 THEN
+      SYS STARTS NAME "-"
+      IF LAST_N == 0 THEN
+        LET items = NAME
+        LET item_n = 1
+      END
+    END
+  END
+  IF item_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "admit empty"
+    FAIL "admit empty"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "admit empty"
+    END
+  ELSE
+    EACH LINE AS it IN items
+      SYS BLANK it
+      IF LAST_N == 0 THEN
+        SYS CAT JOB ":"
+        LET row = LAST
+        SYS CAT row it
+        LET row = LAST
+        SYS HASLINE queue row
+        IF LAST_N == 0 THEN
+          SYS PUSH queue row
+          LET queue = LAST
+          LET admit_n = admit_n + 1
+        END
+      END
+    END
+    LET queue_ch = 1
+    SYS LINES queue
+    LET queue_n = LAST_N
+    LET hit = 1
+    LET note_msg = "admit ok"
+    LET val = queue
+    LET val_ch = 1
+    LET meta = "job"
+    SYS PUSH meta JOB
+    LET meta = LAST
+    SYS PUSH meta "admit"
+    LET meta = LAST
+    SYS STR admit_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON admit_n queue_n JOB MATCHED
+  CLEAR_ERR
+END
+
+# --- drain ---
+SYS EQS op "drain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drain"
+  SYS LINES queue
+  LET queue_n = LAST_N
+  IF queue_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "drain empty"
+    FAIL "drain empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drain empty"
+    END
+  ELSE
+    SYS NTH 0 queue
+    LET val = LAST
+    LET val_ch = 1
+    SYS DROP 1 queue
+    LET queue = LAST
+    LET queue_ch = 1
+    SYS LINES queue
+    LET queue_n = LAST_N
+    LET hit = 1
+    LET note_msg = "drain ok"
+    LET meta = "drained"
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON hit miss queue_n
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS op "pin"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS NTH 0 items
+    LET NAME = LAST
+    CLEAR_ERR
+  END
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs name"
+    FAIL "pin needs name"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "pin needs name"
+    END
+  ELSE
+    SYS FINDLINE queue NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE queue idx 0
+      LET queue = LAST
+      LET queue_ch = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS STR idx
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON hit miss
+  CLEAR_ERR
+END
+
+# --- drop ---
+SYS EQS op "drop"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drop"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS NTH 0 items
+    LET NAME = LAST
+    CLEAR_ERR
+  END
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "drop needs name"
+    FAIL "drop needs name"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "drop needs name"
+    END
+  ELSE
+    SYS HASLINE queue NAME
+    LET has_n = LAST_N
+    IF has_n == 0 THEN
+      LET miss = 1
+      LET note_msg = "drop miss"
+      FAIL "drop miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drop miss"
+      END
+    ELSE
+      SYS REMOVELINE queue NAME
+      LET queue = LAST
+      LET queue_ch = 1
+      SYS LINES queue
+      LET queue_n = LAST_N
+      LET hit = 1
+      LET note_msg = "drop ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "drop"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON hit miss
+  CLEAR_ERR
+END
+
+# --- has ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS NTH 0 items
+    LET NAME = LAST
+    CLEAR_ERR
+  END
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE queue NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS NTH 0 items
+    LET NAME = LAST
+    CLEAR_ERR
+  END
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE queue NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES queue
+  LET queue_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "queue"
+  LET meta = LAST
+  SYS STR queue_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR queue_n
+  LET val = LAST
+  LET val_ch = 1
+  IF queue_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON queue_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES queue
+  LET queue_n = LAST_N
+  IF queue_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has work"
+    LET val = queue
+    LET val_ch = 1
+  END
+  PRINT_JSON queue_n miss hit
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET queue = ""
+  LET val = ""
+  LET meta = ""
+  LET queue_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET queue_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF queue_ch > 0 THEN
+  SYS WRITE queue_path queue
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "queue write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+# reuse meta for report plate body
+LET meta = "schema=cubalc.queue_case_dispatch_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "matched"
+LET meta = LAST
+SYS STR MATCHED
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "queue_n"
+LET meta = LAST
+SYS STR queue_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "admit_n"
+LET meta = LAST
+SYS STR admit_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "queue_case_dispatch_board" ACTION MATCH_ARM hit miss queue_n admit_n note_msg elapsed
+NOTE "queue_case_dispatch_board: done"
