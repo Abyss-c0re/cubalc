@@ -4807,6 +4807,282 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* TOPNBYFWHERE|HEADWHERE|TAKEWHERE [Class] sortfield n [WHERE] matchfield matchvalue [ASC|DESC]
+   * — top-n matching object names ordered by numeric sortfield.
+   * WHERE sugar: TOPNBYFWHERE Cell energy 2 WHERE age 1 DESC.
+   * Soft empty → "" / 0. Usability: filtered leaderboard without WHERE+TOPNBYF or SORTBYFWHERE+TAKE. */
+  if (kw(&L->cur, "TOPNBYFWHERE") || kw(&L->cur, "HEADWHERE") ||
+      kw(&L->cur, "TAKEWHERE") || kw(&L->cur, "FIRSTNWHERE") ||
+      kw(&L->cur, "LIMITWHERE") || kw(&L->cur, "TOPNIF") ||
+      kw(&L->cur, "HEADIF") || kw(&L->cur, "TAKEIF") ||
+      kw(&L->cur, "WHERETOPN") || kw(&L->cur, "TOPNOBJSWHERE") ||
+      kw(&L->cur, "HEADBYFWHERE") || kw(&L->cur, "TAKEBYFWHERE")) {
+    char filt[48], sfield[48], mfield[48], tok1[48], bag[4096];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, desc = 0, i, n = 0, n_skip = 0, take = 0, out_n = 0;
+    long m_nval = 0, narg = 0;
+    size_t o = 0;
+    typedef struct { char name[48]; long v; int idx; } TopNByFWRow;
+    TopNByFWRow rows[CUBALC_MAX_OBJS];
+    TopNByFWRow key;
+    lex_next(L);
+    filt[0] = 0;
+    sfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "TOPNBYFWHERE OF Class sortfield n matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN") &&
+          !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+          L->cur.kind != TK_NUM && L->cur.kind != TK_MINUS &&
+          L->cur.kind != TK_LPAREN) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(sfield, sizeof sfield, "%s", vv->sval);
+          else
+            snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT ||
+             L->cur.kind == TK_STR || kw(&L->cur, "WHERE") ||
+             kw(&L->cur, "TOP") || kw(&L->cur, "TAKE") || kw(&L->cur, "N")))
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "TOPNBYFWHERE [Class] sortfield n matchfield matchvalue");
+      return -1;
+    }
+    if (!sfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") &&
+                 !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+                 !kw(&L->cur, "TOP") && !kw(&L->cur, "TAKE") &&
+                 !kw(&L->cur, "N") && L->cur.kind != TK_NUM) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "TOPNBYFWHERE [Class] sortfield n matchfield matchvalue");
+        return -1;
+      }
+    }
+    /* n: optional TOP|TAKE|FIRST|LIMIT|N sugar then count */
+    if (kw(&L->cur, "TOP") || kw(&L->cur, "FIRST") || kw(&L->cur, "LIMIT") ||
+        kw(&L->cur, "TAKE") || kw(&L->cur, "N") || kw(&L->cur, "COUNT") ||
+        kw(&L->cur, "HEAD"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      narg = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      narg = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") &&
+               !kw(&L->cur, "WHEN") && !kw(&L->cur, "MATCH") &&
+               !kw(&L->cur, "ON") && !kw(&L->cur, "ASC") &&
+               !kw(&L->cur, "DESC") && !kw(&L->cur, "ASSERT") &&
+               !kw(&L->cur, "LET") && !kw(&L->cur, "PRINT") &&
+               !kw(&L->cur, "SYS") && !kw(&L->cur, "END") &&
+               !kw(&L->cur, "NEW")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        narg = atol(sv->sval);
+      else
+        narg = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      narg = parse_expr(vm, L);
+    } else {
+      fail(vm, "TOPNBYFWHERE [Class] sortfield n matchfield matchvalue");
+      return -1;
+    }
+    if (narg < 0) narg = 0;
+    take = (int)narg;
+    if (take > CUBALC_MAX_OBJS) take = CUBALC_MAX_OBJS;
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS") &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "TOPNBYFWHERE [Class] sortfield n matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+               !kw(&L->cur, "UP") && !kw(&L->cur, "DOWN") &&
+               !kw(&L->cur, "HIGHFIRST") && !kw(&L->cur, "LOWFIRST") &&
+               !kw(&L->cur, "TOP") && !kw(&L->cur, "BEST") &&
+               !kw(&L->cur, "BOTTOM") && !kw(&L->cur, "WORST")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    if (kw(&L->cur, "DESC") || kw(&L->cur, "DOWN") || kw(&L->cur, "REV") ||
+        kw(&L->cur, "REVERSE") || kw(&L->cur, "HIGHFIRST") ||
+        kw(&L->cur, "TOP") || kw(&L->cur, "BEST")) {
+      desc = 1;
+      lex_next(L);
+    } else if (kw(&L->cur, "ASC") || kw(&L->cur, "UP") ||
+               kw(&L->cur, "LOWFIRST") || kw(&L->cur, "WORST") ||
+               kw(&L->cur, "BOTTOM")) {
+      desc = 0;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int sfi, mfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      sfi = oop_field_idx(cd, sfield);
+      if (mfi < 0 || sfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[sfi]) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      snprintf(rows[n].name, sizeof rows[n].name, "%s", ob->name);
+      rows[n].v = ob->fnum[sfi];
+      rows[n].idx = n;
+      n++;
+    }
+    {
+      int a, b;
+      for (a = 1; a < n; a++) {
+        key = rows[a];
+        b = a - 1;
+        while (b >= 0) {
+          int less;
+          if (desc)
+            less = (key.v > rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          else
+            less = (key.v < rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          if (!less) break;
+          rows[b + 1] = rows[b];
+          b--;
+        }
+        rows[b + 1] = key;
+      }
+    }
+    out_n = n < take ? n : take;
+    for (i = 0; i < out_n; i++) {
+      size_t ln = strlen(rows[i].name);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "TOPNBYFWHERE", bag);
+    var_set_str(vm, "HEADWHERE", bag);
+    var_set_str(vm, "TAKEWHERE", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = out_n;
+    var_set_num(vm, "LAST_N", out_n);
+    var_set_num(vm, "TOPNBYFWHERE_N", out_n);
+    var_set_num(vm, "HEADWHERE_N", out_n);
+    var_set_num(vm, "TAKEWHERE_N", out_n);
+    var_set_num(vm, "TOPNBYFWHERE_TOTAL", n);
+    var_set_num(vm, "TOPNBYFWHERE_REQ", narg);
+    var_set_num(vm, "TOPNBYFWHERE_SKIP", n_skip);
+    var_set_num(vm, "TOPNBYFWHERE_DESC", desc);
+    var_set_str(vm, "FIELD", sfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* SUMF|SUMFALL|TOTALF [Class] field
    * AVGF|AVGFALL|MEANF [Class] field
    * — sum or integer mean of numeric field over live objects (optional class).
