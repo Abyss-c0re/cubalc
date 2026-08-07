@@ -477,6 +477,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 447. ~~**`FLAGMAP / FLAGKV`**~~ **done** (name=value bag for every --flag · bare → 1 · LOOKUP sep `=` · coexists with RESTARGS files).
 448. ~~**`CASE string arms`**~~ **done** (CASE/MATCH/SWITCH string selector + WHEN "s" · CLI action dispatch · numeric TO range kept).
 449. ~~**`WHEN multi-alias`**~~ **done** (WHEN a, b OR c | d · CLI synonyms · MATCH_ARM/WHEN_HIT · numeric multi kept · TO range unchanged).
+450. ~~**`CASEI` / `MATCHI`**~~ **done** (case-insensitive string CASE · CASE ICASE · CLI mixed-case GETFLAG · multi-alias kept).
 
 ## Tick protocol
 

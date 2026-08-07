@@ -18199,16 +18199,28 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm); return 1;
   }
   /* CASE expr|str ... WHEN n|"s" [,|"OR"|] … THEN ... [DEFAULT ...] END
-   * Numeric arms keep TO-range. String selector (literal / string var / LAST)
-   * matches WHEN string arms by content. Multi-alias WHEN: comma / OR / |
-   * list of synonyms (CLI list|ls|l). MATCH_ARM = which alias hit.
-   * Usability: CLI action dispatch after GETFLAG without nested IF EQS soup. */
-  if (kw(&L->cur,"CASE")||kw(&L->cur,"SWITCH")||kw(&L->cur,"MATCH")){
+   * CASEI|MATCHI|SWITCHI or CASE ICASE — case-insensitive string arms (strcasecmp).
+   * Numeric arms keep TO-range. Multi-alias WHEN: comma / OR / |.
+   * MATCH_ARM = which synonym hit. Usability: CLI GETFLAG mixed-case actions. */
+  if (kw(&L->cur,"CASE")||kw(&L->cur,"SWITCH")||kw(&L->cur,"MATCH")||
+      kw(&L->cur,"CASEI")||kw(&L->cur,"SWITCHI")||kw(&L->cur,"MATCHI")||
+      kw(&L->cur,"ICASE")||kw(&L->cur,"CASECI")){
     long sel = 0;
     char sel_s[512];
     char match_arm[512];
     int sel_is_str = 0;
+    int icase = 0;
+    if (kw(&L->cur,"CASEI")||kw(&L->cur,"SWITCHI")||kw(&L->cur,"MATCHI")||
+        kw(&L->cur,"ICASE")||kw(&L->cur,"CASECI"))
+      icase = 1;
     lex_next(L);
+    /* CASE ICASE|"CI"|IGNORECASE selector — modifier after CASE/MATCH/SWITCH */
+    if (!icase && (kw(&L->cur,"ICASE")||kw(&L->cur,"IGNORECASE")||
+                   kw(&L->cur,"NOCASE")||kw(&L->cur,"CI")||
+                   kw(&L->cur,"CASEFOLD"))){
+      icase = 1;
+      lex_next(L);
+    }
     sel_s[0] = 0;
     match_arm[0] = 0;
     /* string selector: "…", LAST (str), or string var — before parse_expr */
@@ -18285,7 +18297,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             w = parse_expr(vm, L);
             arm_is_str = 0;
           }
-          if (arm_is_str && strcmp(sel_s, w_s) == 0) {
+          if (arm_is_str &&
+              (icase ? strcasecmp(sel_s, w_s) == 0 : strcmp(sel_s, w_s) == 0)) {
             arm_hit = 1;
             snprintf(match_arm, sizeof match_arm, "%s", w_s);
           }
@@ -18336,7 +18349,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
             } else {
               break; /* THEN / WHEN / END — stop alias list */
             }
-            if (arm_is_str && strcmp(sel_s, w_s) == 0) {
+            if (arm_is_str &&
+                (icase ? strcasecmp(sel_s, w_s) == 0 : strcmp(sel_s, w_s) == 0)) {
               arm_hit = 1;
               if (!match_arm[0])
                 snprintf(match_arm, sizeof match_arm, "%s", w_s);
@@ -18391,7 +18405,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
               kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
               kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
               kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||
-              kw(&L->cur,"CASE")) depth++;
+              kw(&L->cur,"CASE")||kw(&L->cur,"CASEI")||kw(&L->cur,"MATCHI")||
+              kw(&L->cur,"SWITCHI")) depth++;
           else if ((kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"DEFAULT")||kw(&L->cur,"ELSE")) && depth==1) break;
           else if (kw(&L->cur,"END")){ depth--; if (depth==0) break; }
           lex_next(L);
@@ -18413,7 +18428,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           /* skip remaining arms to END on outer L (parked on next arm or END) */
           depth=1;
           while (L->cur.kind!=TK_EOF && depth>0){
-            if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
+            if (kw(&L->cur,"CASE")||kw(&L->cur,"CASEI")||kw(&L->cur,"MATCHI")||
+                kw(&L->cur,"SWITCHI")||
+                kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
                 kw(&L->cur,"FOR")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
                 kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
                 kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
@@ -18448,7 +18465,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         {
           int depth=1;
           while (L->cur.kind!=TK_EOF && depth>0){
-            if (kw(&L->cur,"CASE")||kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
+            if (kw(&L->cur,"CASE")||kw(&L->cur,"CASEI")||kw(&L->cur,"MATCHI")||
+                kw(&L->cur,"SWITCHI")||
+                kw(&L->cur,"IF")||kw(&L->cur,"LOOP")||kw(&L->cur,"WHILE")||
                 kw(&L->cur,"FOR")||kw(&L->cur,"FORCELL")||kw(&L->cur,"EACHCELL")||
                 kw(&L->cur,"FORBIT")||kw(&L->cur,"EACHBIT")||
                 kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")) depth++;
@@ -18472,6 +18491,8 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     /* which synonym matched (empty on DEFAULT / no arm) */
     var_set_str(vm, "MATCH_ARM", match_arm);
     var_set_str(vm, "WHEN_HIT", match_arm);
+    var_set_num(vm, "CASE_ICASE", icase ? 1 : 0);
+    var_set_num(vm, "ICASE", icase ? 1 : 0);
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

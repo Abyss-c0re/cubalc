@@ -1,0 +1,109 @@
+# CASEI / MATCHI — case-insensitive string CASE for CLI mixed-case flags
+
+HOLD_FLASH 1
+
+# CASEI basic
+LET act ""
+CASEI "List"
+  WHEN "list", "ls", "l" THEN
+    LET act "L"
+  WHEN "seal", "s" THEN
+    LET act "S"
+  DEFAULT
+    LET act "?"
+END
+SYS EQS act "L"
+ASSERT LAST_N == 1
+ASSERT CASE_ICASE == 1
+SYS EQS MATCH_ARM "list"
+ASSERT LAST_N == 1
+
+# MATCHI multi + mixed selector
+LET out ""
+MATCHI "SEAL"
+  WHEN "list" OR "ls" THEN
+    LET out "L"
+  WHEN "seal" OR "s" OR "commit" THEN
+    LET out "S"
+  DEFAULT
+    LET out "?"
+END
+SYS EQS out "S"
+ASSERT LAST_N == 1
+SYS EQS WHEN_HIT "seal"
+ASSERT LAST_N == 1
+
+# CASE ICASE modifier form
+LET m ""
+CASE ICASE "Help"
+  WHEN "h", "help" OR "?" THEN
+    LET m "H"
+  DEFAULT
+    LET m "?"
+END
+SYS EQS m "H"
+ASSERT LAST_N == 1
+ASSERT ICASE == 1
+
+# SWITCHI alias
+LET p ""
+SWITCHI "Parse"
+  WHEN "admit" | "parse" | "p" THEN
+    LET p "P"
+  DEFAULT
+    LET p "?"
+END
+SYS EQS p "P"
+ASSERT LAST_N == 1
+
+# exact CASE still case-sensitive (reg)
+LET x ""
+CASE "List"
+  WHEN "list" THEN
+    LET x "hit"
+  DEFAULT
+    LET x "miss"
+END
+SYS EQS x "miss"
+ASSERT LAST_N == 1
+ASSERT CASE_ICASE == 0
+
+# LAST after GETFLAG-style mixed case
+LET LAST "VERBOSE"
+LET mode ""
+CASEI LAST
+  WHEN "quiet", "q" THEN
+    LET mode "q"
+  WHEN "verbose", "v" THEN
+    LET mode "v"
+  DEFAULT
+    LET mode "d"
+END
+SYS EQS mode "v"
+ASSERT LAST_N == 1
+
+# numeric still works under CASEI entry (icase ignored)
+LET n 0
+CASEI 2
+  WHEN 1 THEN
+    LET n 1
+  WHEN 2 THEN
+    LET n 2
+  DEFAULT
+    LET n 9
+END
+ASSERT n == 2
+
+# DEFAULT on CASEI miss
+LET d 0
+CASEI "Nope"
+  WHEN "a", "b" THEN
+    LET d 1
+  DEFAULT
+    LET d 2
+END
+ASSERT d == 2
+SYS EMPTY MATCH_ARM
+ASSERT LAST_N == 1
+
+PRINT "casei ok"

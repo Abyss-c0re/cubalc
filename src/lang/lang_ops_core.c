@@ -26212,6 +26212,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"INCLUDE", "INCLUDE [ONCE] [OR|SOFT] path|libname — ONCE skips reload"},
       {"LET", "LET name [=] expr|string — = optional before value"},
       {"CASE", "CASE expr|str … WHEN a [,|OR||] b … [THEN] … [DEFAULT] END — multi-alias synonyms"},
+      {"CASEI", "CASEI|MATCHI|SWITCHI · CASE ICASE — case-insensitive string WHEN · CLI mixed-case flags"},
       {"SWITCH", "SWITCH alias of CASE — CLI action dispatch after GETFLAG"},
       {"MATCH", "MATCH alias of CASE — WHEN multi-alias string arms · MATCH_ARM hit"},
       {"MATCH_ARM", "MATCH_ARM|WHEN_HIT — which WHEN synonym matched (empty on DEFAULT)"},
