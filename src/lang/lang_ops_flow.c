@@ -13668,6 +13668,201 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LINEF|NTHLINEF|BAGLINEF obj field index — 0-based newline bag line peel into field.
+   * LINENOF|LINENF|ROWF obj field index — 1-based line peel into field.
+   * TRYLINEF|LINEF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * On hit: field becomes that line (mutate). On miss: field unchanged, HIT=0.
+   * LAST = line (or ""); LAST_N/LINEF_HIT = 0|1; LINEF_I = 0-based index used.
+   * Trailing newline does not create an empty last field (matches SYS NTH).
+   * Promotes num→str for walk. Complements CUTF (sep columns) for bag-in-field.
+   * Usability: multi-line plate/work bag line without GETF+SYS NTH+SETF
+   * (METHOD/THIS; pairs SPLITF/WORDSF/JOINF). */
+  if (kw(&L->cur, "LINEF") || kw(&L->cur, "NTHLINEF") ||
+      kw(&L->cur, "BAGLINEF") || kw(&L->cur, "GETLINEF") ||
+      kw(&L->cur, "FIELDLINE") || kw(&L->cur, "NTHBAGF") ||
+      kw(&L->cur, "LINENOF") || kw(&L->cur, "LINENF") ||
+      kw(&L->cur, "ROWF") || kw(&L->cur, "ROWLINEF") ||
+      kw(&L->cur, "TRYLINEF") || kw(&L->cur, "LINEFSOFT") ||
+      kw(&L->cur, "SOFTLINEF") || kw(&L->cur, "TRYLINENOF") ||
+      kw(&L->cur, "TRYLINENF") || kw(&L->cur, "TRYNTHLINEF")) {
+    char oname[48], fname[48], op[24], hay[256], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, one_based = 0;
+    long want = 0, idx = 0, found = 0, nlines = 0;
+    const char *p, *start;
+    size_t flen;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "LINENOF") == 0 || strcmp(op, "LINENF") == 0 ||
+        strcmp(op, "ROWF") == 0 || strcmp(op, "ROWLINEF") == 0 ||
+        strcmp(op, "TRYLINENOF") == 0 || strcmp(op, "TRYLINENF") == 0)
+      one_based = 1;
+    if (strcmp(op, "TRYLINEF") == 0 || strcmp(op, "LINEFSOFT") == 0 ||
+        strcmp(op, "SOFTLINEF") == 0 || strcmp(op, "TRYLINENOF") == 0 ||
+        strcmp(op, "TRYLINENF") == 0 || strcmp(op, "TRYNTHLINEF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, one_based ? "LINENOF object field index"
+                         : "LINEF object field index");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, one_based ? "LINENOF field" : "LINEF field"); return -1;
+    }
+    if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+        kw(&L->cur, "LINE") || kw(&L->cur, "ROW"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        want = parse_expr(vm, L);
+      } else {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          want = dv->val;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          want = vm->last_n;
+          lex_next(L);
+        } else {
+          fail(vm, one_based ? "LINENOF object field index"
+                             : "LINEF object field index");
+          return -1;
+        }
+      }
+    } else {
+      want = one_based ? 1 : 0;
+    }
+    if (one_based) {
+      if (want < 1) want = 1;
+      want = want - 1;
+    } else {
+      if (want < 0) want = 0;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag = one_based ? "LINENOF" : "LINEF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LINEF_N", 0);
+      var_set_num(vm, "LINEF_HIT", 0);
+      var_set_num(vm, "LINENOF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag = one_based ? "LINENOF" : "LINEF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LINEF_N", 0);
+      var_set_num(vm, "LINEF_HIT", 0);
+      var_set_num(vm, "LINENOF_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    out[0] = 0;
+    found = 0;
+    nlines = 0;
+    if (hay[0]) {
+      nlines = 1;
+      for (p = hay; *p; p++) {
+        if (*p == '\n' && p[1]) nlines++;
+      }
+    }
+    if (want >= 0 && want < nlines && hay[0]) {
+      p = hay;
+      for (idx = 0; idx < want; idx++) {
+        while (*p && *p != '\n') p++;
+        if (*p == '\n') p++;
+      }
+      start = p;
+      while (*p && *p != '\n') p++;
+      flen = (size_t)(p - start);
+      if (flen >= sizeof out) flen = sizeof out - 1;
+      memcpy(out, start, flen);
+      out[flen] = 0;
+      found = 1;
+    }
+    if (found) {
+      snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+      ob->fis_str[fi] = 1;
+    }
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = found;
+    var_set_num(vm, "LAST_N", found);
+    var_set_num(vm, "LINEF_N", found);
+    var_set_num(vm, "LINEF_HIT", found);
+    var_set_num(vm, "LINEF_I", want);
+    var_set_num(vm, "LINENOF_N", found);
+    var_set_num(vm, "LINENOF_HIT", found);
+    var_set_num(vm, "NTHLINEF_N", found);
+    var_set_num(vm, "NTHLINEF_HIT", found);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

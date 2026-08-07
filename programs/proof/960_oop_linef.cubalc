@@ -1,0 +1,180 @@
+# LINEF / LINENOF — Nth newline bag line peel into field for agents
+# Usability: multi-line plate/work bag line without GETF+SYS NTH+SETF
+# 0-based LINEF / 1-based LINENOF; miss leaves field, HIT=0
+
+HOLD_FLASH 1
+
+CLASS Bag
+  FIELD lines "alpha\nbeta\ngamma"
+  FIELD single "only"
+  FIELD code 7
+  METHOD init
+  END
+  METHOD mid
+    LINEF THIS lines 1
+  END
+  METHOD firstrow
+    LINENOF THIS lines 1
+  END
+END
+
+NEW Bag b
+
+# 0-based middle line
+LINEF b lines 1
+ASSERT OK == 1
+ASSERT LINEF_HIT == 1
+ASSERT LINEF_N == 1
+ASSERT LINEF_I == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+GETF b lines
+SYS EQS LAST "beta"
+ASSERT LAST_N == 1
+SYS EQS FIELD "lines"
+ASSERT LAST_N == 1
+
+# first line
+SETF b lines "x\ny\nz"
+LINEF b lines 0
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+ASSERT LINEF_HIT == 1
+
+# last line
+SETF b lines "x\ny\nz"
+LINEF b lines 2
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# miss out of range — field unchanged
+SETF b lines "p\nq"
+LINEF b lines 5
+ASSERT LINEF_HIT == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETF b lines
+SYS EQS LAST "p\nq"
+ASSERT LAST_N == 1
+
+# LINENOF 1-based
+SETF b lines "a\nb\nc"
+LINENOF b lines 2
+ASSERT LINENOF_HIT == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+GETF b lines
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+SETF b lines "a\nb\nc"
+LINENF b lines 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+SETF b lines "a\nb\nc"
+ROWF b lines 3
+SYS EQS LAST "c"
+ASSERT LAST_N == 1
+
+# aliases
+SETF b lines "u\nv"
+NTHLINEF b lines 0
+SYS EQS LAST "u"
+ASSERT LAST_N == 1
+SETF b lines "u\nv"
+BAGLINEF b lines 1
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+SETF b lines "u\nv"
+GETLINEF b lines 0
+SYS EQS LAST "u"
+ASSERT LAST_N == 1
+
+# AT glue + default index 0
+SETF b lines "first\nsecond"
+LINEF b lines AT 1
+SYS EQS LAST "second"
+ASSERT LAST_N == 1
+SETF b lines "solo"
+LINEF b lines
+SYS EQS LAST "solo"
+ASSERT LAST_N == 1
+ASSERT LINEF_I == 0
+
+# single-line field
+SETF b single "only"
+LINEF b single 0
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+SETF b single "only"
+LINEF b single 1
+ASSERT LINEF_HIT == 0
+GETF b single
+SYS EQS LAST "only"
+ASSERT LAST_N == 1
+
+# num field promoted
+LINEF b code 0
+SYS EQS LAST "7"
+ASSERT LAST_N == 1
+ASSERT LINEF_HIT == 1
+
+# trailing newline does not invent empty last field
+SETF b lines "a\nb\n"
+LINEF b lines 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SETF b lines "a\nb\n"
+LINEF b lines 2
+ASSERT LINEF_HIT == 0
+
+# METHOD / THIS
+SETF b lines "aa\nbb\ncc"
+SEND b mid
+GETF b lines
+SYS EQS LAST "bb"
+ASSERT LAST_N == 1
+SETF b lines "aa\nbb\ncc"
+SEND b firstrow
+GETF b lines
+SYS EQS LAST "aa"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYLINEF nosuch lines 0
+ASSERT OK == 0
+ASSERT LINEF_HIT == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+LINEF SOFT b nosuch 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+SETF b lines "ok\nyes"
+LINEF b lines 1
+ASSERT OK == 1
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF b lines "d\ne"
+LINEF b "lines" 0
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+
+# HELP
+HELP LINEF
+SYS HAS LAST "LINEF"
+ASSERT LAST_N == 1
+HELP LINENOF
+SYS HAS LAST "LINENOF"
+ASSERT LAST_N == 1
+
+PRINT "oop_linef ok"
