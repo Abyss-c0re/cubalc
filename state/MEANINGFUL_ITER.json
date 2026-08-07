@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 377,
-  "version": "1.15.404-usability",
-  "item": "COUNTINF field needle tally",
-  "item_id": 413,
-  "title": "COUNTINF|COUNTINFI — count needle hits in one field",
-  "commit": "4bba691889d97e568d5f874669e125b55922f0a2",
-  "summary": "Path/delimiter depth without GETF+loop. Soft miss. proof 954 33/33.",
+  "iter": 378,
+  "version": "1.15.405-usability",
+  "item": "SPLITF field-to-bag path/CSV",
+  "item_id": 414,
+  "title": "SPLITF|FIELDSF — split field on sep → newline bag",
+  "commit": "f5936fbf91a26254219d9af74dad2b66ae9be59a",
+  "summary": "Path/CSV bag without GETF+SYS SPLIT. Soft miss. proof 955 40/40.",
   "proofs": [
-    "954_oop_countinf",
-    "asserts 33/33",
-    "953/944 still green"
+    "955_oop_splitf",
+    "asserts 40/40",
+    "954 still green"
   ],
-  "when": "2026-08-07T16:44:40Z",
+  "when": "2026-08-07T16:55:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "4bba691889d97e568d5f874669e125b55922f0a2",
-  "note": "COUNTINF_N/COUNTINF_I; not fleet COUNTF hist"
+  "sha": "f5936fbf91a26254219d9af74dad2b66ae9be59a",
+  "note": "SPLITF_N bag; no mutate; pairs COUNTINF/EACH LINE"
 }
