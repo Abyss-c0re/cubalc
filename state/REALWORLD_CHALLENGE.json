@@ -15,13 +15,13 @@
     },
     {
       "name": "schema_bag",
-      "cmd": "CLASSINFO Handler → n_fields:4 n_methods:4 live:2",
+      "cmd": "CLASSINFO Handler \u2192 n_fields:4 n_methods:4 live:2",
       "ok": true,
       "note": "CLASSINFO"
     },
     {
       "name": "schema_json",
-      "cmd": "CLASSINFO JSON → cubalc.class.v1",
+      "cmd": "CLASSINFO JSON \u2192 cubalc.class.v1",
       "ok": true,
       "note": "CLASSINFO JSON"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "gate_class",
-      "cmd": "MINF/MINM/MINL admit; MINL=99 deny; REQUIRE→2",
+      "cmd": "MINF/MINM/MINL admit; MINL=99 deny; REQUIRE\u21922",
       "ok": true,
       "note": "gate_class"
     },
     {
       "name": "gate_arity",
-      "cmd": "EXPECT=1 process admit; EXPECT=2 deny; miss REQUIRE→2",
+      "cmd": "EXPECT=1 process admit; EXPECT=2 deny; miss REQUIRE\u21922",
       "ok": true,
       "note": "gate_arity"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "send_prep",
-      "cmd": "arity check + SEND process → status done",
+      "cmd": "arity check + SEND process \u2192 status done",
       "ok": true,
       "note": "send_prep"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "edges",
-      "cmd": "open bad REQUIRE→2; unknown soft; REQUIRE=abc softens",
+      "cmd": "open bad REQUIRE\u21922; unknown soft; REQUIRE=abc softens",
       "ok": true,
       "note": "edges"
     },
@@ -86,16 +86,16 @@
       "severity": "high",
       "area": "oop|methodinfo|keyword",
       "title": "METH optional keyword steals var METHODINFO Handler METH",
-      "detail": "METHODINFO accepts optional METH/METHOD/OF before method name. A string var named METH is consumed as keyword; next token missing → hard parse fail METHODINFO [JSON] Class|obj method (not soft miss).",
-      "repro": "LET METH=\"process\"; METHODINFO Handler METH → fail parse"
+      "detail": "METHODINFO accepts optional METH/METHOD/OF before method name. A string var named METH is consumed as keyword; next token missing \u2192 hard parse fail METHODINFO [JSON] Class|obj method (not soft miss).",
+      "repro": "LET METH=\"process\"; METHODINFO Handler METH \u2192 fail parse"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|hasmethod",
-      "title": "HASMETHOD method name is raw token — no string-var resolve",
-      "detail": "Unlike METHODINFO which looks up string vars for method name, HASMETHOD uses the ident text literally. LET m=\"process\"; HASMETHOD Handler m looks for method \"m\" → 0. Dynamic ARG-driven has-method must use METHODINFO OK or string literals.",
-      "repro": "LET m2=\"process\"; HASMETHOD Handler m2 → LAST_N=0"
+      "title": "HASMETHOD method name is raw token \u2014 no string-var resolve",
+      "detail": "Unlike METHODINFO which looks up string vars for method name, HASMETHOD uses the ident text literally. LET m=\"process\"; HASMETHOD Handler m looks for method \"m\" \u2192 0. Dynamic ARG-driven has-method must use METHODINFO OK or string literals.",
+      "repro": "LET m2=\"process\"; HASMETHOD Handler m2 \u2192 LAST_N=0"
     },
     {
       "id": "W3",
@@ -109,9 +109,9 @@
       "id": "W4",
       "severity": "med",
       "area": "oop|methodinfo",
-      "title": "Arity only — no required/optional/default params",
+      "title": "Arity only \u2014 no required/optional/default params",
       "detail": "NPARAMS is declared formals count. Cannot express defaults or rest args; SEND still hard-fails wrong arity at call time after gate.",
-      "repro": "METHODINFO process → n_params:1 only"
+      "repro": "METHODINFO process \u2192 n_params:1 only"
     },
     {
       "id": "W5",
@@ -119,7 +119,7 @@
       "area": "oop|classinfo",
       "title": "CLASSINFO unknown soft OK=0 LAST blank",
       "detail": "Same soft pattern as METHODINFO; agents must check OK before reading NFIELDS.",
-      "repro": "CLASSINFO NoSuch → OK=0 N=0"
+      "repro": "CLASSINFO NoSuch \u2192 OK=0 N=0"
     },
     {
       "id": "W6",
@@ -135,7 +135,7 @@
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
       "detail": "REQUIRE=abc leaves NEED_HIT=0; miss paths exit 0.",
-      "repro": "CUBALC_FS_REQUIRE=abc method nosuch → exit 0"
+      "repro": "CUBALC_FS_REQUIRE=abc method nosuch \u2192 exit 0"
     },
     {
       "id": "W8",
@@ -148,7 +148,7 @@
   ],
   "workarounds": [
     "Never name method-name var METH; use MNAME/mname",
-    "Dynamic has-method: METHODINFO Class MNAME; IF OK — not HASMETHOD Class MNAME",
+    "Dynamic has-method: METHODINFO Class MNAME; IF OK \u2014 not HASMETHOD Class MNAME",
     "Gate on NFIELDS/NMETHODS/LIVE mins + METHODINFO_N == EXPECT for SEND prep",
     "Soft unknown: probe CLASSINFO/METHODINFO OK=0; REQUIRE EXIT in action bodies",
     "Rehydrate dump/* each process; objects memory-local"
@@ -161,12 +161,12 @@
     "Strict NUM REQUIRE; WRITE trailing NL option"
   ],
   "issues_faced": [
-    "METHODINFO Handler METH hard-failed parse — METH optional keyword",
-    "HASMETHOD Handler m2 with m2=\"process\" returns 0 — raw token only",
+    "METHODINFO Handler METH hard-failed parse \u2014 METH optional keyword",
+    "HASMETHOD Handler m2 with m2=\"process\" returns 0 \u2014 raw token only",
     "CLASSINFO bag+JSON and METHODINFO bag+JSON worked once MNAME used",
     "gate_class live+field mins; gate_arity expect match; send_prep status done",
     "selftest 355/355 green; no language fix this iter (document only)"
   ],
-  "commit": "",
+  "commit": "2143dba91edcf5bd754da41bd0f6c8e20f171cac",
   "ts": "2026-08-07T12:45:57Z"
 }
