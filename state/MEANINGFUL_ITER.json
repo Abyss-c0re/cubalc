@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 366,
-  "version": "1.15.393-usability",
-  "item": "LENF/EMPTYF/BLANKF/NONEMPTYF field probes",
-  "item_id": 402,
-  "title": "LENF|EMPTYF|BLANKF|NONEMPTYF — field probes for IF guards",
-  "commit": "679ba76ad8aa17d8feeddcb9b67e73d11f74b0af",
-  "summary": "Field length/empty/blank without GETF+SYS LEN/EMPTY. proof 943 43/43.",
+  "iter": 367,
+  "version": "1.15.394-usability",
+  "item": "HASINF/STARTSF/ENDSF field membership probes",
+  "item_id": 403,
+  "title": "HASINF|STARTSF|ENDSF — field contains/prefix/suffix probes",
+  "commit": "35c373bd6ec3b3bc7b581585fd6f1bb86a69a7c8",
+  "summary": "Field membership IF without GETF+SYS HAS/STARTS/ENDS. proof 944 39/39.",
   "proofs": [
-    "943_oop_lenf",
-    "asserts 43/43",
-    "942 still green"
+    "944_oop_hasinf",
+    "asserts 39/39",
+    "943 still green"
   ],
-  "when": "2026-08-07T14:54:18Z",
+  "when": "2026-08-07T15:05:19Z",
   "agent": "meaningful_iter_10m",
-  "sha": "679ba76ad8aa17d8feeddcb9b67e73d11f74b0af",
-  "note": "no mutate; LAST=text; LAST_N=len or 0|1; soft TRYLENF"
+  "sha": "35c373bd6ec3b3bc7b581585fd6f1bb86a69a7c8",
+  "note": "restored thrash first; HASIFI/STARTSIF/ENDSIF; soft TRYHASINF; no mutate"
 }
