@@ -40,12 +40,35 @@ static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
   return NULL;
 }
 static int oop_resolve_obj_name(VM *vm, Lex *L, char *out, size_t outn){
+  if (L->cur.kind == TK_STR) {
+    if (!L->cur.text[0]) return -1;
+    snprintf(out, outn, "%s", L->cur.text);
+    lex_next(L);
+    return 0;
+  }
   if (L->cur.kind != TK_IDENT) return -1;
   if (strcasecmp(L->cur.text, "THIS") == 0 || strcasecmp(L->cur.text, "SELF") == 0) {
     if (!vm->this_obj[0]) return -1;
     snprintf(out, outn, "%s", vm->this_obj);
     lex_next(L);
     return 0;
+  }
+  /* LAST / string-var as object name when value is a *live* object.
+   * NEW stores var(name)=Class as string — do NOT expand that pollution;
+   * only expand when sval names a live instance (EACH OBJ bind, LET peer=…). */
+  if (strcmp(L->cur.text, "LAST") == 0) {
+    if (vm->last_str[0] && oop_find_obj(vm, vm->last_str)) {
+      snprintf(out, outn, "%s", vm->last_str);
+      lex_next(L);
+      return 0;
+    }
+  } else {
+    Var *sv = var_get(vm, L->cur.text, 0);
+    if (sv && sv->is_str && sv->sval[0] && oop_find_obj(vm, sv->sval)) {
+      snprintf(out, outn, "%s", sv->sval);
+      lex_next(L);
+      return 0;
+    }
   }
   snprintf(out, outn, "%s", L->cur.text);
   lex_next(L);
@@ -1224,18 +1247,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     ObjInst *ob;
     int hit = 0;
     lex_next(L);
-    if (L->cur.kind == TK_STR) {
-      snprintf(oname, sizeof oname, "%s", L->cur.text);
-      lex_next(L);
-    } else if (L->cur.kind == TK_IDENT) {
-      if (strcmp(L->cur.text, "LAST") == 0) {
-        snprintf(oname, sizeof oname, "%s", vm->last_str);
-        lex_next(L);
-      } else {
-        snprintf(oname, sizeof oname, "%s", L->cur.text);
-        lex_next(L);
-      }
-    } else {
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
       fail(vm, "HASOBJ name"); return -1;
     }
     ob = oop_find_obj(vm, oname);
@@ -2033,6 +2045,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
   /* EACH CUBE as name ... END  |  EACH CELL [as name] [FROM lo TO hi] ... END
    * EACH LINE [as name] [IN str|LAST] ... END — walk newline fields (LIST/GREP).
+   * EACH OBJ [Class] [AS name] ... END — walk live OOP objects (optional class filter).
    * digit-4 control: cell-range iterator binds value to name, IT=index, VAL=value */
   if (kw(&L->cur,"EACH")||kw(&L->cur,"FOREACH")){
     lex_next(L);
@@ -2041,8 +2054,99 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int is_line = (kw(&L->cur,"LINE")||kw(&L->cur,"LINES")||kw(&L->cur,"FIELD")||
                    kw(&L->cur,"FIELDS")||kw(&L->cur,"ROW")||kw(&L->cur,"ROWS")||
                    kw(&L->cur,"ENTRY")||kw(&L->cur,"ENTRIES"));
-    if (!is_cell && !is_cube && !is_line){ fail(vm,"EACH CUBE|CELL|LINE as name"); return -1; }
+    int is_obj = (kw(&L->cur,"OBJ")||kw(&L->cur,"OBJS")||kw(&L->cur,"OBJECT")||
+                  kw(&L->cur,"OBJECTS")||kw(&L->cur,"INST")||kw(&L->cur,"INSTANCE")||
+                  kw(&L->cur,"INSTANCES")||kw(&L->cur,"OOP"));
+    if (!is_cell && !is_cube && !is_line && !is_obj){
+      fail(vm,"EACH CUBE|CELL|LINE|OBJ as name"); return -1;
+    }
     lex_next(L);
+    if (is_obj){
+      /* EACH OBJ [ClassName] [AS name] ... END
+       * Binds each live object name to name (default OBJ); IT=0-based; OBJ_N=1-based.
+       * Optional Class filter like LISTOBJS. Usability: no LISTOBJS+EACH LINE glue. */
+      char oname_bind[48], filt[48];
+      int has_filt = 0, i, n = 0;
+      snprintf(oname_bind, sizeof oname_bind, "OBJ");
+      filt[0] = 0;
+      /* optional class filter before AS (bare IDENT = class filter, even if
+       * unknown → empty walk; use EACH OBJ AS name for unfiltered bind). */
+      if (L->cur.kind == TK_IDENT && !kw(&L->cur, "AS") &&
+          strcmp(L->cur.text, "->") != 0 && !kw(&L->cur, "OF") &&
+          !kw(&L->cur, "END")) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      } else if (L->cur.kind == TK_STR) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+      if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+        lex_next(L);
+        if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+          snprintf(filt, sizeof filt, "%s", L->cur.text);
+          lex_next(L);
+          has_filt = 1;
+        }
+      }
+      if (kw(&L->cur, "AS") || kw(&L->cur, "->")) {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT) { fail(vm, "EACH OBJ as name"); return -1; }
+        snprintf(oname_bind, sizeof oname_bind, "%s", L->cur.text);
+        lex_next(L);
+      }
+      /* class filter after AS: EACH OBJ AS c OF Cell */
+      if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+        lex_next(L);
+        if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+          snprintf(filt, sizeof filt, "%s", L->cur.text);
+          lex_next(L);
+          has_filt = 1;
+        }
+      }
+      skip_nl(L);
+      {
+        Lex body_start = *L;
+        int depth = 1;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "EACH OBJ without END"); return -1; }
+        for (i = 0; i < vm->n_objs && !vm->fatal && !vm->halt; i++) {
+          ObjInst *ob = &vm->objs[i];
+          ClassDef *cd;
+          if (!ob->live) continue;
+          if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+          cd = &vm->classes[ob->class_idx];
+          if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+          var_set_str(vm, oname_bind, ob->name);
+          var_set_str(vm, "OBJ", ob->name);
+          var_set_str(vm, "OBJECT", ob->name);
+          var_set_str(vm, "CLASS", cd->name);
+          var_set_num(vm, "IT", n);
+          var_set_num(vm, "IDX", n);
+          var_set_num(vm, "OBJ_N", n + 1);
+          var_set_num(vm, "OK", 1);
+          vm->break_loop = 0;
+          vm->continue_loop = 0;
+          {
+            Lex body = body_start;
+            if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+          }
+          if (vm->break_loop) { vm->break_loop = 0; n++; break; }
+          vm->continue_loop = 0;
+          n++;
+        }
+        if (kw(&L->cur, "END")) lex_next(L);
+        var_set_num(vm, "LAST_N", n);
+        var_set_num(vm, "EACH_N", n);
+        var_set_num(vm, "NOBJS", n);
+        var_set_num(vm, "OK", 1);
+        bump(vm);
+        return 1;
+      }
+    }
     if (is_line){
       /* EACH LINE [AS name] [IN|OF|FROM str] ... END
        * Binds each newline field to name (default LINE); IT=0-based, LINE_N=1-based.

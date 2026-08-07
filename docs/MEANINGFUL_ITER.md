@@ -363,6 +363,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 333. ~~**`RENAMEOBJ` / `MOVEOBJ`**~~ **done** (rename live object slot in place · promote temp names after CLONE).
 334. ~~**`TRYSETF` / `SETF SOFT`**~~ **done** (soft field write · mirrors TRYGETF · string field names).
 335. ~~**`TRYSEND` / `SEND SOFT`**~~ **done** (soft method dispatch · completes soft OOP triad · string method names).
+336. ~~**`EACH OBJ`**~~ **done** (walk live objects with optional class filter · no LISTOBJS+EACH LINE glue).
 
 ## Tick protocol
 
