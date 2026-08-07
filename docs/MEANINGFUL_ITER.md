@@ -358,6 +358,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 328. ~~**`DUMPOBJ` / `INSPECT`**~~ **done** (object field:value bag / cubalc.obj.v1 JSON · agent snapshot without EACH+GETF).
 329. ~~**`GETF … OR` / `TRYGETF`**~~ **done** (soft field read + default like ENV/LOOKUP · string field name · no HASFIELD glue).
 330. ~~**SETF/NEW string-from-var**~~ **done** (string formals + dynamic NEW name · ticket_object W1–W3).
+331. ~~**ASSERT/IF string `==` / `!=`**~~ **done** (content compare for LAST/str vars · no SYS EQS glue).
 
 ## Tick protocol
 

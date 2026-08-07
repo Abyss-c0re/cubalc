@@ -1,0 +1,68 @@
+# ASSERT / IF string == and != — content compare without SYS EQS glue
+# Usability: GETF/LET strings in ASSERT and IF like natural language
+
+HOLD_FLASH 1
+
+# literal == literal
+ASSERT "hello" == "hello"
+ASSERT "a" != "b"
+
+# string vars
+LET a = "open"
+LET b = "open"
+LET c = "closed"
+ASSERT a == b "var == var"
+ASSERT a != c
+ASSERT a == "open"
+ASSERT "closed" == c
+
+# LAST from GETF / LET sticky
+LET s = "ticket-1"
+ASSERT s == "ticket-1"
+LET t = s
+ASSERT t == s
+
+# IF string branch
+LET hit = 0
+IF a == "open" THEN
+  LET hit = 1
+END
+ASSERT hit == 1 "IF string true"
+
+LET hit2 = 0
+IF a == "closed" THEN
+  LET hit2 = 1
+END
+ASSERT hit2 == 0 "IF string false"
+
+LET hit3 = 0
+IF a != c THEN
+  LET hit3 = 1
+END
+ASSERT hit3 == 1 "IF != branch"
+
+# numeric path still works (no string coerce footgun on nums)
+LET n = 42
+ASSERT n == 42
+ASSERT n != 0
+LET z = 0
+ASSERT z == 0
+
+# empty string
+LET e = ""
+ASSERT e == ""
+ASSERT e != "x"
+
+# OOP field string via GETF → LAST
+CLASS Tag
+  FIELD name "x"
+  METHOD init nm
+    SETF THIS name nm
+  END
+END
+NEW Tag g "alpha"
+GETF g name
+ASSERT LAST == "alpha" "GETF LAST == literal"
+ASSERT LAST != "beta"
+
+PRINT "assert_str_eq ok"

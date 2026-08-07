@@ -24893,7 +24893,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SETDIGIT", "SETDIGIT cube 0..9"},
       {"FOLDBITS", "FOLDBITS cube bits — fold 01 stream into matrix"},
       {"DECIDE", "DECIDE [cube] — matrix → algocube digit 0..9"},
-      {"ASSERT", "ASSERT expr [\"why\"] — fail with line + reason"},
+      {"ASSERT", "ASSERT expr [\"why\"] — fail with line+reason · string ==/!= content compare"},
       {"EXPECT", "EXPECT expr [\"why\"] — soft check; OK/LAST_ERR, no fatal"},
       {"FAIL", "FAIL [\"why\"] — soft status OK=0 sticky LAST_ERR, no fatal"},
       {"PASS", "PASS [\"why\"] — soft status OK=1 optional LAST note"},
