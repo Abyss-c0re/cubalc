@@ -21,7 +21,7 @@
     },
     {
       "name": "use_stale_rollup",
-      "cmd": "use c0 c1; stale c2 → f:0 b:2 s:1",
+      "cmd": "use c0 c1; stale c2 \u2192 f:0 b:2 s:1",
       "ok": true,
       "note": "EACH rollup"
     },
@@ -33,7 +33,7 @@
     },
     {
       "name": "gate_deny_require",
-      "cmd": "gate MIN=3 REQUIRE=1 → rc2",
+      "cmd": "gate MIN=3 REQUIRE=1 \u2192 rc2",
       "ok": true,
       "note": "hard deny"
     },
@@ -51,7 +51,7 @@
     },
     {
       "name": "setmatch_first_only",
-      "cmd": "3×c0:use → SETMATCH once → 2 left",
+      "cmd": "3\u00d7c0:use \u2192 SETMATCH once \u2192 2 left",
       "ok": true,
       "note": "first only"
     },
@@ -81,31 +81,31 @@
     },
     {
       "name": "empty_drain",
-      "cmd": "DELETEALL Conn on empty → 0 soft OK",
+      "cmd": "DELETEALL Conn on empty \u2192 0 soft OK",
       "ok": true,
       "note": "empty wipe"
     },
     {
       "name": "rehydrate_undoes_drain",
-      "cmd": "restore dumps after drain → list rehydrates conns",
+      "cmd": "restore dumps after drain \u2192 list rehydrates conns",
       "ok": true,
       "note": "plate trap"
     },
     {
       "name": "stale_use_require",
-      "cmd": "stale then use REQUIRE → rc2",
+      "cmd": "stale then use REQUIRE \u2192 rc2",
       "ok": true,
       "note": "blocked"
     },
     {
       "name": "bad_slot_require",
-      "cmd": "use ghost REQUIRE→2; soft rc0",
+      "cmd": "use ghost REQUIRE\u21922; soft rc0",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "num_require_softens",
-      "cmd": "CUBALC_CP_REQUIRE=abc gate deny → rc0",
+      "cmd": "CUBALC_CP_REQUIRE=abc gate deny \u2192 rc0",
       "ok": true,
       "note": "NUM"
     },
@@ -127,25 +127,25 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|persist",
-      "title": "DELETEALL is process-local — plate DUMPOBJ rehydrate undoes drain",
+      "title": "DELETEALL is process-local \u2014 plate DUMPOBJ rehydrate undoes drain",
       "detail": "Agents must RM dump files in the same action as DELETEALL Conn. Restoring dumps after drain re-creates live objects on next ARG run. No native object plate lifetime tied to DELETEALL.",
-      "repro": "open c0 c1; drain; restore dump/*; list → 2 conns back"
+      "repro": "open c0 c1; drain; restore dump/*; list \u2192 2 conns back"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|name",
-      "title": "Fixed slot EQS dispatch — string-var object names fail GETF/SEND",
+      "title": "Fixed slot EQS dispatch \u2014 string-var object names fail GETF/SEND",
       "detail": "c0/c1/c2/g0 forced as literal idents. Cannot loop slot names from bag with SEND n use.",
-      "repro": "LET n=\"c0\"; SEND n use → fail"
+      "repro": "LET n=\"c0\"; SEND n use \u2192 fail"
     },
     {
       "id": "W3",
       "severity": "high",
       "area": "host|join",
-      "title": "SYS JOIN is path-join only (inserts /) — no string concat",
+      "title": "SYS JOIN is path-join only (inserts /) \u2014 no string concat",
       "detail": "rollup label must REPLACEALL template f:F b:B s:S, not JOIN.",
-      "repro": "SYS JOIN \"f:\" n_free → f:/0"
+      "repro": "SYS JOIN \"f:\" n_free \u2192 f:/0"
     },
     {
       "id": "W4",
@@ -153,14 +153,14 @@
       "area": "oop|each",
       "title": "DUMPOBJ on EACH bind o fails (unknown object)",
       "detail": "Fleet dump uses HASOBJ+DUMPOBJ literal slots after EACH rollup.",
-      "repro": "EACH OBJ Conn AS o; DUMPOBJ o → unknown object"
+      "repro": "EACH OBJ Conn AS o; DUMPOBJ o \u2192 unknown object"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH replaces first exact only; no replace-all",
-      "detail": "Three c0:use rows → one SETMATCH leaves 2. Agents loop or accept first-only.",
+      "detail": "Three c0:use rows \u2192 one SETMATCH leaves 2. Agents loop or accept first-only.",
       "repro": "count after one SETMATCH drops by 1 only"
     },
     {
@@ -184,8 +184,8 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE env softens to 0",
-      "detail": "CUBALC_CP_REQUIRE=abc → REQUIRE_HIT stays 0 → gate deny soft rc0.",
-      "repro": "REQUIRE=abc gate MIN=9 → rc0"
+      "detail": "CUBALC_CP_REQUIRE=abc \u2192 REQUIRE_HIT stays 0 \u2192 gate deny soft rc0.",
+      "repro": "REQUIRE=abc gate MIN=9 \u2192 rc0"
     },
     {
       "id": "W9",
@@ -198,7 +198,7 @@
   ],
   "workarounds": [
     "drain/wipe/freeall always SYS RM dump slots after DELETEALL",
-    "REPLACEALL templates for rollup labels — never SYS JOIN for non-paths",
+    "REPLACEALL templates for rollup labels \u2014 never SYS JOIN for non-paths",
     "DUMPOBJ after every mutation; READ dump at start of each run",
     "Literal c0|c1|c2|g0 slots + EQS NAME dispatch",
     "CLEAR_ERR after every soft TRYSEND/TRYSETF/TRYGETF",
@@ -217,13 +217,13 @@
   ],
   "issues_faced": [
     "DELETEALL Conn correctly frees 3 keeps Guard; FREEALL clears all",
-    "restored dumps after drain rehydrated 2 conns — documented W1",
+    "restored dumps after drain rehydrated 2 conns \u2014 documented W1",
     "rollup REPLACEALL f:0 b:2 s:1 ok",
-    "SETMATCH first-only 3→2 confirmed",
-    "COUNTLINE false friend c0→0 exactness good",
+    "SETMATCH first-only 3\u21922 confirmed",
+    "COUNTLINE false friend c0\u21920 exactness good",
     "empty DELETEALL soft DELETEALL_N=0",
     "selftest 305/305 green (oop_deleteall proof included); no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T04:25:00Z"
+  "commit": "bdf0940ab6920d7154e14186bf4379385b5c58b2",
+  "ts": "2026-08-07T04:25:11Z"
 }
