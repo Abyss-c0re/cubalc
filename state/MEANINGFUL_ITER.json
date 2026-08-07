@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 408,
-  "version": "1.15.435-usability",
-  "item": "HASRESTARGS soft positional probe",
-  "item_id": 444,
-  "title": "HASRESTARGS|HASPOS [min] soft 0|1 non-flag count",
-  "commit": "d26b389573e5f01a7e7e38519af55def8d22e988",
-  "summary": "Soft min non-flag probe twin REQUIRE RESTARGS; thrash restore. proof 985 12/12.",
+  "iter": 409,
+  "version": "1.15.436-usability",
+  "item": "LISTFLAGS bag of flag names",
+  "item_id": 445,
+  "title": "LISTFLAGS|FLAGS bag of --flag names \u00b7 LAST_N=count",
+  "commit": "362be5e8a811ab39e83380623d401fb0e8d806a0",
+  "summary": "Discover CLI flag names as bag; no EACH ARGS glue. proof 986 14/14.",
   "proofs": [
-    "985_hasrestargs",
-    "asserts 12/12",
-    "smoke HASRESTARGS 1 -- --mode=x only.txt"
+    "986_listflags",
+    "asserts 14/14",
+    "smoke LISTFLAGS -- --mode=fast --verbose a.txt"
   ],
-  "when": "2026-08-07T22:04:31Z",
+  "when": "2026-08-07T22:14:22Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d26b389573e5f01a7e7e38519af55def8d22e988",
-  "note": "thrash restore before implement; EVOLVE_PAUSED"
+  "sha": "362be5e8a811ab39e83380623d401fb0e8d806a0",
+  "note": "no thrash; EVOLVE_PAUSED"
 }
