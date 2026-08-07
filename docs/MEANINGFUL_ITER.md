@@ -405,6 +405,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 375. ~~**`COPYFWHERE` / `SNAPSHOTWHERE` / `COPYIF`**~~ **done** (copy src→dst field on field==value objs · selective snapshot).
 376. ~~**`SWAPFWHERE` / `EXCHANGEWHERE` / `FLIPWHERE`**~~ **done** (swap two fields on field==value objs · selective dual-buffer; not stack SWAPIF).
 377. ~~**`MAXOBJWHERE` / `MINOBJWHERE` / `BESTWHERE`**~~ **done** (extreme obj among field==value · no WHERE bag+MAXOBJ glue).
+378. ~~**`SORTBYFWHERE` / `ORDERWHERE` / `RANKWHERE`**~~ **done** (rank matching objs by field ASC|DESC · no WHERE bag+SORTBYF).
 
 ## Tick protocol
 

@@ -4383,6 +4383,232 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SORTBYFWHERE|ORDERWHERE|RANKWHERE [Class] sortfield matchfield matchvalue [ASC|DESC]
+   * — bag of matching object names ordered by numeric sortfield.
+   * WHERE sugar: SORTBYFWHERE Cell energy WHERE age 1 DESC.
+   * Soft empty → "" / 0. Usability: ranked subset without WHEREOBJ+SORTBYF glue. */
+  if (kw(&L->cur, "SORTBYFWHERE") || kw(&L->cur, "ORDERWHERE") ||
+      kw(&L->cur, "RANKWHERE") || kw(&L->cur, "WHERESORTBYF") ||
+      kw(&L->cur, "SORTOBJSWHERE") || kw(&L->cur, "ORDERBYFWHERE") ||
+      kw(&L->cur, "RANKBYFWHERE") || kw(&L->cur, "SORTIF") ||
+      kw(&L->cur, "ORDERIF") || kw(&L->cur, "RANKIF")) {
+    char filt[48], sfield[48], mfield[48], tok1[48], bag[4096];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, desc = 0, i, n = 0, n_skip = 0;
+    long m_nval = 0;
+    size_t o = 0;
+    typedef struct { char name[48]; long v; int idx; } SortByFWRow;
+    SortByFWRow rows[CUBALC_MAX_OBJS];
+    SortByFWRow key;
+    lex_next(L);
+    filt[0] = 0;
+    sfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SORTBYFWHERE OF Class sortfield matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN") &&
+          !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(sfield, sizeof sfield, "%s", vv->sval);
+          else
+            snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "WHERE")))
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "SORTBYFWHERE [Class] sortfield matchfield matchvalue");
+      return -1;
+    }
+    if (!sfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") &&
+                 !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(sfield, sizeof sfield, "%s", vv->sval);
+        else
+          snprintf(sfield, sizeof sfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "SORTBYFWHERE [Class] sortfield matchfield matchvalue");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS") &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "SORTBYFWHERE [Class] sortfield matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASC") && !kw(&L->cur, "DESC") &&
+               !kw(&L->cur, "UP") && !kw(&L->cur, "DOWN")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    if (kw(&L->cur, "DESC") || kw(&L->cur, "DOWN") || kw(&L->cur, "REV") ||
+        kw(&L->cur, "REVERSE") || kw(&L->cur, "HIGHFIRST")) {
+      desc = 1;
+      lex_next(L);
+    } else if (kw(&L->cur, "ASC") || kw(&L->cur, "UP") ||
+               kw(&L->cur, "LOWFIRST")) {
+      desc = 0;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int sfi, mfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      sfi = oop_field_idx(cd, sfield);
+      if (mfi < 0 || sfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[sfi]) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      snprintf(rows[n].name, sizeof rows[n].name, "%s", ob->name);
+      rows[n].v = ob->fnum[sfi];
+      rows[n].idx = n;
+      n++;
+    }
+    {
+      int a, b;
+      for (a = 1; a < n; a++) {
+        key = rows[a];
+        b = a - 1;
+        while (b >= 0) {
+          int less;
+          if (desc)
+            less = (key.v > rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          else
+            less = (key.v < rows[b].v) ||
+                   (key.v == rows[b].v && key.idx < rows[b].idx);
+          if (!less) break;
+          rows[b + 1] = rows[b];
+          b--;
+        }
+        rows[b + 1] = key;
+      }
+    }
+    for (i = 0; i < n; i++) {
+      size_t ln = strlen(rows[i].name);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, rows[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "SORTBYFWHERE", bag);
+    var_set_str(vm, "ORDERWHERE", bag);
+    var_set_str(vm, "RANKWHERE", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "SORTBYFWHERE_N", n);
+    var_set_num(vm, "ORDERWHERE_N", n);
+    var_set_num(vm, "RANKWHERE_N", n);
+    var_set_num(vm, "SORTBYFWHERE_SKIP", n_skip);
+    var_set_num(vm, "SORTBYFWHERE_DESC", desc);
+    var_set_str(vm, "FIELD", sfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* SUMF|SUMFALL|TOTALF [Class] field
    * AVGF|AVGFALL|MEANF [Class] field
    * — sum or integer mean of numeric field over live objects (optional class).
