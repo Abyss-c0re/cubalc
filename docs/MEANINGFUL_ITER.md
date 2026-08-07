@@ -380,6 +380,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 350. ~~**`SENDWHEREGE` / `SENDWHERELE` / `SENDWHEREGT` / `SENDWHERELT`**~~ **done** (method on threshold-matched objs · SENDBELOW/SENDABOVE · no EACH+GETF+IF+SEND).
 351. ~~**`COUNTOBJ` / `COUNTWHERE` / `COUNTWHEREGE`…`**~~ **done** (fleet tallies · equality + threshold · no WHERE bag materialize).
 352. ~~**`HASWHERE` / `HASWHEREGE`…`**~~ **done** (soft 0|1 existence · ANYWHERE/HASATLEAST · IF without COUNTWHERE compare).
+353. ~~**`WHEREBETWEEN` / `COUNTBETWEEN` / `HASBETWEEN`**~~ **done** (closed lo..hi band select/count/probe · no dual WHEREGE+WHERELE glue).
 
 ## Tick protocol
 
