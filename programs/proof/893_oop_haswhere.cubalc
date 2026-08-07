@@ -1,0 +1,116 @@
+# HASWHERE / HASWHEREGE — soft 0|1 existence probes for IF gates
+# Usability: mirrors HASOBJ/HASFIELD · LAST_N 0|1 · LAST = first name
+# Completes WHERE (bag) / COUNT (tally) / HAS (boolean) query triad
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+
+CLASS Counter
+  FIELD n 0
+  FIELD tag 0
+  METHOD init x t
+    SETF THIS n x
+    SETF THIS tag t
+  END
+END
+NEW Counter k1 3 1
+NEW Counter k2 50 2
+NEW Counter k3 15 1
+
+# equality probe
+HASWHERE Cell energy 0
+ASSERT OK == 1
+ASSERT HASWHERE_N == 1
+ASSERT LAST_N == 1
+ASSERT HASWHERE == "b"
+ASSERT LAST == "b"
+
+HASWHERE Cell energy 10
+ASSERT LAST_N == 1
+ASSERT LAST == "a"
+
+# miss soft
+HASWHERE Cell energy 999
+ASSERT OK == 1
+ASSERT HASWHERE_N == 0
+ASSERT LAST_N == 0
+
+# ANYWHERE alias + string field
+ANYWHERE Counter tag 2
+ASSERT ANYWHERE_N == 1
+ASSERT LAST == "k2"
+
+# OF sugar
+HASWHERE OF Counter tag 1
+ASSERT LAST_N == 1
+ASSERT LAST == "k1"
+
+# bare field
+HASWHERE energy 30
+ASSERT LAST_N == 1
+ASSERT LAST == "c"
+HASWHERE n 50
+ASSERT LAST_N == 1
+ASSERT LAST == "k2"
+
+# threshold GE
+HASWHEREGE Cell energy 20
+ASSERT OK == 1
+ASSERT HASWHEREGE_N == 1
+ASSERT LAST_N == 1
+ASSERT HASWHEREGE == "c"
+ASSERT HASWHEREGE_THRESH == 20
+
+HASATLEAST Cell energy 10
+ASSERT HASATLEAST_N == 1
+ASSERT LAST == "a"
+
+# miss threshold
+HASWHEREGE Cell energy 999
+ASSERT OK == 1
+ASSERT HASWHEREGE_N == 0
+ASSERT LAST_N == 0
+
+# LE / BELOW
+HASWHERELE Cell energy 0
+ASSERT HASWHERELE_N == 1
+ASSERT LAST == "b"
+
+HASBELOW Cell energy 5
+ASSERT HASBELOW_N == 1 "energy 0 only"
+ASSERT LAST == "b"
+
+HASABOVE Cell energy 25
+ASSERT HASABOVE_N == 1
+ASSERT LAST == "c"
+
+# OF + counter thresholds
+HASWHEREGE OF Counter n 40
+ASSERT LAST_N == 1
+ASSERT LAST == "k2"
+
+ANYATLEAST Counter n 15
+ASSERT ANYATLEAST_N == 1
+
+HASATMOST Counter n 3
+ASSERT HASATMOST_N == 1
+ASSERT LAST == "k1"
+
+# bare threshold
+HASWHEREGE n 15
+ASSERT LAST_N == 1 "k2 or k3 first live"
+
+# gate style after free
+DELETEWHERELE Cell energy 0
+HASWHERE Cell energy 0
+ASSERT LAST_N == 0 "dead cells gone"
+HASWHEREGE Cell energy 10
+ASSERT LAST_N == 1
+
+PRINT "oop_haswhere ok"

@@ -2736,6 +2736,326 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASWHERE|ANYWHERE|ANYOBJWHERE [Class] field value
+   * — soft 0|1 existence probe: any live obj with field==value?
+   * Early-exit on first hit. LAST_N 0|1; optional FIRST name in LAST/HASWHERE.
+   * Usability: IF gates without COUNTWHERE compare · mirrors HASOBJ/HASFIELD. */
+  if (kw(&L->cur, "HASWHERE") || kw(&L->cur, "ANYWHERE") ||
+      kw(&L->cur, "ANYOBJWHERE") || kw(&L->cur, "EXISTSWHERE") ||
+      kw(&L->cur, "SOMEWHERE") || kw(&L->cur, "HASMATCH") ||
+      kw(&L->cur, "ANYMATCH")) {
+    char filt[48], fname[48], tok1[48], sval[512], found[48];
+    int has_filt = 0, is_str = 0, i, hit_any = 0, n_skip = 0;
+    long nval = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    sval[0] = 0;
+    found[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "HASWHERE OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "HASWHERE [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "HASWHERE [Class] field value"); return -1;
+      }
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(sval, sizeof sval, "%s", L->cur.text);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(sval, sizeof sval, "%s", vm->last_str);
+      is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(sval, sizeof sval, "%s", sv->sval);
+        is_str = 1;
+        lex_next(L);
+      } else {
+        nval = parse_expr(vm, L);
+        is_str = 0;
+      }
+    } else {
+      nval = parse_expr(vm, L);
+      is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) {
+        if (is_str)
+          hit = (strcmp(ob->fstr[fi], sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", nval);
+          hit = (strcmp(ob->fstr[fi], nb) == 0);
+        }
+      } else {
+        if (is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[fi]);
+          hit = (strcmp(nb, sval) == 0);
+        } else {
+          hit = (ob->fnum[fi] == nval);
+        }
+      }
+      if (hit) {
+        hit_any = 1;
+        snprintf(found, sizeof found, "%s", ob->name);
+        break;
+      }
+    }
+    var_set_str(vm, "LAST", found);
+    var_set_str(vm, "HASWHERE", found);
+    var_set_str(vm, "ANYWHERE", found);
+    var_set_str(vm, "FIRST", found);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", found);
+    vm->last_n = hit_any ? 1 : 0;
+    var_set_num(vm, "LAST_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHERE_N", hit_any ? 1 : 0);
+    var_set_num(vm, "ANYWHERE_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASMATCH_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHERE_SKIP", n_skip);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASWHEREGE|HASWHERELE|HASWHEREGT|HASWHERELT [Class] field value
+   * ANYATLEAST|ANYABOVE|ANYBELOW|HASATLEAST aliases.
+   * — soft 0|1: any live obj whose numeric field meets threshold?
+   * Early-exit; LAST = first matching name. Completes WHERE/COUNT/HAS triad. */
+  if (kw(&L->cur, "HASWHEREGE") || kw(&L->cur, "HASWHEREGTE") ||
+      kw(&L->cur, "HASATLEAST") || kw(&L->cur, "ANYATLEAST") ||
+      kw(&L->cur, "ANYWHEREGE") ||
+      kw(&L->cur, "HASWHEREGT") || kw(&L->cur, "HASABOVE") ||
+      kw(&L->cur, "ANYABOVE") || kw(&L->cur, "ANYWHEREGT") ||
+      kw(&L->cur, "HASWHERELE") || kw(&L->cur, "HASWHERELTE") ||
+      kw(&L->cur, "HASATMOST") || kw(&L->cur, "ANYATMOST") ||
+      kw(&L->cur, "ANYWHERELE") ||
+      kw(&L->cur, "HASWHERELT") || kw(&L->cur, "HASBELOW") ||
+      kw(&L->cur, "ANYBELOW") || kw(&L->cur, "ANYWHERELT") ||
+      kw(&L->cur, "THRESHHAS") || kw(&L->cur, "HASTHRESH")) {
+    char filt[48], fname[48], tok1[48], found[48], op[32];
+    int has_filt = 0, mode = 0, i, hit_any = 0, n_skip = 0;
+    long thresh = 0;
+    /* mode: 0=GE 1=GT 2=LE 3=LT */
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "HASWHEREGT") == 0 || strcmp(op, "HASABOVE") == 0 ||
+        strcmp(op, "ANYABOVE") == 0 || strcmp(op, "ANYWHEREGT") == 0)
+      mode = 1;
+    else if (strcmp(op, "HASWHERELE") == 0 || strcmp(op, "HASWHERELTE") == 0 ||
+             strcmp(op, "HASATMOST") == 0 || strcmp(op, "ANYATMOST") == 0 ||
+             strcmp(op, "ANYWHERELE") == 0)
+      mode = 2;
+    else if (strcmp(op, "HASWHERELT") == 0 || strcmp(op, "HASBELOW") == 0 ||
+             strcmp(op, "ANYBELOW") == 0 || strcmp(op, "ANYWHERELT") == 0)
+      mode = 3;
+    else
+      mode = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    found[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "HASWHEREGE OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "HASWHEREGE [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "HASWHEREGE [Class] field value"); return -1;
+      }
+    }
+    if (kw(&L->cur, "GE") || kw(&L->cur, "GTE") || kw(&L->cur, "GT") ||
+        kw(&L->cur, "LE") || kw(&L->cur, "LTE") || kw(&L->cur, "LT") ||
+        kw(&L->cur, "MIN") || kw(&L->cur, "MAX"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      thresh = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      thresh = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        thresh = atol(sv->sval);
+      else
+        thresh = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else {
+      thresh = parse_expr(vm, L);
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi, hit = 0;
+      long v;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      v = ob->fnum[fi];
+      if (mode == 0) hit = (v >= thresh);
+      else if (mode == 1) hit = (v > thresh);
+      else if (mode == 2) hit = (v <= thresh);
+      else hit = (v < thresh);
+      if (hit) {
+        hit_any = 1;
+        snprintf(found, sizeof found, "%s", ob->name);
+        break;
+      }
+    }
+    var_set_str(vm, "LAST", found);
+    var_set_str(vm, "HASWHEREGE", found);
+    var_set_str(vm, "HASWHERELE", found);
+    var_set_str(vm, "HASATLEAST", found);
+    var_set_str(vm, "FIRST", found);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", found);
+    vm->last_n = hit_any ? 1 : 0;
+    var_set_num(vm, "LAST_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHEREGE_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHERELE_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHEREGT_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHERELT_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASATLEAST_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASATMOST_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASABOVE_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASBELOW_N", hit_any ? 1 : 0);
+    var_set_num(vm, "ANYATLEAST_N", hit_any ? 1 : 0);
+    var_set_num(vm, "ANYBELOW_N", hit_any ? 1 : 0);
+    var_set_num(vm, "HASWHEREGE_SKIP", n_skip);
+    var_set_num(vm, "HASWHEREGE_THRESH", thresh);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* DELETEWHERE|FREEWHERE|PURGEWHERE [Class] field value
    * — free every live object whose field equals value (optional class).
    * Soft always; LAST_N/DELETEWHERE_N = count freed. Optional bag of names freed.
