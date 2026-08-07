@@ -21,7 +21,7 @@
     },
     {
       "name": "sendbetween_ping",
-      "cmd": "SENDBETWEEN 1..5 bump N=1; t1 3→4; t0 out",
+      "cmd": "SENDBETWEEN 1..5 bump N=1; t1 3\u21924; t0 out",
       "ok": true,
       "note": "SENDBETWEEN"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2→1",
+      "cmd": "exact false friend; SETMATCH 2\u21921",
       "ok": true,
       "note": "journal"
     },
@@ -85,7 +85,7 @@
       "id": "W1",
       "severity": "high",
       "area": "oop|persist",
-      "title": "DELETEBETWEEN process-local — dumps rehydrate purged tickets",
+      "title": "DELETEBETWEEN process-local \u2014 dumps rehydrate purged tickets",
       "detail": "Must RM dump/tN for names in DELETEBETWEEN bag or next ARG run restores GC'd tickets.",
       "repro": "purge without RM; next list rehydrates"
     },
@@ -95,13 +95,13 @@
       "area": "oop|name",
       "title": "Freed-name dump hygiene needs fixed HASLINE t0|t1|t2 wall",
       "detail": "Cannot loop DELETEBETWEEN bag to RM dumps without EQS wall.",
-      "repro": "HASLINE fbag t0; RM d_t0 ×3"
+      "repro": "HASLINE fbag t0; RM d_t0 \u00d73"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|clampfall",
-      "title": "CLAMPFALL has no WHERE filter — clamps entire class",
+      "title": "CLAMPFALL has no WHERE filter \u2014 clamps entire class",
       "detail": "Cannot clamp only out-of-band tickets; always all live Ticket rows.",
       "repro": "CLAMPFALL Ticket tries 0 10 on full fleet"
     },
@@ -118,7 +118,7 @@
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two t1:try → one SETMATCH leaves 1.",
+      "detail": "Two t1:try \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -134,7 +134,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_RB_REQUIRE=abc → soft.",
+      "detail": "CUBALC_RB_REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -143,7 +143,7 @@
       "area": "oop|sendbetween",
       "title": "SENDBETWEEN miss method soft skip",
       "detail": "Typo methods soft under -s without N checks.",
-      "repro": "SENDBETWEEN … no_meth → N=0"
+      "repro": "SENDBETWEEN \u2026 no_meth \u2192 N=0"
     }
   ],
   "workarounds": [
@@ -161,12 +161,12 @@
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "CLAMPFALL 12→10 and -2→0 CHANGED=2; in-range noop CHANGED=0",
+    "CLAMPFALL 12\u219210 and -2\u21920 CHANGED=2; in-range noop CHANGED=0",
     "SENDBETWEEN 1..5 bumped only t1; t0@10 out of band",
     "DELETEBETWEEN 8..10 freed t0; admit REQUIRE green after purge",
     "empty DELETEBETWEEN/SENDBETWEEN soft N=0",
     "selftest 323/323 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T07:20:00Z"
+  "commit": "9369a2d1092c64e47bcd8900ccc9848a9cb7b4f0",
+  "ts": "2026-08-07T07:20:08Z"
 }
