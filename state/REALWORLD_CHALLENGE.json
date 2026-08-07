@@ -1,75 +1,75 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 123,
-  "program": "programs/realworld/queue_depth_band_board.cubalc",
-  "theme": "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN + HASWHEREGE queue depth band + slo_gate + bag journal",
-  "version": "1.15.346-usability",
+  "iter": 124,
+  "program": "programs/realworld/retry_budget_band_board.cubalc",
+  "theme": "CLAMPFALL + SENDBETWEEN + DELETEBETWEEN retry budget band clamp/ping/purge + admit + bag journal",
+  "version": "1.15.347-usability",
   "pass": true,
-  "prior_note": "iter 122 cache_ttl DELETEWHEREGE; this iter stresses WHEREBETWEEN/HASBETWEEN/HASWHERE (246bec1/08004bc)",
+  "prior_note": "iter 123 queue_depth WHEREBETWEEN/HAS; this iter stresses CLAMPFALL+SENDBETWEEN+DELETEBETWEEN (6e5faee/3fccde2/404cf7c)",
   "tests": [
     {
-      "name": "open_depths",
-      "cmd": "open q0=5 q1=50 q2=100",
+      "name": "open_tries",
+      "cmd": "open t0=12 t1=3 t2=-2",
       "ok": true,
-      "note": "NEW"
+      "note": "NEW neg ok"
     },
     {
-      "name": "sum_avg",
-      "cmd": "SUMF 155; AVGF 51",
+      "name": "clampfall",
+      "cmd": "CLAMPFALL 0..10 CHANGED=2; t0=10 t2=0",
       "ok": true,
-      "note": "SUMF"
+      "note": "CLAMPFALL"
     },
     {
-      "name": "wherebetween_band",
-      "cmd": "WHEREBETWEEN 5..50 \u2192 q0 q1",
+      "name": "sendbetween_ping",
+      "cmd": "SENDBETWEEN 1..5 bump N=1; t1 3→4; t0 out",
       "ok": true,
-      "note": "WHEREBETWEEN"
+      "note": "SENDBETWEEN"
     },
     {
-      "name": "count_band",
-      "cmd": "COUNTBETWEEN 5..50 \u2192 2",
+      "name": "count_has_sticky",
+      "cmd": "COUNTBETWEEN 8..10=1; HASBETWEEN first t0",
       "ok": true,
-      "note": "COUNTBETWEEN"
+      "note": "band tally"
     },
     {
-      "name": "has_band",
-      "cmd": "HASBETWEEN \u2192 1 first q0",
-      "ok": true,
-      "note": "HASBETWEEN"
-    },
-    {
-      "name": "has_hot_eq",
-      "cmd": "HASWHEREGE \u226580 \u21921 q2; HASWHERE 50 \u21921 q1",
-      "ok": true,
-      "note": "HASWHERE*"
-    },
-    {
-      "name": "inverted_band",
-      "cmd": "band 50 5 still N=2 (swap)",
-      "ok": true,
-      "note": "swap lo/hi"
-    },
-    {
-      "name": "slo_gate_hot_deny",
-      "cmd": "band ok but hot \u2192 deny; REQUIRE rc2",
-      "ok": true,
-      "note": "deny"
-    },
-    {
-      "name": "slo_gate_admit_require",
-      "cmd": "cool q2; slo_gate REQUIRE admit rc0",
+      "name": "admit_deny_require",
+      "cmd": "sticky non-empty deny; REQUIRE rc2",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "count_false_friend",
-      "cmd": "COUNTLINE q0 \u21920 exact",
+      "name": "deletebetween_purge",
+      "cmd": "DELETEBETWEEN 8..10 freed t0; dump RM",
+      "ok": true,
+      "note": "DELETEBETWEEN"
+    },
+    {
+      "name": "admit_after_purge",
+      "cmd": "admit REQUIRE rc0",
+      "ok": true,
+      "note": "admit ok"
+    },
+    {
+      "name": "clamp_noop",
+      "cmd": "CLAMPFALL CHANGED=0",
+      "ok": true,
+      "note": "stable"
+    },
+    {
+      "name": "empty_band_ops",
+      "cmd": "purge/ping empty N=0 soft",
+      "ok": true,
+      "note": "empty"
+    },
+    {
+      "name": "count_setmatch",
+      "cmd": "exact false friend; SETMATCH 2→1",
       "ok": true,
       "note": "journal"
     },
     {
       "name": "probe_soft",
-      "cmd": "TRYSEND soft; empty HASBETWEEN 0",
+      "cmd": "TRYSEND soft; empty BETWEEN 0",
       "ok": true,
       "note": "soft"
     },
@@ -77,49 +77,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "322/322 pass"
+      "note": "323/323 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|if",
-      "title": "IF on stored LET counts flaky after COUNT/HAS \u2014 use LAST_N immediately",
-      "detail": "IF band_n > 0 / IF admit == 1 failed to take branch after COUNTBETWEEN even when SYS STR band_n printed 3. Nested IF and flat IF on LET vars both failed; IF LAST_N > 0 right after COUNTBETWEEN worked.",
-      "repro": "COUNTBETWEEN; LET band_n=LAST_N; IF band_n > 0 THEN LET admit=1 \u2014 admit stays 0 under -s"
+      "area": "oop|persist",
+      "title": "DELETEBETWEEN process-local — dumps rehydrate purged tickets",
+      "detail": "Must RM dump/tN for names in DELETEBETWEEN bag or next ARG run restores GC'd tickets.",
+      "repro": "purge without RM; next list rehydrates"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "host|eqs|require",
-      "title": "Unknown-action EQS wall + REQUIRE EXIT can fire after successful action",
-      "detail": "After slo_gate set val=admit, footer EQS ACTION/val wall still left is_known=0 and EXIT 2 unknown action when REQUIRE set. Hard REQUIRE exits must stay inside action bodies; unknown wall should be soft-only.",
-      "repro": "slo_gate admit with CUBALC_QD_REQUIRE=1 \u2192 EXIT unknown action"
+      "severity": "med",
+      "area": "oop|name",
+      "title": "Freed-name dump hygiene needs fixed HASLINE t0|t1|t2 wall",
+      "detail": "Cannot loop DELETEBETWEEN bag to RM dumps without EQS wall.",
+      "repro": "HASLINE fbag t0; RM d_t0 ×3"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|haswherege",
-      "title": "HASWHEREGE_N can disagree with COUNTWHEREGE_N in same run",
-      "detail": "Gate meta showed COUNTWHEREGE hot_n=1 while HASWHEREGE_N=0 for depth\u226580 with a live q2@100 after prior HASBETWEEN.",
-      "repro": "HASBETWEEN; HASWHEREGE; COUNTWHEREGE same thr \u2014 N mismatch"
+      "area": "oop|clampfall",
+      "title": "CLAMPFALL has no WHERE filter — clamps entire class",
+      "detail": "Cannot clamp only out-of-band tickets; always all live Ticket rows.",
+      "repro": "CLAMPFALL Ticket tries 0 10 on full fleet"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|has",
-      "title": "HAS* returns first match only \u2014 not multi-name bag",
-      "detail": "HASBETWEEN first q0 only; full set needs WHEREBETWEEN.",
-      "repro": "HASBETWEEN 5 50 \u2192 LAST q0 only"
+      "area": "host|if",
+      "title": "IF LAST_N immediately after COUNT required (stored LET IF flaky)",
+      "detail": "Carried from queue_depth_band; admit uses IF LAST_N == 0 after COUNTBETWEEN.",
+      "repro": "see queue_depth W1"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|wherebetween",
-      "title": "No SUMF/AVGF on WHEREBETWEEN subset",
-      "detail": "Band bag is names; cannot avg depth of band without EACH+GETF.",
-      "repro": "WHEREBETWEEN; no SUMF band"
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact only",
+      "detail": "Two t1:try → one SETMATCH leaves 1.",
+      "repro": "count drops by 1"
     },
     {
       "id": "W6",
@@ -127,39 +127,46 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c VAL.txt"
+      "repro": "od -c dump"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_QD_REQUIRE=abc \u2192 soft.",
+      "detail": "CUBALC_RB_REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
+    },
+    {
+      "id": "W8",
+      "severity": "low",
+      "area": "oop|sendbetween",
+      "title": "SENDBETWEEN miss method soft skip",
+      "detail": "Typo methods soft under -s without N checks.",
+      "repro": "SENDBETWEEN … no_meth → N=0"
     }
   ],
   "workarounds": [
-    "IF LAST_N immediately after COUNT* \u2014 do not trust stored LET for IF",
-    "REQUIRE EXIT only inside action deny paths; unknown wall soft-only",
-    "Prefer COUNTWHEREGE for tallies; HAS* for first-name breadcrumb",
-    "WHEREBETWEEN for full band bag; HASBETWEEN for 0|1 only",
-    "DUMPOBJ rehydrate; COUNTLINE exact"
+    "RM dumps listed in DELETEBETWEEN bag after purge",
+    "Literal SYS PUSH jbag after DELETE*",
+    "IF LAST_N right after COUNTBETWEEN for admit",
+    "REQUIRE EXIT only inside action bodies; soft unknown wall",
+    "CLAMPFALL then SENDBETWEEN for budget hygiene"
   ],
   "language_gaps": [
-    "Reliable IF on LET numeric vars after OOP query ops",
-    "Stable EQS ACTION known-wall after HAS/COUNT under REQUIRE",
-    "HASWHEREGE/COUNTWHEREGE consistency after sibling probes",
-    "SUMF over WHEREBETWEEN result set",
-    "WRITE trailing NL; strict NUM REQUIRE"
+    "DELETEBETWEEN cascade to plate files",
+    "CLAMPFALL/SENDBETWEEN WHERE predicate filter",
+    "Dynamic path from free-name bag",
+    "Reliable IF on stored LET after OOP COUNT",
+    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN band select worked; lo/hi swap ok",
-    "HASWHERE/HASWHEREGE/HASBELOW soft probes worked for single-name",
-    "nested/stored IF on band_n/hot_n never set admit \u2014 LAST_N IF fixed",
-    "REQUIRE+unknown wall exited after successful admit \u2014 soft unknown wall fixed",
-    "HASWHEREGE_N vs COUNTWHEREGE_N mismatch documented",
-    "selftest 322/322 green; no language fix this iter"
+    "CLAMPFALL 12→10 and -2→0 CHANGED=2; in-range noop CHANGED=0",
+    "SENDBETWEEN 1..5 bumped only t1; t0@10 out of band",
+    "DELETEBETWEEN 8..10 freed t0; admit REQUIRE green after purge",
+    "empty DELETEBETWEEN/SENDBETWEEN soft N=0",
+    "selftest 323/323 green; no language fix this iter"
   ],
-  "commit": "e6d79b16cef7894d69da39aafadf6a6c7ea7a38c",
-  "ts": "2026-08-07T07:07:30Z"
+  "commit": "",
+  "ts": "2026-08-07T07:20:00Z"
 }

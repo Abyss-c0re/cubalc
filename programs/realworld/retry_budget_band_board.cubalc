@@ -1,0 +1,1237 @@
+# retry_budget_band_board.cubalc — CLAMPFALL + SENDBETWEEN + DELETEBETWEEN
+#
+# Real use: agents track a small ticket fleet (t0..t2) with try counts.
+# Clamp tries into budget bounds, bump only the mid-retry band, purge a
+# stuck-try band via DELETEBETWEEN — without dual GE/LE free or EACH glue.
+#
+# Surfaces forced (1.15.345–347):
+#   CLAMPFALL / CLAMPF / CLIPFALL     — bulk bound tries to [lo,hi]
+#   SENDBETWEEN / SENDBAND            — method on closed-range matches
+#   DELETEBETWEEN / FREEBAND          — band GC + plate dump hygiene
+#   COUNTBETWEEN / HASBETWEEN         — band tallies / soft probe
+#   SUMF · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from queue_depth_band (read-only band+HAS), cache_ttl (GE free),
+# job_gc (equality DELETEWHERE): this board is *clamp + band send + band free*.
+#
+# Slots: t0 t1 t2
+#
+# Plate under STATE:
+#   dump/t0 dump/t1 dump/t2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt FREED.txt BAND.txt BUDGET_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_RB_ACTION):
+#   list       — LISTOBJS Ticket
+#   open       — NEW Ticket ARG1=tN [tries=ARG2]
+#   settries   — SETF tries ARG2
+#   clamp      — CLAMPFALL tries LO HI (ENV or ARG1 ARG2; default 0..10)
+#   ping       — SENDBETWEEN tries LO HI bump
+#   purge      — DELETEBETWEEN tries LO HI + RM dumps for freed names
+#   count_band — COUNTBETWEEN tries LO HI
+#   has_band   — HASBETWEEN tries LO HI
+#   sum        — SUMF tries
+#   admit      — COUNTBETWEEN sticky LO..HI == 0 (no tickets in sticky band)
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rb_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=t0 CUBALC_ARG2=12
+#   CUBALC_ARG0=clamp CUBALC_ARG1=0 CUBALC_ARG2=10
+#   CUBALC_ARG0=ping CUBALC_ARG1=1 CUBALC_ARG2=5
+#   CUBALC_ARG0=purge CUBALC_ARG1=8 CUBALC_ARG2=10
+#   CUBALC_ARG0=admit CUBALC_RB_LO=8 CUBALC_RB_HI=10 CUBALC_RB_REQUIRE=1
+#
+# Env: CUBALC_RB_REQUIRE NAME LO HI ACTION
+#
+# Edges:
+#   CLAMPFALL_CHANGED counts only clipped rows
+#   DELETEBETWEEN process-local — RM dumps for FREED bag names
+#   SYS PUSH jbag literal after DELETE* under -s (var PUSH flaked before)
+#   IF LAST_N immediately after COUNT — stored LET IF flaked (queue_depth W1)
+#   unknown-action wall soft only; REQUIRE EXIT inside action bodies
+#   WRITE NL; SETMATCH first-only; NUM REQUIRE softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Ticket
+  FIELD id ""
+  FIELD tries 0
+  METHOD init i tr
+    SETF THIS id i
+    SETF THIS tries tr
+  END
+  METHOD bump
+    GETF THIS tries
+    LET t = LAST_N + 1
+    SETF THIS tries t
+    RET t
+  END
+END
+
+NOTE "retry_budget_band_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT LO = 0
+DEFAULT HI = 10
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_RB_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_RB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_RB_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_RB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_RB_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_RB_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "FREED.txt"
+LET freed_path = LAST
+SYS JOIN state_dir "BAND.txt"
+LET band_path = LAST
+SYS JOIN state_dir "BUDGET_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "t0"
+LET d_t0 = LAST
+SYS JOIN dump_dir "t1"
+LET d_t1 = LAST
+SYS JOIN dump_dir "t2"
+LET d_t2 = LAST
+
+LET slot = -1
+SYS EQS NAME "t0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "t1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "t2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "t0"
+END
+IF slot == 1 THEN
+  LET sn = "t1"
+END
+IF slot == 2 THEN
+  LET sn = "t2"
+END
+
+# rehydrate t0
+SYS READ OR d_t0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DELETEOBJ t0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "tries"
+  LET rtr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t0 rid rtr
+  TRYSETF t0 tries rtr
+  CLEAR_ERR
+END
+# rehydrate t1
+SYS READ OR d_t1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DELETEOBJ t1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "tries"
+  LET rtr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t1 rid rtr
+  TRYSETF t1 tries rtr
+  CLEAR_ERR
+END
+# rehydrate t2
+SYS READ OR d_t2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DELETEOBJ t2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "tries"
+  LET rtr = LAST_N
+  CLEAR_ERR
+  NEW Ticket t2 rid rtr
+  TRYSETF t2 tries rtr
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET lo_n = 0
+LET hi_n = 0
+LET freed_n = 0
+LET chg_n = 0
+LET board_rep = "retry_budget_band_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Ticket
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET tr = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET tr = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        DELETEOBJ t0
+        CLEAR_ERR
+      END
+      NEW Ticket t0 sn tr
+      DUMPOBJ t0
+      SYS WRITE d_t0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        DELETEOBJ t1
+        CLEAR_ERR
+      END
+      NEW Ticket t1 sn tr
+      DUMPOBJ t1
+      SYS WRITE d_t1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        DELETEOBJ t2
+        CLEAR_ERR
+      END
+      NEW Ticket t2 sn tr
+      DUMPOBJ t2
+      SYS WRITE d_t2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Ticket
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR tr
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- settries ---
+SYS EQS ACTION "settries"
+IF LAST_N == 1 THEN
+  NOTE "action settries"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "settries bad slot"
+    FAIL "settries bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "settries bad slot"
+    END
+  ELSE
+    LET tr = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET tr = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ t0
+      IF LAST_N == 1 THEN
+        SETF t0 tries tr
+        LET ok_set = 1
+        DUMPOBJ t0
+        SYS WRITE d_t0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ t1
+      IF LAST_N == 1 THEN
+        SETF t1 tries tr
+        LET ok_set = 1
+        DUMPOBJ t1
+        SYS WRITE d_t1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ t2
+      IF LAST_N == 1 THEN
+        SETF t2 tries tr
+        LET ok_set = 1
+        DUMPOBJ t2
+        SYS WRITE d_t2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "settries no obj"
+      FAIL "settries no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "settries no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "settries ok"
+      SYS STR tr
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "settries"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clamp CLAMPFALL ---
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  NOTE "action clamp"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  CLAMPFALL Ticket tries lo_n hi_n
+  LET ret_n = LAST_N
+  LET chg_n = CLAMPFALL_CHANGED
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DUMPOBJ t0
+    SYS WRITE d_t0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DUMPOBJ t1
+    SYS WRITE d_t1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DUMPOBJ t2
+    SYS WRITE d_t2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:clamp"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clamp ok"
+  SYS STR chg_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "clamp"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON chg_n
+  CLEAR_ERR
+END
+
+# --- ping SENDBETWEEN bump ---
+SYS EQS ACTION "ping"
+IF LAST_N == 1 THEN
+  NOTE "action ping"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  SENDBETWEEN Ticket tries lo_n hi_n bump
+  LET ret_n = LAST_N
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DUMPOBJ t0
+    SYS WRITE d_t0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DUMPOBJ t1
+    SYS WRITE d_t1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DUMPOBJ t2
+    SYS WRITE d_t2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:ping"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "ping ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "ping"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- purge DELETEBETWEEN + RM dumps ---
+SYS EQS ACTION "purge"
+IF LAST_N == 1 THEN
+  NOTE "action purge"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  DELETEBETWEEN Ticket tries lo_n hi_n
+  LET freed_n = LAST_N
+  LET fbag = DELETEBETWEEN
+  SYS WRITE freed_path fbag
+  CLEAR_ERR
+  SYS HASLINE fbag "t0"
+  IF LAST_N == 1 THEN
+    SYS RM d_t0
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "t1"
+  IF LAST_N == 1 THEN
+    SYS RM d_t1
+    CLEAR_ERR
+  END
+  SYS HASLINE fbag "t2"
+  IF LAST_N == 1 THEN
+    SYS RM d_t2
+    CLEAR_ERR
+  END
+  LISTOBJS Ticket
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  # literal PUSH after DELETE* under -s (var form flaked historically)
+  SYS PUSH jbag "fleet:purge"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "purge ok"
+  SYS STR freed_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "purge"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON freed_n
+  CLEAR_ERR
+END
+
+# --- count_band ---
+SYS EQS ACTION "count_band"
+IF LAST_N == 1 THEN
+  NOTE "action count_band"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  COUNTBETWEEN Ticket tries lo_n hi_n
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_band ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_band"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- has_band ---
+SYS EQS ACTION "has_band"
+IF LAST_N == 1 THEN
+  NOTE "action has_band"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  HASBETWEEN Ticket tries lo_n hi_n
+  LET ret_n = LAST_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_band ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_band"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SUMF Ticket tries
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "sum ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "sum"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: no tickets in sticky band LO..HI ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  COUNTBETWEEN Ticket tries lo_n hi_n
+  LET ret_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  # IF LAST_N immediately — stored LET IF flaked on prior board
+  IF LAST_N == 0 THEN
+    LET val = "admit"
+    LET miss = 0
+    LET hit = 1
+    LET note_msg = "admit ok"
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny sticky try band non-empty"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny sticky try band non-empty"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    TRYSEND t0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF t0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  COUNTBETWEEN Ticket tries 999 1000
+  LET ret_n = LAST_N
+  CLEAR_ERR
+  DELETEBETWEEN Ticket tries 999 1000
+  LET freed_n = LAST_N
+  CLEAR_ERR
+  SENDBETWEEN Ticket tries 999 1000 bump
+  LET chg_n = LAST_N
+  CLEAR_ERR
+  CLAMPFALL Ticket tries 0 100
+  LET chg_n = CLAMPFALL_CHANGED
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR freed_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ t0
+  IF LAST_N == 1 THEN
+    DUMPOBJ t0
+    SYS WRITE d_t0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t1
+  IF LAST_N == 1 THEN
+    DUMPOBJ t1
+    SYS WRITE d_t1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ t2
+  IF LAST_N == 1 THEN
+    DUMPOBJ t2
+    SYS WRITE d_t2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Ticket
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Ticket
+  CLEAR_ERR
+  SYS RM d_t0
+  CLEAR_ERR
+  SYS RM d_t1
+  CLEAR_ERR
+  SYS RM d_t2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM freed_path
+  CLEAR_ERR
+  SYS RM band_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown — soft only (REQUIRE hard exits stay in action bodies)
+SYS EQS ACTION "list"
+LET is_known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "settries"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "ping"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "purge"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_band"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_band"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "retry_budget_band_board: done"
+# REQUIRE hard exit only for non-unknown action misses (note already EXIT'd inside admit/open)
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
