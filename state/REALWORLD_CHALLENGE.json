@@ -1,137 +1,134 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 112,
-  "program": "programs/realworld/ticket_object_board.cubalc",
-  "theme": "OOP Ticket pool LISTOBJS/HASOBJ/DELETEOBJ + plate rehydrate",
-  "version": "1.15.320-usability",
+  "iter": 113,
+  "program": "programs/realworld/svc_config_object_board.cubalc",
+  "theme": "DUMPOBJ+GETF OR service configs + IF str== prod gate",
+  "version": "1.15.322-usability",
   "pass": true,
   "tests": [
     {
-      "name": "open_t1",
-      "cmd": "NEW t1 prio3 plate pool/t1.txt",
+      "name": "open_dump",
+      "cmd": "open api prod r=3 DUMPOBJ plate",
       "ok": true,
       "note": "open"
     },
     {
-      "name": "rehydrate_status",
-      "cmd": "multi-run status\u2192open after plate restore",
+      "name": "rehydrate_get",
+      "cmd": "multi-run get name\u2192api",
       "ok": true,
-      "note": "persist"
+      "note": "restore"
     },
     {
-      "name": "prio_bump",
-      "cmd": "prio 3; bump\u21924",
-      "ok": true,
-      "note": "method"
-    },
-    {
-      "name": "gate_open_closed",
-      "cmd": "admit open; close deny REQUIRE2",
-      "ok": true,
-      "note": "gate"
-    },
-    {
-      "name": "list_methods_fields",
-      "cmd": "LISTOBJS/METHODS/FIELDS/CLASSES",
-      "ok": true,
-      "note": "introspect"
-    },
-    {
-      "name": "has_miss",
-      "cmd": "t5 soft; REQUIRE\u21922",
+      "name": "getf_or",
+      "cmd": "GETF ghost OR none \u2192 none GETF_OR=1",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "delete_clear",
-      "cmd": "delete t1; clear pool",
+      "name": "try_require",
+      "cmd": "TRYGETF miss soft; REQUIRE\u21922",
       "ok": true,
-      "note": "lifecycle"
+      "note": "try"
+    },
+    {
+      "name": "lookup_reps",
+      "cmd": "LOOKUP replicas \u2192 3",
+      "ok": true,
+      "note": "lookup"
+    },
+    {
+      "name": "json_schema",
+      "cmd": "DUMPOBJ JSON cubalc.obj.v1",
+      "ok": true,
+      "note": "json"
+    },
+    {
+      "name": "gate_prod",
+      "cmd": "not ready deny; arm admit; staging REQUIRE2",
+      "ok": true,
+      "note": "gate"
+    },
+    {
+      "name": "list_delete",
+      "cmd": "open web list; delete web",
+      "ok": true,
+      "note": "pool"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "295/295 pass"
+      "note": "298/298 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|new",
-      "title": "NEW object name is token ident, not string value of variable",
-      "detail": "LET n='dyn'; NEW T n \u2192 object named 'n' not 'dyn'. Dynamic registries need fixed slot pools.",
-      "repro": "LET n='dyn'; NEW T n; LISTOBJS has n not dyn"
+      "area": "oop|name",
+      "title": "HASOBJ/GETF/SEND/DUMPOBJ ignore string *vars* as object names",
+      "detail": "NEW S n works (n='api' creates api) but HASOBJ n \u2192 0; HASOBJ api \u2192 1. Agents need EQS dispatch to literals. String *literals* work for HASOBJ/DUMPOBJ.",
+      "repro": "LET n='api'; NEW S n 1; HASOBJ n \u2192 0; HASOBJ api \u2192 1"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|setf",
-      "title": "SETF string field from variable stores strlen not text",
-      "detail": "SETF obj status st where st='open' \u2192 field becomes 4. Only string *literals* work. Blocks generic rehydrate.",
-      "repro": "LET s='open'; SETF t status s; GETF \u2192 4"
+      "area": "oop|getf_or",
+      "title": "GETF OR string *variable* default still strlen-coerces",
+      "detail": "GETF o f OR DEF_DEFAULT with DEF_DEFAULT='none' \u2192 LAST=4. Literal OR \"none\" works. Partial fix only for formals/SETF.",
+      "repro": "LET d='none'; GETF o ghost OR d \u2192 4"
     },
     {
       "id": "W3",
-      "severity": "high",
-      "area": "oop|init",
-      "title": "NEW/METHOD string ctor args arrive as string length",
-      "detail": "NEW Ticket t 'ticket-1' 3; GETF id \u2192 8 (strlen). Must SETF literals after NEW.",
-      "repro": "NEW T t 'hello' ; GETF id \u2192 5"
+      "severity": "med",
+      "area": "oop|persist",
+      "title": "Objects still process-local; dump rehydrate is agent glue",
+      "detail": "No built-in object store; DUMPOBJ\u2192WRITE\u2192READ\u2192LOOKUP\u2192NEW each process.",
+      "repro": "open run1; without dump plate has run2 miss"
     },
     {
       "id": "W4",
-      "severity": "high",
-      "area": "oop|persist",
-      "title": "Objects are process-local \u2014 no serialize; multi-run needs plate dual",
-      "detail": "ARG-dispatch agents lose all NEW state each process. Board rehydrates from pool/*.txt.",
-      "repro": "open in run1; has in run2 without plate \u2192 miss"
+      "severity": "med",
+      "area": "oop|slots",
+      "title": "Fixed slot roster forced by name-var gap",
+      "detail": "Cannot open arbitrary service names from ARG without compile-time EQS branches.",
+      "repro": "open cache \u2192 bad slot"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "oop|delete",
-      "title": "DELETEOBJ unknown soft OK=0 sticky last_err",
-      "detail": "Need CLEAR_ERR after soft destroy miss for -s.",
-      "repro": "DELETEOBJ missing; last_err set"
+      "severity": "low",
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "VAL/dump cat -A glue.",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "VAL/pool lines may glue in cat -A on short files.",
-      "repro": "od -c VAL.txt"
-    },
-    {
-      "id": "W7",
-      "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_TO_REQUIRE=abc.",
-      "repro": "REQUIRE=abc has miss \u2192 rc0"
+      "detail": "CUBALC_SC_REQUIRE=abc.",
+      "repro": "REQUIRE=abc try miss \u2192 rc0"
     }
   ],
   "workarounds": [
-    "Fixed slot pool t0..tN with EQS dispatch",
-    "SETF string fields only with literals; branch EQS for rehydrate",
-    "Numeric-only METHOD init args; SETF strings after NEW",
-    "Plate snapshot pool/*.txt per process for multi-run",
-    "CLEAR_ERR after DELETEOBJ soft miss"
+    "EQS dispatch to literal object idents after NEW from string",
+    "GETF OR only with string literals for defaults",
+    "DUMPOBJ plate + LOOKUP rehydrate each process",
+    "Fixed service slot names (api/web/db)",
+    "IF str == for env gates (post assert_str_eq)"
   ],
   "language_gaps": [
-    "Dynamic NEW from string name",
-    "SETF/GETF true string-var path (not strlen)",
-    "METHOD string formal values not lengths",
-    "Object serialize/restore or plate-backed store",
+    "HASOBJ/GETF/SEND/DUMPOBJ resolve string-var object names",
+    "GETF OR string-var defaults (not strlen)",
+    "Native object persistence / dump restore",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "open/status/prio/bump/gate/close/list/methods/fields/delete green with plate rehydrate",
-    "SETF strlen + NEW name token are core OOP agent blockers",
-    "selftest green; no language fix this iter (gaps documented)"
+    "open/dump/get/try/lookup/json/arm/gate/setenv green with rehydrate",
+    "string formals+IF str== work; name-var refs remain blocker",
+    "selftest 298/298; no language fix this iter"
   ],
-  "commit": "de3976c6d972b216b6de7484fcc6043a1d721b2d",
-  "ts": "2026-08-07T02:50:47Z"
+  "commit": "",
+  "ts": "2026-08-07T03:13:17Z"
 }

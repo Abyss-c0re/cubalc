@@ -1,0 +1,1101 @@
+# svc_config_object_board.cubalc — DUMPOBJ + GETF OR + string formals + IF str==
+#
+# Real use: service config objects (fixed slots api/web/db) with DUMPOBJ plate
+# snapshots, soft GETF OR defaults, string ctor formals, IF env == "prod" gate:
+#   DUMPOBJ / INSPECT / DUMPOBJ JSON — field:value bag / JSON
+#   LOOKUP / LOOKUPN on dump bags
+#   GETF OR / TRYGETF — soft field defaults
+#   NEW + METHOD string formals (sid, env)
+#   IF str == for prod gate
+# Distinct from ticket_object_board (pool rehydrate fight without DUMPOBJ):
+# this board is *dump-centric handoff + soft field reads*.
+#
+# WHY fixed slots: HASOBJ/GETF/SEND/DUMPOBJ do not resolve *string vars* as
+# object names (only idents or string *literals*). NEW does accept string-var
+# names, but follow-up ops need literals — EQS dispatch on api|web|db.
+#
+# Plate under STATE:
+#   dump/api dump/web dump/db — DUMPOBJ bags
+#   OBJS.txt VAL.txt META.txt SVC_REPORT.txt
+#
+# Actions: list open dump json get try setenv arm gate lookup delete clear
+# Slot ARG1: api|web|db. ARG2: env (open/setenv) or field (get/try/lookup).
+#
+# Env: CUBALC_SC_REQUIRE=1 CUBALC_SC_NAME=api CUBALC_SC_ENV=prod
+#      CUBALC_SC_REPLICAS=3 CUBALC_SC_DEFAULT=none
+#
+# Edges:
+#   Object-name string *vars* not accepted by HASOBJ/GETF/SEND (high)
+#   DUMPOBJ miss soft; TRYGETF miss soft; GETF OR GETF_OR flag
+#   Objects process-local; dump plates rehydrate
+#   WRITE may omit NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Svc
+  FIELD name ""
+  FIELD env "dev"
+  FIELD replicas 1
+  FIELD ready 0
+  METHOD init n e r
+    SETF THIS name n
+    SETF THIS env e
+    SETF THIS replicas r
+    SETF THIS ready 0
+  END
+  METHOD arm
+    SETF THIS ready 1
+    RET 1
+  END
+  METHOD set_env e
+    SETF THIS env e
+    RET 1
+  END
+END
+
+NOTE "svc_config_object_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_ENV = "dev"
+DEFAULT DEF_REPLICAS = 1
+DEFAULT DEF_DEFAULT = "none"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_SC_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_SC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_SC_ENV" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_SC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_SC_REPLICAS" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET DEF_REPLICAS = LAST_N
+  END
+END
+SYS ENV "CUBALC_SC_DEFAULT" OR ""
+IF LAST_N > 0 THEN
+  LET DEF_DEFAULT = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "SVC_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "api"
+LET d_api = LAST
+SYS JOIN dump_dir "web"
+LET d_web = LAST
+SYS JOIN dump_dir "db"
+LET d_db = LAST
+
+# slot flags
+LET is_api = 0
+LET is_web = 0
+LET is_db = 0
+SYS EQS NAME "api"
+IF LAST_N == 1 THEN
+  LET is_api = 1
+END
+SYS EQS NAME "web"
+IF LAST_N == 1 THEN
+  LET is_web = 1
+END
+SYS EQS NAME "db"
+IF LAST_N == 1 THEN
+  LET is_db = 1
+END
+LET slot_ok = is_api + is_web + is_db
+
+# --- rehydrate from dump plates ---
+SYS READ OR d_api OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "name:"
+IF LAST_N == 1 THEN
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    DELETEOBJ api
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "name"
+  LET rn = LAST
+  SYS LOOKUP snap "env"
+  LET re = LAST
+  SYS LOOKUPN snap "replicas"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  CLEAR_ERR
+  NEW Svc api rn re rr
+  IF rdy == 1 THEN
+    SEND api arm
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_web OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "name:"
+IF LAST_N == 1 THEN
+  HASOBJ web
+  IF LAST_N == 1 THEN
+    DELETEOBJ web
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "name"
+  LET rn = LAST
+  SYS LOOKUP snap "env"
+  LET re = LAST
+  SYS LOOKUPN snap "replicas"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  CLEAR_ERR
+  NEW Svc web rn re rr
+  IF rdy == 1 THEN
+    SEND web arm
+  END
+  CLEAR_ERR
+END
+SYS READ OR d_db OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "name:"
+IF LAST_N == 1 THEN
+  HASOBJ db
+  IF LAST_N == 1 THEN
+    DELETEOBJ db
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "name"
+  LET rn = LAST
+  SYS LOOKUP snap "env"
+  LET re = LAST
+  SYS LOOKUPN snap "replicas"
+  LET rr = LAST_N
+  SYS LOOKUPN snap "ready"
+  LET rdy = LAST_N
+  CLEAR_ERR
+  NEW Svc db rn re rr
+  IF rdy == 1 THEN
+    SEND db arm
+  END
+  CLEAR_ERR
+END
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET nobjs = 0
+LET has_n = 0
+LET ready_n = 0
+LET getf_or = 0
+LET env_in = DEF_ENV
+SYS BLANK A2
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "open"
+  IF LAST_N == 1 THEN
+    LET env_in = A2
+  END
+  SYS EQS ACTION "setenv"
+  IF LAST_N == 1 THEN
+    LET env_in = A2
+  END
+END
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Svc
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    SYS BLANK env_in
+    IF LAST_N == 1 THEN
+      LET env_in = DEF_ENV
+    END
+    IF is_api == 1 THEN
+      HASOBJ api
+      IF LAST_N == 1 THEN
+        DELETEOBJ api
+        CLEAR_ERR
+      END
+      NEW Svc api NAME env_in DEF_REPLICAS
+      DUMPOBJ api
+      LET snap = LAST
+      SYS WRITE d_api snap
+      CLEAR_ERR
+      GETF api name
+      LET val = LAST
+    END
+    IF is_web == 1 THEN
+      HASOBJ web
+      IF LAST_N == 1 THEN
+        DELETEOBJ web
+        CLEAR_ERR
+      END
+      NEW Svc web NAME env_in DEF_REPLICAS
+      DUMPOBJ web
+      LET snap = LAST
+      SYS WRITE d_web snap
+      CLEAR_ERR
+      GETF web name
+      LET val = LAST
+    END
+    IF is_db == 1 THEN
+      HASOBJ db
+      IF LAST_N == 1 THEN
+        DELETEOBJ db
+        CLEAR_ERR
+      END
+      NEW Svc db NAME env_in DEF_REPLICAS
+      DUMPOBJ db
+      LET snap = LAST
+      SYS WRITE d_db snap
+      CLEAR_ERR
+      GETF db name
+      LET val = LAST
+    END
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET meta = "open"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta env_in
+    LET meta = LAST
+    SYS STR DEF_REPLICAS
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LISTOBJS Svc
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET okd = 0
+    IF is_api == 1 THEN
+      DUMPOBJ api
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_api snap
+        CLEAR_ERR
+      END
+    END
+    IF is_web == 1 THEN
+      DUMPOBJ web
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_web snap
+        CLEAR_ERR
+      END
+    END
+    IF is_db == 1 THEN
+      DUMPOBJ db
+      LET okd = OK
+      LET snap = LAST
+      IF okd == 1 THEN
+        SYS WRITE d_db snap
+        CLEAR_ERR
+      END
+    END
+    IF okd == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET val = snap
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET meta = "dump"
+      SYS STR DUMPOBJ_N
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON DUMPOBJ_N
+  CLEAR_ERR
+END
+
+# --- json ---
+SYS EQS ACTION "json"
+IF LAST_N == 1 THEN
+  NOTE "action json"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "json bad slot"
+    FAIL "json bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "json bad slot"
+    END
+  ELSE
+    LET okd = 0
+    LET js = ""
+    IF is_api == 1 THEN
+      DUMPOBJ JSON api
+      LET okd = OK
+      LET js = LAST
+    END
+    IF is_web == 1 THEN
+      DUMPOBJ JSON web
+      LET okd = OK
+      LET js = LAST
+    END
+    IF is_db == 1 THEN
+      DUMPOBJ JSON db
+      LET okd = OK
+      LET js = LAST
+    END
+    IF okd == 0 THEN
+      LET miss = 1
+      LET note_msg = "json miss"
+      FAIL "json miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "json miss"
+      END
+    ELSE
+      SYS HAS js "cubalc.obj.v1"
+      LET has_n = LAST_N
+      LET val = js
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "json ok"
+      LET meta = "json"
+      SYS STR has_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- get field OR default ---
+SYS EQS ACTION "get"
+IF LAST_N == 1 THEN
+  NOTE "action get"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "get bad slot"
+    FAIL "get bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "get bad slot"
+    END
+  ELSE
+    LET field = "name"
+    SYS ARG 2 OR ""
+    IF LAST_N > 0 THEN
+      LET field = LAST
+    END
+    # OR string default must be literal — var default becomes strlen (lang gap)
+    IF is_api == 1 THEN
+      GETF api field OR "none"
+    END
+    IF is_web == 1 THEN
+      GETF web field OR "none"
+    END
+    IF is_db == 1 THEN
+      GETF db field OR "none"
+    END
+    LET getf_or = GETF_OR
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    IF getf_or == 1 THEN
+      LET note_msg = "get default"
+    ELSE
+      LET note_msg = "get hit"
+    END
+    LET meta = "get"
+    SYS PUSH meta field
+    LET meta = LAST
+    SYS STR getf_or
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON getf_or
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- try ---
+SYS EQS ACTION "try"
+IF LAST_N == 1 THEN
+  NOTE "action try"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "try bad slot"
+    FAIL "try bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "try bad slot"
+    END
+  ELSE
+    LET field = "name"
+    SYS ARG 2 OR ""
+    IF LAST_N > 0 THEN
+      LET field = LAST
+    END
+    LET tok = 0
+    IF is_api == 1 THEN
+      TRYGETF api field
+      LET tok = OK
+      LET val = LAST
+    END
+    IF is_web == 1 THEN
+      TRYGETF web field
+      LET tok = OK
+      LET val = LAST
+    END
+    IF is_db == 1 THEN
+      TRYGETF db field
+      LET tok = OK
+      LET val = LAST
+    END
+    IF tok == 0 THEN
+      LET miss = 1
+      LET note_msg = "try miss"
+      LET val_ch = 1
+      FAIL "try miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "try miss"
+      END
+    ELSE
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "try hit"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setenv ---
+SYS EQS ACTION "setenv"
+IF LAST_N == 1 THEN
+  NOTE "action setenv"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "setenv bad slot"
+    FAIL "setenv bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "setenv bad slot"
+    END
+  ELSE
+    SYS BLANK env_in
+    IF LAST_N == 1 THEN
+      LET env_in = DEF_ENV
+    END
+    LET alive = 0
+    IF is_api == 1 THEN
+      HASOBJ api
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND api set_env env_in
+        GETF api env
+        LET val = LAST
+        DUMPOBJ api
+        LET snap = LAST
+        SYS WRITE d_api snap
+        CLEAR_ERR
+      END
+    END
+    IF is_web == 1 THEN
+      HASOBJ web
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND web set_env env_in
+        GETF web env
+        LET val = LAST
+        DUMPOBJ web
+        LET snap = LAST
+        SYS WRITE d_web snap
+        CLEAR_ERR
+      END
+    END
+    IF is_db == 1 THEN
+      HASOBJ db
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND db set_env env_in
+        GETF db env
+        LET val = LAST
+        DUMPOBJ db
+        LET snap = LAST
+        SYS WRITE d_db snap
+        CLEAR_ERR
+      END
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "setenv missing"
+      FAIL "setenv missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "setenv missing"
+      END
+    ELSE
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "setenv ok"
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- arm ---
+SYS EQS ACTION "arm"
+IF LAST_N == 1 THEN
+  NOTE "action arm"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "arm bad slot"
+    FAIL "arm bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "arm bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_api == 1 THEN
+      HASOBJ api
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND api arm
+        GETF api ready
+        LET ready_n = LAST_N
+        DUMPOBJ api
+        LET snap = LAST
+        SYS WRITE d_api snap
+        CLEAR_ERR
+      END
+    END
+    IF is_web == 1 THEN
+      HASOBJ web
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND web arm
+        GETF web ready
+        LET ready_n = LAST_N
+        DUMPOBJ web
+        LET snap = LAST
+        SYS WRITE d_web snap
+        CLEAR_ERR
+      END
+    END
+    IF is_db == 1 THEN
+      HASOBJ db
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        SEND db arm
+        GETF db ready
+        LET ready_n = LAST_N
+        DUMPOBJ db
+        LET snap = LAST
+        SYS WRITE d_db snap
+        CLEAR_ERR
+      END
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "arm missing"
+      FAIL "arm missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "arm missing"
+      END
+    ELSE
+      SYS STR ready_n
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "arm ok"
+    END
+  END
+  PRINT_JSON ready_n
+  CLEAR_ERR
+END
+
+# --- gate: env == prod && ready ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "gate bad slot"
+    FAIL "gate bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate bad slot"
+    END
+  ELSE
+    LET alive = 0
+    LET env_now = ""
+    LET ready_n = 0
+    IF is_api == 1 THEN
+      HASOBJ api
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF api env
+        LET env_now = LAST
+        GETF api ready
+        LET ready_n = LAST_N
+      END
+    END
+    IF is_web == 1 THEN
+      HASOBJ web
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF web env
+        LET env_now = LAST
+        GETF web ready
+        LET ready_n = LAST_N
+      END
+    END
+    IF is_db == 1 THEN
+      HASOBJ db
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        GETF db env
+        LET env_now = LAST
+        GETF db ready
+        LET ready_n = LAST_N
+      END
+    END
+    IF alive == 0 THEN
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate missing"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate missing"
+      END
+    ELSE
+      LET ok_env = 0
+      IF env_now == "prod" THEN
+        LET ok_env = 1
+      END
+      IF ok_env == 1 THEN
+        IF ready_n == 1 THEN
+          LET gate_n = 1
+          LET hit = 1
+          LET note_msg = "gate admit"
+          LET val = "admit"
+          LET val_ch = 1
+        ELSE
+          LET gate_n = 0
+          LET miss = 1
+          LET note_msg = "gate not ready"
+          LET val = "deny"
+          LET val_ch = 1
+          FAIL "gate not ready"
+          CLEAR_ERR
+          IF REQUIRE_HIT > 0 THEN
+            EXIT 2 "gate not ready"
+          END
+        END
+      ELSE
+        LET gate_n = 0
+        LET miss = 1
+        LET note_msg = "gate not prod"
+        LET val = "deny"
+        LET val_ch = 1
+        FAIL "gate not prod"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "gate not prod"
+        END
+      END
+      LET meta = "gate"
+      SYS PUSH meta env_now
+      LET meta = LAST
+      SYS STR ready_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON gate_n ready_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- lookup key in dump ---
+SYS EQS ACTION "lookup"
+IF LAST_N == 1 THEN
+  NOTE "action lookup"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "lookup bad slot"
+    FAIL "lookup bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lookup bad slot"
+    END
+  ELSE
+    LET key = "name"
+    SYS ARG 2 OR ""
+    IF LAST_N > 0 THEN
+      LET key = LAST
+    END
+    LET okd = 0
+    LET snap = ""
+    IF is_api == 1 THEN
+      DUMPOBJ api
+      LET okd = OK
+      LET snap = LAST
+    END
+    IF is_web == 1 THEN
+      DUMPOBJ web
+      LET okd = OK
+      LET snap = LAST
+    END
+    IF is_db == 1 THEN
+      DUMPOBJ db
+      LET okd = OK
+      LET snap = LAST
+    END
+    IF okd == 0 THEN
+      LET miss = 1
+      LET note_msg = "lookup missing"
+      FAIL "lookup missing"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "lookup missing"
+      END
+    ELSE
+      SYS LOOKUP snap key
+      IF OK == 0 THEN
+        LET miss = 1
+        LET note_msg = "lookup key miss"
+        FAIL "lookup key miss"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "lookup key miss"
+        END
+      ELSE
+        LET val = LAST
+        LET val_ch = 1
+        LET hit = 1
+        LET note_msg = "lookup ok"
+        LET meta = "lookup"
+        SYS PUSH meta key
+        LET meta = LAST
+        SYS PUSH meta val
+        LET meta = LAST
+        LET meta_ch = 1
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- delete ---
+SYS EQS ACTION "delete"
+IF LAST_N == 1 THEN
+  NOTE "action delete"
+  IF slot_ok == 0 THEN
+    LET miss = 1
+    LET note_msg = "delete bad slot"
+    FAIL "delete bad slot"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "delete bad slot"
+    END
+  ELSE
+    LET alive = 0
+    IF is_api == 1 THEN
+      HASOBJ api
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ api
+      END
+      SYS RM d_api
+      CLEAR_ERR
+    END
+    IF is_web == 1 THEN
+      HASOBJ web
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ web
+      END
+      SYS RM d_web
+      CLEAR_ERR
+    END
+    IF is_db == 1 THEN
+      HASOBJ db
+      LET alive = LAST_N
+      IF alive == 1 THEN
+        DELETEOBJ db
+      END
+      SYS RM d_db
+      CLEAR_ERR
+    END
+    IF alive == 0 THEN
+      LET miss = 1
+      LET note_msg = "delete miss"
+      FAIL "delete miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "delete miss"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "delete ok"
+      LET val = "deleted"
+      LET val_ch = 1
+    END
+  END
+  LISTOBJS Svc
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ api
+  IF LAST_N == 1 THEN
+    DELETEOBJ api
+  END
+  CLEAR_ERR
+  HASOBJ web
+  IF LAST_N == 1 THEN
+    DELETEOBJ web
+  END
+  CLEAR_ERR
+  HASOBJ db
+  IF LAST_N == 1 THEN
+    DELETEOBJ db
+  END
+  CLEAR_ERR
+  SYS RM d_api
+  SYS RM d_web
+  SYS RM d_db
+  CLEAR_ERR
+  SYS WRITE objs_path ""
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "cleared"
+  LET val = ""
+  LET val_ch = 1
+  LET meta = ""
+  LET meta_ch = 1
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "open"
+LET k = k + LAST_N
+SYS EQS ACTION "dump"
+LET k = k + LAST_N
+SYS EQS ACTION "json"
+LET k = k + LAST_N
+SYS EQS ACTION "get"
+LET k = k + LAST_N
+SYS EQS ACTION "try"
+LET k = k + LAST_N
+SYS EQS ACTION "setenv"
+LET k = k + LAST_N
+SYS EQS ACTION "arm"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "lookup"
+LET k = k + LAST_N
+SYS EQS ACTION "delete"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET elapsed = MS - t0
+LISTOBJS Svc
+LET nobjs = NOBJS
+
+LET report = "schema=cubalc.svc_config_object_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "name"
+LET report = LAST
+SYS PUSH report NAME
+LET report = LAST
+SYS PUSH report "nobjs"
+LET report = LAST
+SYS STR nobjs
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+CLEAR_ERR
+
+STATUS
+PRINT "svc_config_object_board" ACTION hit miss nobjs gate_n note_msg elapsed
