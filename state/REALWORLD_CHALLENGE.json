@@ -1,149 +1,125 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 122,
-  "program": "programs/realworld/cache_ttl_gc_board.cubalc",
-  "theme": "DELETEWHEREGE/SENDWHEREGE/COUNTWHEREGE cache TTL GC + SENDBELOW touch + plate dump hygiene + bag journal",
-  "version": "1.15.342-usability",
+  "iter": 123,
+  "program": "programs/realworld/queue_depth_band_board.cubalc",
+  "theme": "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN + HASWHEREGE queue depth band + slo_gate + bag journal",
+  "version": "1.15.346-usability",
   "pass": true,
-  "prior_note": "iter 121 latency_slo SUMF/WHEREGE; this iter stresses DELETEWHEREGE+SENDWHEREGE+COUNTOBJ (b4278e8/955e309/d9071d0)",
+  "prior_note": "iter 122 cache_ttl DELETEWHEREGE; this iter stresses WHEREBETWEEN/HASBETWEEN/HASWHERE (246bec1/08004bc)",
   "tests": [
     {
-      "name": "open_ages",
-      "cmd": "open e0=5 e1=50 e2=100; sethits e0=3",
+      "name": "open_depths",
+      "cmd": "open q0=5 q1=50 q2=100",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "countobj",
-      "cmd": "COUNTOBJ Entry \u2192 3",
+      "name": "sum_avg",
+      "cmd": "SUMF 155; AVGF 51",
       "ok": true,
-      "note": "COUNTOBJ"
+      "note": "SUMF"
     },
     {
-      "name": "count_stale_ge",
-      "cmd": "COUNTWHEREGE age>=50 \u2192 2",
+      "name": "wherebetween_band",
+      "cmd": "WHEREBETWEEN 5..50 → q0 q1",
       "ok": true,
-      "note": "COUNTWHEREGE"
+      "note": "WHEREBETWEEN"
     },
     {
-      "name": "count_fresh_below",
-      "cmd": "COUNTBELOW age<50 \u2192 1",
+      "name": "count_band",
+      "cmd": "COUNTBETWEEN 5..50 → 2",
       "ok": true,
-      "note": "COUNTBELOW"
+      "note": "COUNTBETWEEN"
     },
     {
-      "name": "count_eq_hits",
-      "cmd": "COUNTWHERE hits 3 \u2192 1",
+      "name": "has_band",
+      "cmd": "HASBETWEEN → 1 first q0",
       "ok": true,
-      "note": "COUNTWHERE"
+      "note": "HASBETWEEN"
     },
     {
-      "name": "sendwherege_touch",
-      "cmd": "SENDWHEREGE age>=50 bump N=2; e1/e2 hits=1",
+      "name": "has_hot_eq",
+      "cmd": "HASWHEREGE ≥80 →1 q2; HASWHERE 50 →1 q1",
       "ok": true,
-      "note": "SENDWHEREGE"
+      "note": "HASWHERE*"
     },
     {
-      "name": "sendbelow_fresh",
-      "cmd": "SENDBELOW age<50 bump N=1; e0 hits=4",
+      "name": "inverted_band",
+      "cmd": "band 50 5 still N=2 (swap)",
       "ok": true,
-      "note": "SENDBELOW"
+      "note": "swap lo/hi"
     },
     {
-      "name": "gate_stale_require",
-      "cmd": "gate soft deny; REQUIRE rc2",
+      "name": "slo_gate_hot_deny",
+      "cmd": "band ok but hot → deny; REQUIRE rc2",
       "ok": true,
-      "note": "gate"
+      "note": "deny"
     },
     {
-      "name": "deletewherege_expire",
-      "cmd": "DELETEWHEREGE age>=50 freed=2 FREED e1 e2; dump RM",
-      "ok": true,
-      "note": "DELETEWHEREGE"
-    },
-    {
-      "name": "gate_admit_after_gc",
-      "cmd": "gate admit stale=0",
+      "name": "slo_gate_admit_require",
+      "cmd": "cool q2; slo_gate REQUIRE admit rc0",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "incfall_age",
-      "cmd": "INCFALL age +10 e0\u219215",
-      "ok": true,
-      "note": "INCFALL"
-    },
-    {
-      "name": "deletewherele",
-      "cmd": "DELETEWHERELE age<=3 freed e1 e2",
-      "ok": true,
-      "note": "DELETEWHERELE"
-    },
-    {
-      "name": "journal_setmatch",
-      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
+      "name": "count_false_friend",
+      "cmd": "COUNTLINE q0 →0 exact",
       "ok": true,
       "note": "journal"
     },
     {
-      "name": "probe_empty_threshold",
-      "cmd": "soft TRYSEND; COUNT/DELETE/SEND WHEREGE 999 \u2192 0",
+      "name": "probe_soft",
+      "cmd": "TRYSEND soft; empty HASBETWEEN 0",
       "ok": true,
       "note": "soft"
-    },
-    {
-      "name": "push_after_deletewherege",
-      "cmd": "SYS PUSH jbag jev failed under -s; literal line works",
-      "ok": true,
-      "note": "W1"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "318/318 pass"
+      "note": "322/322 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|push|strict",
-      "title": "SYS PUSH jbag jev after DELETEWHEREGE under -s \u2192 unknown form 'jev'",
-      "detail": "Expire path freed objects and wrote FREED plate then failed at SYS PUSH jbag jev under -s. Literal SYS PUSH jbag \"fleet:expire\" works. Same hazard class as late bag LET+PUSH after OOP query (replica_fleet W1).",
-      "repro": "DELETEWHEREGE Entry age_s 50; LET jev=...; SYS PUSH jbag jev under -s"
+      "area": "host|if",
+      "title": "IF on stored LET counts flaky after COUNT/HAS — use LAST_N immediately",
+      "detail": "IF band_n > 0 / IF admit == 1 failed to take branch after COUNTBETWEEN even when SYS STR band_n printed 3. Nested IF and flat IF on LET vars both failed; IF LAST_N > 0 right after COUNTBETWEEN worked.",
+      "repro": "COUNTBETWEEN; LET band_n=LAST_N; IF band_n > 0 THEN LET admit=1 — admit stays 0 under -s"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|persist",
-      "title": "DELETEWHEREGE process-local \u2014 plate dumps rehydrate expired entries",
-      "detail": "Must RM dump/eN for each name in DELETEWHEREGE bag or next ARG run restores GC'd entries.",
-      "repro": "expire without RM dump; next list rehydrates"
+      "area": "host|eqs|require",
+      "title": "Unknown-action EQS wall + REQUIRE EXIT can fire after successful action",
+      "detail": "After slo_gate set val=admit, footer EQS ACTION/val wall still left is_known=0 and EXIT 2 unknown action when REQUIRE set. Hard REQUIRE exits must stay inside action bodies; unknown wall should be soft-only.",
+      "repro": "slo_gate admit with CUBALC_QD_REQUIRE=1 → EXIT unknown action"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|name",
-      "title": "Freed-name dump hygiene needs fixed HASLINE e0|e1|e2 wall",
-      "detail": "Cannot loop DELETEWHEREGE bag names to RM dumps dynamically without EQS wall.",
-      "repro": "HASLINE fbag e0; RM d_e0 \u00d73"
+      "area": "oop|haswherege",
+      "title": "HASWHEREGE_N can disagree with COUNTWHEREGE_N in same run",
+      "detail": "Gate meta showed COUNTWHEREGE hot_n=1 while HASWHEREGE_N=0 for depth≥80 with a live q2@100 after prior HASBETWEEN.",
+      "repro": "HASBETWEEN; HASWHEREGE; COUNTWHEREGE same thr — N mismatch"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|sendwherege",
-      "title": "SENDWHEREGE miss method soft \u2014 no strict fail",
-      "detail": "Typo methods soft-skip under -s without agent SENDWHEREGE_N checks.",
-      "repro": "SENDWHEREGE \u2026 no_meth \u2192 N=0 OK=1"
+      "area": "oop|has",
+      "title": "HAS* returns first match only — not multi-name bag",
+      "detail": "HASBETWEEN first q0 only; full set needs WHEREBETWEEN.",
+      "repro": "HASBETWEEN 5 50 → LAST q0 only"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two e0:age \u2192 one SETMATCH leaves 1.",
-      "repro": "count drops by 1"
+      "area": "oop|wherebetween",
+      "title": "No SUMF/AVGF on WHEREBETWEEN subset",
+      "detail": "Band bag is names; cannot avg depth of band without EACH+GETF.",
+      "repro": "WHEREBETWEEN; no SUMF band"
     },
     {
       "id": "W6",
@@ -158,41 +134,32 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_CT_REQUIRE=abc \u2192 soft gate.",
+      "detail": "CUBALC_QD_REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
-    },
-    {
-      "id": "W8",
-      "severity": "low",
-      "area": "oop|gc",
-      "title": "No atomic DELETEWHEREGE + plate unlink + journal",
-      "detail": "Partial failure leaves inconsistent plate (W1 hit mid-expire).",
-      "repro": "crash between free and RM"
     }
   ],
   "workarounds": [
-    "SYS PUSH jbag with string literal after DELETEWHEREGE under -s",
-    "Always RM dump slots listed in DELETEWHEREGE/LE bag",
-    "Literal e0|e1|e2 HASLINE for dump hygiene",
-    "Check SENDWHEREGE_N after selective touch",
-    "Predeclare board_rep; COUNTLINE exact; loop SETMATCH"
+    "IF LAST_N immediately after COUNT* — do not trust stored LET for IF",
+    "REQUIRE EXIT only inside action deny paths; unknown wall soft-only",
+    "Prefer COUNTWHEREGE for tallies; HAS* for first-name breadcrumb",
+    "WHEREBETWEEN for full band bag; HASBETWEEN for 0|1 only",
+    "DUMPOBJ rehydrate; COUNTLINE exact"
   ],
   "language_gaps": [
-    "Stable SYS PUSH var after DELETEWHEREGE under -s",
-    "DELETEWHEREGE cascade to plate files",
-    "Dynamic path from free-name bag",
-    "Strict SENDWHEREGE on missing method",
-    "Atomic GC transaction (memory+plate+journal)",
-    "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
+    "Reliable IF on LET numeric vars after OOP query ops",
+    "Stable EQS ACTION known-wall after HAS/COUNT under REQUIRE",
+    "HASWHEREGE/COUNTWHEREGE consistency after sibling probes",
+    "SUMF over WHEREBETWEEN result set",
+    "WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "COUNTOBJ/COUNTWHEREGE/COUNTBELOW tallies without bag materialize",
-    "SENDWHEREGE touch old + SENDBELOW bump fresh selective",
-    "DELETEWHEREGE expire freed e1 e2 kept e0; plate RM ok",
-    "expire first failed SYS PUSH jbag jev under -s \u2014 fixed with literal",
-    "DELETEWHERELE <=3 freed 2; empty DELETEWHEREGE soft 0",
-    "selftest 318/318 green; no language fix this iter"
+    "WHEREBETWEEN/COUNTBETWEEN/HASBETWEEN band select worked; lo/hi swap ok",
+    "HASWHERE/HASWHEREGE/HASBELOW soft probes worked for single-name",
+    "nested/stored IF on band_n/hot_n never set admit — LAST_N IF fixed",
+    "REQUIRE+unknown wall exited after successful admit — soft unknown wall fixed",
+    "HASWHEREGE_N vs COUNTWHEREGE_N mismatch documented",
+    "selftest 322/322 green; no language fix this iter"
   ],
-  "commit": "af53857fb40db8f1e64dde64acdf5141a7e4e436",
-  "ts": "2026-08-07T06:30:06Z"
+  "commit": "",
+  "ts": "2026-08-07T06:55:00Z"
 }

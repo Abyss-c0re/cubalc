@@ -1,0 +1,1235 @@
+# queue_depth_band_board.cubalc — WHEREBETWEEN/HASBETWEEN/HASWHEREGE depth bands
+#
+# Real use: agents watch a small queue fleet (q0..q2) by depth. Golden-band
+# membership (lo..hi inclusive) without dual WHEREGE+WHERELE; soft existence
+# probes for IF gates (HASBETWEEN / HASWHEREGE) without COUNT compare glue.
+#
+# Surfaces forced (1.15.343–344):
+#   WHEREBETWEEN / WHERERANGE / COUNTBETWEEN / COUNTBAND
+#   HASBETWEEN / ANYBETWEEN / INRANGE
+#   HASWHERE / HASWHEREGE / HASATLEAST / HASBELOW
+#   SUMF / AVGF · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss
+#
+# Distinct from latency_slo (SUMF+WHEREGE only), cache_ttl_gc (DELETEWHEREGE),
+# shard_load_pick (MAXOBJ): this board is *closed range + boolean HAS probes*.
+#
+# Slots: q0 q1 q2
+#
+# Plate under STATE:
+#   dump/q0 dump/q1 dump/q2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt BAND.txt DEPTH_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_QD_ACTION):
+#   list       — LISTOBJS Queue
+#   open       — NEW Queue ARG1=qN [depth=ARG2]
+#   setdepth   — SETF depth ARG2
+#   sum / avg  — SUMF / AVGF depth
+#   band       — WHEREBETWEEN depth LO HI (ARG1 ARG2 or ENV LO/HI)
+#   count_band — COUNTBETWEEN depth LO HI
+#   has_band   — HASBETWEEN depth LO HI → 0|1 + first name
+#   has_hot    — HASWHEREGE depth THR
+#   has_eq     — HASWHERE depth ARG1
+#   has_cold   — HASBELOW depth THR
+#   journal / count / pin / setmatch
+#   probe / dump
+#   slo_gate   — COUNTBETWEEN>0 AND COUNTWHEREGE hot==0; REQUIRE→2 deny
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_qd_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=q0 CUBALC_ARG2=5
+#   CUBALC_ARG0=band CUBALC_ARG1=3 CUBALC_ARG2=10
+#   CUBALC_ARG0=has_band
+#   CUBALC_ARG0=slo_gate CUBALC_QD_LO=3 CUBALC_QD_HI=20 CUBALC_QD_HOT=50 CUBALC_QD_REQUIRE=1
+#
+# Env: CUBALC_QD_REQUIRE NAME LO HI HOT ACTION
+#
+# Edges:
+#   WHEREBETWEEN closed inclusive; lo/hi swap when inverted
+#   HAS* first-name only; HASWHEREGE_N can disagree with COUNTWHEREGE_N after probes
+#   IF on stored LET counts flaked — use LAST_N immediately in IF
+#   unknown-action EQS wall flaky after HAS*; REQUIRE exit must stay in action body
+#   no SUMF on band subset; process-local rehydrate; WRITE NL; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Queue
+  FIELD id ""
+  FIELD depth 0
+  METHOD init i d
+    SETF THIS id i
+    SETF THIS depth d
+  END
+  METHOD bump
+    GETF THIS depth
+    LET x = LAST_N + 1
+    SETF THIS depth x
+    RET x
+  END
+END
+
+NOTE "queue_depth_band_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT LO = 1
+DEFAULT HI = 100
+DEFAULT HOT = 80
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_QD_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_QD_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_QD_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_QD_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_QD_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_QD_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+SYS ENV "CUBALC_QD_HOT" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HOT = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "BAND.txt"
+LET band_path = LAST
+SYS JOIN state_dir "DEPTH_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "q0"
+LET d_q0 = LAST
+SYS JOIN dump_dir "q1"
+LET d_q1 = LAST
+SYS JOIN dump_dir "q2"
+LET d_q2 = LAST
+
+LET slot = -1
+SYS EQS NAME "q0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "q1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "q2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "q0"
+END
+IF slot == 1 THEN
+  LET sn = "q1"
+END
+IF slot == 2 THEN
+  LET sn = "q2"
+END
+
+# rehydrate q0
+SYS READ OR d_q0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    DELETEOBJ q0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  CLEAR_ERR
+  NEW Queue q0 rid rd
+  TRYSETF q0 depth rd
+  CLEAR_ERR
+END
+# rehydrate q1
+SYS READ OR d_q1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q1
+  IF LAST_N == 1 THEN
+    DELETEOBJ q1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  CLEAR_ERR
+  NEW Queue q1 rid rd
+  TRYSETF q1 depth rd
+  CLEAR_ERR
+END
+# rehydrate q2
+SYS READ OR d_q2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ q2
+  IF LAST_N == 1 THEN
+    DELETEOBJ q2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUPN snap "depth"
+  LET rd = LAST_N
+  CLEAR_ERR
+  NEW Queue q2 rid rd
+  TRYSETF q2 depth rd
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET lo_n = 0
+LET hi_n = 0
+LET thr_n = 0
+LET has_n = 0
+LET board_rep = "queue_depth_band_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Queue
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET dep = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET dep = LAST_N
+      END
+    END
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        DELETEOBJ q0
+        CLEAR_ERR
+      END
+      NEW Queue q0 sn dep
+      DUMPOBJ q0
+      SYS WRITE d_q0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        DELETEOBJ q1
+        CLEAR_ERR
+      END
+      NEW Queue q1 sn dep
+      DUMPOBJ q1
+      SYS WRITE d_q1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        DELETEOBJ q2
+        CLEAR_ERR
+      END
+      NEW Queue q2 sn dep
+      DUMPOBJ q2
+      SYS WRITE d_q2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Queue
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS STR dep
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setdepth ---
+SYS EQS ACTION "setdepth"
+IF LAST_N == 1 THEN
+  NOTE "action setdepth"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setdepth bad slot"
+    FAIL "setdepth bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setdepth bad slot"
+    END
+  ELSE
+    LET dep = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET dep = LAST_N
+      END
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ q0
+      IF LAST_N == 1 THEN
+        SETF q0 depth dep
+        LET ok_set = 1
+        DUMPOBJ q0
+        SYS WRITE d_q0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ q1
+      IF LAST_N == 1 THEN
+        SETF q1 depth dep
+        LET ok_set = 1
+        DUMPOBJ q1
+        SYS WRITE d_q1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ q2
+      IF LAST_N == 1 THEN
+        SETF q2 depth dep
+        LET ok_set = 1
+        DUMPOBJ q2
+        SYS WRITE d_q2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setdepth no obj"
+      FAIL "setdepth no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setdepth no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setdepth ok"
+      SYS STR dep
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setdepth"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- sum ---
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  NOTE "action sum"
+  SUMF Queue depth
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "sum ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "sum"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR SUMF_N
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- avg ---
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  NOTE "action avg"
+  AVGF Queue depth
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "avg ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "avg"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# resolve LO/HI from ARG for band actions
+# --- band WHEREBETWEEN ---
+SYS EQS ACTION "band"
+IF LAST_N == 1 THEN
+  NOTE "action band"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  WHEREBETWEEN Queue depth lo_n hi_n
+  LET wbag = LAST
+  LET ret_n = WHEREBETWEEN_N
+  SYS WRITE band_path wbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "band ok"
+  LET val = wbag
+  LET val_ch = 1
+  LET meta = "band"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_band ---
+SYS EQS ACTION "count_band"
+IF LAST_N == 1 THEN
+  NOTE "action count_band"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  COUNTBETWEEN Queue depth lo_n hi_n
+  LET ret_n = COUNTBETWEEN_N
+  LET hit = 1
+  LET note_msg = "count_band ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_band"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- has_band HASBETWEEN ---
+SYS EQS ACTION "has_band"
+IF LAST_N == 1 THEN
+  NOTE "action has_band"
+  LET lo_n = LO
+  LET hi_n = HI
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  HASBETWEEN Queue depth lo_n hi_n
+  LET has_n = HASBETWEEN_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_band ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_band"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- has_hot HASWHEREGE ---
+SYS EQS ACTION "has_hot"
+IF LAST_N == 1 THEN
+  NOTE "action has_hot"
+  LET thr_n = HOT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  HASWHEREGE Queue depth thr_n
+  LET has_n = HASWHEREGE_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_hot ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_hot"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- has_eq HASWHERE ---
+SYS EQS ACTION "has_eq"
+IF LAST_N == 1 THEN
+  NOTE "action has_eq"
+  LET thr_n = 0
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  HASWHERE Queue depth thr_n
+  LET has_n = HASWHERE_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_eq ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_eq"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- has_cold HASBELOW ---
+SYS EQS ACTION "has_cold"
+IF LAST_N == 1 THEN
+  NOTE "action has_cold"
+  LET thr_n = LO
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET thr_n = LAST_N
+    END
+  END
+  HASBELOW Queue depth thr_n
+  LET has_n = HASBELOW_N
+  LET found = LAST
+  LET hit = 1
+  LET note_msg = "has_cold ok"
+  SYS STR has_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "has_cold"
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS PUSH meta found
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    TRYSEND q0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF q0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  HASBETWEEN Queue depth 999 1000
+  LET has_n = HASBETWEEN_N
+  CLEAR_ERR
+  HASWHEREGE Queue depth 999999
+  LET thr_n = HASWHEREGE_N
+  CLEAR_ERR
+  COUNTBETWEEN Queue depth 0 0
+  LET ret_n = COUNTBETWEEN_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR thr_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  LET val = meta
+  LET val_ch = 1
+  PRINT_JSON meta
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  HASOBJ q0
+  IF LAST_N == 1 THEN
+    DUMPOBJ q0
+    SYS WRITE d_q0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ q1
+  IF LAST_N == 1 THEN
+    DUMPOBJ q1
+    SYS WRITE d_q1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ q2
+  IF LAST_N == 1 THEN
+    DUMPOBJ q2
+    SYS WRITE d_q2 LAST
+    CLEAR_ERR
+  END
+  LISTOBJS Queue
+  LET nobjs = NOBJS
+  SYS WRITE objs_path LAST
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "dump ok"
+  SYS STR nobjs
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "dump"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- gate: band non-empty AND no hot (COUNT* more reliable than nested IF on HAS*) ---
+SYS EQS ACTION "slo_gate"
+IF LAST_N == 1 THEN
+  NOTE "action slo_gate"
+  LET lo_n = LO
+  LET hi_n = HI
+  LET thr_n = HOT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET lo_n = LAST_N
+    END
+  END
+  SYS BLANK A2
+  IF LAST_N == 0 THEN
+    SYS NUM A2
+    IF OK == 1 THEN
+      LET hi_n = LAST_N
+    END
+  END
+  # use LAST_N immediately in IF — stored band_n/hot_n IF compares flaked in this board
+  COUNTBETWEEN Queue depth lo_n hi_n
+  LET band_n = LAST_N
+  LET hit = 0
+  LET miss = 1
+  LET val = "deny"
+  LET note_msg = "slo_gate deny"
+  IF LAST_N > 0 THEN
+    COUNTWHEREGE Queue depth thr_n
+    LET hot_n = LAST_N
+    IF LAST_N == 0 THEN
+      LET hit = 1
+      LET miss = 0
+      LET val = "admit"
+      LET note_msg = "slo_gate admit"
+    END
+  ELSE
+    LET hot_n = 0
+  END
+  HASBETWEEN Queue depth lo_n hi_n
+  LET has_n = LAST_N
+  HASWHEREGE Queue depth thr_n
+  LET hot_has = LAST_N
+  LET val_ch = 1
+  IF miss > 0 THEN
+    FAIL "gate deny band empty or hot queue"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "gate deny band empty or hot queue"
+    END
+  END
+  LET meta = "slo_gate"
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR band_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hot_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hot_has
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  DELETEALL Queue
+  CLEAR_ERR
+  SYS RM d_q0
+  CLEAR_ERR
+  SYS RM d_q1
+  CLEAR_ERR
+  SYS RM d_q2
+  CLEAR_ERR
+  SYS RM journal_path
+  CLEAR_ERR
+  SYS RM objs_path
+  CLEAR_ERR
+  SYS RM val_path
+  CLEAR_ERR
+  SYS RM meta_path
+  CLEAR_ERR
+  SYS RM band_path
+  CLEAR_ERR
+  SYS RM report_path
+  CLEAR_ERR
+  LET jbag = ""
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# unknown — soft only; REQUIRE hard exits stay in action bodies (EQS wall flaky after HAS*)
+SYS EQS ACTION "list"
+LET is_known = LAST_N
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setdepth"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "sum"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "avg"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "band"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_band"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_band"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_hot"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_eq"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "has_cold"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "slo_gate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "queue_depth_band_board: done"
+# REQUIRE hard exit only when note_msg is an action deny (not unknown after success)
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
