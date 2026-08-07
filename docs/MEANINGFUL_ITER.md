@@ -463,6 +463,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 433. ~~**optional THEN / LET =**~~ **done** (IF/UNLESS/ELIF body without THEN · LET name value without = · clearer LET syntax errs with line).
 434. ~~**PRINT multi-arg strings**~~ **done** (PRINT/SAY/ECHO space-join str+num · string vars by content not strlen · LAST/PRINT_N · empty PRINT re-echoes LAST).
 435. ~~**SYS ARGC / ARGS + run args**~~ **done** (ARGC count · ARGS newline bag · cubalc run file| -e … [--] args → CUBALC_ARGn/ARGC).
+436. ~~**REQUIRE ARG / ARGC**~~ **done** (fail-fast CLI contract · ARG n|name · ARGC [min] · line+tip · pairs SYS ARGS/run args).
 
 ## Tick protocol
 

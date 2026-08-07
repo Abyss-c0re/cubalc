@@ -25869,7 +25869,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
+      {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
+      {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -27233,6 +27235,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   /* REQUIRE VERSION "x.y[.z]" — fail-fast if runtime older than need.
    * REQUIRE LIB|MODULE name — fail-fast if INCLUDE-style path not found.
    * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
+   * REQUIRE ARG n|name / ARGC [min] — fail-fast program CLI args.
    * REQUIRE PATH|DIR|REG path — fail-fast if host path missing / wrong kind.
    * REQUIRE BIN|CMD|EXE name — fail-fast if host executable not on PATH.
    * REQUIRE FN|CLASS|METHOD — fail-fast language-plane after INCLUDE (HASFN soft twin).
@@ -27499,6 +27502,135 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
         bump(vm); return 1;
       }
     }
+    /* REQUIRE ARGC|ARGCOUNT min — fail if program arg count < min (default 1).
+     * REQUIRE ARG n|name — CUBALC_ARGn / named env must be non-empty.
+     * Usability: fail-fast CLI contract after cubalc run … -- args without IF glue. */
+    if (kw(&L->cur,"ARGC") || kw(&L->cur,"ARGCOUNT") || kw(&L->cur,"NARGS")){
+      long need = 1, have = 0;
+      const char *ac;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+           !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"NEED"))){
+        need = parse_expr(vm, L);
+      }
+      if (need < 0) need = 0;
+      if (need > 32) need = 32;
+      ac = getenv("CUBALC_ARGC");
+      if (ac && ac[0]) {
+        have = strtol(ac, NULL, 10);
+        if (have < 0) have = 0;
+        if (have > 32) have = 32;
+      } else {
+        int k;
+        for (k = 0; k < 32; k++) {
+          char nm[32];
+          snprintf(nm, sizeof nm, "CUBALC_ARG%d", k);
+          if (!getenv(nm)) break;
+          have++;
+        }
+      }
+      if (have < need) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE ARGC %ld got %ld line %d — cubalc run … -- args (SYS ARGS)",
+                 need, have, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      vm->last_n = have;
+      var_set_num(vm, "LAST_N", have);
+      var_set_num(vm, "ARGC", have);
+      var_set_num(vm, "REQUIRE_ARGC", need);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require argc >= %ld (have %ld)\n", need, have);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"ARG") || kw(&L->cur,"ARGV") || kw(&L->cur,"ARGN")){
+      char key[96], envn[96];
+      const char *val = NULL;
+      int is_num = 0;
+      long idx = -1;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = L->cur.num;
+        is_num = 1;
+        snprintf(envn, sizeof envn, "CUBALC_ARG%ld", idx);
+        snprintf(key, sizeof key, "%ld", idx);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        snprintf(key, sizeof key, "%s", L->cur.text);
+        /* bare 0..31 as name → CUBALC_ARGn; else raw env name */
+        if (key[0] >= '0' && key[0] <= '9' && key[1] == 0) {
+          snprintf(envn, sizeof envn, "CUBALC_ARG%c", key[0]);
+          is_num = 1;
+          idx = key[0] - '0';
+        } else if (strncmp(key, "CUBALC_ARG", 10) == 0) {
+          snprintf(envn, sizeof envn, "%s", key);
+        } else if (strcmp(key, "MSG") == 0) {
+          snprintf(envn, sizeof envn, "GROKIUM_MSG");
+        } else {
+          /* numeric name or CUBALC_ARG prefix preferred; plain name tries CUBALC_ARG then raw */
+          char probe[96];
+          int all_digit = 1, pi;
+          for (pi = 0; key[pi]; pi++) {
+            if (key[pi] < '0' || key[pi] > '9') { all_digit = 0; break; }
+          }
+          if (all_digit && key[0]) {
+            snprintf(envn, sizeof envn, "CUBALC_ARG%s", key);
+            is_num = 1;
+            idx = strtol(key, NULL, 10);
+          } else {
+            snprintf(probe, sizeof probe, "CUBALC_ARG_%s", key);
+            if (getenv(probe) && getenv(probe)[0])
+              snprintf(envn, sizeof envn, "%s", probe);
+            else
+              snprintf(envn, sizeof envn, "%s", key);
+          }
+        }
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE ARG n|name");
+        return -1;
+      }
+      val = getenv(envn);
+      if (!val || !val[0]) {
+        char msg[180];
+        if (is_num)
+          snprintf(msg, sizeof msg,
+                   "REQUIRE ARG %ld missing line %d — cubalc run … -- arg (SYS ARG %ld)",
+                   idx, aln, idx);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE ARG '%s' missing line %d — set env or pass run arg",
+                   key, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      {
+        size_t vl = strlen(val);
+        char out[CUBALC_HOST_STR_MAX];
+        if (vl >= sizeof out) vl = sizeof out - 1;
+        memcpy(out, val, vl);
+        out[vl] = 0;
+        var_set_str(vm, "LAST", out);
+        var_set_str(vm, "ARG", out);
+        var_set_str(vm, "REQUIRE_ARG", key);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)vl;
+        var_set_num(vm, "LAST_N", (long)vl);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# require arg %s ok\n", key);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+    }
     /* REQUIRE PATH|EXIST path — fail if host path missing.
      * REQUIRE DIR|DIRECTORY path — fail if not a directory.
      * REQUIRE REG|REGFILE|ISFILE path — fail if not a regular file.
@@ -27617,7 +27749,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN|FN|CLASS|METHOD …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|ARGC|PATH|DIR|REG|BIN|FN|CLASS|METHOD …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

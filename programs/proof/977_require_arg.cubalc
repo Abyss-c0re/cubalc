@@ -1,0 +1,33 @@
+# REQUIRE ARG / ARGC — fail-fast CLI contract for agents
+# Pairs with cubalc run … -- args and SYS ARGC/ARGS
+
+HOLD_FLASH 1
+
+SYS ENV SET CUBALC_ARG0 "peer-a"
+SYS ENV SET CUBALC_ARG1 "ticket"
+SYS ENV SET CUBALC_ARGC "2"
+
+REQUIRE ARGC 2
+ASSERT LAST_N == 2
+ASSERT REQUIRE_ARGC == 2
+
+REQUIRE ARG 0
+SYS EQS LAST "peer-a"
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_ARG "0"
+ASSERT LAST_N == 1
+
+REQUIRE ARG 1
+SYS EQS LAST "ticket"
+ASSERT LAST_N == 1
+
+# default min=1
+REQUIRE ARGC
+ASSERT LAST_N == 2
+
+# still have soft SYS ARG OR for optional
+SYS ARG 2 OR "none"
+SYS EQS LAST "none"
+ASSERT LAST_N == 1
+
+PRINT "require_arg ok"
