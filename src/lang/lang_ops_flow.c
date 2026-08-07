@@ -18131,10 +18131,43 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }
-  /* CASE expr ... WHEN n THEN ... [DEFAULT ...] END */
+  /* CASE expr|str ... WHEN n|"s" THEN ... [DEFAULT ...] END
+   * Numeric arms keep TO-range. String selector (literal / string var / LAST)
+   * matches WHEN string arms by content. Usability: CLI action dispatch after
+   * GETFLAG without nested IF EQS soup. */
   if (kw(&L->cur,"CASE")||kw(&L->cur,"SWITCH")||kw(&L->cur,"MATCH")){
+    long sel = 0;
+    char sel_s[512];
+    int sel_is_str = 0;
     lex_next(L);
-    long sel = parse_expr(vm, L);
+    sel_s[0] = 0;
+    /* string selector: "…", LAST (str), or string var — before parse_expr */
+    if (L->cur.kind == TK_STR) {
+      snprintf(sel_s, sizeof sel_s, "%s", L->cur.text);
+      lex_next(L);
+      sel_is_str = 1;
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        Var *lv = var_get(vm, "LAST", 0);
+        if ((lv && lv->is_str) || vm->last_str[0]) {
+          if (lv && lv->is_str)
+            snprintf(sel_s, sizeof sel_s, "%s", lv->sval);
+          else
+            snprintf(sel_s, sizeof sel_s, "%s", vm->last_str);
+          lex_next(L);
+          sel_is_str = 1;
+        }
+      } else {
+        Var *sv = var_get(vm, L->cur.text, 0);
+        if (sv && sv->is_str) {
+          snprintf(sel_s, sizeof sel_s, "%s", sv->sval);
+          lex_next(L);
+          sel_is_str = 1;
+        }
+      }
+    }
+    if (!sel_is_str)
+      sel = parse_expr(vm, L);
     skip_nl(L);
     int matched = 0;
     int ran = 0;
@@ -18143,16 +18176,53 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       if (L->cur.kind==TK_EOF){ fail(vm,"CASE without END"); return -1; }
       if (kw(&L->cur,"END")){ lex_next(L); break; }
       if (kw(&L->cur,"WHEN")||kw(&L->cur,"OF")||kw(&L->cur,"CASEIF")){
+        long w = 0, w_hi = 0;
+        char w_s[512];
+        int is_range = 0, arm_is_str = 0;
         lex_next(L);
-        long w = parse_expr(vm, L);
-        long w_hi = w;
-        int is_range = 0;
-        /* WHEN lo TO hi THEN — inclusive range arm (digit-1 control_or_branch) */
-        if (kw(&L->cur,"TO")||kw(&L->cur,"THROUGH")||kw(&L->cur,"THRU")||
-            kw(&L->cur,"DOTDOT")||kw(&L->cur,"RANGE")){
-          lex_next(L);
-          w_hi = parse_expr(vm, L);
-          is_range = 1;
+        w_s[0] = 0;
+        if (sel_is_str) {
+          /* string arm: literal or string var */
+          if (L->cur.kind == TK_STR) {
+            snprintf(w_s, sizeof w_s, "%s", L->cur.text);
+            lex_next(L);
+            arm_is_str = 1;
+          } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"TO") &&
+                     !kw(&L->cur,"THEN") && !kw(&L->cur,"THROUGH")) {
+            if (strcmp(L->cur.text, "LAST") == 0) {
+              Var *lv = var_get(vm, "LAST", 0);
+              if (lv && lv->is_str)
+                snprintf(w_s, sizeof w_s, "%s", lv->sval);
+              else
+                snprintf(w_s, sizeof w_s, "%s", vm->last_str);
+              lex_next(L);
+              arm_is_str = 1;
+            } else {
+              Var *sv = var_get(vm, L->cur.text, 0);
+              if (sv && sv->is_str) {
+                snprintf(w_s, sizeof w_s, "%s", sv->sval);
+                lex_next(L);
+                arm_is_str = 1;
+              } else {
+                /* numeric WHEN under string CASE → no match (coerce fail soft) */
+                w = parse_expr(vm, L);
+                arm_is_str = 0;
+              }
+            }
+          } else {
+            w = parse_expr(vm, L);
+            arm_is_str = 0;
+          }
+        } else {
+          w = parse_expr(vm, L);
+          w_hi = w;
+          /* WHEN lo TO hi THEN — inclusive range arm (digit-1 control_or_branch) */
+          if (kw(&L->cur,"TO")||kw(&L->cur,"THROUGH")||kw(&L->cur,"THRU")||
+              kw(&L->cur,"DOTDOT")||kw(&L->cur,"RANGE")){
+            lex_next(L);
+            w_hi = parse_expr(vm, L);
+            is_range = 1;
+          }
         }
         if (kw(&L->cur,"THEN")) lex_next(L);
         skip_nl(L);
@@ -18172,7 +18242,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
           lex_next(L);
         }
         int arm_hit = 0;
-        if (is_range){
+        if (sel_is_str) {
+          if (arm_is_str)
+            arm_hit = (strcmp(sel_s, w_s) == 0);
+          else
+            arm_hit = 0;
+        } else if (is_range){
           long lo = w, hi = w_hi;
           if (hi < lo){ long t = lo; lo = hi; hi = t; }
           arm_hit = (sel >= lo && sel <= hi);
@@ -18242,6 +18317,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       fail(vm,"CASE expects WHEN|DEFAULT|END"); return -1;
     }
     var_set_num(vm, "MATCHED", matched || ran ? 1 : 0);
+    if (sel_is_str) {
+      var_set_str(vm, "CASE", sel_s);
+      var_set_str(vm, "MATCH", sel_s);
+    } else {
+      var_set_num(vm, "CASE", sel);
+      var_set_num(vm, "MATCH", sel);
+    }
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
   }

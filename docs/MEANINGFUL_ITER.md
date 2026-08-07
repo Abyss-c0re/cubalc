@@ -475,6 +475,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 445. ~~**`LISTFLAGS / FLAGS`**~~ **done** (bag of flag names no dashes · LAST_N=count · discover --flags without EACH ARGS).
 446. ~~**`NTHPOS / POSN`**~~ **done** (0-based non-flag positional peel · OR fallback · no RESTARGS+NTH · index avoids parse_expr OR).
 447. ~~**`FLAGMAP / FLAGKV`**~~ **done** (name=value bag for every --flag · bare → 1 · LOOKUP sep `=` · coexists with RESTARGS files).
+448. ~~**`CASE string arms`**~~ **done** (CASE/MATCH/SWITCH string selector + WHEN "s" · CLI action dispatch · numeric TO range kept).
 
 ## Tick protocol
 

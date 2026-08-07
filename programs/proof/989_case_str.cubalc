@@ -1,0 +1,84 @@
+# CASE string arms — CLI action dispatch without nested IF EQS
+
+HOLD_FLASH 1
+
+# numeric still works
+LET path 0
+CASE 2
+  WHEN 1 THEN
+    LET path 11
+  WHEN 2 THEN
+    LET path 22
+  DEFAULT
+    LET path 99
+END
+ASSERT path == 22
+ASSERT MATCHED == 1
+
+# string literal selector
+LET act ""
+CASE "seal"
+  WHEN "list" THEN
+    LET act "L"
+  WHEN "seal" THEN
+    LET act "S"
+  WHEN "parse" THEN
+    LET act "P"
+  DEFAULT
+    LET act "?"
+END
+SYS EQS act "S"
+ASSERT LAST_N == 1
+
+# string var selector (CLI GETFLAG style)
+LET action "parse"
+LET out ""
+CASE action
+  WHEN "list" THEN
+    LET out "list"
+  WHEN "parse" THEN
+    LET out "parse"
+  WHEN "admit" THEN
+    LET out "admit"
+  DEFAULT
+    LET out "other"
+END
+SYS EQS out "parse"
+ASSERT LAST_N == 1
+ASSERT MATCHED == 1
+
+# LAST string after GETFLAG pattern
+LET LAST "verbose"
+CASE LAST
+  WHEN "quiet" THEN
+    LET mode "q"
+  WHEN "verbose" THEN
+    LET mode "v"
+  DEFAULT
+    LET mode "d"
+END
+SYS EQS mode "v"
+ASSERT LAST_N == 1
+
+# DEFAULT when no arm
+LET hit 0
+CASE "nope"
+  WHEN "a" THEN
+    LET hit 1
+  DEFAULT
+    LET hit 2
+END
+ASSERT hit == 2
+
+# WHEN string var
+LET want "seal"
+LET got 0
+CASE "seal"
+  WHEN want THEN
+    LET got 1
+  DEFAULT
+    LET got 0
+END
+ASSERT got == 1
+
+PRINT "case_str ok"
