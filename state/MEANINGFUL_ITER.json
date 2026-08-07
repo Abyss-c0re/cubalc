@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 410,
-  "version": "1.15.437-usability",
-  "item": "NTHPOS Nth non-flag positional",
-  "item_id": 446,
-  "title": "NTHPOS|POSN index [OR fb] peel non-flag positional",
-  "commit": "50df5468dde609d66b91bcede2d3959eca7cea2a",
-  "summary": "0-based file after --flags without RESTARGS+NTH. proof 987 12/12.",
+  "iter": 411,
+  "version": "1.15.438-usability",
+  "item": "FLAGMAP name=value flag bag",
+  "item_id": 447,
+  "title": "FLAGMAP|FLAGKV bag of name=value CLI flags \u00b7 LOOKUP =",
+  "commit": "ade2ef1205e010e527b93dc9108db44b8b8492c9",
+  "summary": "Flag name=value plate bag; bare bool=1 keeps files. proof 988 11/11.",
   "proofs": [
-    "987_nthpos",
-    "asserts 12/12",
-    "smoke NTHPOS 0 -- --mode=x in.txt"
+    "988_flagmap",
+    "asserts 11/11",
+    "smoke FLAGMAP -- --mode=fast --verbose a.txt"
   ],
-  "when": "2026-08-07T22:27:14Z",
+  "when": "2026-08-07T22:37:27Z",
   "agent": "meaningful_iter_10m",
-  "sha": "50df5468dde609d66b91bcede2d3959eca7cea2a",
+  "sha": "ade2ef1205e010e527b93dc9108db44b8b8492c9",
   "note": "no thrash; EVOLVE_PAUSED"
 }
