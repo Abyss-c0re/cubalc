@@ -15,13 +15,13 @@
     },
     {
       "name": "clampwhere_hot",
-      "cmd": "rates 150/-5/200; CLAMPWHERE hot [0,100] → 100/0; idle 200 unclamped",
+      "cmd": "rates 150/-5/200; CLAMPWHERE hot [0,100] \u2192 100/0; idle 200 unclamped",
       "ok": true,
       "note": "CLAMPWHERE N=2 CHANGED=2"
     },
     {
       "name": "uniquwhere_pools",
-      "cmd": "UNIQUWHERE pool status hot → api only",
+      "cmd": "UNIQUWHERE pool status hot \u2192 api only",
       "ok": true,
       "note": "UNIQUWHERE"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "lo_hi_autoswap",
-      "cmd": "LO=50 HI=20 → LO=20 HI=50; rate 10→20",
+      "cmd": "LO=50 HI=20 \u2192 LO=20 HI=50; rate 10\u219220",
       "ok": true,
       "note": "swap"
     },
     {
       "name": "empty_status",
-      "cmd": "clamp/unique/max missing → 0; admit REQUIRE deny",
+      "cmd": "clamp/unique/max missing \u2192 0; admit REQUIRE deny",
       "ok": true,
       "note": "empty"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two w0:clamp → SETMATCH leaves 1",
+      "cmd": "two w0:clamp \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -79,7 +79,7 @@
       "id": "W1",
       "severity": "med",
       "area": "oop|clampwhere",
-      "title": "CLAMPWHERE equality match only — no rate>HI predicate without status",
+      "title": "CLAMPWHERE equality match only \u2014 no rate>HI predicate without status",
       "detail": "Cannot clamp only workers already over budget without a status/tag field. Agents must mark hot first or clamp entire class.",
       "repro": "want clamp rate>100 only; need status=hot marker"
     },
@@ -87,9 +87,9 @@
       "id": "W2",
       "severity": "med",
       "area": "oop|clampwhere",
-      "title": "No per-pool LO/HI — one bound for all matching status",
+      "title": "No per-pool LO/HI \u2014 one bound for all matching status",
       "detail": "api and batch hot workers share same clamp range; multi-pool budgets need multiple CLAMPWHERE or SETFWHERE glue.",
-      "repro": "hot api cap 100 batch cap 50 — one clamp hits both"
+      "repro": "hot api cap 100 batch cap 50 \u2014 one clamp hits both"
     },
     {
       "id": "W3",
@@ -103,15 +103,15 @@
       "id": "W4",
       "severity": "med",
       "area": "oop|maxwhere|empty",
-      "title": "Empty MAXWHERE → 0 like true zero rate",
-      "detail": "Admit must COUNTWHERE N>0; empty status would admit under BUDGET≥0 without gate.",
-      "repro": "max_rate missing → 0 N=0"
+      "title": "Empty MAXWHERE \u2192 0 like true zero rate",
+      "detail": "Admit must COUNTWHERE N>0; empty status would admit under BUDGET\u22650 without gate.",
+      "repro": "max_rate missing \u2192 0 N=0"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "oop|clampwhere",
-      "title": "LO>HI auto-swap is silent — no warn",
+      "title": "LO>HI auto-swap is silent \u2014 no warn",
       "detail": "LO=50 HI=20 becomes [20,50] via CLAMPWHERE_LO/HI; agent mis-order bounds without hard error.",
       "repro": "META lo 20 hi 50 after LO=50 HI=20"
     },
@@ -128,7 +128,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE/LO/HI softens",
-      "detail": "REQUIRE=abc → soft; bad LO keeps default.",
+      "detail": "REQUIRE=abc \u2192 soft; bad LO keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -136,7 +136,7 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two w0:clamp → one SETMATCH leaves 1.",
+      "detail": "Two w0:clamp \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
@@ -150,20 +150,20 @@
   ],
   "language_gaps": [
     "CLAMPWHERE with numeric predicate (rate>N) not only field==value",
-    "Per-group clamp bounds (pool→[lo,hi] map)",
+    "Per-group clamp bounds (pool\u2192[lo,hi] map)",
     "UNIQUWHERE sorted + with counts option",
     "Empty MAXWHERE soft miss vs zero",
     "Warn on LO>HI auto-swap",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "CLAMPWHERE hot 150→100 -5→0; idle 200 untouched CHANGED=2",
-    "UNIQUWHERE hot pools → api; idle → batch",
+    "CLAMPWHERE hot 150\u2192100 -5\u21920; idle 200 untouched CHANGED=2",
+    "UNIQUWHERE hot pools \u2192 api; idle \u2192 batch",
     "MAXWHERE 100; admit budget 100 ok; 50 deny",
-    "second clamp CHANGED=0; LO>HI auto-swap 10→20",
+    "second clamp CHANGED=0; LO>HI auto-swap 10\u219220",
     "empty missing clamp N=0; admit REQUIRE deny",
     "selftest 340/340 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "819ffdbdbf9388d125f7e043d25ade98dc313c53",
   "ts": "2026-08-07T10:14:12Z"
 }
