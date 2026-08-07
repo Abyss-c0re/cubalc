@@ -2039,6 +2039,7 @@ int main(int argc, char **argv) {
       {"oop_medianf", "programs/proof/898_oop_medianf.cubalc", "MEDIANF/P50F integer median of fleet numeric field"},
       {"oop_mulfall", "programs/proof/899_oop_mulfall.cubalc", "MULFALL/SCALEFALL bulk multiply numeric fields by factor"},
       {"oop_freqf", "programs/proof/900_oop_freqf.cubalc", "FREQF/HISTF fleet field value histogram key:count"},
+      {"oop_modef", "programs/proof/901_oop_modef.cubalc", "MODEF/TOPF most frequent fleet field value"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5945,6 +5946,7 @@ int main(int argc, char **argv) {
       {"programs/proof/898_oop_medianf.cubalc", "oop_medianf", "MEDIANF/P50F integer median of fleet numeric field"},
       {"programs/proof/899_oop_mulfall.cubalc", "oop_mulfall", "MULFALL/SCALEFALL bulk multiply numeric fields by factor"},
       {"programs/proof/900_oop_freqf.cubalc", "oop_freqf", "FREQF/HISTF fleet field value histogram key:count"},
+      {"programs/proof/901_oop_modef.cubalc", "oop_modef", "MODEF/TOPF most frequent fleet field value"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6243,6 +6245,7 @@ int main(int argc, char **argv) {
       {"programs/proof/898_oop_medianf.cubalc", "oop_medianf", "MEDIANF/P50F integer median of fleet numeric field"},
       {"programs/proof/899_oop_mulfall.cubalc", "oop_mulfall", "MULFALL/SCALEFALL bulk multiply numeric fields by factor"},
       {"programs/proof/900_oop_freqf.cubalc", "oop_freqf", "FREQF/HISTF fleet field value histogram key:count"},
+      {"programs/proof/901_oop_modef.cubalc", "oop_modef", "MODEF/TOPF most frequent fleet field value"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

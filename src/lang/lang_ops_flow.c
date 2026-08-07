@@ -2754,6 +2754,157 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MODEF|TOPF|MODEFALL|DOMINANTF [Class] field
+   * — most frequent field value over live objects (num or str).
+   * LAST = mode value (first-seen on ties); LAST_N = mode count.
+   * MODEF_TOTAL = samples; MODEF_DISTINCT = unique keys; soft empty → "".
+   * Usability: dominant status/energy without FREQF+SYS TOPKEY glue. */
+  if (kw(&L->cur, "MODEF") || kw(&L->cur, "TOPF") ||
+      kw(&L->cur, "MODEFALL") || kw(&L->cur, "DOMINANTF") ||
+      kw(&L->cur, "MOSTF") || kw(&L->cur, "COMMONF") ||
+      kw(&L->cur, "FIELDMODE") || kw(&L->cur, "OBJSMODE") ||
+      kw(&L->cur, "TOPVALUE") || kw(&L->cur, "MODEFIELD")) {
+    char filt[48], fname[48], tok1[48];
+    char keys[64][128];
+    long counts[64];
+    char best[128];
+    int has_filt = 0, i, k, nk = 0, n_skip = 0, total = 0, best_i = -1;
+    long best_c = 0;
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    best[0] = 0;
+    memset(counts, 0, sizeof counts);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "BY")) {
+      if (kw(&L->cur, "BY")) {
+        lex_next(L);
+      } else {
+        lex_next(L);
+        if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+          fail(vm, "MODEF OF Class field"); return -1;
+        }
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "MODEF [Class] field"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "MODEF [Class] field"); return -1;
+      }
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi;
+      char field[128];
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi])
+        snprintf(field, sizeof field, "%s", ob->fstr[fi]);
+      else
+        snprintf(field, sizeof field, "%ld", ob->fnum[fi]);
+      total++;
+      for (k = 0; k < nk; k++) {
+        if (strcmp(keys[k], field) == 0) {
+          counts[k]++;
+          break;
+        }
+      }
+      if (k == nk && nk < 64) {
+        snprintf(keys[nk], sizeof keys[0], "%s", field);
+        counts[nk] = 1;
+        nk++;
+      }
+    }
+    for (k = 0; k < nk; k++) {
+      if (best_i < 0 || counts[k] > best_c) {
+        best_c = counts[k];
+        best_i = k;
+      }
+    }
+    if (best_i >= 0)
+      snprintf(best, sizeof best, "%s", keys[best_i]);
+    var_set_str(vm, "LAST", best);
+    var_set_str(vm, "MODEF", best);
+    var_set_str(vm, "TOPF", best);
+    var_set_str(vm, "MODEFALL", best);
+    var_set_str(vm, "DOMINANTF", best);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", best);
+    vm->last_n = best_c;
+    var_set_num(vm, "LAST_N", best_c);
+    var_set_num(vm, "MODEF_COUNT", best_c);
+    var_set_num(vm, "TOPF_COUNT", best_c);
+    var_set_num(vm, "MODEF_N", total);
+    var_set_num(vm, "MODEFALL_N", total);
+    var_set_num(vm, "TOPF_N", total);
+    var_set_num(vm, "MODEF_TOTAL", total);
+    var_set_num(vm, "MODEF_DISTINCT", nk);
+    var_set_num(vm, "MODEF_SKIP", n_skip);
+    /* numeric peel when mode key is integer text */
+    {
+      char *end = 0;
+      long nv;
+      if (best[0]) {
+        nv = strtol(best, &end, 10);
+        if (end && end != best && *end == 0)
+          var_set_num(vm, "MODEF_NUM", nv);
+        else
+          var_set_num(vm, "MODEF_NUM", 0);
+      } else {
+        var_set_num(vm, "MODEF_NUM", 0);
+      }
+    }
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* WHEREGE|WHEREGT|WHERELE|WHERELT [Class] field value
    * — bag of live object names where numeric field meets threshold.
    * Soft always; string/missing fields skipped. LAST_N = count.

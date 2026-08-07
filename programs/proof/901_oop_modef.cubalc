@@ -1,0 +1,100 @@
+# MODEF / TOPF — most frequent fleet field value
+# Usability: dominant status/energy without FREQF+SYS TOPKEY glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+
+# numeric mode (10 appears twice)
+MODEF Cell energy
+ASSERT OK == 1
+ASSERT MODEF_COUNT == 2
+ASSERT LAST_N == 2
+ASSERT MODEF_TOTAL == 4
+ASSERT MODEF_N == 4
+ASSERT MODEF_DISTINCT == 3
+ASSERT MODEF_NUM == 10
+ASSERT MODEF_SKIP == 0
+SYS EQS LAST "10"
+ASSERT LAST_N == 1 "mode value is 10"
+
+# TOPF / MODEFALL aliases
+TOPF Cell energy
+ASSERT TOPF_COUNT == 2
+ASSERT LAST_N == 2
+SYS EQS TOPF "10"
+ASSERT LAST_N == 1
+MODEFALL Cell energy
+ASSERT LAST_N == 2
+SYS EQS MODEFALL "10"
+ASSERT LAST_N == 1
+
+# OF sugar
+MODEF OF Cell energy
+ASSERT MODEF_COUNT == 2
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+
+# string status dominant
+CLASS Ticket
+  FIELD status "new"
+  METHOD init s
+    SETF THIS status s
+  END
+END
+NEW Ticket t1 "open"
+NEW Ticket t2 "open"
+NEW Ticket t3 "closed"
+NEW Ticket t4 "open"
+MODEF Ticket status
+ASSERT MODEF_COUNT == 3
+ASSERT LAST_N == 3
+ASSERT MODEF_TOTAL == 4
+ASSERT MODEF_DISTINCT == 2
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+DOMINANTF Ticket status
+ASSERT LAST_N == 3
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+
+# bare field + Counter
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 5
+NEW Counter k2 5
+NEW Counter k3 7
+MODEF n
+ASSERT LAST_N == 2
+ASSERT MODEF_NUM == 5
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# class filter
+MODEF Counter n
+ASSERT MODEF_TOTAL == 3
+ASSERT LAST_N == 2
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# tie: first-seen wins
+DELETEALL Cell
+NEW Cell e1 1 40 0
+NEW Cell e2 1 50 0
+MODEF Cell energy
+ASSERT LAST_N == 1
+ASSERT MODEF_DISTINCT == 2
+SYS EQS LAST "40"
+ASSERT LAST_N == 1
+
+PRINT "proof901_oop_modef" 1
+ASSERT OK == 1
