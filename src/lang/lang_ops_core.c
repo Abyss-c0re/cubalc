@@ -25332,8 +25332,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN — fail-fast gates (host path/kind/tool)"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
+      {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
+      {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
+      {"REQUIRE METHOD", "REQUIRE METHOD Class method — fail if method missing on class"},
       {"SYS WHICHBIN", "SYS WHICHBIN|PATHWHICH name — PATH-only soft resolve → LAST/OK"},
       {"PRINT", "PRINT str|expr…"},
       {"PRINT_JSON", "PRINT_JSON [idents] — one JSON line for agents"},
@@ -26627,10 +26630,190 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    * REQUIRE ENV|VAR name — fail-fast if host env missing or empty.
    * REQUIRE PATH|DIR|REG path — fail-fast if host path missing / wrong kind.
    * REQUIRE BIN|CMD|EXE name — fail-fast if host executable not on PATH.
-   * Usability: agents refuse missing stdlib / old runtime / host config / tools without shell glue. */
+   * REQUIRE FN|CLASS|METHOD — fail-fast language-plane after INCLUDE (HASFN soft twin).
+   * Usability: agents refuse missing stdlib / old runtime / host config / tools / symbols. */
   if (kw(&L->cur,"REQUIRE")||kw(&L->cur,"NEED")||kw(&L->cur,"REQUIRES")){
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE FN|FUNC|FUNCTION name — defined FN must exist (after INCLUDE).
+     * On success: LAST = name, REQUIRE_FN = name, LAST_N=1, OK=1.
+     * Usability: fail-fast optional-lib surface without HASFN + IF + FAIL glue. */
+    if (kw(&L->cur,"FN")||kw(&L->cur,"FUNC")||kw(&L->cur,"FUNCTION")||
+        kw(&L->cur,"DEFUN")||kw(&L->cur,"SUB")){
+      char name[48];
+      int i, hit = 0;
+      lex_next(L);
+      name[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(name, sizeof name, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(name, sizeof name, "%s", vm->last_str);
+        else
+          snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE FN name");
+        return -1;
+      }
+      if (!name[0]) {
+        fail(vm, "REQUIRE FN empty name");
+        return -1;
+      }
+      for (i = 0; i < vm->n_fns; i++) {
+        if (strcmp(vm->fns[i].name, name) == 0) { hit = 1; break; }
+      }
+      if (!hit) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE FN '%s' missing line %d — DEFINE/INCLUDE or HASFN soft probe",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", name);
+      var_set_str(vm, "REQUIRE_FN", name);
+      var_set_str(vm, "FN", name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", name);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require fn %s ok\n", name);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+    /* REQUIRE CLASS|TYPE name — class must be defined (after INCLUDE).
+     * On success: LAST = name, REQUIRE_CLASS = name, LAST_N=1, OK=1. */
+    if (kw(&L->cur,"CLASS")||kw(&L->cur,"TYPE")||kw(&L->cur,"CLS")||
+        kw(&L->cur,"CLASSNAME")||kw(&L->cur,"OOPCLASS")){
+      char name[48];
+      int i, hit = 0;
+      lex_next(L);
+      name[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(name, sizeof name, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(name, sizeof name, "%s", vm->last_str);
+        else
+          snprintf(name, sizeof name, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE CLASS name");
+        return -1;
+      }
+      if (!name[0]) {
+        fail(vm, "REQUIRE CLASS empty name");
+        return -1;
+      }
+      for (i = 0; i < vm->n_classes; i++) {
+        if (strcmp(vm->classes[i].name, name) == 0) { hit = 1; break; }
+      }
+      if (!hit) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE CLASS '%s' missing line %d — CLASS/INCLUDE or LISTCLASSES",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", name);
+      var_set_str(vm, "REQUIRE_CLASS", name);
+      var_set_str(vm, "CLASS", name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", name);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require class %s ok\n", name);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+    /* REQUIRE METHOD|METH Class method — class method must exist.
+     * On success: LAST = Class.method, REQUIRE_METHOD, CLASS, METHOD, OK=1. */
+    if (kw(&L->cur,"METHOD")||kw(&L->cur,"METH")||kw(&L->cur,"MSG")||
+        kw(&L->cur,"HANDLER")){
+      char cname[48], mname[48], plate[96];
+      int i, j, hit = 0;
+      lex_next(L);
+      cname[0] = 0;
+      mname[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(cname, sizeof cname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else if (strcmp(L->cur.text, "LAST") == 0)
+          snprintf(cname, sizeof cname, "%s", vm->last_str);
+        else
+          snprintf(cname, sizeof cname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE METHOD Class method");
+        return -1;
+      }
+      if (kw(&L->cur, "METHOD") || kw(&L->cur, "METH") || kw(&L->cur, "OF"))
+        lex_next(L);
+      if (L->cur.kind == TK_STR) {
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(mname, sizeof mname, "%s", vv->sval);
+        else
+          snprintf(mname, sizeof mname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE METHOD Class method");
+        return -1;
+      }
+      for (i = 0; i < vm->n_classes; i++) {
+        if (strcmp(vm->classes[i].name, cname) != 0) continue;
+        for (j = 0; j < vm->classes[i].n_methods; j++) {
+          if (strcmp(vm->classes[i].methods[j].name, mname) == 0) {
+            hit = 1;
+            break;
+          }
+        }
+        break;
+      }
+      if (!hit) {
+        char msg[180];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE METHOD '%s.%s' missing line %d — CLASS METHOD or HASMETHOD",
+                 cname, mname, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      snprintf(plate, sizeof plate, "%s.%s", cname, mname);
+      var_set_str(vm, "LAST", plate);
+      var_set_str(vm, "REQUIRE_METHOD", plate);
+      var_set_str(vm, "CLASS", cname);
+      var_set_str(vm, "METHOD", mname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require method %s ok\n", plate);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     /* REQUIRE LIB|MODULE|INCLUDE|FILE name — resolve like INCLUDE / cubalc which.
      * Note: FILE here means cubalc module (legacy), not host path — use REQUIRE PATH|REG. */
     if (kw(&L->cur,"LIB")||kw(&L->cur,"MODULE")||kw(&L->cur,"INCLUDE")||
@@ -26829,7 +27012,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     }
     if (!kw(&L->cur,"VERSION") && !kw(&L->cur,"VER") && !kw(&L->cur,"LANG") &&
         !kw(&L->cur,"CUBALC") && L->cur.kind != TK_STR){
-      fail(vm, "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN …");
+      fail(vm, "REQUIRE VERSION|LIB|ENV|PATH|DIR|REG|BIN|FN|CLASS|METHOD …");
       return -1;
     }
     if (kw(&L->cur,"VERSION")||kw(&L->cur,"VER")||kw(&L->cur,"LANG")||

@@ -1,0 +1,88 @@
+# REQUIRE FN|CLASS|METHOD — fail-fast language-plane gates after INCLUDE
+# Usability: no HASFN/LISTCLASSES + IF + FAIL glue for agent boot
+
+HOLD_FLASH 1
+
+FN add a b
+  RET a + b
+END
+
+FN ping
+  RET 1
+END
+
+CLASS Ticket
+  FIELD status "new"
+  METHOD init s
+    SETF THIS status s
+  END
+  METHOD bump
+    INCF THIS retries
+  END
+  FIELD retries 0
+END
+
+# FN present
+REQUIRE FN add
+ASSERT OK == 1
+ASSERT LAST_N == 1
+SYS EQS REQUIRE_FN "add"
+ASSERT LAST_N == 1
+SYS EQS LAST "add"
+ASSERT LAST_N == 1
+SYS EQS FN "add"
+ASSERT LAST_N == 1
+
+REQUIRE FUNC ping
+SYS EQS REQUIRE_FN "ping"
+ASSERT LAST_N == 1
+
+# string / dynamic name
+REQUIRE FN "add"
+ASSERT OK == 1
+LET f = "ping"
+REQUIRE FN f
+SYS EQS REQUIRE_FN "ping"
+ASSERT LAST_N == 1
+
+# CLASS present
+REQUIRE CLASS Ticket
+ASSERT OK == 1
+SYS EQS REQUIRE_CLASS "Ticket"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+
+REQUIRE TYPE "Ticket"
+ASSERT OK == 1
+
+# METHOD present
+REQUIRE METHOD Ticket init
+ASSERT OK == 1
+SYS EQS REQUIRE_METHOD "Ticket.init"
+ASSERT LAST_N == 1
+SYS EQS METHOD "init"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+
+REQUIRE METHOD Ticket METHOD bump
+SYS EQS REQUIRE_METHOD "Ticket.bump"
+ASSERT LAST_N == 1
+
+REQUIRE METH Ticket "init"
+ASSERT OK == 1
+
+# CALL still works after REQUIRE
+CALL add 3 4
+ASSERT LAST_N == 7
+
+# HELP
+HELP REQUIRE
+ASSERT OK == 1
+SYS HAS LAST "REQUIRE"
+ASSERT LAST_N == 1
+SYS HAS LAST "FN"
+ASSERT LAST_N == 1
+
+NOTE "934_require_fn_class_method ok"
