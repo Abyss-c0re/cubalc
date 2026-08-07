@@ -1,0 +1,50 @@
+# REQUIRE RESTARGS — fail-fast min non-flag positionals after --flags
+# Unlike REQUIRE ARGC, flags do not count toward the minimum.
+
+HOLD_FLASH 1
+
+# success: two files after --mode=fast
+SYS ENV SET CUBALC_ARG0 "--mode=fast"
+SYS ENV SET CUBALC_ARG1 "a.txt"
+SYS ENV SET CUBALC_ARG2 "b.txt"
+SYS ENV SET CUBALC_ARGC "3"
+
+REQUIRE RESTARGS 2
+ASSERT LAST_N == 2
+SYS NTH 0 LAST
+SYS EQS LAST "a.txt"
+ASSERT LAST_N == 1
+REQUIRE RESTARGS 2
+SYS NTH 1 LAST
+SYS EQS LAST "b.txt"
+ASSERT LAST_N == 1
+ASSERT REQUIRE_RESTARGS == 2
+
+# default min=1
+REQUIRE RESTARGS
+ASSERT LAST_N == 2
+
+# ARGC would be 3 (includes flag) — RESTARGS is the precise gate
+SYS ARGC
+ASSERT LAST_N == 3
+RESTARGS
+ASSERT LAST_N == 2
+
+# only flags → fail soft-proved via count 0 before hard gate
+SYS ENV SET CUBALC_ARG0 "--verbose=1"
+SYS ENV SET CUBALC_ARG1 "--dry-run=1"
+SYS ENV SET CUBALC_ARGC "2"
+RESTARGS
+ASSERT LAST_N == 0
+
+# bare -- then files
+SYS ENV SET CUBALC_ARG0 "--verbose"
+SYS ENV SET CUBALC_ARG1 "--"
+SYS ENV SET CUBALC_ARG2 "only.bin"
+SYS ENV SET CUBALC_ARGC "3"
+REQUIRE POS 1
+ASSERT LAST_N == 1
+SYS EQS LAST "only.bin"
+ASSERT LAST_N == 1
+
+PRINT "require_restargs ok"

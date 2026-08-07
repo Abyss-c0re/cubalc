@@ -26030,10 +26030,11 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"EXIT", "EXIT [code] [\"why\"] — halt program; non-zero fails plate + process rc"},
       {"CLEAR_ERR", "CLEAR_ERR [note] — wipe sticky ERR/LAST_ERR after soft recovery"},
       {"VERSION", "VERSION — set LAST/VERSION to language version string"},
-      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
+      {"REQUIRE", "REQUIRE VERSION|LIB|ENV|ARG|ARGC|FLAG|RESTARGS|PATH|DIR|REG|BIN|FN|CLASS|METHOD — fail-fast gates"},
       {"REQUIRE ARG", "REQUIRE ARG n|name — fail if CUBALC_ARGn/env empty · CLI contract"},
       {"REQUIRE ARGC", "REQUIRE ARGC [min] — fail if program arg count < min (default 1)"},
       {"REQUIRE FLAG", "REQUIRE FLAG|OPT name — fail if --name missing · LAST=value (HASFLAG twin)"},
+      {"REQUIRE RESTARGS", "REQUIRE RESTARGS|POS [min] — fail if non-flag count < min · LAST=bag"},
       {"HASARG", "HASARG n|name — soft 0|1 if program arg present (REQUIRE ARG twin)"},
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
@@ -27928,6 +27929,49 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# require flag %s ok → %s\n", name, val);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+    /* REQUIRE RESTARGS|POSITIONALS|POS [min] — fail if non-flag arg count < min
+     * (default 1). On success: LAST = positional bag, LAST_N = count (RESTARGS).
+     * Usability: gate files after --flags without REQUIRE ARGC (flags inflate ARGC). */
+    if (kw(&L->cur,"RESTARGS") || kw(&L->cur,"POSITIONALS") || kw(&L->cur,"POSARGS") ||
+        kw(&L->cur,"POS") || kw(&L->cur,"NFILES") || kw(&L->cur,"FILES") ||
+        kw(&L->cur,"REST_ARGS") || kw(&L->cur,"NONFLAGS")){
+      long need = 1, have;
+      char bag[CUBALC_HOST_STR_MAX];
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+           !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"NEED") && !kw(&L->cur,"PATH") &&
+           !kw(&L->cur,"FLAG") && !kw(&L->cur,"ARG") && !kw(&L->cur,"ARGC"))){
+        need = parse_expr(vm, L);
+      }
+      if (need < 0) need = 0;
+      if (need > 32) need = 32;
+      have = cubalc_collect_restargs(bag, sizeof bag);
+      if (have < need) {
+        char msg[180];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE RESTARGS %ld got %ld line %d — pass files after --flags (RESTARGS)",
+                 need, have, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", bag);
+      var_set_str(vm, "RESTARGS", bag);
+      var_set_str(vm, "POSITIONALS", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = have;
+      var_set_num(vm, "LAST_N", have);
+      var_set_num(vm, "RESTARGS_N", have);
+      var_set_num(vm, "REQUIRE_RESTARGS", need);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require restargs >= %ld (have %ld)\n", need, have);
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
