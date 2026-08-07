@@ -21,13 +21,13 @@
     },
     {
       "name": "gate",
-      "cmd": "MINLEN=10 MINHITS=2 admit; MINHITS=99 REQUIRE→2",
+      "cmd": "MINLEN=10 MINHITS=2 admit; MINHITS=99 REQUIRE\u21922",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "icase_clear",
-      "cmd": "HASIFI on i1; CLEARF note → empty closed",
+      "cmd": "HASIFI on i1; CLEARF note \u2192 empty closed",
       "ok": true,
       "note": "HASIFI/CLEARF"
     },
@@ -51,22 +51,22 @@
       "area": "host|note",
       "title": "Var named NOTE is poisoned by NOTE statement",
       "detail": "DEFAULT NOTE=... then NOTE \"action open\" overwrites the var with log text (dump showed note:action open). Agents must use BODY/MSG not NOTE for payload vars.",
-      "repro": "DEFAULT NOTE=\"ERROR...\"; NOTE \"action open\"; SETF note NOTE → action open"
+      "repro": "DEFAULT NOTE=\"ERROR...\"; NOTE \"action open\"; SETF note NOTE \u2192 action open"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "oop|countinf",
       "title": "COUNTINF needle var NEEDLE hard-fails",
-      "detail": "COUNTINF obj field NEEDLE → err 'COUNTINF object field needle'. Same reserved class as GREPF NEEDLE. Use WANT.",
-      "repro": "DEFAULT NEEDLE=\"ERROR\"; COUNTINF i note NEEDLE → hard err"
+      "detail": "COUNTINF obj field NEEDLE \u2192 err 'COUNTINF object field needle'. Same reserved class as GREPF NEEDLE. Use WANT.",
+      "repro": "DEFAULT NEEDLE=\"ERROR\"; COUNTINF i note NEEDLE \u2192 hard err"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "oop|replacef",
       "title": "REPLACEF args FROM/TO reserved",
-      "detail": "REPLACEF note FROM TO → 'REPLACEF object field old new'. Rename OLDSTR/NEWSTR.",
+      "detail": "REPLACEF note FROM TO \u2192 'REPLACEF object field old new'. Rename OLDSTR/NEWSTR.",
       "repro": "REPLACEF i note FROM TO with FROM/TO vars"
     },
     {
@@ -75,7 +75,7 @@
       "area": "oop|hasinf",
       "title": "HASINF case-sensitive vs HASIFI dual path",
       "detail": "Easy false miss on ERROR vs error; agents must pick HASIFI for logs. Not a bug but ops footgun.",
-      "repro": "HASINF note ERROR on 'error lower' → 0"
+      "repro": "HASINF note ERROR on 'error lower' \u2192 0"
     },
     {
       "id": "W5",
@@ -95,9 +95,9 @@
     }
   ],
   "workarounds": [
-    "Never name payload vars NOTE — use BODY",
-    "Never name COUNTINF/GREPF needle NEEDLE — use WANT",
-    "Never name REPLACEF args FROM/TO — use OLDSTR/NEWSTR",
+    "Never name payload vars NOTE \u2014 use BODY",
+    "Never name COUNTINF/GREPF needle NEEDLE \u2014 use WANT",
+    "Never name REPLACEF args FROM/TO \u2014 use OLDSTR/NEWSTR",
     "HASIFI for case-fold log triage; HASINF exact",
     "Fixed i0/i1/i2; TRY* soft; numeric REQUIRE only"
   ],
@@ -108,12 +108,12 @@
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "NOTE var poisoned by NOTE stmt — renamed BODY",
-    "NEEDLE/FROM hard-fail COUNTINF/REPLACEF — WANT/OLDSTR",
+    "NOTE var poisoned by NOTE stmt \u2014 renamed BODY",
+    "NEEDLE/FROM hard-fail COUNTINF/REPLACEF \u2014 WANT/OLDSTR",
     "COUNTINF ERROR=2; scrub REDACTED; CLEARF closed",
     "HASIFI icase; gate len+hits dual wall",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "f5c098be229c18ea6bb25cdf8678ea81c01619b9",
   "ts": "2026-08-07T19:50:44Z"
 }
