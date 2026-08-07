@@ -15613,6 +15613,55 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS TIMEDIFF|ELAPSED|DELTA|DIFFTIME [a] [b]
+     * — epoch-second difference for plate age/deadline math.
+     * Two args: LAST_N = a - b (signed). One arg: LAST_N = now - a.
+     * Zero args: LAST_N = 0. LAST = decimal; TIMEDIFF_N mirrors.
+     * Usability: after PARSEISO/FROMTIME/MTIME compare without shell date.
+     * Distinct from SYS AGE (file mtime age by path). */
+    if (kw(&L->cur,"TIMEDIFF") || kw(&L->cur,"ELAPSED") || kw(&L->cur,"DELTA") ||
+        kw(&L->cur,"DIFFTIME") || kw(&L->cur,"SECDIFF") || kw(&L->cur,"EPOCHDIFF") ||
+        kw(&L->cur,"TDIFF") || kw(&L->cur,"DIFFSEC") || kw(&L->cur,"SUBTIME") ||
+        kw(&L->cur,"TIMEDELTA") || kw(&L->cur,"DTIME")){
+      long a = 0, b = 0, outn = 0;
+      int has_a = 0, has_b = 0;
+      char buf[40];
+      long now;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        b = parse_expr(vm, L);
+        has_b = 1;
+      }
+      now = (long)time(NULL);
+      if (has_a && has_b) {
+        outn = a - b;
+      } else if (has_a) {
+        outn = now - a;
+      } else {
+        /* default: age of prior LAST_N as epoch */
+        outn = now - vm->last_n;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "TIMEDIFF_N", outn);
+      var_set_num(vm, "ELAPSED_N", outn);
+      var_set_num(vm, "DELTA_N", outn);
+      var_set_str(vm, "TIMEDIFF", buf);
+      var_set_str(vm, "ELAPSED", buf);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
      * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
      * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
@@ -24371,6 +24420,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PARSEISO", "SYS PARSEISO|TOEPOCH|FROMISO [str] — ISO stamp → epoch · dual of FROMTIME"},
       {"SYS TOEPOCH", "SYS TOEPOCH [str] — alias of SYS PARSEISO"},
       {"SYS FROMISO", "SYS FROMISO [str] — alias of SYS PARSEISO"},
+      {"SYS TIMEDIFF", "SYS TIMEDIFF|ELAPSED a [b] — epoch delta seconds · a-b or now-a"},
+      {"SYS ELAPSED", "SYS ELAPSED a [b] — alias of SYS TIMEDIFF"},
+      {"SYS DELTA", "SYS DELTA a [b] — alias of SYS TIMEDIFF"},
       {"SYS LOCAL", "SYS LOCAL|LOCALTIME — local wall stamp YYYY-MM-DDTHH:MM:SS → LAST"},
       {"SYS LOCALTIME", "SYS LOCALTIME alias of SYS LOCAL"},
       {"SYS LOCALDATE", "SYS LOCALDATE — local date-only YYYY-MM-DD → LAST"},

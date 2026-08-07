@@ -339,6 +339,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 309. ~~**`SYS HUMANMS` / `FMTMS`**~~ **done** (ms → compact 5s/1m30s plate labels · dual of PARSEMS).
 310. ~~**`SYS FROMTIME` / `EPOCHISO`**~~ **done** (epoch seconds → UTC ISO stamp · MTIME plates without shell date).
 311. ~~**`SYS PARSEISO` / `TOEPOCH`**~~ **done** (ISO stamp → epoch · dual of FROMTIME · plate age/compare).
+312. ~~**`SYS TIMEDIFF` / `ELAPSED`**~~ **done** (epoch second delta a−b or now−a · plate age/deadline math).
 
 ## Tick protocol
 

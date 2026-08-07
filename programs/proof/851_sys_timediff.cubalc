@@ -1,0 +1,73 @@
+# SYS TIMEDIFF / ELAPSED — epoch second deltas for plate age/deadlines
+# Usability: after PARSEISO/FROMTIME compare without shell date
+# Distinct from SYS AGE (file path mtime age)
+
+HOLD_FLASH 1
+
+# two-arg: a - b
+SYS TIMEDIFF 1000 400
+ASSERT OK == 1
+ASSERT LAST_N == 600
+ASSERT TIMEDIFF_N == 600
+
+SYS TIMEDIFF 400 1000
+ASSERT OK == 1
+ASSERT LAST_N == -600
+
+# equal → 0
+SYS TIMEDIFF 946684800 946684800
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# known span: 2000-01-01 to 2000-01-02 = 86400
+SYS TIMEDIFF 946771200 946684800
+ASSERT OK == 1
+ASSERT LAST_N == 86400
+
+# aliases
+SYS ELAPSED 50 20
+ASSERT OK == 1
+ASSERT LAST_N == 30
+SYS DELTA 10 3
+ASSERT OK == 1
+ASSERT LAST_N == 7
+
+# one-arg: now - a (age of epoch). Use past epoch → positive
+SYS PARSEISO "2000-01-01T00:00:00Z"
+LET y2k = LAST_N
+SYS TIMEDIFF y2k
+ASSERT OK == 1
+# years since 2000: must be > 20 years * 365 * 86400 roughly
+# 20y ≈ 630720000; wall now is 2026 → ~26y
+ASSERT LAST_N > 600000000
+
+# one-arg future epoch → negative
+SYS TIME
+LET now_ep = LAST_N
+LET future = now_ep + 3600
+SYS TIMEDIFF future
+ASSERT OK == 1
+ASSERT LAST_N < 0
+ASSERT LAST_N > -7200
+
+# zero-arg: age of prior LAST_N
+SYS PARSEISO "2000-01-01T00:00:00Z"
+SYS TIMEDIFF
+ASSERT OK == 1
+ASSERT LAST_N > 600000000
+
+# round-trip style: two plate stamps
+SYS PARSEISO "2000-01-01T00:00:00Z"
+LET t0 = LAST_N
+SYS PARSEISO "2000-01-01T01:00:00Z"
+LET t1 = LAST_N
+SYS TIMEDIFF t1 t0
+ASSERT OK == 1
+ASSERT LAST_N == 3600
+
+# string form of LAST after TIMEDIFF
+SYS TIMEDIFF 100 40
+SYS EQS LAST "60"
+ASSERT LAST_N == 1
+
+PRINT "sys_timediff ok"
