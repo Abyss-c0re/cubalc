@@ -1,63 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 132,
-  "program": "programs/realworld/canary_weight_mul_board.cubalc",
-  "theme": "COPYFWHERE/MULWHERE/SWAPFWHERE canary weight snap+scale+rollback + SUMWHERE admit",
-  "version": "1.15.367-usability",
+  "iter": 133,
+  "program": "programs/realworld/ready_pick_where_board.cubalc",
+  "theme": "MINOBJWHERE/MAXOBJWHERE/SORTBYFWHERE status-filtered cold/hot pick + ranked place/drain bag",
+  "version": "1.15.369-usability",
   "pass": true,
-  "prior_note": "iter 131 pool_rate_clamp CLAMPWHERE/UNIQUWHERE; this iter stresses COPYFWHERE+MULWHERE+SWAPFWHERE (288b963/a01fa39/917)",
+  "prior_note": "iter 132 canary_weight_mul COPYFWHERE/MULWHERE/SWAPFWHERE; this iter stresses MINOBJWHERE+MAXOBJWHERE+SORTBYFWHERE (957e666/d384e7e)",
   "tests": [
     {
-      "name": "open_roles",
-      "cmd": "open r0/r1 canary r2 stable; weights 10/20/100",
+      "name": "open_nodes",
+      "cmd": "open n0/n1 ready n2 drain; loads 30/10/5",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "copyfwhere_snap",
-      "cmd": "COPYFWHERE weight\u2192prev role canary N=2",
+      "name": "pick_cold",
+      "cmd": "MINOBJWHERE ready → n1 load 10 (drain n2 excluded)",
       "ok": true,
-      "note": "COPYFWHERE"
+      "note": "MINOBJWHERE"
     },
     {
-      "name": "mulwhere_scale",
-      "cmd": "MULWHERE BY 2 \u2192 20/40; stable 100 unscaled",
+      "name": "pick_hot",
+      "cmd": "MAXOBJWHERE ready → n0 load 30",
       "ok": true,
-      "note": "MULWHERE"
+      "note": "MAXOBJWHERE"
     },
     {
-      "name": "sum_admit",
-      "cmd": "sum canary 60; budget 50 deny; after rollback 30 admit",
+      "name": "rank_asc_desc",
+      "cmd": "ASC n1 n0; DESC n0 n1",
       "ok": true,
-      "note": "SUMWHERE+admit"
+      "note": "SORTBYFWHERE"
     },
     {
-      "name": "swapfwhere_rollback",
-      "cmd": "SWAPFWHERE weight\u2194prev \u2192 10/20 restored",
+      "name": "admit_budget",
+      "cmd": "cold 10 budget 20 admit; budget 5 deny",
       "ok": true,
-      "note": "SWAPFWHERE"
+      "note": "admit"
     },
     {
-      "name": "factor_zero_drain",
-      "cmd": "scale BY 0 \u2192 weights 0; rollback restores",
+      "name": "exclude_drain",
+      "cmd": "drain n1; cold → n0 only",
       "ok": true,
-      "note": "drain"
+      "note": "filter"
     },
     {
-      "name": "empty_role",
-      "cmd": "snap/scale/sum missing N=0; admit REQUIRE deny",
+      "name": "empty_ready",
+      "cmd": "all drain; pick_cold REQUIRE EXIT 2; rank N=0",
       "ok": true,
       "note": "empty"
     },
     {
+      "name": "tie_first_seen",
+      "cmd": "loads 15/15; cold and hot both n0 first-seen",
+      "ok": true,
+      "note": "tie"
+    },
+    {
       "name": "substring_false_friend",
-      "cmd": "role can count/sum 0 vs canary",
+      "cmd": "status read count 0",
       "ok": true,
       "note": "exact"
     },
     {
       "name": "setmatch_first",
-      "cmd": "two r0:scale \u2192 SETMATCH leaves 1",
+      "cmd": "two n0:place → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -65,49 +71,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "343/343 pass"
+      "note": "345/345 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "med",
-      "area": "oop|mulwhere",
-      "title": "MULWHERE factor is integer only \u2014 no fractional scale",
-      "detail": "Cannot ramp canary by 1.5x without two-step or non-integer path. BY 0 drains; negative factors may surprise.",
-      "repro": "scale BY 1.5 not expressible cleanly"
+      "severity": "high",
+      "area": "oop|maxobjwhere|empty",
+      "title": "Empty MINOBJWHERE/MAXOBJWHERE can leave last_err hard path",
+      "detail": "No matching objects sets last_err (e.g. MAXOBJWHERE: no matching objects). Agents must COUNTWHERE gate before pick or risk soft-hard confusion. SORTBYFWHERE empty is quieter (N=0 bag).",
+      "repro": "MINOBJWHERE status missing without COUNTWHERE"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|copyfwhere",
-      "title": "COPYFWHERE/SWAPFWHERE equality match only \u2014 no weight>N cohort",
-      "detail": "Selective snap/rollback needs a role/tag field; cannot match on weight threshold alone.",
-      "repro": "want snap only weight>10 without role tag"
+      "area": "oop|maxobjwhere|tie",
+      "title": "Ties → first-seen only — no multi-winner bag",
+      "detail": "Equal loads return single object name; cannot round-robin without extra state. SORTBYFWHERE keeps first-seen order on ties.",
+      "repro": "two ready load=15 → cold and hot both n0"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|swapfwhere",
-      "title": "Rollback without snap swaps zeros into weight",
-      "detail": "SWAPFWHERE with prev=0 drains canary if snap skipped. No refuse-if-blank for numeric prev.",
-      "repro": "open; no snap; rollback \u2192 weight 0"
+      "area": "oop|sortbyfwhere",
+      "title": "SORTBYFWHERE bag is names only — no load values paired",
+      "detail": "Rank plate is object names; agents need GETF per name or GETFWHERE for load:value inventory.",
+      "repro": "RANK.txt = n1\\nn0 not n1:10"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|sumwhere|empty",
-      "title": "Empty SUMWHERE \u2192 0; admit needs explicit N>0",
-      "detail": "Ghost role sum 0 would admit under any budget without COUNTWHERE gate.",
-      "repro": "admit missing budget 10 \u2192 deny only because N=0 gate"
+      "area": "oop|where",
+      "title": "Status equality only — no ready|idle multi-status pick",
+      "detail": "Cannot MINOBJWHERE across ready OR idle without two picks + compare.",
+      "repro": "want cold among ready+idle"
     },
     {
       "id": "W5",
       "severity": "low",
-      "area": "oop|mulwhere",
-      "title": "No atomic snap+scale single op",
-      "detail": "Race window between COPYFWHERE and MULWHERE across multi-process ARG dispatch (plate rehydrate helps but two runs).",
-      "repro": "snap then scale as separate CUBALC_ARG0 runs"
+      "area": "oop|pick",
+      "title": "LAST after pick is name string; GETF LAST works only if name is live object",
+      "detail": "Proof uses GETF LAST energy after MAXOBJWHERE; multi-run rehydrate boards usually store name then GETF by slot literal.",
+      "repro": "GETF LAST after plate rehydrate next process"
     },
     {
       "id": "W6",
@@ -115,14 +121,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c VAL.txt"
+      "repro": "od -c RANK.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE/FACTOR softens",
-      "detail": "REQUIRE=abc \u2192 soft; bad FACTOR keeps default.",
+      "title": "Non-numeric REQUIRE softens",
+      "detail": "REQUIRE=abc → soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -130,31 +136,31 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two r0:scale \u2192 one SETMATCH leaves 1.",
+      "detail": "Two n0:place → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Always snap before scale for meaningful SWAPFWHERE rollback",
-    "Tag canary role for WHERE match; COUNTWHERE N>0 before admit",
-    "Integer factors only; multi-step for non-power-of-two ramps",
-    "Gate empty role via N>0 not sum alone",
+    "COUNTWHERE before MINOBJWHERE/MAXOBJWHERE to avoid empty last_err",
+    "Tie-break with secondary field or explicit round-robin bag",
+    "Pair SORTBYFWHERE names with GETFWHERE loads if values needed",
+    "Dual pick+compare for multi-status cohorts",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "Fractional MULWHERE / fixed-point scale",
-    "WHERE numeric predicate (weight>N)",
-    "Atomic SNAPSCALE / refuse-if-prev-zero SWAP",
-    "Empty SUMWHERE soft miss vs zero",
+    "Soft-empty MINOBJWHERE/MAXOBJWHERE without last_err",
+    "Multi-winner / random-among-ties pick",
+    "SORTBYFWHERE AS KV name:value",
+    "WHERE IN (ready,idle) multi-match",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "COPYFWHERE snap N=2; MULWHERE BY 2 \u2192 20/40; stable 100 untouched",
-    "sum canary 60 budget 50 deny; rollback sum 30 budget 30 admit",
-    "scale BY 0 drain; rollback restores prev",
-    "empty missing N=0 admit REQUIRE deny; role can false friend 0",
-    "selftest 343/343 green; no language fix this iter"
+    "MINOBJWHERE ready → n1:10; MAXOBJWHERE → n0:30; drain n2 excluded",
+    "SORT ASC n1 n0; DESC n0 n1; admit cold≤20 ok; ≤5 deny",
+    "empty ready pick_cold REQUIRE EXIT 2; rank N=0",
+    "tie load 15 → first-seen n0 for cold and hot",
+    "selftest 345/345 green; no language fix this iter"
   ],
-  "commit": "ea2d1c196ab0f7758d6e4ab5e325892501b51b16",
-  "ts": "2026-08-07T10:39:58Z"
+  "commit": "",
+  "ts": "2026-08-07T11:04:20Z"
 }
