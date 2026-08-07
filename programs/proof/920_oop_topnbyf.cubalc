@@ -1,0 +1,139 @@
+# TOPNBYF / HEADBYF — top-n live object names by numeric field
+# Usability: no SORTBYF + SYS TAKE glue for peer pick / leaderboard
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 30 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 10 0
+NEW Cell e 1 50 0
+NEW Cell f 1 5 0
+
+# full ASC rank would be f5 b10 d10 c20 a30 e50
+# top 3 ASC = lowest 3: f b d
+TOPNBYF Cell energy 3 ASC
+ASSERT OK == 1
+ASSERT TOPNBYF_N == 3
+ASSERT LAST_N == 3
+ASSERT TOPNBYF_TOTAL == 6
+ASSERT TOPNBYF_REQ == 3
+ASSERT TOPNBYF_DESC == 0
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+SYS NTH 1 TOPNBYF
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SYS NTH 2 TOPNBYF
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+SYS HASLINE TOPNBYF "e"
+ASSERT LAST_N == 0 "high energy excluded from ASC top3"
+
+# top 2 DESC = e50 a30
+TOPNBYF Cell energy 2 DESC
+ASSERT TOPNBYF_DESC == 1
+ASSERT TOPNBYF_N == 2
+ASSERT TOPNBYF_TOTAL == 6
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+SYS NTH 1 TOPNBYF
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+SYS HASLINE TOPNBYF "c"
+ASSERT LAST_N == 0
+
+# n larger than fleet → all ranked (DESC)
+TOPNBYF Cell energy 99 DESC
+ASSERT TOPNBYF_N == 6
+ASSERT TOPNBYF_REQ == 99
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+SYS NTH 5 TOPNBYF
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+
+# n=0 → empty
+TOPNBYF Cell energy 0 DESC
+ASSERT OK == 1
+ASSERT TOPNBYF_N == 0
+ASSERT LAST_N == 0
+ASSERT TOPNBYF_TOTAL == 6
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# OF sugar + TAKE keyword
+TOPNBYF OF Cell energy TAKE 1 DESC
+ASSERT TOPNBYF_N == 1
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# aliases
+HEADBYF Cell energy 2 ASC
+ASSERT HEADBYF_N == 2
+SYS NTH 0 HEADBYF
+SYS EQS LAST "f"
+ASSERT LAST_N == 1
+TAKEBYF Cell energy 1 DESC
+ASSERT TAKEBYF_N == 1
+SYS NTH 0 TAKEBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+FIRSTNBYF Cell energy 2 DESC
+ASSERT TOPNBYF_N == 2
+LIMITBYF Cell energy 3 ASC
+ASSERT TOPNBYF_N == 3
+
+# var n
+LET k = 2
+TOPNBYF Cell energy k DESC
+ASSERT TOPNBYF_N == 2
+ASSERT TOPNBYF_REQ == 2
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "e"
+ASSERT LAST_N == 1
+
+# Ticket class mixed fleet — class filter ignores others
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 7
+NEW Ticket t2 "closed" 1
+NEW Ticket t3 "open" 2
+TOPNBYF Ticket retries 2 DESC
+ASSERT OK == 1
+ASSERT TOPNBYF_N == 2
+ASSERT TOPNBYF_TOTAL == 3
+SYS NTH 0 TOPNBYF
+SYS EQS LAST "t1"
+ASSERT LAST_N == 1
+SYS NTH 1 TOPNBYF
+SYS EQS LAST "t3"
+ASSERT LAST_N == 1
+SYS HASLINE TOPNBYF "a"
+ASSERT LAST_N == 0 "Cell not in Ticket filter"
+SYS HASLINE TOPNBYF "t2"
+ASSERT LAST_N == 0 "closed not top-2 DESC"
+
+# empty class (no live objs) → empty soft
+CLASS Empty
+  FIELD x 0
+END
+TOPNBYF Empty x 3 DESC
+ASSERT OK == 1
+ASSERT TOPNBYF_N == 0
+ASSERT TOPNBYF_TOTAL == 0
+
+PRINT "proof920_oop_topnbyf" 1
+ASSERT OK == 1
