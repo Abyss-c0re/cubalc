@@ -154,6 +154,6 @@
     "Empty needle BEFORE blanks tag in probe",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "361c9b9a5521b5f34e128fbd907bc80cdd6eed62",
   "ts": "2026-08-07T16:04:39Z"
 }
