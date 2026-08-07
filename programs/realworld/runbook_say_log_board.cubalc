@@ -1,0 +1,1079 @@
+# runbook_say_log_board.cubalc — multi-arg SAY/PRINT + optional THEN/LET runbook log
+#
+# Real use: runbook agents log multi-field step lines (step name status phase
+# code) without SYS CAT glue, using SAY/PRINT multi-arg string join; optional
+# LET/IF without =/THEN for denser agent glue. Append lines to LOG plate.
+#
+# Surfaces forced (1.15.424–425 / proof 974–975):
+#   PRINT / SAY / ECHO multi-arg string parts · PRINT_N · LAST join
+#   optional LET x val (no =) · optional IF cond body (no THEN)
+#   SYS APPEND log · HASLINE exact · soft READ miss
+#   soft miss + REQUIRE wall
+#
+# Distinct from deploy_step_board (stage machine), ordered_runbook (bags),
+# fn_runbook: this is *multi-arg SAY journal + optional syntax stress*.
+#
+# Slots: s0 s1 s2
+#
+# Plate under STATE:
+#   dump/s0 dump/s1 dump/s2
+#   LOG.txt VAL.txt META.txt OBJS.txt SAY_REPORT.txt
+#
+# Actions:
+#   list | open | set | say | saycode | log | hasline | countlog
+#   gate | probe | dump | clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_rsl_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=s0 CUBALC_ARG2=build
+#   CUBALC_FS_ST=running CUBALC_FS_PHASE=start CUBALC_ARG0=say CUBALC_ARG1=s0
+#   CUBALC_FS_CODE=0 CUBALC_ARG0=saycode CUBALC_ARG1=s0
+#   CUBALC_FS_MINLOG=1 CUBALC_ARG0=gate
+#
+# Env: CUBALC_FS_REQUIRE NAME ST PHASE CODE MINLOG STEPNAME ACTION
+#
+# Edges:
+#   PRINT joins with single spaces; empty PRINT re-echoes LAST
+#   numeric parts stringify; PRINT_N counts parts
+#   optional LET/IF still need END; classic THEN/= still work
+#   WRITE NL; NUM softens REQUIRE=abc
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Step
+  FIELD id ""
+  FIELD name "step"
+  FIELD status "pending"
+  FIELD phase "init"
+  FIELD code 0
+  METHOD init i n
+    SETF THIS id i
+    SETF THIS name n
+    SETF THIS status "pending"
+    SETF THIS phase "init"
+    SETF THIS code 0
+  END
+END
+
+REQUIRE CLASS Step
+REQUIRE METHOD Step init
+
+NOTE "runbook_say_log_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT ST = "running"
+DEFAULT PHASE = "start"
+DEFAULT CODE = 0
+DEFAULT MINLOG = 1
+DEFAULT STEPNAME = "build"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0
+  LET A2 = LAST
+  LET STEPNAME = LAST
+  SYS NUM
+  IF OK == 1
+    LET CODE = LAST_N
+  END
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  IF LAST_N > 0
+    LET A2 = LAST
+  END
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0
+  SYS NUM
+  IF OK == 1
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_ST" OR ""
+IF LAST_N > 0
+  LET ST = LAST
+END
+SYS ENV "CUBALC_FS_PHASE" OR ""
+IF LAST_N > 0
+  LET PHASE = LAST
+END
+SYS ENV "CUBALC_FS_CODE" OR ""
+IF LAST_N > 0
+  SYS NUM
+  IF OK == 1
+    LET CODE = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_MINLOG" OR ""
+IF LAST_N > 0
+  SYS NUM
+  IF OK == 1
+    LET MINLOG = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_STEPNAME" OR ""
+IF LAST_N > 0
+  LET STEPNAME = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "LOG.txt"
+LET log_path = LAST
+SYS JOIN state_dir "SAY_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "s0"
+LET d_s0 = LAST
+SYS JOIN dump_dir "s1"
+LET d_s1 = LAST
+SYS JOIN dump_dir "s2"
+LET d_s2 = LAST
+
+LET slot -1
+SYS EQS NAME "s0"
+IF LAST_N == 1
+  LET slot 0
+END
+SYS EQS NAME "s1"
+IF LAST_N == 1
+  LET slot 1
+END
+SYS EQS NAME "s2"
+IF LAST_N == 1
+  LET slot 2
+END
+LET sn ""
+IF slot == 0
+  LET sn "s0"
+END
+IF slot == 1
+  LET sn "s1"
+END
+IF slot == 2
+  LET sn "s2"
+END
+
+# rehydrate
+SYS READ OR d_s0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1
+  HASOBJ s0
+  IF LAST_N == 1
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "name"
+  LET rname = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "phase"
+  LET rph = LAST
+  SYS LOOKUPN snap "code"
+  LET rc = LAST_N
+  CLEAR_ERR
+  NEW Step s0 rid rname
+  SYS BLANK rid
+  IF LAST_N == 0
+    TRYSETF s0 id rid
+  END
+  TRYSETF s0 name rname
+  TRYSETF s0 status rst
+  TRYSETF s0 phase rph
+  TRYSETF s0 code rc
+  CLEAR_ERR
+END
+SYS READ OR d_s1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1
+  HASOBJ s1
+  IF LAST_N == 1
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "name"
+  LET rname = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "phase"
+  LET rph = LAST
+  SYS LOOKUPN snap "code"
+  LET rc = LAST_N
+  CLEAR_ERR
+  NEW Step s1 rid rname
+  SYS BLANK rid
+  IF LAST_N == 0
+    TRYSETF s1 id rid
+  END
+  TRYSETF s1 name rname
+  TRYSETF s1 status rst
+  TRYSETF s1 phase rph
+  TRYSETF s1 code rc
+  CLEAR_ERR
+END
+SYS READ OR d_s2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1
+  HASOBJ s2
+  IF LAST_N == 1
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "name"
+  LET rname = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUP snap "phase"
+  LET rph = LAST
+  SYS LOOKUPN snap "code"
+  LET rc = LAST_N
+  CLEAR_ERR
+  NEW Step s2 rid rname
+  SYS BLANK rid
+  IF LAST_N == 0
+    TRYSETF s2 id rid
+  END
+  TRYSETF s2 name rname
+  TRYSETF s2 status rst
+  TRYSETF s2 phase rph
+  TRYSETF s2 code rc
+  CLEAR_ERR
+END
+
+LET hit 0
+LET miss 0
+LET val ""
+LET meta ""
+LET val_ch 0
+LET meta_ch 0
+LET note_msg "ok"
+LET nobjs 0
+LET ret_n 0
+LET changed 0
+LET board_rep "runbook_say_log_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1
+  NOTE "action list"
+  LISTOBJS Step
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit 1
+  LET note_msg "list ok"
+  LET val bag
+  LET val_ch 1
+  LET meta "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1
+  NOTE "action open"
+  IF slot < 0
+    LET miss 1
+    LET note_msg "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    IF slot == 0
+      HASOBJ s0
+      IF LAST_N == 1
+        DELETEOBJ s0
+        CLEAR_ERR
+      END
+      NEW Step s0 sn STEPNAME
+      DUMPOBJ s0
+      SYS WRITE d_s0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1
+      HASOBJ s1
+      IF LAST_N == 1
+        DELETEOBJ s1
+        CLEAR_ERR
+      END
+      NEW Step s1 sn STEPNAME
+      DUMPOBJ s1
+      SYS WRITE d_s1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2
+      HASOBJ s2
+      IF LAST_N == 1
+        DELETEOBJ s2
+        CLEAR_ERR
+      END
+      NEW Step s2 sn STEPNAME
+      DUMPOBJ s2
+      SYS WRITE d_s2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Step
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit 1
+    LET note_msg "open ok"
+    LET val sn
+    LET val_ch 1
+    LET meta "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta STEPNAME
+    LET meta = LAST
+    LET meta_ch 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- set status/phase/code ---
+SYS EQS ACTION "set"
+IF LAST_N == 1
+  NOTE "action set"
+  IF slot < 0
+    LET miss 1
+    LET note_msg "set bad slot"
+    FAIL "set bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "set bad slot"
+    END
+  ELSE
+    LET o_ok 0
+    IF slot == 0
+      HASOBJ s0
+      IF LAST_N == 1
+        SETF s0 status ST
+        SETF s0 phase PHASE
+        SETF s0 code CODE
+        LET o_ok 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1
+      HASOBJ s1
+      IF LAST_N == 1
+        SETF s1 status ST
+        SETF s1 phase PHASE
+        SETF s1 code CODE
+        LET o_ok 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2
+      HASOBJ s2
+      IF LAST_N == 1
+        SETF s2 status ST
+        SETF s2 phase PHASE
+        SETF s2 code CODE
+        LET o_ok 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0
+      LET miss 1
+      LET note_msg "set miss"
+      FAIL "set miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0
+        EXIT 2 "set miss"
+      END
+    ELSE
+      LET hit 1
+      LET note_msg "set ok"
+      LET val ST
+      LET val_ch 1
+      LET meta "set"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta ST
+      LET meta = LAST
+      SYS PUSH meta PHASE
+      LET meta = LAST
+      LET meta_ch 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- say: multi-arg SAY step name status phase ---
+SYS EQS ACTION "say"
+IF LAST_N == 1
+  NOTE "action say"
+  IF slot < 0
+    LET miss 1
+    LET note_msg "say bad slot"
+    FAIL "say bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "say bad slot"
+    END
+  ELSE
+    LET o_ok 0
+    LET line ""
+    LET pn 0
+    IF slot == 0
+      HASOBJ s0
+      IF LAST_N == 1
+        SETF s0 status ST
+        SETF s0 phase PHASE
+        GETF s0 name
+        LET nm = LAST
+        GETF s0 status
+        LET st = LAST
+        GETF s0 phase
+        LET ph = LAST
+        SAY "step" nm st ph
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1
+      HASOBJ s1
+      IF LAST_N == 1
+        SETF s1 status ST
+        SETF s1 phase PHASE
+        GETF s1 name
+        LET nm = LAST
+        GETF s1 status
+        LET st = LAST
+        GETF s1 phase
+        LET ph = LAST
+        PRINT "step" nm st ph
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2
+      HASOBJ s2
+      IF LAST_N == 1
+        SETF s2 status ST
+        SETF s2 phase PHASE
+        GETF s2 name
+        LET nm = LAST
+        GETF s2 status
+        LET st = LAST
+        GETF s2 phase
+        LET ph = LAST
+        ECHO "step" nm st ph
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0
+      LET miss 1
+      LET note_msg "say miss"
+      FAIL "say miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0
+        EXIT 2 "say miss"
+      END
+    ELSE
+      # append to LOG plate
+      SYS APPEND log_path line
+      CLEAR_ERR
+      LET hit 1
+      LET note_msg "say ok"
+      LET val line
+      LET val_ch 1
+      LET ret_n pn
+      LET meta "say"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta line
+      LET meta = LAST
+      SYS STR pn
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- saycode: include numeric code ---
+SYS EQS ACTION "saycode"
+IF LAST_N == 1
+  NOTE "action saycode"
+  IF slot < 0
+    LET miss 1
+    LET note_msg "saycode bad slot"
+    FAIL "saycode bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "saycode bad slot"
+    END
+  ELSE
+    LET o_ok 0
+    LET line ""
+    LET pn 0
+    IF slot == 0
+      HASOBJ s0
+      IF LAST_N == 1
+        SETF s0 code CODE
+        SETF s0 status ST
+        GETF s0 name
+        LET nm = LAST
+        GETF s0 status
+        LET st = LAST
+        GETF s0 code
+        LET cd = LAST_N
+        SAY "step" nm st "code" cd
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1
+      HASOBJ s1
+      IF LAST_N == 1
+        SETF s1 code CODE
+        SETF s1 status ST
+        GETF s1 name
+        LET nm = LAST
+        GETF s1 status
+        LET st = LAST
+        GETF s1 code
+        LET cd = LAST_N
+        PRINT "step" nm st "code" cd
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2
+      HASOBJ s2
+      IF LAST_N == 1
+        SETF s2 code CODE
+        SETF s2 status ST
+        GETF s2 name
+        LET nm = LAST
+        GETF s2 status
+        LET st = LAST
+        GETF s2 code
+        LET cd = LAST_N
+        ECHO "step" nm st "code" cd
+        LET line = LAST
+        LET pn = PRINT_N
+        LET o_ok 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0
+      LET miss 1
+      LET note_msg "saycode miss"
+      FAIL "saycode miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0
+        EXIT 2 "saycode miss"
+      END
+    ELSE
+      SYS APPEND log_path line
+      CLEAR_ERR
+      LET hit 1
+      LET note_msg "saycode ok"
+      LET val line
+      LET val_ch 1
+      LET ret_n pn
+      LET meta "saycode"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta line
+      LET meta = LAST
+      SYS STR pn
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- log: dump LOG plate ---
+SYS EQS ACTION "log"
+IF LAST_N == 1
+  NOTE "action log"
+  SYS READ OR log_path OR ""
+  LET val = LAST
+  CLEAR_ERR
+  SYS LINES val
+  LET ret_n = LAST_N
+  LET hit 1
+  LET note_msg "log ok"
+  LET val_ch 1
+  LET meta "log"
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- hasline exact ---
+SYS EQS ACTION "hasline"
+IF LAST_N == 1
+  NOTE "action hasline"
+  SYS READ OR log_path OR ""
+  LET bag = LAST
+  CLEAR_ERR
+  SYS HASLINE bag ST
+  LET ret_n = LAST_N
+  IF ret_n == 0
+    LET miss 1
+    LET note_msg "hasline absent"
+    LET val ST
+    LET val_ch 1
+    LET meta "hasline absent"
+    SYS PUSH meta ST
+    LET meta = LAST
+    LET meta_ch 1
+    FAIL "hasline absent"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "hasline absent"
+    END
+  ELSE
+    LET hit 1
+    LET note_msg "hasline present"
+    LET val ST
+    LET val_ch 1
+    LET meta "hasline present"
+    SYS PUSH meta ST
+    LET meta = LAST
+    LET meta_ch 1
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- countlog ---
+SYS EQS ACTION "countlog"
+IF LAST_N == 1
+  NOTE "action countlog"
+  SYS READ OR log_path OR ""
+  LET bag = LAST
+  CLEAR_ERR
+  SYS LINES bag
+  LET ret_n = LAST_N
+  LET hit 1
+  LET note_msg "countlog ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch 1
+  LET meta "countlog"
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- gate: log lines >= MINLOG ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1
+  NOTE "action gate"
+  SYS READ OR log_path OR ""
+  LET bag = LAST
+  CLEAR_ERR
+  SYS LINES bag
+  LET dnow = LAST_N
+  LET ret_n dnow
+  IF dnow < MINLOG
+    LET miss 1
+    LET note_msg "gate deny"
+    SYS STR dnow
+    LET val = LAST
+    LET val_ch 1
+    LET meta "gate deny"
+    SYS STR dnow
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR MINLOG
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch 1
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "gate deny"
+    END
+  ELSE
+    LET hit 1
+    LET note_msg "gate admit"
+    SYS STR dnow
+    LET val = LAST
+    LET val_ch 1
+    LET meta "gate admit"
+    SYS STR dnow
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR MINLOG
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch 1
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1
+  NOTE "action probe"
+  LET p_ok 1
+  # empty PRINT re-echo
+  LET seed "seed-line"
+  PRINT seed
+  PRINT
+  SYS EQS LAST "seed-line"
+  IF LAST_N != 1
+    LET p_ok 0
+    LET note_msg "probe empty PRINT should re-echo LAST"
+  END
+  CLEAR_ERR
+  # multi-arg spaces
+  SAY "a" "b" "c"
+  SYS EQS LAST "a b c"
+  IF LAST_N != 1
+    LET p_ok 0
+    LET note_msg "probe SAY join should a b c"
+  END
+  IF PRINT_N != 3
+    LET p_ok 0
+    LET note_msg "probe PRINT_N should 3"
+  END
+  CLEAR_ERR
+  # optional LET/IF
+  LET x 0
+  IF 1
+    LET x 7
+  END
+  IF x != 7
+    LET p_ok 0
+    LET note_msg "probe optional IF/LET failed"
+  END
+  CLEAR_ERR
+  # soft missing log
+  SYS READ OR "/tmp/cubalc_no_such_log_$$" OR ""
+  CLEAR_ERR
+  # substring false friend for HASLINE
+  SYS READ OR log_path OR ""
+  LET bag = LAST
+  CLEAR_ERR
+  SYS HASLINE bag "run"
+  # may or may not — just soft
+  CLEAR_ERR
+  IF p_ok == 1
+    LET hit 1
+    LET note_msg "probe ok"
+    LET val "probe"
+    LET val_ch 1
+    LET meta "probe soft"
+    LET meta_ch 1
+  ELSE
+    LET miss 1
+    FAIL note_msg
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 note_msg
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1
+  NOTE "action dump"
+  IF slot < 0
+    LET miss 1
+    LET note_msg "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET o_ok 0
+    IF slot == 0
+      HASOBJ s0
+      IF LAST_N == 1
+        DUMPOBJ s0
+        LET val = LAST
+        LET o_ok 1
+        SYS WRITE d_s0 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1
+      HASOBJ s1
+      IF LAST_N == 1
+        DUMPOBJ s1
+        LET val = LAST
+        LET o_ok 1
+        SYS WRITE d_s1 val
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2
+      HASOBJ s2
+      IF LAST_N == 1
+        DUMPOBJ s2
+        LET val = LAST
+        LET o_ok 1
+        SYS WRITE d_s2 val
+        CLEAR_ERR
+      END
+    END
+    IF o_ok == 0
+      LET miss 1
+      LET note_msg "dump miss"
+      FAIL "dump miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0
+        EXIT 2 "dump miss"
+      END
+    ELSE
+      LET hit 1
+      LET note_msg "dump ok"
+      LET val_ch 1
+      LET meta "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1
+  NOTE "action clear"
+  HASOBJ s0
+  IF LAST_N == 1
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS WRITE d_s0 ""
+  SYS WRITE d_s1 ""
+  SYS WRITE d_s2 ""
+  SYS WRITE objs_path ""
+  SYS WRITE log_path ""
+  CLEAR_ERR
+  LET hit 1
+  LET note_msg "clear ok"
+  LET val "cleared"
+  LET val_ch 1
+  LET meta "clear"
+  LET meta_ch 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+LET is_known 0
+SYS EQS ACTION "list"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "set"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "say"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "saycode"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "log"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "hasline"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "countlog"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1
+  LET is_known 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1
+  LET is_known 1
+END
+IF is_known == 0
+  LET miss 1
+  LET note_msg "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF val_ch == 1
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR ret_n
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR changed
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "runbook_say_log_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0
+  IF miss > 0
+    IF NEED_HIT > 0
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

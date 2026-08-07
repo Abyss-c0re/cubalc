@@ -1,39 +1,39 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 155,
-  "program": "programs/realworld/svc_send_dispatch_board.cubalc",
-  "theme": "SEND/TRYSEND arity + EQF status live service dispatch",
-  "version": "1.15.423-usability",
+  "iter": 156,
+  "program": "programs/realworld/runbook_say_log_board.cubalc",
+  "theme": "multi-arg SAY/PRINT + optional THEN/LET runbook step journal",
+  "version": "1.15.426-usability",
   "pass": true,
-  "prior_note": "iter 154 HASINF/COUNTINF note triage; this iter first realworld SEND arity wall (973) + EQF dispatch",
+  "prior_note": "iter 155 SEND arity dispatch; this iter first realworld multi-arg SAY (975) + optional LET/IF (974)",
   "tests": [
     {
-      "name": "bump_send",
-      "cmd": "SEND bump 5 \u2192 n=5; bump 3 \u2192 n=8",
+      "name": "say_join",
+      "cmd": "SAY step build running start → PRINT_N=4; LOG append",
       "ok": true,
-      "note": "SEND"
+      "note": "SAY"
     },
     {
-      "name": "setst_ping",
-      "cmd": "setst hot; ping \u2192 pong",
+      "name": "saycode",
+      "cmd": "PRINT step build ok code 0 with numeric part",
       "ok": true,
-      "note": "methods"
+      "note": "PRINT num"
     },
     {
-      "name": "eq",
-      "cmd": "EQF hot true; cold REQUIRE\u21922; EQFI Hot/hot on s1",
+      "name": "hasline",
+      "cmd": "exact full line present; substring run absent",
       "ok": true,
-      "note": "EQF"
+      "note": "HASLINE"
     },
     {
       "name": "gate",
-      "cmd": "n>=5 admit; MINN=99 REQUIRE\u21922",
+      "cmd": "MINLOG=2 admit; 99 REQUIRE→2",
       "ok": true,
       "note": "gate"
     },
     {
       "name": "probe",
-      "cmd": "TRYSEND under-arity needs1 got0; over-arity OK=1 got2; EQF case",
+      "cmd": "empty PRINT re-echo; SAY a b c; optional IF/LET",
       "ok": true,
       "note": "probe"
     },
@@ -47,63 +47,73 @@
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "med",
-      "area": "oop|send",
-      "title": "Over-arity SEND soft-accepts (extra args ignored)",
-      "detail": "TRYSEND s bump 1 2 \u2192 OK=1 ARITY_GOT=2 with no hard fail. Under-arity correctly soft-fails needs/got. Agents cannot detect extra-arg mistakes at call site.",
-      "repro": "TRYSEND s0 bump 1 2 \u2192 OK=1 got 2"
+      "severity": "high",
+      "area": "host|arg",
+      "title": "CUBALC_ARG0 env no longer reaches SYS ARG in 1.15.426",
+      "detail": "export CUBALC_ARG0=open leaves SYS ARG 0 and SYS ENV CUBALC_ARG0 empty; python sees the env var. Positional `cubalc run file open s0` works. Breaks all prior host contracts that used CUBALC_ARG* alone.",
+      "repro": "CUBALC_ARG0=open cubalc run prog; SYS ARG 0 → empty; cubalc run prog open works"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|send",
-      "title": "SEND method name still literal-only",
-      "detail": "Cannot SEND s0 METH with METH from ENV; same class as HASMETHOD var miss. Dispatch boards hardcode method tokens.",
-      "repro": "SEND s0 m with m=bump fails / not dynamic"
+      "area": "lang|default",
+      "title": "DEFAULT still requires = (optional = is LET-only)",
+      "detail": "DEFAULT ACTION \"list\" → err DEFAULT name = value. Optional glue from 974 is LET/IF only, not DEFAULT. Agents must keep DEFAULT name = val.",
+      "repro": "DEFAULT ACTION \"list\" hard-fail"
     },
     {
       "id": "W3",
-      "severity": "low",
-      "area": "oop|eqf",
-      "title": "EQF case-sensitive; need EQFI for status fold",
-      "detail": "Hot vs hot miss on EQF; slot-local EQFI works. Ops status strings need explicit icase path.",
-      "repro": "EQF status hot on Hot \u2192 0; EQFI \u2192 1"
+      "severity": "med",
+      "area": "lang|let",
+      "title": "LET x LAST without = may not bind LAST token",
+      "detail": "Prefer LET x = LAST for special knobs. Documented during ARG parse debug; optional LET is for literals/vars not always LAST.",
+      "repro": "LET ACTION LAST vs LET ACTION = LAST"
     },
     {
       "id": "W4",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE VAL omit trailing NL",
-      "detail": "od -c META ends without \\n.",
-      "repro": "od -c META.txt after dump"
+      "area": "host|print",
+      "title": "PRINT multi-arg overwrites LAST with joined line",
+      "detail": "Agents that PRINT then read LAST for prior ARG lose the arg. Capture before SAY.",
+      "repro": "SYS ARG 0; PRINT \"x\"; LAST is x not arg"
     },
     {
       "id": "W5",
       "severity": "low",
+      "area": "host|write",
+      "title": "WRITE VAL omit trailing NL",
+      "detail": "od -c META ends without \\n.",
+      "repro": "od -c META.txt"
+    },
+    {
+      "id": "W6",
+      "severity": "low",
       "area": "host|num",
       "title": "REQUIRE=abc softens",
-      "detail": "Non-numeric REQUIRE miss exit 0 on gate deny.",
-      "repro": "REQUIRE=abc MINN=99 gate soft"
+      "detail": "Non-numeric REQUIRE miss exit 0.",
+      "repro": "REQUIRE=abc MINLOG=99 gate soft"
     }
   ],
   "workarounds": [
-    "Always pass exact arity; treat over-arity as silent accept",
-    "Literal SEND method names only; catalog board for discovery",
-    "EQFI for case-fold status; EQF for exact",
-    "TRYSEND before SEND when args optional; check ARITY_* knobs",
+    "Use positional: cubalc run prog.cubalc open s0 (or CUBALC_FS_ACTION)",
+    "DEFAULT always with =; LET = LAST for knobs",
+    "Capture ARG before any SAY/PRINT",
+    "HASLINE exact full line only",
     "Fixed s0/s1/s2; numeric REQUIRE only"
   ],
   "language_gaps": [
-    "Strict over-arity fail mode (SEND STRICT / ARITY_STRICT)",
-    "Dynamic SEND method name from string/var",
+    "Restore CUBALC_ARG* env → SYS ARG contract",
+    "Optional = for DEFAULT parity with LET",
+    "Document LAST bind rules for optional LET",
     "WRITE NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "SEND bump 5+3 \u2192 n=8; setst hot; ping pong",
-    "TRYSEND under-arity needs1 got0 LAST_ERR; over OK=1",
-    "EQF/EQFI status gate; counter MINN gate",
+    "DEFAULT without = hard-fail; restored =",
+    "CUBALC_ARG0 env dead — switched tests to positional args",
+    "SAY join PRINT_N=4; saycode with num; LOG 2 lines",
+    "HASLINE exact vs substring; gate MINLOG",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "36495bcdd9bb8113c1cb4a126360ea2fda7543df",
-  "ts": "2026-08-07T20:16:24Z"
+  "commit": "",
+  "ts": "2026-08-07T20:41:54Z"
 }
