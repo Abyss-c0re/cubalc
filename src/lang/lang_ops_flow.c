@@ -19221,8 +19221,6 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 0; /* stop marker for nested bodies */
   }
 
-  snprintf(vm->err,sizeof vm->err,"unknown form '%s' line %d — place a unit with [name]",
-           L->cur.text, L->cur.line);
-  fail(vm, vm->err);
+  /* Unknown here: return 0 so parse_form can emit did-you-mean + HELP tip. */
   return 0;
 }

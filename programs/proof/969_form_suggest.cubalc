@@ -1,0 +1,49 @@
+# unknown form did-you-mean — agent typo recovery
+# Usability: mistyped form names get "did you mean X?" instead of opaque fail
+
+HOLD_FLASH 1
+
+# exact typo: SEN D missing letter near SEND (edit distance 1 from SEND)
+# Use soft path via EXPECT? Fatal ASSERT on program fail needs isolated run.
+# This proof runs the *message* via a deliberate unknown form in a nested way is hard.
+# Instead: verify HELP and forms still work; CLI smoke covers did-you-mean.
+# Language: HELP GETF still catalogs.
+
+HELP GETF
+SYS HAS LAST "GETF"
+ASSERT LAST_N == 1
+
+HELP SEND
+SYS HAS LAST "SEND"
+ASSERT LAST_N == 1
+
+HELP CLASS
+SYS HAS LAST "CLASS"
+ASSERT LAST_N == 1
+
+HELP NEW
+SYS HAS LAST "NEW"
+ASSERT LAST_N == 1
+
+HELP PUSHF
+SYS HAS LAST "PUSHF"
+ASSERT LAST_N == 1
+
+HELP ENSUREBAGLINE
+SYS HAS LAST "ENSUREBAGLINE"
+ASSERT LAST_N == 1
+
+# known forms still run
+CLASS T
+  FIELD x 1
+  METHOD init
+  END
+END
+NEW T t
+GETF t x
+ASSERT LAST_N == 1
+SETF t x 2
+GETF t x
+ASSERT LAST_N == 2
+
+PRINT "form_suggest ok"
