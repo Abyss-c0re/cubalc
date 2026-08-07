@@ -131,6 +131,6 @@
     "ms-vs-secs PARSEMS pitfall is core lesson for HUMANSECS agents",
     "selftest green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "3af989c54f15626649d3fe525b9719f2f4274528",
   "ts": "2026-08-07T02:18:55Z"
 }
