@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 383,
-  "version": "1.15.410-usability",
-  "item": "LINEF/LINENOF Nth bag line peel into field",
-  "item_id": 419,
-  "title": "LINEF|LINENOF — Nth newline bag line peel into field",
-  "commit": "141a22af6183fad1b890211d5300af13ffd6b8f1",
-  "summary": "Bag line peel without GETF+SYS NTH+SETF. Soft miss. proof 960 45/45.",
+  "iter": 384,
+  "version": "1.15.411-usability",
+  "item": "PUSHF/POPF/POPHEADF bag queue on fields",
+  "item_id": 420,
+  "title": "PUSHF|POPF|POPHEADF|UNSHIFTF — bag queue on object fields",
+  "commit": "e0a7e076d7f4c2936c0b5708da95e981b59c4317",
+  "summary": "Worklist LIFO/FIFO without GETF+SYS PUSH/POP+SETF. Soft miss. proof 961 57/57.",
   "proofs": [
-    "960_oop_linef",
-    "asserts 45/45",
-    "959 still green"
+    "961_oop_pushf",
+    "asserts 57/57",
+    "960 still green"
   ],
-  "when": "2026-08-07T17:46:18Z",
+  "when": "2026-08-07T17:55:24Z",
   "agent": "meaningful_iter_10m",
-  "sha": "141a22af6183fad1b890211d5300af13ffd6b8f1",
-  "note": "LINEF_HIT/LINEF_I; 0-based LINEF / 1-based LINENOF|ROWF"
+  "sha": "e0a7e076d7f4c2936c0b5708da95e981b59c4317",
+  "note": "PUSHF_N/POPF_HIT/POPHEADF; not string PREPENDF"
 }
