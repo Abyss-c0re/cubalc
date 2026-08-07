@@ -2064,6 +2064,7 @@ int main(int argc, char **argv) {
       {"oop_nthbyfwhere", "programs/proof/923_oop_nthbyfwhere.cubalc", "NTHBYFWHERE/ATWHERE kth match by numeric field rank"},
       {"oop_slicebyf", "programs/proof/924_oop_slicebyf.cubalc", "SLICEBYF/MIDBYF ranked object name window by field"},
       {"oop_pickobj", "programs/proof/925_oop_pickobj.cubalc", "PICKOBJ/RANDOBJ random live object sample"},
+      {"oop_drawnobj", "programs/proof/926_oop_drawnobj.cubalc", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5995,6 +5996,7 @@ int main(int argc, char **argv) {
       {"programs/proof/923_oop_nthbyfwhere.cubalc", "oop_nthbyfwhere", "NTHBYFWHERE/ATWHERE kth match by numeric field rank"},
       {"programs/proof/924_oop_slicebyf.cubalc", "oop_slicebyf", "SLICEBYF/MIDBYF ranked object name window by field"},
       {"programs/proof/925_oop_pickobj.cubalc", "oop_pickobj", "PICKOBJ/RANDOBJ random live object sample"},
+      {"programs/proof/926_oop_drawnobj.cubalc", "oop_drawnobj", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6318,6 +6320,7 @@ int main(int argc, char **argv) {
       {"programs/proof/923_oop_nthbyfwhere.cubalc", "oop_nthbyfwhere", "NTHBYFWHERE/ATWHERE kth match by numeric field rank"},
       {"programs/proof/924_oop_slicebyf.cubalc", "oop_slicebyf", "SLICEBYF/MIDBYF ranked object name window by field"},
       {"programs/proof/925_oop_pickobj.cubalc", "oop_pickobj", "PICKOBJ/RANDOBJ random live object sample"},
+      {"programs/proof/926_oop_drawnobj.cubalc", "oop_drawnobj", "DRAWNOBJ/SAMPLEKOBJ sample k unique live objects"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

@@ -10071,6 +10071,145 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* DRAWNOBJ|SAMPLEKOBJ|PICKNOBJ [Class] k
+   * — sample k unique live object names without replacement (partial Fisher–Yates).
+   * k<=0 → empty; k>=pool → all shuffled. LAST bag; LAST_N=count; DRAWNOBJ_TOTAL=pool.
+   * Uses vm->rng (SEED/CUBALC_SEED). Usability: multi-peer sample without LISTOBJS+DRAWN. */
+  if (kw(&L->cur, "DRAWNOBJ") || kw(&L->cur, "SAMPLEKOBJ") ||
+      kw(&L->cur, "PICKNOBJ") || kw(&L->cur, "NPICKOBJ") ||
+      kw(&L->cur, "TAKERANDOBJ") || kw(&L->cur, "DRAWNINST") ||
+      kw(&L->cur, "SAMPLEKINST") || kw(&L->cur, "DRAWKOBJ") ||
+      kw(&L->cur, "RSAMPLEOBJ") || kw(&L->cur, "MULTIDRAWOBJ")) {
+    char filt[48], bag_names[CUBALC_MAX_OBJS][48], bag[4096], tmp[48];
+    int has_filt = 0, i, n = 0, take = 0, out_n = 0;
+    long karg = 0;
+    uint32_t x;
+    size_t o = 0;
+    lex_next(L);
+    filt[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "FROM")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "DRAWNOBJ OF Class k"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+               L->cur.kind != TK_NUM) {
+      /* Class name only if known class and next looks like k */
+      if (L->cur.kind == TK_STR) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      } else if (oop_find_class(vm, L->cur.text) &&
+                 !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+                 !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+                 !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+        char maybe[48];
+        snprintf(maybe, sizeof maybe, "%s", L->cur.text);
+        lex_next(L);
+        /* if next is k (num/ident/TAKE/K) treat maybe as class; else fail later as k */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+            kw(&L->cur, "K") || kw(&L->cur, "TAKE") || kw(&L->cur, "COUNT") ||
+            kw(&L->cur, "LIMIT") ||
+            (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+             !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET"))) {
+          snprintf(filt, sizeof filt, "%s", maybe);
+          has_filt = 1;
+        } else {
+          /* put back: treat maybe as k via re-parse impossible; use as k string */
+          fail(vm, "DRAWNOBJ [Class] k"); return -1;
+        }
+      }
+    }
+    /* optional K|TAKE|COUNT|LIMIT sugar — avoid bare N (steals var n) */
+    if (kw(&L->cur, "TAKE") || kw(&L->cur, "COUNT") ||
+        kw(&L->cur, "LIMIT") || kw(&L->cur, "SIZE") || kw(&L->cur, "DRAW"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      karg = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      karg = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        karg = atol(sv->sval);
+      else
+        karg = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      karg = parse_expr(vm, L);
+    } else {
+      fail(vm, "DRAWNOBJ [Class] k"); return -1;
+    }
+    if (karg < 0) karg = 0;
+    take = (int)karg;
+    if (take > CUBALC_MAX_OBJS) take = CUBALC_MAX_OBJS;
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      snprintf(bag_names[n], sizeof bag_names[n], "%s", ob->name);
+      n++;
+    }
+    out_n = take < n ? take : n;
+    /* partial Fisher–Yates: shuffle first out_n into front */
+    for (i = 0; i < out_n; i++) {
+      int r;
+      x = vm->rng;
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      if (!x) x = 1;
+      vm->rng = x;
+      r = i + (int)(x % (uint32_t)(n - i));
+      if (r != i) {
+        snprintf(tmp, sizeof tmp, "%s", bag_names[i]);
+        snprintf(bag_names[i], sizeof bag_names[i], "%s", bag_names[r]);
+        snprintf(bag_names[r], sizeof bag_names[r], "%s", tmp);
+      }
+    }
+    for (i = 0; i < out_n; i++) {
+      size_t ln = strlen(bag_names[i]);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, bag_names[i], ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "DRAWNOBJ", bag);
+    var_set_str(vm, "SAMPLEKOBJ", bag);
+    var_set_str(vm, "PICKNOBJ", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = out_n;
+    var_set_num(vm, "LAST_N", out_n);
+    var_set_num(vm, "DRAWNOBJ_N", out_n);
+    var_set_num(vm, "SAMPLEKOBJ_N", out_n);
+    var_set_num(vm, "PICKNOBJ_N", out_n);
+    var_set_num(vm, "DRAWNOBJ_TOTAL", n);
+    var_set_num(vm, "DRAWNOBJ_REQ", karg);
+    var_set_num(vm, "NOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* HASMETHOD obj|Class method — LAST_N 1|0 soft probe before SEND.
    * First arg object (live) or ClassName. Usability: agent IF without fatal. */
   if (kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETH") ||

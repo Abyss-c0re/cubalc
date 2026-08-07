@@ -1,0 +1,130 @@
+# DRAWNOBJ / SAMPLEKOBJ — sample k unique live objects without replacement
+# Usability: no LISTOBJS + SYS DRAWN glue for multi-peer assignment
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+SEED 42
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+
+# draw 2 unique from 4
+DRAWNOBJ Cell 2
+ASSERT OK == 1
+ASSERT DRAWNOBJ_N == 2
+ASSERT LAST_N == 2
+ASSERT DRAWNOBJ_TOTAL == 4
+ASSERT DRAWNOBJ_REQ == 2
+SYS LINES DRAWNOBJ
+ASSERT LAST_N == 2
+# both fields distinct
+SYS NTH 0 DRAWNOBJ
+LET p0 = LAST
+SYS NTH 1 DRAWNOBJ
+LET p1 = LAST
+SYS EQS p0 p1
+ASSERT LAST_N == 0 "unique sample"
+SYS HASLINE "a\nb\nc\nd" p0
+ASSERT LAST_N == 1
+SYS HASLINE "a\nb\nc\nd" p1
+ASSERT LAST_N == 1
+
+# k=0 empty
+DRAWNOBJ Cell 0
+ASSERT OK == 1
+ASSERT DRAWNOBJ_N == 0
+ASSERT DRAWNOBJ_TOTAL == 4
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# k >= pool → all (shuffled), count 4
+SEED 1
+DRAWNOBJ Cell 99
+ASSERT DRAWNOBJ_N == 4
+ASSERT DRAWNOBJ_REQ == 99
+ASSERT DRAWNOBJ_TOTAL == 4
+SYS HASLINE DRAWNOBJ "a"
+ASSERT LAST_N == 1
+SYS HASLINE DRAWNOBJ "b"
+ASSERT LAST_N == 1
+SYS HASLINE DRAWNOBJ "c"
+ASSERT LAST_N == 1
+SYS HASLINE DRAWNOBJ "d"
+ASSERT LAST_N == 1
+
+# OF + TAKE sugar
+SEED 5
+DRAWNOBJ OF Cell TAKE 1
+ASSERT DRAWNOBJ_N == 1
+SYS HASLINE "a\nb\nc\nd" LAST
+ASSERT LAST_N == 1
+
+# aliases same seed
+SEED 77
+SAMPLEKOBJ Cell 2
+LET s1 = SAMPLEKOBJ
+SEED 77
+PICKNOBJ Cell 2
+SYS EQS LAST s1
+ASSERT LAST_N == 1
+SEED 77
+NPICKOBJ Cell 2
+SYS EQS LAST s1
+ASSERT LAST_N == 1
+
+# var k
+LET k = 3
+SEED 3
+DRAWNOBJ Cell k
+ASSERT DRAWNOBJ_N == 3
+ASSERT DRAWNOBJ_REQ == 3
+
+# class filter
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 1
+NEW Ticket t2 "open" 2
+NEW Ticket t3 "closed" 3
+SEED 9
+DRAWNOBJ Ticket 2
+ASSERT DRAWNOBJ_TOTAL == 3
+ASSERT DRAWNOBJ_N == 2
+# check both picks are tickets
+SYS NTH 0 DRAWNOBJ
+SYS HASLINE "t1\nt2\nt3" LAST
+ASSERT LAST_N == 1
+SYS NTH 1 DRAWNOBJ
+SYS HASLINE "t1\nt2\nt3" LAST
+ASSERT LAST_N == 1
+SYS HASLINE DRAWNOBJ "a"
+ASSERT LAST_N == 0 "cells excluded"
+
+# unfiltered draw can include tickets
+SEED 2
+DRAWNOBJ 3
+ASSERT DRAWNOBJ_TOTAL == 7
+ASSERT DRAWNOBJ_N == 3
+
+# empty class
+CLASS Empty
+  FIELD x 0
+END
+DRAWNOBJ Empty 2
+ASSERT OK == 1
+ASSERT DRAWNOBJ_N == 0
+ASSERT DRAWNOBJ_TOTAL == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof926_oop_drawnobj" 1
+ASSERT OK == 1
