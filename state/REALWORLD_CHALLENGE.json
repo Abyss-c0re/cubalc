@@ -248,6 +248,6 @@
     "LISTFLAGS clean name bag; admit job:path green",
     "selftest 355/355; no language fix this iter"
   ],
-  "commit": "pending",
+  "commit": "8e81337c6863293273df26ad94bd5f3c64159ef2",
   "ts": "2026-08-07T22:19:03Z"
 }
