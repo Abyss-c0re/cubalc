@@ -1,41 +1,41 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 162,
-  "program": "programs/realworld/queue_case_dispatch_board.cubalc",
-  "theme": "CASE/WHEN multi-alias queue CLI dispatch (synonym arms + exact queue ops)",
-  "version": "1.15.440-usability",
+  "iter": 163,
+  "program": "programs/realworld/maint_boolflag_board.cubalc",
+  "theme": "CASEI + BOOLFLAG maintenance window gates (mixed-case CLI + truthy --force/--dry-run)",
+  "version": "1.15.443-usability",
   "pass": true,
-  "prior_note": "iter 161 FLAGMAP+NTHPOS; this iter first realworld CASE multi-alias (989-990)",
+  "prior_note": "iter 162 CASE multi-alias queue; this iter first realworld CASEI+BOOLFLAG/TRUTHY (991-992)",
   "tests": [
     {
-      "name": "ls_show",
-      "cmd": "ls/show synonym \u2192 list arm",
+      "name": "Open_CASEI",
+      "cmd": "Open -- --window=night \u2192 open arm",
       "ok": true,
-      "note": "CASE multi"
+      "note": "CASEI"
     },
     {
-      "name": "admit_enqueue",
-      "cmd": "admit/enqueue --job + items",
+      "name": "drain_force",
+      "cmd": "drain needs --force; dry-run skip write; force replaces status",
       "ok": true,
-      "note": "admit"
+      "note": "BOOLFLAG"
     },
     {
-      "name": "pop_top_del",
-      "cmd": "pop drain; top pin; del drop",
+      "name": "probe",
+      "cmd": "quiet=false: BOOLFLAG 0 HASFLAG 1; dry-run=no truth 0 hit 1",
       "ok": true,
-      "note": "queue ops"
+      "note": "truth"
     },
     {
-      "name": "has_gate",
-      "cmd": "HASLINE exact; gate min depth",
+      "name": "hold_close",
+      "cmd": "Pause\u2192hold; close status row",
+      "ok": true,
+      "note": "status"
+    },
+    {
+      "name": "has_soft",
+      "cmd": "HASLINE exact; soft empty EXIT 2",
       "ok": true,
       "note": "exact"
-    },
-    {
-      "name": "soft_unk",
-      "cmd": "soft empty EXIT 2; unknown EXIT 2",
-      "ok": true,
-      "note": "walls"
     },
     {
       "name": "selftest",
@@ -284,26 +284,59 @@
       "title": "CASE multi-alias comma/OR/| works for CLI synonyms when arms stay simple",
       "detail": "Positive: list|ls|show, admit|add|enqueue, drain|pop|take, pin|top, drop|rm|del all map correctly with MATCHED=1.",
       "repro": "CASE ACTION WHEN list, ls, show THEN LET op=list"
+    },
+    {
+      "id": "W31",
+      "severity": "med",
+      "area": "host|grep",
+      "title": "SYS GREP argument order is needle then bag (easy to reverse)",
+      "detail": "SYS GREP bag needle silently mis-filters (empty or wrong). Correct: SYS GREP needle bag. Broke window status replace until fixed; agents copy IF/LIST order habits.",
+      "repro": "SYS GREP windows night \u2192 empty; SYS GREP night windows \u2192 night:open"
+    },
+    {
+      "id": "W32",
+      "severity": "low",
+      "area": "lang|boolflag",
+      "title": "BOOLFLAG_HIT vs truth: present false still HIT=1",
+      "detail": "Positive distinction: --quiet=false \u2192 BOOLFLAG truth 0 but BOOLFLAG_HIT 1 and HASFLAG 1. --dry-run=no same. Agents must use BOOLFLAG not HASFLAG for enable gates.",
+      "repro": "BOOLFLAG quiet with --quiet=false \u2192 LAST_N 0 HIT 1"
+    },
+    {
+      "id": "W33",
+      "severity": "low",
+      "area": "lang|casei",
+      "title": "CASE exact remains case-sensitive; CASEI matches List/DRAIN",
+      "detail": "Positive: CASE List vs list DEFAULT miss; CASEI List hits list arm. Good dual for strict vs CLI-tolerant dispatch.",
+      "repro": "CASE List WHEN list \u2192 miss; CASEI List WHEN list \u2192 hit"
+    },
+    {
+      "id": "W34",
+      "severity": "med",
+      "area": "lang|boolflag",
+      "title": "BOOLFLAG truth table: true/yes/on/1 vs false/no/off/0 (case variants)",
+      "detail": "force=yes/ON/true work; dry=0/off/no work. Bare --force \u2192 true. OR default when missing. Document for ops runbooks.",
+      "repro": "BOOLFLAG force with --force=ON \u2192 1"
     }
   ],
   "workarounds": [
-    "CASE ACTION \u2192 LET op only; bodies after CASE via SYS EQS op",
-    "WHEN multi: comma list for synonyms; need THEN",
-    "PRINT_JSON MATCHED/MATCH_ARM; do not LET/PUSH MATCH_ARM",
-    "Use note_msg not note; known latch; never action run",
-    "cubalc run prog.cubalc admit -- --job=J items..."
+    "CASEI ACTION \u2192 LET op only; bodies after CASE",
+    "BOOLFLAG for enable; HASFLAG only for presence",
+    "SYS GREP needle bag (needle first)",
+    "Drain: require --force unless --dry-run truthy",
+    "cubalc run prog.cubalc Open -- --window=N --force",
+    "note_msg; known latch; never action run"
   ],
   "language_gaps": [
-    "Stable multi-statement CASE arms (or document single-stmt-only)",
-    "MATCH_ARM as first-class string for LET/PUSH",
-    "Cookbook: CASE synonym dispatch + queue ops"
+    "GREP forms hint bag-first ergonomics or dual order",
+    "Cookbook: CASEI + BOOLFLAG maint/ops CLI",
+    "Document BOOLFLAG_HIT vs truth dual"
   ],
   "issues_faced": [
-    "Heavy CASE WHEN bodies broke subsequent WHEN \u2014 CASE\u2192op split",
-    "MATCH_ARM not assignable \u2014 PRINT_JSON only",
-    "note name collided with NOTE \u2014 note_msg",
-    "ls/admit/pop/pin/drop green; selftest 355/355"
+    "GREP bag-first left stale night:open \u2014 fixed needle-first",
+    "CASEI Open/DRAIN/Pause green; BOOLFLAG force/dry-run gates green",
+    "quiet=false dual HIT/truth documented",
+    "selftest 355/355; no language fix this iter"
   ],
-  "commit": "4f5ef4636f394daab5eacfd4457c435d48d3b275",
-  "ts": "2026-08-07T23:13:04Z"
+  "commit": "pending",
+  "ts": "2026-08-07T23:34:25Z"
 }

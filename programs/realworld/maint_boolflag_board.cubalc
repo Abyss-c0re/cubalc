@@ -1,0 +1,750 @@
+# maint_boolflag_board.cubalc — CASEI + BOOLFLAG maintenance window board
+#
+# Real use: maint/ops agents dispatch mixed-case CLI actions and gate
+# drains with truthy --force/--dry-run without shell getopt:
+#   CASEI / MATCHI / SWITCHI — case-insensitive WHEN for List/DRAIN/…
+#   BOOLFLAG name            — bare/--flag=true|yes|on vs false|0|off|no
+#   TRUTHY / FALSY           — string truth probes (GETFLAG values)
+#   FLAGMAP + LOOKUP         — --window=NAME
+#   HASLINE / COUNTLINE      — exact window registry
+#
+# Distinct from maint_window_board (time windows) and queue_case_dispatch
+# (case-sensitive CASE): this board is *CASEI + BOOLFLAG truth gates*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_mb_$$
+#   ./out/cubalc run programs/realworld/maint_boolflag_board.cubalc \
+#     Open -- --window=night
+#   ./out/cubalc run ... DRAIN -- --force --window=night
+#   ./out/cubalc run ... drain -- --dry-run=yes --window=night
+#
+# Plate under STATE:
+#   WINDOWS.txt    — window:status rows (exact)
+#   VAL.txt META.txt MB_REPORT.txt
+#
+# Actions (ARG0 via CASEI — never "run"):
+#   list|ls|show     — windows bag
+#   open|start       — ensure window:open
+#   hold|pause       — set window:held
+#   drain|flush      — require force unless dry-run; set window:drained
+#   close|end        — set window:closed
+#   has|count|gate|soft|clear
+#
+# Env: CUBALC_MB_ACTION CUBALC_MB_NAME CUBALC_MB_REQUIRE CUBALC_MB_MIN
+#
+# Edges:
+#   CASE exact is case-sensitive; CASEI matches List/DRAIN
+#   BOOLFLAG quiet=false → present but false (HASFLAG still 1)
+#   BOOLFLAG dry=0/off/no → false; force=true/yes/ON → true
+#   Keep CASEI arms simple LET op= (heavy arms break WHEN framing W27)
+#   MATCH_ARM not LET/PUSH-able; PRINT_JSON MATCHED works
+#   note_msg not note; known latch; WRITE NL; NUM soft; exact HASLINE
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "maint_boolflag_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT WFILE = "WINDOWS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "MB_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT WINDOW = "default"
+DEFAULT FORCE = 0
+DEFAULT DRY = 0
+DEFAULT USAGE_LINE = "maint_boolflag -- Open|DRAIN|hold|close -- [--window=N] [--force] [--dry-run]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SYS ARGC
+LET argc_n = LAST_N
+CLEAR_ERR
+
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    LET ACTION = a0
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_MB_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_MB_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ENV "CUBALC_MB_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_MB_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# gate min only if ARG1 not flag-shaped
+CASEI ACTION
+  WHEN "gate" THEN
+    LET _is_gate = 1
+  DEFAULT
+    LET _is_gate = 0
+END
+IF _is_gate == 1 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      SYS ARG 1 OR ""
+      SYS NUM
+      IF OK == 1 THEN
+        LET MIN = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+END
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+
+# BOOLFLAG probes
+BOOLFLAG force
+LET FORCE = LAST_N
+CLEAR_ERR
+BOOLFLAG dry-run
+LET DRY = LAST_N
+CLEAR_ERR
+BOOLFLAG dry
+IF LAST_N == 1 THEN
+  LET DRY = 1
+END
+CLEAR_ERR
+
+FLAGMAP
+LET fmap = LAST
+CLEAR_ERR
+SYS LOOKUP fmap "window" "="
+IF LAST_N > 0 THEN
+  SYS BLANK LAST
+  IF LAST_N == 0 THEN
+    LET WINDOW = LAST
+  END
+END
+CLEAR_ERR
+# NAME can override window when not numeric gate
+SYS BLANK NAME
+IF LAST_N == 0 THEN
+  SYS STARTS NAME "-"
+  IF LAST_N == 0 THEN
+    SYS NUM
+    IF OK == 0 THEN
+      LET WINDOW = NAME
+    END
+    CLEAR_ERR
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir WFILE
+LET win_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR win_path OR ""
+LET windows = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET win_ch = 0
+LET known = 0
+LET note_msg = "ok"
+LET win_n = 0
+LET has_n = 0
+LET count_n = 0
+LET op = "unknown"
+LET row = ""
+
+SYS LINES windows
+LET win_n = LAST_N
+
+# --- CASEI simple op map (mixed-case CLI) ---
+CASEI ACTION
+  WHEN "list", "ls", "show" THEN
+    LET op = "list"
+  WHEN "open", "start" THEN
+    LET op = "open"
+  WHEN "hold", "pause" THEN
+    LET op = "hold"
+  WHEN "drain", "flush" THEN
+    LET op = "drain"
+  WHEN "close", "end" THEN
+    LET op = "close"
+  WHEN "has" THEN
+    LET op = "has"
+  WHEN "count" THEN
+    LET op = "count"
+  WHEN "gate" THEN
+    LET op = "gate"
+  WHEN "soft" THEN
+    LET op = "soft"
+  WHEN "clear" THEN
+    LET op = "clear"
+  WHEN "probe" THEN
+    LET op = "probe"
+  DEFAULT
+    LET op = "unknown"
+END
+
+# --- list ---
+SYS EQS op "list"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = windows
+  LET val_ch = 1
+  LET meta = "windows"
+  SYS STR win_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON win_n MATCHED FORCE DRY
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS op "open"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action open"
+  SYS CAT WINDOW ":open"
+  LET row = LAST
+  # drop any prior status for this window name (prefix before :)
+  SYS GREP WINDOW windows
+  LET hits = LAST
+  CLEAR_ERR
+  EACH LINE AS old IN hits
+    SYS REMOVELINE windows old
+    LET windows = LAST
+    CLEAR_ERR
+  END
+  SYS PUSH windows row
+  LET windows = LAST
+  LET win_ch = 1
+  SYS LINES windows
+  LET win_n = LAST_N
+  LET hit = 1
+  LET note_msg = "open ok"
+  LET val = row
+  LET val_ch = 1
+  LET meta = "window"
+  SYS PUSH meta WINDOW
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON WINDOW win_n
+  CLEAR_ERR
+END
+
+# --- hold ---
+SYS EQS op "hold"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action hold"
+  SYS CAT WINDOW ":held"
+  LET row = LAST
+  SYS GREP WINDOW windows
+  LET hits = LAST
+  CLEAR_ERR
+  EACH LINE AS old IN hits
+    SYS REMOVELINE windows old
+    LET windows = LAST
+    CLEAR_ERR
+  END
+  SYS PUSH windows row
+  LET windows = LAST
+  LET win_ch = 1
+  LET hit = 1
+  LET note_msg = "hold ok"
+  LET val = row
+  LET val_ch = 1
+  LET meta = "window"
+  SYS PUSH meta WINDOW
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON WINDOW
+  CLEAR_ERR
+END
+
+# --- drain: BOOLFLAG force / dry-run gate ---
+SYS EQS op "drain"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action drain"
+  IF DRY == 1 THEN
+    LET hit = 1
+    LET note_msg = "drain dry-run"
+    LET val = "dry-run"
+    LET val_ch = 1
+    LET meta = "dry"
+    SYS STR DRY
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "force"
+    LET meta = LAST
+    SYS STR FORCE
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "window"
+    LET meta = LAST
+    SYS PUSH meta WINDOW
+    LET meta = LAST
+    LET meta_ch = 1
+  ELSE
+    IF FORCE == 0 THEN
+      LET miss = 1
+      LET note_msg = "drain needs --force"
+      FAIL "drain needs force"
+      CLEAR_ERR
+      LET val = USAGE
+      LET val_ch = 1
+      LET meta = "force"
+      SYS STR FORCE
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "drain needs force"
+      END
+    ELSE
+      SYS CAT WINDOW ":drained"
+      LET row = LAST
+      SYS GREP WINDOW windows
+      LET hits = LAST
+      CLEAR_ERR
+      EACH LINE AS old IN hits
+        SYS REMOVELINE windows old
+        LET windows = LAST
+        CLEAR_ERR
+      END
+      SYS PUSH windows row
+      LET windows = LAST
+      LET win_ch = 1
+      LET hit = 1
+      LET note_msg = "drain ok"
+      LET val = row
+      LET val_ch = 1
+      LET meta = "force"
+      SYS STR FORCE
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta "window"
+      LET meta = LAST
+      SYS PUSH meta WINDOW
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON hit miss FORCE DRY WINDOW
+  CLEAR_ERR
+END
+
+# --- close ---
+SYS EQS op "close"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action close"
+  SYS CAT WINDOW ":closed"
+  LET row = LAST
+  SYS GREP WINDOW windows
+  LET hits = LAST
+  CLEAR_ERR
+  EACH LINE AS old IN hits
+    SYS REMOVELINE windows old
+    LET windows = LAST
+    CLEAR_ERR
+  END
+  SYS PUSH windows row
+  LET windows = LAST
+  LET win_ch = 1
+  LET hit = 1
+  LET note_msg = "close ok"
+  LET val = row
+  LET val_ch = 1
+  LET meta = "window"
+  SYS PUSH meta WINDOW
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON WINDOW
+  CLEAR_ERR
+END
+
+# --- has exact ---
+SYS EQS op "has"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS CAT WINDOW ":open"
+    LET NAME = LAST
+  END
+  SYS HASLINE windows NAME
+  LET has_n = LAST_N
+  LET val = NAME
+  LET val_ch = 1
+  LET meta = "has"
+  SYS STR has_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF has_n == 1 THEN
+    LET hit = 1
+    LET note_msg = "has ok"
+  ELSE
+    LET miss = 1
+    LET note_msg = "has miss"
+    FAIL "has miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has miss"
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS op "count"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE windows NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate ---
+SYS EQS op "gate"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action gate"
+  SYS LINES windows
+  LET win_n = LAST_N
+  LET meta = "min"
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "windows"
+  LET meta = LAST
+  SYS STR win_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR win_n
+  LET val = LAST
+  LET val_ch = 1
+  IF win_n >= MIN THEN
+    LET hit = 1
+    LET note_msg = "gate admit"
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate deny"
+    FAIL "gate deny"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate deny"
+    END
+  END
+  PRINT_JSON win_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- soft empty ---
+SYS EQS op "soft"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action soft"
+  SYS LINES windows
+  LET win_n = LAST_N
+  IF win_n < 1 THEN
+    LET miss = 1
+    LET note_msg = "soft empty ok"
+    FAIL "soft empty"
+    CLEAR_ERR
+    LET val = ""
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "empty"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft empty wall"
+    END
+  ELSE
+    LET hit = 1
+    LET note_msg = "soft has windows"
+    LET val = windows
+    LET val_ch = 1
+  END
+  PRINT_JSON win_n miss hit
+  CLEAR_ERR
+END
+
+# --- probe BOOLFLAG/TRUTHY edges ---
+SYS EQS op "probe"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action probe"
+  BOOLFLAG force
+  LET FORCE = LAST_N
+  LET force_hit = BOOLFLAG_HIT
+  BOOLFLAG dry-run
+  LET DRY = LAST_N
+  LET dry_hit = BOOLFLAG_HIT
+  # falsey present flag
+  BOOLFLAG quiet
+  LET quiet_truth = LAST_N
+  LET quiet_hit = BOOLFLAG_HIT
+  HASFLAG quiet
+  LET quiet_has = LAST_N
+  GETFLAG force OR ""
+  TRUTHY LAST
+  LET force_truthy = LAST_N
+  GETFLAG dry-run OR ""
+  FALSY LAST
+  LET dry_falsy = LAST_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET meta = "force"
+  SYS STR FORCE
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "force_hit"
+  LET meta = LAST
+  SYS STR force_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "dry"
+  LET meta = LAST
+  SYS STR DRY
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "quiet_truth"
+  LET meta = LAST
+  SYS STR quiet_truth
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "quiet_has"
+  LET meta = LAST
+  SYS STR quiet_has
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR FORCE
+  LET val = LAST
+  LET val_ch = 1
+  PRINT_JSON FORCE DRY force_hit dry_hit quiet_truth quiet_has force_truthy
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS op "clear"
+IF LAST_N == 1 THEN
+  LET known = 1
+  NOTE "action clear"
+  LET windows = ""
+  LET val = ""
+  LET meta = ""
+  LET win_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET win_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+IF known == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF win_ch > 0 THEN
+  SYS WRITE win_path windows
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "windows write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET meta = "schema=cubalc.maint_boolflag_board.v1"
+SYS PUSH meta "date"
+LET meta = LAST
+SYS PUSH meta run_date
+LET meta = LAST
+SYS PUSH meta "action"
+LET meta = LAST
+SYS PUSH meta ACTION
+LET meta = LAST
+SYS PUSH meta "op"
+LET meta = LAST
+SYS PUSH meta op
+LET meta = LAST
+SYS PUSH meta "matched"
+LET meta = LAST
+SYS STR MATCHED
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "hit"
+LET meta = LAST
+SYS STR hit
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "miss"
+LET meta = LAST
+SYS STR miss
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "force"
+LET meta = LAST
+SYS STR FORCE
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "dry"
+LET meta = LAST
+SYS STR DRY
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "window"
+LET meta = LAST
+SYS PUSH meta WINDOW
+LET meta = LAST
+SYS PUSH meta "win_n"
+LET meta = LAST
+SYS STR win_n
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "note"
+LET meta = LAST
+SYS PUSH meta note_msg
+LET meta = LAST
+SYS PUSH meta "elapsed_ms"
+LET meta = LAST
+SYS STR elapsed
+SYS PUSH meta LAST
+LET meta = LAST
+SYS PUSH meta "identity"
+LET meta = LAST
+SYS PUSH meta IDENTITY
+LET meta = LAST
+
+SYS WRITE report_path meta
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "maint_boolflag_board" ACTION op hit miss FORCE DRY WINDOW note_msg elapsed
+NOTE "maint_boolflag_board: done"
