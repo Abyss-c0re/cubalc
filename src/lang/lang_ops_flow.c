@@ -4653,6 +4653,227 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MODEWHERE|DOMINANTWHERE|MODEFWHERE [Class] valfield matchfield matchvalue
+   * — most frequent valfield where matchfield == matchvalue.
+   * WHERE sugar: MODEWHERE Ticket severity WHERE status "open".
+   * LAST = mode value (first-seen on ties); LAST_N = mode count.
+   * MODEWHERE_TOTAL = matched samples; soft empty → "" / 0.
+   * Usability: filtered MODEF without FREQWHERE+TOPKEY glue. */
+  if (kw(&L->cur, "MODEWHERE") || kw(&L->cur, "DOMINANTWHERE") ||
+      kw(&L->cur, "MODEFWHERE") || kw(&L->cur, "WHEREMODE") ||
+      kw(&L->cur, "MODEIF") || kw(&L->cur, "MOSTWHERE") ||
+      kw(&L->cur, "COMMONWHERE") || kw(&L->cur, "FIELDMODEWHERE") ||
+      kw(&L->cur, "WHEREDOMINANT") || kw(&L->cur, "MODEMATCH")) {
+    char filt[48], vfield[48], mfield[48], tok1[48];
+    char m_sval[512];
+    char keys[64][128];
+    long counts[64];
+    char best[128];
+    int has_filt = 0, m_is_str = 0, i, k, nk = 0, n_skip = 0, total = 0, best_i = -1;
+    long m_nval = 0, best_c = 0;
+    lex_next(L);
+    filt[0] = 0;
+    vfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    best[0] = 0;
+    memset(counts, 0, sizeof counts);
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "MODEWHERE OF Class valfield matchfield matchvalue");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(vfield, sizeof vfield, "%s", vv->sval);
+          else
+            snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "WHERE")))
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "MODEWHERE [Class] valfield matchfield matchvalue");
+      return -1;
+    }
+    if (!vfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "MODEWHERE [Class] valfield matchfield matchvalue");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "MODEWHERE [Class] valfield matchfield matchvalue");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int vfi, mfi, hit = 0;
+      char field[128];
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      vfi = oop_field_idx(cd, vfield);
+      if (mfi < 0 || vfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      if (ob->fis_str[vfi])
+        snprintf(field, sizeof field, "%s", ob->fstr[vfi]);
+      else
+        snprintf(field, sizeof field, "%ld", ob->fnum[vfi]);
+      total++;
+      for (k = 0; k < nk; k++) {
+        if (strcmp(keys[k], field) == 0) {
+          counts[k]++;
+          break;
+        }
+      }
+      if (k == nk && nk < 64) {
+        snprintf(keys[nk], sizeof keys[0], "%s", field);
+        counts[nk] = 1;
+        nk++;
+      }
+    }
+    for (k = 0; k < nk; k++) {
+      if (best_i < 0 || counts[k] > best_c) {
+        best_c = counts[k];
+        best_i = k;
+      }
+    }
+    if (best_i >= 0)
+      snprintf(best, sizeof best, "%s", keys[best_i]);
+    var_set_str(vm, "LAST", best);
+    var_set_str(vm, "MODEWHERE", best);
+    var_set_str(vm, "DOMINANTWHERE", best);
+    var_set_str(vm, "MODEFWHERE", best);
+    var_set_str(vm, "MODE", best);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", best);
+    vm->last_n = best_c;
+    var_set_num(vm, "LAST_N", best_c);
+    var_set_num(vm, "MODEWHERE_COUNT", best_c);
+    var_set_num(vm, "DOMINANTWHERE_COUNT", best_c);
+    var_set_num(vm, "MODEWHERE_N", total);
+    var_set_num(vm, "MODEFWHERE_N", total);
+    var_set_num(vm, "MODEWHERE_TOTAL", total);
+    var_set_num(vm, "MODEWHERE_DISTINCT", nk);
+    var_set_num(vm, "MODEWHERE_SKIP", n_skip);
+    {
+      char *end = 0;
+      long nv;
+      if (best[0]) {
+        nv = strtol(best, &end, 10);
+        if (end && end != best && *end == 0)
+          var_set_num(vm, "MODEWHERE_NUM", nv);
+        else
+          var_set_num(vm, "MODEWHERE_NUM", 0);
+      } else {
+        var_set_num(vm, "MODEWHERE_NUM", 0);
+      }
+    }
+    var_set_str(vm, "FIELD", vfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* UNIQUF|DISTINCTF|UNIQUEFALL|UNIQF [Class] field
    * — unique field values over live objects as newline bag (first-seen order).
    * LAST = bag; LAST_N = distinct count; UNIQUF_TOTAL = samples.

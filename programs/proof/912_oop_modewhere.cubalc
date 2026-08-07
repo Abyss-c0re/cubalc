@@ -1,0 +1,118 @@
+# MODEWHERE / DOMINANTWHERE — filtered fleet mode on field match
+# Usability: no FREQWHERE+TOPKEY glue · dominant value among subset
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 10 0
+NEW Cell c 1 20 0
+NEW Cell d 1 30 0
+NEW Cell e 1 20 0
+NEW Cell f 1 20 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+SETF e age 1
+SETF f age 1
+
+# energy where age==1 → 10,20,20,20 → mode 20 count 3
+MODEWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT MODEWHERE_COUNT == 3
+ASSERT LAST_N == 3
+ASSERT MODEWHERE_TOTAL == 4
+ASSERT MODEWHERE_N == 4
+ASSERT MODEWHERE_DISTINCT == 2
+ASSERT MODEWHERE_NUM == 20
+ASSERT MODEWHERE_SKIP == 0
+SYS EQS LAST "20"
+ASSERT LAST_N == 1 "mode energy among age=1"
+SYS EQS MODEWHERE "20"
+ASSERT LAST_N == 1
+
+# age==0 → 10,30 → first-seen 10 wins tie
+MODEWHERE Cell energy age 0
+ASSERT MODEWHERE_COUNT == 1
+ASSERT MODEWHERE_TOTAL == 2
+ASSERT MODEWHERE_DISTINCT == 2
+SYS EQS LAST "10"
+ASSERT LAST_N == 1 "first-seen on tie"
+
+# WHERE sugar
+MODEWHERE Cell energy WHERE age 1
+ASSERT MODEWHERE_COUNT == 3
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+
+# OF sugar
+MODEWHERE OF Cell energy age 1
+ASSERT MODEWHERE_NUM == 20
+
+# aliases
+DOMINANTWHERE Cell energy age 1
+ASSERT DOMINANTWHERE_COUNT == 3
+SYS EQS DOMINANTWHERE "20"
+ASSERT LAST_N == 1
+MODEFWHERE Cell energy age 1
+ASSERT MODEFWHERE_N == 4
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+WHEREMODE Cell energy age 0
+SYS EQS LAST "10"
+ASSERT LAST_N == 1
+MODEIF Cell energy age 1
+ASSERT MODEWHERE_COUNT == 3
+MOSTWHERE Cell energy age 1
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+COMMONWHERE Cell energy age 1
+SYS EQS LAST "20"
+ASSERT LAST_N == 1
+
+# string match · dominant severity among open
+CLASS Ticket
+  FIELD status "new"
+  FIELD severity "low"
+  METHOD init s sev
+    SETF THIS status s
+    SETF THIS severity sev
+  END
+END
+NEW Ticket t1 "open" "high"
+NEW Ticket t2 "closed" "low"
+NEW Ticket t3 "open" "high"
+NEW Ticket t4 "open" "med"
+NEW Ticket t5 "closed" "high"
+NEW Ticket t6 "open" "high"
+MODEWHERE Ticket severity status "open"
+ASSERT OK == 1
+ASSERT MODEWHERE_COUNT == 3
+ASSERT MODEWHERE_TOTAL == 4
+ASSERT MODEWHERE_DISTINCT == 2
+SYS EQS LAST "high"
+ASSERT LAST_N == 1 "dominant open severity"
+SYS EQS MODEWHERE "high"
+ASSERT LAST_N == 1
+
+# closed: high once, low once → first-seen low
+MODEWHERE Ticket severity status "closed"
+ASSERT MODEWHERE_COUNT == 1
+ASSERT MODEWHERE_TOTAL == 2
+SYS EQS LAST "low"
+ASSERT LAST_N == 1 "first closed severity"
+
+# no match → empty / 0
+MODEWHERE Ticket severity status "missing"
+ASSERT OK == 1
+ASSERT MODEWHERE_COUNT == 0
+ASSERT LAST_N == 0
+ASSERT MODEWHERE_TOTAL == 0
+ASSERT MODEWHERE_DISTINCT == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+PRINT "proof912_oop_modewhere" 1
+ASSERT OK == 1
