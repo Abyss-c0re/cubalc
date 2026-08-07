@@ -5,7 +5,7 @@
   "item": "FIELDINFO/DUMPFIELD field kind and default plate",
   "item_id": 392,
   "title": "FIELDINFO|DUMPFIELD|DESCRIBEFIELD \u2014 field kind/default plate",
-  "commit": "2c040679d96be5559081fe5e0f0e113768e220f0",
+  "commit": "e0434c5698fc6a1d2cce06e1039b54497a836111",
   "summary": "Field kind+default(+live value) bag/JSON for SETF/NEW. proof 933 46/46.",
   "proofs": [
     "933_oop_fieldinfo",
@@ -14,6 +14,6 @@
   ],
   "when": "2026-08-07T13:14:30Z",
   "agent": "meaningful_iter_10m",
-  "sha": "2c040679d96be5559081fe5e0f0e113768e220f0",
+  "sha": "e0434c5698fc6a1d2cce06e1039b54497a836111",
   "note": "pairs with METHODINFO/CLASSINFO for agent OOP discovery"
 }
