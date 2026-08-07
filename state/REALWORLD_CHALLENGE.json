@@ -8,25 +8,25 @@
   "tests": [
     {
       "name": "open_pin_now",
-      "cmd": "open → LEASE FROMTIME TIME ISO Z",
+      "cmd": "open \u2192 LEASE FROMTIME TIME ISO Z",
       "ok": true,
       "note": "pin now"
     },
     {
       "name": "age_fresh",
-      "cmd": "age after open → 0s",
+      "cmd": "age after open \u2192 0s",
       "ok": true,
       "note": "TIMEDIFF"
     },
     {
       "name": "human_0",
-      "cmd": "HUMANMS 0 → 0ms",
+      "cmd": "HUMANMS 0 \u2192 0ms",
       "ok": true,
       "note": "label"
     },
     {
       "name": "sla_5m",
-      "cmd": "PARSEMS 5m → 300000",
+      "cmd": "PARSEMS 5m \u2192 300000",
       "ok": true,
       "note": "sla ms"
     },
@@ -44,25 +44,25 @@
     },
     {
       "name": "span_1h",
-      "cmd": "TIMEDIFF ARG2-ARG1 → 3600",
+      "cmd": "TIMEDIFF ARG2-ARG1 \u2192 3600",
       "ok": true,
       "note": "duration"
     },
     {
       "name": "round_trip",
-      "cmd": "FROMTIME↔PARSEISO epoch equality",
+      "cmd": "FROMTIME\u2194PARSEISO epoch equality",
       "ok": true,
       "note": "Z form"
     },
     {
       "name": "pin_soft_require",
-      "cmd": "not-a-date soft; REQUIRE→2",
+      "cmd": "not-a-date soft; REQUIRE\u21922",
       "ok": true,
       "note": "parse miss"
     },
     {
       "name": "offset_ignored",
-      "cmd": "+01:00 pin → …01:00Z; span vs Z midnight −3600 not 0",
+      "cmd": "+01:00 pin \u2192 \u202601:00Z; span vs Z midnight \u22123600 not 0",
       "ok": true,
       "note": "TZ bug"
     },
@@ -79,39 +79,39 @@
       "severity": "high",
       "area": "host|parseiso",
       "title": "PARSEISO ignores timezone offsets (+01:00 / -05:00)",
-      "detail": "Wall time treated as UTC. 2000-01-01T01:00:00+01:00 → epoch of 01:00Z (946688400) not 00:00Z. Offset-aware stamps silently wrong by hours; pin canonicalizes to wrong Z.",
-      "repro": "PARSEISO 2000-01-01T01:00:00+01:00 → 946688400; expect 946684800"
+      "detail": "Wall time treated as UTC. 2000-01-01T01:00:00+01:00 \u2192 epoch of 01:00Z (946688400) not 00:00Z. Offset-aware stamps silently wrong by hours; pin canonicalizes to wrong Z.",
+      "repro": "PARSEISO 2000-01-01T01:00:00+01:00 \u2192 946688400; expect 946684800"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "host|parseiso|local",
-      "title": "LOCAL stamps reparsed as UTC — TZ skew",
+      "title": "LOCAL stamps reparsed as UTC \u2014 TZ skew",
       "detail": "SYS LOCAL yields no Z; PARSEISO treats as UTC. On UTC+3 host LOCAL now is ~+10800s vs TIME. Agents that pin LOCAL and age via TIMEDIFF get wrong ages.",
-      "repro": "LOCAL; PARSEISO LAST vs TIME → delta = TZ hours"
+      "repro": "LOCAL; PARSEISO LAST vs TIME \u2192 delta = TZ hours"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "host|humanms",
       "title": "HUMANMS multi-unit age labels not PARSEMS-round-trippable",
-      "detail": "Age of Y2K → 1387w6d14m28s via HUMANMS; PARSEMS cannot reparse compound labels. SLA configs must stay single-unit.",
-      "repro": "HUMANMS huge_ms; PARSEMS LAST → fail"
+      "detail": "Age of Y2K \u2192 1387w6d14m28s via HUMANMS; PARSEMS cannot reparse compound labels. SLA configs must stay single-unit.",
+      "repro": "HUMANMS huge_ms; PARSEMS LAST \u2192 fail"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "host|timediff",
-      "title": "TIMEDIFF whole-second only — sub-second lease SLA imprecise",
+      "title": "TIMEDIFF whole-second only \u2014 sub-second lease SLA imprecise",
       "detail": "Age resolution is 1s. Leases with 500ms SLA cannot distinguish. No MS-epoch TIMEDIFF dual.",
-      "repro": "open; age immediately → 0 even if 900ms elapsed"
+      "repro": "open; age immediately \u2192 0 even if 900ms elapsed"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "host|parseiso",
       "title": "Fractional seconds truncated without flag",
-      "detail": "…T00:12:10.999Z and …T00:12:10Z same epoch. No PARSEISO_MS / subsecond retain.",
+      "detail": "\u2026T00:12:10.999Z and \u2026T00:12:10Z same epoch. No PARSEISO_MS / subsecond retain.",
       "repro": "PARSEISO with .999Z equals without"
     },
     {
@@ -127,8 +127,8 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_LA_REQUIRE=abc → REQUIRE_HIT stays 0; hard paths soft-pass.",
-      "repro": "REQUIRE=abc pin bad → rc 0"
+      "detail": "CUBALC_LA_REQUIRE=abc \u2192 REQUIRE_HIT stays 0; hard paths soft-pass.",
+      "repro": "REQUIRE=abc pin bad \u2192 rc 0"
     },
     {
       "id": "W8",
@@ -136,7 +136,7 @@
       "area": "host|timediff",
       "title": "No ABS/clamp helper for negative ages",
       "detail": "Future stamps yield negative TIMEDIFF; agents hand-clamp for gate. No SYS ABS or AGECLAMP.",
-      "repro": "TIMEDIFF future → negative"
+      "repro": "TIMEDIFF future \u2192 negative"
     }
   ],
   "workarounds": [
@@ -157,9 +157,9 @@
   "issues_faced": [
     "open/age/sla/gate/span/round/pin soft+REQUIRE all green",
     "offset ignore is the core language challenge this iter",
-    "span polarity fixed to ARG2-ARG1 (duration a→b)",
+    "span polarity fixed to ARG2-ARG1 (duration a\u2192b)",
     "selftest 278/278; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "79a960074306f29beba4b0b119e161f665f78044",
   "ts": "2026-08-07T00:14:47Z"
 }
