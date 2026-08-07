@@ -14688,6 +14688,288 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LINESF|BAGLINESF|COUNTBAGF obj field — count newline bag lines → LAST_N (no mutate).
+   * HASBAGLINE|BAGHASLINE|LINEINBAGF obj field line — exact bag membership → LAST_N 0|1.
+   * DROPBAGLINE|BAGDROPLINE|ACKBAGLINE obj field line — drop first exact line (mutate).
+   * HASBAGLINEI / DROPBAGLINEI — case-insensitive exact field.
+   * TRYLINESF|LINESF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * LINESF: LAST = bag text; LAST_N/LINESF_N = count.
+   * HAS: LAST_N = 0|1; DROP: LAST = bag after; LAST_N/DROPBAGLINE_HIT = 0|1.
+   * Not SYS HASLINEF/REMOVELINEF (file-plane). Complements PUSHF/GREPF for work queues.
+   * Usability: IF/ack bag work without GETF+SYS LINES/HASLINE/REMOVELINE+SETF
+   * (METHOD/THIS). */
+  if (kw(&L->cur, "LINESF") || kw(&L->cur, "BAGLINESF") ||
+      kw(&L->cur, "COUNTBAGF") || kw(&L->cur, "NLINESF") ||
+      kw(&L->cur, "WCFIELD") || kw(&L->cur, "BAGCOUNTF") ||
+      kw(&L->cur, "HASBAGLINE") || kw(&L->cur, "BAGHASLINE") ||
+      kw(&L->cur, "LINEINBAGF") || kw(&L->cur, "BAGCONTAINSLINE") ||
+      kw(&L->cur, "HASBAGLINEI") || kw(&L->cur, "BAGHASLINEI") ||
+      kw(&L->cur, "LINEINBAGFI") ||
+      kw(&L->cur, "DROPBAGLINE") || kw(&L->cur, "BAGDROPLINE") ||
+      kw(&L->cur, "ACKBAGLINE") || kw(&L->cur, "REMOVELINEBAG") ||
+      kw(&L->cur, "DROPBAGLINEI") || kw(&L->cur, "BAGDROPLINEI") ||
+      kw(&L->cur, "ACKBAGLINEI") ||
+      kw(&L->cur, "TRYLINESF") || kw(&L->cur, "LINESFSOFT") ||
+      kw(&L->cur, "SOFTLINESF") || kw(&L->cur, "TRYHASBAGLINE") ||
+      kw(&L->cur, "TRYDROPBAGLINE")) {
+    char oname[48], fname[48], op[24], hay[256], needle[128], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=lines, 1=has, 2=drop */
+    int icase = 0;
+    long nfields = 0, hit = 0, removed = 0;
+    const char *p, *start;
+    size_t nn, flen, o;
+    int first_kept;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "HASBAGLINE") == 0 || strcmp(op, "BAGHASLINE") == 0 ||
+        strcmp(op, "LINEINBAGF") == 0 || strcmp(op, "BAGCONTAINSLINE") == 0 ||
+        strcmp(op, "HASBAGLINEI") == 0 || strcmp(op, "BAGHASLINEI") == 0 ||
+        strcmp(op, "LINEINBAGFI") == 0 || strcmp(op, "TRYHASBAGLINE") == 0)
+      mode = 1;
+    else if (strcmp(op, "DROPBAGLINE") == 0 || strcmp(op, "BAGDROPLINE") == 0 ||
+             strcmp(op, "ACKBAGLINE") == 0 || strcmp(op, "REMOVELINEBAG") == 0 ||
+             strcmp(op, "DROPBAGLINEI") == 0 || strcmp(op, "BAGDROPLINEI") == 0 ||
+             strcmp(op, "ACKBAGLINEI") == 0 || strcmp(op, "TRYDROPBAGLINE") == 0)
+      mode = 2;
+    else
+      mode = 0;
+    if (strcmp(op, "HASBAGLINEI") == 0 || strcmp(op, "BAGHASLINEI") == 0 ||
+        strcmp(op, "LINEINBAGFI") == 0 || strcmp(op, "DROPBAGLINEI") == 0 ||
+        strcmp(op, "BAGDROPLINEI") == 0 || strcmp(op, "ACKBAGLINEI") == 0)
+      icase = 1;
+    if (strcmp(op, "TRYLINESF") == 0 || strcmp(op, "LINESFSOFT") == 0 ||
+        strcmp(op, "SOFTLINESF") == 0 || strcmp(op, "TRYHASBAGLINE") == 0 ||
+        strcmp(op, "TRYDROPBAGLINE") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (!icase && mode >= 1 && (kw(&L->cur, "I") || kw(&L->cur, "ICASE") ||
+                                kw(&L->cur, "IGNORECASE") || kw(&L->cur, "-I") ||
+                                kw(&L->cur, "CI"))) {
+      icase = 1;
+      lex_next(L);
+    }
+    {
+      const char *usage =
+          (mode == 1) ? "HASBAGLINE object field line"
+        : (mode == 2) ? "DROPBAGLINE object field line"
+                      : "LINESF object field";
+      if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+        fail(vm, usage); return -1;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        char id[48];
+        Var *vv;
+        snprintf(id, sizeof id, "%s", L->cur.text);
+        lex_next(L);
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", id);
+      } else {
+        fail(vm, mode == 1 ? "HASBAGLINE field"
+             : mode == 2 ? "DROPBAGLINE field" : "LINESF field");
+        return -1;
+      }
+    }
+    needle[0] = 0;
+    if (mode >= 1) {
+      if (kw(&L->cur, "LINE") || kw(&L->cur, "ITEM") || kw(&L->cur, "VALUE") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "IS") || kw(&L->cur, "EQ"))
+        lex_next(L);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0)
+        snprintf(needle, sizeof needle, "%s", vm->last_str);
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag =
+          (mode == 1) ? "HASBAGLINE" : (mode == 2) ? "DROPBAGLINE" : "LINESF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LINESF_N", 0);
+      var_set_num(vm, "HASBAGLINE_N", 0);
+      var_set_num(vm, "DROPBAGLINE_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag =
+          (mode == 1) ? "HASBAGLINE" : (mode == 2) ? "DROPBAGLINE" : "LINESF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LINESF_N", 0);
+      var_set_num(vm, "HASBAGLINE_N", 0);
+      var_set_num(vm, "DROPBAGLINE_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    nn = strlen(needle);
+    nfields = 0;
+    hit = 0;
+    removed = 0;
+    out[0] = 0;
+    o = 0;
+    first_kept = 1;
+    if (mode == 0) {
+      if (hay[0]) {
+        p = hay;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", hay);
+      var_set_str(vm, "LINESF", hay);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hay);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "LINESF_N", nfields);
+      var_set_num(vm, "COUNTBAGF_N", nfields);
+      var_set_num(vm, "BAGLINESF_N", nfields);
+    } else if (mode == 1) {
+      if (hay[0]) {
+        p = hay;
+        while (*p && !hit) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              if (nn == 0 || memcmp(start, needle, nn) == 0) hit = 1;
+            } else {
+              size_t i; int okm = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { okm = 0; break; }
+              }
+              if (okm) hit = 1;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "HASBAGLINE_N", hit);
+      var_set_num(vm, "BAGHASLINE_N", hit);
+      var_set_str(vm, "LAST", hit ? needle : "");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? needle : "");
+    } else {
+      /* drop first exact */
+      p = hay;
+      while (*p) {
+        int match = 0;
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (!removed && flen == nn) {
+          if (!icase) {
+            match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+          } else {
+            size_t i; match = 1;
+            for (i = 0; i < nn; i++) {
+              char a = start[i], b = needle[i];
+              if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+              if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+              if (a != b) { match = 0; break; }
+            }
+          }
+        }
+        if (match) {
+          removed = 1;
+        } else {
+          if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+          first_kept = 0;
+          if (o + flen < sizeof out) {
+            memcpy(out + o, start, flen);
+            o += flen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, start, take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+        if (*p == '\n') p++;
+      }
+      if (!removed)
+        snprintf(out, sizeof out, "%s", hay);
+      {
+        size_t cap = sizeof ob->fstr[fi];
+        size_t olen = strlen(out);
+        if (olen >= cap) {
+          memcpy(ob->fstr[fi], out, cap - 1);
+          ob->fstr[fi][cap - 1] = 0;
+        } else {
+          memcpy(ob->fstr[fi], out, olen + 1);
+        }
+      }
+      ob->fis_str[fi] = 1;
+      var_set_str(vm, "LAST", ob->fstr[fi]);
+      var_set_str(vm, "DROPBAGLINE", ob->fstr[fi]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", ob->fstr[fi]);
+      vm->last_n = removed;
+      var_set_num(vm, "LAST_N", removed);
+      var_set_num(vm, "DROPBAGLINE_HIT", removed);
+      var_set_num(vm, "DROPBAGLINE_N", removed);
+      var_set_num(vm, "ACKBAGLINE_HIT", removed);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

@@ -1,0 +1,188 @@
+# LINESF / HASBAGLINE / DROPBAGLINE — bag count, membership, ack on fields
+# Usability: work-queue IF/ack without GETF+SYS LINES/HASLINE/REMOVELINE+SETF
+# Not file-plane SYS HASLINEF / REMOVELINEF
+
+HOLD_FLASH 1
+
+CLASS Q
+  FIELD work "a\nb\nc\nb"
+  FIELD code 5
+  METHOD init
+  END
+  METHOD size
+    LINESF THIS work
+  END
+  METHOD has_b
+    HASBAGLINE THIS work "b"
+  END
+  METHOD ack_b
+    DROPBAGLINE THIS work "b"
+  END
+END
+
+NEW Q q
+
+# count bag lines
+LINESF q work
+ASSERT OK == 1
+ASSERT LINESF_N == 4
+ASSERT LAST_N == 4
+SYS EQS LAST "a\nb\nc\nb"
+ASSERT LAST_N == 1
+# field unchanged
+GETF q work
+SYS EQS LAST "a\nb\nc\nb"
+ASSERT LAST_N == 1
+
+# empty
+SETF q work ""
+LINESF q work
+ASSERT LINESF_N == 0
+ASSERT LAST_N == 0
+
+# single / num promote
+SETF q work "solo"
+LINESF q work
+ASSERT LINESF_N == 1
+LINESF q code
+ASSERT LINESF_N == 1
+SYS EQS LAST "5"
+ASSERT LAST_N == 1
+
+# HASBAGLINE exact membership
+SETF q work "a\nb\nc"
+HASBAGLINE q work "b"
+ASSERT HASBAGLINE_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+HASBAGLINE q work "z"
+ASSERT HASBAGLINE_N == 0
+ASSERT LAST_N == 0
+
+# not substring — GREPF domain
+SETF q work "beta\nalpha"
+HASBAGLINE q work "a"
+ASSERT HASBAGLINE_N == 0
+HASBAGLINE q work "alpha"
+ASSERT HASBAGLINE_N == 1
+
+# aliases
+BAGHASLINE q work "beta"
+ASSERT LAST_N == 1
+LINEINBAGF q work "nope"
+ASSERT LAST_N == 0
+
+# case-insensitive
+SETF q work "Error\nok"
+HASBAGLINEI q work "error"
+ASSERT HASBAGLINE_N == 1
+HASBAGLINE q work "error"
+ASSERT HASBAGLINE_N == 0
+
+# DROPBAGLINE first exact ack
+SETF q work "a\nb\nc\nb"
+DROPBAGLINE q work "b"
+ASSERT DROPBAGLINE_HIT == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "a\nc\nb"
+ASSERT LAST_N == 1
+GETF q work
+SYS EQS LAST "a\nc\nb"
+ASSERT LAST_N == 1
+
+# second ack
+DROPBAGLINE q work "b"
+ASSERT DROPBAGLINE_HIT == 1
+GETF q work
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# miss — field unchanged
+DROPBAGLINE q work "z"
+ASSERT DROPBAGLINE_HIT == 0
+ASSERT LAST_N == 0
+GETF q work
+SYS EQS LAST "a\nc"
+ASSERT LAST_N == 1
+
+# aliases
+SETF q work "x\ny"
+ACKBAGLINE q work "x"
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+SETF q work "p\nq"
+BAGDROPLINE q work "q"
+SYS EQS LAST "p"
+ASSERT LAST_N == 1
+SETF q work "m\nn"
+REMOVELINEBAG q work "m"
+SYS EQS LAST "n"
+ASSERT LAST_N == 1
+
+# DROPBAGLINEI
+SETF q work "Ok\nFAIL\nok"
+DROPBAGLINEI q work "ok"
+ASSERT DROPBAGLINE_HIT == 1
+GETF q work
+SYS EQS LAST "FAIL\nok"
+ASSERT LAST_N == 1
+
+# METHOD / THIS
+SETF q work "u\nv\nw"
+SEND q size
+ASSERT LAST_N == 3
+SEND q has_b
+ASSERT LAST_N == 0
+SEND q has_b
+# restore work for has_b test with b
+SETF q work "u\nb\nw"
+SEND q has_b
+ASSERT LAST_N == 1
+SEND q ack_b
+GETF q work
+SYS EQS LAST "u\nw"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYLINESF nosuch work
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+LINESF SOFT q nosuch
+ASSERT OK == 0
+TRYHASBAGLINE nosuch work "x"
+ASSERT OK == 0
+TRYDROPBAGLINE nosuch work "x"
+ASSERT OK == 0
+
+# recover
+SETF q work "ok\nyes"
+LINESF q work
+ASSERT OK == 1
+ASSERT LINESF_N == 2
+HASBAGLINE q work "yes"
+ASSERT LAST_N == 1
+DROPBAGLINE q work "ok"
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF q work "d\ne"
+LINESF q "work"
+ASSERT LINESF_N == 2
+HASBAGLINE q "work" "e"
+ASSERT LAST_N == 1
+
+# HELP
+HELP LINESF
+SYS HAS LAST "LINESF"
+ASSERT LAST_N == 1
+HELP HASBAGLINE
+SYS HAS LAST "HASBAGLINE"
+ASSERT LAST_N == 1
+HELP DROPBAGLINE
+SYS HAS LAST "DROPBAGLINE"
+ASSERT LAST_N == 1
+
+PRINT "oop_hasbagline ok"
