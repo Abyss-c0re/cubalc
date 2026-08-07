@@ -467,6 +467,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 437. ~~**incomplete form tips + line**~~ **done** (NEW/SEND/GETF/SETF/CALL/CLASS/FN/CUBE/PLUG/INCLUDE/DEFAULT fail_at with example + line · DEFAULT optional =).
 438. ~~**HASARG / HASARGC**~~ **done** (soft 0|1 CLI arg probes · twin REQUIRE ARG/ARGC · HASARG_N · IF LAST_N branch).
 439. ~~**`HASFLAG / GETFLAG`**~~ **done** (soft CLI `--name` / `--name=val` / `--name val` probes · no shell getopt · OR fallback).
+440. ~~**`RESTARGS / POSITIONALS`**~~ **done** (non-flag CUBALC_ARGn bag · files after --flags · LAST_N=count · bare `--` ends flags).
 
 ## Tick protocol
 

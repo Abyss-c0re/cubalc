@@ -1085,6 +1085,77 @@ static int cubalc_scan_cli_flag(const char *name, char *out, size_t outn) {
   return 0;
 }
 
+/* Collect non-flag positionals from CUBALC_ARGn → newline bag.
+ * Skips --flag / -flag / --flag=val; bare --flag val skips value too
+ * (same rule as GETFLAG). Bare "-" kept. Bare "--" ends flag scan.
+ * Usability: RESTARGS after mixed --flags + files without shell. */
+static long cubalc_collect_restargs(char *out, size_t outn) {
+  char envn[32];
+  const char *ac;
+  int argc = 32, k;
+  size_t o = 0;
+  long count = 0;
+  int end_flags = 0;
+  if (out && outn) out[0] = 0;
+  ac = getenv("CUBALC_ARGC");
+  if (ac && ac[0]) {
+    argc = (int)strtol(ac, NULL, 10);
+    if (argc < 0) argc = 0;
+    if (argc > 32) argc = 32;
+  } else {
+    argc = 0;
+    for (k = 0; k < 32; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      if (!getenv(envn)) break;
+      argc++;
+    }
+  }
+  for (k = 0; k < argc; k++) {
+    const char *a;
+    size_t al, room;
+    snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+    a = getenv(envn);
+    if (!a || !a[0]) continue;
+    if (!end_flags && a[0] == '-' && a[1] != 0) {
+      const char *p;
+      /* bare "--" → remaining args are all positionals */
+      if (a[1] == '-' && a[2] == 0) {
+        end_flags = 1;
+        continue;
+      }
+      p = a + 1;
+      if (*p == '-') p++;
+      if (strchr(p, '='))
+        continue; /* --name=value */
+      /* --name [value] — consume next non-flag as value (GETFLAG parity) */
+      if (k + 1 < argc) {
+        char env2[32];
+        const char *b;
+        snprintf(env2, sizeof env2, "CUBALC_ARG%d", k + 1);
+        b = getenv(env2);
+        if (b && b[0] && !(b[0] == '-' && b[1] != 0))
+          k++;
+      }
+      continue;
+    }
+    /* positional (includes bare "-" stdin convention) */
+    al = strlen(a);
+    if (out && outn > 1) {
+      if (count > 0 && o + 1 < outn)
+        out[o++] = '\n';
+      room = outn - o - 1;
+      if (al > room) al = room;
+      if (al > 0) {
+        memcpy(out + o, a, al);
+        o += al;
+      }
+      out[o] = 0;
+    }
+    count++;
+  }
+  return count;
+}
+
 /* Format ASSERT/EXPECT failure with got/expected from last parse_cmp. */
 static void assert_fail_msg(VM *vm, char *msg, size_t n, const char *tag, int aln,
                             const char *why){
@@ -25942,6 +26013,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"HASARGC", "HASARGC [min] — soft 0|1 if ARGC >= min (default 1)"},
       {"HASFLAG", "HASFLAG name — soft 0|1 if --name / -name / --name= in CUBALC_ARGn"},
       {"GETFLAG", "GETFLAG name [OR fallback] — LAST = flag value (bare → \"1\")"},
+      {"RESTARGS", "RESTARGS|POSITIONALS — bag of non-flag CUBALC_ARGn · LAST_N=count"},
+      {"POSITIONALS", "POSITIONALS alias of RESTARGS — files after --flags"},
       {"REQUIRE BIN", "REQUIRE BIN|CMD|EXE name — fail if tool not X_OK on PATH"},
       {"REQUIRE FN", "REQUIRE FN|FUNC name — fail if FN not defined (after INCLUDE)"},
       {"REQUIRE CLASS", "REQUIRE CLASS|TYPE name — fail if CLASS not defined"},
@@ -28105,6 +28178,30 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
     if (vm->trace)
       fprintf(vm->trace, "# getflag %s hit=%d → %s\n", name, hit, val);
+    bump(vm); return 1;
+  }
+  /* RESTARGS|POSITIONALS — newline bag of non-flag CUBALC_ARGn (positionals).
+   * LAST = bag · LAST_N / RESTARGS_N = count · OK=1.
+   * Usability: peel files after --flags without EACH+HAS/STARTS glue. */
+  if (kw(&L->cur,"RESTARGS") || kw(&L->cur,"POSITIONALS") || kw(&L->cur,"POSARGS") ||
+      kw(&L->cur,"NONFLAGS") || kw(&L->cur,"ARGSREST") || kw(&L->cur,"POSARG") ||
+      kw(&L->cur,"REST_ARGS")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    char nbuf[16];
+    lex_next(L);
+    n = cubalc_collect_restargs(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "RESTARGS", bag);
+    var_set_str(vm, "POSITIONALS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RESTARGS_N", n);
+    var_set_num(vm, "OK", 1);
+    snprintf(nbuf, sizeof nbuf, "%ld", n);
+    if (vm->trace)
+      fprintf(vm->trace, "# restargs n=%ld\n", n);
     bump(vm); return 1;
   }
   /* UNSET name — remove a program var so DEFAULT can re-apply.
