@@ -1,0 +1,127 @@
+# LENF / EMPTYF / BLANKF / NONEMPTYF — field probes for agent IF guards
+# Usability: length/empty/blank without GETF+SYS LEN/EMPTY; no mutate
+# Complements TRIMF mutators; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "open"
+  FIELD note "hi"
+  FIELD pad "  "
+  FIELD empty ""
+  FIELD retries 42
+  METHOD init
+  END
+  METHOD has_note
+    NONEMPTYF THIS note
+  END
+END
+
+NEW Ticket t
+
+# LENF — length + LAST text
+LENF t note
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT LENF_N == 2
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+# field unchanged
+GETF t note
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+
+LENF t status
+ASSERT LAST_N == 4
+ASSERT LENF_N == 4
+SYS EQS LAST "open"
+ASSERT LAST_N == 1
+
+# numeric field → decimal length
+LENF t retries
+ASSERT LAST_N == 2
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+
+# EMPTYF
+EMPTYF t empty
+ASSERT LAST_N == 1
+ASSERT EMPTYF_N == 1
+EMPTYF t note
+ASSERT LAST_N == 0
+ASSERT EMPTYF_N == 0
+
+# BLANKF — whitespace counts as blank
+BLANKF t pad
+ASSERT LAST_N == 1
+ASSERT BLANKF_N == 1
+BLANKF t empty
+ASSERT LAST_N == 1
+BLANKF t note
+ASSERT LAST_N == 0
+ASSERT BLANKF_N == 0
+
+# NONEMPTYF
+NONEMPTYF t note
+ASSERT LAST_N == 1
+ASSERT NONEMPTYF_N == 1
+NONEMPTYF t empty
+ASSERT LAST_N == 0
+ASSERT NONEMPTYF_N == 0
+
+# METHOD + THIS
+SEND t has_note
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYLENF nosuch note
+ASSERT OK == 0
+ASSERT LENF_N == 0
+SYS EQS LAST_ERR "LENF: unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+LENF SOFT t nosuch
+ASSERT OK == 0
+SYS HAS LAST_ERR "field"
+ASSERT LAST_N == 1
+
+TRYEMPTYF nosuch note
+ASSERT OK == 0
+
+# dynamic field name
+LENF t "note"
+ASSERT LAST_N == 2
+
+# aliases
+STRLENF t status
+ASSERT LAST_N == 4
+FIELDLEN t note
+ASSERT LAST_N == 2
+ISEMPTYF t empty
+ASSERT LAST_N == 1
+ISBLANKF t pad
+ASSERT LAST_N == 1
+NOTEMPTYF t note
+ASSERT LAST_N == 1
+
+# LENF still sets EMPTYF_N/BLANKF_N side plates
+SETF t note ""
+LENF t note
+ASSERT LAST_N == 0
+ASSERT EMPTYF_N == 1
+ASSERT BLANKF_N == 1
+ASSERT NONEMPTYF_N == 0
+
+# HELP
+HELP LENF
+SYS HAS LAST "LENF"
+ASSERT LAST_N == 1
+HELP EMPTYF
+SYS HAS LAST "EMPTYF"
+ASSERT LAST_N == 1
+HELP BLANKF
+SYS HAS LAST "BLANKF"
+ASSERT LAST_N == 1
+
+PRINT "oop_lenf ok"

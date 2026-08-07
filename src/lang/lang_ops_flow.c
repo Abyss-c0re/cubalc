@@ -11039,6 +11039,154 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LENF|STRLENF|EMPTYF|BLANKF|NONEMPTYF obj field
+   * TRYLENF|LENF SOFT — soft miss OK=0.
+   * Field probes without mutating: length / empty / blank / nonempty.
+   * LAST = field text (num promoted); LAST_N = length (LENF) or 0|1 probe.
+   * Usability: IF guards on note/status without GETF+SYS LEN/EMPTY glue
+   * (METHOD/THIS; complements TRIMF mutators). */
+  if (kw(&L->cur, "LENF") || kw(&L->cur, "STRLENF") ||
+      kw(&L->cur, "FIELDLEN") || kw(&L->cur, "LENFIELD") ||
+      kw(&L->cur, "EMPTYF") || kw(&L->cur, "ISEMPTYF") ||
+      kw(&L->cur, "FIELDEMPTY") || kw(&L->cur, "EMPTYFIELD") ||
+      kw(&L->cur, "BLANKF") || kw(&L->cur, "ISBLANKF") ||
+      kw(&L->cur, "FIELDBLANK") || kw(&L->cur, "BLANKFIELD") ||
+      kw(&L->cur, "NONEMPTYF") || kw(&L->cur, "NOTEMPTYF") ||
+      kw(&L->cur, "HASCHARSF") || kw(&L->cur, "FIELDFULL") ||
+      kw(&L->cur, "TRYLENF") || kw(&L->cur, "LENFSOFT") ||
+      kw(&L->cur, "SOFTLENF") || kw(&L->cur, "TRYEMPTYF") ||
+      kw(&L->cur, "TRYBLANKF") || kw(&L->cur, "TRYNONEMPTYF")) {
+    char oname[48], fname[48], op[24], hay[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, mode = 0; /* 0=len, 1=empty, 2=blank, 3=nonempty */
+    long hit = 0, len = 0;
+    const char *p;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "EMPTYF") == 0 || strcmp(op, "ISEMPTYF") == 0 ||
+        strcmp(op, "FIELDEMPTY") == 0 || strcmp(op, "EMPTYFIELD") == 0 ||
+        strcmp(op, "TRYEMPTYF") == 0)
+      mode = 1;
+    else if (strcmp(op, "BLANKF") == 0 || strcmp(op, "ISBLANKF") == 0 ||
+             strcmp(op, "FIELDBLANK") == 0 || strcmp(op, "BLANKFIELD") == 0 ||
+             strcmp(op, "TRYBLANKF") == 0)
+      mode = 2;
+    else if (strcmp(op, "NONEMPTYF") == 0 || strcmp(op, "NOTEMPTYF") == 0 ||
+             strcmp(op, "HASCHARSF") == 0 || strcmp(op, "FIELDFULL") == 0 ||
+             strcmp(op, "TRYNONEMPTYF") == 0)
+      mode = 3;
+    else
+      mode = 0; /* LENF */
+    if (strcmp(op, "TRYLENF") == 0 || strcmp(op, "LENFSOFT") == 0 ||
+        strcmp(op, "SOFTLENF") == 0 || strcmp(op, "TRYEMPTYF") == 0 ||
+        strcmp(op, "TRYBLANKF") == 0 || strcmp(op, "TRYNONEMPTYF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "LENF object field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, "LENF field"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "LENF unknown object %s", oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LENF_N", 0);
+      var_set_num(vm, "EMPTYF_N", 0);
+      var_set_num(vm, "BLANKF_N", 0);
+      var_set_num(vm, "NONEMPTYF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LENF: unknown object");
+      var_set_str(vm, "ERR", "LENF: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "LENF unknown FIELD %s", fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "LENF_N", 0);
+      var_set_num(vm, "EMPTYF_N", 0);
+      var_set_num(vm, "BLANKF_N", 0);
+      var_set_num(vm, "NONEMPTYF_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "LENF: unknown field");
+      var_set_str(vm, "ERR", "LENF: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    len = (long)strlen(hay);
+    if (mode == 1) {
+      hit = (hay[0] == 0) ? 1 : 0;
+    } else if (mode == 2) {
+      p = hay;
+      while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+      hit = (*p == 0) ? 1 : 0;
+    } else if (mode == 3) {
+      hit = (hay[0] != 0) ? 1 : 0;
+    } else {
+      hit = len; /* LENF reports length in LAST_N */
+    }
+    var_set_str(vm, "LAST", hay);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hay);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "LENF_N", len);
+    var_set_num(vm, "EMPTYF_N", (hay[0] == 0) ? 1 : 0);
+    {
+      p = hay;
+      while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+      var_set_num(vm, "BLANKF_N", (*p == 0) ? 1 : 0);
+    }
+    var_set_num(vm, "NONEMPTYF_N", (hay[0] != 0) ? 1 : 0);
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISOF obj ClassName */
   if (kw(&L->cur, "ISOF") || kw(&L->cur, "ISINSTANCE") || kw(&L->cur, "ISA") ||
       kw(&L->cur, "INSTANCEOF")) {
