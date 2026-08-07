@@ -1,0 +1,792 @@
+# deploy_cli_contract_board.cubalc — USAGE + REQUIRE FLAG deploy CLI contract
+#
+# Real use: deploy/promote agents refuse to run without required --flags and
+# surface a sticky USAGE tip on contract failure (no shell getopt/usage):
+#   USAGE "…"              — sticky CLI contract string (appended to REQUIRE errs)
+#   REQUIRE FLAG name      — fail-fast --flag (HASFLAG twin; LAST=value)
+#   HASFLAG / GETFLAG      — soft probes / defaults
+#   RESTARGS               — non-flag artifact paths after flags
+#   HASLINE / COUNTLINE    — exact deploy-row registry
+#
+# Distinct from cli_flag_intake_board (soft HASFLAG admit only):
+# this board is *hard REQUIRE FLAG + USAGE tip + deploy plate*.
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_dc_$$
+#   ./out/cubalc run programs/realworld/deploy_cli_contract_board.cubalc \
+#     deploy -- --mode=canary --out=web "$CUBALC_STATE/art.bin"
+#   # missing mode → REQUIRE FLAG err includes · usage: …
+#   # NOTE: do NOT name an action "run" — host strips token "run" from args
+#
+# Plate under STATE:
+#   DEPLOYS.txt    — mode:path rows (exact)
+#   PATHS.txt      — last RESTARGS bag
+#   VAL.txt META.txt DC_REPORT.txt
+#
+# Actions (ARG0 or CUBALC_DC_ACTION):
+#   list      — deploys depth (default)
+#   usage     — set USAGE from ARG1 or default contract line
+#   show      — echo sticky USAGE → VAL
+#   contract  — REQUIRE FLAG mode + REQUIRE FLAG out (hard)
+#   soft      — HASFLAG mode only (soft miss + optional REQUIRE wall via EXIT)
+#   deploy    — USAGE; REQUIRE FLAG mode; optional out; RESTARGS → append rows
+#   dry       — REQUIRE FLAG mode; list would-run paths without write
+#   has       — HASLINE exact deploy row
+#   count     — COUNTLINE exact
+#   gate      — soft HASFLAG mode + path_n >= MIN
+#   clear
+#
+# Env: CUBALC_DC_ACTION CUBALC_DC_NAME CUBALC_DC_A2
+#      CUBALC_DC_REQUIRE CUBALC_DC_MIN
+#
+# Edges:
+#   REQUIRE FLAG miss → ok:false asserts_fail but process exit_code often 0
+#   USAGE sticky appends to REQUIRE FLAG err string
+#   host strips --flags without `… -- --flags`
+#   host strips positional token "run" (subcommand name collision)
+#   bare bool flags consume next path; prefer --flag=val
+#   REQUIRE FLAG / HASFLAG literals only (no var name)
+#   WRITE NL; NUM soft REQUIRE=abc; PRINT_JSON; substring HASLINE false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "deploy_cli_contract_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT DFILE = "DEPLOYS.txt"
+DEFAULT PFILE = "PATHS.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "DC_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT MIN = 1
+DEFAULT MODE = ""
+DEFAULT OUT = ""
+DEFAULT USAGE_LINE = "deploy_cli_contract -- deploy -- --mode=M [--out=T] file [file...]"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+# sticky USAGE early so REQUIRE tips work
+USAGE USAGE_LINE
+CLEAR_ERR
+
+SYS ARGC
+LET argc_n = LAST_N
+SYS ARGS
+LET args_bag = LAST
+CLEAR_ERR
+
+# ACTION from ARG0 (non-flag) or ENV
+HASARG 0
+IF LAST_N == 1 THEN
+  SYS ARG 0 OR ""
+  LET a0 = LAST
+  SYS STARTS a0 "-"
+  IF LAST_N == 0 THEN
+    LET ACTION = a0
+  END
+END
+CLEAR_ERR
+SYS ENV "CUBALC_DC_ACTION" OR ""
+IF LAST_N > 0 THEN
+  SYS EQS ACTION "list"
+  IF LAST_N == 1 THEN
+    LET ACTION = LAST
+  END
+END
+CLEAR_ERR
+
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_DC_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_DC_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_DC_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_DC_MIN" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+END
+# hasargc-style min for gate only via --min=
+HASFLAG min
+IF LAST_N == 1 THEN
+  GETFLAG min OR "1"
+  SYS NUM
+  IF OK == 1 THEN
+    LET MIN = LAST_N
+  END
+  CLEAR_ERR
+END
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  SYS ARG 1 OR ""
+  IF LAST_N > 0 THEN
+    LET _a1 = LAST
+    SYS STARTS _a1 "-"
+    IF LAST_N == 0 THEN
+      # only plain numeric ARG1, never --flags
+      SYS ARG 1 OR ""
+      SYS NUM
+      IF OK == 1 THEN
+        LET MIN = LAST_N
+      END
+      CLEAR_ERR
+    END
+  END
+END
+
+# soft peel flags for plate (REQUIRE FLAG used in hard actions)
+HASFLAG mode
+IF LAST_N == 1 THEN
+  GETFLAG mode OR ""
+  LET MODE = LAST
+END
+CLEAR_ERR
+HASFLAG out
+IF LAST_N == 1 THEN
+  GETFLAG out OR ""
+  LET OUT = LAST
+END
+CLEAR_ERR
+
+# RESTARGS; drop leading action token
+RESTARGS
+LET rest_bag = LAST
+SYS LINES rest_bag
+LET rest_n = LAST_N
+CLEAR_ERR
+SYS NTH 0 rest_bag
+LET first = LAST
+CLEAR_ERR
+SYS EQS first ACTION
+IF LAST_N == 1 THEN
+  SYS DROP 1 rest_bag
+  LET rest_bag = LAST
+  SYS LINES rest_bag
+  LET rest_n = LAST_N
+END
+CLEAR_ERR
+LET paths = rest_bag
+LET path_n = rest_n
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+
+SYS JOIN state_dir DFILE
+LET deploys_path = LAST
+SYS JOIN state_dir PFILE
+LET paths_path = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR deploys_path OR ""
+LET deploys = LAST
+CLEAR_ERR
+SYS READ OR paths_path OR ""
+LET paths_prev = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET deploys_ch = 0
+LET paths_ch = 0
+LET note_msg = "ok"
+LET deploy_n = 0
+LET admit_n = 0
+LET has_n = 0
+LET count_n = 0
+LET flag_n = 0
+
+SYS LINES deploys
+LET deploy_n = LAST_N
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = deploys
+  LET val_ch = 1
+  LET meta = "deploys"
+  SYS STR deploy_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "usage"
+  LET meta = LAST
+  SYS PUSH meta USAGE
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON deploy_n argc_n
+  CLEAR_ERR
+END
+
+# --- usage: set sticky contract ---
+SYS EQS ACTION "usage"
+IF LAST_N == 1 THEN
+  NOTE "action usage"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    USAGE USAGE_LINE
+  ELSE
+    USAGE NAME
+    LET USAGE_LINE = NAME
+  END
+  LET val = USAGE
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "usage set"
+  LET meta = "usage"
+  SYS PUSH meta USAGE
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- show sticky USAGE ---
+SYS EQS ACTION "show"
+IF LAST_N == 1 THEN
+  NOTE "action show"
+  USAGE
+  LET val = LAST
+  LET val_ch = 1
+  LET hit = 1
+  LET note_msg = "usage show"
+  LET meta = "usage"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- contract: hard REQUIRE FLAG mode + out ---
+SYS EQS ACTION "contract"
+IF LAST_N == 1 THEN
+  NOTE "action contract"
+  USAGE USAGE_LINE
+  # hard fails halt the program on miss — only call when flags expected
+  HASFLAG mode
+  LET flag_n = LAST_N
+  HASFLAG out
+  LET has_out = LAST_N
+  IF flag_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "contract mode miss"
+    FAIL "contract mode miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE FLAG mode
+    END
+    LET val = USAGE
+    LET val_ch = 1
+    LET meta = "miss"
+    SYS PUSH meta "mode"
+    LET meta = LAST
+    LET meta_ch = 1
+  ELSE
+    IF has_out == 0 THEN
+      LET miss = 1
+      LET note_msg = "contract out miss"
+      FAIL "contract out miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        REQUIRE FLAG out
+      END
+      LET val = USAGE
+      LET val_ch = 1
+      LET meta = "miss"
+      SYS PUSH meta "out"
+      LET meta = LAST
+      LET meta_ch = 1
+    ELSE
+      REQUIRE FLAG mode
+      LET MODE = LAST
+      REQUIRE FLAG out
+      LET OUT = LAST
+      LET hit = 1
+      LET note_msg = "contract ok"
+      LET val = MODE
+      LET val_ch = 1
+      LET meta = "mode"
+      SYS PUSH meta MODE
+      LET meta = LAST
+      SYS PUSH meta "out"
+      LET meta = LAST
+      SYS PUSH meta OUT
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON hit miss MODE OUT
+  CLEAR_ERR
+END
+
+# --- soft: HASFLAG mode only ---
+SYS EQS ACTION "soft"
+IF LAST_N == 1 THEN
+  NOTE "action soft"
+  HASFLAG mode
+  LET flag_n = LAST_N
+  IF flag_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "soft mode miss"
+    FAIL "soft mode miss"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    LET meta = "soft"
+    SYS PUSH meta "miss"
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "soft mode require wall"
+    END
+  ELSE
+    GETFLAG mode OR ""
+    LET MODE = LAST
+    LET hit = 1
+    LET note_msg = "soft mode ok"
+    LET val = MODE
+    LET val_ch = 1
+    LET meta = "mode"
+    SYS PUSH meta MODE
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON flag_n hit miss
+  CLEAR_ERR
+END
+
+# --- deploy: REQUIRE mode; optional out; admit paths ---
+SYS EQS ACTION "deploy"
+IF LAST_N == 1 THEN
+  NOTE "action deploy"
+  USAGE USAGE_LINE
+  HASFLAG mode
+  LET flag_n = LAST_N
+  IF flag_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "deploy mode miss"
+    FAIL "deploy mode miss"
+    CLEAR_ERR
+    LET val = USAGE
+    LET val_ch = 1
+    LET meta = "usage"
+    SYS PUSH meta USAGE
+    LET meta = LAST
+    LET meta_ch = 1
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE FLAG mode
+    END
+  ELSE
+    REQUIRE FLAG mode
+    LET MODE = LAST
+    HASFLAG out
+    IF LAST_N == 1 THEN
+      REQUIRE FLAG out
+      LET OUT = LAST
+    ELSE
+      LET OUT = "default"
+    END
+    LET paths = rest_bag
+    LET paths_ch = 1
+    LET path_n = rest_n
+    IF path_n < 1 THEN
+      LET miss = 1
+      LET note_msg = "deploy no paths"
+      FAIL "deploy no paths"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "deploy no paths"
+      END
+    ELSE
+      EACH LINE AS p IN paths
+        SYS BLANK p
+        IF LAST_N == 0 THEN
+          SYS CAT MODE ":"
+          LET row = LAST
+          SYS CAT row p
+          LET row = LAST
+          SYS HASLINE deploys row
+          IF LAST_N == 0 THEN
+            SYS PUSH deploys row
+            LET deploys = LAST
+            LET admit_n = admit_n + 1
+          END
+        END
+      END
+      LET deploys_ch = 1
+      SYS LINES deploys
+      LET deploy_n = LAST_N
+      LET hit = 1
+      LET note_msg = "deploy ok"
+      LET val = deploys
+      LET val_ch = 1
+      LET meta = "mode"
+      SYS PUSH meta MODE
+      LET meta = LAST
+      SYS PUSH meta "out"
+      LET meta = LAST
+      SYS PUSH meta OUT
+      LET meta = LAST
+      SYS PUSH meta "admit"
+      LET meta = LAST
+      SYS STR admit_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON admit_n deploy_n MODE OUT hit miss
+  CLEAR_ERR
+END
+
+# --- dry: require mode, report paths, no write ---
+SYS EQS ACTION "dry"
+IF LAST_N == 1 THEN
+  NOTE "action dry"
+  USAGE USAGE_LINE
+  HASFLAG mode
+  LET flag_n = LAST_N
+  IF flag_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "dry mode miss"
+    FAIL "dry mode miss"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      REQUIRE FLAG mode
+    END
+  ELSE
+    REQUIRE FLAG mode
+    LET MODE = LAST
+    LET paths = rest_bag
+    LET paths_ch = 1
+    LET path_n = rest_n
+    LET hit = 1
+    LET note_msg = "dry ok"
+    LET val = paths
+    LET val_ch = 1
+    LET meta = "mode"
+    SYS PUSH meta MODE
+    LET meta = LAST
+    SYS PUSH meta "paths"
+    LET meta = LAST
+    SYS STR path_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON path_n MODE hit miss
+  CLEAR_ERR
+END
+
+# --- has exact ---
+SYS EQS ACTION "has"
+IF LAST_N == 1 THEN
+  NOTE "action has"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "has needs row"
+    FAIL "has needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "has needs row"
+    END
+  ELSE
+    SYS HASLINE deploys NAME
+    LET has_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "has"
+    SYS STR has_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    IF has_n == 1 THEN
+      LET hit = 1
+      LET note_msg = "has ok"
+    ELSE
+      LET miss = 1
+      LET note_msg = "has miss"
+      FAIL "has miss"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "has miss"
+      END
+    END
+  END
+  PRINT_JSON has_n
+  CLEAR_ERR
+END
+
+# --- count ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs row"
+    FAIL "count needs row"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "count needs row"
+    END
+  ELSE
+    SYS COUNTLINE deploys NAME
+    LET count_n = LAST_N
+    LET val = NAME
+    LET val_ch = 1
+    LET meta = "count"
+    SYS STR count_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+    LET hit = 1
+    LET note_msg = "count ok"
+  END
+  PRINT_JSON count_n
+  CLEAR_ERR
+END
+
+# --- gate soft ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  HASFLAG mode
+  LET flag_n = LAST_N
+  LET path_n = rest_n
+  LET meta = "has_mode"
+  SYS STR flag_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "paths"
+  LET meta = LAST
+  SYS STR path_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta "min"
+  LET meta = LAST
+  SYS STR MIN
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  SYS STR flag_n
+  LET val = LAST
+  LET val_ch = 1
+  IF flag_n == 1 THEN
+    IF path_n >= MIN THEN
+      LET hit = 1
+      LET note_msg = "gate admit"
+    ELSE
+      LET miss = 1
+      LET note_msg = "gate paths short"
+      FAIL "gate paths short"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate paths short"
+      END
+    END
+  ELSE
+    LET miss = 1
+    LET note_msg = "gate no mode"
+    FAIL "gate no mode"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no mode"
+    END
+  END
+  PRINT_JSON flag_n path_n MIN hit miss
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET deploys = ""
+  LET paths = ""
+  LET val = ""
+  LET meta = ""
+  LET deploys_ch = 1
+  LET paths_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET deploy_n = 0
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "usage"
+LET k = k + LAST_N
+SYS EQS ACTION "show"
+LET k = k + LAST_N
+SYS EQS ACTION "contract"
+LET k = k + LAST_N
+SYS EQS ACTION "soft"
+LET k = k + LAST_N
+SYS EQS ACTION "deploy"
+LET k = k + LAST_N
+SYS EQS ACTION "dry"
+LET k = k + LAST_N
+SYS EQS ACTION "has"
+LET k = k + LAST_N
+SYS EQS ACTION "count"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF deploys_ch > 0 THEN
+  SYS WRITE deploys_path deploys
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "deploys write failed"
+  END
+  CLEAR_ERR
+END
+IF paths_ch > 0 THEN
+  SYS WRITE paths_path paths
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "paths write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.deploy_cli_contract_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "mode"
+LET report = LAST
+SYS PUSH report MODE
+LET report = LAST
+SYS PUSH report "out"
+LET report = LAST
+SYS PUSH report OUT
+LET report = LAST
+SYS PUSH report "deploy_n"
+LET report = LAST
+SYS STR deploy_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "admit_n"
+LET report = LAST
+SYS STR admit_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "usage"
+LET report = LAST
+SYS PUSH report USAGE
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "deploy_cli_contract_board" ACTION hit miss deploy_n admit_n MODE note_msg elapsed
+NOTE "deploy_cli_contract_board: done"

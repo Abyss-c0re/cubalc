@@ -1,59 +1,53 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 158,
-  "program": "programs/realworld/cli_flag_intake_board.cubalc",
-  "theme": "HASARG/HASFLAG/GETFLAG/RESTARGS CLI job intake (getopt without shell)",
-  "version": "1.15.431-usability",
+  "iter": 159,
+  "program": "programs/realworld/deploy_cli_contract_board.cubalc",
+  "theme": "USAGE + REQUIRE FLAG deploy CLI contract (hard flag gate + sticky usage tip)",
+  "version": "1.15.434-usability",
   "pass": true,
-  "prior_note": "iter 157 ARGS/CRC seals; this iter first realworld HASARG/HASFLAG/RESTARGS (979-981)",
+  "prior_note": "iter 158 soft HASFLAG intake; this iter first realworld USAGE+REQUIRE FLAG (982-983)",
   "tests": [
     {
-      "name": "parse_flags",
-      "cmd": "parse with --mode=seal --dry-run=1 --out=rep paths",
+      "name": "show_usage",
+      "cmd": "show sticky USAGE contract line",
       "ok": true,
-      "note": "HASFLAG+RESTARGS"
+      "note": "USAGE"
     },
     {
-      "name": "admit",
-      "cmd": "admit p1 p2 to JOBS exact rows",
+      "name": "deploy",
+      "cmd": "deploy -- --mode=canary --out=web a.bin b.bin",
       "ok": true,
-      "note": "admit"
+      "note": "REQUIRE FLAG+RESTARGS"
     },
     {
-      "name": "dry_run",
-      "cmd": "admit dry-run skips JOBS writes",
+      "name": "contract_hard",
+      "cmd": "REQUIRE FLAG mode miss includes usage tip; exit_code 0",
       "ok": true,
-      "note": "dry"
+      "note": "REQUIRE FLAG"
     },
     {
-      "name": "hasflag_getflag",
-      "cmd": "literal hasflag mode; getflag out; OR default",
+      "name": "contract_ok",
+      "cmd": "REQUIRE FLAG mode+out values",
       "ok": true,
-      "note": "flags"
+      "note": "contract"
     },
     {
-      "name": "hasarg_hasargc",
-      "cmd": "HASARG 0; HASARGC min admit/deny",
+      "name": "has_count",
+      "cmd": "HASLINE exact; substring false friend",
       "ok": true,
-      "note": "HASARG"
+      "note": "exact"
     },
     {
-      "name": "gate_soft",
-      "cmd": "gate mode+paths; soft miss EXIT 2 require",
+      "name": "soft_wall",
+      "cmd": "soft miss EXIT 2 require wall shell rc 2",
       "ok": true,
-      "note": "gate"
+      "note": "soft"
     },
     {
-      "name": "bool_trap",
-      "cmd": "bare --verbose consumes path; =1 form fixed",
+      "name": "run_token",
+      "cmd": "host strips positional token run",
       "ok": true,
-      "note": "bool trap"
-    },
-    {
-      "name": "host_strip",
-      "cmd": "without host -- cubalc strips long opts",
-      "ok": true,
-      "note": "host"
+      "note": "host run"
     },
     {
       "name": "selftest",
@@ -174,31 +168,62 @@
       "title": "HASARGC min wants literal; variable MIN unreliable",
       "detail": "Board branches literal mins 1/2/3/4/9 and falls back to SYS ARGC compare for other values.",
       "repro": "LET m 2; HASARGC m vs HASARGC 2"
+    },
+    {
+      "id": "W15",
+      "severity": "high",
+      "area": "host|cli",
+      "title": "host strips positional token run from program args",
+      "detail": "cubalc run prog.cubalc run -- --mode=x leaves ARG0 as --mode=x (token run dropped). Other action names (deploy, dry, list) pass through. Action cannot be named run; use deploy/apply or CUBALC_*_ACTION env.",
+      "repro": "cubalc run -e 'SYS ARG 0; PRINT LAST' run -- --mode=x \u2192 prints --mode=x"
+    },
+    {
+      "id": "W16",
+      "severity": "high",
+      "area": "host|require_flag",
+      "title": "REQUIRE FLAG miss leaves process exit_code 0",
+      "detail": "Same class as REQUIRE ARGC (W7): ok:false + asserts_fail + sticky err with usage tip, but shell $? is 0. Agents must EXIT n after soft probe for shell-visible contract failures.",
+      "repro": "CUBALC_DC_REQUIRE=1 contract without flags \u2192 exit_code 0 shell 0"
+    },
+    {
+      "id": "W17",
+      "severity": "med",
+      "area": "lang|usage",
+      "title": "USAGE works; multi-part join and sticky tip on REQUIRE FLAG confirmed",
+      "detail": "Positive note: sticky USAGE appends to REQUIRE FLAG err as \u00b7 usage: \u2026. Unicode ellipsis in USAGE string can mangle plate bytes \u2014 prefer ASCII ....",
+      "repro": "USAGE line with unicode ellipsis \u2192 cat -A shows M-bM-^@M-&"
+    },
+    {
+      "id": "W18",
+      "severity": "med",
+      "area": "host|num",
+      "title": "SYS NUM can accept non-numeric ARG1 tokens in gate MIN override paths",
+      "detail": "When ARG1 is a --flag form after host eats bare --, gate must not treat it as MIN. Guard with SYS STARTS ARG1 dash before NUM.",
+      "repro": "gate -- --mode=x f1 without dash guard may corrupt MIN"
     }
   ],
   "workarounds": [
-    "Always: cubalc run prog.cubalc ACTION -- --flag=val files",
-    "Bool flags as --verbose=1 or --verbose -- files",
-    "HASFLAG/GETFLAG/HASARG only with literal tokens; EQS-branch known names",
-    "HASARGC: literal mins or manual SYS ARGC >= MIN",
-    "RESTARGS then DROP action token when action is positional ARG0",
-    "EXIT n for shell-visible failures"
+    "Never name action run; use deploy/apply or ENV ACTION",
+    "cubalc run prog.cubalc deploy -- --mode=M --out=T files",
+    "Soft HASFLAG then EXIT 2 for shell rc; REQUIRE FLAG alone is plate-only",
+    "USAGE with ASCII only; set before REQUIRE FLAG",
+    "Gate MIN via --min=N or ENV, not flag-shaped ARG1",
+    "HASFLAG/REQUIRE FLAG literals only"
   ],
   "language_gaps": [
-    "Pass through unknown long options to program args (or document required host --)",
-    "Bool flags should not consume following non-flag token by default",
-    "HASFLAG/GETFLAG/HASARG accept variable name/index expressions",
-    "HASARGC accept numeric var min",
-    "Cookbook: getopt-style agent CLI with host -- separator and =bool form"
+    "Do not strip program arg token run (or document reserved tokens)",
+    "REQUIRE FLAG/ARGC miss should set non-zero process exit_code",
+    "SYS NUM must reject --flag-shaped strings",
+    "Document USAGE + REQUIRE FLAG agent CLI cookbook"
   ],
   "issues_faced": [
-    "Host ate long options until tests used run ACTION -- --flags",
-    "Bool --verbose ate a.bin; demos use --verbose=1",
-    "HASFLAG NAME var always 0; literal EQS branches for mode/out/dry/verbose",
-    "HASARG idx var always 0; branch indices 0..3",
-    "parse/admit/gate/hasflag/getflag green; selftest 355/355",
-    "no language fix this iter; document W11-W14 for MEANINGFUL_ITER"
+    "Action name run silently dropped by host \u2014 renamed to deploy",
+    "Unicode ellipsis in USAGE mangled plates \u2014 switched to ASCII ...",
+    "REQUIRE FLAG miss exit_code 0 \u2014 soft path + EXIT 2 for walls",
+    "Gate ARG1 NUM on --mode corrupted MIN \u2014 dash guard",
+    "deploy/contract/usage/has green; selftest 355/355",
+    "no language fix this iter; W15-W18 for MEANINGFUL_ITER"
   ],
-  "commit": "18810ba",
-  "ts": "2026-08-07T21:32:24Z"
+  "commit": "pending",
+  "ts": "2026-08-07T21:55:17Z"
 }
