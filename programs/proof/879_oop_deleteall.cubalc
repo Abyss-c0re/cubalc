@@ -1,0 +1,78 @@
+# DELETEALL / FREEALL — bulk free live objects (optional class filter)
+# Usability: pool wipe without EACH OBJ + DELETEOBJ glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 3 0
+NEW Cell b 1 3 0
+NEW Cell c 1 3 0
+
+CLASS Marker
+  FIELD tag 0
+  METHOD init t
+    SETF THIS tag t
+  END
+END
+NEW Marker m1 1
+NEW Marker m2 2
+
+LISTOBJS
+ASSERT NOBJS >= 5
+
+# class-filtered wipe
+DELETEALL Cell
+ASSERT OK == 1
+ASSERT DELETEALL_N == 3
+ASSERT LAST_N == 3
+
+HASOBJ a
+ASSERT LAST_N == 0
+HASOBJ b
+ASSERT LAST_N == 0
+HASOBJ m1
+ASSERT LAST_N == 1 "markers kept"
+
+LISTOBJS Cell
+ASSERT LAST_N == 0
+LISTOBJS Marker
+ASSERT LAST_N == 2
+
+# FREEALL alias
+FREEALL Marker
+ASSERT FREEALL_N == 2
+HASOBJ m1
+ASSERT LAST_N == 0
+HASOBJ m2
+ASSERT LAST_N == 0
+
+# empty wipe is soft OK
+DELETEALL Cell
+ASSERT OK == 1
+ASSERT DELETEALL_N == 0
+
+# repopulate then clear all
+NEW Cell x 1 1 0
+NEW Marker y 9
+DELETEALL
+ASSERT DELETEALL_N == 2
+LISTOBJS
+ASSERT LAST_N == 0
+
+# OF sugar
+NEW Cell p 1 2 0
+NEW Cell q 1 2 0
+CLEAROBJS OF Cell
+ASSERT CLEAROBJS_N == 2
+HASOBJ p
+ASSERT LAST_N == 0
+
+# NEW reuses freed names
+NEW Cell a 1 8 0
+HASOBJ a
+ASSERT LAST_N == 1
+GETF a energy
+ASSERT LAST_N == 8
+
+PRINT "oop_deleteall ok"

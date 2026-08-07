@@ -365,6 +365,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 335. ~~**`TRYSEND` / `SEND SOFT`**~~ **done** (soft method dispatch · completes soft OOP triad · string method names).
 336. ~~**`EACH OBJ`**~~ **done** (walk live objects with optional class filter · no LISTOBJS+EACH LINE glue).
 337. ~~**`SENDALL` / `BROADCAST`**~~ **done** (method on every live object · optional class · fleet without EACH+SEND).
+338. ~~**`DELETEALL` / `FREEALL`**~~ **done** (bulk free live objects · optional class · pool wipe without EACH+DELETEOBJ).
 
 ## Tick protocol
 

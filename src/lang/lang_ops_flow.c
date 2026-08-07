@@ -1402,6 +1402,65 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* DELETEALL|FREEALL|CLEAROBJS [Class] — free every live object (optional class).
+   * Soft always; LAST_N/DELETEALL_N = count freed. Complements DELETEOBJ + SENDALL.
+   * Usability: pool wipe without EACH OBJ + DELETEOBJ glue. */
+  if (kw(&L->cur, "DELETEALL") || kw(&L->cur, "FREEALL") ||
+      kw(&L->cur, "CLEAROBJS") || kw(&L->cur, "CLEAROBJECTS") ||
+      kw(&L->cur, "PURGEOBJS") || kw(&L->cur, "KILLALL") ||
+      kw(&L->cur, "DELOBJALL") || kw(&L->cur, "OBJCLEAR")) {
+    char filt[48];
+    int has_filt = 0, i, n = 0;
+    lex_next(L);
+    filt[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "SYS") && !kw(&L->cur, "PRINT") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "CUBE") &&
+               !kw(&L->cur, "NEW") && !kw(&L->cur, "OF")) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      ob->live = 0;
+      if (strcmp(vm->this_obj, ob->name) == 0)
+        vm->this_obj[0] = 0;
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "DELETEALL_N", n);
+    var_set_num(vm, "FREEALL_N", n);
+    var_set_num(vm, "CLEAROBJS_N", n);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* CLONEOBJ|COPYOBJ|DUPLOBJ src dst — shallow copy live object fields into
    * new instance of same class. Does not re-run init (snapshot clone).
    * Soft miss src OK=0; dst live already → fatal redefine.
