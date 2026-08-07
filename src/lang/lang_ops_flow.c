@@ -10160,6 +10160,210 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MINF|CAPF|ATMOSTF obj field limit — field = min(field, limit) (ceiling).
+   * MAXF|FLOORF|ATLEASTF obj field limit — field = max(field, limit) (floor).
+   * TRYMINF|MINF SOFT / TRYMAXF|MAXF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * One-sided bound without full BOUNDF lo..hi. Note: fleet MINWHERE/MAXWHERE
+   * stay select forms; this mutates one object field.
+   * Usability: floor energy at 0 or cap retries without GETF+IF+SETF (METHOD/THIS). */
+  if (kw(&L->cur, "MINF") || kw(&L->cur, "CAPF") ||
+      kw(&L->cur, "ATMOSTF") || kw(&L->cur, "CEILF") ||
+      kw(&L->cur, "CAPOBJ") || kw(&L->cur, "MINFIELD") ||
+      kw(&L->cur, "CAPFIELD") || kw(&L->cur, "MAXF") ||
+      kw(&L->cur, "FLOORF") || kw(&L->cur, "ATLEASTF") ||
+      kw(&L->cur, "RAISEF") || kw(&L->cur, "FLOOROBJ") ||
+      kw(&L->cur, "MAXFIELD") || kw(&L->cur, "FLOORFIELD") ||
+      kw(&L->cur, "TRYMINF") || kw(&L->cur, "MINFSOFT") ||
+      kw(&L->cur, "SOFTMINF") || kw(&L->cur, "TRYCAPF") ||
+      kw(&L->cur, "TRYMAXF") || kw(&L->cur, "MAXFSOFT") ||
+      kw(&L->cur, "SOFTMAXF") || kw(&L->cur, "TRYFLOORF") ||
+      kw(&L->cur, "TRYATMOSTF") || kw(&L->cur, "TRYATLEASTF")) {
+    char oname[48], fname[48], op[24];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_max = 0, changed = 0;
+    long lim = 0, nv, oldv;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    /* MAXF / FLOORF / ATLEASTF / RAISEF → raise floor (max with limit)
+     * MINF / CAPF / ATMOSTF / CEILF → lower ceiling (min with limit)
+     * Note: fleet MAXOBJ/MINOBJ stay extreme-object pickers (not aliases). */
+    if (strcmp(op, "MAXF") == 0 || strcmp(op, "FLOORF") == 0 ||
+        strcmp(op, "ATLEASTF") == 0 || strcmp(op, "RAISEF") == 0 ||
+        strcmp(op, "FLOOROBJ") == 0 || strcmp(op, "MAXFIELD") == 0 ||
+        strcmp(op, "FLOORFIELD") == 0 || strcmp(op, "TRYMAXF") == 0 ||
+        strcmp(op, "MAXFSOFT") == 0 || strcmp(op, "SOFTMAXF") == 0 ||
+        strcmp(op, "TRYFLOORF") == 0 || strcmp(op, "TRYATLEASTF") == 0)
+      is_max = 1;
+    if (strcmp(op, "TRYMINF") == 0 || strcmp(op, "MINFSOFT") == 0 ||
+        strcmp(op, "SOFTMINF") == 0 || strcmp(op, "TRYCAPF") == 0 ||
+        strcmp(op, "TRYMAXF") == 0 || strcmp(op, "MAXFSOFT") == 0 ||
+        strcmp(op, "SOFTMAXF") == 0 || strcmp(op, "TRYFLOORF") == 0 ||
+        strcmp(op, "TRYATMOSTF") == 0 || strcmp(op, "TRYATLEASTF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, is_max ? "MAXF object field limit" : "MINF object field limit");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, is_max ? "MAXF field" : "MINF field"); return -1;
+    }
+    if (kw(&L->cur, "TO") || kw(&L->cur, "AT") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "LIMIT") || kw(&L->cur, "CAP") || kw(&L->cur, "FLOOR"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+        L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        lim = parse_expr(vm, L);
+      } else {
+        Var *dv = var_get(vm, L->cur.text, 0);
+        if (dv && !dv->is_str) {
+          lim = dv->val;
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          lim = vm->last_n;
+          lex_next(L);
+        } else {
+          fail(vm, is_max ? "MAXF object field limit" : "MINF object field limit");
+          return -1;
+        }
+      }
+    } else {
+      fail(vm, is_max ? "MAXF object field limit" : "MINF object field limit");
+      return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag = is_max ? "MAXF" : "MINF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "MINF_N", 0);
+      var_set_num(vm, "MAXF_N", 0);
+      var_set_num(vm, "MINF_CHANGED", 0);
+      var_set_num(vm, "MAXF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag = is_max ? "MAXF" : "MINF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "MINF_N", 0);
+      var_set_num(vm, "MAXF_N", 0);
+      var_set_num(vm, "MINF_CHANGED", 0);
+      var_set_num(vm, "MAXF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi]) {
+      const char *tag = is_max ? "MAXF" : "MINF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s field %s is string", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "MINF_N", 0);
+      var_set_num(vm, "MAXF_N", 0);
+      var_set_num(vm, "MINF_CHANGED", 0);
+      var_set_num(vm, "MAXF_CHANGED", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[48];
+        snprintf(ebuf, sizeof ebuf, "%s: string field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    oldv = ob->fnum[fi];
+    if (is_max)
+      nv = (oldv > lim) ? oldv : lim;
+    else
+      nv = (oldv < lim) ? oldv : lim;
+    if (nv != oldv) changed = 1;
+    ob->fnum[fi] = nv;
+    ob->fis_str[fi] = 0;
+    {
+      char nb[32];
+      snprintf(nb, sizeof nb, "%ld", nv);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    vm->last_n = nv;
+    var_set_num(vm, "LAST_N", nv);
+    if (is_max) {
+      var_set_num(vm, "MAXF_N", 1);
+      var_set_num(vm, "MAXF_CHANGED", changed);
+      var_set_num(vm, "MAXF_LIM", lim);
+      var_set_num(vm, "FLOORF_N", 1);
+      var_set_num(vm, "MINF_N", 0);
+      var_set_num(vm, "MINF_CHANGED", 0);
+    } else {
+      var_set_num(vm, "MINF_N", 1);
+      var_set_num(vm, "MINF_CHANGED", changed);
+      var_set_num(vm, "MINF_LIM", lim);
+      var_set_num(vm, "CAPF_N", 1);
+      var_set_num(vm, "MAXF_N", 0);
+      var_set_num(vm, "MAXF_CHANGED", 0);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* TIMESF|SCALEOBJ|MULOBJ obj field factor
    * TRYTIMESF|TIMESF SOFT — soft miss OK=0.
    * Multiply one object's numeric field by factor (integer).

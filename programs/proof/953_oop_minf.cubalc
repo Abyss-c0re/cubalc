@@ -1,0 +1,139 @@
+# MINF / MAXF — one-sided numeric field floor/cap for agents
+# Usability: floor energy or cap retries without GETF+IF+SETF · METHOD/THIS
+# Complements BOUNDF [lo,hi]; not fleet MAXOBJ/MINOBJ
+
+HOLD_FLASH 1
+
+CLASS Cell
+  FIELD energy 50
+  FIELD retries 0
+  FIELD tag "x"
+  METHOD init e
+    SETF THIS energy e
+  END
+  METHOD floor0
+    MAXF THIS energy 0
+  END
+  METHOD cap100
+    MINF THIS energy 100
+  END
+END
+
+NEW Cell c 50
+
+# CAP: min(field, limit)
+SETF c energy 150
+MINF c energy 100
+ASSERT OK == 1
+ASSERT MINF_N == 1
+ASSERT MINF_CHANGED == 1
+ASSERT MINF_LIM == 100
+ASSERT LAST_N == 100
+SYS EQS FIELD "energy"
+ASSERT LAST_N == 1
+GETF c energy
+ASSERT LAST_N == 100
+
+# already under cap — unchanged
+SETF c energy 40
+MINF c energy 100
+ASSERT LAST_N == 40
+ASSERT MINF_CHANGED == 0
+
+# FLOOR: max(field, limit)
+SETF c energy -5
+MAXF c energy 0
+ASSERT OK == 1
+ASSERT MAXF_N == 1
+ASSERT MAXF_CHANGED == 1
+ASSERT MAXF_LIM == 0
+ASSERT LAST_N == 0
+GETF c energy
+ASSERT LAST_N == 0
+
+# already above floor
+SETF c energy 12
+MAXF c energy 0
+ASSERT LAST_N == 12
+ASSERT MAXF_CHANGED == 0
+
+# aliases
+SETF c energy 200
+CAPF c energy 50
+ASSERT LAST_N == 50
+SETF c energy 80
+ATMOSTF c energy 60
+ASSERT LAST_N == 60
+SETF c energy -3
+FLOORF c energy 0
+ASSERT LAST_N == 0
+SETF c energy 2
+ATLEASTF c energy 10
+ASSERT LAST_N == 10
+SETF c energy -1
+RAISEF c energy 0
+ASSERT LAST_N == 0
+
+# TO glue
+SETF c energy 999
+MINF c energy TO 10
+ASSERT LAST_N == 10
+SETF c energy -9
+MAXF c energy AT 0
+ASSERT LAST_N == 0
+
+# METHOD + THIS
+SETF c energy -8
+SEND c floor0
+GETF c energy
+ASSERT LAST_N == 0
+
+SETF c energy 500
+SEND c cap100
+GETF c energy
+ASSERT LAST_N == 100
+
+# soft miss object
+TRYMINF nosuch energy 10
+ASSERT OK == 0
+ASSERT MINF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYMAXF nosuch energy 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+MINF SOFT c nosuch 10
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# soft string field
+TRYMINF c tag 1
+ASSERT OK == 0
+SYS HAS LAST_ERR "string"
+ASSERT LAST_N == 1
+
+# after soft, still works
+SETF c energy 30
+MINF c energy 20
+ASSERT OK == 1
+ASSERT LAST_N == 20
+
+# dynamic field name
+SETF c energy 5
+MAXF c "energy" 10
+ASSERT LAST_N == 10
+
+# HELP
+HELP MINF
+SYS HAS LAST "MINF"
+ASSERT LAST_N == 1
+HELP MAXF
+SYS HAS LAST "MAXF"
+ASSERT LAST_N == 1
+
+PRINT "oop_minf ok"
