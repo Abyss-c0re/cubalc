@@ -1,144 +1,136 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 110,
-  "program": "programs/realworld/iso_window_board.cubalc",
-  "theme": "ISO window ADDISO+DIFFISO/ISOAGE gate; PARSEMS signed fix",
-  "version": "1.15.315-usability",
+  "iter": 111,
+  "program": "programs/realworld/human_age_sla_board.cubalc",
+  "theme": "HUMANSECS plate age labels + ISOAGE SLA gate",
+  "version": "1.15.317-usability",
   "pass": true,
   "tests": [
     {
-      "name": "pin_shift_1h30m",
-      "cmd": "pin DATE; ADDISO 1h30m span 5400",
+      "name": "pin_age_human",
+      "cmd": "pin DATE; age 0; HUMANSECS \u2192 0s",
       "ok": true,
-      "note": "shift"
+      "note": "fresh"
     },
     {
-      "name": "gate_admit",
-      "cmd": "age0 until~5400 gate admit",
+      "name": "max_remain_gate",
+      "cmd": "max 5m \u2192 300s; remain 5m; gate admit",
       "ok": true,
-      "note": "inside"
+      "note": "sla"
     },
     {
-      "name": "gate_past",
-      "cmd": "Y2K+1s end past deny REQUIRE2",
+      "name": "old_deny",
+      "cmd": "Y2K age human weeks; gate deny REQUIRE2",
       "ok": true,
-      "note": "past"
+      "note": "stale"
     },
     {
-      "name": "gate_future",
-      "cmd": "2099 window deny before start",
+      "name": "round_90",
+      "cmd": "HUMANSECS 90 \u2192 1m30s \u2192 MS2SEC 90",
       "ok": true,
-      "note": "future"
+      "note": "round"
     },
     {
-      "name": "back_5m",
-      "cmd": "ADDISO -300s \u2192 00:55:00Z",
+      "name": "round_label",
+      "cmd": "round 1h1m1s equality",
       "ok": true,
-      "note": "rewind"
+      "note": "compound"
     },
     {
-      "name": "signed_30s",
-      "cmd": "PARSEMS -30s; ADDISO \u2192 00:59:30Z",
+      "name": "lease_90s",
+      "cmd": "DEADLINE 90s REMAINING HUMANSECS 1m30s",
       "ok": true,
-      "note": "sign fix"
+      "note": "lease"
     },
     {
-      "name": "pin_bad",
-      "cmd": "not-iso soft; REQUIRE\u21922",
+      "name": "max_soft",
+      "cmd": "nope soft; REQUIRE\u21922",
       "ok": true,
-      "note": "soft"
-    },
-    {
-      "name": "ms_floor",
-      "cmd": "ADDISO 500ms span0",
-      "ok": true,
-      "note": "floor"
+      "note": "miss"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "289/289 pass"
+      "note": "292/292 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "host|parseiso|local",
-      "title": "LOCAL stamps reparsed as UTC \u2014 ISOAGE skew by TZ hours",
-      "detail": "ISOAGE on SYS LOCAL yields ~-10800 on UTC+3. ADDISO on LOCAL stamps rewrites with Z. Prefer DATE UTC.",
-      "repro": "LOCAL; ISOAGE LAST \u2192 -TZ*3600"
+      "area": "host|units",
+      "title": "HUMANSECS\u2194PARSEMS unit family mismatch (secs label vs ms value)",
+      "detail": "HUMANSECS 90 \u2192 '1m30s'; PARSEMS LAST \u2192 90000 (ms). Agents comparing PARSEMS result to ISOAGE seconds get 1000\u00d7 error unless MS2SEC. No PARSESECS dual.",
+      "repro": "HUMANSECS 90; PARSEMS LAST \u2192 90000 not 90"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "host|parseiso",
-      "title": "ISO offsets still ignored in ADDISO/DIFFISO path",
-      "detail": "DIFFISO +01:00 vs Z same wall \u2192 0 not -3600. Offset stamps normalize to wrong Z.",
-      "repro": "DIFFISO 00:00+01:00 00:00Z \u2192 0"
+      "severity": "med",
+      "area": "host|humansecs",
+      "title": "Huge ages produce week-heavy labels (ops noise)",
+      "detail": "Y2K age \u2192 1387w6d\u2026 No HUMANSECS_MAXUNIT or day-cap for digests.",
+      "repro": "ISOAGE 2000-01-01; HUMANSECS"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "host|addiso",
-      "title": "ADDISO duration floors sub-second to 0s",
-      "detail": "ADDISO stamp 500ms \u2192 ADDISO_SECS=0 no shift. Sub-second windows impossible.",
-      "repro": "ADDISO 2020\u2026 500ms \u2192 same stamp"
+      "area": "host|humansecs",
+      "title": "No dual that formats seconds and returns seconds in LAST_N",
+      "detail": "HUMANSECS sets HUMANSECS_N=input secs but LAST is string; PARSEMS of LAST is ms. Easy shuttle confusion with HUMANMS (ms in/out).",
+      "repro": "HUMANMS 90000 vs HUMANSECS 90 both '1m30s'"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "host|parsems",
-      "title": "Was: PARSEMS -30s ULONG wrap to LONG_MAX (fixed this iter)",
-      "detail": "strtoull('-30') wrapped; ADDISO produced year 292279044. Fixed: leading \u00b1 sign on whole duration. Still document as was/now.",
-      "repro": "was PARSEMS -30s \u2192 9e18; now -30000"
+      "area": "host|local",
+      "title": "LOCAL stamp ISOAGE still TZ-skewed",
+      "detail": "Inherited; pin DATE UTC only.",
+      "repro": "LOCAL; ISOAGE"
     },
     {
       "id": "W5",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
-      "detail": "START/END od -c no newline.",
-      "repro": "od -c START.txt"
+      "detail": "MAX/AGE od -c no newline.",
+      "repro": "od -c MAX.txt"
     },
     {
       "id": "W6",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "CUBALC_IW_REQUIRE=abc.",
-      "repro": "REQUIRE=abc pin bad \u2192 rc0"
+      "detail": "CUBALC_HA_REQUIRE=abc.",
+      "repro": "REQUIRE=abc max bad \u2192 rc0"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|push",
-      "title": "SYS PUSH is bag not string concat",
-      "detail": "Prefixing '-' via PUSH yields multi-line bag; agents must PARSEMS\u00b1 or numeric negate.",
-      "repro": "PUSH '-' '5m' \u2192 bag lines"
+      "area": "host|humansecs",
+      "title": "Zero-arg HUMANSECS uses prior LAST_N \u2014 silent if LAST is string path",
+      "detail": "Chain after path-producing ops needs explicit secs arg.",
+      "repro": "HUMANSECS after string LAST"
     }
   ],
   "workarounds": [
-    "Pin UTC DATE/Z only; never LOCAL for ISOAGE",
-    "Reject offset stamps or require trailing Z",
-    "Whole-second ADDISO durations only",
-    "Use PARSEMS signed or numeric ADDISO for rewind",
+    "Always MS2SEC after PARSEMS of HUMANSECS labels before comparing to age_s",
+    "Store max/age as integer seconds on plate, not only human labels",
+    "Pin UTC DATE/Z; avoid LOCAL",
+    "Prefer HUMANSECS for second clocks; HUMANMS only for ms budgets",
     "Digit-check REQUIRE"
   ],
   "language_gaps": [
-    "PARSEISO/ADDISO/DIFFISO timezone offset application",
-    "LOCAL-aware ISO dual or zone flag",
-    "ADDISO_MS sub-second shift",
-    "String concat helper distinct from bag PUSH",
+    "PARSESECS dual of HUMANSECS (label \u2192 seconds not ms)",
+    "HUMANSECS max unit / compact mode for multi-week ages",
+    "Documented unit family matrix (ms vs s clocks)",
     "WRITE trailing NL"
   ],
   "issues_faced": [
-    "pin/shift/span/age/until/gate/back green",
-    "fixed PARSEMS signed duration (ULONG wrap) + proof",
-    "LOCAL/offset/500ms floor remain open",
-    "selftest green"
+    "pin/age/human/max/remain/gate/round/lease green",
+    "ms-vs-secs PARSEMS pitfall is core lesson for HUMANSECS agents",
+    "selftest green; no language fix this iter"
   ],
-  "commit": "198f5a9e2c2f0dc600a6fdd726e8bdfbb6363a33",
-  "ts": "2026-08-07T01:57:34Z"
+  "commit": "",
+  "ts": "2026-08-07T02:18:55Z"
 }

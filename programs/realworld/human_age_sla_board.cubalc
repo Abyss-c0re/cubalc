@@ -1,0 +1,828 @@
+# human_age_sla_board.cubalc — ISOAGE/REMAINING → HUMANSECS labels + SLA gate
+#
+# Real use: agents pin plate start ISO, compute age seconds (ISOAGE), format
+# human labels without SEC2MS+HUMANMS glue, set max age via PARSEMS, and gate
+# when age exceeds SLA:
+#   HUMANSECS / HUMANAGE / FMTSECS — seconds → 1m30s / 1h1m1s / -5s
+#   ISOAGE                         — now − stamp seconds
+#   PARSEMS + MS2SEC               — max age label → seconds
+#   DEADLINE + REMAINING           — optional TTL remain → HUMANSECS
+# Distinct from iso_window (shift/span), lease_sla_age (PARSEISO+TIMEDIFF raw),
+# retry_backoff (HUMANMS ms): this board is *seconds age → human label → SLA*.
+#
+# Plate under STATE:
+#   START.txt   — ISO start stamp
+#   AGE.txt     — last age seconds
+#   MAX.txt     — max age seconds
+#   VAL.txt     — last human label / gate
+#   META.txt
+#   AGE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_HA_ACTION):
+#   list      — plate (default)
+#   pin       — START = DATE or ARG1 ISO
+#   age       — ISOAGE START → AGE_s
+#   human     — HUMANSECS AGE → VAL
+#   max       — PARSEMS ARG1 → MS2SEC → MAX_s
+#   gate      — age < max admit (REQUIRE hard)
+#   remain    — HUMANSECS (max−age) or 0 if over
+#   round     — HUMANSECS n → PARSEMS → MS2SEC equality
+#   lease     — DEADLINE ARG1; REMAINING; HUMANSECS
+#   clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_ha_$$
+#   CUBALC_ARG0=pin ...
+#   CUBALC_ARG0=age ...
+#   CUBALC_ARG0=human ...
+#   CUBALC_ARG0=max CUBALC_ARG1=5m ...
+#   CUBALC_ARG0=gate CUBALC_HA_REQUIRE=1 ...
+#
+# Env: CUBALC_HA_REQUIRE=1  CUBALC_HA_MAX=1h  CUBALC_HA_STAMP=ISO
+#
+# Edges:
+#   HUMANSECS multi-unit round-trips PARSEMS→MS2SEC for positive
+#   PARSEMS returns ms; agents forgetting MS2SEC mis-scale 1000×
+#   Negative HUMANSECS "-1m30s" PARSEMS → -90000 (signed fix)
+#   HUMANSECS 0 → "0s" not "0ms" (unit family seconds)
+#   LOCAL stamp ISOAGE skew still applies
+#   WRITE no NL; REQUIRE non-numeric softens
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+NOTE "human_age_sla_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT SFILE = "START.txt"
+DEFAULT AFILE = "AGE.txt"
+DEFAULT XFILE = "MAX.txt"
+DEFAULT VFILE = "VAL.txt"
+DEFAULT MFILE = "META.txt"
+DEFAULT REPORT = "AGE_REPORT.txt"
+DEFAULT REQUIRE_HIT = 0
+DEFAULT DEF_MAX = "1h"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0 = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_HA_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_HA_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_HA_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_HA_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET REQUIRE_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_HA_MAX" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_MAX = LAST
+ELSE
+  LET ENV_MAX = ""
+END
+SYS ENV "CUBALC_HA_STAMP" OR ""
+IF LAST_N > 0 THEN
+  LET ENV_STAMP = LAST
+ELSE
+  LET ENV_STAMP = ""
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir SFILE
+LET start_meta = LAST
+SYS JOIN state_dir AFILE
+LET age_meta = LAST
+SYS JOIN state_dir XFILE
+LET max_meta = LAST
+SYS JOIN state_dir VFILE
+LET val_path = LAST
+SYS JOIN state_dir MFILE
+LET meta_path = LAST
+SYS JOIN state_dir REPORT
+LET report_path = LAST
+
+SYS READ OR start_meta OR ""
+LET start_s = LAST
+CLEAR_ERR
+SYS READ OR age_meta OR ""
+LET age_s = LAST
+CLEAR_ERR
+SYS READ OR max_meta OR ""
+LET max_s = LAST
+CLEAR_ERR
+SYS READ OR val_path OR ""
+LET val = LAST
+CLEAR_ERR
+SYS READ OR meta_path OR ""
+LET meta = LAST
+CLEAR_ERR
+
+LET age_n = 0
+SYS BLANK age_s
+IF LAST_N == 0 THEN
+  SYS NUM age_s
+  IF OK == 1 THEN
+    LET age_n = LAST_N
+  END
+  CLEAR_ERR
+END
+LET max_n = 0
+SYS BLANK max_s
+IF LAST_N == 0 THEN
+  SYS NUM max_s
+  IF OK == 1 THEN
+    LET max_n = LAST_N
+  END
+  CLEAR_ERR
+END
+
+SYS BLANK ENV_STAMP
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "pin"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_STAMP
+    END
+  END
+END
+SYS BLANK ENV_MAX
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "max"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_MAX
+    END
+  END
+END
+SYS BLANK ENV_MAX
+IF LAST_N == 0 THEN
+  SYS EQS ACTION "round"
+  IF LAST_N == 1 THEN
+    SYS BLANK NAME
+    IF LAST_N == 1 THEN
+      LET NAME = ENV_MAX
+    END
+  END
+END
+
+LET hit = 0
+LET miss = 0
+LET start_ch = 0
+LET age_ch = 0
+LET max_ch = 0
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET gate_n = 0
+LET round_n = 0
+LET remain_n = 0
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LET hit = 1
+  STATUS
+  PRINT "hage" ACTION
+  PRINT_JSON ACTION STATUS_OK
+  PRINT_JSON start_s
+  PRINT_JSON age_s
+  PRINT_JSON max_s
+  PRINT_JSON val
+  LET note_msg = "list ok"
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    SYS DATE
+    LET start_s = LAST
+    LET start_ch = 1
+    LET val = start_s
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "pin now"
+  ELSE
+    SYS ADDISO NAME 0
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin bad iso"
+      FAIL "pin bad iso"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "pin bad iso"
+      END
+    ELSE
+      LET start_s = LAST
+      LET start_ch = 1
+      LET val = start_s
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+    END
+  END
+  IF hit == 1 THEN
+    LET meta = "pin"
+    SYS PUSH meta start_s
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON start_s
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- age: ISOAGE ---
+SYS EQS ACTION "age"
+IF LAST_N == 1 THEN
+  NOTE "action age"
+  SYS BLANK start_s
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "age no start"
+    FAIL "age no start"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "age no start"
+    END
+  ELSE
+    SYS ISOAGE start_s
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "age fail"
+      FAIL "age fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "age fail"
+      END
+    ELSE
+      LET age_n = LAST_N
+      SYS STR age_n
+      LET age_s = LAST
+      LET age_ch = 1
+      LET val = age_s
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "age ok"
+      LET meta = "age"
+      SYS STR age_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON age_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- human: HUMANSECS age ---
+SYS EQS ACTION "human"
+IF LAST_N == 1 THEN
+  NOTE "action human"
+  # refresh age if start present
+  SYS BLANK start_s
+  IF LAST_N == 0 THEN
+    SYS ISOAGE start_s
+    IF OK == 1 THEN
+      LET age_n = LAST_N
+      SYS STR age_n
+      LET age_s = LAST
+      LET age_ch = 1
+    END
+    CLEAR_ERR
+  END
+  SYS HUMANSECS age_n
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "human fail"
+    FAIL "human fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "human fail"
+    END
+  ELSE
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "human ok"
+    LET meta = "human"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS STR age_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON age_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- max: PARSEMS → MS2SEC ---
+SYS EQS ACTION "max"
+IF LAST_N == 1 THEN
+  NOTE "action max"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = DEF_MAX
+  END
+  SYS PARSEMS NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "max parse fail"
+    FAIL "max parse fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "max parse fail"
+    END
+  ELSE
+    LET ms = LAST_N
+    SYS MS2SEC ms
+    LET max_n = LAST_N
+    SYS STR max_n
+    LET max_s = LAST
+    LET max_ch = 1
+    LET val = NAME
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "max ok"
+    LET meta = "max"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta "ms"
+    LET meta = LAST
+    SYS STR ms
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta "secs"
+    LET meta = LAST
+    SYS STR max_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON max_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- gate: age < max ---
+SYS EQS ACTION "gate"
+IF LAST_N == 1 THEN
+  NOTE "action gate"
+  SYS BLANK start_s
+  IF LAST_N == 0 THEN
+    SYS ISOAGE start_s
+    IF OK == 1 THEN
+      LET age_n = LAST_N
+      SYS STR age_n
+      LET age_s = LAST
+      LET age_ch = 1
+    END
+    CLEAR_ERR
+  END
+  IF max_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "gate no max"
+    FAIL "gate no max"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "gate no max"
+    END
+  ELSE
+    IF age_n < max_n THEN
+      LET gate_n = 1
+      LET hit = 1
+      LET note_msg = "gate admit"
+      LET val = "admit"
+      LET val_ch = 1
+    ELSE
+      LET gate_n = 0
+      LET miss = 1
+      LET note_msg = "gate deny"
+      LET val = "deny"
+      LET val_ch = 1
+      FAIL "gate deny age exceeds max"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "gate deny age exceeds max"
+      END
+    END
+    SYS HUMANSECS age_n
+    LET age_lab = LAST
+    CLEAR_ERR
+    SYS HUMANSECS max_n
+    LET max_lab = LAST
+    CLEAR_ERR
+    LET meta = "gate"
+    SYS PUSH meta val
+    LET meta = LAST
+    SYS PUSH meta age_lab
+    LET meta = LAST
+    SYS PUSH meta max_lab
+    LET meta = LAST
+    SYS STR age_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS STR max_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON gate_n age_n max_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- remain: HUMANSECS max-age ---
+SYS EQS ACTION "remain"
+IF LAST_N == 1 THEN
+  NOTE "action remain"
+  SYS BLANK start_s
+  IF LAST_N == 0 THEN
+    SYS ISOAGE start_s
+    IF OK == 1 THEN
+      LET age_n = LAST_N
+      SYS STR age_n
+      LET age_s = LAST
+      LET age_ch = 1
+    END
+    CLEAR_ERR
+  END
+  IF max_n <= 0 THEN
+    LET miss = 1
+    LET note_msg = "remain no max"
+    FAIL "remain no max"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "remain no max"
+    END
+  ELSE
+    LET remain_n = max_n - age_n
+    IF remain_n < 0 THEN
+      LET remain_n = 0
+    END
+    SYS HUMANSECS remain_n
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "remain human fail"
+      FAIL "remain human fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "remain human fail"
+      END
+    ELSE
+      LET val = LAST
+      LET val_ch = 1
+      LET hit = 1
+      LET note_msg = "remain ok"
+      LET meta = "remain"
+      SYS PUSH meta val
+      LET meta = LAST
+      SYS STR remain_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- round: secs → HUMANSECS → PARSEMS → MS2SEC ---
+SYS EQS ACTION "round"
+IF LAST_N == 1 THEN
+  NOTE "action round"
+  LET secs_in = 0
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    IF age_n > 0 THEN
+      LET secs_in = age_n
+    ELSE
+      LET secs_in = 90
+    END
+  ELSE
+    SYS NUM NAME
+    IF OK == 1 THEN
+      LET ntmp = LAST_N
+      SYS STR ntmp
+      SYS EQS LAST NAME
+      IF LAST_N == 1 THEN
+        LET secs_in = ntmp
+      ELSE
+        CLEAR_ERR
+        SYS PARSEMS NAME
+        IF OK == 1 THEN
+          SYS MS2SEC LAST_N
+          LET secs_in = LAST_N
+        END
+      END
+    ELSE
+      CLEAR_ERR
+      SYS PARSEMS NAME
+      IF OK == 1 THEN
+        SYS MS2SEC LAST_N
+        LET secs_in = LAST_N
+      END
+    END
+    CLEAR_ERR
+  END
+  IF secs_in < 0 THEN
+    LET secs_in = 0 - secs_in
+  END
+  SYS HUMANSECS secs_in
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "round human fail"
+    FAIL "round human fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "round human fail"
+    END
+  ELSE
+    LET lab = LAST
+    SYS PARSEMS lab
+    IF OK == 0 THEN
+      LET miss = 1
+      LET round_n = 0
+      LET note_msg = "round parse fail"
+      FAIL "round parse fail"
+      CLEAR_ERR
+      IF REQUIRE_HIT > 0 THEN
+        EXIT 2 "round parse fail"
+      END
+    ELSE
+      SYS MS2SEC LAST_N
+      LET secs2 = LAST_N
+      IF secs2 == secs_in THEN
+        LET round_n = 1
+        LET hit = 1
+        LET note_msg = "round ok"
+      ELSE
+        LET round_n = 0
+        LET miss = 1
+        LET note_msg = "round mismatch"
+        FAIL "round mismatch"
+        CLEAR_ERR
+        IF REQUIRE_HIT > 0 THEN
+          EXIT 2 "round mismatch"
+        END
+      END
+      LET val = lab
+      LET val_ch = 1
+      LET meta = "round"
+      SYS STR secs_in
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS PUSH meta lab
+      LET meta = LAST
+      SYS STR secs2
+      SYS PUSH meta LAST
+      LET meta = LAST
+      SYS STR round_n
+      SYS PUSH meta LAST
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON round_n secs_in
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- lease: DEADLINE + REMAINING + HUMANSECS ---
+SYS EQS ACTION "lease"
+IF LAST_N == 1 THEN
+  NOTE "action lease"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET NAME = "2m"
+  END
+  SYS DEADLINE NAME
+  IF OK == 0 THEN
+    LET miss = 1
+    LET note_msg = "lease fail"
+    FAIL "lease fail"
+    CLEAR_ERR
+    IF REQUIRE_HIT > 0 THEN
+      EXIT 2 "lease fail"
+    END
+  ELSE
+    LET due = LAST_N
+    SYS REMAINING due
+    LET remain_n = LAST_N
+    CLEAR_ERR
+    SYS HUMANSECS remain_n
+    LET val = LAST
+    LET val_ch = 1
+    LET hit = 1
+    LET note_msg = "lease ok"
+    LET meta = "lease"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS STR remain_n
+    SYS PUSH meta LAST
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON remain_n
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  LET start_s = ""
+  LET age_s = ""
+  LET max_s = ""
+  LET val = ""
+  LET meta = ""
+  LET age_n = 0
+  LET max_n = 0
+  LET start_ch = 1
+  LET age_ch = 1
+  LET max_ch = 1
+  LET val_ch = 1
+  LET meta_ch = 1
+  LET hit = 1
+  LET note_msg = "cleared"
+END
+
+SYS EQS ACTION "list"
+LET k = LAST_N
+SYS EQS ACTION "pin"
+LET k = k + LAST_N
+SYS EQS ACTION "age"
+LET k = k + LAST_N
+SYS EQS ACTION "human"
+LET k = k + LAST_N
+SYS EQS ACTION "max"
+LET k = k + LAST_N
+SYS EQS ACTION "gate"
+LET k = k + LAST_N
+SYS EQS ACTION "remain"
+LET k = k + LAST_N
+SYS EQS ACTION "round"
+LET k = k + LAST_N
+SYS EQS ACTION "lease"
+LET k = k + LAST_N
+SYS EQS ACTION "clear"
+LET k = k + LAST_N
+IF k == 0 THEN
+  FAIL "unknown action"
+  CLEAR_ERR
+  EXIT 2 "unknown action"
+END
+
+IF start_ch > 0 THEN
+  SYS WRITE start_meta start_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "start write failed"
+  END
+  CLEAR_ERR
+END
+IF age_ch > 0 THEN
+  SYS WRITE age_meta age_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "age write failed"
+  END
+  CLEAR_ERR
+END
+IF max_ch > 0 THEN
+  SYS WRITE max_meta max_s
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "max write failed"
+  END
+  CLEAR_ERR
+END
+IF val_ch > 0 THEN
+  SYS WRITE val_path val
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "val write failed"
+  END
+  CLEAR_ERR
+END
+IF meta_ch > 0 THEN
+  SYS WRITE meta_path meta
+  EXPECT OK == 1
+  IF OK == 0 THEN
+    EXIT 2 "meta write failed"
+  END
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1 = MS
+LET elapsed = t1 - t0
+
+LET report = "schema=cubalc.human_age_sla_board.v1"
+SYS PUSH report "date"
+LET report = LAST
+SYS PUSH report run_date
+LET report = LAST
+SYS PUSH report "action"
+LET report = LAST
+SYS PUSH report ACTION
+LET report = LAST
+SYS PUSH report "hit"
+LET report = LAST
+SYS STR hit
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "miss"
+LET report = LAST
+SYS STR miss
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "start"
+LET report = LAST
+SYS PUSH report start_s
+LET report = LAST
+SYS PUSH report "age_s"
+LET report = LAST
+SYS STR age_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "max_s"
+LET report = LAST
+SYS STR max_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "gate"
+LET report = LAST
+SYS STR gate_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "round"
+LET report = LAST
+SYS STR round_n
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "note"
+LET report = LAST
+SYS PUSH report note_msg
+LET report = LAST
+SYS PUSH report "elapsed_ms"
+LET report = LAST
+SYS STR elapsed
+SYS PUSH report LAST
+LET report = LAST
+SYS PUSH report "identity"
+LET report = LAST
+SYS PUSH report IDENTITY
+LET report = LAST
+
+SYS WRITE report_path report
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "report write failed"
+END
+CLEAR_ERR
+
+STATUS
+PRINT "human_age_sla_board" ACTION hit miss age_n max_n gate_n note_msg elapsed
