@@ -2047,6 +2047,7 @@ int main(int argc, char **argv) {
       {"oop_incfwhere", "programs/proof/906_oop_incfwhere.cubalc", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"oop_getfwhere", "programs/proof/907_oop_getfwhere.cubalc", "GETFWHERE filtered field collect from matching live objects"},
       {"oop_sumwhere", "programs/proof/908_oop_sumwhere.cubalc", "SUMWHERE/AVGWHERE filtered fleet sum/mean on match"},
+      {"oop_minwhere", "programs/proof/909_oop_minwhere.cubalc", "MINWHERE/MAXWHERE filtered fleet min/max on match"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5961,6 +5962,7 @@ int main(int argc, char **argv) {
       {"programs/proof/906_oop_incfwhere.cubalc", "oop_incfwhere", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"programs/proof/907_oop_getfwhere.cubalc", "oop_getfwhere", "GETFWHERE filtered field collect from matching live objects"},
       {"programs/proof/908_oop_sumwhere.cubalc", "oop_sumwhere", "SUMWHERE/AVGWHERE filtered fleet sum/mean on match"},
+      {"programs/proof/909_oop_minwhere.cubalc", "oop_minwhere", "MINWHERE/MAXWHERE filtered fleet min/max on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6267,6 +6269,7 @@ int main(int argc, char **argv) {
       {"programs/proof/906_oop_incfwhere.cubalc", "oop_incfwhere", "INCFWHERE/DECFWHERE bump field on matching live objects"},
       {"programs/proof/907_oop_getfwhere.cubalc", "oop_getfwhere", "GETFWHERE filtered field collect from matching live objects"},
       {"programs/proof/908_oop_sumwhere.cubalc", "oop_sumwhere", "SUMWHERE/AVGWHERE filtered fleet sum/mean on match"},
+      {"programs/proof/909_oop_minwhere.cubalc", "oop_minwhere", "MINWHERE/MAXWHERE filtered fleet min/max on match"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},

@@ -1,0 +1,85 @@
+# MINWHERE / MAXWHERE — filtered fleet min/max on field match
+# Usability: no GETFWHERE + SYS MIN/MAX glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# min energy where age==1 → min(10,30)=10
+MINWHERE Cell energy age 1
+ASSERT OK == 1
+ASSERT LAST_N == 10
+ASSERT MINWHERE_N == 2
+ASSERT MINWHERE_VAL == 10
+
+# max energy where age==1 → 30
+MAXWHERE Cell energy age 1
+ASSERT LAST_N == 30
+ASSERT MAXWHERE_N == 2
+ASSERT MAXWHERE_VAL == 30
+
+# WHERE sugar
+MINWHERE Cell energy WHERE age 0
+ASSERT LAST_N == 20
+MAXWHERE Cell energy WHERE age 0
+ASSERT LAST_N == 40
+
+# OF sugar
+MINWHERE OF Cell energy age 1
+ASSERT LAST_N == 10
+MAXWHERE OF Cell energy age 0
+ASSERT LAST_N == 40
+
+# aliases
+MINFWHERE Cell energy age 1
+ASSERT LAST_N == 10
+MAXFWHERE Cell energy age 1
+ASSERT LAST_N == 30
+WHEREMIN Cell energy age 0
+ASSERT LAST_N == 20
+WHEREMAX Cell energy age 0
+ASSERT LAST_N == 40
+MINIF Cell energy age 1
+ASSERT LAST_N == 10
+MAXIF Cell energy age 1
+ASSERT LAST_N == 30
+
+# string match
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 2
+NEW Ticket t2 "closed" 9
+NEW Ticket t3 "open" 7
+MINWHERE Ticket retries status "open"
+ASSERT LAST_N == 2
+ASSERT MINWHERE_N == 2
+MAXWHERE Ticket retries status "open"
+ASSERT LAST_N == 7
+MINWHERE Ticket retries status "closed"
+ASSERT LAST_N == 9
+ASSERT MINWHERE_N == 1
+
+# no match → 0
+MINWHERE Ticket retries status "missing"
+ASSERT LAST_N == 0
+ASSERT MINWHERE_N == 0
+MAXWHERE Ticket retries status "missing"
+ASSERT LAST_N == 0
+
+PRINT "proof909_oop_minwhere" 1
+ASSERT OK == 1
