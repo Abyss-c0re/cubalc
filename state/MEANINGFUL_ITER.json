@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 369,
-  "version": "1.15.396-usability",
-  "item": "EQF/NEQF/EQFI/FINDF field equality and locate probes",
-  "item_id": 405,
-  "title": "EQF|NEQF|EQFI|FINDF — exact field==value + first-index locate",
-  "commit": "d02ae7433d36a864935332ef2a767ca8a9bc7f6e",
-  "summary": "Field equality/locate without GETF+SYS EQS/FIND. proof 946 44/44.",
+  "iter": 370,
+  "version": "1.15.397-usability",
+  "item": "LEFTF/RIGHTF/SLICEF/TRUNCF field string slices",
+  "item_id": 406,
+  "title": "LEFTF|RIGHTF|SLICEF|TRUNCF — in-place field string slice/clip",
+  "commit": "7b1581770941f5b350d2a2bd1eda31362917e10d",
+  "summary": "In-place field peel/clip without GETF+LEFT/MID+SETF. proof 947 35/35.",
   "proofs": [
-    "946_oop_eqf",
-    "asserts 44/44",
-    "945 still green"
+    "947_oop_leftf",
+    "asserts 35/35",
+    "946 still green"
   ],
-  "when": "2026-08-07T15:24:56Z",
+  "when": "2026-08-07T15:35:01Z",
   "agent": "meaningful_iter_10m",
-  "sha": "d02ae7433d36a864935332ef2a767ca8a9bc7f6e",
-  "note": "FINDF_N index or -1; EQFI/FINDFI; soft TRYEQF; complements HASINF"
+  "sha": "7b1581770941f5b350d2a2bd1eda31362917e10d",
+  "note": "MIDSTRF not fleet MIDF; STRCLIPF not fleet CLIPF; pairs FINDF"
 }
