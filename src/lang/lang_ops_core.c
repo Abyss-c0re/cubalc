@@ -13189,6 +13189,56 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       var_set_num(vm, "OK", 1);
       bump(vm); return 1;
     }
+    /* SYS MS2SEC|TOSECS|FROMMS|MS_TO_SEC [n|LAST_N]
+     * — floor(ms / 1000) → seconds for DEADLINE/ADDTIME after PARSEMS.
+     * SYS SEC2MS|MSECFROM|SECS2MS|SEC_TO_MS [n|LAST_N]
+     * — secs * 1000 → ms for SLEEP/WAIT after REMAINING/TTL.
+     * LAST_N = result; clamp n>=0. Usability: unit bridge without shell $(( )). */
+    if (kw(&L->cur,"MS2SEC") || kw(&L->cur,"TOSECS") || kw(&L->cur,"FROMMS") ||
+        kw(&L->cur,"MS_TO_SEC") || kw(&L->cur,"MSTOSEC") || kw(&L->cur,"MSSECS") ||
+        kw(&L->cur,"MILLI2SEC") || kw(&L->cur,"MSDIV") ||
+        kw(&L->cur,"SEC2MS") || kw(&L->cur,"MSECFROM") || kw(&L->cur,"SECS2MS") ||
+        kw(&L->cur,"SEC_TO_MS") || kw(&L->cur,"SECTOMS") || kw(&L->cur,"S2MS") ||
+        kw(&L->cur,"SECMS") || kw(&L->cur,"TOMILLISEC")){
+      char op[24];
+      int to_ms = 0;
+      long n = vm->last_n, outn = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      to_ms = (strcmp(op, "SEC2MS") == 0 || strcmp(op, "MSECFROM") == 0 ||
+               strcmp(op, "SECS2MS") == 0 || strcmp(op, "SEC_TO_MS") == 0 ||
+               strcmp(op, "SECTOMS") == 0 || strcmp(op, "S2MS") == 0 ||
+               strcmp(op, "SECMS") == 0 || strcmp(op, "TOMILLISEC") == 0);
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      if (to_ms) {
+        /* overflow guard: LONG_MAX/1000 */
+        if (n > (LONG_MAX / 1000L))
+          outn = LONG_MAX;
+        else
+          outn = n * 1000L;
+        var_set_num(vm, "SEC2MS_N", outn);
+        var_set_num(vm, "SEC2MS_SECS", n);
+      } else {
+        outn = n / 1000L;
+        var_set_num(vm, "MS2SEC_N", outn);
+        var_set_num(vm, "MS2SEC_MS", n);
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
     if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
       lex_next(L);
       long n = 0;
@@ -24579,6 +24629,9 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS PARSEMS", "SYS PARSEMS|DURATION|TOMS [str] — 5s/2m/1h → ms · SLEEP/WAIT timeouts"},
       {"SYS DURATION", "SYS DURATION [str] — alias of SYS PARSEMS · human duration → ms"},
       {"SYS TOMS", "SYS TOMS [str] — alias of SYS PARSEMS"},
+      {"SYS MS2SEC", "SYS MS2SEC|TOSECS [n] — floor ms/1000 → secs · PARSEMS→DEADLINE bridge"},
+      {"SYS SEC2MS", "SYS SEC2MS|SECS2MS [n] — secs*1000 → ms · REMAINING→SLEEP bridge"},
+      {"SYS TOSECS", "SYS TOSECS [n] — alias of SYS MS2SEC"},
       {"SYS HUMANMS", "SYS HUMANMS|FMTMS [n] — ms → 5s/1m30s plate label · dual of PARSEMS"},
       {"SYS FMTMS", "SYS FMTMS [n] — alias of SYS HUMANMS"},
       {"SYS HUMANDUR", "SYS HUMANDUR [n] — alias of SYS HUMANMS"},
