@@ -376,6 +376,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 346. ~~**`SORTBYF` / `SORTOBJS`**~~ **done** (bag of names ordered by numeric field ASC|DESC · no GETFALL+ZIP+SORTN glue).
 347. ~~**`SUMF` / `AVGF`**~~ **done** (sum/mean numeric field over live objs · no GETFALL+SYS SUM/AVG glue).
 348. ~~**`WHEREGE` / `WHERELE` / `WHEREGT` / `WHERELT`**~~ **done** (threshold select live objs · bag · no EACH+GETF+IF).
+349. ~~**`DELETEWHEREGE` / `DELETEWHERELE` / `DELETEWHEREGT` / `DELETEWHERELT`**~~ **done** (threshold free live objs · FREEBELOW/FREEABOVE · no EACH+GETF+IF+DELETEOBJ).
 
 ## Tick protocol
 

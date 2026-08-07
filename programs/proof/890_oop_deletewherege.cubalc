@@ -1,0 +1,127 @@
+# DELETEWHEREGE / DELETEWHERELE / FREEBELOW — threshold free live objects
+# Usability: WHEREGE + DELETEWHERE one-shot · pool GC by range
+# without EACH+GETF+IF+DELETEOBJ
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 0 0
+NEW Cell c 1 30 0
+NEW Cell d 1 5 0
+NEW Cell e 1 0 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 3
+NEW Counter k2 50
+NEW Counter k3 15
+NEW Counter k4 0
+
+# free dead cells energy <= 0
+DELETEWHERELE Cell energy 0
+ASSERT OK == 1
+ASSERT DELETEWHERELE_N == 2
+ASSERT LAST_N == 2
+SYS HASLINE DELETEWHERELE "b"
+ASSERT LAST_N == 1
+SYS HASLINE DELETEWHERELE "e"
+ASSERT LAST_N == 1
+HASOBJ b
+ASSERT LAST_N == 0
+HASOBJ e
+ASSERT LAST_N == 0
+HASOBJ a
+ASSERT LAST_N == 1 "survivors kept"
+HASOBJ c
+ASSERT LAST_N == 1
+HASOBJ d
+ASSERT LAST_N == 1
+
+# FREEBELOW alias: energy < 10 → d (energy 5)
+FREEBELOW Cell energy 10
+ASSERT FREEBELOW_N == 1
+HASOBJ d
+ASSERT LAST_N == 0
+HASOBJ a
+ASSERT LAST_N == 1 "energy 10 kept"
+
+# free high counters n >= 15
+DELETEWHEREGE Counter n 15
+ASSERT DELETEWHEREGE_N == 2 "k2 k3"
+HASOBJ k2
+ASSERT LAST_N == 0
+HASOBJ k3
+ASSERT LAST_N == 0
+HASOBJ k1
+ASSERT LAST_N == 1
+HASOBJ k4
+ASSERT LAST_N == 1
+
+# OF sugar + FREEABOVE (n > 2) → k1 n=3
+FREEABOVE OF Counter n 2
+ASSERT FREEABOVE_N == 1
+HASOBJ k1
+ASSERT LAST_N == 0
+HASOBJ k4
+ASSERT LAST_N == 1
+
+# empty match soft
+DELETEWHEREGE Cell energy 999
+ASSERT OK == 1
+ASSERT DELETEWHEREGE_N == 0
+HASOBJ a
+ASSERT LAST_N == 1
+HASOBJ c
+ASSERT LAST_N == 1
+
+# FREEWHEREGE alias (a=10 kept; c=30 hi=100 freed)
+NEW Cell hi 1 100 0
+FREEWHEREGE Cell energy 20
+ASSERT FREEWHEREGE_N == 2 "c hi"
+HASOBJ c
+ASSERT LAST_N == 0
+HASOBJ hi
+ASSERT LAST_N == 0
+HASOBJ a
+ASSERT LAST_N == 1
+
+# bare field: only classes that own the field
+SETF a energy 1
+NEW Counter z 1
+DELETEWHERELT energy 5
+ASSERT DELETEWHERELT_N == 1 "Cell a only"
+HASOBJ a
+ASSERT LAST_N == 0
+HASOBJ z
+ASSERT LAST_N == 1 "Counter has n not energy"
+DELETEWHERELE n 1
+ASSERT DELETEWHERELE_N == 2 "k4 z"
+HASOBJ k4
+ASSERT LAST_N == 0
+HASOBJ z
+ASSERT LAST_N == 0
+
+# NEW reuses freed names
+NEW Cell a 1 8 0
+HASOBJ a
+ASSERT LAST_N == 1
+GETF a energy
+ASSERT LAST_N == 8
+
+# PURGEBELOW alias
+NEW Cell x 1 2 0
+NEW Cell y 1 3 0
+PURGEBELOW Cell energy 3
+ASSERT PURGEBELOW_N == 1 "x energy 2"
+HASOBJ x
+ASSERT LAST_N == 0
+HASOBJ y
+ASSERT LAST_N == 1
+
+PRINT "oop_deletewherege ok"

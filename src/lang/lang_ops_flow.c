@@ -2321,6 +2321,201 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* DELETEWHEREGE|DELETEWHERELE|DELETEWHEREGT|DELETEWHERELT [Class] field value
+   * FREEWHEREGE|FREEWHERELE|…|PURGEBELOW|FREEABOVE aliases.
+   * — free every live object whose numeric field meets threshold.
+   * Soft always; string/missing fields skipped. LAST_N = count freed.
+   * Usability: WHEREGE + DELETEWHERE one-shot · pool GC by range without
+   * EACH+GETF+IF+DELETEOBJ (dead cells energy<=0, expired retries>=max). */
+  if (kw(&L->cur, "DELETEWHEREGE") || kw(&L->cur, "DELETEWHEREGTE") ||
+      kw(&L->cur, "FREEWHEREGE") || kw(&L->cur, "PURGEWHEREGE") ||
+      kw(&L->cur, "KILLWHEREGE") || kw(&L->cur, "DROPWHEREGE") ||
+      kw(&L->cur, "FREEATLEAST") || kw(&L->cur, "PURGEATLEAST") ||
+      kw(&L->cur, "DELETEWHEREGT") || kw(&L->cur, "FREEWHEREGT") ||
+      kw(&L->cur, "PURGEWHEREGT") || kw(&L->cur, "FREEABOVE") ||
+      kw(&L->cur, "PURGEABOVE") || kw(&L->cur, "KILLABOVE") ||
+      kw(&L->cur, "DELETEWHERELE") || kw(&L->cur, "DELETEWHERELTE") ||
+      kw(&L->cur, "FREEWHERELE") || kw(&L->cur, "PURGEWHERELE") ||
+      kw(&L->cur, "KILLWHERELE") || kw(&L->cur, "DROPWHERELE") ||
+      kw(&L->cur, "FREEATMOST") || kw(&L->cur, "PURGEATMOST") ||
+      kw(&L->cur, "DELETEWHERELT") || kw(&L->cur, "FREEWHERELT") ||
+      kw(&L->cur, "PURGEWHERELT") || kw(&L->cur, "FREEBELOW") ||
+      kw(&L->cur, "PURGEBELOW") || kw(&L->cur, "KILLBELOW") ||
+      kw(&L->cur, "THRESHFREE") || kw(&L->cur, "FREETHRESH")) {
+    char filt[48], fname[48], tok1[48], bag[4096], op[32];
+    int has_filt = 0, mode = 0, i, n = 0, n_skip = 0;
+    long thresh = 0;
+    size_t o = 0;
+    /* mode: 0=GE 1=GT 2=LE 3=LT */
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "DELETEWHEREGT") == 0 || strcmp(op, "FREEWHEREGT") == 0 ||
+        strcmp(op, "PURGEWHEREGT") == 0 || strcmp(op, "FREEABOVE") == 0 ||
+        strcmp(op, "PURGEABOVE") == 0 || strcmp(op, "KILLABOVE") == 0)
+      mode = 1;
+    else if (strcmp(op, "DELETEWHERELE") == 0 ||
+             strcmp(op, "DELETEWHERELTE") == 0 ||
+             strcmp(op, "FREEWHERELE") == 0 || strcmp(op, "PURGEWHERELE") == 0 ||
+             strcmp(op, "KILLWHERELE") == 0 || strcmp(op, "DROPWHERELE") == 0 ||
+             strcmp(op, "FREEATMOST") == 0 || strcmp(op, "PURGEATMOST") == 0)
+      mode = 2;
+    else if (strcmp(op, "DELETEWHERELT") == 0 || strcmp(op, "FREEWHERELT") == 0 ||
+             strcmp(op, "PURGEWHERELT") == 0 || strcmp(op, "FREEBELOW") == 0 ||
+             strcmp(op, "PURGEBELOW") == 0 || strcmp(op, "KILLBELOW") == 0)
+      mode = 3;
+    else
+      mode = 0; /* GE / ATLEAST / THRESHFREE */
+    lex_next(L);
+    filt[0] = 0;
+    fname[0] = 0;
+    tok1[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "DELETEWHEREGE OF Class field value"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1)) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(fname, sizeof fname, "%s", vv->sval);
+          else
+            snprintf(fname, sizeof fname, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT && !oop_stmt_kw(L))))
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", tok1);
+      }
+    } else {
+      fail(vm, "DELETEWHEREGE [Class] field value"); return -1;
+    }
+    if (!fname[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(fname, sizeof fname, "%s", vv->sval);
+        else
+          snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "DELETEWHEREGE [Class] field value"); return -1;
+      }
+    }
+    if (kw(&L->cur, "GE") || kw(&L->cur, "GTE") || kw(&L->cur, "GT") ||
+        kw(&L->cur, "LE") || kw(&L->cur, "LTE") || kw(&L->cur, "LT") ||
+        kw(&L->cur, "MIN") || kw(&L->cur, "MAX"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      thresh = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      thresh = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        thresh = atol(sv->sval);
+      else
+        thresh = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else {
+      thresh = parse_expr(vm, L);
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int fi, hit = 0;
+      size_t ln;
+      long v;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      fi = oop_field_idx(cd, fname);
+      if (fi < 0) { n_skip++; continue; }
+      if (ob->fis_str[fi]) { n_skip++; continue; }
+      v = ob->fnum[fi];
+      if (mode == 0) hit = (v >= thresh);
+      else if (mode == 1) hit = (v > thresh);
+      else if (mode == 2) hit = (v <= thresh);
+      else hit = (v < thresh);
+      if (!hit) continue;
+      ln = strlen(ob->name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, ob->name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      ob->live = 0;
+      if (strcmp(vm->this_obj, ob->name) == 0)
+        vm->this_obj[0] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "DELETEWHEREGE", bag);
+    var_set_str(vm, "DELETEWHERELE", bag);
+    var_set_str(vm, "DELETEWHEREGT", bag);
+    var_set_str(vm, "DELETEWHERELT", bag);
+    var_set_str(vm, "FREEWHEREGE", bag);
+    var_set_str(vm, "FREEWHERELE", bag);
+    var_set_str(vm, "FREEBELOW", bag);
+    var_set_str(vm, "FREEABOVE", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "DELETEWHEREGE_N", n);
+    var_set_num(vm, "DELETEWHERELE_N", n);
+    var_set_num(vm, "DELETEWHEREGT_N", n);
+    var_set_num(vm, "DELETEWHERELT_N", n);
+    var_set_num(vm, "FREEWHEREGE_N", n);
+    var_set_num(vm, "FREEWHERELE_N", n);
+    var_set_num(vm, "FREEBELOW_N", n);
+    var_set_num(vm, "FREEABOVE_N", n);
+    var_set_num(vm, "PURGEBELOW_N", n);
+    var_set_num(vm, "PURGEABOVE_N", n);
+    var_set_num(vm, "PURGEWHEREGE_N", n);
+    var_set_num(vm, "PURGEWHERELE_N", n);
+    var_set_num(vm, "DELETEWHEREGE_SKIP", n_skip);
+    var_set_num(vm, "DELETEWHEREGE_THRESH", thresh);
+    var_set_str(vm, "FIELD", fname);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* GETF obj field [OR|DEFAULT fallback]
    * TRYGETF|GETFSOFT|GETF SOFT — soft miss OK=0 (no fatal) without fallback.
    * GETF … OR val — like SYS ENV/LOOKUP: miss → LAST=fallback, OK=1, GETF_OR=1.
