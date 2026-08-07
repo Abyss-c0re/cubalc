@@ -1,19 +1,20 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 411,
-  "version": "1.15.438-usability",
-  "item": "FLAGMAP name=value flag bag",
-  "item_id": 447,
-  "title": "FLAGMAP|FLAGKV bag of name=value CLI flags \u00b7 LOOKUP =",
-  "commit": "ade2ef1205e010e527b93dc9108db44b8b8492c9",
-  "summary": "Flag name=value plate bag; bare bool=1 keeps files. proof 988 11/11.",
+  "iter": 412,
+  "version": "1.15.439-usability",
+  "item": "CASE string arms",
+  "item_id": 448,
+  "title": "CASE|MATCH string selector + WHEN \"s\" arms \u00b7 CLI dispatch",
+  "commit": "fe6cabb8c29e8d8c89c6287c27d89bafd40cbbd3",
+  "summary": "String CASE/WHEN for action dispatch; numeric kept. proof 989 8/8 + 21 reg.",
   "proofs": [
-    "988_flagmap",
-    "asserts 11/11",
-    "smoke FLAGMAP -- --mode=fast --verbose a.txt"
+    "989_case_str",
+    "asserts 8/8",
+    "21_fn_return_case reg 9/9",
+    "smoke CASE act WHEN seal -- --action=seal"
   ],
-  "when": "2026-08-07T22:37:27Z",
+  "when": "2026-08-07T22:45:40Z",
   "agent": "meaningful_iter_10m",
-  "sha": "ade2ef1205e010e527b93dc9108db44b8b8492c9",
+  "sha": "fe6cabb8c29e8d8c89c6287c27d89bafd40cbbd3",
   "note": "no thrash; EVOLVE_PAUSED"
 }
