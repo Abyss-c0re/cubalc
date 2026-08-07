@@ -1,0 +1,144 @@
+# BEFOREF / AFTERF / BETWEENF — delimiter field peels for agents
+# Usability: kv/log peel without GETF+SYS BEFORE/AFTER/BETWEEN+SETF
+# Complements LEFTF (count) with delimiter peels; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD note "sev=error:timeout"
+  FIELD tag "[code=42]"
+  FIELD path "a/b/c.txt"
+  METHOD init
+  END
+  METHOD tail_after_colon
+    AFTERF THIS note ":"
+  END
+END
+
+NEW Ticket t
+
+# BEFOREF
+BEFOREF t note ":"
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT BEFOREF_N == 1
+SYS EQS LAST "sev=error"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "sev=error"
+ASSERT LAST_N == 1
+
+# miss → keep whole for BEFORE
+SETF t note "nocolon"
+BEFOREF t note ":"
+ASSERT LAST_N == 0
+SYS EQS LAST "nocolon"
+ASSERT LAST_N == 1
+
+# AFTERF
+SETF t note "sev=error:timeout"
+AFTERF t note ":"
+ASSERT AFTERF_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "timeout"
+ASSERT LAST_N == 1
+GETF t note
+SYS EQS LAST "timeout"
+ASSERT LAST_N == 1
+
+# AFTER miss → empty
+SETF t note "plain"
+AFTERF t note ":"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# BETWEENF
+SETF t tag "[code=42]"
+BETWEENF t tag "[" "]"
+ASSERT BETWEENF_N == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "code=42"
+ASSERT LAST_N == 1
+GETF t tag
+SYS EQS LAST "code=42"
+ASSERT LAST_N == 1
+
+# BETWEEN miss
+SETF t tag "no-brackets"
+BETWEENF t tag "[" "]"
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+# EXTRACTF / INNERF aliases
+SETF t tag "{x=1}"
+EXTRACTF t tag "{" "}"
+SYS EQS LAST "x=1"
+ASSERT LAST_N == 1
+SETF t tag "(z)"
+INNERF t tag "(" ")"
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# path head/tail
+SETF t path "a/b/c.txt"
+AFTERF t path "/"
+# first / only
+SYS EQS LAST "b/c.txt"
+ASSERT LAST_N == 1
+SETF t path "a/b/c.txt"
+BEFOREF t path "/"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF t note "k:v"
+SEND t tail_after_colon
+GETF t note
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+
+# empty needle: BEFORE → empty, AFTER → whole
+SETF t note "abc"
+BEFOREF t note ""
+ASSERT LAST_N == 1
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+SETF t note "abc"
+AFTERF t note ""
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# soft miss
+TRYBEFOREF nosuch note ":"
+ASSERT OK == 0
+ASSERT BEFOREF_N == 0
+SYS EQS LAST_ERR "BEFOREF: unknown object"
+ASSERT LAST_N == 1
+BEFOREF SOFT t nosuch ":"
+ASSERT OK == 0
+TRYAFTERF nosuch note ":"
+ASSERT OK == 0
+TRYBETWEENF nosuch tag "[" "]"
+ASSERT OK == 0
+
+# dynamic field + needle
+SETF t note "x=y"
+LET sep = "="
+AFTERF t "note" sep
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# HELP
+HELP BEFOREF
+SYS HAS LAST "BEFOREF"
+ASSERT LAST_N == 1
+HELP AFTERF
+SYS HAS LAST "AFTERF"
+ASSERT LAST_N == 1
+HELP BETWEENF
+SYS HAS LAST "BETWEENF"
+ASSERT LAST_N == 1
+
+PRINT "oop_beforef ok"
