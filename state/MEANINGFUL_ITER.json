@@ -1,19 +1,19 @@
 {
   "schema": "cubalc.meaningful_iter.v1",
-  "iter": 397,
-  "version": "1.15.424-usability",
-  "item": "optional THEN / LET =",
-  "item_id": 433,
-  "title": "IF/UNLESS/ELIF optional THEN · LET optional = · better LET errs",
-  "commit": "35b963c94dcec19e0c83c91014009b0f680a3324",
-  "summary": "Optional THEN and LET= glue for agents; classic forms kept. proof 974 8/8.",
+  "iter": 398,
+  "version": "1.15.425-usability",
+  "item": "PRINT multi-arg strings",
+  "item_id": 434,
+  "title": "PRINT/SAY/ECHO space-join str+num · LAST · no strlen footgun",
+  "commit": "d8df7b7bb0afe8e48f1d48516169f5fbe2865046",
+  "summary": "PRINT joins string content multi-arg; SAY/ECHO; empty re-echoes LAST. proof 975 10/10.",
   "proofs": [
-    "974_optional_then_let",
-    "asserts 8/8",
-    "smoke IF/ELIF/UNLESS no THEN · LET x 1"
+    "975_print_str_parts",
+    "asserts 10/10",
+    "smoke hi world · x= 3 ok · SAY 1 2 3"
   ],
-  "when": "2026-08-07T20:17:13Z",
+  "when": "2026-08-07T20:27:06Z",
   "agent": "meaningful_iter_10m",
-  "sha": "35b963c94dcec19e0c83c91014009b0f680a3324",
-  "note": "reduces mandatory glue; err_line on LET fails"
+  "sha": "d8df7b7bb0afe8e48f1d48516169f5fbe2865046",
+  "note": "fixes PRINT string-var printing length"
 }
