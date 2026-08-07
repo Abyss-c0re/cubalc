@@ -24882,6 +24882,8 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SEND", "SEND obj method [args] — message / method call (THIS set)"},
       {"TRYSEND", "TRYSEND|SEND SOFT obj method [args] — soft miss OK=0 sticky LAST_ERR"},
       {"SENDSOFT", "SENDSOFT alias of TRYSEND"},
+      {"SENDALL", "SENDALL|BROADCAST [Class] method [args] — call method on every live obj"},
+      {"BROADCAST", "BROADCAST alias of SENDALL"},
       {"GETF", "GETF obj field [OR fallback] — read FIELD · OR soft default like ENV"},
       {"TRYGETF", "TRYGETF|GETF SOFT obj field — soft miss OK=0 sticky LAST_ERR"},
       {"GETFSOFT", "GETFSOFT alias of TRYGETF"},

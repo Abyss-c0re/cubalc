@@ -1,0 +1,67 @@
+# SENDALL / BROADCAST — invoke method on every live object
+# Usability: fleet tick without EACH OBJ + SEND glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 4 0
+NEW Cell b 1 4 0
+NEW Cell c 1 4 0
+
+# class-filtered broadcast
+SENDALL Cell tick
+ASSERT OK == 1
+ASSERT SENDALL_N == 3
+ASSERT LAST_N == 3
+
+# energy should have grown after tick (life_cell +2-1)
+GETF a energy
+ASSERT LAST_N >= 4
+
+# all objects form (same 3 cells)
+SENDALL tick
+ASSERT SENDALL_N == 3
+
+# BROADCAST alias
+BROADCAST Cell tick
+ASSERT BROADCAST_N == 3
+
+# args bind each call
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+  METHOD add d
+    GETF THIS n
+    LET v = LAST_N + d
+    SETF THIS n v
+  END
+END
+NEW Counter k1 0
+NEW Counter k2 10
+SENDALL Counter add 3
+ASSERT SENDALL_N == 2
+GETF k1 n
+ASSERT LAST_N == 3
+GETF k2 n
+ASSERT LAST_N == 13
+
+# class filter ignores other classes
+SENDALL Cell tick
+ASSERT SENDALL_N == 3
+GETF k1 n
+ASSERT LAST_N == 3 "counters untouched"
+
+# empty / skip missing method
+SENDALL Counter no_meth_zz
+ASSERT OK == 1
+ASSERT SENDALL_N == 0
+ASSERT SENDALL_SKIP == 2
+
+# string method name
+SENDALL Cell "tick"
+ASSERT SENDALL_N == 3
+
+PRINT "oop_sendall ok"

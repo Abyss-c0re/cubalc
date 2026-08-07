@@ -679,6 +679,90 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* SENDALL|BROADCAST [Class] method [args]
+   * — invoke method on every live object (optional class filter).
+   * Skips objects missing the method (soft). LAST_N/SENDALL_N = call count.
+   * Usability: fleet tick without EACH OBJ + SEND glue (beyond TICK). */
+  if (kw(&L->cur, "SENDALL") || kw(&L->cur, "BROADCAST") ||
+      kw(&L->cur, "INVOKEALL") || kw(&L->cur, "CALLALL") ||
+      kw(&L->cur, "MAPSEND") || kw(&L->cur, "FORALLSEND")) {
+    char filt[48], mname[48], tok1[48];
+    int has_filt = 0, i, n = 0, n_skip = 0, advanced = 0;
+    Lex args_start;
+    lex_next(L);
+    filt[0] = 0;
+    mname[0] = 0;
+    tok1[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "SENDALL [Class] method [args]"); return -1;
+    }
+    snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+    lex_next(L);
+    /* Class method when tok1 names a known CLASS and next is method */
+    if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+        oop_find_class(vm, tok1)) {
+      snprintf(filt, sizeof filt, "%s", tok1);
+      has_filt = 1;
+      if (L->cur.kind == TK_STR) {
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(mname, sizeof mname, "%s", vv->sval);
+        else
+          snprintf(mname, sizeof mname, "%s", L->cur.text);
+        lex_next(L);
+      }
+    } else {
+      Var *vv = var_get(vm, tok1, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", tok1);
+    }
+    args_start = *L;
+    for (i = 0; i < vm->n_objs && !vm->fatal && !vm->halt; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      MethodDef *md;
+      Lex bl;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      md = oop_find_method(cd, mname);
+      if (!md) { n_skip++; continue; }
+      bl = args_start;
+      oop_bind_args(vm, &bl, md->params, md->n_params);
+      *L = bl;
+      advanced = 1;
+      if (oop_run_method(vm, ob, md) < 0) return -1;
+      n++;
+    }
+    if (!advanced) {
+      Lex bl = args_start;
+      char dummy[8][32];
+      memset(dummy, 0, sizeof dummy);
+      oop_bind_args(vm, &bl, dummy, 0);
+      *L = bl;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "SENDALL_N", n);
+    var_set_num(vm, "BROADCAST_N", n);
+    var_set_num(vm, "SENDALL_SKIP", n_skip);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* GETF obj field [OR|DEFAULT fallback]
    * TRYGETF|GETFSOFT|GETF SOFT — soft miss OK=0 (no fatal) without fallback.
    * GETF … OR val — like SYS ENV/LOOKUP: miss → LAST=fallback, OK=1, GETF_OR=1.
