@@ -1,0 +1,1287 @@
+# pool_rate_clamp_board.cubalc — CLAMPWHERE/UNIQUWHERE pool rate bound + inventory
+#
+# Real use: capacity agents track Worker fleet (w0..w2) with pool label +
+# numeric rate (qps) + status (idle|hot|drain). Clamp hot workers into
+# [LO,HI] without EACH+IF+SETF; inventory distinct pools among hot via
+# UNIQUWHERE; admit when max hot rate ≤ BUDGET after clamp.
+#
+# Surfaces forced (1.15.363–364):
+#   CLAMPWHERE / CLIPWHERE / BOUNDWHERE / CLAMPIF
+#   UNIQUWHERE / DISTINCTWHERE / UNIQUIF
+#   MAXWHERE · COUNTWHERE · DUMPOBJ rehydrate · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from rate_budget_ledger (host bag counters), quota_counter (plate
+# tally), zone_load_where (sum/avg zone load), env_slo (median/hist env):
+# this board is *selective rate clamp on status match + unique pool inventory*.
+#
+# Slots: w0 w1 w2
+#
+# Plate under STATE:
+#   dump/w0 dump/w1 dump/w2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt POOLS.txt CLAMP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Worker
+#   open       — NEW Worker ARG1=wN [pool=ARG2 default default]
+#   setpool    — SETF pool ARG2
+#   setrate    — SETF rate ARG2
+#   setstatus  — SETF status ARG2
+#   clamp      — CLAMPWHERE rate status ARG1(default hot) LO HI (ENV/ARG)
+#   unique     — UNIQUWHERE pool status ARG1(default hot) → POOLS plate
+#   max_rate   — MAXWHERE rate status ARG1
+#   count_st   — COUNTWHERE status ARG1
+#   admit      — MAXWHERE hot rate ≤ BUDGET and N>0; REQUIRE→2 if not
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_prc_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=w0 CUBALC_ARG2=api
+#   CUBALC_ARG0=setstatus CUBALC_ARG1=w0 CUBALC_ARG2=hot
+#   CUBALC_ARG0=setrate CUBALC_ARG1=w0 CUBALC_ARG2=150
+#   CUBALC_ARG0=clamp CUBALC_FS_LO=0 CUBALC_FS_HI=100
+#   CUBALC_ARG0=unique CUBALC_ARG1=hot
+#   CUBALC_ARG0=admit CUBALC_FS_BUDGET=100 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT BUDGET LO HI ACTION
+#
+# Edges:
+#   CLAMPWHERE no match N=0 CHANGED=0 soft
+#   LO>HI auto-swap; already-in-range CHANGED=0
+#   UNIQUWHERE first-seen order not sorted; empty → empty bag
+#   MAXWHERE empty → 0 (zero vs empty); idle not clamped
+#   WRITE NL; NUM softens; SETMATCH first-only; substring false friends
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Worker
+  FIELD id ""
+  FIELD pool "default"
+  FIELD rate 0
+  FIELD status "idle"
+  METHOD init i p
+    SETF THIS id i
+    SETF THIS pool p
+    SETF THIS rate 0
+    SETF THIS status "idle"
+  END
+END
+
+NOTE "pool_rate_clamp_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "hot"
+DEFAULT BUDGET = 100
+DEFAULT LO = 0
+DEFAULT HI = 100
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+SYS ENV "CUBALC_FS_BUDGET" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET BUDGET = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_LO" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET LO = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_HI" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET HI = LAST_N
+  END
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "POOLS.txt"
+LET pools_path = LAST
+SYS JOIN state_dir "CLAMP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "w0"
+LET d_w0 = LAST
+SYS JOIN dump_dir "w1"
+LET d_w1 = LAST
+SYS JOIN dump_dir "w2"
+LET d_w2 = LAST
+
+LET slot = -1
+SYS EQS NAME "w0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "w1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "w2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "w0"
+END
+IF slot == 1 THEN
+  LET sn = "w1"
+END
+IF slot == 2 THEN
+  LET sn = "w2"
+END
+
+# rehydrate w0
+SYS READ OR d_w0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "pool"
+  LET rpool = LAST
+  SYS LOOKUPN snap "rate"
+  LET rrate = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Worker w0 rid rpool
+  TRYSETF w0 pool rpool
+  TRYSETF w0 rate rrate
+  TRYSETF w0 status rst
+  CLEAR_ERR
+END
+# rehydrate w1
+SYS READ OR d_w1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "pool"
+  LET rpool = LAST
+  SYS LOOKUPN snap "rate"
+  LET rrate = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Worker w1 rid rpool
+  TRYSETF w1 pool rpool
+  TRYSETF w1 rate rrate
+  TRYSETF w1 status rst
+  CLEAR_ERR
+END
+# rehydrate w2
+SYS READ OR d_w2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "pool"
+  LET rpool = LAST
+  SYS LOOKUPN snap "rate"
+  LET rrate = LAST_N
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  CLEAR_ERR
+  NEW Worker w2 rid rpool
+  TRYSETF w2 pool rpool
+  TRYSETF w2 rate rrate
+  TRYSETF w2 status rst
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "pool_rate_clamp_board"
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Worker
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET pl0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET pl0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DELETEOBJ w0
+        CLEAR_ERR
+      END
+      NEW Worker w0 sn pl0
+      DUMPOBJ w0
+      SYS WRITE d_w0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DELETEOBJ w1
+        CLEAR_ERR
+      END
+      NEW Worker w1 sn pl0
+      DUMPOBJ w1
+      SYS WRITE d_w1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DELETEOBJ w2
+        CLEAR_ERR
+      END
+      NEW Worker w2 sn pl0
+      DUMPOBJ w2
+      SYS WRITE d_w2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Worker
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta pl0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setpool ---
+SYS EQS ACTION "setpool"
+IF LAST_N == 1 THEN
+  NOTE "action setpool"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setpool bad slot"
+    FAIL "setpool bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setpool bad slot"
+    END
+  ELSE
+    LET pl0 = "default"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET pl0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        SETF w0 pool pl0
+        LET ok_set = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        SETF w1 pool pl0
+        LET ok_set = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        SETF w2 pool pl0
+        LET ok_set = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setpool no obj"
+      FAIL "setpool no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setpool no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setpool ok"
+      LET val = pl0
+      LET val_ch = 1
+      LET meta = "setpool"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta pl0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setrate ---
+SYS EQS ACTION "setrate"
+IF LAST_N == 1 THEN
+  NOTE "action setrate"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setrate bad slot"
+    FAIL "setrate bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setrate bad slot"
+    END
+  ELSE
+    LET n0 = 0
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      SYS NUM A2
+      IF OK == 1 THEN
+        LET n0 = LAST_N
+      END
+      CLEAR_ERR
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        SETF w0 rate n0
+        LET ok_set = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        SETF w1 rate n0
+        LET ok_set = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        SETF w2 rate n0
+        LET ok_set = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setrate no obj"
+      FAIL "setrate no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setrate no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setrate ok"
+      SYS STR n0
+      LET val = LAST
+      LET val_ch = 1
+      LET meta = "setrate"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta val
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setstatus ---
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  NOTE "action setstatus"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setstatus bad slot"
+    FAIL "setstatus bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setstatus bad slot"
+    END
+  ELSE
+    LET st0 = "idle"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET st0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        SETF w0 status st0
+        LET ok_set = 1
+        DUMPOBJ w0
+        SYS WRITE d_w0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        SETF w1 status st0
+        LET ok_set = 1
+        DUMPOBJ w1
+        SYS WRITE d_w1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        SETF w2 status st0
+        LET ok_set = 1
+        DUMPOBJ w2
+        SYS WRITE d_w2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setstatus no obj"
+      FAIL "setstatus no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setstatus no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setstatus ok"
+      LET val = st0
+      LET val_ch = 1
+      LET meta = "setstatus"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta st0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clamp CLAMPWHERE rate status st LO HI ---
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  NOTE "action clamp"
+  LET st0 = "hot"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  CLAMPWHERE Worker rate status st0 LO TO HI
+  LET ret_n = CLAMPWHERE_N
+  LET ch_n = CLAMPWHERE_CHANGED
+  LET lo_n = CLAMPWHERE_LO
+  LET hi_n = CLAMPWHERE_HI
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DUMPOBJ w0
+    SYS WRITE d_w0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DUMPOBJ w1
+    SYS WRITE d_w1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DUMPOBJ w2
+    SYS WRITE d_w2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:clamp"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "clamp ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "clamp"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR ch_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR lo_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR hi_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- unique UNIQUWHERE pool status ---
+SYS EQS ACTION "unique"
+IF LAST_N == 1 THEN
+  NOTE "action unique"
+  LET st0 = "hot"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  UNIQUWHERE Worker pool status st0
+  LET ubag = LAST
+  LET ret_n = UNIQUWHERE_N
+  LET tot_n = UNIQUWHERE_TOTAL
+  SYS WRITE pools_path ubag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "unique ok"
+  LET val = ubag
+  LET val_ch = 1
+  LET meta = "unique"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR tot_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- max_rate MAXWHERE ---
+SYS EQS ACTION "max_rate"
+IF LAST_N == 1 THEN
+  NOTE "action max_rate"
+  LET st0 = "hot"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  MAXWHERE Worker rate status st0
+  LET ret_n = LAST_N
+  LET n_hit = MAXWHERE_N
+  SYS STR ret_n
+  LET val = LAST
+  LET hit = 1
+  LET note_msg = "max_rate ok"
+  LET val_ch = 1
+  LET meta = "max_rate"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_st ---
+SYS EQS ACTION "count_st"
+IF LAST_N == 1 THEN
+  NOTE "action count_st"
+  LET st0 = "hot"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  COUNTWHERE Worker status st0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_st ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_st"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: MAXWHERE rate status WANT ≤ BUDGET and N>0 ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET st0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  COUNTWHERE Worker status st0
+  LET n_hit = LAST_N
+  MAXWHERE Worker rate status st0
+  LET ret_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF n_hit > 0 THEN
+    IF ret_n <= BUDGET THEN
+      LET val = "admit"
+      LET miss = 0
+      LET hit = 1
+      LET note_msg = "admit ok"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR BUDGET
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR n_hit
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny rate over budget or empty"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny rate over budget or empty"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    TRYSEND w0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF w0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  CLAMPWHERE Worker rate status "no_such" 0 TO 10
+  LET empty_n = CLAMPWHERE_N
+  CLEAR_ERR
+  UNIQUWHERE Worker pool status "no_such"
+  LET empty_u = UNIQUWHERE_N
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR empty_u
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ w0
+      IF LAST_N == 1 THEN
+        DUMPOBJ w0
+        LET val = LAST
+        SYS WRITE d_w0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ w1
+      IF LAST_N == 1 THEN
+        DUMPOBJ w1
+        LET val = LAST
+        SYS WRITE d_w1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ w2
+      IF LAST_N == 1 THEN
+        DUMPOBJ w2
+        LET val = LAST
+        SYS WRITE d_w2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ w0
+  IF LAST_N == 1 THEN
+    DELETEOBJ w0
+    CLEAR_ERR
+  END
+  HASOBJ w1
+  IF LAST_N == 1 THEN
+    DELETEOBJ w1
+    CLEAR_ERR
+  END
+  HASOBJ w2
+  IF LAST_N == 1 THEN
+    DELETEOBJ w2
+    CLEAR_ERR
+  END
+  SYS WRITE d_w0 ""
+  SYS WRITE d_w1 ""
+  SYS WRITE d_w2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE pools_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setpool"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setrate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clamp"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "unique"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "max_rate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_st"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "clamp ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "unique ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit ok"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS note_msg "admit deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "pool_rate_clamp_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

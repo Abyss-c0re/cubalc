@@ -1,75 +1,69 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 130,
-  "program": "programs/realworld/env_slo_where_board.cubalc",
-  "theme": "MEDIANWHERE/FREQWHERE/MODEWHERE env cohort SLO + plate-shuttle dual-gate admit",
-  "version": "1.15.363-usability",
+  "iter": 131,
+  "program": "programs/realworld/pool_rate_clamp_board.cubalc",
+  "theme": "CLAMPWHERE/UNIQUWHERE pool rate bound + unique pool inventory + MAXWHERE admit",
+  "version": "1.15.364-usability",
   "pass": true,
-  "prior_note": "iter 129 zone_load SUM/AVG/MIN/MAXWHERE; this iter stresses MEDIANWHERE+FREQWHERE+MODEWHERE (71fcc10/cdf88f2/a2718dc)",
+  "prior_note": "iter 130 env_slo MEDIAN/FREQ/MODEWHERE; this iter stresses CLAMPWHERE+UNIQUWHERE (a6afd70/0b8a65e)",
   "tests": [
     {
-      "name": "open_probes",
-      "cmd": "open p0/p1 canary p2 prod",
+      "name": "open_workers",
+      "cmd": "open w0/w1 api w2 batch; hot/hot/idle",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "p50_medianwhere",
-      "cmd": "MEDIANWHERE latency env canary \u2192 40 (even lower mid)",
+      "name": "clampwhere_hot",
+      "cmd": "rates 150/-5/200; CLAMPWHERE hot [0,100] → 100/0; idle 200 unclamped",
       "ok": true,
-      "note": "MEDIANWHERE"
+      "note": "CLAMPWHERE N=2 CHANGED=2"
     },
     {
-      "name": "hist_freqwhere",
-      "cmd": "FREQWHERE status canary \u2192 ok:2",
+      "name": "uniquwhere_pools",
+      "cmd": "UNIQUWHERE pool status hot → api only",
       "ok": true,
-      "note": "FREQWHERE"
+      "note": "UNIQUWHERE"
     },
     {
-      "name": "mode_modewhere",
-      "cmd": "MODEWHERE status canary \u2192 ok",
-      "ok": true,
-      "note": "MODEWHERE"
-    },
-    {
-      "name": "admit_dual_gate",
-      "cmd": "p50 plate + FREQ majority ok budget 100 admit",
+      "name": "max_rate_admit",
+      "cmd": "MAXWHERE hot 100; budget 100 admit; budget 50 deny",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "admit_budget_deny",
-      "cmd": "budget 30 with p50 40 \u2192 EXIT 2",
+      "name": "already_in_range",
+      "cmd": "second clamp CHANGED=0",
       "ok": true,
-      "note": "REQUIRE"
+      "note": "idempotent"
     },
     {
-      "name": "admit_mode_deny",
-      "cmd": "want fail while ok majority \u2192 EXIT 2",
+      "name": "lo_hi_autoswap",
+      "cmd": "LO=50 HI=20 → LO=20 HI=50; rate 10→20",
       "ok": true,
-      "note": "mode gate"
+      "note": "swap"
     },
     {
-      "name": "empty_env",
-      "cmd": "p50 0; mode blank; n_hit 0",
+      "name": "empty_status",
+      "cmd": "clamp/unique/max missing → 0; admit REQUIRE deny",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "outlier_median",
-      "cmd": "40,50,1000 \u2192 p50 50 stable",
-      "ok": true,
-      "note": "robust"
-    },
-    {
       "name": "substring_false_friend",
-      "cmd": "env can count 0 vs canary 2",
+      "cmd": "status ho count/unique 0",
       "ok": true,
       "note": "exact"
     },
     {
+      "name": "probe_soft",
+      "cmd": "TRYSEND soft; empty clamp/unique N=0",
+      "ok": true,
+      "note": "soft"
+    },
+    {
       "name": "setmatch_first",
-      "cmd": "two p0:sample \u2192 SETMATCH leaves 1",
+      "cmd": "two w0:clamp → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -77,49 +71,49 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "339/339 pass"
+      "note": "340/340 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
-      "severity": "high",
-      "area": "oop|where|clobber",
-      "title": "Chained *WHERE ops clobber each other's result specials",
-      "detail": "MEDIANWHERE then FREQWHERE \u2192 FREQWHERE_TOTAL=0; reverse \u2192 median LAST_N=0. Dual-gate admit cannot compute p50+hist in one action without plate shuttle or re-query isolation.",
-      "repro": "MEDIANWHERE; FREQWHERE \u2192 TOTAL 0; FREQWHERE; MEDIANWHERE \u2192 p50 0"
+      "severity": "med",
+      "area": "oop|clampwhere",
+      "title": "CLAMPWHERE equality match only — no rate>HI predicate without status",
+      "detail": "Cannot clamp only workers already over budget without a status/tag field. Agents must mark hot first or clamp entire class.",
+      "repro": "want clamp rate>100 only; need status=hot marker"
     },
     {
       "id": "W2",
-      "severity": "high",
-      "area": "bag|let",
-      "title": "LET bag = LAST loses bag type for TOPKEY/LOOKUPN",
-      "detail": "SYS TOPKEY hbag after LET hbag=LAST from FREQWHERE \u2192 unknown form 'hbag'. Must TOPKEY FREQWHERE special directly.",
-      "repro": "FREQWHERE; LET h=LAST; SYS TOPKEY h \u2192 unknown form"
+      "severity": "med",
+      "area": "oop|clampwhere",
+      "title": "No per-pool LO/HI — one bound for all matching status",
+      "detail": "api and batch hot workers share same clamp range; multi-pool budgets need multiple CLAMPWHERE or SETFWHERE glue.",
+      "repro": "hot api cap 100 batch cap 50 — one clamp hits both"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "sys|eqs",
-      "title": "SYS EQS on LET-captured mode strings flaky in ARG boards",
-      "detail": "LET mode_s=LAST after MODEWHERE then SYS EQS mode_s want_st \u2192 unknown form or false-neg in multi-action agent board; works in short proofs. Prefer LOOKUPN FREQWHERE want_st counts.",
-      "repro": "MODEWHERE; LET m=LAST; SYS EQS m want \u2192 unknown form m"
+      "area": "oop|uniquwhere",
+      "title": "UNIQUWHERE first-seen order not sorted; no count per unique",
+      "detail": "Pool inventory is unordered first-seen; frequency needs FREQWHERE separately (and *WHERE clobber risk from iter 130).",
+      "repro": "UNIQUWHERE returns bag without :count"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|modewhere",
-      "title": "MODEWHERE ties \u2192 first-seen; empty \u2192 blank not soft miss",
-      "detail": "ok+fail tie \u2192 first-seen ok. Empty env mode blank; admit must check N/TOTAL.",
-      "repro": "mode canary with ok/fail; mode missing \u2192 blank"
+      "area": "oop|maxwhere|empty",
+      "title": "Empty MAXWHERE → 0 like true zero rate",
+      "detail": "Admit must COUNTWHERE N>0; empty status would admit under BUDGET≥0 without gate.",
+      "repro": "max_rate missing → 0 N=0"
     },
     {
       "id": "W5",
-      "severity": "med",
-      "area": "oop|medianwhere",
-      "title": "Empty MEDIANWHERE \u2192 0 indistinguishable from true zero latency",
-      "detail": "Need MEDIANWHERE_N; even-N uses lower mid.",
-      "repro": "p50 missing \u2192 0 N=0"
+      "severity": "low",
+      "area": "oop|clampwhere",
+      "title": "LO>HI auto-swap is silent — no warn",
+      "detail": "LO=50 HI=20 becomes [20,50] via CLAMPWHERE_LO/HI; agent mis-order bounds without hard error.",
+      "repro": "META lo 20 hi 50 after LO=50 HI=20"
     },
     {
       "id": "W6",
@@ -127,14 +121,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c P50.txt"
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
-      "title": "Non-numeric REQUIRE softens",
-      "detail": "REQUIRE=abc \u2192 soft.",
+      "title": "Non-numeric REQUIRE/LO/HI softens",
+      "detail": "REQUIRE=abc → soft; bad LO keeps default.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,33 +136,34 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:sample \u2192 one SETMATCH leaves 1.",
+      "detail": "Two w0:clamp → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Plate-shuttle p50 (P50.txt) then FREQWHERE admit \u2014 never chain *WHERE specials",
-    "TOPKEY/LOOKUPN FREQWHERE special not LET bag",
-    "Majority via LOOKUPN count vs FREQWHERE_TOTAL not SYS EQS mode string",
-    "Always check *_N / TOTAL for empty env",
+    "Tag workers hot before CLAMPWHERE status match",
+    "Per-pool caps: multiple CLAMPWHERE with different status tags",
+    "FREQWHERE for pool:count; UNIQUWHERE for inventory only",
+    "COUNTWHERE N>0 before MAXWHERE admit",
+    "Read CLAMPWHERE_LO/HI after call to detect auto-swap",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "Isolated result registers per *WHERE op (no clobber)",
-    "LET bag preserves TOPKEY/LOOKUPN bag type",
-    "Reliable SYS EQS for LET string captures after MODEWHERE",
-    "MODEWHERE multi-mode / tie bag",
-    "Empty sample soft miss vs zero value",
+    "CLAMPWHERE with numeric predicate (rate>N) not only field==value",
+    "Per-group clamp bounds (pool→[lo,hi] map)",
+    "UNIQUWHERE sorted + with counts option",
+    "Empty MAXWHERE soft miss vs zero",
+    "Warn on LO>HI auto-swap",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "MEDIANWHERE canary 40; FREQWHERE ok:2; MODEWHERE ok",
-    "Chained WHERE clobber forced P50.txt shuttle for dual-gate admit",
-    "SYS TOPKEY LET bag unknown form; SYS EQS mode_s unknown form",
-    "admit after p50: budget 100 ok; 30 deny; want fail deny",
-    "outlier 40/50/1000 \u2192 p50 50; empty env p50 0 mode blank",
-    "selftest 339/339 green; no language fix this iter"
+    "CLAMPWHERE hot 150→100 -5→0; idle 200 untouched CHANGED=2",
+    "UNIQUWHERE hot pools → api; idle → batch",
+    "MAXWHERE 100; admit budget 100 ok; 50 deny",
+    "second clamp CHANGED=0; LO>HI auto-swap 10→20",
+    "empty missing clamp N=0; admit REQUIRE deny",
+    "selftest 340/340 green; no language fix this iter"
   ],
-  "commit": "7fce8a45c29c70dade74cdceb243431b9efe420e",
-  "ts": "2026-08-07T09:59:38Z"
+  "commit": "",
+  "ts": "2026-08-07T10:14:12Z"
 }
