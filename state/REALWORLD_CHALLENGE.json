@@ -15,19 +15,19 @@
     },
     {
       "name": "p50_medianwhere",
-      "cmd": "MEDIANWHERE latency env canary → 40 (even lower mid)",
+      "cmd": "MEDIANWHERE latency env canary \u2192 40 (even lower mid)",
       "ok": true,
       "note": "MEDIANWHERE"
     },
     {
       "name": "hist_freqwhere",
-      "cmd": "FREQWHERE status canary → ok:2",
+      "cmd": "FREQWHERE status canary \u2192 ok:2",
       "ok": true,
       "note": "FREQWHERE"
     },
     {
       "name": "mode_modewhere",
-      "cmd": "MODEWHERE status canary → ok",
+      "cmd": "MODEWHERE status canary \u2192 ok",
       "ok": true,
       "note": "MODEWHERE"
     },
@@ -39,13 +39,13 @@
     },
     {
       "name": "admit_budget_deny",
-      "cmd": "budget 30 with p50 40 → EXIT 2",
+      "cmd": "budget 30 with p50 40 \u2192 EXIT 2",
       "ok": true,
       "note": "REQUIRE"
     },
     {
       "name": "admit_mode_deny",
-      "cmd": "want fail while ok majority → EXIT 2",
+      "cmd": "want fail while ok majority \u2192 EXIT 2",
       "ok": true,
       "note": "mode gate"
     },
@@ -57,7 +57,7 @@
     },
     {
       "name": "outlier_median",
-      "cmd": "40,50,1000 → p50 50 stable",
+      "cmd": "40,50,1000 \u2192 p50 50 stable",
       "ok": true,
       "note": "robust"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "setmatch_first",
-      "cmd": "two p0:sample → SETMATCH leaves 1",
+      "cmd": "two p0:sample \u2192 SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
@@ -86,40 +86,40 @@
       "severity": "high",
       "area": "oop|where|clobber",
       "title": "Chained *WHERE ops clobber each other's result specials",
-      "detail": "MEDIANWHERE then FREQWHERE → FREQWHERE_TOTAL=0; reverse → median LAST_N=0. Dual-gate admit cannot compute p50+hist in one action without plate shuttle or re-query isolation.",
-      "repro": "MEDIANWHERE; FREQWHERE → TOTAL 0; FREQWHERE; MEDIANWHERE → p50 0"
+      "detail": "MEDIANWHERE then FREQWHERE \u2192 FREQWHERE_TOTAL=0; reverse \u2192 median LAST_N=0. Dual-gate admit cannot compute p50+hist in one action without plate shuttle or re-query isolation.",
+      "repro": "MEDIANWHERE; FREQWHERE \u2192 TOTAL 0; FREQWHERE; MEDIANWHERE \u2192 p50 0"
     },
     {
       "id": "W2",
       "severity": "high",
       "area": "bag|let",
       "title": "LET bag = LAST loses bag type for TOPKEY/LOOKUPN",
-      "detail": "SYS TOPKEY hbag after LET hbag=LAST from FREQWHERE → unknown form 'hbag'. Must TOPKEY FREQWHERE special directly.",
-      "repro": "FREQWHERE; LET h=LAST; SYS TOPKEY h → unknown form"
+      "detail": "SYS TOPKEY hbag after LET hbag=LAST from FREQWHERE \u2192 unknown form 'hbag'. Must TOPKEY FREQWHERE special directly.",
+      "repro": "FREQWHERE; LET h=LAST; SYS TOPKEY h \u2192 unknown form"
     },
     {
       "id": "W3",
       "severity": "med",
       "area": "sys|eqs",
       "title": "SYS EQS on LET-captured mode strings flaky in ARG boards",
-      "detail": "LET mode_s=LAST after MODEWHERE then SYS EQS mode_s want_st → unknown form or false-neg in multi-action agent board; works in short proofs. Prefer LOOKUPN FREQWHERE want_st counts.",
-      "repro": "MODEWHERE; LET m=LAST; SYS EQS m want → unknown form m"
+      "detail": "LET mode_s=LAST after MODEWHERE then SYS EQS mode_s want_st \u2192 unknown form or false-neg in multi-action agent board; works in short proofs. Prefer LOOKUPN FREQWHERE want_st counts.",
+      "repro": "MODEWHERE; LET m=LAST; SYS EQS m want \u2192 unknown form m"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|modewhere",
-      "title": "MODEWHERE ties → first-seen; empty → blank not soft miss",
-      "detail": "ok+fail tie → first-seen ok. Empty env mode blank; admit must check N/TOTAL.",
-      "repro": "mode canary with ok/fail; mode missing → blank"
+      "title": "MODEWHERE ties \u2192 first-seen; empty \u2192 blank not soft miss",
+      "detail": "ok+fail tie \u2192 first-seen ok. Empty env mode blank; admit must check N/TOTAL.",
+      "repro": "mode canary with ok/fail; mode missing \u2192 blank"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "oop|medianwhere",
-      "title": "Empty MEDIANWHERE → 0 indistinguishable from true zero latency",
+      "title": "Empty MEDIANWHERE \u2192 0 indistinguishable from true zero latency",
       "detail": "Need MEDIANWHERE_N; even-N uses lower mid.",
-      "repro": "p50 missing → 0 N=0"
+      "repro": "p50 missing \u2192 0 N=0"
     },
     {
       "id": "W6",
@@ -134,7 +134,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens",
-      "detail": "REQUIRE=abc → soft.",
+      "detail": "REQUIRE=abc \u2192 soft.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,12 +142,12 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two p0:sample → one SETMATCH leaves 1.",
+      "detail": "Two p0:sample \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "Plate-shuttle p50 (P50.txt) then FREQWHERE admit — never chain *WHERE specials",
+    "Plate-shuttle p50 (P50.txt) then FREQWHERE admit \u2014 never chain *WHERE specials",
     "TOPKEY/LOOKUPN FREQWHERE special not LET bag",
     "Majority via LOOKUPN count vs FREQWHERE_TOTAL not SYS EQS mode string",
     "Always check *_N / TOTAL for empty env",
@@ -166,9 +166,9 @@
     "Chained WHERE clobber forced P50.txt shuttle for dual-gate admit",
     "SYS TOPKEY LET bag unknown form; SYS EQS mode_s unknown form",
     "admit after p50: budget 100 ok; 30 deny; want fail deny",
-    "outlier 40/50/1000 → p50 50; empty env p50 0 mode blank",
+    "outlier 40/50/1000 \u2192 p50 50; empty env p50 0 mode blank",
     "selftest 339/339 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "7fce8a45c29c70dade74cdceb243431b9efe420e",
   "ts": "2026-08-07T09:59:38Z"
 }
