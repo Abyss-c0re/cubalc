@@ -13135,6 +13135,188 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* STRIPPREFIXF|DROPPREFIXF|UNPREFIXF obj field prefix
+   * STRIPSUFFIXF|DROPSUFFIXF|UNSUFFIXF obj field suffix
+   * TRYSTRIPPREFIXF|STRIPPREFIXF SOFT — soft miss OK=0 sticky LAST_ERR.
+   * Drop fixed leading/trailing affix when present; no-op if missing.
+   * Empty affix → no-op. Promotes num→str. LAST = result; LAST_N = length;
+   * STRIPPREFIXF_HIT / STRIPSUFFIXF_HIT = 1 if shortened.
+   * Usability: path roots / file extensions without GETF+STARTS+SLICEF+SETF
+   * (METHOD/THIS; pairs STARTSF/ENDSF/BEFOREF). */
+  if (kw(&L->cur, "STRIPPREFIXF") || kw(&L->cur, "DROPPREFIXF") ||
+      kw(&L->cur, "UNPREFIXF") || kw(&L->cur, "CHOPPREFIXF") ||
+      kw(&L->cur, "REMOVEPREFIXF") || kw(&L->cur, "FIELDSTRIPPRE") ||
+      kw(&L->cur, "STRIPSUFFIXF") || kw(&L->cur, "DROPSUFFIXF") ||
+      kw(&L->cur, "UNSUFFIXF") || kw(&L->cur, "CHOPSUFFIXF") ||
+      kw(&L->cur, "REMOVESUFFIXF") || kw(&L->cur, "FIELDSTRIPSUF") ||
+      kw(&L->cur, "TRYSTRIPPREFIXF") || kw(&L->cur, "STRIPPREFIXFSOFT") ||
+      kw(&L->cur, "SOFTSTRIPPREFIXF") || kw(&L->cur, "TRYSTRIPSUFFIXF") ||
+      kw(&L->cur, "STRIPSUFFIXFSOFT") || kw(&L->cur, "SOFTSTRIPSUFFIXF") ||
+      kw(&L->cur, "TRYDROPPREFIXF") || kw(&L->cur, "TRYDROPSUFFIXF")) {
+    char oname[48], fname[48], op[24], hay[256], affix[256], out[256];
+    ObjInst *ob;
+    ClassDef *cd;
+    int fi, soft = 0, is_suf = 0, hit = 0;
+    size_t hn, an;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "STRIPSUFFIXF") == 0 || strcmp(op, "DROPSUFFIXF") == 0 ||
+        strcmp(op, "UNSUFFIXF") == 0 || strcmp(op, "CHOPSUFFIXF") == 0 ||
+        strcmp(op, "REMOVESUFFIXF") == 0 || strcmp(op, "FIELDSTRIPSUF") == 0 ||
+        strcmp(op, "TRYSTRIPSUFFIXF") == 0 || strcmp(op, "STRIPSUFFIXFSOFT") == 0 ||
+        strcmp(op, "SOFTSTRIPSUFFIXF") == 0 || strcmp(op, "TRYDROPSUFFIXF") == 0)
+      is_suf = 1;
+    if (strcmp(op, "TRYSTRIPPREFIXF") == 0 || strcmp(op, "STRIPPREFIXFSOFT") == 0 ||
+        strcmp(op, "SOFTSTRIPPREFIXF") == 0 || strcmp(op, "TRYSTRIPSUFFIXF") == 0 ||
+        strcmp(op, "STRIPSUFFIXFSOFT") == 0 || strcmp(op, "SOFTSTRIPSUFFIXF") == 0 ||
+        strcmp(op, "TRYDROPPREFIXF") == 0 || strcmp(op, "TRYDROPSUFFIXF") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPT") || kw(&L->cur, "OPTIONAL"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, is_suf ? "STRIPSUFFIXF object field suffix"
+                      : "STRIPPREFIXF object field prefix");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    } else {
+      fail(vm, is_suf ? "STRIPSUFFIXF field" : "STRIPPREFIXF field");
+      return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "WITH") || kw(&L->cur, "FROM") ||
+        kw(&L->cur, "AS") || kw(&L->cur, "IS"))
+      lex_next(L);
+    affix[0] = 0;
+    if (resolve_str_arg(vm, L, affix, sizeof affix) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+          L->cur.kind == TK_LPAREN) {
+        long v = parse_expr(vm, L);
+        snprintf(affix, sizeof affix, "%ld", v);
+      } else {
+        fail(vm, is_suf ? "STRIPSUFFIXF object field suffix"
+                        : "STRIPPREFIXF object field prefix");
+        return -1;
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      const char *tag = is_suf ? "STRIPSUFFIXF" : "STRIPPREFIXF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown object %s", tag, oname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "STRIPPREFIXF_N", 0);
+      var_set_num(vm, "STRIPSUFFIXF_N", 0);
+      var_set_num(vm, "STRIPPREFIXF_HIT", 0);
+      var_set_num(vm, "STRIPSUFFIXF_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[56];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown object", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    fi = oop_field_idx(cd, fname);
+    if (fi < 0) {
+      const char *tag = is_suf ? "STRIPSUFFIXF" : "STRIPPREFIXF";
+      if (!soft) {
+        snprintf(vm->err, sizeof vm->err, "%s unknown FIELD %s", tag, fname);
+        fail(vm, vm->err); return -1;
+      }
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "STRIPPREFIXF_N", 0);
+      var_set_num(vm, "STRIPSUFFIXF_N", 0);
+      var_set_num(vm, "STRIPPREFIXF_HIT", 0);
+      var_set_num(vm, "STRIPSUFFIXF_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char ebuf[56];
+        snprintf(ebuf, sizeof ebuf, "%s: unknown field", tag);
+        var_set_str(vm, "LAST_ERR", ebuf);
+        var_set_str(vm, "ERR", ebuf);
+      }
+      bump(vm);
+      return 1;
+    }
+    if (ob->fis_str[fi])
+      snprintf(hay, sizeof hay, "%s", ob->fstr[fi]);
+    else
+      snprintf(hay, sizeof hay, "%ld", ob->fnum[fi]);
+    hn = strlen(hay);
+    an = strlen(affix);
+    snprintf(out, sizeof out, "%s", hay);
+    hit = 0;
+    if (an > 0 && an <= hn) {
+      if (!is_suf) {
+        if (memcmp(hay, affix, an) == 0) {
+          snprintf(out, sizeof out, "%s", hay + an);
+          hit = 1;
+        }
+      } else {
+        if (memcmp(hay + hn - an, affix, an) == 0) {
+          size_t keep = hn - an;
+          if (keep >= sizeof out) keep = sizeof out - 1;
+          memcpy(out, hay, keep);
+          out[keep] = 0;
+          hit = 1;
+        }
+      }
+    }
+    snprintf(ob->fstr[fi], sizeof ob->fstr[fi], "%s", out);
+    ob->fis_str[fi] = 1;
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = (long)strlen(out);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    if (is_suf) {
+      var_set_num(vm, "STRIPSUFFIXF_N", 1);
+      var_set_num(vm, "STRIPSUFFIXF_HIT", hit);
+      var_set_num(vm, "STRIPPREFIXF_N", 0);
+      var_set_num(vm, "STRIPPREFIXF_HIT", 0);
+    } else {
+      var_set_num(vm, "STRIPPREFIXF_N", 1);
+      var_set_num(vm, "STRIPPREFIXF_HIT", hit);
+      var_set_num(vm, "STRIPSUFFIXF_N", 0);
+      var_set_num(vm, "STRIPSUFFIXF_HIT", 0);
+    }
+    var_set_str(vm, "FIELD", fname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* LEFTF|RIGHTF|SLICEF|SUBSTRF|TRUNCF obj field n [count]
    * TRYLEFTF|LEFTF SOFT — soft miss OK=0.
    * In-place string slice on a field (promotes num→str).

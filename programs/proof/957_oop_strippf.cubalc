@@ -1,0 +1,146 @@
+# STRIPPREFIXF / STRIPSUFFIXF — drop affix on one field for agents
+# Usability: path roots / extensions without GETF+STARTS+SLICEF+SETF
+# Pairs STARTSF/ENDSF/BEFOREF; METHOD/THIS
+
+HOLD_FLASH 1
+
+CLASS File
+  FIELD path "/usr/local/bin"
+  FIELD name "app.cubalc"
+  FIELD code 100
+  METHOD init
+  END
+  METHOD unroot
+    STRIPPREFIXF THIS path "/usr/"
+  END
+  METHOD unext
+    STRIPSUFFIXF THIS name ".cubalc"
+  END
+END
+
+NEW File f
+
+# strip prefix
+STRIPPREFIXF f path "/usr/"
+ASSERT OK == 1
+ASSERT STRIPPREFIXF_N == 1
+ASSERT STRIPPREFIXF_HIT == 1
+SYS EQS LAST "local/bin"
+ASSERT LAST_N == 1
+GETF f path
+SYS EQS LAST "local/bin"
+ASSERT LAST_N == 1
+SYS EQS FIELD "path"
+ASSERT LAST_N == 1
+
+# miss prefix → no-op, HIT=0
+SETF f path "/opt/bin"
+STRIPPREFIXF f path "/usr/"
+ASSERT STRIPPREFIXF_HIT == 0
+SYS EQS LAST "/opt/bin"
+ASSERT LAST_N == 1
+
+# empty prefix → no-op
+SETF f path "abc"
+STRIPPREFIXF f path ""
+ASSERT STRIPPREFIXF_HIT == 0
+SYS EQS LAST "abc"
+ASSERT LAST_N == 1
+
+# strip suffix
+SETF f name "app.cubalc"
+STRIPSUFFIXF f name ".cubalc"
+ASSERT OK == 1
+ASSERT STRIPSUFFIXF_N == 1
+ASSERT STRIPSUFFIXF_HIT == 1
+SYS EQS LAST "app"
+ASSERT LAST_N == 1
+GETF f name
+SYS EQS LAST "app"
+ASSERT LAST_N == 1
+
+# miss suffix
+SETF f name "readme.md"
+STRIPSUFFIXF f name ".cubalc"
+ASSERT STRIPSUFFIXF_HIT == 0
+SYS EQS LAST "readme.md"
+ASSERT LAST_N == 1
+
+# aliases
+SETF f path "pre-body"
+DROPPREFIXF f path "pre-"
+SYS EQS LAST "body"
+ASSERT LAST_N == 1
+SETF f path "pre-body"
+UNPREFIXF f path "pre-"
+SYS EQS LAST "body"
+ASSERT LAST_N == 1
+SETF f name "x.tmp"
+DROPSUFFIXF f name ".tmp"
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+SETF f name "y.bak"
+UNSUFFIXF f name ".bak"
+SYS EQS LAST "y"
+ASSERT LAST_N == 1
+
+# promote num
+SETF f code 100
+STRIPPREFIXF f code "1"
+ASSERT STRIPPREFIXF_HIT == 1
+SYS EQS LAST "00"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF f path "/usr/share/doc"
+SEND f unroot
+GETF f path
+SYS EQS LAST "share/doc"
+ASSERT LAST_N == 1
+
+SETF f name "lib.cubalc"
+SEND f unext
+GETF f name
+SYS EQS LAST "lib"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYSTRIPPREFIXF nosuch path "/x"
+ASSERT OK == 0
+ASSERT STRIPPREFIXF_N == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+TRYSTRIPSUFFIXF nosuch name ".x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+STRIPPREFIXF SOFT f nosuch "/x"
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+SETF f path "zz-ok"
+STRIPPREFIXF f path "zz-"
+ASSERT OK == 1
+SYS EQS LAST "ok"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF f path "root/a"
+STRIPPREFIXF f "path" "root/"
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# HELP
+HELP STRIPPREFIXF
+SYS HAS LAST "STRIPPREFIXF"
+ASSERT LAST_N == 1
+HELP STRIPSUFFIXF
+SYS HAS LAST "STRIPSUFFIXF"
+ASSERT LAST_N == 1
+
+PRINT "oop_strippf ok"
