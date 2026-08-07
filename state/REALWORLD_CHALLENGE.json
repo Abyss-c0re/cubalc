@@ -1,99 +1,93 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 119,
-  "program": "programs/realworld/job_gc_board.cubalc",
-  "theme": "DELETEWHERE/SENDWHERE job GC + selective ack/requeue/stale + plate dump hygiene + bag journal",
-  "version": "1.15.335-usability",
+  "iter": 120,
+  "program": "programs/realworld/shard_load_pick_board.cubalc",
+  "theme": "INCFALL/DECFALL + MAXOBJ/MINOBJ + SORTBYF shard load pick/rank + place/shed + bag journal",
+  "version": "1.15.337-usability",
   "pass": true,
-  "prior_note": "iter 118 replica_fleet GETFALL/WHEREOBJ; this iter stresses DELETEWHERE+SENDWHERE (fdc95e4/8974fe7)",
+  "prior_note": "iter 119 job_gc DELETEWHERE/SENDWHERE; this iter stresses INCFALL+MAXOBJ+SORTBYF (defe82d/3e34ce3/SORTBYF)",
   "tests": [
     {
-      "name": "open_done_failed_running",
-      "cmd": "open j0 done j1 failed j2 running",
+      "name": "open_s0_s1_s2",
+      "cmd": "open loads 10/30/20",
       "ok": true,
       "note": "NEW"
     },
     {
-      "name": "sendwhere_ack",
-      "cmd": "SENDWHERE state done ack \u2192 N=1; acked:1",
+      "name": "hottest_coldest",
+      "cmd": "MAXOBJ s1/30; MINOBJ s0/10",
       "ok": true,
-      "note": "SENDWHERE"
+      "note": "MAX/MIN"
     },
     {
-      "name": "sendwhere_requeue",
-      "cmd": "SENDWHERE failed requeue \u2192 j1 queued tries:1",
+      "name": "rank_desc",
+      "cmd": "SORTBYF DESC s1 s2 s0",
       "ok": true,
-      "note": "requeue"
+      "note": "SORTBYF"
     },
     {
-      "name": "mark_stale",
-      "cmd": "SENDWHERE running stale_out \u2192 j2 stale",
+      "name": "tick_incfall",
+      "cmd": "INCFALL +5 N=3; harvest sum:75 avg:25",
       "ok": true,
-      "note": "poison"
+      "note": "INCFALL"
     },
     {
-      "name": "gate_stale_require",
-      "cmd": "gate soft deny; REQUIRE\u2192rc2",
+      "name": "place_coldest",
+      "cmd": "MINOBJ + SEND bump → s0 load 16",
+      "ok": true,
+      "note": "place"
+    },
+    {
+      "name": "shed_hottest",
+      "cmd": "MAXOBJ s1 load-1 → 34",
+      "ok": true,
+      "note": "shed"
+    },
+    {
+      "name": "cool_decfall",
+      "cmd": "DECFALL 2; sum:69 avg:23",
+      "ok": true,
+      "note": "DECFALL"
+    },
+    {
+      "name": "gate_admit_deny",
+      "cmd": "MAX<=50 admit; MAX=5 soft/REQUIRE rc2",
       "ok": true,
       "note": "gate"
     },
     {
-      "name": "deletewhere_gc_stale",
-      "cmd": "DELETEWHERE stale N=1 FREED=j2 dump RM",
+      "name": "tie_first_seen",
+      "cmd": "s0=s2=99 MAXOBJ → s0 first",
       "ok": true,
-      "note": "DELETEWHERE"
-    },
-    {
-      "name": "gate_admit_after_gc",
-      "cmd": "gate admit no stale",
-      "ok": true,
-      "note": "admit"
-    },
-    {
-      "name": "gc_done",
-      "cmd": "DELETEWHERE done N=1 list j1 only",
-      "ok": true,
-      "note": "gc_done"
-    },
-    {
-      "name": "harvest_tries",
-      "cmd": "GETFALL tries n:1 sum:1",
-      "ok": true,
-      "note": "GETFALL"
+      "note": "tie"
     },
     {
       "name": "count_setmatch_pin",
-      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
+      "cmd": "exact false friend; SETMATCH 2→1; pin",
       "ok": true,
       "note": "journal"
     },
     {
       "name": "probe_soft_skip",
-      "cmd": "TRYSEND soft; SENDWHERE miss method SKIP; empty DELETEWHERE 0",
+      "cmd": "TRYSEND soft; INCFALL miss SKIP=3",
       "ok": true,
       "note": "soft"
     },
     {
-      "name": "empty_gc_ack",
-      "cmd": "gc_stale N=0; ack N=0 soft",
+      "name": "empty_hottest_tick",
+      "cmd": "hottest REQUIRE rc2; tick N=0; rank N=0",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "reuse_name_after_free",
-      "cmd": "gc_stale j0; NEW j0 queued reuses slot",
-      "ok": true,
-      "note": "reuse"
-    },
-    {
       "name": "bad_slot_require",
-      "cmd": "open xx soft/REQUIRE\u21922",
+      "cmd": "open xx soft/REQUIRE→2",
       "ok": true,
       "note": "miss"
     },
     {
       "name": "num_require_softens",
-      "cmd": "REQUIRE=abc gate \u2192 soft",
+      "cmd": "REQUIRE=abc hottest empty soft",
       "ok": true,
       "note": "NUM"
     },
@@ -107,52 +101,60 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "311/311 pass"
+      "note": "313/313 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|persist",
-      "title": "DELETEWHERE is process-local \u2014 plate dumps rehydrate freed jobs",
-      "detail": "GC must RM dump/jN for each name in DELETEWHERE bag or next ARG run restores objects. No cascade free\u2192plate. Same class as DELETEALL trap.",
-      "repro": "DELETEWHERE state stale without RM dump; next list rehydrates"
+      "area": "oop|last",
+      "title": "GETF LAST clobbers object name in LAST — SETF LAST after GETF fails",
+      "detail": "After MAXOBJ/MINOBJ, GETF LAST load replaces LAST with field value so SETF LAST load no longer targets the object. Agents must SEND LAST meth before GETF, re-MAXOBJ, or EQS wall. Shed re-MAXOBJ workaround documented.",
+      "repro": "MAXOBJ; GETF LAST load; SETF LAST load x → wrong target"
     },
     {
       "id": "W2",
       "severity": "high",
-      "area": "oop|where",
-      "title": "DELETEWHERE/SENDWHERE equality only \u2014 no multi-state or range GC",
-      "detail": "Cannot DELETEWHERE state in {done,failed} or tries>3. Agents run multiple gc_state or EACH.",
-      "repro": "need two DELETEWHERE for done+failed cleanup"
+      "area": "oop|maxobj",
+      "title": "MAXOBJ/MINOBJ return first tie only — no multi-max bag",
+      "detail": "s0=s2=99 → hottest s0 only. Cannot list all ties without EACH. Ops shed may starve second max.",
+      "repro": "two shards load 99; MAXOBJ → first-seen"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|sendwhere",
-      "title": "SENDWHERE miss method soft skip \u2014 no hard fail mode",
-      "detail": "SENDWHERE Job state queued no_meth_zz \u2192 N=0 SKIP>0 OK=1. Typo methods silent under -s without agent checks.",
-      "repro": "SENDWHERE \u2026 typo_method \u2192 soft"
+      "area": "oop|incfall",
+      "title": "INCFALL/DECFALL unfiltered — bumps entire class",
+      "detail": "No INCFALL Shard load WHERE region a. Bulk tick hits all shards; selective bump needs EACH or per-slot.",
+      "repro": "tick +5 on all live Shards"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|name",
-      "title": "Fixed slot EQS + dump RM wall for freed names",
-      "detail": "Cannot loop DELETEWHERE bag names to RM dumps without per-slot HASLINE j0|j1|j2. Dynamic path from free name still awkward.",
-      "repro": "HASLINE fbag j0; RM d_j0 \u00d73"
+      "area": "oop|sortbyf",
+      "title": "SORTBYF returns name bag not live handles — SEND on rank needs NTH+LAST dance",
+      "detail": "RANK plate is strings; cannot SEND rank_bag[0] without NTH 0 then SEND LAST if LAST still works.",
+      "repro": "SORTBYF; cannot bulk SEND ranked"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two j0:ack \u2192 one SETMATCH leaves 1.",
-      "repro": "count drops by 1"
+      "area": "oop|persist",
+      "title": "Process-local objects force DUMPOBJ rehydrate every ARG run",
+      "detail": "place/shed dump all slots after mutation; no native persistence.",
+      "repro": "place then new process harvest without dump"
     },
     {
       "id": "W6",
+      "severity": "med",
+      "area": "bag|setmatch",
+      "title": "SETMATCH first exact only",
+      "detail": "Two s0:load → one SETMATCH leaves 1.",
+      "repro": "count drops by 1"
+    },
+    {
+      "id": "W7",
       "severity": "low",
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
@@ -160,55 +162,48 @@
       "repro": "od -c VAL.txt"
     },
     {
-      "id": "W7",
+      "id": "W8",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_JG_REQUIRE=abc \u2192 soft gate.",
+      "detail": "CUBALC_SL_REQUIRE=abc → soft empty hottest.",
       "repro": "REQUIRE=abc"
-    },
-    {
-      "id": "W8",
-      "severity": "low",
-      "area": "host|join",
-      "title": "SYS JOIN path-only \u2014 harvest uses REPLACEALL template",
-      "detail": "n:N sum:S not JOIN.",
-      "repro": "SYS JOIN n: count \u2192 n:/1"
     },
     {
       "id": "W9",
       "severity": "low",
-      "area": "oop|gc",
-      "title": "No atomic DELETEWHERE + plate unlink + journal event",
-      "detail": "Agents co-author free + RM + journal; partial failure leaves inconsistent plate.",
-      "repro": "crash between DELETEWHERE and RM"
+      "area": "host|join",
+      "title": "SYS JOIN path-only — harvest REPLACEALL template",
+      "detail": "n:N sum:S avg:A not JOIN.",
+      "repro": "SYS JOIN n: 3 → n:/3"
     }
   ],
   "workarounds": [
-    "Always RM dump slots listed in DELETEWHERE bag after GC",
-    "Multiple DELETEWHERE/SENDWHERE passes for multi-state policies",
-    "Check SENDWHERE_N and SENDWHERE_SKIP after selective dispatch",
-    "Literal j0|j1|j2 HASLINE for dump hygiene",
-    "Predeclare board_rep bag; CLEAR_ERR after soft ops",
-    "COUNTLINE exact tokens; loop SETMATCH"
+    "SEND LAST bump immediately after MINOBJ before any GETF",
+    "Re-MAXOBJ or EQS wall after GETF when mutating extreme pick",
+    "Accept first-tie MAXOBJ or EACH for multi-max",
+    "DUMPOBJ all slots after place/shed; predeclare board_rep",
+    "NTH 0 SORTBYF then SEND LAST for top rank",
+    "COUNTLINE exact; loop SETMATCH; CLEAR_ERR after soft"
   ],
   "language_gaps": [
-    "DELETEWHERE/SENDWHERE multi-value OR and inequality",
-    "DELETEWHERE cascade to plate files",
-    "Strict SENDWHERE (fail on missing method)",
-    "Dynamic path from free-name bag without slot wall",
-    "Atomic GC transaction (memory+plate+journal)",
+    "SETF/SEND preserving object name across GETF (sticky THIS/OBJ)",
+    "MAXOBJS bag of all ties",
+    "INCFALL WHERE field predicate",
+    "SORTBYF then SENDALL on ranked subset",
+    "Native multi-run object persistence",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE",
     "String concat (not path JOIN)"
   ],
   "issues_faced": [
-    "SENDWHERE ack/requeue/mark_stale selective dispatch worked",
-    "DELETEWHERE gc_stale freed j2 kept j0/j1; dump RM hygiene ok",
-    "empty DELETEWHERE/SENDWHERE soft N=0",
-    "NEW reuses freed j0 name after gc",
-    "SETMATCH first-only 2\u21921; COUNTLINE false friend j0\u21920",
-    "selftest 311/311 green (transient 4-fail was mid-rebuild race); no language fix this iter"
+    "INCFALL+5 harvest sum:75; DECFALL 2 sum:69 worked",
+    "MAXOBJ/MINOBJ/SORTBYF DESC ranking clean",
+    "place SEND LAST bump after MINOBJ — GETF would clobber LAST (W1)",
+    "shed needs re-MAXOBJ before SETF after GETF load",
+    "tie s0=s2=99 → first-seen s0",
+    "empty MAXOBJ soft N=0 OK=0; INCFALL empty N=0",
+    "selftest 313/313 green; no language fix this iter"
   ],
-  "commit": "ff4721f93fda564caaaf131cc8e02e235e64046f",
-  "ts": "2026-08-07T05:16:01Z"
+  "commit": "",
+  "ts": "2026-08-07T05:42:00Z"
 }
