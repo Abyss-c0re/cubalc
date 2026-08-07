@@ -33,7 +33,7 @@
     },
     {
       "name": "field_json",
-      "cmd": "FIELDINFO JSON → cubalc.field.v1",
+      "cmd": "FIELDINFO JSON \u2192 cubalc.field.v1",
       "ok": true,
       "note": "JSON"
     },
@@ -45,13 +45,13 @@
     },
     {
       "name": "gate_kind",
-      "cmd": "EXPECT str status admit; retries deny REQUIRE→2",
+      "cmd": "EXPECT str status admit; retries deny REQUIRE\u21922",
       "ok": true,
       "note": "gate_kind"
     },
     {
       "name": "gate_def",
-      "cmd": "status admit; bare note deny REQUIRE→2",
+      "cmd": "status admit; bare note deny REQUIRE\u21922",
       "ok": true,
       "note": "gate_def"
     },
@@ -80,8 +80,8 @@
       "severity": "high",
       "area": "oop|field",
       "title": "Bare FIELD note defaults to kind:num HAS_DEF=0",
-      "detail": "FIELD note without initializer is treated as numeric kind with no default — surprising for free-text notes. Agents SETF string into note may hit type friction; contract boards must gate_def + kind.",
-      "repro": "FIELDINFO Ticket note → kind:num has_def:0"
+      "detail": "FIELD note without initializer is treated as numeric kind with no default \u2014 surprising for free-text notes. Agents SETF string into note may hit type friction; contract boards must gate_def + kind.",
+      "repro": "FIELDINFO Ticket note \u2192 kind:num has_def:0"
     },
     {
       "id": "W2",
@@ -95,9 +95,9 @@
       "id": "W3",
       "severity": "med",
       "area": "host|num",
-      "title": "SYS NUM only on LAST — ARG2 must be NUMed immediately",
+      "title": "SYS NUM only on LAST \u2014 ARG2 must be NUMed immediately",
       "detail": "After other ops, A2 string cannot be re-NUMed without shuttle. N_A2 capture at ARG parse required for SETF numeric; easy to silently keep default.",
-      "repro": "setf retries ARG2=7 without early NUM → stuck default"
+      "repro": "setf retries ARG2=7 without early NUM \u2192 stuck default"
     },
     {
       "id": "W4",
@@ -137,7 +137,7 @@
       "area": "host|num",
       "title": "REQUIRE=abc softens NEED_HIT",
       "detail": "Non-numeric REQUIRE leaves soft miss exit 0",
-      "repro": "CUBALC_FS_REQUIRE=abc field zzz → exit 0"
+      "repro": "CUBALC_FS_REQUIRE=abc field zzz \u2192 exit 0"
     }
   ],
   "workarounds": [
@@ -161,6 +161,6 @@
     "gate_kind str vs num; gate_def bare note deny",
     "selftest 355/355 green; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "18a06b1f1c7a0553553980c8b0b24bb820144e1c",
   "ts": "2026-08-07T13:34:28Z"
 }
