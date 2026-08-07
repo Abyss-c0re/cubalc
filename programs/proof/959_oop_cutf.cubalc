@@ -1,0 +1,155 @@
+# CUTF / COLUMNF — Nth sep column peel into field for agents
+# Usability: CSV/path column without GETF+SYS CUT+SETF or SPLITF+NTH
+# 0-based CUTF / 1-based COLUMNF; miss leaves field, HIT=0
+
+HOLD_FLASH 1
+
+CLASS Row
+  FIELD csv "a,b,c"
+  FIELD path "root/mid/leaf"
+  FIELD code 10
+  METHOD init
+  END
+  METHOD mid
+    CUTF THIS csv "," 1
+  END
+  METHOD firstcol
+    COLUMNF THIS csv "," 1
+  END
+END
+
+NEW Row r
+
+# 0-based middle column
+CUTF r csv "," 1
+ASSERT OK == 1
+ASSERT CUTF_HIT == 1
+ASSERT CUTF_N == 1
+ASSERT CUTF_I == 1
+ASSERT LAST_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+GETF r csv
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+SYS EQS FIELD "csv"
+ASSERT LAST_N == 1
+
+# first column
+SETF r csv "x,y,z"
+CUTF r csv "," 0
+SYS EQS LAST "x"
+ASSERT LAST_N == 1
+ASSERT CUTF_HIT == 1
+
+# last column
+SETF r csv "x,y,z"
+CUTF r csv "," 2
+SYS EQS LAST "z"
+ASSERT LAST_N == 1
+
+# miss out of range — field unchanged
+SETF r csv "p,q"
+CUTF r csv "," 5
+ASSERT CUTF_HIT == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+GETF r csv
+SYS EQS LAST "p,q"
+ASSERT LAST_N == 1
+
+# COLUMNF 1-based
+SETF r csv "a,b,c"
+COLUMNF r csv "," 2
+ASSERT COLUMNF_HIT == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+GETF r csv
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+SETF r csv "a,b,c"
+COLF r csv "," 1
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# path with multi-char? single char /
+SETF r path "root/mid/leaf"
+CUTF r path "/" 1
+SYS EQS LAST "mid"
+ASSERT LAST_N == 1
+
+# empty sep → whole as index 0
+SETF r csv "hello"
+CUTF r csv "" 0
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+ASSERT CUTF_HIT == 1
+SETF r csv "hello"
+CUTF r csv "" 1
+ASSERT CUTF_HIT == 0
+GETF r csv
+SYS EQS LAST "hello"
+ASSERT LAST_N == 1
+
+# aliases
+SETF r csv "1,2,3"
+NTHFIELDF r csv "," 2
+SYS EQS LAST "3"
+ASSERT LAST_N == 1
+
+# BY / AT glue
+SETF r csv "u,v,w"
+CUTF r csv BY "," AT 1
+SYS EQS LAST "v"
+ASSERT LAST_N == 1
+
+# METHOD + THIS
+SETF r csv "aa,bb,cc"
+SEND r mid
+GETF r csv
+SYS EQS LAST "bb"
+ASSERT LAST_N == 1
+
+SETF r csv "aa,bb,cc"
+SEND r firstcol
+GETF r csv
+SYS EQS LAST "aa"
+ASSERT LAST_N == 1
+
+# soft miss object
+TRYCUTF nosuch csv "," 0
+ASSERT OK == 0
+ASSERT CUTF_HIT == 0
+SYS HAS LAST_ERR "unknown object"
+ASSERT LAST_N == 1
+
+# soft miss field
+CUTF SOFT r nosuch "," 0
+ASSERT OK == 0
+SYS HAS LAST_ERR "unknown field"
+ASSERT LAST_N == 1
+
+# after soft
+SETF r csv "ok,yes"
+CUTF r csv "," 1
+ASSERT OK == 1
+SYS EQS LAST "yes"
+ASSERT LAST_N == 1
+
+# dynamic field name
+SETF r csv "d,e"
+CUTF r "csv" "," 0
+SYS EQS LAST "d"
+ASSERT LAST_N == 1
+
+# HELP
+HELP CUTF
+SYS HAS LAST "CUTF"
+ASSERT LAST_N == 1
+HELP COLUMNF
+SYS HAS LAST "COLUMNF"
+ASSERT LAST_N == 1
+
+PRINT "oop_cutf ok"
