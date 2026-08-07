@@ -372,6 +372,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 342. ~~**`DELETEWHERE` / `FREEWHERE`**~~ **done** (free live objs by field==value · pool GC without EACH+GETF+IF+DELETEOBJ).
 343. ~~**`SENDWHERE` / `INVOKEWHERE`**~~ **done** (method on field==value objs · WHERE+SENDALL one-shot · no EACH+GETF+IF+SEND).
 344. ~~**`INCFALL` / `ADDFALL` / `DECFALL`**~~ **done** (bulk numeric field bump · default ±1 · no EACH+GETF+arith+SETF).
+345. ~~**`MAXOBJ` / `MINOBJ`**~~ **done** (first live obj with max/min numeric field · no GETFALL+ARGMAX+NTH glue).
 
 ## Tick protocol
 

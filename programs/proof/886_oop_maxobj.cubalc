@@ -1,0 +1,97 @@
+# MAXOBJ / MINOBJ — pick live object with extreme numeric field
+# Usability: no GETFALL + ARGMAX + NTH / ZIP glue
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 40 0
+NEW Cell c 1 25 0
+NEW Cell d 1 40 0
+
+CLASS Counter
+  FIELD n 0
+  METHOD init x
+    SETF THIS n x
+  END
+END
+NEW Counter k1 3
+NEW Counter k2 99
+NEW Counter k3 7
+
+# max by class
+MAXOBJ Cell energy
+ASSERT OK == 1
+ASSERT MAXOBJ_N == 1
+SYS EQS LAST "b"
+ASSERT LAST_N == 1 "first max is b (before d)"
+ASSERT MAXOBJ_VAL == 40
+GETF LAST energy
+ASSERT LAST_N == 40
+
+# HIGHEST / ARGMAXF aliases
+HIGHEST Cell energy
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+ARGMAXF Cell energy
+SYS EQS OBJECT "b"
+ASSERT LAST_N == 1
+
+# min
+MINOBJ Cell energy
+ASSERT OK == 1
+ASSERT MINOBJ_VAL == 10
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+GETF a energy
+ASSERT LAST_N == 10
+
+# LOWEST alias
+LOWEST Cell energy
+SYS EQS LAST "a"
+ASSERT LAST_N == 1
+
+# OF sugar
+MAXOBJ OF Counter n
+SYS EQS LAST "k2"
+ASSERT LAST_N == 1
+ASSERT MAXOBJ_VAL == 99
+
+MINOBJ OF Counter n
+SYS EQS LAST "k1"
+ASSERT LAST_N == 1
+ASSERT MINOBJ_VAL == 3
+
+# bare field across classes that have it (Counters only have n)
+MAXOBJ n
+SYS EQS LAST "k2"
+ASSERT LAST_N == 1
+
+# string field name
+MAXOBJ Cell "energy"
+SYS EQS LAST "b"
+ASSERT LAST_N == 1
+
+# empty soft
+DELETEALL Cell
+MAXOBJ Cell energy
+ASSERT OK == 0
+ASSERT MAXOBJ_N == 0
+SYS EMPTY LAST
+ASSERT LAST_N == 1
+
+MINOBJ Cell energy
+ASSERT OK == 0
+
+# repopulate and chain GETF
+NEW Cell x 1 5 0
+NEW Cell y 1 8 0
+MAXOBJ Cell energy
+GETF LAST energy
+ASSERT LAST_N == 8
+MINOBJ Cell energy
+GETF LAST energy
+ASSERT LAST_N == 5
+
+PRINT "oop_maxobj ok"
