@@ -1,0 +1,82 @@
+# DUMPOBJ / INSPECT — one-shot object field snapshot for agents
+# Usability: field:value bag (LOOKUP-ready) without EACH+GETF; optional JSON plate
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell c1 1 8 0
+DUMPOBJ c1
+ASSERT OK == 1
+ASSERT LAST_N >= 4
+ASSERT NFIELDS >= 4
+ASSERT DUMPOBJ_N >= 4
+SYS HASLINE LAST "energy:8"
+ASSERT LAST_N == 1 "energy snapshot"
+SYS HASLINE LAST "alive:1"
+ASSERT LAST_N == 1
+SYS LOOKUP DUMPOBJ "energy"
+ASSERT OK == 1
+SYS EQS LAST "8"
+ASSERT LAST_N == 1 "LOOKUP on bag"
+SYS LOOKUPN DUMPOBJ "alive"
+ASSERT LAST_N == 1
+
+# aliases
+INSPECT c1
+ASSERT OK == 1
+SYS HASLINE LAST "gen:0"
+ASSERT LAST_N == 1
+
+OBJDUMP c1
+ASSERT OK == 1
+
+# JSON plate
+DUMPOBJ JSON c1
+ASSERT OK == 1
+SYS HAS LAST "cubalc.obj.v1"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"energy\":8"
+ASSERT LAST_N == 1
+SYS HAS LAST "\"class\":\"Cell\""
+ASSERT LAST_N == 1
+
+# post-name JSON flag
+DUMPOBJ c1 JSON
+ASSERT OK == 1
+SYS HAS LAST "cubalc.obj.v1"
+ASSERT LAST_N == 1
+
+# soft miss
+DUMPOBJ missing_zz
+ASSERT OK == 0
+ASSERT LAST_N == 0
+
+# mutate then re-dump
+SETF c1 energy 42
+DUMPOBJ c1
+SYS LOOKUPN LAST "energy"
+ASSERT LAST_N == 42 "fresh after SETF"
+
+# local class + string field (SETF after NEW)
+CLASS Box
+  FIELD w 0
+  FIELD label "x"
+  METHOD init n
+    SETF THIS w n
+  END
+END
+NEW Box b 3
+SETF b label "hi"
+DUMPOBJ b
+LET snap = LAST
+SYS LINES snap
+ASSERT LAST_N == 2 "two field lines"
+SYS LOOKUPN snap "w"
+ASSERT LAST_N == 3
+SYS LOOKUP snap "label"
+ASSERT OK == 1
+SYS EQS LAST "hi"
+ASSERT LAST_N == 1
+
+PRINT "oop_dumpobj ok"
