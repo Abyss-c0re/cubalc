@@ -1,5 +1,137 @@
 /* CubalC lang — lang_ops_cell.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
+#include <dirent.h>
+#include <string.h>
+
+/* INCLUDE lib did-you-mean — scan programs/lib for closest stem. */
+static void include_fold(char *dst, size_t n, const char *src){
+  size_t i;
+  for (i = 0; i + 1 < n && src[i]; i++) {
+    char c = src[i];
+    if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+    dst[i] = c;
+  }
+  dst[i] = 0;
+}
+static int include_edit_dist(const char *a, const char *b){
+  int na = (int)strlen(a), nb = (int)strlen(b);
+  int i, j, prev, cur, stack[64];
+  if (na > 48) na = 48;
+  if (nb > 48) nb = 48;
+  if (na + 1 > 64) return 99;
+  for (j = 0; j <= nb; j++) stack[j] = j;
+  for (i = 1; i <= na; i++) {
+    prev = stack[0];
+    stack[0] = i;
+    for (j = 1; j <= nb; j++) {
+      cur = stack[j];
+      if (a[i - 1] == b[j - 1])
+        stack[j] = prev;
+      else {
+        int ins = stack[j - 1] + 1;
+        int del = stack[j] + 1;
+        int sub = prev + 1;
+        int m = ins < del ? ins : del;
+        stack[j] = m < sub ? m : sub;
+      }
+      prev = cur;
+    }
+  }
+  return stack[nb];
+}
+static void include_suggest_lib(const char *typo, char *out, size_t outn){
+  DIR *d;
+  struct dirent *ent;
+  char want[64], cand[64], stem[128], best[128];
+  int best_d = 99, ed;
+  size_t best_len = 9999;
+  int have_prefix = 0;
+  const char *dirs[] = { "programs/lib", "lib", NULL };
+  int di;
+  out[0] = 0;
+  best[0] = 0;
+  if (!typo || !typo[0] || outn < 2) return;
+  {
+    const char *slash = strrchr(typo, '/');
+    const char *leaf = slash ? slash + 1 : typo;
+    size_t blen;
+    snprintf(stem, sizeof stem, "%s", leaf);
+    blen = strlen(stem);
+    if (blen > 7 && strcmp(stem + blen - 7, ".cubalc") == 0)
+      stem[blen - 7] = 0;
+  }
+  include_fold(want, sizeof want, stem);
+  if (!want[0]) return;
+  for (di = 0; dirs[di]; di++) {
+    d = opendir(dirs[di]);
+    if (!d) continue;
+    while ((ent = readdir(d)) != NULL) {
+      size_t nlen, cl;
+      char name[128];
+      if (ent->d_name[0] == '.') continue;
+      nlen = strlen(ent->d_name);
+      if (nlen < 8 || strcmp(ent->d_name + nlen - 7, ".cubalc") != 0) continue;
+      if (nlen - 7 >= sizeof name) continue;
+      memcpy(name, ent->d_name, nlen - 7);
+      name[nlen - 7] = 0;
+      include_fold(cand, sizeof cand, name);
+      if (strcmp(want, cand) == 0) {
+        snprintf(out, outn, "%s", name);
+        closedir(d);
+        return;
+      }
+      cl = strlen(cand);
+      if (strlen(want) >= 3 &&
+          (strncmp(want, cand, strlen(want)) == 0 ||
+           (cl >= 3 && strncmp(cand, want, cl) == 0))) {
+        if (!have_prefix || cl < best_len) {
+          have_prefix = 1;
+          best_len = cl;
+          snprintf(best, sizeof best, "%s", name);
+        }
+      }
+      ed = include_edit_dist(want, cand);
+      if (ed < best_d) {
+        best_d = ed;
+        if (!have_prefix)
+          snprintf(best, sizeof best, "%s", name);
+      }
+    }
+    closedir(d);
+  }
+  if (have_prefix) {
+    snprintf(out, outn, "%s", best);
+    return;
+  }
+  /* recompute best by edit only (best may be stale if have_prefix path mixed) */
+  best_d = 99;
+  best[0] = 0;
+  for (di = 0; dirs[di]; di++) {
+    d = opendir(dirs[di]);
+    if (!d) continue;
+    while ((ent = readdir(d)) != NULL) {
+      size_t nlen;
+      char name[128];
+      if (ent->d_name[0] == '.') continue;
+      nlen = strlen(ent->d_name);
+      if (nlen < 8 || strcmp(ent->d_name + nlen - 7, ".cubalc") != 0) continue;
+      if (nlen - 7 >= sizeof name) continue;
+      memcpy(name, ent->d_name, nlen - 7);
+      name[nlen - 7] = 0;
+      include_fold(cand, sizeof cand, name);
+      ed = include_edit_dist(want, cand);
+      if (ed < best_d) {
+        best_d = ed;
+        snprintf(best, sizeof best, "%s", name);
+      }
+    }
+    closedir(d);
+  }
+  if (best_d <= 2 && best[0])
+    snprintf(out, outn, "%s", best);
+}
+
+
 
 int cubalc_lang_ops_cell(VM *vm, Lex *L){
   /* plane ops_cell: L25536-30474 */
@@ -5421,14 +5553,24 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
       }
     }
     if (!f){
-      char ebuf[160];
-      snprintf(ebuf, sizeof ebuf,
-               "INCLUDE cannot open '%s' — tried programs/lib/%s.cubalc · cubalc libs",
-               orig, orig);
+      char ebuf[192], sug[64];
+      include_suggest_lib(orig, sug, sizeof sug);
+      if (sug[0])
+        snprintf(ebuf, sizeof ebuf,
+                 "INCLUDE cannot open '%s' — did you mean %s? (programs/lib · cubalc libs)",
+                 orig, sug);
+      else
+        snprintf(ebuf, sizeof ebuf,
+                 "INCLUDE cannot open '%s' — tried programs/lib/%s.cubalc · cubalc libs",
+                 orig, orig);
       if (soft) {
         /* Usability: optional module — sticky err, continue (like EXPECT). */
-        char msg[160];
-        snprintf(msg, sizeof msg, "INCLUDE SOFT miss line %d: %s", aln, orig);
+        char msg[192];
+        if (sug[0])
+          snprintf(msg, sizeof msg,
+                   "INCLUDE SOFT miss line %d: %s — did you mean %s?", aln, orig, sug);
+        else
+          snprintf(msg, sizeof msg, "INCLUDE SOFT miss line %d: %s", aln, orig);
         var_set_str(vm, "ERR", msg);
         var_set_str(vm, "LAST_ERR", msg);
         var_set_str(vm, "INCLUDE_PATH", "");

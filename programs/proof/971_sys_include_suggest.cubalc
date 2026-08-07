@@ -1,0 +1,28 @@
+# SYS + INCLUDE name did-you-mean — agent typo recovery for host plane
+# Soft INCLUDE miss carries "did you mean"; known SYS/INCLUDE still work.
+
+HOLD_FLASH 1
+
+# INCLUDE typo: hold_sead → hold_seed
+INCLUDE SOFT hold_sead
+ASSERT OK == 0
+SYS HAS LAST_ERR "did you mean"
+ASSERT LAST_N == 1
+SYS HAS LAST_ERR "hold_seed"
+ASSERT LAST_N == 1
+
+# real include still works
+INCLUDE hold_seed
+ASSERT OK == 1
+SYS HAS INCLUDE_PATH "hold_seed"
+ASSERT LAST_N == 1
+
+# known SYS ops still work
+SYS STR 42
+SYS EQS LAST "42"
+ASSERT LAST_N == 1
+SYS GREP "a" "apple\nbanana"
+SYS HAS LAST "apple"
+ASSERT LAST_N == 1
+
+PRINT "sys_include_suggest ok"
