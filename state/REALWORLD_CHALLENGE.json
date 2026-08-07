@@ -1,125 +1,131 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 126,
-  "program": "programs/realworld/fleet_status_hist_board.cubalc",
-  "theme": "FREQF/MODEF/UNIQUF fleet string-status histogram + dominant mode admit + SETFALL stamp + bag journal",
-  "version": "1.15.352-usability",
+  "iter": 127,
+  "program": "programs/realworld/canary_rev_swap_board.cubalc",
+  "theme": "COPYF/SWAPF dual-buffer canary rev snapshot + fleetFALL promote + SWAPF rollback + COUNTWHERE admit",
+  "version": "1.15.355-usability",
   "pass": true,
-  "prior_note": "iter 125 latency_median MEDIANF/MULFALL; this iter stresses FREQF+MODEF+UNIQUF (b233590/b68f6c5/3e8c394)",
+  "prior_note": "iter 126 fleet_status_hist FREQF/MODEF/UNIQUF; this iter stresses COPYF+SWAPF dual-buffer (4271464/6defc3d)",
   "tests": [
     {
-      "name": "open_status",
-      "cmd": "open n0/n1 ready n2 busy",
+      "name": "open_slots",
+      "cmd": "open s0/s1/s2 v1.0",
       "ok": true,
-      "note": "NEW"
+      "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "freqf_hist",
-      "cmd": "FREQF ready:2 busy:1 N=2 TOTAL=3",
+      "name": "snap_copyf",
+      "cmd": "COPYF rev→prev N=3 SKIP=0",
       "ok": true,
-      "note": "FREQF"
+      "note": "COPYF"
     },
     {
-      "name": "modef_dominant",
-      "cmd": "MODEF ready count=2 distinct=2",
-      "ok": true,
-      "note": "MODEF"
-    },
-    {
-      "name": "uniquf_set",
-      "cmd": "UNIQUF ready then busy first-seen",
-      "ok": true,
-      "note": "UNIQUF"
-    },
-    {
-      "name": "countwhere_status",
-      "cmd": "COUNTWHERE ready=2 fail=0",
-      "ok": true,
-      "note": "COUNTWHERE"
-    },
-    {
-      "name": "admit_mode_want",
-      "cmd": "want ready admit; want busy REQUIRE rc2",
-      "ok": true,
-      "note": "admit"
-    },
-    {
-      "name": "mode_flip",
-      "cmd": "n0\u2192busy; mode busy; admit ready deny",
-      "ok": true,
-      "note": "flip"
-    },
-    {
-      "name": "mode_tie_first_seen",
-      "cmd": "fail+drain tie \u2192 mode fail first-seen",
-      "ok": true,
-      "note": "tie"
-    },
-    {
-      "name": "setfall_stamp",
-      "cmd": "SETFALL ready N=3; hist ready:3; admit REQUIRE ok",
+      "name": "promote_setfall",
+      "cmd": "SETFALL rev v2.0 N=3; prev stays v1.0",
       "ok": true,
       "note": "SETFALL"
     },
     {
+      "name": "count_rev",
+      "cmd": "COUNTWHERE rev v2.0 = 3",
+      "ok": true,
+      "note": "COUNTWHERE"
+    },
+    {
+      "name": "admit_all_on_rev",
+      "cmd": "LISTOBJS+NOBJS; admit v2.0 REQUIRE ok",
+      "ok": true,
+      "note": "admit"
+    },
+    {
+      "name": "admit_deny_wrong_rev",
+      "cmd": "want v1.0 while on v2.0 → EXIT 2",
+      "ok": true,
+      "note": "REQUIRE deny"
+    },
+    {
+      "name": "rollback_swapf",
+      "cmd": "SWAPF rev↔prev → rev v1.0 prev v2.0; admit v1.0",
+      "ok": true,
+      "note": "SWAPF"
+    },
+    {
+      "name": "double_rollback",
+      "cmd": "second SWAPF restores v2.0",
+      "ok": true,
+      "note": "toggle"
+    },
+    {
+      "name": "substring_false_friend",
+      "cmd": "v1 vs v1.0 exact COUNTWHERE 1 each",
+      "ok": true,
+      "note": "exact"
+    },
+    {
       "name": "empty_fleet",
-      "cmd": "hist N=0; mode empty; admit ready deny",
+      "cmd": "snap/rollback N=0; admit REQUIRE deny",
       "ok": true,
       "note": "empty"
     },
     {
-      "name": "count_setmatch",
-      "cmd": "exact false friend; SETMATCH 2\u21921",
+      "name": "setmatch_first",
+      "cmd": "two s0:promote → SETMATCH drops to 1",
       "ok": true,
       "note": "journal"
+    },
+    {
+      "name": "probe_soft_skip",
+      "cmd": "COPYF missing field SKIP=3; TRYSEND soft",
+      "ok": true,
+      "note": "soft"
     },
     {
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "328/328 pass"
+      "note": "331/331 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|modef",
-      "title": "MODEF ties \u2192 first-seen only \u2014 no multi-mode bag",
-      "detail": "fail+drain equal count \u2192 mode fail (first opened). Agents cannot detect ties without FREQF and comparing counts.",
-      "repro": "two statuses count=1 each; MODEF returns first-seen"
+      "area": "oop|nobjs",
+      "title": "NOBJS stale/0 until LISTOBJS (or peer fleet scan)",
+      "detail": "After NEW/rehydrate, bare NOBJS stays 0 while COUNTWHERE correctly sees live objs. Admit-all patterns silently deny (0==count fails) unless LISTOBJS refreshes NOBJS first.",
+      "repro": "NEW 3 slots; LET n=NOBJS → 0; LISTOBJS; NOBJS→3"
     },
     {
       "id": "W2",
       "severity": "med",
-      "area": "oop|setfall",
-      "title": "SETFALL stamps entire class \u2014 no WHERE status filter",
-      "detail": "Cannot stamp only busy\u2192ready without SENDBETWEEN-style or per-slot SETF.",
-      "repro": "SETFALL Node status ready hits all"
+      "area": "oop|copyf|swapf",
+      "title": "COPYF/SWAPF are fleet-class only — no single-object form",
+      "detail": "Cannot snapshot/rollback one canary slot without EACH+GETF+SETF or temporary class filter. Ops always walk all live objs of class (or bare field name).",
+      "repro": "want s0 only snap; COPYF Slot hits s0+s1+s2"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|uniquf",
-      "title": "UNIQUF order is first-seen not sorted",
-      "detail": "Agents wanting alphabetical status inventory must SORT bag after UNIQUF.",
-      "repro": "UNIQUF ready then busy not alpha"
+      "area": "oop|setfall",
+      "title": "SETFALL stamps entire class — no WHERE rev predicate",
+      "detail": "Cannot promote only slots still on old rev; partial canary needs per-slot setrev. SETFWHERE exists in 1.15.355 proof 905 but not used here yet.",
+      "repro": "SETFALL Slot rev v2 hits all"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|empty",
-      "title": "Empty MODEF yields blank mode string \u2014 admit EQS want fails soft deny",
-      "detail": "Empty fleet MODEF LAST empty; admit want ready \u2192 deny (not soft admit). Empty FREQF N=0 TOTAL=0.",
-      "repro": "clear; mode; admit ready \u2192 deny"
+      "area": "oop|swapf",
+      "title": "SWAPF with empty prev injects blank rev",
+      "detail": "Rollback without prior snap swaps '' into rev — silent data loss, not soft miss. Agents must gate on prev non-blank or require snap.",
+      "repro": "open; no snap; rollback → rev empty"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|freqf",
-      "title": "FREQF bag needs LOOKUPN for counts \u2014 no direct COUNTKEY on HIST plate",
-      "detail": "Agents re-read HIST and LOOKUPN key for per-status count; COUNTWHERE is dual for live objs only.",
-      "repro": "SYS LOOKUPN FREQF open"
+      "area": "oop|copyf",
+      "title": "Missing dst field soft-skips (N=0 SKIP=n) — easy to miss",
+      "detail": "COPYF Slot rev no_such_field OK=1-ish path with SKIP=n; agents must check COPYF_N/SKIP not just OK.",
+      "repro": "probe COPYF rev no_such_field SKIP=3"
     },
     {
       "id": "W6",
@@ -127,14 +133,14 @@
       "area": "host|write",
       "title": "WRITE metas omit trailing NL",
       "detail": "cat -A last line no $.",
-      "repro": "od -c HIST.txt"
+      "repro": "od -c VAL.txt dump/s0"
     },
     {
       "id": "W7",
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft.",
+      "detail": "CUBALC_FS_REQUIRE=abc → soft wall only.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -142,31 +148,33 @@
       "severity": "low",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two n0:st \u2192 one SETMATCH leaves 1.",
+      "detail": "Two s0:promote → one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     }
   ],
   "workarounds": [
-    "FREQF+LOOKUPN for per-status counts; MODEF for dominant",
-    "Detect ties via FREQF values equality not MODEF alone",
-    "SETFALL for full fleet stamp; per-slot setstatus for selective",
-    "SORT UNIQUF bag if alphabetical inventory needed",
+    "LISTOBJS before reading NOBJS for admit-all",
+    "COPYF snap then SETFALL promote; SWAPF rollback",
+    "Per-slot setrev when partial canary needed",
+    "Gate rollback on non-blank prev or mandatory snap",
+    "Check COPYF_N/SWAPF_N and *_SKIP not only OK",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
-    "MODEF multi-mode / tie bag",
-    "SETFALL WHERE status predicate",
-    "UNIQUF sorted option",
-    "Empty-fleet MODEF policy (soft miss vs blank)",
+    "NOBJS auto-refresh on NEW/DELETE/rehydrate",
+    "Per-object COPYF/SWAPF (or WHERE filter)",
+    "SETFALL WHERE / promote-if-prev",
+    "SWAPF refuse-if-blank option",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "FREQF ready:2 busy:1; MODEF ready; UNIQUF ready/busy worked",
-    "MODEF tie fail/drain \u2192 first-seen fail",
-    "SETFALL stamp ready N=3; admit REQUIRE green",
-    "empty MODEF blank; admit ready deny",
-    "selftest 328/328 green; no language fix this iter"
+    "COPYF snap N=3; SETFALL promote v2.0; prev kept v1.0",
+    "admit failed until LISTOBJS refreshed NOBJS (W1 high)",
+    "SWAPF rollback restored v1.0; second SWAPF restored v2.0",
+    "v1 vs v1.0 exact COUNTWHERE false-friend ok",
+    "empty snap/rollback N=0 soft; admit REQUIRE deny",
+    "selftest 331/331 green; no language fix this iter (SETFWHERE already in tree)"
   ],
-  "commit": "8015bc34254dc400fcd4b28c6faee19ad5234cae",
-  "ts": "2026-08-07T08:10:14Z"
+  "commit": "",
+  "ts": "2026-08-07T08:36:11Z"
 }

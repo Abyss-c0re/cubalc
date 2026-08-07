@@ -1,0 +1,1108 @@
+# canary_rev_swap_board.cubalc — COPYF/SWAPF dual-buffer rev snapshot + rollback
+#
+# Real use: canary/rollout agents keep active rev + prev buffer on each slot.
+# Before promote: COPYF rev→prev (snapshot). SETFALL/SETF apply new rev.
+# On bad signal: SWAPF rev↔prev (instant fleet rollback) without temp field +
+# EACH+GETF+SETF glue. Admit when COUNTWHERE rev want == NOBJS.
+#
+# Surfaces forced (1.15.354):
+#   COPYF / COPYFALL / SNAPSHOTF — fleet field→field snapshot
+#   SWAPF / SWAPFALL / EXCHANGEF — dual-buffer exchange (rollback)
+#   SETFALL + COUNTWHERE          — bulk promote + on-rev tally
+#   DUMPOBJ plate rehydrate · bag journal · soft TRYSEND/TRYSETF
+#   REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from canary_release (CLONEOBJ/RENAMEOBJ slots), fleet_status_hist
+# (FREQF/MODEF status strings), release_stage (host COPYALL): this board is
+# *in-object dual-buffer rev snapshot + SWAPF rollback*.
+#
+# Slots: s0 s1 s2
+#
+# Plate under STATE:
+#   dump/s0 dump/s1 dump/s2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt REVS.txt SWAP_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Slot
+#   open       — NEW Slot ARG1=sN [rev=ARG2 default v0]
+#   setrev     — SETF rev ARG2 on slot
+#   snap       — COPYF Slot rev prev  (snapshot before mutate)
+#   promote    — SETFALL Slot rev ARG1 (default ARG1/ENV want)
+#   rollback   — SWAPF Slot rev prev
+#   count_rev  — COUNTWHERE Slot rev ARG1
+#   admit      — all live slots on WANT rev; REQUIRE→2 if not
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_crs_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=s0 CUBALC_ARG2=v1.0
+#   CUBALC_ARG0=snap
+#   CUBALC_ARG0=promote CUBALC_ARG1=v2.0
+#   CUBALC_ARG0=rollback
+#   CUBALC_ARG0=admit CUBALC_FS_WANT=v1.0 CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT ACTION
+#
+# Edges:
+#   COPYF/SWAPF are fleet-wide (class filter) — no per-slot COPYF
+#   Missing field → soft SKIP count, N=0 (not hard fail)
+#   SWAPF twice restores; empty prev swaps blank into rev
+#   SETFALL no WHERE (stamps all); COUNTWHERE exact rev string
+#   substring false friends (v1 vs v1.0); WRITE NL; NUM REQUIRE softens
+#   DUMPOBJ rehydrate LOOKUP string fields; SETMATCH first-only
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Slot
+  FIELD id ""
+  FIELD rev "v0"
+  FIELD prev ""
+  METHOD init i r
+    SETF THIS id i
+    SETF THIS rev r
+    SETF THIS prev ""
+  END
+END
+
+NOTE "canary_rev_swap_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "v0"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "REVS.txt"
+LET revs_path = LAST
+SYS JOIN state_dir "SWAP_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "s0"
+LET d_s0 = LAST
+SYS JOIN dump_dir "s1"
+LET d_s1 = LAST
+SYS JOIN dump_dir "s2"
+LET d_s2 = LAST
+
+LET slot = -1
+SYS EQS NAME "s0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "s1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "s2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "s0"
+END
+IF slot == 1 THEN
+  LET sn = "s1"
+END
+IF slot == 2 THEN
+  LET sn = "s2"
+END
+
+# rehydrate s0
+SYS READ OR d_s0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "rev"
+  LET rrev = LAST
+  SYS LOOKUP snap "prev"
+  LET rprev = LAST
+  CLEAR_ERR
+  NEW Slot s0 rid rrev
+  TRYSETF s0 rev rrev
+  TRYSETF s0 prev rprev
+  CLEAR_ERR
+END
+# rehydrate s1
+SYS READ OR d_s1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "rev"
+  LET rrev = LAST
+  SYS LOOKUP snap "prev"
+  LET rprev = LAST
+  CLEAR_ERR
+  NEW Slot s1 rid rrev
+  TRYSETF s1 rev rrev
+  TRYSETF s1 prev rprev
+  CLEAR_ERR
+END
+# rehydrate s2
+SYS READ OR d_s2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "rev"
+  LET rrev = LAST
+  SYS LOOKUP snap "prev"
+  LET rprev = LAST
+  CLEAR_ERR
+  NEW Slot s2 rid rrev
+  TRYSETF s2 rev rrev
+  TRYSETF s2 prev rprev
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "canary_rev_swap_board"
+
+# helper: persist live dumps
+# (inlined in mutate actions)
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Slot
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET rv0 = "v0"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET rv0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        DELETEOBJ s0
+        CLEAR_ERR
+      END
+      NEW Slot s0 sn rv0
+      DUMPOBJ s0
+      SYS WRITE d_s0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        DELETEOBJ s1
+        CLEAR_ERR
+      END
+      NEW Slot s1 sn rv0
+      DUMPOBJ s1
+      SYS WRITE d_s1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        DELETEOBJ s2
+        CLEAR_ERR
+      END
+      NEW Slot s2 sn rv0
+      DUMPOBJ s2
+      SYS WRITE d_s2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Slot
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta rv0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setrev (per-slot, no snapshot) ---
+SYS EQS ACTION "setrev"
+IF LAST_N == 1 THEN
+  NOTE "action setrev"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setrev bad slot"
+    FAIL "setrev bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setrev bad slot"
+    END
+  ELSE
+    LET rv0 = "v0"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET rv0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        SETF s0 rev rv0
+        LET ok_set = 1
+        DUMPOBJ s0
+        SYS WRITE d_s0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        SETF s1 rev rv0
+        LET ok_set = 1
+        DUMPOBJ s1
+        SYS WRITE d_s1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        SETF s2 rev rv0
+        LET ok_set = 1
+        DUMPOBJ s2
+        SYS WRITE d_s2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setrev no obj"
+      FAIL "setrev no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setrev no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setrev ok"
+      LET val = rv0
+      LET val_ch = 1
+      LET meta = "setrev"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta rv0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- snap COPYF rev → prev ---
+SYS EQS ACTION "snap"
+IF LAST_N == 1 THEN
+  NOTE "action snap"
+  COPYF Slot rev prev
+  LET ret_n = COPYF_N
+  LET sk = COPYF_SKIP
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DUMPOBJ s0
+    SYS WRITE d_s0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DUMPOBJ s1
+    SYS WRITE d_s1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DUMPOBJ s2
+    SYS WRITE d_s2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:snap"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "snap ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "snap"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- promote SETFALL rev ---
+SYS EQS ACTION "promote"
+IF LAST_N == 1 THEN
+  NOTE "action promote"
+  LET rv0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rv0 = NAME
+  END
+  SETFALL Slot rev rv0
+  LET ret_n = LAST_N
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DUMPOBJ s0
+    SYS WRITE d_s0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DUMPOBJ s1
+    SYS WRITE d_s1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DUMPOBJ s2
+    SYS WRITE d_s2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:promote"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "promote ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "promote"
+  SYS PUSH meta rv0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- rollback SWAPF rev ↔ prev ---
+SYS EQS ACTION "rollback"
+IF LAST_N == 1 THEN
+  NOTE "action rollback"
+  SWAPF Slot rev prev
+  LET ret_n = SWAPF_N
+  LET sk = SWAPF_SKIP
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DUMPOBJ s0
+    SYS WRITE d_s0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DUMPOBJ s1
+    SYS WRITE d_s1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DUMPOBJ s2
+    SYS WRITE d_s2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:rollback"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "rollback ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "rollback"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_rev COUNTWHERE ---
+SYS EQS ACTION "count_rev"
+IF LAST_N == 1 THEN
+  NOTE "action count_rev"
+  LET rv0 = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET rv0 = NAME
+  END
+  COUNTWHERE Slot rev rv0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_rev ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_rev"
+  SYS PUSH meta rv0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- revs GETFALL bag dump ---
+SYS EQS ACTION "revs"
+IF LAST_N == 1 THEN
+  NOTE "action revs"
+  GETFALL Slot rev
+  LET rbag = LAST
+  LET ret_n = LAST_N
+  SYS WRITE revs_path rbag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "revs ok"
+  LET val = rbag
+  LET val_ch = 1
+  LET meta = "revs"
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: all on WANT rev ---
+# NOTE: NOBJS is stale/0 until LISTOBJS (or similar fleet scan) refreshes it.
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET want_s = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET want_s = NAME
+  END
+  LISTOBJS Slot
+  LET nobjs = NOBJS
+  COUNTWHERE Slot rev want_s
+  LET ret_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF nobjs > 0 THEN
+    IF ret_n == nobjs THEN
+      LET val = "admit"
+      LET miss = 0
+      LET hit = 1
+      LET note_msg = "admit ok"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta want_s
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny not all on want rev"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny not all on want rev"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    TRYSEND s0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF s0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  # missing field soft skip
+  COPYF Slot rev no_such_field
+  LET sk = COPYF_SKIP
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ s0
+      IF LAST_N == 1 THEN
+        DUMPOBJ s0
+        LET val = LAST
+        SYS WRITE d_s0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ s1
+      IF LAST_N == 1 THEN
+        DUMPOBJ s1
+        LET val = LAST
+        SYS WRITE d_s1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ s2
+      IF LAST_N == 1 THEN
+        DUMPOBJ s2
+        LET val = LAST
+        SYS WRITE d_s2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ s0
+  IF LAST_N == 1 THEN
+    DELETEOBJ s0
+    CLEAR_ERR
+  END
+  HASOBJ s1
+  IF LAST_N == 1 THEN
+    DELETEOBJ s1
+    CLEAR_ERR
+  END
+  HASOBJ s2
+  IF LAST_N == 1 THEN
+    DELETEOBJ s2
+    CLEAR_ERR
+  END
+  SYS WRITE d_s0 ""
+  SYS WRITE d_s1 ""
+  SYS WRITE d_s2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE revs_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setrev"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "snap"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "promote"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "rollback"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_rev"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "revs"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "canary_rev_swap_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg
