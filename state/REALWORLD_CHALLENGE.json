@@ -15,25 +15,25 @@
     },
     {
       "name": "countobj",
-      "cmd": "COUNTOBJ Entry → 3",
+      "cmd": "COUNTOBJ Entry \u2192 3",
       "ok": true,
       "note": "COUNTOBJ"
     },
     {
       "name": "count_stale_ge",
-      "cmd": "COUNTWHEREGE age>=50 → 2",
+      "cmd": "COUNTWHEREGE age>=50 \u2192 2",
       "ok": true,
       "note": "COUNTWHEREGE"
     },
     {
       "name": "count_fresh_below",
-      "cmd": "COUNTBELOW age<50 → 1",
+      "cmd": "COUNTBELOW age<50 \u2192 1",
       "ok": true,
       "note": "COUNTBELOW"
     },
     {
       "name": "count_eq_hits",
-      "cmd": "COUNTWHERE hits 3 → 1",
+      "cmd": "COUNTWHERE hits 3 \u2192 1",
       "ok": true,
       "note": "COUNTWHERE"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "incfall_age",
-      "cmd": "INCFALL age +10 e0→15",
+      "cmd": "INCFALL age +10 e0\u219215",
       "ok": true,
       "note": "INCFALL"
     },
@@ -81,13 +81,13 @@
     },
     {
       "name": "journal_setmatch",
-      "cmd": "exact false friend; SETMATCH 2→1; pin",
+      "cmd": "exact false friend; SETMATCH 2\u21921; pin",
       "ok": true,
       "note": "journal"
     },
     {
       "name": "probe_empty_threshold",
-      "cmd": "soft TRYSEND; COUNT/DELETE/SEND WHEREGE 999 → 0",
+      "cmd": "soft TRYSEND; COUNT/DELETE/SEND WHEREGE 999 \u2192 0",
       "ok": true,
       "note": "soft"
     },
@@ -109,7 +109,7 @@
       "id": "W1",
       "severity": "high",
       "area": "host|push|strict",
-      "title": "SYS PUSH jbag jev after DELETEWHEREGE under -s → unknown form 'jev'",
+      "title": "SYS PUSH jbag jev after DELETEWHEREGE under -s \u2192 unknown form 'jev'",
       "detail": "Expire path freed objects and wrote FREED plate then failed at SYS PUSH jbag jev under -s. Literal SYS PUSH jbag \"fleet:expire\" works. Same hazard class as late bag LET+PUSH after OOP query (replica_fleet W1).",
       "repro": "DELETEWHEREGE Entry age_s 50; LET jev=...; SYS PUSH jbag jev under -s"
     },
@@ -117,7 +117,7 @@
       "id": "W2",
       "severity": "high",
       "area": "oop|persist",
-      "title": "DELETEWHEREGE process-local — plate dumps rehydrate expired entries",
+      "title": "DELETEWHEREGE process-local \u2014 plate dumps rehydrate expired entries",
       "detail": "Must RM dump/eN for each name in DELETEWHEREGE bag or next ARG run restores GC'd entries.",
       "repro": "expire without RM dump; next list rehydrates"
     },
@@ -127,22 +127,22 @@
       "area": "oop|name",
       "title": "Freed-name dump hygiene needs fixed HASLINE e0|e1|e2 wall",
       "detail": "Cannot loop DELETEWHEREGE bag names to RM dumps dynamically without EQS wall.",
-      "repro": "HASLINE fbag e0; RM d_e0 ×3"
+      "repro": "HASLINE fbag e0; RM d_e0 \u00d73"
     },
     {
       "id": "W4",
       "severity": "med",
       "area": "oop|sendwherege",
-      "title": "SENDWHEREGE miss method soft — no strict fail",
+      "title": "SENDWHEREGE miss method soft \u2014 no strict fail",
       "detail": "Typo methods soft-skip under -s without agent SENDWHEREGE_N checks.",
-      "repro": "SENDWHEREGE … no_meth → N=0 OK=1"
+      "repro": "SENDWHEREGE \u2026 no_meth \u2192 N=0 OK=1"
     },
     {
       "id": "W5",
       "severity": "med",
       "area": "bag|setmatch",
       "title": "SETMATCH first exact only",
-      "detail": "Two e0:age → one SETMATCH leaves 1.",
+      "detail": "Two e0:age \u2192 one SETMATCH leaves 1.",
       "repro": "count drops by 1"
     },
     {
@@ -158,7 +158,7 @@
       "severity": "low",
       "area": "host|num",
       "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_CT_REQUIRE=abc → soft gate.",
+      "detail": "CUBALC_CT_REQUIRE=abc \u2192 soft gate.",
       "repro": "REQUIRE=abc"
     },
     {
@@ -189,10 +189,10 @@
     "COUNTOBJ/COUNTWHEREGE/COUNTBELOW tallies without bag materialize",
     "SENDWHEREGE touch old + SENDBELOW bump fresh selective",
     "DELETEWHEREGE expire freed e1 e2 kept e0; plate RM ok",
-    "expire first failed SYS PUSH jbag jev under -s — fixed with literal",
+    "expire first failed SYS PUSH jbag jev under -s \u2014 fixed with literal",
     "DELETEWHERELE <=3 freed 2; empty DELETEWHEREGE soft 0",
     "selftest 318/318 green; no language fix this iter"
   ],
-  "commit": "",
-  "ts": "2026-08-07T06:30:00Z"
+  "commit": "af53857fb40db8f1e64dde64acdf5141a7e4e436",
+  "ts": "2026-08-07T06:30:06Z"
 }
