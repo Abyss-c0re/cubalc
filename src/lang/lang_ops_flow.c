@@ -3232,6 +3232,216 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* MULWHERE|SCALEWHERE|MULFWHERE [Class] valfield matchfield matchvalue factor
+   * — multiply numeric valfield by factor where matchfield == matchvalue.
+   * WHERE sugar: MULWHERE Cell energy WHERE age 1 BY 2.
+   * LAST_N = matched updates; MULWHERE_FACTOR = factor; soft empty → 0.
+   * Usability: selective scale without EACH+GETF+IF+SETF (pairs with CLAMPWHERE). */
+  if (kw(&L->cur, "MULWHERE") || kw(&L->cur, "SCALEWHERE") ||
+      kw(&L->cur, "MULFWHERE") || kw(&L->cur, "WHEREMUL") ||
+      kw(&L->cur, "MULIF") || kw(&L->cur, "SCALEIF") ||
+      kw(&L->cur, "TIMESWHERE") || kw(&L->cur, "WHERESCALE") ||
+      kw(&L->cur, "PRODUCTWHERE") || kw(&L->cur, "SCALEFWHERE")) {
+    char filt[48], vfield[48], mfield[48], tok1[48];
+    char m_sval[512];
+    int has_filt = 0, m_is_str = 0, i, n = 0, n_skip = 0;
+    long m_nval = 0, factor = 1;
+    lex_next(L);
+    filt[0] = 0;
+    vfield[0] = 0;
+    mfield[0] = 0;
+    tok1[0] = 0;
+    m_sval[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "MULWHERE OF Class valfield matchfield matchvalue factor");
+        return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+      snprintf(tok1, sizeof tok1, "%s", L->cur.text);
+      lex_next(L);
+      if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+          oop_find_class(vm, tok1) &&
+          !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF") && !kw(&L->cur, "WHEN")) {
+        snprintf(filt, sizeof filt, "%s", tok1);
+        has_filt = 1;
+        if (L->cur.kind == TK_STR) {
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(vfield, sizeof vfield, "%s", vv->sval);
+          else
+            snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+          lex_next(L);
+        }
+      } else {
+        Var *vv = var_get(vm, tok1, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR ||
+             kw(&L->cur, "WHERE")))
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", tok1);
+      }
+    } else {
+      fail(vm, "MULWHERE [Class] valfield matchfield matchvalue factor");
+      return -1;
+    }
+    if (!vfield[0]) {
+      if (L->cur.kind == TK_STR) {
+        snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+                 !kw(&L->cur, "WHERE") && !kw(&L->cur, "IF")) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(vfield, sizeof vfield, "%s", vv->sval);
+        else
+          snprintf(vfield, sizeof vfield, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        fail(vm, "MULWHERE [Class] valfield matchfield matchvalue factor");
+        return -1;
+      }
+    }
+    if (kw(&L->cur, "WHERE") || kw(&L->cur, "IF") || kw(&L->cur, "WHEN") ||
+        kw(&L->cur, "MATCH") || kw(&L->cur, "ON"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "EQ") && !kw(&L->cur, "IS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mfield, sizeof mfield, "%s", vv->sval);
+      else
+        snprintf(mfield, sizeof mfield, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "MULWHERE [Class] valfield matchfield matchvalue factor");
+      return -1;
+    }
+    if (kw(&L->cur, "EQ") || kw(&L->cur, "IS") || kw(&L->cur, "EQUALS"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ) {
+      lex_next(L);
+      if (L->cur.kind == TK_EQ) lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(m_sval, sizeof m_sval, "%s", L->cur.text);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      snprintf(m_sval, sizeof m_sval, "%s", vm->last_str);
+      m_is_str = 1;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L)) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str) {
+        snprintf(m_sval, sizeof m_sval, "%s", sv->sval);
+        m_is_str = 1;
+        lex_next(L);
+      } else {
+        m_nval = parse_expr(vm, L);
+        m_is_str = 0;
+      }
+    } else {
+      m_nval = parse_expr(vm, L);
+      m_is_str = 0;
+    }
+    /* factor: BY n | TIMES n | bare */
+    if (kw(&L->cur, "BY") || kw(&L->cur, "TIMES") || kw(&L->cur, "FACTOR") ||
+        kw(&L->cur, "MUL") || kw(&L->cur, "SCALE") || kw(&L->cur, "WITH"))
+      lex_next(L);
+    else if (L->cur.kind == TK_EQ)
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      factor = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      factor = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+               !kw(&L->cur, "GETF") && !kw(&L->cur, "SETF")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        factor = atol(sv->sval);
+      else
+        factor = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      factor = parse_expr(vm, L);
+    } else {
+      fail(vm, "MULWHERE [Class] valfield matchfield matchvalue factor");
+      return -1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      int vfi, mfi, hit = 0;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      mfi = oop_field_idx(cd, mfield);
+      vfi = oop_field_idx(cd, vfield);
+      if (mfi < 0 || vfi < 0) { n_skip++; continue; }
+      if (ob->fis_str[vfi]) { n_skip++; continue; }
+      if (ob->fis_str[mfi]) {
+        if (m_is_str)
+          hit = (strcmp(ob->fstr[mfi], m_sval) == 0);
+        else {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", m_nval);
+          hit = (strcmp(ob->fstr[mfi], nb) == 0);
+        }
+      } else {
+        if (m_is_str) {
+          char nb[32];
+          snprintf(nb, sizeof nb, "%ld", ob->fnum[mfi]);
+          hit = (strcmp(nb, m_sval) == 0);
+        } else {
+          hit = (ob->fnum[mfi] == m_nval);
+        }
+      }
+      if (!hit) continue;
+      ob->fnum[vfi] *= factor;
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "MULWHERE_N", n);
+    var_set_num(vm, "SCALEWHERE_N", n);
+    var_set_num(vm, "MULFWHERE_N", n);
+    var_set_num(vm, "WHEREMUL_N", n);
+    var_set_num(vm, "MULWHERE_SKIP", n_skip);
+    var_set_num(vm, "MULWHERE_FACTOR", factor);
+    var_set_num(vm, "SCALEWHERE_FACTOR", factor);
+    var_set_str(vm, "FIELD", vfield);
+    var_set_str(vm, "SRC", mfield);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* MAXOBJ|HIGHEST|ARGMAXF [Class] field
    * MINOBJ|LOWEST|ARGMINF [Class] field
    * — name of first live object with max/min numeric field (optional class).

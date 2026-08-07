@@ -1,0 +1,115 @@
+# MULWHERE / SCALEWHERE — selective multiply numeric field on match
+# Usability: scale subset energy/retries without EACH+GETF+IF+SETF
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell a 1 10 0
+NEW Cell b 1 20 0
+NEW Cell c 1 30 0
+NEW Cell d 1 40 0
+SETF a age 1
+SETF b age 0
+SETF c age 1
+SETF d age 0
+
+# double energy only where age==1 → a20, c60; b20 d40 untouched
+MULWHERE Cell energy age 1 2
+ASSERT OK == 1
+ASSERT MULWHERE_N == 2
+ASSERT LAST_N == 2
+ASSERT MULWHERE_FACTOR == 2
+ASSERT MULWHERE_SKIP == 0
+GETF a energy
+ASSERT LAST_N == 20
+GETF c energy
+ASSERT LAST_N == 60
+GETF b energy
+ASSERT LAST_N == 20
+GETF d energy
+ASSERT LAST_N == 40
+
+# WHERE sugar + BY
+MULWHERE Cell energy WHERE age 0 BY 3
+ASSERT MULWHERE_N == 2
+ASSERT MULWHERE_FACTOR == 3
+GETF b energy
+ASSERT LAST_N == 60
+GETF d energy
+ASSERT LAST_N == 120
+
+# OF sugar
+MULWHERE OF Cell energy age 1 0
+ASSERT MULWHERE_N == 2
+ASSERT MULWHERE_FACTOR == 0
+GETF a energy
+ASSERT LAST_N == 0
+GETF c energy
+ASSERT LAST_N == 0
+# age 0 untouched by this call
+GETF b energy
+ASSERT LAST_N == 60
+
+# aliases
+SETF a energy 5
+SETF c energy 7
+SCALEWHERE Cell energy age 1 2
+ASSERT SCALEWHERE_N == 2
+ASSERT SCALEWHERE_FACTOR == 2
+GETF a energy
+ASSERT LAST_N == 10
+GETF c energy
+ASSERT LAST_N == 14
+MULFWHERE Cell energy age 1 BY 1
+ASSERT MULFWHERE_N == 2
+MULIF Cell energy age 0 2
+ASSERT MULWHERE_N == 2
+GETF b energy
+ASSERT LAST_N == 120
+GETF d energy
+ASSERT LAST_N == 240
+TIMESWHERE Cell energy age 1 1
+ASSERT MULWHERE_N == 2
+
+# string match · halve open retries (factor 0 then restore pattern)
+CLASS Ticket
+  FIELD status "new"
+  FIELD retries 0
+  METHOD init s r
+    SETF THIS status s
+    SETF THIS retries r
+  END
+END
+NEW Ticket t1 "open" 4
+NEW Ticket t2 "closed" 8
+NEW Ticket t3 "open" 6
+MULWHERE Ticket retries status "open" BY 2
+ASSERT OK == 1
+ASSERT MULWHERE_N == 2
+ASSERT MULWHERE_FACTOR == 2
+GETF t1 retries
+ASSERT LAST_N == 8
+GETF t3 retries
+ASSERT LAST_N == 12
+GETF t2 retries
+ASSERT LAST_N == 8 "closed untouched"
+
+# zero open retries
+MULWHERE Ticket retries status "open" 0
+ASSERT MULWHERE_N == 2
+GETF t1 retries
+ASSERT LAST_N == 0
+GETF t3 retries
+ASSERT LAST_N == 0
+GETF t2 retries
+ASSERT LAST_N == 8
+
+# no match → 0
+MULWHERE Ticket retries status "missing" 5
+ASSERT OK == 1
+ASSERT MULWHERE_N == 0
+ASSERT LAST_N == 0
+
+PRINT "proof915_oop_mulwhere" 1
+ASSERT OK == 1

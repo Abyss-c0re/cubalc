@@ -401,6 +401,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 371. ~~**`MODEWHERE` / `DOMINANTWHERE` / `MODEIF`**~~ **done** (most frequent field on field==value objs · no FREQWHERE+TOPKEY).
 372. ~~**`UNIQUWHERE` / `DISTINCTWHERE` / `UNIQUIF`**~~ **done** (unique field values on field==value objs · no GETFWHERE+UNIQ).
 373. ~~**`CLAMPWHERE` / `CLIPWHERE` / `CLAMPIF`**~~ **done** (clamp numeric field on field==value objs · no EACH+GETF+IF+SETF).
+374. ~~**`MULWHERE` / `SCALEWHERE` / `MULIF`**~~ **done** (multiply numeric field on field==value objs · selective scale).
 
 ## Tick protocol
 
