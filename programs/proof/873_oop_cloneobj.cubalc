@@ -1,0 +1,80 @@
+# CLONEOBJ / COPYOBJ — shallow copy live object fields to new name
+# Usability: template/prototype spawn without EACH field SETF; no init re-run
+
+HOLD_FLASH 1
+
+INCLUDE life_cell
+
+NEW Cell proto 1 12 0
+SETF proto age 3
+SETF proto ready 1
+
+CLONEOBJ proto child
+ASSERT OK == 1
+ASSERT CLONEOBJ_N == 1
+HASOBJ child
+ASSERT LAST_N == 1
+ISOF child Cell
+ASSERT LAST_N == 1
+
+GETF child energy
+ASSERT LAST_N == 12 "fields copied"
+GETF child age
+ASSERT LAST_N == 3
+GETF child ready
+ASSERT LAST_N == 1
+GETF child alive
+ASSERT LAST_N == 1
+
+# source unchanged
+GETF proto energy
+ASSERT LAST_N == 12
+
+# mutate clone independently
+SETF child energy 99
+GETF proto energy
+ASSERT LAST_N == 12 "shallow independent"
+GETF child energy
+ASSERT LAST_N == 99
+
+# LAST is dst name
+CLONEOBJ proto twin
+ASSERT LAST == "twin"
+HASOBJ twin
+ASSERT LAST_N == 1
+
+# soft miss source
+CLONEOBJ missing_zz ghost
+ASSERT OK == 0
+HASOBJ ghost
+ASSERT LAST_N == 0
+
+# AS / TO sugar
+CLONEOBJ proto AS spare
+HASOBJ spare
+ASSERT LAST_N == 1
+GETF spare energy
+ASSERT LAST_N == 12
+
+# COPYOBJ alias
+COPYOBJ child copy1
+GETF copy1 energy
+ASSERT LAST_N == 99
+
+# string fields
+CLASS Box
+  FIELD label "x"
+  FIELD n 0
+  METHOD init s k
+    SETF THIS label s
+    SETF THIS n k
+  END
+END
+NEW Box b0 "hello" 7
+CLONEOBJ b0 b1
+GETF b1 label
+ASSERT LAST == "hello"
+GETF b1 n
+ASSERT LAST_N == 7
+
+PRINT "oop_cloneobj ok"

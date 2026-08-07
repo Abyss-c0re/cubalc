@@ -1158,6 +1158,73 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CLONEOBJ|COPYOBJ|DUPLOBJ src dst — shallow copy live object fields into
+   * new instance of same class. Does not re-run init (snapshot clone).
+   * Soft miss src OK=0; dst live already → fatal redefine.
+   * Usability: template/prototype + pool spawn without field-by-field SETF. */
+  if (kw(&L->cur, "CLONEOBJ") || kw(&L->cur, "COPYOBJ") ||
+      kw(&L->cur, "DUPLOBJ") || kw(&L->cur, "CLONE") ||
+      kw(&L->cur, "OBJCLONE") || kw(&L->cur, "OBJCOPY") ||
+      kw(&L->cur, "DUP_OBJ") || kw(&L->cur, "COPY_OBJ")) {
+    char sname[48], dname[48];
+    ObjInst *src, *dst;
+    ClassDef *cd;
+    int fi;
+    lex_next(L);
+    if (oop_read_name(vm, L, sname, sizeof sname, "CLONEOBJ src") < 0)
+      return -1;
+    if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
+      lex_next(L);
+    if (oop_read_name(vm, L, dname, sizeof dname, "CLONEOBJ dst") < 0)
+      return -1;
+    src = oop_find_obj(vm, sname);
+    if (!src) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLONEOBJ: unknown source");
+      var_set_str(vm, "ERR", "CLONEOBJ: unknown source");
+      bump(vm);
+      return 1;
+    }
+    if (src->class_idx < 0 || src->class_idx >= vm->n_classes) {
+      fail(vm, "CLONEOBJ bad class"); return -1;
+    }
+    cd = &vm->classes[src->class_idx];
+    /* allocate dst without ctor (field defaults then overwrite from src) */
+    if (oop_new_instance(vm, cd->name, dname, -1, NULL, 0) < 0)
+      return -1;
+    dst = oop_find_obj(vm, dname);
+    if (!dst) {
+      fail(vm, "CLONEOBJ alloc fail"); return -1;
+    }
+    for (fi = 0; fi < cd->n_fields && fi < CUBALC_MAX_FIELDS; fi++) {
+      dst->fis_str[fi] = src->fis_str[fi];
+      if (src->fis_str[fi])
+        snprintf(dst->fstr[fi], sizeof dst->fstr[fi], "%s", src->fstr[fi]);
+      else
+        dst->fnum[fi] = src->fnum[fi];
+    }
+    /* pure object clone: not bound to src cube */
+    dst->cube_idx = -1;
+    var_set_str(vm, "LAST", dname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", dname);
+    var_set_str(vm, "OBJECT", dname);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "CLONEOBJ", dname);
+    var_set_str(vm, "CLONE_SRC", sname);
+    var_set_num(vm, "LAST_N", cd->n_fields);
+    vm->last_n = cd->n_fields;
+    var_set_num(vm, "CLONEOBJ_N", 1);
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* HASFIELD obj|Class field — soft 0|1 probe before GETF/SETF. */
   if (kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASF") ||
       kw(&L->cur, "FIELD?") || kw(&L->cur, "HASFILD") ||

@@ -2011,6 +2011,7 @@ int main(int argc, char **argv) {
       {"oop_string_fields", "programs/proof/870_oop_string_fields.cubalc", "SETF/NEW string-from-var + string formals"},
       {"oop_getf_or", "programs/proof/871_oop_getf_or.cubalc", "GETF OR/TRYGETF soft field reads with defaults"},
       {"assert_str_eq", "programs/proof/872_assert_str_eq.cubalc", "ASSERT/IF string ==/!= content compare"},
+      {"oop_cloneobj", "programs/proof/873_oop_cloneobj.cubalc", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"sys_addiso", "programs/proof/860_sys_addiso.cubalc", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"sys_diffiso", "programs/proof/861_sys_diffiso.cubalc", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
     };
@@ -5888,6 +5889,7 @@ int main(int argc, char **argv) {
       {"programs/proof/870_oop_string_fields.cubalc", "oop_string_fields", "SETF/NEW string-from-var + string formals"},
       {"programs/proof/871_oop_getf_or.cubalc", "oop_getf_or", "GETF OR/TRYGETF soft field reads with defaults"},
       {"programs/proof/872_assert_str_eq.cubalc", "assert_str_eq", "ASSERT/IF string ==/!= content compare"},
+      {"programs/proof/873_oop_cloneobj.cubalc", "oop_cloneobj", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/proof/591_sys_ms.cubalc", "sys_ms", "SYS MS wall milliseconds"},
@@ -6158,6 +6160,7 @@ int main(int argc, char **argv) {
       {"programs/proof/870_oop_string_fields.cubalc", "oop_string_fields", "SETF/NEW string-from-var + string formals"},
       {"programs/proof/871_oop_getf_or.cubalc", "oop_getf_or", "GETF OR/TRYGETF soft field reads with defaults"},
       {"programs/proof/872_assert_str_eq.cubalc", "assert_str_eq", "ASSERT/IF string ==/!= content compare"},
+      {"programs/proof/873_oop_cloneobj.cubalc", "oop_cloneobj", "CLONEOBJ/COPYOBJ shallow object field copy"},
       {"programs/proof/860_sys_addiso.cubalc", "sys_addiso", "SYS ADDISO shift ISO stamp by secs or duration"},
       {"programs/proof/861_sys_diffiso.cubalc", "sys_diffiso", "SYS DIFFISO/ISOAGE ISO stamp second deltas"},
       {"programs/p2p/mesh_local.cubalc", "smx", "in-process SMX EXCHANGE"},
