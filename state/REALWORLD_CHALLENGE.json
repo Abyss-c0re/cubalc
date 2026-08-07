@@ -154,6 +154,6 @@
     "EXPIRED LAST_N clobber forces due_save pattern",
     "selftest 280/280; no language fix this iter"
   ],
-  "commit": "",
+  "commit": "2996a7cbed8bc4c8612fe5d2baf4ff170db323e1",
   "ts": "2026-08-07T00:41:13Z"
 }
