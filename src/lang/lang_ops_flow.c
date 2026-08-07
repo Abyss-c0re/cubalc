@@ -11097,9 +11097,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       as_json = 1;
       lex_next(L);
     }
-    /* optional FN|FUNC keyword before name */
+    /* optional FN|FUNC keyword before name (not NAME — conflicts with var id) */
     if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
-        kw(&L->cur, "OF") || kw(&L->cur, "NAME"))
+        kw(&L->cur, "OF"))
       lex_next(L);
     if (L->cur.kind == TK_STR) {
       snprintf(fname, sizeof fname, "%s", L->cur.text);
@@ -11190,6 +11190,90 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "ARITY", fn->n_params);
     var_set_str(vm, "FN", fn->name);
     var_set_str(vm, "PARAMS", pbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTFNS|FUNCTIONS — newline bag of defined FN names for agent discovery.
+   * LAST_N / NFNS = count. Complements FNINFO (per-FN arity) and LISTMETHODS. */
+  if (kw(&L->cur, "LISTFNS") || kw(&L->cur, "FUNCTIONS") ||
+      kw(&L->cur, "LISTFUNCS") || kw(&L->cur, "FUNCS") ||
+      kw(&L->cur, "FNLIST") || kw(&L->cur, "LISTFUNCTIONS") ||
+      kw(&L->cur, "FNS") || kw(&L->cur, "DEFS")) {
+    char bag[4096];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_fns; i++) {
+      size_t ln = strlen(vm->fns[i].name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, vm->fns[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFNS", bag);
+    var_set_str(vm, "FUNCTIONS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFNS", n);
+    var_set_num(vm, "LISTFNS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFN|HASFUNC name — soft 0|1 probe before CALL.
+   * Name may be IDENT, "string", or string-var. Usability: IF without fatal. */
+  if (kw(&L->cur, "HASFN") || kw(&L->cur, "HASFUNC") ||
+      kw(&L->cur, "HASFUNCTION") || kw(&L->cur, "FN?") ||
+      kw(&L->cur, "FUNC?") || kw(&L->cur, "FNEXISTS") ||
+      kw(&L->cur, "FUNCEXISTS") || kw(&L->cur, "DEFINEDFN") ||
+      kw(&L->cur, "ISFN") || kw(&L->cur, "CANCALLFN")) {
+    char fname[48];
+    int i, hit = 0;
+    lex_next(L);
+    /* optional FN|FUNC keyword before name (not NAME — conflicts with var id) */
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "HASFN name"); return -1;
+    }
+    for (i = 0; i < vm->n_fns; i++) {
+      if (strcmp(vm->fns[i].name, fname) == 0) {
+        hit = 1;
+        break;
+      }
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASFN_N", hit);
+    var_set_str(vm, "FN", fname);
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;

@@ -1,0 +1,114 @@
+# LISTFNS / HASFN — FN catalog discovery for agents
+# Usability: find available FNs then FNINFO/CALL without fatal probes
+
+HOLD_FLASH 1
+
+# empty catalog before any FN
+LISTFNS
+ASSERT OK == 1
+ASSERT NFNS == 0
+ASSERT LISTFNS_N == 0
+ASSERT LAST_N == 0
+SYS EQS LAST ""
+ASSERT LAST_N == 1
+
+HASFN nosuch
+ASSERT OK == 1
+ASSERT HASFN_N == 0
+ASSERT LAST_N == 0
+
+FN add a b
+  RET a + b
+END
+
+FN greet name
+  RET name
+END
+
+FN ping
+  RET 1
+END
+
+# bag of names
+LISTFNS
+ASSERT OK == 1
+ASSERT NFNS == 3
+ASSERT LISTFNS_N == 3
+ASSERT LAST_N == 3
+SYS HAS LAST "add"
+ASSERT LAST_N == 1
+SYS HAS LAST "greet"
+ASSERT LAST_N == 1
+SYS HAS LAST "ping"
+ASSERT LAST_N == 1
+SYS EQS LISTFNS LAST
+ASSERT LAST_N == 1
+
+# aliases
+FUNCTIONS
+ASSERT NFNS == 3
+FNLIST
+ASSERT LISTFNS_N == 3
+LISTFUNCS
+ASSERT LAST_N == 3
+
+# soft probes
+HASFN add
+ASSERT OK == 1
+ASSERT HASFN_N == 1
+ASSERT LAST_N == 1
+SYS EQS FN "add"
+ASSERT LAST_N == 1
+
+HASFN "greet"
+ASSERT HASFN_N == 1
+
+LET f = "ping"
+HASFN f
+ASSERT HASFN_N == 1
+SYS EQS FN "ping"
+ASSERT LAST_N == 1
+
+HASFN FN add
+ASSERT HASFN_N == 1
+
+HASFN missing
+ASSERT HASFN_N == 0
+ASSERT LAST_N == 0
+SYS EQS FN "missing"
+ASSERT LAST_N == 1
+
+# aliases
+HASFUNC greet
+ASSERT HASFN_N == 1
+FNEXISTS ping
+ASSERT HASFN_N == 1
+ISFN add
+ASSERT LAST_N == 1
+CANCALLFN nosuch
+ASSERT HASFN_N == 0
+
+# walk bag → FNINFO → CALL
+LISTFNS
+EACH LINE AS name
+  HASFN name
+  ASSERT HASFN_N == 1
+  FNINFO name
+  ASSERT OK == 1
+END
+
+# CALL still works
+CALL add 10 20
+ASSERT LAST_N == 30
+
+# HELP discoverable
+HELP LISTFNS
+ASSERT OK == 1
+SYS HAS LAST "LISTFNS"
+ASSERT LAST_N == 1
+HELP HASFN
+ASSERT OK == 1
+SYS HAS LAST "HASFN"
+ASSERT LAST_N == 1
+
+NOTE "931_fn_listfns_hasfn ok"
