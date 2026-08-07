@@ -13000,20 +13000,20 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       bump(vm); return 1;
     }
     /* SYS PARSEMS|DURATION|TOMS|PARSEDUR [str]
-     * — parse duration "250" / "250ms" / "5s" / "2m" / "1h" / "1d" [/w] → milliseconds.
-     * Bare number = ms (agent configs). LAST = decimal ms; LAST_N / PARSEMS_N = ms.
-     * Soft fail OK=0 on empty/bad unit. Usability: SLEEP/WAITFILE/LOCKFILE timeouts
-     * from human config without shell/awk. Cap LONG_MAX. */
+     * — parse duration → milliseconds. Single: "250"/"250ms"/"5s"/"2m"/"1h"/"1d"/"1w".
+     * Compound (HUMANMS dual): "1h30m", "2m15s", "1d12h", "1s250ms" (spaces ok).
+     * Bare number = ms. LAST_N / PARSEMS_N = total ms. Soft fail empty/bad.
+     * Usability: config timeouts + round-trip HUMANMS without shell. Cap LONG_MAX. */
     if (kw(&L->cur,"PARSEMS") || kw(&L->cur,"DURATION") || kw(&L->cur,"TOMS") ||
         kw(&L->cur,"PARSEDUR") || kw(&L->cur,"DURMS") || kw(&L->cur,"MSDUR") ||
         kw(&L->cur,"PARSE_MS") || kw(&L->cur,"TO_MS") || kw(&L->cur,"ASMS") ||
         kw(&L->cur,"HUMANMS_PARSE") || kw(&L->cur,"PARSE_DURATION")){
-      char src[256], out[48];
+      char src[256], out[48], unit[16];
       const char *p;
-      unsigned long long n = 0, mul = 1;
       char *end = NULL;
-      char unit[16];
-      int ui = 0;
+      unsigned long long total = 0, n = 0, mul = 1, add = 0;
+      int ui = 0, segs = 0, bad = 0;
+      const char *err = NULL;
       lex_next(L);
       src[0] = 0;
       if (resolve_str_arg(vm, L, src, sizeof src) != 0)
@@ -13021,97 +13021,96 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       p = src;
       while (*p == ' ' || *p == '\t') p++;
       if (!*p) {
+        err = "PARSEMS: empty";
+        bad = 1;
+      }
+      while (!bad && *p) {
+        while (*p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        n = strtoull(p, &end, 10);
+        if (end == p) {
+          err = "PARSEMS: bad number";
+          bad = 1;
+          break;
+        }
+        p = end;
+        while (*p == ' ' || *p == '\t') p++;
+        ui = 0;
+        while (ui < (int)sizeof(unit) - 1 &&
+               ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z'))) {
+          char c = *p++;
+          if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+          unit[ui++] = c;
+        }
+        unit[ui] = 0;
+        if (unit[0] == 0 || strcmp(unit, "ms") == 0 || strcmp(unit, "msec") == 0 ||
+            strcmp(unit, "msecs") == 0 || strcmp(unit, "millisecond") == 0 ||
+            strcmp(unit, "milliseconds") == 0) {
+          mul = 1;
+        } else if (strcmp(unit, "s") == 0 || strcmp(unit, "sec") == 0 ||
+                   strcmp(unit, "secs") == 0 || strcmp(unit, "second") == 0 ||
+                   strcmp(unit, "seconds") == 0) {
+          mul = 1000ULL;
+        } else if (strcmp(unit, "m") == 0 || strcmp(unit, "min") == 0 ||
+                   strcmp(unit, "mins") == 0 || strcmp(unit, "minute") == 0 ||
+                   strcmp(unit, "minutes") == 0) {
+          mul = 60ULL * 1000ULL;
+        } else if (strcmp(unit, "h") == 0 || strcmp(unit, "hr") == 0 ||
+                   strcmp(unit, "hrs") == 0 || strcmp(unit, "hour") == 0 ||
+                   strcmp(unit, "hours") == 0) {
+          mul = 60ULL * 60ULL * 1000ULL;
+        } else if (strcmp(unit, "d") == 0 || strcmp(unit, "day") == 0 ||
+                   strcmp(unit, "days") == 0) {
+          mul = 24ULL * 60ULL * 60ULL * 1000ULL;
+        } else if (strcmp(unit, "w") == 0 || strcmp(unit, "wk") == 0 ||
+                   strcmp(unit, "week") == 0 || strcmp(unit, "weeks") == 0) {
+          mul = 7ULL * 24ULL * 60ULL * 60ULL * 1000ULL;
+        } else {
+          err = "PARSEMS: bad unit";
+          bad = 1;
+          break;
+        }
+        /* bare unit-less number only allowed as sole segment (whole string ms) */
+        if (unit[0] == 0 && (segs > 0 || *p != 0)) {
+          /* trailing digits without unit after a unit segment → junk */
+          err = "PARSEMS: bare number only alone";
+          bad = 1;
+          break;
+        }
+        if (mul > 1 && n > (unsigned long long)LONG_MAX / mul)
+          add = (unsigned long long)LONG_MAX;
+        else
+          add = n * mul;
+        if (total > (unsigned long long)LONG_MAX - add)
+          total = (unsigned long long)LONG_MAX;
+        else
+          total += add;
+        segs++;
+      }
+      if (!bad && segs == 0) {
+        err = "PARSEMS: empty";
+        bad = 1;
+      }
+      if (bad) {
         var_set_str(vm, "LAST", "");
         vm->last_str[0] = 0;
         vm->last_n = 0;
         var_set_num(vm, "LAST_N", 0);
         var_set_num(vm, "PARSEMS_N", 0);
         var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "PARSEMS: empty");
-        var_set_str(vm, "ERR", "PARSEMS: empty");
+        var_set_str(vm, "LAST_ERR", err ? err : "PARSEMS: fail");
+        var_set_str(vm, "ERR", err ? err : "PARSEMS: fail");
         bump(vm); return 1;
       }
-      n = strtoull(p, &end, 10);
-      if (end == p) {
-        var_set_str(vm, "LAST", "");
-        vm->last_str[0] = 0;
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
-        var_set_num(vm, "PARSEMS_N", 0);
-        var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "PARSEMS: bad number");
-        var_set_str(vm, "ERR", "PARSEMS: bad number");
-        bump(vm); return 1;
-      }
-      while (*end == ' ' || *end == '\t') end++;
-      /* collect unit letters (case-insensitive) */
-      ui = 0;
-      while (ui < (int)sizeof(unit) - 1 &&
-             ((*end >= 'a' && *end <= 'z') || (*end >= 'A' && *end <= 'Z'))) {
-        char c = *end++;
-        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-        unit[ui++] = c;
-      }
-      unit[ui] = 0;
-      while (*end == ' ' || *end == '\t') end++;
-      if (*end != 0) {
-        var_set_str(vm, "LAST", "");
-        vm->last_str[0] = 0;
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
-        var_set_num(vm, "PARSEMS_N", 0);
-        var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "PARSEMS: trailing junk");
-        var_set_str(vm, "ERR", "PARSEMS: trailing junk");
-        bump(vm); return 1;
-      }
-      /* bare number or ms/msec/millisecond(s) → milliseconds */
-      if (unit[0] == 0 || strcmp(unit, "ms") == 0 || strcmp(unit, "msec") == 0 ||
-          strcmp(unit, "msecs") == 0 || strcmp(unit, "millisecond") == 0 ||
-          strcmp(unit, "milliseconds") == 0) {
-        mul = 1;
-      } else if (strcmp(unit, "s") == 0 || strcmp(unit, "sec") == 0 ||
-                 strcmp(unit, "secs") == 0 || strcmp(unit, "second") == 0 ||
-                 strcmp(unit, "seconds") == 0) {
-        mul = 1000ULL;
-      } else if (strcmp(unit, "m") == 0 || strcmp(unit, "min") == 0 ||
-                 strcmp(unit, "mins") == 0 || strcmp(unit, "minute") == 0 ||
-                 strcmp(unit, "minutes") == 0) {
-        mul = 60ULL * 1000ULL;
-      } else if (strcmp(unit, "h") == 0 || strcmp(unit, "hr") == 0 ||
-                 strcmp(unit, "hrs") == 0 || strcmp(unit, "hour") == 0 ||
-                 strcmp(unit, "hours") == 0) {
-        mul = 60ULL * 60ULL * 1000ULL;
-      } else if (strcmp(unit, "d") == 0 || strcmp(unit, "day") == 0 ||
-                 strcmp(unit, "days") == 0) {
-        mul = 24ULL * 60ULL * 60ULL * 1000ULL;
-      } else if (strcmp(unit, "w") == 0 || strcmp(unit, "wk") == 0 ||
-                 strcmp(unit, "week") == 0 || strcmp(unit, "weeks") == 0) {
-        mul = 7ULL * 24ULL * 60ULL * 60ULL * 1000ULL;
-      } else {
-        var_set_str(vm, "LAST", "");
-        vm->last_str[0] = 0;
-        vm->last_n = 0;
-        var_set_num(vm, "LAST_N", 0);
-        var_set_num(vm, "PARSEMS_N", 0);
-        var_set_num(vm, "OK", 0);
-        var_set_str(vm, "LAST_ERR", "PARSEMS: bad unit");
-        var_set_str(vm, "ERR", "PARSEMS: bad unit");
-        bump(vm); return 1;
-      }
-      /* overflow guard before multiply */
-      if (mul > 1 && n > (unsigned long long)LONG_MAX / mul)
-        n = (unsigned long long)LONG_MAX;
-      else
-        n = n * mul;
-      if (n > (unsigned long long)LONG_MAX) n = (unsigned long long)LONG_MAX;
-      snprintf(out, sizeof out, "%llu", n);
+      if (total > (unsigned long long)LONG_MAX) total = (unsigned long long)LONG_MAX;
+      snprintf(out, sizeof out, "%llu", total);
       var_set_str(vm, "LAST", out);
       snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
-      vm->last_n = (long)n;
-      var_set_num(vm, "LAST_N", (long)n);
-      var_set_num(vm, "PARSEMS_N", (long)n);
-      var_set_num(vm, "DURATION_N", (long)n);
+      vm->last_n = (long)total;
+      var_set_num(vm, "LAST_N", (long)total);
+      var_set_num(vm, "PARSEMS_N", (long)total);
+      var_set_num(vm, "DURATION_N", (long)total);
+      var_set_num(vm, "PARSEMS_SEGS", (long)segs);
       var_set_str(vm, "PARSEMS", out);
       var_set_str(vm, "DURATION", out);
       var_set_str(vm, "TOMS", out);
@@ -24626,7 +24625,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       {"SYS SLEEP", "SYS SLEEP|MSLEEP|DELAY n — pause n ms (cap 60s)"},
       {"SYS RAND", "SYS RAND|RANDOM [n]|[lo hi] — uniform int · jitter/sample without shell"},
       {"SYS ENTROPY", "SYS ENTROPY|URANDOM [n] — n random bytes as hex · nonces/tokens"},
-      {"SYS PARSEMS", "SYS PARSEMS|DURATION|TOMS [str] — 5s/2m/1h → ms · SLEEP/WAIT timeouts"},
+      {"SYS PARSEMS", "SYS PARSEMS|DURATION [str] — 5s/1h30m compound → ms · dual HUMANMS"},
       {"SYS DURATION", "SYS DURATION [str] — alias of SYS PARSEMS · human duration → ms"},
       {"SYS TOMS", "SYS TOMS [str] — alias of SYS PARSEMS"},
       {"SYS MS2SEC", "SYS MS2SEC|TOSECS [n] — floor ms/1000 → secs · PARSEMS→DEADLINE bridge"},

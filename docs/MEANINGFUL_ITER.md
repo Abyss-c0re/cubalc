@@ -344,6 +344,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 314. ~~**`SYS ADDTIME` / `DEADLINE`**~~ **done** (epoch + seconds / now+secs lease expiry · dual of TIMEDIFF).
 315. ~~**`SYS EXPIRED` / `REMAINING`**~~ **done** (lease due probe + TTL secs · IF without TIMEDIFF+CMP).
 316. ~~**`SYS MS2SEC` / `SEC2MS`**~~ **done** (ms↔seconds bridge · PARSEMS→DEADLINE / TTL→SLEEP).
+317. ~~**`SYS PARSEMS` compound**~~ **done** (1h30m/2m15s multi-unit · HUMANMS round-trip).
 
 ## Tick protocol
 
