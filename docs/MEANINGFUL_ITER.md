@@ -426,6 +426,7 @@ The 6-minute universal loop may still fill ISA gaps. This loop ships **one human
 396. ~~**`BOUNDF` / `LIMITF` / `CLIPOBJ`**~~ **done** (single-object numeric field clamp · no GETF+IF+SETF · METHOD/THIS; CLAMPF stays fleet).
 397. ~~**`TIMESF` / `SCALEOBJ` / `MULOBJ`**~~ **done** (single-object numeric field multiply · no GETF+*+SETF · METHOD/THIS; MULF stays fleet).
 398. ~~**`CATF` / `APPENDF` / `PREPENDF`**~~ **done** (single-object string field concat · no GETF+CAT+SETF · METHOD/THIS · dual of INCF).
+399. ~~**`CATFALL` / `APPENDFALL` / `PREPENDFALL`**~~ **done** (fleet string field concat · no EACH+GETF+CAT+SETF · dual of INCFALL / fleet of CATF).
 
 ## Tick protocol
 

@@ -1,0 +1,140 @@
+# CATFALL / APPENDFALL / PREPENDFALL — fleet string field concat for agents
+# Usability: tag every live note/status without EACH+GETF+CAT+SETF
+# String dual of INCFALL; fleet dual of CATF
+
+HOLD_FLASH 1
+
+CLASS Ticket
+  FIELD status "open"
+  FIELD note "n"
+  FIELD retries 0
+  METHOD init s
+    SETF THIS status s
+  END
+END
+
+CLASS Log
+  FIELD note "L"
+  FIELD tag ""
+  METHOD init
+  END
+END
+
+NEW Ticket a "open"
+NEW Ticket b "open"
+NEW Ticket c "held"
+NEW Log g1
+NEW Log g2
+
+# append suffix on class field
+CATFALL Ticket note "!"
+ASSERT OK == 1
+ASSERT CATFALL_N == 3
+ASSERT LAST_N == 3
+ASSERT APPENDFALL_N == 3
+ASSERT PREPENDFALL_N == 0
+SYS EQS LAST "!"
+ASSERT LAST_N == 1
+SYS EQS FIELD "note"
+ASSERT LAST_N == 1
+SYS EQS CLASS "Ticket"
+ASSERT LAST_N == 1
+GETF a note
+SYS EQS LAST "n!"
+ASSERT LAST_N == 1
+GETF b note
+SYS EQS LAST "n!"
+ASSERT LAST_N == 1
+GETF c note
+SYS EQS LAST "n!"
+ASSERT LAST_N == 1
+# Log notes untouched
+GETF g1 note
+SYS EQS LAST "L"
+ASSERT LAST_N == 1
+
+# aliases
+APPENDFALL Ticket note "x"
+ASSERT APPENDFALL_N == 3
+GETF a note
+SYS EQS LAST "n!x"
+ASSERT LAST_N == 1
+
+# OF sugar + WITH glue
+CATFALL OF Ticket note WITH "?"
+ASSERT CATFALL_N == 3
+GETF a note
+SYS EQS LAST "n!x?"
+ASSERT LAST_N == 1
+
+# prepend fleet
+PREPENDFALL Ticket note "["
+ASSERT PREPENDFALL_N == 3
+ASSERT CATFALL_N == 3
+GETF a note
+SYS EQS LAST "[n!x?"
+ASSERT LAST_N == 1
+PREFIXFALL Ticket note "{"
+GETF b note
+SYS EQS LAST "{[n!x?"
+ASSERT LAST_N == 1
+
+# promote numeric field to string via CATFALL
+CATFALL Ticket retries "-r"
+ASSERT CATFALL_N == 3
+GETF a retries
+SYS EQS LAST "0-r"
+ASSERT LAST_N == 1
+
+# bare field across classes that own it
+CATFALL note "|z"
+ASSERT CATFALL_N == 5 "Ticket+Log notes"
+GETF g1 note
+SYS EQS LAST "L|z"
+ASSERT LAST_N == 1
+GETF a note
+SYS EQS LAST "{[n!x?|z"
+ASSERT LAST_N == 1
+
+# dynamic piece from var
+LET suf = "#ok"
+CATFALL Log tag suf
+ASSERT CATFALL_N == 2
+GETF g1 tag
+SYS EQS LAST "#ok"
+ASSERT LAST_N == 1
+
+# missing field soft skip
+CATFALL Ticket no_such_zz "q"
+ASSERT OK == 1
+ASSERT CATFALL_N == 0
+ASSERT CATFALL_SKIP == 3
+
+# empty class pool soft
+DELETEALL Log
+CATFALL Log note "gone"
+ASSERT OK == 1
+ASSERT CATFALL_N == 0
+
+# BULKCATF / MAPCATF aliases
+NEW Log h1
+NEW Log h2
+BULKCATF Log note "-bulk"
+ASSERT CATFALL_N == 2
+GETF h1 note
+SYS EQS LAST "L-bulk"
+ASSERT LAST_N == 1
+MAPCATF OF Log note WITH "!"
+GETF h2 note
+SYS EQS LAST "L-bulk!"
+ASSERT LAST_N == 1
+
+# HELP discoverable
+HELP CATFALL
+SYS HAS LAST "CATFALL"
+ASSERT LAST_N == 1
+HELP PREPENDFALL
+SYS HAS LAST "PREPEND"
+ASSERT LAST_N == 1
+
+PRINT "oop_catfall ok"
