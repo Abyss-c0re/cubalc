@@ -1,0 +1,1293 @@
+# job_retry_where_board.cubalc — SETFWHERE/INCFWHERE/GETFWHERE job retry ladder
+#
+# Real use: agent fleet of Job slots (j0..j2) with status + retries. Selective
+# transitions without EACH+GETF+IF+SETF glue:
+#   SETFWHERE  — pending→running, running→retry, retry→dead, *→ok
+#   INCFWHERE  — bump retries only on matching status (before status rewrite)
+#   GETFWHERE  — collect retries/ids for matching status (AS KV optional)
+# Admit when COUNTWHERE status WANT == NOBJS (LISTOBJS refreshes NOBJS).
+#
+# Surfaces forced (1.15.355–357):
+#   SETFWHERE / WHERESETF / PUTWHERE
+#   INCFWHERE / DECFWHERE / ADDWHERE / BUMPWHERE
+#   GETFWHERE / COLLECTWHERE / PLUCKWHERE (+ AS KV)
+#   COUNTWHERE · DUMPOBJ rehydrate LOOKUP/LOOKUPN · bag journal
+#   soft TRYSEND + REQUIRE miss (EXIT only in action bodies)
+#
+# Distinct from dlq_retry (bag tokens SETMATCH), retry_backoff (host timing),
+# canary_rev_swap (COPYF/SWAPF dual buffer): this board is *OOP WHERE-filtered
+# status ladder + retry counters*.
+#
+# Slots: j0 j1 j2
+# Status vocabulary: pending | running | retry | dead | ok
+#
+# Plate under STATE:
+#   dump/j0 dump/j1 dump/j2
+#   JOURNAL.txt OBJS.txt VAL.txt META.txt RETRIES.txt WHERE_REPORT.txt
+#
+# Actions (CUBALC_ARG0 / CUBALC_FS_ACTION):
+#   list       — LISTOBJS Job
+#   open       — NEW Job ARG1=jN [status=ARG2 default pending]
+#   setstatus  — SETF status ARG2 on slot
+#   start      — SETFWHERE status pending → running
+#   fail       — INCFWHERE running retries +1; SETFWHERE running → retry
+#   escalate   — SETFWHERE retry → dead
+#   succeed    — SETFWHERE ARG1(status default running) → ok
+#   requeue    — SETFWHERE dead → pending
+#   collect    — GETFWHERE retries WHERE status ARG1 (default retry)
+#   collect_kv — GETFWHERE retries WHERE status AS KV
+#   count_st   — COUNTWHERE status ARG1
+#   admit      — all live jobs on WANT status; REQUIRE→2 if not
+#   journal / count / pin / setmatch
+#   probe / dump / clear
+#
+# Host:
+#   export CUBALC_STATE=/tmp/cubalc_jrw_$$
+#   CUBALC_ARG0=open CUBALC_ARG1=j0 CUBALC_ARG2=pending
+#   CUBALC_ARG0=start
+#   CUBALC_ARG0=fail
+#   CUBALC_ARG0=collect CUBALC_ARG1=retry
+#   CUBALC_ARG0=admit CUBALC_FS_WANT=ok CUBALC_FS_REQUIRE=1
+#
+# Env: CUBALC_FS_REQUIRE NAME WANT ACTION
+#
+# Edges:
+#   SETFWHERE/INCFWHERE equality match only — no retries>=N threshold
+#   INCFWHERE after status rewrite hits ALL matching status (old+new)
+#   bump-then-rewrite order required for fail ladder
+#   NOBJS stale until LISTOBJS (admit must list first)
+#   missing set field soft SKIP; no-match N=0 soft
+#   substring false friends; WRITE NL; NUM REQUIRE softens; SETMATCH first
+
+INCLUDE agent_boot
+REQUIRE LIB hold_seed
+
+CLASS Job
+  FIELD id ""
+  FIELD status "pending"
+  FIELD retries 0
+  METHOD init i s
+    SETF THIS id i
+    SETF THIS status s
+    SETF THIS retries 0
+  END
+END
+
+NOTE "job_retry_where_board: start"
+DEFAULT ACTION = "list"
+DEFAULT NAME = ""
+DEFAULT A2 = ""
+DEFAULT NEED_HIT = 0
+DEFAULT WANT = "ok"
+IDENTITY
+SYS DATE
+LET run_date = DATE
+SYS MS
+LET t0ms = MS
+
+SYS ARG 0 OR ""
+IF LAST_N > 0 THEN
+  LET ACTION = LAST
+ELSE
+  SYS ENV "CUBALC_FS_ACTION" OR "list"
+  LET ACTION = LAST
+END
+SYS ARG 1 OR ""
+IF LAST_N > 0 THEN
+  LET NAME = LAST
+ELSE
+  SYS ENV "CUBALC_FS_NAME" OR ""
+  LET NAME = LAST
+END
+SYS ARG 2 OR ""
+IF LAST_N > 0 THEN
+  LET A2 = LAST
+ELSE
+  SYS ENV "CUBALC_FS_A2" OR ""
+  LET A2 = LAST
+END
+SYS ENV "CUBALC_FS_REQUIRE" OR ""
+IF LAST_N > 0 THEN
+  SYS NUM
+  IF OK == 1 THEN
+    LET NEED_HIT = LAST_N
+  END
+END
+SYS ENV "CUBALC_FS_WANT" OR ""
+IF LAST_N > 0 THEN
+  LET WANT = LAST
+END
+
+SYS STATE
+LET state_dir = LAST
+SYS MKDIR state_dir
+EXPECT OK == 1
+IF OK == 0 THEN
+  EXIT 2 "mkdir STATE failed"
+END
+CLEAR_ERR
+SYS JOIN state_dir "dump"
+LET dump_dir = LAST
+SYS MKDIR dump_dir
+CLEAR_ERR
+SYS JOIN state_dir "OBJS.txt"
+LET objs_path = LAST
+SYS JOIN state_dir "VAL.txt"
+LET val_path = LAST
+SYS JOIN state_dir "META.txt"
+LET meta_path = LAST
+SYS JOIN state_dir "JOURNAL.txt"
+LET journal_path = LAST
+SYS JOIN state_dir "RETRIES.txt"
+LET retries_path = LAST
+SYS JOIN state_dir "WHERE_REPORT.txt"
+LET report_path = LAST
+SYS JOIN dump_dir "j0"
+LET d_j0 = LAST
+SYS JOIN dump_dir "j1"
+LET d_j1 = LAST
+SYS JOIN dump_dir "j2"
+LET d_j2 = LAST
+
+LET slot = -1
+SYS EQS NAME "j0"
+IF LAST_N == 1 THEN
+  LET slot = 0
+END
+SYS EQS NAME "j1"
+IF LAST_N == 1 THEN
+  LET slot = 1
+END
+SYS EQS NAME "j2"
+IF LAST_N == 1 THEN
+  LET slot = 2
+END
+LET sn = ""
+IF slot == 0 THEN
+  LET sn = "j0"
+END
+IF slot == 1 THEN
+  LET sn = "j1"
+END
+IF slot == 2 THEN
+  LET sn = "j2"
+END
+
+# rehydrate j0
+SYS READ OR d_j0 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DELETEOBJ j0
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rtry = LAST_N
+  CLEAR_ERR
+  NEW Job j0 rid rst
+  TRYSETF j0 status rst
+  TRYSETF j0 retries rtry
+  CLEAR_ERR
+END
+# rehydrate j1
+SYS READ OR d_j1 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DELETEOBJ j1
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rtry = LAST_N
+  CLEAR_ERR
+  NEW Job j1 rid rst
+  TRYSETF j1 status rst
+  TRYSETF j1 retries rtry
+  CLEAR_ERR
+END
+# rehydrate j2
+SYS READ OR d_j2 OR ""
+LET snap = LAST
+CLEAR_ERR
+SYS HAS snap "id:"
+IF LAST_N == 1 THEN
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DELETEOBJ j2
+    CLEAR_ERR
+  END
+  SYS LOOKUP snap "id"
+  LET rid = LAST
+  SYS LOOKUP snap "status"
+  LET rst = LAST
+  SYS LOOKUPN snap "retries"
+  LET rtry = LAST_N
+  CLEAR_ERR
+  NEW Job j2 rid rst
+  TRYSETF j2 status rst
+  TRYSETF j2 retries rtry
+  CLEAR_ERR
+END
+
+SYS READ OR journal_path OR ""
+LET jbag = LAST
+CLEAR_ERR
+
+LET hit = 0
+LET miss = 0
+LET val = ""
+LET meta = ""
+LET val_ch = 0
+LET meta_ch = 0
+LET note_msg = "ok"
+LET nobjs = 0
+LET ret_n = 0
+LET j_changed = 0
+LET board_rep = "job_retry_where_board"
+
+# --- persist dumps helper inlined in mutators ---
+
+# --- list ---
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  NOTE "action list"
+  LISTOBJS Job
+  LET bag = LAST
+  LET nobjs = NOBJS
+  SYS WRITE objs_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "list ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "list"
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON nobjs
+  CLEAR_ERR
+END
+
+# --- open ---
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  NOTE "action open"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "open bad slot"
+    FAIL "open bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "open bad slot"
+    END
+  ELSE
+    LET st0 = "pending"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET st0 = A2
+    END
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DELETEOBJ j0
+        CLEAR_ERR
+      END
+      NEW Job j0 sn st0
+      DUMPOBJ j0
+      SYS WRITE d_j0 LAST
+      CLEAR_ERR
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DELETEOBJ j1
+        CLEAR_ERR
+      END
+      NEW Job j1 sn st0
+      DUMPOBJ j1
+      SYS WRITE d_j1 LAST
+      CLEAR_ERR
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DELETEOBJ j2
+        CLEAR_ERR
+      END
+      NEW Job j2 sn st0
+      DUMPOBJ j2
+      SYS WRITE d_j2 LAST
+      CLEAR_ERR
+    END
+    LISTOBJS Job
+    LET nobjs = NOBJS
+    SYS WRITE objs_path LAST
+    CLEAR_ERR
+    LET hit = 1
+    LET note_msg = "open ok"
+    LET val = sn
+    LET val_ch = 1
+    LET meta = "open"
+    SYS PUSH meta sn
+    LET meta = LAST
+    SYS PUSH meta st0
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setstatus ---
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  NOTE "action setstatus"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "setstatus bad slot"
+    FAIL "setstatus bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setstatus bad slot"
+    END
+  ELSE
+    LET st0 = "pending"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET st0 = A2
+    END
+    LET ok_set = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        SETF j0 status st0
+        LET ok_set = 1
+        DUMPOBJ j0
+        SYS WRITE d_j0 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        SETF j1 status st0
+        LET ok_set = 1
+        DUMPOBJ j1
+        SYS WRITE d_j1 LAST
+        CLEAR_ERR
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        SETF j2 status st0
+        LET ok_set = 1
+        DUMPOBJ j2
+        SYS WRITE d_j2 LAST
+        CLEAR_ERR
+      END
+    END
+    IF ok_set == 0 THEN
+      LET miss = 1
+      LET note_msg = "setstatus no obj"
+      FAIL "setstatus no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setstatus no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "setstatus ok"
+      LET val = st0
+      LET val_ch = 1
+      LET meta = "setstatus"
+      SYS PUSH meta sn
+      LET meta = LAST
+      SYS PUSH meta st0
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- start: SETFWHERE pending → running ---
+SYS EQS ACTION "start"
+IF LAST_N == 1 THEN
+  NOTE "action start"
+  SETFWHERE Job status "pending" status "running"
+  LET ret_n = SETFWHERE_N
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DUMPOBJ j0
+    SYS WRITE d_j0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DUMPOBJ j1
+    SYS WRITE d_j1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DUMPOBJ j2
+    SYS WRITE d_j2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:start"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "start ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "start"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "start none"
+    FAIL "start none pending"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "start none pending"
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- fail: INCFWHERE running retries; SETFWHERE running → retry ---
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  NOTE "action fail"
+  # bump first while still running (else hits all retry incl. old)
+  INCFWHERE Job status "running" retries 1
+  LET bump_n = INCFWHERE_N
+  LET delta = INCFWHERE_DELTA
+  SETFWHERE Job status "running" status "retry"
+  LET ret_n = SETFWHERE_N
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DUMPOBJ j0
+    SYS WRITE d_j0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DUMPOBJ j1
+    SYS WRITE d_j1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DUMPOBJ j2
+    SYS WRITE d_j2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:fail"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "fail ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "fail"
+  SYS PUSH meta val
+  LET meta = LAST
+  SYS STR bump_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR delta
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "fail none"
+    FAIL "fail none running"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "fail none running"
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- escalate: SETFWHERE retry → dead ---
+SYS EQS ACTION "escalate"
+IF LAST_N == 1 THEN
+  NOTE "action escalate"
+  SETFWHERE Job status "retry" status "dead"
+  LET ret_n = SETFWHERE_N
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DUMPOBJ j0
+    SYS WRITE d_j0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DUMPOBJ j1
+    SYS WRITE d_j1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DUMPOBJ j2
+    SYS WRITE d_j2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:escalate"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "escalate ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "escalate"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "escalate none"
+    FAIL "escalate none retry"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "escalate none retry"
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- succeed: SETFWHERE status(ARG1 default running) → ok ---
+SYS EQS ACTION "succeed"
+IF LAST_N == 1 THEN
+  NOTE "action succeed"
+  LET st0 = "running"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  SETFWHERE Job status st0 status "ok"
+  LET ret_n = SETFWHERE_N
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DUMPOBJ j0
+    SYS WRITE d_j0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DUMPOBJ j1
+    SYS WRITE d_j1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DUMPOBJ j2
+    SYS WRITE d_j2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:succeed"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "succeed ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "succeed"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "succeed none"
+    FAIL "succeed none match"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "succeed none match"
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- requeue: SETFWHERE dead → pending ---
+SYS EQS ACTION "requeue"
+IF LAST_N == 1 THEN
+  NOTE "action requeue"
+  SETFWHERE Job status "dead" status "pending"
+  LET ret_n = SETFWHERE_N
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DUMPOBJ j0
+    SYS WRITE d_j0 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DUMPOBJ j1
+    SYS WRITE d_j1 LAST
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DUMPOBJ j2
+    SYS WRITE d_j2 LAST
+    CLEAR_ERR
+  END
+  SYS PUSH jbag "fleet:requeue"
+  LET jbag = LAST
+  LET j_changed = 1
+  LET hit = 1
+  LET note_msg = "requeue ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "requeue"
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  IF ret_n == 0 THEN
+    LET miss = 1
+    LET note_msg = "requeue none"
+    FAIL "requeue none dead"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "requeue none dead"
+    END
+  END
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- collect GETFWHERE retries WHERE status ---
+SYS EQS ACTION "collect"
+IF LAST_N == 1 THEN
+  NOTE "action collect"
+  LET st0 = "retry"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  GETFWHERE Job retries status st0
+  LET bag = LAST
+  LET ret_n = GETFWHERE_N
+  SYS WRITE retries_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "collect ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "collect"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- collect_kv GETFWHERE AS KV ---
+SYS EQS ACTION "collect_kv"
+IF LAST_N == 1 THEN
+  NOTE "action collect_kv"
+  LET st0 = "retry"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  GETFWHERE Job retries status st0 AS KV
+  LET bag = LAST
+  LET ret_n = GETFWHERE_N
+  SYS WRITE retries_path bag
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "collect_kv ok"
+  LET val = bag
+  LET val_ch = 1
+  LET meta = "collect_kv"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- count_st COUNTWHERE ---
+SYS EQS ACTION "count_st"
+IF LAST_N == 1 THEN
+  NOTE "action count_st"
+  LET st0 = "pending"
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET st0 = NAME
+  END
+  COUNTWHERE Job status st0
+  LET ret_n = LAST_N
+  LET hit = 1
+  LET note_msg = "count_st ok"
+  SYS STR ret_n
+  LET val = LAST
+  LET val_ch = 1
+  LET meta = "count_st"
+  SYS PUSH meta st0
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON ret_n
+  CLEAR_ERR
+END
+
+# --- admit: all on WANT status (LISTOBJS first — NOBJS refresh) ---
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  NOTE "action admit"
+  LET want_s = WANT
+  SYS BLANK NAME
+  IF LAST_N == 0 THEN
+    LET want_s = NAME
+  END
+  LISTOBJS Job
+  LET nobjs = NOBJS
+  COUNTWHERE Job status want_s
+  LET ret_n = LAST_N
+  LET val = "deny"
+  LET miss = 1
+  LET hit = 0
+  LET note_msg = "admit deny"
+  IF nobjs > 0 THEN
+    IF ret_n == nobjs THEN
+      LET val = "admit"
+      LET miss = 0
+      LET hit = 1
+      LET note_msg = "admit ok"
+    END
+  END
+  LET val_ch = 1
+  LET meta = "admit"
+  SYS PUSH meta want_s
+  LET meta = LAST
+  SYS STR ret_n
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR nobjs
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS PUSH meta val
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+  IF miss > 0 THEN
+    FAIL "admit deny not all on want status"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "admit deny not all on want status"
+    END
+  END
+END
+
+# --- journal ---
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  NOTE "action journal"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "journal needs slot"
+    FAIL "journal needs slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "journal needs slot"
+    END
+  ELSE
+    LET ev = "note"
+    SYS BLANK A2
+    IF LAST_N == 0 THEN
+      LET ev = A2
+    END
+    LET jev = "DEP:EV"
+    SYS REPLACEALL jev "DEP" NAME
+    LET jev = LAST
+    SYS REPLACEALL jev "EV" ev
+    LET jev = LAST
+    SYS PUSH jbag jev
+    LET jbag = LAST
+    LET j_changed = 1
+    LET hit = 1
+    LET note_msg = "journal ok"
+    LET val = jev
+    LET val_ch = 1
+    LET meta = "journal"
+    SYS PUSH meta jev
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- count journal ---
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  NOTE "action count"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "count needs needle"
+    FAIL "count needs needle"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "count needs needle"
+    END
+  ELSE
+    SYS COUNTLINE jbag NAME
+    LET ret_n = LAST_N
+    LET hit = 1
+    SYS STR ret_n
+    LET val = LAST
+    LET val_ch = 1
+    LET note_msg = "count ok"
+    LET meta = "count"
+    SYS PUSH meta NAME
+    LET meta = LAST
+    SYS PUSH meta val
+    LET meta = LAST
+    LET meta_ch = 1
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- pin ---
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  NOTE "action pin"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "pin needs row"
+    FAIL "pin needs row"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "pin needs row"
+    END
+  ELSE
+    SYS FINDLINE jbag NAME
+    LET idx = LAST_N
+    IF OK == 0 THEN
+      LET miss = 1
+      LET note_msg = "pin miss"
+      FAIL "pin miss"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "pin miss"
+      END
+    ELSE
+      SYS MOVELINE jbag idx 0
+      LET jbag = LAST
+      LET j_changed = 1
+      LET hit = 1
+      LET note_msg = "pin ok"
+      LET val = NAME
+      LET val_ch = 1
+      LET meta = "pin"
+      SYS PUSH meta NAME
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- setmatch ---
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  NOTE "action setmatch"
+  SYS BLANK NAME
+  IF LAST_N == 1 THEN
+    LET miss = 1
+    LET note_msg = "setmatch needs old"
+    FAIL "setmatch needs old"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "setmatch needs old"
+    END
+  ELSE
+    SYS BLANK A2
+    IF LAST_N == 1 THEN
+      LET miss = 1
+      LET note_msg = "setmatch needs new"
+      FAIL "setmatch needs new"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "setmatch needs new"
+      END
+    ELSE
+      SYS HASLINE jbag NAME
+      IF LAST_N == 0 THEN
+        LET miss = 1
+        LET note_msg = "setmatch miss"
+        FAIL "setmatch miss"
+        CLEAR_ERR
+        IF NEED_HIT > 0 THEN
+          EXIT 2 "setmatch miss"
+        END
+      ELSE
+        SYS SETMATCH jbag NAME A2
+        IF LAST_N == 0 THEN
+          LET miss = 1
+          LET note_msg = "setmatch fail"
+          FAIL "setmatch fail"
+          CLEAR_ERR
+        ELSE
+          LET jbag = LAST
+          LET j_changed = 1
+          LET hit = 1
+          LET note_msg = "setmatch ok"
+          LET val = A2
+          LET val_ch = 1
+          LET meta = "setmatch"
+          SYS PUSH meta NAME
+          LET meta = LAST
+          SYS PUSH meta A2
+          LET meta = LAST
+          LET meta_ch = 1
+        END
+      END
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- probe soft ---
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  NOTE "action probe"
+  LET soft_m = 0
+  LET soft_f = 0
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    TRYSEND j0 no_such_method
+    IF OK == 0 THEN
+      LET soft_m = 1
+    END
+    CLEAR_ERR
+    TRYSETF j0 no_such_field 1
+    IF OK == 0 THEN
+      LET soft_f = 1
+    END
+    CLEAR_ERR
+  ELSE
+    LET soft_m = 1
+    LET soft_f = 1
+  END
+  SETFWHERE Job status "no_such_status" status "x"
+  LET sk0 = SETFWHERE_N
+  CLEAR_ERR
+  SETFWHERE Job status "pending" no_such_field 1
+  LET sk = SETFWHERE_SKIP
+  CLEAR_ERR
+  LET hit = 1
+  LET note_msg = "probe ok"
+  LET val = "probe"
+  LET val_ch = 1
+  LET meta = "probe"
+  SYS STR soft_m
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR soft_f
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR sk0
+  SYS PUSH meta LAST
+  LET meta = LAST
+  SYS STR sk
+  SYS PUSH meta LAST
+  LET meta = LAST
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- dump ---
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  NOTE "action dump"
+  IF slot < 0 THEN
+    LET miss = 1
+    LET note_msg = "dump bad slot"
+    FAIL "dump bad slot"
+    CLEAR_ERR
+    IF NEED_HIT > 0 THEN
+      EXIT 2 "dump bad slot"
+    END
+  ELSE
+    LET ok_d = 0
+    IF slot == 0 THEN
+      HASOBJ j0
+      IF LAST_N == 1 THEN
+        DUMPOBJ j0
+        LET val = LAST
+        SYS WRITE d_j0 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 1 THEN
+      HASOBJ j1
+      IF LAST_N == 1 THEN
+        DUMPOBJ j1
+        LET val = LAST
+        SYS WRITE d_j1 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF slot == 2 THEN
+      HASOBJ j2
+      IF LAST_N == 1 THEN
+        DUMPOBJ j2
+        LET val = LAST
+        SYS WRITE d_j2 val
+        CLEAR_ERR
+        LET ok_d = 1
+      END
+    END
+    IF ok_d == 0 THEN
+      LET miss = 1
+      LET note_msg = "dump no obj"
+      FAIL "dump no obj"
+      CLEAR_ERR
+      IF NEED_HIT > 0 THEN
+        EXIT 2 "dump no obj"
+      END
+    ELSE
+      LET hit = 1
+      LET note_msg = "dump ok"
+      LET val_ch = 1
+      LET meta = "dump"
+      SYS PUSH meta sn
+      LET meta = LAST
+      LET meta_ch = 1
+    END
+  END
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# --- clear ---
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  NOTE "action clear"
+  HASOBJ j0
+  IF LAST_N == 1 THEN
+    DELETEOBJ j0
+    CLEAR_ERR
+  END
+  HASOBJ j1
+  IF LAST_N == 1 THEN
+    DELETEOBJ j1
+    CLEAR_ERR
+  END
+  HASOBJ j2
+  IF LAST_N == 1 THEN
+    DELETEOBJ j2
+    CLEAR_ERR
+  END
+  SYS WRITE d_j0 ""
+  SYS WRITE d_j1 ""
+  SYS WRITE d_j2 ""
+  SYS WRITE journal_path ""
+  SYS WRITE objs_path ""
+  SYS WRITE retries_path ""
+  LET jbag = ""
+  LET j_changed = 0
+  LET hit = 1
+  LET note_msg = "clear ok"
+  LET val = "cleared"
+  LET val_ch = 1
+  LET meta = "clear"
+  LET meta_ch = 1
+  PRINT_JSON val
+  CLEAR_ERR
+END
+
+# known-action wall
+LET is_known = 0
+SYS EQS ACTION "list"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "open"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setstatus"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "start"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "fail"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "escalate"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "succeed"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "requeue"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "collect"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "collect_kv"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count_st"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "journal"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "count"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "pin"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "setmatch"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "probe"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "dump"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS ACTION "clear"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "admit"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "deny"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+SYS EQS val "cleared"
+IF LAST_N == 1 THEN
+  LET is_known = 1
+END
+IF is_known == 0 THEN
+  LET miss = 1
+  LET note_msg = "unknown action"
+  FAIL "unknown action"
+  CLEAR_ERR
+END
+
+IF j_changed == 1 THEN
+  SYS WRITE journal_path jbag
+  CLEAR_ERR
+END
+IF val_ch == 1 THEN
+  SYS WRITE val_path val
+  CLEAR_ERR
+END
+IF meta_ch == 1 THEN
+  SYS WRITE meta_path meta
+  CLEAR_ERR
+END
+
+SYS MS
+LET t1ms = MS
+LET dt = t1ms - t0ms
+SYS PUSH board_rep run_date
+LET board_rep = LAST
+SYS PUSH board_rep ACTION
+LET board_rep = LAST
+SYS PUSH board_rep note_msg
+LET board_rep = LAST
+SYS STR hit
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR miss
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS STR dt
+SYS PUSH board_rep LAST
+LET board_rep = LAST
+SYS WRITE report_path board_rep
+CLEAR_ERR
+
+NOTE "job_retry_where_board: done"
+SYS EQS note_msg "unknown action"
+IF LAST_N == 0 THEN
+  IF miss > 0 THEN
+    IF NEED_HIT > 0 THEN
+      EXIT 2 note_msg
+    END
+  END
+END
+EXIT 0 note_msg

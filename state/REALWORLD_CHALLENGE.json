@@ -1,81 +1,87 @@
 {
   "schema": "cubalc.realworld_challenge.v1",
-  "iter": 127,
-  "program": "programs/realworld/canary_rev_swap_board.cubalc",
-  "theme": "COPYF/SWAPF dual-buffer canary rev snapshot + fleetFALL promote + SWAPF rollback + COUNTWHERE admit",
-  "version": "1.15.355-usability",
+  "iter": 128,
+  "program": "programs/realworld/job_retry_where_board.cubalc",
+  "theme": "SETFWHERE/INCFWHERE/GETFWHERE job status ladder + retry bump + collect bag + admit",
+  "version": "1.15.357-usability",
   "pass": true,
-  "prior_note": "iter 126 fleet_status_hist FREQF/MODEF/UNIQUF; this iter stresses COPYF+SWAPF dual-buffer (4271464/6defc3d)",
+  "prior_note": "iter 127 canary_rev_swap COPYF/SWAPF; this iter stresses SETFWHERE+INCFWHERE+GETFWHERE (0416eb8/3fe6e4b/2843984)",
   "tests": [
     {
-      "name": "open_slots",
-      "cmd": "open s0/s1/s2 v1.0",
+      "name": "open_jobs",
+      "cmd": "open j0/j1/j2 pending",
       "ok": true,
       "note": "NEW+DUMPOBJ"
     },
     {
-      "name": "snap_copyf",
-      "cmd": "COPYF rev\u2192prev N=3 SKIP=0",
+      "name": "start_setfwhere",
+      "cmd": "SETFWHERE pending→running N=3",
       "ok": true,
-      "note": "COPYF"
+      "note": "SETFWHERE"
     },
     {
-      "name": "promote_setfall",
-      "cmd": "SETFALL rev v2.0 N=3; prev stays v1.0",
+      "name": "fail_ladder",
+      "cmd": "INCFWHERE running retries+1; SETFWHERE running→retry",
       "ok": true,
-      "note": "SETFALL"
+      "note": "INCFWHERE+SETFWHERE"
     },
     {
-      "name": "count_rev",
-      "cmd": "COUNTWHERE rev v2.0 = 3",
+      "name": "collect_retries",
+      "cmd": "GETFWHERE retries status retry → 1,1,1",
       "ok": true,
-      "note": "COUNTWHERE"
+      "note": "GETFWHERE"
     },
     {
-      "name": "admit_all_on_rev",
-      "cmd": "LISTOBJS+NOBJS; admit v2.0 REQUIRE ok",
+      "name": "collect_kv",
+      "cmd": "GETFWHERE AS KV j0:1 j1:1 j2:1",
+      "ok": true,
+      "note": "AS KV"
+    },
+    {
+      "name": "escalate_requeue_succeed",
+      "cmd": "retry→dead→pending→running→ok N=3",
+      "ok": true,
+      "note": "ladder"
+    },
+    {
+      "name": "admit_ok",
+      "cmd": "LISTOBJS+NOBJS; admit ok REQUIRE",
       "ok": true,
       "note": "admit"
     },
     {
-      "name": "admit_deny_wrong_rev",
-      "cmd": "want v1.0 while on v2.0 \u2192 EXIT 2",
+      "name": "admit_deny",
+      "cmd": "want retry while ok → EXIT 2",
       "ok": true,
       "note": "REQUIRE deny"
     },
     {
-      "name": "rollback_swapf",
-      "cmd": "SWAPF rev\u2194prev \u2192 rev v1.0 prev v2.0; admit v1.0",
-      "ok": true,
-      "note": "SWAPF"
-    },
-    {
-      "name": "double_rollback",
-      "cmd": "second SWAPF restores v2.0",
-      "ok": true,
-      "note": "toggle"
-    },
-    {
-      "name": "substring_false_friend",
-      "cmd": "v1 vs v1.0 exact COUNTWHERE 1 each",
-      "ok": true,
-      "note": "exact"
-    },
-    {
-      "name": "empty_fleet",
-      "cmd": "snap/rollback N=0; admit REQUIRE deny",
+      "name": "empty_start_fail",
+      "cmd": "clear; start/fail REQUIRE none",
       "ok": true,
       "note": "empty"
     },
     {
+      "name": "substring_false_friend",
+      "cmd": "pending vs pend exact 1 each",
+      "ok": true,
+      "note": "exact"
+    },
+    {
+      "name": "fail_none_running",
+      "cmd": "only retry jobs; fail REQUIRE none (no bump old retry)",
+      "ok": true,
+      "note": "order"
+    },
+    {
       "name": "setmatch_first",
-      "cmd": "two s0:promote \u2192 SETMATCH drops to 1",
+      "cmd": "two j0:fail → SETMATCH leaves 1",
       "ok": true,
       "note": "journal"
     },
     {
-      "name": "probe_soft_skip",
-      "cmd": "COPYF missing field SKIP=3; TRYSEND soft",
+      "name": "probe_soft",
+      "cmd": "no-match N=0; missing field SKIP; TRYSEND soft",
       "ok": true,
       "note": "soft"
     },
@@ -83,98 +89,99 @@
       "name": "selftest",
       "cmd": "./out/cubalc selftest",
       "ok": true,
-      "note": "331/331 pass"
+      "note": "333/333 pass"
     }
   ],
   "weaknesses": [
     {
       "id": "W1",
       "severity": "high",
-      "area": "oop|nobjs",
-      "title": "NOBJS stale/0 until LISTOBJS (or peer fleet scan)",
-      "detail": "After NEW/rehydrate, bare NOBJS stays 0 while COUNTWHERE correctly sees live objs. Admit-all patterns silently deny (0==count fails) unless LISTOBJS refreshes NOBJS first.",
-      "repro": "NEW 3 slots; LET n=NOBJS \u2192 0; LISTOBJS; NOBJS\u21923"
+      "area": "oop|where",
+      "title": "WHERE match is equality only — no retries>=N / compound predicates",
+      "detail": "Cannot escalate only jobs with retries>=3 via SETFWHERE. Agents must GETFWHERE+EACH or WHEREGE-style siblings if any; SETFWHERE status retry→dead kills all retries regardless of count.",
+      "repro": "SETFWHERE Job status retry status dead hits retries=1 and retries=99"
     },
     {
       "id": "W2",
-      "severity": "med",
-      "area": "oop|copyf|swapf",
-      "title": "COPYF/SWAPF are fleet-class only \u2014 no single-object form",
-      "detail": "Cannot snapshot/rollback one canary slot without EACH+GETF+SETF or temporary class filter. Ops always walk all live objs of class (or bare field name).",
-      "repro": "want s0 only snap; COPYF Slot hits s0+s1+s2"
+      "severity": "high",
+      "area": "oop|incfwhere",
+      "title": "INCFWHERE after status rewrite double-bumps cohort",
+      "detail": "If fail does SETFWHERE running→retry then INCFWHERE status retry, every already-retry job also increments. Bump-then-rewrite order is mandatory and undocumented as footgun.",
+      "repro": "old retry=2; new fail path; wrong order → old becomes 3"
     },
     {
       "id": "W3",
       "severity": "med",
-      "area": "oop|setfall",
-      "title": "SETFALL stamps entire class \u2014 no WHERE rev predicate",
-      "detail": "Cannot promote only slots still on old rev; partial canary needs per-slot setrev. SETFWHERE exists in 1.15.355 proof 905 but not used here yet.",
-      "repro": "SETFALL Slot rev v2 hits all"
+      "area": "oop|requeue",
+      "title": "No multi-field WHERE update — requeue cannot zero retries",
+      "detail": "SETFWHERE dead→pending leaves retries sticky. Need second SETFWHERE or SETFALL retries 0 (unscoped) or per-slot SETF.",
+      "repro": "escalate; requeue; retries still 1"
     },
     {
       "id": "W4",
       "severity": "med",
-      "area": "oop|swapf",
-      "title": "SWAPF with empty prev injects blank rev",
-      "detail": "Rollback without prior snap swaps '' into rev \u2014 silent data loss, not soft miss. Agents must gate on prev non-blank or require snap.",
-      "repro": "open; no snap; rollback \u2192 rev empty"
+      "area": "oop|nobjs",
+      "title": "NOBJS stale until LISTOBJS",
+      "detail": "Same as iter 127: admit-all needs LISTOBJS before NOBJS or silent deny.",
+      "repro": "bare NOBJS after rehydrate → 0"
     },
     {
       "id": "W5",
       "severity": "med",
-      "area": "oop|copyf",
-      "title": "Missing dst field soft-skips (N=0 SKIP=n) \u2014 easy to miss",
-      "detail": "COPYF Slot rev no_such_field OK=1-ish path with SKIP=n; agents must check COPYF_N/SKIP not just OK.",
-      "repro": "probe COPYF rev no_such_field SKIP=3"
+      "area": "oop|getfwhere",
+      "title": "GETFWHERE bag is values only unless AS KV",
+      "detail": "Default collect loses object identity; AS KV uses object name not FIELD id. Agents needing id:retries must AS KV or GETFALL id separately.",
+      "repro": "GETFWHERE retries status retry → 1\\n1; AS KV → j0:1"
     },
     {
       "id": "W6",
       "severity": "low",
-      "area": "host|write",
-      "title": "WRITE metas omit trailing NL",
-      "detail": "cat -A last line no $.",
-      "repro": "od -c VAL.txt dump/s0"
+      "area": "oop|skip",
+      "title": "Missing set field soft SKIP; no-match N=0 looks like success unless checked",
+      "detail": "SETFWHERE_N==0 and SETFWHERE_SKIP must be agent-checked; OK path still continues.",
+      "repro": "probe missing status N=0; bad field SKIP=3"
     },
     {
       "id": "W7",
       "severity": "low",
-      "area": "host|num",
-      "title": "Non-numeric REQUIRE softens to 0",
-      "detail": "CUBALC_FS_REQUIRE=abc \u2192 soft wall only.",
-      "repro": "REQUIRE=abc"
+      "area": "host|write",
+      "title": "WRITE metas omit trailing NL",
+      "detail": "cat -A last line no $.",
+      "repro": "od -c VAL.txt"
     },
     {
       "id": "W8",
       "severity": "low",
-      "area": "bag|setmatch",
-      "title": "SETMATCH first exact only",
-      "detail": "Two s0:promote \u2192 one SETMATCH leaves 1.",
-      "repro": "count drops by 1"
+      "area": "bag|setmatch|num",
+      "title": "SETMATCH first-only; non-numeric REQUIRE softens",
+      "detail": "Two j0:fail → one SETMATCH; REQUIRE=abc → soft.",
+      "repro": "count drops by 1; REQUIRE=abc"
     }
   ],
   "workarounds": [
-    "LISTOBJS before reading NOBJS for admit-all",
-    "COPYF snap then SETFALL promote; SWAPF rollback",
-    "Per-slot setrev when partial canary needed",
-    "Gate rollback on non-blank prev or mandatory snap",
-    "Check COPYF_N/SWAPF_N and *_SKIP not only OK",
+    "Bump retries with INCFWHERE while still on old status, then SETFWHERE rewrite",
+    "LISTOBJS before NOBJS for admit-all",
+    "GETFWHERE AS KV for name:value inventory",
+    "Per-slot SETF retries 0 after requeue if reset needed",
+    "Gate N==0 with REQUIRE for empty WHERE transitions",
     "REQUIRE EXIT in action bodies; soft unknown wall"
   ],
   "language_gaps": [
+    "WHERE compound / threshold (retries>=N AND status==retry)",
+    "Multi-field SETFWHERE (status+retries atomic)",
+    "INCFWHERE with status transition in one op",
     "NOBJS auto-refresh on NEW/DELETE/rehydrate",
-    "Per-object COPYF/SWAPF (or WHERE filter)",
-    "SETFALL WHERE / promote-if-prev",
-    "SWAPF refuse-if-blank option",
+    "GETFWHERE keyed by arbitrary field (id) not only object name",
     "SETMATCH ALL; WRITE trailing NL; strict NUM REQUIRE"
   ],
   "issues_faced": [
-    "COPYF snap N=3; SETFALL promote v2.0; prev kept v1.0",
-    "admit failed until LISTOBJS refreshed NOBJS (W1 high)",
-    "SWAPF rollback restored v1.0; second SWAPF restored v2.0",
-    "v1 vs v1.0 exact COUNTWHERE false-friend ok",
-    "empty snap/rollback N=0 soft; admit REQUIRE deny",
-    "selftest 331/331 green; no language fix this iter (SETFWHERE already in tree)"
+    "SETFWHERE start N=3; fail bump+rewrite retries=1 status=retry",
+    "GETFWHERE bag 1,1,1; AS KV j0:1 j1:1 j2:1",
+    "full ladder escalate/requeue/start/succeed/admit ok",
+    "empty start/fail REQUIRE EXIT 2; substring pend vs pending exact",
+    "fail with only retry jobs does not bump old retry (order ok)",
+    "selftest 333/333 green; no language fix this iter"
   ],
-  "commit": "2661ad05d44e4a97327fa99f366179ed34f0ffcd",
-  "ts": "2026-08-07T08:36:11Z"
+  "commit": "",
+  "ts": "2026-08-07T08:59:21Z"
 }
